@@ -15,6 +15,8 @@ function EditorContent() {
   const [designName, setDesignName] = useState('Untitled Design');
   const [designId, setDesignId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [showExportMenu, setShowExportMenu] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   const width = parseInt(searchParams.get('w') || '1080');
   const height = parseInt(searchParams.get('h') || '1080');
@@ -174,6 +176,66 @@ function EditorContent() {
     }
   };
 
+  const downloadFile = (dataUrl: string, filename: string) => {
+    const link = document.createElement('a');
+    link.href = dataUrl;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const exportAsPNG = () => {
+    setExporting(true);
+    const dataUrl = fabricCanvasRef.current.toDataURL({
+      format: 'png',
+      quality: 1,
+      multiplier: 2,
+    });
+    downloadFile(dataUrl, `${designName || 'design'}.png`);
+    setExporting(false);
+    setShowExportMenu(false);
+  };
+
+  const exportAsJPG = () => {
+    setExporting(true);
+    const dataUrl = fabricCanvasRef.current.toDataURL({
+      format: 'jpeg',
+      quality: 0.9,
+      multiplier: 2,
+    });
+    downloadFile(dataUrl, `${designName || 'design'}.jpg`);
+    setExporting(false);
+    setShowExportMenu(false);
+  };
+
+  const exportAsPDF = async () => {
+    setExporting(true);
+    try {
+      const { jsPDF } = await import('jspdf');
+      const dataUrl = fabricCanvasRef.current.toDataURL({
+        format: 'png',
+        quality: 1,
+        multiplier: 2,
+      });
+
+      const orientation = width > height ? 'landscape' : 'portrait';
+      const pdf = new jsPDF({
+        orientation: orientation,
+        unit: 'px',
+        format: [width, height],
+      });
+
+      pdf.addImage(dataUrl, 'PNG', 0, 0, width, height);
+      pdf.save(`${designName || 'design'}.pdf`);
+    } catch (err) {
+      console.error('PDF export failed:', err);
+      alert('Failed to export PDF. Please try again.');
+    }
+    setExporting(false);
+    setShowExportMenu(false);
+  };
+
   return (
     <main className="h-screen flex flex-col bg-gray-50">
       <div className="flex items-center justify-between px-4 py-2 border-b bg-white">
@@ -189,13 +251,46 @@ function EditorContent() {
           <span className="text-sm text-gray-600 w-12 text-center">{zoom}%</span>
           <button onClick={() => setZoom(Math.min(200, zoom + 10))} className="px-2 py-1 border rounded">+</button>
         </div>
-        <button
-          onClick={saveDesign}
-          disabled={saving}
-          className="bg-brand-gradient text-white px-4 py-2 rounded-full text-sm font-semibold disabled:opacity-50"
-        >
-          {saving ? 'Saving...' : 'Save'}
-        </button>
+        <div className="flex items-center gap-2 relative">
+          <button
+            onClick={() => setShowExportMenu(!showExportMenu)}
+            disabled={exporting}
+            className="border border-gray-300 text-gray-700 px-4 py-2 rounded-full text-sm font-semibold disabled:opacity-50"
+          >
+            {exporting ? 'Exporting...' : 'Export'}
+          </button>
+
+          {showExportMenu && (
+            <div className="absolute top-full right-0 mt-2 bg-white border rounded-lg shadow-lg py-1 w-40 z-10">
+              <button
+                onClick={exportAsPNG}
+                className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50"
+              >
+                PNG
+              </button>
+              <button
+                onClick={exportAsJPG}
+                className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50"
+              >
+                JPG
+              </button>
+              <button
+                onClick={exportAsPDF}
+                className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50"
+              >
+                PDF
+              </button>
+            </div>
+          )}
+
+          <button
+            onClick={saveDesign}
+            disabled={saving}
+            className="bg-brand-gradient text-white px-4 py-2 rounded-full text-sm font-semibold disabled:opacity-50"
+          >
+            {saving ? 'Saving...' : 'Save'}
+          </button>
+        </div>
       </div>
 
       <div className="flex flex-1 overflow-hidden">
