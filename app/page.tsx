@@ -1,9 +1,15 @@
+import Image from 'next/image';
+
 export default function Home() {
   return (
     <main className="flex min-h-screen flex-col items-center justify-center p-6 text-center">
-      <h1 className="text-5xl md:text-6xl font-bold bg-brand-gradient bg-clip-text text-transparent">
-        Magical Touch
-      </h1>
+      <Image
+        src="/logo.png"
+        alt="Magical Touch"
+        width={400}
+        height={80}
+        priority
+      />
       <p className="mt-4 text-xl font-medium text-gray-700">
         Create. Design. Make It Magical.
       </p>
