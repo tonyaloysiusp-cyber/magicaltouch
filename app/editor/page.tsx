@@ -1,18 +1,24 @@
 'use client';
 
 import { useEffect, useRef, useState, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
+import { supabase } from '@/lib/supabase';
 
 function EditorContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fabricCanvasRef = useRef<any>(null);
   const [zoom, setZoom] = useState(50);
   const [layers, setLayers] = useState<any[]>([]);
+  const [designName, setDesignName] = useState('Untitled Design');
+  const [designId, setDesignId] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
   const width = parseInt(searchParams.get('w') || '1080');
   const height = parseInt(searchParams.get('h') || '1080');
+  const urlDesignId = searchParams.get('designId');
 
   useEffect(() => {
     import('fabric').then((mod) => {
@@ -29,6 +35,28 @@ function EditorContent() {
       canvas.on('object:removed', function () {
         setLayers(canvas.getObjects().slice().reverse());
       });
+
+      // Load existing design if designId is in the URL
+      if (urlDesignId) {
+        setDesignId(urlDesignId);
+        supabase
+          .from('designs')
+          .select('*')
+          .eq('id', urlDesignId)
+          .single()
+          .then(({ data, error }) => {
+            if (data) {
+              setDesignName(data.name);
+              canvas.loadFromJSON(data.canvas_json, function () {
+                canvas.renderAll();
+                setLayers(canvas.getObjects().slice().reverse());
+              });
+            }
+            if (error) {
+              console.error('Failed to load design:', error);
+            }
+          });
+      }
     });
 
     return function () {
@@ -36,7 +64,7 @@ function EditorContent() {
         fabricCanvasRef.current.dispose();
       }
     };
-  }, [width, height]);
+  }, [width, height, urlDesignId]);
 
   const scale = zoom / 100;
 
@@ -101,17 +129,72 @@ function EditorContent() {
     if (active) fabricCanvasRef.current.remove(active);
   };
 
+  const saveDesign = async () => {
+    setSaving(true);
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      alert('You must be logged in to save a design.');
+      setSaving(false);
+      return;
+    }
+
+    const canvasJson = fabricCanvasRef.current.toJSON();
+
+    const payload: any = {
+      user_id: user.id,
+      name: designName,
+      canvas_json: canvasJson,
+      width: width,
+      height: height,
+      updated_at: new Date().toISOString(),
+    };
+
+    if (designId) {
+      payload.id = designId;
+    }
+
+    const { data, error } = await supabase
+      .from('designs')
+      .upsert(payload)
+      .select()
+      .single();
+
+    setSaving(false);
+
+    if (error) {
+      console.error('Save failed:', error);
+      alert('Failed to save design. Please try again.');
+      return;
+    }
+
+    if (data) {
+      setDesignId(data.id);
+      router.replace(`/editor?designId=${data.id}&w=${width}&h=${height}`);
+    }
+  };
+
   return (
     <main className="h-screen flex flex-col bg-gray-50">
       <div className="flex items-center justify-between px-4 py-2 border-b bg-white">
         <Image src="/logo.png" alt="Magical Touch" width={130} height={26} />
+        <input
+          type="text"
+          value={designName}
+          onChange={(e) => setDesignName(e.target.value)}
+          className="text-sm border rounded px-2 py-1 w-48 text-center"
+        />
         <div className="flex items-center gap-3">
           <button onClick={() => setZoom(Math.max(10, zoom - 10))} className="px-2 py-1 border rounded">-</button>
           <span className="text-sm text-gray-600 w-12 text-center">{zoom}%</span>
           <button onClick={() => setZoom(Math.min(200, zoom + 10))} className="px-2 py-1 border rounded">+</button>
         </div>
-        <button className="bg-brand-gradient text-white px-4 py-2 rounded-full text-sm font-semibold">
-          Save
+        <button
+          onClick={saveDesign}
+          disabled={saving}
+          className="bg-brand-gradient text-white px-4 py-2 rounded-full text-sm font-semibold disabled:opacity-50"
+        >
+          {saving ? 'Saving...' : 'Save'}
         </button>
       </div>
 
