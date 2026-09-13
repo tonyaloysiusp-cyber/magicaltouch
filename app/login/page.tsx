@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -27,34 +28,40 @@ export default function LoginPage() {
   };
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-4">
-      <h1 className="text-3xl font-bold mb-6">Log In to Magical Touch</h1>
-      <form onSubmit={handleLogin} className="w-full max-w-sm flex flex-col gap-4">
-        <input
-          type="email"
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className="border p-2 rounded"
-          required
-        />
-        <input
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="border p-2 rounded"
-          required
-        />
-        {error && <p className="text-red-500 text-sm">{error}</p>}
-        <button
-          type="submit"
-          disabled={loading}
-          className="bg-black text-white p-2 rounded"
-        >
-          {loading ? 'Logging in...' : 'Log In'}
-        </button>
-      </form>
+    <main className="flex min-h-screen flex-col items-center justify-center p-6">
+      <Image src="/logo.png" alt="Magical Touch" width={280} height={56} className="mb-8" />
+      <div className="w-full max-w-sm">
+        <h1 className="text-2xl font-bold mb-6 text-center text-gray-800">Log In</h1>
+        <form onSubmit={handleLogin} className="flex flex-col gap-4">
+          <input
+            type="email"
+            placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="border border-gray-300 p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-blue"
+            required
+          />
+          <input
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="border border-gray-300 p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-blue"
+            required
+          />
+          {error && <p className="text-red-500 text-sm">{error}</p>}
+          <button
+            type="submit"
+            disabled={loading}
+            className="bg-brand-gradient text-white font-semibold p-3 rounded-full shadow-md"
+          >
+            {loading ? 'Logging in...' : 'Log In'}
+          </button>
+        </form>
+        <p className="mt-4 text-center text-sm text-gray-500">
+          Don&apos;t have an account? <a href="/signup" className="text-brand-blue font-medium">Sign up</a>
+        </p>
+      </div>
     </main>
   );
 }
