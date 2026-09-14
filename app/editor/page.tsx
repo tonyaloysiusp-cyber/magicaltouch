@@ -261,11 +261,12 @@ function EditorContent() {
       if (!canvas || draft.anchors.length === 0) return;
 
       import('fabric').then((mod) => {
+        const F: any = mod.fabric;
         const d = buildPathD(draft.anchors, rubberBandTo, false);
         if (draft.previewObj) {
           canvas.remove(draft.previewObj);
         }
-        const preview = new mod.fabric.Path(d, {
+        const preview: any = new F.Path(d, {
           fill: '',
           stroke: '#3FA9E8',
           strokeWidth: 1.5,
@@ -274,7 +275,7 @@ function EditorContent() {
           evented: false,
           objectCaching: false,
         });
-        (preview as any).__isPenPreview = true;
+        preview.__isPenPreview = true;
         draft.previewObj = preview;
         canvas.add(preview);
         canvas.requestRenderAll();
@@ -306,15 +307,16 @@ function EditorContent() {
       }
 
       import('fabric').then((mod) => {
+        const F: any = mod.fabric;
         const d = buildPathD(draft.anchors, null, closed);
-        const pathObj = new mod.fabric.Path(d, {
+        const pathObj: any = new F.Path(d, {
           fill: closed ? '#3FA9E8' : '',
           stroke: '#1A1A1A',
           strokeWidth: 2,
           objectCaching: false,
         });
-        (pathObj as any).isVectorPath = true;
-        (pathObj as any).name = closed ? 'Path (closed)' : 'Path (open)';
+        pathObj.isVectorPath = true;
+        pathObj.name = closed ? 'Path (closed)' : 'Path (open)';
 
         if (draft.previewObj) canvas.remove(draft.previewObj);
         canvas.add(pathObj);
@@ -409,10 +411,18 @@ function EditorContent() {
   // Extracts anchor (on-curve) points from a fabric.Path's internal path
   // command array, in that path object's *canvas* coordinate space
   // (accounting for its current position/scale/rotation/skew).
+  //
+  // Everything here is cast through `any`. fabric.Path's internal `path`
+  // array and `pathOffset` field, plus `fabric.util.transformPoint`, are
+  // not part of fabric's stable public typings across versions, so we
+  // deliberately avoid letting TypeScript infer strict types for any of
+  // this and rely on the runtime shape instead.
   const getPathAnchorsInCanvasSpace = (pathObj: any, fabricMod: any) => {
-    const commands: any[] = pathObj.path || [];
-    const matrix = pathObj.calcTransformMatrix();
-    const offset = pathObj.pathOffset || { x: 0, y: 0 };
+    const F: any = fabricMod.fabric;
+    const target: any = pathObj;
+    const commands: any[] = target.path || [];
+    const matrix: any = target.calcTransformMatrix();
+    const offset: any = target.pathOffset || { x: 0, y: 0 };
     const pts: { x: number; y: number; commandIndex: number }[] = [];
 
     commands.forEach((cmd: any[], idx: number) => {
@@ -430,8 +440,8 @@ function EditorContent() {
         localY = cmd[4];
       }
       if (localX === null || localY === null) return;
-      const localPoint = new fabricMod.fabric.Point(localX - offset.x, localY - offset.y);
-      const canvasPoint = fabricMod.fabric.util.transformPoint(localPoint, matrix);
+      const localPoint: any = new F.Point(localX - offset.x, localY - offset.y);
+      const canvasPoint: any = F.util.transformPoint(localPoint, matrix);
       pts.push({ x: canvasPoint.x, y: canvasPoint.y, commandIndex: idx });
     });
 
@@ -443,13 +453,14 @@ function EditorContent() {
     if (!canvas) return;
 
     import('fabric').then((mod) => {
+      const F: any = mod.fabric;
       clearAnchorHandles();
       const anchors = getPathAnchorsInCanvasSpace(pathObj, mod);
       const state = anchorHandlesRef.current;
       state.pathObj = pathObj;
 
-      anchors.forEach((pt, i) => {
-        const circle = new mod.fabric.Circle({
+      anchors.forEach((pt) => {
+        const circle: any = new F.Circle({
           left: pt.x,
           top: pt.y,
           radius: ANCHOR_HANDLE_SIZE / 2,
@@ -465,25 +476,25 @@ function EditorContent() {
           lockScalingY: true,
           lockRotation: true,
         });
-        (circle as any).__isAnchorHandle = true;
-        (circle as any).__commandIndex = pt.commandIndex;
-        (circle as any).__anchorPathObj = pathObj;
+        circle.__isAnchorHandle = true;
+        circle.__commandIndex = pt.commandIndex;
+        circle.__anchorPathObj = pathObj;
 
         circle.on('moving', () => {
           const canvasNow = fabricCanvasRef.current;
           if (!canvasNow) return;
-          const targetPath = (circle as any).__anchorPathObj;
-          const cmdIdx = (circle as any).__commandIndex;
-          const invMatrix = mod.fabric.util.invertTransform(targetPath.calcTransformMatrix());
-          const localPoint = mod.fabric.util.transformPoint(
-            new mod.fabric.Point(circle.left, circle.top),
+          const targetPath: any = circle.__anchorPathObj;
+          const cmdIdx: number = circle.__commandIndex;
+          const invMatrix: any = F.util.invertTransform(targetPath.calcTransformMatrix());
+          const localPoint: any = F.util.transformPoint(
+            new F.Point(circle.left, circle.top),
             invMatrix
           );
-          const offset = targetPath.pathOffset || { x: 0, y: 0 };
+          const offset: any = targetPath.pathOffset || { x: 0, y: 0 };
           const newLocalX = localPoint.x + offset.x;
           const newLocalY = localPoint.y + offset.y;
 
-          const cmd = targetPath.path[cmdIdx];
+          const cmd: any[] = targetPath.path[cmdIdx];
           if (cmd[0] === 'M' || cmd[0] === 'L') {
             cmd[1] = newLocalX;
             cmd[2] = newLocalY;
@@ -769,7 +780,7 @@ function EditorContent() {
     });
   };
 
-  let __nextImageId = 0;
+  const nextImageIdRef = useRef(0);
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files ? e.target.files[0] : null;
     if (!file) return;
@@ -778,7 +789,7 @@ function EditorContent() {
       import('fabric').then((mod) => {
         mod.fabric.Image.fromURL(event.target ? (event.target.result as string) : '', function (img: any) {
           img.scaleToWidth(300);
-          img.__id = `img_${Date.now()}_${__nextImageId++}`;
+          img.__id = `img_${Date.now()}_${nextImageIdRef.current++}`;
           fabricCanvasRef.current.add(img);
           fabricCanvasRef.current.setActiveObject(img);
         });
