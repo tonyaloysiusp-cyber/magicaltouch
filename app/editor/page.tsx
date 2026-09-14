@@ -651,14 +651,14 @@ function EditorContent() {
       canvas.on('object:removed', onHistoryChanged);
 
       canvas.on('selection:created', (e: any) => {
-        const obj = e.selected ? canvas.getActiveObject() : null;
+        const obj: any = e.selected ? canvas.getActiveObject() : null;
         setSelected(obj);
         if (activeToolRef.current === 'direct' && obj && obj.isVectorPath) {
           renderAnchorHandles(obj);
         }
       });
       canvas.on('selection:updated', (e: any) => {
-        const obj = e.selected ? canvas.getActiveObject() : null;
+        const obj: any = e.selected ? canvas.getActiveObject() : null;
         setSelected(obj);
         if (activeToolRef.current === 'direct' && obj && obj.isVectorPath) {
           renderAnchorHandles(obj);
