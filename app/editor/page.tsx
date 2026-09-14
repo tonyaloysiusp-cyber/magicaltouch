@@ -11,6 +11,10 @@ import {
   Type,
   Square,
   Circle as CircleIcon,
+  Triangle as TriangleIcon,
+  Minus as LineIcon,
+  Hexagon as PolygonIcon,
+  Star as StarIcon,
   ImagePlus,
   Copy,
   ArrowUpToLine,
@@ -92,6 +96,36 @@ const SHORTCUTS: { keys: string; label: string }[] = [
   { keys: '?', label: 'Show this shortcuts panel' },
 ];
 
+// ---------------------------------------------------------------------
+// Geometry helpers for the new shape tools (Polygon / Star). Pure
+// functions, no fabric dependency, so they're trivially testable.
+// ---------------------------------------------------------------------
+
+function regularPolygonPoints(sides: number, radius: number) {
+  const pts: { x: number; y: number }[] = [];
+  for (let i = 0; i < sides; i++) {
+    const angle = (Math.PI * 2 * i) / sides - Math.PI / 2;
+    pts.push({ x: Math.cos(angle) * radius + radius, y: Math.sin(angle) * radius + radius });
+  }
+  return pts;
+}
+
+function starPoints(spikes: number, outerRadius: number, innerRadius: number) {
+  const pts: { x: number; y: number }[] = [];
+  const step = Math.PI / spikes;
+  let rot = -Math.PI / 2;
+  for (let i = 0; i < spikes; i++) {
+    pts.push({ x: Math.cos(rot) * outerRadius + outerRadius, y: Math.sin(rot) * outerRadius + outerRadius });
+    rot += step;
+    pts.push({
+      x: Math.cos(rot) * innerRadius + outerRadius,
+      y: Math.sin(rot) * innerRadius + outerRadius,
+    });
+    rot += step;
+  }
+  return pts;
+}
+
 function EditorContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -123,6 +157,10 @@ function EditorContent() {
   const [canRedo, setCanRedo] = useState(false);
 
   const clipboardRef = useRef<any>(null);
+
+  // Remembers the last gradient angle dragged on the current selection so
+  // repeated color-stop edits don't reset the angle back to a default.
+  const gradAngleRef = useRef<number>(90);
 
   // ---------------------------------------------------------------------
   // VECTOR PEN TOOL + DIRECT SELECTION state
@@ -590,6 +628,69 @@ function EditorContent() {
   }, [pushHistory]);
 
   // ---------------------------------------------------------------------
+  // GRADIENT FILL — real fabric.Gradient, not a fake color swap.
+  // Serializes/deserializes automatically through canvas.toJSON /
+  // loadFromJSON since "fill" is already a default fabric property, so
+  // no changes to the history/save property lists were needed.
+  // ---------------------------------------------------------------------
+
+  const applyGradientFill = useCallback(
+    (type: 'linear' | 'radial', color1: string, color2: string, angleDeg: number) => {
+      const canvas = fabricCanvasRef.current;
+      const active = canvas?.getActiveObject();
+      if (!active || active.locked) return;
+
+      import('fabric').then((mod) => {
+        const F: any = mod.fabric;
+        // Gradient coords are defined in the *unscaled* object's own
+        // coordinate space (0,0 to width,height) — fabric applies the
+        // object's transform on top automatically.
+        const ow: number = active.width || 1;
+        const oh: number = active.height || 1;
+        let coords: any;
+
+        if (type === 'linear') {
+          const rad = (angleDeg * Math.PI) / 180;
+          const cx = ow / 2;
+          const cy = oh / 2;
+          const len = Math.sqrt(ow * ow + oh * oh) / 2;
+          coords = {
+            x1: cx - Math.cos(rad) * len,
+            y1: cy - Math.sin(rad) * len,
+            x2: cx + Math.cos(rad) * len,
+            y2: cy + Math.sin(rad) * len,
+          };
+        } else {
+          coords = {
+            x1: ow / 2,
+            y1: oh / 2,
+            x2: ow / 2,
+            y2: oh / 2,
+            r1: 0,
+            r2: Math.max(ow, oh) / 2,
+          };
+        }
+
+        const gradient = new F.Gradient({
+          type,
+          coords,
+          colorStops: [
+            { offset: 0, color: color1 },
+            { offset: 1, color: color2 },
+          ],
+        });
+
+        active.set({ fill: gradient });
+        active.dirty = true;
+        canvas.requestRenderAll();
+        bumpSel();
+        pushHistory();
+      });
+    },
+    [pushHistory]
+  );
+
+  // ---------------------------------------------------------------------
   // TOOL SWITCHING
   // ---------------------------------------------------------------------
 
@@ -777,6 +878,64 @@ function EditorContent() {
       });
       fabricCanvasRef.current.add(circle);
       fabricCanvasRef.current.setActiveObject(circle);
+    });
+  };
+
+  // --- NEW: Triangle, Line, Polygon, Star — all real, editable Fabric
+  // objects that participate in history/layers/export exactly like the
+  // existing shapes above. ---
+
+  const addTriangle = () => {
+    import('fabric').then((mod) => {
+      const tri = new mod.fabric.Triangle({
+        left: width / 2 - 75,
+        top: height / 2 - 75,
+        width: 150,
+        height: 150,
+        fill: '#E85D75',
+      });
+      fabricCanvasRef.current.add(tri);
+      fabricCanvasRef.current.setActiveObject(tri);
+    });
+  };
+
+  const addLine = () => {
+    import('fabric').then((mod) => {
+      const line = new mod.fabric.Line(
+        [width / 2 - 100, height / 2, width / 2 + 100, height / 2],
+        {
+          stroke: '#1A1A1A',
+          strokeWidth: 4,
+        }
+      );
+      fabricCanvasRef.current.add(line);
+      fabricCanvasRef.current.setActiveObject(line);
+    });
+  };
+
+  const addPolygon = () => {
+    import('fabric').then((mod) => {
+      const points = regularPolygonPoints(6, 75); // hexagon
+      const poly = new mod.fabric.Polygon(points, {
+        left: width / 2 - 75,
+        top: height / 2 - 75,
+        fill: '#9B6BD6',
+      });
+      fabricCanvasRef.current.add(poly);
+      fabricCanvasRef.current.setActiveObject(poly);
+    });
+  };
+
+  const addStar = () => {
+    import('fabric').then((mod) => {
+      const points = starPoints(5, 75, 30);
+      const star = new mod.fabric.Polygon(points, {
+        left: width / 2 - 75,
+        top: height / 2 - 75,
+        fill: '#F5A623',
+      });
+      fabricCanvasRef.current.add(star);
+      fabricCanvasRef.current.setActiveObject(star);
     });
   };
 
@@ -1360,6 +1519,14 @@ function EditorContent() {
     const hasFillStroke = !isImage;
     const isLocked = !!selected.locked;
 
+    // Gradient fill state, derived straight from the live fabric object.
+    const currentFill = selected.fill;
+    const isGradientFill = !!(currentFill && typeof currentFill === 'object' && (currentFill as any).type);
+    const gradType: 'linear' | 'radial' = isGradientFill ? (currentFill as any).type : 'linear';
+    const gradStops = isGradientFill && (currentFill as any).colorStops
+      ? (currentFill as any).colorStops
+      : [{ offset: 0, color: '#3FA9E8' }, { offset: 1, color: '#7ED33E' }];
+
     return (
       <div className="flex flex-col gap-4">
         {isLocked && (
@@ -1569,16 +1736,109 @@ function EditorContent() {
         {!isText && !isImage && hasFillStroke && (
           <>
             <div>
-              <label className="text-xs font-semibold text-gray-500 block mb-1">Fill Color</label>
-              <input
-                type="color"
+              <label className="text-xs font-semibold text-gray-500 block mb-1">Fill Type</label>
+              <select
+                value={isGradientFill ? gradType : 'solid'}
                 disabled={isLocked}
-                value={typeof selected.fill === 'string' ? selected.fill : '#000000'}
-                onChange={(e) => applyProp({ fill: e.target.value }, false)}
-                onBlur={() => pushHistory()}
-                className="w-full h-8 border rounded cursor-pointer disabled:opacity-40"
-              />
+                onChange={(e) => {
+                  const v = e.target.value;
+                  if (v === 'solid') {
+                    applyProp({ fill: typeof selected.fill === 'string' ? selected.fill : '#3FA9E8' });
+                  } else {
+                    applyGradientFill(
+                      v as 'linear' | 'radial',
+                      gradStops[0]?.color || '#3FA9E8',
+                      gradStops[1]?.color || '#7ED33E',
+                      gradAngleRef.current
+                    );
+                  }
+                }}
+                className="w-full text-xs border rounded px-2 py-1 disabled:opacity-40"
+              >
+                <option value="solid">Solid</option>
+                <option value="linear">Linear Gradient</option>
+                <option value="radial">Radial Gradient</option>
+              </select>
             </div>
+
+            {isGradientFill ? (
+              <div className="border rounded-lg p-2.5 bg-gray-50 flex flex-col gap-2">
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-[10px] text-gray-500 block mb-1">Color 1</label>
+                    <input
+                      type="color"
+                      disabled={isLocked}
+                      value={gradStops[0]?.color || '#3FA9E8'}
+                      onChange={(e) =>
+                        applyGradientFill(
+                          gradType,
+                          e.target.value,
+                          gradStops[1]?.color || '#7ED33E',
+                          gradAngleRef.current
+                        )
+                      }
+                      className="w-full h-8 border rounded cursor-pointer disabled:opacity-40"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-gray-500 block mb-1">Color 2</label>
+                    <input
+                      type="color"
+                      disabled={isLocked}
+                      value={gradStops[1]?.color || '#7ED33E'}
+                      onChange={(e) =>
+                        applyGradientFill(
+                          gradType,
+                          gradStops[0]?.color || '#3FA9E8',
+                          e.target.value,
+                          gradAngleRef.current
+                        )
+                      }
+                      className="w-full h-8 border rounded cursor-pointer disabled:opacity-40"
+                    />
+                  </div>
+                </div>
+                {gradType === 'linear' && (
+                  <div>
+                    <label className="text-[10px] text-gray-500 block mb-1">Angle</label>
+                    <input
+                      type="range"
+                      min={0}
+                      max={360}
+                      disabled={isLocked}
+                      defaultValue={gradAngleRef.current}
+                      onChange={(e) => {
+                        gradAngleRef.current = Number(e.target.value);
+                        applyGradientFill(
+                          'linear',
+                          gradStops[0]?.color || '#3FA9E8',
+                          gradStops[1]?.color || '#7ED33E',
+                          gradAngleRef.current
+                        );
+                      }}
+                      className="w-full disabled:opacity-40"
+                    />
+                  </div>
+                )}
+                <p className="text-[10px] text-gray-400">
+                  Gradient stops are fixed at 2 colors (start/end) in this version. On-canvas
+                  draggable gradient handles are not implemented yet.
+                </p>
+              </div>
+            ) : (
+              <div>
+                <label className="text-xs font-semibold text-gray-500 block mb-1">Fill Color</label>
+                <input
+                  type="color"
+                  disabled={isLocked}
+                  value={typeof selected.fill === 'string' ? selected.fill : '#000000'}
+                  onChange={(e) => applyProp({ fill: e.target.value }, false)}
+                  onBlur={() => pushHistory()}
+                  className="w-full h-8 border rounded cursor-pointer disabled:opacity-40"
+                />
+              </div>
+            )}
 
             <div>
               <label className="text-xs font-semibold text-gray-500 block mb-1">Stroke Color</label>
@@ -1755,6 +2015,22 @@ function EditorContent() {
           <button onClick={addCircle} className="flex flex-col items-center gap-1 text-gray-700">
             <CircleIcon size={18} />
             <span>Circle</span>
+          </button>
+          <button onClick={addTriangle} title="Triangle" className="flex flex-col items-center gap-1 text-gray-700">
+            <TriangleIcon size={18} />
+            <span>Triangle</span>
+          </button>
+          <button onClick={addLine} title="Line" className="flex flex-col items-center gap-1 text-gray-700">
+            <LineIcon size={18} />
+            <span>Line</span>
+          </button>
+          <button onClick={addPolygon} title="Polygon" className="flex flex-col items-center gap-1 text-gray-700">
+            <PolygonIcon size={18} />
+            <span>Polygon</span>
+          </button>
+          <button onClick={addStar} title="Star" className="flex flex-col items-center gap-1 text-gray-700">
+            <StarIcon size={18} />
+            <span>Star</span>
           </button>
           <label className="flex flex-col items-center gap-1 text-gray-700 cursor-pointer">
             <ImagePlus size={18} />
