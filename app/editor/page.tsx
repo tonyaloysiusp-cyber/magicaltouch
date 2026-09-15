@@ -297,6 +297,136 @@ function getObjectPixelSize(obj: any): { w: number; h: number } {
   };
 }
 
+// ---------------------------------------------------------------------
+// SHAPE BUILDER (Pathfinder-style boolean ops) geometry helpers.
+//
+// These flatten any supported object type into a polygon expressed in
+// *canvas absolute* coordinates, so Unite/Subtract/Intersect/Exclude can
+// run on real geometry rather than bounding boxes. Curves (Pen paths)
+// are sampled into short line segments — a standard, accepted way to
+// feed curved vector shapes into a polygon-clipping algorithm; the
+// result is still a real editable vector Path afterward, just built
+// from line segments instead of Bezier curves.
+//
+// fabric.Object.calcTransformMatrix() maps *center-relative* local
+// coordinates to canvas space (this matches the convention the existing
+// Direct Selection code already relies on for fabric.Path's pathOffset),
+// so every shape type below is expressed relative to its own center
+// before the matrix is applied.
+// ---------------------------------------------------------------------
+
+function flattenPathToLocalPoints(obj: any): { x: number; y: number }[] {
+  const offset = obj.pathOffset || { x: 0, y: 0 };
+  const commands: any[] = obj.path || [];
+  const pts: { x: number; y: number }[] = [];
+  let cur = { x: 0, y: 0 };
+
+  const cubic = (p0: any, p1: any, p2: any, p3: any, steps = 12) => {
+    for (let i = 1; i <= steps; i++) {
+      const t = i / steps;
+      const mt = 1 - t;
+      pts.push({
+        x: mt * mt * mt * p0.x + 3 * mt * mt * t * p1.x + 3 * mt * t * t * p2.x + t * t * t * p3.x,
+        y: mt * mt * mt * p0.y + 3 * mt * mt * t * p1.y + 3 * mt * t * t * p2.y + t * t * t * p3.y,
+      });
+    }
+  };
+
+  commands.forEach((cmd: any[]) => {
+    const type = cmd[0];
+    if (type === 'M' || type === 'L') {
+      cur = { x: cmd[1], y: cmd[2] };
+      pts.push({ ...cur });
+    } else if (type === 'C') {
+      const p1 = { x: cmd[1], y: cmd[2] };
+      const p2 = { x: cmd[3], y: cmd[4] };
+      const p3 = { x: cmd[5], y: cmd[6] };
+      cubic(cur, p1, p2, p3);
+      cur = p3;
+    } else if (type === 'Q') {
+      const p1 = { x: cmd[1], y: cmd[2] };
+      const p2 = { x: cmd[3], y: cmd[4] };
+      const steps = 12;
+      for (let i = 1; i <= steps; i++) {
+        const t = i / steps;
+        const mt = 1 - t;
+        pts.push({
+          x: mt * mt * cur.x + 2 * mt * t * p1.x + t * t * p2.x,
+          y: mt * mt * cur.y + 2 * mt * t * p1.y + t * t * p2.y,
+        });
+      }
+      cur = p2;
+    }
+  });
+
+  return pts.map((p) => ({ x: p.x - offset.x, y: p.y - offset.y }));
+}
+
+function getAbsolutePolygonPoints(obj: any, F: any): [number, number][] {
+  const w = obj.width || 0;
+  const h = obj.height || 0;
+  let localPts: { x: number; y: number }[] = [];
+
+  if (obj.type === 'rect') {
+    localPts = [
+      { x: 0, y: 0 },
+      { x: w, y: 0 },
+      { x: w, y: h },
+      { x: 0, y: h },
+    ].map((p) => ({ x: p.x - w / 2, y: p.y - h / 2 }));
+  } else if (obj.type === 'triangle') {
+    localPts = [
+      { x: w / 2, y: 0 },
+      { x: w, y: h },
+      { x: 0, y: h },
+    ].map((p) => ({ x: p.x - w / 2, y: p.y - h / 2 }));
+  } else if (obj.type === 'circle') {
+    const r = obj.radius || 0;
+    const N = 64;
+    for (let i = 0; i < N; i++) {
+      const a = (i / N) * 2 * Math.PI;
+      localPts.push({ x: Math.cos(a) * r, y: Math.sin(a) * r });
+    }
+  } else if (obj.type === 'ellipse') {
+    const rx = obj.rx || 0;
+    const ry = obj.ry || 0;
+    const N = 64;
+    for (let i = 0; i < N; i++) {
+      const a = (i / N) * 2 * Math.PI;
+      localPts.push({ x: Math.cos(a) * rx, y: Math.sin(a) * ry });
+    }
+  } else if (obj.type === 'polygon') {
+    const pts: any[] = obj.points || [];
+    const minX = Math.min(...pts.map((p) => p.x));
+    const minY = Math.min(...pts.map((p) => p.y));
+    localPts = pts.map((p) => ({ x: p.x - minX - w / 2, y: p.y - minY - h / 2 }));
+  } else if (obj.type === 'path') {
+    localPts = flattenPathToLocalPoints(obj);
+  }
+
+  const matrix: any = obj.calcTransformMatrix();
+  return localPts.map((p) => {
+    const tp: any = F.util.transformPoint(new F.Point(p.x, p.y), matrix);
+    return [tp.x, tp.y] as [number, number];
+  });
+}
+
+// Builds an SVG path "d" string from a polygon-clipping MultiPolygon
+// result ([polygon][ring][point]), one M...L...Z subpath per ring so
+// holes (from Subtract/Exclude) render correctly with fillRule:'evenodd'.
+function multiPolygonToPathD(mp: number[][][][]): string {
+  let d = '';
+  mp.forEach((polygon) => {
+    polygon.forEach((ring) => {
+      if (ring.length === 0) return;
+      d += `M ${ring[0][0]} ${ring[0][1]} `;
+      for (let i = 1; i < ring.length; i++) d += `L ${ring[i][0]} ${ring[i][1]} `;
+      d += 'Z ';
+    });
+  });
+  return d.trim();
+}
+
 function EditorContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -1065,6 +1195,117 @@ function EditorContent() {
     active.__lockRatio = !active.__lockRatio;
     bumpSel();
   };
+
+  // ---------------------------------------------------------------------
+  // SHAPE BUILDER — Pathfinder-style boolean ops on the current
+  // multi-selection (Unite / Subtract / Intersect / Exclude). Uses the
+  // polygon-clipping package for real polygon math; the result is a
+  // genuine editable fabric.Path (isVectorPath = true), same as a
+  // Pen-tool path — not a grouped stack of the original shapes with a
+  // clip trick, and not a rasterized image standing in for a shape.
+  //
+  // Requires: npm install polygon-clipping
+  //
+  // Subtract order follows the objects' actual stacking order on the
+  // canvas: the back-most selected object is the base, and every
+  // selected object above it is subtracted from it in turn — matching
+  // Illustrator's "Minus Front" pathfinder behavior.
+  // ---------------------------------------------------------------------
+
+  const runShapeBuilder = useCallback(
+    (op: 'union' | 'subtract' | 'intersect' | 'exclude') => {
+      const canvas = fabricCanvasRef.current;
+      const active = canvas?.getActiveObject();
+      if (!active || active.type !== 'activeSelection') {
+        alert('Select two or more shapes first (drag a selection box, or Shift-click each one).');
+        return;
+      }
+      const objs: any[] = active.getObjects ? active.getObjects() : [];
+      if (objs.length < 2) {
+        alert('Shape Builder needs at least two selected objects.');
+        return;
+      }
+      const unsupported = objs.filter(
+        (o) => !['rect', 'triangle', 'circle', 'ellipse', 'polygon', 'path'].includes(o.type)
+      );
+      if (unsupported.length > 0) {
+        alert(
+          'Shape Builder only works on vector shapes and paths right now — remove images/text from the selection first.'
+        );
+        return;
+      }
+
+      import('fabric')
+        .then(async (mod) => {
+          const F: any = mod.fabric;
+          let polygonClipping: any;
+          try {
+            polygonClipping = (await import('polygon-clipping')).default;
+          } catch (err) {
+            console.error(err);
+            alert(
+              "Shape Builder needs the 'polygon-clipping' package. Run: npm install polygon-clipping"
+            );
+            return;
+          }
+
+          const canvasOrder = canvas.getObjects();
+          const ordered = objs
+            .slice()
+            .sort((a: any, b: any) => canvasOrder.indexOf(a) - canvasOrder.indexOf(b));
+
+          const toGeom = (obj: any): number[][][] => {
+            const ring = getAbsolutePolygonPoints(obj, F);
+            if (ring.length < 3) return [];
+            return [[...ring, ring[0]]];
+          };
+
+          const geoms = ordered.map(toGeom).filter((g) => g.length > 0);
+          if (geoms.length < 2) {
+            alert('Could not read enough valid shape geometry to run this operation.');
+            return;
+          }
+
+          let result: number[][][][];
+          if (op === 'union') result = polygonClipping.union(...geoms);
+          else if (op === 'intersect') result = polygonClipping.intersection(...geoms);
+          else if (op === 'exclude') result = polygonClipping.xor(...geoms);
+          else result = polygonClipping.difference(geoms[0], ...geoms.slice(1));
+
+          if (!result || result.length === 0) {
+            alert(
+              'This operation produced an empty shape — the selected objects may not overlap the way this operation expects.'
+            );
+            return;
+          }
+
+          const d = multiPolygonToPathD(result);
+          const baseFill = typeof ordered[0].fill === 'string' ? ordered[0].fill : '#3FA9E8';
+          const pathObj: any = new F.Path(d, {
+            fill: baseFill,
+            stroke: '#1A1A1A',
+            strokeWidth: 2,
+            fillRule: 'evenodd',
+            objectCaching: false,
+          });
+          pathObj.isVectorPath = true;
+          pathObj.name = `Shape Builder (${op})`;
+
+          canvas.discardActiveObject();
+          objs.forEach((o: any) => canvas.remove(o));
+          canvas.add(pathObj);
+          canvas.setActiveObject(pathObj);
+          canvas.requestRenderAll();
+          refreshLayers();
+          pushHistory();
+        })
+        .catch((err) => {
+          console.error('Shape Builder failed:', err);
+          alert('Shape Builder failed on this selection. Please try again.');
+        });
+    },
+    [pushHistory, refreshLayers]
+  );
 
   // ---------------------------------------------------------------------
   // TOOL SWITCHING
@@ -1989,6 +2230,41 @@ function EditorContent() {
           <button onClick={groupSelected} className="text-xs border rounded py-2 hover:bg-gray-50">
             Group Selection (Cmd+G)
           </button>
+        )}
+
+        {isMultiple && (
+          <div className="border rounded-lg p-2.5 bg-purple-50/50 flex flex-col gap-2">
+            <p className="text-xs font-semibold text-gray-700">Shape Builder</p>
+            <p className="text-[10px] text-gray-500">
+              Combines the selected shapes into one real, editable vector path.
+            </p>
+            <div className="grid grid-cols-2 gap-1.5">
+              <button
+                onClick={() => runShapeBuilder('union')}
+                className="text-xs border rounded py-1.5 hover:bg-white"
+              >
+                Unite
+              </button>
+              <button
+                onClick={() => runShapeBuilder('subtract')}
+                className="text-xs border rounded py-1.5 hover:bg-white"
+              >
+                Subtract
+              </button>
+              <button
+                onClick={() => runShapeBuilder('intersect')}
+                className="text-xs border rounded py-1.5 hover:bg-white"
+              >
+                Intersect
+              </button>
+              <button
+                onClick={() => runShapeBuilder('exclude')}
+                className="text-xs border rounded py-1.5 hover:bg-white"
+              >
+                Exclude
+              </button>
+            </div>
+          </div>
         )}
         {isGroup && (
           <button onClick={ungroupSelected} className="text-xs border rounded py-2 hover:bg-gray-50">
