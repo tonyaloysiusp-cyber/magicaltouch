@@ -47,7 +47,27 @@ const FONT_OPTIONS = [
   'Impact',
 ];
 
-type ToolMode = 'select' | 'pen' | 'direct';
+// ---------------------------------------------------------------------
+// Tool model. Draw tools (rect/ellipse/triangle/polygon/star/line) are a
+// separate family from select/direct/pen: activating one only arms the
+// cursor. The actual object is created by a mouse-down -> drag ->
+// mouse-up gesture on the canvas, never by the toolbar click itself.
+// ---------------------------------------------------------------------
+
+type DrawTool = 'rect' | 'ellipse' | 'triangle' | 'polygon' | 'star' | 'line';
+type ToolMode = 'select' | 'pen' | 'direct' | DrawTool;
+
+const DRAW_TOOLS: DrawTool[] = ['rect', 'ellipse', 'triangle', 'polygon', 'star', 'line'];
+const isDrawTool = (t: string): t is DrawTool => (DRAW_TOOLS as string[]).includes(t);
+
+const TOOL_LABELS: Record<DrawTool, string> = {
+  rect: 'Rectangle',
+  ellipse: 'Ellipse',
+  triangle: 'Triangle',
+  polygon: 'Polygon',
+  star: 'Star',
+  line: 'Line',
+};
 
 // Anchor point for an in-progress or already-created vector path.
 // handleOut is the outgoing Bezier control point for the segment leaving
@@ -69,7 +89,9 @@ const SHORTCUTS: { keys: string; label: string }[] = [
   { keys: 'A', label: 'Direct Selection tool' },
   { keys: 'P', label: 'Pen tool' },
   { keys: 'Enter', label: 'Finish open path (Pen tool)' },
-  { keys: 'Esc', label: 'Cancel path in progress / deselect' },
+  { keys: 'Esc', label: 'Cancel current drawing / deselect' },
+  { keys: 'Shift + drag', label: 'Constrain proportions (shape tools)' },
+  { keys: 'Alt/Option + drag', label: 'Draw from center (shape tools)' },
   { keys: 'Shift + Enter', label: 'Apply path as mask to selected image' },
   { keys: 'Ctrl/Cmd + Z', label: 'Undo' },
   { keys: 'Ctrl/Cmd + Shift + Z', label: 'Redo' },
@@ -97,8 +119,7 @@ const SHORTCUTS: { keys: string; label: string }[] = [
 ];
 
 // ---------------------------------------------------------------------
-// Geometry helpers for the new shape tools (Polygon / Star). Pure
-// functions, no fabric dependency, so they're trivially testable.
+// Geometry helpers — pure functions, no fabric dependency.
 // ---------------------------------------------------------------------
 
 function regularPolygonPoints(sides: number, radius: number) {
@@ -126,6 +147,156 @@ function starPoints(spikes: number, outerRadius: number, innerRadius: number) {
   return pts;
 }
 
+// Computes the bounding box (left/top/w/h) for a rect-like drag gesture,
+// honoring Shift (constrain to square/equal w+h) and Alt/Option (draw
+// outward from the mouse-down point instead of from a corner).
+function computeDragGeometry(
+  startX: number,
+  startY: number,
+  curX: number,
+  curY: number,
+  shiftKey: boolean,
+  altKey: boolean
+) {
+  const dx = curX - startX;
+  const dy = curY - startY;
+  let w = Math.abs(dx);
+  let h = Math.abs(dy);
+  if (shiftKey) {
+    const m = Math.max(w, h);
+    w = m;
+    h = m;
+  }
+  let left = dx >= 0 ? startX : startX - w;
+  let top = dy >= 0 ? startY : startY - h;
+  if (altKey) {
+    left = startX - w;
+    top = startY - h;
+    w *= 2;
+    h *= 2;
+  }
+  return { left, top, w, h };
+}
+
+interface DraftGeometry {
+  left: number;
+  top: number;
+  w: number;
+  h: number;
+  x1?: number;
+  y1?: number;
+  x2?: number;
+  y2?: number;
+}
+
+// Builds a fresh, non-interactive preview object for the given draw tool
+// and geometry. Shape tools rebuild this object on every mousemove frame
+// (remove old preview, add new one) rather than mutating one object in
+// place — the same pattern the existing Pen tool preview already uses,
+// and it sidesteps fabric's internal width/height recalculation quirks
+// for Line and Polygon objects when their raw coordinates change.
+function buildDraftShape(F: any, tool: DrawTool, geo: DraftGeometry) {
+  const common = { selectable: false, evented: false, objectCaching: false };
+  switch (tool) {
+    case 'rect':
+      return new F.Rect({
+        ...common,
+        left: geo.left,
+        top: geo.top,
+        width: Math.max(geo.w, 1),
+        height: Math.max(geo.h, 1),
+        fill: '#3FA9E8',
+      });
+    case 'ellipse':
+      return new F.Ellipse({
+        ...common,
+        left: geo.left,
+        top: geo.top,
+        rx: Math.max(geo.w / 2, 0.5),
+        ry: Math.max(geo.h / 2, 0.5),
+        fill: '#7ED33E',
+      });
+    case 'triangle':
+      return new F.Triangle({
+        ...common,
+        left: geo.left,
+        top: geo.top,
+        width: Math.max(geo.w, 1),
+        height: Math.max(geo.h, 1),
+        fill: '#E85D75',
+      });
+    case 'polygon': {
+      const r = Math.max(Math.min(geo.w, geo.h) / 2, 1);
+      return new F.Polygon(regularPolygonPoints(6, r), {
+        ...common,
+        left: geo.left,
+        top: geo.top,
+        fill: '#9B6BD6',
+      });
+    }
+    case 'star': {
+      const r = Math.max(Math.min(geo.w, geo.h) / 2, 1);
+      return new F.Polygon(starPoints(5, r, r * 0.45), {
+        ...common,
+        left: geo.left,
+        top: geo.top,
+        fill: '#F5A623',
+      });
+    }
+    case 'line':
+      return new F.Line([geo.x1 ?? 0, geo.y1 ?? 0, geo.x2 ?? 0, geo.y2 ?? 0], {
+        ...common,
+        stroke: '#1A1A1A',
+        strokeWidth: 4,
+      });
+  }
+}
+
+// ---------------------------------------------------------------------
+// Document unit conversion. Internally every object's geometry stays in
+// CSS pixels (fabric's native unit) — these helpers only convert for
+// *display and input*. PX_PER_INCH=96 is the standard CSS px-to-inch
+// reference; there is no real DPI concept until export, at which point
+// the requested output resolution is applied (see exportAsPDF).
+// ---------------------------------------------------------------------
+
+const PX_PER_INCH = 96;
+type DocUnit = 'px' | 'mm' | 'cm' | 'in';
+const UNIT_FACTORS: Record<DocUnit, number> = {
+  px: 1,
+  in: PX_PER_INCH,
+  cm: PX_PER_INCH / 2.54,
+  mm: PX_PER_INCH / 25.4,
+};
+
+function pxToUnit(px: number, unit: DocUnit) {
+  return px / UNIT_FACTORS[unit];
+}
+
+function unitToPx(value: number, unit: DocUnit) {
+  return value * UNIT_FACTORS[unit];
+}
+
+function formatUnit(px: number, unit: DocUnit) {
+  const v = pxToUnit(px, unit);
+  return unit === 'px' ? Math.round(v).toString() : v.toFixed(2);
+}
+
+// Width/height in px, accounting for scale. Handles the legacy 'circle'
+// type (radius-based) separately from every other object, which uses
+// fabric's standard width/height fields.
+function getObjectPixelSize(obj: any): { w: number; h: number } {
+  if (!obj) return { w: 0, h: 0 };
+  if (obj.type === 'circle') {
+    const d = (obj.radius || 0) * 2;
+    return { w: d * (obj.scaleX || 1), h: d * (obj.scaleY || 1) };
+  }
+  return {
+    w: (obj.width || 0) * (obj.scaleX || 1),
+    h: (obj.height || 0) * (obj.scaleY || 1),
+  };
+}
+
 function EditorContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -148,6 +319,14 @@ function EditorContent() {
   const [renameValue, setRenameValue] = useState('');
   const dragLayerIndex = useRef<number | null>(null);
 
+  // Document display unit for the Transform panel + live drag tooltip.
+  // Purely a display/input convenience — geometry stays in px internally.
+  const [unit, setUnit] = useState<DocUnit>('px');
+  const unitRef = useRef<DocUnit>(unit);
+  useEffect(() => {
+    unitRef.current = unit;
+  }, [unit]);
+
   const historyRef = useRef<{ stack: string[]; index: number; suspend: boolean }>({
     stack: [],
     index: -1,
@@ -155,6 +334,12 @@ function EditorContent() {
   });
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
+
+  // Set true for the duration of a drag-to-create gesture so the
+  // intermediate remove/add churn of the live preview doesn't spam the
+  // undo stack with dozens of in-progress states. A single history entry
+  // is pushed explicitly once the shape is finalized on mouse-up.
+  const suppressHistoryRef = useRef(false);
 
   const clipboardRef = useRef<any>(null);
 
@@ -185,6 +370,21 @@ function EditorContent() {
     draggingIndex: number | null;
   }>({ pathObj: null, circles: [], draggingIndex: null });
 
+  // Live drag state for shape tools (rect/ellipse/triangle/polygon/star/line).
+  const shapeDraftRef = useRef<{
+    tool: DrawTool | null;
+    startX: number;
+    startY: number;
+    obj: any | null;
+  }>({ tool: null, startX: 0, startY: 0, obj: null });
+
+  // Live W/H (or length) tooltip shown near the cursor while dragging a
+  // shape tool. Coordinates are page coordinates (clientX/Y) since the
+  // tooltip is a fixed-position overlay, not a canvas object.
+  const [liveDim, setLiveDim] = useState<{ x: number; y: number; w: string; h: string } | null>(
+    null
+  );
+
   const width = parseInt(searchParams.get('w') || '1080');
   const height = parseInt(searchParams.get('h') || '1080');
   const urlDesignId = searchParams.get('designId');
@@ -192,12 +392,13 @@ function EditorContent() {
   const refreshLayers = useCallback(() => {
     const canvas = fabricCanvasRef.current;
     if (!canvas) return;
-    // Anchor-handle circles and the live pen preview are UI overlays, not
-    // real document objects, so they never show up as layers.
+    // Anchor-handle circles, the live pen preview, and in-progress shape
+    // drafts are UI overlays, not real document objects, so they never
+    // show up as layers.
     setLayers(
       canvas
         .getObjects()
-        .filter((o: any) => !o.__isAnchorHandle && !o.__isPenPreview)
+        .filter((o: any) => !o.__isAnchorHandle && !o.__isPenPreview && !o.__isShapeDraft)
         .slice()
         .reverse()
     );
@@ -212,10 +413,10 @@ function EditorContent() {
   const pushHistory = useCallback(() => {
     const canvas = fabricCanvasRef.current;
     const h = historyRef.current;
-    if (!canvas || h.suspend) return;
+    if (!canvas || h.suspend || suppressHistoryRef.current) return;
 
     const json = JSON.stringify(
-      canvas.toJSON(['name', 'locked', 'visible', 'isVectorPath', 'clipPath'])
+      canvas.toJSON(['name', 'locked', 'visible', 'isVectorPath', 'clipPath', '__uid', '__lockRatio'])
     );
     h.stack = h.stack.slice(0, h.index + 1);
     h.stack.push(json);
@@ -367,6 +568,7 @@ function EditorContent() {
         draft.mouseDownPoint = null;
 
         setActiveToolState('select');
+        activeToolRef.current = 'select';
       });
     },
     [clearPenDraft]
@@ -429,6 +631,142 @@ function EditorContent() {
     const draft = penDraftRef.current;
     draft.mouseDownPoint = null;
   }, []);
+
+  // ---------------------------------------------------------------------
+  // SHAPE TOOLS — drag-to-create for rect/ellipse/triangle/polygon/star/line
+  // ---------------------------------------------------------------------
+
+  const clearShapeDraft = useCallback(() => {
+    const canvas = fabricCanvasRef.current;
+    const draft = shapeDraftRef.current;
+    if (canvas && draft.obj) canvas.remove(draft.obj);
+    shapeDraftRef.current = { tool: null, startX: 0, startY: 0, obj: null };
+    suppressHistoryRef.current = false;
+    setLiveDim(null);
+  }, []);
+
+  const handleShapeMouseDown = useCallback((opt: any) => {
+    const canvas = fabricCanvasRef.current;
+    if (!canvas) return;
+    const pointer = canvas.getPointer(opt.e);
+    const tool = activeToolRef.current as DrawTool;
+
+    suppressHistoryRef.current = true;
+    shapeDraftRef.current = { tool, startX: pointer.x, startY: pointer.y, obj: null };
+
+    import('fabric').then((mod) => {
+      const F: any = mod.fabric;
+      if (shapeDraftRef.current.tool !== tool) return; // stale async guard
+      const obj =
+        tool === 'line'
+          ? buildDraftShape(F, tool, {
+              left: 0,
+              top: 0,
+              w: 0,
+              h: 0,
+              x1: pointer.x,
+              y1: pointer.y,
+              x2: pointer.x,
+              y2: pointer.y,
+            })
+          : buildDraftShape(F, tool, { left: pointer.x, top: pointer.y, w: 1, h: 1 });
+      obj.__isShapeDraft = true;
+      shapeDraftRef.current.obj = obj;
+      canvas.add(obj);
+      canvas.requestRenderAll();
+    });
+  }, []);
+
+  const handleShapeMouseMove = useCallback((opt: any) => {
+    const canvas = fabricCanvasRef.current;
+    const draft = shapeDraftRef.current;
+    if (!canvas || !draft.tool) return;
+    const pointer = canvas.getPointer(opt.e);
+    const shiftKey = !!opt.e.shiftKey;
+    const altKey = !!opt.e.altKey;
+    const currentUnit = unitRef.current;
+
+    import('fabric').then((mod) => {
+      const F: any = mod.fabric;
+      if (shapeDraftRef.current.tool !== draft.tool) return; // stale async guard
+
+      let newObj: any;
+      let wLabel: string;
+      let hLabel: string;
+
+      if (draft.tool === 'line') {
+        let x2 = pointer.x;
+        let y2 = pointer.y;
+        if (shiftKey) {
+          const dx = pointer.x - draft.startX;
+          const dy = pointer.y - draft.startY;
+          const angle = Math.atan2(dy, dx);
+          const snap = Math.round(angle / (Math.PI / 4)) * (Math.PI / 4);
+          const len = Math.hypot(dx, dy);
+          x2 = draft.startX + Math.cos(snap) * len;
+          y2 = draft.startY + Math.sin(snap) * len;
+        }
+        newObj = buildDraftShape(F, 'line', {
+          left: 0,
+          top: 0,
+          w: 0,
+          h: 0,
+          x1: draft.startX,
+          y1: draft.startY,
+          x2,
+          y2,
+        });
+        wLabel = formatUnit(Math.hypot(x2 - draft.startX, y2 - draft.startY), currentUnit);
+        hLabel = '—';
+      } else {
+        const geo = computeDragGeometry(draft.startX, draft.startY, pointer.x, pointer.y, shiftKey, altKey);
+        newObj = buildDraftShape(F, draft.tool as DrawTool, geo);
+        wLabel = formatUnit(geo.w, currentUnit);
+        hLabel = formatUnit(geo.h, currentUnit);
+      }
+
+      if (shapeDraftRef.current.obj) canvas.remove(shapeDraftRef.current.obj);
+      newObj.__isShapeDraft = true;
+      shapeDraftRef.current.obj = newObj;
+      canvas.add(newObj);
+      canvas.requestRenderAll();
+      setLiveDim({ x: opt.e.clientX, y: opt.e.clientY, w: wLabel, h: hLabel });
+    });
+  }, []);
+
+  const handleShapeMouseUp = useCallback(() => {
+    const canvas = fabricCanvasRef.current;
+    const draft = shapeDraftRef.current;
+    setLiveDim(null);
+    suppressHistoryRef.current = false;
+
+    if (!canvas || !draft.tool || !draft.obj) {
+      shapeDraftRef.current = { tool: null, startX: 0, startY: 0, obj: null };
+      return;
+    }
+
+    const obj = draft.obj;
+    const bw = obj.width || 0;
+    const bh = obj.height || 0;
+
+    // Discard near-zero drags (an accidental click rather than an
+    // intentional drag) instead of leaving a 1px sliver object behind.
+    if (bw < 3 && bh < 3) {
+      canvas.remove(obj);
+    } else {
+      delete obj.__isShapeDraft;
+      obj.set({ selectable: true, evented: true });
+      obj.setCoords();
+      canvas.setActiveObject(obj);
+      refreshLayers();
+      pushHistory();
+      setActiveToolState('select');
+      activeToolRef.current = 'select';
+    }
+
+    canvas.requestRenderAll();
+    shapeDraftRef.current = { tool: null, startX: 0, startY: 0, obj: null };
+  }, [pushHistory, refreshLayers]);
 
   // ---------------------------------------------------------------------
   // DIRECT SELECTION — editable anchor handles on an existing path
@@ -642,9 +980,6 @@ function EditorContent() {
 
       import('fabric').then((mod) => {
         const F: any = mod.fabric;
-        // Gradient coords are defined in the *unscaled* object's own
-        // coordinate space (0,0 to width,height) — fabric applies the
-        // object's transform on top automatically.
         const ow: number = active.width || 1;
         const oh: number = active.height || 1;
         let coords: any;
@@ -691,6 +1026,47 @@ function EditorContent() {
   );
 
   // ---------------------------------------------------------------------
+  // EXACT TRANSFORM — X/Y/W/H/Rotation with unit conversion + aspect lock
+  // ---------------------------------------------------------------------
+
+  const applyExactSize = useCallback(
+    (newWpx: number | null, newHpx: number | null) => {
+      const canvas = fabricCanvasRef.current;
+      const active = canvas?.getActiveObject();
+      if (!active || active.locked) return;
+
+      const { w: curW, h: curH } = getObjectPixelSize(active);
+      let w = newWpx;
+      let h = newHpx;
+
+      if (active.__lockRatio) {
+        if (w != null && h == null && curW > 0) h = (w / curW) * curH;
+        if (h != null && w == null && curH > 0) w = (h / curH) * curW;
+      }
+
+      const baseW = active.type === 'circle' ? (active.radius || 1) * 2 : active.width || 1;
+      const baseH = active.type === 'circle' ? (active.radius || 1) * 2 : active.height || 1;
+
+      if (w != null) active.set({ scaleX: w / baseW });
+      if (h != null) active.set({ scaleY: h / baseH });
+
+      active.setCoords();
+      canvas.requestRenderAll();
+      bumpSel();
+      pushHistory();
+    },
+    [pushHistory]
+  );
+
+  const toggleLockRatio = () => {
+    const canvas = fabricCanvasRef.current;
+    const active = canvas?.getActiveObject();
+    if (!active) return;
+    active.__lockRatio = !active.__lockRatio;
+    bumpSel();
+  };
+
+  // ---------------------------------------------------------------------
   // TOOL SWITCHING
   // ---------------------------------------------------------------------
 
@@ -700,9 +1076,10 @@ function EditorContent() {
       activeToolRef.current = tool;
       setActiveToolState(tool);
 
-      // Leaving pen mid-draw cancels the in-progress path.
+      // Leaving a tool mid-gesture cancels whatever it was in the middle of.
       if (tool !== 'pen') clearPenDraft();
       if (tool !== 'direct') clearAnchorHandles();
+      clearShapeDraft();
 
       if (!canvas) return;
 
@@ -719,6 +1096,12 @@ function EditorContent() {
         });
         canvas.defaultCursor = 'default';
         canvas.hoverCursor = 'move';
+      } else if (isDrawTool(tool)) {
+        canvas.discardActiveObject();
+        canvas.selection = false;
+        canvas.forEachObject((o: any) => (o.selectable = false));
+        canvas.defaultCursor = 'crosshair';
+        canvas.hoverCursor = 'crosshair';
       } else {
         canvas.selection = true;
         canvas.forEachObject((o: any) => {
@@ -729,7 +1112,7 @@ function EditorContent() {
       }
       canvas.requestRenderAll();
     },
-    [clearPenDraft, clearAnchorHandles]
+    [clearPenDraft, clearAnchorHandles, clearShapeDraft]
   );
 
   useEffect(() => {
@@ -744,6 +1127,16 @@ function EditorContent() {
 
       const onLayersChanged = () => refreshLayers();
       const onHistoryChanged = () => pushHistory();
+
+      // Every real document object gets a stable id the first time it's
+      // added, so the Properties panel can key its inputs to "which
+      // object is selected" rather than remounting on every keystroke.
+      canvas.on('object:added', (e: any) => {
+        const obj: any = e.target;
+        if (obj && !obj.__isAnchorHandle && !obj.__isPenPreview && !obj.__isShapeDraft && !obj.__uid) {
+          obj.__uid = `obj_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+        }
+      });
 
       canvas.on('object:added', onLayersChanged);
       canvas.on('object:removed', onLayersChanged);
@@ -783,12 +1176,15 @@ function EditorContent() {
 
       canvas.on('mouse:down', (opt: any) => {
         if (activeToolRef.current === 'pen') handlePenMouseDown(opt);
+        else if (isDrawTool(activeToolRef.current)) handleShapeMouseDown(opt);
       });
       canvas.on('mouse:move', (opt: any) => {
         if (activeToolRef.current === 'pen') handlePenMouseMove(opt);
+        else if (isDrawTool(activeToolRef.current)) handleShapeMouseMove(opt);
       });
       canvas.on('mouse:up', () => {
         if (activeToolRef.current === 'pen') handlePenMouseUp();
+        else if (isDrawTool(activeToolRef.current)) handleShapeMouseUp();
       });
 
       if (urlDesignId) {
@@ -808,7 +1204,7 @@ function EditorContent() {
                 historyRef.current.suspend = false;
                 historyRef.current.stack = [
                   JSON.stringify(
-                    canvas.toJSON(['name', 'locked', 'visible', 'isVectorPath', 'clipPath'])
+                    canvas.toJSON(['name', 'locked', 'visible', 'isVectorPath', 'clipPath', '__uid', '__lockRatio'])
                   ),
                 ];
                 historyRef.current.index = 0;
@@ -822,7 +1218,7 @@ function EditorContent() {
       } else {
         historyRef.current.stack = [
           JSON.stringify(
-            canvas.toJSON(['name', 'locked', 'visible', 'isVectorPath', 'clipPath'])
+            canvas.toJSON(['name', 'locked', 'visible', 'isVectorPath', 'clipPath', '__uid', '__lockRatio'])
           ),
         ];
         historyRef.current.index = 0;
@@ -840,6 +1236,10 @@ function EditorContent() {
 
   const scale = zoom / 100;
 
+  // Text and Image remain click-to-place for now (unchanged from before).
+  // A drag-to-create area-text box and true point-text click-to-type are
+  // a separate, scoped piece of work (Phase 6 in the spec) — flagging
+  // rather than silently leaving the toolbar button lying about it.
   const addText = () => {
     import('fabric').then((mod) => {
       const text = new mod.fabric.IText('Double-click to edit', {
@@ -851,91 +1251,6 @@ function EditorContent() {
       });
       fabricCanvasRef.current.add(text);
       fabricCanvasRef.current.setActiveObject(text);
-    });
-  };
-
-  const addRect = () => {
-    import('fabric').then((mod) => {
-      const rect = new mod.fabric.Rect({
-        left: width / 2 - 75,
-        top: height / 2 - 75,
-        width: 150,
-        height: 150,
-        fill: '#3FA9E8',
-      });
-      fabricCanvasRef.current.add(rect);
-      fabricCanvasRef.current.setActiveObject(rect);
-    });
-  };
-
-  const addCircle = () => {
-    import('fabric').then((mod) => {
-      const circle = new mod.fabric.Circle({
-        left: width / 2 - 75,
-        top: height / 2 - 75,
-        radius: 75,
-        fill: '#7ED33E',
-      });
-      fabricCanvasRef.current.add(circle);
-      fabricCanvasRef.current.setActiveObject(circle);
-    });
-  };
-
-  // --- NEW: Triangle, Line, Polygon, Star — all real, editable Fabric
-  // objects that participate in history/layers/export exactly like the
-  // existing shapes above. ---
-
-  const addTriangle = () => {
-    import('fabric').then((mod) => {
-      const tri = new mod.fabric.Triangle({
-        left: width / 2 - 75,
-        top: height / 2 - 75,
-        width: 150,
-        height: 150,
-        fill: '#E85D75',
-      });
-      fabricCanvasRef.current.add(tri);
-      fabricCanvasRef.current.setActiveObject(tri);
-    });
-  };
-
-  const addLine = () => {
-    import('fabric').then((mod) => {
-      const line = new mod.fabric.Line(
-        [width / 2 - 100, height / 2, width / 2 + 100, height / 2],
-        {
-          stroke: '#1A1A1A',
-          strokeWidth: 4,
-        }
-      );
-      fabricCanvasRef.current.add(line);
-      fabricCanvasRef.current.setActiveObject(line);
-    });
-  };
-
-  const addPolygon = () => {
-    import('fabric').then((mod) => {
-      const points = regularPolygonPoints(6, 75); // hexagon
-      const poly = new mod.fabric.Polygon(points, {
-        left: width / 2 - 75,
-        top: height / 2 - 75,
-        fill: '#9B6BD6',
-      });
-      fabricCanvasRef.current.add(poly);
-      fabricCanvasRef.current.setActiveObject(poly);
-    });
-  };
-
-  const addStar = () => {
-    import('fabric').then((mod) => {
-      const points = starPoints(5, 75, 30);
-      const star = new mod.fabric.Polygon(points, {
-        left: width / 2 - 75,
-        top: height / 2 - 75,
-        fill: '#F5A623',
-      });
-      fabricCanvasRef.current.add(star);
-      fabricCanvasRef.current.setActiveObject(star);
     });
   };
 
@@ -980,6 +1295,7 @@ function EditorContent() {
     active.clone((cloned: any) => {
       canvas.discardActiveObject();
       cloned.set({ left: (cloned.left || 0) + 20, top: (cloned.top || 0) + 20, evented: true, locked: false });
+      delete cloned.__uid;
       if (cloned.type === 'activeSelection') {
         cloned.canvas = canvas;
         cloned.forEachObject((obj: any) => canvas.add(obj));
@@ -1007,6 +1323,7 @@ function EditorContent() {
     clipboardRef.current.clone((cloned: any) => {
       canvas.discardActiveObject();
       cloned.set({ left: (cloned.left || 0) + 20, top: (cloned.top || 0) + 20, evented: true });
+      delete cloned.__uid;
       if (cloned.type === 'activeSelection') {
         cloned.canvas = canvas;
         cloned.forEachObject((obj: any) => canvas.add(obj));
@@ -1261,6 +1578,13 @@ function EditorContent() {
         }
       }
 
+      if (canUseToolShortcuts && isDrawTool(activeToolRef.current) && e.key === 'Escape') {
+        e.preventDefault();
+        clearShapeDraft();
+        setActiveTool('select');
+        return;
+      }
+
       if (canUseToolShortcuts && e.shiftKey && e.key === 'Enter') {
         e.preventDefault();
         applyPathAsMask();
@@ -1286,7 +1610,7 @@ function EditorContent() {
         e.preventDefault();
         const objs = canvas
           .getObjects()
-          .filter((o: any) => !o.locked && !o.__isAnchorHandle && !o.__isPenPreview);
+          .filter((o: any) => !o.locked && !o.__isAnchorHandle && !o.__isPenPreview && !o.__isShapeDraft);
         if (objs.length) {
           canvas.discardActiveObject();
           const sel = new (window as any).fabric.ActiveSelection(objs, { canvas });
@@ -1335,7 +1659,12 @@ function EditorContent() {
         toggleHideSelected();
         return;
       }
-      if ((e.key === 'Delete' || e.key === 'Backspace') && !isEditingText && activeToolRef.current !== 'pen') {
+      if (
+        (e.key === 'Delete' || e.key === 'Backspace') &&
+        !isEditingText &&
+        activeToolRef.current !== 'pen' &&
+        !isDrawTool(activeToolRef.current)
+      ) {
         e.preventDefault();
         deleteSelected();
         return;
@@ -1381,6 +1710,7 @@ function EditorContent() {
         active &&
         !active.locked &&
         activeToolRef.current !== 'pen' &&
+        !isDrawTool(activeToolRef.current) &&
         e.key.startsWith('Arrow')
       ) {
         const step = e.shiftKey ? 10 : 1;
@@ -1398,7 +1728,7 @@ function EditorContent() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [undo, redo, finishPenPath, clearPenDraft, applyPathAsMask, setActiveTool, clearAnchorHandles]);
+  }, [undo, redo, finishPenPath, clearPenDraft, applyPathAsMask, setActiveTool, clearAnchorHandles, clearShapeDraft]);
 
   const saveDesign = async () => {
     setSaving(true);
@@ -1416,6 +1746,8 @@ function EditorContent() {
       'visible',
       'isVectorPath',
       'clipPath',
+      '__uid',
+      '__lockRatio',
     ]);
 
     const payload: any = {
@@ -1507,6 +1839,17 @@ function EditorContent() {
       );
     }
 
+    if (isDrawTool(activeTool)) {
+      return (
+        <p className="text-xs text-gray-500">
+          {TOOL_LABELS[activeTool as DrawTool]} tool active. Click and drag on the canvas to draw.
+          Hold <kbd className="bg-gray-100 border rounded px-1">Shift</kbd> to constrain
+          proportions, <kbd className="bg-gray-100 border rounded px-1">Alt/Option</kbd> to draw
+          from the center. <kbd className="bg-gray-100 border rounded px-1">Esc</kbd> cancels.
+        </p>
+      );
+    }
+
     if (!selected) {
       return <p className="text-xs text-gray-400">Select an object to edit its properties.</p>;
     }
@@ -1519,7 +1862,6 @@ function EditorContent() {
     const hasFillStroke = !isImage;
     const isLocked = !!selected.locked;
 
-    // Gradient fill state, derived straight from the live fabric object.
     const currentFill = selected.fill;
     const isGradientFill = !!(currentFill && typeof currentFill === 'object' && (currentFill as any).type);
     const gradType: 'linear' | 'radial' = isGradientFill ? (currentFill as any).type : 'linear';
@@ -1527,12 +1869,107 @@ function EditorContent() {
       ? (currentFill as any).colorStops
       : [{ offset: 0, color: '#3FA9E8' }, { offset: 1, color: '#7ED33E' }];
 
+    const pixelSize = getObjectPixelSize(selected);
+
     return (
       <div className="flex flex-col gap-4">
         {isLocked && (
           <div className="flex items-center gap-2 text-xs bg-amber-50 border border-amber-200 text-amber-700 rounded px-2 py-1.5">
             <Lock size={12} />
             Locked — unlock to edit (Ctrl/Cmd+L)
+          </div>
+        )}
+
+        {!isMultiple && (
+          <div
+            key={`${selected.__uid || 'obj'}-${unit}`}
+            className="border rounded-lg p-3 bg-gray-50 flex flex-col gap-2"
+          >
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-semibold text-gray-500">Transform</p>
+              <button
+                type="button"
+                onClick={toggleLockRatio}
+                title={selected.__lockRatio ? 'Unlock aspect ratio' : 'Lock aspect ratio'}
+                className={`hover:text-gray-700 ${selected.__lockRatio ? 'text-blue-600' : 'text-gray-400'}`}
+              >
+                {selected.__lockRatio ? <Lock size={13} /> : <Unlock size={13} />}
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="text-[10px] text-gray-500 block mb-0.5">X ({unit})</label>
+                <input
+                  type="text"
+                  disabled={isLocked}
+                  defaultValue={formatUnit(selected.left ?? 0, unit)}
+                  onBlur={(e) => {
+                    const val = parseFloat(e.target.value);
+                    if (!isNaN(val)) applyProp({ left: unitToPx(val, unit) });
+                  }}
+                  onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
+                  className="w-full text-xs border rounded px-2 py-1 disabled:opacity-40"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] text-gray-500 block mb-0.5">Y ({unit})</label>
+                <input
+                  type="text"
+                  disabled={isLocked}
+                  defaultValue={formatUnit(selected.top ?? 0, unit)}
+                  onBlur={(e) => {
+                    const val = parseFloat(e.target.value);
+                    if (!isNaN(val)) applyProp({ top: unitToPx(val, unit) });
+                  }}
+                  onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
+                  className="w-full text-xs border rounded px-2 py-1 disabled:opacity-40"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] text-gray-500 block mb-0.5">W ({unit})</label>
+                <input
+                  type="text"
+                  disabled={isLocked}
+                  defaultValue={formatUnit(pixelSize.w, unit)}
+                  onBlur={(e) => {
+                    const val = parseFloat(e.target.value);
+                    if (!isNaN(val)) applyExactSize(unitToPx(val, unit), null);
+                  }}
+                  onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
+                  className="w-full text-xs border rounded px-2 py-1 disabled:opacity-40"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] text-gray-500 block mb-0.5">H ({unit})</label>
+                <input
+                  type="text"
+                  disabled={isLocked}
+                  defaultValue={formatUnit(pixelSize.h, unit)}
+                  onBlur={(e) => {
+                    const val = parseFloat(e.target.value);
+                    if (!isNaN(val)) applyExactSize(null, unitToPx(val, unit));
+                  }}
+                  onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
+                  className="w-full text-xs border rounded px-2 py-1 disabled:opacity-40"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="text-[10px] text-gray-500 block mb-0.5">Rotation (°)</label>
+              <input
+                type="text"
+                disabled={isLocked}
+                defaultValue={Math.round(selected.angle || 0).toString()}
+                onBlur={(e) => {
+                  const val = parseFloat(e.target.value);
+                  if (!isNaN(val)) applyProp({ angle: val });
+                }}
+                onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
+                className="w-full text-xs border rounded px-2 py-1 disabled:opacity-40"
+              />
+            </div>
           </div>
         )}
 
@@ -1946,6 +2383,20 @@ function EditorContent() {
         </div>
 
         <div className="flex items-center gap-3">
+          <label className="text-xs text-gray-500">Units</label>
+          <select
+            value={unit}
+            onChange={(e) => setUnit(e.target.value as DocUnit)}
+            className="text-xs border rounded px-1.5 py-1"
+          >
+            <option value="px">px</option>
+            <option value="mm">mm</option>
+            <option value="cm">cm</option>
+            <option value="in">in</option>
+          </select>
+        </div>
+
+        <div className="flex items-center gap-3">
           <button onClick={() => setZoom(Math.max(10, zoom - 10))} className="px-2 py-1 border rounded">-</button>
           <span className="text-sm text-gray-600 w-12 text-center">{zoom}%</span>
           <button onClick={() => setZoom(Math.min(200, zoom + 10))} className="px-2 py-1 border rounded">+</button>
@@ -2008,27 +2459,51 @@ function EditorContent() {
             <Type size={18} />
             <span>Text</span>
           </button>
-          <button onClick={addRect} className="flex flex-col items-center gap-1 text-gray-700">
+          <button
+            onClick={() => setActiveTool('rect')}
+            title="Rectangle — click and drag on canvas"
+            className={`flex flex-col items-center gap-1 ${activeTool === 'rect' ? 'text-blue-600' : 'text-gray-700'}`}
+          >
             <Square size={18} />
             <span>Square</span>
           </button>
-          <button onClick={addCircle} className="flex flex-col items-center gap-1 text-gray-700">
+          <button
+            onClick={() => setActiveTool('ellipse')}
+            title="Ellipse — click and drag on canvas"
+            className={`flex flex-col items-center gap-1 ${activeTool === 'ellipse' ? 'text-blue-600' : 'text-gray-700'}`}
+          >
             <CircleIcon size={18} />
             <span>Circle</span>
           </button>
-          <button onClick={addTriangle} title="Triangle" className="flex flex-col items-center gap-1 text-gray-700">
+          <button
+            onClick={() => setActiveTool('triangle')}
+            title="Triangle — click and drag on canvas"
+            className={`flex flex-col items-center gap-1 ${activeTool === 'triangle' ? 'text-blue-600' : 'text-gray-700'}`}
+          >
             <TriangleIcon size={18} />
             <span>Triangle</span>
           </button>
-          <button onClick={addLine} title="Line" className="flex flex-col items-center gap-1 text-gray-700">
+          <button
+            onClick={() => setActiveTool('line')}
+            title="Line — click and drag on canvas"
+            className={`flex flex-col items-center gap-1 ${activeTool === 'line' ? 'text-blue-600' : 'text-gray-700'}`}
+          >
             <LineIcon size={18} />
             <span>Line</span>
           </button>
-          <button onClick={addPolygon} title="Polygon" className="flex flex-col items-center gap-1 text-gray-700">
+          <button
+            onClick={() => setActiveTool('polygon')}
+            title="Polygon — click and drag on canvas"
+            className={`flex flex-col items-center gap-1 ${activeTool === 'polygon' ? 'text-blue-600' : 'text-gray-700'}`}
+          >
             <PolygonIcon size={18} />
             <span>Polygon</span>
           </button>
-          <button onClick={addStar} title="Star" className="flex flex-col items-center gap-1 text-gray-700">
+          <button
+            onClick={() => setActiveTool('star')}
+            title="Star — click and drag on canvas"
+            className={`flex flex-col items-center gap-1 ${activeTool === 'star' ? 'text-blue-600' : 'text-gray-700'}`}
+          >
             <StarIcon size={18} />
             <span>Star</span>
           </button>
@@ -2184,6 +2659,21 @@ function EditorContent() {
           </div>
         </div>
       </div>
+
+      {liveDim && (
+        <div
+          style={{ position: 'fixed', left: liveDim.x + 16, top: liveDim.y + 16, pointerEvents: 'none' }}
+          className="z-50 bg-black/80 text-white text-[11px] font-mono px-2 py-1 rounded shadow"
+        >
+          W: {liveDim.w} {unit}
+          {liveDim.h !== '—' && (
+            <>
+              {' '}
+              · H: {liveDim.h} {unit}
+            </>
+          )}
+        </div>
+      )}
 
       {showShortcuts && (
         <div
