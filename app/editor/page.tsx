@@ -4,434 +4,28 @@ import { useEffect, useRef, useState, useCallback, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { supabase } from '@/lib/supabase';
-import {
-  MousePointer2,
-  Pointer,
-  PenTool as PenToolIcon,
-  Type,
-  Square,
-  Circle as CircleIcon,
-  Triangle as TriangleIcon,
-  Minus as LineIcon,
-  Hexagon as PolygonIcon,
-  Star as StarIcon,
-  ImagePlus,
-  Copy,
-  ArrowUpToLine,
-  ArrowUp,
-  ArrowDown,
-  ArrowDownToLine,
-  Trash2,
-  Lock,
-  Unlock,
-  Eye,
-  EyeOff,
-  Pencil,
-  Check,
-  GripVertical,
-  Keyboard,
-  X,
-  Scissors,
-} from 'lucide-react';
+import { Keyboard } from 'lucide-react';
 
-const MAX_HISTORY = 100;
+import { ToolMode, DocUnit, isDrawTool } from '@/lib/editor/types';
+import { getAbsolutePolygonPoints, multiPolygonToPathD } from '@/lib/editor/geometry';
 
-const FONT_OPTIONS = [
-  'Arial',
-  'Helvetica',
-  'Georgia',
-  'Times New Roman',
-  'Courier New',
-  'Verdana',
-  'Trebuchet MS',
-  'Impact',
-];
+import { useEditorHistory } from '@/hooks/useEditorHistory';
+import { usePenTool } from '@/hooks/usePenTool';
+import { useShapeTools } from '@/hooks/useShapeTools';
+import { useDirectSelection } from '@/hooks/useDirectSelection';
 
-// ---------------------------------------------------------------------
-// Tool model. Draw tools (rect/ellipse/triangle/polygon/star/line) are a
-// separate family from select/direct/pen: activating one only arms the
-// cursor. The actual object is created by a mouse-down -> drag ->
-// mouse-up gesture on the canvas, never by the toolbar click itself.
-// ---------------------------------------------------------------------
-
-type DrawTool = 'rect' | 'ellipse' | 'triangle' | 'polygon' | 'star' | 'line';
-type ToolMode = 'select' | 'pen' | 'direct' | DrawTool;
-
-const DRAW_TOOLS: DrawTool[] = ['rect', 'ellipse', 'triangle', 'polygon', 'star', 'line'];
-const isDrawTool = (t: string): t is DrawTool => (DRAW_TOOLS as string[]).includes(t);
-
-const TOOL_LABELS: Record<DrawTool, string> = {
-  rect: 'Rectangle',
-  ellipse: 'Ellipse',
-  triangle: 'Triangle',
-  polygon: 'Polygon',
-  star: 'Star',
-  line: 'Line',
-};
-
-// Anchor point for an in-progress or already-created vector path.
-// handleOut is the outgoing Bezier control point for the segment leaving
-// this anchor; handleIn is the incoming control point for the segment
-// arriving at this anchor. When absent, the segment behaves as a
-// straight corner rather than a curve.
-interface PenAnchor {
-  x: number;
-  y: number;
-  handleIn?: { x: number; y: number };
-  handleOut?: { x: number; y: number };
-}
-
-const ANCHOR_HIT_RADIUS = 8; // px, in canvas-native coordinates
-const ANCHOR_HANDLE_SIZE = 8;
-
-const SHORTCUTS: { keys: string; label: string }[] = [
-  { keys: 'V', label: 'Selection tool' },
-  { keys: 'A', label: 'Direct Selection tool' },
-  { keys: 'P', label: 'Pen tool' },
-  { keys: 'Enter', label: 'Finish open path (Pen tool)' },
-  { keys: 'Esc', label: 'Cancel current drawing / deselect' },
-  { keys: 'Shift + drag', label: 'Constrain proportions (shape tools)' },
-  { keys: 'Alt/Option + drag', label: 'Draw from center (shape tools)' },
-  { keys: 'Shift + Enter', label: 'Apply path as mask to selected image' },
-  { keys: 'Ctrl/Cmd + Z', label: 'Undo' },
-  { keys: 'Ctrl/Cmd + Shift + Z', label: 'Redo' },
-  { keys: 'Ctrl/Cmd + Y', label: 'Redo (alt)' },
-  { keys: 'Ctrl/Cmd + S', label: 'Save design' },
-  { keys: 'Ctrl/Cmd + A', label: 'Select all' },
-  { keys: 'Ctrl/Cmd + C', label: 'Copy' },
-  { keys: 'Ctrl/Cmd + V', label: 'Paste' },
-  { keys: 'Ctrl/Cmd + D', label: 'Duplicate' },
-  { keys: 'Delete / Backspace', label: 'Delete selection' },
-  { keys: 'Ctrl/Cmd + G', label: 'Group selection' },
-  { keys: 'Ctrl/Cmd + Shift + G', label: 'Ungroup' },
-  { keys: 'Ctrl/Cmd + ]', label: 'Bring forward' },
-  { keys: 'Ctrl/Cmd + [', label: 'Send backward' },
-  { keys: 'Ctrl/Cmd + Shift + ]', label: 'Bring to front' },
-  { keys: 'Ctrl/Cmd + Shift + [', label: 'Send to back' },
-  { keys: 'Ctrl/Cmd + L', label: 'Lock / unlock selection' },
-  { keys: 'Ctrl/Cmd + H', label: 'Hide selection' },
-  { keys: 'Arrow keys', label: 'Nudge 1px' },
-  { keys: 'Shift + Arrow keys', label: 'Nudge 10px' },
-  { keys: 'Ctrl/Cmd + "+"', label: 'Zoom in' },
-  { keys: 'Ctrl/Cmd + "-"', label: 'Zoom out' },
-  { keys: 'Ctrl/Cmd + 0', label: 'Reset zoom to 100%' },
-  { keys: '?', label: 'Show this shortcuts panel' },
-];
-
-// ---------------------------------------------------------------------
-// Geometry helpers — pure functions, no fabric dependency.
-// ---------------------------------------------------------------------
-
-function regularPolygonPoints(sides: number, radius: number) {
-  const pts: { x: number; y: number }[] = [];
-  for (let i = 0; i < sides; i++) {
-    const angle = (Math.PI * 2 * i) / sides - Math.PI / 2;
-    pts.push({ x: Math.cos(angle) * radius + radius, y: Math.sin(angle) * radius + radius });
-  }
-  return pts;
-}
-
-function starPoints(spikes: number, outerRadius: number, innerRadius: number) {
-  const pts: { x: number; y: number }[] = [];
-  const step = Math.PI / spikes;
-  let rot = -Math.PI / 2;
-  for (let i = 0; i < spikes; i++) {
-    pts.push({ x: Math.cos(rot) * outerRadius + outerRadius, y: Math.sin(rot) * outerRadius + outerRadius });
-    rot += step;
-    pts.push({
-      x: Math.cos(rot) * innerRadius + outerRadius,
-      y: Math.sin(rot) * innerRadius + outerRadius,
-    });
-    rot += step;
-  }
-  return pts;
-}
-
-// Computes the bounding box (left/top/w/h) for a rect-like drag gesture,
-// honoring Shift (constrain to square/equal w+h) and Alt/Option (draw
-// outward from the mouse-down point instead of from a corner).
-function computeDragGeometry(
-  startX: number,
-  startY: number,
-  curX: number,
-  curY: number,
-  shiftKey: boolean,
-  altKey: boolean
-) {
-  const dx = curX - startX;
-  const dy = curY - startY;
-  let w = Math.abs(dx);
-  let h = Math.abs(dy);
-  if (shiftKey) {
-    const m = Math.max(w, h);
-    w = m;
-    h = m;
-  }
-  let left = dx >= 0 ? startX : startX - w;
-  let top = dy >= 0 ? startY : startY - h;
-  if (altKey) {
-    left = startX - w;
-    top = startY - h;
-    w *= 2;
-    h *= 2;
-  }
-  return { left, top, w, h };
-}
-
-interface DraftGeometry {
-  left: number;
-  top: number;
-  w: number;
-  h: number;
-  x1?: number;
-  y1?: number;
-  x2?: number;
-  y2?: number;
-}
-
-// Builds a fresh, non-interactive preview object for the given draw tool
-// and geometry. Shape tools rebuild this object on every mousemove frame
-// (remove old preview, add new one) rather than mutating one object in
-// place — the same pattern the existing Pen tool preview already uses,
-// and it sidesteps fabric's internal width/height recalculation quirks
-// for Line and Polygon objects when their raw coordinates change.
-function buildDraftShape(F: any, tool: DrawTool, geo: DraftGeometry) {
-  const common = { selectable: false, evented: false, objectCaching: false };
-  switch (tool) {
-    case 'rect':
-      return new F.Rect({
-        ...common,
-        left: geo.left,
-        top: geo.top,
-        width: Math.max(geo.w, 1),
-        height: Math.max(geo.h, 1),
-        fill: '#3FA9E8',
-      });
-    case 'ellipse':
-      return new F.Ellipse({
-        ...common,
-        left: geo.left,
-        top: geo.top,
-        rx: Math.max(geo.w / 2, 0.5),
-        ry: Math.max(geo.h / 2, 0.5),
-        fill: '#7ED33E',
-      });
-    case 'triangle':
-      return new F.Triangle({
-        ...common,
-        left: geo.left,
-        top: geo.top,
-        width: Math.max(geo.w, 1),
-        height: Math.max(geo.h, 1),
-        fill: '#E85D75',
-      });
-    case 'polygon': {
-      const r = Math.max(Math.min(geo.w, geo.h) / 2, 1);
-      return new F.Polygon(regularPolygonPoints(6, r), {
-        ...common,
-        left: geo.left,
-        top: geo.top,
-        fill: '#9B6BD6',
-      });
-    }
-    case 'star': {
-      const r = Math.max(Math.min(geo.w, geo.h) / 2, 1);
-      return new F.Polygon(starPoints(5, r, r * 0.45), {
-        ...common,
-        left: geo.left,
-        top: geo.top,
-        fill: '#F5A623',
-      });
-    }
-    case 'line':
-      return new F.Line([geo.x1 ?? 0, geo.y1 ?? 0, geo.x2 ?? 0, geo.y2 ?? 0], {
-        ...common,
-        stroke: '#1A1A1A',
-        strokeWidth: 4,
-      });
-  }
-}
-
-// ---------------------------------------------------------------------
-// Document unit conversion. Internally every object's geometry stays in
-// CSS pixels (fabric's native unit) — these helpers only convert for
-// *display and input*. PX_PER_INCH=96 is the standard CSS px-to-inch
-// reference; there is no real DPI concept until export, at which point
-// the requested output resolution is applied (see exportAsPDF).
-// ---------------------------------------------------------------------
-
-const PX_PER_INCH = 96;
-type DocUnit = 'px' | 'mm' | 'cm' | 'in';
-const UNIT_FACTORS: Record<DocUnit, number> = {
-  px: 1,
-  in: PX_PER_INCH,
-  cm: PX_PER_INCH / 2.54,
-  mm: PX_PER_INCH / 25.4,
-};
-
-function pxToUnit(px: number, unit: DocUnit) {
-  return px / UNIT_FACTORS[unit];
-}
-
-function unitToPx(value: number, unit: DocUnit) {
-  return value * UNIT_FACTORS[unit];
-}
-
-function formatUnit(px: number, unit: DocUnit) {
-  const v = pxToUnit(px, unit);
-  return unit === 'px' ? Math.round(v).toString() : v.toFixed(2);
-}
-
-// Width/height in px, accounting for scale. Handles the legacy 'circle'
-// type (radius-based) separately from every other object, which uses
-// fabric's standard width/height fields.
-function getObjectPixelSize(obj: any): { w: number; h: number } {
-  if (!obj) return { w: 0, h: 0 };
-  if (obj.type === 'circle') {
-    const d = (obj.radius || 0) * 2;
-    return { w: d * (obj.scaleX || 1), h: d * (obj.scaleY || 1) };
-  }
-  return {
-    w: (obj.width || 0) * (obj.scaleX || 1),
-    h: (obj.height || 0) * (obj.scaleY || 1),
-  };
-}
-
-// ---------------------------------------------------------------------
-// SHAPE BUILDER (Pathfinder-style boolean ops) geometry helpers.
-//
-// These flatten any supported object type into a polygon expressed in
-// *canvas absolute* coordinates, so Unite/Subtract/Intersect/Exclude can
-// run on real geometry rather than bounding boxes. Curves (Pen paths)
-// are sampled into short line segments — a standard, accepted way to
-// feed curved vector shapes into a polygon-clipping algorithm; the
-// result is still a real editable vector Path afterward, just built
-// from line segments instead of Bezier curves.
-//
-// fabric.Object.calcTransformMatrix() maps *center-relative* local
-// coordinates to canvas space (this matches the convention the existing
-// Direct Selection code already relies on for fabric.Path's pathOffset),
-// so every shape type below is expressed relative to its own center
-// before the matrix is applied.
-// ---------------------------------------------------------------------
-
-function flattenPathToLocalPoints(obj: any): { x: number; y: number }[] {
-  const offset = obj.pathOffset || { x: 0, y: 0 };
-  const commands: any[] = obj.path || [];
-  const pts: { x: number; y: number }[] = [];
-  let cur = { x: 0, y: 0 };
-
-  const cubic = (p0: any, p1: any, p2: any, p3: any, steps = 12) => {
-    for (let i = 1; i <= steps; i++) {
-      const t = i / steps;
-      const mt = 1 - t;
-      pts.push({
-        x: mt * mt * mt * p0.x + 3 * mt * mt * t * p1.x + 3 * mt * t * t * p2.x + t * t * t * p3.x,
-        y: mt * mt * mt * p0.y + 3 * mt * mt * t * p1.y + 3 * mt * t * t * p2.y + t * t * t * p3.y,
-      });
-    }
-  };
-
-  commands.forEach((cmd: any[]) => {
-    const type = cmd[0];
-    if (type === 'M' || type === 'L') {
-      cur = { x: cmd[1], y: cmd[2] };
-      pts.push({ ...cur });
-    } else if (type === 'C') {
-      const p1 = { x: cmd[1], y: cmd[2] };
-      const p2 = { x: cmd[3], y: cmd[4] };
-      const p3 = { x: cmd[5], y: cmd[6] };
-      cubic(cur, p1, p2, p3);
-      cur = p3;
-    } else if (type === 'Q') {
-      const p1 = { x: cmd[1], y: cmd[2] };
-      const p2 = { x: cmd[3], y: cmd[4] };
-      const steps = 12;
-      for (let i = 1; i <= steps; i++) {
-        const t = i / steps;
-        const mt = 1 - t;
-        pts.push({
-          x: mt * mt * cur.x + 2 * mt * t * p1.x + t * t * p2.x,
-          y: mt * mt * cur.y + 2 * mt * t * p1.y + t * t * p2.y,
-        });
-      }
-      cur = p2;
-    }
-  });
-
-  return pts.map((p) => ({ x: p.x - offset.x, y: p.y - offset.y }));
-}
-
-function getAbsolutePolygonPoints(obj: any, F: any): [number, number][] {
-  const w = obj.width || 0;
-  const h = obj.height || 0;
-  let localPts: { x: number; y: number }[] = [];
-
-  if (obj.type === 'rect') {
-    localPts = [
-      { x: 0, y: 0 },
-      { x: w, y: 0 },
-      { x: w, y: h },
-      { x: 0, y: h },
-    ].map((p) => ({ x: p.x - w / 2, y: p.y - h / 2 }));
-  } else if (obj.type === 'triangle') {
-    localPts = [
-      { x: w / 2, y: 0 },
-      { x: w, y: h },
-      { x: 0, y: h },
-    ].map((p) => ({ x: p.x - w / 2, y: p.y - h / 2 }));
-  } else if (obj.type === 'circle') {
-    const r = obj.radius || 0;
-    const N = 64;
-    for (let i = 0; i < N; i++) {
-      const a = (i / N) * 2 * Math.PI;
-      localPts.push({ x: Math.cos(a) * r, y: Math.sin(a) * r });
-    }
-  } else if (obj.type === 'ellipse') {
-    const rx = obj.rx || 0;
-    const ry = obj.ry || 0;
-    const N = 64;
-    for (let i = 0; i < N; i++) {
-      const a = (i / N) * 2 * Math.PI;
-      localPts.push({ x: Math.cos(a) * rx, y: Math.sin(a) * ry });
-    }
-  } else if (obj.type === 'polygon') {
-    const pts: any[] = obj.points || [];
-    const minX = Math.min(...pts.map((p) => p.x));
-    const minY = Math.min(...pts.map((p) => p.y));
-    localPts = pts.map((p) => ({ x: p.x - minX - w / 2, y: p.y - minY - h / 2 }));
-  } else if (obj.type === 'path') {
-    localPts = flattenPathToLocalPoints(obj);
-  }
-
-  const matrix: any = obj.calcTransformMatrix();
-  return localPts.map((p) => {
-    const tp: any = F.util.transformPoint(new F.Point(p.x, p.y), matrix);
-    return [tp.x, tp.y] as [number, number];
-  });
-}
-
-// Builds an SVG path "d" string from a polygon-clipping MultiPolygon
-// result ([polygon][ring][point]), one M...L...Z subpath per ring so
-// holes (from Subtract/Exclude) render correctly with fillRule:'evenodd'.
-function multiPolygonToPathD(mp: number[][][][]): string {
-  let d = '';
-  mp.forEach((polygon) => {
-    polygon.forEach((ring) => {
-      if (ring.length === 0) return;
-      d += `M ${ring[0][0]} ${ring[0][1]} `;
-      for (let i = 1; i < ring.length; i++) d += `L ${ring[i][0]} ${ring[i][1]} `;
-      d += 'Z ';
-    });
-  });
-  return d.trim();
-}
+import { Toolbar } from '@/components/editor/Toolbar';
+import { PropertiesPanel } from '@/components/editor/PropertiesPanel';
+import { LayersPanel } from '@/components/editor/LayersPanel';
+import { ShortcutsModal } from '@/components/editor/ShortcutsModal';
+import { RoadmapModal } from '@/components/editor/RoadmapModal';
 
 function EditorContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fabricCanvasRef = useRef<any>(null);
+
   const [zoom, setZoom] = useState(50);
   const [layers, setLayers] = useState<any[]>([]);
   const [designName, setDesignName] = useState('Untitled Design');
@@ -440,80 +34,24 @@ function EditorContent() {
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
+  const [roadmap, setRoadmap] = useState<{ open: boolean; id?: string }>({ open: false });
 
   const [selected, setSelected] = useState<any>(null);
   const [, setSelVersion] = useState(0);
   const bumpSel = () => setSelVersion((v) => v + 1);
 
-  const [renamingId, setRenamingId] = useState<number | null>(null);
-  const [renameValue, setRenameValue] = useState('');
-  const dragLayerIndex = useRef<number | null>(null);
-
-  // Document display unit for the Transform panel + live drag tooltip.
-  // Purely a display/input convenience — geometry stays in px internally.
   const [unit, setUnit] = useState<DocUnit>('px');
   const unitRef = useRef<DocUnit>(unit);
   useEffect(() => {
     unitRef.current = unit;
   }, [unit]);
 
-  const historyRef = useRef<{ stack: string[]; index: number; suspend: boolean }>({
-    stack: [],
-    index: -1,
-    suspend: false,
-  });
-  const [canUndo, setCanUndo] = useState(false);
-  const [canRedo, setCanRedo] = useState(false);
-
-  // Set true for the duration of a drag-to-create gesture so the
-  // intermediate remove/add churn of the live preview doesn't spam the
-  // undo stack with dozens of in-progress states. A single history entry
-  // is pushed explicitly once the shape is finalized on mouse-up.
-  const suppressHistoryRef = useRef(false);
-
-  const clipboardRef = useRef<any>(null);
-
-  // Remembers the last gradient angle dragged on the current selection so
-  // repeated color-stop edits don't reset the angle back to a default.
-  const gradAngleRef = useRef<number>(90);
-
-  // ---------------------------------------------------------------------
-  // VECTOR PEN TOOL + DIRECT SELECTION state
-  // ---------------------------------------------------------------------
   const [activeTool, setActiveToolState] = useState<ToolMode>('select');
   const activeToolRef = useRef<ToolMode>('select');
   const [maskTargetId, setMaskTargetId] = useState<string>('');
 
-  // Buffer of anchors for the path currently being drawn with the Pen tool.
-  const penDraftRef = useRef<{
-    anchors: PenAnchor[];
-    previewObj: any | null;
-    draggingHandleForIndex: number | null;
-    mouseDownPoint: { x: number; y: number } | null;
-  }>({ anchors: [], previewObj: null, draggingHandleForIndex: null, mouseDownPoint: null });
-
-  // Handle circles currently overlaid on a path being edited with the
-  // Direct Selection tool, plus which path they belong to.
-  const anchorHandlesRef = useRef<{
-    pathObj: any | null;
-    circles: any[];
-    draggingIndex: number | null;
-  }>({ pathObj: null, circles: [], draggingIndex: null });
-
-  // Live drag state for shape tools (rect/ellipse/triangle/polygon/star/line).
-  const shapeDraftRef = useRef<{
-    tool: DrawTool | null;
-    startX: number;
-    startY: number;
-    obj: any | null;
-  }>({ tool: null, startX: 0, startY: 0, obj: null });
-
-  // Live W/H (or length) tooltip shown near the cursor while dragging a
-  // shape tool. Coordinates are page coordinates (clientX/Y) since the
-  // tooltip is a fixed-position overlay, not a canvas object.
-  const [liveDim, setLiveDim] = useState<{ x: number; y: number; w: string; h: string } | null>(
-    null
-  );
+  const clipboardRef = useRef<any>(null);
+  const gradAngleRef = useRef<number>(90);
 
   const width = parseInt(searchParams.get('w') || '1080');
   const height = parseInt(searchParams.get('h') || '1080');
@@ -522,9 +60,6 @@ function EditorContent() {
   const refreshLayers = useCallback(() => {
     const canvas = fabricCanvasRef.current;
     if (!canvas) return;
-    // Anchor-handle circles, the live pen preview, and in-progress shape
-    // drafts are UI overlays, not real document objects, so they never
-    // show up as layers.
     setLayers(
       canvas
         .getObjects()
@@ -534,514 +69,61 @@ function EditorContent() {
     );
   }, []);
 
-  const updateHistoryButtons = useCallback(() => {
-    const h = historyRef.current;
-    setCanUndo(h.index > 0);
-    setCanRedo(h.index < h.stack.length - 1);
-  }, []);
-
-  const pushHistory = useCallback(() => {
-    const canvas = fabricCanvasRef.current;
-    const h = historyRef.current;
-    if (!canvas || h.suspend || suppressHistoryRef.current) return;
-
-    const json = JSON.stringify(
-      canvas.toJSON(['name', 'locked', 'visible', 'isVectorPath', 'clipPath', '__uid', '__lockRatio'])
-    );
-    h.stack = h.stack.slice(0, h.index + 1);
-    h.stack.push(json);
-
-    if (h.stack.length > MAX_HISTORY) {
-      h.stack.shift();
-    }
-    h.index = h.stack.length - 1;
-    updateHistoryButtons();
-  }, [updateHistoryButtons]);
-
-  const loadHistoryState = useCallback(
-    (index: number) => {
-      const canvas = fabricCanvasRef.current;
-      const h = historyRef.current;
-      if (!canvas || index < 0 || index >= h.stack.length) return;
-
-      h.suspend = true;
-      canvas.loadFromJSON(h.stack[index], () => {
-        canvas.renderAll();
-        refreshLayers();
-        setSelected(canvas.getActiveObject() || null);
-        h.suspend = false;
-        h.index = index;
-        updateHistoryButtons();
-      });
-    },
-    [refreshLayers, updateHistoryButtons]
-  );
-
-  const undo = useCallback(() => {
-    const h = historyRef.current;
-    if (h.index > 0) loadHistoryState(h.index - 1);
-  }, [loadHistoryState]);
-
-  const redo = useCallback(() => {
-    const h = historyRef.current;
-    if (h.index < h.stack.length - 1) loadHistoryState(h.index + 1);
-  }, [loadHistoryState]);
+  // ---------------------------------------------------------------------
+  // HISTORY
+  // ---------------------------------------------------------------------
+  const { suppressHistoryRef, canUndo, canRedo, pushHistory, undo, redo, seedInitialSnapshot } =
+    useEditorHistory(fabricCanvasRef, () => {
+      refreshLayers();
+      setSelected(fabricCanvasRef.current?.getActiveObject() || null);
+    });
 
   // ---------------------------------------------------------------------
-  // PEN TOOL — drawing an editable Bezier path
+  // DIRECT SELECTION (anchor handles)
   // ---------------------------------------------------------------------
+  const { clearHandles: clearAnchorHandles, renderHandles: renderAnchorHandles } = useDirectSelection({
+    fabricCanvasRef,
+    onAnchorMoved: pushHistory,
+  });
 
-  // Builds an SVG path "d" string from committed anchors, optionally
-  // followed by a rubber-band segment to the current pointer, and
-  // optionally closed back to the first anchor.
-  const buildPathD = (
-    anchors: PenAnchor[],
-    rubberBandTo: { x: number; y: number } | null,
-    closed: boolean
-  ) => {
-    if (anchors.length === 0) return '';
-    let d = `M ${anchors[0].x} ${anchors[0].y}`;
-    for (let i = 1; i < anchors.length; i++) {
-      const prev = anchors[i - 1];
-      const curr = anchors[i];
-      const c1 = prev.handleOut || prev;
-      const c2 = curr.handleIn || curr;
-      d += ` C ${c1.x} ${c1.y}, ${c2.x} ${c2.y}, ${curr.x} ${curr.y}`;
-    }
-    if (rubberBandTo) {
-      const last = anchors[anchors.length - 1];
-      const c1 = last.handleOut || last;
-      d += ` C ${c1.x} ${c1.y}, ${rubberBandTo.x} ${rubberBandTo.y}, ${rubberBandTo.x} ${rubberBandTo.y}`;
-    }
-    if (closed) {
-      const last = anchors[anchors.length - 1];
-      const first = anchors[0];
-      const c1 = last.handleOut || last;
-      const c2 = first.handleIn || first;
-      d += ` C ${c1.x} ${c1.y}, ${c2.x} ${c2.y}, ${first.x} ${first.y} Z`;
-    }
-    return d;
-  };
-
-  const updatePenPreview = useCallback(
-    (rubberBandTo: { x: number; y: number } | null) => {
-      const canvas = fabricCanvasRef.current;
-      const draft = penDraftRef.current;
-      if (!canvas || draft.anchors.length === 0) return;
-
-      import('fabric').then((mod) => {
-        const F: any = mod.fabric;
-        const d = buildPathD(draft.anchors, rubberBandTo, false);
-        if (draft.previewObj) {
-          canvas.remove(draft.previewObj);
-        }
-        const preview: any = new F.Path(d, {
-          fill: '',
-          stroke: '#3FA9E8',
-          strokeWidth: 1.5,
-          strokeDashArray: [4, 3],
-          selectable: false,
-          evented: false,
-          objectCaching: false,
-        });
-        preview.__isPenPreview = true;
-        draft.previewObj = preview;
-        canvas.add(preview);
-        canvas.requestRenderAll();
-      });
-    },
-    []
-  );
-
-  const clearPenDraft = useCallback(() => {
-    const canvas = fabricCanvasRef.current;
-    const draft = penDraftRef.current;
-    if (canvas && draft.previewObj) {
-      canvas.remove(draft.previewObj);
-    }
-    draft.anchors = [];
-    draft.previewObj = null;
-    draft.draggingHandleForIndex = null;
-    draft.mouseDownPoint = null;
-    canvas?.requestRenderAll();
-  }, []);
-
-  const finishPenPath = useCallback(
-    (closed: boolean) => {
-      const canvas = fabricCanvasRef.current;
-      const draft = penDraftRef.current;
-      if (!canvas || draft.anchors.length < 2) {
-        clearPenDraft();
-        return;
-      }
-
-      import('fabric').then((mod) => {
-        const F: any = mod.fabric;
-        const d = buildPathD(draft.anchors, null, closed);
-        const pathObj: any = new F.Path(d, {
-          fill: closed ? '#3FA9E8' : '',
-          stroke: '#1A1A1A',
-          strokeWidth: 2,
-          objectCaching: false,
-        });
-        pathObj.isVectorPath = true;
-        pathObj.name = closed ? 'Path (closed)' : 'Path (open)';
-
-        if (draft.previewObj) canvas.remove(draft.previewObj);
+  // ---------------------------------------------------------------------
+  // PEN TOOL
+  // ---------------------------------------------------------------------
+  const { clearDraft: clearPenDraft, finishPath: finishPenPath, handleMouseDown: handlePenMouseDown, handleMouseMove: handlePenMouseMove, handleMouseUp: handlePenMouseUp } =
+    usePenTool({
+      fabricCanvasRef,
+      onPathFinished: (pathObj) => {
+        const canvas = fabricCanvasRef.current;
         canvas.add(pathObj);
         canvas.setActiveObject(pathObj);
         canvas.requestRenderAll();
-
-        draft.anchors = [];
-        draft.previewObj = null;
-        draft.draggingHandleForIndex = null;
-        draft.mouseDownPoint = null;
-
         setActiveToolState('select');
         activeToolRef.current = 'select';
-      });
-    },
-    [clearPenDraft]
-  );
-
-  const handlePenMouseDown = useCallback(
-    (opt: any) => {
-      const canvas = fabricCanvasRef.current;
-      if (!canvas) return;
-      const pointer = canvas.getPointer(opt.e);
-      const draft = penDraftRef.current;
-
-      // Closing the path: click landed near the first anchor.
-      if (draft.anchors.length >= 3) {
-        const first = draft.anchors[0];
-        const dist = Math.hypot(pointer.x - first.x, pointer.y - first.y);
-        if (dist <= ANCHOR_HIT_RADIUS) {
-          finishPenPath(true);
-          return;
-        }
-      }
-
-      draft.anchors.push({ x: pointer.x, y: pointer.y });
-      draft.mouseDownPoint = { x: pointer.x, y: pointer.y };
-      updatePenPreview(null);
-    },
-    [finishPenPath, updatePenPreview]
-  );
-
-  const handlePenMouseMove = useCallback(
-    (opt: any) => {
-      const canvas = fabricCanvasRef.current;
-      if (!canvas) return;
-      const pointer = canvas.getPointer(opt.e);
-      const draft = penDraftRef.current;
-      if (draft.anchors.length === 0) return;
-
-      const isMouseDown = opt.e.buttons === 1 || opt.e.which === 1;
-      const lastIndex = draft.anchors.length - 1;
-
-      if (isMouseDown && draft.mouseDownPoint) {
-        // Dragging out of the most recently placed anchor creates a
-        // symmetric smooth Bezier handle pair for that anchor.
-        const anchor = draft.anchors[lastIndex];
-        anchor.handleOut = { x: pointer.x, y: pointer.y };
-        anchor.handleIn = {
-          x: anchor.x - (pointer.x - anchor.x),
-          y: anchor.y - (pointer.y - anchor.y),
-        };
-        updatePenPreview(null);
-      } else {
-        // Rubber-band preview toward the current pointer position.
-        updatePenPreview({ x: pointer.x, y: pointer.y });
-      }
-    },
-    [updatePenPreview]
-  );
-
-  const handlePenMouseUp = useCallback(() => {
-    const draft = penDraftRef.current;
-    draft.mouseDownPoint = null;
-  }, []);
-
-  // ---------------------------------------------------------------------
-  // SHAPE TOOLS — drag-to-create for rect/ellipse/triangle/polygon/star/line
-  // ---------------------------------------------------------------------
-
-  const clearShapeDraft = useCallback(() => {
-    const canvas = fabricCanvasRef.current;
-    const draft = shapeDraftRef.current;
-    if (canvas && draft.obj) canvas.remove(draft.obj);
-    shapeDraftRef.current = { tool: null, startX: 0, startY: 0, obj: null };
-    suppressHistoryRef.current = false;
-    setLiveDim(null);
-  }, []);
-
-  const handleShapeMouseDown = useCallback((opt: any) => {
-    const canvas = fabricCanvasRef.current;
-    if (!canvas) return;
-    const pointer = canvas.getPointer(opt.e);
-    const tool = activeToolRef.current as DrawTool;
-
-    suppressHistoryRef.current = true;
-    shapeDraftRef.current = { tool, startX: pointer.x, startY: pointer.y, obj: null };
-
-    import('fabric').then((mod) => {
-      const F: any = mod.fabric;
-      if (shapeDraftRef.current.tool !== tool) return; // stale async guard
-      const obj =
-        tool === 'line'
-          ? buildDraftShape(F, tool, {
-              left: 0,
-              top: 0,
-              w: 0,
-              h: 0,
-              x1: pointer.x,
-              y1: pointer.y,
-              x2: pointer.x,
-              y2: pointer.y,
-            })
-          : buildDraftShape(F, tool, { left: pointer.x, top: pointer.y, w: 1, h: 1 });
-      obj.__isShapeDraft = true;
-      shapeDraftRef.current.obj = obj;
-      canvas.add(obj);
-      canvas.requestRenderAll();
-    });
-  }, []);
-
-  const handleShapeMouseMove = useCallback((opt: any) => {
-    const canvas = fabricCanvasRef.current;
-    const draft = shapeDraftRef.current;
-    if (!canvas || !draft.tool) return;
-    const pointer = canvas.getPointer(opt.e);
-    const shiftKey = !!opt.e.shiftKey;
-    const altKey = !!opt.e.altKey;
-    const currentUnit = unitRef.current;
-
-    import('fabric').then((mod) => {
-      const F: any = mod.fabric;
-      if (shapeDraftRef.current.tool !== draft.tool) return; // stale async guard
-
-      let newObj: any;
-      let wLabel: string;
-      let hLabel: string;
-
-      if (draft.tool === 'line') {
-        let x2 = pointer.x;
-        let y2 = pointer.y;
-        if (shiftKey) {
-          const dx = pointer.x - draft.startX;
-          const dy = pointer.y - draft.startY;
-          const angle = Math.atan2(dy, dx);
-          const snap = Math.round(angle / (Math.PI / 4)) * (Math.PI / 4);
-          const len = Math.hypot(dx, dy);
-          x2 = draft.startX + Math.cos(snap) * len;
-          y2 = draft.startY + Math.sin(snap) * len;
-        }
-        newObj = buildDraftShape(F, 'line', {
-          left: 0,
-          top: 0,
-          w: 0,
-          h: 0,
-          x1: draft.startX,
-          y1: draft.startY,
-          x2,
-          y2,
-        });
-        wLabel = formatUnit(Math.hypot(x2 - draft.startX, y2 - draft.startY), currentUnit);
-        hLabel = '—';
-      } else {
-        const geo = computeDragGeometry(draft.startX, draft.startY, pointer.x, pointer.y, shiftKey, altKey);
-        newObj = buildDraftShape(F, draft.tool as DrawTool, geo);
-        wLabel = formatUnit(geo.w, currentUnit);
-        hLabel = formatUnit(geo.h, currentUnit);
-      }
-
-      if (shapeDraftRef.current.obj) canvas.remove(shapeDraftRef.current.obj);
-      newObj.__isShapeDraft = true;
-      shapeDraftRef.current.obj = newObj;
-      canvas.add(newObj);
-      canvas.requestRenderAll();
-      setLiveDim({ x: opt.e.clientX, y: opt.e.clientY, w: wLabel, h: hLabel });
-    });
-  }, []);
-
-  const handleShapeMouseUp = useCallback(() => {
-    const canvas = fabricCanvasRef.current;
-    const draft = shapeDraftRef.current;
-    setLiveDim(null);
-    suppressHistoryRef.current = false;
-
-    if (!canvas || !draft.tool || !draft.obj) {
-      shapeDraftRef.current = { tool: null, startX: 0, startY: 0, obj: null };
-      return;
-    }
-
-    const obj = draft.obj;
-    const bw = obj.width || 0;
-    const bh = obj.height || 0;
-
-    // Discard near-zero drags (an accidental click rather than an
-    // intentional drag) instead of leaving a 1px sliver object behind.
-    if (bw < 3 && bh < 3) {
-      canvas.remove(obj);
-    } else {
-      delete obj.__isShapeDraft;
-      obj.set({ selectable: true, evented: true });
-      obj.setCoords();
-      canvas.setActiveObject(obj);
-      refreshLayers();
-      pushHistory();
-      setActiveToolState('select');
-      activeToolRef.current = 'select';
-    }
-
-    canvas.requestRenderAll();
-    shapeDraftRef.current = { tool: null, startX: 0, startY: 0, obj: null };
-  }, [pushHistory, refreshLayers]);
-
-  // ---------------------------------------------------------------------
-  // DIRECT SELECTION — editable anchor handles on an existing path
-  // ---------------------------------------------------------------------
-
-  const clearAnchorHandles = useCallback(() => {
-    const canvas = fabricCanvasRef.current;
-    const state = anchorHandlesRef.current;
-    if (canvas && state.circles.length) {
-      state.circles.forEach((c) => canvas.remove(c));
-      canvas.requestRenderAll();
-    }
-    state.pathObj = null;
-    state.circles = [];
-    state.draggingIndex = null;
-  }, []);
-
-  // Extracts anchor (on-curve) points from a fabric.Path's internal path
-  // command array, in that path object's *canvas* coordinate space
-  // (accounting for its current position/scale/rotation/skew).
-  //
-  // Everything here is cast through `any`. fabric.Path's internal `path`
-  // array and `pathOffset` field, plus `fabric.util.transformPoint`, are
-  // not part of fabric's stable public typings across versions, so we
-  // deliberately avoid letting TypeScript infer strict types for any of
-  // this and rely on the runtime shape instead.
-  const getPathAnchorsInCanvasSpace = (pathObj: any, fabricMod: any) => {
-    const F: any = fabricMod.fabric;
-    const target: any = pathObj;
-    const commands: any[] = target.path || [];
-    const matrix: any = target.calcTransformMatrix();
-    const offset: any = target.pathOffset || { x: 0, y: 0 };
-    const pts: { x: number; y: number; commandIndex: number }[] = [];
-
-    commands.forEach((cmd: any[], idx: number) => {
-      const type = cmd[0];
-      let localX: number | null = null;
-      let localY: number | null = null;
-      if (type === 'M' || type === 'L') {
-        localX = cmd[1];
-        localY = cmd[2];
-      } else if (type === 'C') {
-        localX = cmd[5];
-        localY = cmd[6];
-      } else if (type === 'Q') {
-        localX = cmd[3];
-        localY = cmd[4];
-      }
-      if (localX === null || localY === null) return;
-      const localPoint: any = new F.Point(localX - offset.x, localY - offset.y);
-      const canvasPoint: any = F.util.transformPoint(localPoint, matrix);
-      pts.push({ x: canvasPoint.x, y: canvasPoint.y, commandIndex: idx });
+      },
     });
 
-    return pts;
-  };
-
-  const renderAnchorHandles = useCallback((pathObj: any) => {
-    const canvas = fabricCanvasRef.current;
-    if (!canvas) return;
-
-    import('fabric').then((mod) => {
-      const F: any = mod.fabric;
-      clearAnchorHandles();
-      const anchors = getPathAnchorsInCanvasSpace(pathObj, mod);
-      const state = anchorHandlesRef.current;
-      state.pathObj = pathObj;
-
-      anchors.forEach((pt) => {
-        const circle: any = new F.Circle({
-          left: pt.x,
-          top: pt.y,
-          radius: ANCHOR_HANDLE_SIZE / 2,
-          fill: '#ffffff',
-          stroke: '#3FA9E8',
-          strokeWidth: 2,
-          originX: 'center',
-          originY: 'center',
-          hasControls: false,
-          hasBorders: false,
-          selectable: true,
-          lockScalingX: true,
-          lockScalingY: true,
-          lockRotation: true,
-        });
-        circle.__isAnchorHandle = true;
-        circle.__commandIndex = pt.commandIndex;
-        circle.__anchorPathObj = pathObj;
-
-        circle.on('moving', () => {
-          const canvasNow = fabricCanvasRef.current;
-          if (!canvasNow) return;
-          const targetPath: any = circle.__anchorPathObj;
-          const cmdIdx: number = circle.__commandIndex;
-          const invMatrix: any = F.util.invertTransform(targetPath.calcTransformMatrix());
-          const localPoint: any = F.util.transformPoint(
-            new F.Point(circle.left, circle.top),
-            invMatrix
-          );
-          const offset: any = targetPath.pathOffset || { x: 0, y: 0 };
-          const newLocalX = localPoint.x + offset.x;
-          const newLocalY = localPoint.y + offset.y;
-
-          const cmd: any[] = targetPath.path[cmdIdx];
-          if (cmd[0] === 'M' || cmd[0] === 'L') {
-            cmd[1] = newLocalX;
-            cmd[2] = newLocalY;
-          } else if (cmd[0] === 'C') {
-            cmd[5] = newLocalX;
-            cmd[6] = newLocalY;
-          } else if (cmd[0] === 'Q') {
-            cmd[3] = newLocalX;
-            cmd[4] = newLocalY;
-          }
-          targetPath.dirty = true;
-          targetPath.setCoords();
-          canvasNow.requestRenderAll();
-        });
-
-        circle.on('mouseup', () => {
-          pushHistory();
-        });
-
-        canvas.add(circle);
-        state.circles.push(circle);
-      });
-
-      canvas.requestRenderAll();
+  // ---------------------------------------------------------------------
+  // SHAPE TOOLS (drag-to-create)
+  // ---------------------------------------------------------------------
+  const { liveDim, clearDraft: clearShapeDraft, handleMouseDown: handleShapeMouseDown, handleMouseMove: handleShapeMouseMove, handleMouseUp: handleShapeMouseUp } =
+    useShapeTools({
+      fabricCanvasRef,
+      activeToolRef,
+      unitRef,
+      suppressHistoryRef,
+      onShapeFinished: (obj) => {
+        const canvas = fabricCanvasRef.current;
+        canvas.setActiveObject(obj);
+        refreshLayers();
+        pushHistory();
+        setActiveToolState('select');
+        activeToolRef.current = 'select';
+      },
     });
-  }, [clearAnchorHandles, pushHistory]);
 
   // ---------------------------------------------------------------------
-  // PATH -> MASK (non-destructive clip path applied to an image)
+  // PATH -> MASK
   // ---------------------------------------------------------------------
-
-  // Applies the currently selected closed vector path as a clipPath on
-  // the image chosen in the Properties panel. This is real, working
-  // masking: the image's pixels are never altered, and the mask can be
-  // removed at any time via "Remove Mask" to fully restore the image.
-  //
-  // LIMITATION (documented, not hidden): this replaces the whole clip
-  // region in one step. It does not yet implement the spec's full
-  // "Make Selection" dialog (feather / anti-alias / add / subtract /
-  // intersect modes) — that requires a general Selection Engine that
-  // doesn't exist in this codebase yet.
   const applyPathAsMask = useCallback(() => {
     const canvas = fabricCanvasRef.current;
     if (!canvas) return;
@@ -1054,9 +136,7 @@ function EditorContent() {
       alert('Choose a target image to mask in the Properties panel.');
       return;
     }
-    const targetImage = canvas
-      .getObjects()
-      .find((o: any) => o.type === 'image' && o.__id === maskTargetId);
+    const targetImage = canvas.getObjects().find((o: any) => o.type === 'image' && o.__id === maskTargetId);
     if (!targetImage) {
       alert('Target image not found.');
       return;
@@ -1064,12 +144,7 @@ function EditorContent() {
 
     import('fabric').then((mod) => {
       pathObj.clone((cloned: any) => {
-        cloned.set({
-          absolutePositioned: true, // clip coordinates stay in canvas space
-          fill: '#000000',
-          stroke: '',
-        });
-        // Preserve the original path so the mask can be edited/restored later.
+        cloned.set({ absolutePositioned: true, fill: '#000000', stroke: '' });
         targetImage.__maskSourcePath = JSON.stringify(pathObj.toObject(['isVectorPath']));
         targetImage.clipPath = cloned;
         targetImage.dirty = true;
@@ -1096,12 +171,8 @@ function EditorContent() {
   }, [pushHistory]);
 
   // ---------------------------------------------------------------------
-  // GRADIENT FILL — real fabric.Gradient, not a fake color swap.
-  // Serializes/deserializes automatically through canvas.toJSON /
-  // loadFromJSON since "fill" is already a default fabric property, so
-  // no changes to the history/save property lists were needed.
+  // GRADIENT FILL
   // ---------------------------------------------------------------------
-
   const applyGradientFill = useCallback(
     (type: 'linear' | 'radial', color1: string, color2: string, angleDeg: number) => {
       const canvas = fabricCanvasRef.current;
@@ -1126,14 +197,7 @@ function EditorContent() {
             y2: cy + Math.sin(rad) * len,
           };
         } else {
-          coords = {
-            x1: ow / 2,
-            y1: oh / 2,
-            x2: ow / 2,
-            y2: oh / 2,
-            r1: 0,
-            r2: Math.max(ow, oh) / 2,
-          };
+          coords = { x1: ow / 2, y1: oh / 2, x2: ow / 2, y2: oh / 2, r1: 0, r2: Math.max(ow, oh) / 2 };
         }
 
         const gradient = new F.Gradient({
@@ -1156,16 +220,16 @@ function EditorContent() {
   );
 
   // ---------------------------------------------------------------------
-  // EXACT TRANSFORM — X/Y/W/H/Rotation with unit conversion + aspect lock
+  // EXACT TRANSFORM
   // ---------------------------------------------------------------------
-
   const applyExactSize = useCallback(
     (newWpx: number | null, newHpx: number | null) => {
       const canvas = fabricCanvasRef.current;
       const active = canvas?.getActiveObject();
       if (!active || active.locked) return;
 
-      const { w: curW, h: curH } = getObjectPixelSize(active);
+      const curW = active.type === 'circle' ? (active.radius || 1) * 2 * (active.scaleX || 1) : (active.width || 0) * (active.scaleX || 1);
+      const curH = active.type === 'circle' ? (active.radius || 1) * 2 * (active.scaleY || 1) : (active.height || 0) * (active.scaleY || 1);
       let w = newWpx;
       let h = newHpx;
 
@@ -1197,21 +261,8 @@ function EditorContent() {
   };
 
   // ---------------------------------------------------------------------
-  // SHAPE BUILDER — Pathfinder-style boolean ops on the current
-  // multi-selection (Unite / Subtract / Intersect / Exclude). Uses the
-  // polygon-clipping package for real polygon math; the result is a
-  // genuine editable fabric.Path (isVectorPath = true), same as a
-  // Pen-tool path — not a grouped stack of the original shapes with a
-  // clip trick, and not a rasterized image standing in for a shape.
-  //
-  // Requires: npm install polygon-clipping
-  //
-  // Subtract order follows the objects' actual stacking order on the
-  // canvas: the back-most selected object is the base, and every
-  // selected object above it is subtracted from it in turn — matching
-  // Illustrator's "Minus Front" pathfinder behavior.
+  // SHAPE BUILDER
   // ---------------------------------------------------------------------
-
   const runShapeBuilder = useCallback(
     (op: 'union' | 'subtract' | 'intersect' | 'exclude') => {
       const canvas = fabricCanvasRef.current;
@@ -1225,13 +276,9 @@ function EditorContent() {
         alert('Shape Builder needs at least two selected objects.');
         return;
       }
-      const unsupported = objs.filter(
-        (o) => !['rect', 'triangle', 'circle', 'ellipse', 'polygon', 'path'].includes(o.type)
-      );
+      const unsupported = objs.filter((o) => !['rect', 'triangle', 'circle', 'ellipse', 'polygon', 'path'].includes(o.type));
       if (unsupported.length > 0) {
-        alert(
-          'Shape Builder only works on vector shapes and paths right now — remove images/text from the selection first.'
-        );
+        alert('Shape Builder only works on vector shapes and paths right now — remove images/text from the selection first.');
         return;
       }
 
@@ -1243,16 +290,12 @@ function EditorContent() {
             polygonClipping = (await import('polygon-clipping')).default;
           } catch (err) {
             console.error(err);
-            alert(
-              "Shape Builder needs the 'polygon-clipping' package. Run: npm install polygon-clipping"
-            );
+            alert("Shape Builder needs the 'polygon-clipping' package. Run: npm install polygon-clipping");
             return;
           }
 
           const canvasOrder = canvas.getObjects();
-          const ordered = objs
-            .slice()
-            .sort((a: any, b: any) => canvasOrder.indexOf(a) - canvasOrder.indexOf(b));
+          const ordered = objs.slice().sort((a: any, b: any) => canvasOrder.indexOf(a) - canvasOrder.indexOf(b));
 
           const toGeom = (obj: any): number[][][] => {
             const ring = getAbsolutePolygonPoints(obj, F);
@@ -1273,21 +316,13 @@ function EditorContent() {
           else result = polygonClipping.difference(geoms[0], ...geoms.slice(1));
 
           if (!result || result.length === 0) {
-            alert(
-              'This operation produced an empty shape — the selected objects may not overlap the way this operation expects.'
-            );
+            alert('This operation produced an empty shape — the selected objects may not overlap the way this operation expects.');
             return;
           }
 
           const d = multiPolygonToPathD(result);
           const baseFill = typeof ordered[0].fill === 'string' ? ordered[0].fill : '#3FA9E8';
-          const pathObj: any = new F.Path(d, {
-            fill: baseFill,
-            stroke: '#1A1A1A',
-            strokeWidth: 2,
-            fillRule: 'evenodd',
-            objectCaching: false,
-          });
+          const pathObj: any = new F.Path(d, { fill: baseFill, stroke: '#1A1A1A', strokeWidth: 2, fillRule: 'evenodd', objectCaching: false });
           pathObj.isVectorPath = true;
           pathObj.name = `Shape Builder (${op})`;
 
@@ -1307,37 +342,31 @@ function EditorContent() {
     [pushHistory, refreshLayers]
   );
 
+  const openShapeBuilder = () => {
+    const canvas = fabricCanvasRef.current;
+    const active = canvas?.getActiveObject();
+    if (!active || active.type !== 'activeSelection') {
+      alert('Select two or more shapes first (drag a selection box, or Shift-click each one), then use Shape Builder in the Properties panel.');
+      return;
+    }
+  };
+
   // ---------------------------------------------------------------------
   // TOOL SWITCHING
   // ---------------------------------------------------------------------
-
   const setActiveTool = useCallback(
     (tool: ToolMode) => {
       const canvas = fabricCanvasRef.current;
       activeToolRef.current = tool;
       setActiveToolState(tool);
 
-      // Leaving a tool mid-gesture cancels whatever it was in the middle of.
       if (tool !== 'pen') clearPenDraft();
       if (tool !== 'direct') clearAnchorHandles();
       clearShapeDraft();
 
       if (!canvas) return;
 
-      if (tool === 'pen') {
-        canvas.discardActiveObject();
-        canvas.selection = false;
-        canvas.forEachObject((o: any) => (o.selectable = false));
-        canvas.defaultCursor = 'crosshair';
-        canvas.hoverCursor = 'crosshair';
-      } else if (tool === 'direct') {
-        canvas.selection = true;
-        canvas.forEachObject((o: any) => {
-          if (!o.locked && !o.__isAnchorHandle && !o.__isPenPreview) o.selectable = true;
-        });
-        canvas.defaultCursor = 'default';
-        canvas.hoverCursor = 'move';
-      } else if (isDrawTool(tool)) {
+      if (tool === 'pen' || isDrawTool(tool)) {
         canvas.discardActiveObject();
         canvas.selection = false;
         canvas.forEachObject((o: any) => (o.selectable = false));
@@ -1356,11 +385,14 @@ function EditorContent() {
     [clearPenDraft, clearAnchorHandles, clearShapeDraft]
   );
 
+  // ---------------------------------------------------------------------
+  // CANVAS LIFECYCLE
+  // ---------------------------------------------------------------------
   useEffect(() => {
     import('fabric').then((mod) => {
       const canvas = new mod.fabric.Canvas(canvasRef.current, {
-        width: width,
-        height: height,
+        width,
+        height,
         backgroundColor: '#ffffff',
       });
       fabricCanvasRef.current = canvas;
@@ -1369,9 +401,6 @@ function EditorContent() {
       const onLayersChanged = () => refreshLayers();
       const onHistoryChanged = () => pushHistory();
 
-      // Every real document object gets a stable id the first time it's
-      // added, so the Properties panel can key its inputs to "which
-      // object is selected" rather than remounting on every keystroke.
       canvas.on('object:added', (e: any) => {
         const obj: any = e.target;
         if (obj && !obj.__isAnchorHandle && !obj.__isPenPreview && !obj.__isShapeDraft && !obj.__uid) {
@@ -1388,18 +417,13 @@ function EditorContent() {
       canvas.on('selection:created', (e: any) => {
         const obj: any = e.selected ? canvas.getActiveObject() : null;
         setSelected(obj);
-        if (activeToolRef.current === 'direct' && obj && obj.isVectorPath) {
-          renderAnchorHandles(obj);
-        }
+        if (activeToolRef.current === 'direct' && obj && obj.isVectorPath) renderAnchorHandles(obj);
       });
       canvas.on('selection:updated', (e: any) => {
         const obj: any = e.selected ? canvas.getActiveObject() : null;
         setSelected(obj);
-        if (activeToolRef.current === 'direct' && obj && obj.isVectorPath) {
-          renderAnchorHandles(obj);
-        } else {
-          clearAnchorHandles();
-        }
+        if (activeToolRef.current === 'direct' && obj && obj.isVectorPath) renderAnchorHandles(obj);
+        else clearAnchorHandles();
       });
       canvas.on('selection:cleared', () => {
         setSelected(null);
@@ -1408,11 +432,7 @@ function EditorContent() {
       canvas.on('object:scaling', () => bumpSel());
       canvas.on('object:moving', (e: any) => {
         bumpSel();
-        // Keep anchor handles glued to the path while it (or the canvas)
-        // moves it via the Selection tool.
-        if (anchorHandlesRef.current.pathObj === e.target) {
-          renderAnchorHandles(e.target);
-        }
+        renderAnchorHandles(e.target); // no-op unless this is the path currently being edited
       });
 
       canvas.on('mouse:down', (opt: any) => {
@@ -1438,1558 +458,21 @@ function EditorContent() {
           .then(({ data, error }) => {
             if (data) {
               setDesignName(data.name);
-              historyRef.current.suspend = true;
               canvas.loadFromJSON(data.canvas_json, function () {
                 canvas.renderAll();
                 refreshLayers();
-                historyRef.current.suspend = false;
-                historyRef.current.stack = [
-                  JSON.stringify(
-                    canvas.toJSON(['name', 'locked', 'visible', 'isVectorPath', 'clipPath', '__uid', '__lockRatio'])
-                  ),
-                ];
-                historyRef.current.index = 0;
-                updateHistoryButtons();
+                seedInitialSnapshot();
               });
             }
-            if (error) {
-              console.error('Failed to load design:', error);
-            }
+            if (error) console.error('Failed to load design:', error);
           });
       } else {
-        historyRef.current.stack = [
-          JSON.stringify(
-            canvas.toJSON(['name', 'locked', 'visible', 'isVectorPath', 'clipPath', '__uid', '__lockRatio'])
-          ),
-        ];
-        historyRef.current.index = 0;
-        updateHistoryButtons();
+        seedInitialSnapshot();
       }
     });
 
     return function () {
-      if (fabricCanvasRef.current) {
-        fabricCanvasRef.current.dispose();
-      }
+      if (fabricCanvasRef.current) fabricCanvasRef.current.dispose();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [width, height, urlDesignId]);
-
-  const scale = zoom / 100;
-
-  // Text and Image remain click-to-place for now (unchanged from before).
-  // A drag-to-create area-text box and true point-text click-to-type are
-  // a separate, scoped piece of work (Phase 6 in the spec) — flagging
-  // rather than silently leaving the toolbar button lying about it.
-  const addText = () => {
-    import('fabric').then((mod) => {
-      const text = new mod.fabric.IText('Double-click to edit', {
-        left: width / 2 - 100,
-        top: height / 2 - 20,
-        fontSize: 40,
-        fill: '#1A1A1A',
-        fontFamily: 'Arial',
-      });
-      fabricCanvasRef.current.add(text);
-      fabricCanvasRef.current.setActiveObject(text);
-    });
-  };
-
-  const nextImageIdRef = useRef(0);
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files ? e.target.files[0] : null;
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = function (event) {
-      import('fabric').then((mod) => {
-        mod.fabric.Image.fromURL(event.target ? (event.target.result as string) : '', function (img: any) {
-          img.scaleToWidth(300);
-          img.__id = `img_${Date.now()}_${nextImageIdRef.current++}`;
-          fabricCanvasRef.current.add(img);
-          fabricCanvasRef.current.setActiveObject(img);
-        });
-      });
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const deleteSelected = () => {
-    const canvas = fabricCanvasRef.current;
-    const active = canvas.getActiveObject();
-    if (!active || active.locked) return;
-    if (active.type === 'activeSelection') {
-      active.forEachObject((obj: any) => {
-        if (!obj.locked) canvas.remove(obj);
-      });
-      canvas.discardActiveObject();
-    } else {
-      canvas.remove(active);
-    }
-    clearAnchorHandles();
-    canvas.requestRenderAll();
-  };
-
-  const duplicateSelected = () => {
-    const canvas = fabricCanvasRef.current;
-    const active = canvas.getActiveObject();
-    if (!active) return;
-    active.clone((cloned: any) => {
-      canvas.discardActiveObject();
-      cloned.set({ left: (cloned.left || 0) + 20, top: (cloned.top || 0) + 20, evented: true, locked: false });
-      delete cloned.__uid;
-      if (cloned.type === 'activeSelection') {
-        cloned.canvas = canvas;
-        cloned.forEachObject((obj: any) => canvas.add(obj));
-        cloned.setCoords();
-      } else {
-        canvas.add(cloned);
-      }
-      canvas.setActiveObject(cloned);
-      canvas.requestRenderAll();
-    });
-  };
-
-  const copySelected = () => {
-    const canvas = fabricCanvasRef.current;
-    const active = canvas.getActiveObject();
-    if (!active) return;
-    active.clone((cloned: any) => {
-      clipboardRef.current = cloned;
-    });
-  };
-
-  const pasteClipboard = () => {
-    const canvas = fabricCanvasRef.current;
-    if (!clipboardRef.current) return;
-    clipboardRef.current.clone((cloned: any) => {
-      canvas.discardActiveObject();
-      cloned.set({ left: (cloned.left || 0) + 20, top: (cloned.top || 0) + 20, evented: true });
-      delete cloned.__uid;
-      if (cloned.type === 'activeSelection') {
-        cloned.canvas = canvas;
-        cloned.forEachObject((obj: any) => canvas.add(obj));
-        cloned.setCoords();
-      } else {
-        canvas.add(cloned);
-      }
-      canvas.setActiveObject(cloned);
-      canvas.requestRenderAll();
-    });
-  };
-
-  const bringForward = () => {
-    const canvas = fabricCanvasRef.current;
-    const active = canvas.getActiveObject();
-    if (!active) return;
-    canvas.bringForward(active);
-    canvas.requestRenderAll();
-    refreshLayers();
-    pushHistory();
-  };
-
-  const sendBackward = () => {
-    const canvas = fabricCanvasRef.current;
-    const active = canvas.getActiveObject();
-    if (!active) return;
-    canvas.sendBackwards(active);
-    canvas.requestRenderAll();
-    refreshLayers();
-    pushHistory();
-  };
-
-  const bringToFront = () => {
-    const canvas = fabricCanvasRef.current;
-    const active = canvas.getActiveObject();
-    if (!active) return;
-    canvas.bringToFront(active);
-    canvas.requestRenderAll();
-    refreshLayers();
-    pushHistory();
-  };
-
-  const sendToBack = () => {
-    const canvas = fabricCanvasRef.current;
-    const active = canvas.getActiveObject();
-    if (!active) return;
-    canvas.sendToBack(active);
-    canvas.requestRenderAll();
-    refreshLayers();
-    pushHistory();
-  };
-
-  const groupSelected = () => {
-    const canvas = fabricCanvasRef.current;
-    const active = canvas.getActiveObject();
-    if (!active || active.type !== 'activeSelection') return;
-    const group = active.toGroup();
-    canvas.setActiveObject(group);
-    canvas.requestRenderAll();
-    refreshLayers();
-    pushHistory();
-    setSelected(group);
-  };
-
-  const ungroupSelected = () => {
-    const canvas = fabricCanvasRef.current;
-    const active = canvas.getActiveObject();
-    if (!active || active.type !== 'group') return;
-    const items = active.toActiveSelection();
-    canvas.setActiveObject(items);
-    canvas.requestRenderAll();
-    refreshLayers();
-    pushHistory();
-    setSelected(items);
-  };
-
-  const toggleLock = (obj: any) => {
-    const canvas = fabricCanvasRef.current;
-    const nextLocked = !obj.locked;
-    obj.set({
-      locked: nextLocked,
-      selectable: !nextLocked,
-      evented: !nextLocked,
-      lockMovementX: nextLocked,
-      lockMovementY: nextLocked,
-      lockScalingX: nextLocked,
-      lockScalingY: nextLocked,
-      lockRotation: nextLocked,
-    });
-    if (nextLocked && canvas.getActiveObject() === obj) {
-      canvas.discardActiveObject();
-    }
-    canvas.requestRenderAll();
-    bumpSel();
-    pushHistory();
-  };
-
-  const toggleVisible = (obj: any) => {
-    const canvas = fabricCanvasRef.current;
-    obj.set({ visible: obj.visible === false ? true : false });
-    if (obj.visible === false && canvas.getActiveObject() === obj) {
-      canvas.discardActiveObject();
-    }
-    canvas.requestRenderAll();
-    refreshLayers();
-    bumpSel();
-    pushHistory();
-  };
-
-  const toggleLockSelected = () => {
-    const canvas = fabricCanvasRef.current;
-    const active = canvas.getActiveObject();
-    if (!active) return;
-    toggleLock(active);
-  };
-
-  const toggleHideSelected = () => {
-    const canvas = fabricCanvasRef.current;
-    const active = canvas.getActiveObject();
-    if (!active) return;
-    toggleVisible(active);
-  };
-
-  const startRename = (obj: any, index: number) => {
-    setRenamingId(index);
-    setRenameValue(obj.name || `${obj.type} ${index + 1}`);
-  };
-
-  const commitRename = (obj: any) => {
-    obj.set({ name: renameValue.trim() || obj.type });
-    setRenamingId(null);
-    refreshLayers();
-    pushHistory();
-  };
-
-  const layerLabel = (obj: any, index: number) => obj.name || `${obj.type} ${index + 1}`;
-
-  const handleLayerDragStart = (index: number) => {
-    dragLayerIndex.current = index;
-  };
-
-  const handleLayerDrop = (targetIndex: number) => {
-    const canvas = fabricCanvasRef.current;
-    const from = dragLayerIndex.current;
-    dragLayerIndex.current = null;
-    if (from === null || from === targetIndex) return;
-
-    const obj = layers[from];
-    const objs = canvas.getObjects();
-    const currentIdx = objs.indexOf(obj);
-    const targetCanvasIdx = objs.length - 1 - targetIndex;
-
-    canvas.moveTo(obj, targetCanvasIdx);
-    canvas.requestRenderAll();
-    refreshLayers();
-    pushHistory();
-    void currentIdx;
-  };
-
-  const alignObject = (mode: 'left' | 'centerH' | 'right' | 'top' | 'centerV' | 'bottom') => {
-    const canvas = fabricCanvasRef.current;
-    const active = canvas.getActiveObject();
-    if (!active || active.locked) return;
-    const objW = active.getScaledWidth();
-    const objH = active.getScaledHeight();
-
-    switch (mode) {
-      case 'left':
-        active.set({ left: 0 });
-        break;
-      case 'centerH':
-        active.set({ left: width / 2 - objW / 2 });
-        break;
-      case 'right':
-        active.set({ left: width - objW });
-        break;
-      case 'top':
-        active.set({ top: 0 });
-        break;
-      case 'centerV':
-        active.set({ top: height / 2 - objH / 2 });
-        break;
-      case 'bottom':
-        active.set({ top: height - objH });
-        break;
-    }
-    active.setCoords();
-    canvas.requestRenderAll();
-    pushHistory();
-    bumpSel();
-  };
-
-  const applyProp = (props: Record<string, any>, record = true) => {
-    const canvas = fabricCanvasRef.current;
-    const active = canvas.getActiveObject();
-    if (!active || active.locked) return;
-    active.set(props);
-    active.setCoords();
-    canvas.requestRenderAll();
-    bumpSel();
-    if (record) pushHistory();
-  };
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      const canvas = fabricCanvasRef.current;
-      if (!canvas) return;
-
-      const isMeta = e.ctrlKey || e.metaKey;
-      const active = canvas.getActiveObject();
-      const isEditingText = active && active.isEditing;
-      const isTypingInField =
-        document.activeElement &&
-        ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName);
-      const canUseToolShortcuts = !isEditingText && !isTypingInField;
-
-      if (e.key === '?' && canUseToolShortcuts) {
-        e.preventDefault();
-        setShowShortcuts((v) => !v);
-        return;
-      }
-
-      // --- Vector tool shortcuts ---
-      if (canUseToolShortcuts && !isMeta && !e.shiftKey) {
-        if (e.key.toLowerCase() === 'v') {
-          e.preventDefault();
-          setActiveTool('select');
-          return;
-        }
-        if (e.key.toLowerCase() === 'a') {
-          e.preventDefault();
-          setActiveTool('direct');
-          return;
-        }
-        if (e.key.toLowerCase() === 'p') {
-          e.preventDefault();
-          setActiveTool('pen');
-          return;
-        }
-      }
-
-      if (canUseToolShortcuts && activeToolRef.current === 'pen') {
-        if (e.key === 'Enter') {
-          e.preventDefault();
-          finishPenPath(false);
-          return;
-        }
-        if (e.key === 'Escape') {
-          e.preventDefault();
-          clearPenDraft();
-          return;
-        }
-      }
-
-      if (canUseToolShortcuts && isDrawTool(activeToolRef.current) && e.key === 'Escape') {
-        e.preventDefault();
-        clearShapeDraft();
-        setActiveTool('select');
-        return;
-      }
-
-      if (canUseToolShortcuts && e.shiftKey && e.key === 'Enter') {
-        e.preventDefault();
-        applyPathAsMask();
-        return;
-      }
-
-      if (isMeta && e.key.toLowerCase() === 'z' && !e.shiftKey) {
-        e.preventDefault();
-        undo();
-        return;
-      }
-      if ((isMeta && e.key.toLowerCase() === 'z' && e.shiftKey) || (isMeta && e.key.toLowerCase() === 'y')) {
-        e.preventDefault();
-        redo();
-        return;
-      }
-      if (isMeta && e.key.toLowerCase() === 's') {
-        e.preventDefault();
-        saveDesign();
-        return;
-      }
-      if (isMeta && e.key.toLowerCase() === 'a' && !isEditingText) {
-        e.preventDefault();
-        const objs = canvas
-          .getObjects()
-          .filter((o: any) => !o.locked && !o.__isAnchorHandle && !o.__isPenPreview && !o.__isShapeDraft);
-        if (objs.length) {
-          canvas.discardActiveObject();
-          const sel = new (window as any).fabric.ActiveSelection(objs, { canvas });
-          canvas.setActiveObject(sel);
-          canvas.requestRenderAll();
-        }
-        return;
-      }
-      if (e.key === 'Escape') {
-        canvas.discardActiveObject();
-        clearAnchorHandles();
-        canvas.requestRenderAll();
-        setShowShortcuts(false);
-        return;
-      }
-      if (isMeta && e.key.toLowerCase() === 'g' && e.shiftKey && !isEditingText) {
-        e.preventDefault();
-        ungroupSelected();
-        return;
-      }
-      if (isMeta && e.key.toLowerCase() === 'g' && !isEditingText) {
-        e.preventDefault();
-        groupSelected();
-        return;
-      }
-      if (isMeta && e.key.toLowerCase() === 'd' && !isEditingText) {
-        e.preventDefault();
-        duplicateSelected();
-        return;
-      }
-      if (isMeta && e.key.toLowerCase() === 'c' && !isEditingText) {
-        copySelected();
-        return;
-      }
-      if (isMeta && e.key.toLowerCase() === 'v' && !isEditingText) {
-        pasteClipboard();
-        return;
-      }
-      if (isMeta && e.key.toLowerCase() === 'l' && !isEditingText) {
-        e.preventDefault();
-        toggleLockSelected();
-        return;
-      }
-      if (isMeta && e.key.toLowerCase() === 'h' && !isEditingText) {
-        e.preventDefault();
-        toggleHideSelected();
-        return;
-      }
-      if (
-        (e.key === 'Delete' || e.key === 'Backspace') &&
-        !isEditingText &&
-        activeToolRef.current !== 'pen' &&
-        !isDrawTool(activeToolRef.current)
-      ) {
-        e.preventDefault();
-        deleteSelected();
-        return;
-      }
-      if (isMeta && e.key === ']' && !e.shiftKey) {
-        e.preventDefault();
-        bringForward();
-        return;
-      }
-      if (isMeta && e.key === '[' && !e.shiftKey) {
-        e.preventDefault();
-        sendBackward();
-        return;
-      }
-      if (isMeta && e.shiftKey && e.key === ']') {
-        e.preventDefault();
-        bringToFront();
-        return;
-      }
-      if (isMeta && e.shiftKey && e.key === '[') {
-        e.preventDefault();
-        sendToBack();
-        return;
-      }
-      if (isMeta && (e.key === '=' || e.key === '+')) {
-        e.preventDefault();
-        setZoom((z) => Math.min(200, z + 10));
-        return;
-      }
-      if (isMeta && e.key === '-') {
-        e.preventDefault();
-        setZoom((z) => Math.max(10, z - 10));
-        return;
-      }
-      if (isMeta && e.key === '0') {
-        e.preventDefault();
-        setZoom(100);
-        return;
-      }
-
-      if (
-        !isEditingText &&
-        active &&
-        !active.locked &&
-        activeToolRef.current !== 'pen' &&
-        !isDrawTool(activeToolRef.current) &&
-        e.key.startsWith('Arrow')
-      ) {
-        const step = e.shiftKey ? 10 : 1;
-        e.preventDefault();
-        if (e.key === 'ArrowUp') active.top -= step;
-        if (e.key === 'ArrowDown') active.top += step;
-        if (e.key === 'ArrowLeft') active.left -= step;
-        if (e.key === 'ArrowRight') active.left += step;
-        active.setCoords();
-        canvas.requestRenderAll();
-        bumpSel();
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [undo, redo, finishPenPath, clearPenDraft, applyPathAsMask, setActiveTool, clearAnchorHandles, clearShapeDraft]);
-
-  const saveDesign = async () => {
-    setSaving(true);
-
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      alert('You must be logged in to save a design.');
-      setSaving(false);
-      return;
-    }
-
-    const canvasJson = fabricCanvasRef.current.toJSON([
-      'name',
-      'locked',
-      'visible',
-      'isVectorPath',
-      'clipPath',
-      '__uid',
-      '__lockRatio',
-    ]);
-
-    const payload: any = {
-      user_id: user.id,
-      name: designName,
-      canvas_json: canvasJson,
-      width: width,
-      height: height,
-      updated_at: new Date().toISOString(),
-    };
-
-    if (designId) {
-      payload.id = designId;
-    }
-
-    const { data, error } = await supabase
-      .from('designs')
-      .upsert(payload)
-      .select()
-      .single();
-
-    setSaving(false);
-
-    if (error) {
-      console.error('Save failed:', error);
-      alert('Failed to save design. Please try again.');
-      return;
-    }
-
-    if (data) {
-      setDesignId(data.id);
-      router.replace(`/editor?designId=${data.id}&w=${width}&h=${height}`);
-    }
-  };
-
-  const downloadFile = (dataUrl: string, filename: string) => {
-    const link = document.createElement('a');
-    link.href = dataUrl;
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-  const exportAsPNG = () => {
-    setExporting(true);
-    const dataUrl = fabricCanvasRef.current.toDataURL({ format: 'png', quality: 1, multiplier: 2 });
-    downloadFile(dataUrl, `${designName || 'design'}.png`);
-    setExporting(false);
-    setShowExportMenu(false);
-  };
-
-  const exportAsJPG = () => {
-    setExporting(true);
-    const dataUrl = fabricCanvasRef.current.toDataURL({ format: 'jpeg', quality: 0.9, multiplier: 2 });
-    downloadFile(dataUrl, `${designName || 'design'}.jpg`);
-    setExporting(false);
-    setShowExportMenu(false);
-  };
-
-  const exportAsPDF = async () => {
-    setExporting(true);
-    try {
-      const { jsPDF } = await import('jspdf');
-      const dataUrl = fabricCanvasRef.current.toDataURL({ format: 'png', quality: 1, multiplier: 2 });
-      const orientation = width > height ? 'landscape' : 'portrait';
-      const pdf = new jsPDF({ orientation, unit: 'px', format: [width, height] });
-      pdf.addImage(dataUrl, 'PNG', 0, 0, width, height);
-      pdf.save(`${designName || 'design'}.pdf`);
-    } catch (err) {
-      console.error('PDF export failed:', err);
-      alert('Failed to export PDF. Please try again.');
-    }
-    setExporting(false);
-    setShowExportMenu(false);
-  };
-
-  const imageLayerOptions = layers.filter((o) => o.type === 'image');
-
-  const renderPropertiesPanel = () => {
-    if (activeTool === 'pen') {
-      return (
-        <p className="text-xs text-gray-500">
-          Pen tool active. Click to place anchors, click + drag for curved handles.
-          Press <kbd className="bg-gray-100 border rounded px-1">Enter</kbd> to finish an open
-          path, or click the first anchor to close it.{' '}
-          <kbd className="bg-gray-100 border rounded px-1">Esc</kbd> cancels the current path.
-        </p>
-      );
-    }
-
-    if (isDrawTool(activeTool)) {
-      return (
-        <p className="text-xs text-gray-500">
-          {TOOL_LABELS[activeTool as DrawTool]} tool active. Click and drag on the canvas to draw.
-          Hold <kbd className="bg-gray-100 border rounded px-1">Shift</kbd> to constrain
-          proportions, <kbd className="bg-gray-100 border rounded px-1">Alt/Option</kbd> to draw
-          from the center. <kbd className="bg-gray-100 border rounded px-1">Esc</kbd> cancels.
-        </p>
-      );
-    }
-
-    if (!selected) {
-      return <p className="text-xs text-gray-400">Select an object to edit its properties.</p>;
-    }
-
-    const isMultiple = selected.type === 'activeSelection';
-    const isText = selected.type === 'i-text' || selected.type === 'text' || selected.type === 'textbox';
-    const isImage = selected.type === 'image';
-    const isGroup = selected.type === 'group';
-    const isPath = !!selected.isVectorPath;
-    const hasFillStroke = !isImage;
-    const isLocked = !!selected.locked;
-
-    const currentFill = selected.fill;
-    const isGradientFill = !!(currentFill && typeof currentFill === 'object' && (currentFill as any).type);
-    const gradType: 'linear' | 'radial' = isGradientFill ? (currentFill as any).type : 'linear';
-    const gradStops = isGradientFill && (currentFill as any).colorStops
-      ? (currentFill as any).colorStops
-      : [{ offset: 0, color: '#3FA9E8' }, { offset: 1, color: '#7ED33E' }];
-
-    const pixelSize = getObjectPixelSize(selected);
-
-    return (
-      <div className="flex flex-col gap-4">
-        {isLocked && (
-          <div className="flex items-center gap-2 text-xs bg-amber-50 border border-amber-200 text-amber-700 rounded px-2 py-1.5">
-            <Lock size={12} />
-            Locked — unlock to edit (Ctrl/Cmd+L)
-          </div>
-        )}
-
-        {!isMultiple && (
-          <div
-            key={`${selected.__uid || 'obj'}-${unit}`}
-            className="border rounded-lg p-3 bg-gray-50 flex flex-col gap-2"
-          >
-            <div className="flex items-center justify-between">
-              <p className="text-xs font-semibold text-gray-500">Transform</p>
-              <button
-                type="button"
-                onClick={toggleLockRatio}
-                title={selected.__lockRatio ? 'Unlock aspect ratio' : 'Lock aspect ratio'}
-                className={`hover:text-gray-700 ${selected.__lockRatio ? 'text-blue-600' : 'text-gray-400'}`}
-              >
-                {selected.__lockRatio ? <Lock size={13} /> : <Unlock size={13} />}
-              </button>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className="text-[10px] text-gray-500 block mb-0.5">X ({unit})</label>
-                <input
-                  type="text"
-                  disabled={isLocked}
-                  defaultValue={formatUnit(selected.left ?? 0, unit)}
-                  onBlur={(e) => {
-                    const val = parseFloat(e.target.value);
-                    if (!isNaN(val)) applyProp({ left: unitToPx(val, unit) });
-                  }}
-                  onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
-                  className="w-full text-xs border rounded px-2 py-1 disabled:opacity-40"
-                />
-              </div>
-              <div>
-                <label className="text-[10px] text-gray-500 block mb-0.5">Y ({unit})</label>
-                <input
-                  type="text"
-                  disabled={isLocked}
-                  defaultValue={formatUnit(selected.top ?? 0, unit)}
-                  onBlur={(e) => {
-                    const val = parseFloat(e.target.value);
-                    if (!isNaN(val)) applyProp({ top: unitToPx(val, unit) });
-                  }}
-                  onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
-                  className="w-full text-xs border rounded px-2 py-1 disabled:opacity-40"
-                />
-              </div>
-              <div>
-                <label className="text-[10px] text-gray-500 block mb-0.5">W ({unit})</label>
-                <input
-                  type="text"
-                  disabled={isLocked}
-                  defaultValue={formatUnit(pixelSize.w, unit)}
-                  onBlur={(e) => {
-                    const val = parseFloat(e.target.value);
-                    if (!isNaN(val)) applyExactSize(unitToPx(val, unit), null);
-                  }}
-                  onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
-                  className="w-full text-xs border rounded px-2 py-1 disabled:opacity-40"
-                />
-              </div>
-              <div>
-                <label className="text-[10px] text-gray-500 block mb-0.5">H ({unit})</label>
-                <input
-                  type="text"
-                  disabled={isLocked}
-                  defaultValue={formatUnit(pixelSize.h, unit)}
-                  onBlur={(e) => {
-                    const val = parseFloat(e.target.value);
-                    if (!isNaN(val)) applyExactSize(null, unitToPx(val, unit));
-                  }}
-                  onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
-                  className="w-full text-xs border rounded px-2 py-1 disabled:opacity-40"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="text-[10px] text-gray-500 block mb-0.5">Rotation (°)</label>
-              <input
-                type="text"
-                disabled={isLocked}
-                defaultValue={Math.round(selected.angle || 0).toString()}
-                onBlur={(e) => {
-                  const val = parseFloat(e.target.value);
-                  if (!isNaN(val)) applyProp({ angle: val });
-                }}
-                onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
-                className="w-full text-xs border rounded px-2 py-1 disabled:opacity-40"
-              />
-            </div>
-          </div>
-        )}
-
-        <div>
-          <p className="text-xs font-semibold text-gray-500 mb-2">Align to Canvas</p>
-          <div className="grid grid-cols-3 gap-1">
-            <button onClick={() => alignObject('left')} className="text-xs border rounded py-1 hover:bg-gray-50">⟸</button>
-            <button onClick={() => alignObject('centerH')} className="text-xs border rounded py-1 hover:bg-gray-50">↔</button>
-            <button onClick={() => alignObject('right')} className="text-xs border rounded py-1 hover:bg-gray-50">⟹</button>
-            <button onClick={() => alignObject('top')} className="text-xs border rounded py-1 hover:bg-gray-50">⟰</button>
-            <button onClick={() => alignObject('centerV')} className="text-xs border rounded py-1 hover:bg-gray-50">↕</button>
-            <button onClick={() => alignObject('bottom')} className="text-xs border rounded py-1 hover:bg-gray-50">⟱</button>
-          </div>
-        </div>
-
-        {isMultiple && (
-          <button onClick={groupSelected} className="text-xs border rounded py-2 hover:bg-gray-50">
-            Group Selection (Cmd+G)
-          </button>
-        )}
-
-        {isMultiple && (
-          <div className="border rounded-lg p-2.5 bg-purple-50/50 flex flex-col gap-2">
-            <p className="text-xs font-semibold text-gray-700">Shape Builder</p>
-            <p className="text-[10px] text-gray-500">
-              Combines the selected shapes into one real, editable vector path.
-            </p>
-            <div className="grid grid-cols-2 gap-1.5">
-              <button
-                onClick={() => runShapeBuilder('union')}
-                className="text-xs border rounded py-1.5 hover:bg-white"
-              >
-                Unite
-              </button>
-              <button
-                onClick={() => runShapeBuilder('subtract')}
-                className="text-xs border rounded py-1.5 hover:bg-white"
-              >
-                Subtract
-              </button>
-              <button
-                onClick={() => runShapeBuilder('intersect')}
-                className="text-xs border rounded py-1.5 hover:bg-white"
-              >
-                Intersect
-              </button>
-              <button
-                onClick={() => runShapeBuilder('exclude')}
-                className="text-xs border rounded py-1.5 hover:bg-white"
-              >
-                Exclude
-              </button>
-            </div>
-          </div>
-        )}
-        {isGroup && (
-          <button onClick={ungroupSelected} className="text-xs border rounded py-2 hover:bg-gray-50">
-            Ungroup (Cmd+Shift+G)
-          </button>
-        )}
-
-        {isPath && (
-          <div className="border rounded-lg p-2.5 bg-blue-50/50 flex flex-col gap-2">
-            <p className="text-xs font-semibold text-gray-700 flex items-center gap-1.5">
-              <Scissors size={12} /> Path → Mask
-            </p>
-            <p className="text-[10px] text-gray-500">
-              Press <kbd className="bg-white border rounded px-1">A</kbd> to switch to Direct
-              Selection and drag anchors to reshape this path.
-            </p>
-            {imageLayerOptions.length === 0 ? (
-              <p className="text-[10px] text-gray-400">Upload an image to mask it with this path.</p>
-            ) : (
-              <>
-                <select
-                  value={maskTargetId}
-                  onChange={(e) => setMaskTargetId(e.target.value)}
-                  className="w-full text-xs border rounded px-2 py-1"
-                >
-                  <option value="">Choose target image…</option>
-                  {imageLayerOptions.map((img, i) => (
-                    <option key={img.__id || i} value={img.__id}>
-                      {layerLabel(img, layers.indexOf(img))}
-                    </option>
-                  ))}
-                </select>
-                <button
-                  onClick={applyPathAsMask}
-                  disabled={!maskTargetId}
-                  className="text-xs bg-brand-gradient text-white rounded py-1.5 font-semibold disabled:opacity-40"
-                >
-                  Apply as Mask (Shift+Enter)
-                </button>
-              </>
-            )}
-          </div>
-        )}
-
-        <div>
-          <label className="text-xs font-semibold text-gray-500 block mb-1">
-            Opacity ({Math.round((selected.opacity ?? 1) * 100)}%)
-          </label>
-          <input
-            type="range"
-            min={0}
-            max={100}
-            disabled={isLocked}
-            value={Math.round((selected.opacity ?? 1) * 100)}
-            onChange={(e) => applyProp({ opacity: Number(e.target.value) / 100 }, false)}
-            onMouseUp={() => pushHistory()}
-            className="w-full disabled:opacity-40"
-          />
-        </div>
-
-        {isText && (
-          <>
-            <div>
-              <label className="text-xs font-semibold text-gray-500 block mb-1">Font</label>
-              <select
-                value={selected.fontFamily || 'Arial'}
-                disabled={isLocked}
-                onChange={(e) => applyProp({ fontFamily: e.target.value })}
-                className="w-full text-xs border rounded px-2 py-1 disabled:opacity-40"
-              >
-                {FONT_OPTIONS.map((f) => (
-                  <option key={f} value={f}>
-                    {f}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="text-xs font-semibold text-gray-500 block mb-1">
-                Size ({selected.fontSize || 40})
-              </label>
-              <input
-                type="range"
-                min={8}
-                max={200}
-                disabled={isLocked}
-                value={selected.fontSize || 40}
-                onChange={(e) => applyProp({ fontSize: Number(e.target.value) }, false)}
-                onMouseUp={() => pushHistory()}
-                className="w-full disabled:opacity-40"
-              />
-            </div>
-
-            <div>
-              <label className="text-xs font-semibold text-gray-500 block mb-1">Color</label>
-              <input
-                type="color"
-                disabled={isLocked}
-                value={selected.fill || '#000000'}
-                onChange={(e) => applyProp({ fill: e.target.value }, false)}
-                onBlur={() => pushHistory()}
-                className="w-full h-8 border rounded cursor-pointer disabled:opacity-40"
-              />
-            </div>
-
-            <div className="flex gap-1">
-              <button
-                disabled={isLocked}
-                onClick={() => applyProp({ fontWeight: selected.fontWeight === 'bold' ? 'normal' : 'bold' })}
-                className={`flex-1 text-xs border rounded py-1 disabled:opacity-40 ${selected.fontWeight === 'bold' ? 'bg-gray-200' : 'hover:bg-gray-50'}`}
-              >
-                B
-              </button>
-              <button
-                disabled={isLocked}
-                onClick={() => applyProp({ fontStyle: selected.fontStyle === 'italic' ? 'normal' : 'italic' })}
-                className={`flex-1 text-xs border rounded py-1 italic disabled:opacity-40 ${selected.fontStyle === 'italic' ? 'bg-gray-200' : 'hover:bg-gray-50'}`}
-              >
-                I
-              </button>
-              <button
-                disabled={isLocked}
-                onClick={() => applyProp({ underline: !selected.underline })}
-                className={`flex-1 text-xs border rounded py-1 underline disabled:opacity-40 ${selected.underline ? 'bg-gray-200' : 'hover:bg-gray-50'}`}
-              >
-                U
-              </button>
-            </div>
-
-            <div>
-              <label className="text-xs font-semibold text-gray-500 block mb-1">Alignment</label>
-              <div className="grid grid-cols-4 gap-1">
-                {['left', 'center', 'right', 'justify'].map((a) => (
-                  <button
-                    key={a}
-                    disabled={isLocked}
-                    onClick={() => applyProp({ textAlign: a })}
-                    className={`text-xs border rounded py-1 disabled:opacity-40 ${selected.textAlign === a ? 'bg-gray-200' : 'hover:bg-gray-50'}`}
-                  >
-                    {a[0].toUpperCase()}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <label className="text-xs font-semibold text-gray-500 block mb-1">
-                Letter Spacing ({selected.charSpacing || 0})
-              </label>
-              <input
-                type="range"
-                min={-100}
-                max={800}
-                disabled={isLocked}
-                value={selected.charSpacing || 0}
-                onChange={(e) => applyProp({ charSpacing: Number(e.target.value) }, false)}
-                onMouseUp={() => pushHistory()}
-                className="w-full disabled:opacity-40"
-              />
-            </div>
-
-            <div>
-              <label className="text-xs font-semibold text-gray-500 block mb-1">
-                Line Height ({(selected.lineHeight || 1.16).toFixed(2)})
-              </label>
-              <input
-                type="range"
-                min={0.5}
-                max={3}
-                step={0.05}
-                disabled={isLocked}
-                value={selected.lineHeight || 1.16}
-                onChange={(e) => applyProp({ lineHeight: Number(e.target.value) }, false)}
-                onMouseUp={() => pushHistory()}
-                className="w-full disabled:opacity-40"
-              />
-            </div>
-          </>
-        )}
-
-        {!isText && !isImage && hasFillStroke && (
-          <>
-            <div>
-              <label className="text-xs font-semibold text-gray-500 block mb-1">Fill Type</label>
-              <select
-                value={isGradientFill ? gradType : 'solid'}
-                disabled={isLocked}
-                onChange={(e) => {
-                  const v = e.target.value;
-                  if (v === 'solid') {
-                    applyProp({ fill: typeof selected.fill === 'string' ? selected.fill : '#3FA9E8' });
-                  } else {
-                    applyGradientFill(
-                      v as 'linear' | 'radial',
-                      gradStops[0]?.color || '#3FA9E8',
-                      gradStops[1]?.color || '#7ED33E',
-                      gradAngleRef.current
-                    );
-                  }
-                }}
-                className="w-full text-xs border rounded px-2 py-1 disabled:opacity-40"
-              >
-                <option value="solid">Solid</option>
-                <option value="linear">Linear Gradient</option>
-                <option value="radial">Radial Gradient</option>
-              </select>
-            </div>
-
-            {isGradientFill ? (
-              <div className="border rounded-lg p-2.5 bg-gray-50 flex flex-col gap-2">
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="text-[10px] text-gray-500 block mb-1">Color 1</label>
-                    <input
-                      type="color"
-                      disabled={isLocked}
-                      value={gradStops[0]?.color || '#3FA9E8'}
-                      onChange={(e) =>
-                        applyGradientFill(
-                          gradType,
-                          e.target.value,
-                          gradStops[1]?.color || '#7ED33E',
-                          gradAngleRef.current
-                        )
-                      }
-                      className="w-full h-8 border rounded cursor-pointer disabled:opacity-40"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[10px] text-gray-500 block mb-1">Color 2</label>
-                    <input
-                      type="color"
-                      disabled={isLocked}
-                      value={gradStops[1]?.color || '#7ED33E'}
-                      onChange={(e) =>
-                        applyGradientFill(
-                          gradType,
-                          gradStops[0]?.color || '#3FA9E8',
-                          e.target.value,
-                          gradAngleRef.current
-                        )
-                      }
-                      className="w-full h-8 border rounded cursor-pointer disabled:opacity-40"
-                    />
-                  </div>
-                </div>
-                {gradType === 'linear' && (
-                  <div>
-                    <label className="text-[10px] text-gray-500 block mb-1">Angle</label>
-                    <input
-                      type="range"
-                      min={0}
-                      max={360}
-                      disabled={isLocked}
-                      defaultValue={gradAngleRef.current}
-                      onChange={(e) => {
-                        gradAngleRef.current = Number(e.target.value);
-                        applyGradientFill(
-                          'linear',
-                          gradStops[0]?.color || '#3FA9E8',
-                          gradStops[1]?.color || '#7ED33E',
-                          gradAngleRef.current
-                        );
-                      }}
-                      className="w-full disabled:opacity-40"
-                    />
-                  </div>
-                )}
-                <p className="text-[10px] text-gray-400">
-                  Gradient stops are fixed at 2 colors (start/end) in this version. On-canvas
-                  draggable gradient handles are not implemented yet.
-                </p>
-              </div>
-            ) : (
-              <div>
-                <label className="text-xs font-semibold text-gray-500 block mb-1">Fill Color</label>
-                <input
-                  type="color"
-                  disabled={isLocked}
-                  value={typeof selected.fill === 'string' ? selected.fill : '#000000'}
-                  onChange={(e) => applyProp({ fill: e.target.value }, false)}
-                  onBlur={() => pushHistory()}
-                  className="w-full h-8 border rounded cursor-pointer disabled:opacity-40"
-                />
-              </div>
-            )}
-
-            <div>
-              <label className="text-xs font-semibold text-gray-500 block mb-1">Stroke Color</label>
-              <input
-                type="color"
-                disabled={isLocked}
-                value={selected.stroke || '#000000'}
-                onChange={(e) => applyProp({ stroke: e.target.value }, false)}
-                onBlur={() => pushHistory()}
-                className="w-full h-8 border rounded cursor-pointer disabled:opacity-40"
-              />
-            </div>
-
-            <div>
-              <label className="text-xs font-semibold text-gray-500 block mb-1">
-                Stroke Width ({selected.strokeWidth || 0})
-              </label>
-              <input
-                type="range"
-                min={0}
-                max={40}
-                disabled={isLocked}
-                value={selected.strokeWidth || 0}
-                onChange={(e) => applyProp({ strokeWidth: Number(e.target.value) }, false)}
-                onMouseUp={() => pushHistory()}
-                className="w-full disabled:opacity-40"
-              />
-            </div>
-
-            {selected.type === 'rect' && (
-              <div>
-                <label className="text-xs font-semibold text-gray-500 block mb-1">
-                  Corner Radius ({selected.rx || 0})
-                </label>
-                <input
-                  type="range"
-                  min={0}
-                  max={100}
-                  disabled={isLocked}
-                  value={selected.rx || 0}
-                  onChange={(e) => applyProp({ rx: Number(e.target.value), ry: Number(e.target.value) }, false)}
-                  onMouseUp={() => pushHistory()}
-                  className="w-full disabled:opacity-40"
-                />
-              </div>
-            )}
-          </>
-        )}
-
-        {isImage && (
-          <>
-            <div className="grid grid-cols-2 gap-1">
-              <button disabled={isLocked} onClick={() => applyProp({ flipX: !selected.flipX })} className="text-xs border rounded py-1 hover:bg-gray-50 disabled:opacity-40">
-                Flip H
-              </button>
-              <button disabled={isLocked} onClick={() => applyProp({ flipY: !selected.flipY })} className="text-xs border rounded py-1 hover:bg-gray-50 disabled:opacity-40">
-                Flip V
-              </button>
-            </div>
-            {selected.clipPath ? (
-              <button
-                onClick={removeMask}
-                className="text-xs border border-red-200 text-red-600 rounded py-1.5 hover:bg-red-50"
-              >
-                Remove Mask
-              </button>
-            ) : (
-              <p className="text-[10px] text-gray-400">
-                Draw a closed path with the Pen tool, then apply it as a mask from the path's
-                properties.
-              </p>
-            )}
-            <p className="text-[10px] text-gray-400">Crop and filters are coming in a future update.</p>
-          </>
-        )}
-      </div>
-    );
-  };
-
-  return (
-    <main className="h-screen flex flex-col bg-gray-50">
-      <div className="flex items-center justify-between px-4 py-2 border-b bg-white">
-        <Image src="/logo.png" alt="Magical Touch" width={130} height={26} />
-        <input
-          type="text"
-          value={designName}
-          onChange={(e) => setDesignName(e.target.value)}
-          className="text-sm border rounded px-2 py-1 w-48 text-center"
-        />
-
-        <div className="flex items-center gap-2">
-          <button onClick={undo} disabled={!canUndo} title="Undo (Ctrl/Cmd+Z)" className="px-2 py-1 border rounded disabled:opacity-30">
-            ↶ Undo
-          </button>
-          <button onClick={redo} disabled={!canRedo} title="Redo (Ctrl/Cmd+Shift+Z)" className="px-2 py-1 border rounded disabled:opacity-30">
-            ↷ Redo
-          </button>
-          <button
-            onClick={() => setShowShortcuts(true)}
-            title="Keyboard shortcuts (?)"
-            className="p-1.5 border rounded text-gray-500 hover:bg-gray-50"
-          >
-            <Keyboard size={16} />
-          </button>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <label className="text-xs text-gray-500">Units</label>
-          <select
-            value={unit}
-            onChange={(e) => setUnit(e.target.value as DocUnit)}
-            className="text-xs border rounded px-1.5 py-1"
-          >
-            <option value="px">px</option>
-            <option value="mm">mm</option>
-            <option value="cm">cm</option>
-            <option value="in">in</option>
-          </select>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <button onClick={() => setZoom(Math.max(10, zoom - 10))} className="px-2 py-1 border rounded">-</button>
-          <span className="text-sm text-gray-600 w-12 text-center">{zoom}%</span>
-          <button onClick={() => setZoom(Math.min(200, zoom + 10))} className="px-2 py-1 border rounded">+</button>
-        </div>
-
-        <div className="flex items-center gap-2 relative">
-          <button
-            onClick={() => setShowExportMenu(!showExportMenu)}
-            disabled={exporting}
-            className="border border-gray-300 text-gray-700 px-4 py-2 rounded-full text-sm font-semibold disabled:opacity-50"
-          >
-            {exporting ? 'Exporting...' : 'Export'}
-          </button>
-
-          {showExportMenu && (
-            <div className="absolute top-full right-0 mt-2 bg-white border rounded-lg shadow-lg py-1 w-40 z-10">
-              <button onClick={exportAsPNG} className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50">PNG</button>
-              <button onClick={exportAsJPG} className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50">JPG</button>
-              <button onClick={exportAsPDF} className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50">PDF</button>
-            </div>
-          )}
-
-          <button
-            onClick={saveDesign}
-            disabled={saving}
-            className="bg-brand-gradient text-white px-4 py-2 rounded-full text-sm font-semibold disabled:opacity-50"
-          >
-            {saving ? 'Saving...' : 'Save'}
-          </button>
-        </div>
-      </div>
-
-      <div className="flex flex-1 overflow-hidden">
-        <div className="w-20 bg-white border-r flex flex-col items-center py-4 gap-4 text-xs overflow-y-auto">
-          <button
-            onClick={() => setActiveTool('select')}
-            title="Selection (V)"
-            className={`flex flex-col items-center gap-1 ${activeTool === 'select' ? 'text-blue-600' : 'text-gray-700'}`}
-          >
-            <MousePointer2 size={18} />
-            <span>Select</span>
-          </button>
-          <button
-            onClick={() => setActiveTool('direct')}
-            title="Direct Selection (A)"
-            className={`flex flex-col items-center gap-1 ${activeTool === 'direct' ? 'text-blue-600' : 'text-gray-700'}`}
-          >
-            <Pointer size={18} />
-            <span>Direct</span>
-          </button>
-          <button
-            onClick={() => setActiveTool('pen')}
-            title="Pen Tool (P)"
-            className={`flex flex-col items-center gap-1 ${activeTool === 'pen' ? 'text-blue-600' : 'text-gray-700'}`}
-          >
-            <PenToolIcon size={18} />
-            <span>Pen</span>
-          </button>
-          <button onClick={addText} className="flex flex-col items-center gap-1 text-gray-700">
-            <Type size={18} />
-            <span>Text</span>
-          </button>
-          <button
-            onClick={() => setActiveTool('rect')}
-            title="Rectangle — click and drag on canvas"
-            className={`flex flex-col items-center gap-1 ${activeTool === 'rect' ? 'text-blue-600' : 'text-gray-700'}`}
-          >
-            <Square size={18} />
-            <span>Square</span>
-          </button>
-          <button
-            onClick={() => setActiveTool('ellipse')}
-            title="Ellipse — click and drag on canvas"
-            className={`flex flex-col items-center gap-1 ${activeTool === 'ellipse' ? 'text-blue-600' : 'text-gray-700'}`}
-          >
-            <CircleIcon size={18} />
-            <span>Circle</span>
-          </button>
-          <button
-            onClick={() => setActiveTool('triangle')}
-            title="Triangle — click and drag on canvas"
-            className={`flex flex-col items-center gap-1 ${activeTool === 'triangle' ? 'text-blue-600' : 'text-gray-700'}`}
-          >
-            <TriangleIcon size={18} />
-            <span>Triangle</span>
-          </button>
-          <button
-            onClick={() => setActiveTool('line')}
-            title="Line — click and drag on canvas"
-            className={`flex flex-col items-center gap-1 ${activeTool === 'line' ? 'text-blue-600' : 'text-gray-700'}`}
-          >
-            <LineIcon size={18} />
-            <span>Line</span>
-          </button>
-          <button
-            onClick={() => setActiveTool('polygon')}
-            title="Polygon — click and drag on canvas"
-            className={`flex flex-col items-center gap-1 ${activeTool === 'polygon' ? 'text-blue-600' : 'text-gray-700'}`}
-          >
-            <PolygonIcon size={18} />
-            <span>Polygon</span>
-          </button>
-          <button
-            onClick={() => setActiveTool('star')}
-            title="Star — click and drag on canvas"
-            className={`flex flex-col items-center gap-1 ${activeTool === 'star' ? 'text-blue-600' : 'text-gray-700'}`}
-          >
-            <StarIcon size={18} />
-            <span>Star</span>
-          </button>
-          <label className="flex flex-col items-center gap-1 text-gray-700 cursor-pointer">
-            <ImagePlus size={18} />
-            <span>Upload</span>
-            <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
-          </label>
-
-          <div className="w-full h-px bg-gray-200 my-1" />
-
-          <button onClick={duplicateSelected} title="Duplicate (Ctrl/Cmd+D)" className="flex flex-col items-center gap-1 text-gray-700">
-            <Copy size={18} />
-            <span>Duplicate</span>
-          </button>
-          <button onClick={bringForward} title="Bring Forward (Ctrl/Cmd+])" className="flex flex-col items-center gap-1 text-gray-700">
-            <ArrowUp size={18} />
-            <span>Fwd</span>
-          </button>
-          <button onClick={sendBackward} title="Send Backward (Ctrl/Cmd+[)" className="flex flex-col items-center gap-1 text-gray-700">
-            <ArrowDown size={18} />
-            <span>Back</span>
-          </button>
-          <button onClick={bringToFront} title="Bring to Front (Ctrl/Cmd+Shift+])" className="flex flex-col items-center gap-1 text-gray-700">
-            <ArrowUpToLine size={18} />
-            <span>Front</span>
-          </button>
-          <button onClick={sendToBack} title="Send to Back (Ctrl/Cmd+Shift+[)" className="flex flex-col items-center gap-1 text-gray-700">
-            <ArrowDownToLine size={18} />
-            <span>Rear</span>
-          </button>
-
-          <button onClick={deleteSelected} className="flex flex-col items-center gap-1 text-red-400 mt-auto">
-            <Trash2 size={18} />
-            <span>Delete</span>
-          </button>
-        </div>
-
-        <div className="flex-1 overflow-auto flex items-center justify-center p-8">
-          <div
-            style={{
-              transform: 'scale(' + scale + ')',
-              transformOrigin: 'center',
-              boxShadow: '0 0 0 1px #e5e7eb',
-            }}
-          >
-            <canvas ref={canvasRef} />
-          </div>
-        </div>
-
-        <div className="w-64 bg-white border-l flex flex-col overflow-y-auto">
-          <div className="p-3 border-b">
-            <p className="font-semibold text-gray-700 mb-3 text-sm">Properties</p>
-            {renderPropertiesPanel()}
-          </div>
-
-          <div className="p-3">
-            <p className="font-semibold text-gray-700 mb-3 text-sm">Layers</p>
-            <div className="flex flex-col gap-1">
-              {layers.length === 0 && <p className="text-xs text-gray-400">No objects yet</p>}
-              {layers.map((obj, i) => {
-                const isLocked = !!obj.locked;
-                const isHidden = obj.visible === false;
-                const isRenaming = renamingId === i;
-                const isSelectedLayer = selected === obj;
-
-                return (
-                  <div
-                    key={i}
-                    draggable
-                    onDragStart={() => handleLayerDragStart(i)}
-                    onDragOver={(e) => e.preventDefault()}
-                    onDrop={() => handleLayerDrop(i)}
-                    onClick={() => {
-                      if (isLocked) return;
-                      fabricCanvasRef.current.setActiveObject(obj);
-                      fabricCanvasRef.current.requestRenderAll();
-                      setSelected(obj);
-                    }}
-                    className={`flex items-center gap-1.5 text-xs p-1.5 border rounded cursor-pointer hover:bg-gray-50 ${
-                      isSelectedLayer ? 'bg-gray-100 border-gray-400' : ''
-                    } ${isHidden ? 'opacity-40' : ''}`}
-                  >
-                    <span className="text-gray-300 cursor-grab shrink-0">
-                      <GripVertical size={12} />
-                    </span>
-
-                    {isRenaming ? (
-                      <input
-                        autoFocus
-                        value={renameValue}
-                        onClick={(e) => e.stopPropagation()}
-                        onChange={(e) => setRenameValue(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') commitRename(obj);
-                          if (e.key === 'Escape') setRenamingId(null);
-                        }}
-                        className="flex-1 min-w-0 border rounded px-1 py-0.5 text-xs"
-                      />
-                    ) : (
-                      <span className="flex-1 min-w-0 truncate">{layerLabel(obj, i)}</span>
-                    )}
-
-                    {isRenaming ? (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          commitRename(obj);
-                        }}
-                        className="shrink-0 text-gray-400 hover:text-gray-700"
-                        title="Confirm rename"
-                      >
-                        <Check size={12} />
-                      </button>
-                    ) : (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          startRename(obj, i);
-                        }}
-                        className="shrink-0 text-gray-300 hover:text-gray-700"
-                        title="Rename"
-                      >
-                        <Pencil size={12} />
-                      </button>
-                    )}
-
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleVisible(obj);
-                      }}
-                      className="shrink-0 text-gray-300 hover:text-gray-700"
-                      title={isHidden ? 'Show layer' : 'Hide layer'}
-                    >
-                      {isHidden ? <EyeOff size={12} /> : <Eye size={12} />}
-                    </button>
-
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleLock(obj);
-                      }}
-                      className="shrink-0 text-gray-300 hover:text-gray-700"
-                      title={isLocked ? 'Unlock layer' : 'Lock layer'}
-                    >
-                      {isLocked ? <Lock size={12} /> : <Unlock size={12} />}
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {liveDim && (
-        <div
-          style={{ position: 'fixed', left: liveDim.x + 16, top: liveDim.y + 16, pointerEvents: 'none' }}
-          className="z-50 bg-black/80 text-white text-[11px] font-mono px-2 py-1 rounded shadow"
-        >
-          W: {liveDim.w} {unit}
-          {liveDim.h !== '—' && (
-            <>
-              {' '}
-              · H: {liveDim.h} {unit}
-            </>
-          )}
-        </div>
-      )}
-
-      {showShortcuts && (
-        <div
-          className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-6"
-          onClick={() => setShowShortcuts(false)}
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="bg-white rounded-xl shadow-xl w-full max-w-md max-h-[80vh] overflow-y-auto"
-          >
-            <div className="flex items-center justify-between px-4 py-3 border-b sticky top-0 bg-white">
-              <div className="flex items-center gap-2">
-                <Keyboard size={16} className="text-gray-500" />
-                <p className="font-semibold text-sm text-gray-800">Keyboard shortcuts</p>
-              </div>
-              <button onClick={() => setShowShortcuts(false)} className="text-gray-400 hover:text-gray-700">
-                <X size={16} />
-              </button>
-            </div>
-            <div className="p-4 flex flex-col gap-1.5">
-              {SHORTCUTS.map((s) => (
-                <div key={s.label} className="flex items-center justify-between text-xs py-1">
-                  <span className="text-gray-600">{s.label}</span>
-                  <kbd className="bg-gray-100 border border-gray-300 rounded px-2 py-0.5 font-mono text-[11px] text-gray-700">
-                    {s.keys}
-                  </kbd>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-    </main>
-  );
-}
-
-export default function EditorPage() {
-  return (
-    <Suspense fallback={<div>Loading editor...</div>}>
-      <EditorContent />
-    </Suspense>
-  );
-}
