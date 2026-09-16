@@ -476,3 +476,561 @@ function EditorContent() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [width, height, urlDesignId]);
+
+  const scale = zoom / 100;
+
+  // ---------------------------------------------------------------------
+  // TEXT / IMAGE
+  // ---------------------------------------------------------------------
+  const addText = () => {
+    import('fabric').then((mod) => {
+      const text = new mod.fabric.IText('Double-click to edit', {
+        left: width / 2 - 100,
+        top: height / 2 - 20,
+        fontSize: 40,
+        fill: '#1A1A1A',
+        fontFamily: 'Arial',
+      });
+      fabricCanvasRef.current.add(text);
+      fabricCanvasRef.current.setActiveObject(text);
+    });
+  };
+
+  const nextImageIdRef = useRef(0);
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files ? e.target.files[0] : null;
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function (event) {
+      import('fabric').then((mod) => {
+        mod.fabric.Image.fromURL(event.target ? (event.target.result as string) : '', function (img: any) {
+          img.scaleToWidth(300);
+          img.__id = `img_${Date.now()}_${nextImageIdRef.current++}`;
+          fabricCanvasRef.current.add(img);
+          fabricCanvasRef.current.setActiveObject(img);
+        });
+      });
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // ---------------------------------------------------------------------
+  // OBJECT ACTIONS
+  // ---------------------------------------------------------------------
+  const deleteSelected = () => {
+    const canvas = fabricCanvasRef.current;
+    const active = canvas.getActiveObject();
+    if (!active || active.locked) return;
+    if (active.type === 'activeSelection') {
+      active.forEachObject((obj: any) => {
+        if (!obj.locked) canvas.remove(obj);
+      });
+      canvas.discardActiveObject();
+    } else {
+      canvas.remove(active);
+    }
+    clearAnchorHandles();
+    canvas.requestRenderAll();
+  };
+
+  const duplicateSelected = () => {
+    const canvas = fabricCanvasRef.current;
+    const active = canvas.getActiveObject();
+    if (!active) return;
+    active.clone((cloned: any) => {
+      canvas.discardActiveObject();
+      cloned.set({ left: (cloned.left || 0) + 20, top: (cloned.top || 0) + 20, evented: true, locked: false });
+      delete cloned.__uid;
+      if (cloned.type === 'activeSelection') {
+        cloned.canvas = canvas;
+        cloned.forEachObject((obj: any) => canvas.add(obj));
+        cloned.setCoords();
+      } else {
+        canvas.add(cloned);
+      }
+      canvas.setActiveObject(cloned);
+      canvas.requestRenderAll();
+    });
+  };
+
+  const copySelected = () => {
+    const canvas = fabricCanvasRef.current;
+    const active = canvas.getActiveObject();
+    if (!active) return;
+    active.clone((cloned: any) => {
+      clipboardRef.current = cloned;
+    });
+  };
+
+  const pasteClipboard = () => {
+    const canvas = fabricCanvasRef.current;
+    if (!clipboardRef.current) return;
+    clipboardRef.current.clone((cloned: any) => {
+      canvas.discardActiveObject();
+      cloned.set({ left: (cloned.left || 0) + 20, top: (cloned.top || 0) + 20, evented: true });
+      delete cloned.__uid;
+      if (cloned.type === 'activeSelection') {
+        cloned.canvas = canvas;
+        cloned.forEachObject((obj: any) => canvas.add(obj));
+        cloned.setCoords();
+      } else {
+        canvas.add(cloned);
+      }
+      canvas.setActiveObject(cloned);
+      canvas.requestRenderAll();
+    });
+  };
+
+  const bringForward = () => {
+    const canvas = fabricCanvasRef.current;
+    const active = canvas.getActiveObject();
+    if (!active) return;
+    canvas.bringForward(active);
+    canvas.requestRenderAll();
+    refreshLayers();
+    pushHistory();
+  };
+  const sendBackward = () => {
+    const canvas = fabricCanvasRef.current;
+    const active = canvas.getActiveObject();
+    if (!active) return;
+    canvas.sendBackwards(active);
+    canvas.requestRenderAll();
+    refreshLayers();
+    pushHistory();
+  };
+  const bringToFront = () => {
+    const canvas = fabricCanvasRef.current;
+    const active = canvas.getActiveObject();
+    if (!active) return;
+    canvas.bringToFront(active);
+    canvas.requestRenderAll();
+    refreshLayers();
+    pushHistory();
+  };
+  const sendToBack = () => {
+    const canvas = fabricCanvasRef.current;
+    const active = canvas.getActiveObject();
+    if (!active) return;
+    canvas.sendToBack(active);
+    canvas.requestRenderAll();
+    refreshLayers();
+    pushHistory();
+  };
+
+  const groupSelected = () => {
+    const canvas = fabricCanvasRef.current;
+    const active = canvas.getActiveObject();
+    if (!active || active.type !== 'activeSelection') return;
+    const group = active.toGroup();
+    canvas.setActiveObject(group);
+    canvas.requestRenderAll();
+    refreshLayers();
+    pushHistory();
+    setSelected(group);
+  };
+
+  const ungroupSelected = () => {
+    const canvas = fabricCanvasRef.current;
+    const active = canvas.getActiveObject();
+    if (!active || active.type !== 'group') return;
+    const items = active.toActiveSelection();
+    canvas.setActiveObject(items);
+    canvas.requestRenderAll();
+    refreshLayers();
+    pushHistory();
+    setSelected(items);
+  };
+
+  const toggleLock = (obj: any) => {
+    const canvas = fabricCanvasRef.current;
+    const nextLocked = !obj.locked;
+    obj.set({
+      locked: nextLocked,
+      selectable: !nextLocked,
+      evented: !nextLocked,
+      lockMovementX: nextLocked,
+      lockMovementY: nextLocked,
+      lockScalingX: nextLocked,
+      lockScalingY: nextLocked,
+      lockRotation: nextLocked,
+    });
+    if (nextLocked && canvas.getActiveObject() === obj) canvas.discardActiveObject();
+    canvas.requestRenderAll();
+    bumpSel();
+    pushHistory();
+  };
+
+  const toggleVisible = (obj: any) => {
+    const canvas = fabricCanvasRef.current;
+    obj.set({ visible: obj.visible === false ? true : false });
+    if (obj.visible === false && canvas.getActiveObject() === obj) canvas.discardActiveObject();
+    canvas.requestRenderAll();
+    refreshLayers();
+    bumpSel();
+    pushHistory();
+  };
+
+  const renameLayer = (obj: any, name: string) => {
+    obj.set({ name });
+    refreshLayers();
+    pushHistory();
+  };
+
+  const layerLabel = (obj: any, index: number) => obj.name || `${obj.type} ${index + 1}`;
+
+  const reorderLayers = (fromIndex: number, targetIndex: number) => {
+    const canvas = fabricCanvasRef.current;
+    const obj = layers[fromIndex];
+    const objs = canvas.getObjects();
+    const targetCanvasIdx = objs.length - 1 - targetIndex;
+    canvas.moveTo(obj, targetCanvasIdx);
+    canvas.requestRenderAll();
+    refreshLayers();
+    pushHistory();
+  };
+
+  const alignObject = (mode: 'left' | 'centerH' | 'right' | 'top' | 'centerV' | 'bottom') => {
+    const canvas = fabricCanvasRef.current;
+    const active = canvas.getActiveObject();
+    if (!active || active.locked) return;
+    const objW = active.getScaledWidth();
+    const objH = active.getScaledHeight();
+
+    switch (mode) {
+      case 'left': active.set({ left: 0 }); break;
+      case 'centerH': active.set({ left: width / 2 - objW / 2 }); break;
+      case 'right': active.set({ left: width - objW }); break;
+      case 'top': active.set({ top: 0 }); break;
+      case 'centerV': active.set({ top: height / 2 - objH / 2 }); break;
+      case 'bottom': active.set({ top: height - objH }); break;
+    }
+    active.setCoords();
+    canvas.requestRenderAll();
+    pushHistory();
+    bumpSel();
+  };
+
+  const applyProp = (props: Record<string, any>, record = true) => {
+    const canvas = fabricCanvasRef.current;
+    const active = canvas.getActiveObject();
+    if (!active || active.locked) return;
+    active.set(props);
+    active.setCoords();
+    canvas.requestRenderAll();
+    bumpSel();
+    if (record) pushHistory();
+  };
+
+  // ---------------------------------------------------------------------
+  // KEYBOARD SHORTCUTS
+  // ---------------------------------------------------------------------
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const canvas = fabricCanvasRef.current;
+      if (!canvas) return;
+
+      const isMeta = e.ctrlKey || e.metaKey;
+      const active = canvas.getActiveObject();
+      const isEditingText = active && active.isEditing;
+      const isTypingInField = document.activeElement && ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName);
+      const canUseToolShortcuts = !isEditingText && !isTypingInField;
+
+      if (e.key === '?' && canUseToolShortcuts) {
+        e.preventDefault();
+        setShowShortcuts((v) => !v);
+        return;
+      }
+
+      if (canUseToolShortcuts && !isMeta && !e.shiftKey) {
+        if (e.key.toLowerCase() === 'v') { e.preventDefault(); setActiveTool('select'); return; }
+        if (e.key.toLowerCase() === 'a') { e.preventDefault(); setActiveTool('direct'); return; }
+        if (e.key.toLowerCase() === 'p') { e.preventDefault(); setActiveTool('pen'); return; }
+      }
+
+      if (canUseToolShortcuts && activeToolRef.current === 'pen') {
+        if (e.key === 'Enter') { e.preventDefault(); finishPenPath(false); return; }
+        if (e.key === 'Escape') { e.preventDefault(); clearPenDraft(); return; }
+      }
+
+      if (canUseToolShortcuts && isDrawTool(activeToolRef.current) && e.key === 'Escape') {
+        e.preventDefault();
+        clearShapeDraft();
+        setActiveTool('select');
+        return;
+      }
+
+      if (canUseToolShortcuts && e.shiftKey && e.key === 'Enter') { e.preventDefault(); applyPathAsMask(); return; }
+
+      if (isMeta && e.key.toLowerCase() === 'z' && !e.shiftKey) { e.preventDefault(); undo(); return; }
+      if ((isMeta && e.key.toLowerCase() === 'z' && e.shiftKey) || (isMeta && e.key.toLowerCase() === 'y')) { e.preventDefault(); redo(); return; }
+      if (isMeta && e.key.toLowerCase() === 's') { e.preventDefault(); saveDesign(); return; }
+      if (isMeta && e.key.toLowerCase() === 'a' && !isEditingText) {
+        e.preventDefault();
+        const objs = canvas.getObjects().filter((o: any) => !o.locked && !o.__isAnchorHandle && !o.__isPenPreview && !o.__isShapeDraft);
+        if (objs.length) {
+          canvas.discardActiveObject();
+          const sel = new (window as any).fabric.ActiveSelection(objs, { canvas });
+          canvas.setActiveObject(sel);
+          canvas.requestRenderAll();
+        }
+        return;
+      }
+      if (e.key === 'Escape') {
+        canvas.discardActiveObject();
+        clearAnchorHandles();
+        canvas.requestRenderAll();
+        setShowShortcuts(false);
+        return;
+      }
+      if (isMeta && e.key.toLowerCase() === 'g' && e.shiftKey && !isEditingText) { e.preventDefault(); ungroupSelected(); return; }
+      if (isMeta && e.key.toLowerCase() === 'g' && !isEditingText) { e.preventDefault(); groupSelected(); return; }
+      if (isMeta && e.key.toLowerCase() === 'd' && !isEditingText) { e.preventDefault(); duplicateSelected(); return; }
+      if (isMeta && e.key.toLowerCase() === 'c' && !isEditingText) { copySelected(); return; }
+      if (isMeta && e.key.toLowerCase() === 'v' && !isEditingText) { pasteClipboard(); return; }
+      if (isMeta && e.key.toLowerCase() === 'l' && !isEditingText) { e.preventDefault(); active && toggleLock(active); return; }
+      if (isMeta && e.key.toLowerCase() === 'h' && !isEditingText) { e.preventDefault(); active && toggleVisible(active); return; }
+      if ((e.key === 'Delete' || e.key === 'Backspace') && !isEditingText && activeToolRef.current !== 'pen' && !isDrawTool(activeToolRef.current)) {
+        e.preventDefault();
+        deleteSelected();
+        return;
+      }
+      if (isMeta && e.key === ']' && !e.shiftKey) { e.preventDefault(); bringForward(); return; }
+      if (isMeta && e.key === '[' && !e.shiftKey) { e.preventDefault(); sendBackward(); return; }
+      if (isMeta && e.shiftKey && e.key === ']') { e.preventDefault(); bringToFront(); return; }
+      if (isMeta && e.shiftKey && e.key === '[') { e.preventDefault(); sendToBack(); return; }
+      if (isMeta && (e.key === '=' || e.key === '+')) { e.preventDefault(); setZoom((z) => Math.min(200, z + 10)); return; }
+      if (isMeta && e.key === '-') { e.preventDefault(); setZoom((z) => Math.max(10, z - 10)); return; }
+      if (isMeta && e.key === '0') { e.preventDefault(); setZoom(100); return; }
+
+      if (!isEditingText && active && !active.locked && activeToolRef.current !== 'pen' && !isDrawTool(activeToolRef.current) && e.key.startsWith('Arrow')) {
+        const step = e.shiftKey ? 10 : 1;
+        e.preventDefault();
+        if (e.key === 'ArrowUp') active.top -= step;
+        if (e.key === 'ArrowDown') active.top += step;
+        if (e.key === 'ArrowLeft') active.left -= step;
+        if (e.key === 'ArrowRight') active.left += step;
+        active.setCoords();
+        canvas.requestRenderAll();
+        bumpSel();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [undo, redo, finishPenPath, clearPenDraft, applyPathAsMask, setActiveTool, clearAnchorHandles, clearShapeDraft]);
+
+  // ---------------------------------------------------------------------
+  // SAVE / EXPORT
+  // ---------------------------------------------------------------------
+  const saveDesign = async () => {
+    setSaving(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      alert('You must be logged in to save a design.');
+      setSaving(false);
+      return;
+    }
+
+    const canvasJson = fabricCanvasRef.current.toJSON(['name', 'locked', 'visible', 'isVectorPath', 'clipPath', '__uid', '__lockRatio']);
+    const payload: any = {
+      user_id: user.id,
+      name: designName,
+      canvas_json: canvasJson,
+      width,
+      height,
+      updated_at: new Date().toISOString(),
+    };
+    if (designId) payload.id = designId;
+
+    const { data, error } = await supabase.from('designs').upsert(payload).select().single();
+    setSaving(false);
+
+    if (error) {
+      console.error('Save failed:', error);
+      alert('Failed to save design. Please try again.');
+      return;
+    }
+    if (data) {
+      setDesignId(data.id);
+      router.replace(`/editor?designId=${data.id}&w=${width}&h=${height}`);
+    }
+  };
+
+  const downloadFile = (dataUrl: string, filename: string) => {
+    const link = document.createElement('a');
+    link.href = dataUrl;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const exportAsPNG = () => {
+    setExporting(true);
+    const dataUrl = fabricCanvasRef.current.toDataURL({ format: 'png', quality: 1, multiplier: 2 });
+    downloadFile(dataUrl, `${designName || 'design'}.png`);
+    setExporting(false);
+    setShowExportMenu(false);
+  };
+  const exportAsJPG = () => {
+    setExporting(true);
+    const dataUrl = fabricCanvasRef.current.toDataURL({ format: 'jpeg', quality: 0.9, multiplier: 2 });
+    downloadFile(dataUrl, `${designName || 'design'}.jpg`);
+    setExporting(false);
+    setShowExportMenu(false);
+  };
+  const exportAsPDF = async () => {
+    setExporting(true);
+    try {
+      const { jsPDF } = await import('jspdf');
+      const dataUrl = fabricCanvasRef.current.toDataURL({ format: 'png', quality: 1, multiplier: 2 });
+      const orientation = width > height ? 'landscape' : 'portrait';
+      const pdf = new jsPDF({ orientation, unit: 'px', format: [width, height] });
+      pdf.addImage(dataUrl, 'PNG', 0, 0, width, height);
+      pdf.save(`${designName || 'design'}.pdf`);
+    } catch (err) {
+      console.error('PDF export failed:', err);
+      alert('Failed to export PDF. Please try again.');
+    }
+    setExporting(false);
+    setShowExportMenu(false);
+  };
+
+  return (
+    <main className="h-screen flex flex-col bg-gray-50">
+      <div className="flex items-center justify-between px-4 py-2 border-b bg-white">
+        <Image src="/logo.png" alt="Magical Touch" width={130} height={26} />
+        <input
+          type="text"
+          value={designName}
+          onChange={(e) => setDesignName(e.target.value)}
+          className="text-sm border rounded px-2 py-1 w-48 text-center"
+        />
+
+        <div className="flex items-center gap-2">
+          <button onClick={undo} disabled={!canUndo} title="Undo (Ctrl/Cmd+Z)" className="px-2 py-1 border rounded disabled:opacity-30">↶ Undo</button>
+          <button onClick={redo} disabled={!canRedo} title="Redo (Ctrl/Cmd+Shift+Z)" className="px-2 py-1 border rounded disabled:opacity-30">↷ Redo</button>
+          <button onClick={() => setShowShortcuts(true)} title="Keyboard shortcuts (?)" className="p-1.5 border rounded text-gray-500 hover:bg-gray-50">
+            <Keyboard size={16} />
+          </button>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <label className="text-xs text-gray-500">Units</label>
+          <select value={unit} onChange={(e) => setUnit(e.target.value as DocUnit)} className="text-xs border rounded px-1.5 py-1">
+            <option value="px">px</option>
+            <option value="mm">mm</option>
+            <option value="cm">cm</option>
+            <option value="in">in</option>
+          </select>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <button onClick={() => setZoom(Math.max(10, zoom - 10))} className="px-2 py-1 border rounded">-</button>
+          <span className="text-sm text-gray-600 w-12 text-center">{zoom}%</span>
+          <button onClick={() => setZoom(Math.min(200, zoom + 10))} className="px-2 py-1 border rounded">+</button>
+        </div>
+
+        <div className="flex items-center gap-2 relative">
+          <button onClick={() => setShowExportMenu(!showExportMenu)} disabled={exporting} className="border border-gray-300 text-gray-700 px-4 py-2 rounded-full text-sm font-semibold disabled:opacity-50">
+            {exporting ? 'Exporting...' : 'Export'}
+          </button>
+          {showExportMenu && (
+            <div className="absolute top-full right-0 mt-2 bg-white border rounded-lg shadow-lg py-1 w-40 z-10">
+              <button onClick={exportAsPNG} className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50">PNG</button>
+              <button onClick={exportAsJPG} className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50">JPG</button>
+              <button onClick={exportAsPDF} className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50">PDF</button>
+            </div>
+          )}
+          <button onClick={saveDesign} disabled={saving} className="bg-brand-gradient text-white px-4 py-2 rounded-full text-sm font-semibold disabled:opacity-50">
+            {saving ? 'Saving...' : 'Save'}
+          </button>
+        </div>
+      </div>
+
+      <div className="flex flex-1 overflow-hidden">
+        <Toolbar
+          activeTool={activeTool}
+          onSelectTool={setActiveTool}
+          onAddText={addText}
+          onImageUpload={handleImageUpload}
+          onDuplicate={duplicateSelected}
+          onBringForward={bringForward}
+          onSendBackward={sendBackward}
+          onBringToFront={bringToFront}
+          onSendToBack={sendToBack}
+          onDelete={deleteSelected}
+          onOpenShapeBuilder={openShapeBuilder}
+          onOpenRoadmap={(id) => setRoadmap({ open: true, id })}
+        />
+
+        <div className="flex-1 overflow-auto flex items-center justify-center p-8">
+          <div style={{ transform: `scale(${scale})`, transformOrigin: 'center', boxShadow: '0 0 0 1px #e5e7eb' }}>
+            <canvas ref={canvasRef} />
+          </div>
+        </div>
+
+        <div className="w-64 bg-white border-l flex flex-col overflow-y-auto">
+          <div className="p-3 border-b">
+            <p className="font-semibold text-gray-700 mb-3 text-sm">Properties</p>
+            <PropertiesPanel
+              activeTool={activeTool}
+              selected={selected}
+              unit={unit}
+              layers={layers}
+              maskTargetId={maskTargetId}
+              setMaskTargetId={setMaskTargetId}
+              applyProp={applyProp}
+              applyExactSize={applyExactSize}
+              toggleLockRatio={toggleLockRatio}
+              alignObject={alignObject}
+              groupSelected={groupSelected}
+              ungroupSelected={ungroupSelected}
+              runShapeBuilder={runShapeBuilder}
+              applyPathAsMask={applyPathAsMask}
+              removeMask={removeMask}
+              applyGradientFill={applyGradientFill}
+              gradAngleRef={gradAngleRef}
+              pushHistory={pushHistory}
+              layerLabel={layerLabel}
+            />
+          </div>
+
+          <LayersPanel
+            layers={layers}
+            selected={selected}
+            onSelect={(obj) => {
+              fabricCanvasRef.current.setActiveObject(obj);
+              fabricCanvasRef.current.requestRenderAll();
+              setSelected(obj);
+            }}
+            onToggleVisible={toggleVisible}
+            onToggleLock={toggleLock}
+            onRename={renameLayer}
+            onReorder={reorderLayers}
+          />
+        </div>
+      </div>
+
+      {liveDim && (
+        <div style={{ position: 'fixed', left: liveDim.x + 16, top: liveDim.y + 16, pointerEvents: 'none' }} className="z-50 bg-black/80 text-white text-[11px] font-mono px-2 py-1 rounded shadow">
+          W: {liveDim.w} {unit}
+          {liveDim.h !== '—' && <> · H: {liveDim.h} {unit}</>}
+        </div>
+      )}
+
+      <ShortcutsModal open={showShortcuts} onClose={() => setShowShortcuts(false)} />
+      <RoadmapModal open={roadmap.open} highlightId={roadmap.id} onClose={() => setRoadmap({ open: false })} />
+    </main>
+  );
+}
+
+export default function EditorPage() {
+  return (
+    <Suspense fallback={<div>Loading editor...</div>}>
+      <EditorContent />
+    </Suspense>
+  );
+}
