@@ -19,6 +19,9 @@ import { PropertiesPanel } from '@/components/editor/PropertiesPanel';
 import { LayersPanel } from '@/components/editor/LayersPanel';
 import { ShortcutsModal } from '@/components/editor/ShortcutsModal';
 import { RoadmapModal } from '@/components/editor/RoadmapModal';
+import { MenuBar, MenuDef } from '@/components/editor/MenuBar';
+import { useWindowPanels } from '@/components/editor/WindowPanels';
+import { AlignPanel } from '@/components/editor/AlignPanel';
 
 function EditorContent() {
   const searchParams = useSearchParams();
@@ -35,6 +38,7 @@ function EditorContent() {
   const [exporting, setExporting] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [roadmap, setRoadmap] = useState<{ open: boolean; id?: string }>({ open: false });
+  const { isOpen: isPanelOpen, toggle: togglePanel } = useWindowPanels(['properties', 'layers']);
 
   const [selected, setSelected] = useState<any>(null);
   const [, setSelVersion] = useState(0);
@@ -856,8 +860,138 @@ function EditorContent() {
     setShowExportMenu(false);
   };
 
+  // ---------------------------------------------------------------------
+  // Menu bar definitions — every item wired to a real function above,
+  // or explicitly marked "planned" (never a fake working button).
+  // ---------------------------------------------------------------------
+  const hasSelection = !!selected;
+
+  const menus: MenuDef[] = [
+    {
+      label: 'File',
+      items: [
+        { label: 'New Design', planned: true },
+        { label: 'Open', planned: true },
+        { divider: true },
+        { label: 'Save', shortcut: 'Ctrl/Cmd+S', onClick: saveDesign },
+        { label: 'Export as PNG', onClick: exportAsPNG },
+        { label: 'Export as JPG', onClick: exportAsJPG },
+        { label: 'Export as PDF', onClick: exportAsPDF },
+        { divider: true },
+        { label: 'Document Setup', planned: true },
+        { label: 'Print Setup', planned: true },
+      ],
+    },
+    {
+      label: 'Edit',
+      items: [
+        { label: 'Undo', shortcut: 'Ctrl/Cmd+Z', onClick: undo, disabled: !canUndo },
+        { label: 'Redo', shortcut: 'Ctrl/Cmd+Shift+Z', onClick: redo, disabled: !canRedo },
+        { divider: true },
+        { label: 'Copy', shortcut: 'Ctrl/Cmd+C', onClick: copySelected, disabled: !hasSelection },
+        { label: 'Paste', shortcut: 'Ctrl/Cmd+V', onClick: pasteClipboard },
+        { label: 'Duplicate', shortcut: 'Ctrl/Cmd+D', onClick: duplicateSelected, disabled: !hasSelection },
+        { label: 'Delete', shortcut: 'Delete', onClick: deleteSelected, disabled: !hasSelection },
+        { divider: true },
+        { label: 'Preferences', planned: true },
+      ],
+    },
+    {
+      label: 'Object',
+      items: [
+        { label: 'Group', shortcut: 'Ctrl/Cmd+G', onClick: groupSelected, disabled: !hasSelection },
+        { label: 'Ungroup', shortcut: 'Ctrl/Cmd+Shift+G', onClick: ungroupSelected, disabled: !hasSelection },
+        { divider: true },
+        { label: 'Bring to Front', shortcut: 'Ctrl/Cmd+Shift+]', onClick: bringToFront, disabled: !hasSelection },
+        { label: 'Bring Forward', shortcut: 'Ctrl/Cmd+]', onClick: bringForward, disabled: !hasSelection },
+        { label: 'Send Backward', shortcut: 'Ctrl/Cmd+[', onClick: sendBackward, disabled: !hasSelection },
+        { label: 'Send to Back', shortcut: 'Ctrl/Cmd+Shift+[', onClick: sendToBack, disabled: !hasSelection },
+        { divider: true },
+        { label: 'Lock', shortcut: 'Ctrl/Cmd+L', onClick: () => selected && toggleLock(selected), disabled: !hasSelection },
+        { label: 'Hide', shortcut: 'Ctrl/Cmd+H', onClick: () => selected && toggleVisible(selected), disabled: !hasSelection },
+        { divider: true },
+        { label: 'Path Operations (Offset, Simplify...)', planned: true },
+        { label: 'Artboards', planned: true },
+      ],
+    },
+    {
+      label: 'Type',
+      items: [
+        { label: 'Add Text', onClick: addText },
+        { divider: true },
+        { label: 'Area Type', planned: true },
+        { label: 'Type on a Path', planned: true },
+        { label: 'Vertical Type', planned: true },
+      ],
+    },
+    {
+      label: 'Select',
+      items: [
+        {
+          label: 'Select All',
+          shortcut: 'Ctrl/Cmd+A',
+          onClick: () => {
+            const canvas = fabricCanvasRef.current;
+            const objs = canvas.getObjects().filter((o: any) => !o.locked && !o.__isAnchorHandle && !o.__isPenPreview && !o.__isShapeDraft);
+            if (objs.length) {
+              canvas.discardActiveObject();
+              const sel = new (window as any).fabric.ActiveSelection(objs, { canvas });
+              canvas.setActiveObject(sel);
+              canvas.requestRenderAll();
+            }
+          },
+        },
+        {
+          label: 'Deselect',
+          shortcut: 'Esc',
+          onClick: () => {
+            fabricCanvasRef.current?.discardActiveObject();
+            fabricCanvasRef.current?.requestRenderAll();
+          },
+        },
+        { divider: true },
+        { label: 'Same Fill Color', planned: true },
+        { label: 'Same Stroke Color', planned: true },
+      ],
+    },
+    {
+      label: 'View',
+      items: [
+        { label: 'Zoom In', shortcut: 'Ctrl/Cmd+"+"', onClick: () => setZoom((z) => Math.min(200, z + 10)) },
+        { label: 'Zoom Out', shortcut: 'Ctrl/Cmd+"-"', onClick: () => setZoom((z) => Math.max(10, z - 10)) },
+        { label: 'Actual Size', shortcut: 'Ctrl/Cmd+0', onClick: () => setZoom(100) },
+        { divider: true },
+        { label: 'Show Rulers', planned: true },
+        { label: 'Show Grid', planned: true },
+        { label: 'Show Guides', planned: true },
+      ],
+    },
+    {
+      label: 'Window',
+      items: [
+        { label: 'Properties', onClick: () => togglePanel('properties') },
+        { label: 'Layers', onClick: () => togglePanel('layers') },
+        { label: 'Align', onClick: () => togglePanel('align') },
+        { divider: true },
+        { label: 'Swatches', planned: true },
+        { label: 'Character', planned: true },
+        { label: 'Pathfinder', planned: true },
+        { label: 'History', planned: true },
+      ],
+    },
+    {
+      label: 'Help',
+      items: [
+        { label: 'Keyboard Shortcuts', shortcut: '?', onClick: () => setShowShortcuts(true) },
+        { label: 'Feature Roadmap', onClick: () => setRoadmap({ open: true }) },
+      ],
+    },
+  ];
+
   return (
     <main className="h-screen flex flex-col bg-gray-50">
+      <MenuBar menus={menus} />
+
       <div className="flex items-center justify-between px-4 py-2 border-b bg-white">
         <Image src="/logo.png" alt="Magical Touch" width={130} height={26} />
         <input
@@ -931,44 +1065,54 @@ function EditorContent() {
         </div>
 
         <div className="w-64 bg-white border-l flex flex-col overflow-y-auto">
-          <div className="p-3 border-b">
-            <p className="font-semibold text-gray-700 mb-3 text-sm">Properties</p>
-            <PropertiesPanel
-              activeTool={activeTool}
-              selected={selected}
-              unit={unit}
-              layers={layers}
-              maskTargetId={maskTargetId}
-              setMaskTargetId={setMaskTargetId}
-              applyProp={applyProp}
-              applyExactSize={applyExactSize}
-              toggleLockRatio={toggleLockRatio}
-              alignObject={alignObject}
-              groupSelected={groupSelected}
-              ungroupSelected={ungroupSelected}
-              runShapeBuilder={runShapeBuilder}
-              applyPathAsMask={applyPathAsMask}
-              removeMask={removeMask}
-              applyGradientFill={applyGradientFill}
-              gradAngleRef={gradAngleRef}
-              pushHistory={pushHistory}
-              layerLabel={layerLabel}
-            />
-          </div>
+          {isPanelOpen('properties') && (
+            <div className="p-3 border-b">
+              <p className="font-semibold text-gray-700 mb-3 text-sm">Properties</p>
+              <PropertiesPanel
+                activeTool={activeTool}
+                selected={selected}
+                unit={unit}
+                layers={layers}
+                maskTargetId={maskTargetId}
+                setMaskTargetId={setMaskTargetId}
+                applyProp={applyProp}
+                applyExactSize={applyExactSize}
+                toggleLockRatio={toggleLockRatio}
+                alignObject={alignObject}
+                groupSelected={groupSelected}
+                ungroupSelected={ungroupSelected}
+                runShapeBuilder={runShapeBuilder}
+                applyPathAsMask={applyPathAsMask}
+                removeMask={removeMask}
+                applyGradientFill={applyGradientFill}
+                gradAngleRef={gradAngleRef}
+                pushHistory={pushHistory}
+                layerLabel={layerLabel}
+              />
+            </div>
+          )}
 
-          <LayersPanel
-            layers={layers}
-            selected={selected}
-            onSelect={(obj) => {
-              fabricCanvasRef.current.setActiveObject(obj);
-              fabricCanvasRef.current.requestRenderAll();
-              setSelected(obj);
-            }}
-            onToggleVisible={toggleVisible}
-            onToggleLock={toggleLock}
-            onRename={renameLayer}
-            onReorder={reorderLayers}
-          />
+          {isPanelOpen('align') && (
+            <div className="border-b">
+              <AlignPanel alignObject={alignObject} hasSelection={hasSelection} />
+            </div>
+          )}
+
+          {isPanelOpen('layers') && (
+            <LayersPanel
+              layers={layers}
+              selected={selected}
+              onSelect={(obj) => {
+                fabricCanvasRef.current.setActiveObject(obj);
+                fabricCanvasRef.current.requestRenderAll();
+                setSelected(obj);
+              }}
+              onToggleVisible={toggleVisible}
+              onToggleLock={toggleLock}
+              onRename={renameLayer}
+              onReorder={reorderLayers}
+            />
+          )}
         </div>
       </div>
 
