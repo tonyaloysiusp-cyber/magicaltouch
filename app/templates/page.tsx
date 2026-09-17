@@ -5,6 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Fraunces, Inter } from 'next/font/google';
 import { Menu, X, Instagram, Twitter, Facebook, Youtube } from 'lucide-react';
+import { BackBar } from '@/components/BackBar';
 
 const display = Fraunces({
   subsets: ['latin'],
@@ -85,6 +86,9 @@ export default function TemplatesPage() {
       className={`${display.variable} ${body.variable} font-[family-name:var(--font-body)] bg-[#FAF9F6] text-[#14121F] min-h-screen`}
     >
       <header className="sticky top-0 z-50 bg-[#FAF9F6]/90 backdrop-blur border-b border-black/5">
+        <div className="max-w-7xl mx-auto px-6">
+          <BackBar href="/dashboard" label="Dashboard" />
+        </div>
         <nav className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center shrink-0">
             <Image src="/logo.png" alt="Magical Touch" width={140} height={28} priority />
