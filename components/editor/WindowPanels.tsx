@@ -15,6 +15,7 @@ import { useState, useCallback } from 'react';
 export type PanelId =
   | 'properties'
   | 'layers'
+  | 'artboards'
   | 'align'
   | 'swatches'
   | 'character'
@@ -24,6 +25,7 @@ export type PanelId =
 export const PANEL_LABELS: Record<PanelId, string> = {
   properties: 'Properties',
   layers: 'Layers',
+  artboards: 'Artboards',
   align: 'Align',
   swatches: 'Swatches',
   character: 'Character',
@@ -33,7 +35,7 @@ export const PANEL_LABELS: Record<PanelId, string> = {
 
 // Which panels are actually built right now. Keep this list honest —
 // add a panel here only once its component really exists and works.
-export const IMPLEMENTED_PANELS: PanelId[] = ['properties', 'layers', 'align'];
+export const IMPLEMENTED_PANELS: PanelId[] = ['properties', 'layers', 'artboards', 'align'];
 
 export function useWindowPanels(initial: PanelId[] = ['properties', 'layers']) {
   const [visible, setVisible] = useState<Set<PanelId>>(new Set(initial));

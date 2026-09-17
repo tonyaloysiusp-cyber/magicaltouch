@@ -3,7 +3,7 @@
 import { useCallback, useRef, useState } from 'react';
 import { MAX_HISTORY } from '@/lib/editor/types';
 
-const SNAPSHOT_PROPS = ['name', 'locked', 'visible', 'isVectorPath', 'clipPath', '__uid', '__lockRatio', '__isArtboard'];
+const SNAPSHOT_PROPS = ['name', 'locked', 'visible', 'isVectorPath', 'clipPath', '__uid', '__lockRatio', '__isArtboard', '__artboardId'];
 
 export function useEditorHistory(
   fabricCanvasRef: React.MutableRefObject<any>,

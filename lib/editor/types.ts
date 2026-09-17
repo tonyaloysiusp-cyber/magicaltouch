@@ -4,7 +4,7 @@
 // ---------------------------------------------------------------------
 
 export type DrawTool = 'rect' | 'ellipse' | 'triangle' | 'polygon' | 'star' | 'line';
-export type ToolMode = 'select' | 'pen' | 'direct' | 'pan' | DrawTool;
+export type ToolMode = 'select' | 'pen' | 'direct' | 'pan' | 'artboard' | DrawTool;
 
 export const DRAW_TOOLS: DrawTool[] = ['rect', 'ellipse', 'triangle', 'polygon', 'star', 'line'];
 export const isDrawTool = (t: string): t is DrawTool => (DRAW_TOOLS as string[]).includes(t);

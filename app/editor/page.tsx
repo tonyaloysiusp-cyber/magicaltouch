@@ -8,16 +8,27 @@ import { Keyboard } from 'lucide-react';
 
 import { ToolMode, DocUnit, isDrawTool, PASTEBOARD_BG, RULER_SIZE } from '@/lib/editor/types';
 import { getAbsolutePolygonPoints, multiPolygonToPathD } from '@/lib/editor/geometry';
-import { exportCanvasToPDF } from '@/lib/editor/pdfExport';
+import { exportCanvasToPDF, exportArtboardsToPDF } from '@/lib/editor/pdfExport';
+import {
+  ArtboardMeta,
+  ArtboardPreset,
+  createArtboardId,
+  nextArtboardName,
+  nextArtboardPosition,
+  findOwningArtboard,
+  boundingBoxOfArtboards,
+} from '@/lib/editor/artboards';
 
 import { useEditorHistory } from '@/hooks/useEditorHistory';
 import { usePenTool } from '@/hooks/usePenTool';
 import { useShapeTools } from '@/hooks/useShapeTools';
 import { useDirectSelection } from '@/hooks/useDirectSelection';
+import { useArtboardTool } from '@/hooks/useArtboardTool';
 
 import { Toolbar } from '@/components/editor/Toolbar';
 import { PropertiesPanel } from '@/components/editor/PropertiesPanel';
 import { LayersPanel } from '@/components/editor/LayersPanel';
+import { ArtboardsPanel } from '@/components/editor/ArtboardsPanel';
 import { ShortcutsModal } from '@/components/editor/ShortcutsModal';
 import { RoadmapModal } from '@/components/editor/RoadmapModal';
 import { MenuBar, MenuDef } from '@/components/editor/MenuBar';
@@ -44,7 +55,10 @@ function EditorContent() {
   const [exporting, setExporting] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [roadmap, setRoadmap] = useState<{ open: boolean; id?: string }>({ open: false });
-  const { isOpen: isPanelOpen, toggle: togglePanel } = useWindowPanels(['properties', 'layers']);
+  const { isOpen: isPanelOpen, toggle: togglePanel } = useWindowPanels(['properties', 'layers', 'artboards']);
+
+  const [artboards, setArtboards] = useState<ArtboardMeta[]>([]);
+  const [activeArtboardId, setActiveArtboardId] = useState<string | null>(null);
 
   const [selected, setSelected] = useState<any>(null);
   const [, setSelVersion] = useState(0);
@@ -78,6 +92,52 @@ function EditorContent() {
         .slice()
         .reverse()
     );
+  }, []);
+
+  // Reads the artboard rects straight off the canvas (source of truth) into
+  // plain metadata, both for rendering the ArtboardsPanel and for any
+  // internal logic that needs the current list without risking a stale
+  // React-state closure inside long-lived Fabric event handlers.
+  const getArtboardMetas = useCallback((): ArtboardMeta[] => {
+    const canvas = fabricCanvasRef.current;
+    if (!canvas) return [];
+    return canvas
+      .getObjects()
+      .filter((o: any) => o.__isArtboard)
+      .map((o: any) => ({
+        id: o.__artboardId,
+        name: o.name || 'Artboard',
+        x: o.left || 0,
+        y: o.top || 0,
+        width: (o.width || 0) * (o.scaleX || 1),
+        height: (o.height || 0) * (o.scaleY || 1),
+      }));
+  }, []);
+
+  const refreshArtboards = useCallback(() => {
+    setArtboards(getArtboardMetas());
+  }, [getArtboardMetas]);
+
+  // Stamps __artboardId on every non-artboard object based on which
+  // artboard's rect currently contains its center point. Recomputed
+  // whenever an object or an artboard moves/resizes — cheap point-in-rect
+  // tests against however many artboards the document has.
+  const recomputeMembership = useCallback(() => {
+    const canvas = fabricCanvasRef.current;
+    if (!canvas) return;
+    const metas = getArtboardMetas();
+    canvas.getObjects().forEach((obj: any) => {
+      if (obj.__isArtboard || obj.__isAnchorHandle || obj.__isPenPreview || obj.__isShapeDraft) return;
+      const center = obj.getCenterPoint();
+      obj.__artboardId = findOwningArtboard(center.x, center.y, metas);
+    });
+  }, [getArtboardMetas]);
+
+  const pinArtboardsBack = useCallback(() => {
+    const canvas = fabricCanvasRef.current;
+    if (!canvas) return;
+    const abs = canvas.getObjects().filter((o: any) => o.__isArtboard);
+    [...abs].reverse().forEach((a: any) => canvas.sendToBack(a));
   }, []);
 
   const { suppressHistoryRef, canUndo, canRedo, pushHistory, undo, redo, seedInitialSnapshot } =
@@ -119,6 +179,49 @@ function EditorContent() {
         activeToolRef.current = 'select';
       },
     });
+
+  const {
+    liveDim: artboardLiveDim,
+    clearDraft: clearArtboardDraft,
+    handleMouseDown: handleArtboardMouseDown,
+    handleMouseMove: handleArtboardMouseMove,
+    handleMouseUp: handleArtboardMouseUp,
+  } = useArtboardTool({
+    fabricCanvasRef,
+    activeToolRef,
+    onArtboardFinished: ({ x, y, width: w, height: h }) => {
+      const canvas = fabricCanvasRef.current;
+      import('fabric').then((mod) => {
+        const F: any = mod.fabric;
+        const rect = new F.Rect({
+          left: x,
+          top: y,
+          width: w,
+          height: h,
+          fill: '#ffffff',
+          selectable: true,
+          evented: true,
+          hasControls: true,
+          hasBorders: true,
+          lockRotation: true,
+          hoverCursor: 'move',
+          objectCaching: false,
+        });
+        rect.__isArtboard = true;
+        rect.__artboardId = createArtboardId();
+        rect.name = nextArtboardName(getArtboardMetas());
+        if (rect.setControlsVisibility) rect.setControlsVisibility({ mtr: false });
+        canvas.add(rect);
+        pinArtboardsBack();
+        recomputeMembership();
+        refreshArtboards();
+        setActiveArtboardId(rect.__artboardId);
+        canvas.setActiveObject(rect);
+        canvas.requestRenderAll();
+        pushHistory();
+      });
+    },
+  });
 
   const applyPathAsMask = useCallback(() => {
     const canvas = fabricCanvasRef.current;
@@ -347,6 +450,7 @@ function EditorContent() {
       if (tool !== 'pen') clearPenDraft();
       if (tool !== 'direct') clearAnchorHandles();
       clearShapeDraft();
+      if (tool !== 'artboard') clearArtboardDraft();
 
       if (!canvas) return;
 
@@ -356,6 +460,26 @@ function EditorContent() {
         canvas.forEachObject((o: any) => (o.selectable = false));
         canvas.defaultCursor = 'grab';
         canvas.hoverCursor = 'grab';
+      } else if (tool === 'artboard') {
+        // Artboard tool: artboards become the selectable/movable/resizable
+        // things (never rotatable), everything else is locked out, matching
+        // Illustrator's Artboard tool.
+        canvas.discardActiveObject();
+        canvas.selection = false;
+        canvas.forEachObject((o: any) => {
+          if (o.__isArtboard) {
+            o.selectable = true;
+            o.evented = true;
+            o.hasControls = true;
+            o.hasBorders = true;
+            o.lockRotation = true;
+            if (o.setControlsVisibility) o.setControlsVisibility({ mtr: false });
+          } else {
+            o.selectable = false;
+          }
+        });
+        canvas.defaultCursor = 'crosshair';
+        canvas.hoverCursor = 'move';
       } else if (tool === 'pen' || isDrawTool(tool)) {
         canvas.discardActiveObject();
         canvas.selection = false;
@@ -365,52 +489,73 @@ function EditorContent() {
       } else {
         canvas.selection = true;
         canvas.forEachObject((o: any) => {
-          if (!o.locked && !o.__isAnchorHandle && !o.__isPenPreview && !o.__isArtboard) o.selectable = true;
+          if (o.__isArtboard) {
+            // Reset back to non-interactive whenever we leave the Artboard tool.
+            o.selectable = false;
+            o.evented = false;
+            o.hasControls = false;
+            return;
+          }
+          if (!o.locked && !o.__isAnchorHandle && !o.__isPenPreview) o.selectable = true;
         });
         canvas.defaultCursor = 'default';
         canvas.hoverCursor = 'move';
       }
       canvas.requestRenderAll();
     },
-    [clearPenDraft, clearAnchorHandles, clearShapeDraft]
+    [clearPenDraft, clearAnchorHandles, clearShapeDraft, clearArtboardDraft]
   );
 
-  // Ensures a locked, non-exported-away white artboard Rect sits at the
-  // bottom of the stack at world (0,0)-(w,h). Everything outside it is the
-  // dark pasteboard (canvas.backgroundColor), which objects can freely sit on.
-  const ensureArtboard = (canvas: any, F: any, w: number, h: number) => {
+  // Ensures at least one locked, non-rotatable white artboard Rect exists.
+  // Everything outside every artboard is the dark pasteboard
+  // (canvas.backgroundColor), which objects can freely sit on. Also
+  // migrates designs saved before multi-artboard support: an old
+  // __isArtboard rect with no id/name gets one stamped on so it becomes
+  // "Artboard 1" instead of silently losing its identity.
+  const ensureArtboards = (canvas: any, F: any) => {
     canvas.backgroundColor = PASTEBOARD_BG;
-    let artboard = canvas.getObjects().find((o: any) => o.__isArtboard);
-    if (!artboard) {
-      artboard = new F.Rect({
+    const existing = canvas.getObjects().filter((o: any) => o.__isArtboard);
+    if (existing.length === 0) {
+      const rect = new F.Rect({
         left: 0,
         top: 0,
-        width: w,
-        height: h,
+        width,
+        height,
         fill: '#ffffff',
         selectable: false,
         evented: false,
         hasControls: false,
         hoverCursor: 'default',
         objectCaching: false,
+        lockRotation: true,
       });
-      artboard.__isArtboard = true;
-      canvas.add(artboard);
+      rect.__isArtboard = true;
+      rect.__artboardId = createArtboardId();
+      rect.name = 'Artboard 1';
+      canvas.add(rect);
+    } else {
+      existing.forEach((rect: any, i: number) => {
+        if (!rect.__artboardId) rect.__artboardId = createArtboardId();
+        if (!rect.name) rect.name = `Artboard ${i + 1}`;
+        rect.set({ selectable: false, evented: false, hasControls: false, lockRotation: true });
+      });
     }
-    canvas.sendToBack(artboard);
+    pinArtboardsBack();
+    recomputeMembership();
+    refreshArtboards();
+    setActiveArtboardId(canvas.getObjects().find((o: any) => o.__isArtboard)?.__artboardId || null);
     canvas.requestRenderAll();
   };
 
-  const fitToScreen = (canvas: any) => {
+  const fitToRect = (canvas: any, rect: { x: number; y: number; width: number; height: number }, pad = 60) => {
     const vw = canvas.getWidth();
     const vh = canvas.getHeight();
-    if (!vw || !vh) return;
-    const pad = 60;
-    let z = Math.min((vw - pad * 2) / width, (vh - pad * 2) / height);
+    if (!vw || !vh || rect.width <= 0 || rect.height <= 0) return;
+    let z = Math.min((vw - pad * 2) / rect.width, (vh - pad * 2) / rect.height);
     if (!isFinite(z) || z <= 0) z = 1;
     z = Math.max(0.1, Math.min(2, z));
-    const panX = (vw - width * z) / 2;
-    const panY = (vh - height * z) / 2;
+    const panX = (vw - rect.width * z) / 2 - rect.x * z;
+    const panY = (vh - rect.height * z) / 2 - rect.y * z;
     canvas.setViewportTransform([z, 0, 0, z, panX, panY]);
     setZoom(Math.round(z * 100));
   };
@@ -445,14 +590,39 @@ function EditorContent() {
       canvas.on('object:added', onHistoryChanged);
       canvas.on('object:removed', onHistoryChanged);
 
+      // Multi-artboard bookkeeping: keep each object's owning artboard
+      // current, and normalize an artboard's own scale into width/height
+      // whenever it's moved/resized via the Artboard tool.
+      canvas.on('object:added', () => {
+        recomputeMembership();
+        refreshArtboards();
+      });
+      canvas.on('object:removed', () => {
+        recomputeMembership();
+        refreshArtboards();
+      });
+      canvas.on('object:modified', (e: any) => {
+        const obj = e.target;
+        if (obj && obj.__isArtboard) {
+          const w = (obj.width || 0) * (obj.scaleX || 1);
+          const h = (obj.height || 0) * (obj.scaleY || 1);
+          obj.set({ width: w, height: h, scaleX: 1, scaleY: 1 });
+          obj.setCoords();
+        }
+        recomputeMembership();
+        refreshArtboards();
+      });
+
       canvas.on('selection:created', (e: any) => {
         const obj: any = e.selected ? canvas.getActiveObject() : null;
         setSelected(obj);
+        if (obj && obj.__artboardId) setActiveArtboardId(obj.__artboardId);
         if (activeToolRef.current === 'direct' && obj && obj.isVectorPath) renderAnchorHandles(obj);
       });
       canvas.on('selection:updated', (e: any) => {
         const obj: any = e.selected ? canvas.getActiveObject() : null;
         setSelected(obj);
+        if (obj && obj.__artboardId) setActiveArtboardId(obj.__artboardId);
         if (activeToolRef.current === 'direct' && obj && obj.isVectorPath) renderAnchorHandles(obj);
         else clearAnchorHandles();
       });
@@ -472,6 +642,10 @@ function EditorContent() {
           canvas.setCursor('grabbing');
           return;
         }
+        if (activeToolRef.current === 'artboard') {
+          handleArtboardMouseDown(opt);
+          return;
+        }
         if (activeToolRef.current === 'pen') handlePenMouseDown(opt);
         else if (isDrawTool(activeToolRef.current)) handleShapeMouseDown(opt);
       });
@@ -484,6 +658,10 @@ function EditorContent() {
           canvas.relativePan(new F.Point(dx, dy));
           return;
         }
+        if (activeToolRef.current === 'artboard') {
+          handleArtboardMouseMove(opt);
+          return;
+        }
         if (activeToolRef.current === 'pen') handlePenMouseMove(opt);
         else if (isDrawTool(activeToolRef.current)) handleShapeMouseMove(opt);
       });
@@ -491,6 +669,10 @@ function EditorContent() {
         if (panRef.current.active) {
           panRef.current.active = false;
           canvas.setCursor(activeToolRef.current === 'pan' ? 'grab' : 'default');
+          return;
+        }
+        if (activeToolRef.current === 'artboard') {
+          handleArtboardMouseUp();
           return;
         }
         if (activeToolRef.current === 'pen') handlePenMouseUp();
@@ -520,17 +702,20 @@ function EditorContent() {
         const ctx = canvasRef.current?.getContext('2d');
         const vt = canvas.viewportTransform;
         if (!ctx || !vt) return;
-        const x = vt[4];
-        const y = vt[5];
-        const w = width * vt[0];
-        const h = height * vt[3];
+        const abs = canvas.getObjects().filter((o: any) => o.__isArtboard);
         ctx.save();
         ctx.shadowColor = 'rgba(0,0,0,0.35)';
         ctx.shadowBlur = 16;
         ctx.shadowOffsetY = 3;
         ctx.strokeStyle = 'rgba(0,0,0,0.35)';
         ctx.lineWidth = 1;
-        ctx.strokeRect(x + 0.5, y + 0.5, Math.max(w - 1, 0), Math.max(h - 1, 0));
+        abs.forEach((ab: any) => {
+          const x = (ab.left || 0) * vt[0] + vt[4];
+          const y = (ab.top || 0) * vt[3] + vt[5];
+          const w = (ab.width || 0) * (ab.scaleX || 1) * vt[0];
+          const h = (ab.height || 0) * (ab.scaleY || 1) * vt[3];
+          ctx.strokeRect(x + 0.5, y + 0.5, Math.max(w - 1, 0), Math.max(h - 1, 0));
+        });
         ctx.restore();
       });
 
@@ -545,8 +730,14 @@ function EditorContent() {
             if (data) {
               setDesignName(data.name);
               canvas.loadFromJSON(data.canvas_json, function () {
-                ensureArtboard(canvas, F, width, height);
-                fitToScreen(canvas);
+                ensureArtboards(canvas, F);
+                const first = canvas.getObjects().find((o: any) => o.__isArtboard);
+                fitToRect(canvas, {
+                  x: first?.left || 0,
+                  y: first?.top || 0,
+                  width: (first?.width || width) * (first?.scaleX || 1),
+                  height: (first?.height || height) * (first?.scaleY || 1),
+                });
                 canvas.renderAll();
                 refreshLayers();
                 seedInitialSnapshot();
@@ -555,8 +746,8 @@ function EditorContent() {
             if (error) console.error('Failed to load design:', error);
           });
       } else {
-        ensureArtboard(canvas, F, width, height);
-        fitToScreen(canvas);
+        ensureArtboards(canvas, F);
+        fitToRect(canvas, { x: 0, y: 0, width, height });
         seedInitialSnapshot();
       }
 
@@ -599,11 +790,20 @@ function EditorContent() {
     });
   }, []);
 
+  // Where new content should land: the active artboard if one exists,
+  // otherwise the (0,0)-(width,height) box a brand-new document starts with
+  // (id is undefined only in that startup-edge-case fallback).
+  const getActiveArtboardRect = (): { id?: string; x: number; y: number; width: number; height: number } => {
+    const ab = artboards.find((a) => a.id === activeArtboardId) || artboards[0];
+    return ab || { x: 0, y: 0, width, height };
+  };
+
   const addText = () => {
+    const ab = getActiveArtboardRect();
     import('fabric').then((mod) => {
       const text = new mod.fabric.IText('Double-click to edit', {
-        left: width / 2 - 100,
-        top: height / 2 - 20,
+        left: ab.x + ab.width / 2 - 100,
+        top: ab.y + ab.height / 2 - 20,
         fontSize: 40,
         fill: '#1A1A1A',
         fontFamily: 'Arial',
@@ -617,11 +817,13 @@ function EditorContent() {
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files ? e.target.files[0] : null;
     if (!file) return;
+    const ab = getActiveArtboardRect();
     const reader = new FileReader();
     reader.onload = function (event) {
       import('fabric').then((mod) => {
         mod.fabric.Image.fromURL(event.target ? (event.target.result as string) : '', function (img: any) {
           img.scaleToWidth(300);
+          img.set({ left: ab.x + 20, top: ab.y + 20 });
           img.__id = `img_${Date.now()}_${nextImageIdRef.current++}`;
           fabricCanvasRef.current.add(img);
           fabricCanvasRef.current.setActiveObject(img);
@@ -635,6 +837,13 @@ function EditorContent() {
     const canvas = fabricCanvasRef.current;
     const active = canvas.getActiveObject();
     if (!active || active.locked) return;
+    if (active.__isArtboard) {
+      // Route through the guarded artboard delete (keeps the "can't delete
+      // the only artboard" protection instead of silently removing it).
+      deleteArtboard(active.__artboardId);
+      canvas.discardActiveObject();
+      return;
+    }
     if (active.type === 'activeSelection') {
       active.forEachObject((obj: any) => {
         if (!obj.locked) canvas.remove(obj);
@@ -651,6 +860,10 @@ function EditorContent() {
     const canvas = fabricCanvasRef.current;
     const active = canvas.getActiveObject();
     if (!active) return;
+    if (active.__isArtboard) {
+      duplicateArtboard(active.__artboardId);
+      return;
+    }
     active.clone((cloned: any) => {
       canvas.discardActiveObject();
       cloned.set({ left: (cloned.left || 0) + 20, top: (cloned.top || 0) + 20, evented: true, locked: false });
@@ -695,13 +908,6 @@ function EditorContent() {
     });
   };
 
-  const pinArtboardBack = () => {
-    const canvas = fabricCanvasRef.current;
-    if (!canvas) return;
-    const artboard = canvas.getObjects().find((o: any) => o.__isArtboard);
-    if (artboard) canvas.sendToBack(artboard);
-  };
-
   const bringForward = () => {
     const canvas = fabricCanvasRef.current;
     const active = canvas.getActiveObject();
@@ -709,7 +915,7 @@ function EditorContent() {
     canvas.bringForward(active);
     canvas.requestRenderAll();
     refreshLayers();
-    pinArtboardBack();
+    pinArtboardsBack();
     pushHistory();
   };
   const sendBackward = () => {
@@ -719,7 +925,7 @@ function EditorContent() {
     canvas.sendBackwards(active);
     canvas.requestRenderAll();
     refreshLayers();
-    pinArtboardBack();
+    pinArtboardsBack();
     pushHistory();
   };
   const bringToFront = () => {
@@ -729,7 +935,7 @@ function EditorContent() {
     canvas.bringToFront(active);
     canvas.requestRenderAll();
     refreshLayers();
-    pinArtboardBack();
+    pinArtboardsBack();
     pushHistory();
   };
   const sendToBack = () => {
@@ -739,7 +945,7 @@ function EditorContent() {
     canvas.sendToBack(active);
     canvas.requestRenderAll();
     refreshLayers();
-    pinArtboardBack();
+    pinArtboardsBack();
     pushHistory();
   };
 
@@ -751,7 +957,7 @@ function EditorContent() {
     canvas.setActiveObject(group);
     canvas.requestRenderAll();
     refreshLayers();
-    pinArtboardBack();
+    pinArtboardsBack();
     pushHistory();
     setSelected(group);
   };
@@ -764,7 +970,7 @@ function EditorContent() {
     canvas.setActiveObject(items);
     canvas.requestRenderAll();
     refreshLayers();
-    pinArtboardBack();
+    pinArtboardsBack();
     pushHistory();
     setSelected(items);
   };
@@ -814,7 +1020,7 @@ function EditorContent() {
     canvas.moveTo(obj, targetCanvasIdx);
     canvas.requestRenderAll();
     refreshLayers();
-    pinArtboardBack();
+    pinArtboardsBack();
     pushHistory();
   };
 
@@ -824,14 +1030,18 @@ function EditorContent() {
     if (!active || active.locked) return;
     const objW = active.getScaledWidth();
     const objH = active.getScaledHeight();
+    // Align relative to whichever artboard the object is actually on,
+    // falling back to the active artboard for objects on the pasteboard.
+    const ownAb = artboards.find((a) => a.id === active.__artboardId);
+    const ab = ownAb || getActiveArtboardRect();
 
     switch (mode) {
-      case 'left': active.set({ left: 0 }); break;
-      case 'centerH': active.set({ left: width / 2 - objW / 2 }); break;
-      case 'right': active.set({ left: width - objW }); break;
-      case 'top': active.set({ top: 0 }); break;
-      case 'centerV': active.set({ top: height / 2 - objH / 2 }); break;
-      case 'bottom': active.set({ top: height - objH }); break;
+      case 'left': active.set({ left: ab.x }); break;
+      case 'centerH': active.set({ left: ab.x + ab.width / 2 - objW / 2 }); break;
+      case 'right': active.set({ left: ab.x + ab.width - objW }); break;
+      case 'top': active.set({ top: ab.y }); break;
+      case 'centerV': active.set({ top: ab.y + ab.height / 2 - objH / 2 }); break;
+      case 'bottom': active.set({ top: ab.y + ab.height - objH }); break;
     }
     active.setCoords();
     canvas.requestRenderAll();
@@ -848,6 +1058,185 @@ function EditorContent() {
     canvas.requestRenderAll();
     bumpSel();
     if (record) pushHistory();
+  };
+
+  // ---------------------------------------------------------------------
+  // Artboard CRUD — all real editor state changes (add/rename/resize/
+  // duplicate/delete/reorder), each pushing history and refreshing the
+  // ArtboardsPanel + Layers the same way every other mutation in this file
+  // does.
+  // ---------------------------------------------------------------------
+
+  const createArtboardRect = (F: any, x: number, y: number, w: number, h: number, name: string) => {
+    const rect = new F.Rect({
+      left: x,
+      top: y,
+      width: w,
+      height: h,
+      fill: '#ffffff',
+      selectable: false,
+      evented: false,
+      hasControls: false,
+      hoverCursor: 'default',
+      objectCaching: false,
+      lockRotation: true,
+    });
+    rect.__isArtboard = true;
+    rect.__artboardId = createArtboardId();
+    rect.name = name;
+    return rect;
+  };
+
+  const addArtboardWithSize = (w: number, h: number) => {
+    const canvas = fabricCanvasRef.current;
+    if (!canvas) return;
+    import('fabric').then((mod) => {
+      const F: any = mod.fabric;
+      const metas = getArtboardMetas();
+      const pos = nextArtboardPosition(metas);
+      const rect = createArtboardRect(F, pos.x, pos.y, w, h, nextArtboardName(metas));
+      canvas.add(rect);
+      pinArtboardsBack();
+      setActiveArtboardId(rect.__artboardId);
+      fitToRect(canvas, { x: pos.x, y: pos.y, width: w, height: h });
+      canvas.requestRenderAll();
+      pushHistory();
+    });
+  };
+
+  const addArtboardFromPreset = (preset: ArtboardPreset) => addArtboardWithSize(preset.widthPx, preset.heightPx);
+  const addArtboardCustom = (w: number, h: number) => addArtboardWithSize(w, h);
+
+  const selectArtboard = (id: string) => {
+    const canvas = fabricCanvasRef.current;
+    if (!canvas) return;
+    const ab = artboards.find((a) => a.id === id);
+    if (!ab) return;
+    setActiveArtboardId(id);
+    fitToRect(canvas, ab);
+  };
+
+  const fitAllArtboards = () => {
+    const canvas = fabricCanvasRef.current;
+    if (!canvas) return;
+    fitToRect(canvas, boundingBoxOfArtboards(artboards));
+  };
+
+  const renameArtboard = (id: string, name: string) => {
+    const canvas = fabricCanvasRef.current;
+    const rect = canvas?.getObjects().find((o: any) => o.__isArtboard && o.__artboardId === id);
+    if (!rect) return;
+    rect.set({ name });
+    refreshArtboards();
+    pushHistory();
+  };
+
+  const resizeArtboard = (id: string, patch: Partial<{ x: number; y: number; width: number; height: number }>) => {
+    const canvas = fabricCanvasRef.current;
+    const rect = canvas?.getObjects().find((o: any) => o.__isArtboard && o.__artboardId === id);
+    if (!rect) return;
+    const next: Record<string, any> = {};
+    if (patch.x != null) next.left = patch.x;
+    if (patch.y != null) next.top = patch.y;
+    if (patch.width != null) next.width = patch.width;
+    if (patch.height != null) next.height = patch.height;
+    rect.set(next);
+    rect.setCoords();
+    recomputeMembership();
+    refreshArtboards();
+    canvas.requestRenderAll();
+    pushHistory();
+  };
+
+  const duplicateArtboard = (id: string) => {
+    const canvas = fabricCanvasRef.current;
+    if (!canvas) return;
+    const srcRect = canvas.getObjects().find((o: any) => o.__isArtboard && o.__artboardId === id);
+    if (!srcRect) return;
+
+    const metas = getArtboardMetas();
+    const pos = nextArtboardPosition(metas);
+    const dx = pos.x - (srcRect.left || 0);
+    const dy = pos.y - (srcRect.top || 0);
+    const newId = createArtboardId();
+    const newName = nextArtboardName(metas);
+    const members = canvas.getObjects().filter((o: any) => !o.__isArtboard && o.__artboardId === id);
+
+    const finish = () => {
+      pinArtboardsBack();
+      recomputeMembership();
+      refreshArtboards();
+      refreshLayers();
+      setActiveArtboardId(newId);
+      canvas.requestRenderAll();
+      pushHistory();
+    };
+
+    srcRect.clone((clonedRect: any) => {
+      clonedRect.set({ left: pos.x, top: pos.y, name: newName });
+      clonedRect.__isArtboard = true;
+      clonedRect.__artboardId = newId;
+      canvas.add(clonedRect);
+
+      if (members.length === 0) {
+        finish();
+        return;
+      }
+      let pending = members.length;
+      members.forEach((obj: any) => {
+        obj.clone((clonedObj: any) => {
+          clonedObj.set({ left: (clonedObj.left || 0) + dx, top: (clonedObj.top || 0) + dy });
+          delete clonedObj.__uid;
+          clonedObj.__artboardId = newId;
+          canvas.add(clonedObj);
+          pending -= 1;
+          if (pending === 0) finish();
+        });
+      });
+    });
+  };
+
+  const deleteArtboard = (id: string) => {
+    const canvas = fabricCanvasRef.current;
+    if (!canvas) return;
+    const metas = getArtboardMetas();
+    if (metas.length <= 1) {
+      alert("You can't delete the only artboard in a document.");
+      return;
+    }
+    const rect = canvas.getObjects().find((o: any) => o.__isArtboard && o.__artboardId === id);
+    if (!rect) return;
+    canvas.remove(rect);
+    recomputeMembership();
+    refreshArtboards();
+    if (activeArtboardId === id) {
+      const remaining = getArtboardMetas();
+      setActiveArtboardId(remaining[0]?.id || null);
+    }
+    canvas.requestRenderAll();
+    pushHistory();
+  };
+
+  const moveArtboardUp = (index: number) => {
+    if (index <= 0) return;
+    const canvas = fabricCanvasRef.current;
+    const abObjs = canvas.getObjects().filter((o: any) => o.__isArtboard);
+    const a = abObjs[index];
+    const b = abObjs[index - 1];
+    const idxA = canvas.getObjects().indexOf(a);
+    const idxB = canvas.getObjects().indexOf(b);
+    canvas.moveTo(a, idxB);
+    canvas.moveTo(b, idxA);
+    pinArtboardsBack();
+    refreshArtboards();
+    pushHistory();
+  };
+
+  const moveArtboardDown = (index: number) => {
+    const canvas = fabricCanvasRef.current;
+    const abObjs = canvas.getObjects().filter((o: any) => o.__isArtboard);
+    if (index >= abObjs.length - 1) return;
+    moveArtboardUp(index + 1);
   };
 
   useEffect(() => {
@@ -872,6 +1261,12 @@ function EditorContent() {
         if (e.key.toLowerCase() === 'a') { e.preventDefault(); setActiveTool('direct'); return; }
         if (e.key.toLowerCase() === 'p') { e.preventDefault(); setActiveTool('pen'); return; }
         if (e.key.toLowerCase() === 'h') { e.preventDefault(); setActiveTool('pan'); return; }
+      }
+
+      if (canUseToolShortcuts && !isMeta && e.shiftKey && e.key.toLowerCase() === 'o') {
+        e.preventDefault();
+        setActiveTool('artboard');
+        return;
       }
 
       if (canUseToolShortcuts && activeToolRef.current === 'pen') {
@@ -956,13 +1351,27 @@ function EditorContent() {
       return;
     }
 
-    const canvasJson = fabricCanvasRef.current.toJSON(['name', 'locked', 'visible', 'isVectorPath', 'clipPath', '__uid', '__lockRatio', '__isArtboard']);
+    const canvasJson = fabricCanvasRef.current.toJSON([
+      'name',
+      'locked',
+      'visible',
+      'isVectorPath',
+      'clipPath',
+      '__uid',
+      '__lockRatio',
+      '__isArtboard',
+      '__artboardId',
+    ]);
+    // width/height stay as the dashboard/thumbnail-facing summary size —
+    // the first artboard's current dimensions, not the URL params a brand
+    // new document happened to start from.
+    const firstAb = artboards[0];
     const payload: any = {
       user_id: user.id,
       name: designName,
       canvas_json: canvasJson,
-      width,
-      height,
+      width: firstAb ? Math.round(firstAb.width) : width,
+      height: firstAb ? Math.round(firstAb.height) : height,
       updated_at: new Date().toISOString(),
     };
     if (designId) payload.id = designId;
@@ -990,26 +1399,52 @@ function EditorContent() {
     document.body.removeChild(link);
   };
 
-  // Crops export to just the artboard rect, regardless of current pan/zoom, and
-  // keeps output resolution independent of the on-screen zoom level (dividing
-  // the desired multiplier by the current zoom cancels it out).
-  const getArtboardExportOptions = (baseMultiplier: number) => {
+  // Crops export to just one artboard's rect, regardless of current pan/
+  // zoom, and keeps output resolution independent of the on-screen zoom
+  // level (dividing the desired multiplier by the current zoom cancels it
+  // out — see fabric's toCanvasElement crop math).
+  const getArtboardExportOptions = (ab: { x: number; y: number; width: number; height: number }, baseMultiplier: number) => {
     const canvas = fabricCanvasRef.current;
     const vt = canvas.viewportTransform;
     const zoomLevel = vt[0] || 1;
+    const screenX = ab.x * zoomLevel + vt[4];
+    const screenY = ab.y * zoomLevel + vt[5];
     return {
-      left: vt[4],
-      top: vt[5],
-      width: width * zoomLevel,
-      height: height * zoomLevel,
+      left: screenX,
+      top: screenY,
+      width: ab.width * zoomLevel,
+      height: ab.height * zoomLevel,
       multiplier: baseMultiplier / zoomLevel,
     };
   };
 
+  const exportArtboardPNG = (id: string, opts?: { silent?: boolean }) => {
+    const canvas = fabricCanvasRef.current;
+    const ab = artboards.find((a) => a.id === id);
+    if (!canvas || !ab) return;
+    const dataUrl = canvas.toDataURL({ format: 'png', quality: 1, ...getArtboardExportOptions(ab, 2) });
+    downloadFile(dataUrl, `${designName || 'design'} - ${ab.name}.png`);
+    if (!opts?.silent) {
+      setExporting(false);
+      setShowExportMenu(false);
+    }
+  };
+
+  const exportAllArtboardsPNG = () => {
+    setExporting(true);
+    artboards.forEach((ab) => exportArtboardPNG(ab.id, { silent: true }));
+    setExporting(false);
+  };
+
   const exportAsPNG = () => {
     setExporting(true);
+    const ab = getActiveArtboardRect();
+    if (ab.id) {
+      exportArtboardPNG(ab.id);
+      return;
+    }
     const canvas = fabricCanvasRef.current;
-    const dataUrl = canvas.toDataURL({ format: 'png', quality: 1, ...getArtboardExportOptions(2) });
+    const dataUrl = canvas.toDataURL({ format: 'png', quality: 1, ...getArtboardExportOptions(ab, 2) });
     downloadFile(dataUrl, `${designName || 'design'}.png`);
     setExporting(false);
     setShowExportMenu(false);
@@ -1017,18 +1452,24 @@ function EditorContent() {
   const exportAsJPG = () => {
     setExporting(true);
     const canvas = fabricCanvasRef.current;
-    const dataUrl = canvas.toDataURL({ format: 'jpeg', quality: 0.9, ...getArtboardExportOptions(2) });
+    const ab = getActiveArtboardRect();
+    const dataUrl = canvas.toDataURL({ format: 'jpeg', quality: 0.9, ...getArtboardExportOptions(ab, 2) });
     downloadFile(dataUrl, `${designName || 'design'}.jpg`);
     setExporting(false);
     setShowExportMenu(false);
   };
+
+  // File > Export as PDF exports every artboard as its own page, matching
+  // how Illustrator treats "the document" as all of its artboards.
   const exportAsPDF = async () => {
     setExporting(true);
     try {
       const [{ jsPDF }, mod] = await Promise.all([import('jspdf'), import('fabric')]);
-      const orientation = width > height ? 'landscape' : 'portrait';
-      const pdf = new jsPDF({ orientation, unit: 'px', format: [width, height] });
-      exportCanvasToPDF(pdf, fabricCanvasRef.current, mod.fabric);
+      const list = artboards.length ? artboards : [{ id: '', x: 0, y: 0, width, height, name: '' }];
+      const first = list[0];
+      const pdf = new jsPDF({ orientation: first.width > first.height ? 'landscape' : 'portrait', unit: 'px', format: [first.width, first.height] });
+      if (artboards.length) exportArtboardsToPDF(pdf, fabricCanvasRef.current, mod.fabric, list);
+      else exportCanvasToPDF(pdf, fabricCanvasRef.current, mod.fabric);
       pdf.save(`${designName || 'design'}.pdf`);
     } catch (err) {
       console.error('PDF export failed:', err);
@@ -1085,7 +1526,8 @@ function EditorContent() {
         { label: 'Hide', shortcut: 'Ctrl/Cmd+H', onClick: () => selected && toggleVisible(selected), disabled: !hasSelection },
         { divider: true },
         { label: 'Path Operations (Offset, Simplify...)', planned: true },
-        { label: 'Artboards', planned: true },
+        { label: 'Artboard Tool', shortcut: 'Shift+O', onClick: () => setActiveTool('artboard') },
+        { label: 'Artboards Panel', onClick: () => togglePanel('artboards') },
       ],
     },
     {
@@ -1239,7 +1681,15 @@ function EditorContent() {
         />
 
         <div className="flex-1 overflow-hidden relative" style={{ background: PASTEBOARD_BG }}>
-          <Rulers fabricCanvasRef={fabricCanvasRef} unit={unit} artboardWidth={width} artboardHeight={height} ready={canvasReady} />
+          <Rulers
+            fabricCanvasRef={fabricCanvasRef}
+            unit={unit}
+            originX={getActiveArtboardRect().x}
+            originY={getActiveArtboardRect().y}
+            artboardWidth={getActiveArtboardRect().width}
+            artboardHeight={getActiveArtboardRect().height}
+            ready={canvasReady}
+          />
           <div
             ref={viewportRef}
             className="absolute overflow-hidden"
@@ -1277,6 +1727,27 @@ function EditorContent() {
             </div>
           )}
 
+          {isPanelOpen('artboards') && (
+            <ArtboardsPanel
+              artboards={artboards}
+              activeArtboardId={activeArtboardId}
+              unit={unit}
+              onSelect={selectArtboard}
+              onRename={renameArtboard}
+              onResize={resizeArtboard}
+              onDuplicate={duplicateArtboard}
+              onDelete={deleteArtboard}
+              onMoveUp={moveArtboardUp}
+              onMoveDown={moveArtboardDown}
+              onAddPreset={addArtboardFromPreset}
+              onAddCustom={addArtboardCustom}
+              onFitAll={fitAllArtboards}
+              onExportOne={(id) => exportArtboardPNG(id)}
+              onExportAll={exportAllArtboardsPNG}
+              onExportAllPDF={exportAsPDF}
+            />
+          )}
+
           {isPanelOpen('align') && (
             <div className="border-b">
               <AlignPanel alignObject={alignObject} hasSelection={hasSelection} />
@@ -1305,6 +1776,15 @@ function EditorContent() {
         <div style={{ position: 'fixed', left: liveDim.x + 16, top: liveDim.y + 16, pointerEvents: 'none' }} className="z-50 bg-black/80 text-white text-[11px] font-mono px-2 py-1 rounded shadow">
           W: {liveDim.w} {unit}
           {liveDim.h !== '—' && <> · H: {liveDim.h} {unit}</>}
+        </div>
+      )}
+
+      {artboardLiveDim && (
+        <div
+          style={{ position: 'fixed', left: artboardLiveDim.x + 16, top: artboardLiveDim.y + 16, pointerEvents: 'none' }}
+          className="z-50 bg-black/80 text-white text-[11px] font-mono px-2 py-1 rounded shadow"
+        >
+          {artboardLiveDim.w} × {artboardLiveDim.h} px
         </div>
       )}
 
