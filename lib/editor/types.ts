@@ -4,7 +4,7 @@
 // ---------------------------------------------------------------------
 
 export type DrawTool = 'rect' | 'ellipse' | 'triangle' | 'polygon' | 'star' | 'line';
-export type ToolMode = 'select' | 'pen' | 'direct' | DrawTool;
+export type ToolMode = 'select' | 'pen' | 'direct' | 'pan' | DrawTool;
 
 export const DRAW_TOOLS: DrawTool[] = ['rect', 'ellipse', 'triangle', 'polygon', 'star', 'line'];
 export const isDrawTool = (t: string): t is DrawTool => (DRAW_TOOLS as string[]).includes(t);
@@ -53,6 +53,13 @@ export const FONT_OPTIONS = [
 ];
 
 export const MAX_HISTORY = 100;
+
+// ---------------------------------------------------------------------
+// Pasteboard / artboard workspace
+// ---------------------------------------------------------------------
+
+export const PASTEBOARD_BG = '#4b4b50';
+export const RULER_SIZE = 20;
 
 export type FeatureStatus = 'live' | 'beta' | 'planned';
 

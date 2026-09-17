@@ -58,6 +58,14 @@ export function PropertiesPanel({
     );
   }
 
+  if (activeTool === 'pan') {
+    return (
+      <p className="text-xs text-gray-500">
+        Hand tool active. Click and drag anywhere on the pasteboard to pan around the canvas.
+      </p>
+    );
+  }
+
   if (isDrawTool(activeTool)) {
     return (
       <p className="text-xs text-gray-500">
