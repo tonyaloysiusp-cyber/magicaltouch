@@ -22,6 +22,7 @@ import { RoadmapModal } from '@/components/editor/RoadmapModal';
 import { MenuBar, MenuDef } from '@/components/editor/MenuBar';
 import { useWindowPanels } from '@/components/editor/WindowPanels';
 import { AlignPanel } from '@/components/editor/AlignPanel';
+import { BackBar } from '@/components/BackBar';
 
 function EditorContent() {
   const searchParams = useSearchParams();
@@ -60,6 +61,7 @@ function EditorContent() {
   const width = parseInt(searchParams.get('w') || '1080');
   const height = parseInt(searchParams.get('h') || '1080');
   const urlDesignId = searchParams.get('designId');
+  const cameFromTemplate = searchParams.get('templateId');
 
   const refreshLayers = useCallback(() => {
     const canvas = fabricCanvasRef.current;
@@ -860,10 +862,6 @@ function EditorContent() {
     setShowExportMenu(false);
   };
 
-  // ---------------------------------------------------------------------
-  // Menu bar definitions — every item wired to a real function above,
-  // or explicitly marked "planned" (never a fake working button).
-  // ---------------------------------------------------------------------
   const hasSelection = !!selected;
 
   const menus: MenuDef[] = [
@@ -993,7 +991,13 @@ function EditorContent() {
       <MenuBar menus={menus} />
 
       <div className="flex items-center justify-between px-4 py-2 border-b bg-white">
-        <Image src="/logo.png" alt="Magical Touch" width={130} height={26} />
+        <div className="flex items-center gap-2">
+          <BackBar
+            href={cameFromTemplate ? '/templates' : '/dashboard'}
+            label={cameFromTemplate ? 'Templates' : 'Dashboard'}
+          />
+          <Image src="/logo.png" alt="Magical Touch" width={130} height={26} />
+        </div>
         <input
           type="text"
           value={designName}
