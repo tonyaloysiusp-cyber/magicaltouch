@@ -63,12 +63,20 @@ export default function DashboardPage() {
     <main className="min-h-screen p-6">
       <div className="flex items-center justify-between mb-10">
         <Image src="/logo.png" alt="Magical Touch" width={180} height={36} />
-        <Link
-          href="/create"
-          className="bg-brand-gradient text-white px-5 py-2 rounded-full text-sm font-semibold"
-        >
-          + New Design
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link
+            href="/templates"
+            className="text-sm font-medium text-gray-600 hover:text-gray-900 px-4 py-2"
+          >
+            Browse Templates
+          </Link>
+          <Link
+            href="/create"
+            className="bg-brand-gradient text-white px-5 py-2 rounded-full text-sm font-semibold"
+          >
+            + New Design
+          </Link>
+        </div>
       </div>
 
       <h1 className="text-3xl font-bold text-gray-800">Welcome to your Dashboard</h1>
