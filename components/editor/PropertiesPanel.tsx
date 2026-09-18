@@ -66,6 +66,16 @@ export function PropertiesPanel({
     );
   }
 
+  if (activeTool === 'artboard') {
+    return (
+      <p className="text-xs text-gray-500">
+        Artboard tool active. Drag on the pasteboard to create a new artboard, or click and drag an
+        existing one to move/resize it. Rename, duplicate, delete, and export artboards from the{' '}
+        <span className="font-medium text-gray-600">Artboards</span> panel.
+      </p>
+    );
+  }
+
   if (isDrawTool(activeTool)) {
     return (
       <p className="text-xs text-gray-500">

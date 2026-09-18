@@ -47,7 +47,7 @@ export const TOOL_REGISTRY: ToolDefinition[] = [
   { id: 'reflect', label: 'Reflect', status: 'beta', group: 'transform' },
   { id: 'shear', label: 'Shear', status: 'planned', group: 'transform' },
 
-  { id: 'artboard', label: 'Artboard', status: 'live', group: 'layout' },
+  { id: 'artboard', label: 'Artboard', status: 'live', shortcut: 'Shift+O', group: 'layout' },
   { id: 'guides', label: 'Guides', status: 'planned', group: 'layout' },
   { id: 'grid', label: 'Grid', status: 'planned', group: 'layout' },
   { id: 'ruler', label: 'Ruler', status: 'live', group: 'layout' },

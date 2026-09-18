@@ -7,6 +7,8 @@ import { UNIT_FACTORS, pxToUnit } from '@/lib/editor/units';
 interface Props {
   fabricCanvasRef: React.MutableRefObject<any>;
   unit: DocUnit;
+  originX: number;
+  originY: number;
   artboardWidth: number;
   artboardHeight: number;
   ready: boolean;
@@ -29,6 +31,8 @@ function drawRulers(
   canvas: any,
   topCanvas: HTMLCanvasElement | null,
   leftCanvas: HTMLCanvasElement | null,
+  originX: number,
+  originY: number,
   artboardWidth: number,
   artboardHeight: number,
   unit: DocUnit
@@ -67,28 +71,28 @@ function drawRulers(
     tctx.fillStyle = bg;
     tctx.fillRect(0, 0, vw, RULER_SIZE);
 
-    const artLeft = worldToScreenX(0);
-    const artRight = worldToScreenX(artboardWidth);
+    const artLeft = worldToScreenX(originX);
+    const artRight = worldToScreenX(originX + artboardWidth);
     tctx.fillStyle = artboardTint;
     tctx.fillRect(Math.max(artLeft, 0), 0, Math.max(Math.min(artRight, vw) - Math.max(artLeft, 0), 0), RULER_SIZE);
 
-    const worldStart = screenToWorldX(0);
-    const worldEnd = screenToWorldX(vw);
-    const firstMinor = Math.floor(worldStart / minorStepWorldPx) * minorStepWorldPx;
+    const relStart = screenToWorldX(0) - originX;
+    const relEnd = screenToWorldX(vw) - originX;
+    const firstMinorRel = Math.floor(relStart / minorStepWorldPx) * minorStepWorldPx;
 
     tctx.font = '9px sans-serif';
     tctx.textBaseline = 'top';
-    for (let w = firstMinor; w <= worldEnd + minorStepWorldPx; w += minorStepWorldPx) {
-      const sx = worldToScreenX(w);
+    for (let rel = firstMinorRel; rel <= relEnd + minorStepWorldPx; rel += minorStepWorldPx) {
+      const sx = worldToScreenX(originX + rel);
       if (sx < 0 || sx > vw) continue;
-      const isMajor = Math.abs(Math.round(w / stepWorldPx) * stepWorldPx - w) < minorStepWorldPx / 4;
+      const isMajor = Math.abs(Math.round(rel / stepWorldPx) * stepWorldPx - rel) < minorStepWorldPx / 4;
       tctx.strokeStyle = isMajor ? majorLine : line;
       tctx.beginPath();
       tctx.moveTo(sx + 0.5, isMajor ? 4 : 12);
       tctx.lineTo(sx + 0.5, RULER_SIZE);
       tctx.stroke();
       if (isMajor) {
-        const label = Math.round(pxToUnit(w, unit) * 100) / 100;
+        const label = Math.round(pxToUnit(rel, unit) * 100) / 100;
         tctx.fillStyle = text;
         tctx.fillText(String(label), sx + 2, 3);
       }
@@ -104,27 +108,27 @@ function drawRulers(
     lctx.fillStyle = bg;
     lctx.fillRect(0, 0, RULER_SIZE, vh);
 
-    const artTop = worldToScreenY(0);
-    const artBottom = worldToScreenY(artboardHeight);
+    const artTop = worldToScreenY(originY);
+    const artBottom = worldToScreenY(originY + artboardHeight);
     lctx.fillStyle = artboardTint;
     lctx.fillRect(0, Math.max(artTop, 0), RULER_SIZE, Math.max(Math.min(artBottom, vh) - Math.max(artTop, 0), 0));
 
-    const worldStart = screenToWorldY(0);
-    const worldEnd = screenToWorldY(vh);
-    const firstMinor = Math.floor(worldStart / minorStepWorldPx) * minorStepWorldPx;
+    const relStart = screenToWorldY(0) - originY;
+    const relEnd = screenToWorldY(vh) - originY;
+    const firstMinorRel = Math.floor(relStart / minorStepWorldPx) * minorStepWorldPx;
 
     lctx.font = '9px sans-serif';
-    for (let w = firstMinor; w <= worldEnd + minorStepWorldPx; w += minorStepWorldPx) {
-      const sy = worldToScreenY(w);
+    for (let rel = firstMinorRel; rel <= relEnd + minorStepWorldPx; rel += minorStepWorldPx) {
+      const sy = worldToScreenY(originY + rel);
       if (sy < 0 || sy > vh) continue;
-      const isMajor = Math.abs(Math.round(w / stepWorldPx) * stepWorldPx - w) < minorStepWorldPx / 4;
+      const isMajor = Math.abs(Math.round(rel / stepWorldPx) * stepWorldPx - rel) < minorStepWorldPx / 4;
       lctx.strokeStyle = isMajor ? majorLine : line;
       lctx.beginPath();
       lctx.moveTo(isMajor ? 4 : 12, sy + 0.5);
       lctx.lineTo(RULER_SIZE, sy + 0.5);
       lctx.stroke();
       if (isMajor) {
-        const label = Math.round(pxToUnit(w, unit) * 100) / 100;
+        const label = Math.round(pxToUnit(rel, unit) * 100) / 100;
         lctx.save();
         lctx.translate(9, sy + 2);
         lctx.rotate(-Math.PI / 2);
@@ -136,7 +140,7 @@ function drawRulers(
   }
 }
 
-export function Rulers({ fabricCanvasRef, unit, artboardWidth, artboardHeight, ready }: Props) {
+export function Rulers({ fabricCanvasRef, unit, originX, originY, artboardWidth, artboardHeight, ready }: Props) {
   const topRef = useRef<HTMLCanvasElement>(null);
   const leftRef = useRef<HTMLCanvasElement>(null);
 
@@ -148,7 +152,7 @@ export function Rulers({ fabricCanvasRef, unit, artboardWidth, artboardHeight, r
     const scheduleDraw = () => {
       cancelAnimationFrame(raf);
       raf = requestAnimationFrame(() =>
-        drawRulers(canvas, topRef.current, leftRef.current, artboardWidth, artboardHeight, unit)
+        drawRulers(canvas, topRef.current, leftRef.current, originX, originY, artboardWidth, artboardHeight, unit)
       );
     };
 
@@ -158,7 +162,7 @@ export function Rulers({ fabricCanvasRef, unit, artboardWidth, artboardHeight, r
       canvas.off('after:render', scheduleDraw);
       cancelAnimationFrame(raf);
     };
-  }, [fabricCanvasRef, ready, unit, artboardWidth, artboardHeight]);
+  }, [fabricCanvasRef, ready, unit, originX, originY, artboardWidth, artboardHeight]);
 
   return (
     <>

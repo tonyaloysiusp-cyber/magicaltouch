@@ -6,9 +6,22 @@
 // be represented safely as vector (gradients, patterns, clip masks,
 // multi-subpath/hole paths, groups) falls back to rendering just that
 // object as an embedded image.
+//
+// exportArtboardsToPDF() produces one PDF page per artboard: each
+// artboard's own objects (matched by __artboardId, in the same world
+// coordinate space Fabric uses) are drawn with their positions shifted
+// so the artboard's top-left lands at that page's local (0,0).
 // ---------------------------------------------------------------------
 
 import { getAbsolutePolygonPoints } from './geometry';
+
+interface ArtboardLike {
+  id: string;
+  width: number;
+  height: number;
+  x: number;
+  y: number;
+}
 
 const PT_PER_PX = 72 / 96;
 
@@ -82,14 +95,15 @@ function applyPaintAndGetStyle(pdf: any, F: any, obj: any): string | null {
   return null;
 }
 
-function drawClosedPolygon(pdf: any, pts: [number, number][], style: string) {
+function drawClosedPolygon(pdf: any, pts: [number, number][], style: string, offsetX: number, offsetY: number) {
   if (pts.length < 2) return;
-  const [x0, y0] = pts[0];
-  const segments = pts.slice(1).map((p, i) => [p[0] - pts[i][0], p[1] - pts[i][1]]);
+  const shifted = pts.map(([x, y]) => [x - offsetX, y - offsetY] as [number, number]);
+  const [x0, y0] = shifted[0];
+  const segments = shifted.slice(1).map((p, i) => [p[0] - shifted[i][0], p[1] - shifted[i][1]]);
   pdf.lines(segments, x0, y0, [1, 1], style, true);
 }
 
-function drawLineObject(pdf: any, F: any, obj: any) {
+function drawLineObject(pdf: any, F: any, obj: any, offsetX: number, offsetY: number) {
   if (!isPaintable(obj.stroke) || !((obj.strokeWidth || 0) > 0)) return;
   const matrix = obj.calcTransformMatrix();
   const x1 = obj.x1 ?? 0;
@@ -105,7 +119,7 @@ function drawLineObject(pdf: any, F: any, obj: any) {
   pdf.setDrawColor(r, g, b);
   const avgScale = ((obj.scaleX || 1) + (obj.scaleY || 1)) / 2;
   pdf.setLineWidth(Math.max((obj.strokeWidth || 1) * avgScale, 0.01));
-  pdf.line(p1.x, p1.y, p2.x, p2.y);
+  pdf.line(p1.x - offsetX, p1.y - offsetY, p2.x - offsetX, p2.y - offsetY);
 }
 
 function mapFontFamily(fontFamily: string | undefined): string {
@@ -125,7 +139,7 @@ function mapFontStyle(obj: any): string {
   return 'normal';
 }
 
-function drawTextObject(pdf: any, F: any, obj: any) {
+function drawTextObject(pdf: any, F: any, obj: any, offsetX: number, offsetY: number) {
   const rawLines: string[] =
     obj._textLines && obj._textLines.length
       ? obj._textLines.map((l: any) => (Array.isArray(l) ? l.join('') : l))
@@ -154,8 +168,8 @@ function drawTextObject(pdf: any, F: any, obj: any) {
     pdf.setTextColor(0, 0, 0);
   }
 
-  const offsetX = obj.originX === 'center' ? -w / 2 : obj.originX === 'right' ? -w : 0;
-  const offsetY = obj.originY === 'center' ? -h / 2 : obj.originY === 'bottom' ? -h : 0;
+  const offX = obj.originX === 'center' ? -w / 2 : obj.originX === 'right' ? -w : 0;
+  const offY = obj.originY === 'center' ? -h / 2 : obj.originY === 'bottom' ? -h : 0;
   const align: 'left' | 'center' | 'right' = ['left', 'center', 'right'].includes(obj.textAlign)
     ? obj.textAlign
     : 'left';
@@ -165,73 +179,97 @@ function drawTextObject(pdf: any, F: any, obj: any) {
   rawLines.forEach((line, i) => {
     if (!line) return;
     const baselineLocal = i * lineHeightLocal + fontSizeLocal * 0.8;
-    let localX = offsetX;
-    if (align === 'center') localX = offsetX + w / 2;
-    else if (align === 'right') localX = offsetX + w;
+    let localX = offX;
+    if (align === 'center') localX = offX + w / 2;
+    else if (align === 'right') localX = offX + w;
 
-    const local = new F.Point(localX, offsetY + baselineLocal);
+    const local = new F.Point(localX, offY + baselineLocal);
     const abs: any = F.util.transformPoint(local, matrix);
-    pdf.text(line, abs.x, abs.y, { angle, align, baseline: 'alphabetic' });
+    pdf.text(line, abs.x - offsetX, abs.y - offsetY, { angle, align, baseline: 'alphabetic' });
   });
 }
 
-function drawImageObject(pdf: any, obj: any) {
+function drawImageObject(pdf: any, obj: any, offsetX: number, offsetY: number) {
   const rect = obj.getBoundingRect(true, true);
   if (!rect.width || !rect.height) return;
   // multiplier: 1 keeps the image at its native/full resolution — never scaled down.
   const dataUrl = obj.toDataURL({ format: 'png', multiplier: 1 });
-  pdf.addImage(dataUrl, 'PNG', rect.left, rect.top, rect.width, rect.height);
+  pdf.addImage(dataUrl, 'PNG', rect.left - offsetX, rect.top - offsetY, rect.width, rect.height);
 }
 
-function drawObjectAsRaster(pdf: any, obj: any) {
+function drawObjectAsRaster(pdf: any, obj: any, offsetX: number, offsetY: number) {
   const rect = obj.getBoundingRect(true, true);
   if (!rect.width || !rect.height) return;
   const dataUrl = obj.toDataURL({ format: 'png', multiplier: 3 });
-  pdf.addImage(dataUrl, 'PNG', rect.left, rect.top, rect.width, rect.height);
+  pdf.addImage(dataUrl, 'PNG', rect.left - offsetX, rect.top - offsetY, rect.width, rect.height);
 }
 
-function renderOneObject(pdf: any, F: any, obj: any) {
+function renderOneObject(pdf: any, F: any, obj: any, offsetX: number, offsetY: number) {
   if (obj.type === 'image') {
-    drawImageObject(pdf, obj);
+    drawImageObject(pdf, obj, offsetX, offsetY);
     return;
   }
   if (needsRasterFallback(obj)) {
-    drawObjectAsRaster(pdf, obj);
+    drawObjectAsRaster(pdf, obj, offsetX, offsetY);
     return;
   }
   if (obj.type === 'line') {
-    drawLineObject(pdf, F, obj);
+    drawLineObject(pdf, F, obj, offsetX, offsetY);
     return;
   }
   if (obj.type === 'i-text' || obj.type === 'text' || obj.type === 'textbox') {
-    drawTextObject(pdf, F, obj);
+    drawTextObject(pdf, F, obj, offsetX, offsetY);
     return;
   }
   // rect (incl. the artboard background), triangle, circle, ellipse, polygon, single-ring path.
   const pts = getAbsolutePolygonPoints(obj, F);
   if (pts.length < 2) return;
   const style = applyPaintAndGetStyle(pdf, F, obj);
-  if (style) drawClosedPolygon(pdf, pts, style);
+  if (style) drawClosedPolygon(pdf, pts, style, offsetX, offsetY);
 }
 
-export function exportCanvasToPDF(pdf: any, canvas: any, F: any) {
-  const objects: any[] = canvas
-    .getObjects()
-    .filter((o: any) => !o.__isAnchorHandle && !o.__isPenPreview && !o.__isShapeDraft && o.visible !== false);
-
+function renderObjectsToPage(pdf: any, F: any, objects: any[], offsetX: number, offsetY: number) {
   objects.forEach((obj) => {
     withOpacity(pdf, obj.opacity, () => {
       try {
-        renderOneObject(pdf, F, obj);
+        renderOneObject(pdf, F, obj, offsetX, offsetY);
       } catch (err) {
         console.error('Vector PDF render failed for object, falling back to raster:', obj.type, err);
         try {
-          if (obj.type === 'image') drawImageObject(pdf, obj);
-          else drawObjectAsRaster(pdf, obj);
+          if (obj.type === 'image') drawImageObject(pdf, obj, offsetX, offsetY);
+          else drawObjectAsRaster(pdf, obj, offsetX, offsetY);
         } catch (err2) {
           console.error('Raster fallback also failed for object:', obj.type, err2);
         }
       }
     });
+  });
+}
+
+// Single-artboard / legacy entry point: draws every real object on the
+// canvas onto the current page at world coordinates (offset 0,0).
+export function exportCanvasToPDF(pdf: any, canvas: any, F: any) {
+  const objects: any[] = canvas
+    .getObjects()
+    .filter((o: any) => !o.__isAnchorHandle && !o.__isPenPreview && !o.__isShapeDraft && o.visible !== false);
+  renderObjectsToPage(pdf, F, objects, 0, 0);
+}
+
+// Multi-artboard entry point: one PDF page per artboard. The first
+// artboard renders onto the page the caller already created (matching
+// `new jsPDF({ format: [w, h] })`); every subsequent artboard gets its
+// own addPage() at that artboard's own size.
+export function exportArtboardsToPDF(pdf: any, canvas: any, F: any, artboards: ArtboardLike[]) {
+  artboards.forEach((ab, i) => {
+    if (i > 0) {
+      pdf.addPage([ab.width, ab.height], ab.width > ab.height ? 'landscape' : 'portrait');
+    }
+    const objects: any[] = canvas
+      .getObjects()
+      .filter(
+        (o: any) =>
+          !o.__isAnchorHandle && !o.__isPenPreview && !o.__isShapeDraft && o.visible !== false && o.__artboardId === ab.id
+      );
+    renderObjectsToPage(pdf, F, objects, ab.x, ab.y);
   });
 }
