@@ -18,6 +18,9 @@ import {
   findOwningArtboard,
   boundingBoxOfArtboards,
 } from '@/lib/editor/artboards';
+import { ArtboardPrintSettings, ExportScope, createDefaultPrintSettings, getExportRect } from '@/lib/editor/printSetup';
+import { buildProductionMarks } from '@/lib/editor/printMarks';
+import { runPreflight, PreflightIssue } from '@/lib/editor/preflight';
 
 import { useEditorHistory } from '@/hooks/useEditorHistory';
 import { usePenTool } from '@/hooks/usePenTool';
@@ -29,6 +32,7 @@ import { Toolbar } from '@/components/editor/Toolbar';
 import { PropertiesPanel } from '@/components/editor/PropertiesPanel';
 import { LayersPanel } from '@/components/editor/LayersPanel';
 import { ArtboardsPanel } from '@/components/editor/ArtboardsPanel';
+import { PreflightModal } from '@/components/editor/PreflightModal';
 import { ShortcutsModal } from '@/components/editor/ShortcutsModal';
 import { RoadmapModal } from '@/components/editor/RoadmapModal';
 import { MenuBar, MenuDef } from '@/components/editor/MenuBar';
@@ -59,6 +63,8 @@ function EditorContent() {
 
   const [artboards, setArtboards] = useState<ArtboardMeta[]>([]);
   const [activeArtboardId, setActiveArtboardId] = useState<string | null>(null);
+  const [showPreflight, setShowPreflight] = useState(false);
+  const [preflightIssues, setPreflightIssues] = useState<PreflightIssue[]>([]);
 
   const [selected, setSelected] = useState<any>(null);
   const [, setSelVersion] = useState(0);
@@ -111,6 +117,7 @@ function EditorContent() {
         y: o.top || 0,
         width: (o.width || 0) * (o.scaleX || 1),
         height: (o.height || 0) * (o.scaleY || 1),
+        print: o.__print || createDefaultPrintSettings(),
       }));
   }, []);
 
@@ -127,7 +134,7 @@ function EditorContent() {
     if (!canvas) return;
     const metas = getArtboardMetas();
     canvas.getObjects().forEach((obj: any) => {
-      if (obj.__isArtboard || obj.__isAnchorHandle || obj.__isPenPreview || obj.__isShapeDraft) return;
+      if (obj.__isArtboard || obj.__isAnchorHandle || obj.__isPenPreview || obj.__isShapeDraft || obj.__isPrintMark) return;
       const center = obj.getCenterPoint();
       obj.__artboardId = findOwningArtboard(center.x, center.y, metas);
     });
@@ -532,11 +539,13 @@ function EditorContent() {
       rect.__isArtboard = true;
       rect.__artboardId = createArtboardId();
       rect.name = 'Artboard 1';
+      rect.__print = createDefaultPrintSettings();
       canvas.add(rect);
     } else {
       existing.forEach((rect: any, i: number) => {
         if (!rect.__artboardId) rect.__artboardId = createArtboardId();
         if (!rect.name) rect.name = `Artboard ${i + 1}`;
+        if (!rect.__print) rect.__print = createDefaultPrintSettings();
         rect.set({ selectable: false, evented: false, hasControls: false, lockRotation: true });
       });
     }
@@ -703,6 +712,7 @@ function EditorContent() {
         const vt = canvas.viewportTransform;
         if (!ctx || !vt) return;
         const abs = canvas.getObjects().filter((o: any) => o.__isArtboard);
+
         ctx.save();
         ctx.shadowColor = 'rgba(0,0,0,0.35)';
         ctx.shadowBlur = 16;
@@ -716,6 +726,57 @@ function EditorContent() {
           const h = (ab.height || 0) * (ab.scaleY || 1) * vt[3];
           ctx.strokeRect(x + 0.5, y + 0.5, Math.max(w - 1, 0), Math.max(h - 1, 0));
         });
+        ctx.restore();
+
+        // Non-artwork production guides (bleed/slug/safe area) — drawn the
+        // same way as the border above, so they never leak into exports.
+        ctx.save();
+        ctx.shadowColor = 'transparent';
+        ctx.shadowBlur = 0;
+        abs.forEach((abRect: any) => {
+          const print = abRect.__print;
+          if (!print) return;
+          const x = (abRect.left || 0) * vt[0] + vt[4];
+          const y = (abRect.top || 0) * vt[3] + vt[5];
+          const w = (abRect.width || 0) * (abRect.scaleX || 1) * vt[0];
+          const h = (abRect.height || 0) * (abRect.scaleY || 1) * vt[3];
+
+          const strokeOutset = (edges: any, color: string) => {
+            if (!edges || (!edges.top && !edges.right && !edges.bottom && !edges.left)) return;
+            const gx = x - edges.left * vt[0];
+            const gy = y - edges.top * vt[3];
+            const gw = w + (edges.left + edges.right) * vt[0];
+            const gh = h + (edges.top + edges.bottom) * vt[3];
+            ctx.setLineDash([4, 3]);
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 1;
+            ctx.strokeRect(gx + 0.5, gy + 0.5, Math.max(gw - 1, 0), Math.max(gh - 1, 0));
+          };
+
+          const sa = print.safeArea;
+          if (sa && (sa.top || sa.right || sa.bottom || sa.left)) {
+            const gx = x + sa.left * vt[0];
+            const gy = y + sa.top * vt[3];
+            const gw = w - (sa.left + sa.right) * vt[0];
+            const gh = h - (sa.top + sa.bottom) * vt[3];
+            ctx.setLineDash([3, 3]);
+            ctx.strokeStyle = 'rgba(59,130,246,0.85)';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(gx + 0.5, gy + 0.5, Math.max(gw - 1, 0), Math.max(gh - 1, 0));
+          }
+
+          strokeOutset(print.bleed, 'rgba(239,68,68,0.9)');
+
+          const b = print.bleed || { top: 0, right: 0, bottom: 0, left: 0 };
+          const s = print.slug;
+          if (s && (s.top || s.right || s.bottom || s.left)) {
+            strokeOutset(
+              { top: b.top + s.top, right: b.right + s.right, bottom: b.bottom + s.bottom, left: b.left + s.left },
+              'rgba(245,158,11,0.85)'
+            );
+          }
+        });
+        ctx.setLineDash([]);
         ctx.restore();
       });
 
@@ -1083,6 +1144,7 @@ function EditorContent() {
     });
     rect.__isArtboard = true;
     rect.__artboardId = createArtboardId();
+    rect.__print = createDefaultPrintSettings();
     rect.name = name;
     return rect;
   };
@@ -1148,6 +1210,17 @@ function EditorContent() {
     pushHistory();
   };
 
+  const updateArtboardPrint = (id: string, patch: Partial<ArtboardPrintSettings>) => {
+    const canvas = fabricCanvasRef.current;
+    const rect = canvas?.getObjects().find((o: any) => o.__isArtboard && o.__artboardId === id);
+    if (!rect) return;
+    const current: ArtboardPrintSettings = rect.__print || createDefaultPrintSettings();
+    rect.__print = { ...current, ...patch };
+    refreshArtboards();
+    canvas.requestRenderAll();
+    pushHistory();
+  };
+
   const duplicateArtboard = (id: string) => {
     const canvas = fabricCanvasRef.current;
     if (!canvas) return;
@@ -1176,6 +1249,7 @@ function EditorContent() {
       clonedRect.set({ left: pos.x, top: pos.y, name: newName });
       clonedRect.__isArtboard = true;
       clonedRect.__artboardId = newId;
+      clonedRect.__print = JSON.parse(JSON.stringify(srcRect.__print || createDefaultPrintSettings()));
       canvas.add(clonedRect);
 
       if (members.length === 0) {
@@ -1361,6 +1435,7 @@ function EditorContent() {
       '__lockRatio',
       '__isArtboard',
       '__artboardId',
+      '__print',
     ]);
     // width/height stay as the dashboard/thumbnail-facing summary size —
     // the first artboard's current dimensions, not the URL params a brand
@@ -1418,16 +1493,78 @@ function EditorContent() {
     };
   };
 
-  const exportArtboardPNG = (id: string, opts?: { silent?: boolean }) => {
+  // Adds real, temporary Fabric objects for the requested production marks
+  // right before an export and returns them so the caller can remove them
+  // again immediately after. Wrapped in suppressHistoryRef so this never
+  // pollutes undo history.
+  const buildAndInsertMarks = (ab: ArtboardMeta, scope: ExportScope) => {
+    const F = (window as any).fabric;
+    const canvas = fabricCanvasRef.current;
+    if (!F || !canvas || scope === 'artboard' || scope === 'bleed') return [];
+    const marks = buildProductionMarks(F, ab, ab.print.bleed, ab.print.marks, ab.id);
+    marks.forEach((m: any) => canvas.add(m));
+    canvas.requestRenderAll();
+    return marks;
+  };
+  const removeTemporaryMarks = (marks: any[]) => {
+    const canvas = fabricCanvasRef.current;
+    if (!canvas) return;
+    marks.forEach((m) => canvas.remove(m));
+    canvas.requestRenderAll();
+  };
+
+  const exportArtboardPNG = (id: string, opts?: { silent?: boolean; scope?: ExportScope }) => {
     const canvas = fabricCanvasRef.current;
     const ab = artboards.find((a) => a.id === id);
     if (!canvas || !ab) return;
-    const dataUrl = canvas.toDataURL({ format: 'png', quality: 1, ...getArtboardExportOptions(ab, 2) });
-    downloadFile(dataUrl, `${designName || 'design'} - ${ab.name}.png`);
+    const scope = opts?.scope || 'artboard';
+    const exportRect = getExportRect(ab, ab.print, scope);
+    suppressHistoryRef.current = true;
+    const marks = buildAndInsertMarks(ab, scope);
+    const dataUrl = canvas.toDataURL({ format: 'png', quality: 1, ...getArtboardExportOptions(exportRect, 2) });
+    removeTemporaryMarks(marks);
+    suppressHistoryRef.current = false;
+    downloadFile(dataUrl, `${designName || 'design'} - ${ab.name}${scope !== 'artboard' ? ` (${scope})` : ''}.png`);
     if (!opts?.silent) {
       setExporting(false);
       setShowExportMenu(false);
     }
+  };
+
+  const exportArtboardPDF = async (id: string, scope: ExportScope) => {
+    const canvas = fabricCanvasRef.current;
+    const ab = artboards.find((a) => a.id === id);
+    if (!canvas || !ab) return;
+    setExporting(true);
+    try {
+      const { jsPDF } = await import('jspdf');
+      const F = (window as any).fabric;
+      const rect = getExportRect(ab, ab.print, scope);
+      suppressHistoryRef.current = true;
+      const marks = buildAndInsertMarks(ab, scope);
+      const pdf = new jsPDF({ orientation: rect.width > rect.height ? 'landscape' : 'portrait', unit: 'px', format: [rect.width, rect.height] });
+      exportArtboardsToPDF(pdf, canvas, F, [{ id: ab.id, x: rect.x, y: rect.y, width: rect.width, height: rect.height }]);
+      removeTemporaryMarks(marks);
+      suppressHistoryRef.current = false;
+      pdf.save(`${designName || 'design'} - ${ab.name}${scope !== 'artboard' ? ` (${scope})` : ''}.pdf`);
+    } catch (err) {
+      console.error('Print PDF export failed:', err);
+      alert('Failed to export PDF. Please try again.');
+    }
+    setExporting(false);
+  };
+
+  const exportArtboardForPrint = (id: string, scope: ExportScope, format: 'png' | 'pdf') => {
+    if (format === 'png') exportArtboardPNG(id, { scope });
+    else exportArtboardPDF(id, scope);
+  };
+
+  const runPreflightCheck = () => {
+    const canvas = fabricCanvasRef.current;
+    const printSettingsById: Record<string, ArtboardPrintSettings> = {};
+    artboards.forEach((ab) => (printSettingsById[ab.id] = ab.print));
+    setPreflightIssues(runPreflight(canvas, artboards, printSettingsById));
+    setShowPreflight(true);
   };
 
   const exportAllArtboardsPNG = () => {
@@ -1465,7 +1602,7 @@ function EditorContent() {
     setExporting(true);
     try {
       const [{ jsPDF }, mod] = await Promise.all([import('jspdf'), import('fabric')]);
-      const list = artboards.length ? artboards : [{ id: '', x: 0, y: 0, width, height, name: '' }];
+      const list = artboards.length ? artboards : [{ id: '', x: 0, y: 0, width, height, name: '', print: createDefaultPrintSettings() }];
       const first = list[0];
       const pdf = new jsPDF({ orientation: first.width > first.height ? 'landscape' : 'portrait', unit: 'px', format: [first.width, first.height] });
       if (artboards.length) exportArtboardsToPDF(pdf, fabricCanvasRef.current, mod.fabric, list);
@@ -1493,8 +1630,9 @@ function EditorContent() {
         { label: 'Export as JPG', onClick: exportAsJPG },
         { label: 'Export as PDF', onClick: exportAsPDF },
         { divider: true },
+        { label: 'Preflight...', onClick: runPreflightCheck },
+        { label: 'Print Setup (Bleed/Slug/Marks)', onClick: () => togglePanel('artboards') },
         { label: 'Document Setup', planned: true },
-        { label: 'Print Setup', planned: true },
       ],
     },
     {
@@ -1745,6 +1883,9 @@ function EditorContent() {
               onExportOne={(id) => exportArtboardPNG(id)}
               onExportAll={exportAllArtboardsPNG}
               onExportAllPDF={exportAsPDF}
+              onUpdatePrint={updateArtboardPrint}
+              onExportPrint={exportArtboardForPrint}
+              onRunPreflight={runPreflightCheck}
             />
           )}
 
@@ -1790,6 +1931,7 @@ function EditorContent() {
 
       <ShortcutsModal open={showShortcuts} onClose={() => setShowShortcuts(false)} />
       <RoadmapModal open={roadmap.open} highlightId={roadmap.id} onClose={() => setRoadmap({ open: false })} />
+      <PreflightModal open={showPreflight} issues={preflightIssues} onClose={() => setShowPreflight(false)} />
     </main>
   );
 }

@@ -9,6 +9,7 @@
 
 import { DocUnit } from './types';
 import { unitToPx } from './units';
+import { ArtboardPrintSettings } from './printSetup';
 
 export interface ArtboardMeta {
   id: string;
@@ -17,6 +18,7 @@ export interface ArtboardMeta {
   y: number;
   width: number;
   height: number;
+  print: ArtboardPrintSettings;
 }
 
 export interface ArtboardPreset {

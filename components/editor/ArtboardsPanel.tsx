@@ -1,8 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { Plus, Trash2, Copy, ScanSearch, ChevronUp, ChevronDown, Download, FileDown } from 'lucide-react';
+import { Plus, Trash2, Copy, ScanSearch, ChevronUp, ChevronDown, Download, FileDown, Link2, Link2Off, ClipboardCheck, ChevronRight } from 'lucide-react';
 import { ArtboardMeta, ArtboardPreset, ARTBOARD_PRESETS } from '@/lib/editor/artboards';
+import { ArtboardPrintSettings, EdgeValues, ExportScope, EXPORT_SCOPE_LABELS } from '@/lib/editor/printSetup';
 import { DocUnit } from '@/lib/editor/types';
 import { formatUnit, unitToPx } from '@/lib/editor/units';
 
@@ -23,9 +24,72 @@ interface Props {
   onExportOne: (id: string) => void;
   onExportAll: () => void;
   onExportAllPDF: () => void;
+  onUpdatePrint: (id: string, patch: Partial<ArtboardPrintSettings>) => void;
+  onExportPrint: (id: string, scope: ExportScope, format: 'png' | 'pdf') => void;
+  onRunPreflight: () => void;
 }
 
 const PRESET_CATEGORIES = Array.from(new Set(ARTBOARD_PRESETS.map((p) => p.category)));
+
+function EdgeFields({
+  label,
+  unit,
+  values,
+  linked,
+  onChange,
+  onToggleLinked,
+}: {
+  label: string;
+  unit: DocUnit;
+  values: EdgeValues;
+  linked: boolean;
+  onChange: (next: EdgeValues) => void;
+  onToggleLinked: () => void;
+}) {
+  const set = (edge: keyof EdgeValues, raw: string) => {
+    const val = parseFloat(raw);
+    if (isNaN(val) || val < 0) return;
+    const px = unitToPx(val, unit);
+    if (linked) onChange({ top: px, right: px, bottom: px, left: px });
+    else onChange({ ...values, [edge]: px });
+  };
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-1">
+        <label className="text-[10px] text-gray-500">
+          {label} ({unit})
+        </label>
+        <button onClick={onToggleLinked} title={linked ? 'Unlink edges' : 'Link edges'} className="text-gray-400 hover:text-gray-700">
+          {linked ? <Link2 size={11} /> : <Link2Off size={11} />}
+        </button>
+      </div>
+      {linked ? (
+        <input
+          type="text"
+          defaultValue={formatUnit(values.top, unit)}
+          onBlur={(e) => set('top', e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
+          className="w-full text-xs border rounded px-2 py-1"
+        />
+      ) : (
+        <div className="grid grid-cols-4 gap-1">
+          {(['top', 'right', 'bottom', 'left'] as const).map((edge) => (
+            <input
+              key={edge}
+              type="text"
+              title={edge}
+              defaultValue={formatUnit(values[edge], unit)}
+              onBlur={(e) => set(edge, e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
+              className="w-full text-xs border rounded px-1 py-1"
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function ArtboardsPanel({
   artboards,
@@ -44,12 +108,17 @@ export function ArtboardsPanel({
   onExportOne,
   onExportAll,
   onExportAllPDF,
+  onUpdatePrint,
+  onExportPrint,
+  onRunPreflight,
 }: Props) {
   const [showAddMenu, setShowAddMenu] = useState(false);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
   const [customW, setCustomW] = useState('1080');
   const [customH, setCustomH] = useState('1080');
+  const [showPrintSetup, setShowPrintSetup] = useState(false);
+  const [exportScope, setExportScope] = useState<ExportScope>('artboard');
 
   const active = artboards.find((a) => a.id === activeArtboardId) || null;
 
@@ -58,6 +127,9 @@ export function ArtboardsPanel({
       <div className="flex items-center justify-between mb-2">
         <p className="font-semibold text-gray-700 text-sm">Artboards</p>
         <div className="flex items-center gap-2">
+          <button onClick={onRunPreflight} title="Run preflight check" className="text-gray-400 hover:text-gray-700">
+            <ClipboardCheck size={14} />
+          </button>
           <button onClick={onFitAll} title="Fit all artboards" className="text-gray-400 hover:text-gray-700">
             <ScanSearch size={14} />
           </button>
@@ -250,6 +322,113 @@ export function ArtboardsPanel({
               />
             </div>
           </div>
+
+          <button
+            onClick={() => setShowPrintSetup((v) => !v)}
+            className="flex items-center gap-1 text-[11px] text-gray-500 hover:text-gray-700 mt-2"
+          >
+            <ChevronRight size={12} className={`transition-transform ${showPrintSetup ? 'rotate-90' : ''}`} />
+            Print Setup
+          </button>
+
+          {showPrintSetup && (
+            <div key={active.id + '-print'} className="mt-2 space-y-2 border rounded p-2 bg-gray-50">
+              <EdgeFields
+                label="Bleed"
+                unit={unit}
+                values={active.print.bleed}
+                linked={active.print.bleedLinked}
+                onChange={(next) => onUpdatePrint(active.id, { bleed: next })}
+                onToggleLinked={() => onUpdatePrint(active.id, { bleedLinked: !active.print.bleedLinked })}
+              />
+              <EdgeFields
+                label="Slug"
+                unit={unit}
+                values={active.print.slug}
+                linked={active.print.slugLinked}
+                onChange={(next) => onUpdatePrint(active.id, { slug: next })}
+                onToggleLinked={() => onUpdatePrint(active.id, { slugLinked: !active.print.slugLinked })}
+              />
+              <EdgeFields
+                label="Safe Area"
+                unit={unit}
+                values={active.print.safeArea}
+                linked={active.print.safeAreaLinked}
+                onChange={(next) => onUpdatePrint(active.id, { safeArea: next })}
+                onToggleLinked={() => onUpdatePrint(active.id, { safeAreaLinked: !active.print.safeAreaLinked })}
+              />
+
+              <div>
+                <label className="text-[10px] text-gray-500 block mb-0.5">Target Print DPI</label>
+                <input
+                  type="text"
+                  defaultValue={String(active.print.dpi)}
+                  onBlur={(e) => {
+                    const val = parseFloat(e.target.value);
+                    if (!isNaN(val) && val > 0) onUpdatePrint(active.id, { dpi: val });
+                  }}
+                  onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
+                  className="w-full text-xs border rounded px-2 py-1"
+                />
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="flex items-center gap-1.5 text-[11px] text-gray-600">
+                  <input
+                    type="checkbox"
+                    checked={active.print.marks.crop}
+                    onChange={(e) => onUpdatePrint(active.id, { marks: { ...active.print.marks, crop: e.target.checked } })}
+                  />
+                  Crop marks
+                </label>
+                <label className="flex items-center gap-1.5 text-[11px] text-gray-600">
+                  <input
+                    type="checkbox"
+                    checked={active.print.marks.registration}
+                    onChange={(e) => onUpdatePrint(active.id, { marks: { ...active.print.marks, registration: e.target.checked } })}
+                  />
+                  Registration marks
+                </label>
+                <label className="flex items-center gap-1.5 text-[11px] text-gray-600">
+                  <input
+                    type="checkbox"
+                    checked={active.print.marks.colorBar}
+                    onChange={(e) => onUpdatePrint(active.id, { marks: { ...active.print.marks, colorBar: e.target.checked } })}
+                  />
+                  Color bar (RGB swatches — not true CMYK/Pantone)
+                </label>
+              </div>
+
+              <div>
+                <label className="text-[10px] text-gray-500 block mb-0.5">Export for Print</label>
+                <select
+                  value={exportScope}
+                  onChange={(e) => setExportScope(e.target.value as ExportScope)}
+                  className="w-full text-xs border rounded px-2 py-1 mb-1"
+                >
+                  {(Object.keys(EXPORT_SCOPE_LABELS) as ExportScope[]).map((s) => (
+                    <option key={s} value={s}>
+                      {EXPORT_SCOPE_LABELS[s]}
+                    </option>
+                  ))}
+                </select>
+                <div className="flex gap-1">
+                  <button
+                    onClick={() => onExportPrint(active.id, exportScope, 'png')}
+                    className="flex-1 text-[11px] border rounded px-2 py-1 bg-white hover:bg-purple-50"
+                  >
+                    PNG
+                  </button>
+                  <button
+                    onClick={() => onExportPrint(active.id, exportScope, 'pdf')}
+                    className="flex-1 text-[11px] border rounded px-2 py-1 bg-white hover:bg-purple-50"
+                  >
+                    PDF
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
