@@ -47,10 +47,10 @@ export const TOOL_REGISTRY: ToolDefinition[] = [
   { id: 'reflect', label: 'Reflect', status: 'beta', group: 'transform' },
   { id: 'shear', label: 'Shear', status: 'planned', group: 'transform' },
 
-  { id: 'artboard', label: 'Artboard', status: 'live', group: 'layout' },
+  { id: 'artboard', label: 'Artboard', status: 'planned', group: 'layout' },
   { id: 'guides', label: 'Guides', status: 'planned', group: 'layout' },
   { id: 'grid', label: 'Grid', status: 'planned', group: 'layout' },
-  { id: 'ruler', label: 'Ruler', status: 'live', group: 'layout' },
+  { id: 'ruler', label: 'Ruler', status: 'planned', group: 'layout' },
   { id: 'measure', label: 'Measure', status: 'planned', group: 'layout' },
 
   { id: 'eyedropper', label: 'Eyedropper', status: 'planned', group: 'color' },
@@ -65,7 +65,7 @@ export const TOOL_REGISTRY: ToolDefinition[] = [
   { id: 'print-area', label: 'Print Area', status: 'planned', group: 'production' },
   { id: 'registration-marks', label: 'Registration Marks', status: 'planned', group: 'production' },
 
-  { id: 'pan', label: 'Hand / Pan', status: 'live', shortcut: 'H', group: 'utility' },
+  { id: 'pan', label: 'Hand / Pan', status: 'planned', group: 'utility' },
   { id: 'zoom', label: 'Zoom', status: 'live', group: 'utility' },
 ];
 

@@ -6,9 +6,8 @@ import Image from 'next/image';
 import { supabase } from '@/lib/supabase';
 import { Keyboard } from 'lucide-react';
 
-import { ToolMode, DocUnit, isDrawTool, PASTEBOARD_BG, RULER_SIZE } from '@/lib/editor/types';
+import { ToolMode, DocUnit, isDrawTool } from '@/lib/editor/types';
 import { getAbsolutePolygonPoints, multiPolygonToPathD } from '@/lib/editor/geometry';
-import { exportCanvasToPDF } from '@/lib/editor/pdfExport';
 
 import { useEditorHistory } from '@/hooks/useEditorHistory';
 import { usePenTool } from '@/hooks/usePenTool';
@@ -24,18 +23,14 @@ import { MenuBar, MenuDef } from '@/components/editor/MenuBar';
 import { useWindowPanels } from '@/components/editor/WindowPanels';
 import { AlignPanel } from '@/components/editor/AlignPanel';
 import { BackBar } from '@/components/BackBar';
-import { Rulers } from '@/components/editor/Rulers';
 
 function EditorContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fabricCanvasRef = useRef<any>(null);
-  const viewportRef = useRef<HTMLDivElement>(null);
-  const panRef = useRef<{ active: boolean; lastX: number; lastY: number }>({ active: false, lastX: 0, lastY: 0 });
-  const [canvasReady, setCanvasReady] = useState(false);
 
-  const [zoom, setZoom] = useState(100);
+  const [zoom, setZoom] = useState(50);
   const [layers, setLayers] = useState<any[]>([]);
   const [designName, setDesignName] = useState('Untitled Design');
   const [designId, setDesignId] = useState<string | null>(null);
@@ -74,7 +69,7 @@ function EditorContent() {
     setLayers(
       canvas
         .getObjects()
-        .filter((o: any) => !o.__isAnchorHandle && !o.__isPenPreview && !o.__isShapeDraft && !o.__isArtboard)
+        .filter((o: any) => !o.__isAnchorHandle && !o.__isPenPreview && !o.__isShapeDraft)
         .slice()
         .reverse()
     );
@@ -350,13 +345,7 @@ function EditorContent() {
 
       if (!canvas) return;
 
-      if (tool === 'pan') {
-        canvas.discardActiveObject();
-        canvas.selection = false;
-        canvas.forEachObject((o: any) => (o.selectable = false));
-        canvas.defaultCursor = 'grab';
-        canvas.hoverCursor = 'grab';
-      } else if (tool === 'pen' || isDrawTool(tool)) {
+      if (tool === 'pen' || isDrawTool(tool)) {
         canvas.discardActiveObject();
         canvas.selection = false;
         canvas.forEachObject((o: any) => (o.selectable = false));
@@ -365,7 +354,7 @@ function EditorContent() {
       } else {
         canvas.selection = true;
         canvas.forEachObject((o: any) => {
-          if (!o.locked && !o.__isAnchorHandle && !o.__isPenPreview && !o.__isArtboard) o.selectable = true;
+          if (!o.locked && !o.__isAnchorHandle && !o.__isPenPreview) o.selectable = true;
         });
         canvas.defaultCursor = 'default';
         canvas.hoverCursor = 'move';
@@ -375,66 +364,22 @@ function EditorContent() {
     [clearPenDraft, clearAnchorHandles, clearShapeDraft]
   );
 
-  // Ensures a locked, non-exported-away white artboard Rect sits at the
-  // bottom of the stack at world (0,0)-(w,h). Everything outside it is the
-  // dark pasteboard (canvas.backgroundColor), which objects can freely sit on.
-  const ensureArtboard = (canvas: any, F: any, w: number, h: number) => {
-    canvas.backgroundColor = PASTEBOARD_BG;
-    let artboard = canvas.getObjects().find((o: any) => o.__isArtboard);
-    if (!artboard) {
-      artboard = new F.Rect({
-        left: 0,
-        top: 0,
-        width: w,
-        height: h,
-        fill: '#ffffff',
-        selectable: false,
-        evented: false,
-        hasControls: false,
-        hoverCursor: 'default',
-        objectCaching: false,
-      });
-      artboard.__isArtboard = true;
-      canvas.add(artboard);
-    }
-    canvas.sendToBack(artboard);
-    canvas.requestRenderAll();
-  };
-
-  const fitToScreen = (canvas: any) => {
-    const vw = canvas.getWidth();
-    const vh = canvas.getHeight();
-    if (!vw || !vh) return;
-    const pad = 60;
-    let z = Math.min((vw - pad * 2) / width, (vh - pad * 2) / height);
-    if (!isFinite(z) || z <= 0) z = 1;
-    z = Math.max(0.1, Math.min(2, z));
-    const panX = (vw - width * z) / 2;
-    const panY = (vh - height * z) / 2;
-    canvas.setViewportTransform([z, 0, 0, z, panX, panY]);
-    setZoom(Math.round(z * 100));
-  };
-
   useEffect(() => {
     import('fabric').then((mod) => {
-      const F: any = mod.fabric;
-      const initialW = viewportRef.current?.clientWidth || 900;
-      const initialH = viewportRef.current?.clientHeight || 600;
-
-      const canvas = new F.Canvas(canvasRef.current, {
-        width: initialW,
-        height: initialH,
-        backgroundColor: PASTEBOARD_BG,
+      const canvas = new mod.fabric.Canvas(canvasRef.current, {
+        width,
+        height,
+        backgroundColor: '#ffffff',
       });
       fabricCanvasRef.current = canvas;
-      (window as any).fabric = F;
+      (window as any).fabric = mod.fabric;
 
       const onLayersChanged = () => refreshLayers();
       const onHistoryChanged = () => pushHistory();
 
       canvas.on('object:added', (e: any) => {
         const obj: any = e.target;
-        if (obj && !obj.__isAnchorHandle && !obj.__isPenPreview && !obj.__isShapeDraft && !obj.__isArtboard && !obj.__uid) {
+        if (obj && !obj.__isAnchorHandle && !obj.__isPenPreview && !obj.__isShapeDraft && !obj.__uid) {
           obj.__uid = `obj_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
         }
       });
@@ -467,71 +412,16 @@ function EditorContent() {
       });
 
       canvas.on('mouse:down', (opt: any) => {
-        if (activeToolRef.current === 'pan') {
-          panRef.current = { active: true, lastX: opt.e.clientX, lastY: opt.e.clientY };
-          canvas.setCursor('grabbing');
-          return;
-        }
         if (activeToolRef.current === 'pen') handlePenMouseDown(opt);
         else if (isDrawTool(activeToolRef.current)) handleShapeMouseDown(opt);
       });
       canvas.on('mouse:move', (opt: any) => {
-        if (panRef.current.active) {
-          const dx = opt.e.clientX - panRef.current.lastX;
-          const dy = opt.e.clientY - panRef.current.lastY;
-          panRef.current.lastX = opt.e.clientX;
-          panRef.current.lastY = opt.e.clientY;
-          canvas.relativePan(new F.Point(dx, dy));
-          return;
-        }
         if (activeToolRef.current === 'pen') handlePenMouseMove(opt);
         else if (isDrawTool(activeToolRef.current)) handleShapeMouseMove(opt);
       });
       canvas.on('mouse:up', () => {
-        if (panRef.current.active) {
-          panRef.current.active = false;
-          canvas.setCursor(activeToolRef.current === 'pan' ? 'grab' : 'default');
-          return;
-        }
         if (activeToolRef.current === 'pen') handlePenMouseUp();
         else if (isDrawTool(activeToolRef.current)) handleShapeMouseUp();
-      });
-
-      canvas.on('mouse:wheel', (opt: any) => {
-        const e = opt.e as WheelEvent;
-        e.preventDefault();
-        e.stopPropagation();
-        if (e.ctrlKey || e.metaKey) {
-          let z = canvas.getZoom();
-          z *= 0.999 ** e.deltaY;
-          z = Math.max(0.1, Math.min(2, z));
-          canvas.zoomToPoint(new F.Point(e.offsetX, e.offsetY), z);
-          setZoom(Math.round(z * 100));
-        } else {
-          canvas.relativePan(new F.Point(-e.deltaX, -e.deltaY));
-        }
-      });
-
-      // Decorative border/shadow drawn straight onto the live lower canvas after
-      // each render. toDataURL()/toCanvasElement() render objects into a fresh
-      // offscreen canvas instead of this element, so this never leaks into
-      // PNG/JPG/PDF exports.
-      canvas.on('after:render', () => {
-        const ctx = canvasRef.current?.getContext('2d');
-        const vt = canvas.viewportTransform;
-        if (!ctx || !vt) return;
-        const x = vt[4];
-        const y = vt[5];
-        const w = width * vt[0];
-        const h = height * vt[3];
-        ctx.save();
-        ctx.shadowColor = 'rgba(0,0,0,0.35)';
-        ctx.shadowBlur = 16;
-        ctx.shadowOffsetY = 3;
-        ctx.strokeStyle = 'rgba(0,0,0,0.35)';
-        ctx.lineWidth = 1;
-        ctx.strokeRect(x + 0.5, y + 0.5, Math.max(w - 1, 0), Math.max(h - 1, 0));
-        ctx.restore();
       });
 
       if (urlDesignId) {
@@ -545,8 +435,6 @@ function EditorContent() {
             if (data) {
               setDesignName(data.name);
               canvas.loadFromJSON(data.canvas_json, function () {
-                ensureArtboard(canvas, F, width, height);
-                fitToScreen(canvas);
                 canvas.renderAll();
                 refreshLayers();
                 seedInitialSnapshot();
@@ -555,49 +443,17 @@ function EditorContent() {
             if (error) console.error('Failed to load design:', error);
           });
       } else {
-        ensureArtboard(canvas, F, width, height);
-        fitToScreen(canvas);
         seedInitialSnapshot();
       }
-
-      setCanvasReady(true);
     });
 
     return function () {
-      setCanvasReady(false);
       if (fabricCanvasRef.current) fabricCanvasRef.current.dispose();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [width, height, urlDesignId]);
 
-  useEffect(() => {
-    const el = viewportRef.current;
-    if (!el) return;
-    const ro = new ResizeObserver((entries) => {
-      const canvas = fabricCanvasRef.current;
-      if (!canvas) return;
-      const { width: w, height: h } = entries[0].contentRect;
-      if (w > 0 && h > 0) {
-        canvas.setDimensions({ width: Math.floor(w), height: Math.floor(h) });
-        canvas.requestRenderAll();
-      }
-    });
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, [canvasReady]);
-
-  const applyZoom = useCallback((updater: number | ((z: number) => number)) => {
-    setZoom((prev) => {
-      const next = typeof updater === 'function' ? (updater as (z: number) => number)(prev) : updater;
-      const clamped = Math.max(10, Math.min(200, Math.round(next)));
-      const canvas = fabricCanvasRef.current;
-      if (canvas) {
-        const center = new (window as any).fabric.Point(canvas.getWidth() / 2, canvas.getHeight() / 2);
-        canvas.zoomToPoint(center, clamped / 100);
-      }
-      return clamped;
-    });
-  }, []);
+  const scale = zoom / 100;
 
   const addText = () => {
     import('fabric').then((mod) => {
@@ -695,13 +551,6 @@ function EditorContent() {
     });
   };
 
-  const pinArtboardBack = () => {
-    const canvas = fabricCanvasRef.current;
-    if (!canvas) return;
-    const artboard = canvas.getObjects().find((o: any) => o.__isArtboard);
-    if (artboard) canvas.sendToBack(artboard);
-  };
-
   const bringForward = () => {
     const canvas = fabricCanvasRef.current;
     const active = canvas.getActiveObject();
@@ -709,7 +558,6 @@ function EditorContent() {
     canvas.bringForward(active);
     canvas.requestRenderAll();
     refreshLayers();
-    pinArtboardBack();
     pushHistory();
   };
   const sendBackward = () => {
@@ -719,7 +567,6 @@ function EditorContent() {
     canvas.sendBackwards(active);
     canvas.requestRenderAll();
     refreshLayers();
-    pinArtboardBack();
     pushHistory();
   };
   const bringToFront = () => {
@@ -729,7 +576,6 @@ function EditorContent() {
     canvas.bringToFront(active);
     canvas.requestRenderAll();
     refreshLayers();
-    pinArtboardBack();
     pushHistory();
   };
   const sendToBack = () => {
@@ -739,7 +585,6 @@ function EditorContent() {
     canvas.sendToBack(active);
     canvas.requestRenderAll();
     refreshLayers();
-    pinArtboardBack();
     pushHistory();
   };
 
@@ -751,7 +596,6 @@ function EditorContent() {
     canvas.setActiveObject(group);
     canvas.requestRenderAll();
     refreshLayers();
-    pinArtboardBack();
     pushHistory();
     setSelected(group);
   };
@@ -764,7 +608,6 @@ function EditorContent() {
     canvas.setActiveObject(items);
     canvas.requestRenderAll();
     refreshLayers();
-    pinArtboardBack();
     pushHistory();
     setSelected(items);
   };
@@ -814,7 +657,6 @@ function EditorContent() {
     canvas.moveTo(obj, targetCanvasIdx);
     canvas.requestRenderAll();
     refreshLayers();
-    pinArtboardBack();
     pushHistory();
   };
 
@@ -871,7 +713,6 @@ function EditorContent() {
         if (e.key.toLowerCase() === 'v') { e.preventDefault(); setActiveTool('select'); return; }
         if (e.key.toLowerCase() === 'a') { e.preventDefault(); setActiveTool('direct'); return; }
         if (e.key.toLowerCase() === 'p') { e.preventDefault(); setActiveTool('pen'); return; }
-        if (e.key.toLowerCase() === 'h') { e.preventDefault(); setActiveTool('pan'); return; }
       }
 
       if (canUseToolShortcuts && activeToolRef.current === 'pen') {
@@ -893,7 +734,7 @@ function EditorContent() {
       if (isMeta && e.key.toLowerCase() === 's') { e.preventDefault(); saveDesign(); return; }
       if (isMeta && e.key.toLowerCase() === 'a' && !isEditingText) {
         e.preventDefault();
-        const objs = canvas.getObjects().filter((o: any) => !o.locked && !o.__isAnchorHandle && !o.__isPenPreview && !o.__isShapeDraft && !o.__isArtboard);
+        const objs = canvas.getObjects().filter((o: any) => !o.locked && !o.__isAnchorHandle && !o.__isPenPreview && !o.__isShapeDraft);
         if (objs.length) {
           canvas.discardActiveObject();
           const sel = new (window as any).fabric.ActiveSelection(objs, { canvas });
@@ -925,9 +766,9 @@ function EditorContent() {
       if (isMeta && e.key === '[' && !e.shiftKey) { e.preventDefault(); sendBackward(); return; }
       if (isMeta && e.shiftKey && e.key === ']') { e.preventDefault(); bringToFront(); return; }
       if (isMeta && e.shiftKey && e.key === '[') { e.preventDefault(); sendToBack(); return; }
-      if (isMeta && (e.key === '=' || e.key === '+')) { e.preventDefault(); applyZoom((z) => z + 10); return; }
-      if (isMeta && e.key === '-') { e.preventDefault(); applyZoom((z) => z - 10); return; }
-      if (isMeta && e.key === '0') { e.preventDefault(); applyZoom(100); return; }
+      if (isMeta && (e.key === '=' || e.key === '+')) { e.preventDefault(); setZoom((z) => Math.min(200, z + 10)); return; }
+      if (isMeta && e.key === '-') { e.preventDefault(); setZoom((z) => Math.max(10, z - 10)); return; }
+      if (isMeta && e.key === '0') { e.preventDefault(); setZoom(100); return; }
 
       if (!isEditingText && active && !active.locked && activeToolRef.current !== 'pen' && !isDrawTool(activeToolRef.current) && e.key.startsWith('Arrow')) {
         const step = e.shiftKey ? 10 : 1;
@@ -956,7 +797,7 @@ function EditorContent() {
       return;
     }
 
-    const canvasJson = fabricCanvasRef.current.toJSON(['name', 'locked', 'visible', 'isVectorPath', 'clipPath', '__uid', '__lockRatio', '__isArtboard']);
+    const canvasJson = fabricCanvasRef.current.toJSON(['name', 'locked', 'visible', 'isVectorPath', 'clipPath', '__uid', '__lockRatio']);
     const payload: any = {
       user_id: user.id,
       name: designName,
@@ -990,34 +831,16 @@ function EditorContent() {
     document.body.removeChild(link);
   };
 
-  // Crops export to just the artboard rect, regardless of current pan/zoom, and
-  // keeps output resolution independent of the on-screen zoom level (dividing
-  // the desired multiplier by the current zoom cancels it out).
-  const getArtboardExportOptions = (baseMultiplier: number) => {
-    const canvas = fabricCanvasRef.current;
-    const vt = canvas.viewportTransform;
-    const zoomLevel = vt[0] || 1;
-    return {
-      left: vt[4],
-      top: vt[5],
-      width: width * zoomLevel,
-      height: height * zoomLevel,
-      multiplier: baseMultiplier / zoomLevel,
-    };
-  };
-
   const exportAsPNG = () => {
     setExporting(true);
-    const canvas = fabricCanvasRef.current;
-    const dataUrl = canvas.toDataURL({ format: 'png', quality: 1, ...getArtboardExportOptions(2) });
+    const dataUrl = fabricCanvasRef.current.toDataURL({ format: 'png', quality: 1, multiplier: 2 });
     downloadFile(dataUrl, `${designName || 'design'}.png`);
     setExporting(false);
     setShowExportMenu(false);
   };
   const exportAsJPG = () => {
     setExporting(true);
-    const canvas = fabricCanvasRef.current;
-    const dataUrl = canvas.toDataURL({ format: 'jpeg', quality: 0.9, ...getArtboardExportOptions(2) });
+    const dataUrl = fabricCanvasRef.current.toDataURL({ format: 'jpeg', quality: 0.9, multiplier: 2 });
     downloadFile(dataUrl, `${designName || 'design'}.jpg`);
     setExporting(false);
     setShowExportMenu(false);
@@ -1025,10 +848,11 @@ function EditorContent() {
   const exportAsPDF = async () => {
     setExporting(true);
     try {
-      const [{ jsPDF }, mod] = await Promise.all([import('jspdf'), import('fabric')]);
+      const { jsPDF } = await import('jspdf');
+      const dataUrl = fabricCanvasRef.current.toDataURL({ format: 'png', quality: 1, multiplier: 2 });
       const orientation = width > height ? 'landscape' : 'portrait';
       const pdf = new jsPDF({ orientation, unit: 'px', format: [width, height] });
-      exportCanvasToPDF(pdf, fabricCanvasRef.current, mod.fabric);
+      pdf.addImage(dataUrl, 'PNG', 0, 0, width, height);
       pdf.save(`${designName || 'design'}.pdf`);
     } catch (err) {
       console.error('PDF export failed:', err);
@@ -1106,7 +930,7 @@ function EditorContent() {
           shortcut: 'Ctrl/Cmd+A',
           onClick: () => {
             const canvas = fabricCanvasRef.current;
-            const objs = canvas.getObjects().filter((o: any) => !o.locked && !o.__isAnchorHandle && !o.__isPenPreview && !o.__isShapeDraft && !o.__isArtboard);
+            const objs = canvas.getObjects().filter((o: any) => !o.locked && !o.__isAnchorHandle && !o.__isPenPreview && !o.__isShapeDraft);
             if (objs.length) {
               canvas.discardActiveObject();
               const sel = new (window as any).fabric.ActiveSelection(objs, { canvas });
@@ -1131,9 +955,9 @@ function EditorContent() {
     {
       label: 'View',
       items: [
-        { label: 'Zoom In', shortcut: 'Ctrl/Cmd+"+"', onClick: () => applyZoom((z) => z + 10) },
-        { label: 'Zoom Out', shortcut: 'Ctrl/Cmd+"-"', onClick: () => applyZoom((z) => z - 10) },
-        { label: 'Actual Size', shortcut: 'Ctrl/Cmd+0', onClick: () => applyZoom(100) },
+        { label: 'Zoom In', shortcut: 'Ctrl/Cmd+"+"', onClick: () => setZoom((z) => Math.min(200, z + 10)) },
+        { label: 'Zoom Out', shortcut: 'Ctrl/Cmd+"-"', onClick: () => setZoom((z) => Math.max(10, z - 10)) },
+        { label: 'Actual Size', shortcut: 'Ctrl/Cmd+0', onClick: () => setZoom(100) },
         { divider: true },
         { label: 'Show Rulers', planned: true },
         { label: 'Show Grid', planned: true },
@@ -1200,9 +1024,9 @@ function EditorContent() {
         </div>
 
         <div className="flex items-center gap-3">
-          <button onClick={() => applyZoom(zoom - 10)} className="px-2 py-1 border rounded">-</button>
+          <button onClick={() => setZoom(Math.max(10, zoom - 10))} className="px-2 py-1 border rounded">-</button>
           <span className="text-sm text-gray-600 w-12 text-center">{zoom}%</span>
-          <button onClick={() => applyZoom(zoom + 10)} className="px-2 py-1 border rounded">+</button>
+          <button onClick={() => setZoom(Math.min(200, zoom + 10))} className="px-2 py-1 border rounded">+</button>
         </div>
 
         <div className="flex items-center gap-2 relative">
@@ -1238,13 +1062,8 @@ function EditorContent() {
           onOpenRoadmap={(id) => setRoadmap({ open: true, id })}
         />
 
-        <div className="flex-1 overflow-hidden relative" style={{ background: PASTEBOARD_BG }}>
-          <Rulers fabricCanvasRef={fabricCanvasRef} unit={unit} artboardWidth={width} artboardHeight={height} ready={canvasReady} />
-          <div
-            ref={viewportRef}
-            className="absolute overflow-hidden"
-            style={{ top: RULER_SIZE, left: RULER_SIZE, right: 0, bottom: 0 }}
-          >
+        <div className="flex-1 overflow-auto flex items-center justify-center p-8">
+          <div style={{ transform: `scale(${scale})`, transformOrigin: 'center', boxShadow: '0 0 0 1px #e5e7eb' }}>
             <canvas ref={canvasRef} />
           </div>
         </div>

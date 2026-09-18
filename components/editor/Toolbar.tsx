@@ -3,7 +3,6 @@
 import {
   MousePointer2,
   Pointer,
-  Hand,
   PenTool as PenToolIcon,
   Type,
   Square,
@@ -107,14 +106,6 @@ export function Toolbar({
         icon={<Pointer size={18} />}
         active={activeTool === 'direct'}
         onClick={() => onSelectTool('direct')}
-        onPlanned={onOpenRoadmap}
-      />
-      <ToolButton
-        id="pan"
-        label="Hand"
-        icon={<Hand size={18} />}
-        active={activeTool === 'pan'}
-        onClick={() => onSelectTool('pan')}
         onPlanned={onOpenRoadmap}
       />
 
