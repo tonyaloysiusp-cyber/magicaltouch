@@ -1,7 +1,7 @@
 'use client';
 
 import { Lock, Unlock, Scissors } from 'lucide-react';
-import { isDrawTool, TOOL_LABELS, DrawTool, DocUnit, FONT_OPTIONS, ToolMode } from '@/lib/editor/types';
+import { isDrawTool, isPixelSelectTool, TOOL_LABELS, DrawTool, DocUnit, FONT_OPTIONS, ToolMode } from '@/lib/editor/types';
 import { formatUnit, unitToPx, getObjectPixelSize } from '@/lib/editor/units';
 
 interface Props {
@@ -24,6 +24,19 @@ interface Props {
   gradAngleRef: React.MutableRefObject<number>;
   pushHistory: () => void;
   layerLabel: (obj: any, index: number) => string;
+  pixelTolerance: number;
+  onPixelToleranceChange: (n: number) => void;
+  pixelContiguous: boolean;
+  onPixelContiguousChange: (b: boolean) => void;
+  hasPixelSelection: boolean;
+  hasOriginalBackup: boolean;
+  onInvertPixelSelection: () => void;
+  onDeselectPixels: () => void;
+  onFeatherPixelSelection: (radius: number) => void;
+  onDeleteSelectedPixels: () => void;
+  onApplyPixelSelectionAsMask: () => void;
+  onExtractPixelSelectionToLayer: () => void;
+  onRestoreOriginalImage: () => void;
 }
 
 export function PropertiesPanel({
@@ -46,6 +59,19 @@ export function PropertiesPanel({
   gradAngleRef,
   pushHistory,
   layerLabel,
+  pixelTolerance,
+  onPixelToleranceChange,
+  pixelContiguous,
+  onPixelContiguousChange,
+  hasPixelSelection,
+  hasOriginalBackup,
+  onInvertPixelSelection,
+  onDeselectPixels,
+  onFeatherPixelSelection,
+  onDeleteSelectedPixels,
+  onApplyPixelSelectionAsMask,
+  onExtractPixelSelectionToLayer,
+  onRestoreOriginalImage,
 }: Props) {
   if (activeTool === 'pen') {
     return (
@@ -84,6 +110,107 @@ export function PropertiesPanel({
         <kbd className="bg-gray-100 border rounded px-1">Alt/Option</kbd> to draw from the center.{' '}
         <kbd className="bg-gray-100 border rounded px-1">Esc</kbd> cancels.
       </p>
+    );
+  }
+
+  if (isPixelSelectTool(activeTool)) {
+    const isImageSelected = selected?.type === 'image';
+    return (
+      <div className="flex flex-col gap-4">
+        <div className="border rounded-lg p-2.5 bg-blue-50/50 flex flex-col gap-2">
+          <p className="text-xs font-semibold text-gray-700">Pixel Selection</p>
+          <p className="text-[10px] text-gray-500">
+            Select a raster image layer, then {activeTool === 'magic-wand' ? 'click a pixel' : 'drag'} to
+            select real pixels on it. Hold <kbd className="bg-white border rounded px-1">Shift</kbd> to
+            add, <kbd className="bg-white border rounded px-1">Alt/Option</kbd> to subtract.
+          </p>
+          {!isImageSelected && (
+            <p className="text-[10px] text-amber-600">No image layer selected — click an image on the canvas first.</p>
+          )}
+        </div>
+
+        {activeTool === 'magic-wand' && (
+          <div className="border rounded-lg p-2.5 bg-gray-50 flex flex-col gap-2">
+            <label className="text-xs font-semibold text-gray-500 block">Tolerance ({pixelTolerance})</label>
+            <input
+              type="range"
+              min={0}
+              max={255}
+              value={pixelTolerance}
+              onChange={(e) => onPixelToleranceChange(Number(e.target.value))}
+              className="w-full"
+            />
+            <label className="flex items-center gap-2 text-xs text-gray-600">
+              <input
+                type="checkbox"
+                checked={pixelContiguous}
+                onChange={(e) => onPixelContiguousChange(e.target.checked)}
+              />
+              Contiguous
+            </label>
+          </div>
+        )}
+
+        <div className="flex flex-col gap-1.5">
+          <p className="text-xs font-semibold text-gray-500">Selection</p>
+          <div className="grid grid-cols-2 gap-1.5">
+            <button
+              disabled={!hasPixelSelection}
+              onClick={onInvertPixelSelection}
+              className="text-xs border rounded py-1.5 hover:bg-gray-50 disabled:opacity-40"
+            >
+              Invert
+            </button>
+            <button
+              disabled={!hasPixelSelection}
+              onClick={onDeselectPixels}
+              className="text-xs border rounded py-1.5 hover:bg-gray-50 disabled:opacity-40"
+            >
+              Deselect
+            </button>
+          </div>
+          <button
+            disabled={!hasPixelSelection}
+            onClick={() => onFeatherPixelSelection(4)}
+            className="text-xs border rounded py-1.5 hover:bg-gray-50 disabled:opacity-40"
+          >
+            Feather Edge (4px)
+          </button>
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <p className="text-xs font-semibold text-gray-500">Apply</p>
+          <button
+            disabled={!hasPixelSelection}
+            onClick={onDeleteSelectedPixels}
+            className="text-xs border border-red-200 text-red-600 rounded py-1.5 hover:bg-red-50 disabled:opacity-40"
+          >
+            Delete Selected Pixels
+          </button>
+          <button
+            disabled={!hasPixelSelection}
+            onClick={onApplyPixelSelectionAsMask}
+            className="text-xs border rounded py-1.5 hover:bg-gray-50 disabled:opacity-40"
+          >
+            Apply as Mask (keep selected, clear rest)
+          </button>
+          <button
+            disabled={!hasPixelSelection}
+            onClick={onExtractPixelSelectionToLayer}
+            className="text-xs bg-brand-gradient text-white rounded py-1.5 font-semibold disabled:opacity-40"
+          >
+            Extract to New Layer
+          </button>
+          {hasOriginalBackup && (
+            <button
+              onClick={onRestoreOriginalImage}
+              className="text-xs border rounded py-1.5 hover:bg-gray-50 text-gray-600"
+            >
+              Restore Original Image
+            </button>
+          )}
+        </div>
+      </div>
     );
   }
 
