@@ -224,6 +224,33 @@ export function multiPolygonToPathD(mp: number[][][][]): string {
   return d.trim();
 }
 
+// De Casteljau subdivision of a cubic bezier at parameter t — splits one
+// curve into two that together trace the exact same shape (unlike
+// approximating a midpoint and guessing new handles).
+export function splitCubicBezier(
+  p0: { x: number; y: number },
+  p1: { x: number; y: number },
+  p2: { x: number; y: number },
+  p3: { x: number; y: number },
+  t = 0.5
+) {
+  const lerp = (a: { x: number; y: number }, b: { x: number; y: number }) => ({
+    x: a.x + (b.x - a.x) * t,
+    y: a.y + (b.y - a.y) * t,
+  });
+  const p01 = lerp(p0, p1);
+  const p12 = lerp(p1, p2);
+  const p23 = lerp(p2, p3);
+  const p012 = lerp(p01, p12);
+  const p123 = lerp(p12, p23);
+  const p0123 = lerp(p012, p123);
+  return {
+    left: [p0, p01, p012, p0123] as const,
+    right: [p0123, p123, p23, p3] as const,
+    midpoint: p0123,
+  };
+}
+
 export function buildPathD(
   anchors: { x: number; y: number; handleIn?: { x: number; y: number }; handleOut?: { x: number; y: number } }[],
   rubberBandTo: { x: number; y: number } | null,

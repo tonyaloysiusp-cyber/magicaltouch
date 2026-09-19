@@ -119,10 +119,15 @@ export function usePenTool({ fabricCanvasRef, onPathFinished }: Args) {
       if (isMouseDown && draft.mouseDownPoint) {
         const anchor = draft.anchors[lastIndex];
         anchor.handleOut = { x: pointer.x, y: pointer.y };
-        anchor.handleIn = {
-          x: anchor.x - (pointer.x - anchor.x),
-          y: anchor.y - (pointer.y - anchor.y),
-        };
+        // Alt/Option breaks the symmetric handle: only the outgoing side
+        // (toward the next segment) follows the drag, leaving whatever
+        // incoming handle the anchor already had untouched.
+        if (!opt.e.altKey) {
+          anchor.handleIn = {
+            x: anchor.x - (pointer.x - anchor.x),
+            y: anchor.y - (pointer.y - anchor.y),
+          };
+        }
         updatePreview(null);
       } else {
         updatePreview({ x: pointer.x, y: pointer.y });
