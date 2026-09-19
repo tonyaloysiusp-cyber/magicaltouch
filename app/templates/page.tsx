@@ -8,6 +8,8 @@ import { Fraunces, Inter } from 'next/font/google';
 import { Menu, X, Instagram, Twitter, Facebook, Youtube } from 'lucide-react';
 import { BackBar } from '@/components/BackBar';
 import { resolveAuthedPath } from '@/lib/authNav';
+import { MockDesignCard } from '@/components/MockDesignCard';
+import { Category, Template, CATEGORIES, TEMPLATES } from '@/lib/templatesData';
 
 const display = Fraunces({
   subsets: ['latin'],
@@ -26,50 +28,6 @@ const NAV_LINKS = [
   { label: 'Templates', href: '/templates' },
   { label: 'Pricing', href: '/#pricing' },
 ];
-
-type Category = 'Business Card' | 'Letterhead' | 'Flyer' | 'Resume' | 'Invitation' | 'Poster';
-
-interface Template {
-  name: string;
-  category: Category;
-  width: number;
-  height: number;
-  colors: [string, string];
-}
-
-const CATEGORIES: Category[] = ['Business Card', 'Letterhead', 'Flyer', 'Resume', 'Invitation', 'Poster'];
-
-const TEMPLATES: Template[] = [
-  { name: 'Studio Minimal', category: 'Business Card', width: 1050, height: 600, colors: ['#14121F', '#FAF9F6'] },
-  { name: 'Bold Contact', category: 'Business Card', width: 1050, height: 600, colors: ['#6C4FD1', '#FF6F91'] },
-  { name: 'Classic Letterpress', category: 'Business Card', width: 1050, height: 600, colors: ['#F5B942', '#14121F'] },
-
-  { name: 'Clean Correspondence', category: 'Letterhead', width: 850, height: 1100, colors: ['#FAF9F6', '#6C4FD1'] },
-  { name: 'Studio Header', category: 'Letterhead', width: 850, height: 1100, colors: ['#14121F', '#F5B942'] },
-
-  { name: 'Night Market Flyer', category: 'Flyer', width: 1080, height: 1350, colors: ['#14121F', '#6C4FD1'] },
-  { name: 'Bloom Festival', category: 'Flyer', width: 1080, height: 1350, colors: ['#FF6F91', '#F5B942'] },
-  { name: 'Grand Opening', category: 'Flyer', width: 1080, height: 1350, colors: ['#6C4FD1', '#14121F'] },
-
-  { name: 'Modern Resume', category: 'Resume', width: 850, height: 1100, colors: ['#14121F', '#FAF9F6'] },
-  { name: 'Creative Portfolio', category: 'Resume', width: 850, height: 1100, colors: ['#6C4FD1', '#F5B942'] },
-
-  { name: 'Paper & Ink Invite', category: 'Invitation', width: 1200, height: 1200, colors: ['#FF6F91', '#F5B942'] },
-  { name: 'Golden Hour', category: 'Invitation', width: 1200, height: 1200, colors: ['#F5B942', '#FF6F91'] },
-
-  { name: 'Quarterly Showcase', category: 'Poster', width: 1240, height: 1754, colors: ['#6C4FD1', '#FF6F91'] },
-];
-
-function MockDesignCard({ colors, label }: { colors: [string, string]; label: string }) {
-  return (
-    <div
-      className="w-full h-full flex items-end p-4"
-      style={{ background: `linear-gradient(135deg, ${colors[0]}, ${colors[1]})` }}
-    >
-      <span className="text-white text-xs font-semibold tracking-tight opacity-90">{label}</span>
-    </div>
-  );
-}
 
 export default function TemplatesPage() {
   const [menuOpen, setMenuOpen] = useState(false);
