@@ -6,9 +6,20 @@ import Image from 'next/image';
 import { supabase } from '@/lib/supabase';
 import { Keyboard } from 'lucide-react';
 
-import { ToolMode, DocUnit, isDrawTool, PASTEBOARD_BG, RULER_SIZE } from '@/lib/editor/types';
+import { ToolMode, DocUnit, isDrawTool, isPixelSelectTool, PASTEBOARD_BG, RULER_SIZE } from '@/lib/editor/types';
 import { getAbsolutePolygonPoints, multiPolygonToPathD } from '@/lib/editor/geometry';
 import { exportCanvasToPDF, exportArtboardsToPDF } from '@/lib/editor/pdfExport';
+import {
+  PixelMask,
+  invertMask,
+  featherMask,
+  maskHasSelection,
+  maskToTintCanvas,
+  clearMaskedPixels,
+  applyMaskKeepSelected,
+  extractMaskedRegion,
+} from '@/lib/editor/pixelSelection';
+import { computeSnap, GuideLine } from '@/lib/editor/snapping';
 import {
   ArtboardMeta,
   ArtboardPreset,
@@ -27,6 +38,7 @@ import { usePenTool } from '@/hooks/usePenTool';
 import { useShapeTools } from '@/hooks/useShapeTools';
 import { useDirectSelection } from '@/hooks/useDirectSelection';
 import { useArtboardTool } from '@/hooks/useArtboardTool';
+import { usePixelSelectionTool, getImagePixelCanvas } from '@/hooks/usePixelSelectionTool';
 
 import { Toolbar } from '@/components/editor/Toolbar';
 import { PropertiesPanel } from '@/components/editor/PropertiesPanel';
@@ -79,6 +91,28 @@ function EditorContent() {
   const [activeTool, setActiveToolState] = useState<ToolMode>('select');
   const activeToolRef = useRef<ToolMode>('select');
   const [maskTargetId, setMaskTargetId] = useState<string>('');
+
+  // Pixel selection (marquee/lasso/magic wand) state. The mask itself and
+  // its cached tint preview live in refs (read fresh inside canvas event
+  // handlers and the render loop); pixelSelectionVersion just forces a
+  // React re-render so PropertiesPanel's disabled states stay in sync.
+  const pixelSelectionRef = useRef<{ imageUid: string; mask: PixelMask } | null>(null);
+  const pixelTintCanvasRef = useRef<HTMLCanvasElement | null>(null);
+
+  // Smart-guide snap lines, live only while an object is actively being
+  // dragged. Cleared on mouse-up so the guides never persist after a drop.
+  const snapGuidesRef = useRef<GuideLine[]>([]);
+  const [, setPixelSelectionVersion] = useState(0);
+  const [magicWandTolerance, setMagicWandTolerance] = useState(32);
+  const magicWandToleranceRef = useRef(32);
+  const [magicWandContiguous, setMagicWandContiguous] = useState(true);
+  const magicWandContiguousRef = useRef(true);
+  useEffect(() => {
+    magicWandToleranceRef.current = magicWandTolerance;
+  }, [magicWandTolerance]);
+  useEffect(() => {
+    magicWandContiguousRef.current = magicWandContiguous;
+  }, [magicWandContiguous]);
 
   const clipboardRef = useRef<any>(null);
   const gradAngleRef = useRef<number>(90);
@@ -229,6 +263,161 @@ function EditorContent() {
       });
     },
   });
+
+  const setPixelSelectionMask = useCallback((imageUid: string | null, mask: PixelMask | null) => {
+    if (!imageUid || !mask || !maskHasSelection(mask)) {
+      pixelSelectionRef.current = null;
+      pixelTintCanvasRef.current = null;
+    } else {
+      pixelSelectionRef.current = { imageUid, mask };
+      pixelTintCanvasRef.current = maskToTintCanvas(mask, [56, 145, 255], 0.4);
+    }
+    setPixelSelectionVersion((v) => v + 1);
+    fabricCanvasRef.current?.requestRenderAll();
+  }, []);
+
+  const getSelectionMaskForActiveImage = useCallback(() => {
+    const canvas = fabricCanvasRef.current;
+    const active = canvas?.getActiveObject();
+    if (!active || active.type !== 'image') return null;
+    const sel = pixelSelectionRef.current;
+    return sel && sel.imageUid === active.__uid ? sel.mask : null;
+  }, []);
+
+  const onNoImageSelected = useCallback(() => {
+    // Properties panel already shows the "no image selected" hint; nothing
+    // else to do here.
+  }, []);
+
+  const {
+    draftRef: pixelDraftRef,
+    clearDraft: clearPixelDraft,
+    handleMouseDown: handlePixelMouseDown,
+    handleMouseMove: handlePixelMouseMove,
+    handleMouseUp: handlePixelMouseUp,
+  } = usePixelSelectionTool({
+    fabricCanvasRef,
+    activeToolRef,
+    toleranceRef: magicWandToleranceRef,
+    contiguousRef: magicWandContiguousRef,
+    getSelectionMask: getSelectionMaskForActiveImage,
+    onSelectionChanged: setPixelSelectionMask,
+    onNoImageSelected,
+  });
+
+  // Only meaningful while `selected` is the same image the mask belongs to
+  // — switching to a different object disables the destructive actions.
+  const hasPixelSelection = !!(
+    selected &&
+    pixelSelectionRef.current &&
+    pixelSelectionRef.current.imageUid === selected.__uid &&
+    maskHasSelection(pixelSelectionRef.current.mask)
+  );
+  const hasOriginalBackup = !!(selected && selected.type === 'image' && selected.__originalSrc);
+
+  const getPixelSelectionTarget = () => {
+    const canvas = fabricCanvasRef.current;
+    const active = canvas?.getActiveObject();
+    const sel = pixelSelectionRef.current;
+    if (!canvas || !active || active.type !== 'image' || !sel || sel.imageUid !== active.__uid) return null;
+    if (!maskHasSelection(sel.mask)) return null;
+    return { canvas, image: active, mask: sel.mask };
+  };
+
+  const deleteSelectedPixels = () => {
+    const target = getPixelSelectionTarget();
+    if (!target) return;
+    const { canvas, image, mask } = target;
+    if (!image.__originalSrc) image.__originalSrc = image.toDataURL({});
+    const dataUrl = clearMaskedPixels(getImagePixelCanvas(image), mask);
+    image.setSrc(dataUrl, () => {
+      image.dirty = true;
+      canvas.requestRenderAll();
+      setPixelSelectionMask(null, null);
+      bumpSel();
+      pushHistory();
+    });
+  };
+
+  const applyPixelSelectionAsMask = () => {
+    const target = getPixelSelectionTarget();
+    if (!target) return;
+    const { canvas, image, mask } = target;
+    if (!image.__originalSrc) image.__originalSrc = image.toDataURL({});
+    const dataUrl = applyMaskKeepSelected(getImagePixelCanvas(image), mask);
+    image.setSrc(dataUrl, () => {
+      image.dirty = true;
+      canvas.requestRenderAll();
+      setPixelSelectionMask(null, null);
+      bumpSel();
+      pushHistory();
+    });
+  };
+
+  const extractPixelSelectionToLayer = () => {
+    const target = getPixelSelectionTarget();
+    if (!target) return;
+    const { canvas, image, mask } = target;
+    const result = extractMaskedRegion(getImagePixelCanvas(image), mask);
+    if (!result) return;
+
+    import('fabric').then((mod) => {
+      const F: any = mod.fabric;
+      const matrix = image.calcTransformMatrix();
+      const localCenter = {
+        x: result.bbox.x + result.bbox.width / 2 - image.width / 2,
+        y: result.bbox.y + result.bbox.height / 2 - image.height / 2,
+      };
+      const worldCenter = F.util.transformPoint(new F.Point(localCenter.x, localCenter.y), matrix);
+
+      F.Image.fromURL(result.dataUrl, (img: any) => {
+        img.set({
+          left: worldCenter.x,
+          top: worldCenter.y,
+          originX: 'center',
+          originY: 'center',
+          angle: image.angle || 0,
+          scaleX: image.scaleX || 1,
+          scaleY: image.scaleY || 1,
+        });
+        img.__id = `img_${Date.now()}_${nextImageIdRef.current++}`;
+        canvas.add(img);
+        canvas.setActiveObject(img);
+        canvas.requestRenderAll();
+        pushHistory();
+      });
+    });
+  };
+
+  const restoreOriginalImage = () => {
+    const canvas = fabricCanvasRef.current;
+    const active = canvas?.getActiveObject();
+    if (!active || active.type !== 'image' || !active.__originalSrc) return;
+    active.setSrc(active.__originalSrc, () => {
+      active.dirty = true;
+      canvas.requestRenderAll();
+      bumpSel();
+      pushHistory();
+    });
+  };
+
+  const invertPixelSelection = () => {
+    const active = fabricCanvasRef.current?.getActiveObject();
+    const sel = pixelSelectionRef.current;
+    if (!active || active.type !== 'image' || !sel || sel.imageUid !== active.__uid) return;
+    setPixelSelectionMask(active.__uid, invertMask(sel.mask));
+  };
+
+  const deselectPixels = () => {
+    setPixelSelectionMask(null, null);
+  };
+
+  const featherPixelSelection = (radius: number) => {
+    const active = fabricCanvasRef.current?.getActiveObject();
+    const sel = pixelSelectionRef.current;
+    if (!active || active.type !== 'image' || !sel || sel.imageUid !== active.__uid) return;
+    setPixelSelectionMask(active.__uid, featherMask(sel.mask, radius));
+  };
 
   const applyPathAsMask = useCallback(() => {
     const canvas = fabricCanvasRef.current;
@@ -458,6 +647,7 @@ function EditorContent() {
       if (tool !== 'direct') clearAnchorHandles();
       clearShapeDraft();
       if (tool !== 'artboard') clearArtboardDraft();
+      if (!isPixelSelectTool(tool)) clearPixelDraft();
 
       if (!canvas) return;
 
@@ -493,6 +683,18 @@ function EditorContent() {
         canvas.forEachObject((o: any) => (o.selectable = false));
         canvas.defaultCursor = 'crosshair';
         canvas.hoverCursor = 'crosshair';
+      } else if (isPixelSelectTool(tool)) {
+        // These tools operate on whichever image is already the active
+        // object, so it's kept selected (not discarded) but stops
+        // intercepting mouse events — otherwise dragging on it would move
+        // the image instead of drawing a marquee/lasso.
+        canvas.selection = false;
+        canvas.forEachObject((o: any) => {
+          o.selectable = false;
+          o.evented = false;
+        });
+        canvas.defaultCursor = 'crosshair';
+        canvas.hoverCursor = 'crosshair';
       } else {
         canvas.selection = true;
         canvas.forEachObject((o: any) => {
@@ -503,6 +705,7 @@ function EditorContent() {
             o.hasControls = false;
             return;
           }
+          o.evented = true;
           if (!o.locked && !o.__isAnchorHandle && !o.__isPenPreview) o.selectable = true;
         });
         canvas.defaultCursor = 'default';
@@ -510,7 +713,7 @@ function EditorContent() {
       }
       canvas.requestRenderAll();
     },
-    [clearPenDraft, clearAnchorHandles, clearShapeDraft, clearArtboardDraft]
+    [clearPenDraft, clearAnchorHandles, clearShapeDraft, clearArtboardDraft, clearPixelDraft]
   );
 
   // Ensures at least one locked, non-rotatable white artboard Rect exists.
@@ -642,6 +845,33 @@ function EditorContent() {
       canvas.on('object:scaling', () => bumpSel());
       canvas.on('object:moving', (e: any) => {
         bumpSel();
+        const obj = e.target;
+        const disableSnap = e.e && (e.e.ctrlKey || e.e.metaKey);
+        if (activeToolRef.current === 'select' && obj && !obj.__isArtboard && !disableSnap) {
+          const zoom = canvas.getZoom() || 1;
+          const threshold = 8 / zoom;
+          const moving = obj.getBoundingRect();
+          const targets = canvas
+            .getObjects()
+            .filter(
+              (o: any) =>
+                o !== obj &&
+                !o.__isAnchorHandle &&
+                !o.__isPenPreview &&
+                !o.__isShapeDraft &&
+                !o.__isPrintMark &&
+                o.visible !== false
+            )
+            .map((o: any) => o.getBoundingRect());
+          const { dx, dy, guides } = computeSnap(moving, targets, threshold);
+          if (dx || dy) {
+            obj.set({ left: (obj.left || 0) + dx, top: (obj.top || 0) + dy });
+            obj.setCoords();
+          }
+          snapGuidesRef.current = guides;
+        } else {
+          snapGuidesRef.current = [];
+        }
         renderAnchorHandles(e.target);
       });
 
@@ -653,6 +883,10 @@ function EditorContent() {
         }
         if (activeToolRef.current === 'artboard') {
           handleArtboardMouseDown(opt);
+          return;
+        }
+        if (isPixelSelectTool(activeToolRef.current)) {
+          handlePixelMouseDown(opt);
           return;
         }
         if (activeToolRef.current === 'pen') handlePenMouseDown(opt);
@@ -671,10 +905,18 @@ function EditorContent() {
           handleArtboardMouseMove(opt);
           return;
         }
+        if (isPixelSelectTool(activeToolRef.current)) {
+          handlePixelMouseMove(opt);
+          return;
+        }
         if (activeToolRef.current === 'pen') handlePenMouseMove(opt);
         else if (isDrawTool(activeToolRef.current)) handleShapeMouseMove(opt);
       });
-      canvas.on('mouse:up', () => {
+      canvas.on('mouse:up', (opt: any) => {
+        if (snapGuidesRef.current.length > 0) {
+          snapGuidesRef.current = [];
+          canvas.requestRenderAll();
+        }
         if (panRef.current.active) {
           panRef.current.active = false;
           canvas.setCursor(activeToolRef.current === 'pan' ? 'grab' : 'default');
@@ -682,6 +924,10 @@ function EditorContent() {
         }
         if (activeToolRef.current === 'artboard') {
           handleArtboardMouseUp();
+          return;
+        }
+        if (isPixelSelectTool(activeToolRef.current)) {
+          handlePixelMouseUp(opt);
           return;
         }
         if (activeToolRef.current === 'pen') handlePenMouseUp();
@@ -778,6 +1024,102 @@ function EditorContent() {
         });
         ctx.setLineDash([]);
         ctx.restore();
+
+        // Pixel selection overlay — a tint of the actual selected pixels
+        // (or, mid-drag, the live marquee/lasso outline), projected through
+        // the target image's own transform matrix so it stays pinned to the
+        // image under pan/zoom/rotation. Drawn on the live upper context
+        // only, so — like everything else in this handler — it never
+        // touches PNG/JPG/PDF exports.
+        const sel = pixelSelectionRef.current;
+        const tint = pixelTintCanvasRef.current;
+        if (sel && tint) {
+          const img = canvas.getObjects().find((o: any) => o.type === 'image' && o.__uid === sel.imageUid);
+          if (img) {
+            const combined = F.util.multiplyTransformMatrices(vt, img.calcTransformMatrix());
+            ctx.save();
+            ctx.setTransform(combined[0], combined[1], combined[2], combined[3], combined[4], combined[5]);
+            ctx.drawImage(tint, -img.width / 2, -img.height / 2, img.width, img.height);
+            ctx.restore();
+          }
+        }
+
+        if (isPixelSelectTool(activeToolRef.current)) {
+          // Read the draft straight off the ref rather than the hook's
+          // React-state `liveRect` — this handler was registered once at
+          // canvas-mount time, so a state closure here would stay frozen
+          // at whatever it was on that first render.
+          const draft = pixelDraftRef.current;
+          const targetImg = draft.imageObj || canvas.getActiveObject();
+          if (targetImg && targetImg.type === 'image') {
+            const combined = F.util.multiplyTransformMatrices(vt, targetImg.calcTransformMatrix());
+            const project = (px: number, py: number) =>
+              F.util.transformPoint(new F.Point(px - targetImg.width / 2, py - targetImg.height / 2), combined);
+
+            if ((draft.tool === 'marquee-rect' || draft.tool === 'marquee-ellipse') && draft.points.length >= 2) {
+              const [a, b] = draft.points;
+              const x = Math.min(a.x, b.x);
+              const y = Math.min(a.y, b.y);
+              const w = Math.abs(b.x - a.x);
+              const h = Math.abs(b.y - a.y);
+              const corners = [
+                project(x, y),
+                project(x + w, y),
+                project(x + w, y + h),
+                project(x, y + h),
+              ];
+              ctx.save();
+              ctx.setLineDash([4, 3]);
+              ctx.strokeStyle = 'rgba(56,145,255,0.9)';
+              ctx.lineWidth = 1;
+              ctx.beginPath();
+              ctx.moveTo(corners[0].x, corners[0].y);
+              corners.slice(1).forEach((c: any) => ctx.lineTo(c.x, c.y));
+              ctx.closePath();
+              ctx.stroke();
+              ctx.restore();
+            } else if (draft.tool === 'lasso' && draft.points.length > 1) {
+              const pts = draft.points.map((p: any) => project(p.x, p.y));
+              ctx.save();
+              ctx.setLineDash([4, 3]);
+              ctx.strokeStyle = 'rgba(56,145,255,0.9)';
+              ctx.lineWidth = 1;
+              ctx.beginPath();
+              ctx.moveTo(pts[0].x, pts[0].y);
+              pts.slice(1).forEach((p: any) => ctx.lineTo(p.x, p.y));
+              ctx.stroke();
+              ctx.restore();
+            }
+          }
+        }
+
+        // Smart-guide snap lines, live only while dragging an object near a
+        // matching edge/center on another object or an artboard. Cleared on
+        // mouse-up, so — like everything else here — purely a live-canvas
+        // aid that never reaches an export.
+        const guides = snapGuidesRef.current;
+        if (guides.length > 0) {
+          const vw = canvas.getWidth();
+          const vh = canvas.getHeight();
+          ctx.save();
+          ctx.strokeStyle = 'rgba(255,0,200,0.9)';
+          ctx.lineWidth = 1;
+          ctx.setLineDash([]);
+          guides.forEach((g) => {
+            ctx.beginPath();
+            if (g.axis === 'v') {
+              const x = g.position * vt[0] + vt[4];
+              ctx.moveTo(x + 0.5, 0);
+              ctx.lineTo(x + 0.5, vh);
+            } else {
+              const y = g.position * vt[3] + vt[5];
+              ctx.moveTo(0, y + 0.5);
+              ctx.lineTo(vw, y + 0.5);
+            }
+            ctx.stroke();
+          });
+          ctx.restore();
+        }
       });
 
       if (urlDesignId) {
@@ -1335,6 +1677,9 @@ function EditorContent() {
         if (e.key.toLowerCase() === 'a') { e.preventDefault(); setActiveTool('direct'); return; }
         if (e.key.toLowerCase() === 'p') { e.preventDefault(); setActiveTool('pen'); return; }
         if (e.key.toLowerCase() === 'h') { e.preventDefault(); setActiveTool('pan'); return; }
+        if (e.key.toLowerCase() === 'm') { e.preventDefault(); setActiveTool('marquee-rect'); return; }
+        if (e.key.toLowerCase() === 'l') { e.preventDefault(); setActiveTool('lasso'); return; }
+        if (e.key.toLowerCase() === 'w') { e.preventDefault(); setActiveTool('magic-wand'); return; }
       }
 
       if (canUseToolShortcuts && !isMeta && e.shiftKey && e.key.toLowerCase() === 'o') {
@@ -1352,6 +1697,13 @@ function EditorContent() {
         e.preventDefault();
         clearShapeDraft();
         setActiveTool('select');
+        return;
+      }
+
+      if (canUseToolShortcuts && isPixelSelectTool(activeToolRef.current) && e.key === 'Escape') {
+        e.preventDefault();
+        clearPixelDraft();
+        deselectPixels();
         return;
       }
 
@@ -1385,6 +1737,11 @@ function EditorContent() {
       if (isMeta && e.key.toLowerCase() === 'v' && !isEditingText) { pasteClipboard(); return; }
       if (isMeta && e.key.toLowerCase() === 'l' && !isEditingText) { e.preventDefault(); active && toggleLock(active); return; }
       if (isMeta && e.key.toLowerCase() === 'h' && !isEditingText) { e.preventDefault(); active && toggleVisible(active); return; }
+      if ((e.key === 'Delete' || e.key === 'Backspace') && !isEditingText && isPixelSelectTool(activeToolRef.current)) {
+        e.preventDefault();
+        deleteSelectedPixels();
+        return;
+      }
       if ((e.key === 'Delete' || e.key === 'Backspace') && !isEditingText && activeToolRef.current !== 'pen' && !isDrawTool(activeToolRef.current)) {
         e.preventDefault();
         deleteSelected();
@@ -1436,6 +1793,7 @@ function EditorContent() {
       '__isArtboard',
       '__artboardId',
       '__print',
+      '__originalSrc',
     ]);
     // width/height stay as the dashboard/thumbnail-facing summary size —
     // the first artboard's current dimensions, not the URL params a brand
@@ -1744,7 +2102,7 @@ function EditorContent() {
 
   return (
     <main className="h-screen flex flex-col bg-gray-50">
-      <MenuBar menus={menus} />
+      <MenuBar menus={menus} leading={<Image src="/logo.png" alt="Magical Touch" width={110} height={22} priority />} />
 
       <div className="flex items-center justify-between px-4 py-2 border-b bg-white">
         <div className="flex items-center gap-2">
@@ -1752,7 +2110,6 @@ function EditorContent() {
             href={cameFromTemplate ? '/templates' : '/dashboard'}
             label={cameFromTemplate ? 'Templates' : 'Dashboard'}
           />
-          <Image src="/logo.png" alt="Magical Touch" width={130} height={26} />
         </div>
         <input
           type="text"
@@ -1861,6 +2218,19 @@ function EditorContent() {
                 gradAngleRef={gradAngleRef}
                 pushHistory={pushHistory}
                 layerLabel={layerLabel}
+                pixelTolerance={magicWandTolerance}
+                onPixelToleranceChange={setMagicWandTolerance}
+                pixelContiguous={magicWandContiguous}
+                onPixelContiguousChange={setMagicWandContiguous}
+                hasPixelSelection={hasPixelSelection}
+                hasOriginalBackup={hasOriginalBackup}
+                onInvertPixelSelection={invertPixelSelection}
+                onDeselectPixels={deselectPixels}
+                onFeatherPixelSelection={featherPixelSelection}
+                onDeleteSelectedPixels={deleteSelectedPixels}
+                onApplyPixelSelectionAsMask={applyPixelSelectionAsMask}
+                onExtractPixelSelectionToLayer={extractPixelSelectionToLayer}
+                onRestoreOriginalImage={restoreOriginalImage}
               />
             </div>
           )}

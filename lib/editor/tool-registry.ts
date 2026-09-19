@@ -9,8 +9,10 @@ export const TOOL_REGISTRY: ToolDefinition[] = [
   { id: 'select', label: 'Select', status: 'live', shortcut: 'V', group: 'selection' },
   { id: 'direct', label: 'Direct Select', status: 'live', shortcut: 'A', group: 'selection' },
   { id: 'group-select', label: 'Group Select', status: 'live', group: 'selection' },
-  { id: 'magic-select', label: 'Magic Select', status: 'planned', group: 'selection' },
-  { id: 'lasso-select', label: 'Lasso Select', status: 'planned', group: 'selection' },
+  { id: 'marquee-rect', label: 'Rectangle Marquee', status: 'live', shortcut: 'M', group: 'selection' },
+  { id: 'marquee-ellipse', label: 'Ellipse Marquee', status: 'live', group: 'selection' },
+  { id: 'lasso', label: 'Lasso Select', status: 'live', shortcut: 'L', group: 'selection' },
+  { id: 'magic-wand', label: 'Magic Wand', status: 'live', shortcut: 'W', group: 'selection' },
 
   { id: 'pen', label: 'Pen', status: 'live', shortcut: 'P', group: 'drawing' },
   { id: 'pencil', label: 'Pencil', status: 'planned', group: 'drawing' },

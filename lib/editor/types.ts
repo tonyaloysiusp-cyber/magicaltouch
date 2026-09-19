@@ -4,10 +4,15 @@
 // ---------------------------------------------------------------------
 
 export type DrawTool = 'rect' | 'ellipse' | 'triangle' | 'polygon' | 'star' | 'line';
-export type ToolMode = 'select' | 'pen' | 'direct' | 'pan' | 'artboard' | DrawTool;
+export type PixelSelectTool = 'marquee-rect' | 'marquee-ellipse' | 'lasso' | 'magic-wand';
+export type ToolMode = 'select' | 'pen' | 'direct' | 'pan' | 'artboard' | DrawTool | PixelSelectTool;
 
 export const DRAW_TOOLS: DrawTool[] = ['rect', 'ellipse', 'triangle', 'polygon', 'star', 'line'];
 export const isDrawTool = (t: string): t is DrawTool => (DRAW_TOOLS as string[]).includes(t);
+
+export const PIXEL_SELECT_TOOLS: PixelSelectTool[] = ['marquee-rect', 'marquee-ellipse', 'lasso', 'magic-wand'];
+export const isPixelSelectTool = (t: string): t is PixelSelectTool =>
+  (PIXEL_SELECT_TOOLS as string[]).includes(t);
 
 export const TOOL_LABELS: Record<DrawTool, string> = {
   rect: 'Rectangle',
@@ -58,7 +63,7 @@ export const MAX_HISTORY = 100;
 // Pasteboard / artboard workspace
 // ---------------------------------------------------------------------
 
-export const PASTEBOARD_BG = '#4b4b50';
+export const PASTEBOARD_BG = '#e7e7e7';
 export const RULER_SIZE = 20;
 
 export type FeatureStatus = 'live' | 'beta' | 'planned';
