@@ -13,6 +13,7 @@ const SHORTCUTS: { keys: string; label: string }[] = [
   { keys: 'W', label: 'Magic Wand tool' },
   { keys: 'Shift + click (pixel select)', label: 'Add to pixel selection' },
   { keys: 'Alt/Option + click (pixel select)', label: 'Subtract from pixel selection' },
+  { keys: 'Ctrl/Cmd + drag', label: 'Move without smart-guide snapping' },
   { keys: 'Enter', label: 'Finish open path (Pen tool)' },
   { keys: 'Esc', label: 'Cancel current drawing / deselect' },
   { keys: 'Shift + drag', label: 'Constrain proportions (shape tools)' },

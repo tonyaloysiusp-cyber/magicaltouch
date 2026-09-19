@@ -19,6 +19,7 @@ import {
   applyMaskKeepSelected,
   extractMaskedRegion,
 } from '@/lib/editor/pixelSelection';
+import { computeSnap, GuideLine } from '@/lib/editor/snapping';
 import {
   ArtboardMeta,
   ArtboardPreset,
@@ -97,6 +98,10 @@ function EditorContent() {
   // React re-render so PropertiesPanel's disabled states stay in sync.
   const pixelSelectionRef = useRef<{ imageUid: string; mask: PixelMask } | null>(null);
   const pixelTintCanvasRef = useRef<HTMLCanvasElement | null>(null);
+
+  // Smart-guide snap lines, live only while an object is actively being
+  // dragged. Cleared on mouse-up so the guides never persist after a drop.
+  const snapGuidesRef = useRef<GuideLine[]>([]);
   const [, setPixelSelectionVersion] = useState(0);
   const [magicWandTolerance, setMagicWandTolerance] = useState(32);
   const magicWandToleranceRef = useRef(32);
@@ -840,6 +845,33 @@ function EditorContent() {
       canvas.on('object:scaling', () => bumpSel());
       canvas.on('object:moving', (e: any) => {
         bumpSel();
+        const obj = e.target;
+        const disableSnap = e.e && (e.e.ctrlKey || e.e.metaKey);
+        if (activeToolRef.current === 'select' && obj && !obj.__isArtboard && !disableSnap) {
+          const zoom = canvas.getZoom() || 1;
+          const threshold = 8 / zoom;
+          const moving = obj.getBoundingRect();
+          const targets = canvas
+            .getObjects()
+            .filter(
+              (o: any) =>
+                o !== obj &&
+                !o.__isAnchorHandle &&
+                !o.__isPenPreview &&
+                !o.__isShapeDraft &&
+                !o.__isPrintMark &&
+                o.visible !== false
+            )
+            .map((o: any) => o.getBoundingRect());
+          const { dx, dy, guides } = computeSnap(moving, targets, threshold);
+          if (dx || dy) {
+            obj.set({ left: (obj.left || 0) + dx, top: (obj.top || 0) + dy });
+            obj.setCoords();
+          }
+          snapGuidesRef.current = guides;
+        } else {
+          snapGuidesRef.current = [];
+        }
         renderAnchorHandles(e.target);
       });
 
@@ -881,6 +913,10 @@ function EditorContent() {
         else if (isDrawTool(activeToolRef.current)) handleShapeMouseMove(opt);
       });
       canvas.on('mouse:up', (opt: any) => {
+        if (snapGuidesRef.current.length > 0) {
+          snapGuidesRef.current = [];
+          canvas.requestRenderAll();
+        }
         if (panRef.current.active) {
           panRef.current.active = false;
           canvas.setCursor(activeToolRef.current === 'pan' ? 'grab' : 'default');
@@ -1055,6 +1091,34 @@ function EditorContent() {
               ctx.restore();
             }
           }
+        }
+
+        // Smart-guide snap lines, live only while dragging an object near a
+        // matching edge/center on another object or an artboard. Cleared on
+        // mouse-up, so — like everything else here — purely a live-canvas
+        // aid that never reaches an export.
+        const guides = snapGuidesRef.current;
+        if (guides.length > 0) {
+          const vw = canvas.getWidth();
+          const vh = canvas.getHeight();
+          ctx.save();
+          ctx.strokeStyle = 'rgba(255,0,200,0.9)';
+          ctx.lineWidth = 1;
+          ctx.setLineDash([]);
+          guides.forEach((g) => {
+            ctx.beginPath();
+            if (g.axis === 'v') {
+              const x = g.position * vt[0] + vt[4];
+              ctx.moveTo(x + 0.5, 0);
+              ctx.lineTo(x + 0.5, vh);
+            } else {
+              const y = g.position * vt[3] + vt[5];
+              ctx.moveTo(0, y + 0.5);
+              ctx.lineTo(vw, y + 0.5);
+            }
+            ctx.stroke();
+          });
+          ctx.restore();
         }
       });
 
