@@ -2102,7 +2102,7 @@ function EditorContent() {
 
   return (
     <main className="h-screen flex flex-col bg-gray-50">
-      <MenuBar menus={menus} leading={<Image src="/logo.png" alt="Magical Touch" width={110} height={22} priority />} />
+      <MenuBar menus={menus} leading={<Image src="/logo.png" alt="Magical Touch" width={140} height={28} priority />} />
 
       <div className="flex items-center justify-between px-4 py-2 border-b bg-white">
         <div className="flex items-center gap-2">
