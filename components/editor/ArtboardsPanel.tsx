@@ -336,7 +336,7 @@ export function ArtboardsPanel({
                     checked={active.print.marks.colorBar}
                     onChange={(e) => onUpdatePrint(active.id, { marks: { ...active.print.marks, colorBar: e.target.checked } })}
                   />
-                  Color bar (RGB swatches — not true CMYK/Pantone)
+                  Color bar (CMYK + grayscale ramp, RGB screen simulation)
                 </label>
               </div>
 

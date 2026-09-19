@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase';
 import { Keyboard } from 'lucide-react';
 
 import { ToolMode, DocUnit, isDrawTool, isPixelSelectTool, PASTEBOARD_BG, RULER_SIZE } from '@/lib/editor/types';
+import { googleFontsStylesheetHref } from '@/lib/editor/googleFonts';
 import { getAbsolutePolygonPoints, multiPolygonToPathD } from '@/lib/editor/geometry';
 import { exportCanvasToPDF, exportArtboardsToPDF } from '@/lib/editor/pdfExport';
 import {
@@ -1545,6 +1546,17 @@ function EditorContent() {
     canvas.requestRenderAll();
     bumpSel();
     if (record) pushHistory();
+
+    // A newly-picked Google Font may not have finished downloading yet —
+    // the canvas draws it with a fallback font until the browser's Font
+    // Loading API resolves, and Fabric never re-renders on its own once
+    // that happens. Force one more render when it's actually ready.
+    if (props.fontFamily && typeof document !== 'undefined' && (document as any).fonts?.load) {
+      const bold = active.fontWeight === 'bold' || (typeof active.fontWeight === 'number' && active.fontWeight >= 600);
+      const italic = active.fontStyle === 'italic';
+      const spec = `${italic ? 'italic ' : ''}${bold ? '700' : '400'} 16px "${props.fontFamily}"`;
+      (document as any).fonts.load(spec).then(() => canvas.requestRenderAll()).catch(() => {});
+    }
   };
 
   // ---------------------------------------------------------------------
@@ -2019,7 +2031,7 @@ function EditorContent() {
       suppressHistoryRef.current = true;
       const marks = buildAndInsertMarks(ab, scope);
       const pdf = new jsPDF({ orientation: rect.width > rect.height ? 'landscape' : 'portrait', unit: 'px', format: [rect.width, rect.height] });
-      exportArtboardsToPDF(pdf, canvas, F, [{ id: ab.id, x: rect.x, y: rect.y, width: rect.width, height: rect.height }]);
+      await exportArtboardsToPDF(pdf, canvas, F, [{ id: ab.id, x: rect.x, y: rect.y, width: rect.width, height: rect.height }]);
       removeTemporaryMarks(marks);
       suppressHistoryRef.current = false;
       pdf.save(`${designName || 'design'} - ${ab.name}${scope !== 'artboard' ? ` (${scope})` : ''}.pdf`);
@@ -2081,8 +2093,8 @@ function EditorContent() {
       const list = artboards.length ? artboards : [{ id: '', x: 0, y: 0, width, height, name: '', print: createDefaultPrintSettings() }];
       const first = list[0];
       const pdf = new jsPDF({ orientation: first.width > first.height ? 'landscape' : 'portrait', unit: 'px', format: [first.width, first.height] });
-      if (artboards.length) exportArtboardsToPDF(pdf, fabricCanvasRef.current, mod.fabric, list);
-      else exportCanvasToPDF(pdf, fabricCanvasRef.current, mod.fabric);
+      if (artboards.length) await exportArtboardsToPDF(pdf, fabricCanvasRef.current, mod.fabric, list);
+      else await exportCanvasToPDF(pdf, fabricCanvasRef.current, mod.fabric);
       pdf.save(`${designName || 'design'}.pdf`);
     } catch (err) {
       console.error('PDF export failed:', err);
@@ -2234,6 +2246,10 @@ function EditorContent() {
 
   return (
     <>
+      {/* Next.js hoists <link> tags found anywhere in the tree into the
+          document head. Loaded here (not site-wide) since the font picker
+          is only reachable inside the editor. */}
+      <link rel="stylesheet" href={googleFontsStylesheetHref()} />
       {checkingAuth && (
         <div className="fixed inset-0 z-[999] flex items-center justify-center bg-gray-50 text-gray-400">
           Checking access...
