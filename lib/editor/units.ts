@@ -12,6 +12,7 @@ export const UNIT_FACTORS: Record<DocUnit, number> = {
   in: PX_PER_INCH,
   cm: PX_PER_INCH / 2.54,
   mm: PX_PER_INCH / 25.4,
+  pt: PX_PER_INCH / 72,
 };
 
 export function pxToUnit(px: number, unit: DocUnit) {

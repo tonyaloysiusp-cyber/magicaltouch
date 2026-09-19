@@ -121,6 +121,26 @@ function EditorContent() {
   const height = parseInt(searchParams.get('h') || '1080');
   const urlDesignId = searchParams.get('designId');
   const cameFromTemplate = searchParams.get('templateId');
+  const autoExportFormat = searchParams.get('autoExport'); // 'png' | 'jpg' | 'pdf', from the dashboard's Download action
+  const hasAutoExportedRef = useRef(false);
+
+  // Document setup carried over from the "Create New Design" screen. Only
+  // meaningful the first time an artboard is created for a brand-new
+  // document — loading an existing design already has its own __print.
+  const initialDpi = parseInt(searchParams.get('dpi') || '') || null;
+  const initialBg = searchParams.get('bg');
+  const initialBleed = {
+    top: parseFloat(searchParams.get('bleedT') || '0') || 0,
+    right: parseFloat(searchParams.get('bleedR') || '0') || 0,
+    bottom: parseFloat(searchParams.get('bleedB') || '0') || 0,
+    left: parseFloat(searchParams.get('bleedL') || '0') || 0,
+  };
+  const initialSafeArea = {
+    top: parseFloat(searchParams.get('safeT') || '0') || 0,
+    right: parseFloat(searchParams.get('safeR') || '0') || 0,
+    bottom: parseFloat(searchParams.get('safeB') || '0') || 0,
+    left: parseFloat(searchParams.get('safeL') || '0') || 0,
+  };
 
   const refreshLayers = useCallback(() => {
     const canvas = fabricCanvasRef.current;
@@ -731,12 +751,17 @@ function EditorContent() {
     canvas.backgroundColor = PASTEBOARD_BG;
     const existing = canvas.getObjects().filter((o: any) => o.__isArtboard);
     if (existing.length === 0) {
+      const fill = initialBg?.startsWith('custom:')
+        ? `#${initialBg.slice(7)}`
+        : initialBg === 'transparent'
+        ? ''
+        : '#ffffff';
       const rect = new F.Rect({
         left: 0,
         top: 0,
         width,
         height,
-        fill: '#ffffff',
+        fill,
         selectable: false,
         evented: false,
         hasControls: false,
@@ -747,7 +772,20 @@ function EditorContent() {
       rect.__isArtboard = true;
       rect.__artboardId = createArtboardId();
       rect.name = 'Artboard 1';
-      rect.__print = createDefaultPrintSettings();
+
+      const printSettings = createDefaultPrintSettings();
+      if (initialDpi) printSettings.dpi = initialDpi;
+      const b = initialBleed;
+      if (b.top || b.right || b.bottom || b.left) {
+        printSettings.bleed = b;
+        printSettings.bleedLinked = b.top === b.right && b.right === b.bottom && b.bottom === b.left;
+      }
+      const s = initialSafeArea;
+      if (s.top || s.right || s.bottom || s.left) {
+        printSettings.safeArea = s;
+        printSettings.safeAreaLinked = s.top === s.right && s.right === s.bottom && s.bottom === s.left;
+      }
+      rect.__print = printSettings;
       canvas.add(rect);
     } else {
       existing.forEach((rect: any, i: number) => {
@@ -1840,7 +1878,41 @@ function EditorContent() {
     };
     if (designId) payload.id = designId;
 
-    const { data, error } = await supabase.from('designs').upsert(payload).select().single();
+    // A real preview generated from the first artboard's actual content —
+    // not a placeholder — so the dashboard can show what the design looks
+    // like instead of just its pixel dimensions.
+    const thumbnail = firstAb
+      ? (() => {
+          try {
+            const THUMB_WIDTH = 400;
+            const mult = THUMB_WIDTH / Math.max(firstAb.width, 1);
+            return fabricCanvasRef.current.toDataURL({
+              format: 'jpeg',
+              quality: 0.7,
+              ...getArtboardExportOptions(firstAb, mult),
+            });
+          } catch (err) {
+            console.error('Thumbnail generation failed:', err);
+            return null;
+          }
+        })()
+      : null;
+    if (thumbnail) payload.thumbnail = thumbnail;
+
+    let { data, error } = await supabase.from('designs').upsert(payload).select().single();
+
+    // The `thumbnail` column may not exist yet on a database created before
+    // this feature — fall back to saving without it rather than failing the
+    // whole save over a missing preview image.
+    if (error && thumbnail && /thumbnail/i.test(error.message || '') && /column|does not exist/i.test(error.message || '')) {
+      console.warn(
+        'designs.thumbnail column not found — saving without a thumbnail. Add it with: ' +
+          'ALTER TABLE designs ADD COLUMN thumbnail text;'
+      );
+      const { thumbnail: _drop, ...withoutThumbnail } = payload;
+      ({ data, error } = await supabase.from('designs').upsert(withoutThumbnail).select().single());
+    }
+
     setSaving(false);
 
     if (error) {
@@ -2005,6 +2077,20 @@ function EditorContent() {
     setShowExportMenu(false);
   };
 
+  // The dashboard's "Download" action opens the editor with ?autoExport=
+  // instead of trying to export a static thumbnail — this runs the exact
+  // same export code the toolbar's Export button uses, once the loaded
+  // design's artboards are actually available.
+  useEffect(() => {
+    if (!autoExportFormat || hasAutoExportedRef.current) return;
+    if (!canvasReady || artboards.length === 0) return;
+    hasAutoExportedRef.current = true;
+    if (autoExportFormat === 'png') exportAsPNG();
+    else if (autoExportFormat === 'jpg') exportAsJPG();
+    else if (autoExportFormat === 'pdf') exportAsPDF();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canvasReady, artboards, autoExportFormat]);
+
   const hasSelection = !!selected;
 
   const menus: MenuDef[] = [
@@ -2164,6 +2250,7 @@ function EditorContent() {
             <option value="mm">mm</option>
             <option value="cm">cm</option>
             <option value="in">in</option>
+            <option value="pt">pt</option>
           </select>
         </div>
 

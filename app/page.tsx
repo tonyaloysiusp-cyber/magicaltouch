@@ -3,8 +3,10 @@
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Fraunces, Inter } from 'next/font/google';
 import { Menu, X, ArrowRight, Check } from 'lucide-react';
+import { resolveAuthedPath } from '@/lib/authNav';
 
 const display = Fraunces({
   subsets: ['latin'],
@@ -20,7 +22,6 @@ const body = Inter({
 });
 
 const NAV_LINKS = [
-  { label: 'Workspace', href: '/dashboard' },
   { label: 'Templates', href: '/templates' },
   { label: 'Pricing', href: '#pricing' },
 ];
@@ -110,12 +111,18 @@ function RegistrationMark() {
 export default function Home() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
     window.addEventListener('scroll', onScroll);
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
+
+  const goToWorkspace = async () => {
+    setMenuOpen(false);
+    router.push(await resolveAuthedPath('/dashboard'));
+  };
 
   return (
     <main
@@ -133,6 +140,9 @@ export default function Home() {
           </Link>
 
           <div className="hidden md:flex items-center gap-8">
+            <button onClick={goToWorkspace} className="text-sm text-[#4A4750] hover:text-[#17161B] transition-colors">
+              Workspace
+            </button>
             {NAV_LINKS.map((l) => (
               <Link key={l.label} href={l.href} className="text-sm text-[#4A4750] hover:text-[#17161B] transition-colors">
                 {l.label}
@@ -144,12 +154,12 @@ export default function Home() {
             <Link href="/login" className="text-sm font-medium text-[#4A4750] hover:text-[#17161B] px-3 py-2">
               Log In
             </Link>
-            <Link
-              href="/signup"
+            <button
+              onClick={goToWorkspace}
               className="text-sm font-semibold text-white px-5 py-2.5 bg-[#17161B] hover:bg-[#6C4FD1] transition-colors"
             >
               Start Designing
-            </Link>
+            </button>
           </div>
 
           <button className="md:hidden p-2 -mr-2" onClick={() => setMenuOpen((v) => !v)} aria-label="Menu">
@@ -159,6 +169,9 @@ export default function Home() {
 
         {menuOpen && (
           <div className="md:hidden border-t border-black/10 bg-[#F7F5F0] px-6 py-4 flex flex-col gap-1">
+            <button onClick={goToWorkspace} className="py-2.5 text-sm text-left">
+              Workspace
+            </button>
             {NAV_LINKS.map((l) => (
               <Link key={l.label} href={l.href} className="py-2.5 text-sm" onClick={() => setMenuOpen(false)}>
                 {l.label}
@@ -168,9 +181,9 @@ export default function Home() {
               <Link href="/login" className="text-center text-sm font-medium border border-black/15 py-2.5">
                 Log In
               </Link>
-              <Link href="/signup" className="text-center text-sm font-semibold text-white bg-[#17161B] py-2.5">
+              <button onClick={goToWorkspace} className="text-center text-sm font-semibold text-white bg-[#17161B] py-2.5">
                 Start Designing
-              </Link>
+              </button>
             </div>
           </div>
         )}
@@ -198,12 +211,12 @@ export default function Home() {
             </p>
 
             <div className="mt-8 flex flex-wrap gap-3">
-              <Link
-                href="/signup"
+              <button
+                onClick={goToWorkspace}
                 className="inline-flex items-center gap-2 text-sm font-semibold text-white px-6 py-3.5 bg-[#17161B] hover:bg-[#6C4FD1] transition-colors"
               >
                 Open the Workspace <ArrowRight size={15} />
-              </Link>
+              </button>
               <Link
                 href="/templates"
                 className="inline-flex items-center gap-2 text-sm font-semibold px-6 py-3.5 border border-black/15 hover:border-black/40 transition-colors"
@@ -321,14 +334,14 @@ export default function Home() {
                     </li>
                   ))}
                 </ul>
-                <Link
-                  href="/signup"
-                  className={`mt-7 block text-center text-sm font-semibold py-3 transition-colors ${
+                <button
+                  onClick={goToWorkspace}
+                  className={`mt-7 block w-full text-center text-sm font-semibold py-3 transition-colors ${
                     p.highlighted ? 'bg-white text-[#17161B] hover:bg-[#F7F5F0]' : 'bg-[#17161B] text-white hover:bg-[#6C4FD1]'
                   }`}
                 >
                   {p.cta}
-                </Link>
+                </button>
               </div>
             ))}
           </div>
@@ -343,7 +356,7 @@ export default function Home() {
             <span className="text-xs text-[#4A4750]">© 2026 Magical Touch</span>
           </div>
           <div className="flex gap-6 text-sm text-[#4A4750]">
-            <Link href="/dashboard" className="hover:text-[#17161B]">Workspace</Link>
+            <button onClick={goToWorkspace} className="hover:text-[#17161B]">Workspace</button>
             <Link href="/templates" className="hover:text-[#17161B]">Templates</Link>
           </div>
         </div>

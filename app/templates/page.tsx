@@ -3,9 +3,11 @@
 import { useMemo, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Fraunces, Inter } from 'next/font/google';
 import { Menu, X, Instagram, Twitter, Facebook, Youtube } from 'lucide-react';
 import { BackBar } from '@/components/BackBar';
+import { resolveAuthedPath } from '@/lib/authNav';
 
 const display = Fraunces({
   subsets: ['latin'],
@@ -21,11 +23,8 @@ const body = Inter({
 });
 
 const NAV_LINKS = [
-  { label: 'Create', href: '/create' },
   { label: 'Templates', href: '/templates' },
-  { label: 'Features', href: '/#features' },
   { label: 'Pricing', href: '/#pricing' },
-  { label: 'Resources', href: '/#resources' },
 ];
 
 type Category = 'Business Card' | 'Letterhead' | 'Flyer' | 'Resume' | 'Invitation' | 'Poster';
@@ -75,11 +74,22 @@ function MockDesignCard({ colors, label }: { colors: [string, string]; label: st
 export default function TemplatesPage() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [activeCategory, setActiveCategory] = useState<Category | 'All'>('All');
+  const router = useRouter();
 
   const filtered = useMemo(
     () => (activeCategory === 'All' ? TEMPLATES : TEMPLATES.filter((t) => t.category === activeCategory)),
     [activeCategory]
   );
+
+  const goToWorkspace = async () => {
+    setMenuOpen(false);
+    router.push(await resolveAuthedPath('/dashboard'));
+  };
+
+  const useTemplate = async (t: Template) => {
+    const editorPath = `/editor?w=${t.width}&h=${t.height}&templateId=${encodeURIComponent(t.name)}`;
+    router.push(await resolveAuthedPath(editorPath));
+  };
 
   return (
     <main
@@ -112,12 +122,12 @@ export default function TemplatesPage() {
             <Link href="/login" className="text-sm font-medium text-[#4B4560] hover:text-[#14121F] px-3 py-2">
               Log In
             </Link>
-            <Link
-              href="/signup"
+            <button
+              onClick={goToWorkspace}
               className="text-sm font-semibold text-white px-5 py-2.5 rounded-full bg-brand-gradient shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all"
             >
               Start Designing
-            </Link>
+            </button>
           </div>
 
           <button
@@ -140,9 +150,9 @@ export default function TemplatesPage() {
               <Link href="/login" className="text-center text-sm font-medium border border-black/10 rounded-full py-2.5">
                 Log In
               </Link>
-              <Link href="/signup" className="text-center text-sm font-semibold text-white rounded-full py-2.5 bg-brand-gradient">
+              <button onClick={goToWorkspace} className="text-center text-sm font-semibold text-white rounded-full py-2.5 bg-brand-gradient">
                 Start Designing
-              </Link>
+              </button>
             </div>
           </div>
         )}
@@ -185,12 +195,12 @@ export default function TemplatesPage() {
                     <MockDesignCard colors={t.colors} label={t.category} />
                   </div>
                   <div className="absolute inset-0 bg-[#14121F]/0 group-hover:bg-[#14121F]/35 transition-colors flex items-center justify-center">
-                    <Link
-                      href={`/editor?w=${t.width}&h=${t.height}&templateId=${encodeURIComponent(t.name)}`}
+                    <button
+                      onClick={() => useTemplate(t)}
                       className="opacity-0 group-hover:opacity-100 transition-opacity text-sm font-semibold text-white bg-white/15 backdrop-blur px-4 py-2 rounded-full border border-white/30 hover:bg-white/25"
                     >
                       Use Template
-                    </Link>
+                    </button>
                   </div>
                 </div>
                 <div className="p-4 flex items-center justify-between">
