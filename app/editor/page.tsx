@@ -122,6 +122,24 @@ function EditorContent() {
   const urlDesignId = searchParams.get('designId');
   const cameFromTemplate = searchParams.get('templateId');
 
+  // Document setup carried over from the "Create New Design" screen. Only
+  // meaningful the first time an artboard is created for a brand-new
+  // document — loading an existing design already has its own __print.
+  const initialDpi = parseInt(searchParams.get('dpi') || '') || null;
+  const initialBg = searchParams.get('bg');
+  const initialBleed = {
+    top: parseFloat(searchParams.get('bleedT') || '0') || 0,
+    right: parseFloat(searchParams.get('bleedR') || '0') || 0,
+    bottom: parseFloat(searchParams.get('bleedB') || '0') || 0,
+    left: parseFloat(searchParams.get('bleedL') || '0') || 0,
+  };
+  const initialSafeArea = {
+    top: parseFloat(searchParams.get('safeT') || '0') || 0,
+    right: parseFloat(searchParams.get('safeR') || '0') || 0,
+    bottom: parseFloat(searchParams.get('safeB') || '0') || 0,
+    left: parseFloat(searchParams.get('safeL') || '0') || 0,
+  };
+
   const refreshLayers = useCallback(() => {
     const canvas = fabricCanvasRef.current;
     if (!canvas) return;
@@ -731,12 +749,17 @@ function EditorContent() {
     canvas.backgroundColor = PASTEBOARD_BG;
     const existing = canvas.getObjects().filter((o: any) => o.__isArtboard);
     if (existing.length === 0) {
+      const fill = initialBg?.startsWith('custom:')
+        ? `#${initialBg.slice(7)}`
+        : initialBg === 'transparent'
+        ? ''
+        : '#ffffff';
       const rect = new F.Rect({
         left: 0,
         top: 0,
         width,
         height,
-        fill: '#ffffff',
+        fill,
         selectable: false,
         evented: false,
         hasControls: false,
@@ -747,7 +770,20 @@ function EditorContent() {
       rect.__isArtboard = true;
       rect.__artboardId = createArtboardId();
       rect.name = 'Artboard 1';
-      rect.__print = createDefaultPrintSettings();
+
+      const printSettings = createDefaultPrintSettings();
+      if (initialDpi) printSettings.dpi = initialDpi;
+      const b = initialBleed;
+      if (b.top || b.right || b.bottom || b.left) {
+        printSettings.bleed = b;
+        printSettings.bleedLinked = b.top === b.right && b.right === b.bottom && b.bottom === b.left;
+      }
+      const s = initialSafeArea;
+      if (s.top || s.right || s.bottom || s.left) {
+        printSettings.safeArea = s;
+        printSettings.safeAreaLinked = s.top === s.right && s.right === s.bottom && s.bottom === s.left;
+      }
+      rect.__print = printSettings;
       canvas.add(rect);
     } else {
       existing.forEach((rect: any, i: number) => {
@@ -2164,6 +2200,7 @@ function EditorContent() {
             <option value="mm">mm</option>
             <option value="cm">cm</option>
             <option value="in">in</option>
+            <option value="pt">pt</option>
           </select>
         </div>
 

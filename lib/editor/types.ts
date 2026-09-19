@@ -33,7 +33,7 @@ export interface PenAnchor {
 export const ANCHOR_HIT_RADIUS = 8;
 export const ANCHOR_HANDLE_SIZE = 8;
 
-export type DocUnit = 'px' | 'mm' | 'cm' | 'in';
+export type DocUnit = 'px' | 'mm' | 'cm' | 'in' | 'pt';
 
 export interface DraftGeometry {
   left: number;
