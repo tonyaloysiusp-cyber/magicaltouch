@@ -1,31 +1,59 @@
 'use client';
 
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 
-export default function SignupPage() {
+function SignupForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [confirmSent, setConfirmSent] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const next = searchParams.get('next') || '/dashboard';
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
 
-    const { error } = await supabase.auth.signUp({ email, password });
+    const { data, error } = await supabase.auth.signUp({ email, password });
 
     if (error) {
       setError(error.message);
       setLoading(false);
+    } else if (!data.session) {
+      // Email confirmation is required before a session exists.
+      setConfirmSent(true);
+      setLoading(false);
     } else {
-      router.push('/dashboard');
+      router.push(next);
     }
   };
+
+  if (confirmSent) {
+    return (
+      <main className="flex min-h-screen flex-col items-center justify-center p-6">
+        <Image src="/logo.png" alt="Magical Touch" width={280} height={56} className="mb-8" />
+        <div className="w-full max-w-sm text-center">
+          <h1 className="text-2xl font-bold mb-3 text-gray-800">Check your email</h1>
+          <p className="text-sm text-gray-500">
+            We sent a confirmation link to <span className="font-medium">{email}</span>. Confirm your
+            address, then log in to continue.
+          </p>
+          <a
+            href={`/login${next !== '/dashboard' ? `?next=${encodeURIComponent(next)}` : ''}`}
+            className="mt-6 inline-block text-brand-blue font-medium hover:underline"
+          >
+            Back to log in
+          </a>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center p-6">
@@ -59,9 +87,23 @@ export default function SignupPage() {
           </button>
         </form>
         <p className="mt-4 text-center text-sm text-gray-500">
-          Already have an account? <a href="/login" className="text-brand-blue font-medium">Log in</a>
+          Already have an account?{' '}
+          <a
+            href={`/login${next !== '/dashboard' ? `?next=${encodeURIComponent(next)}` : ''}`}
+            className="text-brand-blue font-medium"
+          >
+            Log in
+          </a>
         </p>
       </div>
     </main>
+  );
+}
+
+export default function SignupPage() {
+  return (
+    <Suspense fallback={<div className="flex min-h-screen items-center justify-center">Loading...</div>}>
+      <SignupForm />
+    </Suspense>
   );
 }
