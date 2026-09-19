@@ -48,22 +48,13 @@ export interface DraftGeometry {
   y2?: number;
 }
 
-export const SYSTEM_FONT_OPTIONS = [
-  'Arial',
-  'Helvetica',
-  'Georgia',
-  'Times New Roman',
-  'Courier New',
-  'Verdana',
-  'Trebuchet MS',
-  'Impact',
-];
-
-// The font picker's full list: the original OS-installed fonts, plus the
-// curated Google Fonts catalog (see lib/editor/googleFonts.ts) — real
-// webfonts loaded from Google's CDN so what's picked here is what
-// actually renders, in the editor and in exported PDFs alike.
-export const FONT_OPTIONS = [...SYSTEM_FONT_OPTIONS, ...GOOGLE_FONT_NAMES];
+// The font picker's full list (see lib/editor/googleFonts.ts) — every
+// entry is a real webfont loaded from Google's CDN, including the
+// classic names (Arial, Times New Roman, ...), which are aliased to
+// real open replacements rather than left as unembeddable OS font
+// names. What's picked here is what actually renders, in the editor
+// canvas and in exported PDFs alike.
+export const FONT_OPTIONS = GOOGLE_FONT_NAMES;
 
 export const MAX_HISTORY = 100;
 

@@ -7,9 +7,9 @@ import { supabase } from '@/lib/supabase';
 import { Keyboard } from 'lucide-react';
 
 import { ToolMode, DocUnit, isDrawTool, isPixelSelectTool, PASTEBOARD_BG, RULER_SIZE } from '@/lib/editor/types';
-import { googleFontsStylesheetHref } from '@/lib/editor/googleFonts';
+import { googleFontsStylesheetHref, aliasedFontFaceCSS } from '@/lib/editor/googleFonts';
 import { getAbsolutePolygonPoints, multiPolygonToPathD } from '@/lib/editor/geometry';
-import { exportCanvasToPDF, exportArtboardsToPDF } from '@/lib/editor/pdfExport';
+import { exportCanvasToPDF, exportArtboardsToPDF, toPt } from '@/lib/editor/pdfExport';
 import {
   PixelMask,
   invertMask,
@@ -255,6 +255,15 @@ function EditorContent() {
       onShapeFinished: (obj) => {
         const canvas = fabricCanvasRef.current;
         canvas.setActiveObject(obj);
+        // The object was already sitting on the canvas as a live drag
+        // preview (added/removed on every mousemove while __isShapeDraft
+        // was set, which recomputeMembership() deliberately skips) before
+        // it became "real" here — nothing re-fires object:added at this
+        // point, so its artboard membership was never actually computed
+        // against its final position/size. Do it explicitly now, or the
+        // shape can end up with no __artboardId at all and silently
+        // vanish from that artboard's PNG/PDF export.
+        recomputeMembership();
         refreshLayers();
         pushHistory();
         setActiveToolState('select');
@@ -2030,7 +2039,15 @@ function EditorContent() {
       const rect = getExportRect(ab, ab.print, scope);
       suppressHistoryRef.current = true;
       const marks = buildAndInsertMarks(ab, scope);
-      const pdf = new jsPDF({ orientation: rect.width > rect.height ? 'landscape' : 'portrait', unit: 'px', format: [rect.width, rect.height] });
+      // jsPDF's own 'px' unit doesn't reliably convert a custom [w,h]
+      // format array in this version (verified: it comes out ~33% too
+      // big in every dimension) — build in 'pt' and convert ourselves.
+      // See lib/editor/pdfExport.ts's toPt() for the full explanation.
+      const pdf = new jsPDF({
+        orientation: rect.width > rect.height ? 'landscape' : 'portrait',
+        unit: 'pt',
+        format: [toPt(rect.width), toPt(rect.height)],
+      });
       await exportArtboardsToPDF(pdf, canvas, F, [{ id: ab.id, x: rect.x, y: rect.y, width: rect.width, height: rect.height }]);
       removeTemporaryMarks(marks);
       suppressHistoryRef.current = false;
@@ -2092,7 +2109,11 @@ function EditorContent() {
       const [{ jsPDF }, mod] = await Promise.all([import('jspdf'), import('fabric')]);
       const list = artboards.length ? artboards : [{ id: '', x: 0, y: 0, width, height, name: '', print: createDefaultPrintSettings() }];
       const first = list[0];
-      const pdf = new jsPDF({ orientation: first.width > first.height ? 'landscape' : 'portrait', unit: 'px', format: [first.width, first.height] });
+      const pdf = new jsPDF({
+        orientation: first.width > first.height ? 'landscape' : 'portrait',
+        unit: 'pt',
+        format: [toPt(first.width), toPt(first.height)],
+      });
       if (artboards.length) await exportArtboardsToPDF(pdf, fabricCanvasRef.current, mod.fabric, list);
       else await exportCanvasToPDF(pdf, fabricCanvasRef.current, mod.fabric);
       pdf.save(`${designName || 'design'}.pdf`);
@@ -2102,6 +2123,35 @@ function EditorContent() {
     }
     setExporting(false);
     setShowExportMenu(false);
+  };
+
+  // Exports artboards fromIndex..toIndex (1-based, inclusive, in the same
+  // order they're listed in the Artboards panel) as one multi-page PDF —
+  // e.g. "3 to 5" of a 10-artboard document — instead of forcing an
+  // all-or-one choice between a single artboard and the whole document.
+  const exportArtboardRangePDF = async (fromIndex: number, toIndex: number) => {
+    if (artboards.length === 0) return;
+    const lo = Math.max(1, Math.min(fromIndex, toIndex));
+    const hi = Math.min(artboards.length, Math.max(fromIndex, toIndex));
+    if (lo > hi) return;
+    const list = artboards.slice(lo - 1, hi);
+    setExporting(true);
+    try {
+      const [{ jsPDF }, mod] = await Promise.all([import('jspdf'), import('fabric')]);
+      const first = list[0];
+      const pdf = new jsPDF({
+        orientation: first.width > first.height ? 'landscape' : 'portrait',
+        unit: 'pt',
+        format: [toPt(first.width), toPt(first.height)],
+      });
+      await exportArtboardsToPDF(pdf, fabricCanvasRef.current, mod.fabric, list);
+      const rangeLabel = lo === hi ? `page ${lo}` : `pages ${lo}-${hi}`;
+      pdf.save(`${designName || 'design'} (${rangeLabel}).pdf`);
+    } catch (err) {
+      console.error('PDF range export failed:', err);
+      alert('Failed to export PDF. Please try again.');
+    }
+    setExporting(false);
   };
 
   // The dashboard's "Download" action opens the editor with ?autoExport=
@@ -2246,10 +2296,14 @@ function EditorContent() {
 
   return (
     <>
-      {/* Next.js hoists <link> tags found anywhere in the tree into the
-          document head. Loaded here (not site-wide) since the font picker
-          is only reachable inside the editor. */}
+      {/* Next.js hoists <link>/<style> tags found anywhere in the tree
+          into the document head. Loaded here (not site-wide) since the
+          font picker is only reachable inside the editor. The aliased
+          classics (Arial, Times New Roman, ...) aren't real Google Fonts
+          names, so they get their own @font-face rules sourced from this
+          app's own font proxy instead of the batched Google stylesheet. */}
       <link rel="stylesheet" href={googleFontsStylesheetHref()} />
+      <style>{aliasedFontFaceCSS()}</style>
       {checkingAuth && (
         <div className="fixed inset-0 z-[999] flex items-center justify-center bg-gray-50 text-gray-400">
           Checking access...
@@ -2408,6 +2462,7 @@ function EditorContent() {
               onExportOne={(id) => exportArtboardPNG(id)}
               onExportAll={exportAllArtboardsPNG}
               onExportAllPDF={exportAsPDF}
+              onExportRangePDF={exportArtboardRangePDF}
               onUpdatePrint={updateArtboardPrint}
               onExportPrint={exportArtboardForPrint}
               onRunPreflight={runPreflightCheck}

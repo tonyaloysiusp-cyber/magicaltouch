@@ -24,7 +24,21 @@ interface ArtboardLike {
   y: number;
 }
 
-const PT_PER_PX = 72 / 96;
+// This app's whole document/canvas coordinate space is 96px = 1 inch
+// (see lib/editor/units.ts) regardless of the artboard's own target
+// print DPI, which is a raster-quality setting, not a geometry scale.
+// jsPDF's own `unit: 'px'` mode does not reliably apply this same 96px/
+// inch conversion for a custom `format: [w, h]` array in this jsPDF
+// version — verified empirically: a 336×192px page (meant to be a
+// 3.5"×2" business card) came out with a MediaBox of 448×256pt (4.67"×
+// 2.67", 33% too big in every dimension). To sidestep that, every
+// caller here builds the jsPDF document in 'pt' units and this module
+// converts every px coordinate/size to pt (1px = 0.75pt) right at the
+// point it's handed to a jsPDF drawing call — never earlier, so all the
+// intermediate Fabric-space geometry math above stays in the same units
+// Fabric itself uses.
+export const PT_PER_PX = 72 / 96;
+export const toPt = (px: number) => px * PT_PER_PX;
 
 function isPaintable(value: any): value is string {
   return typeof value === 'string' && value !== '';
@@ -87,7 +101,7 @@ function applyPaintAndGetStyle(pdf: any, F: any, obj: any): string | null {
     const [r, g, b] = colorToRGB(F, obj.stroke);
     pdf.setDrawColor(r, g, b);
     const avgScale = ((obj.scaleX || 1) + (obj.scaleY || 1)) / 2;
-    pdf.setLineWidth(Math.max((obj.strokeWidth || 1) * avgScale, 0.01));
+    pdf.setLineWidth(Math.max(toPt((obj.strokeWidth || 1) * avgScale), 0.01));
   }
 
   if (hasFill && hasStroke) return 'FD';
@@ -98,7 +112,7 @@ function applyPaintAndGetStyle(pdf: any, F: any, obj: any): string | null {
 
 function drawClosedPolygon(pdf: any, pts: [number, number][], style: string, offsetX: number, offsetY: number) {
   if (pts.length < 2) return;
-  const shifted = pts.map(([x, y]) => [x - offsetX, y - offsetY] as [number, number]);
+  const shifted = pts.map(([x, y]) => [toPt(x - offsetX), toPt(y - offsetY)] as [number, number]);
   const [x0, y0] = shifted[0];
   const segments = shifted.slice(1).map((p, i) => [p[0] - shifted[i][0], p[1] - shifted[i][1]]);
   pdf.lines(segments, x0, y0, [1, 1], style, true);
@@ -119,8 +133,8 @@ function drawLineObject(pdf: any, F: any, obj: any, offsetX: number, offsetY: nu
   const [r, g, b] = colorToRGB(F, obj.stroke);
   pdf.setDrawColor(r, g, b);
   const avgScale = ((obj.scaleX || 1) + (obj.scaleY || 1)) / 2;
-  pdf.setLineWidth(Math.max((obj.strokeWidth || 1) * avgScale, 0.01));
-  pdf.line(p1.x - offsetX, p1.y - offsetY, p2.x - offsetX, p2.y - offsetY);
+  pdf.setLineWidth(Math.max(toPt((obj.strokeWidth || 1) * avgScale), 0.01));
+  pdf.line(toPt(p1.x - offsetX), toPt(p1.y - offsetY), toPt(p2.x - offsetX), toPt(p2.y - offsetY));
 }
 
 function mapFontFamily(fontFamily: string | undefined): string {
@@ -203,7 +217,7 @@ async function drawTextObject(pdf: any, F: any, obj: any, offsetX: number, offse
 
     const local = new F.Point(localX, offY + baselineLocal);
     const abs: any = F.util.transformPoint(local, matrix);
-    pdf.text(line, abs.x - offsetX, abs.y - offsetY, { angle, align, baseline: 'alphabetic' });
+    pdf.text(line, toPt(abs.x - offsetX), toPt(abs.y - offsetY), { angle, align, baseline: 'alphabetic' });
   });
 }
 
@@ -212,14 +226,14 @@ function drawImageObject(pdf: any, obj: any, offsetX: number, offsetY: number) {
   if (!rect.width || !rect.height) return;
   // multiplier: 1 keeps the image at its native/full resolution — never scaled down.
   const dataUrl = obj.toDataURL({ format: 'png', multiplier: 1 });
-  pdf.addImage(dataUrl, 'PNG', rect.left - offsetX, rect.top - offsetY, rect.width, rect.height);
+  pdf.addImage(dataUrl, 'PNG', toPt(rect.left - offsetX), toPt(rect.top - offsetY), toPt(rect.width), toPt(rect.height));
 }
 
 function drawObjectAsRaster(pdf: any, obj: any, offsetX: number, offsetY: number) {
   const rect = obj.getBoundingRect(true, true);
   if (!rect.width || !rect.height) return;
   const dataUrl = obj.toDataURL({ format: 'png', multiplier: 3 });
-  pdf.addImage(dataUrl, 'PNG', rect.left - offsetX, rect.top - offsetY, rect.width, rect.height);
+  pdf.addImage(dataUrl, 'PNG', toPt(rect.left - offsetX), toPt(rect.top - offsetY), toPt(rect.width), toPt(rect.height));
 }
 
 async function renderOneObject(
@@ -298,7 +312,7 @@ export async function exportArtboardsToPDF(pdf: any, canvas: any, F: any, artboa
   for (let i = 0; i < artboards.length; i++) {
     const ab = artboards[i];
     if (i > 0) {
-      pdf.addPage([ab.width, ab.height], ab.width > ab.height ? 'landscape' : 'portrait');
+      pdf.addPage([toPt(ab.width), toPt(ab.height)], ab.width > ab.height ? 'landscape' : 'portrait');
     }
     const objects: any[] = canvas
       .getObjects()

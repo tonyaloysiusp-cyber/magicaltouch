@@ -1,11 +1,15 @@
 'use client';
 
 import { Lock, Unlock, Scissors } from 'lucide-react';
-import { isDrawTool, isPixelSelectTool, TOOL_LABELS, DrawTool, DocUnit, SYSTEM_FONT_OPTIONS, ToolMode } from '@/lib/editor/types';
+import { isDrawTool, isPixelSelectTool, TOOL_LABELS, DrawTool, DocUnit, ToolMode } from '@/lib/editor/types';
 import { formatUnit, unitToPx, getObjectPixelSize } from '@/lib/editor/units';
 import { GOOGLE_FONTS } from '@/lib/editor/googleFonts';
 
-const GOOGLE_FONT_CATEGORIES = Array.from(new Set(GOOGLE_FONTS.map((f) => f.category)));
+// 'Classic' (Arial, Times New Roman, ...) first since that's what most
+// people look for first, then the rest in the order they're defined.
+const FONT_CATEGORIES = Array.from(new Set(GOOGLE_FONTS.map((f) => f.category))).sort((a, b) =>
+  a === 'Classic' ? -1 : b === 'Classic' ? 1 : 0
+);
 
 interface Props {
   activeTool: ToolMode;
@@ -473,12 +477,7 @@ export function PropertiesPanel({
               onChange={(e) => applyProp({ fontFamily: e.target.value })}
               className="w-full text-xs border rounded px-2 py-1 disabled:opacity-40"
             >
-              <optgroup label="System">
-                {SYSTEM_FONT_OPTIONS.map((f) => (
-                  <option key={f} value={f}>{f}</option>
-                ))}
-              </optgroup>
-              {GOOGLE_FONT_CATEGORIES.map((cat) => (
+              {FONT_CATEGORIES.map((cat) => (
                 <optgroup key={cat} label={cat}>
                   {GOOGLE_FONTS.filter((f) => f.category === cat).map((f) => (
                     <option key={f.family} value={f.family}>{f.family}</option>

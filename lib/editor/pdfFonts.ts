@@ -72,14 +72,19 @@ export async function ensurePdfFont(
     return null;
   }
 
-  const regularB64 = await fetchFontBase64(def.family, 400);
+  // Fetch by the real Google Fonts family (an alias like Arial resolves
+  // to its replacement, e.g. Arimo) but register/name it in the PDF as
+  // the display family, so pdf.setFont(obj.fontFamily, style) still works
+  // unchanged regardless of whether this entry is aliased.
+  const sourceFamily = def.googleFamily || def.family;
+  const regularB64 = await fetchFontBase64(sourceFamily, 400);
   if (!regularB64) {
     cache.set(key, null);
     return null;
   }
 
   const canBold = needsBold && def.weights.includes(700);
-  const boldB64 = canBold ? await fetchFontBase64(def.family, 700) : null;
+  const boldB64 = canBold ? await fetchFontBase64(sourceFamily, 700) : null;
 
   const vfsName = `${def.family.replace(/\s+/g, '-')}.ttf`;
   const boldVfsName = boldB64 ? `${def.family.replace(/\s+/g, '-')}-Bold.ttf` : vfsName;

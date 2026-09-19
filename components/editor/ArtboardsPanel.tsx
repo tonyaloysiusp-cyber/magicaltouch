@@ -25,6 +25,7 @@ interface Props {
   onExportOne: (id: string) => void;
   onExportAll: () => void;
   onExportAllPDF: () => void;
+  onExportRangePDF: (fromIndex: number, toIndex: number) => void;
   onUpdatePrint: (id: string, patch: Partial<ArtboardPrintSettings>) => void;
   onExportPrint: (id: string, scope: ExportScope, format: 'png' | 'pdf') => void;
   onRunPreflight: () => void;
@@ -49,6 +50,7 @@ export function ArtboardsPanel({
   onExportOne,
   onExportAll,
   onExportAllPDF,
+  onExportRangePDF,
   onUpdatePrint,
   onExportPrint,
   onRunPreflight,
@@ -60,6 +62,8 @@ export function ArtboardsPanel({
   const [customH, setCustomH] = useState('1080');
   const [showPrintSetup, setShowPrintSetup] = useState(false);
   const [exportScope, setExportScope] = useState<ExportScope>('artboard');
+  const [rangeFrom, setRangeFrom] = useState('1');
+  const [rangeTo, setRangeTo] = useState('1');
 
   const active = artboards.find((a) => a.id === activeArtboardId) || null;
 
@@ -381,6 +385,43 @@ export function ArtboardsPanel({
           <FileDown size={12} /> All (PDF)
         </button>
       </div>
+
+      {artboards.length > 1 && (
+        <div className="mt-2 pt-2 border-t">
+          <label className="text-[10px] text-gray-500 block mb-1">
+            Export page range (PDF) — 1–{artboards.length}
+          </label>
+          <div className="flex items-center gap-1.5">
+            <input
+              type="number"
+              min={1}
+              max={artboards.length}
+              value={rangeFrom}
+              onChange={(e) => setRangeFrom(e.target.value)}
+              className="w-14 text-xs border rounded px-2 py-1"
+            />
+            <span className="text-[11px] text-gray-500">to</span>
+            <input
+              type="number"
+              min={1}
+              max={artboards.length}
+              value={rangeTo}
+              onChange={(e) => setRangeTo(e.target.value)}
+              className="w-14 text-xs border rounded px-2 py-1"
+            />
+            <button
+              onClick={() => {
+                const from = parseInt(rangeFrom, 10);
+                const to = parseInt(rangeTo, 10);
+                if (!isNaN(from) && !isNaN(to)) onExportRangePDF(from, to);
+              }}
+              className="flex-1 flex items-center justify-center gap-1 text-[11px] border rounded px-2 py-1.5 hover:bg-gray-50"
+            >
+              <FileDown size={12} /> Export Range
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
