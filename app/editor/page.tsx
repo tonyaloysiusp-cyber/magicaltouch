@@ -121,6 +121,8 @@ function EditorContent() {
   const height = parseInt(searchParams.get('h') || '1080');
   const urlDesignId = searchParams.get('designId');
   const cameFromTemplate = searchParams.get('templateId');
+  const autoExportFormat = searchParams.get('autoExport'); // 'png' | 'jpg' | 'pdf', from the dashboard's Download action
+  const hasAutoExportedRef = useRef(false);
 
   // Document setup carried over from the "Create New Design" screen. Only
   // meaningful the first time an artboard is created for a brand-new
@@ -1876,7 +1878,41 @@ function EditorContent() {
     };
     if (designId) payload.id = designId;
 
-    const { data, error } = await supabase.from('designs').upsert(payload).select().single();
+    // A real preview generated from the first artboard's actual content —
+    // not a placeholder — so the dashboard can show what the design looks
+    // like instead of just its pixel dimensions.
+    const thumbnail = firstAb
+      ? (() => {
+          try {
+            const THUMB_WIDTH = 400;
+            const mult = THUMB_WIDTH / Math.max(firstAb.width, 1);
+            return fabricCanvasRef.current.toDataURL({
+              format: 'jpeg',
+              quality: 0.7,
+              ...getArtboardExportOptions(firstAb, mult),
+            });
+          } catch (err) {
+            console.error('Thumbnail generation failed:', err);
+            return null;
+          }
+        })()
+      : null;
+    if (thumbnail) payload.thumbnail = thumbnail;
+
+    let { data, error } = await supabase.from('designs').upsert(payload).select().single();
+
+    // The `thumbnail` column may not exist yet on a database created before
+    // this feature — fall back to saving without it rather than failing the
+    // whole save over a missing preview image.
+    if (error && thumbnail && /thumbnail/i.test(error.message || '') && /column|does not exist/i.test(error.message || '')) {
+      console.warn(
+        'designs.thumbnail column not found — saving without a thumbnail. Add it with: ' +
+          'ALTER TABLE designs ADD COLUMN thumbnail text;'
+      );
+      const { thumbnail: _drop, ...withoutThumbnail } = payload;
+      ({ data, error } = await supabase.from('designs').upsert(withoutThumbnail).select().single());
+    }
+
     setSaving(false);
 
     if (error) {
@@ -2040,6 +2076,20 @@ function EditorContent() {
     setExporting(false);
     setShowExportMenu(false);
   };
+
+  // The dashboard's "Download" action opens the editor with ?autoExport=
+  // instead of trying to export a static thumbnail — this runs the exact
+  // same export code the toolbar's Export button uses, once the loaded
+  // design's artboards are actually available.
+  useEffect(() => {
+    if (!autoExportFormat || hasAutoExportedRef.current) return;
+    if (!canvasReady || artboards.length === 0) return;
+    hasAutoExportedRef.current = true;
+    if (autoExportFormat === 'png') exportAsPNG();
+    else if (autoExportFormat === 'jpg') exportAsJPG();
+    else if (autoExportFormat === 'pdf') exportAsPDF();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canvasReady, artboards, autoExportFormat]);
 
   const hasSelection = !!selected;
 
