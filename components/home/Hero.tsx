@@ -1,0 +1,61 @@
+'use client';
+
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { ArrowRight, Sparkles } from 'lucide-react';
+import { resolveAuthedPath } from '@/lib/authNav';
+import { WorkspacePreview } from './WorkspacePreview';
+import { Reveal } from './Reveal';
+
+export function Hero() {
+  const router = useRouter();
+
+  const goToCreate = async () => {
+    router.push(await resolveAuthedPath('/create'));
+  };
+
+  return (
+    <section className="max-w-6xl mx-auto px-6 pt-14 pb-20 md:pt-20">
+      <div className="grid lg:grid-cols-[1fr_1.15fr] gap-14 items-center">
+        <Reveal>
+          <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#6C4FD1] tracking-wide uppercase">
+            <Sparkles size={13} />
+            <span>Your Creative Space</span>
+          </div>
+
+          <h1 className="mt-6 font-[family-name:var(--font-display)] text-5xl sm:text-6xl leading-[1.05] tracking-tight">
+            Create. Design.
+            <br />
+            <span className="italic">Make it magical.</span>
+          </h1>
+
+          <p className="mt-6 text-lg text-[#4A4750] max-w-md leading-relaxed">
+            Bring your ideas to life with a simple, powerful design workspace built for
+            creators, businesses and professionals.
+          </p>
+
+          <div className="mt-8 flex flex-wrap gap-3">
+            <button
+              onClick={goToCreate}
+              className="inline-flex items-center gap-2 text-sm font-semibold text-white px-6 py-3.5 rounded-full bg-brand-gradient shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all"
+            >
+              Start Designing Free <ArrowRight size={15} />
+            </button>
+            <Link
+              href="/templates"
+              className="inline-flex items-center gap-2 text-sm font-semibold px-6 py-3.5 rounded-full border border-black/15 hover:border-black/40 transition-colors"
+            >
+              Explore Templates
+            </Link>
+          </div>
+
+          <p className="mt-4 text-xs text-[#4A4750]">No complicated tools. Just your creativity.</p>
+        </Reveal>
+
+        <Reveal delayMs={150}>
+          <WorkspacePreview />
+        </Reveal>
+      </div>
+    </section>
+  );
+}
