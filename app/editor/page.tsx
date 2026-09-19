@@ -2102,7 +2102,7 @@ function EditorContent() {
 
   return (
     <main className="h-screen flex flex-col bg-gray-50">
-      <MenuBar menus={menus} />
+      <MenuBar menus={menus} leading={<Image src="/logo.png" alt="Magical Touch" width={110} height={22} priority />} />
 
       <div className="flex items-center justify-between px-4 py-2 border-b bg-white">
         <div className="flex items-center gap-2">
@@ -2110,7 +2110,6 @@ function EditorContent() {
             href={cameFromTemplate ? '/templates' : '/dashboard'}
             label={cameFromTemplate ? 'Templates' : 'Dashboard'}
           />
-          <Image src="/logo.png" alt="Magical Touch" width={130} height={26} />
         </div>
         <input
           type="text"

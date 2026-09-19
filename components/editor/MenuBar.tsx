@@ -32,13 +32,14 @@ export interface MenuDef {
 
 interface Props {
   menus: MenuDef[];
+  leading?: React.ReactNode;
 }
 
 function isDivider(item: MenuItem): item is MenuDivider {
   return (item as MenuDivider).divider === true;
 }
 
-export function MenuBar({ menus }: Props) {
+export function MenuBar({ menus, leading }: Props) {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
   const barRef = useRef<HTMLDivElement>(null);
 
@@ -54,6 +55,7 @@ export function MenuBar({ menus }: Props) {
 
   return (
     <div ref={barRef} className="flex items-center h-8 px-1 bg-white border-b text-[13px] select-none relative z-40">
+      {leading && <div className="flex items-center pl-1 pr-3 shrink-0">{leading}</div>}
       {menus.map((menu, i) => (
         <div key={menu.label} className="relative">
           <button
