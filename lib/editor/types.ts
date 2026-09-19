@@ -3,6 +3,8 @@
 // Single source of truth for editor-wide types.
 // ---------------------------------------------------------------------
 
+import { GOOGLE_FONT_NAMES } from './googleFonts';
+
 export type DrawTool = 'rect' | 'ellipse' | 'triangle' | 'polygon' | 'star' | 'line';
 export type PixelSelectTool = 'marquee-rect' | 'marquee-ellipse' | 'lasso' | 'magic-wand';
 export type ToolMode = 'select' | 'pen' | 'direct' | 'pan' | 'artboard' | DrawTool | PixelSelectTool;
@@ -46,7 +48,7 @@ export interface DraftGeometry {
   y2?: number;
 }
 
-export const FONT_OPTIONS = [
+export const SYSTEM_FONT_OPTIONS = [
   'Arial',
   'Helvetica',
   'Georgia',
@@ -56,6 +58,12 @@ export const FONT_OPTIONS = [
   'Trebuchet MS',
   'Impact',
 ];
+
+// The font picker's full list: the original OS-installed fonts, plus the
+// curated Google Fonts catalog (see lib/editor/googleFonts.ts) — real
+// webfonts loaded from Google's CDN so what's picked here is what
+// actually renders, in the editor and in exported PDFs alike.
+export const FONT_OPTIONS = [...SYSTEM_FONT_OPTIONS, ...GOOGLE_FONT_NAMES];
 
 export const MAX_HISTORY = 100;
 

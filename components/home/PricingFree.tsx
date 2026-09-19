@@ -33,7 +33,8 @@ export function PricingFree() {
       </Reveal>
 
       <Reveal delayMs={100} className="mt-12 max-w-md mx-auto">
-        <div className="rounded-2xl border border-black/10 p-8 bg-white shadow-sm">
+        <div className="relative overflow-hidden rounded-2xl border border-black/10 p-8 bg-white shadow-[0_30px_60px_-30px_rgba(23,22,27,0.25)]">
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-brand-gradient" />
           <p className="text-sm font-semibold text-[#6C4FD1]">Free Forever</p>
           <p className="mt-2 font-[family-name:var(--font-display)] text-4xl">$0</p>
           <p className="mt-1 text-sm text-[#4A4750]">Everything you need, always free.</p>
@@ -51,7 +52,7 @@ export function PricingFree() {
 
           <button
             onClick={goToCreate}
-            className="mt-8 w-full inline-flex items-center justify-center gap-2 text-sm font-semibold text-white px-6 py-3.5 rounded-full bg-brand-gradient shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all"
+            className="relative overflow-hidden mt-8 w-full inline-flex items-center justify-center gap-2 text-sm font-semibold text-white px-6 py-3.5 rounded-full bg-brand-gradient shadow-[0_10px_24px_-8px_rgba(108,79,209,0.55)] hover:shadow-[0_14px_30px_-8px_rgba(108,79,209,0.65)] hover:-translate-y-0.5 transition-all before:content-[''] before:absolute before:inset-x-0 before:top-0 before:h-1/2 before:bg-white/25 before:rounded-t-full"
           >
             Start Designing Free <ArrowRight size={15} />
           </button>

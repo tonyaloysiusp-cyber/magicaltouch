@@ -16,9 +16,10 @@ export interface EdgeValues {
 export interface PrintMarksSettings {
   crop: boolean;
   registration: boolean;
-  // Explicitly RGB swatches, not a real color-managed CMYK/Pantone bar —
-  // this app has no CMYK pipeline, so it would be dishonest to label it
-  // as one.
+  // A GATF/SWOP-style color control bar (process + overprint solids and
+  // a grayscale ramp) rendered as RGB screen approximations, not a real
+  // color-managed CMYK/Pantone separation — this app's whole pipeline is
+  // RGB, so it would be dishonest to label it as true ink values.
   colorBar: boolean;
 }
 
@@ -55,9 +56,13 @@ export const EXPORT_SCOPE_LABELS: Record<ExportScope, string> = {
   slug: 'Artboard + Bleed + Marks + Slug',
 };
 
-// Extra room left outside the bleed box for crop/registration marks to be
-// drawn into without getting clipped by the export crop rect.
-const MARKS_MARGIN = 24;
+// Extra room left outside the bleed box for crop/registration marks — and
+// the color bar's swatches plus their labels, the tallest thing drawn out
+// there — to be drawn into without getting clipped by the export crop
+// rect. Kept generous and uniform on all four sides rather than
+// conditional on which marks are enabled, so toggling a mark on never
+// needs a matching change here.
+const MARKS_MARGIN = 48;
 
 interface RectLike {
   x: number;

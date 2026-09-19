@@ -14,6 +14,7 @@
 // ---------------------------------------------------------------------
 
 import { getAbsolutePolygonPoints } from './geometry';
+import { createPdfFontCache, ensurePdfFont } from './pdfFonts';
 
 interface ArtboardLike {
   id: string;
@@ -59,16 +60,16 @@ function needsRasterFallback(obj: any): boolean {
   return false;
 }
 
-function withOpacity(pdf: any, opacity: number | undefined, draw: () => void) {
+async function withOpacity(pdf: any, opacity: number | undefined, draw: () => void | Promise<void>) {
   const o = typeof opacity === 'number' ? Math.max(0, Math.min(1, opacity)) : 1;
   if (o >= 1) {
-    draw();
+    await draw();
     return;
   }
   pdf.saveGraphicsState();
   try {
     pdf.setGState(new pdf.GState({ opacity: o, 'stroke-opacity': o }));
-    draw();
+    await draw();
   } finally {
     pdf.restoreGraphicsState();
   }
@@ -139,7 +140,7 @@ function mapFontStyle(obj: any): string {
   return 'normal';
 }
 
-function drawTextObject(pdf: any, F: any, obj: any, offsetX: number, offsetY: number) {
+async function drawTextObject(pdf: any, F: any, obj: any, offsetX: number, offsetY: number, fontCache: ReturnType<typeof createPdfFontCache>) {
   const rawLines: string[] =
     obj._textLines && obj._textLines.length
       ? obj._textLines.map((l: any) => (Array.isArray(l) ? l.join('') : l))
@@ -159,7 +160,17 @@ function drawTextObject(pdf: any, F: any, obj: any, offsetX: number, offsetY: nu
   // Font size itself isn't affected by the coordinate transform, so scale it explicitly.
   const fontSizePt = Math.max(fontSizeLocal * avgScale * PT_PER_PX, 1);
 
-  pdf.setFont(mapFontFamily(obj.fontFamily), mapFontStyle(obj));
+  const style = mapFontStyle(obj);
+  const bold = style === 'bold' || style === 'bolditalic';
+  const registered = await ensurePdfFont(pdf, fontCache, obj.fontFamily, bold);
+  if (registered) {
+    pdf.setFont(registered.name, style);
+  } else {
+    // Not one of our curated webfonts (a plain system font like Arial/
+    // Georgia, or something unrecognized) — fall back to the closest of
+    // jsPDF's built-in fonts, same as before.
+    pdf.setFont(mapFontFamily(obj.fontFamily), style);
+  }
   pdf.setFontSize(fontSizePt);
   if (isPaintable(obj.fill)) {
     const [r, g, b] = colorToRGB(F, obj.fill);
@@ -211,7 +222,14 @@ function drawObjectAsRaster(pdf: any, obj: any, offsetX: number, offsetY: number
   pdf.addImage(dataUrl, 'PNG', rect.left - offsetX, rect.top - offsetY, rect.width, rect.height);
 }
 
-function renderOneObject(pdf: any, F: any, obj: any, offsetX: number, offsetY: number) {
+async function renderOneObject(
+  pdf: any,
+  F: any,
+  obj: any,
+  offsetX: number,
+  offsetY: number,
+  fontCache: ReturnType<typeof createPdfFontCache>
+) {
   if (obj.type === 'image') {
     drawImageObject(pdf, obj, offsetX, offsetY);
     return;
@@ -225,7 +243,7 @@ function renderOneObject(pdf: any, F: any, obj: any, offsetX: number, offsetY: n
     return;
   }
   if (obj.type === 'i-text' || obj.type === 'text' || obj.type === 'textbox') {
-    drawTextObject(pdf, F, obj, offsetX, offsetY);
+    await drawTextObject(pdf, F, obj, offsetX, offsetY, fontCache);
     return;
   }
   // rect (incl. the artboard background), triangle, circle, ellipse, polygon, single-ring path.
@@ -235,11 +253,18 @@ function renderOneObject(pdf: any, F: any, obj: any, offsetX: number, offsetY: n
   if (style) drawClosedPolygon(pdf, pts, style, offsetX, offsetY);
 }
 
-function renderObjectsToPage(pdf: any, F: any, objects: any[], offsetX: number, offsetY: number) {
-  objects.forEach((obj) => {
-    withOpacity(pdf, obj.opacity, () => {
+async function renderObjectsToPage(
+  pdf: any,
+  F: any,
+  objects: any[],
+  offsetX: number,
+  offsetY: number,
+  fontCache: ReturnType<typeof createPdfFontCache>
+) {
+  for (const obj of objects) {
+    await withOpacity(pdf, obj.opacity, async () => {
       try {
-        renderOneObject(pdf, F, obj, offsetX, offsetY);
+        await renderOneObject(pdf, F, obj, offsetX, offsetY, fontCache);
       } catch (err) {
         console.error('Vector PDF render failed for object, falling back to raster:', obj.type, err);
         try {
@@ -250,24 +275,28 @@ function renderObjectsToPage(pdf: any, F: any, objects: any[], offsetX: number, 
         }
       }
     });
-  });
+  }
 }
 
 // Single-artboard / legacy entry point: draws every real object on the
 // canvas onto the current page at world coordinates (offset 0,0).
-export function exportCanvasToPDF(pdf: any, canvas: any, F: any) {
+export async function exportCanvasToPDF(pdf: any, canvas: any, F: any) {
   const objects: any[] = canvas
     .getObjects()
     .filter((o: any) => !o.__isAnchorHandle && !o.__isPenPreview && !o.__isShapeDraft && o.visible !== false);
-  renderObjectsToPage(pdf, F, objects, 0, 0);
+  await renderObjectsToPage(pdf, F, objects, 0, 0, createPdfFontCache());
 }
 
 // Multi-artboard entry point: one PDF page per artboard. The first
 // artboard renders onto the page the caller already created (matching
 // `new jsPDF({ format: [w, h] })`); every subsequent artboard gets its
 // own addPage() at that artboard's own size.
-export function exportArtboardsToPDF(pdf: any, canvas: any, F: any, artboards: ArtboardLike[]) {
-  artboards.forEach((ab, i) => {
+export async function exportArtboardsToPDF(pdf: any, canvas: any, F: any, artboards: ArtboardLike[]) {
+  // Shared across every artboard/page in this export, so a font used on
+  // multiple artboards is only fetched and registered with jsPDF once.
+  const fontCache = createPdfFontCache();
+  for (let i = 0; i < artboards.length; i++) {
+    const ab = artboards[i];
     if (i > 0) {
       pdf.addPage([ab.width, ab.height], ab.width > ab.height ? 'landscape' : 'portrait');
     }
@@ -277,6 +306,6 @@ export function exportArtboardsToPDF(pdf: any, canvas: any, F: any, artboards: A
         (o: any) =>
           !o.__isAnchorHandle && !o.__isPenPreview && !o.__isShapeDraft && o.visible !== false && o.__artboardId === ab.id
       );
-    renderObjectsToPage(pdf, F, objects, ab.x, ab.y);
-  });
+    await renderObjectsToPage(pdf, F, objects, ab.x, ab.y, fontCache);
+  }
 }

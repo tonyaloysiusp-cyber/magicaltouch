@@ -24,7 +24,7 @@ export function FinalCTA() {
           </p>
           <button
             onClick={goToCreate}
-            className="mt-8 inline-flex items-center gap-2 text-sm font-semibold text-[#17161B] px-7 py-3.5 rounded-full bg-white hover:-translate-y-0.5 hover:shadow-lg transition-all"
+            className="mt-8 inline-flex items-center gap-2 text-sm font-semibold text-[#17161B] px-7 py-3.5 rounded-full bg-white shadow-[inset_0_1px_0_rgba(255,255,255,0.9),inset_0_-2px_4px_rgba(0,0,0,0.06),0_10px_24px_-8px_rgba(0,0,0,0.3)] hover:-translate-y-0.5 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.9),inset_0_-2px_4px_rgba(0,0,0,0.06),0_16px_30px_-8px_rgba(0,0,0,0.35)] transition-all"
           >
             Start Designing Free <ArrowRight size={15} />
           </button>

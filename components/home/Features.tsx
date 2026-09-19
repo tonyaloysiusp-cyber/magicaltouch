@@ -67,7 +67,7 @@ export function Features() {
           >
             <div className="group h-full rounded-2xl border border-black/10 p-7 hover:border-black/20 hover:-translate-y-1 transition-all duration-300 bg-white">
               <div
-                className="w-11 h-11 rounded-xl flex items-center justify-center text-white"
+                className="w-11 h-11 rounded-xl flex items-center justify-center text-white shadow-[inset_0_1px_1px_rgba(255,255,255,0.5),inset_0_-3px_5px_rgba(0,0,0,0.15),0_8px_16px_-8px_rgba(0,0,0,0.35)]"
                 style={{ background: `linear-gradient(135deg, ${f.colors[0]}, ${f.colors[1]})` }}
               >
                 <f.icon size={19} />

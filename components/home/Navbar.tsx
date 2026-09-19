@@ -57,7 +57,7 @@ export function Navbar() {
           </Link>
           <button
             onClick={goToCreate}
-            className="text-sm font-semibold text-white px-5 py-2.5 rounded-full bg-brand-gradient shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all"
+            className="relative overflow-hidden text-sm font-semibold text-white px-5 py-2.5 rounded-full bg-brand-gradient shadow-[0_6px_16px_-6px_rgba(108,79,209,0.5)] hover:shadow-[0_10px_20px_-6px_rgba(108,79,209,0.6)] hover:-translate-y-0.5 transition-all before:content-[''] before:absolute before:inset-x-0 before:top-0 before:h-1/2 before:bg-white/25 before:rounded-t-full"
           >
             Start Designing
           </button>
