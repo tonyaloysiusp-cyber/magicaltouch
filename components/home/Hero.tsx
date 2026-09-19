@@ -37,7 +37,7 @@ export function Hero() {
           <div className="mt-8 flex flex-wrap gap-3">
             <button
               onClick={goToCreate}
-              className="inline-flex items-center gap-2 text-sm font-semibold text-white px-6 py-3.5 rounded-full bg-brand-gradient shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all"
+              className="relative overflow-hidden inline-flex items-center gap-2 text-sm font-semibold text-white px-6 py-3.5 rounded-full bg-brand-gradient shadow-[0_10px_24px_-8px_rgba(108,79,209,0.55)] hover:shadow-[0_14px_30px_-8px_rgba(108,79,209,0.65)] hover:-translate-y-0.5 transition-all before:content-[''] before:absolute before:inset-x-0 before:top-0 before:h-1/2 before:bg-white/25 before:rounded-t-full"
             >
               Start Designing Free <ArrowRight size={15} />
             </button>

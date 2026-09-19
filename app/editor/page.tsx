@@ -61,6 +61,21 @@ function EditorContent() {
   const viewportRef = useRef<HTMLDivElement>(null);
   const panRef = useRef<{ active: boolean; lastX: number; lastY: number }>({ active: false, lastX: 0, lastY: 0 });
   const [canvasReady, setCanvasReady] = useState(false);
+  const [checkingAuth, setCheckingAuth] = useState(true);
+
+  // The editor is a protected route: a logged-out visitor who lands here
+  // directly (typed URL, bookmark, back button) must be bounced to login
+  // before they can touch the canvas, not just when they click a CTA on
+  // the homepage. The overlay below blocks interaction until this resolves.
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      if (!data.user) {
+        router.push(`/login?next=${encodeURIComponent(window.location.pathname + window.location.search)}`);
+      } else {
+        setCheckingAuth(false);
+      }
+    });
+  }, [router]);
 
   const [zoom, setZoom] = useState(100);
   const [layers, setLayers] = useState<any[]>([]);
@@ -2218,7 +2233,13 @@ function EditorContent() {
   ];
 
   return (
-    <main className="h-screen flex flex-col bg-gray-50">
+    <>
+      {checkingAuth && (
+        <div className="fixed inset-0 z-[999] flex items-center justify-center bg-gray-50 text-gray-400">
+          Checking access...
+        </div>
+      )}
+      <main className="h-screen flex flex-col bg-gray-50">
       <MenuBar menus={menus} leading={<Image src="/logo.png" alt="Magical Touch" width={140} height={28} priority />} />
 
       <div className="flex items-center justify-between px-4 py-2 border-b bg-white">
@@ -2420,7 +2441,8 @@ function EditorContent() {
       <ShortcutsModal open={showShortcuts} onClose={() => setShowShortcuts(false)} />
       <RoadmapModal open={roadmap.open} highlightId={roadmap.id} onClose={() => setRoadmap({ open: false })} />
       <PreflightModal open={showPreflight} issues={preflightIssues} onClose={() => setShowPreflight(false)} />
-    </main>
+      </main>
+    </>
   );
 }
 
