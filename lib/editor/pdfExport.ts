@@ -168,8 +168,15 @@ function drawTextObject(pdf: any, F: any, obj: any, offsetX: number, offsetY: nu
     pdf.setTextColor(0, 0, 0);
   }
 
-  const offX = obj.originX === 'center' ? -w / 2 : obj.originX === 'right' ? -w : 0;
-  const offY = obj.originY === 'center' ? -h / 2 : obj.originY === 'bottom' ? -h : 0;
+  // calcTransformMatrix()'s local coordinate frame is always centered on the
+  // object (local (0,0) = visual center) regardless of originX/originY — that
+  // setting only affects how obj.left/top map to the center, which the matrix
+  // already accounts for. Treating originX/Y as if they also shifted this
+  // local frame (the previous code) put every left-originX/top-originY text
+  // object — i.e. every text object this editor creates — half its own
+  // width/height off from where it should render.
+  const offX = -w / 2;
+  const offY = -h / 2;
   const align: 'left' | 'center' | 'right' = ['left', 'center', 'right'].includes(obj.textAlign)
     ? obj.textAlign
     : 'left';

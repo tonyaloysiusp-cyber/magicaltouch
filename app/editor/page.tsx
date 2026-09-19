@@ -187,7 +187,12 @@ function EditorContent() {
       setSelected(fabricCanvasRef.current?.getActiveObject() || null);
     });
 
-  const { clearHandles: clearAnchorHandles, renderHandles: renderAnchorHandles } = useDirectSelection({
+  const {
+    stateRef: directSelectionStateRef,
+    clearHandles: clearAnchorHandles,
+    renderHandles: renderAnchorHandles,
+    deleteActiveAnchor,
+  } = useDirectSelection({
     fabricCanvasRef,
     onAnchorMoved: pushHistory,
   });
@@ -1120,6 +1125,25 @@ function EditorContent() {
           });
           ctx.restore();
         }
+
+        // Curve-handle connector lines for the Direct Selection tool — a
+        // thin line from each bezier handle back to the anchor it controls,
+        // read straight off the live handle/anchor circles so it always
+        // matches whatever they're currently at, including mid-drag.
+        const handleLinks = directSelectionStateRef.current.handleLinks;
+        if (handleLinks.length > 0) {
+          ctx.save();
+          ctx.strokeStyle = 'rgba(63,169,232,0.8)';
+          ctx.lineWidth = 1;
+          ctx.setLineDash([]);
+          handleLinks.forEach(({ handle, anchor }) => {
+            ctx.beginPath();
+            ctx.moveTo(anchor.left * vt[0] + vt[4], anchor.top * vt[3] + vt[5]);
+            ctx.lineTo(handle.left * vt[0] + vt[4], handle.top * vt[3] + vt[5]);
+            ctx.stroke();
+          });
+          ctx.restore();
+        }
       });
 
       if (urlDesignId) {
@@ -1240,6 +1264,13 @@ function EditorContent() {
     const canvas = fabricCanvasRef.current;
     const active = canvas.getActiveObject();
     if (!active || active.locked) return;
+    if (active.__isAnchorHandle) {
+      // The active object is a Direct Selection helper circle (an anchor or
+      // curve handle), not real artwork — route to the anchor-aware delete
+      // instead of just removing the circle itself.
+      deleteActiveAnchor();
+      return;
+    }
     if (active.__isArtboard) {
       // Route through the guarded artboard delete (keeps the "can't delete
       // the only artboard" protection instead of silently removing it).

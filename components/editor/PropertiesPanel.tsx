@@ -76,10 +76,37 @@ export function PropertiesPanel({
   if (activeTool === 'pen') {
     return (
       <p className="text-xs text-gray-500">
-        Pen tool active. Click to place anchors, click + drag for curved handles. Press{' '}
-        <kbd className="bg-gray-100 border rounded px-1">Enter</kbd> to finish an open path, or click
-        the first anchor to close it. <kbd className="bg-gray-100 border rounded px-1">Esc</kbd>{' '}
-        cancels the current path.
+        Pen tool active. Click to place anchors, click + drag for curved handles. Hold{' '}
+        <kbd className="bg-gray-100 border rounded px-1">Alt/Option</kbd> while dragging a handle to
+        break it (curve one side only). Press <kbd className="bg-gray-100 border rounded px-1">Enter</kbd>{' '}
+        to finish an open path, or click the first anchor to close it.{' '}
+        <kbd className="bg-gray-100 border rounded px-1">Esc</kbd> cancels the current path.
+      </p>
+    );
+  }
+
+  if (activeTool === 'direct' && (!selected || selected.__isAnchorHandle)) {
+    if (selected?.__isAnchorHandle && !selected.__isMidpointMarker) {
+      return (
+        <p className="text-xs text-gray-500">
+          {selected.__isHandlePoint ? 'Curve handle selected. Drag to reshape the curve.' : (
+            <>
+              Anchor point selected. Drag to move it,{' '}
+              <kbd className="bg-gray-100 border rounded px-1">Alt/Option</kbd>+click it to toggle
+              corner/smooth, or press <kbd className="bg-gray-100 border rounded px-1">Delete</kbd> to
+              remove it.
+            </>
+          )}
+        </p>
+      );
+    }
+    return (
+      <p className="text-xs text-gray-500">
+        Direct Selection active. Select a vector path to edit it: drag an anchor (blue outline) or a
+        curve handle (filled blue) to reshape it. <kbd className="bg-gray-100 border rounded px-1">Alt/Option</kbd>+click
+        an anchor to toggle it between a sharp corner and a smooth curve point. Click a green square on a
+        segment to add a new anchor there. Select an anchor and press{' '}
+        <kbd className="bg-gray-100 border rounded px-1">Delete</kbd> to remove it.
       </p>
     );
   }
