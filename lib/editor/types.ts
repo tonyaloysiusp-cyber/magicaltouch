@@ -63,7 +63,7 @@ export const MAX_HISTORY = 100;
 // Pasteboard / artboard workspace
 // ---------------------------------------------------------------------
 
-export const PASTEBOARD_BG = '#e2e2e5';
+export const PASTEBOARD_BG = '#e7e7e7';
 export const RULER_SIZE = 20;
 
 export type FeatureStatus = 'live' | 'beta' | 'planned';
