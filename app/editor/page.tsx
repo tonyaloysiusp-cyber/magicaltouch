@@ -6,20 +6,10 @@ import Image from 'next/image';
 import { supabase } from '@/lib/supabase';
 import { Keyboard } from 'lucide-react';
 
-import { ToolMode, DocUnit, isDrawTool, isPixelSelectTool, PASTEBOARD_BG, RULER_SIZE } from '@/lib/editor/types';
-import { googleFontsStylesheetHref, aliasedFontFaceCSS } from '@/lib/editor/googleFonts';
+import { ToolMode, DocUnit, isDrawTool, PASTEBOARD_BG, RULER_SIZE } from '@/lib/editor/types';
+import { googleFontsStylesheetHref, aliasedFontFaceCSS, ensureFontLoaded, ensureFontsLoadedForCanvasJSON } from '@/lib/editor/googleFonts';
 import { getAbsolutePolygonPoints, multiPolygonToPathD } from '@/lib/editor/geometry';
 import { exportCanvasToPDF, exportArtboardsToPDF, toPt } from '@/lib/editor/pdfExport';
-import {
-  PixelMask,
-  invertMask,
-  featherMask,
-  maskHasSelection,
-  maskToTintCanvas,
-  clearMaskedPixels,
-  applyMaskKeepSelected,
-  extractMaskedRegion,
-} from '@/lib/editor/pixelSelection';
 import { computeSnap, GuideLine } from '@/lib/editor/snapping';
 import {
   ArtboardMeta,
@@ -39,7 +29,6 @@ import { usePenTool } from '@/hooks/usePenTool';
 import { useShapeTools } from '@/hooks/useShapeTools';
 import { useDirectSelection } from '@/hooks/useDirectSelection';
 import { useArtboardTool } from '@/hooks/useArtboardTool';
-import { usePixelSelectionTool, getImagePixelCanvas } from '@/hooks/usePixelSelectionTool';
 
 import { Toolbar } from '@/components/editor/Toolbar';
 import { PropertiesPanel } from '@/components/editor/PropertiesPanel';
@@ -59,6 +48,8 @@ import { BackBar } from '@/components/BackBar';
 import { Rulers } from '@/components/editor/Rulers';
 import { TabBar, EditorTabInfo } from '@/components/editor/TabBar';
 import { OpenDesignDialog, OpenableDesign } from '@/components/editor/OpenDesignDialog';
+import { UnsavedChangesDialog } from '@/components/editor/UnsavedChangesDialog';
+import { loadTabSession, saveTabSession, clearTabSession } from '@/lib/editor/tabSession';
 import { WorkspaceSwitcher, EditorWorkspace } from '@/components/editor/WorkspaceSwitcher';
 import { PhotoEditorWorkspace, PhotoEditResult, CropRect } from '@/components/photoEditor/PhotoEditorWorkspace';
 import { PhotoAdjustments, DEFAULT_ADJUSTMENTS } from '@/lib/editor/photoFilters';
@@ -118,27 +109,9 @@ function EditorContent() {
   const activeToolRef = useRef<ToolMode>('select');
   const [maskTargetId, setMaskTargetId] = useState<string>('');
 
-  // Pixel selection (marquee/lasso/magic wand) state. The mask itself and
-  // its cached tint preview live in refs (read fresh inside canvas event
-  // handlers and the render loop); pixelSelectionVersion just forces a
-  // React re-render so PropertiesPanel's disabled states stay in sync.
-  const pixelSelectionRef = useRef<{ imageUid: string; mask: PixelMask } | null>(null);
-  const pixelTintCanvasRef = useRef<HTMLCanvasElement | null>(null);
-
   // Smart-guide snap lines, live only while an object is actively being
   // dragged. Cleared on mouse-up so the guides never persist after a drop.
   const snapGuidesRef = useRef<GuideLine[]>([]);
-  const [, setPixelSelectionVersion] = useState(0);
-  const [magicWandTolerance, setMagicWandTolerance] = useState(32);
-  const magicWandToleranceRef = useRef(32);
-  const [magicWandContiguous, setMagicWandContiguous] = useState(true);
-  const magicWandContiguousRef = useRef(true);
-  useEffect(() => {
-    magicWandToleranceRef.current = magicWandTolerance;
-  }, [magicWandTolerance]);
-  useEffect(() => {
-    magicWandContiguousRef.current = magicWandContiguous;
-  }, [magicWandContiguous]);
 
   // Each entry is a freshly-cloned Fabric object holding its absolute
   // canvas position at copy time. Kept as a flat array of individual
@@ -273,15 +246,62 @@ function EditorContent() {
     initialCropRect: CropRect | null;
   }
   const [workspace, setWorkspace] = useState<EditorWorkspace>('design');
+  const workspaceRef = useRef<EditorWorkspace>('design');
+  useEffect(() => {
+    workspaceRef.current = workspace;
+  }, [workspace]);
   const [photoEditSession, setPhotoEditSession] = useState<PhotoEditSession | null>(null);
 
   // Seeds the tab strip with whatever design the editor was opened on
   // (from the URL), exactly once. Its name is filled in below once the
   // canvas-load effect finishes fetching it.
+  //
+  // First checks for a persisted session from tabSession.ts — if this
+  // browser tab already had other designs open before navigating away
+  // (e.g. through New Design's trip to /create and back), those tabs are
+  // restored, and the design the URL now points to is added as ANOTHER
+  // tab alongside them rather than replacing the whole session. Without
+  // this, every previously open tab would silently close the instant a
+  // new design was created.
   useEffect(() => {
-    const id = urlDesignId || `new-${Date.now()}`;
-    setTabs([{ id, designId: urlDesignId, name: urlDesignId ? 'Loading…' : 'Untitled Design', width, height, dirty: false }]);
-    setActiveTabId(id);
+    const restored = loadTabSession();
+    const newTabMarker = searchParams.get('newTab');
+    const freshId = urlDesignId || `new-${newTabMarker || Date.now()}`;
+
+    if (restored && restored.tabs.length) {
+      tabSnapshotsRef.current = new Map(Object.entries(restored.snapshots || {}));
+      // newTab is stamped fresh by /create on every "New Design" — its
+      // presence means this navigation must always become a new tab, even
+      // if it happens to land on the exact same blank w/h another already-
+      // open tab started from (otherwise indistinguishable from a plain
+      // reload of that other tab, since neither has a designId yet).
+      const existing = urlDesignId
+        ? restored.tabs.find((t) => t.designId === urlDesignId)
+        : newTabMarker
+          ? undefined
+          : restored.tabs.find((t) => t.id === restored.activeTabId);
+
+      if (existing) {
+        setTabs(restored.tabs);
+        setActiveTabId(existing.id);
+        pendingSnapshotRef.current = tabSnapshotsRef.current.get(existing.id) || null;
+      } else {
+        const newTab: EditorTabInfo = {
+          id: freshId,
+          designId: urlDesignId,
+          name: urlDesignId ? 'Loading…' : 'Untitled Design',
+          width,
+          height,
+          dirty: false,
+        };
+        setTabs([...restored.tabs, newTab]);
+        setActiveTabId(newTab.id);
+      }
+      return;
+    }
+
+    setTabs([{ id: freshId, designId: urlDesignId, name: urlDesignId ? 'Loading…' : 'Untitled Design', width, height, dirty: false }]);
+    setActiveTabId(freshId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -392,161 +412,6 @@ function EditorContent() {
       });
     },
   });
-
-  const setPixelSelectionMask = useCallback((imageUid: string | null, mask: PixelMask | null) => {
-    if (!imageUid || !mask || !maskHasSelection(mask)) {
-      pixelSelectionRef.current = null;
-      pixelTintCanvasRef.current = null;
-    } else {
-      pixelSelectionRef.current = { imageUid, mask };
-      pixelTintCanvasRef.current = maskToTintCanvas(mask, [56, 145, 255], 0.4);
-    }
-    setPixelSelectionVersion((v) => v + 1);
-    fabricCanvasRef.current?.requestRenderAll();
-  }, []);
-
-  const getSelectionMaskForActiveImage = useCallback(() => {
-    const canvas = fabricCanvasRef.current;
-    const active = canvas?.getActiveObject();
-    if (!active || active.type !== 'image') return null;
-    const sel = pixelSelectionRef.current;
-    return sel && sel.imageUid === active.__uid ? sel.mask : null;
-  }, []);
-
-  const onNoImageSelected = useCallback(() => {
-    // Properties panel already shows the "no image selected" hint; nothing
-    // else to do here.
-  }, []);
-
-  const {
-    draftRef: pixelDraftRef,
-    clearDraft: clearPixelDraft,
-    handleMouseDown: handlePixelMouseDown,
-    handleMouseMove: handlePixelMouseMove,
-    handleMouseUp: handlePixelMouseUp,
-  } = usePixelSelectionTool({
-    fabricCanvasRef,
-    activeToolRef,
-    toleranceRef: magicWandToleranceRef,
-    contiguousRef: magicWandContiguousRef,
-    getSelectionMask: getSelectionMaskForActiveImage,
-    onSelectionChanged: setPixelSelectionMask,
-    onNoImageSelected,
-  });
-
-  // Only meaningful while `selected` is the same image the mask belongs to
-  // — switching to a different object disables the destructive actions.
-  const hasPixelSelection = !!(
-    selected &&
-    pixelSelectionRef.current &&
-    pixelSelectionRef.current.imageUid === selected.__uid &&
-    maskHasSelection(pixelSelectionRef.current.mask)
-  );
-  const hasOriginalBackup = !!(selected && selected.type === 'image' && selected.__originalSrc);
-
-  const getPixelSelectionTarget = () => {
-    const canvas = fabricCanvasRef.current;
-    const active = canvas?.getActiveObject();
-    const sel = pixelSelectionRef.current;
-    if (!canvas || !active || active.type !== 'image' || !sel || sel.imageUid !== active.__uid) return null;
-    if (!maskHasSelection(sel.mask)) return null;
-    return { canvas, image: active, mask: sel.mask };
-  };
-
-  const deleteSelectedPixels = () => {
-    const target = getPixelSelectionTarget();
-    if (!target) return;
-    const { canvas, image, mask } = target;
-    if (!image.__originalSrc) image.__originalSrc = image.toDataURL({});
-    const dataUrl = clearMaskedPixels(getImagePixelCanvas(image), mask);
-    image.setSrc(dataUrl, () => {
-      image.dirty = true;
-      canvas.requestRenderAll();
-      setPixelSelectionMask(null, null);
-      bumpSel();
-      pushHistory();
-    });
-  };
-
-  const applyPixelSelectionAsMask = () => {
-    const target = getPixelSelectionTarget();
-    if (!target) return;
-    const { canvas, image, mask } = target;
-    if (!image.__originalSrc) image.__originalSrc = image.toDataURL({});
-    const dataUrl = applyMaskKeepSelected(getImagePixelCanvas(image), mask);
-    image.setSrc(dataUrl, () => {
-      image.dirty = true;
-      canvas.requestRenderAll();
-      setPixelSelectionMask(null, null);
-      bumpSel();
-      pushHistory();
-    });
-  };
-
-  const extractPixelSelectionToLayer = () => {
-    const target = getPixelSelectionTarget();
-    if (!target) return;
-    const { canvas, image, mask } = target;
-    const result = extractMaskedRegion(getImagePixelCanvas(image), mask);
-    if (!result) return;
-
-    import('fabric').then((mod) => {
-      const F: any = mod.fabric;
-      const matrix = image.calcTransformMatrix();
-      const localCenter = {
-        x: result.bbox.x + result.bbox.width / 2 - image.width / 2,
-        y: result.bbox.y + result.bbox.height / 2 - image.height / 2,
-      };
-      const worldCenter = F.util.transformPoint(new F.Point(localCenter.x, localCenter.y), matrix);
-
-      F.Image.fromURL(result.dataUrl, (img: any) => {
-        img.set({
-          left: worldCenter.x,
-          top: worldCenter.y,
-          originX: 'center',
-          originY: 'center',
-          angle: image.angle || 0,
-          scaleX: image.scaleX || 1,
-          scaleY: image.scaleY || 1,
-        });
-        img.__id = `img_${Date.now()}_${nextImageIdRef.current++}`;
-        canvas.add(img);
-        canvas.setActiveObject(img);
-        canvas.requestRenderAll();
-        pushHistory();
-      });
-    });
-  };
-
-  const restoreOriginalImage = () => {
-    const canvas = fabricCanvasRef.current;
-    const active = canvas?.getActiveObject();
-    if (!active || active.type !== 'image' || !active.__originalSrc) return;
-    active.setSrc(active.__originalSrc, () => {
-      active.dirty = true;
-      canvas.requestRenderAll();
-      bumpSel();
-      pushHistory();
-    });
-  };
-
-  const invertPixelSelection = () => {
-    const active = fabricCanvasRef.current?.getActiveObject();
-    const sel = pixelSelectionRef.current;
-    if (!active || active.type !== 'image' || !sel || sel.imageUid !== active.__uid) return;
-    setPixelSelectionMask(active.__uid, invertMask(sel.mask));
-  };
-
-  const deselectPixels = () => {
-    setPixelSelectionMask(null, null);
-  };
-
-  const featherPixelSelection = (radius: number) => {
-    const active = fabricCanvasRef.current?.getActiveObject();
-    const sel = pixelSelectionRef.current;
-    if (!active || active.type !== 'image' || !sel || sel.imageUid !== active.__uid) return;
-    setPixelSelectionMask(active.__uid, featherMask(sel.mask, radius));
-  };
 
   const applyPathAsMask = useCallback(() => {
     const canvas = fabricCanvasRef.current;
@@ -776,7 +641,6 @@ function EditorContent() {
       if (tool !== 'direct') clearAnchorHandles();
       clearShapeDraft();
       if (tool !== 'artboard') clearArtboardDraft();
-      if (!isPixelSelectTool(tool)) clearPixelDraft();
 
       if (!canvas) return;
 
@@ -812,18 +676,6 @@ function EditorContent() {
         canvas.forEachObject((o: any) => (o.selectable = false));
         canvas.defaultCursor = 'crosshair';
         canvas.hoverCursor = 'crosshair';
-      } else if (isPixelSelectTool(tool)) {
-        // These tools operate on whichever image is already the active
-        // object, so it's kept selected (not discarded) but stops
-        // intercepting mouse events — otherwise dragging on it would move
-        // the image instead of drawing a marquee/lasso.
-        canvas.selection = false;
-        canvas.forEachObject((o: any) => {
-          o.selectable = false;
-          o.evented = false;
-        });
-        canvas.defaultCursor = 'crosshair';
-        canvas.hoverCursor = 'crosshair';
       } else {
         canvas.selection = true;
         canvas.forEachObject((o: any) => {
@@ -842,7 +694,7 @@ function EditorContent() {
       }
       canvas.requestRenderAll();
     },
-    [clearPenDraft, clearAnchorHandles, clearShapeDraft, clearArtboardDraft, clearPixelDraft]
+    [clearPenDraft, clearAnchorHandles, clearShapeDraft, clearArtboardDraft]
   );
 
   // Ensures at least one locked, non-rotatable white artboard Rect exists.
@@ -1032,10 +884,6 @@ function EditorContent() {
           handleArtboardMouseDown(opt);
           return;
         }
-        if (isPixelSelectTool(activeToolRef.current)) {
-          handlePixelMouseDown(opt);
-          return;
-        }
         if (activeToolRef.current === 'pen') handlePenMouseDown(opt);
         else if (isDrawTool(activeToolRef.current)) handleShapeMouseDown(opt);
       });
@@ -1050,10 +898,6 @@ function EditorContent() {
         }
         if (activeToolRef.current === 'artboard') {
           handleArtboardMouseMove(opt);
-          return;
-        }
-        if (isPixelSelectTool(activeToolRef.current)) {
-          handlePixelMouseMove(opt);
           return;
         }
         if (activeToolRef.current === 'pen') handlePenMouseMove(opt);
@@ -1071,10 +915,6 @@ function EditorContent() {
         }
         if (activeToolRef.current === 'artboard') {
           handleArtboardMouseUp();
-          return;
-        }
-        if (isPixelSelectTool(activeToolRef.current)) {
-          handlePixelMouseUp(opt);
           return;
         }
         if (activeToolRef.current === 'pen') handlePenMouseUp();
@@ -1172,74 +1012,6 @@ function EditorContent() {
         ctx.setLineDash([]);
         ctx.restore();
 
-        // Pixel selection overlay — a tint of the actual selected pixels
-        // (or, mid-drag, the live marquee/lasso outline), projected through
-        // the target image's own transform matrix so it stays pinned to the
-        // image under pan/zoom/rotation. Drawn on the live upper context
-        // only, so — like everything else in this handler — it never
-        // touches PNG/JPG/PDF exports.
-        const sel = pixelSelectionRef.current;
-        const tint = pixelTintCanvasRef.current;
-        if (sel && tint) {
-          const img = canvas.getObjects().find((o: any) => o.type === 'image' && o.__uid === sel.imageUid);
-          if (img) {
-            const combined = F.util.multiplyTransformMatrices(vt, img.calcTransformMatrix());
-            ctx.save();
-            ctx.setTransform(combined[0], combined[1], combined[2], combined[3], combined[4], combined[5]);
-            ctx.drawImage(tint, -img.width / 2, -img.height / 2, img.width, img.height);
-            ctx.restore();
-          }
-        }
-
-        if (isPixelSelectTool(activeToolRef.current)) {
-          // Read the draft straight off the ref rather than the hook's
-          // React-state `liveRect` — this handler was registered once at
-          // canvas-mount time, so a state closure here would stay frozen
-          // at whatever it was on that first render.
-          const draft = pixelDraftRef.current;
-          const targetImg = draft.imageObj || canvas.getActiveObject();
-          if (targetImg && targetImg.type === 'image') {
-            const combined = F.util.multiplyTransformMatrices(vt, targetImg.calcTransformMatrix());
-            const project = (px: number, py: number) =>
-              F.util.transformPoint(new F.Point(px - targetImg.width / 2, py - targetImg.height / 2), combined);
-
-            if ((draft.tool === 'marquee-rect' || draft.tool === 'marquee-ellipse') && draft.points.length >= 2) {
-              const [a, b] = draft.points;
-              const x = Math.min(a.x, b.x);
-              const y = Math.min(a.y, b.y);
-              const w = Math.abs(b.x - a.x);
-              const h = Math.abs(b.y - a.y);
-              const corners = [
-                project(x, y),
-                project(x + w, y),
-                project(x + w, y + h),
-                project(x, y + h),
-              ];
-              ctx.save();
-              ctx.setLineDash([4, 3]);
-              ctx.strokeStyle = 'rgba(56,145,255,0.9)';
-              ctx.lineWidth = 1;
-              ctx.beginPath();
-              ctx.moveTo(corners[0].x, corners[0].y);
-              corners.slice(1).forEach((c: any) => ctx.lineTo(c.x, c.y));
-              ctx.closePath();
-              ctx.stroke();
-              ctx.restore();
-            } else if (draft.tool === 'lasso' && draft.points.length > 1) {
-              const pts = draft.points.map((p: any) => project(p.x, p.y));
-              ctx.save();
-              ctx.setLineDash([4, 3]);
-              ctx.strokeStyle = 'rgba(56,145,255,0.9)';
-              ctx.lineWidth = 1;
-              ctx.beginPath();
-              ctx.moveTo(pts[0].x, pts[0].y);
-              pts.slice(1).forEach((p: any) => ctx.lineTo(p.x, p.y));
-              ctx.stroke();
-              ctx.restore();
-            }
-          }
-        }
-
         // Smart-guide snap lines, live only while dragging an object near a
         // matching edge/center on another object or an artboard. Cleared on
         // mouse-up, so — like everything else here — purely a live-canvas
@@ -1307,6 +1079,7 @@ function EditorContent() {
           setUnit(pendingSnapshot.unit);
           setDesignName(pendingSnapshot.designName);
           setDesignId(pendingSnapshot.designId);
+          ensureFontsLoadedForCanvasJSON(pendingSnapshot.canvasJSON).then(() => canvas.requestRenderAll());
         });
       } else if (urlDesignId) {
         setDesignId(urlDesignId);
@@ -1331,6 +1104,7 @@ function EditorContent() {
                 canvas.renderAll();
                 refreshLayers();
                 seedInitialSnapshot();
+                ensureFontsLoadedForCanvasJSON(data.canvas_json).then(() => canvas.requestRenderAll());
               });
             }
             if (error) console.error('Failed to load design:', error);
@@ -1400,6 +1174,7 @@ function EditorContent() {
       });
       fabricCanvasRef.current.add(text);
       fabricCanvasRef.current.setActiveObject(text);
+      ensureFontLoaded(text.fontFamily || 'Arial').then(() => fabricCanvasRef.current?.requestRenderAll());
     });
   };
 
@@ -1522,6 +1297,23 @@ function EditorContent() {
   const closePhotoEditor = () => {
     setPhotoEditSession(null);
     setWorkspace('design');
+  };
+
+  // The workspace switcher is always visible (Main Design | Photo
+  // Editing), not just once a photo session already exists — switching
+  // to Photo Editing with none open yet starts one from the currently
+  // selected image, same as the "Edit Photo" button.
+  const handleWorkspaceSwitch = (target: EditorWorkspace) => {
+    if (target === 'photo' && !photoEditSession) {
+      const active = fabricCanvasRef.current?.getActiveObject();
+      if (active && active.type === 'image') {
+        openPhotoEditor();
+      } else {
+        alert('Select an image in Main Design first, then switch to Photo Editing.');
+      }
+      return;
+    }
+    setWorkspace(target);
   };
 
   // Bakes the Photo Editor's result back into the SAME image object on
@@ -2046,6 +1838,11 @@ function EditorContent() {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // While the Photo Editor workspace is showing, its own keyboard
+      // handling owns the keyboard — without this, e.g. Delete/Ctrl+Z
+      // would also fire against the (hidden) Main Design canvas at the
+      // same time, silently mutating a document the user can't see.
+      if (workspaceRef.current !== 'design') return;
       const canvas = fabricCanvasRef.current;
       if (!canvas) return;
 
@@ -2089,13 +1886,6 @@ function EditorContent() {
         return;
       }
 
-      if (canUseToolShortcuts && isPixelSelectTool(activeToolRef.current) && e.key === 'Escape') {
-        e.preventDefault();
-        clearPixelDraft();
-        deselectPixels();
-        return;
-      }
-
       if (canUseToolShortcuts && e.shiftKey && e.key === 'Enter') { e.preventDefault(); applyPathAsMask(); return; }
 
       if (isMeta && e.key.toLowerCase() === 'z' && !e.shiftKey) { e.preventDefault(); undo(); return; }
@@ -2127,11 +1917,6 @@ function EditorContent() {
       if (isMeta && e.key.toLowerCase() === 'v' && canUseToolShortcuts) { e.preventDefault(); pasteClipboard(); return; }
       if (isMeta && e.key.toLowerCase() === 'l' && canUseToolShortcuts) { e.preventDefault(); active && toggleLock(active); return; }
       if (isMeta && e.key.toLowerCase() === 'h' && canUseToolShortcuts) { e.preventDefault(); active && toggleVisible(active); return; }
-      if ((e.key === 'Delete' || e.key === 'Backspace') && canUseToolShortcuts && isPixelSelectTool(activeToolRef.current)) {
-        e.preventDefault();
-        deleteSelectedPixels();
-        return;
-      }
       if ((e.key === 'Delete' || e.key === 'Backspace') && canUseToolShortcuts && activeToolRef.current !== 'pen' && !isDrawTool(activeToolRef.current)) {
         e.preventDefault();
         deleteSelected();
@@ -2298,7 +2083,16 @@ function EditorContent() {
     thenDo();
   };
 
-  const startNewDesign = () => withDesignLimitCheck(() => router.push('/create'));
+  // New Design routes through the existing /create flow — a real page
+  // navigation away from /editor and back, which would otherwise unmount
+  // this whole component and wipe every other open tab. Persisting the
+  // session right before leaving is what lets them survive that round
+  // trip; see the mount effect above and lib/editor/tabSession.ts.
+  const startNewDesign = () =>
+    withDesignLimitCheck(() => {
+      persistTabSession();
+      router.push('/create');
+    });
 
   const saveDesignAs = () => {
     withDesignLimitCheck(() => {
@@ -2327,6 +2121,38 @@ function EditorContent() {
       vpt: canvas.viewportTransform ? [...canvas.viewportTransform] : null,
     });
   };
+
+  // Writes the whole open-tab session — every tab's frozen snapshot, plus
+  // the active tab's CURRENT live state — to sessionStorage. This is what
+  // lets other open tabs survive a real page navigation (New Design's
+  // round trip through /create) instead of getting silently wiped when
+  // this component unmounts. See lib/editor/tabSession.ts.
+  const persistTabSession = (tabsOverride?: EditorTabInfo[]) => {
+    snapshotCurrentTab();
+    saveTabSession({
+      tabs: (tabsOverride || tabs).map((t) => ({
+        id: t.id,
+        designId: t.designId,
+        name: t.name,
+        width: t.width,
+        height: t.height,
+        dirty: t.dirty,
+      })),
+      activeTabId: activeTabIdRef.current,
+      snapshots: Object.fromEntries(tabSnapshotsRef.current),
+    });
+  };
+
+  // Best-effort safety net: also persists on tab close/refresh, so a
+  // manual reload doesn't lose other open tabs either (the explicit call
+  // in startNewDesign is what fixes the actual reported bug — a real
+  // in-app navigation to /create and back).
+  useEffect(() => {
+    const handler = () => persistTabSession();
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tabs]);
 
   // Swaps the live canvas over to `tab`. If it was open before (a
   // snapshot exists), that snapshot is restored verbatim; if it's a
@@ -2359,34 +2185,68 @@ function EditorContent() {
     );
   };
 
-  // Closes a tab, confirming first if it has unsaved edits. Closing the
-  // last open tab leaves the editor entirely (back to the dashboard) —
-  // there's always at least one document open otherwise.
-  const closeTab = (id: string, e?: React.MouseEvent) => {
-    e?.stopPropagation();
-    const tab = tabs.find((t) => t.id === id);
-    if (!tab) return;
-    if (tab.dirty && !window.confirm(`"${tab.name || 'Untitled Design'}" has unsaved changes. Close without saving?`)) return;
+  // Closes a tab. If it has unsaved edits, the user is asked what to do
+  // with them (see closeConfirm/UnsavedChangesDialog below) rather than
+  // just discarding or auto-saving. Closing the last open tab leaves the
+  // editor entirely (back to the dashboard) — there's always at least
+  // one document open otherwise.
+  const [closeConfirm, setCloseConfirm] = useState<{ id: string; name: string } | null>(null);
 
+  const finishCloseTab = (id: string) => {
+    const tabList = tabs;
     tabSnapshotsRef.current.delete(id);
-    const remaining = tabs.filter((t) => t.id !== id);
+    const remaining = tabList.filter((t) => t.id !== id);
 
     if (id !== activeTabIdRef.current) {
       setTabs(remaining);
+      persistTabSession(remaining);
       return;
     }
     if (remaining.length === 0) {
+      clearTabSession();
       router.push('/dashboard');
       return;
     }
-    const idx = tabs.findIndex((t) => t.id === id);
+    const idx = tabList.findIndex((t) => t.id === id);
     const next = remaining[Math.max(0, idx - 1)] || remaining[0];
     setTabs(remaining);
+    persistTabSession(remaining);
     pendingSnapshotRef.current = tabSnapshotsRef.current.get(next.id) || null;
     setActiveTabId(next.id);
     const query = next.designId ? `designId=${next.designId}&w=${next.width}&h=${next.height}` : `w=${next.width}&h=${next.height}`;
     router.replace(`/editor?${query}`, { scroll: false });
   };
+
+  const closeTab = (id: string, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    const tab = tabs.find((t) => t.id === id);
+    if (!tab) return;
+    if (!tab.dirty) {
+      finishCloseTab(id);
+      return;
+    }
+    // The Save option in the confirm dialog below always saves whatever
+    // is currently on the live canvas, so the tab being closed has to be
+    // the active one before that dialog can offer it.
+    if (id !== activeTabIdRef.current) activateTab(tab);
+    setCloseConfirm({ id, name: tab.name || 'Untitled Design' });
+  };
+
+  const handleCloseConfirmSave = () => {
+    if (!closeConfirm) return;
+    const id = closeConfirm.id;
+    Promise.resolve(saveDesign()).then(() => {
+      setCloseConfirm(null);
+      finishCloseTab(id);
+    });
+  };
+  const handleCloseConfirmDontSave = () => {
+    if (!closeConfirm) return;
+    const id = closeConfirm.id;
+    setCloseConfirm(null);
+    finishCloseTab(id);
+  };
+  const handleCloseConfirmCancel = () => setCloseConfirm(null);
 
   const downloadFile = (dataUrl: string, filename: string) => {
     const link = document.createElement('a');
@@ -2560,22 +2420,42 @@ function EditorContent() {
   // order they're listed in the Artboards panel) as one multi-page PDF —
   // e.g. "3 to 5" of a 10-artboard document — instead of forcing an
   // all-or-one choice between a single artboard and the whole document.
-  const exportArtboardRangePDF = async (fromIndex: number, toIndex: number) => {
+  // Print Setup's own "Export page range" control — this used to export
+  // each page at its raw artboard bounds only, silently ignoring
+  // whatever bleed/crop-mark scope was selected right above it in the
+  // same panel. Now applies that scope's real getExportRect/marks to
+  // EVERY page in the range, the same way the main Export dialog's
+  // runExport does, so bleed and marks actually apply across a
+  // multi-page Print Setup export instead of only to a single artboard.
+  const exportArtboardRangePDF = async (fromIndex: number, toIndex: number, scope: ExportScope = 'artboard') => {
     if (artboards.length === 0) return;
     const lo = Math.max(1, Math.min(fromIndex, toIndex));
     const hi = Math.min(artboards.length, Math.max(fromIndex, toIndex));
     if (lo > hi) return;
     const list = artboards.slice(lo - 1, hi);
+    const canvas = fabricCanvasRef.current;
     setExporting(true);
     try {
       const [{ jsPDF }, mod] = await Promise.all([import('jspdf'), import('fabric')]);
-      const first = list[0];
+      const F = mod.fabric;
+      const pages = list.map((ab) => ({ ab, rect: getExportRect(ab, ab.print, scope) }));
+      const first = pages[0];
       const pdf = new jsPDF({
-        orientation: first.width > first.height ? 'landscape' : 'portrait',
+        orientation: first.rect.width > first.rect.height ? 'landscape' : 'portrait',
         unit: 'pt',
-        format: [toPt(first.width), toPt(first.height)],
+        format: [toPt(first.rect.width), toPt(first.rect.height)],
       });
-      await exportArtboardsToPDF(pdf, fabricCanvasRef.current, mod.fabric, list);
+
+      suppressHistoryRef.current = true;
+      for (let i = 0; i < pages.length; i++) {
+        const { ab, rect } = pages[i];
+        if (i > 0) pdf.addPage([toPt(rect.width), toPt(rect.height)], rect.width > rect.height ? 'landscape' : 'portrait');
+        const marks = buildAndInsertMarks(ab, scope);
+        await exportArtboardsToPDF(pdf, canvas, F, [{ id: ab.id, x: rect.x, y: rect.y, width: rect.width, height: rect.height }]);
+        removeTemporaryMarks(marks);
+      }
+      suppressHistoryRef.current = false;
+
       const rangeLabel = lo === hi ? `page ${lo}` : `pages ${lo}-${hi}`;
       pdf.save(`${designName || 'design'} (${rangeLabel}).pdf`);
     } catch (err) {
@@ -2898,7 +2778,7 @@ function EditorContent() {
           className="text-sm border rounded px-2 py-1 w-48 text-center"
         />
 
-        {photoEditSession && <WorkspaceSwitcher workspace={workspace} onSwitch={setWorkspace} />}
+        <WorkspaceSwitcher workspace={workspace} onSwitch={handleWorkspaceSwitch} />
 
         <div className="flex items-center gap-2">
           <button onClick={undo} disabled={!canUndo} title="Undo (Ctrl/Cmd+Z)" className="px-2 py-1 border rounded disabled:opacity-30">↶ Undo</button>
@@ -2954,6 +2834,16 @@ function EditorContent() {
           openDesignIds={tabs.map((t) => t.designId).filter((id): id is string => !!id)}
           onClose={() => setShowOpenDialog(false)}
           onPick={openDesignAsTab}
+        />
+      )}
+
+      {closeConfirm && (
+        <UnsavedChangesDialog
+          designName={closeConfirm.name}
+          saving={saving}
+          onSave={handleCloseConfirmSave}
+          onDontSave={handleCloseConfirmDontSave}
+          onCancel={handleCloseConfirmCancel}
         />
       )}
 
@@ -3016,19 +2906,6 @@ function EditorContent() {
                 gradAngleRef={gradAngleRef}
                 pushHistory={pushHistory}
                 layerLabel={layerLabel}
-                pixelTolerance={magicWandTolerance}
-                onPixelToleranceChange={setMagicWandTolerance}
-                pixelContiguous={magicWandContiguous}
-                onPixelContiguousChange={setMagicWandContiguous}
-                hasPixelSelection={hasPixelSelection}
-                hasOriginalBackup={hasOriginalBackup}
-                onInvertPixelSelection={invertPixelSelection}
-                onDeselectPixels={deselectPixels}
-                onFeatherPixelSelection={featherPixelSelection}
-                onDeleteSelectedPixels={deleteSelectedPixels}
-                onApplyPixelSelectionAsMask={applyPixelSelectionAsMask}
-                onExtractPixelSelectionToLayer={extractPixelSelectionToLayer}
-                onRestoreOriginalImage={restoreOriginalImage}
                 onReplaceImage={replaceSelectedImage}
                 onEditPhoto={openPhotoEditor}
               />
@@ -3087,6 +2964,7 @@ function EditorContent() {
       {photoEditSession && (
         <div className="flex flex-1 overflow-hidden" style={{ display: workspace === 'photo' ? 'flex' : 'none' }}>
           <PhotoEditorWorkspace
+            active={workspace === 'photo'}
             sourceDataUrl={photoEditSession.sourceDataUrl}
             initialAdjustments={photoEditSession.initialAdjustments}
             initialCropRect={photoEditSession.initialCropRect}

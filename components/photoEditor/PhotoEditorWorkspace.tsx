@@ -16,11 +16,22 @@ import {
   maskToTintCanvas,
 } from '@/lib/editor/pixelSelection';
 import { usePixelSelectionTool, getImagePixelCanvas } from '@/hooks/usePixelSelectionTool';
+import { usePenTool } from '@/hooks/usePenTool';
+import { useDirectSelection } from '@/hooks/useDirectSelection';
 import {
   PhotoAdjustments,
   DEFAULT_ADJUSTMENTS,
   applyAdjustments,
 } from '@/lib/editor/photoFilters';
+import {
+  paintColorInMask,
+  dodgeBurnInMask,
+  applyLevels,
+  applyGradientOverlay,
+  pickColorAt,
+  LevelsSettings,
+  DEFAULT_LEVELS,
+} from '@/lib/editor/photoBrush';
 
 export interface CropRect {
   x: number;
@@ -36,6 +47,7 @@ export interface PhotoEditResult {
 }
 
 interface Props {
+  active: boolean;
   sourceDataUrl: string;
   initialAdjustments: PhotoAdjustments;
   initialCropRect: CropRect | null;
@@ -43,7 +55,24 @@ interface Props {
   onCancel: () => void;
 }
 
-type PhotoTool = 'select' | 'crop' | 'marquee-rect' | 'marquee-ellipse' | 'lasso' | 'magic-wand' | 'eraser';
+type PhotoTool =
+  | 'select'
+  | 'crop'
+  | 'pen'
+  | 'direct'
+  | 'marquee-rect'
+  | 'marquee-ellipse'
+  | 'lasso'
+  | 'magic-wand'
+  | 'eraser'
+  | 'brush'
+  | 'dodge'
+  | 'burn'
+  | 'eyedropper'
+  | 'gradient'
+  | 'levels';
+
+const PAINT_TOOLS: PhotoTool[] = ['eraser', 'brush', 'dodge', 'burn'];
 
 const MAX_LOCAL_HISTORY = 30;
 
@@ -64,7 +93,7 @@ function cropToCanvas(source: CanvasImageSource, sw: number, sh: number, rect: C
 // back a finished data URL to swap into the target image layer, the
 // same "update in place, preserve frame" pattern replaceSelectedImage
 // already uses for Replace Image.
-export function PhotoEditorWorkspace({ sourceDataUrl, initialAdjustments, initialCropRect, onApply, onCancel }: Props) {
+export function PhotoEditorWorkspace({ active, sourceDataUrl, initialAdjustments, initialCropRect, onApply, onCancel }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasElRef = useRef<HTMLCanvasElement>(null);
   const fabricCanvasRef = useRef<any>(null);
@@ -75,6 +104,18 @@ export function PhotoEditorWorkspace({ sourceDataUrl, initialAdjustments, initia
   const cropRectRef = useRef<CropRect>({ x: 0, y: 0, width: 1, height: 1 });
   const viewScaleRef = useRef(1);
   const cropObjRef = useRef<any>(null);
+
+  // Vector path mask: a Fabric clipPath applied to the image, built from
+  // a path drawn with the Pen tool — real, non-destructive masking
+  // (toggle/invert/remove all just change what's rendered, no pixel data
+  // is touched) exactly like the main editor's own "Apply Path as Mask",
+  // just scoped to this single image.
+  const maskPathRef = useRef<any>(null);
+  const [hasMask, setHasMask] = useState(false);
+  const [maskEnabled, setMaskEnabled] = useState(true);
+  const [maskInverted, setMaskInverted] = useState(false);
+  const lastPathRef = useRef<any>(null);
+  const [hasVectorPath, setHasVectorPath] = useState(false);
 
   const [ready, setReady] = useState(false);
   const [activeTool, setActiveTool] = useState<PhotoTool>('select');
@@ -100,13 +141,26 @@ export function PhotoEditorWorkspace({ sourceDataUrl, initialAdjustments, initia
     contiguousRef.current = contiguous;
   }, [contiguous]);
 
-  const [eraserSize, setEraserSize] = useState(40);
-  const eraserSizeRef = useRef(40);
+  // Shared by every brush-like tool (eraser/brush/dodge/burn): brush
+  // radius, plus the running mask a stroke paints into before its
+  // operation (clear/paint-color/lighten/darken) bakes once on mouse-up.
+  const [brushSize, setBrushSize] = useState(40);
+  const brushSizeRef = useRef(40);
   useEffect(() => {
-    eraserSizeRef.current = eraserSize;
-  }, [eraserSize]);
-  const eraserDraftRef = useRef<PixelMask | null>(null);
-  const eraserPaintingRef = useRef(false);
+    brushSizeRef.current = brushSize;
+  }, [brushSize]);
+  const paintDraftRef = useRef<PixelMask | null>(null);
+  const paintingRef = useRef(false);
+
+  const [brushColor, setBrushColor] = useState('#ff2d55');
+  const [dodgeBurnStrength, setDodgeBurnStrength] = useState(0.35);
+
+  const [gradientColor1, setGradientColor1] = useState('#000000');
+  const [gradientColor2, setGradientColor2] = useState('#ffffff');
+  const [gradientOpacity, setGradientOpacity] = useState(0.5);
+  const gradientDraftRef = useRef<{ start: { x: number; y: number }; line: any } | null>(null);
+
+  const [levels, setLevels] = useState<LevelsSettings>(DEFAULT_LEVELS);
 
   const [selectionMask, setSelectionMask] = useState<PixelMask | null>(null);
   const selectionMaskRef = useRef<PixelMask | null>(null);
@@ -274,7 +328,7 @@ export function PhotoEditorWorkspace({ sourceDataUrl, initialAdjustments, initia
   };
 
   // ---- Adjustments (live, non-destructive until Apply) ----
-  const setAdjustment = (key: keyof PhotoAdjustments, value: number) => {
+  const setAdjustment = (key: keyof PhotoAdjustments, value: number | boolean) => {
     const next = { ...adjustmentsRef.current, [key]: value };
     setAdjustments(next);
     const img = imageRef.current;
@@ -363,6 +417,15 @@ export function PhotoEditorWorkspace({ sourceDataUrl, initialAdjustments, initia
 
     canvas.remove(rect);
     cropObjRef.current = null;
+    // A mask's clip region is fixed in absolute canvas coordinates from
+    // when it was created — cropping repositions/rescales the image
+    // under it (via fitToView below), which would leave the mask visibly
+    // misaligned. Rather than render something silently wrong, clear it.
+    if (img.clipPath) {
+      img.clipPath = null;
+      maskPathRef.current = null;
+      setHasMask(false);
+    }
     img.setSrc(dataUrl, () => {
       applyAdjustments(img, F, adjustmentsRef.current);
       fitToView();
@@ -389,6 +452,98 @@ export function PhotoEditorWorkspace({ sourceDataUrl, initialAdjustments, initia
   });
 
   const isSelectTool = (t: PhotoTool) => t === 'marquee-rect' || t === 'marquee-ellipse' || t === 'lasso' || t === 'magic-wand';
+
+  // ---- Pen tool + Direct Selection (anchor editing), reused verbatim
+  // from the main editor's own hooks — real bezier path drawing/editing,
+  // not a simplified stand-in. A finished path becomes selectable and
+  // can be used to build a real mask (see maskPathRef below). ----
+  const { clearDraft: clearPenDraft, finishPath: finishPenPath, handleMouseDown: handlePenMouseDown, handleMouseMove: handlePenMouseMove, handleMouseUp: handlePenMouseUp } =
+    usePenTool({
+      fabricCanvasRef,
+      onPathFinished: (pathObj) => {
+        const canvas = fabricCanvasRef.current;
+        pathObj.set({ selectable: true, evented: true, stroke: '#3891ff', strokeWidth: 1.5, fill: '' });
+        canvas.add(pathObj);
+        canvas.setActiveObject(pathObj);
+        lastPathRef.current = pathObj;
+        setHasVectorPath(true);
+        canvas.requestRenderAll();
+        setActiveTool('direct');
+        renderHandles(pathObj);
+      },
+    });
+
+  const { clearHandles, renderHandles, deleteActiveAnchor } = useDirectSelection({
+    fabricCanvasRef,
+    onAnchorMoved: () => {},
+  });
+
+  const handleDirectClick = (opt: any) => {
+    const canvas = fabricCanvasRef.current;
+    const target = canvas.findTarget ? canvas.findTarget(opt.e, false) : null;
+    if (target && target.isVectorPath) {
+      lastPathRef.current = target;
+      setHasVectorPath(true);
+      canvas.setActiveObject(target);
+      renderHandles(target);
+    } else if (!target || !target.__isAnchorHandle) {
+      clearHandles();
+    }
+  };
+
+  // ---- Real, non-destructive masking: clips the image to the last
+  // drawn/selected vector path. This never touches pixel data (so it
+  // isn't part of the crop/pixel-op undo stack above) — toggling,
+  // inverting or removing it is instant and fully reversible.
+  const createMaskFromPath = () => {
+    const canvas = fabricCanvasRef.current;
+    const img = imageRef.current;
+    const path = lastPathRef.current;
+    if (!canvas || !img || !path) return;
+    clearHandles();
+    path.clone((clip: any) => {
+      clip.set({ absolutePositioned: true, inverted: false });
+      img.clipPath = clip;
+      maskPathRef.current = clip;
+      setHasMask(true);
+      setMaskEnabled(true);
+      setMaskInverted(false);
+      canvas.remove(path);
+      lastPathRef.current = null;
+      setHasVectorPath(false);
+      canvas.requestRenderAll();
+    });
+  };
+
+  const toggleMaskEnabled = () => {
+    const img = imageRef.current;
+    const canvas = fabricCanvasRef.current;
+    if (!img || !maskPathRef.current) return;
+    const next = !maskEnabled;
+    img.clipPath = next ? maskPathRef.current : null;
+    setMaskEnabled(next);
+    canvas.requestRenderAll();
+  };
+
+  const toggleMaskInverted = () => {
+    const img = imageRef.current;
+    const canvas = fabricCanvasRef.current;
+    if (!img || !maskPathRef.current) return;
+    const next = !maskInverted;
+    maskPathRef.current.inverted = next;
+    setMaskInverted(next);
+    if (maskEnabled) canvas.requestRenderAll();
+  };
+
+  const removeMask = () => {
+    const img = imageRef.current;
+    const canvas = fabricCanvasRef.current;
+    if (!img) return;
+    img.clipPath = null;
+    maskPathRef.current = null;
+    setHasMask(false);
+    canvas.requestRenderAll();
+  };
 
   const bakeAndPush = (dataUrl: string) => {
     const canvas = fabricCanvasRef.current;
@@ -430,55 +585,137 @@ export function PhotoEditorWorkspace({ sourceDataUrl, initialAdjustments, initia
     renderTint();
   };
 
-  // ---- Eraser (brush of circular dabs unioned into one mask, applied
-  // once on mouse-up — same delete-pixel mechanics as the selection
-  // tools, just fed by a moving brush instead of a drag shape). ----
-  const eraserDab = (local: { x: number; y: number }) => {
+  // ---- Brush-like tools (eraser/brush/dodge/burn): circular dabs
+  // unioned into one running mask as the stroke moves, with the actual
+  // pixel operation (clear/paint-color/lighten/darken) applied once on
+  // mouse-up — same mechanics as the selection tools, just fed by a
+  // moving brush instead of a drag shape. ----
+  const paintDab = (local: { x: number; y: number }) => {
     const img = imageRef.current;
     if (!img) return;
-    const r = eraserSizeRef.current / 2;
+    const r = brushSizeRef.current / 2;
     const dab = ellipseMask(img.width, img.height, local.x, local.y, r, r);
-    eraserDraftRef.current = eraserDraftRef.current ? combineMasks(eraserDraftRef.current, dab, 'add') : dab;
-    setSelectionMask(eraserDraftRef.current);
+    paintDraftRef.current = paintDraftRef.current ? combineMasks(paintDraftRef.current, dab, 'add') : dab;
+    setSelectionMask(paintDraftRef.current);
     renderTint();
+  };
+
+  const bakePaintStroke = (tool: PhotoTool) => {
+    const mask = paintDraftRef.current;
+    const img = imageRef.current;
+    if (!mask || !maskHasSelection(mask) || !img) return;
+    const pixelCanvas = getImagePixelCanvas(img);
+    if (tool === 'eraser') bakeAndPush(clearMaskedPixels(pixelCanvas, mask));
+    else if (tool === 'brush') bakeAndPush(paintColorInMask(pixelCanvas, mask, brushColor));
+    else if (tool === 'dodge') bakeAndPush(dodgeBurnInMask(pixelCanvas, mask, dodgeBurnStrength));
+    else if (tool === 'burn') bakeAndPush(dodgeBurnInMask(pixelCanvas, mask, -dodgeBurnStrength));
+  };
+
+  // ---- Gradient: click-drag draws a live preview line; releasing bakes
+  // a real two-stop linear gradient along it. ----
+  const startGradientDraft = (local: { x: number; y: number }, canvasPoint: { x: number; y: number }) => {
+    const F = fabricModRef.current;
+    const canvas = fabricCanvasRef.current;
+    const line = new F.Line([canvasPoint.x, canvasPoint.y, canvasPoint.x, canvasPoint.y], {
+      stroke: '#3891ff',
+      strokeWidth: 2,
+      strokeDashArray: [6, 4],
+      selectable: false,
+      evented: false,
+    });
+    canvas.add(line);
+    gradientDraftRef.current = { start: local, line };
   };
 
   const handleCanvasMouseDown = (opt: any) => {
     const tool = activeToolRef.current;
-    if (tool === 'eraser') {
-      eraserPaintingRef.current = true;
-      eraserDraftRef.current = null;
-      const canvas = fabricCanvasRef.current;
+    const canvas = fabricCanvasRef.current;
+    if (PAINT_TOOLS.includes(tool)) {
+      paintingRef.current = true;
+      paintDraftRef.current = null;
       const pointer = canvas.getPointer(opt.e);
-      eraserDab(canvasToImageLocal(pointer));
+      paintDab(canvasToImageLocal(pointer));
+      return;
+    }
+    if (tool === 'eyedropper') {
+      const img = imageRef.current;
+      if (!img) return;
+      const pointer = canvas.getPointer(opt.e);
+      const local = canvasToImageLocal(pointer);
+      const picked = pickColorAt(getImagePixelCanvas(img), local.x, local.y);
+      if (picked) setBrushColor(picked);
+      return;
+    }
+    if (tool === 'gradient') {
+      const pointer = canvas.getPointer(opt.e);
+      startGradientDraft(canvasToImageLocal(pointer), pointer);
+      return;
+    }
+    if (tool === 'pen') {
+      handlePenMouseDown(opt);
+      return;
+    }
+    if (tool === 'direct') {
+      handleDirectClick(opt);
       return;
     }
     if (isSelectTool(tool)) selDown(opt);
   };
   const handleCanvasMouseMove = (opt: any) => {
     const tool = activeToolRef.current;
-    if (tool === 'eraser' && eraserPaintingRef.current) {
-      const canvas = fabricCanvasRef.current;
+    const canvas = fabricCanvasRef.current;
+    if (PAINT_TOOLS.includes(tool) && paintingRef.current) {
       const pointer = canvas.getPointer(opt.e);
-      eraserDab(canvasToImageLocal(pointer));
+      paintDab(canvasToImageLocal(pointer));
+      return;
+    }
+    if (tool === 'gradient' && gradientDraftRef.current) {
+      const pointer = canvas.getPointer(opt.e);
+      gradientDraftRef.current.line.set({ x2: pointer.x, y2: pointer.y });
+      canvas.requestRenderAll();
+      return;
+    }
+    if (tool === 'pen') {
+      handlePenMouseMove(opt);
       return;
     }
     if (isSelectTool(tool)) selMove(opt);
   };
   const handleCanvasMouseUp = (opt: any) => {
     const tool = activeToolRef.current;
-    if (tool === 'eraser') {
-      eraserPaintingRef.current = false;
-      const mask = eraserDraftRef.current;
-      const img = imageRef.current;
-      if (mask && maskHasSelection(mask) && img) {
-        bakeAndPush(clearMaskedPixels(getImagePixelCanvas(img), mask));
-      }
-      eraserDraftRef.current = null;
+    const canvas = fabricCanvasRef.current;
+    if (PAINT_TOOLS.includes(tool)) {
+      paintingRef.current = false;
+      bakePaintStroke(tool);
+      paintDraftRef.current = null;
       setSelectionMask(null);
       return;
     }
+    if (tool === 'gradient' && gradientDraftRef.current) {
+      const { start, line } = gradientDraftRef.current;
+      const pointer = canvas.getPointer(opt.e);
+      const end = canvasToImageLocal(pointer);
+      canvas.remove(line);
+      gradientDraftRef.current = null;
+      const img = imageRef.current;
+      if (img && Math.hypot(end.x - start.x, end.y - start.y) > 2) {
+        bakeAndPush(applyGradientOverlay(getImagePixelCanvas(img), start.x, start.y, end.x, end.y, gradientColor1, gradientColor2, gradientOpacity));
+      } else {
+        canvas.requestRenderAll();
+      }
+      return;
+    }
+    if (tool === 'pen') {
+      handlePenMouseUp();
+      return;
+    }
     if (isSelectTool(tool)) selUp(opt);
+  };
+
+  const applyLevelsNow = () => {
+    const img = imageRef.current;
+    if (!img) return;
+    bakeAndPush(applyLevels(getImagePixelCanvas(img), levels));
   };
 
   useEffect(() => {
@@ -494,6 +731,56 @@ export function PhotoEditorWorkspace({ sourceDataUrl, initialAdjustments, initia
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready]);
+
+  // Pen/Direct Selection need clicks to reach the canvas itself (to place
+  // an anchor, or hit-test a path/handle) rather than being swallowed by
+  // the image becoming the active object first.
+  useEffect(() => {
+    const canvas = fabricCanvasRef.current;
+    const img = imageRef.current;
+    if (!canvas || !img) return;
+    if (activeTool === 'pen' || activeTool === 'direct') {
+      canvas.discardActiveObject();
+      canvas.selection = false;
+      img.evented = false;
+    } else {
+      img.evented = true;
+      canvas.selection = false; // image is the only real object; nothing to marquee-select
+      if (activeTool !== 'crop') canvas.setActiveObject(img);
+    }
+    if (activeTool !== 'pen') clearPenDraft();
+    if (activeTool !== 'direct') clearHandles();
+    canvas.requestRenderAll();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTool]);
+
+  // Keyboard handling only while this workspace is the one actually
+  // showing — otherwise Enter/Escape/Delete here would also fire while
+  // the user is looking at Main Design.
+  useEffect(() => {
+    if (!active) return;
+    const handler = (e: KeyboardEvent) => {
+      const isTypingInField = document.activeElement && ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName);
+      if (isTypingInField) return;
+      if (activeToolRef.current === 'pen') {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          finishPenPath(false);
+          return;
+        }
+        if (e.key === 'Escape') {
+          e.preventDefault();
+          clearPenDraft();
+          return;
+        }
+      }
+      if (activeToolRef.current === 'direct' && (e.key === 'Delete' || e.key === 'Backspace')) {
+        if (deleteActiveAnchor()) e.preventDefault();
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [active, finishPenPath, clearPenDraft, deleteActiveAnchor]);
 
   // ---- Background removal (heuristic): flood-fills from all 4 corners
   // by color similarity and clears the matched pixels. Not ML-based
@@ -530,6 +817,11 @@ export function PhotoEditorWorkspace({ sourceDataUrl, initialAdjustments, initia
     const dataUrl = cropToCanvas(pristine, pristine.naturalWidth, pristine.naturalHeight, fullRect).toDataURL('image/png');
     cropRectRef.current = fullRect;
     setAdjustments(DEFAULT_ADJUSTMENTS);
+    if (img.clipPath) {
+      img.clipPath = null;
+      maskPathRef.current = null;
+      setHasMask(false);
+    }
     img.setSrc(dataUrl, () => {
       applyAdjustments(img, F, DEFAULT_ADJUSTMENTS);
       fitToView();
@@ -556,11 +848,19 @@ export function PhotoEditorWorkspace({ sourceDataUrl, initialAdjustments, initia
   const toolButtons: { id: PhotoTool; label: string }[] = [
     { id: 'select', label: 'Select' },
     { id: 'crop', label: 'Crop' },
+    { id: 'pen', label: 'Pen' },
+    { id: 'direct', label: 'Direct Select' },
     { id: 'marquee-rect', label: 'Marquee' },
     { id: 'marquee-ellipse', label: 'Ellipse' },
     { id: 'lasso', label: 'Lasso' },
     { id: 'magic-wand', label: 'Magic Wand' },
     { id: 'eraser', label: 'Eraser' },
+    { id: 'brush', label: 'Brush' },
+    { id: 'dodge', label: 'Dodge' },
+    { id: 'burn', label: 'Burn' },
+    { id: 'eyedropper', label: 'Color Picker' },
+    { id: 'gradient', label: 'Gradient' },
+    { id: 'levels', label: 'Levels' },
   ];
 
   return (
@@ -606,25 +906,34 @@ export function PhotoEditorWorkspace({ sourceDataUrl, initialAdjustments, initia
             ['brightness', 'Brightness', -1, 1],
             ['contrast', 'Contrast', -1, 1],
             ['saturation', 'Saturation', -1, 1],
+            ['hue', 'Hue', -1, 1],
             ['blur', 'Blur', 0, 1],
             ['sharpen', 'Sharpen', 0, 1],
           ] as [keyof PhotoAdjustments, string, number, number][]).map(([key, label, min, max]) => (
             <div key={key} className="mb-2">
               <div className="flex justify-between text-[11px] text-gray-500 mb-0.5">
                 <span>{label}</span>
-                <span>{adjustments[key].toFixed(2)}</span>
+                <span>{(adjustments[key] as number).toFixed(2)}</span>
               </div>
               <input
                 type="range"
                 min={min}
                 max={max}
                 step={0.01}
-                value={adjustments[key]}
+                value={adjustments[key] as number}
                 onChange={(e) => setAdjustment(key, parseFloat(e.target.value))}
                 className="w-full"
               />
             </div>
           ))}
+          <label className="flex items-center gap-1.5 text-[11px] text-gray-600 mt-1">
+            <input
+              type="checkbox"
+              checked={adjustments.blackAndWhite}
+              onChange={(e) => setAdjustment('blackAndWhite', e.target.checked)}
+            />
+            Black &amp; White
+          </label>
         </div>
 
         {(isSelectTool(activeTool) || hasSelection) && (
@@ -654,16 +963,157 @@ export function PhotoEditorWorkspace({ sourceDataUrl, initialAdjustments, initia
           </div>
         )}
 
-        {activeTool === 'eraser' && (
+        {(activeTool === 'eraser' || activeTool === 'brush' || activeTool === 'dodge' || activeTool === 'burn') && (
           <div className="border-t pt-3">
-            <p className="font-semibold text-gray-700 text-xs uppercase tracking-wide mb-2">Eraser</p>
+            <p className="font-semibold text-gray-700 text-xs uppercase tracking-wide mb-2">
+              {activeTool === 'eraser' ? 'Eraser' : activeTool === 'brush' ? 'Brush' : activeTool === 'dodge' ? 'Dodge (lighten)' : 'Burn (darken)'}
+            </p>
             <div className="flex justify-between text-[11px] text-gray-500 mb-0.5">
               <span>Brush size</span>
-              <span>{eraserSize}px</span>
+              <span>{brushSize}px</span>
             </div>
-            <input type="range" min={4} max={200} value={eraserSize} onChange={(e) => setEraserSize(parseInt(e.target.value))} className="w-full" />
+            <input type="range" min={4} max={200} value={brushSize} onChange={(e) => setBrushSize(parseInt(e.target.value))} className="w-full mb-2" />
+            {activeTool === 'brush' && (
+              <div className="flex items-center gap-2">
+                <label className="text-[11px] text-gray-500">Color</label>
+                <input type="color" value={brushColor} onChange={(e) => setBrushColor(e.target.value)} className="w-8 h-6 border rounded" />
+              </div>
+            )}
+            {(activeTool === 'dodge' || activeTool === 'burn') && (
+              <>
+                <div className="flex justify-between text-[11px] text-gray-500 mb-0.5">
+                  <span>Strength</span>
+                  <span>{dodgeBurnStrength.toFixed(2)}</span>
+                </div>
+                <input
+                  type="range"
+                  min={0.05}
+                  max={1}
+                  step={0.05}
+                  value={dodgeBurnStrength}
+                  onChange={(e) => setDodgeBurnStrength(parseFloat(e.target.value))}
+                  className="w-full"
+                />
+              </>
+            )}
           </div>
         )}
+
+        {activeTool === 'eyedropper' && (
+          <div className="border-t pt-3">
+            <p className="font-semibold text-gray-700 text-xs uppercase tracking-wide mb-2">Color Picker</p>
+            <p className="text-[11px] text-gray-500 mb-2">Click anywhere on the image to pick its color — sets the Brush color.</p>
+            <div className="flex items-center gap-2">
+              <span className="w-8 h-6 border rounded" style={{ background: brushColor }} />
+              <span className="text-[11px] text-gray-600 font-mono">{brushColor}</span>
+            </div>
+          </div>
+        )}
+
+        {activeTool === 'gradient' && (
+          <div className="border-t pt-3">
+            <p className="font-semibold text-gray-700 text-xs uppercase tracking-wide mb-2">Gradient</p>
+            <p className="text-[11px] text-gray-500 mb-2">Click and drag across the image to draw a linear gradient.</p>
+            <div className="flex items-center gap-2 mb-2">
+              <label className="text-[11px] text-gray-500">From</label>
+              <input type="color" value={gradientColor1} onChange={(e) => setGradientColor1(e.target.value)} className="w-8 h-6 border rounded" />
+              <label className="text-[11px] text-gray-500">To</label>
+              <input type="color" value={gradientColor2} onChange={(e) => setGradientColor2(e.target.value)} className="w-8 h-6 border rounded" />
+            </div>
+            <div className="flex justify-between text-[11px] text-gray-500 mb-0.5">
+              <span>Opacity</span>
+              <span>{gradientOpacity.toFixed(2)}</span>
+            </div>
+            <input type="range" min={0} max={1} step={0.05} value={gradientOpacity} onChange={(e) => setGradientOpacity(parseFloat(e.target.value))} className="w-full" />
+          </div>
+        )}
+
+        {activeTool === 'levels' && (
+          <div className="border-t pt-3">
+            <p className="font-semibold text-gray-700 text-xs uppercase tracking-wide mb-2">Levels</p>
+            {([
+              ['inputBlack', 'Input black', 0, 254],
+              ['inputWhite', 'Input white', 1, 255],
+            ] as [keyof LevelsSettings, string, number, number][]).map(([key, label, min, max]) => (
+              <div key={key} className="mb-2">
+                <div className="flex justify-between text-[11px] text-gray-500 mb-0.5">
+                  <span>{label}</span>
+                  <span>{levels[key]}</span>
+                </div>
+                <input
+                  type="range"
+                  min={min}
+                  max={max}
+                  value={levels[key]}
+                  onChange={(e) => setLevels((prev) => ({ ...prev, [key]: parseInt(e.target.value) }))}
+                  className="w-full"
+                />
+              </div>
+            ))}
+            <div className="mb-2">
+              <div className="flex justify-between text-[11px] text-gray-500 mb-0.5">
+                <span>Gamma</span>
+                <span>{levels.gamma.toFixed(2)}</span>
+              </div>
+              <input
+                type="range"
+                min={0.1}
+                max={3}
+                step={0.05}
+                value={levels.gamma}
+                onChange={(e) => setLevels((prev) => ({ ...prev, gamma: parseFloat(e.target.value) }))}
+                className="w-full"
+              />
+            </div>
+            <div className="flex gap-1.5">
+              <button onClick={() => setLevels(DEFAULT_LEVELS)} className="flex-1 text-[11px] px-2 py-1.5 border rounded hover:bg-gray-50">Reset</button>
+              <button onClick={applyLevelsNow} className="flex-1 text-[11px] px-2 py-1.5 border rounded bg-gray-800 text-white hover:bg-gray-700">Apply</button>
+            </div>
+          </div>
+        )}
+
+        {(activeTool === 'pen' || activeTool === 'direct') && (
+          <div className="border-t pt-3">
+            <p className="font-semibold text-gray-700 text-xs uppercase tracking-wide mb-2">
+              {activeTool === 'pen' ? 'Pen' : 'Direct Selection'}
+            </p>
+            <p className="text-[11px] text-gray-500">
+              {activeTool === 'pen'
+                ? 'Click to place anchors, drag for curve handles. Enter finishes an open path; click the first anchor to close it. Esc cancels.'
+                : 'Drag an anchor to move it. Alt/Option-click toggles corner/smooth. Click a green square to add an anchor. Delete removes the selected anchor.'}
+            </p>
+          </div>
+        )}
+
+        <div className="border-t pt-3">
+          <p className="font-semibold text-gray-700 text-xs uppercase tracking-wide mb-2">Mask</p>
+          {!hasMask ? (
+            <>
+              <p className="text-[11px] text-gray-400 mb-2">
+                Draw a path with the Pen tool, then create a mask from it — a real, non-destructive clip that can be toggled, inverted or removed.
+              </p>
+              <button
+                onClick={createMaskFromPath}
+                disabled={!hasVectorPath}
+                className="w-full text-[11px] px-2 py-1.5 border rounded hover:bg-gray-50 disabled:opacity-40"
+              >
+                Create Mask from Path
+              </button>
+            </>
+          ) : (
+            <div className="grid grid-cols-2 gap-1.5">
+              <button onClick={toggleMaskEnabled} className="text-[11px] px-2 py-1 border rounded hover:bg-gray-50">
+                {maskEnabled ? 'Disable' : 'Enable'}
+              </button>
+              <button onClick={toggleMaskInverted} className="text-[11px] px-2 py-1 border rounded hover:bg-gray-50">
+                {maskInverted ? 'Un-invert' : 'Invert'}
+              </button>
+              <button onClick={removeMask} className="col-span-2 text-[11px] px-2 py-1 border border-red-200 text-red-600 rounded hover:bg-red-50">
+                Remove Mask
+              </button>
+            </div>
+          )}
+        </div>
 
         <div className="border-t pt-3">
           <p className="font-semibold text-gray-700 text-xs uppercase tracking-wide mb-2">Background Removal</p>
