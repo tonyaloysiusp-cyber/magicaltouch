@@ -45,6 +45,7 @@ interface Props {
   onExtractPixelSelectionToLayer: () => void;
   onRestoreOriginalImage: () => void;
   onReplaceImage: (file: File) => void;
+  onEditPhoto: () => void;
 }
 
 export function PropertiesPanel({
@@ -81,6 +82,7 @@ export function PropertiesPanel({
   onExtractPixelSelectionToLayer,
   onRestoreOriginalImage,
   onReplaceImage,
+  onEditPhoto,
 }: Props) {
   if (activeTool === 'pen') {
     return (
@@ -726,6 +728,17 @@ export function PropertiesPanel({
 
       {isImage && (
         <>
+          <button
+            disabled={isLocked}
+            onClick={onEditPhoto}
+            className="text-xs font-semibold border rounded py-1.5 hover:bg-gray-50 disabled:opacity-40 bg-gray-800 text-white hover:bg-gray-700"
+          >
+            Edit Photo
+          </button>
+          <p className="text-[10px] text-gray-400 -mt-2">
+            Opens the Photo Editor workspace for crop, adjustments, pixel selection/erase and
+            background removal — Apply syncs the result back into this exact layer.
+          </p>
           <label
             className={`flex items-center justify-center gap-1.5 text-xs font-semibold border rounded py-1.5 cursor-pointer hover:bg-gray-50 ${
               isLocked ? 'opacity-40 pointer-events-none' : ''
@@ -764,7 +777,6 @@ export function PropertiesPanel({
               Draw a closed path with the Pen tool, then apply it as a mask from the path's properties.
             </p>
           )}
-          <p className="text-[10px] text-gray-400">Crop and filters are coming in a future update.</p>
         </>
       )}
     </div>

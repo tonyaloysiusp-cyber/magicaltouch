@@ -59,6 +59,9 @@ import { BackBar } from '@/components/BackBar';
 import { Rulers } from '@/components/editor/Rulers';
 import { TabBar, EditorTabInfo } from '@/components/editor/TabBar';
 import { OpenDesignDialog, OpenableDesign } from '@/components/editor/OpenDesignDialog';
+import { WorkspaceSwitcher, EditorWorkspace } from '@/components/editor/WorkspaceSwitcher';
+import { PhotoEditorWorkspace, PhotoEditResult, CropRect } from '@/components/photoEditor/PhotoEditorWorkspace';
+import { PhotoAdjustments, DEFAULT_ADJUSTMENTS } from '@/lib/editor/photoFilters';
 
 function EditorContent() {
   const searchParams = useSearchParams();
@@ -258,6 +261,19 @@ function EditorContent() {
   const tabSnapshotsRef = useRef<Map<string, TabSnapshot>>(new Map());
   const pendingSnapshotRef = useRef<TabSnapshot | null>(null);
   const [showOpenDialog, setShowOpenDialog] = useState(false);
+
+  // Photo Editor workspace: a session exists once "Edit Photo" is used
+  // on a selected image, and stays mounted (just hidden) while toggling
+  // back to Main Design so in-progress crop/adjustments aren't lost —
+  // see the WorkspaceSwitcher render below.
+  interface PhotoEditSession {
+    targetUid: string;
+    sourceDataUrl: string;
+    initialAdjustments: PhotoAdjustments;
+    initialCropRect: CropRect | null;
+  }
+  const [workspace, setWorkspace] = useState<EditorWorkspace>('design');
+  const [photoEditSession, setPhotoEditSession] = useState<PhotoEditSession | null>(null);
 
   // Seeds the tab strip with whatever design the editor was opened on
   // (from the URL), exactly once. Its name is filled in below once the
@@ -1482,6 +1498,86 @@ function EditorContent() {
     reader.readAsDataURL(file);
   };
 
+  // Opens the Photo Editor workspace on the currently selected image. The
+  // FIRST time an image is edited this way, its current pixels become
+  // the permanent "pristine" source (__originalSrc, already used
+  // elsewhere for "Restore Original Image") so every future edit session
+  // re-derives from the same untouched bytes instead of compounding
+  // lossy re-encodes — the workspace itself reconstructs whatever crop/
+  // adjustments were saved from that pristine copy on open.
+  const openPhotoEditor = () => {
+    const canvas = fabricCanvasRef.current;
+    const active = canvas?.getActiveObject();
+    if (!active || active.type !== 'image') return;
+    if (!active.__originalSrc) active.__originalSrc = active.toDataURL({});
+    setPhotoEditSession({
+      targetUid: active.__uid,
+      sourceDataUrl: active.__originalSrc,
+      initialAdjustments: active.__photoEdits || DEFAULT_ADJUSTMENTS,
+      initialCropRect: active.__cropRect || null,
+    });
+    setWorkspace('photo');
+  };
+
+  const closePhotoEditor = () => {
+    setPhotoEditSession(null);
+    setWorkspace('design');
+  };
+
+  // Bakes the Photo Editor's result back into the SAME image object on
+  // the main canvas (matched by __uid, never recreated — same layer,
+  // same z-order, same artboard membership), following the exact frame-
+  // preserving pattern replaceSelectedImage uses: recompute one uniform
+  // cover-scale from the new pixel size, and rescale (not replace) any
+  // existing clipPath so the on-screen frame never moves.
+  const applyPhotoEdits = (result: PhotoEditResult) => {
+    const canvas = fabricCanvasRef.current;
+    const session = photoEditSession;
+    if (!canvas || !session) return;
+    const target = canvas.getObjects().find((o: any) => o.__uid === session.targetUid);
+    if (!target) {
+      closePhotoEditor();
+      return;
+    }
+
+    const frameW = (target.width || 1) * (target.scaleX || 1);
+    const frameH = (target.height || 1) * (target.scaleY || 1);
+    const prevScaleX = target.scaleX || 1;
+    const prevScaleY = target.scaleY || 1;
+
+    target.setSrc(result.dataUrl, () => {
+      const naturalW = target.width || 1;
+      const naturalH = target.height || 1;
+      const scale = Math.max(frameW / naturalW, frameH / naturalH);
+
+      if (target.clipPath) {
+        const ratioX = prevScaleX / scale;
+        const ratioY = prevScaleY / scale;
+        target.clipPath.set({
+          scaleX: (target.clipPath.scaleX || 1) * ratioX,
+          scaleY: (target.clipPath.scaleY || 1) * ratioY,
+        });
+      } else {
+        const F = (window as any).fabric;
+        target.clipPath = new F.Rect({
+          width: frameW / scale,
+          height: frameH / scale,
+          originX: 'center',
+          originY: 'center',
+        });
+      }
+
+      target.set({ scaleX: scale, scaleY: scale, dirty: true });
+      target.__photoEdits = result.adjustments;
+      target.__cropRect = result.cropRect;
+      target.setCoords();
+      canvas.requestRenderAll();
+      bumpSel();
+      pushHistory();
+      closePhotoEditor();
+    });
+  };
+
   const deleteSelected = () => {
     const canvas = fabricCanvasRef.current;
     const active = canvas.getActiveObject();
@@ -2094,6 +2190,8 @@ function EditorContent() {
       '__artboardId',
       '__print',
       '__originalSrc',
+      '__photoEdits',
+      '__cropRect',
     ]);
     // width/height stay as the dashboard/thumbnail-facing summary size —
     // the first artboard's current dimensions, not the URL params a brand
@@ -2800,6 +2898,8 @@ function EditorContent() {
           className="text-sm border rounded px-2 py-1 w-48 text-center"
         />
 
+        {photoEditSession && <WorkspaceSwitcher workspace={workspace} onSwitch={setWorkspace} />}
+
         <div className="flex items-center gap-2">
           <button onClick={undo} disabled={!canUndo} title="Undo (Ctrl/Cmd+Z)" className="px-2 py-1 border rounded disabled:opacity-30">↶ Undo</button>
           <button onClick={redo} disabled={!canRedo} title="Redo (Ctrl/Cmd+Shift+Z)" className="px-2 py-1 border rounded disabled:opacity-30">↷ Redo</button>
@@ -2857,7 +2957,7 @@ function EditorContent() {
         />
       )}
 
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden" style={{ display: workspace === 'design' ? 'flex' : 'none' }}>
         <Toolbar
           activeTool={activeTool}
           onSelectTool={setActiveTool}
@@ -2930,6 +3030,7 @@ function EditorContent() {
                 onExtractPixelSelectionToLayer={extractPixelSelectionToLayer}
                 onRestoreOriginalImage={restoreOriginalImage}
                 onReplaceImage={replaceSelectedImage}
+                onEditPhoto={openPhotoEditor}
               />
             </div>
           )}
@@ -2982,6 +3083,18 @@ function EditorContent() {
           )}
         </div>
       </div>
+
+      {photoEditSession && (
+        <div className="flex flex-1 overflow-hidden" style={{ display: workspace === 'photo' ? 'flex' : 'none' }}>
+          <PhotoEditorWorkspace
+            sourceDataUrl={photoEditSession.sourceDataUrl}
+            initialAdjustments={photoEditSession.initialAdjustments}
+            initialCropRect={photoEditSession.initialCropRect}
+            onApply={applyPhotoEdits}
+            onCancel={closePhotoEditor}
+          />
+        </div>
+      )}
 
       {liveDim && (
         <div style={{ position: 'fixed', left: liveDim.x + 16, top: liveDim.y + 16, pointerEvents: 'none' }} className="z-50 bg-black/80 text-white text-[11px] font-mono px-2 py-1 rounded shadow">
