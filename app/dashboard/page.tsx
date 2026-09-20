@@ -6,6 +6,9 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { MoreVertical, Pencil, Copy, Download, Trash2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { ProfileMenu } from '@/components/ProfileMenu';
+import { DesignLimitDialog } from '@/components/DesignLimitDialog';
+import { MAX_DESIGNS } from '@/lib/profile';
 
 interface Design {
   id: string;
@@ -23,7 +26,15 @@ export default function DashboardPage() {
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [showLimitWarning, setShowLimitWarning] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  const handleNewDesignClick = (e: React.MouseEvent) => {
+    if (designs.length >= MAX_DESIGNS) {
+      e.preventDefault();
+      setShowLimitWarning(true);
+    }
+  };
 
   const fetchDesigns = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -153,12 +164,16 @@ export default function DashboardPage() {
           </Link>
           <Link
             href="/create"
+            onClick={handleNewDesignClick}
             className="bg-brand-gradient text-white px-5 py-2 rounded-full text-sm font-semibold"
           >
             + New Design
           </Link>
+          <ProfileMenu />
         </div>
       </div>
+
+      {showLimitWarning && <DesignLimitDialog onCancel={() => setShowLimitWarning(false)} />}
 
       <h1 className="text-3xl font-bold text-gray-800">Welcome to your Dashboard</h1>
       <p className="mt-2 text-gray-500 mb-8">Your saved designs live here.</p>

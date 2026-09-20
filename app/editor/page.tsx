@@ -46,6 +46,9 @@ import { PropertiesPanel } from '@/components/editor/PropertiesPanel';
 import { LayersPanel } from '@/components/editor/LayersPanel';
 import { ArtboardsPanel } from '@/components/editor/ArtboardsPanel';
 import { ExportDialog, ExportSettings } from '@/components/editor/ExportDialog';
+import { DesignLimitDialog } from '@/components/DesignLimitDialog';
+import { ProfileMenu } from '@/components/ProfileMenu';
+import { MAX_DESIGNS, getDesignCount } from '@/lib/profile';
 import { PreflightModal } from '@/components/editor/PreflightModal';
 import { ShortcutsModal } from '@/components/editor/ShortcutsModal';
 import { RoadmapModal } from '@/components/editor/RoadmapModal';
@@ -85,6 +88,7 @@ function EditorContent() {
   const [designId, setDesignId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [showExportDialog, setShowExportDialog] = useState(false);
+  const [showDesignLimitDialog, setShowDesignLimitDialog] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [roadmap, setRoadmap] = useState<{ open: boolean; id?: string }>({ open: false });
@@ -2090,11 +2094,29 @@ function EditorContent() {
   // name, leaving the original untouched — after this, the editor keeps
   // working on the new copy (standard "Save As" behavior), not the one
   // that was open before.
+  // Both "New Design" and "Save As" create a brand-new design row, so
+  // both need to respect the same active-design cap — checked here
+  // against the real count rather than a cached/stale number.
+  const withDesignLimitCheck = async (thenDo: () => void) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const count = await getDesignCount(user.id);
+    if (count >= MAX_DESIGNS) {
+      setShowDesignLimitDialog(true);
+      return;
+    }
+    thenDo();
+  };
+
+  const startNewDesign = () => withDesignLimitCheck(() => router.push('/create'));
+
   const saveDesignAs = () => {
-    const suggested = designName ? `${designName} copy` : 'Untitled Design copy';
-    const name = window.prompt('Save As — name for the new design:', suggested);
-    if (!name || !name.trim()) return;
-    performSave(null, name.trim());
+    withDesignLimitCheck(() => {
+      const suggested = designName ? `${designName} copy` : 'Untitled Design copy';
+      const name = window.prompt('Save As — name for the new design:', suggested);
+      if (!name || !name.trim()) return;
+      performSave(null, name.trim());
+    });
   };
 
   const downloadFile = (dataUrl: string, filename: string) => {
@@ -2442,7 +2464,7 @@ function EditorContent() {
     {
       label: 'File',
       items: [
-        { label: 'New Design', onClick: () => router.push('/create') },
+        { label: 'New Design', onClick: startNewDesign },
         { label: 'Open...', onClick: () => router.push('/dashboard') },
         { divider: true },
         { label: 'Save', shortcut: 'Ctrl/Cmd+S', onClick: saveDesign },
@@ -2633,6 +2655,7 @@ function EditorContent() {
           <button onClick={saveDesign} disabled={saving} className="bg-brand-gradient text-white px-4 py-2 rounded-full text-sm font-semibold disabled:opacity-50">
             {saving ? 'Saving...' : 'Save'}
           </button>
+          <ProfileMenu />
         </div>
       </div>
 
@@ -2645,6 +2668,8 @@ function EditorContent() {
           onExport={runExport}
         />
       )}
+
+      {showDesignLimitDialog && <DesignLimitDialog onCancel={() => setShowDesignLimitDialog(false)} />}
 
       <div className="flex flex-1 overflow-hidden">
         <Toolbar
