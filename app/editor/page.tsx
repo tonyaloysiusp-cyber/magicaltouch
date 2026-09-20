@@ -130,7 +130,16 @@ function EditorContent() {
     magicWandContiguousRef.current = magicWandContiguous;
   }, [magicWandContiguous]);
 
-  const clipboardRef = useRef<any>(null);
+  // Each entry is a freshly-cloned Fabric object holding its absolute
+  // canvas position at copy time. Kept as a flat array of individual
+  // objects rather than a single cloned ActiveSelection/Group — Fabric's
+  // Group.clone() doesn't reliably re-bake each child's absolute left/top
+  // once the group itself is repositioned and its members are peeled back
+  // off with forEachObject(), which was landing multi-object paste/
+  // duplicate in the wrong place. Cloning members individually and
+  // shifting each by the same delta keeps their relative layout exact.
+  const clipboardRef = useRef<any[] | null>(null);
+  const pasteCountRef = useRef(0);
   const gradAngleRef = useRef<number>(90);
 
   const width = parseInt(searchParams.get('w') || '1080');
@@ -1353,7 +1362,49 @@ function EditorContent() {
     canvas.requestRenderAll();
   };
 
-  const duplicateSelected = () => {
+  // Selected real objects (not the activeSelection wrapper itself) in
+  // canvas order, so multi-select clone/copy always operates on the
+  // actual artwork objects rather than the transient group Fabric builds
+  // to represent the selection.
+  const getSelectedObjects = (canvas: any): any[] => {
+    const active = canvas.getActiveObject();
+    if (!active) return [];
+    if (active.type === 'activeSelection') return active.getObjects();
+    return [active];
+  };
+
+  const cloneObjectsAsync = (objects: any[]): Promise<any[]> =>
+    Promise.all(objects.map((obj) => new Promise<any>((resolve) => obj.clone((c: any) => resolve(c)))));
+
+  // Adds a set of already-cloned objects back to the canvas as one atomic
+  // undo step, shifted by (dx,dy) from their source position, and leaves
+  // them selected together afterward (as a real ActiveSelection when more
+  // than one, matching how a normal multi-select looks/behaves).
+  const addClonesToCanvas = (clones: any[], dx: number, dy: number) => {
+    const canvas = fabricCanvasRef.current;
+    const F = (window as any).fabric;
+    suppressHistoryRef.current = true;
+    canvas.discardActiveObject();
+    clones.forEach((obj: any) => {
+      delete obj.__uid;
+      obj.set({ left: (obj.left || 0) + dx, top: (obj.top || 0) + dy, evented: true, locked: false });
+      obj.setCoords();
+      canvas.add(obj);
+    });
+    suppressHistoryRef.current = false;
+
+    if (clones.length > 1) {
+      const sel = new F.ActiveSelection(clones, { canvas });
+      canvas.setActiveObject(sel);
+    } else if (clones.length === 1) {
+      canvas.setActiveObject(clones[0]);
+    }
+    canvas.requestRenderAll();
+    refreshLayers();
+    pushHistory();
+  };
+
+  const duplicateSelected = async () => {
     const canvas = fabricCanvasRef.current;
     const active = canvas.getActiveObject();
     if (!active) return;
@@ -1361,48 +1412,35 @@ function EditorContent() {
       duplicateArtboard(active.__artboardId);
       return;
     }
-    active.clone((cloned: any) => {
-      canvas.discardActiveObject();
-      cloned.set({ left: (cloned.left || 0) + 20, top: (cloned.top || 0) + 20, evented: true, locked: false });
-      delete cloned.__uid;
-      if (cloned.type === 'activeSelection') {
-        cloned.canvas = canvas;
-        cloned.forEachObject((obj: any) => canvas.add(obj));
-        cloned.setCoords();
-      } else {
-        canvas.add(cloned);
-      }
-      canvas.setActiveObject(cloned);
-      canvas.requestRenderAll();
-    });
+    const objects = getSelectedObjects(canvas);
+    if (!objects.length) return;
+    const clones = await cloneObjectsAsync(objects);
+    addClonesToCanvas(clones, 20, 20);
   };
 
-  const copySelected = () => {
+  const copySelected = async () => {
     const canvas = fabricCanvasRef.current;
     const active = canvas.getActiveObject();
     if (!active) return;
-    active.clone((cloned: any) => {
-      clipboardRef.current = cloned;
-    });
+    const objects = getSelectedObjects(canvas);
+    if (!objects.length) return;
+    clipboardRef.current = await cloneObjectsAsync(objects);
+    pasteCountRef.current = 0;
   };
 
-  const pasteClipboard = () => {
-    const canvas = fabricCanvasRef.current;
-    if (!clipboardRef.current) return;
-    clipboardRef.current.clone((cloned: any) => {
-      canvas.discardActiveObject();
-      cloned.set({ left: (cloned.left || 0) + 20, top: (cloned.top || 0) + 20, evented: true });
-      delete cloned.__uid;
-      if (cloned.type === 'activeSelection') {
-        cloned.canvas = canvas;
-        cloned.forEachObject((obj: any) => canvas.add(obj));
-        cloned.setCoords();
-      } else {
-        canvas.add(cloned);
-      }
-      canvas.setActiveObject(cloned);
-      canvas.requestRenderAll();
-    });
+  const PASTE_STEP = 20;
+
+  const pasteClipboard = async () => {
+    if (!clipboardRef.current || clipboardRef.current.length === 0) return;
+    pasteCountRef.current += 1;
+    // Re-clone from the stored clipboard on every paste (rather than
+    // reusing/mutating the same objects) so repeated Ctrl+V keeps
+    // cascading new copies further out instead of moving one object
+    // around, and pasting again after moving pasted copies elsewhere
+    // still starts from the original copied position.
+    const clones = await cloneObjectsAsync(clipboardRef.current);
+    const shift = PASTE_STEP * pasteCountRef.current;
+    addClonesToCanvas(clones, shift, shift);
   };
 
   const bringForward = () => {
@@ -1835,19 +1873,19 @@ function EditorContent() {
         setShowShortcuts(false);
         return;
       }
-      if (isMeta && e.key.toLowerCase() === 'g' && e.shiftKey && !isEditingText) { e.preventDefault(); ungroupSelected(); return; }
-      if (isMeta && e.key.toLowerCase() === 'g' && !isEditingText) { e.preventDefault(); groupSelected(); return; }
-      if (isMeta && e.key.toLowerCase() === 'd' && !isEditingText) { e.preventDefault(); duplicateSelected(); return; }
-      if (isMeta && e.key.toLowerCase() === 'c' && !isEditingText) { copySelected(); return; }
-      if (isMeta && e.key.toLowerCase() === 'v' && !isEditingText) { pasteClipboard(); return; }
-      if (isMeta && e.key.toLowerCase() === 'l' && !isEditingText) { e.preventDefault(); active && toggleLock(active); return; }
-      if (isMeta && e.key.toLowerCase() === 'h' && !isEditingText) { e.preventDefault(); active && toggleVisible(active); return; }
-      if ((e.key === 'Delete' || e.key === 'Backspace') && !isEditingText && isPixelSelectTool(activeToolRef.current)) {
+      if (isMeta && e.key.toLowerCase() === 'g' && e.shiftKey && canUseToolShortcuts) { e.preventDefault(); ungroupSelected(); return; }
+      if (isMeta && e.key.toLowerCase() === 'g' && canUseToolShortcuts) { e.preventDefault(); groupSelected(); return; }
+      if (isMeta && e.key.toLowerCase() === 'd' && canUseToolShortcuts) { e.preventDefault(); duplicateSelected(); return; }
+      if (isMeta && e.key.toLowerCase() === 'c' && canUseToolShortcuts) { e.preventDefault(); copySelected(); return; }
+      if (isMeta && e.key.toLowerCase() === 'v' && canUseToolShortcuts) { e.preventDefault(); pasteClipboard(); return; }
+      if (isMeta && e.key.toLowerCase() === 'l' && canUseToolShortcuts) { e.preventDefault(); active && toggleLock(active); return; }
+      if (isMeta && e.key.toLowerCase() === 'h' && canUseToolShortcuts) { e.preventDefault(); active && toggleVisible(active); return; }
+      if ((e.key === 'Delete' || e.key === 'Backspace') && canUseToolShortcuts && isPixelSelectTool(activeToolRef.current)) {
         e.preventDefault();
         deleteSelectedPixels();
         return;
       }
-      if ((e.key === 'Delete' || e.key === 'Backspace') && !isEditingText && activeToolRef.current !== 'pen' && !isDrawTool(activeToolRef.current)) {
+      if ((e.key === 'Delete' || e.key === 'Backspace') && canUseToolShortcuts && activeToolRef.current !== 'pen' && !isDrawTool(activeToolRef.current)) {
         e.preventDefault();
         deleteSelected();
         return;
