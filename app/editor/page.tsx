@@ -45,6 +45,7 @@ import { Toolbar } from '@/components/editor/Toolbar';
 import { PropertiesPanel } from '@/components/editor/PropertiesPanel';
 import { LayersPanel } from '@/components/editor/LayersPanel';
 import { ArtboardsPanel } from '@/components/editor/ArtboardsPanel';
+import { ExportDialog, ExportSettings } from '@/components/editor/ExportDialog';
 import { PreflightModal } from '@/components/editor/PreflightModal';
 import { ShortcutsModal } from '@/components/editor/ShortcutsModal';
 import { RoadmapModal } from '@/components/editor/RoadmapModal';
@@ -83,7 +84,7 @@ function EditorContent() {
   const [designName, setDesignName] = useState('Untitled Design');
   const [designId, setDesignId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const [showExportMenu, setShowExportMenu] = useState(false);
+  const [showExportDialog, setShowExportDialog] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [roadmap, setRoadmap] = useState<{ open: boolean; id?: string }>({ open: false });
@@ -2127,12 +2128,17 @@ function EditorContent() {
   // Adds real, temporary Fabric objects for the requested production marks
   // right before an export and returns them so the caller can remove them
   // again immediately after. Wrapped in suppressHistoryRef so this never
-  // pollutes undo history.
-  const buildAndInsertMarks = (ab: ArtboardMeta, scope: ExportScope) => {
+  // pollutes undo history. Takes an optional print-settings override so
+  // the Export dialog's own Include Bleed/Include Marks toggles can
+  // decide what to draw for this one export without touching the
+  // artboard's own persisted print settings (which stay exactly as the
+  // Artboards panel left them).
+  const buildAndInsertMarks = (ab: ArtboardMeta, scope: ExportScope, printOverride?: ArtboardPrintSettings) => {
     const F = (window as any).fabric;
     const canvas = fabricCanvasRef.current;
     if (!F || !canvas || scope === 'artboard' || scope === 'bleed') return [];
-    const marks = buildProductionMarks(F, ab, ab.print.bleed, ab.print.marks, ab.id);
+    const print = printOverride || ab.print;
+    const marks = buildProductionMarks(F, ab, print.bleed, print.marks, ab.id);
     marks.forEach((m: any) => canvas.add(m));
     canvas.requestRenderAll();
     return marks;
@@ -2158,7 +2164,7 @@ function EditorContent() {
     downloadFile(dataUrl, `${designName || 'design'} - ${ab.name}${scope !== 'artboard' ? ` (${scope})` : ''}.png`);
     if (!opts?.silent) {
       setExporting(false);
-      setShowExportMenu(false);
+      setShowExportDialog(false);
     }
   };
 
@@ -2223,7 +2229,7 @@ function EditorContent() {
     const dataUrl = canvas.toDataURL({ format: 'png', quality: 1, ...getArtboardExportOptions(ab, 2) });
     downloadFile(dataUrl, `${designName || 'design'}.png`);
     setExporting(false);
-    setShowExportMenu(false);
+    setShowExportDialog(false);
   };
   const exportAsJPG = () => {
     setExporting(true);
@@ -2232,7 +2238,7 @@ function EditorContent() {
     const dataUrl = canvas.toDataURL({ format: 'jpeg', quality: 0.9, ...getArtboardExportOptions(ab, 2) });
     downloadFile(dataUrl, `${designName || 'design'}.jpg`);
     setExporting(false);
-    setShowExportMenu(false);
+    setShowExportDialog(false);
   };
 
   // File > Export as PDF exports every artboard as its own page, matching
@@ -2256,7 +2262,7 @@ function EditorContent() {
       alert('Failed to export PDF. Please try again.');
     }
     setExporting(false);
-    setShowExportMenu(false);
+    setShowExportDialog(false);
   };
 
   // Exports artboards fromIndex..toIndex (1-based, inclusive, in the same
@@ -2288,6 +2294,134 @@ function EditorContent() {
     setExporting(false);
   };
 
+  // Resolves which artboards the Export dialog's chosen range actually
+  // covers. "Selected pages" is an explicit checklist in the dialog
+  // itself (this editor has no multi-artboard canvas-selection concept
+  // to piggyback on), so it can name any subset regardless of order.
+  const resolveExportArtboards = (settings: ExportSettings): ArtboardMeta[] => {
+    if (!artboards.length) return [];
+    switch (settings.rangeMode) {
+      case 'current': {
+        const ab = artboards.find((a) => a.id === activeArtboardId);
+        return ab ? [ab] : [artboards[0]];
+      }
+      case 'all':
+        return artboards;
+      case 'selected':
+        return artboards.filter((a) => settings.selectedIds.includes(a.id));
+      case 'range': {
+        const lo = Math.max(1, Math.min(settings.rangeFrom, settings.rangeTo));
+        const hi = Math.min(artboards.length, Math.max(settings.rangeFrom, settings.rangeTo));
+        return lo <= hi ? artboards.slice(lo - 1, hi) : [];
+      }
+      default:
+        return [];
+    }
+  };
+
+  // The dialog's Include Bleed/Include Marks toggles apply for this one
+  // export only — they never touch (or get saved back to) the artboard's
+  // own persisted print settings, which stay whatever the Artboards
+  // panel has them set to.
+  const exportPrintFor = (ab: ArtboardMeta, settings: ExportSettings): ArtboardPrintSettings => ({
+    ...ab.print,
+    marks: settings.includeMarks
+      ? { crop: true, registration: true, colorBar: true }
+      : { crop: false, registration: false, colorBar: false },
+  });
+
+  // One export path for every combination the dialog can produce: any
+  // page range, any of the three formats, with or without bleed/marks.
+  // PDF pages all land in a single multi-page file (matching how a real
+  // print-ready document is delivered); PNG/JPG can't hold multiple
+  // pages, so each artboard downloads as its own file.
+  const runExport = async (settings: ExportSettings) => {
+    const canvas = fabricCanvasRef.current;
+    const list = resolveExportArtboards(settings);
+    if (!list.length) {
+      alert('No pages match the selected export range.');
+      return;
+    }
+
+    const scope: ExportScope = settings.includeMarks ? 'marks' : settings.includeBleed ? 'bleed' : 'artboard';
+    setExporting(true);
+
+    try {
+      if (settings.format === 'pdf') {
+        const [{ jsPDF }, mod] = await Promise.all([import('jspdf'), import('fabric')]);
+        const F = mod.fabric;
+        const pages = list.map((ab) => {
+          const print = exportPrintFor(ab, settings);
+          return { ab, print, rect: getExportRect(ab, print, scope) };
+        });
+        const first = pages[0];
+        const pdf = new jsPDF({
+          orientation: first.rect.width > first.rect.height ? 'landscape' : 'portrait',
+          unit: 'pt',
+          format: [toPt(first.rect.width), toPt(first.rect.height)],
+        });
+
+        suppressHistoryRef.current = true;
+        for (let i = 0; i < pages.length; i++) {
+          const { ab, print, rect } = pages[i];
+          if (i > 0) pdf.addPage([toPt(rect.width), toPt(rect.height)], rect.width > rect.height ? 'landscape' : 'portrait');
+          const marks = buildAndInsertMarks(ab, scope, print);
+          await exportArtboardsToPDF(pdf, canvas, F, [{ id: ab.id, x: rect.x, y: rect.y, width: rect.width, height: rect.height }]);
+          removeTemporaryMarks(marks);
+        }
+        suppressHistoryRef.current = false;
+
+        const rangeLabel = pages.length === 1 ? pages[0].ab.name : `${pages.length} pages`;
+        pdf.save(`${designName || 'design'} (${rangeLabel}).${settings.format}`);
+      } else {
+        for (const ab of list) {
+          const print = exportPrintFor(ab, settings);
+          const rect = getExportRect(ab, print, scope);
+
+          // A transparent PNG needs both the canvas's own backgroundColor
+          // and this artboard's own white background rect cleared for the
+          // capture, then restored right after — this editor's canvas
+          // always has both, so without this the "transparent" export
+          // would just come back opaque.
+          const wantsTransparency = settings.format === 'png' && settings.transparentBackground;
+          const savedCanvasBg = canvas.backgroundColor;
+          const artboardRectObj = wantsTransparency
+            ? canvas.getObjects().find((o: any) => o.__isArtboard && o.__artboardId === ab.id)
+            : null;
+          const savedArtboardFill = artboardRectObj ? artboardRectObj.fill : undefined;
+          if (wantsTransparency) {
+            canvas.backgroundColor = '';
+            if (artboardRectObj) artboardRectObj.set('fill', '');
+          }
+
+          suppressHistoryRef.current = true;
+          const marks = buildAndInsertMarks(ab, scope, print);
+          const dataUrl = canvas.toDataURL({
+            format: settings.format,
+            quality: settings.format === 'jpg' ? settings.quality : 1,
+            ...getArtboardExportOptions(rect, settings.multiplier),
+          });
+          removeTemporaryMarks(marks);
+          suppressHistoryRef.current = false;
+
+          if (wantsTransparency) {
+            canvas.backgroundColor = savedCanvasBg;
+            if (artboardRectObj) artboardRectObj.set('fill', savedArtboardFill);
+            canvas.requestRenderAll();
+          }
+
+          downloadFile(dataUrl, `${designName || 'design'} - ${ab.name}.${settings.format}`);
+        }
+      }
+    } catch (err) {
+      console.error('Export failed:', err);
+      alert('Failed to export. Please try again.');
+    }
+
+    setExporting(false);
+    setShowExportDialog(false);
+  };
+
   // The dashboard's "Download" action opens the editor with ?autoExport=
   // instead of trying to export a static thumbnail — this runs the exact
   // same export code the toolbar's Export button uses, once the loaded
@@ -2314,7 +2448,7 @@ function EditorContent() {
         { label: 'Save', shortcut: 'Ctrl/Cmd+S', onClick: saveDesign },
         { label: 'Save As...', shortcut: 'Ctrl/Cmd+Shift+S', onClick: saveDesignAs },
         { divider: true },
-        { label: 'Export...', onClick: () => setShowExportMenu(true) },
+        { label: 'Export...', onClick: () => setShowExportDialog(true) },
         { label: 'Export as PNG', onClick: exportAsPNG },
         { label: 'Export as JPG', onClick: exportAsJPG },
         { label: 'Export as PDF', onClick: exportAsPDF },
@@ -2493,21 +2627,24 @@ function EditorContent() {
         </div>
 
         <div className="flex items-center gap-2 relative">
-          <button onClick={() => setShowExportMenu(!showExportMenu)} disabled={exporting} className="border border-gray-300 text-gray-700 px-4 py-2 rounded-full text-sm font-semibold disabled:opacity-50">
+          <button onClick={() => setShowExportDialog(true)} disabled={exporting} className="border border-gray-300 text-gray-700 px-4 py-2 rounded-full text-sm font-semibold disabled:opacity-50">
             {exporting ? 'Exporting...' : 'Export'}
           </button>
-          {showExportMenu && (
-            <div className="absolute top-full right-0 mt-2 bg-white border rounded-lg shadow-lg py-1 w-40 z-10">
-              <button onClick={exportAsPNG} className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50">PNG</button>
-              <button onClick={exportAsJPG} className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50">JPG</button>
-              <button onClick={exportAsPDF} className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50">PDF</button>
-            </div>
-          )}
           <button onClick={saveDesign} disabled={saving} className="bg-brand-gradient text-white px-4 py-2 rounded-full text-sm font-semibold disabled:opacity-50">
             {saving ? 'Saving...' : 'Save'}
           </button>
         </div>
       </div>
+
+      {showExportDialog && (
+        <ExportDialog
+          artboards={artboards}
+          activeArtboardId={activeArtboardId}
+          exporting={exporting}
+          onClose={() => setShowExportDialog(false)}
+          onExport={runExport}
+        />
+      )}
 
       <div className="flex flex-1 overflow-hidden">
         <Toolbar
