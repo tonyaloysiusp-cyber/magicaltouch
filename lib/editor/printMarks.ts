@@ -33,11 +33,23 @@ function markLine(F: any, x1: number, y1: number, x2: number, y2: number) {
   return line;
 }
 
-export function buildCropMarks(F: any, ab: RectLike, bleed: EdgeValues) {
-  const left = ab.x - bleed.left;
-  const top = ab.y - bleed.top;
-  const right = ab.x + ab.width + bleed.right;
-  const bottom = ab.y + ab.height + bleed.bottom;
+// Crop (trim/cutting) marks indicate where the sheet is physically cut —
+// that's the artboard's own trim edge, always, regardless of how much
+// bleed is set. Verified against real Adobe-generated reference PDFs
+// (a business card and an A4 sheet, both with bleed + cutting marks):
+// each tick's aligned coordinate sits exactly on the TrimBox edge, with
+// its near point offset outward from that trim edge by a fixed 6pt and
+// its far point 18pt further still — both measured from the trim edge,
+// never from the bleed edge. That offset is independent of the bleed
+// amount: real software doesn't grow it to match a larger bleed, so a
+// bleed bigger than the offset can make the mark's inner end sit inside
+// the bleed area — confirmed in the reference files themselves — but the
+// mark is never drawn across the trim line.
+export function buildCropMarks(F: any, ab: RectLike, _bleed: EdgeValues) {
+  const left = ab.x;
+  const top = ab.y;
+  const right = ab.x + ab.width;
+  const bottom = ab.y + ab.height;
 
   return [
     markLine(F, left, top - MARK_OFFSET, left, top - MARK_OFFSET - MARK_LENGTH),
@@ -51,9 +63,11 @@ export function buildCropMarks(F: any, ab: RectLike, bleed: EdgeValues) {
   ];
 }
 
-export function buildRegistrationMarks(F: any, ab: RectLike, bleed: EdgeValues) {
-  const top = ab.y - bleed.top;
-  const bottom = ab.y + ab.height + bleed.bottom;
+// Same principle as crop marks: anchored on the trim edge, not the bleed
+// edge, so the mark identifies the real cut line regardless of bleed.
+export function buildRegistrationMarks(F: any, ab: RectLike, _bleed: EdgeValues) {
+  const top = ab.y;
+  const bottom = ab.y + ab.height;
   const midX = ab.x + ab.width / 2;
 
   const markAt = (cx: number, cy: number) => {

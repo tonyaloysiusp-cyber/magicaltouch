@@ -4,10 +4,12 @@ import { Suspense, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
+import { getOrCreateProfile, updateProfile } from '@/lib/profile';
 
 function SignupForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [phone, setPhone] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [confirmSent, setConfirmSent] = useState(false);
@@ -30,6 +32,10 @@ function SignupForm() {
       setConfirmSent(true);
       setLoading(false);
     } else {
+      // Phone is optional contact info on the profile, not an auth
+      // credential — this app's login stays email+password only.
+      const profile = await getOrCreateProfile(data.user!.id, email.split('@')[0]);
+      if (profile && phone.trim()) await updateProfile(data.user!.id, { phone: phone.trim() });
       router.push(next);
     }
   };
@@ -76,6 +82,13 @@ function SignupForm() {
             onChange={(e) => setPassword(e.target.value)}
             className="border border-gray-300 p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-blue"
             required
+          />
+          <input
+            type="tel"
+            placeholder="Phone number (optional)"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            className="border border-gray-300 p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-blue"
           />
           {error && <p className="text-red-500 text-sm">{error}</p>}
           <button
