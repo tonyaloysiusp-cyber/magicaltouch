@@ -1929,6 +1929,7 @@ function EditorContent() {
 
       if (isMeta && e.key.toLowerCase() === 'z' && !e.shiftKey) { e.preventDefault(); undo(); return; }
       if ((isMeta && e.key.toLowerCase() === 'z' && e.shiftKey) || (isMeta && e.key.toLowerCase() === 'y')) { e.preventDefault(); redo(); return; }
+      if (isMeta && e.key.toLowerCase() === 's' && e.shiftKey) { e.preventDefault(); saveDesignAs(); return; }
       if (isMeta && e.key.toLowerCase() === 's') { e.preventDefault(); saveDesign(); return; }
       if (isMeta && e.key.toLowerCase() === 'a' && !isEditingText) {
         e.preventDefault();
@@ -1991,7 +1992,13 @@ function EditorContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [undo, redo, finishPenPath, clearPenDraft, applyPathAsMask, setActiveTool, clearAnchorHandles, clearShapeDraft]);
 
-  const saveDesign = async () => {
+  // Shared by Save (idToUse = the current design's id, or null for a
+  // brand-new one) and Save As (idToUse always null, forcing a fresh
+  // row) — kept as one function taking explicit id/name rather than two
+  // near-duplicate copies each reading designId/designName from the
+  // component closure, which would go stale the instant Save As updates
+  // that state right before saving.
+  const performSave = async (idToUse: string | null, nameToUse: string) => {
     setSaving(true);
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
@@ -2019,13 +2026,13 @@ function EditorContent() {
     const firstAb = artboards[0];
     const payload: any = {
       user_id: user.id,
-      name: designName,
+      name: nameToUse,
       canvas_json: canvasJson,
       width: firstAb ? Math.round(firstAb.width) : width,
       height: firstAb ? Math.round(firstAb.height) : height,
       updated_at: new Date().toISOString(),
     };
-    if (designId) payload.id = designId;
+    if (idToUse) payload.id = idToUse;
 
     // A real preview generated from the first artboard's actual content —
     // not a placeholder — so the dashboard can show what the design looks
@@ -2071,8 +2078,22 @@ function EditorContent() {
     }
     if (data) {
       setDesignId(data.id);
+      setDesignName(nameToUse);
       router.replace(`/editor?designId=${data.id}&w=${width}&h=${height}`);
     }
+  };
+
+  const saveDesign = () => performSave(designId, designName);
+
+  // Forks the current canvas into a brand-new design row under a new
+  // name, leaving the original untouched — after this, the editor keeps
+  // working on the new copy (standard "Save As" behavior), not the one
+  // that was open before.
+  const saveDesignAs = () => {
+    const suggested = designName ? `${designName} copy` : 'Untitled Design copy';
+    const name = window.prompt('Save As — name for the new design:', suggested);
+    if (!name || !name.trim()) return;
+    performSave(null, name.trim());
   };
 
   const downloadFile = (dataUrl: string, filename: string) => {
@@ -2287,17 +2308,24 @@ function EditorContent() {
     {
       label: 'File',
       items: [
-        { label: 'New Design', planned: true },
-        { label: 'Open', planned: true },
+        { label: 'New Design', onClick: () => router.push('/create') },
+        { label: 'Open...', onClick: () => router.push('/dashboard') },
         { divider: true },
         { label: 'Save', shortcut: 'Ctrl/Cmd+S', onClick: saveDesign },
+        { label: 'Save As...', shortcut: 'Ctrl/Cmd+Shift+S', onClick: saveDesignAs },
+        { divider: true },
+        { label: 'Export...', onClick: () => setShowExportMenu(true) },
         { label: 'Export as PNG', onClick: exportAsPNG },
         { label: 'Export as JPG', onClick: exportAsJPG },
         { label: 'Export as PDF', onClick: exportAsPDF },
+        { label: 'Download (PNG)', onClick: exportAsPNG },
         { divider: true },
         { label: 'Preflight...', onClick: runPreflightCheck },
         { label: 'Print Setup (Bleed/Slug/Marks)', onClick: () => togglePanel('artboards') },
         { label: 'Document Setup', planned: true },
+        { divider: true },
+        { label: 'Close Design', onClick: () => router.push('/dashboard') },
+        { label: 'Back to Dashboard', onClick: () => router.push('/dashboard') },
       ],
     },
     {
