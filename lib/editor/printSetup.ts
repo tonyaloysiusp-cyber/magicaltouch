@@ -6,6 +6,8 @@
 // so they round-trip through history/save automatically.
 // ---------------------------------------------------------------------
 
+import { PT_PER_PX } from './pdfExport';
+
 export interface EdgeValues {
   top: number;
   right: number;
@@ -56,13 +58,52 @@ export const EXPORT_SCOPE_LABELS: Record<ExportScope, string> = {
   slug: 'Artboard + Bleed + Marks + Slug',
 };
 
-// Extra room left outside the bleed box for crop/registration marks — and
-// the color bar's swatches plus their labels, the tallest thing drawn out
-// there — to be drawn into without getting clipped by the export crop
-// rect. Kept generous and uniform on all four sides rather than
-// conditional on which marks are enabled, so toggling a mark on never
-// needs a matching change here.
-const MARKS_MARGIN = 48;
+// Canonical crop-mark geometry — the single source of truth shared with
+// printMarks.ts (which imports these instead of redefining them), so the
+// marks' actual drawn geometry and the export rect sized to contain them
+// can never drift apart again the way they did before (marks drawn at
+// offset 6/length 18, export margin hand-tuned separately to a flat 48).
+//
+// These are expressed in the SAME canvas-pixel space as the artboard's
+// own x/y/width/height (getExportRect below adds them directly to ab.x/
+// ab.width, etc.) — but the values that were actually verified against
+// two real Adobe-generated reference PDFs (a business card and an A4
+// sheet, both with 3mm bleed + cutting marks) are in POINTS, the unit
+// the final exported PDF is measured in: offset 6pt, length 18pt, page
+// edge exactly 33pt from trim. The export pipeline converts canvas px
+// to PDF points via toPt() (PT_PER_PX = 72/96) right before writing the
+// file, so a constant meant to come out as N points in that final PDF
+// has to be stored here as N / PT_PER_PX canvas px — otherwise it gets
+// scaled down by that same 0.75 a second time and everything comes out
+// visibly smaller than the verified reference (which is exactly the bug
+// this conversion fixes: a naive 6/18/9 stored directly as px produced
+// 4.5pt/13.5pt/6.75pt after export, not the real 6pt/18pt/9pt).
+export const PT_TO_PX = 1 / PT_PER_PX; // 96/72
+export const MARK_OFFSET = 6 * PT_TO_PX;
+export const MARK_LENGTH = 18 * PT_TO_PX;
+// How far a crop mark's outer tip sits from the TRIM edge. Marks are
+// always anchored to trim, never to bleed, so this is independent of the
+// bleed amount.
+const MARK_REACH_FROM_TRIM = MARK_OFFSET + MARK_LENGTH;
+// Fixed clear space left between the outermost thing (whichever is
+// bigger: the bleed edge, or the crop marks' outer tip) and the page
+// edge — 9pt (1/8") of breathing room beyond whichever extends furthest,
+// matching both reference files' page edge sitting exactly 33pt from
+// trim (max(bleed 8.504pt, markReach 24pt) + 9pt). Scales correctly to
+// larger bleeds too: a 10mm bleed (28.35pt, bigger than the 24pt mark
+// reach) puts the page edge at bleed + 9pt, still a 9pt clearance beyond
+// the outermost content.
+const MARKS_BREATHING_ROOM = 9 * PT_TO_PX;
+
+// The color bar (when enabled) extends further past the bleed edge than
+// the crop marks do, only along the bottom — this is how far, so the
+// bottom margin can grow to fit it instead of getting clipped. Kept in
+// sync with printMarks.ts's buildColorBar, which imports these same
+// constants for its own gap/swatch-height/label sizing.
+export const COLOR_BAR_GAP = 3 * PT_TO_PX;
+export const COLOR_BAR_SWATCH_H_MAX = 6 * PT_TO_PX;
+export const COLOR_BAR_LABEL_H = 5 * PT_TO_PX;
+const COLOR_BAR_FOOTPRINT = COLOR_BAR_GAP + COLOR_BAR_SWATCH_H_MAX + COLOR_BAR_LABEL_H;
 
 interface RectLike {
   x: number;
@@ -86,11 +127,22 @@ export function getExportRect(ab: RectLike, print: ArtboardPrintSettings, scope:
   };
   if (scope === 'bleed') return bleedRect;
 
+  // Page edge sits MARKS_BREATHING_ROOM beyond whichever is further out
+  // on each side — the bleed edge, or the crop marks' outer tip (a fixed
+  // distance from trim) — never a flat margin added past the bleed box
+  // regardless of how big the bleed already is. The bottom edge also has
+  // to clear the color bar's own footprint when it's enabled.
+  const marginFromTrim = (bleedSide: number, extraReachFromBleed = 0) =>
+    Math.max(bleedSide, MARK_REACH_FROM_TRIM, print.marks.colorBar ? bleedSide + extraReachFromBleed : 0) + MARKS_BREATHING_ROOM;
+  const mLeft = marginFromTrim(b.left);
+  const mRight = marginFromTrim(b.right);
+  const mTop = marginFromTrim(b.top);
+  const mBottom = marginFromTrim(b.bottom, COLOR_BAR_FOOTPRINT);
   const withMargin: RectLike = {
-    x: bleedRect.x - MARKS_MARGIN,
-    y: bleedRect.y - MARKS_MARGIN,
-    width: bleedRect.width + MARKS_MARGIN * 2,
-    height: bleedRect.height + MARKS_MARGIN * 2,
+    x: ab.x - mLeft,
+    y: ab.y - mTop,
+    width: ab.width + mLeft + mRight,
+    height: ab.height + mTop + mBottom,
   };
   if (scope === 'marks') return withMargin;
 

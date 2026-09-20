@@ -145,3 +145,50 @@ export function googleFontsStylesheetHref(): string {
   const parts = DIRECT_FONTS.map((f) => `family=${encodeURIComponent(f.family)}:wght@${f.weights.join(';')}`);
   return `https://fonts.googleapis.com/css2?${parts.join('&')}&display=swap`;
 }
+
+// Declaring an @font-face (or listing a family in the Google Fonts <link>
+// above) does NOT actually fetch its bytes — the browser only downloads a
+// webfont once something on the page is rendered WITH that font, and even
+// then the swap from a fallback happens invisibly to Fabric: a <canvas>
+// text object drawn before the swap completes just stays wrong forever,
+// since nothing tells Fabric to re-render once the real glyphs arrive.
+// This is the actual root cause behind "editor shows the wrong font, but
+// export is correct" — PDF export fetches the font's real bytes directly
+// and always waits for that fetch, so it never hits this gap.
+//
+// Call this anywhere a font is about to be used for the first time in a
+// session (a brand new text object, or text objects coming back from
+// canvas_json on design/tab load) and re-render once it resolves, rather
+// than trusting whatever the canvas already drew.
+export function ensureFontLoaded(fontFamily: string, weight: number | string = 400, italic = false): Promise<void> {
+  if (typeof document === 'undefined' || !(document as any).fonts?.load) return Promise.resolve();
+  const w = typeof weight === 'number' ? (weight >= 600 ? 700 : 400) : weight === 'bold' ? 700 : 400;
+  const spec = `${italic ? 'italic ' : ''}${w} 16px "${fontFamily}"`;
+  return (document as any).fonts
+    .load(spec)
+    .then(() => undefined)
+    .catch(() => undefined);
+}
+
+// Loads every distinct font family (at both weights, to be safe) used by
+// any text-bearing object in a Fabric canvas JSON payload — used right
+// after loadFromJSON, before the first paint, so a design that uses a
+// font nobody in this browser session has requested yet doesn't render
+// with the wrong glyphs the first time it's opened.
+export function ensureFontsLoadedForCanvasJSON(json: any): Promise<void> {
+  if (typeof document === 'undefined' || !(document as any).fonts?.load) return Promise.resolve();
+  const families = new Set<string>();
+  const visit = (obj: any) => {
+    if (!obj || typeof obj !== 'object') return;
+    if (typeof obj.fontFamily === 'string') families.add(obj.fontFamily);
+    if (Array.isArray(obj.objects)) obj.objects.forEach(visit);
+  };
+  visit(json);
+  if (families.size === 0) return Promise.resolve();
+  const loads: Promise<void>[] = [];
+  families.forEach((f) => {
+    loads.push(ensureFontLoaded(f, 400));
+    loads.push(ensureFontLoaded(f, 700));
+  });
+  return Promise.all(loads).then(() => undefined);
+}

@@ -25,7 +25,7 @@ interface Props {
   onExportOne: (id: string) => void;
   onExportAll: () => void;
   onExportAllPDF: () => void;
-  onExportRangePDF: (fromIndex: number, toIndex: number) => void;
+  onExportRangePDF: (fromIndex: number, toIndex: number, scope: ExportScope) => void;
   onUpdatePrint: (id: string, patch: Partial<ArtboardPrintSettings>) => void;
   onExportPrint: (id: string, scope: ExportScope, format: 'png' | 'pdf') => void;
   onRunPreflight: () => void;
@@ -391,6 +391,17 @@ export function ArtboardsPanel({
           <label className="text-[10px] text-gray-500 block mb-1">
             Export page range (PDF) — 1–{artboards.length}
           </label>
+          <select
+            value={exportScope}
+            onChange={(e) => setExportScope(e.target.value as ExportScope)}
+            className="w-full text-xs border rounded px-2 py-1 mb-1.5"
+          >
+            {(Object.keys(EXPORT_SCOPE_LABELS) as ExportScope[]).map((s) => (
+              <option key={s} value={s}>
+                {EXPORT_SCOPE_LABELS[s]}
+              </option>
+            ))}
+          </select>
           <div className="flex items-center gap-1.5">
             <input
               type="number"
@@ -413,13 +424,19 @@ export function ArtboardsPanel({
               onClick={() => {
                 const from = parseInt(rangeFrom, 10);
                 const to = parseInt(rangeTo, 10);
-                if (!isNaN(from) && !isNaN(to)) onExportRangePDF(from, to);
+                if (!isNaN(from) && !isNaN(to)) onExportRangePDF(from, to, exportScope);
               }}
               className="flex-1 flex items-center justify-center gap-1 text-[11px] border rounded px-2 py-1.5 hover:bg-gray-50"
             >
               <FileDown size={12} /> Export Range
             </button>
           </div>
+          <button
+            onClick={() => onExportRangePDF(1, artboards.length, exportScope)}
+            className="w-full mt-1.5 flex items-center justify-center gap-1 text-[11px] border rounded px-2 py-1.5 hover:bg-gray-50"
+          >
+            <FileDown size={12} /> Export All Pages ({EXPORT_SCOPE_LABELS[exportScope]})
+          </button>
         </div>
       )}
     </div>

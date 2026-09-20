@@ -7,7 +7,7 @@
 // vector content in the exported file instead of a faked overlay.
 // ---------------------------------------------------------------------
 
-import { EdgeValues, PrintMarksSettings } from './printSetup';
+import { EdgeValues, PrintMarksSettings, MARK_OFFSET, MARK_LENGTH, COLOR_BAR_GAP, COLOR_BAR_SWATCH_H_MAX, COLOR_BAR_LABEL_H, PT_TO_PX } from './printSetup';
 
 interface RectLike {
   x: number;
@@ -16,10 +16,12 @@ interface RectLike {
   height: number;
 }
 
-const MARK_LENGTH = 18;
-const MARK_OFFSET = 6;
 const MARK_COLOR = '#000000';
-const REG_MARK_RADIUS = 5;
+// Not independently verified against the reference files (which is why
+// this isn't in printSetup.ts's shared/confirmed constants), but scaled
+// by the same px<->pt factor for internal consistency with the ones that
+// were: ~5pt, a typical registration-target radius.
+const REG_MARK_RADIUS = 5 * PT_TO_PX;
 
 function markLine(F: any, x1: number, y1: number, x2: number, y2: number) {
   const line = new F.Line([x1, y1, x2, y2], {
@@ -85,14 +87,16 @@ export function buildRegistrationMarks(F: any, ab: RectLike, _bleed: EdgeValues)
       objectCaching: false,
     });
     circle.__isPrintMark = true;
+    const tickPad = 3 * PT_TO_PX;
     return [
       circle,
-      markLine(F, cx - REG_MARK_RADIUS - 3, cy, cx + REG_MARK_RADIUS + 3, cy),
-      markLine(F, cx, cy - REG_MARK_RADIUS - 3, cx, cy + REG_MARK_RADIUS + 3),
+      markLine(F, cx - REG_MARK_RADIUS - tickPad, cy, cx + REG_MARK_RADIUS + tickPad, cy),
+      markLine(F, cx, cy - REG_MARK_RADIUS - tickPad, cx, cy + REG_MARK_RADIUS + tickPad),
     ];
   };
 
-  return [...markAt(midX, top - MARK_OFFSET - REG_MARK_RADIUS - 6), ...markAt(midX, bottom + MARK_OFFSET + REG_MARK_RADIUS + 6)];
+  const clearance = 6 * PT_TO_PX;
+  return [...markAt(midX, top - MARK_OFFSET - REG_MARK_RADIUS - clearance), ...markAt(midX, bottom + MARK_OFFSET + REG_MARK_RADIUS + clearance)];
 }
 
 // Screen-RGB approximations of the four process-ink solids, in the order
@@ -128,7 +132,7 @@ function labelText(F: any, text: string, x: number, y: number) {
   const label = new F.Text(text, {
     left: x,
     top: y,
-    fontSize: 4,
+    fontSize: 3.2,
     fontFamily: 'Helvetica',
     fill: '#000000',
     originX: 'center',
@@ -145,6 +149,12 @@ function labelText(F: any, text: string, x: number, y: number) {
 // plus a grayscale tint ramp, run along the artboard's bottom edge —
 // the same reference marks a real press sheet carries so an operator can
 // eyeball ink density and registration at a glance.
+//
+// Deliberately compact: sits just past the BLEED edge (not past the crop
+// marks' own reach — real corner crop marks don't span the full width,
+// so there's no actual clash), sized to COLOR_BAR_GAP/SWATCH_H_MAX/
+// LABEL_H from printSetup.ts, which the export-rect margin calculation
+// reads to make sure this never gets clipped.
 export function buildColorBar(F: any, ab: RectLike, bleed: EdgeValues) {
   const objs: any[] = [];
   const gap = 1;
@@ -154,9 +164,9 @@ export function buildColorBar(F: any, ab: RectLike, bleed: EdgeValues) {
   // Bleed + Marks" already exports for tiny artboards, and doesn't turn
   // into an oversized stripe on a large poster.
   const swatchW = Math.max(3, Math.min(12, (ab.width - (totalSwatches - 1) * gap) / totalSwatches));
-  const swatchH = Math.max(swatchW * 0.6, 4);
+  const swatchH = Math.min(COLOR_BAR_SWATCH_H_MAX, Math.max(swatchW * 0.6, 3));
   const startX = ab.x;
-  const y = ab.y + ab.height + bleed.bottom + MARK_OFFSET + MARK_LENGTH + 6;
+  const y = ab.y + ab.height + bleed.bottom + COLOR_BAR_GAP;
 
   PROCESS_SWATCHES.forEach((s, i) => {
     const left = startX + i * (swatchW + gap);

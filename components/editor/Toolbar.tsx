@@ -22,10 +22,6 @@ import {
   Trash2,
   Combine,
   Clock,
-  SquareDashedMousePointer,
-  CircleDashed,
-  Lasso,
-  Wand2,
 } from 'lucide-react';
 import type { ToolMode } from '@/lib/editor/types';
 import { getFeatureStatus } from '@/lib/editor/tool-registry';
@@ -114,39 +110,6 @@ export function Toolbar({
         onClick={() => onSelectTool('direct')}
         onPlanned={onOpenRoadmap}
       />
-      <ToolButton
-        id="marquee-rect"
-        label="Marquee"
-        icon={<SquareDashedMousePointer size={18} />}
-        active={activeTool === 'marquee-rect'}
-        onClick={() => onSelectTool('marquee-rect')}
-        onPlanned={onOpenRoadmap}
-      />
-      <ToolButton
-        id="marquee-ellipse"
-        label="Oval Marquee"
-        icon={<CircleDashed size={18} />}
-        active={activeTool === 'marquee-ellipse'}
-        onClick={() => onSelectTool('marquee-ellipse')}
-        onPlanned={onOpenRoadmap}
-      />
-      <ToolButton
-        id="lasso"
-        label="Lasso"
-        icon={<Lasso size={18} />}
-        active={activeTool === 'lasso'}
-        onClick={() => onSelectTool('lasso')}
-        onPlanned={onOpenRoadmap}
-      />
-      <ToolButton
-        id="magic-wand"
-        label="Magic Wand"
-        icon={<Wand2 size={18} />}
-        active={activeTool === 'magic-wand'}
-        onClick={() => onSelectTool('magic-wand')}
-        onPlanned={onOpenRoadmap}
-      />
-
       <div className="w-full h-px bg-gray-200" />
 
       <ToolButton

@@ -102,6 +102,13 @@ export default function CreateDesignPage() {
     params.set('safeR', String(Math.round(safeArea.right)));
     params.set('safeB', String(Math.round(safeArea.bottom)));
     params.set('safeL', String(Math.round(safeArea.left)));
+    // A brand-new blank design's editor URL otherwise has no unique part
+    // (just w/h/dpi/...), which is indistinguishable from a plain reload
+    // of an already-open blank tab — this marker tells the editor's tab
+    // session restore that this specific navigation must always become a
+    // NEW tab, never get matched onto whatever tab happened to be active
+    // before the user came here.
+    params.set('newTab', `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`);
     router.push(`/editor?${params.toString()}`);
   };
 
