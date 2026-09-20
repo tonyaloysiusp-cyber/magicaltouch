@@ -76,6 +76,18 @@ export function useEditorHistory(
     updateHistoryButtons();
   }, [fabricCanvasRef, updateHistoryButtons]);
 
+  // Wholesale swap of the undo stack — used when switching between open
+  // design tabs, each of which keeps its own history rather than sharing
+  // the one this hook otherwise manages for a single document.
+  const restoreHistory = useCallback(
+    (stack: string[], index: number) => {
+      historyRef.current.stack = stack;
+      historyRef.current.index = index;
+      updateHistoryButtons();
+    },
+    [updateHistoryButtons]
+  );
+
   return {
     historyRef,
     suppressHistoryRef,
@@ -85,6 +97,7 @@ export function useEditorHistory(
     undo,
     redo,
     seedInitialSnapshot,
+    restoreHistory,
     SNAPSHOT_PROPS,
   };
 }

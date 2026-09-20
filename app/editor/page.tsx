@@ -57,6 +57,8 @@ import { useWindowPanels } from '@/components/editor/WindowPanels';
 import { AlignPanel } from '@/components/editor/AlignPanel';
 import { BackBar } from '@/components/BackBar';
 import { Rulers } from '@/components/editor/Rulers';
+import { TabBar, EditorTabInfo } from '@/components/editor/TabBar';
+import { OpenDesignDialog, OpenableDesign } from '@/components/editor/OpenDesignDialog';
 
 function EditorContent() {
   const searchParams = useSearchParams();
@@ -231,11 +233,58 @@ function EditorContent() {
     [...abs].reverse().forEach((a: any) => canvas.sendToBack(a));
   }, []);
 
-  const { suppressHistoryRef, canUndo, canRedo, pushHistory, undo, redo, seedInitialSnapshot } =
+  // Multi-document tabs: each tab is an independently saved design. Only
+  // the ACTIVE tab's data lives in the live canvas/React state below —
+  // every other open tab's canvas JSON, undo stack, artboards, zoom and
+  // unit are frozen into tabSnapshotsRef until it's switched back to (see
+  // activateTab()), so nothing bleeds between tabs.
+  interface TabSnapshot {
+    canvasJSON: any;
+    history: { stack: string[]; index: number };
+    artboards: ArtboardMeta[];
+    activeArtboardId: string | null;
+    zoom: number;
+    unit: DocUnit;
+    designName: string;
+    designId: string | null;
+    vpt: number[] | null;
+  }
+  const [tabs, setTabs] = useState<EditorTabInfo[]>([]);
+  const [activeTabId, setActiveTabId] = useState<string>('');
+  const activeTabIdRef = useRef<string>('');
+  useEffect(() => {
+    activeTabIdRef.current = activeTabId;
+  }, [activeTabId]);
+  const tabSnapshotsRef = useRef<Map<string, TabSnapshot>>(new Map());
+  const pendingSnapshotRef = useRef<TabSnapshot | null>(null);
+  const [showOpenDialog, setShowOpenDialog] = useState(false);
+
+  // Seeds the tab strip with whatever design the editor was opened on
+  // (from the URL), exactly once. Its name is filled in below once the
+  // canvas-load effect finishes fetching it.
+  useEffect(() => {
+    const id = urlDesignId || `new-${Date.now()}`;
+    setTabs([{ id, designId: urlDesignId, name: urlDesignId ? 'Loading…' : 'Untitled Design', width, height, dirty: false }]);
+    setActiveTabId(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const { historyRef, suppressHistoryRef, canUndo, canRedo, pushHistory: pushHistoryRaw, undo, redo, seedInitialSnapshot, restoreHistory, SNAPSHOT_PROPS } =
     useEditorHistory(fabricCanvasRef, () => {
       refreshLayers();
       setSelected(fabricCanvasRef.current?.getActiveObject() || null);
     });
+
+  // Marks the active tab dirty on every edit. pushHistory is already
+  // called from every mutation site in this file (see grep: ~40 call
+  // sites), so wrapping this one symbol is enough to cover the unsaved
+  // indicator without touching each of them individually.
+  const pushHistory = useCallback(() => {
+    pushHistoryRaw();
+    const id = activeTabIdRef.current;
+    if (!id) return;
+    setTabs((ts) => (ts.some((t) => t.id === id && !t.dirty) ? ts.map((t) => (t.id === id ? { ...t, dirty: true } : t)) : ts));
+  }, [pushHistoryRaw]);
 
   const {
     stateRef: directSelectionStateRef,
@@ -1223,7 +1272,27 @@ function EditorContent() {
         }
       });
 
-      if (urlDesignId) {
+      const pendingSnapshot = pendingSnapshotRef.current;
+      pendingSnapshotRef.current = null;
+
+      if (pendingSnapshot) {
+        // Switching to a tab that already had a live document in memory —
+        // restore it exactly rather than re-fetching from Supabase, which
+        // would both waste a round trip and discard any unsaved edits.
+        canvas.loadFromJSON(pendingSnapshot.canvasJSON, function () {
+          ensureArtboards(canvas, F);
+          if (pendingSnapshot.vpt) canvas.setViewportTransform(pendingSnapshot.vpt);
+          canvas.renderAll();
+          refreshLayers();
+          restoreHistory(pendingSnapshot.history.stack, pendingSnapshot.history.index);
+          setArtboards(pendingSnapshot.artboards);
+          setActiveArtboardId(pendingSnapshot.activeArtboardId);
+          setZoom(pendingSnapshot.zoom);
+          setUnit(pendingSnapshot.unit);
+          setDesignName(pendingSnapshot.designName);
+          setDesignId(pendingSnapshot.designId);
+        });
+      } else if (urlDesignId) {
         setDesignId(urlDesignId);
         supabase
           .from('designs')
@@ -1233,6 +1302,7 @@ function EditorContent() {
           .then(({ data, error }) => {
             if (data) {
               setDesignName(data.name);
+              setTabs((ts) => ts.map((t) => (t.designId === urlDesignId ? { ...t, name: data.name } : t)));
               canvas.loadFromJSON(data.canvas_json, function () {
                 ensureArtboards(canvas, F);
                 const first = canvas.getObjects().find((o: any) => o.__isArtboard);
@@ -2084,6 +2154,28 @@ function EditorContent() {
     if (data) {
       setDesignId(data.id);
       setDesignName(nameToUse);
+      const savedTabId = activeTabIdRef.current;
+      setTabs((ts) => ts.map((t) => (t.id === savedTabId ? { ...t, id: data.id, designId: data.id, name: nameToUse, dirty: false } : t)));
+      if (savedTabId !== data.id) setActiveTabId(data.id);
+      // Only a first save (idToUse null) or Save As actually changes the
+      // URL's designId, which re-triggers the canvas load effect below —
+      // hand it back exactly what's already on screen instead of making
+      // it re-fetch what was just written. A plain re-save of an
+      // already-loaded design leaves the URL (and so the effect) alone,
+      // so there's nothing to hand off.
+      if (idToUse !== data.id) {
+        pendingSnapshotRef.current = {
+          canvasJSON: canvasJson,
+          history: { stack: [...historyRef.current.stack], index: historyRef.current.index },
+          artboards,
+          activeArtboardId,
+          zoom,
+          unit,
+          designName: nameToUse,
+          designId: data.id,
+          vpt: fabricCanvasRef.current.viewportTransform ? [...fabricCanvasRef.current.viewportTransform] : null,
+        };
+      }
       router.replace(`/editor?designId=${data.id}&w=${width}&h=${height}`);
     }
   };
@@ -2117,6 +2209,85 @@ function EditorContent() {
       if (!name || !name.trim()) return;
       performSave(null, name.trim());
     });
+  };
+
+  // Freezes the tab currently on screen into tabSnapshotsRef so it can be
+  // restored exactly when switched back to. Called right before swapping
+  // in a different tab's document.
+  const snapshotCurrentTab = () => {
+    const canvas = fabricCanvasRef.current;
+    if (!canvas || !activeTabIdRef.current) return;
+    tabSnapshotsRef.current.set(activeTabIdRef.current, {
+      canvasJSON: canvas.toJSON(SNAPSHOT_PROPS),
+      history: { stack: [...historyRef.current.stack], index: historyRef.current.index },
+      artboards,
+      activeArtboardId,
+      zoom,
+      unit,
+      designName,
+      designId,
+      vpt: canvas.viewportTransform ? [...canvas.viewportTransform] : null,
+    });
+  };
+
+  // Swaps the live canvas over to `tab`. If it was open before (a
+  // snapshot exists), that snapshot is restored verbatim; if it's a
+  // design being opened for the first time this session, the URL change
+  // below falls through to the normal Supabase fetch in the canvas-load
+  // effect. `isNew` adds it to the tab strip first.
+  const activateTab = (tab: EditorTabInfo, opts: { isNew?: boolean } = {}) => {
+    if (tab.id === activeTabIdRef.current) return;
+    snapshotCurrentTab();
+    if (opts.isNew) setTabs((ts) => [...ts, tab]);
+    pendingSnapshotRef.current = tabSnapshotsRef.current.get(tab.id) || null;
+    setActiveTabId(tab.id);
+    const query = tab.designId
+      ? `designId=${tab.designId}&w=${tab.width}&h=${tab.height}`
+      : `w=${tab.width}&h=${tab.height}`;
+    router.replace(`/editor?${query}`, { scroll: false });
+  };
+
+  const switchTab = (id: string) => {
+    const tab = tabs.find((t) => t.id === id);
+    if (tab) activateTab(tab);
+  };
+
+  const openDesignAsTab = (design: OpenableDesign) => {
+    setShowOpenDialog(false);
+    const existing = tabs.find((t) => t.designId === design.id);
+    activateTab(
+      existing || { id: design.id, designId: design.id, name: design.name, width: design.width, height: design.height, dirty: false },
+      { isNew: !existing }
+    );
+  };
+
+  // Closes a tab, confirming first if it has unsaved edits. Closing the
+  // last open tab leaves the editor entirely (back to the dashboard) —
+  // there's always at least one document open otherwise.
+  const closeTab = (id: string, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    const tab = tabs.find((t) => t.id === id);
+    if (!tab) return;
+    if (tab.dirty && !window.confirm(`"${tab.name || 'Untitled Design'}" has unsaved changes. Close without saving?`)) return;
+
+    tabSnapshotsRef.current.delete(id);
+    const remaining = tabs.filter((t) => t.id !== id);
+
+    if (id !== activeTabIdRef.current) {
+      setTabs(remaining);
+      return;
+    }
+    if (remaining.length === 0) {
+      router.push('/dashboard');
+      return;
+    }
+    const idx = tabs.findIndex((t) => t.id === id);
+    const next = remaining[Math.max(0, idx - 1)] || remaining[0];
+    setTabs(remaining);
+    pendingSnapshotRef.current = tabSnapshotsRef.current.get(next.id) || null;
+    setActiveTabId(next.id);
+    const query = next.designId ? `designId=${next.designId}&w=${next.width}&h=${next.height}` : `w=${next.width}&h=${next.height}`;
+    router.replace(`/editor?${query}`, { scroll: false });
   };
 
   const downloadFile = (dataUrl: string, filename: string) => {
@@ -2465,7 +2636,7 @@ function EditorContent() {
       label: 'File',
       items: [
         { label: 'New Design', onClick: startNewDesign },
-        { label: 'Open...', onClick: () => router.push('/dashboard') },
+        { label: 'Open...', onClick: () => setShowOpenDialog(true) },
         { divider: true },
         { label: 'Save', shortcut: 'Ctrl/Cmd+S', onClick: saveDesign },
         { label: 'Save As...', shortcut: 'Ctrl/Cmd+Shift+S', onClick: saveDesignAs },
@@ -2480,7 +2651,7 @@ function EditorContent() {
         { label: 'Print Setup (Bleed/Slug/Marks)', onClick: () => togglePanel('artboards') },
         { label: 'Document Setup', planned: true },
         { divider: true },
-        { label: 'Close Design', onClick: () => router.push('/dashboard') },
+        { label: 'Close Design', onClick: () => closeTab(activeTabId) },
         { label: 'Back to Dashboard', onClick: () => router.push('/dashboard') },
       ],
     },
@@ -2609,6 +2780,8 @@ function EditorContent() {
       <main className="h-screen flex flex-col bg-gray-50">
       <MenuBar menus={menus} leading={<Image src="/logo.png" alt="Magical Touch" width={140} height={28} priority />} />
 
+      <TabBar tabs={tabs} activeTabId={activeTabId} onSwitch={switchTab} onClose={closeTab} onAdd={() => setShowOpenDialog(true)} />
+
       <div className="flex items-center justify-between px-4 py-2 border-b bg-white">
         <div className="flex items-center gap-2">
           <BackBar
@@ -2619,7 +2792,11 @@ function EditorContent() {
         <input
           type="text"
           value={designName}
-          onChange={(e) => setDesignName(e.target.value)}
+          onChange={(e) => {
+            const name = e.target.value;
+            setDesignName(name);
+            setTabs((ts) => ts.map((t) => (t.id === activeTabIdRef.current ? { ...t, name } : t)));
+          }}
           className="text-sm border rounded px-2 py-1 w-48 text-center"
         />
 
@@ -2670,6 +2847,15 @@ function EditorContent() {
       )}
 
       {showDesignLimitDialog && <DesignLimitDialog onCancel={() => setShowDesignLimitDialog(false)} />}
+
+      {showOpenDialog && (
+        <OpenDesignDialog
+          currentDesignId={designId}
+          openDesignIds={tabs.map((t) => t.designId).filter((id): id is string => !!id)}
+          onClose={() => setShowOpenDialog(false)}
+          onPick={openDesignAsTab}
+        />
+      )}
 
       <div className="flex flex-1 overflow-hidden">
         <Toolbar
