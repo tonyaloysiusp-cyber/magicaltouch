@@ -44,6 +44,7 @@ interface Props {
   onApplyPixelSelectionAsMask: () => void;
   onExtractPixelSelectionToLayer: () => void;
   onRestoreOriginalImage: () => void;
+  onReplaceImage: (file: File) => void;
 }
 
 export function PropertiesPanel({
@@ -79,6 +80,7 @@ export function PropertiesPanel({
   onApplyPixelSelectionAsMask,
   onExtractPixelSelectionToLayer,
   onRestoreOriginalImage,
+  onReplaceImage,
 }: Props) {
   if (activeTool === 'pen') {
     return (
@@ -724,6 +726,27 @@ export function PropertiesPanel({
 
       {isImage && (
         <>
+          <label
+            className={`flex items-center justify-center gap-1.5 text-xs font-semibold border rounded py-1.5 cursor-pointer hover:bg-gray-50 ${
+              isLocked ? 'opacity-40 pointer-events-none' : ''
+            }`}
+          >
+            Replace Image
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) onReplaceImage(file);
+                e.target.value = '';
+              }}
+            />
+          </label>
+          <p className="text-[10px] text-gray-400 -mt-2">
+            Swaps this layer's photo in place — same position, size and crop. The new image is scaled
+            proportionally to fill the frame, never stretched.
+          </p>
           <div className="grid grid-cols-2 gap-1">
             <button disabled={isLocked} onClick={() => applyProp({ flipX: !selected.flipX })} className="text-xs border rounded py-1 hover:bg-gray-50 disabled:opacity-40">
               Flip H

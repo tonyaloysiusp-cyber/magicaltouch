@@ -1332,6 +1332,81 @@ function EditorContent() {
     reader.readAsDataURL(file);
   };
 
+  // Swaps the pixel data of the selected image layer for a newly-chosen
+  // file, in place — same Fabric object, same __uid/__artboardId/layer
+  // position/z-order, same clipPath (crop or custom mask) instance,
+  // rotation and opacity untouched. Only the source image and the scale
+  // needed to make it cover that same frame change, so this behaves like
+  // a real design tool's "Replace Image": the new photo fills the exact
+  // area the old one did, proportionally (never stretched), instead of
+  // the old image being deleted and a disconnected new layer added.
+  const replaceSelectedImage = (file: File) => {
+    const canvas = fabricCanvasRef.current;
+    const active = canvas.getActiveObject();
+    if (!active || active.type !== 'image' || active.locked) return;
+
+    // The frame is the image's own current on-canvas footprint — exactly
+    // the area it visually occupies now, independent of its natural
+    // pixel size or any crop already applied.
+    const frameW = (active.width || 1) * (active.scaleX || 1);
+    const frameH = (active.height || 1) * (active.scaleY || 1);
+    const prevScaleX = active.scaleX || 1;
+    const prevScaleY = active.scaleY || 1;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const dataUrl = event.target ? (event.target.result as string) : '';
+      if (!dataUrl) return;
+      active.setSrc(dataUrl, () => {
+        // Fabric's setSrc updates width/height to the new image's natural
+        // pixel size but leaves scaleX/scaleY untouched — recompute them
+        // so the new image covers the same frame the old one did, using
+        // one uniform scale factor (never independent X/Y) so its own
+        // aspect ratio is never distorted.
+        const naturalW = active.width || 1;
+        const naturalH = active.height || 1;
+        const scale = Math.max(frameW / naturalW, frameH / naturalH);
+
+        // An existing crop/mask clipPath was sized against the old
+        // scale — rescale it by the same ratio so its absolute size and
+        // position on screen stay exactly where they were, regardless of
+        // how the new image's natural size compares to the old one's.
+        if (active.clipPath) {
+          const ratioX = prevScaleX / scale;
+          const ratioY = prevScaleY / scale;
+          active.clipPath.set({
+            scaleX: (active.clipPath.scaleX || 1) * ratioX,
+            scaleY: (active.clipPath.scaleY || 1) * ratioY,
+          });
+        } else {
+          // No existing crop/mask: a "cover" fit can still overhang the
+          // original frame on one axis (e.g. a tall replacement fit into
+          // a square frame), so clip to a plain rectangle matching that
+          // frame — sized in the image's own local space, i.e. before its
+          // new scale is applied — so the new photo never visually
+          // exceeds the area the old one occupied.
+          const F = (window as any).fabric;
+          active.clipPath = new F.Rect({
+            width: frameW / scale,
+            height: frameH / scale,
+            originX: 'center',
+            originY: 'center',
+          });
+        }
+
+        active.set({ scaleX: scale, scaleY: scale, dirty: true });
+        // A stale "restore original" backup from the previous photo no
+        // longer applies to this one.
+        delete active.__originalSrc;
+        active.setCoords();
+        canvas.requestRenderAll();
+        bumpSel();
+        pushHistory();
+      });
+    };
+    reader.readAsDataURL(file);
+  };
+
   const deleteSelected = () => {
     const canvas = fabricCanvasRef.current;
     const active = canvas.getActiveObject();
@@ -2478,6 +2553,7 @@ function EditorContent() {
                 onApplyPixelSelectionAsMask={applyPixelSelectionAsMask}
                 onExtractPixelSelectionToLayer={extractPixelSelectionToLayer}
                 onRestoreOriginalImage={restoreOriginalImage}
+                onReplaceImage={replaceSelectedImage}
               />
             </div>
           )}
