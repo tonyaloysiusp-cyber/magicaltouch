@@ -84,7 +84,51 @@ function EditorContent() {
   const [layers, setLayers] = useState<any[]>([]);
   const [designName, setDesignName] = useState('Untitled Design');
   const [designId, setDesignId] = useState<string | null>(null);
+  // Read by the autosave timer at fire time, which can be several seconds
+  // after it was scheduled — reading these refs instead of the state
+  // values captured in a stale closure avoids saving under an old id/name
+  // (e.g. right after Save As renames the document).
+  const designIdRef = useRef(designId);
+  const designNameRef = useRef(designName);
+  useEffect(() => {
+    designIdRef.current = designId;
+    designNameRef.current = designName;
+  }, [designId, designName]);
   const [saving, setSaving] = useState(false);
+  // A real status the user can see at a glance, matching every other
+  // cloud editor (Saving.../Saved/Offline/Error) — previously the only
+  // feedback was the Save button's own disabled state while a MANUAL
+  // save was in flight, with no signal at all for autosave or
+  // connectivity loss.
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'unsaved' | 'error' | 'offline'>('idle');
+  const dirtyRef = useRef(false);
+  // Assigned once scheduleAutosave itself is defined further down (after
+  // performSave) — indirected through a ref purely so the effect above,
+  // which needs to exist before that point, can still call the latest
+  // version without a definition-order problem.
+  const scheduleAutosaveRef = useRef<((delayMs?: number) => void) | null>(null);
+  const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [isOnline, setIsOnline] = useState(true);
+  useEffect(() => {
+    setIsOnline(typeof navigator === 'undefined' ? true : navigator.onLine);
+    const goOnline = () => {
+      setIsOnline(true);
+      // Reconnecting is exactly when a pending edit is most at risk of
+      // being lost if the user closes the tab before a manual save —
+      // sync immediately rather than waiting out the debounce.
+      if (dirtyRef.current) scheduleAutosaveRef.current?.(0);
+    };
+    const goOffline = () => {
+      setIsOnline(false);
+      setSaveStatus('offline');
+    };
+    window.addEventListener('online', goOnline);
+    window.addEventListener('offline', goOffline);
+    return () => {
+      window.removeEventListener('online', goOnline);
+      window.removeEventListener('offline', goOffline);
+    };
+  }, []);
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [showDesignLimitDialog, setShowDesignLimitDialog] = useState(false);
   const [exporting, setExporting] = useState(false);
@@ -349,9 +393,19 @@ function EditorContent() {
   // indicator without touching each of them individually.
   const pushHistory = useCallback(() => {
     pushHistoryRaw();
+    // A programmatic canvas rebuild (restoring a tab snapshot, loading a
+    // just-saved design after its id-changing router.replace, undo/redo)
+    // also fires the same object:added events a real edit would — the
+    // undo stack already ignores these via suppressHistoryRef, and the
+    // dirty/autosave tracking needs the same guard or every first save of
+    // a new document would immediately re-mark itself unsaved and loop.
+    if (suppressHistoryRef.current) return;
     const id = activeTabIdRef.current;
     if (!id) return;
     setTabs((ts) => (ts.some((t) => t.id === id && !t.dirty) ? ts.map((t) => (t.id === id ? { ...t, dirty: true } : t)) : ts));
+    dirtyRef.current = true;
+    setSaveStatus((s) => (s === 'saving' ? s : 'unsaved'));
+    scheduleAutosaveRef.current?.();
   }, [pushHistoryRaw]);
 
   const {
@@ -1117,6 +1171,11 @@ function EditorContent() {
         // Switching to a tab that already had a live document in memory —
         // restore it exactly rather than re-fetching from Supabase, which
         // would both waste a round trip and discard any unsaved edits.
+        // Suppressed because loadFromJSON's own object:added events would
+        // otherwise re-mark the tab dirty and re-trigger autosave for a
+        // load that isn't a real edit (restoreHistory below already
+        // corrects the undo stack the same way).
+        suppressHistoryRef.current = true;
         canvas.loadFromJSON(pendingSnapshot.canvasJSON, function () {
           ensureArtboards(canvas, F);
           if (pendingSnapshot.vpt) canvas.setViewportTransform(pendingSnapshot.vpt);
@@ -1130,6 +1189,7 @@ function EditorContent() {
           setDesignName(pendingSnapshot.designName);
           setDesignId(pendingSnapshot.designId);
           ensureFontsLoadedForCanvasJSON(pendingSnapshot.canvasJSON).then(() => canvas.requestRenderAll());
+          suppressHistoryRef.current = false;
         });
       } else if (urlDesignId) {
         setDesignId(urlDesignId);
@@ -1142,6 +1202,7 @@ function EditorContent() {
             if (data) {
               setDesignName(data.name);
               setTabs((ts) => ts.map((t) => (t.designId === urlDesignId ? { ...t, name: data.name } : t)));
+              suppressHistoryRef.current = true;
               canvas.loadFromJSON(data.canvas_json, function () {
                 ensureArtboards(canvas, F);
                 const first = canvas.getObjects().find((o: any) => o.__isArtboard);
@@ -1155,6 +1216,7 @@ function EditorContent() {
                 refreshLayers();
                 seedInitialSnapshot();
                 ensureFontsLoadedForCanvasJSON(data.canvas_json).then(() => canvas.requestRenderAll());
+                suppressHistoryRef.current = false;
               });
             }
             if (error) console.error('Failed to load design:', error);
@@ -2017,12 +2079,23 @@ function EditorContent() {
   // near-duplicate copies each reading designId/designName from the
   // component closure, which would go stale the instant Save As updates
   // that state right before saving.
-  const performSave = async (idToUse: string | null, nameToUse: string) => {
+  const performSave = async (idToUse: string | null, nameToUse: string, opts?: { silent?: boolean }) => {
+    const silent = !!opts?.silent;
+    if (!fabricCanvasRef.current) return;
     setSaving(true);
+    setSaveStatus('saving');
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
-      alert('You must be logged in to save a design.');
       setSaving(false);
+      if (silent) {
+        // Autosave with no session (e.g. an expired token) isn't an error
+        // to interrupt the user with — just leave the change marked dirty
+        // so the next successful save (manual or autosave) picks it up.
+        setSaveStatus('error');
+        return;
+      }
+      alert('You must be logged in to save a design.');
+      setSaveStatus('unsaved');
       return;
     }
 
@@ -2094,9 +2167,12 @@ function EditorContent() {
 
     if (error) {
       console.error('Save failed:', error);
-      alert('Failed to save design. Please try again.');
+      setSaveStatus('error');
+      if (!silent) alert('Failed to save design. Please try again.');
       return;
     }
+    dirtyRef.current = false;
+    setSaveStatus('saved');
     if (data) {
       setDesignId(data.id);
       setDesignName(nameToUse);
@@ -2127,6 +2203,36 @@ function EditorContent() {
   };
 
   const saveDesign = () => performSave(designId, designName);
+
+  // Debounced background save (spec: "Never lose a design because of
+  // navigation or refresh"). A few seconds of inactivity after any edit
+  // triggers a silent save reusing the same performSave path as the manual
+  // Save button — including a document's very first save, since
+  // performSave already handles idToUse === null by inserting a new row.
+  const AUTOSAVE_DELAY_MS = 3000;
+  const scheduleAutosave = useCallback(
+    (delayMs: number = AUTOSAVE_DELAY_MS) => {
+      if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
+      autosaveTimerRef.current = setTimeout(() => {
+        autosaveTimerRef.current = null;
+        if (!dirtyRef.current) return;
+        if (typeof navigator !== 'undefined' && !navigator.onLine) {
+          setSaveStatus('offline');
+          return;
+        }
+        performSave(designIdRef.current, designNameRef.current, { silent: true });
+      }, delayMs);
+    },
+    // designId/designName are read from refs at fire time (see below) so
+    // this callback never goes stale without needing them as deps.
+    []
+  );
+  useEffect(() => {
+    scheduleAutosaveRef.current = scheduleAutosave;
+  }, [scheduleAutosave]);
+  useEffect(() => () => {
+    if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
+  }, []);
 
   // Forks the current canvas into a brand-new design row under a new
   // name, leaving the original untouched — after this, the editor keeps
@@ -2887,6 +2993,34 @@ function EditorContent() {
         </div>
 
         <div className="flex items-center gap-2 relative">
+          <span
+            className={
+              'text-xs px-2 py-1 rounded-full ' +
+              (!isOnline
+                ? 'text-amber-700 bg-amber-50'
+                : saveStatus === 'error'
+                ? 'text-red-600 bg-red-50'
+                : saveStatus === 'saving'
+                ? 'text-gray-500 bg-gray-50'
+                : saveStatus === 'unsaved'
+                ? 'text-gray-400 bg-gray-50'
+                : saveStatus === 'saved'
+                ? 'text-green-600 bg-green-50'
+                : 'text-transparent')
+            }
+          >
+            {!isOnline
+              ? 'Offline'
+              : saveStatus === 'error'
+              ? 'Save failed'
+              : saveStatus === 'saving'
+              ? 'Saving...'
+              : saveStatus === 'unsaved'
+              ? 'Unsaved changes'
+              : saveStatus === 'saved'
+              ? 'Saved'
+              : ''}
+          </span>
           <button onClick={() => setShowExportDialog(true)} disabled={exporting} className="border border-gray-300 text-gray-700 px-4 py-2 rounded-full text-sm font-semibold disabled:opacity-50">
             {exporting ? 'Exporting...' : 'Export'}
           </button>
