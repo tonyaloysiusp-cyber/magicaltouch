@@ -224,7 +224,7 @@ export function Toolbar({
       <label className="flex flex-col items-center gap-1 text-gray-700 cursor-pointer w-full">
         <ImagePlus size={18} />
         <span className="text-[10px] leading-none">Upload</span>
-        <input type="file" accept="image/*" onChange={onImageUpload} className="hidden" />
+        <input id="mainImageUploadInput" type="file" accept="image/*" onChange={onImageUpload} className="hidden" />
       </label>
 
       <div className="w-full h-px bg-gray-200" />

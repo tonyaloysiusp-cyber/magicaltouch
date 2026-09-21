@@ -178,6 +178,21 @@ function cropToCanvas(source: CanvasImageSource, sw: number, sh: number, rect: C
   return out;
 }
 
+// Real resampling (as distinct from cropToCanvas's trim-only crop):
+// draws the full source into a canvas at NEW target pixel dimensions,
+// genuinely changing the pixel count rather than just selecting a
+// sub-region — this is what "Resize Image" / Photoshop's Image Size
+// does, backing the Resize dialog below.
+function resampleToCanvas(source: CanvasImageSource, srcW: number, srcH: number, destW: number, destH: number): HTMLCanvasElement {
+  const out = document.createElement('canvas');
+  out.width = Math.max(1, Math.round(destW));
+  out.height = Math.max(1, Math.round(destH));
+  const ctx = out.getContext('2d') as CanvasRenderingContext2D;
+  configureHighQualityContext(ctx);
+  ctx.drawImage(source, 0, 0, srcW, srcH, 0, 0, out.width, out.height);
+  return out;
+}
+
 // Decodes a PNG data URL (the same encoding maskToCanvas produces — RGB
 // irrelevant, mask value carried entirely in alpha) back into a PixelMask.
 // Used to restore a mask from a history entry, where masks are kept as
@@ -836,6 +851,10 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
 
   // ---- Crop tool ----
   const cropObjRef = useRef<any>(null);
+  // Exact-size crop input (spec ask: typing a target size, not only
+  // freeform drag) — independent of the draggable crop rect's own
+  // resize handles; "Set Size" below reads these and resizes the rect.
+  const [cropSizeInput, setCropSizeInput] = useState<{ w: string; h: string }>({ w: '', h: '' });
   const startCrop = () => {
     const canvas = fabricCanvasRef.current;
     const F = fabricModRef.current;
@@ -864,6 +883,33 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
     canvas.add(rect);
     canvas.setActiveObject(rect);
     canvas.requestRenderAll();
+    setCropSizeInput({ w: String(Math.round(w * 0.8)), h: String(Math.round(h * 0.8)) });
+  };
+
+  // Resizes the crop rect to an exact typed width/height (image pixels),
+  // anchored at its current top-left and clamped so it never extends
+  // past the image bounds — the same rect applyCrop() reads, so typing a
+  // size and dragging to reposition can be mixed freely.
+  const applyCropSizeInput = () => {
+    const canvas = fabricCanvasRef.current;
+    const img = imageRef.current;
+    const rect = cropObjRef.current;
+    if (!canvas || !img || !rect) return;
+    const w = Math.round(parseFloat(cropSizeInput.w));
+    const h = Math.round(parseFloat(cropSizeInput.h));
+    if (!Number.isFinite(w) || !Number.isFinite(h) || w < 1 || h < 1) return;
+    const clampedW = Math.min(w, img.width);
+    const clampedH = Math.min(h, img.height);
+    const minLeft = img.left || 0;
+    const minTop = img.top || 0;
+    const maxLeft = minLeft + img.width - clampedW;
+    const maxTop = minTop + img.height - clampedH;
+    const left = Math.min(Math.max(rect.left, minLeft), Math.max(minLeft, maxLeft));
+    const top = Math.min(Math.max(rect.top, minTop), Math.max(minTop, maxTop));
+    rect.set({ width: clampedW, height: clampedH, scaleX: 1, scaleY: 1, left, top });
+    rect.setCoords();
+    canvas.requestRenderAll();
+    setCropSizeInput({ w: String(clampedW), h: String(clampedH) });
   };
 
   const cancelCrop = () => {
@@ -925,6 +971,12 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
     const cropped = cropToCanvas(pristine, pristine.naturalWidth, pristine.naturalHeight, newRect);
     const dataUrl = cropped.toDataURL('image/png');
     img.__cropRect = newRect;
+    // Was never updated after a crop, so the status bar's "document size"
+    // kept showing the ORIGINAL uncropped dimensions, and addPathToMask's
+    // fallback (img.__naturalSize?.w || img.width) would build a mask
+    // canvas at the stale, larger size — misaligned against the actually-
+    // cropped image.
+    img.__naturalSize = { w: cropped.width, h: cropped.height };
 
     canvas.remove(rect);
     cropObjRef.current = null;
@@ -947,6 +999,101 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
       pushLocalHistory(dataUrl, newRect);
       setActiveTool('select');
     });
+  };
+
+  // ---- Resize Image (real resampling, distinct from Crop's trim-only
+  // behavior) + DPI, matching Photoshop's own Image Size dialog: editing
+  // width/height resamples the actual pixels, editing DPI alone just
+  // changes the physical print size a fixed pixel count represents. DPI
+  // is genuinely tied to pixel dimensions here (computed live below) —
+  // it isn't wired into the PDF export pipeline yet, which is Main
+  // Design's own separate per-artboard DPI setting. ----
+  const [showResizeDialog, setShowResizeDialog] = useState(false);
+  const [resizeInput, setResizeInput] = useState({ w: '', h: '', dpi: '300', lockAspect: true });
+
+  const openResizeDialog = () => {
+    const img = imageRef.current;
+    if (!img) return;
+    const size = img.__naturalSize || { w: img.width, h: img.height };
+    setResizeInput({ w: String(size.w), h: String(size.h), dpi: String(img.__dpi || 300), lockAspect: true });
+    setShowResizeDialog(true);
+  };
+
+  const onResizeWidthChange = (value: string) => {
+    setResizeInput((s) => {
+      if (!s.lockAspect) return { ...s, w: value };
+      const img = imageRef.current;
+      const size = img?.__naturalSize || { w: img?.width || 1, h: img?.height || 1 };
+      const w = parseFloat(value);
+      if (!Number.isFinite(w) || size.w <= 0) return { ...s, w: value };
+      return { ...s, w: value, h: String(Math.round((w * size.h) / size.w)) };
+    });
+  };
+  const onResizeHeightChange = (value: string) => {
+    setResizeInput((s) => {
+      if (!s.lockAspect) return { ...s, h: value };
+      const img = imageRef.current;
+      const size = img?.__naturalSize || { w: img?.width || 1, h: img?.height || 1 };
+      const h = parseFloat(value);
+      if (!Number.isFinite(h) || size.h <= 0) return { ...s, h: value };
+      return { ...s, h: value, w: String(Math.round((h * size.w) / size.h)) };
+    });
+  };
+
+  const applyResizeImage = () => {
+    const canvas = fabricCanvasRef.current;
+    const F = fabricModRef.current;
+    const img = imageRef.current;
+    const pristine = img?.__pristineEl;
+    if (!canvas || !F || !img || !pristine) return;
+    const newW = Math.round(parseFloat(resizeInput.w));
+    const newH = Math.round(parseFloat(resizeInput.h));
+    const dpi = Math.max(1, Math.round(parseFloat(resizeInput.dpi)) || 300);
+    if (!Number.isFinite(newW) || !Number.isFinite(newH) || newW < 1 || newH < 1) return;
+
+    const currentSize = img.__naturalSize || { w: img.width, h: img.height };
+    if (newW === currentSize.w && newH === currentSize.h) {
+      // DPI-only change: no reason to touch pixels at all.
+      img.__dpi = dpi;
+      setShowResizeDialog(false);
+      return;
+    }
+
+    // Resamples from the current cropped view (what's actually on
+    // screen), not blindly the full original pristine, so Resize acts on
+    // the image as the user currently sees it.
+    const cur: CropRect = img.__cropRect;
+    const cropped = cropToCanvas(pristine, pristine.naturalWidth, pristine.naturalHeight, cur);
+    const resampled = resampleToCanvas(cropped, cropped.width, cropped.height, newW, newH);
+    const dataUrl = resampled.toDataURL('image/png');
+
+    // A deliberate resize becomes the new baseline pristine — later crops
+    // build on this resolution rather than the old one, the same
+    // "every step is permanent, never cumulative quality loss on top of
+    // an already-lossy copy" principle Crop already follows.
+    const newPristine = new Image();
+    newPristine.onload = () => {
+      img.__pristineEl = newPristine;
+      img.__naturalSize = { w: newW, h: newH };
+      img.__cropRect = { x: 0, y: 0, width: newW, height: newH };
+      img.__dpi = dpi;
+      if (img.__maskData) {
+        img.__maskData = null;
+        img.clipPath = null;
+        setHasMask(false);
+      }
+      img.setSrc(dataUrl, () => {
+        img.set({ left: 0, top: 0 });
+        applyAdjustments(img, F, img.__adjustments);
+        img.setCoords();
+        fitToView();
+        canvas.setActiveObject(img);
+        canvas.requestRenderAll();
+        pushLocalHistory(dataUrl, img.__cropRect);
+        setShowResizeDialog(false);
+      });
+    };
+    newPristine.src = dataUrl;
   };
 
   // ---- Pixel selection tools (marquee/lasso/magic-wand), reused as-is
@@ -975,14 +1122,23 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
       fabricCanvasRef,
       onPathFinished: (pathObj) => {
         const canvas = fabricCanvasRef.current;
-        pathObj.set({ selectable: true, evented: true, stroke: '#3891ff', strokeWidth: 1.5, fill: '' });
+        pathObj.set({ stroke: '#3891ff', strokeWidth: 1.5, fill: '' });
         canvas.add(pathObj);
         canvas.setActiveObject(pathObj);
         lastPathRef.current = pathObj;
         setHasVectorPath(true);
+        // The Pen tool stays active after finishing a path (matching the
+        // same fix already applied to Main Design's Pen/shape tools) so
+        // drawing several paths in a row doesn't require re-selecting the
+        // tool each time — auto-switching to Direct Selection here (the
+        // previous behavior) silently kicked the user out of Pen after
+        // every single path, which is what was being reported as the
+        // Pen tool "not working". Direct Selection (A) is still one
+        // keypress away for anchor editing. Non-interactive for the same
+        // reason a just-drawn shape is in Main Design: a click meant to
+        // start the NEXT path shouldn't instead grab/drag this one.
+        pathObj.set({ selectable: false, evented: false });
         canvas.requestRenderAll();
-        setActiveTool('direct');
-        renderHandles(pathObj);
       },
     });
 
@@ -1714,7 +1870,26 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
         <div ref={containerRef} className="flex-1 relative bg-gray-200">
           <canvas ref={canvasElRef} />
           {activeTool === 'crop' && (
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 bg-white rounded-full shadow px-3 py-1.5">
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-white rounded-full shadow px-3 py-1.5">
+              <input
+                type="number"
+                min={1}
+                value={cropSizeInput.w}
+                onChange={(e) => setCropSizeInput((s) => ({ ...s, w: e.target.value }))}
+                className="w-16 text-xs border rounded px-1.5 py-1"
+                title="Crop width (px)"
+              />
+              <span className="text-xs text-gray-400">×</span>
+              <input
+                type="number"
+                min={1}
+                value={cropSizeInput.h}
+                onChange={(e) => setCropSizeInput((s) => ({ ...s, h: e.target.value }))}
+                className="w-16 text-xs border rounded px-1.5 py-1"
+                title="Crop height (px)"
+              />
+              <button onClick={applyCropSizeInput} className="text-xs px-2.5 py-1 rounded-full border hover:bg-gray-50">Set Size</button>
+              <div className="w-px h-4 bg-gray-200" />
               <button onClick={cancelCrop} className="text-xs px-3 py-1 rounded-full border">Cancel Crop</button>
               <button onClick={applyCrop} className="text-xs px-3 py-1 rounded-full bg-gray-800 text-white">Apply Crop</button>
             </div>
@@ -1959,7 +2134,7 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
                     ? 'Click to place anchors, drag for curve handles. Enter finishes an open path; click the first anchor to close it. Esc cancels.'
                     : 'Drag an anchor to move it. Alt/Option-click toggles corner/smooth. Click a green square to add an anchor. Delete removes the selected anchor.'}
                 </p>
-                {activeTool === 'direct' && hasVectorPath && (
+                {hasVectorPath && (
                   <button onClick={addPathToMask} className="w-full text-[11px] px-2 py-1.5 border rounded hover:bg-gray-50">Add Path to Mask</button>
                 )}
               </div>
@@ -2043,7 +2218,9 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
 
       <div className="h-9 border-t bg-white flex items-center justify-between px-3 text-[11px] text-gray-500 shrink-0">
         <div className="flex items-center gap-2">
-          <span>{docSize.w} × {docSize.h} px</span>
+          <button onClick={openResizeDialog} className="hover:underline" title="Resize Image / DPI">
+            {docSize.w} × {docSize.h} px
+          </button>
           {layersForPanel.length > 1 && <span>· {layersForPanel.length} layers</span>}
         </div>
         <div className="flex items-center gap-2">
@@ -2063,6 +2240,69 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
           <button onClick={() => setZoomLevel(100)} className="px-2 py-0.5 border rounded hover:bg-gray-50">100%</button>
         </div>
       </div>
+
+      {showResizeDialog && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-6" onClick={() => setShowResizeDialog(false)}>
+          <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-xl shadow-xl w-full max-w-xs p-4">
+            <p className="font-semibold text-sm text-gray-800 mb-3">Resize Image</p>
+            <div className="flex items-center gap-2 mb-2">
+              <div className="flex-1">
+                <label className="text-[11px] text-gray-500">Width (px)</label>
+                <input
+                  type="number"
+                  min={1}
+                  value={resizeInput.w}
+                  onChange={(e) => onResizeWidthChange(e.target.value)}
+                  className="w-full text-sm border rounded px-2 py-1 mt-0.5"
+                />
+              </div>
+              <div className="flex-1">
+                <label className="text-[11px] text-gray-500">Height (px)</label>
+                <input
+                  type="number"
+                  min={1}
+                  value={resizeInput.h}
+                  onChange={(e) => onResizeHeightChange(e.target.value)}
+                  className="w-full text-sm border rounded px-2 py-1 mt-0.5"
+                />
+              </div>
+            </div>
+            <label className="flex items-center gap-1.5 text-[11px] text-gray-600 mb-3">
+              <input
+                type="checkbox"
+                checked={resizeInput.lockAspect}
+                onChange={(e) => setResizeInput((s) => ({ ...s, lockAspect: e.target.checked }))}
+              />
+              Lock aspect ratio
+            </label>
+            <div className="mb-3">
+              <label className="text-[11px] text-gray-500">DPI</label>
+              <input
+                type="number"
+                min={1}
+                value={resizeInput.dpi}
+                onChange={(e) => setResizeInput((s) => ({ ...s, dpi: e.target.value }))}
+                className="w-full text-sm border rounded px-2 py-1 mt-0.5"
+              />
+            </div>
+            {(() => {
+              const w = parseFloat(resizeInput.w);
+              const h = parseFloat(resizeInput.h);
+              const dpi = parseFloat(resizeInput.dpi);
+              const valid = Number.isFinite(w) && Number.isFinite(h) && Number.isFinite(dpi) && dpi > 0;
+              return (
+                <p className="text-[11px] text-gray-400 mb-3">
+                  {valid ? `Prints at ${(w / dpi).toFixed(2)} × ${(h / dpi).toFixed(2)} in at ${dpi} DPI` : ''}
+                </p>
+              );
+            })()}
+            <div className="flex gap-2">
+              <button onClick={() => setShowResizeDialog(false)} className="flex-1 text-xs px-3 py-2 rounded-full border">Cancel</button>
+              <button onClick={applyResizeImage} className="flex-1 text-xs px-3 py-2 rounded-full bg-gray-800 text-white font-semibold">Apply</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 });

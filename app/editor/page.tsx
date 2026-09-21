@@ -210,6 +210,15 @@ function EditorContent() {
   const cameFromTemplate = searchParams.get('templateId');
   const autoExportFormat = searchParams.get('autoExport'); // 'png' | 'jpg' | 'pdf', from the dashboard's Download action
   const hasAutoExportedRef = useRef(false);
+  // "New Photo Project" (dashboard) — lets the Photo Editor be used
+  // independently of manually building a Main Design document first:
+  // this flag prompts the image picker immediately on load, and once
+  // that image lands on the canvas, opens the Photo Editor on it
+  // automatically instead of requiring the normal upload -> select ->
+  // "Edit Photo" sequence.
+  const startInPhotoEditor = searchParams.get('newPhoto') === '1';
+  const pendingPhotoStartRef = useRef(startInPhotoEditor);
+  const hasPromptedPhotoUploadRef = useRef(false);
 
   // Document setup carried over from the "Create New Design" screen. Only
   // meaningful the first time an artboard is created for a brand-new
@@ -1240,6 +1249,18 @@ function EditorContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [width, height, urlDesignId]);
 
+  // "New Photo Project" entry point (dashboard) — opens the OS file
+  // picker immediately once the canvas is ready, so using the Photo
+  // Editor doesn't require first manually uploading an image, selecting
+  // it, and clicking "Edit Photo" in Main Design. handleImageUpload
+  // (above) checks pendingPhotoStartRef once that image lands and opens
+  // the Photo Editor on it automatically.
+  useEffect(() => {
+    if (!canvasReady || !startInPhotoEditor || hasPromptedPhotoUploadRef.current) return;
+    hasPromptedPhotoUploadRef.current = true;
+    document.getElementById('mainImageUploadInput')?.click();
+  }, [canvasReady, startInPhotoEditor]);
+
   useEffect(() => {
     const el = viewportRef.current;
     if (!el) return;
@@ -1307,6 +1328,14 @@ function EditorContent() {
           img.__id = `img_${Date.now()}_${nextImageIdRef.current++}`;
           fabricCanvasRef.current.add(img);
           fabricCanvasRef.current.setActiveObject(img);
+          if (pendingPhotoStartRef.current) {
+            pendingPhotoStartRef.current = false;
+            openPhotoEditor();
+            // Drop ?newPhoto=1 so refreshing this tab later doesn't
+            // re-arm the auto-open behavior on an unrelated upload.
+            const base = `/editor?w=${width}&h=${height}`;
+            router.replace(designIdRef.current ? `${base}&designId=${designIdRef.current}` : base);
+          }
         });
       });
     };
