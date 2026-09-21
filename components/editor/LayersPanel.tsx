@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { Eye, EyeOff, Lock, Unlock, Pencil, Check, GripVertical } from 'lucide-react';
+import { Eye, EyeOff, Lock, Unlock, Pencil, Check, GripVertical, Copy, Trash2 } from 'lucide-react';
 
 interface Props {
   layers: any[];
@@ -11,9 +11,29 @@ interface Props {
   onToggleLock: (obj: any) => void;
   onRename: (obj: any, name: string) => void;
   onReorder: (fromIndex: number, toIndex: number) => void;
+  // Optional, additive extras used by the Photo Editor's layer stack
+  // (real raster layers with opacity/duplicate/delete/a live thumbnail) —
+  // all opt-in so Main Design's existing vector/text/shape layers list
+  // keeps behaving exactly as before when these are omitted.
+  onOpacityChange?: (obj: any, opacity: number) => void;
+  onDuplicate?: (obj: any) => void;
+  onDelete?: (obj: any) => void;
+  getThumbnail?: (obj: any) => string | null;
 }
 
-export function LayersPanel({ layers, selected, onSelect, onToggleVisible, onToggleLock, onRename, onReorder }: Props) {
+export function LayersPanel({
+  layers,
+  selected,
+  onSelect,
+  onToggleVisible,
+  onToggleLock,
+  onRename,
+  onReorder,
+  onOpacityChange,
+  onDuplicate,
+  onDelete,
+  getThumbnail,
+}: Props) {
   const [renamingId, setRenamingId] = useState<number | null>(null);
   const [renameValue, setRenameValue] = useState('');
   const dragLayerIndex = useRef<number | null>(null);
@@ -54,13 +74,23 @@ export function LayersPanel({ layers, selected, onSelect, onToggleVisible, onTog
                 dragLayerIndex.current = null;
               }}
               onClick={() => !isLocked && onSelect(obj)}
-              className={`flex items-center gap-1.5 text-xs p-1.5 border rounded cursor-pointer hover:bg-gray-50 ${
+              className={`flex flex-col gap-1 text-xs p-1.5 border rounded cursor-pointer hover:bg-gray-50 ${
                 isSelectedLayer ? 'bg-gray-100 border-gray-400' : ''
               } ${isHidden ? 'opacity-40' : ''}`}
             >
+            <div className="flex items-center gap-1.5">
               <span className="text-gray-300 cursor-grab shrink-0">
                 <GripVertical size={12} />
               </span>
+
+              {getThumbnail && (
+                <span className="shrink-0 w-6 h-6 rounded border bg-[repeating-conic-gradient(#e5e7eb_0_25%,white_0_50%)] bg-[length:8px_8px] overflow-hidden">
+                  {getThumbnail(obj) && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={getThumbnail(obj) as string} alt="" className="w-full h-full object-cover" />
+                  )}
+                </span>
+              )}
 
               {isRenaming ? (
                 <input
@@ -123,6 +153,48 @@ export function LayersPanel({ layers, selected, onSelect, onToggleVisible, onTog
               >
                 {isLocked ? <Lock size={12} /> : <Unlock size={12} />}
               </button>
+
+              {onDuplicate && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDuplicate(obj);
+                  }}
+                  className="shrink-0 text-gray-300 hover:text-gray-700"
+                  title="Duplicate layer"
+                >
+                  <Copy size={12} />
+                </button>
+              )}
+
+              {onDelete && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete(obj);
+                  }}
+                  className="shrink-0 text-red-300 hover:text-red-500"
+                  title="Delete layer"
+                >
+                  <Trash2 size={12} />
+                </button>
+              )}
+            </div>
+
+            {onOpacityChange && (
+              <div className="flex items-center gap-1.5 pl-[26px]" onClick={(e) => e.stopPropagation()}>
+                <span className="text-[10px] text-gray-400 w-10 shrink-0">Opacity</span>
+                <input
+                  type="range"
+                  min={0}
+                  max={100}
+                  value={Math.round((obj.opacity ?? 1) * 100)}
+                  onChange={(e) => onOpacityChange(obj, Number(e.target.value) / 100)}
+                  className="flex-1"
+                />
+                <span className="text-[10px] text-gray-400 w-7 text-right shrink-0">{Math.round((obj.opacity ?? 1) * 100)}%</span>
+              </div>
+            )}
             </div>
           );
         })}

@@ -53,6 +53,7 @@ import { loadTabSession, saveTabSession, clearTabSession } from '@/lib/editor/ta
 import { WorkspaceSwitcher, EditorWorkspace } from '@/components/editor/WorkspaceSwitcher';
 import { PhotoEditorWorkspace, PhotoEditResult, CropRect } from '@/components/photoEditor/PhotoEditorWorkspace';
 import { PhotoAdjustments, DEFAULT_ADJUSTMENTS } from '@/lib/editor/photoFilters';
+import { imageObjectToDataURL } from '@/lib/editor/imageQuality';
 
 function EditorContent() {
   const searchParams = useSearchParams();
@@ -1284,7 +1285,13 @@ function EditorContent() {
     const canvas = fabricCanvasRef.current;
     const active = canvas?.getActiveObject();
     if (!active || active.type !== 'image') return;
-    if (!active.__originalSrc) active.__originalSrc = active.toDataURL({});
+    // active.toDataURL({}) would render at whatever size the image
+    // currently appears on the Main Design canvas (e.g. 300px wide from
+    // the initial upload placement), not its real source resolution —
+    // imageObjectToDataURL restores the native pixel data regardless of
+    // on-canvas scale, so the Photo Editor always starts from the best
+    // available source instead of a display-sized preview.
+    if (!active.__originalSrc) active.__originalSrc = imageObjectToDataURL(active);
     setPhotoEditSession({
       targetUid: active.__uid,
       sourceDataUrl: active.__originalSrc,
