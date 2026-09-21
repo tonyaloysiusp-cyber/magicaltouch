@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback, forwardRef, useImperativeHandle } from 'react';
 import {
   PixelMask,
   combineMasks,
@@ -38,6 +38,26 @@ import {
 } from '@/lib/editor/photoBrush';
 import { imageObjectToDataURL, nativeResMultiplier, clampMultiplierForSafety, configureHighQualityContext, devicePixelRatioSafe } from '@/lib/editor/imageQuality';
 import { LayersPanel } from '@/components/editor/LayersPanel';
+import {
+  Hand,
+  MousePointer2,
+  Pointer,
+  Crop as CropIcon,
+  PenTool as PenToolIcon,
+  SquareDashedMousePointer,
+  CircleDashed,
+  Lasso as LassoIcon,
+  Wand2,
+  Eraser as EraserIcon,
+  Paintbrush,
+  Sun,
+  Moon,
+  Pipette,
+  Blend,
+  SlidersHorizontal,
+  Eye,
+  EyeOff,
+} from 'lucide-react';
 
 export interface CropRect {
   x: number;
@@ -59,6 +79,17 @@ interface Props {
   initialCropRect: CropRect | null;
   onApply: (result: PhotoEditResult) => void;
   onCancel: () => void;
+  // Lets the host page's own top-bar Undo/Redo buttons (which otherwise
+  // stay wired to Main Design even while this workspace is showing —
+  // silently editing the hidden canvas instead of doing nothing useful)
+  // reflect and control THIS workspace's own history while it's active.
+  onHistoryChange?: (canUndo: boolean, canRedo: boolean) => void;
+  onShowShortcuts?: () => void;
+}
+
+export interface PhotoEditorHandle {
+  undo: () => void;
+  redo: () => void;
 }
 
 type PhotoTool =
@@ -83,6 +114,53 @@ type PhotoTool =
 
 const PAINT_TOOLS: PhotoTool[] = ['eraser', 'brush', 'dodge', 'burn'];
 const MASK_PAINT_TOOLS: PhotoTool[] = ['mask-reveal', 'mask-hide'];
+
+// Icons + shortcut labels for every tool — matching Photoshop's own key
+// bindings (and icon meaning) wherever a real equivalent exists, so
+// nothing here is an invented convention. Rendered at size 16 to read
+// clearly in the toolbar's compact 44px column.
+const ICON_SIZE = 16;
+const TOOL_ICONS: Record<PhotoTool, React.ReactNode> = {
+  hand: <Hand size={ICON_SIZE} />,
+  select: <MousePointer2 size={ICON_SIZE} />,
+  crop: <CropIcon size={ICON_SIZE} />,
+  pen: <PenToolIcon size={ICON_SIZE} />,
+  direct: <Pointer size={ICON_SIZE} />,
+  'marquee-rect': <SquareDashedMousePointer size={ICON_SIZE} />,
+  'marquee-ellipse': <CircleDashed size={ICON_SIZE} />,
+  lasso: <LassoIcon size={ICON_SIZE} />,
+  'magic-wand': <Wand2 size={ICON_SIZE} />,
+  eraser: <EraserIcon size={ICON_SIZE} />,
+  brush: <Paintbrush size={ICON_SIZE} />,
+  dodge: <Sun size={ICON_SIZE} />,
+  burn: <Moon size={ICON_SIZE} />,
+  eyedropper: <Pipette size={ICON_SIZE} />,
+  gradient: <Blend size={ICON_SIZE} />,
+  levels: <SlidersHorizontal size={ICON_SIZE} />,
+  'mask-reveal': <Eye size={ICON_SIZE} />,
+  'mask-hide': <EyeOff size={ICON_SIZE} />,
+};
+
+const SHORTCUT_LABEL: Partial<Record<PhotoTool, string>> = {
+  hand: 'H',
+  select: 'V',
+  crop: 'C',
+  pen: 'P',
+  direct: 'A',
+  'marquee-rect': 'M',
+  'marquee-ellipse': 'Shift+M',
+  lasso: 'L',
+  'magic-wand': 'W',
+  eraser: 'E',
+  brush: 'B',
+  dodge: 'O',
+  burn: 'Shift+O',
+  eyedropper: 'I',
+  gradient: 'G',
+  levels: 'Ctrl/Cmd+L',
+  'mask-reveal': 'R',
+  'mask-hide': 'Shift+R',
+};
 
 const MAX_LOCAL_HISTORY = 30;
 const ZOOM_PRESETS = [25, 50, 100, 200, 400];
@@ -152,7 +230,10 @@ function nextLayerId() {
 // and gets back a finished, native-resolution data URL to swap into the
 // target image layer, the same "update in place, preserve frame" pattern
 // replaceSelectedImage already uses for Replace Image.
-export function PhotoEditorWorkspace({ active, sourceDataUrl, initialAdjustments, initialCropRect, onApply, onCancel }: Props) {
+export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(function PhotoEditorWorkspace(
+  { active, sourceDataUrl, initialAdjustments, initialCropRect, onApply, onCancel, onHistoryChange, onShowShortcuts },
+  ref
+) {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasElRef = useRef<HTMLCanvasElement>(null);
   const fabricCanvasRef = useRef<any>(null);
@@ -309,6 +390,16 @@ export function PhotoEditorWorkspace({ active, sourceDataUrl, initialAdjustments
     if (trimmed.length > MAX_LOCAL_HISTORY) trimmed.shift();
     layer.__historyStack = trimmed;
     layer.__historyIndex = trimmed.length - 1;
+    // canUndo/canRedo are React state (so the Undo/Redo buttons re-render),
+    // but were previously only refreshed on switching the active layer —
+    // meaning after the very first edit in a session, Undo stayed
+    // whatever it was at load time (usually disabled) no matter how many
+    // real edits followed. Refresh them here, on every push, for
+    // whichever layer is currently active.
+    if (imageRef.current === layer) {
+      setCanUndo(layer.__historyIndex > 0);
+      setCanRedo(false); // a new push always truncates any redo branch
+    }
     bump();
   };
 
@@ -351,6 +442,15 @@ export function PhotoEditorWorkspace({ active, sourceDataUrl, initialAdjustments
     const idx = layer.__historyIndex ?? 0;
     if (idx < stack.length - 1) restoreLayerHistory(layer, idx + 1);
   };
+
+  // Exposes undo/redo to the host page so its OWN top-bar Undo/Redo
+  // buttons can drive this workspace's history while it's the one
+  // showing, instead of staying wired to Main Design's (hidden) canvas.
+  useImperativeHandle(ref, () => ({ undo: undoLocal, redo: redoLocal }));
+  useEffect(() => {
+    onHistoryChange?.(canUndo, canRedo);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canUndo, canRedo]);
 
   // Re-reads all the per-layer UI mirrors (adjustments/mask/history
   // button state) from whichever fabric object is now active, so the
@@ -762,6 +862,20 @@ export function PhotoEditorWorkspace({ active, sourceDataUrl, initialAdjustments
     cropObjRef.current = null;
     setActiveTool('select');
     if (canvas && imageRef.current) canvas.setActiveObject(imageRef.current);
+  };
+
+  // Single entry point for switching tools, used by both the toolbar's
+  // own clicks and every keyboard shortcut below, so the two can never
+  // drift out of sync (e.g. a shortcut bypassing the crop-tool cleanup a
+  // click would have done).
+  const selectTool = (id: PhotoTool) => {
+    // Reads the ref, not the `activeTool` state variable — this function
+    // is also called from the keydown handler's long-lived closure
+    // (subscribed once, not re-created on every tool change), where the
+    // state variable would be stale.
+    if (activeToolRef.current === 'crop' && cropObjRef.current) cancelCrop();
+    if (id === 'crop') startCrop();
+    else setActiveTool(id);
   };
 
   const applyCrop = () => {
@@ -1294,17 +1408,47 @@ export function PhotoEditorWorkspace({ active, sourceDataUrl, initialAdjustments
       if (activeToolRef.current === 'direct' && (e.key === 'Delete' || e.key === 'Backspace')) {
         if (deleteActiveAnchor()) e.preventDefault();
       }
-      if ((e.ctrlKey || e.metaKey) && e.key === '=') {
+
+      const isMeta = e.ctrlKey || e.metaKey;
+
+      if (e.key === '?' && !isMeta) {
         e.preventDefault();
-        zoomIn();
+        onShowShortcuts?.();
+        return;
       }
-      if ((e.ctrlKey || e.metaKey) && e.key === '-') {
-        e.preventDefault();
-        zoomOut();
+
+      if (isMeta && e.key.toLowerCase() === 'z' && !e.shiftKey) { e.preventDefault(); undoLocal(); return; }
+      if ((isMeta && e.key.toLowerCase() === 'z' && e.shiftKey) || (isMeta && e.key.toLowerCase() === 'y')) { e.preventDefault(); redoLocal(); return; }
+      if (isMeta && e.key.toLowerCase() === 'l') { e.preventDefault(); selectTool('levels'); return; }
+      if (isMeta && e.key === '=') { e.preventDefault(); zoomIn(); return; }
+      if (isMeta && e.key === '-') { e.preventDefault(); zoomOut(); return; }
+      if (isMeta && e.key === '0') { e.preventDefault(); fitToView(); return; }
+      if (isMeta && e.key === '1') { e.preventDefault(); setZoomLevel(100); return; }
+
+      // Tool switches — same letters Photoshop itself uses wherever a real
+      // equivalent tool exists here, so muscle memory carries over.
+      if (!isMeta && !e.shiftKey) {
+        const key = e.key.toLowerCase();
+        if (key === 'v') { e.preventDefault(); selectTool('select'); return; }
+        if (key === 'h') { e.preventDefault(); selectTool('hand'); return; }
+        if (key === 'c') { e.preventDefault(); selectTool('crop'); return; }
+        if (key === 'p') { e.preventDefault(); selectTool('pen'); return; }
+        if (key === 'a') { e.preventDefault(); selectTool('direct'); return; }
+        if (key === 'm') { e.preventDefault(); selectTool('marquee-rect'); return; }
+        if (key === 'l') { e.preventDefault(); selectTool('lasso'); return; }
+        if (key === 'w') { e.preventDefault(); selectTool('magic-wand'); return; }
+        if (key === 'b') { e.preventDefault(); selectTool('brush'); return; }
+        if (key === 'e') { e.preventDefault(); selectTool('eraser'); return; }
+        if (key === 'o') { e.preventDefault(); selectTool('dodge'); return; }
+        if (key === 'i') { e.preventDefault(); selectTool('eyedropper'); return; }
+        if (key === 'g') { e.preventDefault(); selectTool('gradient'); return; }
+        if (key === 'r') { e.preventDefault(); selectTool('mask-reveal'); return; }
       }
-      if ((e.ctrlKey || e.metaKey) && e.key === '0') {
-        e.preventDefault();
-        fitToView();
+      if (!isMeta && e.shiftKey) {
+        const key = e.key.toLowerCase();
+        if (key === 'm') { e.preventDefault(); selectTool('marquee-ellipse'); return; }
+        if (key === 'o') { e.preventDefault(); selectTool('burn'); return; }
+        if (key === 'r') { e.preventDefault(); selectTool('mask-hide'); return; }
       }
     };
     const handleUp = (e: KeyboardEvent) => {
@@ -1480,13 +1624,11 @@ export function PhotoEditorWorkspace({ active, sourceDataUrl, initialAdjustments
                 {group.tools.map((t) => (
                   <button
                     key={t.id}
-                    onClick={() => {
-                      if (activeTool === 'crop' && cropObjRef.current) cancelCrop();
-                      if (t.id === 'crop') startCrop();
-                      else setActiveTool(t.id);
-                    }}
-                    className={`text-left text-xs px-2 py-1.5 rounded ${activeTool === t.id ? 'bg-gray-800 text-white' : 'hover:bg-gray-100 text-gray-700'}`}
+                    onClick={() => selectTool(t.id)}
+                    title={`${t.label}${SHORTCUT_LABEL[t.id] ? ` (${SHORTCUT_LABEL[t.id]})` : ''}`}
+                    className={`flex items-center gap-2 text-left text-xs px-2 py-1.5 rounded ${activeTool === t.id ? 'bg-gray-800 text-white' : 'hover:bg-gray-100 text-gray-700'}`}
                   >
+                    {TOOL_ICONS[t.id]}
                     {t.label}
                   </button>
                 ))}
@@ -1848,4 +1990,4 @@ export function PhotoEditorWorkspace({ active, sourceDataUrl, initialAdjustments
       </div>
     </div>
   );
-}
+});

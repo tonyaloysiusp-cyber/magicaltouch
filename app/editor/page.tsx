@@ -51,7 +51,7 @@ import { OpenDesignDialog, OpenableDesign } from '@/components/editor/OpenDesign
 import { UnsavedChangesDialog } from '@/components/editor/UnsavedChangesDialog';
 import { loadTabSession, saveTabSession, clearTabSession } from '@/lib/editor/tabSession';
 import { WorkspaceSwitcher, EditorWorkspace } from '@/components/editor/WorkspaceSwitcher';
-import { PhotoEditorWorkspace, PhotoEditResult, CropRect } from '@/components/photoEditor/PhotoEditorWorkspace';
+import { PhotoEditorWorkspace, PhotoEditResult, CropRect, PhotoEditorHandle } from '@/components/photoEditor/PhotoEditorWorkspace';
 import { PhotoAdjustments, DEFAULT_ADJUSTMENTS } from '@/lib/editor/photoFilters';
 import { imageObjectToDataURL } from '@/lib/editor/imageQuality';
 
@@ -88,6 +88,9 @@ function EditorContent() {
   const [showDesignLimitDialog, setShowDesignLimitDialog] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
+  const photoEditorRef = useRef<PhotoEditorHandle>(null);
+  const [photoCanUndo, setPhotoCanUndo] = useState(false);
+  const [photoCanRedo, setPhotoCanRedo] = useState(false);
   const [roadmap, setRoadmap] = useState<{ open: boolean; id?: string }>({ open: false });
   const { isOpen: isPanelOpen, toggle: togglePanel } = useWindowPanels(['properties', 'layers', 'artboards']);
 
@@ -1865,20 +1868,27 @@ function EditorContent() {
         return;
       }
 
+      // Tool shortcuts follow Adobe Illustrator's own bindings. M/L used to
+      // be bound to the pixel marquee/lasso tools from when this canvas
+      // still had raster selection tools — those moved to the Photo
+      // Editor workspace, so M/L are repurposed here for Illustrator's own
+      // Rectangle/Ellipse tools rather than left silently dead.
       if (canUseToolShortcuts && !isMeta && !e.shiftKey) {
         if (e.key.toLowerCase() === 'v') { e.preventDefault(); setActiveTool('select'); return; }
         if (e.key.toLowerCase() === 'a') { e.preventDefault(); setActiveTool('direct'); return; }
         if (e.key.toLowerCase() === 'p') { e.preventDefault(); setActiveTool('pen'); return; }
         if (e.key.toLowerCase() === 'h') { e.preventDefault(); setActiveTool('pan'); return; }
-        if (e.key.toLowerCase() === 'm') { e.preventDefault(); setActiveTool('marquee-rect'); return; }
-        if (e.key.toLowerCase() === 'l') { e.preventDefault(); setActiveTool('lasso'); return; }
-        if (e.key.toLowerCase() === 'w') { e.preventDefault(); setActiveTool('magic-wand'); return; }
+        if (e.key.toLowerCase() === 't') { e.preventDefault(); addText(); return; }
+        if (e.key.toLowerCase() === 'm') { e.preventDefault(); setActiveTool('rect'); return; }
+        if (e.key.toLowerCase() === 'l') { e.preventDefault(); setActiveTool('ellipse'); return; }
+        if (e.key === '\\') { e.preventDefault(); setActiveTool('line'); return; }
       }
 
-      if (canUseToolShortcuts && !isMeta && e.shiftKey && e.key.toLowerCase() === 'o') {
-        e.preventDefault();
-        setActiveTool('artboard');
-        return;
+      if (canUseToolShortcuts && !isMeta && e.shiftKey) {
+        if (e.key.toLowerCase() === 'o') { e.preventDefault(); setActiveTool('artboard'); return; }
+        if (e.key.toLowerCase() === 't') { e.preventDefault(); setActiveTool('triangle'); return; }
+        if (e.key.toLowerCase() === 's') { e.preventDefault(); setActiveTool('star'); return; }
+        if (e.key.toLowerCase() === 'g') { e.preventDefault(); setActiveTool('polygon'); return; }
       }
 
       if (canUseToolShortcuts && activeToolRef.current === 'pen') {
@@ -2788,8 +2798,26 @@ function EditorContent() {
         <WorkspaceSwitcher workspace={workspace} onSwitch={handleWorkspaceSwitch} />
 
         <div className="flex items-center gap-2">
-          <button onClick={undo} disabled={!canUndo} title="Undo (Ctrl/Cmd+Z)" className="px-2 py-1 border rounded disabled:opacity-30">↶ Undo</button>
-          <button onClick={redo} disabled={!canRedo} title="Redo (Ctrl/Cmd+Shift+Z)" className="px-2 py-1 border rounded disabled:opacity-30">↷ Redo</button>
+          {/* Undo/Redo target whichever workspace is actually showing —
+              previously these stayed wired to Main Design even while the
+              Photo Editor was open, so clicking them silently edited the
+              hidden canvas instead of undoing the visible one. */}
+          <button
+            onClick={workspace === 'photo' ? () => photoEditorRef.current?.undo() : undo}
+            disabled={workspace === 'photo' ? !photoCanUndo : !canUndo}
+            title="Undo (Ctrl/Cmd+Z)"
+            className="px-2 py-1 border rounded disabled:opacity-30"
+          >
+            ↶ Undo
+          </button>
+          <button
+            onClick={workspace === 'photo' ? () => photoEditorRef.current?.redo() : redo}
+            disabled={workspace === 'photo' ? !photoCanRedo : !canRedo}
+            title="Redo (Ctrl/Cmd+Shift+Z)"
+            className="px-2 py-1 border rounded disabled:opacity-30"
+          >
+            ↷ Redo
+          </button>
           <button onClick={() => setShowShortcuts(true)} title="Keyboard shortcuts (?)" className="p-1.5 border rounded text-gray-500 hover:bg-gray-50">
             <Keyboard size={16} />
           </button>
@@ -2971,12 +2999,15 @@ function EditorContent() {
       {photoEditSession && (
         <div className="flex flex-1 overflow-hidden" style={{ display: workspace === 'photo' ? 'flex' : 'none' }}>
           <PhotoEditorWorkspace
+            ref={photoEditorRef}
             active={workspace === 'photo'}
             sourceDataUrl={photoEditSession.sourceDataUrl}
             initialAdjustments={photoEditSession.initialAdjustments}
             initialCropRect={photoEditSession.initialCropRect}
             onApply={applyPhotoEdits}
             onCancel={closePhotoEditor}
+            onHistoryChange={(u, r) => { setPhotoCanUndo(u); setPhotoCanRedo(r); }}
+            onShowShortcuts={() => setShowShortcuts(true)}
           />
         </div>
       )}
@@ -2997,7 +3028,7 @@ function EditorContent() {
         </div>
       )}
 
-      <ShortcutsModal open={showShortcuts} onClose={() => setShowShortcuts(false)} />
+      <ShortcutsModal open={showShortcuts} onClose={() => setShowShortcuts(false)} workspace={workspace} />
       <RoadmapModal open={roadmap.open} highlightId={roadmap.id} onClose={() => setRoadmap({ open: false })} />
       <PreflightModal open={showPreflight} issues={preflightIssues} onClose={() => setShowPreflight(false)} />
       </main>
