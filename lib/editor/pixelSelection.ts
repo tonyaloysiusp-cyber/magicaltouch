@@ -27,15 +27,22 @@ export function cloneMask(mask: PixelMask): PixelMask {
   return { width: mask.width, height: mask.height, data: new Uint8ClampedArray(mask.data) };
 }
 
+// Grayscale-safe combines: these generalize to real 0-255 partial values
+// (a soft/feathered brush dab, a painted layer mask) while producing
+// EXACTLY the same result as the old binary-only logic whenever both
+// inputs are already pure 0/255 — which is every existing caller
+// (marquee/lasso/magic-wand all build hard-edged shapes), so this is a
+// pure generalization, not a behavior change for anything already
+// working.
 export function combineMasks(base: PixelMask | null, shape: PixelMask, mode: CombineMode): PixelMask {
   if (!base || mode === 'new') return shape;
   const out = createEmptyMask(base.width, base.height);
   for (let i = 0; i < out.data.length; i++) {
     const a = base.data[i];
     const b = shape.data[i];
-    if (mode === 'add') out.data[i] = a || b ? 255 : 0;
-    else if (mode === 'subtract') out.data[i] = a && !b ? 255 : 0;
-    else out.data[i] = a && b ? 255 : 0; // intersect
+    if (mode === 'add') out.data[i] = Math.max(a, b);
+    else if (mode === 'subtract') out.data[i] = Math.max(0, a - b);
+    else out.data[i] = Math.min(a, b); // intersect
   }
   return out;
 }
@@ -66,6 +73,48 @@ export function ellipseMask(width: number, height: number, cx: number, cy: numbe
     for (let px = x0; px < x1; px++) {
       const nx = (px + 0.5 - cx) / rx;
       if (nx * nx + ny * ny <= 1) mask.data[row + px] = 255;
+    }
+  }
+  return mask;
+}
+
+// A real soft-edged (feathered) circular brush dab: full strength (255)
+// through the `hardness` fraction of the radius, then a smooth cosine
+// falloff to 0 at the edge — the same falloff shape a real paint/photo
+// app's round brush uses, instead of the hard binary edge a plain
+// ellipseMask gives you. Used for every brush-like tool (paint mask,
+// brush, dodge/burn, eraser) so strokes actually blend instead of
+// looking like stamped, cut-out circles.
+export function softBrushMask(
+  width: number,
+  height: number,
+  cx: number,
+  cy: number,
+  radius: number,
+  hardness = 0.5,
+  strength = 1
+): PixelMask {
+  const mask = createEmptyMask(width, height);
+  if (radius <= 0) return mask;
+  const x0 = Math.max(0, Math.floor(cx - radius));
+  const x1 = Math.min(width, Math.ceil(cx + radius));
+  const y0 = Math.max(0, Math.floor(cy - radius));
+  const y1 = Math.min(height, Math.ceil(cy + radius));
+  const hardR = Math.max(0, Math.min(1, hardness)) * radius;
+  const softSpan = Math.max(1e-6, radius - hardR);
+  for (let py = y0; py < y1; py++) {
+    const dy = py + 0.5 - cy;
+    const row = py * width;
+    for (let px = x0; px < x1; px++) {
+      const dx = px + 0.5 - cx;
+      const d = Math.sqrt(dx * dx + dy * dy);
+      if (d > radius) continue;
+      let falloff = 1;
+      if (d > hardR) {
+        const t = (d - hardR) / softSpan;
+        falloff = 0.5 * (1 + Math.cos(Math.PI * t)); // 1 -> 0, smooth (no hard ring)
+      }
+      mask.data[row + px] = Math.max(mask.data[row + px], Math.round(falloff * strength * 255));
     }
   }
   return mask;
@@ -247,7 +296,9 @@ export function maskToTintCanvas(mask: PixelMask, color: [number, number, number
     imgData.data[i * 4] = r;
     imgData.data[i * 4 + 1] = g;
     imgData.data[i * 4 + 2] = b;
-    imgData.data[i * 4 + 3] = v > 0 ? Math.round(alpha * 255) : 0;
+    // Proportional to the mask's own value so a soft/feathered edge shows
+    // as a real gradient in the preview, not a hard on/off tint.
+    imgData.data[i * 4 + 3] = Math.round((v / 255) * alpha * 255);
   }
   ctx.putImageData(imgData, 0, 0);
   return canvas;

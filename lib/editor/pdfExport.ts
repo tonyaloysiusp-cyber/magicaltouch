@@ -15,6 +15,7 @@
 
 import { getAbsolutePolygonPoints } from './geometry';
 import { createPdfFontCache, ensurePdfFont } from './pdfFonts';
+import { nativeResMultiplier, clampMultiplierForSafety } from './imageQuality';
 
 interface ArtboardLike {
   id: string;
@@ -224,8 +225,15 @@ async function drawTextObject(pdf: any, F: any, obj: any, offsetX: number, offse
 function drawImageObject(pdf: any, obj: any, offsetX: number, offsetY: number) {
   const rect = obj.getBoundingRect(true, true);
   if (!rect.width || !rect.height) return;
-  // multiplier: 1 keeps the image at its native/full resolution — never scaled down.
-  const dataUrl = obj.toDataURL({ format: 'png', multiplier: 1 });
+  // `multiplier: 1` is NOT "native resolution" — fabric sizes its output
+  // canvas from the object's current ON-SCREEN bounding box, so a plain
+  // multiplier of 1 silently re-embeds the image at whatever size it
+  // happens to be displayed/scaled to on the design canvas (e.g. a
+  // 6000x4000 photo placed small on a business card used to export at a
+  // few hundred pixels). nativeResMultiplier undoes the object's own
+  // scale so the embedded PNG always carries the image's real pixel data.
+  const multiplier = clampMultiplierForSafety(obj, nativeResMultiplier(obj));
+  const dataUrl = obj.toDataURL({ format: 'png', multiplier });
   pdf.addImage(dataUrl, 'PNG', toPt(rect.left - offsetX), toPt(rect.top - offsetY), toPt(rect.width), toPt(rect.height));
 }
 
