@@ -6,6 +6,8 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Menu, X } from 'lucide-react';
 import { resolveAuthedPath } from '@/lib/authNav';
+import { supabase } from '@/lib/supabase';
+import { ProfileMenu } from '@/components/ProfileMenu';
 
 const NAV_LINKS = [
   { label: 'Templates', href: '/templates' },
@@ -16,12 +18,27 @@ const NAV_LINKS = [
 export function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [loggedIn, setLoggedIn] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
     window.addEventListener('scroll', onScroll);
     return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  // The homepage previously showed "Log In" / "Start Designing" even to
+  // an already-logged-in visitor — there was no auth check backing the
+  // nav UI at all (goToCreate below checks auth only at click time, not
+  // for what the header displays). This keeps the header itself in sync,
+  // including across a login/logout that happens without this component
+  // remounting.
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => setLoggedIn(!!data.user));
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+      setLoggedIn(!!session?.user);
+    });
+    return () => sub.subscription.unsubscribe();
   }, []);
 
   const goToCreate = async () => {
@@ -52,15 +69,22 @@ export function Navbar() {
         </div>
 
         <div className="hidden md:flex items-center gap-3">
-          <Link href="/login" className="text-sm font-medium text-[#4A4750] hover:text-[#17161B] px-3 py-2">
-            Log In
-          </Link>
+          {loggedIn ? (
+            <Link href="/dashboard" className="text-sm font-medium text-[#4A4750] hover:text-[#17161B] px-3 py-2">
+              Dashboard
+            </Link>
+          ) : (
+            <Link href="/login" className="text-sm font-medium text-[#4A4750] hover:text-[#17161B] px-3 py-2">
+              Log In
+            </Link>
+          )}
           <button
             onClick={goToCreate}
             className="relative overflow-hidden text-sm font-semibold text-white px-5 py-2.5 rounded-full bg-brand-gradient shadow-[0_6px_16px_-6px_rgba(108,79,209,0.5)] hover:shadow-[0_10px_20px_-6px_rgba(108,79,209,0.6)] hover:-translate-y-0.5 transition-all before:content-[''] before:absolute before:inset-x-0 before:top-0 before:h-1/2 before:bg-white/25 before:rounded-t-full"
           >
             Start Designing
           </button>
+          {loggedIn && <ProfileMenu />}
         </div>
 
         <button className="md:hidden p-2 -mr-2" onClick={() => setMenuOpen((v) => !v)} aria-label="Menu">
@@ -79,8 +103,12 @@ export function Navbar() {
             </Link>
           ))}
           <div className="flex flex-col gap-2 mt-3">
-            <Link href="/login" className="text-center text-sm font-medium border border-black/15 rounded-full py-2.5">
-              Log In
+            <Link
+              href={loggedIn ? '/dashboard' : '/login'}
+              className="text-center text-sm font-medium border border-black/15 rounded-full py-2.5"
+              onClick={() => setMenuOpen(false)}
+            >
+              {loggedIn ? 'Dashboard' : 'Log In'}
             </Link>
             <button onClick={goToCreate} className="text-center text-sm font-semibold text-white rounded-full py-2.5 bg-brand-gradient">
               Start Designing

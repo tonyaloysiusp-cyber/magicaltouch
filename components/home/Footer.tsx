@@ -1,18 +1,36 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { resolveAuthedPath } from '@/lib/authNav';
+import { supabase } from '@/lib/supabase';
 
 export function Footer() {
   const router = useRouter();
+  const [loggedIn, setLoggedIn] = useState(false);
+
+  // Same gap as the homepage/templates headers: this footer's "Account"
+  // links always said "Log In / Sign Up" even to an already-signed-in
+  // visitor.
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => setLoggedIn(!!data.user));
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+      setLoggedIn(!!session?.user);
+    });
+    return () => sub.subscription.unsubscribe();
+  }, []);
 
   const goToCreate = async () => {
     router.push(await resolveAuthedPath('/create'));
   };
   const goToDashboard = async () => {
     router.push(await resolveAuthedPath('/dashboard'));
+  };
+  const logout = async () => {
+    await supabase.auth.signOut();
+    router.push('/login');
   };
 
   return (
@@ -41,8 +59,17 @@ export function Footer() {
           <div>
             <p className="text-xs font-semibold text-[#17161B] tracking-wide uppercase">Account</p>
             <ul className="mt-4 space-y-2.5 text-sm text-[#4A4750]">
-              <li><Link href="/login" className="hover:text-[#17161B]">Log In</Link></li>
-              <li><Link href="/signup" className="hover:text-[#17161B]">Sign Up</Link></li>
+              {loggedIn ? (
+                <>
+                  <li><Link href="/profile" className="hover:text-[#17161B]">Profile</Link></li>
+                  <li><button onClick={logout} className="hover:text-[#17161B]">Log Out</button></li>
+                </>
+              ) : (
+                <>
+                  <li><Link href="/login" className="hover:text-[#17161B]">Log In</Link></li>
+                  <li><Link href="/signup" className="hover:text-[#17161B]">Sign Up</Link></li>
+                </>
+              )}
             </ul>
           </div>
 

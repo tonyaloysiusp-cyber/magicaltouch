@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -10,6 +10,8 @@ import { BackBar } from '@/components/BackBar';
 import { resolveAuthedPath } from '@/lib/authNav';
 import { MockDesignCard } from '@/components/MockDesignCard';
 import { Category, Template, CATEGORIES, TEMPLATES } from '@/lib/templatesData';
+import { supabase } from '@/lib/supabase';
+import { ProfileMenu } from '@/components/ProfileMenu';
 
 const display = Fraunces({
   subsets: ['latin'],
@@ -32,7 +34,19 @@ const NAV_LINKS = [
 export default function TemplatesPage() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [activeCategory, setActiveCategory] = useState<Category | 'All'>('All');
+  const [loggedIn, setLoggedIn] = useState(false);
   const router = useRouter();
+
+  // Same gap as the homepage Navbar: this header showed "Log In" even
+  // when the visitor was already signed in, since nothing checked auth
+  // for the nav UI itself (only the "Start Designing" click handler did).
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => setLoggedIn(!!data.user));
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+      setLoggedIn(!!session?.user);
+    });
+    return () => sub.subscription.unsubscribe();
+  }, []);
 
   const filtered = useMemo(
     () => (activeCategory === 'All' ? TEMPLATES : TEMPLATES.filter((t) => t.category === activeCategory)),
@@ -77,15 +91,18 @@ export default function TemplatesPage() {
           </div>
 
           <div className="hidden md:flex items-center gap-3">
-            <Link href="/login" className="text-sm font-medium text-[#4B4560] hover:text-[#14121F] px-3 py-2">
-              Log In
-            </Link>
+            {!loggedIn && (
+              <Link href="/login" className="text-sm font-medium text-[#4B4560] hover:text-[#14121F] px-3 py-2">
+                Log In
+              </Link>
+            )}
             <button
               onClick={goToWorkspace}
               className="text-sm font-semibold text-white px-5 py-2.5 rounded-full bg-brand-gradient shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all"
             >
               Start Designing
             </button>
+            {loggedIn && <ProfileMenu />}
           </div>
 
           <button
@@ -105,8 +122,12 @@ export default function TemplatesPage() {
               </Link>
             ))}
             <div className="flex flex-col gap-2 mt-3">
-              <Link href="/login" className="text-center text-sm font-medium border border-black/10 rounded-full py-2.5">
-                Log In
+              <Link
+                href={loggedIn ? '/dashboard' : '/login'}
+                className="text-center text-sm font-medium border border-black/10 rounded-full py-2.5"
+                onClick={() => setMenuOpen(false)}
+              >
+                {loggedIn ? 'Dashboard' : 'Log In'}
               </Link>
               <button onClick={goToWorkspace} className="text-center text-sm font-semibold text-white rounded-full py-2.5 bg-brand-gradient">
                 Start Designing

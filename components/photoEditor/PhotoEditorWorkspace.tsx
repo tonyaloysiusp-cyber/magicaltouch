@@ -19,6 +19,7 @@ import {
   cloneMask,
   createEmptyMask,
 } from '@/lib/editor/pixelSelection';
+import { contentAwareFill } from '@/lib/editor/inpaint';
 import { usePixelSelectionTool, getImagePixelCanvas } from '@/hooks/usePixelSelectionTool';
 import { usePenTool } from '@/hooks/usePenTool';
 import { useDirectSelection } from '@/hooks/useDirectSelection';
@@ -1132,6 +1133,28 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
     });
   };
 
+  const [removingObject, setRemovingObject] = useState(false);
+  // Remove Object / Content-Aware Fill: reconstructs whatever is under
+  // the current selection from its real surrounding pixels (see
+  // lib/editor/inpaint.ts) instead of just deleting to transparent —
+  // the diffusion solve is synchronous and CPU-bound, so the "Removing…"
+  // state is set first and the actual work deferred a frame so it has a
+  // chance to paint before the tab blocks.
+  const removeSelectedObject = () => {
+    const mask = selectionMaskRef.current;
+    const img = imageRef.current;
+    if (!mask || !maskHasSelection(mask) || !img) return;
+    setRemovingObject(true);
+    requestAnimationFrame(() => {
+      try {
+        bakeAndPush(contentAwareFill(getImagePixelCanvas(img), mask));
+        setSelectionMask(null);
+      } finally {
+        setRemovingObject(false);
+      }
+    });
+  };
+
   const deleteSelectedPixels = () => {
     const mask = selectionMaskRef.current;
     const img = imageRef.current;
@@ -1795,6 +1818,14 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
                   <button onClick={featherSelection} disabled={!hasSelection} className="text-[11px] px-2 py-1 border rounded disabled:opacity-30">Feather</button>
                   <button onClick={applySelectionAsMask} disabled={!hasSelection} className="text-[11px] px-2 py-1 border rounded disabled:opacity-30">Add to Mask</button>
                   <button onClick={deleteSelectedPixels} disabled={!hasSelection} className="col-span-2 text-[11px] px-2 py-1 border rounded text-red-500 disabled:opacity-30">Delete Selected Pixels</button>
+                  <button
+                    onClick={removeSelectedObject}
+                    disabled={!hasSelection || removingObject}
+                    title="Reconstructs the selected area from its surrounding pixels — select the object to remove first"
+                    className="col-span-2 text-[11px] px-2 py-1.5 border rounded bg-gray-800 text-white disabled:opacity-30"
+                  >
+                    {removingObject ? 'Removing…' : 'Remove Object (Content-Aware Fill)'}
+                  </button>
                 </div>
               </div>
             )}

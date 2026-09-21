@@ -41,6 +41,7 @@ import { MAX_DESIGNS, getDesignCount } from '@/lib/profile';
 import { PreflightModal } from '@/components/editor/PreflightModal';
 import { ShortcutsModal } from '@/components/editor/ShortcutsModal';
 import { PreferencesModal } from '@/components/editor/PreferencesModal';
+import { VersionHistoryModal } from '@/components/editor/VersionHistoryModal';
 import { RoadmapModal } from '@/components/editor/RoadmapModal';
 import { MenuBar, MenuDef } from '@/components/editor/MenuBar';
 import { useWindowPanels } from '@/components/editor/WindowPanels';
@@ -134,6 +135,7 @@ function EditorContent() {
   const [exporting, setExporting] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [showPreferences, setShowPreferences] = useState(false);
+  const [showVersionHistory, setShowVersionHistory] = useState(false);
   // Off by default per spec: drawing tools (Rectangle, Ellipse, Line,
   // Polygon, Star, Pen) stay active after creating an object instead of
   // silently reverting to Selection — matching Illustrator, not a
@@ -2199,10 +2201,53 @@ function EditorContent() {
         };
       }
       router.replace(`/editor?designId=${data.id}&w=${width}&h=${height}`);
+      // Version History (spec §56/98/99): a real recoverable snapshot per
+      // save, not just the single latest row — best-effort and silent,
+      // since a migration-less/placeholder Supabase project (or one that
+      // hasn't applied 0002_design_versions.sql yet) must never break the
+      // save itself over a missing table.
+      supabase
+        .from('design_versions')
+        .insert({
+          design_id: data.id,
+          user_id: user.id,
+          canvas_json: canvasJson,
+          width: payload.width,
+          height: payload.height,
+          thumbnail: thumbnail || null,
+        })
+        .then(({ error: versionError }) => {
+          if (versionError) console.warn('Version snapshot not saved (design_versions table missing?):', versionError.message);
+        });
     }
   };
 
   const saveDesign = () => performSave(designId, designName);
+
+  // Replaces the live canvas with a past version's content, as one
+  // undoable step (Ctrl/Cmd+Z reverts back to whatever was on screen
+  // before the restore). The loadFromJSON itself is suppressed from
+  // history/dirty-tracking for the same reason the tab/version-load
+  // paths above are — its own object:added events aren't a real edit —
+  // then a single pushHistory() after records the restore as one step
+  // and marks the design dirty so it autosaves.
+  const restoreVersion = (canvasJson: any, _versionWidth: number, _versionHeight: number) => {
+    const canvas = fabricCanvasRef.current;
+    const F = (window as any).fabric;
+    if (!canvas || !F) return;
+    suppressHistoryRef.current = true;
+    canvas.loadFromJSON(canvasJson, () => {
+      ensureArtboards(canvas, F);
+      canvas.renderAll();
+      refreshLayers();
+      refreshArtboards();
+      const first = canvas.getObjects().find((o: any) => o.__isArtboard);
+      if (first) setActiveArtboardId(first.__artboardId);
+      ensureFontsLoadedForCanvasJSON(canvasJson).then(() => canvas.requestRenderAll());
+      suppressHistoryRef.current = false;
+      pushHistory();
+    });
+  };
 
   // Debounced background save (spec: "Never lose a design because of
   // navigation or refresh"). A few seconds of inactivity after any edit
@@ -2787,6 +2832,7 @@ function EditorContent() {
         { divider: true },
         { label: 'Save', shortcut: 'Ctrl/Cmd+S', onClick: saveDesign },
         { label: 'Save As...', shortcut: 'Ctrl/Cmd+Shift+S', onClick: saveDesignAs },
+        { label: 'Version History...', onClick: () => setShowVersionHistory(true) },
         { divider: true },
         { label: 'Export...', onClick: () => setShowExportDialog(true) },
         { label: 'Export as PNG', onClick: exportAsPNG },
@@ -3214,6 +3260,12 @@ function EditorContent() {
         onClose={() => setShowPreferences(false)}
         returnToSelectAfterCreate={returnToSelectAfterCreate}
         onToggleReturnToSelect={updateReturnToSelectPref}
+      />
+      <VersionHistoryModal
+        open={showVersionHistory}
+        onClose={() => setShowVersionHistory(false)}
+        designId={designId}
+        onRestore={restoreVersion}
       />
       <RoadmapModal open={roadmap.open} highlightId={roadmap.id} onClose={() => setRoadmap({ open: false })} />
       <PreflightModal open={showPreflight} issues={preflightIssues} onClose={() => setShowPreflight(false)} />
