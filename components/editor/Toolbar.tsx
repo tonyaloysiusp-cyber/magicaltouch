@@ -41,6 +41,24 @@ interface Props {
   onOpenRoadmap: (featureId: string, label: string) => void;
 }
 
+// Illustrator's own bindings — M/L used to be this app's pixel marquee/
+// lasso tools (from when this canvas still had raster selection here);
+// those moved to the Photo Editor workspace, so M/L are repurposed for
+// Illustrator's Rectangle/Ellipse tools rather than left dead.
+const TOOL_SHORTCUTS: Record<string, string> = {
+  select: 'V',
+  direct: 'A',
+  pan: 'H',
+  artboard: 'Shift+O',
+  pen: 'P',
+  rect: 'M',
+  ellipse: 'L',
+  triangle: 'Shift+T',
+  line: '\\',
+  polygon: 'Shift+G',
+  star: 'Shift+S',
+};
+
 function ToolButton({
   id,
   label,
@@ -58,11 +76,12 @@ function ToolButton({
 }) {
   const status = getFeatureStatus(id);
   const isLive = status !== 'planned';
+  const shortcut = TOOL_SHORTCUTS[id];
 
   return (
     <button
       onClick={() => (isLive ? onClick() : onPlanned(id, label))}
-      title={isLive ? label : `${label} — planned, not yet available`}
+      title={isLive ? (shortcut ? `${label} (${shortcut})` : label) : `${label} — planned, not yet available`}
       className={`relative flex flex-col items-center gap-1 w-full ${
         active ? 'text-blue-600' : isLive ? 'text-gray-700' : 'text-gray-300'
       }`}
@@ -139,14 +158,14 @@ export function Toolbar({
         onClick={() => onSelectTool('pen')}
         onPlanned={onOpenRoadmap}
       />
-      <button onClick={onOpenShapeBuilder} className="flex flex-col items-center gap-1 text-gray-700 w-full">
+      <button onClick={onOpenShapeBuilder} title="Shape Builder" className="flex flex-col items-center gap-1 text-gray-700 w-full">
         <Combine size={18} />
         <span className="text-[10px] leading-none">Shape Builder</span>
       </button>
 
       <div className="w-full h-px bg-gray-200" />
 
-      <button onClick={onAddText} className="flex flex-col items-center gap-1 text-gray-700 w-full">
+      <button onClick={onAddText} title="Add Text (T)" className="flex flex-col items-center gap-1 text-gray-700 w-full">
         <Type size={18} />
         <span className="text-[10px] leading-none">Text</span>
       </button>
