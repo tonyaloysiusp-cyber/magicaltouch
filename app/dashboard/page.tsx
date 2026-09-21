@@ -161,18 +161,23 @@ export default function DashboardPage() {
   return (
     <main className="min-h-screen p-6">
       <div className="flex items-center justify-between mb-10">
-        <Image src="/logo.png" alt="Magical Touch" width={180} height={36} />
-        <div className="flex items-center gap-3">
-          <Link
-            href="/templates"
-            className="text-sm font-medium text-gray-600 hover:text-gray-900 px-4 py-2"
-          >
-            Browse Templates
+        <Link href="/" title="Go to homepage">
+          <Image src="/logo.png" alt="Magical Touch" width={180} height={36} />
+        </Link>
+        <div className="flex items-center gap-1">
+          <Link href="/" className="text-sm font-medium text-gray-600 hover:text-gray-900 px-4 py-2">
+            Home
+          </Link>
+          <Link href="/templates" className="text-sm font-medium text-gray-600 hover:text-gray-900 px-4 py-2">
+            Templates
+          </Link>
+          <Link href="/#pricing" className="text-sm font-medium text-gray-600 hover:text-gray-900 px-4 py-2">
+            Pricing
           </Link>
           <Link
             href="/create"
             onClick={handleNewDesignClick}
-            className="bg-brand-gradient text-white px-5 py-2 rounded-full text-sm font-semibold"
+            className="ml-2 bg-brand-gradient text-white px-5 py-2 rounded-full text-sm font-semibold"
           >
             + New Design
           </Link>

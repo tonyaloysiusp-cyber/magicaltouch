@@ -27,6 +27,7 @@ const body = Inter({
 });
 
 const NAV_LINKS = [
+  { label: 'Home', href: '/' },
   { label: 'Templates', href: '/templates' },
   { label: 'Pricing', href: '/#pricing' },
 ];

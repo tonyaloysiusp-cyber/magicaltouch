@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
+import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { Keyboard } from 'lucide-react';
 
@@ -2971,7 +2972,14 @@ function EditorContent() {
         </div>
       )}
       <main className="h-screen flex flex-col bg-gray-50">
-      <MenuBar menus={menus} leading={<Image src="/logo.png" alt="Magical Touch" width={140} height={28} priority />} />
+      <MenuBar
+        menus={menus}
+        leading={
+          <Link href="/" title="Go to homepage">
+            <Image src="/logo.png" alt="Magical Touch" width={140} height={28} priority />
+          </Link>
+        }
+      />
 
       <TabBar tabs={tabs} activeTabId={activeTabId} onSwitch={switchTab} onClose={closeTab} onAdd={() => setShowOpenDialog(true)} />
 
