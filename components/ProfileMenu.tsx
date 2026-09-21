@@ -53,17 +53,37 @@ export function ProfileMenu() {
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    supabase.auth.getUser().then(async ({ data }) => {
-      const user = data.user;
-      if (!user) return;
-      setEmail(user.email || '');
+    let cancelled = false;
+    const loadForUser = async (user: { id: string; email?: string | null } | null | undefined) => {
+      if (!user) {
+        if (!cancelled) {
+          setEmail('');
+          setProfile(null);
+        }
+        return;
+      }
+      if (!cancelled) setEmail(user.email || '');
       const [p, count] = await Promise.all([
         getOrCreateProfile(user.id, user.email?.split('@')[0]),
         getDesignCount(user.id),
       ]);
+      if (cancelled) return;
       setProfile(p);
       setLevel(creatorLevelForCount(count));
+    };
+
+    supabase.auth.getUser().then(({ data }) => loadForUser(data.user));
+    // A one-time getUser() on mount misses a login/logout that happens
+    // without this component remounting (e.g. logging in on another tab,
+    // or a redirect flow that keeps the same page shell) — subscribing
+    // keeps the icon in sync with the real session going forward.
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+      loadForUser(session?.user);
     });
+    return () => {
+      cancelled = true;
+      sub.subscription.unsubscribe();
+    };
   }, []);
 
   useEffect(() => {

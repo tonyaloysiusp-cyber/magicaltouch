@@ -8,7 +8,9 @@ import { MoreVertical, Pencil, Copy, Download, Trash2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { ProfileMenu } from '@/components/ProfileMenu';
 import { DesignLimitDialog } from '@/components/DesignLimitDialog';
-import { MAX_DESIGNS } from '@/lib/profile';
+import { MAX_DESIGNS, getOrCreateProfile } from '@/lib/profile';
+
+const RECENT_COUNT = 6;
 
 interface Design {
   id: string;
@@ -27,6 +29,7 @@ export default function DashboardPage() {
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [showLimitWarning, setShowLimitWarning] = useState(false);
+  const [displayName, setDisplayName] = useState('');
   const menuRef = useRef<HTMLDivElement>(null);
 
   const handleNewDesignClick = (e: React.MouseEvent) => {
@@ -43,6 +46,10 @@ export default function DashboardPage() {
       router.push('/login?next=/dashboard');
       return;
     }
+
+    getOrCreateProfile(user.id, user.email?.split('@')[0]).then((p) => {
+      if (p?.name) setDisplayName(p.name);
+    });
 
     const { data, error } = await supabase
       .from('designs')
@@ -175,8 +182,8 @@ export default function DashboardPage() {
 
       {showLimitWarning && <DesignLimitDialog onCancel={() => setShowLimitWarning(false)} />}
 
-      <h1 className="text-3xl font-bold text-gray-800">Welcome to your Dashboard</h1>
-      <p className="mt-2 text-gray-500 mb-8">Your saved designs live here.</p>
+      <h1 className="text-3xl font-bold text-gray-800">{displayName ? `Welcome back, ${displayName}!` : 'Welcome!'}</h1>
+      <p className="mt-2 text-gray-500 mb-8">Create something new, or jump back into a recent design.</p>
 
       {loading && <p className="text-gray-400">Loading your designs...</p>}
 
@@ -190,9 +197,28 @@ export default function DashboardPage() {
       )}
 
       {!loading && designs.length > 0 && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-          {designs.map((design) => (
-            <div
+        <>
+          <h2 className="text-lg font-semibold text-gray-700 mb-3">Recent Files</h2>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mb-10">
+            {designs.slice(0, RECENT_COUNT).map((design) => renderDesignCard(design))}
+          </div>
+        </>
+      )}
+
+      {!loading && designs.length > RECENT_COUNT && (
+        <>
+          <h2 className="text-lg font-semibold text-gray-700 mb-3">All Designs</h2>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+            {designs.slice(RECENT_COUNT).map((design) => renderDesignCard(design))}
+          </div>
+        </>
+      )}
+    </main>
+  );
+
+  function renderDesignCard(design: Design) {
+    return (
+      <div
               key={design.id}
               className="relative border rounded-xl p-4 hover:shadow-md transition bg-white"
             >
@@ -273,9 +299,6 @@ export default function DashboardPage() {
                 </div>
               )}
             </div>
-          ))}
-        </div>
-      )}
-    </main>
-  );
+    );
+  }
 }
