@@ -40,6 +40,7 @@ import { ProfileMenu } from '@/components/ProfileMenu';
 import { MAX_DESIGNS, getDesignCount } from '@/lib/profile';
 import { PreflightModal } from '@/components/editor/PreflightModal';
 import { ShortcutsModal } from '@/components/editor/ShortcutsModal';
+import { PreferencesModal } from '@/components/editor/PreferencesModal';
 import { RoadmapModal } from '@/components/editor/RoadmapModal';
 import { MenuBar, MenuDef } from '@/components/editor/MenuBar';
 import { useWindowPanels } from '@/components/editor/WindowPanels';
@@ -88,6 +89,33 @@ function EditorContent() {
   const [showDesignLimitDialog, setShowDesignLimitDialog] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
+  const [showPreferences, setShowPreferences] = useState(false);
+  // Off by default per spec: drawing tools (Rectangle, Ellipse, Line,
+  // Polygon, Star, Pen) stay active after creating an object instead of
+  // silently reverting to Selection — matching Illustrator, not a
+  // Canva-style single-shot tool. Persisted locally since it's a pure
+  // editing-feel preference, not document data.
+  const [returnToSelectAfterCreate, setReturnToSelectAfterCreate] = useState(false);
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('mt:returnToSelectAfterCreate');
+      if (stored != null) setReturnToSelectAfterCreate(stored === 'true');
+    } catch {
+      // localStorage unavailable (private mode, etc.) — keep the default.
+    }
+  }, []);
+  const returnToSelectAfterCreateRef = useRef(false);
+  useEffect(() => {
+    returnToSelectAfterCreateRef.current = returnToSelectAfterCreate;
+  }, [returnToSelectAfterCreate]);
+  const updateReturnToSelectPref = (value: boolean) => {
+    setReturnToSelectAfterCreate(value);
+    try {
+      localStorage.setItem('mt:returnToSelectAfterCreate', String(value));
+    } catch {
+      // Best-effort only.
+    }
+  };
   const photoEditorRef = useRef<PhotoEditorHandle>(null);
   const [photoCanUndo, setPhotoCanUndo] = useState(false);
   const [photoCanRedo, setPhotoCanRedo] = useState(false);
@@ -343,9 +371,17 @@ function EditorContent() {
         const canvas = fabricCanvasRef.current;
         canvas.add(pathObj);
         canvas.setActiveObject(pathObj);
+        if (returnToSelectAfterCreateRef.current) {
+          setActiveToolState('select');
+          activeToolRef.current = 'select';
+        } else {
+          // Pen tool stays active (Illustrator's own behavior) — the
+          // finished path must go back to non-interactive like every
+          // other object while a draw tool is loaded, or a click meant to
+          // start the NEXT path could instead grab/drag this one.
+          pathObj.set({ selectable: false, evented: false });
+        }
         canvas.requestRenderAll();
-        setActiveToolState('select');
-        activeToolRef.current = 'select';
       },
     });
 
@@ -369,8 +405,18 @@ function EditorContent() {
         recomputeMembership();
         refreshLayers();
         pushHistory();
-        setActiveToolState('select');
-        activeToolRef.current = 'select';
+        if (returnToSelectAfterCreateRef.current) {
+          setActiveToolState('select');
+          activeToolRef.current = 'select';
+        } else {
+          // The shape tool stays loaded (Illustrator's own behavior: draw
+          // several rectangles in a row without reselecting the tool) —
+          // the just-drawn shape has to go back to non-interactive like
+          // every other object while a draw tool is active, or a click
+          // meant to start the NEXT shape could instead grab/drag this one.
+          obj.set({ selectable: false, evented: false });
+        }
+        canvas.requestRenderAll();
       },
     });
 
@@ -2661,7 +2707,7 @@ function EditorContent() {
         { label: 'Duplicate', shortcut: 'Ctrl/Cmd+D', onClick: duplicateSelected, disabled: !hasSelection },
         { label: 'Delete', shortcut: 'Delete', onClick: deleteSelected, disabled: !hasSelection },
         { divider: true },
-        { label: 'Preferences', planned: true },
+        { label: 'Preferences...', onClick: () => setShowPreferences(true) },
       ],
     },
     {
@@ -3029,6 +3075,12 @@ function EditorContent() {
       )}
 
       <ShortcutsModal open={showShortcuts} onClose={() => setShowShortcuts(false)} workspace={workspace} />
+      <PreferencesModal
+        open={showPreferences}
+        onClose={() => setShowPreferences(false)}
+        returnToSelectAfterCreate={returnToSelectAfterCreate}
+        onToggleReturnToSelect={updateReturnToSelectPref}
+      />
       <RoadmapModal open={roadmap.open} highlightId={roadmap.id} onClose={() => setRoadmap({ open: false })} />
       <PreflightModal open={showPreflight} issues={preflightIssues} onClose={() => setShowPreflight(false)} />
       </main>
