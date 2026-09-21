@@ -298,6 +298,15 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
   }, [brushOpacity]);
   const paintDraftRef = useRef<PixelMask | null>(null);
   const paintingRef = useRef(false);
+  // Real stroke smoothing: the raw pointer position is exponentially
+  // smoothed (a lightweight "stabilizer") before it's used, and every
+  // move interpolates dabs along the segment from the last stamped point
+  // instead of stamping once at the new position — without this, a
+  // normal-speed stroke leaves visible gaps/segments between mousemove
+  // events instead of a continuous line.
+  const lastPaintPointRef = useRef<{ x: number; y: number } | null>(null);
+  const smoothedPaintPointRef = useRef<{ x: number; y: number } | null>(null);
+  const PAINT_SMOOTHING = 0.55; // 0 = raw input, closer to 1 = more lag/smoothing
 
   const [brushColor, setBrushColor] = useState('#ff2d55');
 
@@ -1175,6 +1184,39 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
     fabricCanvasRef.current?.requestRenderAll();
   };
 
+  // Starts a new stroke: seeds the stabilizer at the raw start point (no
+  // lag on the very first dab) and stamps it immediately.
+  const beginPaintStroke = (local: { x: number; y: number }) => {
+    smoothedPaintPointRef.current = local;
+    lastPaintPointRef.current = local;
+    paintDab(local);
+  };
+
+  // Continues a stroke to a new raw pointer position: smooths it against
+  // the running average, then stamps dabs at a fixed spacing along the
+  // segment from the last stamped point to the smoothed point, so the
+  // stroke reads as one continuous line — a fast mouse move still leaves
+  // real, unbroken brush coverage instead of isolated dots.
+  const continuePaintStroke = (raw: { x: number; y: number }) => {
+    const prevSmoothed = smoothedPaintPointRef.current || raw;
+    const smoothed = {
+      x: prevSmoothed.x + (raw.x - prevSmoothed.x) * (1 - PAINT_SMOOTHING),
+      y: prevSmoothed.y + (raw.y - prevSmoothed.y) * (1 - PAINT_SMOOTHING),
+    };
+    smoothedPaintPointRef.current = smoothed;
+
+    const from = lastPaintPointRef.current || smoothed;
+    const radius = Math.max(1, brushSizeRef.current / 2);
+    const spacing = Math.max(1, radius * 0.2);
+    const dist = Math.hypot(smoothed.x - from.x, smoothed.y - from.y);
+    const steps = Math.max(1, Math.round(dist / spacing));
+    for (let i = 1; i <= steps; i++) {
+      const t = i / steps;
+      paintDab({ x: from.x + (smoothed.x - from.x) * t, y: from.y + (smoothed.y - from.y) * t });
+    }
+    lastPaintPointRef.current = smoothed;
+  };
+
   const bakePaintStroke = (tool: PhotoTool) => {
     const mask = paintDraftRef.current;
     const img = imageRef.current;
@@ -1242,7 +1284,7 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
       paintingRef.current = true;
       paintDraftRef.current = null;
       const pointer = canvas.getPointer(opt.e);
-      paintDab(canvasToImageLocal(pointer));
+      beginPaintStroke(canvasToImageLocal(pointer));
       return;
     }
     if (tool === 'eyedropper') {
@@ -1282,7 +1324,7 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
     const tool = activeToolRef.current;
     if ((PAINT_TOOLS.includes(tool) || MASK_PAINT_TOOLS.includes(tool)) && paintingRef.current) {
       const pointer = canvas.getPointer(opt.e);
-      paintDab(canvasToImageLocal(pointer));
+      continuePaintStroke(canvasToImageLocal(pointer));
       return;
     }
     if (tool === 'gradient' && gradientDraftRef.current) {
@@ -1309,6 +1351,8 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
       paintingRef.current = false;
       bakePaintStroke(tool);
       paintDraftRef.current = null;
+      lastPaintPointRef.current = null;
+      smoothedPaintPointRef.current = null;
       setSelectionMask(null);
       return;
     }

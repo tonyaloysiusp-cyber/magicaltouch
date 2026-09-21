@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import { Keyboard, X } from 'lucide-react';
 
 const MAIN_DESIGN_SHORTCUTS: { keys: string; label: string }[] = [
@@ -89,6 +90,15 @@ interface Props {
 }
 
 export function ShortcutsModal({ open, onClose, workspace = 'design' }: Props) {
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open, onClose]);
+
   if (!open) return null;
 
   const mainList = MAIN_DESIGN_SHORTCUTS;
