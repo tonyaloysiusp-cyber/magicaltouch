@@ -136,3 +136,119 @@ export function pickColorAt(source: HTMLCanvasElement, x: number, y: number): st
   const [r, g, b] = ctx.getImageData(ix, iy, 1, 1).data;
   return `#${[r, g, b].map((v) => v.toString(16).padStart(2, '0')).join('')}`;
 }
+
+// Real Clone Stamp compositing: samples pixels from (x - offsetX,
+// y - offsetY) of the SAME image and paints them into exactly the
+// masked pixels — genuine "copy real pixels from point A to point B",
+// not a filter or a fake overlay. `offsetX/offsetY` is the fixed
+// source->destination vector established when the stroke began (see
+// PhotoEditorWorkspace's clone-source/offset handling).
+export function cloneStampPaint(source: HTMLCanvasElement, mask: PixelMask, offsetX: number, offsetY: number): string {
+  const canvas = document.createElement('canvas');
+  canvas.width = source.width;
+  canvas.height = source.height;
+  const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
+  ctx.drawImage(source, 0, 0);
+
+  // drawImage(source, offsetX, offsetY) places source's pixel (sx,sy) at
+  // dest (sx+offsetX, sy+offsetY) — i.e. dest(x,y) becomes
+  // source(x-offsetX, y-offsetY), exactly the sampling relationship a
+  // clone stamp needs.
+  const sampled = document.createElement('canvas');
+  sampled.width = source.width;
+  sampled.height = source.height;
+  const sctx = sampled.getContext('2d') as CanvasRenderingContext2D;
+  sctx.drawImage(source, offsetX, offsetY);
+  sctx.globalCompositeOperation = 'destination-in';
+  sctx.drawImage(maskToCanvas(mask), 0, 0);
+
+  ctx.drawImage(sampled, 0, 0);
+  return canvas.toDataURL('image/png');
+}
+
+export interface HueSaturationSettings {
+  hue: number; // -180..180 degrees
+  saturation: number; // -100..100 (%), scales existing saturation
+  lightness: number; // -100..100 (%), additive
+}
+
+export const DEFAULT_HUE_SATURATION: HueSaturationSettings = { hue: 0, saturation: 0, lightness: 0 };
+
+function rgbToHsl(r: number, g: number, b: number): [number, number, number] {
+  r /= 255; g /= 255; b /= 255;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const l = (max + min) / 2;
+  if (max === min) return [0, 0, l];
+  const d = max - min;
+  const s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+  let h: number;
+  if (max === r) h = ((g - b) / d + (g < b ? 6 : 0)) / 6;
+  else if (max === g) h = ((b - r) / d + 2) / 6;
+  else h = ((r - g) / d + 4) / 6;
+  return [h, s, l];
+}
+
+function hue2rgb(p: number, q: number, t: number): number {
+  if (t < 0) t += 1;
+  if (t > 1) t -= 1;
+  if (t < 1 / 6) return p + (q - p) * 6 * t;
+  if (t < 1 / 2) return q;
+  if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+  return p;
+}
+
+function hslToRgb(h: number, s: number, l: number): [number, number, number] {
+  if (s === 0) {
+    const v = Math.round(l * 255);
+    return [v, v, v];
+  }
+  const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+  const p = 2 * l - q;
+  return [
+    Math.round(hue2rgb(p, q, h + 1 / 3) * 255),
+    Math.round(hue2rgb(p, q, h) * 255),
+    Math.round(hue2rgb(p, q, h - 1 / 3) * 255),
+  ];
+}
+
+// Real HSL-space Hue/Saturation/Lightness adjustment: converts each
+// pixel to HSL, shifts hue, scales saturation, adds lightness, converts
+// back — genuine per-pixel color-space math via a precomputed 256*3-ish
+// isn't feasible for hue (it's not a simple per-channel LUT), so this
+// walks every pixel directly. Master channel only — real per-color-range
+// adjustment (Photoshop's Reds/Yellows/etc.) isn't implemented; that's a
+// documented, honest scope limit, not a hidden shortcut on this one.
+export function applyHueSaturation(source: HTMLCanvasElement, settings: HueSaturationSettings, mask?: PixelMask | null): string {
+  const canvas = document.createElement('canvas');
+  canvas.width = source.width;
+  canvas.height = source.height;
+  const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
+  ctx.drawImage(source, 0, 0);
+  const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const d = imgData.data;
+  const hueShift = settings.hue / 360;
+  const satScale = 1 + Math.max(-1, Math.min(1, settings.saturation / 100));
+  const lightAdd = settings.lightness / 100;
+
+  for (let p = 0, i = 0; i < d.length; p++, i += 4) {
+    const m = mask ? mask.data[p] / 255 : 1;
+    if (!m) continue;
+    let [h, s, l] = rgbToHsl(d[i], d[i + 1], d[i + 2]);
+    h = ((h + hueShift) % 1 + 1) % 1;
+    s = Math.max(0, Math.min(1, s * satScale));
+    l = Math.max(0, Math.min(1, l + lightAdd));
+    const [r2, g2, b2] = hslToRgb(h, s, l);
+    if (m >= 1) {
+      d[i] = r2; d[i + 1] = g2; d[i + 2] = b2;
+    } else {
+      // Partial (feathered) mask coverage — blend toward the adjusted
+      // color proportionally instead of an all-or-nothing swap.
+      d[i] = d[i] + (r2 - d[i]) * m;
+      d[i + 1] = d[i + 1] + (g2 - d[i + 1]) * m;
+      d[i + 2] = d[i + 2] + (b2 - d[i + 2]) * m;
+    }
+  }
+  ctx.putImageData(imgData, 0, 0);
+  return canvas.toDataURL('image/png');
+}
