@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useRef, useState } from 'react';
-import { PixelMask, CombineMode, rectMask, ellipseMask, polygonMask, magicWandMask, combineMasks } from '@/lib/editor/pixelSelection';
+import { PixelMask, CombineMode, rectMask, ellipseMask, polygonMask, magicWandMask, combineMasks, featherMask } from '@/lib/editor/pixelSelection';
 
 interface Args {
   fabricCanvasRef: React.MutableRefObject<any>;
@@ -11,6 +11,16 @@ interface Args {
   getSelectionMask: () => PixelMask | null;
   onSelectionChanged: (imageUid: string, mask: PixelMask | null) => void;
   onNoImageSelected: () => void;
+  // Persistent New/Add/Subtract/Intersect mode set via the options panel
+  // (Photoshop lets you set this once instead of holding Shift/Alt for
+  // every click). Shift/Alt held during the click still temporarily
+  // override it, exactly like Photoshop's own modifier-key behavior.
+  modeRef?: React.MutableRefObject<CombineMode>;
+  // Feather amount (px), applied to a freshly-drawn shape BEFORE it's
+  // combined into the selection — real Photoshop "Feather" tool-option
+  // behavior (softens the selection as it's created), not a post-hoc
+  // approximation.
+  featherRef?: React.MutableRefObject<number>;
 }
 
 function getTargetImage(canvas: any) {
@@ -39,10 +49,11 @@ export function getImagePixelCanvas(obj: any): HTMLCanvasElement {
   return canvas;
 }
 
-function modeFromEvent(e: any): CombineMode {
+function modeFromEvent(e: any, modeRef?: React.MutableRefObject<CombineMode>): CombineMode {
+  if (e?.shiftKey && e?.altKey) return 'intersect';
   if (e?.shiftKey) return 'add';
   if (e?.altKey) return 'subtract';
-  return 'new';
+  return modeRef?.current || 'new';
 }
 
 export function usePixelSelectionTool({
@@ -53,6 +64,8 @@ export function usePixelSelectionTool({
   getSelectionMask,
   onSelectionChanged,
   onNoImageSelected,
+  modeRef,
+  featherRef,
 }: Args) {
   const draftRef = useRef<{
     tool: string | null;
@@ -87,8 +100,9 @@ export function usePixelSelectionTool({
           const pixelCanvas = getImagePixelCanvas(imageObj);
           const ctx = pixelCanvas.getContext('2d') as CanvasRenderingContext2D;
           const imageData = ctx.getImageData(0, 0, pixelCanvas.width, pixelCanvas.height);
-          const shape = magicWandMask(imageData, local.x, local.y, toleranceRef.current, contiguousRef.current);
-          const mode = modeFromEvent(opt.e);
+          let shape = magicWandMask(imageData, local.x, local.y, toleranceRef.current, contiguousRef.current);
+          if (featherRef?.current) shape = featherMask(shape, featherRef.current);
+          const mode = modeFromEvent(opt.e, modeRef);
           const base = mode === 'new' ? null : getSelectionMask();
           onSelectionChanged(imageObj.__uid, combineMasks(base, shape, mode));
           return;
@@ -157,7 +171,8 @@ export function usePixelSelectionTool({
       }
 
       if (shape) {
-        const mode = modeFromEvent(opt?.e);
+        if (featherRef?.current) shape = featherMask(shape, featherRef.current);
+        const mode = modeFromEvent(opt?.e, modeRef);
         const base = mode === 'new' ? null : getSelectionMask();
         onSelectionChanged(imageObj.__uid, combineMasks(base, shape, mode));
       }
