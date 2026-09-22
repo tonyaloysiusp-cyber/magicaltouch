@@ -119,6 +119,76 @@ function drawClosedPolygon(pdf: any, pts: [number, number][], style: string, off
   pdf.lines(segments, x0, y0, [1, 1], style, true);
 }
 
+// Pen-drawn (and any other single-subpath) Path objects previously went
+// through getAbsolutePolygonPoints -> flattenPathToLocalPoints, which
+// subdivides every C/Q command into ~12 straight-line segments — real
+// vector data, but a polygon approximation of the curve rather than the
+// curve itself, so a bezier path exported to PDF and reopened in a real
+// vector editor would show as a many-sided polygon, not an editable
+// curve. This draws the path's actual M/L/C/Q/Z commands as jsPDF's own
+// path primitives (moveTo/lineTo/curveTo), which emit a real PDF `c`
+// bezier operator (verified against the raw content stream) — the curve
+// stays a curve.
+function drawBezierPathObject(pdf: any, F: any, obj: any, offsetX: number, offsetY: number) {
+  const commands: any[] = obj.path || [];
+  if (commands.length < 2) return;
+  const style = applyPaintAndGetStyle(pdf, F, obj);
+  if (!style) return;
+
+  const offset = obj.pathOffset || { x: 0, y: 0 };
+  const matrix: any = obj.calcTransformMatrix();
+  const toAbsPt = (x: number, y: number): [number, number] => {
+    const tp: any = F.util.transformPoint(new F.Point(x - offset.x, y - offset.y), matrix);
+    return [toPt(tp.x - offsetX), toPt(tp.y - offsetY)];
+  };
+
+  let cur = { x: 0, y: 0 };
+  let drewAnything = false;
+  commands.forEach((cmd: any[]) => {
+    const type = cmd[0];
+    if (type === 'M') {
+      cur = { x: cmd[1], y: cmd[2] };
+      const [x, y] = toAbsPt(cur.x, cur.y);
+      pdf.moveTo(x, y);
+      drewAnything = true;
+    } else if (type === 'L') {
+      const next = { x: cmd[1], y: cmd[2] };
+      const [x, y] = toAbsPt(next.x, next.y);
+      pdf.lineTo(x, y);
+      cur = next;
+    } else if (type === 'C') {
+      const p1 = { x: cmd[1], y: cmd[2] };
+      const p2 = { x: cmd[3], y: cmd[4] };
+      const p3 = { x: cmd[5], y: cmd[6] };
+      const [x1, y1] = toAbsPt(p1.x, p1.y);
+      const [x2, y2] = toAbsPt(p2.x, p2.y);
+      const [x3, y3] = toAbsPt(p3.x, p3.y);
+      pdf.curveTo(x1, y1, x2, y2, x3, y3);
+      cur = p3;
+    } else if (type === 'Q') {
+      // jsPDF's path API is cubic-only — degree-elevate the quadratic to
+      // an exactly equivalent cubic in LOCAL space first, then transform,
+      // so a non-uniform scale/rotation applies consistently to both.
+      const p1 = { x: cmd[1], y: cmd[2] };
+      const p2 = { x: cmd[3], y: cmd[4] };
+      const c1 = { x: cur.x + (2 / 3) * (p1.x - cur.x), y: cur.y + (2 / 3) * (p1.y - cur.y) };
+      const c2 = { x: p2.x + (2 / 3) * (p1.x - p2.x), y: p2.y + (2 / 3) * (p1.y - p2.y) };
+      const [x1, y1] = toAbsPt(c1.x, c1.y);
+      const [x2, y2] = toAbsPt(c2.x, c2.y);
+      const [x3, y3] = toAbsPt(p2.x, p2.y);
+      pdf.curveTo(x1, y1, x2, y2, x3, y3);
+      cur = p2;
+    } else if (type === 'Z' || type === 'z') {
+      pdf.close();
+    }
+  });
+
+  if (!drewAnything) return;
+  if (style === 'F') pdf.fill();
+  else if (style === 'S') pdf.stroke();
+  else if (style === 'FD') pdf.fillStroke();
+}
+
 function drawLineObject(pdf: any, F: any, obj: any, offsetX: number, offsetY: number) {
   if (!isPaintable(obj.stroke) || !((obj.strokeWidth || 0) > 0)) return;
   const matrix = obj.calcTransformMatrix();
@@ -268,7 +338,11 @@ async function renderOneObject(
     await drawTextObject(pdf, F, obj, offsetX, offsetY, fontCache);
     return;
   }
-  // rect (incl. the artboard background), triangle, circle, ellipse, polygon, single-ring path.
+  if (obj.type === 'path') {
+    drawBezierPathObject(pdf, F, obj, offsetX, offsetY);
+    return;
+  }
+  // rect (incl. the artboard background), triangle, circle, ellipse, polygon.
   const pts = getAbsolutePolygonPoints(obj, F);
   if (pts.length < 2) return;
   const style = applyPaintAndGetStyle(pdf, F, obj);

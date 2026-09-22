@@ -11,6 +11,7 @@ import { ToolMode, DocUnit, isDrawTool, PASTEBOARD_BG, RULER_SIZE } from '@/lib/
 import { googleFontsStylesheetHref, aliasedFontFaceCSS, ensureFontLoaded, ensureFontsLoadedForCanvasJSON } from '@/lib/editor/googleFonts';
 import { getAbsolutePolygonPoints, multiPolygonToPathD } from '@/lib/editor/geometry';
 import { exportCanvasToPDF, exportArtboardsToPDF, toPt } from '@/lib/editor/pdfExport';
+import { exportArtboardToSVG } from '@/lib/editor/svgExport';
 import { computeSnap, GuideLine } from '@/lib/editor/snapping';
 import {
   ArtboardMeta,
@@ -2645,6 +2646,29 @@ function EditorContent() {
     setShowExportDialog(false);
   };
 
+  // File > Export as SVG serializes the active artboard's real object
+  // geometry (see lib/editor/svgExport.ts) — a pen-drawn path comes out as
+  // a genuine <path d="M...C..."> a vector editor can re-edit, not a
+  // rasterized screenshot wrapped in <svg> tags.
+  const exportAsSVG = async () => {
+    setExporting(true);
+    try {
+      const canvas = fabricCanvasRef.current;
+      const F = (window as any).fabric || (await import('fabric')).fabric;
+      const ab = getActiveArtboardRect();
+      const svg = exportArtboardToSVG(canvas, F, ab);
+      const blob = new Blob([svg], { type: 'image/svg+xml' });
+      const url = URL.createObjectURL(blob);
+      downloadFile(url, `${designName || 'design'}${ab.id ? ` - ${artboards.find((a) => a.id === ab.id)?.name || ''}` : ''}.svg`);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('SVG export failed:', err);
+      alert('Failed to export SVG. Please try again.');
+    }
+    setExporting(false);
+    setShowExportDialog(false);
+  };
+
   // File > Export as PDF exports every artboard as its own page, matching
   // how Illustrator treats "the document" as all of its artboards.
   const exportAsPDF = async () => {
@@ -2877,6 +2901,7 @@ function EditorContent() {
         { label: 'Export as PNG', onClick: exportAsPNG },
         { label: 'Export as JPG', onClick: exportAsJPG },
         { label: 'Export as PDF', onClick: exportAsPDF },
+        { label: 'Export as SVG', onClick: exportAsSVG },
         { label: 'Download (PNG)', onClick: exportAsPNG },
         { divider: true },
         { label: 'Preflight...', onClick: runPreflightCheck },
