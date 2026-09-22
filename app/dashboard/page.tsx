@@ -39,6 +39,20 @@ export default function DashboardPage() {
     }
   };
 
+  // Lets the Photo Editor be used on its own, independent of manually
+  // building a Main Design document first — this drops straight into
+  // /editor with ?newPhoto=1, which prompts an image upload immediately
+  // and opens the Photo Editor on it as soon as that lands (see
+  // app/editor/page.tsx's startInPhotoEditor handling). Same design-count
+  // limit as "+ New Design" since it becomes a real saved design too.
+  const goToNewPhotoProject = () => {
+    if (designs.length >= MAX_DESIGNS) {
+      setShowLimitWarning(true);
+      return;
+    }
+    router.push(`/editor?w=1200&h=1200&newTab=${Date.now()}&newPhoto=1`);
+  };
+
   const fetchDesigns = async () => {
     const { data: { user } } = await supabase.auth.getUser();
 
@@ -174,10 +188,16 @@ export default function DashboardPage() {
           <Link href="/#pricing" className="text-sm font-medium text-gray-600 hover:text-gray-900 px-4 py-2">
             Pricing
           </Link>
+          <button
+            onClick={goToNewPhotoProject}
+            className="ml-2 border border-gray-300 text-gray-700 px-4 py-2 rounded-full text-sm font-semibold hover:bg-gray-50"
+          >
+            + New Photo Project
+          </button>
           <Link
             href="/create"
             onClick={handleNewDesignClick}
-            className="ml-2 bg-brand-gradient text-white px-5 py-2 rounded-full text-sm font-semibold"
+            className="bg-brand-gradient text-white px-5 py-2 rounded-full text-sm font-semibold"
           >
             + New Design
           </Link>
