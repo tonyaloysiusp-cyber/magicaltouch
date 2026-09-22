@@ -37,8 +37,12 @@ import {
   applyLevels,
   applyGradientOverlay,
   pickColorAt,
+  cloneStampPaint,
+  applyHueSaturation,
   LevelsSettings,
   DEFAULT_LEVELS,
+  HueSaturationSettings,
+  DEFAULT_HUE_SATURATION,
 } from '@/lib/editor/photoBrush';
 import { imageObjectToDataURL, nativeResMultiplier, clampMultiplierForSafety, configureHighQualityContext, devicePixelRatioSafe } from '@/lib/editor/imageQuality';
 import { LayersPanel } from '@/components/editor/LayersPanel';
@@ -61,6 +65,8 @@ import {
   SlidersHorizontal,
   Eye,
   EyeOff,
+  Stamp,
+  Droplet,
 } from 'lucide-react';
 
 export interface CropRect {
@@ -110,13 +116,15 @@ type PhotoTool =
   | 'brush'
   | 'dodge'
   | 'burn'
+  | 'clone'
   | 'eyedropper'
   | 'gradient'
   | 'levels'
+  | 'hue-sat'
   | 'mask-reveal'
   | 'mask-hide';
 
-const PAINT_TOOLS: PhotoTool[] = ['eraser', 'brush', 'dodge', 'burn'];
+const PAINT_TOOLS: PhotoTool[] = ['eraser', 'brush', 'dodge', 'burn', 'clone'];
 const MASK_PAINT_TOOLS: PhotoTool[] = ['mask-reveal', 'mask-hide'];
 
 // Icons + shortcut labels for every tool — matching Photoshop's own key
@@ -138,9 +146,11 @@ const TOOL_ICONS: Record<PhotoTool, React.ReactNode> = {
   brush: <Paintbrush size={ICON_SIZE} />,
   dodge: <Sun size={ICON_SIZE} />,
   burn: <Moon size={ICON_SIZE} />,
+  clone: <Stamp size={ICON_SIZE} />,
   eyedropper: <Pipette size={ICON_SIZE} />,
   gradient: <Blend size={ICON_SIZE} />,
   levels: <SlidersHorizontal size={ICON_SIZE} />,
+  'hue-sat': <Droplet size={ICON_SIZE} />,
   'mask-reveal': <Eye size={ICON_SIZE} />,
   'mask-hide': <EyeOff size={ICON_SIZE} />,
 };
@@ -160,8 +170,10 @@ const SHORTCUT_LABEL: Partial<Record<PhotoTool, string>> = {
   dodge: 'O',
   burn: 'Shift+O',
   eyedropper: 'I',
+  clone: 'S',
   gradient: 'G',
   levels: 'Ctrl/Cmd+L',
+  'hue-sat': 'Ctrl/Cmd+U',
   'mask-reveal': 'R',
   'mask-hide': 'Shift+R',
 };
@@ -391,6 +403,22 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
   const gradientDraftRef = useRef<{ start: { x: number; y: number }; line: any } | null>(null);
 
   const [levels, setLevels] = useState<LevelsSettings>(DEFAULT_LEVELS);
+  const [hueSat, setHueSat] = useState<HueSaturationSettings>(DEFAULT_HUE_SATURATION);
+
+  // ---- Clone Stamp: Alt+click sets a real source point (image-local
+  // pixel coords); painting samples from that point offset by the fixed
+  // source->destination vector established when a stroke begins. Read
+  // via refs for the same reason brushColorRef etc. are — this state is
+  // consumed inside handlers bound once to the canvas's mouse events. ----
+  const cloneSourceRef = useRef<{ x: number; y: number } | null>(null);
+  const cloneOffsetRef = useRef<{ x: number; y: number } | null>(null);
+  const cloneLiveSourceRef = useRef<{ x: number; y: number } | null>(null);
+  const [cloneAligned, setCloneAligned] = useState(true);
+  const cloneAlignedRef = useRef(true);
+  useEffect(() => {
+    cloneAlignedRef.current = cloneAligned;
+  }, [cloneAligned]);
+  const [hasCloneSource, setHasCloneSource] = useState(false);
 
   const [selectionMask, setSelectionMask] = useState<PixelMask | null>(null);
   const selectionMaskRef = useRef<PixelMask | null>(null);
@@ -946,6 +974,30 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
                 ctx.lineTo(ox + draft.points[i].x * vt[0], oy + draft.points[i].y * vt[3]);
               }
             });
+          }
+        }
+
+        // Clone Stamp source-ring: shows exactly where the tool is
+        // currently sampling from, moving in lockstep with the brush
+        // while painting (cloneLiveSourceRef), or resting at the fixed
+        // source point otherwise — a real indicator of the actual sample
+        // location, not a fixed decorative crosshair.
+        if (activeToolRef.current === 'clone') {
+          const src = cloneLiveSourceRef.current || cloneSourceRef.current;
+          if (src) {
+            const r = Math.max(4, brushSizeRef.current / 2);
+            ctx.save();
+            ctx.strokeStyle = '#22c55e';
+            ctx.lineWidth = 1.5;
+            ctx.setLineDash([3, 3]);
+            ctx.beginPath();
+            ctx.arc(ox + src.x * vt[0], oy + src.y * vt[3], r * vt[0], 0, Math.PI * 2);
+            ctx.moveTo(ox + src.x * vt[0] - 4, oy + src.y * vt[3]);
+            ctx.lineTo(ox + src.x * vt[0] + 4, oy + src.y * vt[3]);
+            ctx.moveTo(ox + src.x * vt[0], oy + src.y * vt[3] - 4);
+            ctx.lineTo(ox + src.x * vt[0], oy + src.y * vt[3] + 4);
+            ctx.stroke();
+            ctx.restore();
           }
         }
       });
@@ -1552,6 +1604,13 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
     if (selection && maskHasSelection(selection)) dab = combineMasks(selection, dab, 'intersect');
     paintDraftRef.current = paintDraftRef.current ? combineMasks(paintDraftRef.current, dab, 'add') : dab;
     setPaintPreviewMask(paintDraftRef.current);
+    // Track where the Clone Stamp is CURRENTLY sampling from (moves in
+    // lockstep with the brush, offset by the fixed source vector) so the
+    // on-canvas source-ring indicator tracks the real sample point, not
+    // just the originally-clicked source.
+    if (activeToolRef.current === 'clone' && cloneOffsetRef.current) {
+      cloneLiveSourceRef.current = { x: local.x - cloneOffsetRef.current.x, y: local.y - cloneOffsetRef.current.y };
+    }
     fabricCanvasRef.current?.requestRenderAll();
   };
 
@@ -1617,6 +1676,9 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
     else if (tool === 'brush') bakeAndPush(paintColorInMask(pixelCanvas, mask, brushColorRef.current));
     else if (tool === 'dodge') bakeAndPush(dodgeBurnInMask(pixelCanvas, mask, dodgeBurnStrengthRef.current));
     else if (tool === 'burn') bakeAndPush(dodgeBurnInMask(pixelCanvas, mask, -dodgeBurnStrengthRef.current));
+    else if (tool === 'clone' && cloneOffsetRef.current) {
+      bakeAndPush(cloneStampPaint(pixelCanvas, mask, cloneOffsetRef.current.x, cloneOffsetRef.current.y));
+    }
   };
 
   // ---- Gradient: click-drag draws a live preview line; releasing bakes
@@ -1651,6 +1713,36 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
       return;
     }
     const tool = activeToolRef.current;
+    if (tool === 'clone') {
+      const pointer = canvas.getPointer(opt.e);
+      const local = canvasToImageLocal(pointer);
+      if (opt.e.altKey) {
+        // Alt+click sets a REAL source point — the exact pixel coords
+        // every subsequent stroke samples from (offset by the vector to
+        // wherever painting actually starts), matching Photoshop's own
+        // Clone Stamp source-setting gesture.
+        cloneSourceRef.current = local;
+        cloneOffsetRef.current = null;
+        cloneLiveSourceRef.current = local;
+        setHasCloneSource(true);
+        canvas.requestRenderAll();
+        return;
+      }
+      if (!cloneSourceRef.current) return; // nothing to sample from yet
+      // Aligned: the source->destination offset is fixed the FIRST time
+      // you paint after setting a source, and every later stroke keeps
+      // sampling relative to that same offset (so a second stroke picks
+      // up where the source content would naturally continue).
+      // Non-aligned: every new stroke resets to the original source
+      // point, so each stroke starts stamping from the same spot again.
+      if (!cloneAlignedRef.current || !cloneOffsetRef.current) {
+        cloneOffsetRef.current = { x: local.x - cloneSourceRef.current.x, y: local.y - cloneSourceRef.current.y };
+      }
+      paintingRef.current = true;
+      paintDraftRef.current = null;
+      beginPaintStroke(local);
+      return;
+    }
     if (PAINT_TOOLS.includes(tool) || MASK_PAINT_TOOLS.includes(tool)) {
       paintingRef.current = true;
       paintDraftRef.current = null;
@@ -1754,6 +1846,18 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
     bakeAndPush(applyLevels(getImagePixelCanvas(img), levels));
   };
 
+  // Applies to the whole image, unless a real selection is active, in
+  // which case only the selected pixels are adjusted (matching Levels'
+  // own scope convention above and how every other real op here treats
+  // an active selection as a real constraint, not just a visual).
+  const applyHueSaturationNow = () => {
+    const img = imageRef.current;
+    if (!img) return;
+    const selection = selectionMaskRef.current;
+    const mask = selection && maskHasSelection(selection) ? selection : undefined;
+    bakeAndPush(applyHueSaturation(getImagePixelCanvas(img), hueSat, mask));
+  };
+
   useEffect(() => {
     const canvas = fabricCanvasRef.current;
     if (!canvas || !ready) return;
@@ -1835,6 +1939,7 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
       if (isMeta && e.key.toLowerCase() === 'z' && !e.shiftKey) { e.preventDefault(); undoLocal(); return; }
       if ((isMeta && e.key.toLowerCase() === 'z' && e.shiftKey) || (isMeta && e.key.toLowerCase() === 'y')) { e.preventDefault(); redoLocal(); return; }
       if (isMeta && e.key.toLowerCase() === 'l') { e.preventDefault(); selectTool('levels'); return; }
+      if (isMeta && e.key.toLowerCase() === 'u') { e.preventDefault(); selectTool('hue-sat'); return; }
       if (isMeta && e.key === '=') { e.preventDefault(); zoomIn(); return; }
       if (isMeta && e.key === '-') { e.preventDefault(); zoomOut(); return; }
       if (isMeta && e.key === '0') { e.preventDefault(); fitToView(); return; }
@@ -1855,6 +1960,7 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
         if (key === 'b') { e.preventDefault(); selectTool('brush'); return; }
         if (key === 'e') { e.preventDefault(); selectTool('eraser'); return; }
         if (key === 'o') { e.preventDefault(); selectTool('dodge'); return; }
+        if (key === 's') { e.preventDefault(); selectTool('clone'); return; }
         if (key === 'i') { e.preventDefault(); selectTool('eyedropper'); return; }
         if (key === 'g') { e.preventDefault(); selectTool('gradient'); return; }
         if (key === 'r') { e.preventDefault(); selectTool('mask-reveal'); return; }
@@ -2001,6 +2107,7 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
         { id: 'eraser', label: 'Eraser' },
         { id: 'dodge', label: 'Dodge' },
         { id: 'burn', label: 'Burn' },
+        { id: 'clone', label: 'Clone Stamp' },
       ],
     },
     {
@@ -2025,7 +2132,7 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
         { id: 'mask-hide', label: 'Hide (paint)' },
       ],
     },
-    { label: 'Adjust', tools: [{ id: 'levels', label: 'Levels' }] },
+    { label: 'Adjust', tools: [{ id: 'levels', label: 'Levels' }, { id: 'hue-sat', label: 'Hue/Saturation' }] },
   ];
 
   return (
@@ -2227,10 +2334,10 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
               </div>
             )}
 
-            {(activeTool === 'eraser' || activeTool === 'brush' || activeTool === 'dodge' || activeTool === 'burn' || MASK_PAINT_TOOLS.includes(activeTool)) && (
+            {(activeTool === 'eraser' || activeTool === 'brush' || activeTool === 'dodge' || activeTool === 'burn' || activeTool === 'clone' || MASK_PAINT_TOOLS.includes(activeTool)) && (
               <div className="border-t pt-3">
                 <p className="font-semibold text-gray-700 text-xs uppercase tracking-wide mb-2">
-                  {activeTool === 'eraser' ? 'Eraser' : activeTool === 'brush' ? 'Brush' : activeTool === 'dodge' ? 'Dodge (lighten)' : activeTool === 'burn' ? 'Burn (darken)' : activeTool === 'mask-reveal' ? 'Mask: Paint Reveal' : 'Mask: Paint Hide'}
+                  {activeTool === 'eraser' ? 'Eraser' : activeTool === 'brush' ? 'Brush' : activeTool === 'dodge' ? 'Dodge (lighten)' : activeTool === 'burn' ? 'Burn (darken)' : activeTool === 'clone' ? 'Clone Stamp' : activeTool === 'mask-reveal' ? 'Mask: Paint Reveal' : 'Mask: Paint Hide'}
                 </p>
                 <div className="flex justify-between text-[11px] text-gray-500 mb-0.5">
                   <span>Brush size</span>
@@ -2268,6 +2375,31 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
                       onChange={(e) => setDodgeBurnStrength(parseFloat(e.target.value))}
                       className="w-full"
                     />
+                  </>
+                )}
+                {activeTool === 'clone' && (
+                  <>
+                    <label className="flex items-center gap-1.5 text-[11px] text-gray-600 mb-2">
+                      <input type="checkbox" checked={cloneAligned} onChange={(e) => setCloneAligned(e.target.checked)} />
+                      Aligned
+                    </label>
+                    <p className="text-[11px] text-gray-500 mb-1">
+                      {hasCloneSource ? '✓ Source set' : 'Alt+Click on the image to set a source'}
+                    </p>
+                    {hasCloneSource && (
+                      <button
+                        onClick={() => {
+                          cloneSourceRef.current = null;
+                          cloneOffsetRef.current = null;
+                          cloneLiveSourceRef.current = null;
+                          setHasCloneSource(false);
+                          fabricCanvasRef.current?.requestRenderAll();
+                        }}
+                        className="text-[11px] px-2 py-1 border rounded hover:bg-gray-50"
+                      >
+                        Clear Source
+                      </button>
+                    )}
                   </>
                 )}
               </div>
@@ -2342,6 +2474,37 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
                 <div className="flex gap-1.5">
                   <button onClick={() => setLevels(DEFAULT_LEVELS)} className="flex-1 text-[11px] px-2 py-1.5 border rounded hover:bg-gray-50">Reset</button>
                   <button onClick={applyLevelsNow} className="flex-1 text-[11px] px-2 py-1.5 border rounded bg-gray-800 text-white hover:bg-gray-700">Apply</button>
+                </div>
+              </div>
+            )}
+
+            {activeTool === 'hue-sat' && (
+              <div className="border-t pt-3">
+                <p className="font-semibold text-gray-700 text-xs uppercase tracking-wide mb-2">Hue / Saturation</p>
+                {hasSelection && <p className="text-[11px] text-amber-600 mb-2">Applies only within the active selection.</p>}
+                {([
+                  ['hue', 'Hue', -180, 180],
+                  ['saturation', 'Saturation', -100, 100],
+                  ['lightness', 'Lightness', -100, 100],
+                ] as [keyof HueSaturationSettings, string, number, number][]).map(([key, label, min, max]) => (
+                  <div key={key} className="mb-2">
+                    <div className="flex justify-between text-[11px] text-gray-500 mb-0.5">
+                      <span>{label}</span>
+                      <span>{hueSat[key]}</span>
+                    </div>
+                    <input
+                      type="range"
+                      min={min}
+                      max={max}
+                      value={hueSat[key]}
+                      onChange={(e) => setHueSat((prev) => ({ ...prev, [key]: parseInt(e.target.value) }))}
+                      className="w-full"
+                    />
+                  </div>
+                ))}
+                <div className="flex gap-1.5">
+                  <button onClick={() => setHueSat(DEFAULT_HUE_SATURATION)} className="flex-1 text-[11px] px-2 py-1.5 border rounded hover:bg-gray-50">Reset</button>
+                  <button onClick={applyHueSaturationNow} className="flex-1 text-[11px] px-2 py-1.5 border rounded bg-gray-800 text-white hover:bg-gray-700">Apply</button>
                 </div>
               </div>
             )}
