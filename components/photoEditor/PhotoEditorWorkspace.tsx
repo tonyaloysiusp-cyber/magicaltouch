@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback, forwardRef, useImperativeHandle } from 'react';
 import {
   PixelMask,
+  CombineMode,
   combineMasks,
   rectMask,
   ellipseMask,
@@ -18,6 +19,8 @@ import {
   maskToCanvas,
   cloneMask,
   createEmptyMask,
+  traceMaskBoundarySegments,
+  BoundarySegment,
 } from '@/lib/editor/pixelSelection';
 import { contentAwareFill } from '@/lib/editor/inpaint';
 import { usePixelSelectionTool, getImagePixelCanvas } from '@/hooks/usePixelSelectionTool';
@@ -163,6 +166,14 @@ const SHORTCUT_LABEL: Partial<Record<PhotoTool, string>> = {
   'mask-hide': 'Shift+R',
 };
 
+const MODE_LABEL: Record<CombineMode, string> = { new: 'New', add: 'Add', subtract: 'Sub', intersect: 'Int' };
+const MODE_TITLE: Record<CombineMode, string> = {
+  new: 'New Selection — replaces the current selection',
+  add: 'Add to Selection',
+  subtract: 'Subtract from Selection',
+  intersect: 'Intersect with Selection',
+};
+
 const MAX_LOCAL_HISTORY = 30;
 const ZOOM_PRESETS = [25, 50, 100, 200, 400];
 const MIN_ZOOM = 0.02;
@@ -294,6 +305,22 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
     contiguousRef.current = contiguous;
   }, [contiguous]);
 
+  // Persistent selection combine mode (New/Add/Subtract/Intersect), set
+  // from the options panel — Shift/Alt held during a click still
+  // temporarily override this, same as Photoshop.
+  const [selectionMode, setSelectionMode] = useState<CombineMode>('new');
+  const selectionModeRef = useRef<CombineMode>('new');
+  useEffect(() => {
+    selectionModeRef.current = selectionMode;
+  }, [selectionMode]);
+  // Feather applied to a selection AS it's drawn (marquee/lasso/wand),
+  // not just as a one-shot action on an existing selection.
+  const [selectionFeather, setSelectionFeather] = useState(0);
+  const selectionFeatherRef = useRef(0);
+  useEffect(() => {
+    selectionFeatherRef.current = selectionFeather;
+  }, [selectionFeather]);
+
   // Shared by every brush-like tool (eraser/brush/dodge/burn/mask paint):
   // brush radius + softness, plus the running dab mask a stroke paints
   // into before its operation bakes once on mouse-up.
@@ -324,13 +351,43 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
   const smoothedPaintPointRef = useRef<{ x: number; y: number } | null>(null);
   const PAINT_SMOOTHING = 0.55; // 0 = raw input, closer to 1 = more lag/smoothing
 
+  // These four are read inside bakePaintStroke/handleCanvasMouseUp, which
+  // are bound to the canvas's mouse events ONCE (see the `[ready]`-only
+  // effect below) and never rebound — so anything they read directly off
+  // React state instead of a ref stays frozen at whatever it was when the
+  // canvas first mounted. brushSize/Hardness/Opacity and tolerance/
+  // contiguous already avoid this via their own refs (below); these four
+  // previously didn't, which meant changing the Brush color, Dodge/Burn
+  // strength, or Gradient colors/opacity mid-session visually updated the
+  // control but silently had NO effect on the actual painted pixels — a
+  // real "looks functional but isn't" bug, not a hypothetical one.
   const [brushColor, setBrushColor] = useState('#ff2d55');
+  const brushColorRef = useRef('#ff2d55');
+  useEffect(() => {
+    brushColorRef.current = brushColor;
+  }, [brushColor]);
 
   const [dodgeBurnStrength, setDodgeBurnStrength] = useState(0.35);
+  const dodgeBurnStrengthRef = useRef(0.35);
+  useEffect(() => {
+    dodgeBurnStrengthRef.current = dodgeBurnStrength;
+  }, [dodgeBurnStrength]);
 
   const [gradientColor1, setGradientColor1] = useState('#000000');
   const [gradientColor2, setGradientColor2] = useState('#ffffff');
   const [gradientOpacity, setGradientOpacity] = useState(0.5);
+  const gradientColor1Ref = useRef('#000000');
+  const gradientColor2Ref = useRef('#ffffff');
+  const gradientOpacityRef = useRef(0.5);
+  useEffect(() => {
+    gradientColor1Ref.current = gradientColor1;
+  }, [gradientColor1]);
+  useEffect(() => {
+    gradientColor2Ref.current = gradientColor2;
+  }, [gradientColor2]);
+  useEffect(() => {
+    gradientOpacityRef.current = gradientOpacity;
+  }, [gradientOpacity]);
   const gradientDraftRef = useRef<{ start: { x: number; y: number }; line: any } | null>(null);
 
   const [levels, setLevels] = useState<LevelsSettings>(DEFAULT_LEVELS);
@@ -340,6 +397,50 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
   useEffect(() => {
     selectionMaskRef.current = selectionMask;
   }, [selectionMask]);
+  // Real marching-ants boundary of the committed selection, recomputed
+  // only when the selection itself changes (not every animation frame —
+  // see the rAF loop below, which just advances the dash offset and
+  // requests a re-render; after:render reads this cached geometry).
+  const selectionBoundaryRef = useRef<BoundarySegment[]>([]);
+  useEffect(() => {
+    selectionBoundaryRef.current = selectionMask && maskHasSelection(selectionMask) ? traceMaskBoundarySegments(selectionMask) : [];
+  }, [selectionMask]);
+  const antsOffsetRef = useRef(0);
+  useEffect(() => {
+    let raf = 0;
+    let running = true;
+    const tick = () => {
+      if (!running) return;
+      if (selectionBoundaryRef.current.length > 0) {
+        antsOffsetRef.current = (antsOffsetRef.current + 0.4) % 8;
+        fabricCanvasRef.current?.requestRenderAll();
+      }
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => {
+      running = false;
+      cancelAnimationFrame(raf);
+    };
+  }, []);
+
+  // The transient in-progress paint-stroke preview (brush/eraser/dodge/
+  // burn/mask-paint dabs before mouse-up bakes them) — kept SEPARATE from
+  // selectionMask so painting a stroke can no longer visually replace or
+  // (on mouse-up) silently delete a real, persistent Marquee/Lasso/Wand
+  // selection that was active before the stroke started.
+  const [paintPreviewMask, setPaintPreviewMask] = useState<PixelMask | null>(null);
+  const paintPreviewMaskRef = useRef<PixelMask | null>(null);
+  useEffect(() => {
+    paintPreviewMaskRef.current = paintPreviewMask;
+  }, [paintPreviewMask]);
+
+  // Live drag-preview geometry for the pixel-selection hook (populated
+  // once usePixelSelectionTool is called below) — declared up here so the
+  // canvas-mount effect's after:render closure can read it; see that
+  // hook's own draftRef/liveRect for what these mirror.
+  const selDraftRefHolder = useRef<any>(null);
+  const liveRectRef = useRef<{ x: number; y: number; w: number; h: number } | null>(null);
 
   // ---- Vector path (Pen tool) — same reused hooks as before. A
   // finished path can be turned into a real mask contribution (painted
@@ -761,22 +862,91 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
         if (obj && obj.__layerId) setActiveLayer(obj);
       });
 
+      // Draws a two-pass black/white dashed stroke ("marching ants") along
+      // whatever path `addPath` traces into ctx — shared by the committed
+      // selection's real boundary trace and the live in-progress drag
+      // preview below, so both read identically.
+      const strokeAnts = (ctx: CanvasRenderingContext2D, addPath: () => void) => {
+        ctx.save();
+        ctx.lineWidth = 1;
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath();
+        addPath();
+        ctx.lineDashOffset = -antsOffsetRef.current;
+        ctx.strokeStyle = '#ffffff';
+        ctx.stroke();
+        ctx.lineDashOffset = -antsOffsetRef.current + 4;
+        ctx.strokeStyle = '#000000';
+        ctx.stroke();
+        ctx.restore();
+      };
+
       canvas.on('after:render', () => {
         const ctx = canvasElRef.current?.getContext('2d');
         const vt = canvas.viewportTransform;
         const layer = imageRef.current;
         if (!ctx || !vt || !layer) return;
+        const ox = (layer.left || 0) * vt[0] + vt[4];
+        const oy = (layer.top || 0) * vt[3] + vt[5];
+
         const mask = selectionMaskRef.current;
         if (mask && maskHasSelection(mask)) {
           const tint = maskToTintCanvas(mask, [56, 145, 255]);
           ctx.save();
           ctx.globalAlpha = 1;
-          const x = (layer.left || 0) * vt[0] + vt[4];
-          const y = (layer.top || 0) * vt[3] + vt[5];
-          const w = tint.width * vt[0];
-          const h = tint.height * vt[3];
-          ctx.drawImage(tint, x, y, w, h);
+          ctx.drawImage(tint, ox, oy, tint.width * vt[0], tint.height * vt[3]);
           ctx.restore();
+        }
+
+        const paintPreview = paintPreviewMaskRef.current;
+        if (paintPreview && maskHasSelection(paintPreview)) {
+          const tint = maskToTintCanvas(paintPreview, [255, 159, 10], 0.55);
+          ctx.save();
+          ctx.globalAlpha = 1;
+          ctx.drawImage(tint, ox, oy, tint.width * vt[0], tint.height * vt[3]);
+          ctx.restore();
+        }
+
+        const segs = selectionBoundaryRef.current;
+        if (segs.length) {
+          strokeAnts(ctx, () => {
+            for (const s of segs) {
+              ctx.moveTo(ox + s.x0 * vt[0], oy + s.y0 * vt[3]);
+              ctx.lineTo(ox + s.x1 * vt[0], oy + s.y1 * vt[3]);
+            }
+          });
+        }
+
+        // Live drag preview for an in-progress Marquee/Ellipse/Lasso —
+        // real geometry read directly from the selection hook's own draft
+        // state, not a separate/duplicated tracking mechanism.
+        const draft = selDraftRefHolder.current;
+        if (draft && draft.tool && draft.imageObj === layer) {
+          if ((draft.tool === 'marquee-rect' || draft.tool === 'marquee-ellipse') && liveRectRef.current) {
+            const r = liveRectRef.current;
+            strokeAnts(ctx, () => {
+              if (draft.tool === 'marquee-rect') {
+                ctx.rect(ox + r.x * vt[0], oy + r.y * vt[3], r.w * vt[0], r.h * vt[3]);
+              } else {
+                ctx.ellipse(
+                  ox + (r.x + r.w / 2) * vt[0],
+                  oy + (r.y + r.h / 2) * vt[3],
+                  Math.max(0, Math.abs((r.w / 2) * vt[0])),
+                  Math.max(0, Math.abs((r.h / 2) * vt[3])),
+                  0,
+                  0,
+                  Math.PI * 2
+                );
+              }
+            });
+          } else if (draft.tool === 'lasso' && draft.points.length > 1) {
+            strokeAnts(ctx, () => {
+              ctx.moveTo(ox + draft.points[0].x * vt[0], oy + draft.points[0].y * vt[3]);
+              for (let i = 1; i < draft.points.length; i++) {
+                ctx.lineTo(ox + draft.points[i].x * vt[0], oy + draft.points[i].y * vt[3]);
+              }
+            });
+          }
         }
       });
 
@@ -1098,11 +1268,13 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
 
   // ---- Pixel selection tools (marquee/lasso/magic-wand), reused as-is
   // from the main editor's own hook. ----
-  const { handleMouseDown: selDown, handleMouseMove: selMove, handleMouseUp: selUp } = usePixelSelectionTool({
+  const { handleMouseDown: selDown, handleMouseMove: selMove, handleMouseUp: selUp, liveRect: selLiveRect, draftRef: selDraftRef } = usePixelSelectionTool({
     fabricCanvasRef,
     activeToolRef: activeToolRef as any,
     toleranceRef,
     contiguousRef,
+    modeRef: selectionModeRef,
+    featherRef: selectionFeatherRef,
     getSelectionMask: () => selectionMaskRef.current,
     onSelectionChanged: (_uid: string, mask: PixelMask | null) => {
       setSelectionMask(mask);
@@ -1110,6 +1282,10 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
     },
     onNoImageSelected: () => {},
   });
+  useEffect(() => {
+    liveRectRef.current = selLiveRect;
+  }, [selLiveRect]);
+  selDraftRefHolder.current = selDraftRef;
 
   const isSelectTool = (t: PhotoTool) => t === 'marquee-rect' || t === 'marquee-ellipse' || t === 'lasso' || t === 'magic-wand';
 
@@ -1340,12 +1516,21 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
   };
   const featherSelection = () => {
     if (!selectionMaskRef.current) return;
-    setSelectionMask(featherMask(selectionMaskRef.current, 4));
+    setSelectionMask(featherMask(selectionMaskRef.current, selectionFeather || 4));
     fabricCanvasRef.current?.requestRenderAll();
   };
   const deselect = () => {
     setSelectionMask(null);
     fabricCanvasRef.current?.requestRenderAll();
+  };
+  const fillSelectionWithColor = () => {
+    const mask = selectionMaskRef.current;
+    const img = imageRef.current;
+    if (!mask || !maskHasSelection(mask) || !img) return;
+    // Unlike Delete/Add-to-Mask/Remove-Object, Fill deliberately leaves
+    // the selection active afterward — matching Photoshop's Edit > Fill,
+    // which doesn't clear your marching ants just because you filled them.
+    bakeAndPush(paintColorInMask(getImagePixelCanvas(img), mask, brushColor));
   };
 
   // ---- Brush-like tools: circular soft dabs unioned into one running
@@ -1357,9 +1542,16 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
     const img = imageRef.current;
     if (!img) return;
     const r = brushSizeRef.current / 2;
-    const dab = softBrushMask(img.width, img.height, local.x, local.y, r, brushHardnessRef.current, brushOpacityRef.current);
+    let dab = softBrushMask(img.width, img.height, local.x, local.y, r, brushHardnessRef.current, brushOpacityRef.current);
+    // A real active selection constrains every paint-like tool (brush,
+    // eraser, dodge/burn, mask paint) to inside its boundary — clipping
+    // the dab itself (not just the final bake) so the live preview
+    // already shows paint stopping at the selection edge, same as
+    // Photoshop.
+    const selection = selectionMaskRef.current;
+    if (selection && maskHasSelection(selection)) dab = combineMasks(selection, dab, 'intersect');
     paintDraftRef.current = paintDraftRef.current ? combineMasks(paintDraftRef.current, dab, 'add') : dab;
-    setSelectionMask(paintDraftRef.current);
+    setPaintPreviewMask(paintDraftRef.current);
     fabricCanvasRef.current?.requestRenderAll();
   };
 
@@ -1422,9 +1614,9 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
     }
     const pixelCanvas = getImagePixelCanvas(img);
     if (tool === 'eraser') bakeAndPush(clearMaskedPixels(pixelCanvas, mask));
-    else if (tool === 'brush') bakeAndPush(paintColorInMask(pixelCanvas, mask, brushColor));
-    else if (tool === 'dodge') bakeAndPush(dodgeBurnInMask(pixelCanvas, mask, dodgeBurnStrength));
-    else if (tool === 'burn') bakeAndPush(dodgeBurnInMask(pixelCanvas, mask, -dodgeBurnStrength));
+    else if (tool === 'brush') bakeAndPush(paintColorInMask(pixelCanvas, mask, brushColorRef.current));
+    else if (tool === 'dodge') bakeAndPush(dodgeBurnInMask(pixelCanvas, mask, dodgeBurnStrengthRef.current));
+    else if (tool === 'burn') bakeAndPush(dodgeBurnInMask(pixelCanvas, mask, -dodgeBurnStrengthRef.current));
   };
 
   // ---- Gradient: click-drag draws a live preview line; releasing bakes
@@ -1532,7 +1724,7 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
       paintDraftRef.current = null;
       lastPaintPointRef.current = null;
       smoothedPaintPointRef.current = null;
-      setSelectionMask(null);
+      setPaintPreviewMask(null);
       return;
     }
     if (tool === 'gradient' && gradientDraftRef.current) {
@@ -1543,7 +1735,7 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
       gradientDraftRef.current = null;
       const img = imageRef.current;
       if (img && Math.hypot(end.x - start.x, end.y - start.y) > 2) {
-        bakeAndPush(applyGradientOverlay(getImagePixelCanvas(img), start.x, start.y, end.x, end.y, gradientColor1, gradientColor2, gradientOpacity));
+        bakeAndPush(applyGradientOverlay(getImagePixelCanvas(img), start.x, start.y, end.x, end.y, gradientColor1Ref.current, gradientColor2Ref.current, gradientOpacityRef.current));
       } else {
         canvas.requestRenderAll();
       }
@@ -1973,6 +2165,32 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
             {(isSelectTool(activeTool) || hasSelection) && (
               <div className="border-t pt-3">
                 <p className="font-semibold text-gray-700 text-xs uppercase tracking-wide mb-2">Selection</p>
+                {isSelectTool(activeTool) && (
+                  <>
+                    <div className="mb-2">
+                      <div className="text-[11px] text-gray-500 mb-1">Mode (Shift=Add, Alt=Subtract, Shift+Alt=Intersect)</div>
+                      <div className="grid grid-cols-4 gap-1">
+                        {(['new', 'add', 'subtract', 'intersect'] as CombineMode[]).map((m) => (
+                          <button
+                            key={m}
+                            onClick={() => setSelectionMode(m)}
+                            title={MODE_TITLE[m]}
+                            className={`text-[10px] px-1 py-1 border rounded ${selectionMode === m ? 'bg-gray-800 text-white border-gray-800' : 'text-gray-600'}`}
+                          >
+                            {MODE_LABEL[m]}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="mb-2">
+                      <div className="flex justify-between text-[11px] text-gray-500 mb-0.5">
+                        <span>Feather (new selections)</span>
+                        <span>{selectionFeather}px</span>
+                      </div>
+                      <input type="range" min={0} max={50} value={selectionFeather} onChange={(e) => setSelectionFeather(parseInt(e.target.value))} className="w-full" />
+                    </div>
+                  </>
+                )}
                 {activeTool === 'magic-wand' && (
                   <>
                     <div className="mb-2">
@@ -1990,8 +2208,12 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
                 <div className="grid grid-cols-2 gap-1.5">
                   <button onClick={invertSelection} disabled={!hasSelection} className="text-[11px] px-2 py-1 border rounded disabled:opacity-30">Invert</button>
                   <button onClick={deselect} disabled={!hasSelection} className="text-[11px] px-2 py-1 border rounded disabled:opacity-30">Deselect</button>
-                  <button onClick={featherSelection} disabled={!hasSelection} className="text-[11px] px-2 py-1 border rounded disabled:opacity-30">Feather</button>
+                  <button onClick={featherSelection} disabled={!hasSelection} title="Feather the CURRENT selection now (uses the amount above)" className="text-[11px] px-2 py-1 border rounded disabled:opacity-30">Feather Now</button>
                   <button onClick={applySelectionAsMask} disabled={!hasSelection} className="text-[11px] px-2 py-1 border rounded disabled:opacity-30">Add to Mask</button>
+                  <button onClick={fillSelectionWithColor} disabled={!hasSelection} title="Fill the selection with the current Brush color" className="col-span-2 text-[11px] px-2 py-1 border rounded disabled:opacity-30 flex items-center justify-center gap-1.5">
+                    <span className="inline-block w-3 h-3 rounded-sm border" style={{ background: brushColor }} />
+                    Fill Selection
+                  </button>
                   <button onClick={deleteSelectedPixels} disabled={!hasSelection} className="col-span-2 text-[11px] px-2 py-1 border rounded text-red-500 disabled:opacity-30">Delete Selected Pixels</button>
                   <button
                     onClick={removeSelectedObject}

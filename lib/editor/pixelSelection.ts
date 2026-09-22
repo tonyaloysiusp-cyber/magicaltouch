@@ -270,6 +270,57 @@ export function maskHasSelection(mask: PixelMask | null): boolean {
   return false;
 }
 
+export interface BoundarySegment {
+  x0: number;
+  y0: number;
+  x1: number;
+  y1: number;
+}
+
+// Traces the REAL boundary of a pixel selection mask as a set of unit
+// edge segments (a segment is emitted between a selected cell and each
+// unselected/out-of-bounds neighbor) — genuine marching-ants geometry
+// from the actual mask data, for any shape (rect/ellipse/lasso/wand/
+// combined), not a fake dashed rectangle drawn regardless of the real
+// selection's shape.
+//
+// For very large masks, tracing happens at a downsampled resolution and
+// segments are scaled back up — an honest, documented tradeoff for a
+// purely visual indicator (the real selection mask used for painting/
+// fills/masking below is always full resolution, unaffected by this).
+export function traceMaskBoundarySegments(mask: PixelMask, maxCells = 4_000_000): BoundarySegment[] {
+  const total = mask.width * mask.height;
+  const scale = total > maxCells ? Math.ceil(Math.sqrt(total / maxCells)) : 1;
+  const w = Math.max(1, Math.ceil(mask.width / scale));
+  const h = Math.max(1, Math.ceil(mask.height / scale));
+
+  const selected = new Uint8Array(w * h);
+  for (let y = 0; y < h; y++) {
+    const sy = Math.min(mask.height - 1, y * scale);
+    for (let x = 0; x < w; x++) {
+      const sx = Math.min(mask.width - 1, x * scale);
+      selected[y * w + x] = mask.data[sy * mask.width + sx] > 127 ? 1 : 0;
+    }
+  }
+  const at = (x: number, y: number): boolean => x >= 0 && y >= 0 && x < w && y < h && selected[y * w + x] === 1;
+
+  const segments: BoundarySegment[] = [];
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      if (!at(x, y)) continue;
+      const x0 = x * scale;
+      const y0 = y * scale;
+      const x1 = Math.min(mask.width, x0 + scale);
+      const y1 = Math.min(mask.height, y0 + scale);
+      if (!at(x, y - 1)) segments.push({ x0, y0, x1, y1: y0 });
+      if (!at(x, y + 1)) segments.push({ x0, y0: y1, x1, y1 });
+      if (!at(x - 1, y)) segments.push({ x0, y0, x1: x0, y1 });
+      if (!at(x + 1, y)) segments.push({ x0: x1, y0, x1, y1 });
+    }
+  }
+  return segments;
+}
+
 // Canvas whose alpha channel is the mask — used as the alpha source for
 // destination-in/out compositing.
 export function maskToCanvas(mask: PixelMask): HTMLCanvasElement {
