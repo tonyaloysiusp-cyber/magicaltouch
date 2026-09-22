@@ -218,6 +218,15 @@ function EditorContent() {
   // "Edit Photo" sequence.
   const startInPhotoEditor = searchParams.get('newPhoto') === '1';
   const pendingPhotoStartRef = useRef(startInPhotoEditor);
+  // Captured once at mount, independent of the ?newPhoto=1 query param
+  // itself (which handleImageUpload clears via router.replace once the
+  // Photo Editor opens) — used to hide Main Design's own chrome (the
+  // menu bar, the Main Design/Photo Editing switcher) while this first
+  // photo is still being edited, since there's no real Main Design
+  // document to switch to or manage yet. Once "Apply to Design" closes
+  // this initial session, the normal full editor UI comes back — by then
+  // there IS a real document worth Main Design's tools.
+  const [photoFirstSession] = useState(startInPhotoEditor);
   const hasPromptedPhotoUploadRef = useRef(false);
 
   // Document setup carried over from the "Create New Design" screen. Only
@@ -2985,6 +2994,13 @@ function EditorContent() {
     },
   ];
 
+  // While the first photo of a "New Photo Project" session is still open
+  // (not yet applied to a real document), Main Design's own chrome —
+  // its File/Edit/Object/Type menus and the Main Design/Photo Editing
+  // switcher — has nothing real to act on, so it's hidden rather than
+  // shown as dead weight around a pure photo-editing session.
+  const photoOnlySession = photoFirstSession && workspace === 'photo' && !!photoEditSession;
+
   return (
     <>
       {/* Next.js hoists <link>/<style> tags found anywhere in the tree
@@ -3002,7 +3018,7 @@ function EditorContent() {
       )}
       <main className="h-screen flex flex-col bg-gray-50">
       <MenuBar
-        menus={menus}
+        menus={photoOnlySession ? [] : menus}
         leading={
           <Link href="/" title="Go to homepage">
             <Image src="/logo.png" alt="Magical Touch" width={140} height={28} priority />
@@ -3030,7 +3046,7 @@ function EditorContent() {
           className="text-sm border rounded px-2 py-1 w-48 text-center"
         />
 
-        <WorkspaceSwitcher workspace={workspace} onSwitch={handleWorkspaceSwitch} />
+        {!photoOnlySession && <WorkspaceSwitcher workspace={workspace} onSwitch={handleWorkspaceSwitch} />}
 
         <div className="flex items-center gap-2">
           {/* Undo/Redo target whichever workspace is actually showing —
