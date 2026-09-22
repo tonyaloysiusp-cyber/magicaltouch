@@ -188,6 +188,13 @@ export default function DashboardPage() {
           <Link href="/#pricing" className="text-sm font-medium text-gray-600 hover:text-gray-900 px-4 py-2">
             Pricing
           </Link>
+          <Link
+            href="/studio"
+            title="A new editor engine being built from scratch — only pan/zoom/layers/undo work so far, saved locally in this browser only"
+            className="text-sm font-medium text-gray-400 hover:text-gray-700 px-4 py-2"
+          >
+            Studio (Preview)
+          </Link>
           <button
             onClick={goToNewPhotoProject}
             className="ml-2 border border-gray-300 text-gray-700 px-4 py-2 rounded-full text-sm font-semibold hover:bg-gray-50"
