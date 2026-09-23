@@ -244,6 +244,111 @@ export function featherMask(mask: PixelMask, radius: number): PixelMask {
   return out;
 }
 
+// Real morphological dilation/erosion via a two-pass separable min/max
+// filter (row-wise sliding window, then column-wise) — an exact square
+// structuring element of side (2*radius+1), computed in O(width*height)
+// per pass via a monotonic deque rather than re-scanning each window.
+// Square (not circular) is an honest, documented shape tradeoff, same
+// spirit as featherMask's box blur standing in for a true gaussian.
+function slidingMinMax(src: Float64Array | Uint8ClampedArray, length: number, radius: number, wantMax: boolean): Float64Array {
+  const out = new Float64Array(length);
+  // Monotonic deque of indices into `src`, kept so src[deque[0]] is
+  // always the window's current min/max. Out-of-range window cells
+  // simply aren't pushed — the structuring element clips at the edge
+  // rather than wrapping or inventing a padding value.
+  const deque: number[] = [];
+  const dominates = (a: number, b: number) => (wantMax ? a >= b : a <= b);
+  let pushed = 0;
+  for (let outIdx = 0; outIdx < length; outIdx++) {
+    const windowEnd = Math.min(length - 1, outIdx + radius);
+    while (pushed <= windowEnd) {
+      while (deque.length && dominates(src[pushed], src[deque[deque.length - 1]])) deque.pop();
+      deque.push(pushed);
+      pushed++;
+    }
+    const windowStart = outIdx - radius;
+    while (deque.length && deque[0] < windowStart) deque.shift();
+    out[outIdx] = deque.length ? src[deque[0]] : 0;
+  }
+  return out;
+}
+
+function morphFilter(mask: PixelMask, radius: number, wantMax: boolean): PixelMask {
+  if (radius <= 0) return cloneMask(mask);
+  const { width, height, data } = mask;
+  const rowPass = new Float64Array(width * height);
+  for (let y = 0; y < height; y++) {
+    const row = data.subarray(y * width, y * width + width);
+    const filtered = slidingMinMax(row, width, radius, wantMax);
+    rowPass.set(filtered, y * width);
+  }
+  const out = createEmptyMask(width, height);
+  const col = new Float64Array(height);
+  for (let x = 0; x < width; x++) {
+    for (let y = 0; y < height; y++) col[y] = rowPass[y * width + x];
+    const filtered = slidingMinMax(col, height, radius, wantMax);
+    for (let y = 0; y < height; y++) out.data[y * width + x] = filtered[y];
+  }
+  return out;
+}
+
+// Select > Expand Selection: grows the selected region outward by `radius`
+// pixels (morphological dilation).
+export function expandMask(mask: PixelMask, radius: number): PixelMask {
+  return morphFilter(mask, Math.round(radius), true);
+}
+
+// Select > Contract Selection: shrinks the selected region inward by
+// `radius` pixels (morphological erosion).
+export function contractMask(mask: PixelMask, radius: number): PixelMask {
+  return morphFilter(mask, Math.round(radius), false);
+}
+
+// Select > Grow: extends the selection outward, one adjacent pixel at a
+// time, into neighboring pixels whose color is within `tolerance` of the
+// specific already-selected neighbor they border — a real multi-source
+// flood fill seeded from the whole current selection (not a fixed-radius
+// expand), matching Grow's actual "contiguous, color-similar" behavior
+// as distinct from Expand's pure-geometry dilation above.
+export function growMask(mask: PixelMask, imageData: ImageData, tolerance: number): PixelMask {
+  const { width, height, data } = imageData;
+  const out = cloneMask(mask);
+  const tol = tolerance * tolerance * 4;
+  const visited = new Uint8Array(width * height);
+  const stack: number[] = [];
+  for (let p = 0; p < out.data.length; p++) {
+    if (out.data[p] > 0) {
+      visited[p] = 1;
+      stack.push(p);
+    }
+  }
+  while (stack.length) {
+    const p = stack.pop() as number;
+    const i = p * 4;
+    const x = p % width;
+    const y = (p - x) / width;
+    const neighbors: number[] = [];
+    if (x > 0) neighbors.push(p - 1);
+    if (x < width - 1) neighbors.push(p + 1);
+    if (y > 0) neighbors.push(p - width);
+    if (y < height - 1) neighbors.push(p + width);
+    for (const n of neighbors) {
+      if (visited[n]) continue;
+      const ni = n * 4;
+      const dr = data[ni] - data[i];
+      const dg = data[ni + 1] - data[i + 1];
+      const db = data[ni + 2] - data[i + 2];
+      const da = data[ni + 3] - data[i + 3];
+      if (dr * dr + dg * dg + db * db + da * da <= tol) {
+        visited[n] = 1;
+        out.data[n] = 255;
+        stack.push(n);
+      }
+    }
+  }
+  return out;
+}
+
 export function maskBoundingBox(mask: PixelMask): { x: number; y: number; width: number; height: number } | null {
   let minX = mask.width;
   let minY = mask.height;

@@ -59,6 +59,9 @@ import { PhotoEditorWorkspace, PhotoEditResult, CropRect, PhotoEditorHandle } fr
 import { PhotoAdjustments, DEFAULT_ADJUSTMENTS } from '@/lib/editor/photoFilters';
 import { imageObjectToDataURL } from '@/lib/editor/imageQuality';
 
+const isOpenVectorPath = (o: any): boolean =>
+  !!o && o.isVectorPath && o.type === 'path' && Array.isArray(o.path) && o.path.length > 0 && o.path[o.path.length - 1][0] !== 'Z';
+
 function EditorContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -435,6 +438,10 @@ function EditorContent() {
     clearHandles: clearAnchorHandles,
     renderHandles: renderAnchorHandles,
     deleteActiveAnchor,
+    breakActiveAnchor,
+    reversePathObject,
+    closeActivePath,
+    joinPathObjects,
   } = useDirectSelection({
     fabricCanvasRef,
     onAnchorMoved: pushHistory,
@@ -965,7 +972,15 @@ function EditorContent() {
         setSelected(obj);
         if (obj && obj.__artboardId) setActiveArtboardId(obj.__artboardId);
         if (activeToolRef.current === 'direct' && obj && obj.isVectorPath) renderAnchorHandles(obj);
-        else clearAnchorHandles();
+        // Clicking straight from a selected path onto one of its OWN
+        // anchor/handle circles fires this same event (Fabric emits
+        // 'selection:updated', not 'selection:cleared'+'selection:created',
+        // whenever the active object changes directly from one object to
+        // another) — the circle itself isn't a vector path, but selecting
+        // it is exactly how a user grabs an anchor to move/delete/break
+        // it, so its own handles must stay on screen rather than being
+        // wiped out from under the click that just landed on one.
+        else if (!obj || !obj.__isAnchorHandle) clearAnchorHandles();
       });
       canvas.on('selection:cleared', () => {
         setSelected(null);
@@ -1761,6 +1776,63 @@ function EditorContent() {
     setSelected(items);
   };
 
+  // Reverses the currently selected vector path's direction (anchor
+  // order, segment order, and handle roles all flip) — works whatever
+  // tool is active, not just while Direct Selection has it open.
+  const reverseSelectedPath = () => {
+    const canvas = fabricCanvasRef.current;
+    const active = canvas?.getActiveObject();
+    if (!active || active.type !== 'path' || !active.isVectorPath) {
+      alert('Select a single vector path to reverse its direction.');
+      return;
+    }
+    if (!reversePathObject(active)) return;
+    canvas.requestRenderAll();
+  };
+
+  // Object > Path > Join: closes a single selected open path (connecting
+  // its own two endpoints), or — with exactly two open paths selected —
+  // merges them into one continuous path at their closest endpoints.
+  const joinSelectedPaths = () => {
+    const canvas = fabricCanvasRef.current;
+    const active = canvas?.getActiveObject();
+    if (active?.type === 'activeSelection') {
+      const objs: any[] = active.getObjects ? active.getObjects() : [];
+      const openPaths = objs.filter(isOpenVectorPath);
+      if (openPaths.length !== 2 || objs.length !== 2) {
+        alert('Join needs exactly two selected open paths.');
+        return;
+      }
+      const [a, b] = openPaths;
+      canvas.discardActiveObject();
+      if (!joinPathObjects(a, b)) {
+        alert('Could not join these paths.');
+        return;
+      }
+      canvas.setActiveObject(a);
+      canvas.requestRenderAll();
+      refreshLayers();
+      return;
+    }
+    if (isOpenVectorPath(active)) {
+      if (!closeActivePath(active)) return;
+      canvas.requestRenderAll();
+      return;
+    }
+    alert('Select an open path (to close it) or two open paths (to join them) first.');
+  };
+
+  // Object > Path > Break: opens a closed path, or splits an open path
+  // into two, at whichever anchor is currently selected in Direct
+  // Selection.
+  const breakSelectedPath = () => {
+    if (!breakActiveAnchor()) {
+      alert('Select an anchor point in Direct Selection first (press A, then click an anchor).');
+      return;
+    }
+    refreshLayers();
+  };
+
   const toggleLock = (obj: any) => {
     const canvas = fabricCanvasRef.current;
     const nextLocked = !obj.locked;
@@ -2133,6 +2205,7 @@ function EditorContent() {
       if (isMeta && e.key.toLowerCase() === 'g' && e.shiftKey && canUseToolShortcuts) { e.preventDefault(); ungroupSelected(); return; }
       if (isMeta && e.key.toLowerCase() === 'g' && canUseToolShortcuts) { e.preventDefault(); groupSelected(); return; }
       if (isMeta && e.key.toLowerCase() === 'd' && canUseToolShortcuts) { e.preventDefault(); duplicateSelected(); return; }
+      if (isMeta && e.key.toLowerCase() === 'j' && canUseToolShortcuts) { e.preventDefault(); joinSelectedPaths(); return; }
       if (isMeta && e.key.toLowerCase() === 'c' && canUseToolShortcuts) { e.preventDefault(); copySelected(); return; }
       if (isMeta && e.key.toLowerCase() === 'v' && canUseToolShortcuts) { e.preventDefault(); pasteClipboard(); return; }
       if (isMeta && e.key.toLowerCase() === 'l' && canUseToolShortcuts) { e.preventDefault(); active && toggleLock(active); return; }
@@ -2993,6 +3066,9 @@ function EditorContent() {
         { label: 'Lock', shortcut: 'Ctrl/Cmd+L', onClick: () => selected && toggleLock(selected), disabled: !hasSelection },
         { label: 'Hide', shortcut: 'Ctrl/Cmd+H', onClick: () => selected && toggleVisible(selected), disabled: !hasSelection },
         { divider: true },
+        { label: 'Join', shortcut: 'Ctrl/Cmd+J', onClick: joinSelectedPaths, disabled: !hasSelection },
+        { label: 'Break Path at Anchor', onClick: breakSelectedPath, disabled: !hasSelection },
+        { label: 'Reverse Path Direction', onClick: reverseSelectedPath, disabled: !hasSelection },
         { label: 'Path Operations (Offset, Simplify...)', planned: true },
         { label: 'Artboard Tool', shortcut: 'Shift+O', onClick: () => setActiveTool('artboard') },
         { label: 'Artboards Panel', onClick: () => togglePanel('artboards') },
