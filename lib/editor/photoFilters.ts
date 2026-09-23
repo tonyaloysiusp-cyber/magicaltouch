@@ -15,6 +15,8 @@
 // left out rather than shipped as something they aren't.
 // ---------------------------------------------------------------------
 
+import { CurvePoint, DEFAULT_CURVE_POINTS, isDefaultCurve, buildCurveLUT } from './curves';
+
 export interface PhotoAdjustments {
   brightness: number; // -1..1, 0 = no change
   contrast: number; // -1..1, 0 = no change
@@ -25,6 +27,7 @@ export interface PhotoAdjustments {
   blur: number; // 0..1, 0 = no change
   sharpen: number; // 0..1, 0 = no change
   blackAndWhite: boolean;
+  curvePoints: CurvePoint[]; // real Catmull-Rom tone curve (lib/editor/curves.ts), default = identity
 }
 
 export const DEFAULT_ADJUSTMENTS: PhotoAdjustments = {
@@ -37,6 +40,7 @@ export const DEFAULT_ADJUSTMENTS: PhotoAdjustments = {
   blur: 0,
   sharpen: 0,
   blackAndWhite: false,
+  curvePoints: DEFAULT_CURVE_POINTS,
 };
 
 export function adjustmentsAreDefault(adj: PhotoAdjustments): boolean {
@@ -49,7 +53,8 @@ export function adjustmentsAreDefault(adj: PhotoAdjustments): boolean {
     adj.vibrance === 0 &&
     adj.blur === 0 &&
     adj.sharpen === 0 &&
-    !adj.blackAndWhite
+    !adj.blackAndWhite &&
+    isDefaultCurve(adj.curvePoints)
   );
 }
 
@@ -125,6 +130,27 @@ function registerCustomFilters(F: any) {
       return this.vibrance === 0;
     },
   });
+
+  // Real tone curve: applies a 256-entry LUT (lib/editor/curves.ts) built
+  // from the user's own control points to every RGB channel.
+  F.Image.filters.Curves = F.util.createClass(F.Image.filters.BaseFilter, {
+    type: 'Curves',
+    lut: null as Uint8ClampedArray | null,
+    mainParameter: 'lut',
+    applyTo2d: function (options: any) {
+      const data = options.imageData.data;
+      const lut = this.lut;
+      if (!lut) return;
+      for (let i = 0; i < data.length; i += 4) {
+        data[i] = lut[data[i]];
+        data[i + 1] = lut[data[i + 1]];
+        data[i + 2] = lut[data[i + 2]];
+      }
+    },
+    isNeutralState: function () {
+      return !this.lut;
+    },
+  });
 }
 
 export function buildFilters(F: any, adj: PhotoAdjustments): any[] {
@@ -139,6 +165,7 @@ export function buildFilters(F: any, adj: PhotoAdjustments): any[] {
   if (adj.vibrance) filters.push(new F.Image.filters.Vibrance({ vibrance: adj.vibrance }));
   if (adj.saturation) filters.push(new F.Image.filters.Saturation({ saturation: adj.saturation }));
   if (adj.hue) filters.push(new F.Image.filters.HueRotation({ rotation: adj.hue * Math.PI }));
+  if (!isDefaultCurve(adj.curvePoints)) filters.push(new F.Image.filters.Curves({ lut: buildCurveLUT(adj.curvePoints) }));
   if (adj.blur) filters.push(new F.Image.filters.Blur({ blur: adj.blur }));
   if (adj.sharpen) {
     // A standard 3x3 unsharp kernel, scaled by the slider amount — real

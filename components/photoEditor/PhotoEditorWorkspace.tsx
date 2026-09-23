@@ -12,6 +12,9 @@ import {
   magicWandMask,
   invertMask,
   featherMask,
+  expandMask,
+  contractMask,
+  growMask,
   maskHasSelection,
   clearMaskedPixels,
   applyMaskKeepSelected,
@@ -24,6 +27,8 @@ import {
 } from '@/lib/editor/pixelSelection';
 import { contentAwareFill } from '@/lib/editor/inpaint';
 import { usePixelSelectionTool, getImagePixelCanvas } from '@/hooks/usePixelSelectionTool';
+import { CurvePoint, Histogram, computeHistogram, DEFAULT_CURVE_POINTS } from '@/lib/editor/curves';
+import { CurveEditor } from './CurveEditor';
 import { usePenTool } from '@/hooks/usePenTool';
 import { useDirectSelection } from '@/hooks/useDirectSelection';
 import {
@@ -332,6 +337,14 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
   useEffect(() => {
     selectionFeatherRef.current = selectionFeather;
   }, [selectionFeather]);
+  // Shared pixel amount for the one-shot Expand/Contract Selection
+  // actions below (distinct from selectionFeather, which softens edges
+  // rather than growing/shrinking the selected region).
+  const [selectionGrowAmount, setSelectionGrowAmount] = useState(4);
+  // Named selection masks, kept for the current Photo Editor session
+  // only (like Photoshop's Select > Save Selection, but scoped to this
+  // editing session rather than written into the document format).
+  const [savedSelections, setSavedSelections] = useState<{ name: string; mask: PixelMask }[]>([]);
 
   // Shared by every brush-like tool (eraser/brush/dodge/burn/mask paint):
   // brush radius + softness, plus the running dab mask a stroke paints
@@ -424,6 +437,10 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
   const selectionMaskRef = useRef<PixelMask | null>(null);
   useEffect(() => {
     selectionMaskRef.current = selectionMask;
+    // Debug/test hook, same spirit as the Main Design editor's
+    // window.__fabricCanvas — exposes the real live selection mask for
+    // inspection without adding any UI.
+    (window as any).__peSelectionMask = selectionMask;
   }, [selectionMask]);
   // Real marching-ants boundary of the committed selection, recomputed
   // only when the selection itself changes (not every animation frame —
@@ -488,7 +505,7 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
   // Bumped on ANY mutation to the active layer's history/mask/layer list
   // that the panels need to re-render for, since that state mostly lives
   // as mutable properties on Fabric objects rather than React state.
-  const [, setRenderTick] = useState(0);
+  const [renderTick, setRenderTick] = useState(0);
   const bump = useCallback(() => setRenderTick((v) => v + 1), []);
 
   const [bgTolerance, setBgTolerance] = useState(24);
@@ -878,6 +895,10 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
       });
       canvas.__retinaDpr = dpr;
       fabricCanvasRef.current = canvas;
+      // Debug/test hook, matching the Main Design editor's own
+      // window.__fabricCanvas -- the Photo Editor mounts a completely
+      // separate Fabric canvas instance, so that hook doesn't reach here.
+      (window as any).__peFabricCanvas = canvas;
 
       addLayerFromSource(sourceDataUrl, { name: 'Background', cropRect: initialCropRect, adjustments: initialAdjustments, makeActive: true });
 
@@ -1058,7 +1079,7 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
   };
 
   // ---- Adjustments (live, non-destructive until Apply) ----
-  const setAdjustment = (key: keyof PhotoAdjustments, value: number | boolean) => {
+  const setAdjustment = (key: keyof PhotoAdjustments, value: number | boolean | CurvePoint[]) => {
     const layer = imageRef.current;
     if (!layer) return;
     const next = { ...(layer.__adjustments || DEFAULT_ADJUSTMENTS), [key]: value };
@@ -1070,6 +1091,28 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
       fabricCanvasRef.current?.requestRenderAll();
     }
   };
+  const setCurvePoints = (points: CurvePoint[]) => setAdjustment('curvePoints', points);
+
+  // The histogram reflects the layer's real SOURCE pixels (before the
+  // live curve/exposure/etc filters below are applied to them) — the
+  // same reference point a real Curves tool's histogram shows, recomputed
+  // whenever the active layer or its underlying pixel data changes
+  // (renderTick also bumps after every destructive bake).
+  const [curveHistogram, setCurveHistogram] = useState<Histogram | null>(null);
+  useEffect(() => {
+    const layer = imageRef.current;
+    if (!layer) {
+      setCurveHistogram(null);
+      return;
+    }
+    const pixelCanvas = getImagePixelCanvas(layer);
+    const ctx = pixelCanvas.getContext('2d') as CanvasRenderingContext2D;
+    setCurveHistogram(computeHistogram(ctx.getImageData(0, 0, pixelCanvas.width, pixelCanvas.height)));
+    // renderTick alone is the right dependency: setActiveLayer bumps it on
+    // every layer switch, and bakeAndPush bumps it after every destructive
+    // pixel-data change -- both real reasons this histogram goes stale.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [renderTick]);
 
   // ---- Crop tool ----
   const cropObjRef = useRef<any>(null);
@@ -1514,6 +1557,7 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
       applyAdjustments(img, F, img.__adjustments);
       canvas.requestRenderAll();
       pushLocalHistory(dataUrl, img.__cropRect);
+      bump(); // pixel data changed -- e.g. the Curves histogram needs a refresh
     });
   };
 
@@ -1570,6 +1614,45 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
     if (!selectionMaskRef.current) return;
     setSelectionMask(featherMask(selectionMaskRef.current, selectionFeather || 4));
     fabricCanvasRef.current?.requestRenderAll();
+  };
+  const expandSelection = () => {
+    if (!selectionMaskRef.current) return;
+    setSelectionMask(expandMask(selectionMaskRef.current, selectionGrowAmount));
+    fabricCanvasRef.current?.requestRenderAll();
+  };
+  const contractSelection = () => {
+    if (!selectionMaskRef.current) return;
+    setSelectionMask(contractMask(selectionMaskRef.current, selectionGrowAmount));
+    fabricCanvasRef.current?.requestRenderAll();
+  };
+  // Select > Grow: extends the selection into adjacent, color-similar
+  // pixels using the same Magic Wand tolerance the tool panel already
+  // exposes, rather than a fixed pixel radius (that's Expand, above).
+  const growSelection = () => {
+    const mask = selectionMaskRef.current;
+    const img = imageRef.current;
+    if (!mask || !img) return;
+    const pixelCanvas = getImagePixelCanvas(img);
+    const ctx = pixelCanvas.getContext('2d') as CanvasRenderingContext2D;
+    const imageData = ctx.getImageData(0, 0, pixelCanvas.width, pixelCanvas.height);
+    setSelectionMask(growMask(mask, imageData, tolerance));
+    fabricCanvasRef.current?.requestRenderAll();
+  };
+  const saveSelection = () => {
+    const mask = selectionMaskRef.current;
+    if (!mask || !maskHasSelection(mask)) return;
+    const name = typeof window !== 'undefined' ? window.prompt('Name this selection:', `Selection ${savedSelections.length + 1}`) : null;
+    if (!name) return;
+    setSavedSelections((list) => [...list.filter((s) => s.name !== name), { name, mask: cloneMask(mask) }]);
+  };
+  const loadSelection = (name: string) => {
+    const found = savedSelections.find((s) => s.name === name);
+    if (!found) return;
+    setSelectionMask(cloneMask(found.mask));
+    fabricCanvasRef.current?.requestRenderAll();
+  };
+  const deleteSavedSelection = (name: string) => {
+    setSavedSelections((list) => list.filter((s) => s.name !== name));
   };
   const deselect = () => {
     setSelectionMask(null);
@@ -2259,7 +2342,14 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
                   />
                 </div>
               ))}
-              <label className="flex items-center gap-1.5 text-[11px] text-gray-600 mt-1">
+              <div className="mt-2">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[11px] text-gray-500">Curves (drag points, click to add, double-click to remove)</span>
+                  <button onClick={() => setCurvePoints(DEFAULT_CURVE_POINTS)} className="text-[11px] text-gray-400 hover:text-gray-700">Reset</button>
+                </div>
+                <CurveEditor points={adjustments.curvePoints} histogram={curveHistogram} onChange={setCurvePoints} />
+              </div>
+              <label className="flex items-center gap-1.5 text-[11px] text-gray-600 mt-2">
                 <input
                   type="checkbox"
                   checked={adjustments.blackAndWhite}
@@ -2312,11 +2402,21 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
                     </label>
                   </>
                 )}
+                <div className="mb-2">
+                  <div className="flex justify-between text-[11px] text-gray-500 mb-0.5">
+                    <span>Expand / Contract / Grow amount</span>
+                    <span>{selectionGrowAmount}px</span>
+                  </div>
+                  <input type="range" min={1} max={100} value={selectionGrowAmount} onChange={(e) => setSelectionGrowAmount(parseInt(e.target.value))} className="w-full" />
+                </div>
                 <div className="grid grid-cols-2 gap-1.5">
                   <button onClick={invertSelection} disabled={!hasSelection} className="text-[11px] px-2 py-1 border rounded disabled:opacity-30">Invert</button>
                   <button onClick={deselect} disabled={!hasSelection} className="text-[11px] px-2 py-1 border rounded disabled:opacity-30">Deselect</button>
                   <button onClick={featherSelection} disabled={!hasSelection} title="Feather the CURRENT selection now (uses the amount above)" className="text-[11px] px-2 py-1 border rounded disabled:opacity-30">Feather Now</button>
                   <button onClick={applySelectionAsMask} disabled={!hasSelection} className="text-[11px] px-2 py-1 border rounded disabled:opacity-30">Add to Mask</button>
+                  <button onClick={expandSelection} disabled={!hasSelection} title="Grow the selection outward by the amount above" className="text-[11px] px-2 py-1 border rounded disabled:opacity-30">Expand</button>
+                  <button onClick={contractSelection} disabled={!hasSelection} title="Shrink the selection inward by the amount above" className="text-[11px] px-2 py-1 border rounded disabled:opacity-30">Contract</button>
+                  <button onClick={growSelection} disabled={!hasSelection} title="Extend the selection into adjacent pixels similar in color (uses the Magic Wand Tolerance above)" className="col-span-2 text-[11px] px-2 py-1 border rounded disabled:opacity-30">Grow</button>
                   <button onClick={fillSelectionWithColor} disabled={!hasSelection} title="Fill the selection with the current Brush color" className="col-span-2 text-[11px] px-2 py-1 border rounded disabled:opacity-30 flex items-center justify-center gap-1.5">
                     <span className="inline-block w-3 h-3 rounded-sm border" style={{ background: brushColor }} />
                     Fill Selection
@@ -2330,6 +2430,23 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
                   >
                     {removingObject ? 'Removing…' : 'Remove Object (Content-Aware Fill)'}
                   </button>
+                </div>
+                <div className="mt-2 pt-2 border-t">
+                  <button onClick={saveSelection} disabled={!hasSelection} className="w-full text-[11px] px-2 py-1 border rounded disabled:opacity-30">Save Selection…</button>
+                  {savedSelections.length > 0 && (
+                    <div className="mt-1.5 space-y-1">
+                      {savedSelections.map((s) => (
+                        <div key={s.name} className="flex items-center gap-1 text-[11px]">
+                          <button onClick={() => loadSelection(s.name)} title="Load this saved selection" className="flex-1 text-left px-2 py-1 border rounded hover:bg-gray-50 truncate">
+                            {s.name}
+                          </button>
+                          <button onClick={() => deleteSavedSelection(s.name)} title="Delete this saved selection" className="px-1.5 py-1 border rounded text-red-400 hover:text-red-600">
+                            ×
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             )}

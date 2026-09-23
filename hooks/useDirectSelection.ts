@@ -2,7 +2,15 @@
 
 import { useCallback, useRef } from 'react';
 import { ANCHOR_HANDLE_SIZE } from '@/lib/editor/types';
-import { splitCubicBezier, snapAngleTo45 } from '@/lib/editor/geometry';
+import {
+  splitCubicBezier,
+  snapAngleTo45,
+  reversePathCommands,
+  breakClosedPathAt,
+  breakOpenPathAt,
+  closeOpenPathCommands,
+  joinTwoOpenPaths,
+} from '@/lib/editor/geometry';
 
 interface Args {
   fabricCanvasRef: React.MutableRefObject<any>;
@@ -482,5 +490,141 @@ export function useDirectSelection({ fabricCanvasRef, onAnchorMoved }: Args) {
     return removed;
   }, [fabricCanvasRef, clearHandles, renderHandles, onAnchorMoved]);
 
-  return { stateRef, clearHandles, renderHandles, deleteActiveAnchor };
+  // Copies the visual/transform properties a split-off or newly-created
+  // sibling path needs to render identically to the object it came from
+  // — everything except `path` itself and `left`/`top` (Fabric refits
+  // those to the new command array's own bounding box on construction).
+  const cloneablePathStyle = (pathObj: any) => ({
+    fill: pathObj.fill,
+    stroke: pathObj.stroke,
+    strokeWidth: pathObj.strokeWidth,
+    strokeDashArray: pathObj.strokeDashArray,
+    strokeLineCap: pathObj.strokeLineCap,
+    strokeLineJoin: pathObj.strokeLineJoin,
+    opacity: pathObj.opacity,
+    angle: pathObj.angle,
+    scaleX: pathObj.scaleX,
+    scaleY: pathObj.scaleY,
+    flipX: pathObj.flipX,
+    flipY: pathObj.flipY,
+    skewX: pathObj.skewX,
+    skewY: pathObj.skewY,
+    objectCaching: false,
+  });
+
+  // Reverses a path's direction — anchor order, segment order, and
+  // handle roles all flip, tracing the exact same visual shape backward.
+  // Works on any selected path object, in any tool (not just while
+  // Direct Selection has it open for anchor editing); if it IS the path
+  // currently open there, its handles are re-rendered in their new order.
+  const reversePathObject = useCallback(
+    (pathObj: any): boolean => {
+      if (!pathObj || !pathObj.path) return false;
+      const F: any = (window as any).fabric;
+      if (!F) return false;
+      pathObj.path = reversePathCommands(pathObj.path);
+      pathObj.dirty = true;
+      recalcPathGeometry(F, pathObj);
+      if (stateRef.current.pathObj === pathObj) renderHandles(pathObj);
+      onAnchorMoved();
+      return true;
+    },
+    [renderHandles, onAnchorMoved]
+  );
+
+  // Closes a single open path by connecting its own two endpoints.
+  const closeActivePath = useCallback(
+    (pathObj: any): boolean => {
+      if (!pathObj || !pathObj.path) return false;
+      const F: any = (window as any).fabric;
+      if (!F) return false;
+      const closed = closeOpenPathCommands(pathObj.path);
+      if (!closed) return false;
+      pathObj.path = closed;
+      pathObj.dirty = true;
+      recalcPathGeometry(F, pathObj);
+      if (stateRef.current.pathObj === pathObj) renderHandles(pathObj);
+      onAnchorMoved();
+      return true;
+    },
+    [renderHandles, onAnchorMoved]
+  );
+
+  // Merges two separate open path objects into one continuous open path
+  // (connecting whichever pair of endpoints is closest), keeping pathA's
+  // object identity/style and removing pathB from the canvas.
+  const joinPathObjects = useCallback(
+    (pathA: any, pathB: any): boolean => {
+      const canvas = fabricCanvasRef.current;
+      if (!canvas || !pathA?.path || !pathB?.path) return false;
+      const F: any = (window as any).fabric;
+      if (!F) return false;
+      const merged = joinTwoOpenPaths(pathA.path, pathB.path);
+      if (!merged) return false;
+      pathA.path = merged;
+      pathA.dirty = true;
+      recalcPathGeometry(F, pathA);
+      clearHandles();
+      canvas.remove(pathB);
+      onAnchorMoved();
+      return true;
+    },
+    [fabricCanvasRef, clearHandles, onAnchorMoved]
+  );
+
+  // Breaks the path at whichever anchor is currently selected: opens a
+  // closed path at that anchor, or splits an open path's interior anchor
+  // into two separate open path objects. A no-op at an open path's own
+  // endpoint (there's nothing to split there).
+  const breakActiveAnchor = useCallback((): boolean => {
+    const canvas = fabricCanvasRef.current;
+    const active = canvas?.getActiveObject();
+    if (!active || !active.__isAnchorHandle || active.__isHandlePoint || active.__isMidpointMarker) return false;
+    const pathObj = active.__anchorPathObj;
+    const idx = active.__commandIndex;
+    if (!pathObj || idx == null) return false;
+    const F: any = (window as any).fabric;
+    if (!F) return false;
+
+    const isClosed = pathObj.path.length > 0 && pathObj.path[pathObj.path.length - 1][0] === 'Z';
+    if (isClosed) {
+      const opened = breakClosedPathAt(pathObj.path, idx);
+      if (!opened) return false;
+      pathObj.path = opened;
+      pathObj.dirty = true;
+      recalcPathGeometry(F, pathObj);
+      clearHandles();
+      canvas.discardActiveObject();
+      renderHandles(pathObj);
+      onAnchorMoved();
+      return true;
+    }
+
+    const split = breakOpenPathAt(pathObj.path, idx);
+    if (!split) return false; // idx was an endpoint — nothing to split
+    const style = cloneablePathStyle(pathObj);
+    const pathB: any = new F.Path(split.cmdsB, style);
+    pathB.isVectorPath = true;
+    pathB.name = pathObj.name || 'Path (open)';
+    pathObj.path = split.cmdsA;
+    pathObj.dirty = true;
+    recalcPathGeometry(F, pathObj);
+    canvas.add(pathB);
+    clearHandles();
+    canvas.discardActiveObject();
+    renderHandles(pathObj);
+    onAnchorMoved();
+    return true;
+  }, [fabricCanvasRef, clearHandles, renderHandles, onAnchorMoved]);
+
+  return {
+    stateRef,
+    clearHandles,
+    renderHandles,
+    deleteActiveAnchor,
+    breakActiveAnchor,
+    reversePathObject,
+    closeActivePath,
+    joinPathObjects,
+  };
 }

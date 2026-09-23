@@ -267,6 +267,155 @@ export function splitCubicBezier(
   };
 }
 
+// A command's own "end point", in the path's raw coordinate space — the
+// point every M/L/C/Q command ultimately draws to. Mirrors the identical
+// helper in useDirectSelection.ts (kept local there to avoid a Fabric
+// dependency here) — this file stays pure math.
+function commandEndPoint(cmd: any[]): { x: number; y: number } | null {
+  const type = cmd[0];
+  if (type === 'M' || type === 'L') return { x: cmd[1], y: cmd[2] };
+  if (type === 'C') return { x: cmd[5], y: cmd[6] };
+  if (type === 'Q') return { x: cmd[3], y: cmd[4] };
+  return null;
+}
+
+interface PathEdge {
+  c1: { x: number; y: number };
+  c2: { x: number; y: number };
+  end: { x: number; y: number };
+}
+
+// Parses a raw Fabric .path command array (this app's Pen tool only ever
+// emits M then C commands, closed paths ending in a trailing Z) into its
+// start point plus one edge per C command — the shared representation
+// reversePathCommands/breakClosedPathAt/breakOpenPathAt/joinTwoOpenPaths
+// all build on, so none of them has to re-parse the raw array itself.
+function parsePathEdges(cmds: any[]): { start: { x: number; y: number }; edges: PathEdge[]; closed: boolean } | null {
+  if (!cmds.length) return null;
+  const hasZ = cmds[cmds.length - 1][0] === 'Z';
+  const body = hasZ ? cmds.slice(0, -1) : cmds;
+  const start = commandEndPoint(body[0]);
+  if (!start) return null;
+  const edges: PathEdge[] = [];
+  for (let i = 1; i < body.length; i++) {
+    const cmd = body[i];
+    if (cmd[0] !== 'C') return null; // unexpected shape — bail out safely
+    const end = commandEndPoint(cmd);
+    if (!end) return null;
+    edges.push({ c1: { x: cmd[1], y: cmd[2] }, c2: { x: cmd[3], y: cmd[4] }, end });
+  }
+  return { start, edges, closed: hasZ };
+}
+
+function buildCommandsFromEdges(start: { x: number; y: number }, edges: PathEdge[], closed: boolean): any[] {
+  const cmds: any[] = [['M', start.x, start.y]];
+  edges.forEach((e) => cmds.push(['C', e.c1.x, e.c1.y, e.c2.x, e.c2.y, e.end.x, e.end.y]));
+  if (closed) cmds.push(['Z']);
+  return cmds;
+}
+
+// Reverses a path's direction: anchor order, segment order, AND each
+// segment's own handle roles all flip (a cubic bezier (P0,P1,P2,P3)
+// reversed is exactly (P3,P2,P1,P0) — the standard, shape-preserving way
+// to reverse a bezier segment). Works for open and closed paths alike;
+// returns the original array unchanged if it isn't in the M-then-C shape
+// this app always produces.
+export function reversePathCommands(cmds: any[]): any[] {
+  const parsed = parsePathEdges(cmds);
+  if (!parsed || parsed.edges.length === 0) return cmds;
+  const { start, edges, closed } = parsed;
+  const points = [start, ...edges.map((e) => e.end)];
+  const newEdges: PathEdge[] = [];
+  for (let i = edges.length - 1; i >= 0; i--) {
+    newEdges.push({ c1: edges[i].c2, c2: edges[i].c1, end: points[i] });
+  }
+  return buildCommandsFromEdges(points[points.length - 1], newEdges, closed);
+}
+
+// "Cuts" a closed path open at anchor `idx` (0-indexed, counting the M
+// as anchor 0) — rotates the loop so that anchor becomes both the new
+// start and end, without changing the traced shape at all, just where it
+// starts/stops. Returns null if the path isn't closed or idx is invalid.
+export function breakClosedPathAt(cmds: any[], idx: number): any[] | null {
+  const parsed = parsePathEdges(cmds);
+  if (!parsed || !parsed.closed) return null;
+  const { start, edges } = parsed;
+  const n = edges.length;
+  if (idx < 0 || idx >= n || n < 2) return null;
+  const points = [start, ...edges.map((e) => e.end)]; // points[n] === points[0]
+  const rotated: PathEdge[] = [];
+  for (let m = 0; m < n; m++) rotated.push(edges[(idx + m) % n]);
+  return buildCommandsFromEdges(points[idx], rotated, false);
+}
+
+// Splits an OPEN path into two separate open paths at interior anchor
+// `idx` (1..edges.length-1 — the endpoints themselves have nothing to
+// split). Returns null if the path is closed or idx is an endpoint.
+export function breakOpenPathAt(cmds: any[], idx: number): { cmdsA: any[]; cmdsB: any[] } | null {
+  const parsed = parsePathEdges(cmds);
+  if (!parsed || parsed.closed) return null;
+  const { start, edges } = parsed;
+  const n = edges.length;
+  if (idx <= 0 || idx >= n) return null;
+  const points = [start, ...edges.map((e) => e.end)];
+  const cmdsA = buildCommandsFromEdges(points[0], edges.slice(0, idx), false);
+  const cmdsB = buildCommandsFromEdges(points[idx], edges.slice(idx), false);
+  return { cmdsA, cmdsB };
+}
+
+// Closes a single open path by connecting its own last anchor back to
+// its first — a straight closing segment when neither endpoint has a
+// handle pointing that way, degenerating exactly like buildPathD's own
+// "no handle" case does.
+export function closeOpenPathCommands(cmds: any[]): any[] | null {
+  const parsed = parsePathEdges(cmds);
+  if (!parsed || parsed.closed || parsed.edges.length === 0) return null;
+  const { start, edges } = parsed;
+  const last = edges[edges.length - 1].end;
+  const closingEdge: PathEdge = { c1: last, c2: start, end: start };
+  return buildCommandsFromEdges(start, [...edges, closingEdge], true);
+}
+
+// Merges two open paths into one continuous open path by connecting the
+// closest pair of endpoints with a new straight segment (degenerate
+// handles, same convention as every other "no handle" join in this
+// file). Whichever path needs to run backward to make its connecting
+// endpoint meet the other path's is reversed first via
+// reversePathCommands so the merge always reads A-start -> ... -> A-end
+// -> (new segment) -> B-start -> ... -> B-end.
+export function joinTwoOpenPaths(cmdsA: any[], cmdsB: any[]): any[] | null {
+  const a = parsePathEdges(cmdsA);
+  const b = parsePathEdges(cmdsB);
+  if (!a || !b || a.closed || b.closed) return null;
+  const aPoints = [a.start, ...a.edges.map((e) => e.end)];
+  const bPoints = [b.start, ...b.edges.map((e) => e.end)];
+  const aStart = aPoints[0];
+  const aEnd = aPoints[aPoints.length - 1];
+  const bStart = bPoints[0];
+  const bEnd = bPoints[bPoints.length - 1];
+  const dist = (p: { x: number; y: number }, q: { x: number; y: number }) => Math.hypot(p.x - q.x, p.y - q.y);
+
+  // Of the four ways to pair up two open paths' endpoints, pick whichever
+  // needs the least reversing to read "A's end meets B's start" — i.e.
+  // the closest pairing decides both which ends connect and which path
+  // (if either) needs reversePathCommands first.
+  const options: { d: number; reverseA: boolean; reverseB: boolean }[] = [
+    { d: dist(aEnd, bStart), reverseA: false, reverseB: false },
+    { d: dist(aEnd, bEnd), reverseA: false, reverseB: true },
+    { d: dist(aStart, bStart), reverseA: true, reverseB: false },
+    { d: dist(aStart, bEnd), reverseA: true, reverseB: true },
+  ];
+  const best = options.reduce((min, o) => (o.d < min.d ? o : min));
+
+  const finalA = best.reverseA ? reversePathCommands(cmdsA) : cmdsA;
+  const finalB = best.reverseB ? reversePathCommands(cmdsB) : cmdsB;
+  const parsedA = parsePathEdges(finalA)!;
+  const parsedB = parsePathEdges(finalB)!;
+  const joinPoint = parsedA.start && parsedA.edges.length ? parsedA.edges[parsedA.edges.length - 1].end : parsedA.start;
+  const connector: PathEdge = { c1: joinPoint, c2: parsedB.start, end: parsedB.start };
+  return buildCommandsFromEdges(parsedA.start, [...parsedA.edges, connector, ...parsedB.edges], false);
+}
+
 export function buildPathD(
   anchors: { x: number; y: number; handleIn?: { x: number; y: number }; handleOut?: { x: number; y: number } }[],
   rubberBandTo: { x: number; y: number } | null,
