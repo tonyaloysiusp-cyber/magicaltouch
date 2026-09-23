@@ -2,7 +2,7 @@
 
 import { useCallback, useRef } from 'react';
 import { ANCHOR_HIT_RADIUS, PenAnchor } from '@/lib/editor/types';
-import { buildPathD } from '@/lib/editor/geometry';
+import { buildPathD, snapAngleTo45 } from '@/lib/editor/geometry';
 
 interface Args {
   fabricCanvasRef: React.MutableRefObject<any>;
@@ -98,8 +98,14 @@ export function usePenTool({ fabricCanvasRef, onPathFinished }: Args) {
         }
       }
 
-      draft.anchors.push({ x: pointer.x, y: pointer.y });
-      draft.mouseDownPoint = { x: pointer.x, y: pointer.y };
+      // Shift constrains a plain click's placement (a straight segment
+      // from the previous anchor) to the nearest 45° increment too, not
+      // just handle drags.
+      const lastAnchor = draft.anchors[draft.anchors.length - 1];
+      const placed = lastAnchor && opt.e.shiftKey ? snapAngleTo45(lastAnchor, pointer) : pointer;
+
+      draft.anchors.push({ x: placed.x, y: placed.y });
+      draft.mouseDownPoint = { x: placed.x, y: placed.y };
       updatePreview(null);
     },
     [fabricCanvasRef, finishPath, updatePreview]
@@ -118,19 +124,25 @@ export function usePenTool({ fabricCanvasRef, onPathFinished }: Args) {
 
       if (isMouseDown && draft.mouseDownPoint) {
         const anchor = draft.anchors[lastIndex];
-        anchor.handleOut = { x: pointer.x, y: pointer.y };
+        // Shift constrains the handle direction to the nearest 45°
+        // increment, same as every other real pen tool.
+        const dragPoint = opt.e.shiftKey ? snapAngleTo45(anchor, pointer) : pointer;
+        anchor.handleOut = { x: dragPoint.x, y: dragPoint.y };
         // Alt/Option breaks the symmetric handle: only the outgoing side
         // (toward the next segment) follows the drag, leaving whatever
         // incoming handle the anchor already had untouched.
         if (!opt.e.altKey) {
           anchor.handleIn = {
-            x: anchor.x - (pointer.x - anchor.x),
-            y: anchor.y - (pointer.y - anchor.y),
+            x: anchor.x - (dragPoint.x - anchor.x),
+            y: anchor.y - (dragPoint.y - anchor.y),
           };
         }
         updatePreview(null);
       } else {
-        updatePreview({ x: pointer.x, y: pointer.y });
+        // Shift constrains the NEXT segment (from the last placed anchor
+        // to the live cursor) to the nearest 45° increment.
+        const previewPoint = opt.e.shiftKey ? snapAngleTo45(draft.anchors[lastIndex], pointer) : pointer;
+        updatePreview({ x: previewPoint.x, y: previewPoint.y });
       }
     },
     [fabricCanvasRef, updatePreview]

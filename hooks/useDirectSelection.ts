@@ -2,7 +2,7 @@
 
 import { useCallback, useRef } from 'react';
 import { ANCHOR_HANDLE_SIZE } from '@/lib/editor/types';
-import { splitCubicBezier } from '@/lib/editor/geometry';
+import { splitCubicBezier, snapAngleTo45 } from '@/lib/editor/geometry';
 
 interface Args {
   fabricCanvasRef: React.MutableRefObject<any>;
@@ -239,6 +239,10 @@ export function useDirectSelection({ fabricCanvasRef, onAnchorMoved }: Args) {
 
         // Curve handles — only shown once they're a real (non-zero-length)
         // distance from their anchor, so plain corner points stay uncluttered.
+        // Tracked in a map (keyed by "cmdIndex:role") so a smooth point's
+        // two handle circles can find and visually move EACH OTHER live
+        // while one is being dragged, not just the underlying path data.
+        const handleCircleMap = new Map<string, any>();
         const HANDLE_EPS = 0.75;
         cmds.forEach((cmd, idx) => {
           if (cmd[0] !== 'C') return;
@@ -249,7 +253,7 @@ export function useDirectSelection({ fabricCanvasRef, onAnchorMoved }: Args) {
           // arriving at this command's anchor.
           const c2 = { x: cmd[3], y: cmd[4] };
           if (dist(c2, anchorRaw) > HANDLE_EPS) {
-            addHandleCircle(F, canvas, state, pathObj, idx, 'in', c2, anchorCircleByIndex.get(idx));
+            addHandleCircle(F, canvas, state, pathObj, idx, 'in', c2, anchorCircleByIndex.get(idx), handleCircleMap);
           }
 
           // Outgoing handle: this command's own c1, controls the curve
@@ -259,7 +263,7 @@ export function useDirectSelection({ fabricCanvasRef, onAnchorMoved }: Args) {
           const prevAnchorRaw = prevAnchorCmd ? commandEndPoint(prevAnchorCmd) : null;
           const c1 = { x: cmd[1], y: cmd[2] };
           if (prevAnchorRaw && dist(c1, prevAnchorRaw) > HANDLE_EPS) {
-            addHandleCircle(F, canvas, state, pathObj, idx, 'out', c1, anchorCircleByIndex.get(prevIdx));
+            addHandleCircle(F, canvas, state, pathObj, idx, 'out', c1, anchorCircleByIndex.get(prevIdx), handleCircleMap);
           }
         });
 
@@ -318,7 +322,8 @@ export function useDirectSelection({ fabricCanvasRef, onAnchorMoved }: Args) {
     cmdIndex: number,
     role: 'in' | 'out',
     raw: { x: number; y: number },
-    anchorCircle: any
+    anchorCircle: any,
+    handleCircleMap: Map<string, any>
   ) {
     const world = commandPointToWorld(F, pathObj, raw);
     const handle: any = new F.Circle({
@@ -340,11 +345,71 @@ export function useDirectSelection({ fabricCanvasRef, onAnchorMoved }: Args) {
     handle.__isAnchorHandle = true;
     handle.__isHandlePoint = true;
     handle.__anchorPathObj = pathObj;
+    handle.__commandIndex = cmdIndex;
+    handle.__role = role;
 
-    handle.on('moving', () => {
+    // The anchor this handle belongs to, and where the OPPOSITE handle of
+    // that same anchor lives (if any) — needed to keep a smooth point's
+    // two handles collinear as one of them is dragged, the same way every
+    // real vector editor does it.
+    handleCircleMap.set(`${cmdIndex}:${role}`, handle);
+
+    const cmds0 = pathObj.path;
+    let anchorPoint: { x: number; y: number } | null = null;
+    let oppCmd: any[] | null = null;
+    let oppKeyX = 0;
+    let oppKeyY = 0;
+    let oppMapKey: string | null = null;
+    if (role === 'in') {
+      anchorPoint = commandEndPoint(cmds0[cmdIndex]);
+      const nextCmd = cmds0[cmdIndex + 1];
+      if (nextCmd && nextCmd[0] === 'C') {
+        oppCmd = nextCmd;
+        oppKeyX = 1;
+        oppKeyY = 2;
+        oppMapKey = `${cmdIndex + 1}:out`;
+      }
+    } else {
+      const prevCmd = cmds0[cmdIndex - 1];
+      anchorPoint = prevCmd ? commandEndPoint(prevCmd) : null;
+      if (prevCmd && prevCmd[0] === 'C') {
+        oppCmd = prevCmd;
+        oppKeyX = 3;
+        oppKeyY = 4;
+        oppMapKey = `${cmdIndex - 1}:in`;
+      }
+    }
+    // Decided once, when the drag starts: was this anchor smooth to begin
+    // with? Only a point that was ALREADY smooth gets coupled — dragging
+    // a handle on a genuine corner point never invents a relationship
+    // that wasn't there.
+    let smoothAtDragStart = false;
+    handle.on('mousedown', () => {
+      smoothAtDragStart = false;
+      if (!oppCmd || !anchorPoint) return;
+      const oppRaw = { x: oppCmd[oppKeyX], y: oppCmd[oppKeyY] };
+      const oppLen = dist(oppRaw, anchorPoint);
+      if (oppLen <= 0.75) return;
+      const angleThis = Math.atan2(raw.y - anchorPoint.y, raw.x - anchorPoint.x);
+      const angleOpp = Math.atan2(oppRaw.y - anchorPoint.y, oppRaw.x - anchorPoint.x);
+      let diff = Math.abs(angleThis - angleOpp) % (Math.PI * 2);
+      if (diff > Math.PI) diff = Math.PI * 2 - diff;
+      smoothAtDragStart = Math.abs(diff - Math.PI) < 0.3; // ~17deg tolerance
+    });
+
+    handle.on('moving', (opt: any) => {
       const canvasNow = fabricCanvasRef.current;
       if (!canvasNow) return;
-      const newRaw = worldPointToCommand(F, pathObj, { x: handle.left, y: handle.top });
+      let newRaw = worldPointToCommand(F, pathObj, { x: handle.left, y: handle.top });
+      // Shift constrains the handle direction (relative to its own
+      // anchor) to the nearest 45° increment — also snap the circle's
+      // own on-screen position so what's drawn matches what's stored.
+      if (opt?.e?.shiftKey && anchorPoint) {
+        newRaw = snapAngleTo45(anchorPoint, newRaw);
+        const snappedWorld = commandPointToWorld(F, pathObj, newRaw);
+        handle.set({ left: snappedWorld.x, top: snappedWorld.y });
+        handle.setCoords();
+      }
       if (role === 'in') {
         pathObj.path[cmdIndex][3] = newRaw.x;
         pathObj.path[cmdIndex][4] = newRaw.y;
@@ -352,6 +417,36 @@ export function useDirectSelection({ fabricCanvasRef, onAnchorMoved }: Args) {
         pathObj.path[cmdIndex][1] = newRaw.x;
         pathObj.path[cmdIndex][2] = newRaw.y;
       }
+
+      // Alt/Option, held at any point during the drag, breaks the
+      // coupling for this drag — the classic "independently edit one
+      // side of a smooth point" gesture. Live-checked every move so
+      // pressing/releasing Alt mid-drag toggles it immediately.
+      const altHeld = !!opt?.e?.altKey;
+      if (smoothAtDragStart && !altHeld && oppCmd && anchorPoint) {
+        const oppRawNow = { x: oppCmd[oppKeyX], y: oppCmd[oppKeyY] };
+        const oppLen = dist(oppRawNow, anchorPoint);
+        const angleThis = Math.atan2(newRaw.y - anchorPoint.y, newRaw.x - anchorPoint.x);
+        // Opposite handle keeps its OWN length (a "smooth" point locks
+        // angle, not length — that's what distinguishes it from a
+        // "symmetric" point) but rotates to stay exactly opposite.
+        const newOppRaw = {
+          x: anchorPoint.x - Math.cos(angleThis) * oppLen,
+          y: anchorPoint.y - Math.sin(angleThis) * oppLen,
+        };
+        oppCmd[oppKeyX] = newOppRaw.x;
+        oppCmd[oppKeyY] = newOppRaw.y;
+        // Move the opposite handle's own on-screen circle too, or it
+        // would sit frozen in its old spot until some later, unrelated
+        // action happens to call renderHandles() again.
+        const oppCircle = oppMapKey ? handleCircleMap.get(oppMapKey) : null;
+        if (oppCircle) {
+          const oppWorld = commandPointToWorld(F, pathObj, newOppRaw);
+          oppCircle.set({ left: oppWorld.x, top: oppWorld.y });
+          oppCircle.setCoords();
+        }
+      }
+
       pathObj.dirty = true;
       recalcPathGeometry(F, pathObj);
       canvasNow.requestRenderAll();

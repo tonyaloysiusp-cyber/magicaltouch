@@ -440,7 +440,7 @@ function EditorContent() {
     onAnchorMoved: pushHistory,
   });
 
-  const { clearDraft: clearPenDraft, finishPath: finishPenPath, handleMouseDown: handlePenMouseDown, handleMouseMove: handlePenMouseMove, handleMouseUp: handlePenMouseUp } =
+  const { draftRef: penDraftRef, clearDraft: clearPenDraft, finishPath: finishPenPath, handleMouseDown: handlePenMouseDown, handleMouseMove: handlePenMouseMove, handleMouseUp: handlePenMouseUp } =
     usePenTool({
       fabricCanvasRef,
       onPathFinished: (pathObj) => {
@@ -910,6 +910,10 @@ function EditorContent() {
       });
       fabricCanvasRef.current = canvas;
       (window as any).fabric = F;
+      // Exposed the same way `window.fabric` already is — lets tests and
+      // debugging tools inspect real document state (anchors, handles,
+      // z-order, history) directly instead of guessing from pixels.
+      (window as any).__fabricCanvas = canvas;
 
       const onLayersChanged = () => refreshLayers();
       const onHistoryChanged = () => pushHistory();
@@ -1010,8 +1014,57 @@ function EditorContent() {
           handleArtboardMouseDown(opt);
           return;
         }
-        if (activeToolRef.current === 'pen') handlePenMouseDown(opt);
-        else if (isDrawTool(activeToolRef.current)) handleShapeMouseDown(opt);
+        if (activeToolRef.current === 'pen') {
+          // A click on an already-revealed anchor/handle circle (see the
+          // Ctrl/Cmd branch below) is that circle's own concern — never
+          // let it also register as "place a new pen anchor here".
+          if (opt.target && opt.target.__isAnchorHandle) return;
+          if (opt.e.ctrlKey || opt.e.metaKey) {
+            // Illustrator's real Pen tool: holding Ctrl/Cmd temporarily
+            // acts like Direct Selection, so you can nudge an existing
+            // anchor without abandoning the Pen tool. Only when there's
+            // no in-progress draft — grabbing a different path's anchor
+            // mid-draw would collide with "click near the first anchor
+            // closes this path".
+            if (penDraftRef.current.anchors.length === 0) {
+              const pointer = canvas.getPointer(opt.e);
+              const paths = canvas.getObjects().filter((o: any) => o.isVectorPath);
+              // Bounding-box-with-tolerance hit-test rather than
+              // canvas.findTarget, since a path finished while Pen stayed
+              // active is deliberately evented=false (so a plain click
+              // starts the NEXT path instead of grabbing this one) —
+              // findTarget would miss it. Fabric's own containsPoint()
+              // tests the object's exact bounding polygon, which is
+              // degenerate (zero height or width) for a perfectly
+              // horizontal/vertical path and would then never register a
+              // hit even exactly on the path — pad it by a few document
+              // units so a straight-line path stays clickable too.
+              const HIT_PAD = 6;
+              let target: any = null;
+              for (let i = paths.length - 1; i >= 0; i--) {
+                const p = paths[i];
+                const br = p.getBoundingRect(true, true);
+                if (
+                  pointer.x >= br.left - HIT_PAD &&
+                  pointer.x <= br.left + br.width + HIT_PAD &&
+                  pointer.y >= br.top - HIT_PAD &&
+                  pointer.y <= br.top + br.height + HIT_PAD
+                ) {
+                  target = p;
+                  break;
+                }
+              }
+              if (target) {
+                renderAnchorHandles(target);
+                return;
+              }
+            }
+            clearAnchorHandles();
+            return;
+          }
+          clearAnchorHandles();
+          handlePenMouseDown(opt);
+        } else if (isDrawTool(activeToolRef.current)) handleShapeMouseDown(opt);
       });
       canvas.on('mouse:move', (opt: any) => {
         if (panRef.current.active) {

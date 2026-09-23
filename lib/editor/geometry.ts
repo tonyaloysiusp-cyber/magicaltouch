@@ -30,6 +30,22 @@ export function starPoints(spikes: number, outerRadius: number, innerRadius: num
   return pts;
 }
 
+// Snaps the direction from `from` to `to` onto the nearest 45° increment
+// (0/45/90/135/180/225/270/315), preserving the distance between them —
+// the standard Shift-constrain gesture for a pen segment or a bezier
+// handle, kept as one shared helper so both usePenTool and
+// useDirectSelection apply the exact same math.
+export function snapAngleTo45(from: { x: number; y: number }, to: { x: number; y: number }): { x: number; y: number } {
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  const d = Math.hypot(dx, dy);
+  if (d < 1e-6) return { x: to.x, y: to.y };
+  const angle = Math.atan2(dy, dx);
+  const step = Math.PI / 4;
+  const snapped = Math.round(angle / step) * step;
+  return { x: from.x + Math.cos(snapped) * d, y: from.y + Math.sin(snapped) * d };
+}
+
 export function computeDragGeometry(
   startX: number,
   startY: number,
