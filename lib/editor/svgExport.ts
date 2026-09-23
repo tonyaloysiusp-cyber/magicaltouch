@@ -190,12 +190,28 @@ function objectToSvgElement(defs: string[], obj: any, F: any): string {
     const fontSize = obj.fontSize || 16;
     const lineHeight = fontSize * (obj.lineHeight || 1.16);
     const totalH = lines.length * lineHeight;
+    // 'justify' isn't 'center' or 'right', so it already falls through to
+    // the same left/'start' anchor a justified line needs (textLength
+    // below stretches rightward FROM that anchor, same as Fabric's own
+    // textAlign:'justify' canvas rendering, which — unlike the usual CSS
+    // convention — stretches every line, including the last).
     const anchor = obj.textAlign === 'center' ? 'middle' : obj.textAlign === 'right' ? 'end' : 'start';
     const xAt = obj.textAlign === 'center' ? 0 : obj.textAlign === 'right' ? w / 2 : -w / 2;
     const weight = obj.fontWeight === 'bold' || (typeof obj.fontWeight === 'number' && obj.fontWeight >= 600) ? 'bold' : 'normal';
     const style = obj.fontStyle === 'italic' ? 'italic' : 'normal';
+    const isJustify = obj.textAlign === 'justify';
     const tspans = lines
-      .map((line, i) => `<tspan x="${xAt}" y="${-totalH / 2 + (i + 1) * lineHeight - lineHeight * 0.2}">${escapeXml(line)}</tspan>`)
+      .map((line, i) => {
+        const y = -totalH / 2 + (i + 1) * lineHeight - lineHeight * 0.2;
+        // A line with no spaces has nothing to distribute into (same as
+        // Fabric's own enlargeSpaces, a no-op there too) — left as-is.
+        // Honest limitation: SVG's lengthAdjust="spacing" widens every
+        // inter-glyph gap, not only the word-space gaps Fabric itself
+        // stretches, so letter spacing within words is very slightly
+        // affected too — a real justify, not pixel-identical to Fabric's.
+        const stretch = isJustify && line.includes(' ') ? ` textLength="${w}" lengthAdjust="spacing"` : '';
+        return `<tspan x="${xAt}" y="${y}"${stretch}>${escapeXml(line)}</tspan>`;
+      })
       .join('');
     inner = `<text font-family="${escapeXml(obj.fontFamily || 'sans-serif')}" font-size="${fontSize}" font-weight="${weight}" font-style="${style}" text-anchor="${anchor}"${paintAttrs}>${tspans}</text>`;
   } else if (obj.type === 'image') {
