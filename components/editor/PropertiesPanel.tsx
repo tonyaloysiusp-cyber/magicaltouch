@@ -224,7 +224,8 @@ export function PropertiesPanel({
               <label className="text-[10px] text-gray-500 block mb-0.5">H ({unit})</label>
               <input
                 type="text"
-                disabled={isLocked}
+                disabled={isLocked || selected.type === 'textbox'}
+                title={selected.type === 'textbox' ? 'Height follows the wrapped text automatically' : undefined}
                 defaultValue={formatUnit(pixelSize.h, unit)}
                 onBlur={(e) => {
                   const val = parseFloat(e.target.value);
@@ -329,9 +330,27 @@ export function PropertiesPanel({
       )}
 
       <div>
-        <label className="text-xs font-semibold text-gray-500 block mb-1">
-          Opacity ({Math.round((selected.opacity ?? 1) * 100)}%)
-        </label>
+        <div className="flex items-center justify-between mb-1">
+          <label className="text-xs font-semibold text-gray-500">Opacity</label>
+          <input
+            key={`opacity-${selected.__uid || 'obj'}`}
+            type="text"
+            inputMode="numeric"
+            disabled={isLocked}
+            defaultValue={Math.round((selected.opacity ?? 1) * 100)}
+            onBlur={(e) => {
+              const val = Math.max(0, Math.min(100, parseFloat(e.target.value)));
+              if (!isNaN(val)) {
+                applyProp({ opacity: val / 100 });
+                e.target.value = String(val);
+              } else {
+                e.target.value = String(Math.round((selected.opacity ?? 1) * 100));
+              }
+            }}
+            onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
+            className="w-14 text-xs border rounded px-1.5 py-0.5 text-right disabled:opacity-40"
+          />
+        </div>
         <input
           type="range"
           min={0}

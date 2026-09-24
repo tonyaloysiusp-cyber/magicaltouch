@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { User, Settings, LogOut, FolderOpen } from 'lucide-react';
+import { User, Settings, LogOut, FolderOpen, LayoutTemplate } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { Profile, CreatorLevel, getOrCreateProfile, getDesignCount, creatorLevelForCount } from '@/lib/profile';
 
@@ -128,6 +128,11 @@ export function ProfileMenu() {
           <Link href="/profile" onClick={() => setOpen(false)} className="flex items-center gap-2 px-4 py-2 hover:bg-gray-50 text-gray-700">
             <Settings size={14} /> Account Settings
           </Link>
+          {profile?.is_admin && (
+            <Link href="/admin/templates" onClick={() => setOpen(false)} className="flex items-center gap-2 px-4 py-2 hover:bg-gray-50 text-gray-700">
+              <LayoutTemplate size={14} /> Manage Templates
+            </Link>
+          )}
           <button onClick={logout} className="w-full flex items-center gap-2 px-4 py-2 hover:bg-red-50 text-red-500 text-left">
             <LogOut size={14} /> Logout
           </button>

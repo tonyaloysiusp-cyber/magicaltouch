@@ -1,20 +1,25 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowUpRight } from 'lucide-react';
 import { resolveAuthedPath } from '@/lib/authNav';
-import { CATEGORIES, TEMPLATES, Category } from '@/lib/templatesData';
+import { CATEGORIES, TEMPLATES, Category, Template, fetchTemplates } from '@/lib/templatesData';
 import { MockDesignCard } from '@/components/MockDesignCard';
 import { Reveal } from './Reveal';
 
 export function TemplateShowcase() {
   const [active, setActive] = useState<Category | 'All'>('All');
+  const [templates, setTemplates] = useState<Template[]>(TEMPLATES);
   const router = useRouter();
 
+  useEffect(() => {
+    fetchTemplates().then(setTemplates);
+  }, []);
+
   const visible = useMemo(
-    () => (active === 'All' ? TEMPLATES.slice(0, 8) : TEMPLATES.filter((t) => t.category === active).slice(0, 8)),
-    [active]
+    () => (active === 'All' ? templates.slice(0, 8) : templates.filter((t) => t.category === active).slice(0, 8)),
+    [active, templates]
   );
 
   const useTemplate = async () => {

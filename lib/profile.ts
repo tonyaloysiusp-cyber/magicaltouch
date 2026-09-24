@@ -13,6 +13,7 @@ export interface Profile {
   name: string | null;
   phone: string | null;
   avatar_url: string | null;
+  is_admin: boolean;
 }
 
 // The active/recent-design cap: past this, creating another design is
@@ -31,7 +32,7 @@ export function creatorLevelForCount(designCount: number): CreatorLevel {
 }
 
 export async function getProfile(userId: string): Promise<Profile | null> {
-  const { data, error } = await supabase.from('profiles').select('id, name, phone, avatar_url').eq('id', userId).single();
+  const { data, error } = await supabase.from('profiles').select('id, name, phone, avatar_url, is_admin').eq('id', userId).single();
   if (error) {
     // PGRST116 = no row found, e.g. a user who signed up before this
     // table existed, or the "no rows" case for .single() generally.
@@ -51,7 +52,7 @@ export async function getOrCreateProfile(userId: string, fallbackName?: string):
   const { data, error } = await supabase
     .from('profiles')
     .insert({ id: userId, name: fallbackName || null })
-    .select('id, name, phone, avatar_url')
+    .select('id, name, phone, avatar_url, is_admin')
     .single();
   if (error) {
     console.error('Failed to create profile:', error);
