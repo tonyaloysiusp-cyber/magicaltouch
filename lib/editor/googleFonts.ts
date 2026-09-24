@@ -104,6 +104,45 @@ export const GOOGLE_FONTS: GoogleFontDef[] = [
   { family: 'IBM Plex Mono', category: 'Monospace', weights: [400, 700] },
   { family: 'Roboto Mono', category: 'Monospace', weights: [400, 700] },
   { family: 'Fira Code', category: 'Monospace', weights: [400, 700] },
+  { family: 'Source Code Pro', category: 'Monospace', weights: [400, 700] },
+  { family: 'Inconsolata', category: 'Monospace', weights: [400, 700] },
+  { family: 'Ubuntu Mono', category: 'Monospace', weights: [400, 700] },
+
+  // More sans serif
+  { family: 'Mulish', category: 'Sans Serif', weights: [400, 700] },
+  { family: 'Barlow', category: 'Sans Serif', weights: [400, 700] },
+  { family: 'Karla', category: 'Sans Serif', weights: [400, 700] },
+  { family: 'Heebo', category: 'Sans Serif', weights: [400, 700] },
+  { family: 'Prompt', category: 'Sans Serif', weights: [400, 700] },
+  { family: 'Plus Jakarta Sans', category: 'Sans Serif', weights: [400, 700] },
+  { family: 'Figtree', category: 'Sans Serif', weights: [400, 700] },
+  { family: 'Epilogue', category: 'Sans Serif', weights: [400, 700] },
+  { family: 'Red Hat Display', category: 'Sans Serif', weights: [400, 700] },
+  { family: 'Fredoka', category: 'Sans Serif', weights: [400, 700] },
+
+  // More serif
+  { family: 'Zilla Slab', category: 'Serif', weights: [400, 700] },
+  { family: 'Spectral', category: 'Serif', weights: [400, 700] },
+  { family: 'Vollkorn', category: 'Serif', weights: [400, 700] },
+  { family: 'Cardo', category: 'Serif', weights: [400, 700] },
+  { family: 'Domine', category: 'Serif', weights: [400, 700] },
+
+  // More display / headline
+  { family: 'Bungee', category: 'Display', weights: [400] },
+  { family: 'Black Ops One', category: 'Display', weights: [400] },
+  { family: 'Rammetto One', category: 'Display', weights: [400] },
+  { family: 'Luckiest Guy', category: 'Display', weights: [400] },
+  { family: 'Bangers', category: 'Display', weights: [400] },
+  { family: 'Chewy', category: 'Display', weights: [400] },
+
+  // More script / handwriting
+  { family: 'Parisienne', category: 'Script', weights: [400] },
+  { family: 'Yellowtail', category: 'Script', weights: [400] },
+  { family: 'Alex Brush', category: 'Script', weights: [400] },
+  { family: 'Marck Script', category: 'Script', weights: [400] },
+  { family: 'Handlee', category: 'Script', weights: [400] },
+  { family: 'Indie Flower', category: 'Script', weights: [400] },
+  { family: 'Patrick Hand', category: 'Script', weights: [400] },
 ];
 
 export const GOOGLE_FONT_NAMES = GOOGLE_FONTS.map((f) => f.family);
@@ -121,28 +160,56 @@ const DIRECT_FONTS = GOOGLE_FONTS.filter((f) => !f.googleFamily);
 // declares the *display* name but sources the real replacement font's
 // bytes from this app's own /api/font-file proxy (the same TTF the PDF
 // exporter embeds — canvas and export always show the same glyphs).
+//
+// Each weight gets BOTH a normal and an italic @font-face (the proxy's
+// own `italic=1` param already existed for this). Without the italic
+// entry, toggling Italic on any of these families had no real slanted
+// face to select — the browser just synthesized a fake oblique from the
+// upright glyphs, forever, since nothing ever told it a real italic
+// existed.
 export function aliasedFontFaceCSS(): string {
   const aliased = GOOGLE_FONTS.filter((f) => f.googleFamily);
   return aliased
     .flatMap((f) =>
-      f.weights.map(
-        (w) => `@font-face {
+      f.weights.flatMap((w) => [
+        `@font-face {
   font-family: '${f.family}';
   font-weight: ${w};
+  font-style: normal;
   src: url('/api/font-file?family=${encodeURIComponent(f.googleFamily!)}&weight=${w}') format('truetype');
   font-display: swap;
-}`
-      )
+}`,
+        `@font-face {
+  font-family: '${f.family}';
+  font-weight: ${w};
+  font-style: italic;
+  src: url('/api/font-file?family=${encodeURIComponent(f.googleFamily!)}&weight=${w}&italic=1') format('truetype');
+  font-display: swap;
+}`,
+      ])
     )
     .join('\n');
 }
 
+// Builds the `ital,wght@...` axis value for Google's CSS2 API: every
+// weight at both italic=0 and italic=1, in the ascending (ital, weight)
+// tuple order the API requires. A family with no real italic cut just
+// gets no italic @font-face back (Google silently omits it, the same
+// graceful behavior as requesting a weight a family doesn't have) — this
+// never hurts, so it's requested unconditionally rather than tracked
+// per-family.
+function italWeightAxis(weights: number[]): string {
+  const tuples = [...weights.map((w) => `0,${w}`), ...weights.map((w) => `1,${w}`)];
+  return `ital,wght@${tuples.join(';')}`;
+}
+
 // One stylesheet request that loads every directly-supported family (at
-// its real weights) from Google's CDN, for accurate in-canvas text
-// rendering — not just an approximation via whatever similarly-named
-// font the OS happens to have installed.
+// its real weights, both upright and italic) from Google's CDN, for
+// accurate in-canvas text rendering — not just an approximation via
+// whatever similarly-named font the OS happens to have installed, and not
+// a fake browser-synthesized slant standing in for a real italic design.
 export function googleFontsStylesheetHref(): string {
-  const parts = DIRECT_FONTS.map((f) => `family=${encodeURIComponent(f.family)}:wght@${f.weights.join(';')}`);
+  const parts = DIRECT_FONTS.map((f) => `family=${encodeURIComponent(f.family)}:${italWeightAxis(f.weights)}`);
   return `https://fonts.googleapis.com/css2?${parts.join('&')}&display=swap`;
 }
 
@@ -170,11 +237,14 @@ export function ensureFontLoaded(fontFamily: string, weight: number | string = 4
     .catch(() => undefined);
 }
 
-// Loads every distinct font family (at both weights, to be safe) used by
-// any text-bearing object in a Fabric canvas JSON payload — used right
-// after loadFromJSON, before the first paint, so a design that uses a
-// font nobody in this browser session has requested yet doesn't render
-// with the wrong glyphs the first time it's opened.
+// Loads every distinct font family (at both weights and both italic
+// states, to be safe) used by any text-bearing object in a Fabric canvas
+// JSON payload — used right after loadFromJSON, before the first paint,
+// so a design that uses a font nobody in this browser session has
+// requested yet doesn't render with the wrong glyphs the first time it's
+// opened. Loading a combination the restored objects don't actually use
+// is harmless (the browser just caches it for later), so this over-loads
+// rather than trying to track exactly which weight/style pairs appear.
 export function ensureFontsLoadedForCanvasJSON(json: any): Promise<void> {
   if (typeof document === 'undefined' || !(document as any).fonts?.load) return Promise.resolve();
   const families = new Set<string>();
@@ -189,6 +259,8 @@ export function ensureFontsLoadedForCanvasJSON(json: any): Promise<void> {
   families.forEach((f) => {
     loads.push(ensureFontLoaded(f, 400));
     loads.push(ensureFontLoaded(f, 700));
+    loads.push(ensureFontLoaded(f, 400, true));
+    loads.push(ensureFontLoaded(f, 700, true));
   });
   return Promise.all(loads).then(() => undefined);
 }
