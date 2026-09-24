@@ -8,7 +8,7 @@ import { supabase } from '@/lib/supabase';
 import { Keyboard } from 'lucide-react';
 
 import { ToolMode, DocUnit, isDrawTool, PASTEBOARD_BG, RULER_SIZE } from '@/lib/editor/types';
-import { googleFontsStylesheetHref, aliasedFontFaceCSS, ensureFontLoaded, ensureFontsLoadedForCanvasJSON } from '@/lib/editor/googleFonts';
+import { allFontFacesCSS, ensureFontLoaded, ensureFontsLoadedForCanvasJSON } from '@/lib/editor/googleFonts';
 import { getAbsolutePolygonPoints, multiPolygonToPathD } from '@/lib/editor/geometry';
 import { exportCanvasToPDF, exportArtboardsToPDF, toPt } from '@/lib/editor/pdfExport';
 import { exportArtboardToSVG } from '@/lib/editor/svgExport';
@@ -3286,14 +3286,16 @@ function EditorContent() {
 
   return (
     <>
-      {/* Next.js hoists <link>/<style> tags found anywhere in the tree
-          into the document head. Loaded here (not site-wide) since the
-          font picker is only reachable inside the editor. The aliased
-          classics (Arial, Times New Roman, ...) aren't real Google Fonts
-          names, so they get their own @font-face rules sourced from this
-          app's own font proxy instead of the batched Google stylesheet. */}
-      <link rel="stylesheet" href={googleFontsStylesheetHref()} />
-      <style>{aliasedFontFaceCSS()}</style>
+      {/* Next.js hoists <style> tags found anywhere in the tree into the
+          document head. Loaded here (not site-wide) since the font picker
+          is only reachable inside the editor. Every font — aliased
+          classics and direct Google Fonts alike — is declared via
+          @font-face rules sourced from this app's own same-origin font
+          proxy, not a <link> straight to fonts.googleapis.com: that
+          third-party request is exactly what ad/tracker blockers commonly
+          block by default, which silently broke every non-aliased font
+          for any visitor with one active. */}
+      <style>{allFontFacesCSS()}</style>
       {checkingAuth && (
         <div className="fixed inset-0 z-[999] flex items-center justify-center bg-gray-50 text-gray-400">
           Checking access...

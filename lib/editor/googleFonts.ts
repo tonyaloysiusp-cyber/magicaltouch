@@ -151,71 +151,56 @@ export function googleFontByName(family: string): GoogleFontDef | undefined {
   return GOOGLE_FONTS.find((f) => f.family === family);
 }
 
-// The subset that maps straight onto Google's CSS2 API by name — every
-// non-aliased font. These load in one batched stylesheet request.
-const DIRECT_FONTS = GOOGLE_FONTS.filter((f) => !f.googleFamily);
-
-// The aliased classics (Arial, Times New Roman, ...): Google's CSS2 API
-// doesn't know these names, so each needs its own @font-face rule that
-// declares the *display* name but sources the real replacement font's
-// bytes from this app's own /api/font-file proxy (the same TTF the PDF
-// exporter embeds — canvas and export always show the same glyphs).
+// Every font in the picker — aliased classics AND the ~86 direct Google
+// Fonts alike — is declared via @font-face rules sourced from this app's
+// own same-origin /api/font-file proxy, rather than a <link> straight to
+// fonts.googleapis.com/fonts.gstatic.com.
 //
-// Each weight gets BOTH a normal and an italic @font-face (the proxy's
-// own `italic=1` param already existed for this). Without the italic
-// entry, toggling Italic on any of these families had no real slanted
-// face to select — the browser just synthesized a fake oblique from the
-// upright glyphs, forever, since nothing ever told it a real italic
-// existed.
-export function aliasedFontFaceCSS(): string {
-  const aliased = GOOGLE_FONTS.filter((f) => f.googleFamily);
-  return aliased
-    .flatMap((f) =>
-      f.weights.flatMap((w) => [
-        `@font-face {
+// This used to be a two-tier system: the 5 aliased classics went through
+// the proxy (since Google's API doesn't know names like "Arial"), while
+// the other ~86 families loaded directly from Google's CDN via one big
+// <link rel="stylesheet">. That direct link is exactly the kind of
+// third-party, cross-site request that ad blockers, tracker blockers
+// (uBlock Origin, Brave, Firefox Enhanced Tracking Protection) and many
+// corporate/school network filters block by default — Google Fonts is
+// one of the most commonly blocklisted font CDNs precisely because it's
+// a cross-origin request every visitor's browser makes. Any visitor with
+// one of those active would see EVERY direct font silently fall back to
+// the browser default, while only the 5 proxied aliases kept working —
+// "some fonts just don't show up" with no error anywhere. Routing every
+// family through this app's own domain (same origin as the editor
+// itself) means there's nothing third-party left to block.
+//
+// Each weight gets both a normal and an italic @font-face (the proxy's
+// own `italic=1` param). A family with no real italic or bold cut just
+// gets a proxy response for a weight/style Google's own API silently
+// omits — handled the same as any other 404 by ensureFontLoaded's catch,
+// falling back to the nearest weight the family actually has.
+export function allFontFacesCSS(): string {
+  return GOOGLE_FONTS.flatMap((f) => {
+    const sourceFamily = f.googleFamily || f.family;
+    return f.weights.flatMap((w) => [
+      `@font-face {
   font-family: '${f.family}';
   font-weight: ${w};
   font-style: normal;
-  src: url('/api/font-file?family=${encodeURIComponent(f.googleFamily!)}&weight=${w}') format('truetype');
+  src: url('/api/font-file?family=${encodeURIComponent(sourceFamily)}&weight=${w}') format('truetype');
   font-display: swap;
 }`,
-        `@font-face {
+      `@font-face {
   font-family: '${f.family}';
   font-weight: ${w};
   font-style: italic;
-  src: url('/api/font-file?family=${encodeURIComponent(f.googleFamily!)}&weight=${w}&italic=1') format('truetype');
+  src: url('/api/font-file?family=${encodeURIComponent(sourceFamily)}&weight=${w}&italic=1') format('truetype');
   font-display: swap;
 }`,
-      ])
-    )
-    .join('\n');
+    ]);
+  }).join('\n');
 }
 
-// Builds the `ital,wght@...` axis value for Google's CSS2 API: every
-// weight at both italic=0 and italic=1, in the ascending (ital, weight)
-// tuple order the API requires. A family with no real italic cut just
-// gets no italic @font-face back (Google silently omits it, the same
-// graceful behavior as requesting a weight a family doesn't have) — this
-// never hurts, so it's requested unconditionally rather than tracked
-// per-family.
-function italWeightAxis(weights: number[]): string {
-  const tuples = [...weights.map((w) => `0,${w}`), ...weights.map((w) => `1,${w}`)];
-  return `ital,wght@${tuples.join(';')}`;
-}
-
-// One stylesheet request that loads every directly-supported family (at
-// its real weights, both upright and italic) from Google's CDN, for
-// accurate in-canvas text rendering — not just an approximation via
-// whatever similarly-named font the OS happens to have installed, and not
-// a fake browser-synthesized slant standing in for a real italic design.
-export function googleFontsStylesheetHref(): string {
-  const parts = DIRECT_FONTS.map((f) => `family=${encodeURIComponent(f.family)}:${italWeightAxis(f.weights)}`);
-  return `https://fonts.googleapis.com/css2?${parts.join('&')}&display=swap`;
-}
-
-// Declaring an @font-face (or listing a family in the Google Fonts <link>
-// above) does NOT actually fetch its bytes — the browser only downloads a
-// webfont once something on the page is rendered WITH that font, and even
+// Declaring an @font-face rule above does NOT actually fetch its bytes —
+// the browser only downloads a webfont once something on the page is
+// rendered WITH that font, and even
 // then the swap from a fallback happens invisibly to Fabric: a <canvas>
 // text object drawn before the swap completes just stays wrong forever,
 // since nothing tells Fabric to re-render once the real glyphs arrive.
