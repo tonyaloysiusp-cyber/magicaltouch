@@ -46,6 +46,7 @@ import { PreferencesModal } from '@/components/editor/PreferencesModal';
 import { VersionHistoryModal } from '@/components/editor/VersionHistoryModal';
 import { RoadmapModal } from '@/components/editor/RoadmapModal';
 import { MenuBar, MenuDef } from '@/components/editor/MenuBar';
+import { ContextMenu, ContextMenuEntry } from '@/components/editor/ContextMenu';
 import { useWindowPanels } from '@/components/editor/WindowPanels';
 import { AlignPanel } from '@/components/editor/AlignPanel';
 import { BackBar } from '@/components/BackBar';
@@ -182,6 +183,8 @@ function EditorContent() {
   const [, setSelVersion] = useState(0);
   const bumpSel = () => setSelVersion((v) => v + 1);
 
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
+
   const [unit, setUnit] = useState<DocUnit>('px');
   const unitRef = useRef<DocUnit>(unit);
   useEffect(() => {
@@ -195,6 +198,17 @@ function EditorContent() {
   // Smart-guide snap lines, live only while an object is actively being
   // dragged. Cleared on mouse-up so the guides never persist after a drop.
   const snapGuidesRef = useRef<GuideLine[]>([]);
+
+  // Alt/Option-drag-to-duplicate (Move tool): captured at mousedown on a
+  // real object, live-checked on every 'object:moving' tick so pressing
+  // Alt mid-drag still triggers it — matching the Pen tool's own
+  // live-modifier convention elsewhere in this file. The dragged object
+  // itself keeps moving natively under Fabric's own handling; a real
+  // clone is dropped at the drag's ORIGINAL position on mouse-up, once,
+  // leaving the original where the drag started and the moved object at
+  // its new spot -- the same end result as cloning up front, without
+  // needing a synchronous clone before Fabric's native drag begins.
+  const altDragRef = useRef<{ obj: any; startLeft: number; startTop: number; triggered: boolean } | null>(null);
 
   // Each entry is a freshly-cloned Fabric object holding its absolute
   // canvas position at copy time. Kept as a flat array of individual
@@ -644,6 +658,21 @@ function EditorContent() {
       const active = canvas?.getActiveObject();
       if (!active || active.locked) return;
 
+      // Real area-text resize: width IS the actual wrap width (Fabric
+      // re-wraps automatically when it changes), and height always stays
+      // derived from the wrapped content — scaling a text box like a
+      // raster shape would stretch/distort the glyphs, which no real
+      // text tool does. Height edits are a no-op here (the field is
+      // disabled for text objects in the Properties panel).
+      if (active.type === 'textbox') {
+        if (newWpx != null && newWpx > 0) active.set({ width: newWpx });
+        active.setCoords();
+        canvas.requestRenderAll();
+        bumpSel();
+        pushHistory();
+        return;
+      }
+
       const curW = active.type === 'circle' ? (active.radius || 1) * 2 * (active.scaleX || 1) : (active.width || 0) * (active.scaleX || 1);
       const curH = active.type === 'circle' ? (active.radius || 1) * 2 * (active.scaleY || 1) : (active.height || 0) * (active.scaleY || 1);
       let w = newWpx;
@@ -990,6 +1019,9 @@ function EditorContent() {
       canvas.on('object:moving', (e: any) => {
         bumpSel();
         const obj = e.target;
+        if (altDragRef.current && obj === altDragRef.current.obj && e.e?.altKey) {
+          altDragRef.current.triggered = true;
+        }
         const disableSnap = e.e && (e.e.ctrlKey || e.e.metaKey);
         if (activeToolRef.current === 'select' && obj && !obj.__isArtboard && !disableSnap) {
           const zoom = canvas.getZoom() || 1;
@@ -1020,6 +1052,18 @@ function EditorContent() {
       });
 
       canvas.on('mouse:down', (opt: any) => {
+        if (
+          activeToolRef.current === 'select' &&
+          opt.target &&
+          opt.target.selectable &&
+          !opt.target.locked &&
+          !opt.target.__isArtboard &&
+          !opt.target.__isAnchorHandle
+        ) {
+          altDragRef.current = { obj: opt.target, startLeft: opt.target.left ?? 0, startTop: opt.target.top ?? 0, triggered: false };
+        } else {
+          altDragRef.current = null;
+        }
         if (activeToolRef.current === 'pan') {
           panRef.current = { active: true, lastX: opt.e.clientX, lastY: opt.e.clientY };
           canvas.setCursor('grabbing');
@@ -1098,6 +1142,36 @@ function EditorContent() {
         else if (isDrawTool(activeToolRef.current)) handleShapeMouseMove(opt);
       });
       canvas.on('mouse:up', (opt: any) => {
+        if (altDragRef.current?.triggered) {
+          const { obj, startLeft, startTop } = altDragRef.current;
+          // Total distance THIS drag moved the object(s) — subtracting it
+          // from each child's current (already-moved) absolute position
+          // gives back exactly where the drag started, regardless of
+          // whether it's a single object or a multi-select ActiveSelection
+          // (Fabric keeps each child's own left/top in absolute canvas
+          // terms even while selected together, the same property
+          // duplicateSelected/copySelected already rely on).
+          const dx = (obj.left ?? 0) - startLeft;
+          const dy = (obj.top ?? 0) - startTop;
+          altDragRef.current = null;
+          const objectsToClone = obj.type === 'activeSelection' ? obj.getObjects() : [obj];
+          Promise.all(
+            objectsToClone.map((o: any) => new Promise<any>((resolve) => o.clone((c: any) => resolve(c))))
+          ).then((clones) => {
+            clones.forEach((c: any) => {
+              delete c.__uid;
+              c.set({ left: (c.left ?? 0) - dx, top: (c.top ?? 0) - dy, evented: true, locked: false });
+              c.setCoords();
+              canvas.add(c);
+            });
+            canvas.requestRenderAll();
+            refreshLayers();
+            pinArtboardsBack();
+            pushHistory();
+          });
+        } else {
+          altDragRef.current = null;
+        }
         if (snapGuidesRef.current.length > 0) {
           snapGuidesRef.current = [];
           canvas.requestRenderAll();
@@ -1379,9 +1453,15 @@ function EditorContent() {
   const addText = () => {
     const ab = getActiveArtboardRect();
     import('fabric').then((mod) => {
-      const text = new mod.fabric.IText('Double-click to edit', {
-        left: ab.x + ab.width / 2 - 100,
+      // Textbox (not plain IText) so the box actually wraps to a real
+      // width — without real wrapping, 'justify' has no interior line to
+      // stretch and silently does nothing on the live canvas, even
+      // though export computes it correctly (they wrap/measure text
+      // independently of Fabric's own renderer).
+      const text = new mod.fabric.Textbox('Double-click to edit', {
+        left: ab.x + ab.width / 2 - 150,
         top: ab.y + ab.height / 2 - 20,
+        width: 300,
         fontSize: 40,
         fill: '#1A1A1A',
         fontFamily: 'Arial',
@@ -1707,6 +1787,49 @@ function EditorContent() {
     const clones = await cloneObjectsAsync(clipboardRef.current);
     const shift = PASTE_STEP * pasteCountRef.current;
     addClonesToCanvas(clones, shift, shift);
+  };
+
+  // Right-click: selects whatever's under the cursor (if anything) before
+  // opening the menu, matching how a real app's context menu always acts
+  // on what you clicked rather than whatever was selected before.
+  const handleCanvasContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const canvas = fabricCanvasRef.current;
+    if (!canvas) return;
+    const target = canvas.findTarget(e.nativeEvent, false);
+    if (target && !target.__isArtboard && !target.__isAnchorHandle && !target.__isPenPreview && !target.__isShapeDraft) {
+      if (canvas.getActiveObject() !== target) {
+        canvas.setActiveObject(target);
+        canvas.requestRenderAll();
+      }
+    } else if (!target && canvas.getActiveObject()) {
+      canvas.discardActiveObject();
+      canvas.requestRenderAll();
+    }
+    setContextMenu({ x: e.clientX, y: e.clientY });
+  };
+
+  const contextMenuItems = (): ContextMenuEntry[] => {
+    const active = fabricCanvasRef.current?.getActiveObject();
+    const has = !!active;
+    const isGroupable = active?.type === 'activeSelection';
+    const isGroup = active?.type === 'group';
+    return [
+      { label: 'Copy', onClick: copySelected, disabled: !has },
+      { label: 'Paste', onClick: pasteClipboard, disabled: !clipboardRef.current?.length },
+      { label: 'Duplicate', onClick: duplicateSelected, disabled: !has },
+      { divider: true },
+      { label: 'Bring to Front', onClick: bringToFront, disabled: !has },
+      { label: 'Bring Forward', onClick: bringForward, disabled: !has },
+      { label: 'Send Backward', onClick: sendBackward, disabled: !has },
+      { label: 'Send to Back', onClick: sendToBack, disabled: !has },
+      { divider: true },
+      { label: active?.locked ? 'Unlock' : 'Lock', onClick: () => active && toggleLock(active), disabled: !has },
+      ...(isGroupable ? [{ label: 'Group', onClick: groupSelected, disabled: false }] : []),
+      ...(isGroup ? [{ label: 'Ungroup', onClick: ungroupSelected, disabled: false }] : []),
+      { divider: true },
+      { label: 'Delete', onClick: deleteSelected, disabled: !has, danger: true },
+    ];
   };
 
   const bringForward = () => {
@@ -3345,10 +3468,14 @@ function EditorContent() {
             ref={viewportRef}
             className="absolute overflow-hidden"
             style={{ top: RULER_SIZE, left: RULER_SIZE, right: 0, bottom: 0 }}
+            onContextMenu={handleCanvasContextMenu}
           >
             <canvas ref={canvasRef} />
           </div>
         </div>
+        {contextMenu && (
+          <ContextMenu x={contextMenu.x} y={contextMenu.y} items={contextMenuItems()} onClose={() => setContextMenu(null)} />
+        )}
 
         <div className="w-64 bg-white border-l flex flex-col overflow-y-auto">
           {isPanelOpen('properties') && (

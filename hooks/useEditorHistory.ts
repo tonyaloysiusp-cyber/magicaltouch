@@ -2,6 +2,7 @@
 
 import { useCallback, useRef, useState } from 'react';
 import { MAX_HISTORY } from '@/lib/editor/types';
+import { ensureFontsLoadedForCanvasJSON } from '@/lib/editor/googleFonts';
 
 const SNAPSHOT_PROPS = ['name', 'locked', 'visible', 'isVectorPath', 'clipPath', '__uid', '__lockRatio', '__isArtboard', '__artboardId', '__print', '__originalSrc', '__photoEdits', '__cropRect'];
 
@@ -47,12 +48,18 @@ export function useEditorHistory(
       if (!canvas || index < 0 || index >= h.stack.length) return;
 
       h.suspend = true;
-      canvas.loadFromJSON(h.stack[index], () => {
+      const json = h.stack[index];
+      canvas.loadFromJSON(json, () => {
         canvas.renderAll();
         onRestore?.();
         h.suspend = false;
         h.index = index;
         updateHistoryButtons();
+        // Same font-load fix the other 3 loadFromJSON call sites already
+        // have — without it, undoing/redoing back to a state that first
+        // introduced a still-downloading font can briefly show it in a
+        // fallback font until something else forces a re-render.
+        ensureFontsLoadedForCanvasJSON(json).then(() => canvas.requestRenderAll());
       });
     },
     [fabricCanvasRef, onRestore, updateHistoryButtons]

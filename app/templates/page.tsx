@@ -8,7 +8,7 @@ import { Fraunces, Inter } from 'next/font/google';
 import { Menu, X, Instagram, Twitter, Facebook, Youtube } from 'lucide-react';
 import { resolveAuthedPath } from '@/lib/authNav';
 import { MockDesignCard } from '@/components/MockDesignCard';
-import { Category, Template, CATEGORIES, TEMPLATES } from '@/lib/templatesData';
+import { Category, Template, CATEGORIES, TEMPLATES, fetchTemplates } from '@/lib/templatesData';
 import { supabase } from '@/lib/supabase';
 import { ProfileMenu } from '@/components/ProfileMenu';
 
@@ -35,7 +35,16 @@ export default function TemplatesPage() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [activeCategory, setActiveCategory] = useState<Category | 'All'>('All');
   const [loggedIn, setLoggedIn] = useState(false);
+  const [templates, setTemplates] = useState<Template[]>(TEMPLATES);
   const router = useRouter();
+
+  // TEMPLATES (the static fallback) renders immediately so the page never
+  // shows an empty gallery while this loads; fetchTemplates() itself falls
+  // back to the same list if the table isn't reachable, so this can only
+  // ever replace it with equal-or-better real data, never blank it out.
+  useEffect(() => {
+    fetchTemplates().then(setTemplates);
+  }, []);
 
   // Same gap as the homepage Navbar: this header showed "Log In" even
   // when the visitor was already signed in, since nothing checked auth
@@ -49,8 +58,8 @@ export default function TemplatesPage() {
   }, []);
 
   const filtered = useMemo(
-    () => (activeCategory === 'All' ? TEMPLATES : TEMPLATES.filter((t) => t.category === activeCategory)),
-    [activeCategory]
+    () => (activeCategory === 'All' ? templates : templates.filter((t) => t.category === activeCategory)),
+    [activeCategory, templates]
   );
 
   const goToWorkspace = async () => {

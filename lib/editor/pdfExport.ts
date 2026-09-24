@@ -273,22 +273,53 @@ async function drawTextObject(pdf: any, F: any, obj: any, offsetX: number, offse
   // width/height off from where it should render.
   const offX = -w / 2;
   const offY = -h / 2;
-  const align: 'left' | 'center' | 'right' = ['left', 'center', 'right'].includes(obj.textAlign)
+  const align: 'left' | 'center' | 'right' | 'justify' = ['left', 'center', 'right', 'justify'].includes(obj.textAlign)
     ? obj.textAlign
     : 'left';
   const angle = -(obj.angle || 0);
   const matrix = obj.calcTransformMatrix();
+  // Converts a width jsPDF measured in POINTS (at the font/size already
+  // set on `pdf`, which bakes in avgScale) back into this function's own
+  // local (pre-transform) px frame, so it composes with offX/w/matrix
+  // exactly like every other measurement here.
+  const localWidth = (text: string) => pdf.getTextWidth(text) / (avgScale * PT_PER_PX);
+
+  const drawAt = (text: string, localX: number, baselineLocal: number, lineAlign: 'left' | 'center' | 'right') => {
+    const local = new F.Point(localX, offY + baselineLocal);
+    const abs: any = F.util.transformPoint(local, matrix);
+    pdf.text(text, toPt(abs.x - offsetX), toPt(abs.y - offsetY), { angle, align: lineAlign, baseline: 'alphabetic' });
+  };
 
   rawLines.forEach((line, i) => {
     if (!line) return;
     const baselineLocal = i * lineHeightLocal + fontSizeLocal * 0.8;
+
+    // Real justify: stretch this line's word gaps to fill the box width —
+    // matching Fabric's own textAlign:'justify' canvas rendering, which
+    // (unlike the usual CSS convention) stretches every line, including
+    // the last one. A line with no spaces has nothing to distribute into
+    // (same as Fabric's own enlargeSpaces), so it falls through to plain
+    // left placement below.
+    if (align === 'justify' && line.includes(' ')) {
+      const words = line.split(' ');
+      const wordWidths = words.map(localWidth);
+      const totalWordWidth = wordWidths.reduce((a, b) => a + b, 0);
+      const gapCount = words.length - 1;
+      const naturalGapWidth = localWidth(' ');
+      const extraWidth = Math.max(0, w - (totalWordWidth + naturalGapWidth * gapCount));
+      const gapWidth = naturalGapWidth + extraWidth / gapCount;
+      let cursorX = offX;
+      words.forEach((word, wi) => {
+        drawAt(word, cursorX, baselineLocal, 'left');
+        cursorX += wordWidths[wi] + gapWidth;
+      });
+      return;
+    }
+
     let localX = offX;
     if (align === 'center') localX = offX + w / 2;
     else if (align === 'right') localX = offX + w;
-
-    const local = new F.Point(localX, offY + baselineLocal);
-    const abs: any = F.util.transformPoint(local, matrix);
-    pdf.text(line, toPt(abs.x - offsetX), toPt(abs.y - offsetY), { angle, align, baseline: 'alphabetic' });
+    drawAt(line, localX, baselineLocal, align === 'justify' ? 'left' : align);
   });
 }
 
