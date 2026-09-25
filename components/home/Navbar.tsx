@@ -78,7 +78,7 @@ export function Navbar({ theme, onToggleTheme }: { theme: HomeTheme; onToggleThe
     <header
       className={`sticky top-0 z-50 transition-all duration-300 ${
         scrolled
-          ? 'bg-[#F7F5F0]/90 dark:bg-[#151320]/90 backdrop-blur-md border-b border-black/10 dark:border-white/10'
+          ? 'bg-white/90 dark:bg-[#151320]/90 backdrop-blur-md border-b border-black/10 dark:border-white/10'
           : 'bg-transparent border-b border-transparent'
       }`}
     >
@@ -127,7 +127,7 @@ export function Navbar({ theme, onToggleTheme }: { theme: HomeTheme; onToggleThe
       </nav>
 
       {menuOpen && (
-        <div className="md:hidden border-t border-black/10 dark:border-white/10 bg-[#F7F5F0] dark:bg-[#151320] px-6 py-4 flex flex-col gap-1">
+        <div className="md:hidden border-t border-black/10 dark:border-white/10 bg-white dark:bg-[#151320] px-6 py-4 flex flex-col gap-1">
           <button onClick={goToCreate} className="py-2.5 text-sm text-left text-[#17161B] dark:text-white">
             Create
           </button>
