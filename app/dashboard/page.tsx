@@ -9,6 +9,7 @@ import { supabase } from '@/lib/supabase';
 import { ProfileMenu } from '@/components/ProfileMenu';
 import { DesignLimitDialog } from '@/components/DesignLimitDialog';
 import { MAX_DESIGNS, getOrCreateProfile } from '@/lib/profile';
+import { allFontFacesCSS, ensureFontsLoadedForCanvasJSON } from '@/lib/editor/googleFonts';
 
 const RECENT_COUNT = 6;
 
@@ -85,8 +86,68 @@ export default function DashboardPage() {
       }
     } else {
       setDesigns(data || []);
+      backfillMissingThumbnails(data || []);
     }
     setLoading(false);
+  };
+
+  // The `thumbnail` column (and the code that populates it on save) only
+  // exist as of a later round than most already-saved designs, so plenty
+  // of real rows have canvas_json but no thumbnail and never will unless
+  // someone opens and re-saves them by hand. Rather than requiring that,
+  // silently render one for each such design the first time any dashboard
+  // load turns them up — an off-screen Fabric canvas, not a screenshot of
+  // anything on screen, using the exact same artboard-cropping logic the
+  // editor's own save flow uses for a freshly-made thumbnail.
+  const backfillMissingThumbnails = async (list: Design[]) => {
+    const missing = list.filter((d) => !d.thumbnail);
+    if (!missing.length) return;
+    const F = (await import('fabric')).fabric;
+    for (const design of missing) {
+      try {
+        const { data: full, error } = await supabase
+          .from('designs')
+          .select('canvas_json, width, height')
+          .eq('id', design.id)
+          .single();
+        if (error || !full?.canvas_json) continue;
+
+        const thumbnail = await new Promise<string | null>((resolve) => {
+          const canvas = new F.StaticCanvas(null, { width: full.width, height: full.height });
+          canvas.loadFromJSON(full.canvas_json, async () => {
+            try {
+              await ensureFontsLoadedForCanvasJSON(full.canvas_json);
+              const ab = canvas.getObjects().find((o: any) => o.__isArtboard) as any;
+              const rect = ab
+                ? { left: ab.left, top: ab.top, width: (ab.width || 0) * (ab.scaleX || 1), height: (ab.height || 0) * (ab.scaleY || 1) }
+                : { left: 0, top: 0, width: full.width, height: full.height };
+              canvas.renderAll();
+              const THUMB_WIDTH = 400;
+              const multiplier = THUMB_WIDTH / Math.max(rect.width, 1);
+              resolve(canvas.toDataURL({ format: 'jpeg', quality: 0.7, ...rect, multiplier }));
+            } catch (err) {
+              console.error('Thumbnail backfill render failed:', err);
+              resolve(null);
+            } finally {
+              canvas.dispose();
+            }
+          });
+        });
+        if (!thumbnail) continue;
+
+        const { error: updateError } = await supabase.from('designs').update({ thumbnail }).eq('id', design.id);
+        if (updateError) {
+          // Column genuinely missing (migration not applied yet) or some
+          // other write failure -- either way, stop trying the rest of
+          // this batch rather than repeating the same failure per design.
+          console.error('Thumbnail backfill save failed:', updateError.message);
+          break;
+        }
+        setDesigns((prev) => prev.map((d) => (d.id === design.id ? { ...d, thumbnail } : d)));
+      } catch (err) {
+        console.error('Thumbnail backfill failed for', design.id, err);
+      }
+    }
   };
 
   useEffect(() => {
@@ -174,6 +235,11 @@ export default function DashboardPage() {
 
   return (
     <main className="min-h-screen p-6">
+      {/* Same same-origin font-face proxy the editor declares -- the
+          off-screen thumbnail backfill above needs these @font-face rules
+          present somewhere in the document for document.fonts.load() to
+          find anything to load. */}
+      <style>{allFontFacesCSS()}</style>
       <div className="flex items-center justify-between mb-10">
         <Link href="/" title="Go to homepage">
           <Image src="/logo.png" alt="Magical Touch" width={180} height={36} />

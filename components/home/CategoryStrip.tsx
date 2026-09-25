@@ -13,11 +13,11 @@ const CATEGORIES = [
 
 export function CategoryStrip() {
   return (
-    <section className="border-y border-black/10 dark:border-white/10 bg-white dark:bg-[#17151F]">
+    <section className="border-y border-black/10 dark:border-white/10 bg-gradient-to-r from-[#FDF4F8] via-white to-[#EAF6FB] dark:bg-[#17151F] dark:from-transparent dark:via-transparent dark:to-transparent">
       <div className="max-w-6xl mx-auto px-6 py-14">
         <Reveal>
           <p className="text-xs font-semibold text-[#4A4750] dark:text-[#B7B2C6] tracking-wide uppercase text-center">
-            Made for every kind of creative work
+            Browse by category
           </p>
         </Reveal>
         <div className="mt-8 flex gap-4 overflow-x-auto pb-2 -mx-6 px-6 md:mx-0 md:px-0 md:grid md:grid-cols-6 no-scrollbar">
