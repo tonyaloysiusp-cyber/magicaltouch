@@ -52,9 +52,9 @@ export function LayersPanel({
 
   return (
     <div className="p-3">
-      <p className="font-semibold text-gray-700 mb-3 text-sm">Layers</p>
+      <p className="font-semibold text-gray-700 dark:text-gray-200 mb-3 text-sm">Layers</p>
       <div className="flex flex-col gap-1">
-        {layers.length === 0 && <p className="text-xs text-gray-400">No objects yet</p>}
+        {layers.length === 0 && <p className="text-xs text-gray-400 dark:text-gray-500">No objects yet</p>}
         {layers.map((obj, i) => {
           const isLocked = !!obj.locked;
           const isHidden = obj.visible === false;
@@ -74,12 +74,12 @@ export function LayersPanel({
                 dragLayerIndex.current = null;
               }}
               onClick={() => !isLocked && onSelect(obj)}
-              className={`flex flex-col gap-1 text-xs p-1.5 border rounded cursor-pointer hover:bg-gray-50 ${
-                isSelectedLayer ? 'bg-gray-100 border-gray-400' : ''
+              className={`flex flex-col gap-1 text-xs p-1.5 border dark:border-[#3A3A3A] rounded cursor-pointer hover:bg-gray-50 dark:hover:bg-[#333333] text-gray-800 dark:text-gray-200 ${
+                isSelectedLayer ? 'bg-gray-100 dark:bg-[#3A3A3A] border-gray-400 dark:border-gray-500' : ''
               } ${isHidden ? 'opacity-40' : ''}`}
             >
             <div className="flex items-center gap-1.5">
-              <span className="text-gray-300 cursor-grab shrink-0">
+              <span className="text-gray-300 dark:text-gray-600 cursor-grab shrink-0">
                 <GripVertical size={12} />
               </span>
 
@@ -102,7 +102,7 @@ export function LayersPanel({
                     if (e.key === 'Enter') commitRename(obj);
                     if (e.key === 'Escape') setRenamingId(null);
                   }}
-                  className="flex-1 min-w-0 border rounded px-1 py-0.5 text-xs"
+                  className="flex-1 min-w-0 border rounded px-1 py-0.5 text-xs dark:bg-[#2B2B2B] dark:border-[#3A3A3A] dark:text-gray-100"
                 />
               ) : (
                 <span className="flex-1 min-w-0 truncate">{layerLabel(obj, i)}</span>
@@ -114,7 +114,7 @@ export function LayersPanel({
                     e.stopPropagation();
                     commitRename(obj);
                   }}
-                  className="shrink-0 text-gray-400 hover:text-gray-700"
+                  className="shrink-0 text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-200"
                   title="Confirm rename"
                 >
                   <Check size={12} />
@@ -125,7 +125,7 @@ export function LayersPanel({
                     e.stopPropagation();
                     startRename(obj, i);
                   }}
-                  className="shrink-0 text-gray-300 hover:text-gray-700"
+                  className="shrink-0 text-gray-300 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-200"
                   title="Rename"
                 >
                   <Pencil size={12} />
@@ -137,7 +137,7 @@ export function LayersPanel({
                   e.stopPropagation();
                   onToggleVisible(obj);
                 }}
-                className="shrink-0 text-gray-300 hover:text-gray-700"
+                className="shrink-0 text-gray-300 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-200"
                 title={isHidden ? 'Show layer' : 'Hide layer'}
               >
                 {isHidden ? <EyeOff size={12} /> : <Eye size={12} />}
@@ -148,7 +148,7 @@ export function LayersPanel({
                   e.stopPropagation();
                   onToggleLock(obj);
                 }}
-                className="shrink-0 text-gray-300 hover:text-gray-700"
+                className="shrink-0 text-gray-300 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-200"
                 title={isLocked ? 'Unlock layer' : 'Lock layer'}
               >
                 {isLocked ? <Lock size={12} /> : <Unlock size={12} />}
@@ -160,7 +160,7 @@ export function LayersPanel({
                     e.stopPropagation();
                     onDuplicate(obj);
                   }}
-                  className="shrink-0 text-gray-300 hover:text-gray-700"
+                  className="shrink-0 text-gray-300 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-200"
                   title="Duplicate layer"
                 >
                   <Copy size={12} />
@@ -173,7 +173,7 @@ export function LayersPanel({
                     e.stopPropagation();
                     onDelete(obj);
                   }}
-                  className="shrink-0 text-red-300 hover:text-red-500"
+                  className="shrink-0 text-red-300 dark:text-red-500 hover:text-red-500 dark:hover:text-red-400"
                   title="Delete layer"
                 >
                   <Trash2 size={12} />
@@ -183,7 +183,7 @@ export function LayersPanel({
 
             {onOpacityChange && (
               <div className="flex items-center gap-1.5 pl-[26px]" onClick={(e) => e.stopPropagation()}>
-                <span className="text-[10px] text-gray-400 w-10 shrink-0">Opacity</span>
+                <span className="text-[10px] text-gray-400 dark:text-gray-500 w-10 shrink-0">Opacity</span>
                 <input
                   type="range"
                   min={0}
@@ -192,7 +192,7 @@ export function LayersPanel({
                   onChange={(e) => onOpacityChange(obj, Number(e.target.value) / 100)}
                   className="flex-1"
                 />
-                <span className="text-[10px] text-gray-400 w-7 text-right shrink-0">{Math.round((obj.opacity ?? 1) * 100)}%</span>
+                <span className="text-[10px] text-gray-400 dark:text-gray-500 w-7 text-right shrink-0">{Math.round((obj.opacity ?? 1) * 100)}%</span>
               </div>
             )}
             </div>

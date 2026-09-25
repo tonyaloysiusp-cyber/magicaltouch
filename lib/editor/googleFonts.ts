@@ -18,6 +18,9 @@
 // exist anywhere in this pipeline.
 // ---------------------------------------------------------------------
 
+import { useEffect, useState } from 'react';
+import { markFontUnavailable, isFontUnavailable, subscribeFontAvailability } from './fontAvailability';
+
 export interface GoogleFontDef {
   family: string;
   category: 'Classic' | 'Sans Serif' | 'Serif' | 'Display' | 'Script' | 'Monospace';
@@ -151,6 +154,18 @@ export function googleFontByName(family: string): GoogleFontDef | undefined {
   return GOOGLE_FONTS.find((f) => f.family === family);
 }
 
+// The font picker's real source of truth: the curated list minus
+// whatever's actually been detected as broken this session (see
+// ensureFontLoaded/validateAllFonts in fontAvailability.ts). Re-renders
+// automatically the moment a font is marked unavailable, so a broken
+// entry disappears from the dropdown instead of lingering as a dead
+// selectable option.
+export function useAvailableGoogleFonts(): GoogleFontDef[] {
+  const [, forceUpdate] = useState(0);
+  useEffect(() => subscribeFontAvailability(() => forceUpdate((v) => v + 1)), []);
+  return GOOGLE_FONTS.filter((f) => !isFontUnavailable(f.family));
+}
+
 // Every font in the picker — aliased classics AND the ~86 direct Google
 // Fonts alike — is declared via @font-face rules sourced from this app's
 // own same-origin /api/font-file proxy, rather than a <link> straight to
@@ -212,14 +227,44 @@ export function allFontFacesCSS(): string {
 // session (a brand new text object, or text objects coming back from
 // canvas_json on design/tab load) and re-render once it resolves, rather
 // than trusting whatever the canvas already drew.
+//
+// Also doubles as the font-availability check: a failure (or a load that
+// resolves without the font actually being usable) on the plain REGULAR
+// weight is a reliable signal the family itself is broken, so it gets
+// marked unavailable and the picker stops offering it. A family that's
+// merely missing a bold or italic cut is normal (most display/script
+// fonts only ship 400) and is handled by falling back to the nearest
+// weight that exists, not by hiding the whole family — so only the
+// plain 400/non-italic check ever marks something unavailable.
 export function ensureFontLoaded(fontFamily: string, weight: number | string = 400, italic = false): Promise<void> {
   if (typeof document === 'undefined' || !(document as any).fonts?.load) return Promise.resolve();
   const w = typeof weight === 'number' ? (weight >= 600 ? 700 : 400) : weight === 'bold' ? 700 : 400;
   const spec = `${italic ? 'italic ' : ''}${w} 16px "${fontFamily}"`;
+  const isAvailabilityProbe = !italic && w === 400;
   return (document as any).fonts
     .load(spec)
-    .then(() => undefined)
-    .catch(() => undefined);
+    .then(() => {
+      if (isAvailabilityProbe && !(document as any).fonts.check(spec)) {
+        markFontUnavailable(fontFamily);
+      }
+    })
+    .catch(() => {
+      if (isAvailabilityProbe) markFontUnavailable(fontFamily);
+    });
+}
+
+// Kicks off a background availability check for every font in the picker
+// — fire-and-forget, non-blocking, so a broken family (a typo'd name, a
+// family Google has since renamed/removed, a proxy fetch that 404s) gets
+// detected and pruned from the picker even if the user never happens to
+// select it. Cheap after the first run in a session: every request goes
+// through this app's own cached /api/font-file proxy, not a fresh
+// third-party fetch each time.
+export function validateAllFonts(): void {
+  if (typeof document === 'undefined') return;
+  GOOGLE_FONTS.forEach((f) => {
+    ensureFontLoaded(f.family, 400, false);
+  });
 }
 
 // Loads every distinct font family (at both weights and both italic

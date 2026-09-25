@@ -54,23 +54,23 @@ export function MenuBar({ menus, leading }: Props) {
   }, []);
 
   return (
-    <div ref={barRef} className="flex items-center h-8 px-1 bg-white border-b text-[13px] select-none relative z-40">
+    <div ref={barRef} className="flex items-center h-8 px-1 bg-white dark:bg-[#242424] border-b dark:border-[#3A3A3A] text-[13px] text-gray-800 dark:text-gray-200 select-none relative z-40 transition-colors duration-150">
       {leading && <div className="flex items-center pl-1 pr-3 shrink-0">{leading}</div>}
       {menus.map((menu, i) => (
         <div key={menu.label} className="relative">
           <button
             onClick={() => setOpenIndex(openIndex === i ? null : i)}
             onMouseEnter={() => openIndex !== null && setOpenIndex(i)}
-            className={`px-3 h-8 rounded-sm ${openIndex === i ? 'bg-gray-100' : 'hover:bg-gray-50'}`}
+            className={`px-3 h-8 rounded-sm ${openIndex === i ? 'bg-gray-100 dark:bg-[#333333]' : 'hover:bg-gray-50 dark:hover:bg-[#333333]'}`}
           >
             {menu.label}
           </button>
 
           {openIndex === i && (
-            <div className="absolute top-full left-0 mt-0.5 min-w-[220px] bg-white border rounded-md shadow-lg py-1">
+            <div className="absolute top-full left-0 mt-0.5 min-w-[220px] bg-white dark:bg-[#2B2B2B] border dark:border-[#3A3A3A] rounded-md shadow-lg py-1">
               {menu.items.map((item, j) =>
                 isDivider(item) ? (
-                  <div key={j} className="my-1 border-t border-gray-100" />
+                  <div key={j} className="my-1 border-t border-gray-100 dark:border-[#3A3A3A]" />
                 ) : (
                   <button
                     key={item.label}
@@ -81,17 +81,17 @@ export function MenuBar({ menus, leading }: Props) {
                     }}
                     className={`w-full flex items-center justify-between px-3 py-1.5 text-left ${
                       item.disabled || item.planned
-                        ? 'text-gray-300 cursor-default'
-                        : 'text-gray-700 hover:bg-purple-50'
+                        ? 'text-gray-300 dark:text-gray-600 cursor-default'
+                        : 'text-gray-700 dark:text-gray-200 hover:bg-purple-50 dark:hover:bg-[#333333]'
                     }`}
                   >
                     <span>{item.label}</span>
                     <span className="flex items-center gap-2 shrink-0 ml-4">
                       {item.shortcut && (
-                        <span className="text-[11px] text-gray-400 font-mono">{item.shortcut}</span>
+                        <span className="text-[11px] text-gray-400 dark:text-gray-500 font-mono">{item.shortcut}</span>
                       )}
                       {item.planned && (
-                        <span className="text-[9px] bg-gray-100 text-gray-400 rounded px-1 py-0.5">
+                        <span className="text-[9px] bg-gray-100 dark:bg-[#3A3A3A] text-gray-400 dark:text-gray-500 rounded px-1 py-0.5">
                           Planned
                         </span>
                       )}

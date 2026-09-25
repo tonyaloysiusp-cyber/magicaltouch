@@ -67,11 +67,11 @@ export function ContextMenu({ x, y, items, onClose }: Props) {
       ref={ref}
       data-testid="context-menu"
       style={{ position: 'fixed', left: Math.max(4, left), top: Math.max(4, top), zIndex: 100 }}
-      className="min-w-[190px] bg-white border rounded-md shadow-lg py-1 text-[13px] select-none"
+      className="min-w-[190px] bg-white dark:bg-[#2B2B2B] border dark:border-[#3A3A3A] rounded-md shadow-lg py-1 text-[13px] select-none"
     >
       {items.map((item, i) =>
         isDivider(item) ? (
-          <div key={i} className="my-1 border-t border-gray-100" />
+          <div key={i} className="my-1 border-t border-gray-100 dark:border-[#3A3A3A]" />
         ) : (
           <button
             key={item.label}
@@ -81,7 +81,11 @@ export function ContextMenu({ x, y, items, onClose }: Props) {
               onClose();
             }}
             className={`w-full text-left px-3 py-1.5 ${
-              item.disabled ? 'text-gray-300 cursor-default' : item.danger ? 'text-red-600 hover:bg-red-50' : 'text-gray-700 hover:bg-purple-50'
+              item.disabled
+                ? 'text-gray-300 dark:text-gray-600 cursor-default'
+                : item.danger
+                ? 'text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30'
+                : 'text-gray-700 dark:text-gray-200 hover:bg-purple-50 dark:hover:bg-[#333333]'
             }`}
           >
             {item.label}

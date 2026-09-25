@@ -5,10 +5,11 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
-import { Keyboard } from 'lucide-react';
+import { Keyboard, Sun, Moon } from 'lucide-react';
+import { useEditorTheme } from '@/hooks/useEditorTheme';
 
 import { ToolMode, DocUnit, isDrawTool, PASTEBOARD_BG, RULER_SIZE } from '@/lib/editor/types';
-import { allFontFacesCSS, ensureFontLoaded, ensureFontsLoadedForCanvasJSON } from '@/lib/editor/googleFonts';
+import { allFontFacesCSS, ensureFontLoaded, ensureFontsLoadedForCanvasJSON, validateAllFonts } from '@/lib/editor/googleFonts';
 import { getAbsolutePolygonPoints, multiPolygonToPathD } from '@/lib/editor/geometry';
 import { exportCanvasToPDF, exportArtboardsToPDF, toPt } from '@/lib/editor/pdfExport';
 import { exportArtboardToSVG } from '@/lib/editor/svgExport';
@@ -72,6 +73,20 @@ function EditorContent() {
   const panRef = useRef<{ active: boolean; lastX: number; lastY: number }>({ active: false, lastX: 0, lastY: 0 });
   const [canvasReady, setCanvasReady] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
+  const { theme, toggleTheme } = useEditorTheme();
+  const isDark = theme === 'dark';
+
+  // Background, one-time-per-session audit of every font in the picker —
+  // detects a genuinely broken family (a 404 from the proxy, a name
+  // Google's since renamed) even if the user never happens to select it,
+  // instead of only ever finding out when someone picks a dead font.
+  useEffect(() => {
+    validateAllFonts();
+  }, []);
+  // The pasteboard (area outside every artboard) is a real Fabric canvas
+  // fill, not CSS — it has to be updated on the canvas object itself
+  // whenever the theme changes, not just via a className.
+  const pasteboardBgFor = (t: 'light' | 'dark') => (t === 'dark' ? '#2B2B2B' : PASTEBOARD_BG);
 
   // The editor is a protected route: a logged-out visitor who lands here
   // directly (typed URL, bookmark, back button) must be bounced to login
@@ -866,7 +881,7 @@ function EditorContent() {
   // __isArtboard rect with no id/name gets one stamped on so it becomes
   // "Artboard 1" instead of silently losing its identity.
   const ensureArtboards = (canvas: any, F: any) => {
-    canvas.backgroundColor = PASTEBOARD_BG;
+    canvas.backgroundColor = pasteboardBgFor(theme);
     const existing = canvas.getObjects().filter((o: any) => o.__isArtboard);
     if (existing.length === 0) {
       const fill = initialBg?.startsWith('custom:')
@@ -942,7 +957,7 @@ function EditorContent() {
       const canvas = new F.Canvas(canvasRef.current, {
         width: initialW,
         height: initialH,
-        backgroundColor: PASTEBOARD_BG,
+        backgroundColor: pasteboardBgFor(theme),
       });
       fabricCanvasRef.current = canvas;
       (window as any).fabric = F;
@@ -958,6 +973,17 @@ function EditorContent() {
         const obj: any = e.target;
         if (obj && !obj.__isAnchorHandle && !obj.__isPenPreview && !obj.__isShapeDraft && !obj.__isArtboard && !obj.__uid) {
           obj.__uid = `obj_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+        }
+        // 'editing:entered'/'editing:exited' fire on the text object
+        // itself, not the canvas (unlike 'text:selection:changed' and
+        // 'text:changed', which Fabric explicitly re-fires on the canvas)
+        // — so each IText/Textbox needs its own listener the moment it's
+        // added, or the Properties Panel never learns editing started or
+        // stopped and keeps showing stale character-vs-whole-object state.
+        if (obj && (obj.type === 'i-text' || obj.type === 'text' || obj.type === 'textbox') && !obj.__editingListenersBound) {
+          obj.__editingListenersBound = true;
+          obj.on('editing:entered', () => bumpSel());
+          obj.on('editing:exited', () => bumpSel());
         }
       });
 
@@ -1015,6 +1041,14 @@ function EditorContent() {
         setSelected(null);
         clearAnchorHandles();
       });
+      // Text-specific Fabric events (fired only by IText/Textbox): the
+      // Properties Panel's character controls need to know the instant
+      // the caret moves or the highlighted range changes, or a
+      // just-typed character will silently show whatever formatting
+      // values were true at the START of editing instead of the current
+      // real cursor/selection position.
+      canvas.on('text:selection:changed', () => bumpSel());
+      canvas.on('text:changed', () => bumpSel());
       canvas.on('object:scaling', () => bumpSel());
       canvas.on('object:moving', (e: any) => {
         bumpSel();
@@ -1428,6 +1462,16 @@ function EditorContent() {
     ro.observe(el);
     return () => ro.disconnect();
   }, [canvasReady]);
+
+  // The pasteboard fill is baked into the Fabric canvas itself (not CSS),
+  // so switching themes has to explicitly repaint it — nothing else about
+  // a design (artboard colors, object fills) changes with the theme.
+  useEffect(() => {
+    const canvas = fabricCanvasRef.current;
+    if (!canvas || !canvasReady) return;
+    canvas.backgroundColor = pasteboardBgFor(theme);
+    canvas.requestRenderAll();
+  }, [theme, canvasReady]);
 
   const applyZoom = useCallback((updater: number | ((z: number) => number)) => {
     setZoom((prev) => {
@@ -2056,6 +2100,84 @@ function EditorContent() {
       const spec = `${italic ? 'italic ' : ''}${bold ? '700' : '400'} 16px "${active.fontFamily}"`;
       (document as any).fonts.load(spec).then(() => canvas.requestRenderAll()).catch(() => {});
     }
+  };
+
+  // Character-level typography controls (Font, Size, Weight, Style,
+  // Underline, Color, Baseline Shift) target the ACTIVE TEXT SELECTION
+  // when the user is mid-edit with real (non-collapsed) characters
+  // selected — via Fabric's own per-character `styles` map
+  // (setSelectionStyles), so selecting just "Magical" out of "Hello
+  // Magical Touch" and changing size only resizes those characters.
+  // Fabric's per-character style system only supports a fixed set of
+  // properties (fontFamily, fontSize, fontWeight, fontStyle, underline/
+  // overline/linethrough, fill, stroke, strokeWidth, deltaY) — anything
+  // else (charSpacing/tracking, line height, alignment) is inherently
+  // object-wide in this engine, the same way "paragraph" properties work
+  // in a real desktop app, and goes through applyProp instead.
+  //
+  // With no real selection (nothing highlighted, or not currently
+  // editing text at all) this falls back to the exact same whole-object
+  // behavior as applyProp, so every other use (selecting a whole text box
+  // to change its font before editing, etc.) is unaffected.
+  const applyCharProp = (props: Record<string, any>, record = true) => {
+    const canvas = fabricCanvasRef.current;
+    const active = canvas.getActiveObject();
+    if (!active || active.locked) return;
+
+    const hasRealSelection =
+      active.isEditing &&
+      typeof active.selectionStart === 'number' &&
+      typeof active.selectionEnd === 'number' &&
+      active.selectionStart !== active.selectionEnd;
+
+    if (!hasRealSelection) {
+      applyProp(props, record);
+      return;
+    }
+
+    const start = Math.min(active.selectionStart, active.selectionEnd);
+    const end = Math.max(active.selectionStart, active.selectionEnd);
+    active.setSelectionStyles(props, start, end);
+    canvas.requestRenderAll();
+    bumpSel();
+    if (record) pushHistory();
+
+    if (
+      (props.fontFamily || props.fontWeight !== undefined || props.fontStyle !== undefined) &&
+      typeof document !== 'undefined' &&
+      (document as any).fonts?.load
+    ) {
+      const styleAtStart = active.getStyleAtPosition ? active.getStyleAtPosition(start, true) : {};
+      const family = props.fontFamily || styleAtStart.fontFamily || active.fontFamily;
+      const weight = props.fontWeight !== undefined ? props.fontWeight : styleAtStart.fontWeight ?? active.fontWeight;
+      const styleVal = props.fontStyle !== undefined ? props.fontStyle : styleAtStart.fontStyle ?? active.fontStyle;
+      const bold = weight === 'bold' || (typeof weight === 'number' && weight >= 600);
+      const italic = styleVal === 'italic';
+      const spec = `${italic ? 'italic ' : ''}${bold ? '700' : '400'} 16px "${family}"`;
+      (document as any).fonts.load(spec).then(() => canvas.requestRenderAll()).catch(() => {});
+    }
+  };
+
+  // Reads the EFFECTIVE value of a text property for whatever's currently
+  // relevant: the exact selected character range while editing with a
+  // real selection (flagging "mixed" if those characters don't all agree,
+  // the same way Adobe apps show a blank field for a mixed selection),
+  // or the whole object's own property otherwise.
+  const getTextPropValue = (active: any, prop: string): { value: any; mixed: boolean } => {
+    if (!active) return { value: undefined, mixed: false };
+    const hasRealSelection =
+      active.isEditing &&
+      typeof active.selectionStart === 'number' &&
+      typeof active.selectionEnd === 'number' &&
+      active.selectionStart !== active.selectionEnd;
+    if (!hasRealSelection) return { value: active[prop], mixed: false };
+    const start = Math.min(active.selectionStart, active.selectionEnd);
+    const end = Math.max(active.selectionStart, active.selectionEnd);
+    const styles = active.getSelectionStyles ? active.getSelectionStyles(start, end, true) : [];
+    if (styles.length === 0) return { value: active[prop], mixed: false };
+    const first = styles[0][prop];
+    const mixed = styles.some((s: any) => s[prop] !== first);
+    return { value: first, mixed };
   };
 
   // ---------------------------------------------------------------------
@@ -3301,7 +3423,7 @@ function EditorContent() {
           Checking access...
         </div>
       )}
-      <main className="h-screen flex flex-col bg-gray-50">
+      <main className={`h-screen flex flex-col bg-gray-50 dark:bg-[#1E1E1E] transition-colors duration-150 ${isDark ? 'dark' : ''}`}>
       <MenuBar
         menus={photoOnlySession ? [] : menus}
         leading={
@@ -3313,7 +3435,7 @@ function EditorContent() {
 
       <TabBar tabs={tabs} activeTabId={activeTabId} onSwitch={switchTab} onClose={closeTab} onAdd={() => setShowOpenDialog(true)} />
 
-      <div className="flex items-center justify-between px-4 py-2 border-b bg-white">
+      <div className="flex items-center justify-between px-4 py-2 border-b bg-white dark:bg-[#242424] dark:border-[#3A3A3A] transition-colors duration-150">
         <div className="flex items-center gap-2">
           <BackBar
             href={cameFromTemplate ? '/templates' : '/dashboard'}
@@ -3328,7 +3450,7 @@ function EditorContent() {
             setDesignName(name);
             setTabs((ts) => ts.map((t) => (t.id === activeTabIdRef.current ? { ...t, name } : t)));
           }}
-          className="text-sm border rounded px-2 py-1 w-48 text-center"
+          className="text-sm border rounded px-2 py-1 w-48 text-center dark:bg-[#2B2B2B] dark:border-[#3A3A3A] dark:text-gray-100"
         />
 
         {!photoOnlySession && <WorkspaceSwitcher workspace={workspace} onSwitch={handleWorkspaceSwitch} />}
@@ -3342,7 +3464,7 @@ function EditorContent() {
             onClick={workspace === 'photo' ? () => photoEditorRef.current?.undo() : undo}
             disabled={workspace === 'photo' ? !photoCanUndo : !canUndo}
             title="Undo (Ctrl/Cmd+Z)"
-            className="px-2 py-1 border rounded disabled:opacity-30"
+            className="px-2 py-1 border rounded disabled:opacity-30 dark:border-[#3A3A3A] dark:text-gray-200 dark:hover:bg-[#333333]"
           >
             ↶ Undo
           </button>
@@ -3350,18 +3472,30 @@ function EditorContent() {
             onClick={workspace === 'photo' ? () => photoEditorRef.current?.redo() : redo}
             disabled={workspace === 'photo' ? !photoCanRedo : !canRedo}
             title="Redo (Ctrl/Cmd+Shift+Z)"
-            className="px-2 py-1 border rounded disabled:opacity-30"
+            className="px-2 py-1 border rounded disabled:opacity-30 dark:border-[#3A3A3A] dark:text-gray-200 dark:hover:bg-[#333333]"
           >
             ↷ Redo
           </button>
-          <button onClick={() => setShowShortcuts(true)} title="Keyboard shortcuts (?)" className="p-1.5 border rounded text-gray-500 hover:bg-gray-50">
+          <button onClick={() => setShowShortcuts(true)} title="Keyboard shortcuts (?)" className="p-1.5 border rounded text-gray-500 hover:bg-gray-50 dark:border-[#3A3A3A] dark:text-gray-300 dark:hover:bg-[#333333]">
             <Keyboard size={16} />
+          </button>
+          <button
+            onClick={toggleTheme}
+            title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+            aria-label={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+            className="p-1.5 border rounded text-gray-500 hover:bg-gray-50 dark:border-[#3A3A3A] dark:text-gray-300 dark:hover:bg-[#333333]"
+          >
+            {isDark ? <Sun size={16} /> : <Moon size={16} />}
           </button>
         </div>
 
         <div className="flex items-center gap-3">
-          <label className="text-xs text-gray-500">Units</label>
-          <select value={unit} onChange={(e) => setUnit(e.target.value as DocUnit)} className="text-xs border rounded px-1.5 py-1">
+          <label className="text-xs text-gray-500 dark:text-gray-400">Units</label>
+          <select
+            value={unit}
+            onChange={(e) => setUnit(e.target.value as DocUnit)}
+            className="text-xs border rounded px-1.5 py-1 dark:bg-[#2B2B2B] dark:border-[#3A3A3A] dark:text-gray-100"
+          >
             <option value="px">px</option>
             <option value="mm">mm</option>
             <option value="cm">cm</option>
@@ -3371,9 +3505,9 @@ function EditorContent() {
         </div>
 
         <div className="flex items-center gap-3">
-          <button onClick={() => applyZoom(zoom - 10)} className="px-2 py-1 border rounded">-</button>
-          <span className="text-sm text-gray-600 w-12 text-center">{zoom}%</span>
-          <button onClick={() => applyZoom(zoom + 10)} className="px-2 py-1 border rounded">+</button>
+          <button onClick={() => applyZoom(zoom - 10)} className="px-2 py-1 border rounded dark:border-[#3A3A3A] dark:text-gray-200 dark:hover:bg-[#333333]">-</button>
+          <span className="text-sm text-gray-600 w-12 text-center dark:text-gray-300">{zoom}%</span>
+          <button onClick={() => applyZoom(zoom + 10)} className="px-2 py-1 border rounded dark:border-[#3A3A3A] dark:text-gray-200 dark:hover:bg-[#333333]">+</button>
         </div>
 
         <div className="flex items-center gap-2 relative">
@@ -3405,7 +3539,7 @@ function EditorContent() {
               ? 'Saved'
               : ''}
           </span>
-          <button onClick={() => setShowExportDialog(true)} disabled={exporting} className="border border-gray-300 text-gray-700 px-4 py-2 rounded-full text-sm font-semibold disabled:opacity-50">
+          <button onClick={() => setShowExportDialog(true)} disabled={exporting} className="border border-gray-300 text-gray-700 px-4 py-2 rounded-full text-sm font-semibold disabled:opacity-50 dark:border-[#3A3A3A] dark:text-gray-200 dark:hover:bg-[#333333]">
             {exporting ? 'Exporting...' : 'Export'}
           </button>
           <button onClick={saveDesign} disabled={saving} className="bg-brand-gradient text-white px-4 py-2 rounded-full text-sm font-semibold disabled:opacity-50">
@@ -3462,7 +3596,7 @@ function EditorContent() {
           onOpenRoadmap={(id) => setRoadmap({ open: true, id })}
         />
 
-        <div className="flex-1 overflow-hidden relative" style={{ background: PASTEBOARD_BG }}>
+        <div className="flex-1 overflow-hidden relative" style={{ background: pasteboardBgFor(theme) }}>
           <Rulers
             fabricCanvasRef={fabricCanvasRef}
             unit={unit}
@@ -3485,10 +3619,10 @@ function EditorContent() {
           <ContextMenu x={contextMenu.x} y={contextMenu.y} items={contextMenuItems()} onClose={() => setContextMenu(null)} />
         )}
 
-        <div className="w-64 bg-white border-l flex flex-col overflow-y-auto">
+        <div className="w-64 bg-white border-l flex flex-col overflow-y-auto dark:bg-[#242424] dark:border-[#3A3A3A] transition-colors duration-150">
           {isPanelOpen('properties') && (
-            <div className="p-3 border-b">
-              <p className="font-semibold text-gray-700 mb-3 text-sm">Properties</p>
+            <div className="p-3 border-b dark:border-[#3A3A3A]">
+              <p className="font-semibold text-gray-700 mb-3 text-sm dark:text-gray-200">Properties</p>
               <PropertiesPanel
                 activeTool={activeTool}
                 selected={selected}
@@ -3497,6 +3631,8 @@ function EditorContent() {
                 maskTargetId={maskTargetId}
                 setMaskTargetId={setMaskTargetId}
                 applyProp={applyProp}
+                applyCharProp={applyCharProp}
+                getTextPropValue={getTextPropValue}
                 applyExactSize={applyExactSize}
                 toggleLockRatio={toggleLockRatio}
                 alignObject={alignObject}
