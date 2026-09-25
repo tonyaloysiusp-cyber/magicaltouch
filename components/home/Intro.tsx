@@ -21,7 +21,7 @@ export function Intro() {
             <br />
             Endless possibilities.
           </h2>
-          <p className="mt-5 text-[#4A4750] max-w-md leading-relaxed">
+          <p className="mt-5 text-[#4A4750] dark:text-[#B7B2C6] max-w-md leading-relaxed">
             From quick social posts to professional marketing materials and print-ready
             designs, Magical Touch gives you everything you need to create beautiful
             content in one place.

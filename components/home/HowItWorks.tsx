@@ -14,7 +14,7 @@ export function HowItWorks() {
   return (
     <section className="max-w-6xl mx-auto px-6 py-24">
       <Reveal>
-        <p className="text-xs font-semibold text-[#6C4FD1] tracking-wide uppercase text-center">How it works</p>
+        <p className="text-xs font-semibold text-[#6C4FD1] dark:text-[#B9A6F2] tracking-wide uppercase text-center">How it works</p>
         <h2 className="mt-3 font-[family-name:var(--font-display)] text-3xl sm:text-4xl leading-tight text-center">
           From idea to finished design.
         </h2>
@@ -25,17 +25,17 @@ export function HowItWorks() {
           <Reveal key={s.title} delayMs={i * 100}>
             <div className="relative flex lg:flex-col items-start lg:items-center gap-4 lg:text-center">
               {i < STEPS.length - 1 && (
-                <div className="hidden lg:block absolute top-6 left-[calc(50%+2rem)] w-[calc(100%-4rem)] h-px bg-black/10" />
+                <div className="hidden lg:block absolute top-6 left-[calc(50%+2rem)] w-[calc(100%-4rem)] h-px bg-black/10 dark:bg-white/10" />
               )}
               <div className="relative shrink-0 w-12 h-12 rounded-full bg-brand-gradient flex items-center justify-center text-white font-semibold z-10">
                 {i + 1}
               </div>
               <div>
                 <div className="flex items-center gap-2 lg:justify-center">
-                  <s.icon size={16} className="text-[#6C4FD1]" />
-                  <h3 className="font-semibold text-[#17161B]">{s.title}</h3>
+                  <s.icon size={16} className="text-[#6C4FD1] dark:text-[#B9A6F2]" />
+                  <h3 className="font-semibold text-[#17161B] dark:text-[#F3F1F7]">{s.title}</h3>
                 </div>
-                <p className="mt-1.5 text-sm text-[#4A4750] leading-relaxed lg:max-w-[13rem]">{s.body}</p>
+                <p className="mt-1.5 text-sm text-[#4A4750] dark:text-[#B7B2C6] leading-relaxed lg:max-w-[13rem]">{s.body}</p>
               </div>
             </div>
           </Reveal>

@@ -26,18 +26,18 @@ export function CreatorSection() {
         </Reveal>
 
         <Reveal delayMs={150}>
-          <p className="text-xs font-semibold text-[#6C4FD1] tracking-wide uppercase">For creators</p>
+          <p className="text-xs font-semibold text-[#6C4FD1] dark:text-[#B9A6F2] tracking-wide uppercase">For creators</p>
           <h2 className="mt-3 font-[family-name:var(--font-display)] text-3xl sm:text-4xl leading-tight">
             Your ideas deserve a magical touch.
           </h2>
-          <p className="mt-5 text-[#4A4750] leading-relaxed max-w-md">
+          <p className="mt-5 text-[#4A4750] dark:text-[#B7B2C6] leading-relaxed max-w-md">
             Whether you're building a personal brand, a side project, or just
             making something for fun, Magical Touch gives independent creators
             the tools to design without limits.
           </p>
           <button
             onClick={goToCreate}
-            className="mt-7 inline-flex items-center gap-2 text-sm font-semibold px-6 py-3.5 rounded-full border border-black/15 hover:border-black/40 transition-colors"
+            className="mt-7 inline-flex items-center gap-2 text-sm font-semibold px-6 py-3.5 rounded-full border border-black/15 dark:border-white/20 hover:border-black/40 dark:hover:border-white/40 transition-colors"
           >
             Start Creating <ArrowRight size={15} />
           </button>

@@ -25,7 +25,7 @@ export function DesignGallery() {
   return (
     <section className="max-w-6xl mx-auto px-6 py-24">
       <Reveal>
-        <p className="text-xs font-semibold text-[#6C4FD1] tracking-wide uppercase">Made in Magical Touch</p>
+        <p className="text-xs font-semibold text-[#6C4FD1] dark:text-[#B9A6F2] tracking-wide uppercase">Made in Magical Touch</p>
         <h2 className="mt-3 font-[family-name:var(--font-display)] text-3xl sm:text-4xl leading-tight max-w-lg">
           Real designs, made by creators like you.
         </h2>
