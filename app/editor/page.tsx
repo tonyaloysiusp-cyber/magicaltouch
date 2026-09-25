@@ -3598,8 +3598,11 @@ function EditorContent() {
           proxy, not a <link> straight to fonts.googleapis.com: that
           third-party request is exactly what ad/tracker blockers commonly
           block by default, which silently broke every non-aliased font
-          for any visitor with one active. */}
-      <style>{allFontFacesCSS()}</style>
+          for any visitor with one active. dangerouslySetInnerHTML (not a
+          JSX text child) because this string is large enough that React's
+          streaming SSR can flush it in multiple chunks, which then fails
+          hydration's server/client text comparison on a plain child. */}
+      <style dangerouslySetInnerHTML={{ __html: allFontFacesCSS() }} />
       {checkingAuth && (
         <div className="fixed inset-0 z-[999] flex items-center justify-center bg-gray-50 text-gray-400">
           Checking access...

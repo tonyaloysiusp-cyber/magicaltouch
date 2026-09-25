@@ -5,7 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Fraunces, Inter } from 'next/font/google';
-import { Menu, X, Instagram, Twitter, Facebook, Youtube } from 'lucide-react';
+import { Menu, X, Search, ArrowUpRight, Instagram, Twitter, Facebook, Youtube } from 'lucide-react';
 import { resolveAuthedPath } from '@/lib/authNav';
 import { MockDesignCard } from '@/components/MockDesignCard';
 import { Category, Template, CATEGORIES, TEMPLATES, fetchTemplates } from '@/lib/templatesData';
@@ -28,12 +28,26 @@ const body = Inter({
 const NAV_LINKS = [
   { label: 'Home', href: '/' },
   { label: 'Templates', href: '/templates' },
+  { label: 'Features', href: '/#features' },
   { label: 'Pricing', href: '/#pricing' },
 ];
+
+// A varied tile height per template, keyed off its own aspect ratio, so
+// the gallery reads as a curated visual wall rather than a uniform grid
+// of identical boxes — the same masonry approach the homepage's own
+// design showcase uses.
+function tileHeight(t: Template): string {
+  const ratio = t.height / t.width;
+  if (ratio >= 1.5) return 'h-96';
+  if (ratio >= 1.05) return 'h-80';
+  if (ratio >= 0.85) return 'h-64';
+  return 'h-52';
+}
 
 export default function TemplatesPage() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [activeCategory, setActiveCategory] = useState<Category | 'All'>('All');
+  const [query, setQuery] = useState('');
   const [loggedIn, setLoggedIn] = useState(false);
   const [templates, setTemplates] = useState<Template[]>(TEMPLATES);
   const router = useRouter();
@@ -57,10 +71,14 @@ export default function TemplatesPage() {
     return () => sub.subscription.unsubscribe();
   }, []);
 
-  const filtered = useMemo(
-    () => (activeCategory === 'All' ? templates : templates.filter((t) => t.category === activeCategory)),
-    [activeCategory, templates]
-  );
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return templates.filter((t) => {
+      const matchesCategory = activeCategory === 'All' || t.category === activeCategory;
+      const matchesQuery = !q || t.name.toLowerCase().includes(q) || t.category.toLowerCase().includes(q);
+      return matchesCategory && matchesQuery;
+    });
+  }, [activeCategory, query, templates]);
 
   const goToWorkspace = async () => {
     setMenuOpen(false);
@@ -104,7 +122,7 @@ export default function TemplatesPage() {
             )}
             <button
               onClick={goToWorkspace}
-              className="text-sm font-semibold text-white px-5 py-2.5 rounded-full bg-brand-gradient shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all"
+              className="relative overflow-hidden text-sm font-semibold text-white px-5 py-2.5 rounded-full bg-brand-gradient shadow-[0_6px_16px_-6px_rgba(108,79,209,0.5)] hover:shadow-[0_10px_20px_-6px_rgba(108,79,209,0.6)] hover:-translate-y-0.5 transition-all before:content-[''] before:absolute before:inset-x-0 before:top-0 before:h-1/2 before:bg-white/25 before:rounded-t-full"
             >
               Start Designing
             </button>
@@ -143,12 +161,24 @@ export default function TemplatesPage() {
         )}
       </header>
 
-      <section className="max-w-5xl mx-auto px-6 pt-16 pb-10 text-center">
-        <h1 className="font-[family-name:var(--font-display)] text-4xl sm:text-5xl">Template Library</h1>
-        <p className="mt-4 text-[#4B4560] max-w-lg mx-auto leading-relaxed">
-          Choose a starting point, customize it and make it yours. Every template opens the
-          editor at the correct size and orientation for its format.
+      <section className="max-w-4xl mx-auto px-6 pt-20 pb-12 text-center">
+        <p className="text-xs font-semibold text-[#6C4FD1] tracking-wide uppercase">Templates</p>
+        <h1 className="mt-4 font-[family-name:var(--font-display)] text-5xl sm:text-6xl leading-[1.05] tracking-tight">
+          Start somewhere brilliant.
+        </h1>
+        <p className="mt-5 text-lg text-[#4B4560] max-w-lg mx-auto leading-relaxed">
+          Choose a starting point. Add your style. Make it yours.
         </p>
+
+        <div className="mt-8 max-w-md mx-auto relative">
+          <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#4B4560]/60" />
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search templates..."
+            className="w-full pl-11 pr-4 py-3 rounded-full border border-black/10 bg-white text-sm placeholder:text-[#4B4560]/60 focus:outline-none focus:border-[#6C4FD1]/50 focus:ring-2 focus:ring-[#6C4FD1]/15 transition-all"
+          />
+        </div>
       </section>
 
       <div className="max-w-7xl mx-auto px-6">
@@ -169,41 +199,41 @@ export default function TemplatesPage() {
         </div>
       </div>
 
-      <section className="max-w-7xl mx-auto px-6 py-12">
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {filtered.map((t) => {
-            const isTall = t.height >= t.width;
-            return (
-              <div key={t.name} className="group rounded-2xl overflow-hidden border border-black/5 bg-white">
-                <div className={`relative overflow-hidden ${isTall ? 'h-64' : 'h-48'}`}>
-                  <div className="absolute inset-0 transition-transform duration-500 group-hover:scale-105">
-                    <MockDesignCard colors={t.colors} label={t.category} />
-                  </div>
-                  <div className="absolute inset-0 bg-[#14121F]/0 group-hover:bg-[#14121F]/35 transition-colors flex items-center justify-center">
-                    <button
-                      onClick={() => useTemplate(t)}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity text-sm font-semibold text-white bg-white/15 backdrop-blur px-4 py-2 rounded-full border border-white/30 hover:bg-white/25"
-                    >
-                      Use Template
-                    </button>
-                  </div>
+      <section className="max-w-7xl mx-auto px-6 py-14">
+        <div className="columns-1 sm:columns-2 lg:columns-3 gap-5 [&>*]:mb-5">
+          {filtered.map((t) => (
+            <div key={t.name} className="group break-inside-avoid rounded-2xl overflow-hidden border border-black/5 bg-white shadow-sm hover:shadow-xl transition-shadow duration-300">
+              <div className={`relative overflow-hidden ${tileHeight(t)}`}>
+                <div className="absolute inset-0 transition-transform duration-500 group-hover:scale-105">
+                  <MockDesignCard colors={t.colors} label={t.category} />
                 </div>
-                <div className="p-4 flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-semibold">{t.name}</p>
-                    <p className="text-xs text-[#4B4560] mt-0.5">{t.category}</p>
-                  </div>
-                  <span className="text-[11px] text-[#4B4560] shrink-0">
-                    {t.width}×{t.height}
-                  </span>
+                <div className="absolute inset-0 bg-[#14121F]/0 group-hover:bg-[#14121F]/40 transition-colors duration-300 flex items-center justify-center">
+                  <button
+                    onClick={() => useTemplate(t)}
+                    className="opacity-0 group-hover:opacity-100 transition-opacity inline-flex items-center gap-1.5 text-sm font-semibold text-[#14121F] bg-white px-4 py-2 rounded-full"
+                  >
+                    Use Template <ArrowUpRight size={14} />
+                  </button>
                 </div>
               </div>
-            );
-          })}
+              <div className="p-4 flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-semibold">{t.name}</p>
+                  <p className="text-xs text-[#4B4560] mt-0.5">{t.category}</p>
+                </div>
+                <span className="text-[11px] text-[#4B4560] shrink-0">
+                  {t.width}×{t.height}
+                </span>
+              </div>
+            </div>
+          ))}
         </div>
 
         {filtered.length === 0 && (
-          <p className="text-center text-sm text-[#4B4560] py-16">No templates in this category yet.</p>
+          <div className="text-center py-20">
+            <p className="text-lg font-[family-name:var(--font-display)]">No templates match yet.</p>
+            <p className="mt-2 text-sm text-[#4B4560]">Try a different search or category.</p>
+          </div>
         )}
       </section>
 
@@ -211,7 +241,7 @@ export default function TemplatesPage() {
         <div className="max-w-7xl mx-auto px-6 py-12 flex flex-col sm:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-3">
             <Image src="/logo.png" alt="Magical Touch" width={120} height={24} />
-            <span className="text-xs text-[#4B4560]">© 2026 Magical Touch</span>
+            <span className="text-xs text-[#4B4560]">© {new Date().getFullYear()} Magical Touch</span>
           </div>
           <div className="flex gap-3 text-[#4B4560]">
             <Instagram size={16} />

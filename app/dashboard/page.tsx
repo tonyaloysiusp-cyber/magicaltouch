@@ -4,12 +4,26 @@ import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { MoreVertical, Pencil, Copy, Download, Trash2 } from 'lucide-react';
+import { Fraunces, Inter } from 'next/font/google';
+import { MoreVertical, Pencil, Copy, Download, Trash2, Plus, Sparkles, ArrowRight } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { ProfileMenu } from '@/components/ProfileMenu';
 import { DesignLimitDialog } from '@/components/DesignLimitDialog';
 import { MAX_DESIGNS, getOrCreateProfile } from '@/lib/profile';
 import { allFontFacesCSS, ensureFontsLoadedForCanvasJSON } from '@/lib/editor/googleFonts';
+
+const display = Fraunces({
+  subsets: ['latin'],
+  weight: ['400', '500', '600'],
+  style: ['normal', 'italic'],
+  variable: '--font-display',
+});
+
+const body = Inter({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-body',
+});
 
 const RECENT_COUNT = 6;
 
@@ -234,83 +248,124 @@ export default function DashboardPage() {
   };
 
   return (
-    <main className="min-h-screen p-6">
+    <main className={`${display.variable} ${body.variable} font-[family-name:var(--font-body)] min-h-screen bg-[#F7F5F0]`}>
       {/* Same same-origin font-face proxy the editor declares -- the
           off-screen thumbnail backfill above needs these @font-face rules
           present somewhere in the document for document.fonts.load() to
-          find anything to load. */}
-      <style>{allFontFacesCSS()}</style>
-      <div className="flex items-center justify-between mb-10">
-        <Link href="/" title="Go to homepage">
-          <Image src="/logo.png" alt="Magical Touch" width={180} height={36} />
-        </Link>
-        <div className="flex items-center gap-1">
-          <Link href="/" className="text-sm font-medium text-gray-600 hover:text-gray-900 px-4 py-2">
-            Home
+          find anything to load. dangerouslySetInnerHTML (not a JSX text
+          child) because this string is large enough that React's
+          streaming SSR can flush it in multiple chunks, which then fails
+          hydration's server/client text comparison on a plain child. */}
+      <style dangerouslySetInnerHTML={{ __html: allFontFacesCSS() }} />
+
+      <header className="sticky top-0 z-40 bg-[#F7F5F0]/90 backdrop-blur border-b border-black/5">
+        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+          <Link href="/" title="Go to homepage" className="shrink-0">
+            <Image src="/logo.png" alt="Magical Touch" width={150} height={30} />
           </Link>
-          <Link href="/templates" className="text-sm font-medium text-gray-600 hover:text-gray-900 px-4 py-2">
-            Templates
-          </Link>
-          <Link href="/#pricing" className="text-sm font-medium text-gray-600 hover:text-gray-900 px-4 py-2">
-            Pricing
-          </Link>
-          <Link
-            href="/studio"
-            title="A new editor engine being built from scratch — only pan/zoom/layers/undo work so far, saved locally in this browser only"
-            className="text-sm font-medium text-gray-400 hover:text-gray-700 px-4 py-2"
-          >
-            Studio (Preview)
-          </Link>
-          <button
-            onClick={goToNewPhotoProject}
-            className="ml-2 border border-gray-300 text-gray-700 px-4 py-2 rounded-full text-sm font-semibold hover:bg-gray-50"
-          >
-            + New Photo Project
-          </button>
-          <Link
-            href="/create"
-            onClick={handleNewDesignClick}
-            className="bg-brand-gradient text-white px-5 py-2 rounded-full text-sm font-semibold"
-          >
-            + New Design
-          </Link>
-          <ProfileMenu />
+          <div className="hidden md:flex items-center gap-1">
+            <Link href="/" className="text-sm font-medium text-[#4A4750] hover:text-[#17161B] px-3 py-2">
+              Home
+            </Link>
+            <Link href="/templates" className="text-sm font-medium text-[#4A4750] hover:text-[#17161B] px-3 py-2">
+              Templates
+            </Link>
+            <Link href="/#pricing" className="text-sm font-medium text-[#4A4750] hover:text-[#17161B] px-3 py-2">
+              Pricing
+            </Link>
+            <Link
+              href="/studio"
+              title="A new editor engine being built from scratch — only pan/zoom/layers/undo work so far, saved locally in this browser only"
+              className="text-sm font-medium text-[#4A4750]/50 hover:text-[#4A4750] px-3 py-2"
+            >
+              Studio (Preview)
+            </Link>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={goToNewPhotoProject}
+              className="hidden sm:inline-flex items-center gap-1.5 border border-black/15 text-[#17161B] px-4 py-2.5 rounded-full text-sm font-semibold hover:border-black/30 transition-colors"
+            >
+              + Photo Project
+            </button>
+            <Link
+              href="/create"
+              onClick={handleNewDesignClick}
+              className="relative overflow-hidden inline-flex items-center gap-1.5 text-white px-4 py-2.5 rounded-full text-sm font-semibold bg-brand-gradient shadow-[0_6px_16px_-6px_rgba(108,79,209,0.5)] hover:shadow-[0_10px_20px_-6px_rgba(108,79,209,0.6)] hover:-translate-y-0.5 transition-all before:content-[''] before:absolute before:inset-x-0 before:top-0 before:h-1/2 before:bg-white/25 before:rounded-t-full"
+            >
+              <Plus size={15} /> New Design
+            </Link>
+            <ProfileMenu />
+          </div>
         </div>
+      </header>
+
+      <div className="max-w-6xl mx-auto px-6 py-10">
+        {showLimitWarning && <DesignLimitDialog onCancel={() => setShowLimitWarning(false)} />}
+
+        <div className="flex flex-wrap items-end justify-between gap-6 mb-10">
+          <div>
+            <p className="text-xs font-semibold text-[#6C4FD1] tracking-wide uppercase flex items-center gap-1.5">
+              <Sparkles size={12} /> Your creative space
+            </p>
+            <h1 className="mt-2 font-[family-name:var(--font-display)] text-4xl sm:text-5xl leading-[1.05] tracking-tight text-[#17161B]">
+              {displayName ? `Welcome back, ${displayName}.` : 'Welcome back.'}
+            </h1>
+            <p className="mt-3 text-[#4A4750]">Ready to make something magical?</p>
+          </div>
+          <Link
+            href="/templates"
+            className="inline-flex items-center gap-2 text-sm font-semibold px-5 py-3 rounded-full border border-black/15 hover:border-black/30 transition-colors shrink-0"
+          >
+            Explore Templates <ArrowRight size={14} />
+          </Link>
+        </div>
+
+        {loading && <p className="text-[#4A4750]/60">Loading your designs...</p>}
+
+        {!loading && designs.length === 0 && (
+          <div className="relative overflow-hidden rounded-3xl border border-black/10 bg-white p-12 sm:p-16 text-center">
+            <div className="pointer-events-none absolute -right-16 -top-16 w-64 h-64 rounded-full bg-brand-gradient opacity-10" />
+            <div className="pointer-events-none absolute -left-16 -bottom-16 w-64 h-64 rounded-full bg-brand-gradient opacity-10" />
+            <div className="relative">
+              <div className="mx-auto w-16 h-16 rounded-2xl bg-brand-gradient flex items-center justify-center shadow-[0_16px_28px_-8px_rgba(108,79,209,0.45)]">
+                <Sparkles size={26} className="text-white" />
+              </div>
+              <h2 className="mt-6 font-[family-name:var(--font-display)] text-3xl sm:text-4xl tracking-tight text-[#17161B]">
+                Your canvas is waiting.
+              </h2>
+              <p className="mt-3 text-[#4A4750] max-w-sm mx-auto leading-relaxed">
+                Start with an idea and give it your magical touch.
+              </p>
+              <Link
+                href="/create"
+                onClick={handleNewDesignClick}
+                className="relative overflow-hidden mt-7 inline-flex items-center gap-2 text-sm font-semibold text-white px-6 py-3.5 rounded-full bg-brand-gradient shadow-[0_10px_24px_-8px_rgba(108,79,209,0.55)] hover:shadow-[0_14px_30px_-8px_rgba(108,79,209,0.65)] hover:-translate-y-0.5 transition-all before:content-[''] before:absolute before:inset-x-0 before:top-0 before:h-1/2 before:bg-white/25 before:rounded-t-full"
+              >
+                Create Your First Design <ArrowRight size={15} />
+              </Link>
+            </div>
+          </div>
+        )}
+
+        {!loading && designs.length > 0 && (
+          <>
+            <h2 className="text-xs font-semibold text-[#4A4750] tracking-wide uppercase mb-4">Recent Designs</h2>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-5 mb-12">
+              {designs.slice(0, RECENT_COUNT).map((design) => renderDesignCard(design))}
+            </div>
+          </>
+        )}
+
+        {!loading && designs.length > RECENT_COUNT && (
+          <>
+            <h2 className="text-xs font-semibold text-[#4A4750] tracking-wide uppercase mb-4">All Designs</h2>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-5">
+              {designs.slice(RECENT_COUNT).map((design) => renderDesignCard(design))}
+            </div>
+          </>
+        )}
       </div>
-
-      {showLimitWarning && <DesignLimitDialog onCancel={() => setShowLimitWarning(false)} />}
-
-      <h1 className="text-3xl font-bold text-gray-800">{displayName ? `Welcome back, ${displayName}!` : 'Welcome!'}</h1>
-      <p className="mt-2 text-gray-500 mb-8">Create something new, or jump back into a recent design.</p>
-
-      {loading && <p className="text-gray-400">Loading your designs...</p>}
-
-      {!loading && designs.length === 0 && (
-        <div className="border border-dashed rounded-xl p-10 text-center text-gray-400">
-          <p>You haven't created any designs yet.</p>
-          <Link href="/create" className="text-blue-500 underline mt-2 inline-block">
-            Start your first design
-          </Link>
-        </div>
-      )}
-
-      {!loading && designs.length > 0 && (
-        <>
-          <h2 className="text-lg font-semibold text-gray-700 mb-3">Recent Files</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mb-10">
-            {designs.slice(0, RECENT_COUNT).map((design) => renderDesignCard(design))}
-          </div>
-        </>
-      )}
-
-      {!loading && designs.length > RECENT_COUNT && (
-        <>
-          <h2 className="text-lg font-semibold text-gray-700 mb-3">All Designs</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-            {designs.slice(RECENT_COUNT).map((design) => renderDesignCard(design))}
-          </div>
-        </>
-      )}
     </main>
   );
 
@@ -318,10 +373,10 @@ export default function DashboardPage() {
     return (
       <div
               key={design.id}
-              className="relative border rounded-xl p-4 hover:shadow-md transition bg-white"
+              className="group relative rounded-2xl border border-black/10 bg-white p-3 hover:shadow-[0_20px_40px_-20px_rgba(23,22,27,0.25)] hover:-translate-y-1 transition-all duration-300"
             >
               <Link href={`/editor?designId=${design.id}&w=${design.width}&h=${design.height}`}>
-                <div className="aspect-square bg-gray-100 rounded-lg mb-3 overflow-hidden flex items-center justify-center text-gray-300 text-xs">
+                <div className="aspect-square bg-[#F7F5F0] rounded-xl mb-3 overflow-hidden flex items-center justify-center text-[#4A4750]/40 text-xs">
                   {design.thumbnail ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={design.thumbnail} alt={design.name} className="w-full h-full object-contain" />
@@ -340,18 +395,18 @@ export default function DashboardPage() {
                     if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
                     if (e.key === 'Escape') setRenamingId(null);
                   }}
-                  className="text-sm font-medium text-gray-800 border rounded px-1.5 py-0.5 w-full"
+                  className="text-sm font-medium text-[#17161B] border border-black/15 rounded px-1.5 py-0.5 w-full"
                 />
               ) : (
-                <p className="text-sm font-medium text-gray-800 truncate">{design.name}</p>
+                <p className="text-sm font-medium text-[#17161B] truncate px-0.5">{design.name}</p>
               )}
-              <p className="text-xs text-gray-400">
+              <p className="text-xs text-[#4A4750]/70 px-0.5">
                 {design.width} × {design.height} · {new Date(design.updated_at).toLocaleDateString()}
               </p>
 
               <button
                 onClick={() => setMenuOpenId((v) => (v === design.id ? null : design.id))}
-                className="absolute top-3 right-3 p-1 rounded-full bg-white/90 border text-gray-500 hover:text-gray-800"
+                className="absolute top-5 right-5 p-1.5 rounded-full bg-white/95 border border-black/10 text-[#4A4750] opacity-70 group-hover:opacity-100 transition-opacity hover:text-[#17161B]"
                 title="More options"
               >
                 <MoreVertical size={14} />
@@ -360,28 +415,28 @@ export default function DashboardPage() {
               {menuOpenId === design.id && (
                 <div
                   ref={menuRef}
-                  className="absolute top-10 right-3 z-10 bg-white border rounded-lg shadow-lg py-1 w-40 text-sm"
+                  className="absolute top-12 right-5 z-10 bg-white border border-black/10 rounded-xl shadow-lg py-1 w-40 text-sm"
                 >
                   <button
                     onClick={() => {
                       setMenuOpenId(null);
                       setRenamingId(design.id);
                     }}
-                    className="w-full flex items-center gap-2 px-3 py-1.5 text-left hover:bg-gray-50 text-gray-700"
+                    className="w-full flex items-center gap-2 px-3 py-1.5 text-left hover:bg-[#F7F5F0] text-[#4A4750]"
                   >
                     <Pencil size={13} /> Rename
                   </button>
                   <button
                     onClick={() => duplicateDesign(design)}
                     disabled={busyId === design.id}
-                    className="w-full flex items-center gap-2 px-3 py-1.5 text-left hover:bg-gray-50 text-gray-700 disabled:opacity-50"
+                    className="w-full flex items-center gap-2 px-3 py-1.5 text-left hover:bg-[#F7F5F0] text-[#4A4750] disabled:opacity-50"
                   >
                     <Copy size={13} /> {busyId === design.id ? 'Duplicating...' : 'Duplicate'}
                   </button>
                   <Link
                     href={`/editor?designId=${design.id}&w=${design.width}&h=${design.height}&autoExport=png`}
                     onClick={() => setMenuOpenId(null)}
-                    className="w-full flex items-center gap-2 px-3 py-1.5 text-left hover:bg-gray-50 text-gray-700"
+                    className="w-full flex items-center gap-2 px-3 py-1.5 text-left hover:bg-[#F7F5F0] text-[#4A4750]"
                   >
                     <Download size={13} /> Download (PNG)
                   </Link>
