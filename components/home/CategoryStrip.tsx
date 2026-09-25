@@ -13,10 +13,10 @@ const CATEGORIES = [
 
 export function CategoryStrip() {
   return (
-    <section className="border-y border-black/10 bg-white">
+    <section className="border-y border-black/10 dark:border-white/10 bg-white dark:bg-[#17151F]">
       <div className="max-w-6xl mx-auto px-6 py-14">
         <Reveal>
-          <p className="text-xs font-semibold text-[#4A4750] tracking-wide uppercase text-center">
+          <p className="text-xs font-semibold text-[#4A4750] dark:text-[#B7B2C6] tracking-wide uppercase text-center">
             Made for every kind of creative work
           </p>
         </Reveal>
@@ -28,7 +28,7 @@ export function CategoryStrip() {
                   className="w-28 h-20 md:w-full md:h-16 rounded-lg transition-transform duration-300 group-hover:-translate-y-1"
                   style={{ background: `linear-gradient(135deg, ${c.colors[0]}, ${c.colors[1]})` }}
                 />
-                <p className="mt-2 text-xs font-medium text-[#17161B] text-center">{c.label}</p>
+                <p className="mt-2 text-xs font-medium text-[#17161B] dark:text-[#F3F1F7] text-center">{c.label}</p>
               </div>
             </Reveal>
           ))}

@@ -52,7 +52,7 @@ export function Features() {
   return (
     <section id="features" className="max-w-6xl mx-auto px-6 py-24">
       <Reveal>
-        <p className="text-xs font-semibold text-[#6C4FD1] tracking-wide uppercase">Features</p>
+        <p className="text-xs font-semibold text-[#6C4FD1] dark:text-[#B9A6F2] tracking-wide uppercase">Features</p>
         <h2 className="mt-3 font-[family-name:var(--font-display)] text-3xl sm:text-4xl leading-tight max-w-lg">
           Everything you need to create.
         </h2>
@@ -65,15 +65,15 @@ export function Features() {
             delayMs={i * 70}
             className={f.big ? 'md:col-span-2' : 'md:col-span-1'}
           >
-            <div className="group h-full rounded-2xl border border-black/10 p-7 hover:border-black/20 hover:-translate-y-1 transition-all duration-300 bg-white">
+            <div className="group h-full rounded-2xl border border-black/10 dark:border-white/10 p-7 hover:border-black/20 dark:hover:border-white/20 hover:-translate-y-1 transition-all duration-300 bg-white dark:bg-[#1B1926]">
               <div
                 className="w-11 h-11 rounded-xl flex items-center justify-center text-white shadow-[inset_0_1px_1px_rgba(255,255,255,0.5),inset_0_-3px_5px_rgba(0,0,0,0.15),0_8px_16px_-8px_rgba(0,0,0,0.35)]"
                 style={{ background: `linear-gradient(135deg, ${f.colors[0]}, ${f.colors[1]})` }}
               >
                 <f.icon size={19} />
               </div>
-              <h3 className="mt-5 font-semibold text-lg text-[#17161B]">{f.title}</h3>
-              <p className="mt-2 text-sm text-[#4A4750] leading-relaxed max-w-sm">{f.body}</p>
+              <h3 className="mt-5 font-semibold text-lg text-[#17161B] dark:text-[#F3F1F7]">{f.title}</h3>
+              <p className="mt-2 text-sm text-[#4A4750] dark:text-[#B7B2C6] leading-relaxed max-w-sm">{f.body}</p>
             </div>
           </Reveal>
         ))}

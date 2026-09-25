@@ -27,12 +27,12 @@ export function TemplateShowcase() {
   };
 
   return (
-    <section className="bg-white border-y border-black/10">
+    <section className="bg-white dark:bg-[#17151F] border-y border-black/10 dark:border-white/10">
       <div className="max-w-6xl mx-auto px-6 py-24">
         <Reveal>
           <div className="flex flex-wrap items-end justify-between gap-6">
             <div>
-              <p className="text-xs font-semibold text-[#6C4FD1] tracking-wide uppercase">Templates</p>
+              <p className="text-xs font-semibold text-[#6C4FD1] dark:text-[#B9A6F2] tracking-wide uppercase">Templates</p>
               <h2 className="mt-3 font-[family-name:var(--font-display)] text-3xl sm:text-4xl leading-tight">
                 A running start for every project.
               </h2>
@@ -48,8 +48,8 @@ export function TemplateShowcase() {
                 onClick={() => setActive(c)}
                 className={`shrink-0 text-sm font-medium px-4 py-2 rounded-full border transition-colors ${
                   active === c
-                    ? 'bg-[#17161B] text-white border-[#17161B]'
-                    : 'border-black/15 text-[#4A4750] hover:border-black/40'
+                    ? 'bg-[#17161B] dark:bg-white text-white dark:text-[#17161B] border-[#17161B] dark:border-white'
+                    : 'border-black/15 dark:border-white/20 text-[#4A4750] dark:text-[#B7B2C6] hover:border-black/40 dark:hover:border-white/40'
                 }`}
               >
                 {c}
@@ -73,8 +73,8 @@ export function TemplateShowcase() {
                     </span>
                   </div>
                 </div>
-                <p className="mt-2 text-xs font-medium text-[#17161B] truncate">{t.name}</p>
-                <p className="text-[11px] text-[#4A4750]">{t.category}</p>
+                <p className="mt-2 text-xs font-medium text-[#17161B] dark:text-[#F3F1F7] truncate">{t.name}</p>
+                <p className="text-[11px] text-[#4A4750] dark:text-[#8A8496]">{t.category}</p>
               </button>
             </Reveal>
           ))}
