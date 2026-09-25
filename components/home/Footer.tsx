@@ -40,8 +40,8 @@ export function Footer() {
           <div className="col-span-2 md:col-span-1">
             <Image src="/logo.png" alt="Magical Touch" width={140} height={28} />
             <p className="mt-4 text-sm text-[#4A4750] dark:text-[#8A8496] max-w-[16rem] leading-relaxed">
-              A simple, powerful design workspace for creators, businesses and
-              professionals.
+              Your creative space for turning ideas into designs people
+              remember.
             </p>
           </div>
 

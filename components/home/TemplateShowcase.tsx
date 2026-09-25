@@ -1,8 +1,9 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowUpRight } from 'lucide-react';
+import { ArrowRight, ArrowUpRight } from 'lucide-react';
 import { resolveAuthedPath } from '@/lib/authNav';
 import { CATEGORIES, TEMPLATES, Category, Template, fetchTemplates } from '@/lib/templatesData';
 import { MockDesignCard } from '@/components/MockDesignCard';
@@ -33,10 +34,19 @@ export function TemplateShowcase() {
           <div className="flex flex-wrap items-end justify-between gap-6">
             <div>
               <p className="text-xs font-semibold text-[#6C4FD1] dark:text-[#B9A6F2] tracking-wide uppercase">Templates</p>
-              <h2 className="mt-3 font-[family-name:var(--font-display)] text-3xl sm:text-4xl leading-tight">
-                A running start for every project.
+              <h2 className="mt-3 font-[family-name:var(--font-display)] text-4xl sm:text-5xl leading-[1.05] tracking-tight">
+                Start with inspiration.
               </h2>
+              <p className="mt-4 text-[#4A4750] dark:text-[#B7B2C6] max-w-md leading-relaxed">
+                Choose a starting point. Add your style. Make it yours.
+              </p>
             </div>
+            <Link
+              href="/templates"
+              className="hidden sm:inline-flex items-center gap-2 text-sm font-semibold px-6 py-3.5 rounded-full border border-black/15 dark:border-white/20 hover:border-black/40 dark:hover:border-white/40 transition-colors shrink-0"
+            >
+              Explore All Templates <ArrowRight size={15} />
+            </Link>
           </div>
         </Reveal>
 
@@ -78,6 +88,15 @@ export function TemplateShowcase() {
               </button>
             </Reveal>
           ))}
+        </div>
+
+        <div className="mt-10 flex justify-center sm:hidden">
+          <Link
+            href="/templates"
+            className="inline-flex items-center gap-2 text-sm font-semibold px-6 py-3.5 rounded-full border border-black/15 dark:border-white/20"
+          >
+            Explore All Templates <ArrowRight size={15} />
+          </Link>
         </div>
       </div>
     </section>

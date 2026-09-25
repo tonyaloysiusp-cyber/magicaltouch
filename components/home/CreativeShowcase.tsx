@@ -18,9 +18,9 @@ export function CreativeShowcase({ theme }: { theme: HomeTheme }) {
       <div className="grid lg:grid-cols-[1fr_0.85fr] gap-14 items-center">
         <Reveal>
           <p className="text-xs font-semibold text-[#6C4FD1] dark:text-[#B9A6F2] tracking-wide uppercase">
-            Your Creative Space
+            Day or night
           </p>
-          <h2 className="mt-3 font-[family-name:var(--font-display)] text-3xl sm:text-4xl leading-tight">
+          <h2 className="mt-3 font-[family-name:var(--font-display)] text-4xl sm:text-5xl leading-[1.05] tracking-tight">
             Design in the light.
             <br />
             Create through the night.

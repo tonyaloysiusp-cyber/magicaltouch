@@ -73,10 +73,10 @@ export function CreativeCarousel() {
         <div className="flex items-end justify-between mb-6">
           <div>
             <p className="text-xs font-semibold text-[#6C4FD1] dark:text-[#B9A6F2] tracking-wide uppercase">
-              Made for every kind of creative work
+              Creative possibilities
             </p>
-            <h2 className="mt-2 font-[family-name:var(--font-display)] text-3xl sm:text-4xl leading-tight">
-              One tool. Endless directions.
+            <h2 className="mt-2 font-[family-name:var(--font-display)] text-4xl sm:text-5xl leading-[1.05] tracking-tight">
+              Made for ideas worth seeing.
             </h2>
           </div>
           <div className="hidden sm:flex items-center gap-2">
