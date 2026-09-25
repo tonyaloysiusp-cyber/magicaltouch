@@ -105,6 +105,11 @@ interface Props {
 export interface PhotoEditorHandle {
   undo: () => void;
   redo: () => void;
+  // Same flatten-and-hand-off as clicking "Apply to Design", callable
+  // from outside (Export/Save while this workspace is still open) so
+  // those never ship the Main Design canvas's stale, pre-edit image.
+  // Returns false when there was nothing to apply (no layers yet).
+  applyNow: () => boolean;
 }
 
 type PhotoTool =
@@ -617,7 +622,7 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
   // Exposes undo/redo to the host page so its OWN top-bar Undo/Redo
   // buttons can drive this workspace's history while it's the one
   // showing, instead of staying wired to Main Design's (hidden) canvas.
-  useImperativeHandle(ref, () => ({ undo: undoLocal, redo: redoLocal }));
+  useImperativeHandle(ref, () => ({ undo: undoLocal, redo: redoLocal, applyNow: handleApply }));
   useEffect(() => {
     onHistoryChange?.(canUndo, canRedo);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -2127,11 +2132,11 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
   // composites the whole canvas at the BASE layer's own native
   // resolution (clamped for safety) with the editor's own gray backdrop
   // stripped out so transparency survives the flatten.
-  const handleApply = () => {
+  const handleApply = (): boolean => {
     const F = fabricModRef.current;
     const canvas = fabricCanvasRef.current;
     const layers = getLayers();
-    if (!layers.length || !F || !canvas) return;
+    if (!layers.length || !F || !canvas) return false;
     layers.forEach((l: any) => applyAdjustments(l, F, l.__adjustments || DEFAULT_ADJUSTMENTS));
 
     if (layers.length === 1) {
@@ -2141,7 +2146,7 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
       const cur: CropRect = only.__cropRect;
       const isFullImage = cur && cur.x === 0 && cur.y === 0 && Math.round(cur.width) === nat.w && Math.round(cur.height) === nat.h;
       onApply({ dataUrl, adjustments: only.__adjustments || DEFAULT_ADJUSTMENTS, cropRect: isFullImage ? null : cur });
-      return;
+      return true;
     }
 
     const base = layers[0];
@@ -2159,6 +2164,7 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
         multiplier,
       });
       onApply({ dataUrl, adjustments: base.__adjustments || DEFAULT_ADJUSTMENTS, cropRect: null });
+      return true;
     } finally {
       canvas.backgroundColor = prevBg;
       canvas.requestRenderAll();
