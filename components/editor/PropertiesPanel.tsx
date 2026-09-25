@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from 'react';
 import { Lock, Unlock, Scissors } from 'lucide-react';
 import { isDrawTool, TOOL_LABELS, DrawTool, DocUnit, ToolMode } from '@/lib/editor/types';
 import { formatUnit, unitToPx, getObjectPixelSize } from '@/lib/editor/units';
 import { FontPicker } from './FontPicker';
+import { ColorSwatchPicker } from './ColorSwatchPicker';
+import { GradientPresetPicker } from './GradientPresetPicker';
 
 interface Props {
   activeTool: ToolMode;
@@ -215,6 +216,7 @@ export function PropertiesPanel({
 
   const currentFill = selected.fill;
   const isGradientFill = !!(currentFill && typeof currentFill === 'object' && (currentFill as any).type);
+  const isNoneFill = currentFill === '' || currentFill === null || currentFill === undefined;
   const gradType: 'linear' | 'radial' = isGradientFill ? (currentFill as any).type : 'linear';
   const gradStops =
     isGradientFill && (currentFill as any).colorStops
@@ -455,12 +457,14 @@ export function PropertiesPanel({
           <div>
             <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 block mb-1">Fill Type</label>
             <select
-              value={isGradientFill ? gradType : 'solid'}
+              value={isGradientFill ? gradType : isNoneFill ? 'none' : 'solid'}
               disabled={isLocked}
               onChange={(e) => {
                 const v = e.target.value;
-                if (v === 'solid') {
-                  applyProp({ fill: typeof selected.fill === 'string' ? selected.fill : '#3FA9E8' });
+                if (v === 'none') {
+                  applyProp({ fill: '' });
+                } else if (v === 'solid') {
+                  applyProp({ fill: typeof selected.fill === 'string' && selected.fill ? selected.fill : '#3FA9E8' });
                 } else {
                   applyGradientFill(
                     v as 'linear' | 'radial',
@@ -472,6 +476,7 @@ export function PropertiesPanel({
               }}
               className="w-full text-xs border rounded px-2 py-1 disabled:opacity-40 dark:bg-[#2B2B2B] dark:border-[#3A3A3A] dark:text-gray-100"
             >
+              <option value="none">None</option>
               <option value="solid">Solid</option>
               <option value="linear">Linear Gradient</option>
               <option value="radial">Radial Gradient</option>
@@ -480,31 +485,29 @@ export function PropertiesPanel({
 
           {isGradientFill ? (
             <div className="border rounded-lg p-2.5 bg-gray-50 dark:bg-[#2B2B2B] dark:border-[#3A3A3A] flex flex-col gap-2">
+              <GradientPresetPicker
+                disabled={isLocked}
+                onPick={(p) => applyGradientFill(gradType, p.c1, p.c2, gradAngleRef.current)}
+              />
               <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="text-[10px] text-gray-500 dark:text-gray-400 block mb-1">Color 1</label>
-                  <input
-                    type="color"
-                    disabled={isLocked}
-                    value={gradStops[0]?.color || '#3FA9E8'}
-                    onChange={(e) =>
-                      applyGradientFill(gradType, e.target.value, gradStops[1]?.color || '#7ED33E', gradAngleRef.current)
-                    }
-                    className="w-full h-8 border rounded cursor-pointer disabled:opacity-40 dark:border-[#3A3A3A]"
-                  />
-                </div>
-                <div>
-                  <label className="text-[10px] text-gray-500 dark:text-gray-400 block mb-1">Color 2</label>
-                  <input
-                    type="color"
-                    disabled={isLocked}
-                    value={gradStops[1]?.color || '#7ED33E'}
-                    onChange={(e) =>
-                      applyGradientFill(gradType, gradStops[0]?.color || '#3FA9E8', e.target.value, gradAngleRef.current)
-                    }
-                    className="w-full h-8 border rounded cursor-pointer disabled:opacity-40 dark:border-[#3A3A3A]"
-                  />
-                </div>
+                <ColorSwatchPicker
+                  label="Color 1"
+                  disabled={isLocked}
+                  value={gradStops[0]?.color || '#3FA9E8'}
+                  onChange={(c) => {
+                    applyGradientFill(gradType, c || '#3FA9E8', gradStops[1]?.color || '#7ED33E', gradAngleRef.current);
+                    pushHistory();
+                  }}
+                />
+                <ColorSwatchPicker
+                  label="Color 2"
+                  disabled={isLocked}
+                  value={gradStops[1]?.color || '#7ED33E'}
+                  onChange={(c) => {
+                    applyGradientFill(gradType, gradStops[0]?.color || '#3FA9E8', c || '#7ED33E', gradAngleRef.current);
+                    pushHistory();
+                  }}
+                />
               </div>
               {gradType === 'linear' && (
                 <div>
@@ -523,36 +526,30 @@ export function PropertiesPanel({
                   />
                 </div>
               )}
-              <p className="text-[10px] text-gray-400 dark:text-gray-500">
-                Gradient stops are fixed at 2 colors (start/end) in this version. On-canvas
-                draggable gradient handles are not implemented yet.
-              </p>
             </div>
-          ) : (
-            <div>
-              <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 block mb-1">Fill Color</label>
-              <input
-                type="color"
-                disabled={isLocked}
-                value={typeof selected.fill === 'string' ? selected.fill : '#000000'}
-                onChange={(e) => applyProp({ fill: e.target.value }, false)}
-                onBlur={() => pushHistory()}
-                className="w-full h-8 border rounded cursor-pointer disabled:opacity-40 dark:border-[#3A3A3A]"
-              />
-            </div>
-          )}
-
-          <div>
-            <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 block mb-1">Stroke Color</label>
-            <input
-              type="color"
+          ) : !isNoneFill ? (
+            <ColorSwatchPicker
+              label="Fill Color"
+              allowNone
               disabled={isLocked}
-              value={selected.stroke || '#000000'}
-              onChange={(e) => applyProp({ stroke: e.target.value }, false)}
-              onBlur={() => pushHistory()}
-              className="w-full h-8 border rounded cursor-pointer disabled:opacity-40 dark:border-[#3A3A3A]"
+              value={typeof selected.fill === 'string' && selected.fill ? selected.fill : '#000000'}
+              onChange={(c) => {
+                applyProp({ fill: c === null ? '' : c });
+                pushHistory();
+              }}
             />
-          </div>
+          ) : null}
+
+          <ColorSwatchPicker
+            label="Stroke Color"
+            allowNone
+            disabled={isLocked}
+            value={selected.stroke || null}
+            onChange={(c) => {
+              applyProp({ stroke: c === null ? '' : c });
+              pushHistory();
+            }}
+          />
 
           <div>
             <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 block mb-1">Stroke Width ({selected.strokeWidth || 0})</label>
@@ -731,17 +728,15 @@ function TextControls({
             </div>
           </div>
 
-          <div>
-            <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 block mb-1">Color</label>
-            <input
-              type="color"
-              disabled={isLocked}
-              value={typeof fill.value === 'string' ? fill.value : '#000000'}
-              onChange={(e) => applyCharProp({ fill: e.target.value }, false)}
-              onBlur={() => pushHistory()}
-              className="w-full h-8 border rounded cursor-pointer disabled:opacity-40 dark:border-[#3A3A3A]"
-            />
-          </div>
+          <ColorSwatchPicker
+            label="Color"
+            disabled={isLocked}
+            value={typeof fill.value === 'string' ? fill.value : '#000000'}
+            onChange={(c) => {
+              applyCharProp({ fill: c || '#000000' });
+              pushHistory();
+            }}
+          />
 
           <div className="flex gap-1">
             <button

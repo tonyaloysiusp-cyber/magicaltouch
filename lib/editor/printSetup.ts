@@ -96,14 +96,19 @@ const MARK_REACH_FROM_TRIM = MARK_OFFSET + MARK_LENGTH;
 const MARKS_BREATHING_ROOM = 9 * PT_TO_PX;
 
 // The color bar (when enabled) extends further past the bleed edge than
-// the crop marks do, only along the bottom — this is how far, so the
-// bottom margin can grow to fit it instead of getting clipped. Kept in
-// sync with printMarks.ts's buildColorBar, which imports these same
-// constants for its own gap/swatch-height/label sizing.
+// the crop marks do — the CMY/overprint swatches run vertically down the
+// LEFT and RIGHT sides, and a grayscale tint ramp runs along the BOTTOM,
+// matching a real press sheet's control strip layout. These are how far
+// past the bleed edge each extends, so the export margin can grow to fit
+// them instead of getting clipped. Kept in sync with printMarks.ts's
+// buildColorBar/buildGrayRamp, which import these same constants for
+// their own gap/size.
 export const COLOR_BAR_GAP = 3 * PT_TO_PX;
 export const COLOR_BAR_SWATCH_H_MAX = 6 * PT_TO_PX;
 export const COLOR_BAR_LABEL_H = 5 * PT_TO_PX;
 const COLOR_BAR_FOOTPRINT = COLOR_BAR_GAP + COLOR_BAR_SWATCH_H_MAX + COLOR_BAR_LABEL_H;
+export const COLOR_BAR_SIDE_WIDTH = 9 * PT_TO_PX;
+const COLOR_BAR_SIDE_FOOTPRINT = COLOR_BAR_GAP + COLOR_BAR_SIDE_WIDTH;
 
 interface RectLike {
   x: number;
@@ -134,8 +139,8 @@ export function getExportRect(ab: RectLike, print: ArtboardPrintSettings, scope:
   // to clear the color bar's own footprint when it's enabled.
   const marginFromTrim = (bleedSide: number, extraReachFromBleed = 0) =>
     Math.max(bleedSide, MARK_REACH_FROM_TRIM, print.marks.colorBar ? bleedSide + extraReachFromBleed : 0) + MARKS_BREATHING_ROOM;
-  const mLeft = marginFromTrim(b.left);
-  const mRight = marginFromTrim(b.right);
+  const mLeft = marginFromTrim(b.left, COLOR_BAR_SIDE_FOOTPRINT);
+  const mRight = marginFromTrim(b.right, COLOR_BAR_SIDE_FOOTPRINT);
   const mTop = marginFromTrim(b.top);
   const mBottom = marginFromTrim(b.bottom, COLOR_BAR_FOOTPRINT);
   const withMargin: RectLike = {

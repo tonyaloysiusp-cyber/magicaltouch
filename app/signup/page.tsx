@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { getOrCreateProfile, updateProfile } from '@/lib/profile';
+import { ArtworkPanel } from '@/components/ArtworkPanel';
 
 function SignupForm() {
   const [email, setEmail] = useState('');
@@ -42,7 +43,11 @@ function SignupForm() {
 
   if (confirmSent) {
     return (
-      <main className="flex min-h-screen flex-col items-center justify-center p-6">
+      <main className="min-h-screen lg:grid lg:grid-cols-2">
+        <div className="hidden lg:block h-screen sticky top-0">
+          <ArtworkPanel variant="night" />
+        </div>
+        <div className="flex flex-col items-center justify-center p-6 min-h-screen">
         <Image src="/logo.png" alt="Magical Touch" width={280} height={56} className="mb-8" />
         <div className="w-full max-w-sm text-center">
           <h1 className="text-2xl font-bold mb-3 text-gray-800">Check your email</h1>
@@ -57,12 +62,17 @@ function SignupForm() {
             Back to log in
           </a>
         </div>
+        </div>
       </main>
     );
   }
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-6">
+    <main className="min-h-screen lg:grid lg:grid-cols-2">
+      <div className="hidden lg:block h-screen sticky top-0">
+        <ArtworkPanel variant="night" />
+      </div>
+      <div className="flex flex-col items-center justify-center p-6 min-h-screen">
       <Image src="/logo.png" alt="Magical Touch" width={280} height={56} className="mb-8" />
       <div className="w-full max-w-sm">
         <h1 className="text-2xl font-bold mb-6 text-center text-gray-800">Create Your Account</h1>
@@ -108,6 +118,7 @@ function SignupForm() {
             Log in
           </a>
         </p>
+      </div>
       </div>
     </main>
   );
