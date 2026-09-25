@@ -1,83 +1,92 @@
 'use client';
 
-import { LayoutTemplate, Palette, Share2, Printer, Maximize2, FolderOpen } from 'lucide-react';
+import { MousePointer2, Type, Share2, Zap, Printer } from 'lucide-react';
 import { Reveal } from './Reveal';
 
+// Large editorial feature statements rather than a grid of small cards —
+// each gets its own full-width beat, alternating text/visual sides, so
+// every capability gets room to breathe instead of competing for
+// attention in a 6-up grid.
 const FEATURES = [
   {
-    icon: Palette,
-    title: 'Design Studio',
-    body: 'A full drag-and-drop canvas with shapes, text, photos and a real color and layer system — everything you need to build something from scratch.',
+    eyebrow: 'Freedom',
+    title: 'Design freely.',
+    body: 'Every element is yours to move, shape and transform.',
+    icon: MousePointer2,
     colors: ['#EC1E79', '#8B6FC4'] as [string, string],
-    big: true,
   },
   {
-    icon: LayoutTemplate,
-    title: 'Ready-to-use Templates',
-    body: 'Start from a template built for the format you need and make it yours in minutes.',
+    eyebrow: 'Detail',
+    title: 'Make every detail yours.',
+    body: 'Typography, images, colors and composition — make the design feel like you.',
+    icon: Type,
     colors: ['#3FA9E8', '#4FC8C0'] as [string, string],
-    big: false,
   },
   {
+    eyebrow: 'Format',
+    title: 'Create for every format.',
+    body: 'From social posts to print-ready designs.',
     icon: Share2,
-    title: 'Social Media',
-    body: 'Posts, stories and covers sized right for every platform.',
-    colors: ['#17161B', '#6C4FD1'] as [string, string],
-    big: false,
-  },
-  {
-    icon: Printer,
-    title: 'Print Ready',
-    body: 'Bleed, safe area and CMYK-aware exports mean what you design is what gets printed.',
     colors: ['#F5B942', '#FF6F91'] as [string, string],
-    big: false,
   },
   {
-    icon: Maximize2,
-    title: 'Resize & Adapt',
-    body: 'Reuse one design across multiple sizes without starting over.',
+    eyebrow: 'Speed',
+    title: 'Work faster.',
+    body: 'Start with templates and make them your own.',
+    icon: Zap,
     colors: ['#7ED33E', '#4FC8C0'] as [string, string],
-    big: false,
   },
   {
-    icon: FolderOpen,
-    title: 'Your Designs, Anywhere',
-    body: 'Everything you make is saved to your dashboard — pick up right where you left off, on any device.',
+    eyebrow: 'Print',
+    title: 'Ready for the real world.',
+    body: 'Create designs that can move from screen to print.',
+    icon: Printer,
     colors: ['#6C4FD1', '#EC1E79'] as [string, string],
-    big: true,
   },
 ];
 
+function FeatureVisual({ colors, Icon }: { colors: [string, string]; Icon: typeof MousePointer2 }) {
+  return (
+    <div
+      className="relative aspect-[4/3] w-full rounded-3xl overflow-hidden flex items-center justify-center shadow-[0_30px_60px_-30px_rgba(23,22,27,0.35)]"
+      style={{ background: `linear-gradient(135deg, ${colors[0]}, ${colors[1]})` }}
+    >
+      <span className="pointer-events-none absolute -right-10 -top-10 w-40 h-40 rounded-full bg-white/10" />
+      <span className="pointer-events-none absolute -left-8 -bottom-14 w-36 h-36 rounded-full bg-black/10" />
+      <div className="relative w-20 h-20 rounded-2xl bg-white/15 backdrop-blur-sm flex items-center justify-center">
+        <Icon size={32} className="text-white" strokeWidth={1.75} />
+      </div>
+    </div>
+  );
+}
+
 export function Features() {
   return (
-    <section id="features" className="max-w-6xl mx-auto px-6 py-24">
+    <section id="features" className="max-w-6xl mx-auto px-6 py-24 space-y-20 sm:space-y-28">
       <Reveal>
         <p className="text-xs font-semibold text-[#6C4FD1] dark:text-[#B9A6F2] tracking-wide uppercase">Features</p>
-        <h2 className="mt-3 font-[family-name:var(--font-display)] text-3xl sm:text-4xl leading-tight max-w-lg">
-          Everything you need to create.
-        </h2>
       </Reveal>
 
-      <div className="mt-12 grid md:grid-cols-3 gap-5">
-        {FEATURES.map((f, i) => (
-          <Reveal
-            key={f.title}
-            delayMs={i * 70}
-            className={f.big ? 'md:col-span-2' : 'md:col-span-1'}
+      {FEATURES.map((f, i) => (
+        <Reveal key={f.title} delayMs={80}>
+          <div
+            className={`grid lg:grid-cols-2 gap-10 lg:gap-16 items-center ${
+              i % 2 === 1 ? 'lg:[&>*:first-child]:order-2' : ''
+            }`}
           >
-            <div className="group h-full rounded-2xl border border-black/10 dark:border-white/10 p-7 hover:border-black/20 dark:hover:border-white/20 hover:-translate-y-1 transition-all duration-300 bg-white dark:bg-[#1B1926]">
-              <div
-                className="w-11 h-11 rounded-xl flex items-center justify-center text-white shadow-[inset_0_1px_1px_rgba(255,255,255,0.5),inset_0_-3px_5px_rgba(0,0,0,0.15),0_8px_16px_-8px_rgba(0,0,0,0.35)]"
-                style={{ background: `linear-gradient(135deg, ${f.colors[0]}, ${f.colors[1]})` }}
-              >
-                <f.icon size={19} />
-              </div>
-              <h3 className="mt-5 font-semibold text-lg text-[#17161B] dark:text-[#F3F1F7]">{f.title}</h3>
-              <p className="mt-2 text-sm text-[#4A4750] dark:text-[#B7B2C6] leading-relaxed max-w-sm">{f.body}</p>
+            <FeatureVisual colors={f.colors} Icon={f.icon} />
+            <div>
+              <p className="text-xs font-semibold tracking-wide uppercase" style={{ color: f.colors[0] }}>
+                {f.eyebrow}
+              </p>
+              <h3 className="mt-3 font-[family-name:var(--font-display)] text-4xl sm:text-5xl leading-[1.05] tracking-tight">
+                {f.title}
+              </h3>
+              <p className="mt-5 text-lg text-[#4A4750] dark:text-[#B7B2C6] leading-relaxed max-w-md">{f.body}</p>
             </div>
-          </Reveal>
-        ))}
-      </div>
+          </div>
+        </Reveal>
+      ))}
     </section>
   );
 }

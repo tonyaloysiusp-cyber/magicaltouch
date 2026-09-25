@@ -27,13 +27,12 @@ export function CreatorSection() {
 
         <Reveal delayMs={150}>
           <p className="text-xs font-semibold text-[#6C4FD1] dark:text-[#B9A6F2] tracking-wide uppercase">For creators</p>
-          <h2 className="mt-3 font-[family-name:var(--font-display)] text-3xl sm:text-4xl leading-tight">
+          <h2 className="mt-3 font-[family-name:var(--font-display)] text-4xl sm:text-5xl leading-[1.05] tracking-tight">
             Your ideas deserve a magical touch.
           </h2>
           <p className="mt-5 text-[#4A4750] dark:text-[#B7B2C6] leading-relaxed max-w-md">
-            Whether you're building a personal brand, a side project, or just
-            making something for fun, Magical Touch gives independent creators
-            the tools to design without limits.
+            Create content, explore ideas and turn your imagination into
+            something real.
           </p>
           <button
             onClick={goToCreate}

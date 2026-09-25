@@ -4,17 +4,16 @@ import { Fraunces, Inter } from 'next/font/google';
 import { useHomeTheme } from '@/hooks/useHomeTheme';
 import { Navbar } from './Navbar';
 import { Hero } from './Hero';
+import { BrandStory } from './BrandStory';
+import { CreatePossibilities } from './CreatePossibilities';
 import { CreativeCarousel } from './CreativeCarousel';
 import { CreativeShowcase } from './CreativeShowcase';
-import { CategoryStrip } from './CategoryStrip';
-import { Intro } from './Intro';
+import { ProductWorkspace } from './ProductWorkspace';
 import { Features } from './Features';
-import { DesignGallery } from './DesignGallery';
 import { TemplateShowcase } from './TemplateShowcase';
 import { HowItWorks } from './HowItWorks';
 import { CreatorSection } from './CreatorSection';
 import { BusinessSection } from './BusinessSection';
-import { Testimonials } from './Testimonials';
 import { PricingFree } from './PricingFree';
 import { FinalCTA } from './FinalCTA';
 import { Footer } from './Footer';
@@ -47,17 +46,16 @@ export function HomePage() {
       >
         <Navbar theme={theme} onToggleTheme={toggleTheme} />
         <Hero />
-        <CreativeCarousel />
+        <BrandStory />
+        <CreatePossibilities />
         <CreativeShowcase theme={theme} />
-        <CategoryStrip />
-        <Intro />
-        <Features />
-        <DesignGallery />
+        <CreativeCarousel />
+        <ProductWorkspace />
         <TemplateShowcase />
+        <Features />
         <HowItWorks />
         <CreatorSection />
         <BusinessSection />
-        <Testimonials />
         <PricingFree />
         <FinalCTA />
         <Footer />

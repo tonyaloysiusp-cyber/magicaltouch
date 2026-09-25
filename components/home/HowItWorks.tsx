@@ -1,13 +1,12 @@
 'use client';
 
-import { LayoutTemplate, PenTool, Sparkles, Download } from 'lucide-react';
 import { Reveal } from './Reveal';
 
 const STEPS = [
-  { icon: LayoutTemplate, title: 'Choose', body: 'Start blank or pick a template sized for what you\'re making.' },
-  { icon: PenTool, title: 'Create', body: 'Add text, photos and shapes on a canvas built for real design work.' },
-  { icon: Sparkles, title: 'Refine', body: 'Fine-tune colors, layout and layers until it feels right.' },
-  { icon: Download, title: 'Export', body: 'Download it ready to share online or print at full quality.' },
+  { n: '01', title: 'Start', body: 'Choose a template or blank canvas.' },
+  { n: '02', title: 'Create', body: 'Build your design.' },
+  { n: '03', title: 'Refine', body: 'Perfect every detail.' },
+  { n: '04', title: 'Export', body: 'Download and share.' },
 ];
 
 export function HowItWorks() {
@@ -15,28 +14,20 @@ export function HowItWorks() {
     <section className="max-w-6xl mx-auto px-6 py-24">
       <Reveal>
         <p className="text-xs font-semibold text-[#6C4FD1] dark:text-[#B9A6F2] tracking-wide uppercase text-center">How it works</p>
-        <h2 className="mt-3 font-[family-name:var(--font-display)] text-3xl sm:text-4xl leading-tight text-center">
+        <h2 className="mt-3 font-[family-name:var(--font-display)] text-4xl sm:text-5xl leading-[1.05] tracking-tight text-center">
           From idea to finished design.
         </h2>
       </Reveal>
 
-      <div className="mt-14 grid sm:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-4">
+      <div className="mt-16 grid sm:grid-cols-2 lg:grid-cols-4 gap-10 lg:gap-6">
         {STEPS.map((s, i) => (
-          <Reveal key={s.title} delayMs={i * 100}>
-            <div className="relative flex lg:flex-col items-start lg:items-center gap-4 lg:text-center">
-              {i < STEPS.length - 1 && (
-                <div className="hidden lg:block absolute top-6 left-[calc(50%+2rem)] w-[calc(100%-4rem)] h-px bg-black/10 dark:bg-white/10" />
-              )}
-              <div className="relative shrink-0 w-12 h-12 rounded-full bg-brand-gradient flex items-center justify-center text-white font-semibold z-10">
-                {i + 1}
-              </div>
-              <div>
-                <div className="flex items-center gap-2 lg:justify-center">
-                  <s.icon size={16} className="text-[#6C4FD1] dark:text-[#B9A6F2]" />
-                  <h3 className="font-semibold text-[#17161B] dark:text-[#F3F1F7]">{s.title}</h3>
-                </div>
-                <p className="mt-1.5 text-sm text-[#4A4750] dark:text-[#B7B2C6] leading-relaxed lg:max-w-[13rem]">{s.body}</p>
-              </div>
+          <Reveal key={s.n} delayMs={i * 100}>
+            <div className="relative">
+              <span className="block font-[family-name:var(--font-display)] text-7xl sm:text-8xl leading-none tracking-tight bg-brand-gradient bg-clip-text text-transparent opacity-90">
+                {s.n}
+              </span>
+              <h3 className="mt-2 font-semibold text-xl text-[#17161B] dark:text-[#F3F1F7]">{s.title}</h3>
+              <p className="mt-1.5 text-sm text-[#4A4750] dark:text-[#B7B2C6] leading-relaxed max-w-[13rem]">{s.body}</p>
             </div>
           </Reveal>
         ))}
