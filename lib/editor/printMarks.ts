@@ -7,7 +7,7 @@
 // vector content in the exported file instead of a faked overlay.
 // ---------------------------------------------------------------------
 
-import { EdgeValues, PrintMarksSettings, MARK_OFFSET, MARK_LENGTH, COLOR_BAR_GAP, COLOR_BAR_SWATCH_H_MAX, COLOR_BAR_LABEL_H, PT_TO_PX } from './printSetup';
+import { EdgeValues, PrintMarksSettings, MARK_OFFSET, MARK_LENGTH, COLOR_BAR_GAP, COLOR_BAR_SIDE_WIDTH, PT_TO_PX } from './printSetup';
 
 interface RectLike {
   x: number;
@@ -99,27 +99,27 @@ export function buildRegistrationMarks(F: any, ab: RectLike, _bleed: EdgeValues)
   return [...markAt(midX, top - MARK_OFFSET - REG_MARK_RADIUS - clearance), ...markAt(midX, bottom + MARK_OFFSET + REG_MARK_RADIUS + clearance)];
 }
 
-// Screen-RGB approximations of the four process-ink solids, in the order
-// a real GATF/SWOP-style print control bar lists them, followed by the
-// three 2-color overprints and a registration (all-inks) solid. This is
-// exactly what a press operator's color bar shows — it just can't be a
-// true ink-separated CMYK value, because this app's whole pipeline (the
-// canvas, every fill picker, PNG/PDF output) is RGB end to end. Faking a
-// CMYK badge on top of that would be lying about a capability the app
-// doesn't have; this bar is upfront about being a visual reference, not
-// a proof.
-const PROCESS_SWATCHES: { label: string; color: string }[] = [
-  { label: 'C', color: '#00AEEF' },
-  { label: 'M', color: '#EC008C' },
-  { label: 'Y', color: '#FFF200' },
-  { label: 'K', color: '#000000' },
-  { label: 'R', color: '#ED1C24' }, // M+Y overprint
-  { label: 'G', color: '#00A651' }, // C+Y overprint
-  { label: 'B', color: '#2E3192' }, // C+M overprint
-  { label: 'Reg', color: '#000000' }, // 4-color registration solid
+// Screen-RGB approximations of the process-ink solids and their 2-color
+// overprints, in the order a real press-sheet color bar runs them down
+// each side: C, M, Y, then the three overprints (CM, MY, CY), then the
+// 3-color overprint (CMY, the closest RGB screen approximation of rich
+// black). These are exactly what a press operator's side color bars
+// show — they just can't be true ink-separated CMYK values, because this
+// app's whole pipeline (canvas, every fill picker, PNG/PDF output) is RGB
+// end to end. Faking a real CMYK badge on top of that would be lying
+// about a capability the app doesn't have; this bar is upfront about
+// being a visual reference, not a proof.
+const VERTICAL_SWATCHES: { label: string; color: string; labelColor: string }[] = [
+  { label: 'C', color: '#00AEEF', labelColor: '#FFFFFF' },
+  { label: 'M', color: '#EC008C', labelColor: '#FFFFFF' },
+  { label: 'Y', color: '#FFF200', labelColor: '#000000' },
+  { label: 'CM', color: '#2E3192', labelColor: '#FFFFFF' },
+  { label: 'MY', color: '#ED1C24', labelColor: '#FFFFFF' },
+  { label: 'CY', color: '#00A651', labelColor: '#FFFFFF' },
+  { label: 'CMY', color: '#231F20', labelColor: '#FFFFFF' },
 ];
 
-const GRAY_RAMP_STEPS = 11; // 0%, 10%, ... 100% black
+const GRAY_RAMP_STEPS = 10; // 0%, ~11%, ... 100% black
 
 function grayAt(t: number): string {
   // t=0 -> white, t=1 -> black, matching a 0%-100% K tint ramp.
@@ -128,15 +128,16 @@ function grayAt(t: number): string {
   return `#${hex}${hex}${hex}`;
 }
 
-function labelText(F: any, text: string, x: number, y: number) {
+function swatchLabel(F: any, text: string, cx: number, cy: number, color: string, fontSize: number) {
   const label = new F.Text(text, {
-    left: x,
-    top: y,
-    fontSize: 3.2,
+    left: cx,
+    top: cy,
+    fontSize,
     fontFamily: 'Helvetica',
-    fill: '#000000',
+    fontWeight: 'bold',
+    fill: color,
     originX: 'center',
-    originY: 'top',
+    originY: 'center',
     selectable: false,
     evented: false,
     objectCaching: false,
@@ -145,56 +146,61 @@ function labelText(F: any, text: string, x: number, y: number) {
   return label;
 }
 
-// A print-shop-style color control bar: solid process/overprint swatches
-// plus a grayscale tint ramp, run along the artboard's bottom edge —
-// the same reference marks a real press sheet carries so an operator can
-// eyeball ink density and registration at a glance.
-//
-// Deliberately compact: sits just past the BLEED edge (not past the crop
-// marks' own reach — real corner crop marks don't span the full width,
-// so there's no actual clash), sized to COLOR_BAR_GAP/SWATCH_H_MAX/
-// LABEL_H from printSetup.ts, which the export-rect margin calculation
-// reads to make sure this never gets clipped.
+// A print-shop-style color control bar: two vertical strips of solid
+// process/overprint swatches flanking the artboard's left and right
+// edges (C/M/Y/CM/MY/CY/CMY, top to bottom, each labeled directly on the
+// swatch), plus a horizontal grayscale tint ramp along the bottom — the
+// same reference marks a real press sheet carries so an operator can
+// eyeball ink density and registration at a glance. Sized to
+// COLOR_BAR_GAP/SIDE_WIDTH from printSetup.ts, which the export-rect
+// margin calculation reads to make sure this never gets clipped.
 export function buildColorBar(F: any, ab: RectLike, bleed: EdgeValues) {
   const objs: any[] = [];
-  const gap = 1;
-  const totalSwatches = PROCESS_SWATCHES.length + GRAY_RAMP_STEPS;
-  // Sized to fit within the artboard's own width, capped to a sensible
-  // on-screen swatch size — so this never overflows past what "Artboard +
-  // Bleed + Marks" already exports for tiny artboards, and doesn't turn
-  // into an oversized stripe on a large poster.
-  const swatchW = Math.max(3, Math.min(12, (ab.width - (totalSwatches - 1) * gap) / totalSwatches));
-  const swatchH = Math.min(COLOR_BAR_SWATCH_H_MAX, Math.max(swatchW * 0.6, 3));
-  const startX = ab.x;
-  const y = ab.y + ab.height + bleed.bottom + COLOR_BAR_GAP;
 
-  PROCESS_SWATCHES.forEach((s, i) => {
-    const left = startX + i * (swatchW + gap);
-    const rect = new F.Rect({
-      left,
-      top: y,
-      width: swatchW,
-      height: swatchH,
-      fill: s.color,
-      stroke: '#999999',
-      strokeWidth: 0.25,
-      selectable: false,
-      evented: false,
-      objectCaching: false,
+  // --- Left + right vertical CMY/overprint bars ---
+  const barW = COLOR_BAR_SIDE_WIDTH;
+  const barGap = 1;
+  const barTotalH = ab.height * 0.9;
+  const barTop = ab.y + (ab.height - barTotalH) / 2;
+  const swatchH = (barTotalH - (VERTICAL_SWATCHES.length - 1) * barGap) / VERTICAL_SWATCHES.length;
+  const fontSize = Math.max(3, Math.min(6, swatchH * 0.4));
+
+  [
+    { x: ab.x - bleed.left - COLOR_BAR_GAP - barW },
+    { x: ab.x + ab.width + bleed.right + COLOR_BAR_GAP },
+  ].forEach(({ x }) => {
+    VERTICAL_SWATCHES.forEach((s, i) => {
+      const top = barTop + i * (swatchH + barGap);
+      const rect = new F.Rect({
+        left: x,
+        top,
+        width: barW,
+        height: swatchH,
+        fill: s.color,
+        stroke: '#999999',
+        strokeWidth: 0.25,
+        selectable: false,
+        evented: false,
+        objectCaching: false,
+      });
+      rect.__isPrintMark = true;
+      objs.push(rect, swatchLabel(F, s.label, x + barW / 2, top + swatchH / 2, s.labelColor, fontSize));
     });
-    rect.__isPrintMark = true;
-    objs.push(rect, labelText(F, s.label, left + swatchW / 2, y + swatchH + 1));
   });
 
-  // Grayscale ramp, right after the solids, sharing the same row height.
-  const rampStartX = startX + PROCESS_SWATCHES.length * (swatchW + gap) + 6;
+  // --- Bottom grayscale ramp ---
+  const rampGap = 0.5;
+  const rampW = Math.max(3, Math.min(12, (ab.width - (GRAY_RAMP_STEPS - 1) * rampGap) / GRAY_RAMP_STEPS));
+  const rampH = Math.max(swatchH * 0.7, 3);
+  const rampStartX = ab.x + (ab.width - (rampW * GRAY_RAMP_STEPS + rampGap * (GRAY_RAMP_STEPS - 1))) / 2;
+  const rampY = ab.y + ab.height + bleed.bottom + COLOR_BAR_GAP;
   for (let i = 0; i < GRAY_RAMP_STEPS; i++) {
     const t = i / (GRAY_RAMP_STEPS - 1);
     const rect = new F.Rect({
-      left: rampStartX + i * (swatchW + gap),
-      top: y,
-      width: swatchW,
-      height: swatchH,
+      left: rampStartX + i * (rampW + rampGap),
+      top: rampY,
+      width: rampW,
+      height: rampH,
       fill: grayAt(t),
       stroke: '#999999',
       strokeWidth: 0.25,

@@ -146,6 +146,51 @@ export const GOOGLE_FONTS: GoogleFontDef[] = [
   { family: 'Handlee', category: 'Script', weights: [400] },
   { family: 'Indie Flower', category: 'Script', weights: [400] },
   { family: 'Patrick Hand', category: 'Script', weights: [400] },
+
+  // Even more sans serif
+  { family: 'Nunito Sans', category: 'Sans Serif', weights: [400, 700] },
+  { family: 'Cabin', category: 'Sans Serif', weights: [400, 700] },
+  { family: 'Asap', category: 'Sans Serif', weights: [400, 700] },
+  { family: 'Overpass', category: 'Sans Serif', weights: [400, 700] },
+  { family: 'Exo 2', category: 'Sans Serif', weights: [400, 700] },
+  { family: 'Titillium Web', category: 'Sans Serif', weights: [400, 700] },
+  { family: 'Hind', category: 'Sans Serif', weights: [400, 700] },
+  { family: 'Inter Tight', category: 'Sans Serif', weights: [400, 700] },
+  { family: 'Public Sans', category: 'Sans Serif', weights: [400, 700] },
+  { family: 'Be Vietnam Pro', category: 'Sans Serif', weights: [400, 700] },
+  { family: 'Sarabun', category: 'Sans Serif', weights: [400, 700] },
+
+  // Even more serif
+  { family: 'Arvo', category: 'Serif', weights: [400, 700] },
+  { family: 'Noto Serif', category: 'Serif', weights: [400, 700] },
+  { family: 'Vidaloka', category: 'Serif', weights: [400] },
+  { family: 'Playfair Display SC', category: 'Serif', weights: [400, 700] },
+  { family: 'Cinzel', category: 'Serif', weights: [400, 700] },
+  { family: 'Marcellus', category: 'Serif', weights: [400] },
+  { family: 'Josefin Slab', category: 'Serif', weights: [400, 700] },
+
+  // Even more display / headline
+  { family: 'Rubik Mono One', category: 'Display', weights: [400] },
+  { family: 'Yeseva One', category: 'Display', weights: [400] },
+  { family: 'Special Elite', category: 'Display', weights: [400] },
+  { family: 'Unica One', category: 'Display', weights: [400] },
+  { family: 'Monoton', category: 'Display', weights: [400] },
+  { family: 'Faster One', category: 'Display', weights: [400] },
+  { family: 'Press Start 2P', category: 'Display', weights: [400] },
+  { family: 'Orbitron', category: 'Display', weights: [400, 700] },
+  { family: 'Audiowide', category: 'Display', weights: [400] },
+
+  // Even more script / handwriting
+  { family: 'Tangerine', category: 'Script', weights: [400, 700] },
+  { family: 'Mrs Saint Delafield', category: 'Script', weights: [400] },
+  { family: 'Kaushan Script', category: 'Script', weights: [400] },
+  { family: 'Norican', category: 'Script', weights: [400] },
+  { family: 'Mea Culpa', category: 'Script', weights: [400] },
+  { family: 'Homemade Apple', category: 'Script', weights: [400] },
+
+  // Even more monospace
+  { family: 'VT323', category: 'Monospace', weights: [400] },
+  { family: 'Silkscreen', category: 'Monospace', weights: [400, 700] },
 ];
 
 export const GOOGLE_FONT_NAMES = GOOGLE_FONTS.map((f) => f.family);

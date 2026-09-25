@@ -4,6 +4,7 @@ import { Suspense, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
+import { ArtworkPanel } from '@/components/ArtworkPanel';
 
 function LoginForm() {
   const [email, setEmail] = useState('');
@@ -54,7 +55,11 @@ function LoginForm() {
   };
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-6">
+    <main className="min-h-screen lg:grid lg:grid-cols-2">
+      <div className="hidden lg:block h-screen sticky top-0">
+        <ArtworkPanel variant="day" />
+      </div>
+      <div className="flex flex-col items-center justify-center p-6 min-h-screen">
       <Image src="/logo.png" alt="Magical Touch" width={280} height={56} className="mb-8" />
       <div className="w-full max-w-sm">
         {!showForgot ? (
@@ -162,6 +167,7 @@ function LoginForm() {
             )}
           </>
         )}
+      </div>
       </div>
     </main>
   );

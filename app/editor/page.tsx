@@ -54,6 +54,7 @@ import { BackBar } from '@/components/BackBar';
 import { Rulers } from '@/components/editor/Rulers';
 import { TabBar, EditorTabInfo } from '@/components/editor/TabBar';
 import { OpenDesignDialog, OpenableDesign } from '@/components/editor/OpenDesignDialog';
+import { ImportDialog } from '@/components/editor/ImportDialog';
 import { UnsavedChangesDialog } from '@/components/editor/UnsavedChangesDialog';
 import { loadTabSession, saveTabSession, clearTabSession } from '@/lib/editor/tabSession';
 import { WorkspaceSwitcher, EditorWorkspace } from '@/components/editor/WorkspaceSwitcher';
@@ -1542,6 +1543,78 @@ function EditorContent() {
       });
     };
     reader.readAsDataURL(file);
+  };
+
+  // Shared by both the plain-image and PDF-page-rasterized import paths
+  // below: places one already-resolved image data URL onto the current
+  // artboard. object:added's own canvas listeners (already wired at
+  // canvas-init time) pick up layers-panel refresh and history recording
+  // automatically, the same way handleImageUpload's own canvas.add() does.
+  const insertImageDataUrl = (dataUrl: string, cascadeIndex = 0): Promise<void> => {
+    return new Promise((resolve) => {
+      const ab = getActiveArtboardRect();
+      import('fabric').then((mod) => {
+        mod.fabric.Image.fromURL(dataUrl, (img: any) => {
+          img.scaleToWidth(300);
+          img.set({ left: ab.x + 20 + cascadeIndex * 24, top: ab.y + 20 + cascadeIndex * 24 });
+          img.__id = `img_${Date.now()}_${nextImageIdRef.current++}`;
+          fabricCanvasRef.current.add(img);
+          fabricCanvasRef.current.setActiveObject(img);
+          resolve();
+        });
+      });
+    });
+  };
+
+  const insertImageFile = (file: File, cascadeIndex = 0): Promise<void> => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        insertImageDataUrl(event.target ? (event.target.result as string) : '', cascadeIndex).then(resolve);
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  // File > Import...: unlike the toolbar's own "Upload" button (images
+  // only), this accepts a PDF too. A plain image goes straight onto the
+  // canvas exactly like the toolbar upload does; a PDF opens ImportDialog
+  // first so the user can pick which page(s) of a multi-page file to
+  // bring in, since importing every page of an unrelated multi-page PDF
+  // by default would rarely be what someone actually wants.
+  const importInputRef = useRef<HTMLInputElement>(null);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importingPdf, setImportingPdf] = useState(false);
+
+  const handleImportFileSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files ? e.target.files[0] : null;
+    e.target.value = '';
+    if (!file) return;
+    const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+    if (isPdf) {
+      setImportFile(file);
+    } else {
+      insertImageFile(file).then(() => fabricCanvasRef.current?.requestRenderAll());
+    }
+  };
+
+  const confirmPdfImport = async (pageNumbers: number[]) => {
+    if (!importFile) return;
+    setImportingPdf(true);
+    try {
+      const { renderPdfPages } = await import('@/lib/editor/pdfImport');
+      const rendered = await renderPdfPages(importFile, pageNumbers);
+      for (let i = 0; i < rendered.length; i++) {
+        await insertImageDataUrl(rendered[i].dataUrl, i);
+      }
+      fabricCanvasRef.current?.requestRenderAll();
+    } catch (err) {
+      console.error('PDF import failed:', err);
+      window.alert('Could not import this PDF — it may be corrupted or password-protected.');
+    } finally {
+      setImportingPdf(false);
+      setImportFile(null);
+    }
   };
 
   // Swaps the pixel data of the selected image layer for a newly-chosen
@@ -3269,6 +3342,7 @@ function EditorContent() {
       items: [
         { label: 'New Design', onClick: startNewDesign },
         { label: 'Open...', onClick: () => setShowOpenDialog(true) },
+        { label: 'Import...', onClick: () => importInputRef.current?.click() },
         { divider: true },
         { label: 'Save', shortcut: 'Ctrl/Cmd+S', onClick: saveDesign },
         { label: 'Save As...', shortcut: 'Ctrl/Cmd+Shift+S', onClick: saveDesignAs },
@@ -3569,6 +3643,22 @@ function EditorContent() {
           onPick={openDesignAsTab}
         />
       )}
+
+      {importFile && (
+        <ImportDialog
+          file={importFile}
+          importing={importingPdf}
+          onCancel={() => setImportFile(null)}
+          onConfirm={confirmPdfImport}
+        />
+      )}
+      <input
+        ref={importInputRef}
+        type="file"
+        accept="image/*,.pdf,application/pdf"
+        onChange={handleImportFileSelected}
+        className="hidden"
+      />
 
       {closeConfirm && (
         <UnsavedChangesDialog
