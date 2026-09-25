@@ -83,7 +83,7 @@ function ToolButton({
       onClick={() => (isLive ? onClick() : onPlanned(id, label))}
       title={isLive ? (shortcut ? `${label} (${shortcut})` : label) : `${label} — planned, not yet available`}
       className={`relative flex flex-col items-center gap-1 w-full ${
-        active ? 'text-blue-600' : isLive ? 'text-gray-700' : 'text-gray-300'
+        active ? 'text-blue-600 dark:text-blue-400' : isLive ? 'text-gray-700 dark:text-gray-300' : 'text-gray-300 dark:text-gray-600'
       }`}
     >
       {icon}
@@ -112,7 +112,7 @@ export function Toolbar({
   onOpenRoadmap,
 }: Props) {
   return (
-    <div className="w-20 bg-white border-r flex flex-col items-center py-4 gap-4 text-xs overflow-y-auto">
+    <div className="w-20 bg-white dark:bg-[#242424] border-r dark:border-[#3A3A3A] flex flex-col items-center py-4 gap-4 text-xs overflow-y-auto transition-colors duration-150">
       <ToolButton
         id="select"
         label="Select"
@@ -129,7 +129,7 @@ export function Toolbar({
         onClick={() => onSelectTool('direct')}
         onPlanned={onOpenRoadmap}
       />
-      <div className="w-full h-px bg-gray-200" />
+      <div className="w-full h-px bg-gray-200 dark:bg-[#3A3A3A]" />
 
       <ToolButton
         id="pan"
@@ -148,7 +148,7 @@ export function Toolbar({
         onPlanned={onOpenRoadmap}
       />
 
-      <div className="w-full h-px bg-gray-200" />
+      <div className="w-full h-px bg-gray-200 dark:bg-[#3A3A3A]" />
 
       <ToolButton
         id="pen"
@@ -158,14 +158,14 @@ export function Toolbar({
         onClick={() => onSelectTool('pen')}
         onPlanned={onOpenRoadmap}
       />
-      <button onClick={onOpenShapeBuilder} title="Shape Builder" className="flex flex-col items-center gap-1 text-gray-700 w-full">
+      <button onClick={onOpenShapeBuilder} title="Shape Builder" className="flex flex-col items-center gap-1 text-gray-700 dark:text-gray-300 w-full">
         <Combine size={18} />
         <span className="text-[10px] leading-none">Shape Builder</span>
       </button>
 
-      <div className="w-full h-px bg-gray-200" />
+      <div className="w-full h-px bg-gray-200 dark:bg-[#3A3A3A]" />
 
-      <button onClick={onAddText} title="Add Text (T)" className="flex flex-col items-center gap-1 text-gray-700 w-full">
+      <button onClick={onAddText} title="Add Text (T)" className="flex flex-col items-center gap-1 text-gray-700 dark:text-gray-300 w-full">
         <Type size={18} />
         <span className="text-[10px] leading-none">Text</span>
       </button>
@@ -219,7 +219,7 @@ export function Toolbar({
         onPlanned={onOpenRoadmap}
       />
 
-      <div className="w-full h-px bg-gray-200" />
+      <div className="w-full h-px bg-gray-200 dark:bg-[#3A3A3A]" />
 
       <label className="flex flex-col items-center gap-1 text-gray-700 cursor-pointer w-full">
         <ImagePlus size={18} />
@@ -227,30 +227,30 @@ export function Toolbar({
         <input id="mainImageUploadInput" type="file" accept="image/*" onChange={onImageUpload} className="hidden" />
       </label>
 
-      <div className="w-full h-px bg-gray-200" />
+      <div className="w-full h-px bg-gray-200 dark:bg-[#3A3A3A]" />
 
-      <button onClick={onDuplicate} title="Duplicate (Ctrl/Cmd+D)" className="flex flex-col items-center gap-1 text-gray-700 w-full">
+      <button onClick={onDuplicate} title="Duplicate (Ctrl/Cmd+D)" className="flex flex-col items-center gap-1 text-gray-700 dark:text-gray-300 w-full">
         <Copy size={18} />
         <span className="text-[10px] leading-none">Duplicate</span>
       </button>
-      <button onClick={onBringForward} title="Bring Forward (Ctrl/Cmd+])" className="flex flex-col items-center gap-1 text-gray-700 w-full">
+      <button onClick={onBringForward} title="Bring Forward (Ctrl/Cmd+])" className="flex flex-col items-center gap-1 text-gray-700 dark:text-gray-300 w-full">
         <ArrowUp size={18} />
         <span className="text-[10px] leading-none">Fwd</span>
       </button>
-      <button onClick={onSendBackward} title="Send Backward (Ctrl/Cmd+[)" className="flex flex-col items-center gap-1 text-gray-700 w-full">
+      <button onClick={onSendBackward} title="Send Backward (Ctrl/Cmd+[)" className="flex flex-col items-center gap-1 text-gray-700 dark:text-gray-300 w-full">
         <ArrowDown size={18} />
         <span className="text-[10px] leading-none">Back</span>
       </button>
-      <button onClick={onBringToFront} title="Bring to Front (Ctrl/Cmd+Shift+])" className="flex flex-col items-center gap-1 text-gray-700 w-full">
+      <button onClick={onBringToFront} title="Bring to Front (Ctrl/Cmd+Shift+])" className="flex flex-col items-center gap-1 text-gray-700 dark:text-gray-300 w-full">
         <ArrowUpToLine size={18} />
         <span className="text-[10px] leading-none">Front</span>
       </button>
-      <button onClick={onSendToBack} title="Send to Back (Ctrl/Cmd+Shift+[)" className="flex flex-col items-center gap-1 text-gray-700 w-full">
+      <button onClick={onSendToBack} title="Send to Back (Ctrl/Cmd+Shift+[)" className="flex flex-col items-center gap-1 text-gray-700 dark:text-gray-300 w-full">
         <ArrowDownToLine size={18} />
         <span className="text-[10px] leading-none">Rear</span>
       </button>
 
-      <button onClick={onDelete} className="flex flex-col items-center gap-1 text-red-400 w-full">
+      <button onClick={onDelete} className="flex flex-col items-center gap-1 text-red-400 dark:text-red-500 w-full">
         <Trash2 size={18} />
         <span className="text-[10px] leading-none">Delete</span>
       </button>
@@ -258,7 +258,7 @@ export function Toolbar({
       <button
         onClick={() => onOpenRoadmap('roadmap', 'Roadmap')}
         title="See what's planned"
-        className="flex flex-col items-center gap-1 text-gray-400 mt-auto w-full"
+        className="flex flex-col items-center gap-1 text-gray-400 dark:text-gray-500 mt-auto w-full"
       >
         <Clock size={18} />
         <span className="text-[10px] leading-none">Roadmap</span>
