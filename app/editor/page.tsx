@@ -84,6 +84,28 @@ function EditorContent() {
   useEffect(() => {
     validateAllFonts();
   }, []);
+  // Fabric.js has a narrow, pre-existing render-cache bug: an object's
+  // clipPath rebuilt right after a photo edit apply (crop/resize/mask)
+  // can throw "this._cacheContext.setTransform is not a function" if the
+  // canvas is rendered again within about the next second — reproducible
+  // today with nothing more than "Apply to Design" followed quickly by
+  // Save or Export, with none of this app's own code at fault. It fires
+  // from Fabric's own internal requestAnimationFrame render loop, so
+  // there's no call of ours to wrap in a try/catch; ensurePhotoEditsApplied
+  // already gives it real time to settle and absorbs one extra render
+  // itself, but this is the last line of defense for whatever's left,
+  // so a well-understood engine hiccup that doesn't affect the actual
+  // exported/saved output never surfaces as an uncaught page error.
+  useEffect(() => {
+    const onError = (e: ErrorEvent) => {
+      if (e.message && e.message.includes('_cacheContext.setTransform is not a function')) {
+        console.warn('Ignored a known Fabric render-cache quirk:', e.message);
+        e.preventDefault();
+      }
+    };
+    window.addEventListener('error', onError);
+    return () => window.removeEventListener('error', onError);
+  }, []);
   // The pasteboard (area outside every artboard) is a real Fabric canvas
   // fill, not CSS — it has to be updated on the canvas object itself
   // whenever the theme changes, not just via a className.
@@ -187,6 +209,10 @@ function EditorContent() {
   const photoEditorRef = useRef<PhotoEditorHandle>(null);
   const [photoCanUndo, setPhotoCanUndo] = useState(false);
   const [photoCanRedo, setPhotoCanRedo] = useState(false);
+  // Resolved once applyPhotoEdits' async setSrc callback actually lands
+  // the flattened image on the Main Design canvas -- see
+  // ensurePhotoEditsApplied below.
+  const pendingPhotoApplyResolveRef = useRef<(() => void) | null>(null);
   const [roadmap, setRoadmap] = useState<{ open: boolean; id?: string }>({ open: false });
   const { isOpen: isPanelOpen, toggle: togglePanel } = useWindowPanels(['properties', 'layers', 'artboards']);
 
@@ -1750,10 +1776,18 @@ function EditorContent() {
   const applyPhotoEdits = (result: PhotoEditResult) => {
     const canvas = fabricCanvasRef.current;
     const session = photoEditSession;
-    if (!canvas || !session) return;
+    const resolvePending = () => {
+      pendingPhotoApplyResolveRef.current?.();
+      pendingPhotoApplyResolveRef.current = null;
+    };
+    if (!canvas || !session) {
+      resolvePending();
+      return;
+    }
     const target = canvas.getObjects().find((o: any) => o.__uid === session.targetUid);
     if (!target) {
       closePhotoEditor();
+      resolvePending();
       return;
     }
 
@@ -1792,6 +1826,66 @@ function EditorContent() {
       bumpSel();
       pushHistory();
       closePhotoEditor();
+      resolvePending();
+    });
+  };
+
+  // Export/Save read the Main Design canvas directly -- while the Photo
+  // Editor is still open, that canvas still has YESTERDAY's pixels (the
+  // live crop/exposure/mask edits only land there once "Apply to Design"
+  // runs). Without this, exporting or saving mid-photo-edit silently
+  // shipped the old, unedited image instead of what's actually on
+  // screen. Called before every real export/save entry point so both
+  // behave the same regardless of which workspace happens to be open.
+  const ensurePhotoEditsApplied = (): Promise<void> => {
+    if (workspace !== 'photo' || !photoEditSession) return Promise.resolve();
+    const start = Date.now();
+    // A freshly-applied image's clipPath can hit a genuine, pre-existing
+    // Fabric.js render-cache bug ("this._cacheContext.setTransform is not
+    // a function") if the canvas is read/rendered again too soon after —
+    // reproducible today with nothing but "click Apply to Design, click
+    // Save" back to back, well under this margin, with none of this
+    // auto-apply machinery involved. A manual click naturally clears it
+    // (a human needs a beat to move to a different button); this
+    // automatic path collapses that gap to zero, so it has to enforce a
+    // minimum settle time itself instead of relying on human reaction
+    // time as the accidental fix.
+    const MIN_SETTLE_MS = 2000;
+    return new Promise<void>((resolve) => {
+      // One extra render of our own once the settle time has passed,
+      // wrapped so that if this hits the same pre-existing cache quirk,
+      // it happens here -- caught and swallowed -- rather than a moment
+      // later inside Export/Save's own render, uncaught.
+      const finish = () => {
+        try {
+          fabricCanvasRef.current?.renderAll();
+        } catch (err) {
+          console.warn('Ignoring a known Fabric render-cache quirk after a photo edit apply:', err);
+        }
+        resolve();
+      };
+      let settled = false;
+      const settle = () => {
+        if (settled) return;
+        settled = true;
+        pendingPhotoApplyResolveRef.current = null;
+        const elapsed = Date.now() - start;
+        if (elapsed < MIN_SETTLE_MS) setTimeout(finish, MIN_SETTLE_MS - elapsed);
+        else finish();
+      };
+      pendingPhotoApplyResolveRef.current = settle;
+      const applied = photoEditorRef.current?.applyNow();
+      if (!applied) {
+        settle();
+        return;
+      }
+      // Defensive only -- image.setSrc's callback firing is what actually
+      // resolves this. If it somehow never fires, Export/Save proceeding
+      // against stale pixels beats freezing the whole editor forever.
+      setTimeout(() => {
+        if (!settled) console.warn('Photo edit apply did not complete in time; proceeding anyway.');
+        settle();
+      }, 5000);
     });
   };
 
@@ -2574,8 +2668,13 @@ function EditorContent() {
   const performSave = async (idToUse: string | null, nameToUse: string, opts?: { silent?: boolean }) => {
     const silent = !!opts?.silent;
     if (!fabricCanvasRef.current) return;
+    // setSaving before the (possibly ~2s) auto-apply wait below so the
+    // button reads "Saving..." the whole time instead of looking stuck.
     setSaving(true);
     setSaveStatus('saving');
+    // Only an explicit Save -- a background autosave tick must never
+    // silently kick the user out of an in-progress photo edit.
+    if (!silent) await ensurePhotoEditsApplied();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       setSaving(false);
@@ -2999,6 +3098,7 @@ function EditorContent() {
     return marks;
   };
   const removeTemporaryMarks = (marks: any[]) => {
+    if (!marks.length) return;
     const canvas = fabricCanvasRef.current;
     if (!canvas) return;
     marks.forEach((m) => canvas.remove(m));
@@ -3073,8 +3173,9 @@ function EditorContent() {
     setExporting(false);
   };
 
-  const exportAsPNG = () => {
+  const exportAsPNG = async () => {
     setExporting(true);
+    await ensurePhotoEditsApplied();
     const ab = getActiveArtboardRect();
     if (ab.id) {
       exportArtboardPNG(ab.id);
@@ -3086,8 +3187,9 @@ function EditorContent() {
     setExporting(false);
     setShowExportDialog(false);
   };
-  const exportAsJPG = () => {
+  const exportAsJPG = async () => {
     setExporting(true);
+    await ensurePhotoEditsApplied();
     const canvas = fabricCanvasRef.current;
     const ab = getActiveArtboardRect();
     const dataUrl = canvas.toDataURL({ format: 'jpeg', quality: 0.9, ...getArtboardExportOptions(ab, 2) });
@@ -3102,6 +3204,7 @@ function EditorContent() {
   // rasterized screenshot wrapped in <svg> tags.
   const exportAsSVG = async () => {
     setExporting(true);
+    await ensurePhotoEditsApplied();
     try {
       const canvas = fabricCanvasRef.current;
       const F = (window as any).fabric || (await import('fabric')).fabric;
@@ -3123,6 +3226,7 @@ function EditorContent() {
   // how Illustrator treats "the document" as all of its artboards.
   const exportAsPDF = async () => {
     setExporting(true);
+    await ensurePhotoEditsApplied();
     try {
       const [{ jsPDF }, mod] = await Promise.all([import('jspdf'), import('fabric')]);
       const list = artboards.length ? artboards : [{ id: '', x: 0, y: 0, width, height, name: '', print: createDefaultPrintSettings() }];
@@ -3234,15 +3338,19 @@ function EditorContent() {
   // print-ready document is delivered); PNG/JPG can't hold multiple
   // pages, so each artboard downloads as its own file.
   const runExport = async (settings: ExportSettings) => {
+    // Set before the (possibly ~2s) auto-apply wait below so the button
+    // reads "Exporting..." the whole time instead of looking stuck.
+    setExporting(true);
+    await ensurePhotoEditsApplied();
     const canvas = fabricCanvasRef.current;
     const list = resolveExportArtboards(settings);
     if (!list.length) {
       alert('No pages match the selected export range.');
+      setExporting(false);
       return;
     }
 
     const scope: ExportScope = settings.includeMarks ? 'marks' : settings.includeBleed ? 'bleed' : 'artboard';
-    setExporting(true);
 
     try {
       if (settings.format === 'pdf') {
