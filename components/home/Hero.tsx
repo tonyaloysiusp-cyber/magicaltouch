@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowRight, Sparkles } from 'lucide-react';
 import { resolveAuthedPath } from '@/lib/authNav';
-import { WorkspacePreview } from './WorkspacePreview';
+import { CreativeHeroArt } from './CreativeHeroArt';
 import { Reveal } from './Reveal';
 
 export function Hero() {
@@ -54,7 +54,7 @@ export function Hero() {
         </Reveal>
 
         <Reveal delayMs={150}>
-          <WorkspacePreview />
+          <CreativeHeroArt />
         </Reveal>
       </div>
     </section>
