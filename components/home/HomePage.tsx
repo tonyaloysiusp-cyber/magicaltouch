@@ -42,7 +42,7 @@ export function HomePage() {
   return (
     <div className={theme === 'night' ? 'dark' : ''}>
       <main
-        className={`${display.variable} ${body.variable} font-[family-name:var(--font-body)] bg-gradient-to-b from-[#F1EEFB] via-[#F7F5F0] to-[#EAF6FB] dark:bg-[#111015] dark:from-transparent dark:via-transparent dark:to-transparent text-[#17161B] dark:text-[#F3F1F7] transition-colors duration-300`}
+        className={`${display.variable} ${body.variable} font-[family-name:var(--font-body)] bg-white dark:bg-[#111015] text-[#17161B] dark:text-[#F3F1F7] transition-colors duration-300`}
       >
         <Navbar theme={theme} onToggleTheme={toggleTheme} />
         <Hero />

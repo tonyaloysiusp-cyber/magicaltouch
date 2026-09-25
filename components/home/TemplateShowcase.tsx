@@ -28,7 +28,7 @@ export function TemplateShowcase() {
   };
 
   return (
-    <section className="bg-gradient-to-r from-[#EAF6FB] via-white to-[#F1EEFB] dark:bg-[#17151F] dark:from-transparent dark:via-transparent dark:to-transparent border-y border-black/10 dark:border-white/10">
+    <section className="bg-white dark:bg-[#17151F] border-y border-black/10 dark:border-white/10">
       <div className="max-w-6xl mx-auto px-6 py-24">
         <Reveal>
           <div className="flex flex-wrap items-end justify-between gap-6">
