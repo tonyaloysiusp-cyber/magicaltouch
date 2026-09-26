@@ -2,18 +2,18 @@
 
 import { useEffect, useRef, useState, useCallback, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import Image from 'next/image';
+import { BrandLogo } from '@/components/BrandLogo';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { Keyboard, Sun, Moon } from 'lucide-react';
-import { useEditorTheme } from '@/hooks/useEditorTheme';
+import { useAppTheme } from '@/hooks/useAppTheme';
 
 import { ToolMode, DocUnit, isDrawTool, PASTEBOARD_BG, RULER_SIZE } from '@/lib/editor/types';
 import { allFontFacesCSS, ensureFontLoaded, ensureFontsLoadedForCanvasJSON, validateAllFonts } from '@/lib/editor/googleFonts';
 import { getAbsolutePolygonPoints, multiPolygonToPathD } from '@/lib/editor/geometry';
 import { exportCanvasToPDF, exportArtboardsToPDF, toPt } from '@/lib/editor/pdfExport';
 import { exportArtboardToSVG } from '@/lib/editor/svgExport';
-import { computeSnap, GuideLine } from '@/lib/editor/snapping';
+import { computeSnap, computeGuideSnap, computeGridSnap, GuideLine } from '@/lib/editor/snapping';
 import {
   ArtboardMeta,
   ArtboardPreset,
@@ -32,6 +32,7 @@ import { usePenTool } from '@/hooks/usePenTool';
 import { useShapeTools } from '@/hooks/useShapeTools';
 import { useDirectSelection } from '@/hooks/useDirectSelection';
 import { useArtboardTool } from '@/hooks/useArtboardTool';
+import { useGuides } from '@/hooks/useGuides';
 
 import { Toolbar } from '@/components/editor/Toolbar';
 import { PropertiesPanel } from '@/components/editor/PropertiesPanel';
@@ -52,6 +53,7 @@ import { useWindowPanels } from '@/components/editor/WindowPanels';
 import { AlignPanel } from '@/components/editor/AlignPanel';
 import { BackBar } from '@/components/BackBar';
 import { Rulers } from '@/components/editor/Rulers';
+import { GridOverlay } from '@/components/editor/GridOverlay';
 import { TabBar, EditorTabInfo } from '@/components/editor/TabBar';
 import { OpenDesignDialog, OpenableDesign } from '@/components/editor/OpenDesignDialog';
 import { ImportDialog } from '@/components/editor/ImportDialog';
@@ -74,7 +76,7 @@ function EditorContent() {
   const panRef = useRef<{ active: boolean; lastX: number; lastY: number }>({ active: false, lastX: 0, lastY: 0 });
   const [canvasReady, setCanvasReady] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
-  const { theme, toggleTheme } = useEditorTheme();
+  const { theme, toggleTheme } = useAppTheme();
   const isDark = theme === 'dark';
 
   // Background, one-time-per-session audit of every font in the picker —
@@ -233,6 +235,37 @@ function EditorContent() {
     unitRef.current = unit;
   }, [unit]);
 
+  // View: rulers/grid/guides visibility and the three independent snap
+  // sources (objects, guides, grid) -- each toggleable on its own,
+  // matching the spec's explicit View-menu list.
+  const [showRulers, setShowRulers] = useState(true);
+  const [showGrid, setShowGrid] = useState(false);
+  const [showGuides, setShowGuides] = useState(true);
+  const [snapToObjects, setSnapToObjects] = useState(true);
+  const [snapToGuides, setSnapToGuides] = useState(true);
+  const [snapToGrid, setSnapToGrid] = useState(false);
+  const [gridSize, setGridSize] = useState(20);
+  const showGuidesRef = useRef(showGuides);
+  const snapToObjectsRef = useRef(snapToObjects);
+  const snapToGuidesRef = useRef(snapToGuides);
+  const snapToGridRef = useRef(snapToGrid);
+  const gridSizeRef = useRef(gridSize);
+  useEffect(() => {
+    showGuidesRef.current = showGuides;
+  }, [showGuides]);
+  useEffect(() => {
+    snapToObjectsRef.current = snapToObjects;
+  }, [snapToObjects]);
+  useEffect(() => {
+    snapToGuidesRef.current = snapToGuides;
+  }, [snapToGuides]);
+  useEffect(() => {
+    snapToGridRef.current = snapToGrid;
+  }, [snapToGrid]);
+  useEffect(() => {
+    gridSizeRef.current = gridSize;
+  }, [gridSize]);
+
   const [activeTool, setActiveToolState] = useState<ToolMode>('select');
   const activeToolRef = useRef<ToolMode>('select');
   const [maskTargetId, setMaskTargetId] = useState<string>('');
@@ -313,7 +346,7 @@ function EditorContent() {
     setLayers(
       canvas
         .getObjects()
-        .filter((o: any) => !o.__isAnchorHandle && !o.__isPenPreview && !o.__isShapeDraft && !o.__isArtboard)
+        .filter((o: any) => !o.__isAnchorHandle && !o.__isPenPreview && !o.__isShapeDraft && !o.__isArtboard && !o.__isGuide)
         .slice()
         .reverse()
     );
@@ -353,7 +386,7 @@ function EditorContent() {
     if (!canvas) return;
     const metas = getArtboardMetas();
     canvas.getObjects().forEach((obj: any) => {
-      if (obj.__isArtboard || obj.__isAnchorHandle || obj.__isPenPreview || obj.__isShapeDraft || obj.__isPrintMark) return;
+      if (obj.__isArtboard || obj.__isAnchorHandle || obj.__isPenPreview || obj.__isShapeDraft || obj.__isPrintMark || obj.__isGuide) return;
       const center = obj.getCenterPoint();
       obj.__artboardId = findOwningArtboard(center.x, center.y, metas);
     });
@@ -601,6 +634,24 @@ function EditorContent() {
       });
     },
   });
+
+  const {
+    guidesLocked,
+    setGuidesLocked,
+    startGuideFromRuler,
+    clearGuides,
+    deleteGuide,
+    setGuidesVisible,
+    applyGuideInteractivity,
+  } = useGuides({
+    fabricCanvasRef,
+    activeToolRef,
+    onGuideChange: pushHistory,
+  });
+
+  useEffect(() => {
+    setGuidesVisible(showGuides);
+  }, [showGuides, setGuidesVisible]);
 
   const applyPathAsMask = useCallback(() => {
     const canvas = fabricCanvasRef.current;
@@ -896,9 +947,14 @@ function EditorContent() {
         canvas.defaultCursor = 'default';
         canvas.hoverCursor = 'move';
       }
+      // Guides get their own interactivity pass regardless of which branch
+      // ran above (every branch's forEachObject would otherwise leave them
+      // either always-selectable or always-locked-out) -- only the Select
+      // tool, and only when not globally locked, makes them draggable.
+      applyGuideInteractivity();
       canvas.requestRenderAll();
     },
-    [clearPenDraft, clearAnchorHandles, clearShapeDraft, clearArtboardDraft]
+    [clearPenDraft, clearAnchorHandles, clearShapeDraft, clearArtboardDraft, applyGuideInteractivity]
   );
 
   // Ensures at least one locked, non-rotatable white artboard Rect exists.
@@ -1087,29 +1143,85 @@ function EditorContent() {
         if (activeToolRef.current === 'select' && obj && !obj.__isArtboard && !disableSnap) {
           const zoom = canvas.getZoom() || 1;
           const threshold = 8 / zoom;
-          const moving = obj.getBoundingRect();
-          const targets = canvas
-            .getObjects()
-            .filter(
-              (o: any) =>
-                o !== obj &&
-                !o.__isAnchorHandle &&
-                !o.__isPenPreview &&
-                !o.__isShapeDraft &&
-                !o.__isPrintMark &&
-                o.visible !== false
-            )
-            .map((o: any) => o.getBoundingRect());
-          const { dx, dy, guides } = computeSnap(moving, targets, threshold);
+          // getBoundingRect(absolute, calculate): `absolute=true` is what
+          // actually yields world/document-space coordinates (the default
+          // `false` returns SCREEN/viewport-space ones instead, despite the
+          // name) -- and `calculate=true` is required too, or it reads the
+          // object's last-cached corner coordinates (.aCoords, refreshed by
+          // setCoords()) instead of its live position, which during an
+          // in-progress drag is one tick stale. Both matter for the `dx`/
+          // `dy` this produces, applied straight to `obj.left`/`top`.
+          const moving = obj.getBoundingRect(true, true);
+
+          // Snap priority (matches every other design tool): object/artboard
+          // edges first, then persistent ruler guides, then the grid --
+          // each independently toggleable, and each axis only takes the
+          // first source that actually snapped it.
+          let dx = 0;
+          let dy = 0;
+          let smartGuideLines: GuideLine[] = [];
+
+          if (snapToObjectsRef.current) {
+            const targets = canvas
+              .getObjects()
+              .filter(
+                (o: any) =>
+                  o !== obj &&
+                  !o.__isAnchorHandle &&
+                  !o.__isPenPreview &&
+                  !o.__isShapeDraft &&
+                  !o.__isPrintMark &&
+                  !o.__isGuide &&
+                  o.visible !== false
+              )
+              .map((o: any) => o.getBoundingRect(true, true));
+            const objSnap = computeSnap(moving, targets, threshold);
+            dx = objSnap.dx;
+            dy = objSnap.dy;
+            smartGuideLines = objSnap.guides;
+          }
+
+          if (snapToGuidesRef.current && showGuidesRef.current && (!dx || !dy)) {
+            const guideLines = canvas
+              .getObjects()
+              .filter((o: any) => o.__isGuide && o.visible !== false)
+              .map((o: any) => ({
+                axis: o.__guideAxis as 'v' | 'h',
+                position: o.__guideAxis === 'h' ? o.getCenterPoint().y : o.getCenterPoint().x,
+              }));
+            const guideSnap = computeGuideSnap({ ...moving, left: moving.left + dx, top: moving.top + dy }, guideLines, threshold);
+            if (!dx) dx = guideSnap.dx;
+            if (!dy) dy = guideSnap.dy;
+          }
+
+          if (snapToGridRef.current && (!dx || !dy)) {
+            const gridSnap = computeGridSnap(
+              { ...moving, left: moving.left + dx, top: moving.top + dy },
+              gridSizeRef.current,
+              !!dx,
+              !!dy
+            );
+            if (!dx) dx = gridSnap.dx;
+            if (!dy) dy = gridSnap.dy;
+          }
+
           if (dx || dy) {
             obj.set({ left: (obj.left || 0) + dx, top: (obj.top || 0) + dy });
             obj.setCoords();
           }
-          snapGuidesRef.current = guides;
+          snapGuidesRef.current = smartGuideLines;
         } else {
           snapGuidesRef.current = [];
         }
         renderAnchorHandles(e.target);
+      });
+
+      // Double-click a ruler guide to delete it -- the same convention
+      // every other design tool uses, since guides otherwise have no
+      // delete affordance of their own (Delete/Backspace is already
+      // claimed by "delete the selected design object").
+      canvas.on('mouse:dblclick', (opt: any) => {
+        if (opt.target?.__isGuide) deleteGuide(opt.target);
       });
 
       canvas.on('mouse:down', (opt: any) => {
@@ -2640,6 +2752,8 @@ function EditorContent() {
       if (isMeta && (e.key === '=' || e.key === '+')) { e.preventDefault(); applyZoom((z) => z + 10); return; }
       if (isMeta && e.key === '-') { e.preventDefault(); applyZoom((z) => z - 10); return; }
       if (isMeta && e.key === '0') { e.preventDefault(); applyZoom(100); return; }
+      if (isMeta && e.key === ';') { e.preventDefault(); setShowGuides((v) => !v); return; }
+      if (isMeta && e.key.toLowerCase() === 'r' && !isEditingText) { e.preventDefault(); setShowRulers((v) => !v); return; }
 
       if (!isEditingText && active && !active.locked && activeToolRef.current !== 'pen' && !isDrawTool(activeToolRef.current) && e.key.startsWith('Arrow')) {
         const step = e.shiftKey ? 10 : 1;
@@ -2704,6 +2818,8 @@ function EditorContent() {
       '__originalSrc',
       '__photoEdits',
       '__cropRect',
+      '__isGuide',
+      '__guideAxis',
     ]);
     // width/height stay as the dashboard/thumbnail-facing summary size —
     // the first artboard's current dimensions, not the URL params a brand
@@ -2724,6 +2840,7 @@ function EditorContent() {
     // like instead of just its pixel dimensions.
     const thumbnail = firstAb
       ? (() => {
+          const hiddenGuides = hideGuidesForExport();
           try {
             const THUMB_WIDTH = 400;
             const mult = THUMB_WIDTH / Math.max(firstAb.width, 1);
@@ -2735,6 +2852,8 @@ function EditorContent() {
           } catch (err) {
             console.error('Thumbnail generation failed:', err);
             return null;
+          } finally {
+            restoreGuidesAfterExport(hiddenGuides);
           }
         })()
       : null;
@@ -3105,6 +3224,26 @@ function EditorContent() {
     canvas.requestRenderAll();
   };
 
+  // Guides are real, visible Fabric objects (see hooks/useGuides.ts) so
+  // they render fine on screen, but a raster export via canvas.toDataURL
+  // rasterizes literally whatever is currently drawn in that rect — with
+  // no per-object filtering step to exclude them the way the PDF/SVG
+  // exporters already do. Hide them for the instant of the capture, same
+  // pattern as buildAndInsertMarks/removeTemporaryMarks above.
+  const hideGuidesForExport = (): any[] => {
+    const canvas = fabricCanvasRef.current;
+    if (!canvas) return [];
+    const guideObjs = canvas.getObjects().filter((o: any) => o.__isGuide && o.visible !== false);
+    guideObjs.forEach((o: any) => (o.visible = false));
+    if (guideObjs.length) canvas.requestRenderAll();
+    return guideObjs;
+  };
+  const restoreGuidesAfterExport = (guideObjs: any[]) => {
+    if (!guideObjs.length) return;
+    guideObjs.forEach((o: any) => (o.visible = true));
+    fabricCanvasRef.current?.requestRenderAll();
+  };
+
   const exportArtboardPNG = (id: string, opts?: { silent?: boolean; scope?: ExportScope }) => {
     const canvas = fabricCanvasRef.current;
     const ab = artboards.find((a) => a.id === id);
@@ -3113,7 +3252,9 @@ function EditorContent() {
     const exportRect = getExportRect(ab, ab.print, scope);
     suppressHistoryRef.current = true;
     const marks = buildAndInsertMarks(ab, scope);
+    const hiddenGuides = hideGuidesForExport();
     const dataUrl = canvas.toDataURL({ format: 'png', quality: 1, ...getArtboardExportOptions(exportRect, 2) });
+    restoreGuidesAfterExport(hiddenGuides);
     removeTemporaryMarks(marks);
     suppressHistoryRef.current = false;
     downloadFile(dataUrl, `${designName || 'design'} - ${ab.name}${scope !== 'artboard' ? ` (${scope})` : ''}.png`);
@@ -3182,7 +3323,9 @@ function EditorContent() {
       return;
     }
     const canvas = fabricCanvasRef.current;
+    const hiddenGuides = hideGuidesForExport();
     const dataUrl = canvas.toDataURL({ format: 'png', quality: 1, ...getArtboardExportOptions(ab, 2) });
+    restoreGuidesAfterExport(hiddenGuides);
     downloadFile(dataUrl, `${designName || 'design'}.png`);
     setExporting(false);
     setShowExportDialog(false);
@@ -3192,7 +3335,9 @@ function EditorContent() {
     await ensurePhotoEditsApplied();
     const canvas = fabricCanvasRef.current;
     const ab = getActiveArtboardRect();
+    const hiddenGuides = hideGuidesForExport();
     const dataUrl = canvas.toDataURL({ format: 'jpeg', quality: 0.9, ...getArtboardExportOptions(ab, 2) });
+    restoreGuidesAfterExport(hiddenGuides);
     downloadFile(dataUrl, `${designName || 'design'}.jpg`);
     setExporting(false);
     setShowExportDialog(false);
@@ -3554,9 +3699,15 @@ function EditorContent() {
         { label: 'Zoom Out', shortcut: 'Ctrl/Cmd+"-"', onClick: () => applyZoom((z) => z - 10) },
         { label: 'Actual Size', shortcut: 'Ctrl/Cmd+0', onClick: () => applyZoom(100) },
         { divider: true },
-        { label: 'Show Rulers', planned: true },
-        { label: 'Show Grid', planned: true },
-        { label: 'Show Guides', planned: true },
+        { label: 'Show Rulers', shortcut: 'Ctrl/Cmd+R', checked: showRulers, onClick: () => setShowRulers((v) => !v) },
+        { label: 'Show Grid', checked: showGrid, onClick: () => setShowGrid((v) => !v) },
+        { label: 'Show Guides', shortcut: 'Ctrl/Cmd+;', checked: showGuides, onClick: () => setShowGuides((v) => !v) },
+        { label: 'Lock Guides', checked: guidesLocked, onClick: () => setGuidesLocked(!guidesLocked) },
+        { label: 'Clear Guides', onClick: clearGuides },
+        { divider: true },
+        { label: 'Snap to Objects', checked: snapToObjects, onClick: () => setSnapToObjects((v) => !v) },
+        { label: 'Snap to Guides', checked: snapToGuides, onClick: () => setSnapToGuides((v) => !v) },
+        { label: 'Snap to Grid', checked: snapToGrid, onClick: () => setSnapToGrid((v) => !v) },
       ],
     },
     {
@@ -3613,7 +3764,7 @@ function EditorContent() {
         menus={photoOnlySession ? [] : menus}
         leading={
           <Link href="/" title="Go to homepage">
-            <Image src="/logo.png" alt="Magical Touch" width={140} height={28} priority />
+            <BrandLogo theme={theme} width={140} height={28} priority />
           </Link>
         }
       />
@@ -3806,6 +3957,8 @@ function EditorContent() {
             artboardWidth={getActiveArtboardRect().width}
             artboardHeight={getActiveArtboardRect().height}
             ready={canvasReady}
+            visible={showRulers}
+            onGuideDragStart={(axis, clientX, clientY) => startGuideFromRuler(axis, clientX, clientY)}
           />
           <div
             ref={viewportRef}
@@ -3814,6 +3967,7 @@ function EditorContent() {
             onContextMenu={handleCanvasContextMenu}
           >
             <canvas ref={canvasRef} />
+            <GridOverlay fabricCanvasRef={fabricCanvasRef} visible={showGrid} gridSize={gridSize} ready={canvasReady} />
           </div>
         </div>
         {contextMenu && (
@@ -3939,6 +4093,8 @@ function EditorContent() {
         onClose={() => setShowPreferences(false)}
         returnToSelectAfterCreate={returnToSelectAfterCreate}
         onToggleReturnToSelect={updateReturnToSelectPref}
+        gridSize={gridSize}
+        onChangeGridSize={setGridSize}
       />
       <VersionHistoryModal
         open={showVersionHistory}

@@ -1,13 +1,14 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { resolveAuthedPath } from '@/lib/authNav';
 import { supabase } from '@/lib/supabase';
+import { BrandLogo } from '@/components/BrandLogo';
+import { AppTheme } from '@/hooks/useAppTheme';
 
-export function Footer() {
+export function Footer({ theme }: { theme: AppTheme }) {
   const router = useRouter();
   const [loggedIn, setLoggedIn] = useState(false);
 
@@ -38,7 +39,7 @@ export function Footer() {
       <div className="max-w-6xl mx-auto px-6 py-16">
         <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-10">
           <div className="col-span-2 md:col-span-1">
-            <Image src="/logo.png" alt="Magical Touch" width={140} height={28} />
+            <BrandLogo theme={theme} width={140} height={28} />
             <p className="mt-4 text-sm text-[#4A4750] dark:text-[#8A8496] max-w-[16rem] leading-relaxed">
               Your creative space for turning ideas into designs people
               remember.

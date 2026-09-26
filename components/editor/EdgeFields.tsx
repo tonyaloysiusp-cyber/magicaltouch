@@ -34,10 +34,10 @@ export function EdgeFields({
   return (
     <div>
       <div className="flex items-center justify-between mb-1">
-        <label className="text-[10px] text-gray-500">
+        <label className="text-[10px] text-gray-500 dark:text-[#B7B2C6]">
           {label} ({unit})
         </label>
-        <button onClick={onToggleLinked} title={linked ? 'Unlink edges' : 'Link edges'} className="text-gray-400 hover:text-gray-700">
+        <button onClick={onToggleLinked} title={linked ? 'Unlink edges' : 'Link edges'} className="text-gray-400 dark:text-[#8A8499] hover:text-gray-700 dark:hover:text-[#F3F1F7]">
           {linked ? <Link2 size={11} /> : <Link2Off size={11} />}
         </button>
       </div>
@@ -47,7 +47,7 @@ export function EdgeFields({
           defaultValue={formatUnit(values.top, unit)}
           onBlur={(e) => set('top', e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
-          className="w-full text-xs border rounded px-2 py-1"
+          className="w-full text-xs border dark:border-white/15 dark:bg-[#242131] dark:text-[#F3F1F7] rounded px-2 py-1"
         />
       ) : (
         <div className="grid grid-cols-4 gap-1">
@@ -59,7 +59,7 @@ export function EdgeFields({
               defaultValue={formatUnit(values[edge], unit)}
               onBlur={(e) => set(edge, e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
-              className="w-full text-xs border rounded px-1 py-1"
+              className="w-full text-xs border dark:border-white/15 dark:bg-[#242131] dark:text-[#F3F1F7] rounded px-1 py-1"
             />
           ))}
         </div>

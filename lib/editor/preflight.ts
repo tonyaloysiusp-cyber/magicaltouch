@@ -35,7 +35,7 @@ export function runPreflight(canvas: any, artboards: ArtboardLike[], printSettin
 
   const allObjects = canvas
     .getObjects()
-    .filter((o: any) => !o.__isAnchorHandle && !o.__isPenPreview && !o.__isShapeDraft && !o.__isPrintMark);
+    .filter((o: any) => !o.__isAnchorHandle && !o.__isPenPreview && !o.__isShapeDraft && !o.__isPrintMark && !o.__isGuide);
 
   artboards.forEach((ab) => {
     const settings = printSettingsById[ab.id];

@@ -1,7 +1,7 @@
 'use client';
 
 import { Fraunces, Inter } from 'next/font/google';
-import { useHomeTheme } from '@/hooks/useHomeTheme';
+import { useAppTheme } from '@/hooks/useAppTheme';
 import { Navbar } from './Navbar';
 import { Hero } from './Hero';
 import { BrandStory } from './BrandStory';
@@ -32,7 +32,7 @@ const body = Inter({
 });
 
 export function HomePage() {
-  const { theme, toggleTheme } = useHomeTheme();
+  const { theme, toggleTheme } = useAppTheme();
 
   // Tailwind's class-strategy `dark:` utilities compile to a descendant
   // selector (`.dark .dark\:bg-x`), which never matches an element that
@@ -40,7 +40,7 @@ export function HomePage() {
   // class needs a wrapper of its own, one level above every element
   // (including <main>) that actually uses a `dark:` variant.
   return (
-    <div className={theme === 'night' ? 'dark' : ''}>
+    <div className={theme === 'dark' ? 'dark' : ''}>
       <main
         className={`${display.variable} ${body.variable} font-[family-name:var(--font-body)] bg-white dark:bg-[#111015] text-[#17161B] dark:text-[#F3F1F7] transition-colors duration-300`}
       >
@@ -58,7 +58,7 @@ export function HomePage() {
         <BusinessSection />
         <PricingFree />
         <FinalCTA />
-        <Footer />
+        <Footer theme={theme} />
       </main>
     </div>
   );

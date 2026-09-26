@@ -8,13 +8,15 @@ interface Props {
   onClose: () => void;
   returnToSelectAfterCreate: boolean;
   onToggleReturnToSelect: (value: boolean) => void;
+  gridSize: number;
+  onChangeGridSize: (value: number) => void;
 }
 
 // A small, honest Preferences panel — only settings that are actually
 // wired up to real behavior live here (see PREFERENCES.md-style rule:
 // don't ship a checkbox that does nothing). More can be added as the
 // behaviors they control are built.
-export function PreferencesModal({ open, onClose, returnToSelectAfterCreate, onToggleReturnToSelect }: Props) {
+export function PreferencesModal({ open, onClose, returnToSelectAfterCreate, onToggleReturnToSelect, gridSize, onChangeGridSize }: Props) {
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -55,6 +57,24 @@ export function PreferencesModal({ open, onClose, returnToSelectAfterCreate, onT
                 Off by default — Rectangle, Ellipse, Line, Polygon, Star and Pen stay active so you can draw several objects in a row, matching Illustrator's own behavior.
               </span>
             </span>
+          </label>
+
+          <label className="flex items-center justify-between gap-3 text-xs text-gray-700 pt-1 border-t">
+            <span className="pt-2">
+              Grid size (px)
+              <span className="block text-[11px] text-gray-400 mt-0.5">Spacing between grid lines and the snap-to-grid step.</span>
+            </span>
+            <input
+              type="number"
+              min={2}
+              step={1}
+              value={gridSize}
+              onChange={(e) => {
+                const v = parseInt(e.target.value, 10);
+                if (!isNaN(v) && v > 0) onChangeGridSize(v);
+              }}
+              className="mt-2 w-16 border rounded px-2 py-1 text-xs"
+            />
           </label>
         </div>
       </div>

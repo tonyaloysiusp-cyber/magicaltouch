@@ -16,6 +16,7 @@ export interface MenuAction {
   onClick?: () => void;
   disabled?: boolean;
   planned?: boolean; // shows a "Planned" tag instead of pretending to work
+  checked?: boolean; // shows a real checkmark for a persistent on/off toggle
   divider?: false;
 }
 
@@ -85,7 +86,12 @@ export function MenuBar({ menus, leading }: Props) {
                         : 'text-gray-700 dark:text-gray-200 hover:bg-purple-50 dark:hover:bg-[#333333]'
                     }`}
                   >
-                    <span>{item.label}</span>
+                    <span className="flex items-center gap-1.5">
+                      {item.checked !== undefined && (
+                        <span className="w-3 text-[11px] text-purple-600 dark:text-purple-400">{item.checked ? '✓' : ''}</span>
+                      )}
+                      <span>{item.label}</span>
+                    </span>
                     <span className="flex items-center gap-2 shrink-0 ml-4">
                       {item.shortcut && (
                         <span className="text-[11px] text-gray-400 dark:text-gray-500 font-mono">{item.shortcut}</span>

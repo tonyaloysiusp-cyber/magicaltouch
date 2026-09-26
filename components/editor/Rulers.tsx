@@ -12,6 +12,8 @@ interface Props {
   artboardWidth: number;
   artboardHeight: number;
   ready: boolean;
+  visible?: boolean;
+  onGuideDragStart?: (axis: 'v' | 'h', clientX: number, clientY: number) => void;
 }
 
 // Picks a "nice" tick spacing (1/2/5 * 10^n) in document-unit space so that
@@ -140,7 +142,7 @@ function drawRulers(
   }
 }
 
-export function Rulers({ fabricCanvasRef, unit, originX, originY, artboardWidth, artboardHeight, ready }: Props) {
+export function Rulers({ fabricCanvasRef, unit, originX, originY, artboardWidth, artboardHeight, ready, visible = true, onGuideDragStart }: Props) {
   const topRef = useRef<HTMLCanvasElement>(null);
   const leftRef = useRef<HTMLCanvasElement>(null);
 
@@ -151,9 +153,16 @@ export function Rulers({ fabricCanvasRef, unit, originX, originY, artboardWidth,
     let raf = 0;
     const scheduleDraw = () => {
       cancelAnimationFrame(raf);
-      raf = requestAnimationFrame(() =>
-        drawRulers(canvas, topRef.current, leftRef.current, originX, originY, artboardWidth, artboardHeight, unit)
-      );
+      raf = requestAnimationFrame(() => {
+        if (!visible) {
+          const tctx = topRef.current?.getContext('2d');
+          const lctx = leftRef.current?.getContext('2d');
+          if (topRef.current && tctx) tctx.clearRect(0, 0, topRef.current.width, topRef.current.height);
+          if (leftRef.current && lctx) lctx.clearRect(0, 0, leftRef.current.width, leftRef.current.height);
+          return;
+        }
+        drawRulers(canvas, topRef.current, leftRef.current, originX, originY, artboardWidth, artboardHeight, unit);
+      });
     };
 
     scheduleDraw();
@@ -162,7 +171,7 @@ export function Rulers({ fabricCanvasRef, unit, originX, originY, artboardWidth,
       canvas.off('after:render', scheduleDraw);
       cancelAnimationFrame(raf);
     };
-  }, [fabricCanvasRef, ready, unit, originX, originY, artboardWidth, artboardHeight]);
+  }, [fabricCanvasRef, ready, unit, originX, originY, artboardWidth, artboardHeight, visible]);
 
   return (
     <>
@@ -172,13 +181,21 @@ export function Rulers({ fabricCanvasRef, unit, originX, originY, artboardWidth,
       />
       <canvas
         ref={topRef}
+        data-testid="ruler-top"
         className="absolute top-0 z-20 border-b border-gray-300"
-        style={{ left: RULER_SIZE, right: 0, height: RULER_SIZE }}
+        style={{ left: RULER_SIZE, right: 0, height: RULER_SIZE, cursor: onGuideDragStart ? 'row-resize' : undefined }}
+        onMouseDown={(e) => {
+          if (onGuideDragStart) onGuideDragStart('h', e.clientX, e.clientY);
+        }}
       />
       <canvas
         ref={leftRef}
+        data-testid="ruler-left"
         className="absolute left-0 z-20 border-r border-gray-300"
-        style={{ top: RULER_SIZE, bottom: 0, width: RULER_SIZE }}
+        style={{ top: RULER_SIZE, bottom: 0, width: RULER_SIZE, cursor: onGuideDragStart ? 'col-resize' : undefined }}
+        onMouseDown={(e) => {
+          if (onGuideDragStart) onGuideDragStart('v', e.clientX, e.clientY);
+        }}
       />
     </>
   );
