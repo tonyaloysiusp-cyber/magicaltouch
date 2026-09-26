@@ -321,6 +321,14 @@ function EditorContent() {
   // there IS a real document worth Main Design's tools.
   const [photoFirstSession] = useState(startInPhotoEditor);
   const hasPromptedPhotoUploadRef = useRef(false);
+  // Flips true the first time openPhotoEditor() actually runs. Distinct
+  // from `workspace === 'photo'`: right after landing on a "New Photo
+  // Project" session, `workspace` still reads its initial 'design' value
+  // for the second or two it takes the OS file picker to resolve (or
+  // forever, if the user cancels it) — during that gap there's no real
+  // Main Design document yet either, so the Main Design/Photo Editing
+  // switcher below stays hidden using this flag rather than `workspace`.
+  const hasOpenedPhotoEditorOnceRef = useRef(false);
 
   // Document setup carried over from the "Create New Design" screen. Only
   // meaningful the first time an artboard is created for a brand-new
@@ -1854,6 +1862,7 @@ function EditorContent() {
       initialAdjustments: active.__photoEdits || DEFAULT_ADJUSTMENTS,
       initialCropRect: active.__cropRect || null,
     });
+    hasOpenedPhotoEditorOnceRef.current = true;
     setWorkspace('photo');
   };
 
@@ -3738,6 +3747,14 @@ function EditorContent() {
   // switcher — has nothing real to act on, so it's hidden rather than
   // shown as dead weight around a pure photo-editing session.
   const photoOnlySession = photoFirstSession && workspace === 'photo' && !!photoEditSession;
+  // Narrower than photoOnlySession: also covers the gap between landing
+  // on a "New Photo Project" session and the OS file picker actually
+  // resolving (or being cancelled), where `workspace` still reads its
+  // initial 'design' value but there's still no real Main Design
+  // document to switch to yet — so the switcher alone (not the full menu
+  // bar, which still offers a manual way to add an image) stays hidden
+  // for that stretch too.
+  const hideWorkspaceSwitcherForPhotoFirst = photoOnlySession || (photoFirstSession && !hasOpenedPhotoEditorOnceRef.current);
 
   return (
     <>
@@ -3789,7 +3806,7 @@ function EditorContent() {
           className="text-sm border rounded px-2 py-1 w-48 text-center dark:bg-[#2B2B2B] dark:border-[#3A3A3A] dark:text-gray-100"
         />
 
-        {!photoOnlySession && <WorkspaceSwitcher workspace={workspace} onSwitch={handleWorkspaceSwitch} />}
+        {!hideWorkspaceSwitcherForPhotoFirst && <WorkspaceSwitcher workspace={workspace} onSwitch={handleWorkspaceSwitch} />}
 
         <div className="flex items-center gap-2">
           {/* Undo/Redo target whichever workspace is actually showing —
