@@ -6,6 +6,65 @@ actually done, what was tested, and what's deliberately left for later.
 
 ---
 
+## 2026-09-26 — Storage: real object storage cutover for Main Design
+
+**Problem** (audit §1, deferred from the Photo Studio slice): Main
+Design's own image insertion paths — the toolbar Upload button
+(`handleImageUpload`) and File > Import / PDF-page-rasterized import
+(`insertImageDataUrl`) — still embedded every image as base64 directly
+in the Fabric object's `src`, the same cost the Photo Studio slice fixed
+for its own, smaller surface.
+
+**What was done:** a `backgroundUploadAsset(img)` helper in
+`app/editor/page.tsx`. The image is still added to the canvas
+immediately from the local data URL — placing an image is never slower
+or dependent on the network, unchanged from before. In the background,
+its bytes are uploaded via the same `uploadDesignAsset` helper the Photo
+Studio slice introduced, and once that resolves, `img.setSrc(signedUrl,
+cb, {crossOrigin: 'anonymous'})` swaps the object's source in place
+(same position/scale/filters/`__uid` — nothing else about the object
+changes) and records `__assetId`. Wired into both `handleImageUpload`
+and `insertImageDataUrl` (so File > Import and PDF-page imports get it
+too, since they share that function), and also into `applyPhotoEdits`
+(the Photo Editor's "Apply to Design") — a photo edit produces fresh
+pixels, so its stale `__assetId` is cleared immediately and a new
+upload kicks off for the edited result. A failed upload (offline, or
+the storage migration not applied) degrades silently: the image just
+stays embedded for that session, the same graceful-fallback pattern
+already used elsewhere in this app (e.g. a missing thumbnail column).
+
+**Why deferred, now not:** the audit flagged this specifically as
+higher-risk than Photo Studio because exports, thumbnails, undo/redo,
+and every already-saved design all read image data directly. The design
+here avoids disturbing any of that: existing designs with embedded
+base64 are untouched (this only changes what a *future* insert or photo
+edit produces), Fabric already serializes `crossOrigin` as part of an
+Image object's JSON (confirmed in the Photo Studio work), so a reload
+correctly re-establishes the same cross-origin-safe loading automatically,
+and the swap itself doesn't call `pushHistory()` (it's not a user
+action, so it doesn't create a spurious undo step or make an old,
+pre-swap history entry disagree with a newer one — both still resolve
+to the same visible image either way).
+
+**Tested:** `npx tsc --noEmit` and `npm run build` clean. New 10-check
+Playwright suite: an uploaded image's src becomes a real signed URL
+with a real `__assetId`, `crossOrigin` is set correctly, exactly one
+real upload happens, Export as PNG still works with a cross-origin
+image (no tainted-canvas error), Save writes `canvas_json` referencing
+the URL (not base64), reloading a saved design correctly re-loads the
+URL-sourced image, and uploading identical content again dedupes
+instead of re-uploading. Existing regression suites re-run and still
+passing: guides/grid/snap (14/14), photo export sync (4/4) and dialog
+(4/4), dashboard thumbnail backfill (5/5), and the real-templates suite
+(14/14, confirming the templates cutover from the previous slice still
+works after these editor changes).
+
+**Not verified (same honest limitation as the Photo Studio slice):**
+real Supabase Storage CORS/signed-URL behavior against production
+infrastructure — only mocked in this sandbox.
+
+---
+
 ## 2026-09-26 — Templates: real, original editable designs (first batch)
 
 **Problem** (audit §3): `templates` held no editable design content at
