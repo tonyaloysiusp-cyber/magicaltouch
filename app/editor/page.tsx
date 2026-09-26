@@ -2829,6 +2829,7 @@ function EditorContent() {
       '__cropRect',
       '__isGuide',
       '__guideAxis',
+      '__assetId',
     ]);
     // width/height stay as the dashboard/thumbnail-facing summary size —
     // the first artboard's current dimensions, not the URL params a brand
