@@ -88,7 +88,13 @@ export default function TemplatesPage() {
   };
 
   const useTemplate = async (t: Template) => {
-    const editorPath = `/editor?w=${t.width}&h=${t.height}&templateId=${encodeURIComponent(t.name)}`;
+    // A real id means this row has actual editable canvas_json the
+    // editor can load (see lib/templatesData.ts) -- the static fallback
+    // array and any pre-migration row have no id, so they fall back to
+    // today's blank-canvas-at-the-right-size behavior.
+    const editorPath = t.id
+      ? `/editor?w=${t.width}&h=${t.height}&templateId=${t.id}`
+      : `/editor?w=${t.width}&h=${t.height}`;
     router.push(await resolveAuthedPath(editorPath));
   };
 
@@ -227,7 +233,12 @@ export default function TemplatesPage() {
             <div key={t.name} className="group break-inside-avoid rounded-2xl overflow-hidden border border-black/5 dark:border-white/10 bg-white dark:bg-[#1B1926] shadow-sm hover:shadow-xl transition-shadow duration-300">
               <div className={`relative overflow-hidden ${tileHeight(t)}`}>
                 <div className="absolute inset-0 transition-transform duration-500 group-hover:scale-105">
-                  <MockDesignCard colors={t.colors} label={t.category} />
+                  {t.thumbnail ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={t.thumbnail} alt={t.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <MockDesignCard colors={t.colors} label={t.category} />
+                  )}
                 </div>
                 <div className="absolute inset-0 bg-[#14121F]/0 group-hover:bg-[#14121F]/40 transition-colors duration-300 flex items-center justify-center">
                   <button

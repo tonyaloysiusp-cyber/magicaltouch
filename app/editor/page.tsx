@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { BrandLogo } from '@/components/BrandLogo';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
+import { fetchTemplateById } from '@/lib/templatesData';
 import { Keyboard, Sun, Moon } from 'lucide-react';
 import { useAppTheme } from '@/hooks/useAppTheme';
 
@@ -1566,6 +1567,43 @@ function EditorContent() {
             }
             if (error) console.error('Failed to load design:', error);
           });
+      } else if (cameFromTemplate) {
+        // "Use Template" (see app/templates/page.tsx) -- a fresh,
+        // never-saved document that starts from a real template's
+        // editable content instead of a blank canvas. designId stays
+        // unset, so the first Save creates a brand-new design rather
+        // than overwriting the template itself (copy-on-use, matching
+        // how every template-based design tool works).
+        fetchTemplateById(cameFromTemplate).then((template) => {
+          if (template?.canvasJson) {
+            suppressHistoryRef.current = true;
+            canvas.loadFromJSON(template.canvasJson, function () {
+              ensureArtboards(canvas, F);
+              const first = canvas.getObjects().find((o: any) => o.__isArtboard);
+              fitToRect(canvas, {
+                x: first?.left || 0,
+                y: first?.top || 0,
+                width: (first?.width || width) * (first?.scaleX || 1),
+                height: (first?.height || height) * (first?.scaleY || 1),
+              });
+              canvas.renderAll();
+              refreshLayers();
+              seedInitialSnapshot();
+              ensureFontsLoadedForCanvasJSON(template.canvasJson).then(() => canvas.requestRenderAll());
+              suppressHistoryRef.current = false;
+            });
+          } else {
+            // No real content for this id (old bookmarked link, deleted
+            // template, or the static fallback list has no id) -- degrade
+            // to the same blank-canvas-at-the-right-size behavior as
+            // before this feature existed.
+            ensureArtboards(canvas, F);
+            fitToRect(canvas, { x: 0, y: 0, width, height });
+            seedInitialSnapshot();
+          }
+          setCanvasReady(true);
+        });
+        return;
       } else {
         ensureArtboards(canvas, F);
         fitToRect(canvas, { x: 0, y: 0, width, height });

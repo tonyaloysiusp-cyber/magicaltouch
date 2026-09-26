@@ -13,6 +13,7 @@ import {
   createTemplate,
   updateTemplate,
   deleteTemplate,
+  generateStarterTemplates,
 } from '@/lib/templatesData';
 
 interface TemplateForm {
@@ -43,6 +44,8 @@ export default function AdminTemplatesPage() {
   const [form, setForm] = useState<TemplateForm>(DEFAULT_FORM);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [generating, setGenerating] = useState(false);
+  const [generateResult, setGenerateResult] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -115,6 +118,24 @@ export default function AdminTemplatesPage() {
     setSaving(false);
   };
 
+  // Runs every real template builder (lib/templates/builders.ts) through
+  // the headless render pipeline and upserts the result -- see that
+  // module and lib/templatesData.ts's generateStarterTemplates() for why
+  // this is a real generation pipeline, not hardcoded React content.
+  const runGenerateStarterTemplates = async () => {
+    if (!userId) return;
+    setGenerating(true);
+    setGenerateResult(null);
+    const { created, updated, errors } = await generateStarterTemplates(userId);
+    setTemplates(await fetchTemplates());
+    setGenerateResult(
+      errors.length
+        ? `${created} created, ${updated} updated, ${errors.length} failed: ${errors.join('; ')}`
+        : `${created} created, ${updated} updated.`
+    );
+    setGenerating(false);
+  };
+
   const remove = async (t: Template) => {
     if (!t.id) return;
     if (!window.confirm(`Delete "${t.name}"? This can't be undone.`)) return;
@@ -159,7 +180,18 @@ export default function AdminTemplatesPage() {
       </header>
 
       <main className="max-w-4xl mx-auto p-6">
-        <div className="flex justify-end mb-4">
+        <div className="flex justify-between items-center mb-4 gap-3">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={runGenerateStarterTemplates}
+              disabled={generating}
+              className="text-sm font-semibold text-gray-700 bg-white border rounded-full px-4 py-2 hover:bg-gray-50 disabled:opacity-50"
+              title="Generates the real, original starter templates from lib/templates/builders.ts"
+            >
+              {generating ? 'Generating…' : 'Generate Starter Templates'}
+            </button>
+            {generateResult && <p className="text-xs text-gray-500">{generateResult}</p>}
+          </div>
           <button onClick={startNew} className="text-sm font-semibold text-white bg-brand-gradient rounded-full px-4 py-2 hover:shadow-md transition-shadow">
             + Add Template
           </button>
@@ -180,10 +212,15 @@ export default function AdminTemplatesPage() {
               {templates.map((t) => (
                 <tr key={t.id || t.name} className="border-t">
                   <td className="px-4 py-2">
-                    <div
-                      className="w-12 h-8 rounded shrink-0"
-                      style={{ background: `linear-gradient(135deg, ${t.colors[0]}, ${t.colors[1]})` }}
-                    />
+                    {t.thumbnail ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={t.thumbnail} alt="" className="w-12 h-8 rounded shrink-0 object-cover border" />
+                    ) : (
+                      <div
+                        className="w-12 h-8 rounded shrink-0"
+                        style={{ background: `linear-gradient(135deg, ${t.colors[0]}, ${t.colors[1]})` }}
+                      />
+                    )}
                   </td>
                   <td className="px-4 py-2 font-medium text-gray-800">{t.name}</td>
                   <td className="px-4 py-2 text-gray-500">{t.category}</td>
