@@ -304,6 +304,13 @@ export default function DashboardPage() {
               + Photo Project
             </button>
             <Link
+              href="/photo-studio"
+              title="A full, standalone photo-editing workspace — layers, masks, curves, dodge/burn, clone stamp and real-world print units"
+              className="hidden md:inline-flex items-center gap-1.5 border border-black/15 dark:border-white/15 text-[#17161B] dark:text-white px-4 py-2.5 rounded-full text-sm font-semibold hover:border-black/30 dark:hover:border-white/30 transition-colors"
+            >
+              Photo Studio
+            </Link>
+            <Link
               href="/create"
               onClick={handleNewDesignClick}
               className="relative overflow-hidden inline-flex items-center gap-1.5 text-white px-4 py-2.5 rounded-full text-sm font-semibold bg-brand-gradient shadow-[0_6px_16px_-6px_rgba(108,79,209,0.5)] hover:shadow-[0_10px_20px_-6px_rgba(108,79,209,0.6)] hover:-translate-y-0.5 transition-all before:content-[''] before:absolute before:inset-x-0 before:top-0 before:h-1/2 before:bg-white/25 before:rounded-t-full"
