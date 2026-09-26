@@ -6,6 +6,70 @@ actually done, what was tested, and what's deliberately left for later.
 
 ---
 
+## 2026-09-26 — Templates: real, original editable designs (first batch)
+
+**Problem** (audit §3): `templates` held no editable design content at
+all — just a name/category/size/two hex colors, rendered as a color
+swatch. Clicking "Use Template" opened a blank document at the right
+size with nothing else loaded; `templateId` only changed a back-link
+label. The "original template library" brief is legitimate greenfield
+work, not a migration.
+
+**What was done — following the brief's own anti-copying rule strictly:**
+every shape, position, and color below is authored directly in
+`lib/templates/builders.ts`, not traced, adapted, or copied from Canva,
+Adobe, Envato, Freepik, Pinterest, Behance, or anywhere else.
+- `supabase/migrations/0006_template_designs.sql` — adds `canvas_json`,
+  `thumbnail`, `rights_status` to `templates` (purely additive).
+- `lib/templates/builders.ts` — six real, structurally distinct template
+  compositions (not one master recolored): Modern Grid (Business Card,
+  two-panel color block), Diagonal Edge (Flyer, wedge cutout + CTA
+  pill), Confetti Pop (Invitation, scattered dot pattern + rounded
+  frame), Golden Frame (Invitation, nested double border — deliberately
+  a different construction technique from Confetti Pop despite sharing
+  a category), Sale Burst (Social Media, rotated-triangle starburst),
+  Editorial Minimal (Resume, sidebar + content grid). `rights_status`
+  defaults to `'verified'` since the content is generated code, not
+  sourced material.
+- `lib/templates/renderTemplate.ts` — mirrors
+  `lib/editor/buildPhotoDesignPayload.ts`'s pattern: a real headless
+  Fabric `StaticCanvas` with a proper Artboard object, producing
+  byte-compatible `canvas_json` + a real thumbnail via `toDataURL`.
+- A "Generate Starter Templates" action in `/admin/templates`
+  (`generateStarterTemplates` in `lib/templatesData.ts`) runs every
+  builder through the pipeline and upserts by `(name, category)` — a
+  real, repeatable generation pipeline, not templates hardcoded into
+  React components.
+- `/templates`' "Use Template" now passes the template's real `id`;
+  Main Design's editor bootstrap loads that template's `canvas_json` as
+  a fresh document's starting content when one resolves (copy-on-use —
+  `designId` stays unset, so the first Save creates a new design and
+  never mutates the template). Falls back to today's blank-canvas
+  behavior for ids that don't resolve (old links, deleted templates, or
+  the static fallback array).
+- Both `/templates` and `/admin/templates` render the real thumbnail
+  when present, falling back to the existing color-swatch placeholder
+  otherwise.
+
+**Deliberately NOT done in this batch:** this ships 6 original templates
+to prove the full pipeline for real, not 10,000+ — producing a large
+library is a content effort as much as an engineering one (see the
+audit's own scope table). Font/image licensing metadata, the full
+originality-review workflow, and template packs are not built yet.
+
+**Tested:** `npx tsc --noEmit` and `npm run build` clean. New 14-check
+Playwright suite: generation produces 6 real rows with genuinely
+different object counts (6–22 objects, confirming distinct
+compositions, not recolors) and real thumbnails; re-running generation
+updates the same rows instead of duplicating them; opening a template
+via "Use Template" loads its actual objects into the editor (verified by
+reading back real text like "Jordan Ellis" from the live canvas, not a
+blank one); saving creates a new design and never mutates the template
+row. Existing regression suites (guides/grid/snap, templates/dashboard)
+re-run and still passing.
+
+---
+
 ## 2026-09-26 — Storage: real object storage + content dedup (first slice)
 
 **Problem** (audit §1): every design image was embedded as a base64

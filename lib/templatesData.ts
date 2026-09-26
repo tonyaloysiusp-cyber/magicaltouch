@@ -14,7 +14,7 @@
 
 import { supabase } from './supabase';
 
-export type Category = 'Business Card' | 'Letterhead' | 'Flyer' | 'Resume' | 'Invitation' | 'Poster';
+export type Category = 'Business Card' | 'Letterhead' | 'Flyer' | 'Resume' | 'Invitation' | 'Poster' | 'Social Media';
 
 export interface Template {
   id?: string; // present for real rows loaded from Supabase; absent for the static fallback below
@@ -23,9 +23,16 @@ export interface Template {
   width: number;
   height: number;
   colors: [string, string];
+  // Present only once a real editable design has been generated for this
+  // row (see lib/templates/renderTemplate.ts) -- the static fallback
+  // array and any pre-migration row never have these, and /templates'
+  // "Use Template" degrades to today's blank-canvas behavior for them.
+  canvasJson?: any;
+  thumbnail?: string | null;
+  rightsStatus?: string;
 }
 
-export const CATEGORIES: Category[] = ['Business Card', 'Letterhead', 'Flyer', 'Resume', 'Invitation', 'Poster'];
+export const CATEGORIES: Category[] = ['Business Card', 'Letterhead', 'Flyer', 'Resume', 'Invitation', 'Poster', 'Social Media'];
 
 export const TEMPLATES: Template[] = [
   { name: 'Studio Minimal', category: 'Business Card', width: 1050, height: 600, colors: ['#14121F', '#FAF9F6'] },
@@ -57,6 +64,9 @@ interface TemplateRow {
   color1: string;
   color2: string;
   sort_order: number;
+  canvas_json?: any;
+  thumbnail?: string | null;
+  rights_status?: string;
 }
 
 function rowToTemplate(row: TemplateRow): Template {
@@ -67,6 +77,9 @@ function rowToTemplate(row: TemplateRow): Template {
     width: row.width,
     height: row.height,
     colors: [row.color1, row.color2],
+    canvasJson: row.canvas_json,
+    thumbnail: row.thumbnail,
+    rightsStatus: row.rights_status,
   };
 }
 
@@ -131,6 +144,70 @@ export async function deleteTemplate(id: string): Promise<boolean> {
     return false;
   }
   return true;
+}
+
+// Fetches a single template's full row (including canvas_json) by id --
+// used by the editor when opening a fresh document via "Use Template" to
+// load its real content, as opposed to fetchTemplates()'s gallery
+// listing which doesn't need to pull every template's full design data.
+export async function fetchTemplateById(id: string): Promise<Template | null> {
+  const { data, error } = await supabase.from('templates').select('*').eq('id', id).single();
+  if (error || !data) return null;
+  return rowToTemplate(data as TemplateRow);
+}
+
+// Runs every builder in lib/templates/builders.ts through the real
+// headless render pipeline and upserts the result into the templates
+// table (matched by name+category, like the original 0003 seed, so this
+// is safe to re-run after editing a builder). Real, original, editable
+// designs -- not a copy of anything -- see that module's own header.
+export async function generateStarterTemplates(userId: string): Promise<{ created: number; updated: number; errors: string[] }> {
+  const { TEMPLATE_BUILDERS } = await import('@/lib/templates/builders');
+  const { renderTemplate } = await import('@/lib/templates/renderTemplate');
+
+  let created = 0;
+  let updated = 0;
+  const errors: string[] = [];
+
+  for (const def of TEMPLATE_BUILDERS) {
+    try {
+      const { canvasJson, thumbnail } = await renderTemplate(def);
+      const { data: existing } = await supabase
+        .from('templates')
+        .select('id')
+        .eq('name', def.name)
+        .eq('category', def.category)
+        .maybeSingle();
+
+      const payload = {
+        name: def.name,
+        category: def.category,
+        width: def.width,
+        height: def.height,
+        color1: def.color1,
+        color2: def.color2,
+        canvas_json: canvasJson,
+        thumbnail,
+        rights_status: 'verified',
+        created_by: userId,
+        updated_at: new Date().toISOString(),
+      };
+
+      if (existing) {
+        const { error } = await supabase.from('templates').update(payload).eq('id', existing.id);
+        if (error) throw error;
+        updated++;
+      } else {
+        const { error } = await supabase.from('templates').insert(payload);
+        if (error) throw error;
+        created++;
+      }
+    } catch (err: any) {
+      errors.push(`${def.name}: ${err?.message || String(err)}`);
+    }
+  }
+
+  return { created, updated, errors };
 }
 
 export async function reorderTemplates(orderedIds: string[]): Promise<boolean> {
