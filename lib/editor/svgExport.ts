@@ -239,7 +239,8 @@ export function exportArtboardToSVG(canvas: any, F: any, artboard: RectLike & { 
         !o.__isAnchorHandle &&
         !o.__isPenPreview &&
         !o.__isShapeDraft &&
-        !o.__isPrintMark
+        !o.__isPrintMark &&
+        !o.__isGuide
     );
 
   const defs: string[] = [];

@@ -109,3 +109,60 @@ export function computeSnap(moving: Bounds, targets: Bounds[], threshold: number
     guides,
   };
 }
+
+// Persistent ruler guides are single positions on one axis (not full
+// bounds like objects/artboards), so they get their own, simpler snap
+// check rather than reusing computeSnap's bounds-vs-bounds anchors.
+export interface PersistedGuide {
+  axis: 'v' | 'h';
+  position: number;
+}
+
+export function computeGuideSnap(moving: Bounds, guides: PersistedGuide[], threshold: number): { dx: number; dy: number } {
+  let bestDx = 0;
+  let bestDxAbs = threshold;
+  let bestDy = 0;
+  let bestDyAbs = threshold;
+
+  const movingXs = xAnchors(moving);
+  const movingYs = yAnchors(moving);
+
+  for (const g of guides) {
+    if (g.axis === 'v') {
+      for (const mx of movingXs) {
+        const diff = g.position - mx;
+        if (Math.abs(diff) < bestDxAbs) {
+          bestDxAbs = Math.abs(diff);
+          bestDx = diff;
+        }
+      }
+    } else {
+      for (const my of movingYs) {
+        const diff = g.position - my;
+        if (Math.abs(diff) < bestDyAbs) {
+          bestDyAbs = Math.abs(diff);
+          bestDy = diff;
+        }
+      }
+    }
+  }
+
+  return {
+    dx: bestDxAbs < threshold ? bestDx : 0,
+    dy: bestDyAbs < threshold ? bestDy : 0,
+  };
+}
+
+// Snaps a moving object's top-left onto the nearest grid line, only on
+// whichever axis didn't already get a smart-guide/ruler-guide snap (those
+// take priority, matching how professional tools layer their snap
+// sources: guides beat grid).
+export function computeGridSnap(moving: Bounds, gridSize: number, skipX: boolean, skipY: boolean): { dx: number; dy: number } {
+  if (gridSize <= 0) return { dx: 0, dy: 0 };
+  const snappedLeft = Math.round(moving.left / gridSize) * gridSize;
+  const snappedTop = Math.round(moving.top / gridSize) * gridSize;
+  return {
+    dx: skipX ? 0 : snappedLeft - moving.left,
+    dy: skipY ? 0 : snappedTop - moving.top,
+  };
+}

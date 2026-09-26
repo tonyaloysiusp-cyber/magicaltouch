@@ -131,6 +131,10 @@ export default function DashboardPage() {
           canvas.loadFromJSON(full.canvas_json, async () => {
             try {
               await ensureFontsLoadedForCanvasJSON(full.canvas_json);
+              // Ruler guides are real (saved) Fabric objects -- this
+              // throwaway canvas exists only to render a thumbnail, so
+              // just drop them outright rather than toggling visibility.
+              canvas.getObjects().filter((o: any) => o.__isGuide).forEach((o: any) => canvas.remove(o));
               const ab = canvas.getObjects().find((o: any) => o.__isArtboard) as any;
               const rect = ab
                 ? { left: ab.left, top: ab.top, width: (ab.width || 0) * (ab.scaleX || 1), height: (ab.height || 0) * (ab.scaleY || 1) }

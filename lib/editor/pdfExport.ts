@@ -410,7 +410,7 @@ async function renderObjectsToPage(
 export async function exportCanvasToPDF(pdf: any, canvas: any, F: any) {
   const objects: any[] = canvas
     .getObjects()
-    .filter((o: any) => !o.__isAnchorHandle && !o.__isPenPreview && !o.__isShapeDraft && o.visible !== false);
+    .filter((o: any) => !o.__isAnchorHandle && !o.__isPenPreview && !o.__isShapeDraft && !o.__isGuide && o.visible !== false);
   await renderObjectsToPage(pdf, F, objects, 0, 0, createPdfFontCache());
 }
 
@@ -431,7 +431,7 @@ export async function exportArtboardsToPDF(pdf: any, canvas: any, F: any, artboa
       .getObjects()
       .filter(
         (o: any) =>
-          !o.__isAnchorHandle && !o.__isPenPreview && !o.__isShapeDraft && o.visible !== false && o.__artboardId === ab.id
+          !o.__isAnchorHandle && !o.__isPenPreview && !o.__isShapeDraft && !o.__isGuide && o.visible !== false && o.__artboardId === ab.id
       );
     await renderObjectsToPage(pdf, F, objects, ab.x, ab.y, fontCache);
   }
