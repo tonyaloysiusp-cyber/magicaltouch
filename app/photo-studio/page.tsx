@@ -188,7 +188,7 @@ export default function PhotoStudioPage() {
         }
       }
       const size = await loadImageSize(result.dataUrl);
-      const { canvasJson, thumbnail } = await buildPhotoDesignJson(result.dataUrl, size.w, size.h, docDpi);
+      const { canvasJson, thumbnail } = await buildPhotoDesignJson(result.dataUrl, size.w, size.h, docDpi, user.id);
       const payload: any = {
         user_id: user.id,
         name: docName || 'Untitled Photo',

@@ -4,7 +4,7 @@ import { useCallback, useRef, useState } from 'react';
 import { MAX_HISTORY } from '@/lib/editor/types';
 import { ensureFontsLoadedForCanvasJSON } from '@/lib/editor/googleFonts';
 
-const SNAPSHOT_PROPS = ['name', 'locked', 'visible', 'isVectorPath', 'clipPath', '__uid', '__lockRatio', '__isArtboard', '__artboardId', '__print', '__originalSrc', '__photoEdits', '__cropRect', '__isGuide', '__guideAxis'];
+const SNAPSHOT_PROPS = ['name', 'locked', 'visible', 'isVectorPath', 'clipPath', '__uid', '__lockRatio', '__isArtboard', '__artboardId', '__print', '__originalSrc', '__photoEdits', '__cropRect', '__isGuide', '__guideAxis', '__assetId'];
 
 export function useEditorHistory(
   fabricCanvasRef: React.MutableRefObject<any>,

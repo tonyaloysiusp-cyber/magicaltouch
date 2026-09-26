@@ -7,14 +7,22 @@
 // JSON) so the result is byte-compatible with what Main Design's own
 // save produces -- the design reopens in /editor, and the dashboard's
 // thumbnail/reopen pipeline needs no special-casing for it.
+//
+// The composite's pixels are uploaded to real object storage
+// (lib/storage/assets.ts) rather than embedded as base64 inside
+// canvas_json -- the #1 fix identified in docs/ENGINEERING_AUDIT.md.
+// This is the first live cutover of that pattern, deliberately scoped
+// to this one new, low-risk page rather than Main Design's mature
+// upload path (see the audit for why).
 // ---------------------------------------------------------------------
 
 import { createArtboardId, nextArtboardName } from './artboards';
 import { createDefaultPrintSettings } from './printSetup';
+import { dataUrlToBlob, uploadDesignAsset } from '@/lib/storage/assets';
 
-// Kept in sync by hand with the identical array in app/editor/page.tsx's
-// own save function -- both must list every custom property that needs
-// to survive a save/reload.
+// Kept in sync by hand with the identical arrays in app/editor/page.tsx's
+// own save function and hooks/useEditorHistory.ts -- all three must list
+// every custom property that needs to survive a save/reload/undo.
 const SAVE_CUSTOM_PROPS = [
   'name',
   'locked',
@@ -31,6 +39,7 @@ const SAVE_CUSTOM_PROPS = [
   '__cropRect',
   '__isGuide',
   '__guideAxis',
+  '__assetId',
 ];
 
 export interface PhotoDesignPayload {
@@ -42,7 +51,8 @@ export async function buildPhotoDesignJson(
   dataUrl: string,
   widthPx: number,
   heightPx: number,
-  dpi: number
+  dpi: number,
+  userId: string
 ): Promise<PhotoDesignPayload> {
   const mod: any = await import('fabric');
   const F = mod.fabric;
@@ -68,20 +78,33 @@ export async function buildPhotoDesignJson(
   artboard.name = nextArtboardName([]);
   canvas.add(artboard);
 
-  await new Promise<void>((resolve) => {
-    F.Image.fromURL(dataUrl, (img: any) => {
-      img.set({
-        left: 0,
-        top: 0,
-        scaleX: widthPx / (img.width || widthPx),
-        scaleY: heightPx / (img.height || heightPx),
-        selectable: true,
-      });
-      img.__uid = `obj_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-      img.__artboardId = artboard.__artboardId;
-      canvas.add(img);
-      resolve();
-    });
+  // Real object storage instead of embedding these pixels as base64
+  // inside canvas_json -- see the module comment above.
+  const uploaded = await uploadDesignAsset(dataUrlToBlob(dataUrl), userId);
+
+  await new Promise<void>((resolve, reject) => {
+    F.Image.fromURL(
+      uploaded.url,
+      (img: any, isError: boolean) => {
+        if (isError || !img) {
+          reject(new Error('Failed to load the uploaded asset back into the canvas'));
+          return;
+        }
+        img.set({
+          left: 0,
+          top: 0,
+          scaleX: widthPx / (img.width || widthPx),
+          scaleY: heightPx / (img.height || heightPx),
+          selectable: true,
+        });
+        img.__uid = `obj_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+        img.__artboardId = artboard.__artboardId;
+        img.__assetId = uploaded.assetId;
+        canvas.add(img);
+        resolve();
+      },
+      { crossOrigin: 'anonymous' }
+    );
   });
 
   const canvasJson = canvas.toJSON(SAVE_CUSTOM_PROPS);
