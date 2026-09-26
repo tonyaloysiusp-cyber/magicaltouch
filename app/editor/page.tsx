@@ -2,11 +2,11 @@
 
 import { useEffect, useRef, useState, useCallback, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import Image from 'next/image';
+import { BrandLogo } from '@/components/BrandLogo';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { Keyboard, Sun, Moon } from 'lucide-react';
-import { useEditorTheme } from '@/hooks/useEditorTheme';
+import { useAppTheme } from '@/hooks/useAppTheme';
 
 import { ToolMode, DocUnit, isDrawTool, PASTEBOARD_BG, RULER_SIZE } from '@/lib/editor/types';
 import { allFontFacesCSS, ensureFontLoaded, ensureFontsLoadedForCanvasJSON, validateAllFonts } from '@/lib/editor/googleFonts';
@@ -76,7 +76,7 @@ function EditorContent() {
   const panRef = useRef<{ active: boolean; lastX: number; lastY: number }>({ active: false, lastX: 0, lastY: 0 });
   const [canvasReady, setCanvasReady] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
-  const { theme, toggleTheme } = useEditorTheme();
+  const { theme, toggleTheme } = useAppTheme();
   const isDark = theme === 'dark';
 
   // Background, one-time-per-session audit of every font in the picker —
@@ -3764,7 +3764,7 @@ function EditorContent() {
         menus={photoOnlySession ? [] : menus}
         leading={
           <Link href="/" title="Go to homepage">
-            <Image src="/logo.png" alt="Magical Touch" width={140} height={28} priority />
+            <BrandLogo theme={theme} width={140} height={28} priority />
           </Link>
         }
       />

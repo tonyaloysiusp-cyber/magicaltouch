@@ -3,8 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import Image from 'next/image';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Sun, Moon } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import {
   Profile,
@@ -16,6 +15,8 @@ import {
   uploadAvatar,
 } from '@/lib/profile';
 import { Avatar, LevelBadge } from '@/components/ProfileMenu';
+import { BrandLogo } from '@/components/BrandLogo';
+import { useAppTheme } from '@/hooks/useAppTheme';
 
 interface RecentDesign {
   id: string;
@@ -28,6 +29,7 @@ interface RecentDesign {
 
 export default function ProfilePage() {
   const router = useRouter();
+  const { theme, toggleTheme } = useAppTheme();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [checkingAuth, setCheckingAuth] = useState(true);
@@ -90,19 +92,34 @@ export default function ProfilePage() {
   };
 
   if (checkingAuth) {
-    return <main className="min-h-screen flex items-center justify-center text-gray-400">Loading...</main>;
+    return (
+      <main className="min-h-screen flex items-center justify-center text-gray-400 dark:bg-[#111015] dark:text-[#B7B2C6]">
+        Loading...
+      </main>
+    );
   }
 
   return (
-    <main className="min-h-screen p-6 max-w-3xl mx-auto">
+    <div className={theme === 'dark' ? 'dark' : ''}>
+    <main className="min-h-screen p-6 max-w-3xl mx-auto bg-white dark:bg-[#111015] transition-colors duration-300">
       <div className="flex items-center justify-between mb-8">
-        <Link href="/dashboard" className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800">
+        <Link href="/dashboard" className="flex items-center gap-1.5 text-sm text-gray-500 dark:text-[#B7B2C6] hover:text-gray-800 dark:hover:text-white">
           <ArrowLeft size={15} /> Dashboard
         </Link>
-        <Image src="/logo.png" alt="Magical Touch" width={150} height={30} />
+        <div className="flex items-center gap-3">
+          <button
+            onClick={toggleTheme}
+            title={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
+            aria-label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
+            className="p-2 rounded-full border border-black/10 dark:border-white/15 text-gray-500 dark:text-[#B7B2C6] hover:border-black/25 dark:hover:border-white/30 transition-colors"
+          >
+            {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+          </button>
+          <BrandLogo theme={theme} width={150} height={30} />
+        </div>
       </div>
 
-      <h1 className="text-2xl font-bold text-gray-800 mb-6">Profile</h1>
+      <h1 className="text-2xl font-bold text-gray-800 dark:text-[#F3F1F7] mb-6">Profile</h1>
 
       <div className="flex items-center gap-5 mb-8">
         <div className="relative">
@@ -110,46 +127,46 @@ export default function ProfilePage() {
           <button
             onClick={() => fileInputRef.current?.click()}
             disabled={uploadingAvatar}
-            className="absolute -bottom-1 -right-1 text-[10px] font-semibold bg-white border rounded-full px-2 py-0.5 shadow hover:bg-gray-50 disabled:opacity-50"
+            className="absolute -bottom-1 -right-1 text-[10px] font-semibold bg-white dark:bg-[#1B1926] dark:text-[#F3F1F7] border dark:border-white/15 rounded-full px-2 py-0.5 shadow hover:bg-gray-50 dark:hover:bg-[#242131] disabled:opacity-50"
           >
             {uploadingAvatar ? '...' : 'Edit'}
           </button>
           <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
         </div>
         <div>
-          <p className="font-semibold text-gray-800 text-lg">{profile?.name || 'Unnamed Creator'}</p>
-          <p className="text-sm text-gray-400">{email}</p>
+          <p className="font-semibold text-gray-800 dark:text-[#F3F1F7] text-lg">{profile?.name || 'Unnamed Creator'}</p>
+          <p className="text-sm text-gray-400 dark:text-[#B7B2C6]">{email}</p>
           <div className="mt-2 flex items-center gap-2">
             <LevelBadge level={level} />
-            <span className="text-xs text-gray-400">{designCount} design{designCount === 1 ? '' : 's'}</span>
+            <span className="text-xs text-gray-400 dark:text-[#B7B2C6]">{designCount} design{designCount === 1 ? '' : 's'}</span>
           </div>
         </div>
       </div>
 
-      <div className="border rounded-xl p-5 mb-8 bg-white">
-        <h2 className="text-sm font-semibold text-gray-700 mb-4">Account details</h2>
+      <div className="border dark:border-white/10 rounded-xl p-5 mb-8 bg-white dark:bg-[#1B1926]">
+        <h2 className="text-sm font-semibold text-gray-700 dark:text-[#F3F1F7] mb-4">Account details</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="text-xs text-gray-500 block mb-1">Name</label>
+            <label className="text-xs text-gray-500 dark:text-[#B7B2C6] block mb-1">Name</label>
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full border rounded-lg px-3 py-2 text-sm"
+              className="w-full border dark:border-white/15 dark:bg-[#242131] dark:text-[#F3F1F7] rounded-lg px-3 py-2 text-sm"
               placeholder="Your name"
             />
           </div>
           <div>
-            <label className="text-xs text-gray-500 block mb-1">Phone number (optional)</label>
+            <label className="text-xs text-gray-500 dark:text-[#B7B2C6] block mb-1">Phone number (optional)</label>
             <input
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              className="w-full border rounded-lg px-3 py-2 text-sm"
+              className="w-full border dark:border-white/15 dark:bg-[#242131] dark:text-[#F3F1F7] rounded-lg px-3 py-2 text-sm"
               placeholder="+1 555 123 4567"
             />
           </div>
           <div className="sm:col-span-2">
-            <label className="text-xs text-gray-500 block mb-1">Email</label>
-            <input value={email} disabled className="w-full border rounded-lg px-3 py-2 text-sm bg-gray-50 text-gray-400" />
+            <label className="text-xs text-gray-500 dark:text-[#B7B2C6] block mb-1">Email</label>
+            <input value={email} disabled className="w-full border dark:border-white/15 rounded-lg px-3 py-2 text-sm bg-gray-50 dark:bg-[#151320] text-gray-400 dark:text-[#B7B2C6]" />
           </div>
         </div>
         <button
@@ -163,22 +180,22 @@ export default function ProfilePage() {
 
       <div>
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-semibold text-gray-700">Recent work</h2>
-          <Link href="/dashboard" className="text-xs text-[#6C4FD1] font-medium hover:underline">
+          <h2 className="text-sm font-semibold text-gray-700 dark:text-[#F3F1F7]">Recent work</h2>
+          <Link href="/dashboard" className="text-xs text-[#6C4FD1] dark:text-[#B79CFF] font-medium hover:underline">
             View all
           </Link>
         </div>
         {recent.length === 0 ? (
-          <p className="text-sm text-gray-400">No designs yet.</p>
+          <p className="text-sm text-gray-400 dark:text-[#B7B2C6]">No designs yet.</p>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {recent.map((d) => (
               <Link
                 key={d.id}
                 href={`/editor?designId=${d.id}&w=${d.width}&h=${d.height}`}
-                className="border rounded-lg overflow-hidden hover:shadow-md transition bg-white"
+                className="border dark:border-white/10 rounded-lg overflow-hidden hover:shadow-md transition bg-white dark:bg-[#1B1926]"
               >
-                <div className="aspect-square bg-gray-100 flex items-center justify-center text-gray-300 text-[10px]">
+                <div className="aspect-square bg-gray-100 dark:bg-[#242131] flex items-center justify-center text-gray-300 dark:text-[#B7B2C6] text-[10px]">
                   {d.thumbnail ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={d.thumbnail} alt={d.name} className="w-full h-full object-contain" />
@@ -186,12 +203,13 @@ export default function ProfilePage() {
                     <span>{d.width}×{d.height}</span>
                   )}
                 </div>
-                <p className="text-xs font-medium text-gray-700 px-2 py-1.5 truncate">{d.name}</p>
+                <p className="text-xs font-medium text-gray-700 dark:text-[#F3F1F7] px-2 py-1.5 truncate">{d.name}</p>
               </Link>
             ))}
           </div>
         )}
       </div>
     </main>
+    </div>
   );
 }

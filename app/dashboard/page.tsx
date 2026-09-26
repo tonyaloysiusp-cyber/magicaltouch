@@ -1,16 +1,17 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Fraunces, Inter } from 'next/font/google';
-import { MoreVertical, Pencil, Copy, Download, Trash2, Plus, Sparkles, ArrowRight } from 'lucide-react';
+import { MoreVertical, Pencil, Copy, Download, Trash2, Plus, Sparkles, ArrowRight, Sun, Moon } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { ProfileMenu } from '@/components/ProfileMenu';
 import { DesignLimitDialog } from '@/components/DesignLimitDialog';
 import { MAX_DESIGNS, getOrCreateProfile } from '@/lib/profile';
 import { allFontFacesCSS, ensureFontsLoadedForCanvasJSON } from '@/lib/editor/googleFonts';
+import { BrandLogo } from '@/components/BrandLogo';
+import { useAppTheme } from '@/hooks/useAppTheme';
 
 const display = Fraunces({
   subsets: ['latin'],
@@ -38,6 +39,7 @@ interface Design {
 
 export default function DashboardPage() {
   const router = useRouter();
+  const { theme, toggleTheme } = useAppTheme();
   const [designs, setDesigns] = useState<Design[]>([]);
   const [loading, setLoading] = useState(true);
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
@@ -252,7 +254,8 @@ export default function DashboardPage() {
   };
 
   return (
-    <main className={`${display.variable} ${body.variable} font-[family-name:var(--font-body)] min-h-screen bg-[#F7F5F0]`}>
+    <div className={theme === 'dark' ? 'dark' : ''}>
+    <main className={`${display.variable} ${body.variable} font-[family-name:var(--font-body)] min-h-screen bg-[#F7F5F0] dark:bg-[#111015] text-[#17161B] dark:text-[#F3F1F7] transition-colors duration-300`}>
       {/* Same same-origin font-face proxy the editor declares -- the
           off-screen thumbnail backfill above needs these @font-face rules
           present somewhere in the document for document.fonts.load() to
@@ -262,33 +265,41 @@ export default function DashboardPage() {
           hydration's server/client text comparison on a plain child. */}
       <style dangerouslySetInnerHTML={{ __html: allFontFacesCSS() }} />
 
-      <header className="sticky top-0 z-40 bg-[#F7F5F0]/90 backdrop-blur border-b border-black/5">
+      <header className="sticky top-0 z-40 bg-[#F7F5F0]/90 dark:bg-[#151320]/90 backdrop-blur border-b border-black/5 dark:border-white/10">
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
           <Link href="/" title="Go to homepage" className="shrink-0">
-            <Image src="/logo.png" alt="Magical Touch" width={150} height={30} />
+            <BrandLogo theme={theme} width={150} height={30} />
           </Link>
           <div className="hidden md:flex items-center gap-1">
-            <Link href="/" className="text-sm font-medium text-[#4A4750] hover:text-[#17161B] px-3 py-2">
+            <Link href="/" className="text-sm font-medium text-[#4A4750] dark:text-[#B7B2C6] hover:text-[#17161B] dark:hover:text-white px-3 py-2">
               Home
             </Link>
-            <Link href="/templates" className="text-sm font-medium text-[#4A4750] hover:text-[#17161B] px-3 py-2">
+            <Link href="/templates" className="text-sm font-medium text-[#4A4750] dark:text-[#B7B2C6] hover:text-[#17161B] dark:hover:text-white px-3 py-2">
               Templates
             </Link>
-            <Link href="/#pricing" className="text-sm font-medium text-[#4A4750] hover:text-[#17161B] px-3 py-2">
+            <Link href="/#pricing" className="text-sm font-medium text-[#4A4750] dark:text-[#B7B2C6] hover:text-[#17161B] dark:hover:text-white px-3 py-2">
               Pricing
             </Link>
             <Link
               href="/studio"
               title="A new editor engine being built from scratch — only pan/zoom/layers/undo work so far, saved locally in this browser only"
-              className="text-sm font-medium text-[#4A4750]/50 hover:text-[#4A4750] px-3 py-2"
+              className="text-sm font-medium text-[#4A4750]/50 dark:text-[#B7B2C6]/50 hover:text-[#4A4750] dark:hover:text-[#B7B2C6] px-3 py-2"
             >
               Studio (Preview)
             </Link>
           </div>
           <div className="flex items-center gap-2 shrink-0">
             <button
+              onClick={toggleTheme}
+              title={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
+              aria-label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
+              className="p-2 rounded-full border border-black/15 dark:border-white/15 text-[#4A4750] dark:text-[#B7B2C6] hover:border-black/30 dark:hover:border-white/30 transition-colors"
+            >
+              {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
+            </button>
+            <button
               onClick={goToNewPhotoProject}
-              className="hidden sm:inline-flex items-center gap-1.5 border border-black/15 text-[#17161B] px-4 py-2.5 rounded-full text-sm font-semibold hover:border-black/30 transition-colors"
+              className="hidden sm:inline-flex items-center gap-1.5 border border-black/15 dark:border-white/15 text-[#17161B] dark:text-white px-4 py-2.5 rounded-full text-sm font-semibold hover:border-black/30 dark:hover:border-white/30 transition-colors"
             >
               + Photo Project
             </button>
@@ -309,36 +320,36 @@ export default function DashboardPage() {
 
         <div className="flex flex-wrap items-end justify-between gap-6 mb-10">
           <div>
-            <p className="text-xs font-semibold text-[#6C4FD1] tracking-wide uppercase flex items-center gap-1.5">
+            <p className="text-xs font-semibold text-[#6C4FD1] dark:text-[#B9A6F2] tracking-wide uppercase flex items-center gap-1.5">
               <Sparkles size={12} /> Your creative space
             </p>
-            <h1 className="mt-2 font-[family-name:var(--font-display)] text-4xl sm:text-5xl leading-[1.05] tracking-tight text-[#17161B]">
+            <h1 className="mt-2 font-[family-name:var(--font-display)] text-4xl sm:text-5xl leading-[1.05] tracking-tight text-[#17161B] dark:text-[#F3F1F7]">
               {displayName ? `Welcome back, ${displayName}.` : 'Welcome back.'}
             </h1>
-            <p className="mt-3 text-[#4A4750]">Ready to make something magical?</p>
+            <p className="mt-3 text-[#4A4750] dark:text-[#B7B2C6]">Ready to make something magical?</p>
           </div>
           <Link
             href="/templates"
-            className="inline-flex items-center gap-2 text-sm font-semibold px-5 py-3 rounded-full border border-black/15 hover:border-black/30 transition-colors shrink-0"
+            className="inline-flex items-center gap-2 text-sm font-semibold px-5 py-3 rounded-full border border-black/15 dark:border-white/15 hover:border-black/30 dark:hover:border-white/30 transition-colors shrink-0"
           >
             Explore Templates <ArrowRight size={14} />
           </Link>
         </div>
 
-        {loading && <p className="text-[#4A4750]/60">Loading your designs...</p>}
+        {loading && <p className="text-[#4A4750]/60 dark:text-[#B7B2C6]/60">Loading your designs...</p>}
 
         {!loading && designs.length === 0 && (
-          <div className="relative overflow-hidden rounded-3xl border border-black/10 bg-white p-12 sm:p-16 text-center">
+          <div className="relative overflow-hidden rounded-3xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#1B1926] p-12 sm:p-16 text-center">
             <div className="pointer-events-none absolute -right-16 -top-16 w-64 h-64 rounded-full bg-brand-gradient opacity-10" />
             <div className="pointer-events-none absolute -left-16 -bottom-16 w-64 h-64 rounded-full bg-brand-gradient opacity-10" />
             <div className="relative">
               <div className="mx-auto w-16 h-16 rounded-2xl bg-brand-gradient flex items-center justify-center shadow-[0_16px_28px_-8px_rgba(108,79,209,0.45)]">
                 <Sparkles size={26} className="text-white" />
               </div>
-              <h2 className="mt-6 font-[family-name:var(--font-display)] text-3xl sm:text-4xl tracking-tight text-[#17161B]">
+              <h2 className="mt-6 font-[family-name:var(--font-display)] text-3xl sm:text-4xl tracking-tight text-[#17161B] dark:text-[#F3F1F7]">
                 Your canvas is waiting.
               </h2>
-              <p className="mt-3 text-[#4A4750] max-w-sm mx-auto leading-relaxed">
+              <p className="mt-3 text-[#4A4750] dark:text-[#B7B2C6] max-w-sm mx-auto leading-relaxed">
                 Start with an idea and give it your magical touch.
               </p>
               <Link
@@ -354,7 +365,7 @@ export default function DashboardPage() {
 
         {!loading && designs.length > 0 && (
           <>
-            <h2 className="text-xs font-semibold text-[#4A4750] tracking-wide uppercase mb-4">Recent Designs</h2>
+            <h2 className="text-xs font-semibold text-[#4A4750] dark:text-[#B7B2C6] tracking-wide uppercase mb-4">Recent Designs</h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-5 mb-12">
               {designs.slice(0, RECENT_COUNT).map((design) => renderDesignCard(design))}
             </div>
@@ -363,7 +374,7 @@ export default function DashboardPage() {
 
         {!loading && designs.length > RECENT_COUNT && (
           <>
-            <h2 className="text-xs font-semibold text-[#4A4750] tracking-wide uppercase mb-4">All Designs</h2>
+            <h2 className="text-xs font-semibold text-[#4A4750] dark:text-[#B7B2C6] tracking-wide uppercase mb-4">All Designs</h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-5">
               {designs.slice(RECENT_COUNT).map((design) => renderDesignCard(design))}
             </div>
@@ -371,16 +382,17 @@ export default function DashboardPage() {
         )}
       </div>
     </main>
+    </div>
   );
 
   function renderDesignCard(design: Design) {
     return (
       <div
               key={design.id}
-              className="group relative rounded-2xl border border-black/10 bg-white p-3 hover:shadow-[0_20px_40px_-20px_rgba(23,22,27,0.25)] hover:-translate-y-1 transition-all duration-300"
+              className="group relative rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#1B1926] p-3 hover:shadow-[0_20px_40px_-20px_rgba(23,22,27,0.25)] hover:-translate-y-1 transition-all duration-300"
             >
               <Link href={`/editor?designId=${design.id}&w=${design.width}&h=${design.height}`}>
-                <div className="aspect-square bg-[#F7F5F0] rounded-xl mb-3 overflow-hidden flex items-center justify-center text-[#4A4750]/40 text-xs">
+                <div className="aspect-square bg-[#F7F5F0] dark:bg-[#111015] rounded-xl mb-3 overflow-hidden flex items-center justify-center text-[#4A4750]/40 dark:text-[#B7B2C6]/40 text-xs">
                   {design.thumbnail ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={design.thumbnail} alt={design.name} className="w-full h-full object-contain" />
@@ -399,18 +411,18 @@ export default function DashboardPage() {
                     if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
                     if (e.key === 'Escape') setRenamingId(null);
                   }}
-                  className="text-sm font-medium text-[#17161B] border border-black/15 rounded px-1.5 py-0.5 w-full"
+                  className="text-sm font-medium text-[#17161B] dark:text-[#F3F1F7] bg-transparent border border-black/15 dark:border-white/15 rounded px-1.5 py-0.5 w-full"
                 />
               ) : (
-                <p className="text-sm font-medium text-[#17161B] truncate px-0.5">{design.name}</p>
+                <p className="text-sm font-medium text-[#17161B] dark:text-[#F3F1F7] truncate px-0.5">{design.name}</p>
               )}
-              <p className="text-xs text-[#4A4750]/70 px-0.5">
+              <p className="text-xs text-[#4A4750]/70 dark:text-[#B7B2C6]/70 px-0.5">
                 {design.width} × {design.height} · {new Date(design.updated_at).toLocaleDateString()}
               </p>
 
               <button
                 onClick={() => setMenuOpenId((v) => (v === design.id ? null : design.id))}
-                className="absolute top-5 right-5 p-1.5 rounded-full bg-white/95 border border-black/10 text-[#4A4750] opacity-70 group-hover:opacity-100 transition-opacity hover:text-[#17161B]"
+                className="absolute top-5 right-5 p-1.5 rounded-full bg-white/95 dark:bg-[#242131]/95 border border-black/10 dark:border-white/10 text-[#4A4750] dark:text-[#B7B2C6] opacity-70 group-hover:opacity-100 transition-opacity hover:text-[#17161B] dark:hover:text-white"
                 title="More options"
               >
                 <MoreVertical size={14} />
@@ -419,28 +431,28 @@ export default function DashboardPage() {
               {menuOpenId === design.id && (
                 <div
                   ref={menuRef}
-                  className="absolute top-12 right-5 z-10 bg-white border border-black/10 rounded-xl shadow-lg py-1 w-40 text-sm"
+                  className="absolute top-12 right-5 z-10 bg-white dark:bg-[#242131] border border-black/10 dark:border-white/10 rounded-xl shadow-lg py-1 w-40 text-sm"
                 >
                   <button
                     onClick={() => {
                       setMenuOpenId(null);
                       setRenamingId(design.id);
                     }}
-                    className="w-full flex items-center gap-2 px-3 py-1.5 text-left hover:bg-[#F7F5F0] text-[#4A4750]"
+                    className="w-full flex items-center gap-2 px-3 py-1.5 text-left hover:bg-[#F7F5F0] dark:hover:bg-white/5 text-[#4A4750] dark:text-[#B7B2C6]"
                   >
                     <Pencil size={13} /> Rename
                   </button>
                   <button
                     onClick={() => duplicateDesign(design)}
                     disabled={busyId === design.id}
-                    className="w-full flex items-center gap-2 px-3 py-1.5 text-left hover:bg-[#F7F5F0] text-[#4A4750] disabled:opacity-50"
+                    className="w-full flex items-center gap-2 px-3 py-1.5 text-left hover:bg-[#F7F5F0] dark:hover:bg-white/5 text-[#4A4750] dark:text-[#B7B2C6] disabled:opacity-50"
                   >
                     <Copy size={13} /> {busyId === design.id ? 'Duplicating...' : 'Duplicate'}
                   </button>
                   <Link
                     href={`/editor?designId=${design.id}&w=${design.width}&h=${design.height}&autoExport=png`}
                     onClick={() => setMenuOpenId(null)}
-                    className="w-full flex items-center gap-2 px-3 py-1.5 text-left hover:bg-[#F7F5F0] text-[#4A4750]"
+                    className="w-full flex items-center gap-2 px-3 py-1.5 text-left hover:bg-[#F7F5F0] dark:hover:bg-white/5 text-[#4A4750] dark:text-[#B7B2C6]"
                   >
                     <Download size={13} /> Download (PNG)
                   </Link>
@@ -449,7 +461,7 @@ export default function DashboardPage() {
                       setMenuOpenId(null);
                       deleteDesign(design.id);
                     }}
-                    className="w-full flex items-center gap-2 px-3 py-1.5 text-left hover:bg-red-50 text-red-500"
+                    className="w-full flex items-center gap-2 px-3 py-1.5 text-left hover:bg-red-50 dark:hover:bg-red-500/10 text-red-500"
                   >
                     <Trash2 size={13} /> Delete
                   </button>

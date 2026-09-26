@@ -1,16 +1,17 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Fraunces, Inter } from 'next/font/google';
-import { Menu, X, Search, ArrowUpRight, Instagram, Twitter, Facebook, Youtube } from 'lucide-react';
+import { Menu, X, Search, ArrowUpRight, Sun, Moon, Instagram, Twitter, Facebook, Youtube } from 'lucide-react';
 import { resolveAuthedPath } from '@/lib/authNav';
 import { MockDesignCard } from '@/components/MockDesignCard';
 import { Category, Template, CATEGORIES, TEMPLATES, fetchTemplates } from '@/lib/templatesData';
 import { supabase } from '@/lib/supabase';
 import { ProfileMenu } from '@/components/ProfileMenu';
+import { BrandLogo } from '@/components/BrandLogo';
+import { useAppTheme } from '@/hooks/useAppTheme';
 
 const display = Fraunces({
   subsets: ['latin'],
@@ -45,6 +46,7 @@ function tileHeight(t: Template): string {
 }
 
 export default function TemplatesPage() {
+  const { theme, toggleTheme } = useAppTheme();
   const [menuOpen, setMenuOpen] = useState(false);
   const [activeCategory, setActiveCategory] = useState<Category | 'All'>('All');
   const [query, setQuery] = useState('');
@@ -91,13 +93,14 @@ export default function TemplatesPage() {
   };
 
   return (
+    <div className={theme === 'dark' ? 'dark' : ''}>
     <main
-      className={`${display.variable} ${body.variable} font-[family-name:var(--font-body)] bg-[#FAF9F6] text-[#14121F] min-h-screen`}
+      className={`${display.variable} ${body.variable} font-[family-name:var(--font-body)] bg-[#FAF9F6] dark:bg-[#111015] text-[#14121F] dark:text-[#F3F1F7] min-h-screen transition-colors duration-300`}
     >
-      <header className="sticky top-0 z-50 bg-[#FAF9F6]/90 backdrop-blur border-b border-black/5">
+      <header className="sticky top-0 z-50 bg-[#FAF9F6]/90 dark:bg-[#151320]/90 backdrop-blur border-b border-black/5 dark:border-white/10">
         <nav className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center shrink-0">
-            <Image src="/logo.png" alt="Magical Touch" width={140} height={28} priority />
+            <BrandLogo theme={theme} width={140} height={28} priority />
           </Link>
 
           <div className="hidden md:flex items-center gap-8">
@@ -106,7 +109,9 @@ export default function TemplatesPage() {
                 key={l.label}
                 href={l.href}
                 className={`text-sm transition-colors ${
-                  l.label === 'Templates' ? 'text-[#14121F] font-semibold' : 'text-[#4B4560] hover:text-[#14121F]'
+                  l.label === 'Templates'
+                    ? 'text-[#14121F] dark:text-white font-semibold'
+                    : 'text-[#4B4560] dark:text-[#B7B2C6] hover:text-[#14121F] dark:hover:text-white'
                 }`}
               >
                 {l.label}
@@ -115,8 +120,16 @@ export default function TemplatesPage() {
           </div>
 
           <div className="hidden md:flex items-center gap-3">
+            <button
+              onClick={toggleTheme}
+              title={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
+              aria-label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
+              className="p-2 rounded-full border border-black/10 dark:border-white/15 text-[#4B4560] dark:text-[#B7B2C6] hover:border-black/25 dark:hover:border-white/30 transition-colors"
+            >
+              {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
+            </button>
             {!loggedIn && (
-              <Link href="/login" className="text-sm font-medium text-[#4B4560] hover:text-[#14121F] px-3 py-2">
+              <Link href="/login" className="text-sm font-medium text-[#4B4560] dark:text-[#B7B2C6] hover:text-[#14121F] dark:hover:text-white px-3 py-2">
                 Log In
               </Link>
             )}
@@ -129,26 +142,35 @@ export default function TemplatesPage() {
             {loggedIn && <ProfileMenu />}
           </div>
 
-          <button
-            className="md:hidden p-2 -mr-2 text-[#14121F]"
-            onClick={() => setMenuOpen((v) => !v)}
-            aria-label={menuOpen ? 'Close menu' : 'Open menu'}
-          >
-            {menuOpen ? <X size={22} /> : <Menu size={22} />}
-          </button>
+          <div className="flex md:hidden items-center gap-1">
+            <button
+              onClick={toggleTheme}
+              aria-label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
+              className="p-2 text-[#4B4560] dark:text-[#B7B2C6]"
+            >
+              {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+            </button>
+            <button
+              className="p-2 -mr-2 text-[#14121F] dark:text-white"
+              onClick={() => setMenuOpen((v) => !v)}
+              aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+            >
+              {menuOpen ? <X size={22} /> : <Menu size={22} />}
+            </button>
+          </div>
         </nav>
 
         {menuOpen && (
-          <div className="md:hidden border-t border-black/5 bg-[#FAF9F6] px-6 py-4 flex flex-col gap-1">
+          <div className="md:hidden border-t border-black/5 dark:border-white/10 bg-[#FAF9F6] dark:bg-[#151320] px-6 py-4 flex flex-col gap-1">
             {NAV_LINKS.map((l) => (
-              <Link key={l.label} href={l.href} className="py-2.5 text-sm text-[#4B4560]" onClick={() => setMenuOpen(false)}>
+              <Link key={l.label} href={l.href} className="py-2.5 text-sm text-[#4B4560] dark:text-[#B7B2C6]" onClick={() => setMenuOpen(false)}>
                 {l.label}
               </Link>
             ))}
             <div className="flex flex-col gap-2 mt-3">
               <Link
                 href={loggedIn ? '/dashboard' : '/login'}
-                className="text-center text-sm font-medium border border-black/10 rounded-full py-2.5"
+                className="text-center text-sm font-medium border border-black/10 dark:border-white/15 text-[#14121F] dark:text-white rounded-full py-2.5"
                 onClick={() => setMenuOpen(false)}
               >
                 {loggedIn ? 'Dashboard' : 'Log In'}
@@ -162,21 +184,21 @@ export default function TemplatesPage() {
       </header>
 
       <section className="max-w-4xl mx-auto px-6 pt-20 pb-12 text-center">
-        <p className="text-xs font-semibold text-[#6C4FD1] tracking-wide uppercase">Templates</p>
+        <p className="text-xs font-semibold text-[#6C4FD1] dark:text-[#B9A6F2] tracking-wide uppercase">Templates</p>
         <h1 className="mt-4 font-[family-name:var(--font-display)] text-5xl sm:text-6xl leading-[1.05] tracking-tight">
           Start somewhere brilliant.
         </h1>
-        <p className="mt-5 text-lg text-[#4B4560] max-w-lg mx-auto leading-relaxed">
+        <p className="mt-5 text-lg text-[#4B4560] dark:text-[#B7B2C6] max-w-lg mx-auto leading-relaxed">
           Choose a starting point. Add your style. Make it yours.
         </p>
 
         <div className="mt-8 max-w-md mx-auto relative">
-          <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#4B4560]/60" />
+          <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#4B4560]/60 dark:text-[#B7B2C6]/60" />
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search templates..."
-            className="w-full pl-11 pr-4 py-3 rounded-full border border-black/10 bg-white text-sm placeholder:text-[#4B4560]/60 focus:outline-none focus:border-[#6C4FD1]/50 focus:ring-2 focus:ring-[#6C4FD1]/15 transition-all"
+            className="w-full pl-11 pr-4 py-3 rounded-full border border-black/10 dark:border-white/15 bg-white dark:bg-[#1B1926] text-sm placeholder:text-[#4B4560]/60 dark:placeholder:text-[#B7B2C6]/60 focus:outline-none focus:border-[#6C4FD1]/50 focus:ring-2 focus:ring-[#6C4FD1]/15 transition-all"
           />
         </div>
       </section>
@@ -189,8 +211,8 @@ export default function TemplatesPage() {
               onClick={() => setActiveCategory(c)}
               className={`shrink-0 text-sm font-medium rounded-full px-4 py-2 border transition-colors ${
                 activeCategory === c
-                  ? 'bg-[#14121F] text-white border-[#14121F]'
-                  : 'text-[#14121F] border-black/10 hover:border-[#6C4FD1]/40 hover:text-[#6C4FD1]'
+                  ? 'bg-[#14121F] dark:bg-white text-white dark:text-[#14121F] border-[#14121F] dark:border-white'
+                  : 'text-[#14121F] dark:text-[#B7B2C6] border-black/10 dark:border-white/15 hover:border-[#6C4FD1]/40 hover:text-[#6C4FD1]'
               }`}
             >
               {c}
@@ -202,7 +224,7 @@ export default function TemplatesPage() {
       <section className="max-w-7xl mx-auto px-6 py-14">
         <div className="columns-1 sm:columns-2 lg:columns-3 gap-5 [&>*]:mb-5">
           {filtered.map((t) => (
-            <div key={t.name} className="group break-inside-avoid rounded-2xl overflow-hidden border border-black/5 bg-white shadow-sm hover:shadow-xl transition-shadow duration-300">
+            <div key={t.name} className="group break-inside-avoid rounded-2xl overflow-hidden border border-black/5 dark:border-white/10 bg-white dark:bg-[#1B1926] shadow-sm hover:shadow-xl transition-shadow duration-300">
               <div className={`relative overflow-hidden ${tileHeight(t)}`}>
                 <div className="absolute inset-0 transition-transform duration-500 group-hover:scale-105">
                   <MockDesignCard colors={t.colors} label={t.category} />
@@ -219,9 +241,9 @@ export default function TemplatesPage() {
               <div className="p-4 flex items-center justify-between">
                 <div>
                   <p className="text-sm font-semibold">{t.name}</p>
-                  <p className="text-xs text-[#4B4560] mt-0.5">{t.category}</p>
+                  <p className="text-xs text-[#4B4560] dark:text-[#B7B2C6] mt-0.5">{t.category}</p>
                 </div>
-                <span className="text-[11px] text-[#4B4560] shrink-0">
+                <span className="text-[11px] text-[#4B4560] dark:text-[#B7B2C6] shrink-0">
                   {t.width}×{t.height}
                 </span>
               </div>
@@ -232,18 +254,18 @@ export default function TemplatesPage() {
         {filtered.length === 0 && (
           <div className="text-center py-20">
             <p className="text-lg font-[family-name:var(--font-display)]">No templates match yet.</p>
-            <p className="mt-2 text-sm text-[#4B4560]">Try a different search or category.</p>
+            <p className="mt-2 text-sm text-[#4B4560] dark:text-[#B7B2C6]">Try a different search or category.</p>
           </div>
         )}
       </section>
 
-      <footer className="border-t border-black/5">
+      <footer className="border-t border-black/5 dark:border-white/10">
         <div className="max-w-7xl mx-auto px-6 py-12 flex flex-col sm:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-3">
-            <Image src="/logo.png" alt="Magical Touch" width={120} height={24} />
-            <span className="text-xs text-[#4B4560]">© {new Date().getFullYear()} Magical Touch</span>
+            <BrandLogo theme={theme} width={120} height={24} />
+            <span className="text-xs text-[#4B4560] dark:text-[#B7B2C6]">© {new Date().getFullYear()} Magical Touch</span>
           </div>
-          <div className="flex gap-3 text-[#4B4560]">
+          <div className="flex gap-3 text-[#4B4560] dark:text-[#B7B2C6]">
             <Instagram size={16} />
             <Twitter size={16} />
             <Facebook size={16} />
@@ -252,5 +274,6 @@ export default function TemplatesPage() {
         </div>
       </footer>
     </main>
+    </div>
   );
 }

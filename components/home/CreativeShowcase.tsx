@@ -1,7 +1,7 @@
 'use client';
 
 import { ArtworkPanel } from '@/components/ArtworkPanel';
-import { HomeTheme } from '@/hooks/useHomeTheme';
+import { AppTheme } from '@/hooks/useAppTheme';
 import { Reveal } from './Reveal';
 
 // Shows the same pure CSS/SVG day/night artwork used on the login and
@@ -12,7 +12,7 @@ import { Reveal } from './Reveal';
 // full-height login column), so it keeps an aspect-[3/4] box here too —
 // stretching it into a short wide banner would crop the ambient shapes
 // at top and bottom.
-export function CreativeShowcase({ theme }: { theme: HomeTheme }) {
+export function CreativeShowcase({ theme }: { theme: AppTheme }) {
   return (
     <section className="max-w-6xl mx-auto px-6 py-20 overflow-hidden">
       <div className="grid lg:grid-cols-[1fr_0.85fr] gap-14 items-center">
@@ -34,7 +34,7 @@ export function CreativeShowcase({ theme }: { theme: HomeTheme }) {
 
         <Reveal delayMs={150}>
           <div className="w-full max-w-sm mx-auto aspect-[3/4] rounded-3xl overflow-hidden shadow-[0_40px_80px_-40px_rgba(23,22,27,0.35)]">
-            <ArtworkPanel variant={theme === 'night' ? 'night' : 'day'} />
+            <ArtworkPanel variant={theme === 'dark' ? 'night' : 'day'} />
           </div>
         </Reveal>
       </div>

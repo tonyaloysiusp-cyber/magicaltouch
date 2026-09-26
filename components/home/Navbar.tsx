@@ -1,14 +1,14 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Menu, X, Sun, Moon } from 'lucide-react';
 import { resolveAuthedPath } from '@/lib/authNav';
 import { supabase } from '@/lib/supabase';
 import { ProfileMenu } from '@/components/ProfileMenu';
-import { HomeTheme } from '@/hooks/useHomeTheme';
+import { BrandLogo } from '@/components/BrandLogo';
+import { AppTheme } from '@/hooks/useAppTheme';
 
 const NAV_LINKS = [
   { label: 'Templates', href: '/templates' },
@@ -19,31 +19,31 @@ const NAV_LINKS = [
 // A real day/night switch, not a decoration — toggling it flips the
 // `dark` class the homepage root applies, which every section below
 // reads via `dark:` Tailwind variants.
-function ThemeSwitch({ theme, onToggle }: { theme: HomeTheme; onToggle: () => void }) {
-  const isNight = theme === 'night';
+function ThemeSwitch({ theme, onToggle }: { theme: AppTheme; onToggle: () => void }) {
+  const isDark = theme === 'dark';
   return (
     <button
       onClick={onToggle}
       role="switch"
-      aria-checked={isNight}
-      aria-label={isNight ? 'Switch to day theme' : 'Switch to night theme'}
-      title={isNight ? 'Switch to day theme' : 'Switch to night theme'}
+      aria-checked={isDark}
+      aria-label={isDark ? 'Switch to light theme' : 'Switch to dark theme'}
+      title={isDark ? 'Switch to light theme' : 'Switch to dark theme'}
       className={`relative inline-flex items-center w-14 h-8 rounded-full shrink-0 transition-colors duration-300 ${
-        isNight ? 'bg-[#2A2740]' : 'bg-[#EAE6F5]'
+        isDark ? 'bg-[#2A2740]' : 'bg-[#EAE6F5]'
       }`}
     >
       <span
         className={`absolute top-1 left-1 w-6 h-6 rounded-full flex items-center justify-center shadow-md transition-transform duration-300 ${
-          isNight ? 'translate-x-6 bg-[#3A355A] text-[#C4DA3B]' : 'translate-x-0 bg-white text-[#F5B942]'
+          isDark ? 'translate-x-6 bg-[#3A355A] text-[#C4DA3B]' : 'translate-x-0 bg-white text-[#F5B942]'
         }`}
       >
-        {isNight ? <Moon size={13} /> : <Sun size={13} />}
+        {isDark ? <Moon size={13} /> : <Sun size={13} />}
       </span>
     </button>
   );
 }
 
-export function Navbar({ theme, onToggleTheme }: { theme: HomeTheme; onToggleTheme: () => void }) {
+export function Navbar({ theme, onToggleTheme }: { theme: AppTheme; onToggleTheme: () => void }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [loggedIn, setLoggedIn] = useState(false);
@@ -84,7 +84,7 @@ export function Navbar({ theme, onToggleTheme }: { theme: HomeTheme; onToggleThe
     >
       <nav className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
         <Link href="/" className="flex items-center shrink-0">
-          <Image src="/logo.png" alt="Magical Touch" width={140} height={28} priority />
+          <BrandLogo theme={theme} width={140} height={28} priority />
         </Link>
 
         <div className="hidden md:flex items-center gap-8">

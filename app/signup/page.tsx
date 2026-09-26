@@ -3,11 +3,14 @@
 import { Suspense, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter, useSearchParams } from 'next/navigation';
-import Image from 'next/image';
+import { Sun, Moon } from 'lucide-react';
 import { getOrCreateProfile, updateProfile } from '@/lib/profile';
 import { ArtworkPanel } from '@/components/ArtworkPanel';
+import { BrandLogo } from '@/components/BrandLogo';
+import { useAppTheme } from '@/hooks/useAppTheme';
 
 function SignupForm() {
+  const { theme, toggleTheme } = useAppTheme();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [phone, setPhone] = useState('');
@@ -41,17 +44,30 @@ function SignupForm() {
     }
   };
 
+  const ThemeToggle = () => (
+    <button
+      onClick={toggleTheme}
+      title={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
+      aria-label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
+      className="absolute top-6 right-6 p-2 rounded-full border border-black/10 dark:border-white/15 text-gray-500 dark:text-[#B7B2C6] hover:border-black/25 dark:hover:border-white/30 transition-colors"
+    >
+      {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+    </button>
+  );
+
   if (confirmSent) {
     return (
-      <main className="min-h-screen lg:grid lg:grid-cols-2">
+      <div className={theme === 'dark' ? 'dark' : ''}>
+      <main className="min-h-screen lg:grid lg:grid-cols-2 bg-white dark:bg-[#111015] transition-colors duration-300">
         <div className="hidden lg:block h-screen sticky top-0">
-          <ArtworkPanel variant="night" />
+          <ArtworkPanel variant={theme === 'dark' ? 'night' : 'day'} />
         </div>
-        <div className="flex flex-col items-center justify-center p-6 min-h-screen">
-        <Image src="/logo.png" alt="Magical Touch" width={280} height={56} className="mb-8" />
+        <div className="relative flex flex-col items-center justify-center p-6 min-h-screen">
+        <ThemeToggle />
+        <BrandLogo theme={theme} width={280} height={56} className="mb-8" />
         <div className="w-full max-w-sm text-center">
-          <h1 className="text-2xl font-bold mb-3 text-gray-800">Check your email</h1>
-          <p className="text-sm text-gray-500">
+          <h1 className="text-2xl font-bold mb-3 text-gray-800 dark:text-[#F3F1F7]">Check your email</h1>
+          <p className="text-sm text-gray-500 dark:text-[#B7B2C6]">
             We sent a confirmation link to <span className="font-medium">{email}</span>. Confirm your
             address, then log in to continue.
           </p>
@@ -64,25 +80,28 @@ function SignupForm() {
         </div>
         </div>
       </main>
+      </div>
     );
   }
 
   return (
-    <main className="min-h-screen lg:grid lg:grid-cols-2">
+    <div className={theme === 'dark' ? 'dark' : ''}>
+    <main className="min-h-screen lg:grid lg:grid-cols-2 bg-white dark:bg-[#111015] transition-colors duration-300">
       <div className="hidden lg:block h-screen sticky top-0">
-        <ArtworkPanel variant="night" />
+        <ArtworkPanel variant={theme === 'dark' ? 'night' : 'day'} />
       </div>
-      <div className="flex flex-col items-center justify-center p-6 min-h-screen">
-      <Image src="/logo.png" alt="Magical Touch" width={280} height={56} className="mb-8" />
+      <div className="relative flex flex-col items-center justify-center p-6 min-h-screen">
+      <ThemeToggle />
+      <BrandLogo theme={theme} width={280} height={56} className="mb-8" />
       <div className="w-full max-w-sm">
-        <h1 className="text-2xl font-bold mb-6 text-center text-gray-800">Create Your Account</h1>
+        <h1 className="text-2xl font-bold mb-6 text-center text-gray-800 dark:text-[#F3F1F7]">Create Your Account</h1>
         <form onSubmit={handleSignup} className="flex flex-col gap-4">
           <input
             type="email"
             placeholder="Email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="border border-gray-300 p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-blue"
+            className="border border-gray-300 dark:border-white/15 dark:bg-[#1B1926] dark:text-[#F3F1F7] p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-blue"
             required
           />
           <input
@@ -90,7 +109,7 @@ function SignupForm() {
             placeholder="Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="border border-gray-300 p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-blue"
+            className="border border-gray-300 dark:border-white/15 dark:bg-[#1B1926] dark:text-[#F3F1F7] p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-blue"
             required
           />
           <input
@@ -98,7 +117,7 @@ function SignupForm() {
             placeholder="Phone number (optional)"
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
-            className="border border-gray-300 p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-blue"
+            className="border border-gray-300 dark:border-white/15 dark:bg-[#1B1926] dark:text-[#F3F1F7] p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-blue"
           />
           {error && <p className="text-red-500 text-sm">{error}</p>}
           <button
@@ -109,7 +128,7 @@ function SignupForm() {
             {loading ? 'Signing up...' : 'Sign Up'}
           </button>
         </form>
-        <p className="mt-4 text-center text-sm text-gray-500">
+        <p className="mt-4 text-center text-sm text-gray-500 dark:text-[#B7B2C6]">
           Already have an account?{' '}
           <a
             href={`/login${next !== '/dashboard' ? `?next=${encodeURIComponent(next)}` : ''}`}
@@ -121,6 +140,7 @@ function SignupForm() {
       </div>
       </div>
     </main>
+    </div>
   );
 }
 
