@@ -50,6 +50,8 @@ import {
   DEFAULT_HUE_SATURATION,
 } from '@/lib/editor/photoBrush';
 import { imageObjectToDataURL, nativeResMultiplier, clampMultiplierForSafety, configureHighQualityContext, devicePixelRatioSafe } from '@/lib/editor/imageQuality';
+import { DocUnit } from '@/lib/editor/types';
+import { pxToPhysicalUnit, physicalUnitToPx } from '@/lib/editor/units';
 import { LayersPanel } from '@/components/editor/LayersPanel';
 import {
   Hand,
@@ -100,6 +102,13 @@ interface Props {
   // reflect and control THIS workspace's own history while it's active.
   onHistoryChange?: (canUndo: boolean, canRedo: boolean) => void;
   onShowShortcuts?: () => void;
+  // Lets a host that isn't "apply this photo edit back into a Main
+  // Design document" (e.g. a standalone photo-only page with nothing to
+  // apply back TO) relabel these two buttons without forking the
+  // component. Default text matches the original embedded-in-Main-Design
+  // usage exactly, so nothing changes for it.
+  applyLabel?: string;
+  cancelLabel?: string;
 }
 
 export interface PhotoEditorHandle {
@@ -280,7 +289,18 @@ function nextLayerId() {
 // target image layer, the same "update in place, preserve frame" pattern
 // replaceSelectedImage already uses for Replace Image.
 export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(function PhotoEditorWorkspace(
-  { active, sourceDataUrl, initialAdjustments, initialCropRect, onApply, onCancel, onHistoryChange, onShowShortcuts },
+  {
+    active,
+    sourceDataUrl,
+    initialAdjustments,
+    initialCropRect,
+    onApply,
+    onCancel,
+    onHistoryChange,
+    onShowShortcuts,
+    applyLabel = 'Apply to Design',
+    cancelLabel = 'Cancel',
+  },
   ref
 ) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -1279,17 +1299,42 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
   // it isn't wired into the PDF export pipeline yet, which is Main
   // Design's own separate per-artboard DPI setting. ----
   const [showResizeDialog, setShowResizeDialog] = useState(false);
+  // resizeInput.w/h always stay raw PIXEL strings -- the single source of
+  // truth applyResizeImage and the lock-aspect math below already used
+  // before real-world units existed. resizeUnit only controls what's
+  // DISPLAYED and how a typed value is interpreted; switching it never
+  // itself changes the document's actual pixel size.
   const [resizeInput, setResizeInput] = useState({ w: '', h: '', dpi: '300', lockAspect: true });
+  const [resizeUnit, setResizeUnit] = useState<DocUnit>('px');
+
+  const resizeDpiNum = () => Math.max(1, parseFloat(resizeInput.dpi) || 300);
+  const displayResizeValue = (pxStr: string) => {
+    const px = parseFloat(pxStr);
+    if (!Number.isFinite(px)) return '';
+    return resizeUnit === 'px' ? String(Math.round(px)) : pxToPhysicalUnit(px, resizeUnit, resizeDpiNum()).toFixed(2);
+  };
+  const parseResizeDisplayValue = (displayValue: string): string => {
+    const v = parseFloat(displayValue);
+    if (!Number.isFinite(v)) return displayValue;
+    return resizeUnit === 'px' ? String(Math.round(v)) : String(Math.round(physicalUnitToPx(v, resizeUnit, resizeDpiNum())));
+  };
 
   const openResizeDialog = () => {
     const img = imageRef.current;
     if (!img) return;
     const size = img.__naturalSize || { w: img.width, h: img.height };
     setResizeInput({ w: String(size.w), h: String(size.h), dpi: String(img.__dpi || 300), lockAspect: true });
+    setResizeUnit('px');
     setShowResizeDialog(true);
   };
 
-  const onResizeWidthChange = (value: string) => {
+  // Both take the raw string straight out of the input -- in whatever
+  // unit the dialog is currently displaying -- and convert it to px
+  // before touching resizeInput.w/h, so every other read of that state
+  // (applyResizeImage, the print-size hint) keeps working in px exactly
+  // as it did before real-world units existed.
+  const onResizeWidthChange = (displayValue: string) => {
+    const value = parseResizeDisplayValue(displayValue);
     setResizeInput((s) => {
       if (!s.lockAspect) return { ...s, w: value };
       const img = imageRef.current;
@@ -1299,7 +1344,8 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
       return { ...s, w: value, h: String(Math.round((w * size.h) / size.w)) };
     });
   };
-  const onResizeHeightChange = (value: string) => {
+  const onResizeHeightChange = (displayValue: string) => {
+    const value = parseResizeDisplayValue(displayValue);
     setResizeInput((s) => {
       if (!s.lockAspect) return { ...s, h: value };
       const img = imageRef.current;
@@ -2480,7 +2526,7 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
                 {activeTool === 'brush' && (
                   <div className="flex items-center gap-2">
                     <label className="text-[11px] text-gray-500">Color</label>
-                    <input type="color" value={brushColor} onChange={(e) => setBrushColor(e.target.value)} className="w-8 h-6 border rounded" />
+                    <input type="color" value={brushColor} onChange={(e) => setBrushColor(e.target.value)} className="w-11 h-11 border rounded cursor-pointer" />
                   </div>
                 )}
                 {(activeTool === 'dodge' || activeTool === 'burn') && (
@@ -2545,9 +2591,9 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
                 <p className="text-[11px] text-gray-500 mb-2">Click and drag across the image to draw a linear gradient.</p>
                 <div className="flex items-center gap-2 mb-2">
                   <label className="text-[11px] text-gray-500">From</label>
-                  <input type="color" value={gradientColor1} onChange={(e) => setGradientColor1(e.target.value)} className="w-8 h-6 border rounded" />
+                  <input type="color" value={gradientColor1} onChange={(e) => setGradientColor1(e.target.value)} className="w-11 h-11 border rounded cursor-pointer" />
                   <label className="text-[11px] text-gray-500">To</label>
-                  <input type="color" value={gradientColor2} onChange={(e) => setGradientColor2(e.target.value)} className="w-8 h-6 border rounded" />
+                  <input type="color" value={gradientColor2} onChange={(e) => setGradientColor2(e.target.value)} className="w-11 h-11 border rounded cursor-pointer" />
                 </div>
                 <div className="flex justify-between text-[11px] text-gray-500 mb-0.5">
                   <span>Opacity</span>
@@ -2717,8 +2763,8 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
             })()}
 
             <div className="mt-auto border-t pt-3 flex gap-2">
-              <button onClick={onCancel} className="flex-1 text-xs px-3 py-2 rounded-full border">Cancel</button>
-              <button onClick={handleApply} className="flex-1 text-xs px-3 py-2 rounded-full bg-brand-gradient text-white font-semibold">Apply to Design</button>
+              <button onClick={onCancel} className="flex-1 text-xs px-3 py-2 rounded-full border">{cancelLabel}</button>
+              <button onClick={handleApply} className="flex-1 text-xs px-3 py-2 rounded-full bg-brand-gradient text-white font-semibold">{applyLabel}</button>
             </div>
           </div>
         </div>
@@ -2752,24 +2798,40 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
       {showResizeDialog && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-6" onClick={() => setShowResizeDialog(false)}>
           <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-xl shadow-xl w-full max-w-xs p-4">
-            <p className="font-semibold text-sm text-gray-800 mb-3">Resize Image</p>
+            <div className="flex items-center justify-between mb-3">
+              <p className="font-semibold text-sm text-gray-800">Resize Image</p>
+              <select
+                value={resizeUnit}
+                onChange={(e) => setResizeUnit(e.target.value as DocUnit)}
+                className="text-[11px] border rounded px-1.5 py-1"
+                title="Display unit — resizing still resamples the real pixel dimensions"
+              >
+                <option value="px">px</option>
+                <option value="in">in</option>
+                <option value="cm">cm</option>
+                <option value="mm">mm</option>
+                <option value="pt">pt</option>
+              </select>
+            </div>
             <div className="flex items-center gap-2 mb-2">
               <div className="flex-1">
-                <label className="text-[11px] text-gray-500">Width (px)</label>
+                <label className="text-[11px] text-gray-500">Width ({resizeUnit})</label>
                 <input
                   type="number"
-                  min={1}
-                  value={resizeInput.w}
+                  min={0}
+                  step={resizeUnit === 'px' ? 1 : 0.01}
+                  value={displayResizeValue(resizeInput.w)}
                   onChange={(e) => onResizeWidthChange(e.target.value)}
                   className="w-full text-sm border rounded px-2 py-1 mt-0.5"
                 />
               </div>
               <div className="flex-1">
-                <label className="text-[11px] text-gray-500">Height (px)</label>
+                <label className="text-[11px] text-gray-500">Height ({resizeUnit})</label>
                 <input
                   type="number"
-                  min={1}
-                  value={resizeInput.h}
+                  min={0}
+                  step={resizeUnit === 'px' ? 1 : 0.01}
+                  value={displayResizeValue(resizeInput.h)}
                   onChange={(e) => onResizeHeightChange(e.target.value)}
                   className="w-full text-sm border rounded px-2 py-1 mt-0.5"
                 />
