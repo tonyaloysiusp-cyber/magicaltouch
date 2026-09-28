@@ -6,6 +6,100 @@ actually done, what was tested, and what's deliberately left for later.
 
 ---
 
+## 2026-09-28 — Workspace cleanup, unit-system UX, and Photo Studio/Main Design separation
+
+**Problem** (the "Major Workspace & Editor Changes" brief, a large,
+multi-week program spanning workspace structure, a full Photoshop-class
+tool suite, a unit-conversion system, and project-data-model changes).
+Per this engagement's established practice, the full brief was audited
+against the real codebase first (see `docs/ENGINEERING_AUDIT.md` §9)
+rather than assumed — that audit found several core Photo Studio tools
+already real (marquee/lasso/magic-wand, brush/eraser, dodge/burn, clone
+stamp, gradient, crop, eyedropper, levels, curves, hue/sat, a real
+Bézier pen, a paintable layer mask, and a real content-aware
+fill/object-removal), so this pass focuses on the concrete, scoped items
+that were genuinely missing, rather than re-building tools that already
+work or faking the much larger remaining tool list.
+
+**What was done:**
+
+- **Workspace cleanup** (`app/dashboard/page.tsx`): removed the "Studio
+  (Preview)" nav link and the "+ Photo Project" button (which opened
+  Main Design's embedded Photo Editor as a weaker, redundant entry point
+  into the same underlying engine `/photo-studio` already wraps fully).
+  The dashboard now shows exactly two workspace products — New Design
+  and Photo Studio — matching the brief's naming. `/studio`'s own route
+  and Main Design's in-context "edit this one image" Photo Editor
+  integration are untouched; only the top-level advertising of them as
+  separate workspace entries was removed.
+- **Aspect-ratio lock, ESC-cancel, inline validation** (`app/create/page.tsx`,
+  `components/editor/ArtboardsPanel.tsx`): both the document-creation
+  screen and the open editor's per-artboard resize controls already
+  resized only on blur/Enter, never per-keystroke (verified by reading
+  the existing code before touching it) — what was missing was a lock
+  icon between Width/Height that keeps the ratio when toggled on, ESC
+  restoring the previous value instead of applying an in-progress edit,
+  and an inline "Enter a valid size greater than 0." message instead of
+  silently no-op'ing on invalid input.
+- **`editor_type` project data model** (`supabase/migrations/
+  0007_designs_editor_type.sql`): Photo Studio and Main Design write into
+  the same `designs` table with no discriminator, so `/photo-studio`
+  could only ever create new designs — reopening a Photo Studio design
+  from the dashboard always landed in the generic `/editor`. The new
+  column (additive, `default 'design'`, so every existing row keeps
+  working exactly as before) is now set on save by both editors, the
+  dashboard's Edit link routes accordingly, and `/photo-studio` gained a
+  `?designId=` load path that fetches the row and extracts its flattened
+  image + DPI back out of `canvas_json` (the same flattening
+  `buildPhotoDesignPayload.ts` already does on save — reopening is
+  exactly as non-destructive as the save that produced it, not a new
+  limitation).
+- **Real bug found and fixed while testing the above**:
+  `PhotoEditorWorkspace.tsx`'s `addLayerFromSource` loaded its base image
+  via a plain `new Image()` with no `crossOrigin` set. Every path that
+  fed it an image before this change was always a local `data:` URL
+  (upload, blank canvas), so this never mattered — but the new Photo
+  Studio reopen path feeds it a real cross-origin signed URL, which
+  taints the crop canvas the moment it's drawn and throws a
+  `SecurityError` on the first `toDataURL()` call after. Fixed by setting
+  `crossOrigin = 'anonymous'` before assigning `.src`, matching the same
+  pattern already used elsewhere in this codebase for signed-URL images.
+
+**Deliberately not done in this pass** (see the audit's §9 tool-status
+table for the full breakdown): the large remaining tool list — magnetic
+lasso, select-and-mask, a literal drag-brush healing/patch tool, warp/
+distort/perspective transforms, gradient map, channel mixer, selective
+color, a full Lightroom-style HSL/effects panel, layer blend modes and
+grouping — is not built or stubbed. Each is its own scoped follow-up;
+several (select subject, select-and-mask, magnetic lasso) are ML-
+integration projects, not something to fake with non-functional buttons.
+
+**Tested:** `npx tsc --noEmit` and `npm run build` clean. New Playwright
+suite (`test_workspace_editor_changes.js`, 19/19): dashboard no longer
+shows Studio (Preview)/+ Photo Project while still showing Photo Studio/
+New Design; aspect lock correctly computes the paired dimension on both
+`/create` and the open editor's ArtboardsPanel; ESC restores the
+pre-edit value without resizing; invalid input shows the inline message
+and leaves the committed size untouched; Main Design's save writes
+`editor_type: 'design'` and Photo Studio's writes `'photo-studio'`; the
+dashboard routes each design's Edit link to the correct editor; and
+reopening a Photo Studio design via `?designId=` skips the blank "Open"
+screen and lands directly in the editing stage with real content loaded
+— which is what caught the crossOrigin bug above (this suite failed
+until it was fixed). Re-ran the full existing regression surface
+touched by this change: `test_real_templates.js` (14/14),
+`test_storage_dedup.js` (8/8), `test_legacy_template_filter.js` (15/15),
+`test_maindesign_storage.js` (10/10), and `test_photo_studio.js`
+(13/13) — all still passing.
+
+**Not verified:** real Supabase Storage CORS/signed-URL behavior against
+production infrastructure (same standing limitation as every prior
+storage-related entry in this log — this sandbox only ever mocks it).
+The `0007` migration needs to be applied by hand in the Supabase SQL
+editor before `editor_type` will actually be recorded.
+
+---
+
 ## 2026-09-28 — Templates: hide legacy content-less rows from public galleries
 
 **Problem** (user-reported: "I ran it, it still shows blank" — after

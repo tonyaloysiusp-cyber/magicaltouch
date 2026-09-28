@@ -725,6 +725,13 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
     const canvas = fabricCanvasRef.current;
     if (!F || !canvas) return;
     const pristine = new Image();
+    // A data: URL (every upload/blank-canvas path before this one) is
+    // always same-origin, so this is a no-op there; a cross-origin signed
+    // URL (Photo Studio reopening a design it saved -- see
+    // app/photo-studio/page.tsx's ?designId= load path) taints the crop
+    // canvas below the moment it's drawn without this, which throws a
+    // SecurityError the first time anything calls .toDataURL() on it.
+    pristine.crossOrigin = 'anonymous';
     pristine.onload = () => {
       const naturalSize = { w: pristine.naturalWidth, h: pristine.naturalHeight };
       const startRect: CropRect = opts.cropRect || { x: 0, y: 0, width: naturalSize.w, height: naturalSize.h };

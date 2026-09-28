@@ -1,7 +1,7 @@
 'use client';
 
-import { useRef, useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRef, useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Sun, Moon, Upload, FileImage } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
@@ -49,8 +49,26 @@ function blankCanvasDataUrl(w: number, h: number): string {
   return canvas.toDataURL('image/png');
 }
 
-export default function PhotoStudioPage() {
+// Reopening a saved design here means pulling the flattened composite back
+// out of Main-Design-compatible canvas_json (see buildPhotoDesignPayload.ts)
+// -- its single image object's src, plus the artboard's own DPI setting,
+// which isn't stored as a top-level column anywhere. Reopening always
+// starts a fresh, flattened editing session on that composite; the
+// original layers/masks/adjustments that produced it were never kept
+// (buildPhotoDesignJson flattens on every save), so this is exactly as
+// non-destructive as the save that created it -- not a new limitation.
+function extractPhotoSource(canvasJson: any): { src: string; dpi: number } | null {
+  const objects: any[] = canvasJson?.objects || [];
+  const imageObj = objects.find((o) => o?.type === 'image' && typeof o.src === 'string');
+  if (!imageObj) return null;
+  const artboardObj = objects.find((o) => o?.__isArtboard);
+  const dpi = artboardObj?.__print?.dpi || 300;
+  return { src: imageObj.src, dpi };
+}
+
+function PhotoStudioContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { theme, toggleTheme } = useAppTheme();
   const photoEditorRef = useRef<PhotoEditorHandle>(null);
   const lastResultRef = useRef<PhotoEditResult | null>(null);
@@ -58,6 +76,10 @@ export default function PhotoStudioPage() {
 
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [stage, setStage] = useState<'open' | 'editing'>('open');
+  // True from first render whenever the URL already names a design to
+  // reopen, so the "Open" screen never flashes before it loads (see the
+  // load effect below, right after the searchParams/designId, name state).
+  const [loadingDesign, setLoadingDesign] = useState(() => !!searchParams.get('designId'));
 
   // "Open" screen state -- a blank-canvas document's real-world size,
   // independent of the Resize dialog's own unit (that one edits an
@@ -90,6 +112,43 @@ export default function PhotoStudioPage() {
       }
     });
   }, [router]);
+
+  // Reopening a design saved from Photo Studio (routed here as
+  // /photo-studio?designId=... by the dashboard once editor_type says
+  // this row belongs to Photo Studio, not Main Design) -- see
+  // extractPhotoSource's own comment for what "reopen" means here.
+  useEffect(() => {
+    if (checkingAuth) return;
+    const designIdParam = searchParams.get('designId');
+    if (!designIdParam) return;
+    let cancelled = false;
+    (async () => {
+      const { data: row, error } = await supabase
+        .from('designs')
+        .select('id, name, width, height, canvas_json')
+        .eq('id', designIdParam)
+        .single();
+      if (cancelled) return;
+      if (error || !row) {
+        console.error('Failed to load design for Photo Studio:', error);
+        setLoadingDesign(false);
+        return;
+      }
+      const source = extractPhotoSource(row.canvas_json);
+      if (!source) {
+        console.warn('This design has no image content Photo Studio can reopen.');
+        setLoadingDesign(false);
+        return;
+      }
+      startWithSource(source.src, row.width, row.height, source.dpi, row.name);
+      setDesignId(row.id);
+      setLoadingDesign(false);
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [checkingAuth]);
 
   const applyPreset = (p: (typeof CANVAS_PRESETS)[number]) => {
     setUnit(p.unit);
@@ -196,6 +255,9 @@ export default function PhotoStudioPage() {
         width: size.w,
         height: size.h,
         updated_at: new Date().toISOString(),
+        // Lets the dashboard route "Edit" back to Photo Studio instead of
+        // the generic /editor (see supabase/migrations/0007_designs_editor_type.sql).
+        editor_type: 'photo-studio',
       };
       if (designId) payload.id = designId;
       if (thumbnail) payload.thumbnail = thumbnail;
@@ -204,6 +266,10 @@ export default function PhotoStudioPage() {
       if (error && thumbnail && /thumbnail/i.test(error.message || '') && /column|does not exist/i.test(error.message || '')) {
         const { thumbnail: _drop, ...withoutThumbnail } = payload;
         ({ data, error } = await supabase.from('designs').upsert(withoutThumbnail).select().single());
+      }
+      if (error && /editor_type/i.test(error.message || '') && /column|does not exist/i.test(error.message || '')) {
+        const { editor_type: _dropType, ...withoutEditorType } = payload;
+        ({ data, error } = await supabase.from('designs').upsert(withoutEditorType).select().single());
       }
       if (error) {
         console.error('Photo Studio save failed:', error);
@@ -222,7 +288,7 @@ export default function PhotoStudioPage() {
     }
   };
 
-  if (checkingAuth) {
+  if (checkingAuth || loadingDesign) {
     return (
       <main className="min-h-screen flex items-center justify-center text-gray-400 dark:bg-[#111015] dark:text-[#B7B2C6]">
         Loading...
@@ -441,5 +507,13 @@ export default function PhotoStudioPage() {
         </div>
       </main>
     </div>
+  );
+}
+
+export default function PhotoStudioPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <PhotoStudioContent />
+    </Suspense>
   );
 }

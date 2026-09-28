@@ -1,0 +1,25 @@
+-- ---------------------------------------------------------------------
+-- 0007_designs_editor_type.sql
+-- Photo Studio (app/photo-studio/page.tsx) and Main Design (app/editor/
+-- page.tsx) both save into the same `designs` table using the same
+-- canvas_json shape (see lib/editor/buildPhotoDesignPayload.ts), with
+-- nothing recording which editor a given row was made in. Because of
+-- that, /photo-studio has never been able to reopen a design it saved --
+-- it can only ever create new ones -- and the dashboard always routes
+-- "Edit" to /editor regardless of which editor actually produced the
+-- design.
+--
+-- This column is purely additive and defaults to 'design' for every
+-- existing row, which is the correct value for all of them: even the
+-- earliest Photo Studio saves used the exact same schema as Main Design
+-- (there was never a way to tell them apart), so there is no reliable
+-- way to retroactively detect which pre-existing rows came from Photo
+-- Studio. Only future saves get accurately tagged; that's a known,
+-- stated limitation, not a bug -- existing rows keep opening in /editor
+-- exactly as they do today.
+--
+-- This app has no migration runner wired up -- apply this by hand in the
+-- Supabase SQL editor (or via `supabase db push` if you adopt the CLI).
+-- ---------------------------------------------------------------------
+
+alter table public.designs add column if not exists editor_type text not null default 'design';
