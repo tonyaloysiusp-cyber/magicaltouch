@@ -7,7 +7,7 @@ import { Fraunces, Inter } from 'next/font/google';
 import { Menu, X, Search, ArrowUpRight, Sun, Moon, Instagram, Twitter, Facebook, Youtube } from 'lucide-react';
 import { resolveAuthedPath } from '@/lib/authNav';
 import { MockDesignCard } from '@/components/MockDesignCard';
-import { Category, Template, CATEGORIES, TEMPLATES, fetchTemplates } from '@/lib/templatesData';
+import { Category, Template, CATEGORIES, TEMPLATES, fetchPublicTemplates } from '@/lib/templatesData';
 import { supabase } from '@/lib/supabase';
 import { ProfileMenu } from '@/components/ProfileMenu';
 import { BrandLogo } from '@/components/BrandLogo';
@@ -55,11 +55,12 @@ export default function TemplatesPage() {
   const router = useRouter();
 
   // TEMPLATES (the static fallback) renders immediately so the page never
-  // shows an empty gallery while this loads; fetchTemplates() itself falls
-  // back to the same list if the table isn't reachable, so this can only
-  // ever replace it with equal-or-better real data, never blank it out.
+  // shows an empty gallery while this loads. fetchPublicTemplates() only
+  // ever returns templates with real, usable design content -- never the
+  // legacy 0003 seed's color-swatch-only rows, which "Use Template" can't
+  // actually do anything with (see lib/templatesData.ts).
   useEffect(() => {
-    fetchTemplates().then(setTemplates);
+    fetchPublicTemplates().then(setTemplates);
   }, []);
 
   // Same gap as the homepage Navbar: this header showed "Log In" even

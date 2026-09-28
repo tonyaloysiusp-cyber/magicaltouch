@@ -156,6 +156,26 @@ export async function fetchTemplateById(id: string): Promise<Template | null> {
   return rowToTemplate(data as TemplateRow);
 }
 
+// The public-facing listing (/templates, the homepage showcase) must only
+// ever show templates a visitor can actually use -- a row with no
+// canvasJson (the original 0003 seed's 13 color-swatch-only rows, from
+// before real template content existed) opens "Use Template" onto a
+// blank artboard, which is exactly the kind of faked/non-functional
+// control this app's culture explicitly avoids showing. fetchTemplates()
+// itself stays unfiltered for /admin/templates, where an admin still
+// needs to see (and can delete or upgrade) those legacy rows.
+export async function fetchPublicTemplates(): Promise<Template[]> {
+  const all = await fetchTemplates();
+  const real = all.filter((t) => !!t.canvasJson);
+  // Falls back to the static TEMPLATES placeholders whenever there are
+  // zero usable templates -- whether that's because the table is
+  // unreachable, empty, or (the production bug this exists to fix) holds
+  // only pre-migration legacy rows with no canvas_json yet. Never a mix
+  // of a few real rows and a pile of empty legacy ones, and never an
+  // empty gallery just because generation hasn't been run yet.
+  return real.length > 0 ? real : TEMPLATES;
+}
+
 // Runs every builder in lib/templates/builders.ts through the real
 // headless render pipeline and upserts the result into the templates
 // table (matched by name+category, like the original 0003 seed, so this
@@ -169,7 +189,8 @@ export async function generateStarterTemplates(userId: string): Promise<{ create
   let updated = 0;
   const errors: string[] = [];
 
-  for (const def of TEMPLATE_BUILDERS) {
+  for (let i = 0; i < TEMPLATE_BUILDERS.length; i++) {
+    const def = TEMPLATE_BUILDERS[i];
     try {
       const { canvasJson, thumbnail } = await renderTemplate(def);
       const { data: existing } = await supabase
@@ -191,6 +212,10 @@ export async function generateStarterTemplates(userId: string): Promise<{ create
         rights_status: 'verified',
         created_by: userId,
         updated_at: new Date().toISOString(),
+        // Negative, so real templates always sort ahead of the legacy
+        // 0003 seed's rows (sort_order 0-12) in the unfiltered admin view,
+        // rather than colliding with whatever value already sits at i.
+        sort_order: i - TEMPLATE_BUILDERS.length,
       };
 
       if (existing) {

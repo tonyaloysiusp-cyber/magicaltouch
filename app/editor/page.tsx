@@ -6,6 +6,7 @@ import { BrandLogo } from '@/components/BrandLogo';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { fetchTemplateById } from '@/lib/templatesData';
+import { dataUrlToBlob, uploadDesignAsset } from '@/lib/storage/assets';
 import { Keyboard, Sun, Moon } from 'lucide-react';
 import { useAppTheme } from '@/hooks/useAppTheme';
 
@@ -1701,6 +1702,44 @@ function EditorContent() {
     });
   };
 
+  // Uploads a newly-inserted image's bytes to real object storage in the
+  // background and swaps the Fabric object's src to the resulting signed
+  // URL once that resolves -- see docs/ENGINEERING_AUDIT.md §1 and
+  // docs/CHANGELOG_ENGINEERING.md's Photo Studio entry for why: embedding
+  // every image as base64 directly in canvas_json is the #1 storage
+  // cost in this app, multiplied up to 50x by version history. The image
+  // is added to the canvas from the local data URL FIRST (synchronously,
+  // same as before this existed) so placing an image is never slower or
+  // dependent on network — this only affects what a LATER save embeds.
+  // A failed upload (offline, or the storage migration not applied yet)
+  // degrades silently: the image just stays embedded for this session,
+  // the same graceful-fallback pattern this app already uses for e.g. a
+  // missing thumbnail column.
+  const backgroundUploadAsset = (img: any) => {
+    const dataUrl = img.getSrc ? img.getSrc() : img._originalElement?.src;
+    if (!dataUrl || !dataUrl.startsWith('data:')) return;
+    supabase.auth.getUser().then(({ data }) => {
+      const user = data.user;
+      if (!user) return;
+      uploadDesignAsset(dataUrlToBlob(dataUrl), user.id)
+        .then((uploaded) => {
+          const canvas = fabricCanvasRef.current;
+          if (!canvas || !canvas.getObjects().includes(img)) return;
+          img.setSrc(
+            uploaded.url,
+            () => {
+              img.__assetId = uploaded.assetId;
+              canvas.requestRenderAll();
+            },
+            { crossOrigin: 'anonymous' }
+          );
+        })
+        .catch((err) => {
+          console.warn('Background asset upload failed — image stays embedded for this session:', err);
+        });
+    });
+  };
+
   const nextImageIdRef = useRef(0);
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files ? e.target.files[0] : null;
@@ -1715,6 +1754,7 @@ function EditorContent() {
           img.__id = `img_${Date.now()}_${nextImageIdRef.current++}`;
           fabricCanvasRef.current.add(img);
           fabricCanvasRef.current.setActiveObject(img);
+          backgroundUploadAsset(img);
           if (pendingPhotoStartRef.current) {
             pendingPhotoStartRef.current = false;
             openPhotoEditor();
@@ -1744,6 +1784,7 @@ function EditorContent() {
           img.__id = `img_${Date.now()}_${nextImageIdRef.current++}`;
           fabricCanvasRef.current.add(img);
           fabricCanvasRef.current.setActiveObject(img);
+          backgroundUploadAsset(img);
           resolve();
         });
       });
@@ -1980,10 +2021,16 @@ function EditorContent() {
       target.set({ scaleX: scale, scaleY: scale, dirty: true });
       target.__photoEdits = result.adjustments;
       target.__cropRect = result.cropRect;
+      // The pixels just changed -- any __assetId from before this edit no
+      // longer describes what's actually on the object now. Clear it
+      // immediately rather than leaving stale metadata around; the
+      // background upload below sets a fresh, correct one once it lands.
+      target.__assetId = undefined;
       target.setCoords();
       canvas.requestRenderAll();
       bumpSel();
       pushHistory();
+      backgroundUploadAsset(target);
       closePhotoEditor();
       resolvePending();
     });

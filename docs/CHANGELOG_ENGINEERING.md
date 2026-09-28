@@ -6,6 +6,124 @@ actually done, what was tested, and what's deliberately left for later.
 
 ---
 
+## 2026-09-28 — Templates: hide legacy content-less rows from public galleries
+
+**Problem** (user-reported: "I ran it, it still shows blank" — after
+applying the migrations and running "Generate Starter Templates," the
+user still hit a blank artboard from `/templates`): the `templates` table
+carries 13 pre-existing rows from the original `0003_templates_and_admin.sql`
+seed, created before `canvas_json` existed as a column. Those 13 rows
+still have `canvas_json = null`. `generateStarterTemplates` adds 6 new
+real rows but never touched the legacy ones, and both `fetchTemplates()`
+(unfiltered, used everywhere) and the public gallery pages listed them
+side by side with no visual distinction and no way to tell which is which
+without opening one. The 6 real rows also defaulted to `sort_order: 0`
+via `.length` on insert, colliding with the legacy rows' own `sort_order`
+0-12 range. The user was almost certainly clicking one of the 13 old,
+identical-looking, non-functional rows.
+
+**What was done:**
+- `generateStarterTemplates` (`lib/templatesData.ts`) now sets each real
+  row's `sort_order` to a negative value (`i - TEMPLATE_BUILDERS.length`),
+  so real templates always sort ahead of any legacy row in an unfiltered
+  listing.
+- New `fetchPublicTemplates()` (`lib/templatesData.ts`): calls the
+  existing `fetchTemplates()`, then filters to only rows with real
+  `canvas_json`. If none exist yet (fresh install, migration applied but
+  generation never run, or literally only legacy rows in the table), it
+  falls back to the static `TEMPLATES` placeholder array — the same
+  fallback `fetchTemplates()` already uses when the table itself is
+  empty or unreachable, so a visitor never sees either an empty gallery
+  or a legacy dead-end row.
+- `/templates` (`app/templates/page.tsx`) and the homepage's
+  `TemplateShowcase` (`components/home/TemplateShowcase.tsx`) now both
+  call `fetchPublicTemplates()` instead of `fetchTemplates()`.
+  `/admin/templates` deliberately still calls the unfiltered
+  `fetchTemplates()` — an admin needs to see the 13 legacy rows to delete
+  or eventually upgrade them, which is why this is a filter on the public
+  read path, not a data migration or deletion.
+
+**Tested:** `npx tsc --noEmit` and `npm run build` clean. New Playwright
+suite (`test_legacy_template_filter.js`, 15/15) that reproduces the exact
+production scenario: seeds the mocked `templates` table with the 13
+legacy no-`canvas_json` rows first, confirms the public gallery falls
+back to the static placeholder list (not the legacy DB rows) before
+generation has run, then generates the 6 real rows on top (19 rows total
+in the table) and confirms: only the 6 real ones render on `/templates`
+and the homepage showcase, a legacy row ("Bold Contact") never appears in
+either public listing, clicking a real template still loads real content
+even with legacy rows present in the same table, and `/admin/templates`
+still shows all 19 rows unfiltered. Re-ran `test_real_templates.js`
+(14/14) to confirm the existing generation/use-template/save flow is
+unaffected.
+
+**Deliberately not done:** the 13 legacy rows are not deleted or
+backfilled with real content by this change — they're now simply hidden
+from public view. Deleting them (optional cleanup) or upgrading them to
+real designs is a separate, low-risk follow-up an admin can do anytime
+from `/admin/templates` now that they can no longer confuse a visitor.
+
+---
+
+## 2026-09-26 — Storage: real object storage cutover for Main Design
+
+**Problem** (audit §1, deferred from the Photo Studio slice): Main
+Design's own image insertion paths — the toolbar Upload button
+(`handleImageUpload`) and File > Import / PDF-page-rasterized import
+(`insertImageDataUrl`) — still embedded every image as base64 directly
+in the Fabric object's `src`, the same cost the Photo Studio slice fixed
+for its own, smaller surface.
+
+**What was done:** a `backgroundUploadAsset(img)` helper in
+`app/editor/page.tsx`. The image is still added to the canvas
+immediately from the local data URL — placing an image is never slower
+or dependent on the network, unchanged from before. In the background,
+its bytes are uploaded via the same `uploadDesignAsset` helper the Photo
+Studio slice introduced, and once that resolves, `img.setSrc(signedUrl,
+cb, {crossOrigin: 'anonymous'})` swaps the object's source in place
+(same position/scale/filters/`__uid` — nothing else about the object
+changes) and records `__assetId`. Wired into both `handleImageUpload`
+and `insertImageDataUrl` (so File > Import and PDF-page imports get it
+too, since they share that function), and also into `applyPhotoEdits`
+(the Photo Editor's "Apply to Design") — a photo edit produces fresh
+pixels, so its stale `__assetId` is cleared immediately and a new
+upload kicks off for the edited result. A failed upload (offline, or
+the storage migration not applied) degrades silently: the image just
+stays embedded for that session, the same graceful-fallback pattern
+already used elsewhere in this app (e.g. a missing thumbnail column).
+
+**Why deferred, now not:** the audit flagged this specifically as
+higher-risk than Photo Studio because exports, thumbnails, undo/redo,
+and every already-saved design all read image data directly. The design
+here avoids disturbing any of that: existing designs with embedded
+base64 are untouched (this only changes what a *future* insert or photo
+edit produces), Fabric already serializes `crossOrigin` as part of an
+Image object's JSON (confirmed in the Photo Studio work), so a reload
+correctly re-establishes the same cross-origin-safe loading automatically,
+and the swap itself doesn't call `pushHistory()` (it's not a user
+action, so it doesn't create a spurious undo step or make an old,
+pre-swap history entry disagree with a newer one — both still resolve
+to the same visible image either way).
+
+**Tested:** `npx tsc --noEmit` and `npm run build` clean. New 10-check
+Playwright suite: an uploaded image's src becomes a real signed URL
+with a real `__assetId`, `crossOrigin` is set correctly, exactly one
+real upload happens, Export as PNG still works with a cross-origin
+image (no tainted-canvas error), Save writes `canvas_json` referencing
+the URL (not base64), reloading a saved design correctly re-loads the
+URL-sourced image, and uploading identical content again dedupes
+instead of re-uploading. Existing regression suites re-run and still
+passing: guides/grid/snap (14/14), photo export sync (4/4) and dialog
+(4/4), dashboard thumbnail backfill (5/5), and the real-templates suite
+(14/14, confirming the templates cutover from the previous slice still
+works after these editor changes).
+
+**Not verified (same honest limitation as the Photo Studio slice):**
+real Supabase Storage CORS/signed-URL behavior against production
+infrastructure — only mocked in this sandbox.
+
+---
+
 ## 2026-09-26 — Templates: real, original editable designs (first batch)
 
 **Problem** (audit §3): `templates` held no editable design content at
