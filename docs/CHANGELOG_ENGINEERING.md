@@ -6,6 +6,65 @@ actually done, what was tested, and what's deliberately left for later.
 
 ---
 
+## 2026-09-28 — Templates: hide legacy content-less rows from public galleries
+
+**Problem** (user-reported: "I ran it, it still shows blank" — after
+applying the migrations and running "Generate Starter Templates," the
+user still hit a blank artboard from `/templates`): the `templates` table
+carries 13 pre-existing rows from the original `0003_templates_and_admin.sql`
+seed, created before `canvas_json` existed as a column. Those 13 rows
+still have `canvas_json = null`. `generateStarterTemplates` adds 6 new
+real rows but never touched the legacy ones, and both `fetchTemplates()`
+(unfiltered, used everywhere) and the public gallery pages listed them
+side by side with no visual distinction and no way to tell which is which
+without opening one. The 6 real rows also defaulted to `sort_order: 0`
+via `.length` on insert, colliding with the legacy rows' own `sort_order`
+0-12 range. The user was almost certainly clicking one of the 13 old,
+identical-looking, non-functional rows.
+
+**What was done:**
+- `generateStarterTemplates` (`lib/templatesData.ts`) now sets each real
+  row's `sort_order` to a negative value (`i - TEMPLATE_BUILDERS.length`),
+  so real templates always sort ahead of any legacy row in an unfiltered
+  listing.
+- New `fetchPublicTemplates()` (`lib/templatesData.ts`): calls the
+  existing `fetchTemplates()`, then filters to only rows with real
+  `canvas_json`. If none exist yet (fresh install, migration applied but
+  generation never run, or literally only legacy rows in the table), it
+  falls back to the static `TEMPLATES` placeholder array — the same
+  fallback `fetchTemplates()` already uses when the table itself is
+  empty or unreachable, so a visitor never sees either an empty gallery
+  or a legacy dead-end row.
+- `/templates` (`app/templates/page.tsx`) and the homepage's
+  `TemplateShowcase` (`components/home/TemplateShowcase.tsx`) now both
+  call `fetchPublicTemplates()` instead of `fetchTemplates()`.
+  `/admin/templates` deliberately still calls the unfiltered
+  `fetchTemplates()` — an admin needs to see the 13 legacy rows to delete
+  or eventually upgrade them, which is why this is a filter on the public
+  read path, not a data migration or deletion.
+
+**Tested:** `npx tsc --noEmit` and `npm run build` clean. New Playwright
+suite (`test_legacy_template_filter.js`, 15/15) that reproduces the exact
+production scenario: seeds the mocked `templates` table with the 13
+legacy no-`canvas_json` rows first, confirms the public gallery falls
+back to the static placeholder list (not the legacy DB rows) before
+generation has run, then generates the 6 real rows on top (19 rows total
+in the table) and confirms: only the 6 real ones render on `/templates`
+and the homepage showcase, a legacy row ("Bold Contact") never appears in
+either public listing, clicking a real template still loads real content
+even with legacy rows present in the same table, and `/admin/templates`
+still shows all 19 rows unfiltered. Re-ran `test_real_templates.js`
+(14/14) to confirm the existing generation/use-template/save flow is
+unaffected.
+
+**Deliberately not done:** the 13 legacy rows are not deleted or
+backfilled with real content by this change — they're now simply hidden
+from public view. Deleting them (optional cleanup) or upgrading them to
+real designs is a separate, low-risk follow-up an admin can do anytime
+from `/admin/templates` now that they can no longer confuse a visitor.
+
+---
+
 ## 2026-09-26 — Storage: real object storage cutover for Main Design
 
 **Problem** (audit §1, deferred from the Photo Studio slice): Main

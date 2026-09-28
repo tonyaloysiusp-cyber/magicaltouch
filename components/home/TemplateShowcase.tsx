@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowRight, ArrowUpRight } from 'lucide-react';
 import { resolveAuthedPath } from '@/lib/authNav';
-import { CATEGORIES, TEMPLATES, Category, Template, fetchTemplates } from '@/lib/templatesData';
+import { CATEGORIES, TEMPLATES, Category, Template, fetchPublicTemplates } from '@/lib/templatesData';
 import { MockDesignCard } from '@/components/MockDesignCard';
 import { Reveal } from './Reveal';
 
@@ -14,8 +14,11 @@ export function TemplateShowcase() {
   const [templates, setTemplates] = useState<Template[]>(TEMPLATES);
   const router = useRouter();
 
+  // fetchPublicTemplates() (not fetchTemplates()) -- this showcase is a
+  // public-facing gallery, so it must never surface a legacy pre-migration
+  // row with no real design content behind it (see lib/templatesData.ts).
   useEffect(() => {
-    fetchTemplates().then(setTemplates);
+    fetchPublicTemplates().then(setTemplates);
   }, []);
 
   const visible = useMemo(
