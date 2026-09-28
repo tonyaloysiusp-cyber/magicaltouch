@@ -82,7 +82,9 @@ import {
   CloudFog,
   PaintBucket as PaintBucketIcon,
   Italic,
+  Move3d,
 } from 'lucide-react';
+import { warpQuadToCanvas, type Point as PerspectivePoint } from '@/lib/editor/perspective';
 
 export interface CropRect {
   x: number;
@@ -134,6 +136,7 @@ type PhotoTool =
   | 'select'
   | 'crop'
   | 'skew'
+  | 'perspective'
   | 'pen'
   | 'direct'
   | 'marquee-rect'
@@ -169,6 +172,7 @@ const TOOL_ICONS: Record<PhotoTool, React.ReactNode> = {
   select: <MousePointer2 size={ICON_SIZE} />,
   crop: <CropIcon size={ICON_SIZE} />,
   skew: <Italic size={ICON_SIZE} />,
+  perspective: <Move3d size={ICON_SIZE} />,
   pen: <PenToolIcon size={ICON_SIZE} />,
   direct: <Pointer size={ICON_SIZE} />,
   'marquee-rect': <SquareDashedMousePointer size={ICON_SIZE} />,
@@ -197,6 +201,7 @@ const SHORTCUT_LABEL: Partial<Record<PhotoTool, string>> = {
   select: 'V',
   crop: 'C',
   skew: 'T',
+  perspective: 'Shift+T',
   pen: 'P',
   direct: 'A',
   'marquee-rect': 'M',
@@ -1298,6 +1303,164 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
     if (canvas && imageRef.current) canvas.setActiveObject(imageRef.current);
   };
 
+  // ---- Perspective (corner-pin distort) ----
+  // Fabric has no built-in projective transform for image objects, so
+  // this is a genuine "position handles, then bake real warped pixels"
+  // tool -- the same pattern Crop and Resize already use in this file --
+  // backed by lib/editor/perspective.ts's real homography math. The four
+  // handles are always kept in TL/TR/BR/BL order (matching
+  // warpQuadToCanvas's expected corner order); dragging only moves a
+  // handle and redraws the live outline, it never touches pixels until
+  // Apply.
+  const perspectiveHandlesRef = useRef<any[]>([]);
+  const perspectiveOutlineRef = useRef<any>(null);
+
+  const perspectiveOutlinePoints = () =>
+    perspectiveHandlesRef.current.map((h) => ({ x: h.left, y: h.top }));
+
+  const syncPerspectiveOutline = () => {
+    const outline = perspectiveOutlineRef.current;
+    if (!outline) return;
+    const points = perspectiveOutlinePoints();
+    outline.set({ points });
+    outline.setCoords();
+    fabricCanvasRef.current?.requestRenderAll();
+  };
+
+  const startPerspective = () => {
+    const canvas = fabricCanvasRef.current;
+    const F = fabricModRef.current;
+    const img = imageRef.current;
+    if (!canvas || !F || !img) return;
+    setActiveTool('perspective');
+
+    const left = img.left || 0;
+    const top = img.top || 0;
+    const w = img.width;
+    const h = img.height;
+    const corners = [
+      { x: left, y: top },
+      { x: left + w, y: top },
+      { x: left + w, y: top + h },
+      { x: left, y: top + h },
+    ];
+
+    const outline = new F.Polygon(corners, {
+      fill: 'transparent',
+      stroke: '#3891ff',
+      strokeDashArray: [6, 4],
+      strokeWidth: 1.5 / Math.max(0.05, canvas.getZoom()),
+      selectable: false,
+      evented: false,
+      objectCaching: false,
+    });
+    perspectiveOutlineRef.current = outline;
+    canvas.add(outline);
+
+    const radius = 6 / Math.max(0.05, canvas.getZoom());
+    perspectiveHandlesRef.current = corners.map(
+      (c) =>
+        new F.Circle({
+          left: c.x,
+          top: c.y,
+          radius,
+          originX: 'center',
+          originY: 'center',
+          fill: '#3891ff',
+          stroke: '#ffffff',
+          strokeWidth: 1.5 / Math.max(0.05, canvas.getZoom()),
+          hasControls: false,
+          hasBorders: false,
+          lockRotation: true,
+          lockScalingX: true,
+          lockScalingY: true,
+        })
+    );
+    perspectiveHandlesRef.current.forEach((handle) => {
+      handle.on('moving', syncPerspectiveOutline);
+      canvas.add(handle);
+    });
+    canvas.requestRenderAll();
+  };
+
+  const resetPerspectiveHandles = () => {
+    const canvas = fabricCanvasRef.current;
+    const img = imageRef.current;
+    if (!canvas || !img || !perspectiveHandlesRef.current.length) return;
+    const left = img.left || 0;
+    const top = img.top || 0;
+    const w = img.width;
+    const h = img.height;
+    const corners = [
+      { x: left, y: top },
+      { x: left + w, y: top },
+      { x: left + w, y: top + h },
+      { x: left, y: top + h },
+    ];
+    perspectiveHandlesRef.current.forEach((handle, i) => {
+      handle.set({ left: corners[i].x, top: corners[i].y });
+      handle.setCoords();
+    });
+    syncPerspectiveOutline();
+  };
+
+  const cleanupPerspectiveHandles = () => {
+    const canvas = fabricCanvasRef.current;
+    if (canvas) {
+      perspectiveHandlesRef.current.forEach((h) => canvas.remove(h));
+      if (perspectiveOutlineRef.current) canvas.remove(perspectiveOutlineRef.current);
+    }
+    perspectiveHandlesRef.current = [];
+    perspectiveOutlineRef.current = null;
+  };
+
+  const cancelPerspective = () => {
+    const canvas = fabricCanvasRef.current;
+    cleanupPerspectiveHandles();
+    setActiveTool('select');
+    if (canvas && imageRef.current) canvas.setActiveObject(imageRef.current);
+  };
+
+  const applyPerspective = () => {
+    const canvas = fabricCanvasRef.current;
+    const F = fabricModRef.current;
+    const img = imageRef.current;
+    const pristine = img?.__pristineEl;
+    if (!canvas || !F || !img || !pristine || perspectiveHandlesRef.current.length !== 4) return;
+
+    const dstCorners: PerspectivePoint[] = perspectiveHandlesRef.current.map((h) => canvasToImageLocal({ x: h.left, y: h.top }));
+
+    const cur: CropRect = img.__cropRect;
+    const cropped = cropToCanvas(pristine, pristine.naturalWidth, pristine.naturalHeight, cur);
+    const warped = warpQuadToCanvas(cropped, img.width, img.height, dstCorners);
+    const dataUrl = warped.toDataURL('image/png');
+
+    if (img.__maskData) {
+      img.__maskData = null;
+      img.clipPath = null;
+      setHasMask(false);
+    }
+
+    const newPristine = new Image();
+    newPristine.onload = () => {
+      img.__pristineEl = newPristine;
+      img.__naturalSize = { w: warped.width, h: warped.height };
+      img.__cropRect = { x: 0, y: 0, width: warped.width, height: warped.height };
+      img.setSrc(dataUrl, () => {
+        img.set({ left: 0, top: 0 });
+        applyAdjustments(img, F, img.__adjustments);
+        img.setCoords();
+        cleanupPerspectiveHandles();
+        fitToView();
+        canvas.setActiveObject(img);
+        canvas.requestRenderAll();
+        pushLocalHistory(dataUrl, img.__cropRect);
+        setActiveTool('select');
+      });
+    };
+    newPristine.src = dataUrl;
+  };
+
   // Single entry point for switching tools, used by both the toolbar's
   // own clicks and every keyboard shortcut below, so the two can never
   // drift out of sync (e.g. a shortcut bypassing the crop-tool cleanup a
@@ -1308,7 +1471,9 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
     // (subscribed once, not re-created on every tool change), where the
     // state variable would be stale.
     if (activeToolRef.current === 'crop' && cropObjRef.current) cancelCrop();
+    if (activeToolRef.current === 'perspective' && perspectiveHandlesRef.current.length) cancelPerspective();
     if (id === 'crop') startCrop();
+    else if (id === 'perspective') startPerspective();
     else setActiveTool(id);
   };
 
@@ -2222,6 +2387,7 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
         if (key === 'm') { e.preventDefault(); selectTool('marquee-ellipse'); return; }
         if (key === 'o') { e.preventDefault(); selectTool('burn'); return; }
         if (key === 'r') { e.preventDefault(); selectTool('mask-hide'); return; }
+        if (key === 't') { e.preventDefault(); selectTool('perspective'); return; }
       }
     };
     const handleUp = (e: KeyboardEvent) => {
@@ -2354,7 +2520,7 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
       ],
     },
     { label: 'Crop', tools: [{ id: 'crop', label: 'Crop' }] },
-    { label: 'Transform', tools: [{ id: 'skew', label: 'Skew' }] },
+    { label: 'Transform', tools: [{ id: 'skew', label: 'Skew' }, { id: 'perspective', label: 'Perspective' }] },
     {
       label: 'Retouch',
       tools: [
@@ -2449,6 +2615,15 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
               <div className="w-px h-4 bg-gray-200" />
               <button onClick={cancelCrop} className="text-xs px-3 py-1 rounded-full border">Cancel Crop</button>
               <button onClick={applyCrop} className="text-xs px-3 py-1 rounded-full bg-gray-800 text-white">Apply Crop</button>
+            </div>
+          )}
+          {activeTool === 'perspective' && (
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-white rounded-full shadow px-3 py-1.5">
+              <span className="text-xs text-gray-500 px-1">Drag the 4 corners, then apply</span>
+              <div className="w-px h-4 bg-gray-200" />
+              <button onClick={resetPerspectiveHandles} className="text-xs px-2.5 py-1 rounded-full border hover:bg-gray-50">Reset</button>
+              <button onClick={cancelPerspective} className="text-xs px-3 py-1 rounded-full border">Cancel Perspective</button>
+              <button onClick={applyPerspective} className="text-xs px-3 py-1 rounded-full bg-gray-800 text-white">Apply Perspective</button>
             </div>
           )}
         </div>

@@ -6,6 +6,42 @@ actually done, what was tested, and what's deliberately left for later.
 
 ---
 
+## 2026-09-29 — Photo Studio: real Perspective transform + resize-bug investigation
+
+**Investigated:** a report that "canvas resizes while typing width/height"
+in Photo Studio. Wrote a targeted Playwright repro
+(`test_photo_studio_resize_bug.js`) against both in-editor resize surfaces
+(the Resize Image dialog and the Crop tool's "Set Size" inputs) plus
+re-ran the existing `/create` and `ArtboardsPanel` suite
+(`test_workspace_editor_changes.js`, 19/19). All 7 new checks and all 19
+existing checks pass: typing in any of these fields only updates local
+draft state, never the live canvas, until an explicit Apply/Set Size
+click. Could not reproduce the bug anywhere in the current build — most
+likely a stale build the report was made against. No code change was
+needed; flagging this in case it resurfaces with a more specific repro.
+
+**Shipped:** a real Perspective (corner-pin distort) tool — the first
+piece of the "more advanced transforms" ask. Fabric.js has no built-in
+projective transform for image objects, so this is a genuine new
+capability, not a relabeled Skew: `lib/editor/perspective.ts` implements
+a real 4-point homography (direct linear transform, solved via Gaussian
+elimination) and warps the image's actual pixels via inverse-mapped
+bilinear sampling, baked into a new raster the same way Crop and Resize
+already bake their own pixel operations. Four draggable handles (`'perspective'`
+tool, Shift+T) show a live outline of the target quadrilateral while
+dragging; Apply performs the real warp, Reset snaps the handles back,
+Cancel discards with no pixel change. Verified with a new Playwright
+suite (`test_perspective_tool.js`, 11/11): handles/outline creation,
+drag-without-baking, a genuine pixel-content diff after Apply (not just
+a dimension check), cleanup after both Apply and Cancel, and the Shift+T
+shortcut. Also backfilled several real shortcuts that existed in code but
+were missing from `ShortcutsModal.tsx` (Skew, Clone Stamp, Blur, Sharpen,
+Sponge, Paint Bucket, Hue/Saturation) alongside the new Perspective entry.
+
+**Still planned for the "more advanced" transforms area:** Warp
+(mesh-based distort) and a unified Free Transform UI wrapping
+move/scale/rotate/skew/perspective in one mode — see audit §9.
+
 ## 2026-09-28 — Photo Studio: Blur, Sharpen, Sponge, Paint Bucket, Skew, layer blend modes
 
 **Problem:** the previous audit (§9) mapped the "full Photoshop" brief's
