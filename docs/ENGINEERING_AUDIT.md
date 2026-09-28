@@ -236,27 +236,32 @@ undo/redo, per `PhotoTool` in `PhotoEditorWorkspace.tsx:124-144`):
 | Healing / object removal | Live, different UX than a brush | "Remove Object (Content-Aware Fill)" menu action on a pixel selection (`lib/editor/inpaint.ts`'s `contentAwareFill` — real harmonic-diffusion reconstruction from real neighboring pixels, not a blur or solid fill; its own header honestly states it doesn't reproduce fine texture/pattern in a large hole) |
 | Layers (opacity, rename, reorder, visibility, lock) | Live | Shares `components/editor/LayersPanel.tsx` with Main Design |
 | Undo/redo + keyboard shortcuts | Live | `canUndo`/`canRedo`, full shortcut table (task #34) |
+| Blur | Live (2026-09-28) | `'blur'` brush, `blurInMask()` — real Gaussian blur (canvas 2D `filter`) blended into the masked region by mask alpha |
+| Sharpen | Live (2026-09-28) | `'sharpen'` brush, `sharpenInMask()` — real unsharp-mask (`original + amount*(original-blurred)`) |
+| Sponge | Live (2026-09-28) | `'sponge'` brush, `spongeInMask()` — real HSL saturation scaling, localized to the brush stroke, with a Saturate/Desaturate mode toggle |
+| Paint Bucket | Live (2026-09-28) | `'paint-bucket'` tool, single-click flood-fill reusing `magicWandMask()` (the same algorithm Background Removal already used) + `paintColorInMask()` |
+| Skew | Live (2026-09-28) | `'skew'` tool, real Fabric `skewX`/`skewY` object properties set via a confirm-on-blur/Enter panel with a Reset control |
+| Layer blend modes | Live (2026-09-28) | `components/editor/LayersPanel.tsx`'s new opt-in `onBlendModeChange` dropdown sets the real Fabric `globalCompositeOperation` (Multiply, Screen, Overlay, Darken, Lighten, Color Dodge/Burn, Hard/Soft Light, Difference, Exclusion, Hue, Saturation, Color, Luminosity) — verified to actually composite correctly at both live render and flatten-on-apply (`handleApply`'s multi-layer path calls `canvas.toDataURL()`, which respects it natively) |
 
 **Not yet real — planned, not faked** (no tool id, no panel, no code path
 exists for these; do not show them as clickable until they are):
 Polygon Lasso, Magnetic Lasso, Object Selection, Quick Selection, Select
 Subject, Select and Mask (these five all imply ML-based segmentation —
-none exists in this codebase); Perspective Crop, Slice, Skew, Distort,
-Perspective, Warp, Free Transform (today's transform is limited to what
-Fabric's own selection handles give: move/scale/rotate); a literal
-drag-brush Spot Healing / Healing Brush / Patch Tool / Red Eye (distinct
-from the real selection-based Content-Aware Fill above); Blur, Sharpen,
-Smudge, Sponge; Mixer Brush, Pattern Stamp, Paint Bucket; Freeform Pen as
-a separate tool from the existing real Pen; Shape tools inside Photo
-Studio specifically (Main Design has real shape tools, Photo Studio does
-not yet); Color Balance, Selective Color, Gradient Map, Channel Mixer,
-Black & White, a full HSL panel (Hue/Saturation exists, the fuller
-Lightroom-style HSL-per-color-band panel does not); Texture, Clarity,
-Dehaze, Vignette, Grain; Linear/Radial Gradient *Mask* and Color Range
-Mask specifically (today's mask is a paintable reveal/hide mask, not yet
-gradient- or color-range-driven); layer blend modes and layer
-grouping/clipping (opacity/rename/reorder/visibility/lock exist per
-above, blend mode and grouping do not).
+none exists in this codebase); Perspective Crop, Slice, Distort,
+Perspective, Warp, Free Transform (today's transform is Skew — see above —
+plus what Fabric's own selection handles give: move/scale/rotate); a
+literal drag-brush Spot Healing / Healing Brush / Patch Tool / Red Eye
+(distinct from the real selection-based Content-Aware Fill above); Smudge;
+Mixer Brush, Pattern Stamp; Freeform Pen as a separate tool from the
+existing real Pen; Shape tools inside Photo Studio specifically (Main
+Design has real shape tools, Photo Studio does not yet); Color Balance,
+Selective Color, Gradient Map, Channel Mixer, Black & White, a full HSL
+panel (Hue/Saturation exists, the fuller Lightroom-style
+HSL-per-color-band panel does not); Texture, Clarity, Dehaze, Vignette,
+Grain; Linear/Radial Gradient *Mask* and Color Range Mask specifically
+(today's mask is a paintable reveal/hide mask, not yet gradient- or
+color-range-driven); layer grouping/clipping (blend mode is now live per
+above; grouping/clipping is not).
 
 **What this means for the brief's priorities:** items 1-2 (remove Studio
 Preview, merge Photo Project into Photo Studio), 9-11 (unit system),

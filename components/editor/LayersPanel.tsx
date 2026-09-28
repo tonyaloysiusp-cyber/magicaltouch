@@ -19,7 +19,35 @@ interface Props {
   onDuplicate?: (obj: any) => void;
   onDelete?: (obj: any) => void;
   getThumbnail?: (obj: any) => string | null;
+  // Real per-layer blend modes via Fabric's own globalCompositeOperation
+  // (the same primitive the canvas 2D API itself compositing uses) --
+  // opt-in, same as onOpacityChange, so Main Design's own layer list is
+  // unaffected when this is omitted.
+  onBlendModeChange?: (obj: any, mode: string) => void;
 }
+
+// Every value here is a real canvas globalCompositeOperation the browser
+// actually implements -- not an invented label. Grouped in the same
+// rough order Photoshop's own blend-mode dropdown uses so the mental
+// model carries over, without copying its exact list or wording.
+const BLEND_MODES: { value: string; label: string }[] = [
+  { value: 'normal', label: 'Normal' },
+  { value: 'multiply', label: 'Multiply' },
+  { value: 'screen', label: 'Screen' },
+  { value: 'overlay', label: 'Overlay' },
+  { value: 'darken', label: 'Darken' },
+  { value: 'lighten', label: 'Lighten' },
+  { value: 'color-dodge', label: 'Color Dodge' },
+  { value: 'color-burn', label: 'Color Burn' },
+  { value: 'hard-light', label: 'Hard Light' },
+  { value: 'soft-light', label: 'Soft Light' },
+  { value: 'difference', label: 'Difference' },
+  { value: 'exclusion', label: 'Exclusion' },
+  { value: 'hue', label: 'Hue' },
+  { value: 'saturation', label: 'Saturation' },
+  { value: 'color', label: 'Color' },
+  { value: 'luminosity', label: 'Luminosity' },
+];
 
 export function LayersPanel({
   layers,
@@ -33,6 +61,7 @@ export function LayersPanel({
   onDuplicate,
   onDelete,
   getThumbnail,
+  onBlendModeChange,
 }: Props) {
   const [renamingId, setRenamingId] = useState<number | null>(null);
   const [renameValue, setRenameValue] = useState('');
@@ -193,6 +222,23 @@ export function LayersPanel({
                   className="flex-1"
                 />
                 <span className="text-[10px] text-gray-400 dark:text-gray-500 w-7 text-right shrink-0">{Math.round((obj.opacity ?? 1) * 100)}%</span>
+              </div>
+            )}
+
+            {onBlendModeChange && (
+              <div className="flex items-center gap-1.5 pl-[26px]" onClick={(e) => e.stopPropagation()}>
+                <span className="text-[10px] text-gray-400 dark:text-gray-500 w-10 shrink-0">Blend</span>
+                <select
+                  value={obj.globalCompositeOperation || 'normal'}
+                  onChange={(e) => onBlendModeChange(obj, e.target.value)}
+                  className="flex-1 text-[10px] border dark:border-[#3A3A3A] dark:bg-[#2B2B2B] dark:text-gray-200 rounded px-1 py-0.5"
+                >
+                  {BLEND_MODES.map((m) => (
+                    <option key={m.value} value={m.value}>
+                      {m.label}
+                    </option>
+                  ))}
+                </select>
               </div>
             )}
             </div>

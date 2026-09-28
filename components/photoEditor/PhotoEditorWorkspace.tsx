@@ -44,6 +44,9 @@ import {
   pickColorAt,
   cloneStampPaint,
   applyHueSaturation,
+  blurInMask,
+  sharpenInMask,
+  spongeInMask,
   LevelsSettings,
   DEFAULT_LEVELS,
   HueSaturationSettings,
@@ -74,6 +77,11 @@ import {
   EyeOff,
   Stamp,
   Droplet,
+  Droplets,
+  Focus,
+  CloudFog,
+  PaintBucket as PaintBucketIcon,
+  Italic,
 } from 'lucide-react';
 
 export interface CropRect {
@@ -125,6 +133,7 @@ type PhotoTool =
   | 'hand'
   | 'select'
   | 'crop'
+  | 'skew'
   | 'pen'
   | 'direct'
   | 'marquee-rect'
@@ -136,6 +145,10 @@ type PhotoTool =
   | 'dodge'
   | 'burn'
   | 'clone'
+  | 'blur'
+  | 'sharpen'
+  | 'sponge'
+  | 'paint-bucket'
   | 'eyedropper'
   | 'gradient'
   | 'levels'
@@ -143,7 +156,7 @@ type PhotoTool =
   | 'mask-reveal'
   | 'mask-hide';
 
-const PAINT_TOOLS: PhotoTool[] = ['eraser', 'brush', 'dodge', 'burn', 'clone'];
+const PAINT_TOOLS: PhotoTool[] = ['eraser', 'brush', 'dodge', 'burn', 'clone', 'blur', 'sharpen', 'sponge'];
 const MASK_PAINT_TOOLS: PhotoTool[] = ['mask-reveal', 'mask-hide'];
 
 // Icons + shortcut labels for every tool — matching Photoshop's own key
@@ -155,6 +168,7 @@ const TOOL_ICONS: Record<PhotoTool, React.ReactNode> = {
   hand: <Hand size={ICON_SIZE} />,
   select: <MousePointer2 size={ICON_SIZE} />,
   crop: <CropIcon size={ICON_SIZE} />,
+  skew: <Italic size={ICON_SIZE} />,
   pen: <PenToolIcon size={ICON_SIZE} />,
   direct: <Pointer size={ICON_SIZE} />,
   'marquee-rect': <SquareDashedMousePointer size={ICON_SIZE} />,
@@ -166,6 +180,10 @@ const TOOL_ICONS: Record<PhotoTool, React.ReactNode> = {
   dodge: <Sun size={ICON_SIZE} />,
   burn: <Moon size={ICON_SIZE} />,
   clone: <Stamp size={ICON_SIZE} />,
+  blur: <CloudFog size={ICON_SIZE} />,
+  sharpen: <Focus size={ICON_SIZE} />,
+  sponge: <Droplets size={ICON_SIZE} />,
+  'paint-bucket': <PaintBucketIcon size={ICON_SIZE} />,
   eyedropper: <Pipette size={ICON_SIZE} />,
   gradient: <Blend size={ICON_SIZE} />,
   levels: <SlidersHorizontal size={ICON_SIZE} />,
@@ -178,6 +196,7 @@ const SHORTCUT_LABEL: Partial<Record<PhotoTool, string>> = {
   hand: 'H',
   select: 'V',
   crop: 'C',
+  skew: 'T',
   pen: 'P',
   direct: 'A',
   'marquee-rect': 'M',
@@ -190,6 +209,10 @@ const SHORTCUT_LABEL: Partial<Record<PhotoTool, string>> = {
   burn: 'Shift+O',
   eyedropper: 'I',
   clone: 'S',
+  blur: 'F',
+  sharpen: 'J',
+  sponge: 'X',
+  'paint-bucket': 'K',
   gradient: 'G',
   levels: 'Ctrl/Cmd+L',
   'hue-sat': 'Ctrl/Cmd+U',
@@ -422,6 +445,41 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
   useEffect(() => {
     dodgeBurnStrengthRef.current = dodgeBurnStrength;
   }, [dodgeBurnStrength]);
+
+  const [blurRadius, setBlurRadius] = useState(6);
+  const blurRadiusRef = useRef(6);
+  useEffect(() => {
+    blurRadiusRef.current = blurRadius;
+  }, [blurRadius]);
+
+  const [sharpenAmount, setSharpenAmount] = useState(0.6);
+  const sharpenAmountRef = useRef(0.6);
+  useEffect(() => {
+    sharpenAmountRef.current = sharpenAmount;
+  }, [sharpenAmount]);
+
+  // Sponge tool: one strength slider plus a saturate/desaturate mode
+  // toggle, matching how Dodge/Burn share one strength with a
+  // direction — the sign is applied at bake time, not stored in state.
+  const [spongeStrength, setSpongeStrength] = useState(0.5);
+  const spongeStrengthRef = useRef(0.5);
+  useEffect(() => {
+    spongeStrengthRef.current = spongeStrength;
+  }, [spongeStrength]);
+  const [spongeMode, setSpongeMode] = useState<'saturate' | 'desaturate'>('desaturate');
+  const spongeModeRef = useRef<'saturate' | 'desaturate'>('desaturate');
+  useEffect(() => {
+    spongeModeRef.current = spongeMode;
+  }, [spongeMode]);
+
+  // Paint Bucket: how close a pixel's color must be to the clicked pixel
+  // to be included in the flood-filled region — same tolerance concept
+  // Background Removal's bgTolerance already uses for magicWandMask.
+  const [fillTolerance, setFillTolerance] = useState(32);
+  const fillToleranceRef = useRef(32);
+  useEffect(() => {
+    fillToleranceRef.current = fillTolerance;
+  }, [fillTolerance]);
 
   const [gradientColor1, setGradientColor1] = useState('#000000');
   const [gradientColor2, setGradientColor2] = useState('#ffffff');
@@ -870,6 +928,29 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
   };
   const setLayerOpacity = (layer: any, opacity: number) => {
     layer.set({ opacity });
+    fabricCanvasRef.current?.requestRenderAll();
+    bump();
+  };
+  // Real skew via Fabric's own skewX/skewY object properties (the same
+  // primitive its corner-drag transform controls would use) -- not a CSS
+  // filter or a cosmetic label. Matches setLayerOpacity's own precedent:
+  // a live object-property change re-renders and bumps immediately, with
+  // no separate undo/redo entry (opacity/rename/reorder don't push one
+  // either in this workspace -- only pixel bakes do).
+  const setLayerSkewX = (layer: any, skewX: number) => {
+    layer.set({ skewX });
+    layer.setCoords();
+    fabricCanvasRef.current?.requestRenderAll();
+    bump();
+  };
+  const setLayerSkewY = (layer: any, skewY: number) => {
+    layer.set({ skewY });
+    layer.setCoords();
+    fabricCanvasRef.current?.requestRenderAll();
+    bump();
+  };
+  const setLayerBlendMode = (layer: any, blendMode: string) => {
+    layer.set({ globalCompositeOperation: blendMode === 'normal' ? undefined : blendMode });
     fabricCanvasRef.current?.requestRenderAll();
     bump();
   };
@@ -1819,6 +1900,13 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
     else if (tool === 'burn') bakeAndPush(dodgeBurnInMask(pixelCanvas, mask, -dodgeBurnStrengthRef.current));
     else if (tool === 'clone' && cloneOffsetRef.current) {
       bakeAndPush(cloneStampPaint(pixelCanvas, mask, cloneOffsetRef.current.x, cloneOffsetRef.current.y));
+    } else if (tool === 'blur') {
+      bakeAndPush(blurInMask(pixelCanvas, mask, blurRadiusRef.current));
+    } else if (tool === 'sharpen') {
+      bakeAndPush(sharpenInMask(pixelCanvas, mask, sharpenAmountRef.current));
+    } else if (tool === 'sponge') {
+      const signedAmount = spongeModeRef.current === 'saturate' ? spongeStrengthRef.current : -spongeStrengthRef.current;
+      bakeAndPush(spongeInMask(pixelCanvas, mask, signedAmount));
     }
   };
 
@@ -1898,6 +1986,24 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
       const local = canvasToImageLocal(pointer);
       const picked = pickColorAt(getImagePixelCanvas(img), local.x, local.y);
       if (picked) setBrushColor(picked);
+      return;
+    }
+    if (tool === 'paint-bucket') {
+      // A single click, not a drag brush -- reuses the same
+      // magicWandMask flood-fill Background Removal already uses, then
+      // fills the matched region with the current brush color via the
+      // same paintColorInMask every other color-fill op here uses.
+      const img = imageRef.current;
+      if (!img) return;
+      const pixelCanvas = getImagePixelCanvas(img);
+      const local = canvasToImageLocal(canvas.getPointer(opt.e));
+      const cx = Math.round(local.x);
+      const cy = Math.round(local.y);
+      if (cx < 0 || cy < 0 || cx >= pixelCanvas.width || cy >= pixelCanvas.height) return;
+      const ctx = pixelCanvas.getContext('2d') as CanvasRenderingContext2D;
+      const data = ctx.getImageData(0, 0, pixelCanvas.width, pixelCanvas.height);
+      const region = magicWandMask(data, cx, cy, fillToleranceRef.current, true);
+      if (maskHasSelection(region)) bakeAndPush(paintColorInMask(pixelCanvas, region, brushColorRef.current));
       return;
     }
     if (tool === 'gradient') {
@@ -2105,6 +2211,11 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
         if (key === 'i') { e.preventDefault(); selectTool('eyedropper'); return; }
         if (key === 'g') { e.preventDefault(); selectTool('gradient'); return; }
         if (key === 'r') { e.preventDefault(); selectTool('mask-reveal'); return; }
+        if (key === 'f') { e.preventDefault(); selectTool('blur'); return; }
+        if (key === 'j') { e.preventDefault(); selectTool('sharpen'); return; }
+        if (key === 'x') { e.preventDefault(); selectTool('sponge'); return; }
+        if (key === 'k') { e.preventDefault(); selectTool('paint-bucket'); return; }
+        if (key === 't') { e.preventDefault(); selectTool('skew'); return; }
       }
       if (!isMeta && e.shiftKey) {
         const key = e.key.toLowerCase();
@@ -2243,6 +2354,7 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
       ],
     },
     { label: 'Crop', tools: [{ id: 'crop', label: 'Crop' }] },
+    { label: 'Transform', tools: [{ id: 'skew', label: 'Skew' }] },
     {
       label: 'Retouch',
       tools: [
@@ -2250,12 +2362,16 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
         { id: 'dodge', label: 'Dodge' },
         { id: 'burn', label: 'Burn' },
         { id: 'clone', label: 'Clone Stamp' },
+        { id: 'blur', label: 'Blur' },
+        { id: 'sharpen', label: 'Sharpen' },
+        { id: 'sponge', label: 'Sponge' },
       ],
     },
     {
       label: 'Paint',
       tools: [
         { id: 'brush', label: 'Brush' },
+        { id: 'paint-bucket', label: 'Paint Bucket' },
         { id: 'gradient', label: 'Gradient' },
         { id: 'eyedropper', label: 'Color Picker' },
       ],
@@ -2351,6 +2467,7 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
               onDuplicate={duplicateActiveLayer}
               onDelete={layersForPanel.length > 1 ? deleteActiveLayer : undefined}
               getThumbnail={layerThumbnail}
+              onBlendModeChange={setLayerBlendMode}
             />
             <div className="px-3 pb-3 flex gap-1.5">
               <button onClick={duplicateActiveLayer} className="flex-1 text-[11px] px-2 py-1.5 border rounded hover:bg-gray-50">Duplicate Layer</button>
@@ -2510,10 +2627,10 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
               </div>
             )}
 
-            {(activeTool === 'eraser' || activeTool === 'brush' || activeTool === 'dodge' || activeTool === 'burn' || activeTool === 'clone' || MASK_PAINT_TOOLS.includes(activeTool)) && (
+            {(activeTool === 'eraser' || activeTool === 'brush' || activeTool === 'dodge' || activeTool === 'burn' || activeTool === 'clone' || activeTool === 'blur' || activeTool === 'sharpen' || activeTool === 'sponge' || MASK_PAINT_TOOLS.includes(activeTool)) && (
               <div className="border-t pt-3">
                 <p className="font-semibold text-gray-700 text-xs uppercase tracking-wide mb-2">
-                  {activeTool === 'eraser' ? 'Eraser' : activeTool === 'brush' ? 'Brush' : activeTool === 'dodge' ? 'Dodge (lighten)' : activeTool === 'burn' ? 'Burn (darken)' : activeTool === 'clone' ? 'Clone Stamp' : activeTool === 'mask-reveal' ? 'Mask: Paint Reveal' : 'Mask: Paint Hide'}
+                  {activeTool === 'eraser' ? 'Eraser' : activeTool === 'brush' ? 'Brush' : activeTool === 'dodge' ? 'Dodge (lighten)' : activeTool === 'burn' ? 'Burn (darken)' : activeTool === 'clone' ? 'Clone Stamp' : activeTool === 'blur' ? 'Blur' : activeTool === 'sharpen' ? 'Sharpen' : activeTool === 'sponge' ? 'Sponge' : activeTool === 'mask-reveal' ? 'Mask: Paint Reveal' : 'Mask: Paint Hide'}
                 </p>
                 <div className="flex justify-between text-[11px] text-gray-500 mb-0.5">
                   <span>Brush size</span>
@@ -2549,6 +2666,70 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
                       step={0.05}
                       value={dodgeBurnStrength}
                       onChange={(e) => setDodgeBurnStrength(parseFloat(e.target.value))}
+                      className="w-full"
+                    />
+                  </>
+                )}
+                {activeTool === 'blur' && (
+                  <>
+                    <div className="flex justify-between text-[11px] text-gray-500 mb-0.5">
+                      <span>Blur radius</span>
+                      <span>{blurRadius}px</span>
+                    </div>
+                    <input
+                      type="range"
+                      min={1}
+                      max={40}
+                      value={blurRadius}
+                      onChange={(e) => setBlurRadius(parseInt(e.target.value))}
+                      className="w-full"
+                    />
+                  </>
+                )}
+                {activeTool === 'sharpen' && (
+                  <>
+                    <div className="flex justify-between text-[11px] text-gray-500 mb-0.5">
+                      <span>Amount</span>
+                      <span>{sharpenAmount.toFixed(2)}</span>
+                    </div>
+                    <input
+                      type="range"
+                      min={0.1}
+                      max={2}
+                      step={0.1}
+                      value={sharpenAmount}
+                      onChange={(e) => setSharpenAmount(parseFloat(e.target.value))}
+                      className="w-full"
+                    />
+                  </>
+                )}
+                {activeTool === 'sponge' && (
+                  <>
+                    <div className="grid grid-cols-2 gap-1.5 mb-2">
+                      <button
+                        onClick={() => setSpongeMode('saturate')}
+                        className={`text-[11px] px-2 py-1 border rounded ${spongeMode === 'saturate' ? 'bg-gray-800 text-white' : ''}`}
+                      >
+                        Saturate
+                      </button>
+                      <button
+                        onClick={() => setSpongeMode('desaturate')}
+                        className={`text-[11px] px-2 py-1 border rounded ${spongeMode === 'desaturate' ? 'bg-gray-800 text-white' : ''}`}
+                      >
+                        Desaturate
+                      </button>
+                    </div>
+                    <div className="flex justify-between text-[11px] text-gray-500 mb-0.5">
+                      <span>Strength</span>
+                      <span>{spongeStrength.toFixed(2)}</span>
+                    </div>
+                    <input
+                      type="range"
+                      min={0.05}
+                      max={1}
+                      step={0.05}
+                      value={spongeStrength}
+                      onChange={(e) => setSpongeStrength(parseFloat(e.target.value))}
                       className="w-full"
                     />
                   </>
@@ -2589,6 +2770,94 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
                   <span className="w-8 h-6 border rounded" style={{ background: brushColor }} />
                   <span className="text-[11px] text-gray-600 font-mono">{brushColor}</span>
                 </div>
+              </div>
+            )}
+
+            {activeTool === 'paint-bucket' && (
+              <div className="border-t pt-3">
+                <p className="font-semibold text-gray-700 text-xs uppercase tracking-wide mb-2">Paint Bucket</p>
+                <p className="text-[11px] text-gray-500 mb-2">Click a region to fill connected, similarly-colored pixels with the current color.</p>
+                <div className="flex items-center gap-2 mb-2">
+                  <label className="text-[11px] text-gray-500">Color</label>
+                  <input type="color" value={brushColor} onChange={(e) => setBrushColor(e.target.value)} className="w-11 h-11 border rounded cursor-pointer" />
+                </div>
+                <div className="flex justify-between text-[11px] text-gray-500 mb-0.5">
+                  <span>Tolerance</span>
+                  <span>{fillTolerance}</span>
+                </div>
+                <input
+                  type="range"
+                  min={1}
+                  max={128}
+                  value={fillTolerance}
+                  onChange={(e) => setFillTolerance(parseInt(e.target.value))}
+                  className="w-full"
+                />
+              </div>
+            )}
+
+            {activeTool === 'skew' && (
+              <div className="border-t pt-3">
+                <p className="font-semibold text-gray-700 text-xs uppercase tracking-wide mb-2">Skew</p>
+                <p className="text-[11px] text-gray-500 mb-2">
+                  {imageRef.current ? 'Skews the active layer along X/Y, in degrees.' : 'Select a layer first.'}
+                </p>
+                <label className="text-[11px] text-gray-500 block mb-0.5">Skew X (°)</label>
+                <input
+                  type="text"
+                  key={`skewx-${imageRef.current?.__layerId}-${imageRef.current?.skewX ?? 0}`}
+                  defaultValue={String(Math.round(imageRef.current?.skewX ?? 0))}
+                  disabled={!imageRef.current}
+                  onBlur={(e) => {
+                    const img = imageRef.current;
+                    if (!img) return;
+                    const val = parseFloat(e.target.value);
+                    if (isNaN(val)) return;
+                    setLayerSkewX(img, Math.max(-80, Math.min(80, val)));
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+                    if (e.key === 'Escape') {
+                      (e.target as HTMLInputElement).value = String(Math.round(imageRef.current?.skewX ?? 0));
+                      (e.target as HTMLInputElement).blur();
+                    }
+                  }}
+                  className="w-full text-xs border rounded px-2 py-1 mb-2 disabled:opacity-40"
+                />
+                <label className="text-[11px] text-gray-500 block mb-0.5">Skew Y (°)</label>
+                <input
+                  type="text"
+                  key={`skewy-${imageRef.current?.__layerId}-${imageRef.current?.skewY ?? 0}`}
+                  defaultValue={String(Math.round(imageRef.current?.skewY ?? 0))}
+                  disabled={!imageRef.current}
+                  onBlur={(e) => {
+                    const img = imageRef.current;
+                    if (!img) return;
+                    const val = parseFloat(e.target.value);
+                    if (isNaN(val)) return;
+                    setLayerSkewY(img, Math.max(-80, Math.min(80, val)));
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+                    if (e.key === 'Escape') {
+                      (e.target as HTMLInputElement).value = String(Math.round(imageRef.current?.skewY ?? 0));
+                      (e.target as HTMLInputElement).blur();
+                    }
+                  }}
+                  className="w-full text-xs border rounded px-2 py-1 mb-2 disabled:opacity-40"
+                />
+                <button
+                  onClick={() => {
+                    const img = imageRef.current;
+                    if (!img) return;
+                    setLayerSkewX(img, 0);
+                    setLayerSkewY(img, 0);
+                  }}
+                  disabled={!imageRef.current}
+                  className="text-[11px] px-2 py-1 border rounded disabled:opacity-30"
+                >
+                  Reset Skew
+                </button>
               </div>
             )}
 
