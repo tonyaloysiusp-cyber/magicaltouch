@@ -242,15 +242,17 @@ undo/redo, per `PhotoTool` in `PhotoEditorWorkspace.tsx:124-144`):
 | Paint Bucket | Live (2026-09-28) | `'paint-bucket'` tool, single-click flood-fill reusing `magicWandMask()` (the same algorithm Background Removal already used) + `paintColorInMask()` |
 | Skew | Live (2026-09-28) | `'skew'` tool, real Fabric `skewX`/`skewY` object properties set via a confirm-on-blur/Enter panel with a Reset control |
 | Layer blend modes | Live (2026-09-28) | `components/editor/LayersPanel.tsx`'s new opt-in `onBlendModeChange` dropdown sets the real Fabric `globalCompositeOperation` (Multiply, Screen, Overlay, Darken, Lighten, Color Dodge/Burn, Hard/Soft Light, Difference, Exclusion, Hue, Saturation, Color, Luminosity) — verified to actually composite correctly at both live render and flatten-on-apply (`handleApply`'s multi-layer path calls `canvas.toDataURL()`, which respects it natively) |
+| Perspective (corner-pin distort) | Live (2026-09-29) | `'perspective'` tool, `lib/editor/perspective.ts` — a real 4-point homography (DLT + Gaussian elimination) with inverse-mapped bilinear sampling, baked into a new raster on Apply (Fabric has no native projective transform for image objects, so this is a genuine pixel warp, not a CSS trick or a skew relabeled). No live per-pixel warp preview while dragging handles — see the file's own header for why; the live outline shows the target shape, the real warped pixels appear on Apply, same "position then commit" flow Crop/Resize already use |
 
 **Not yet real — planned, not faked** (no tool id, no panel, no code path
 exists for these; do not show them as clickable until they are):
 Polygon Lasso, Magnetic Lasso, Object Selection, Quick Selection, Select
 Subject, Select and Mask (these five all imply ML-based segmentation —
-none exists in this codebase); Perspective Crop, Slice, Distort,
-Perspective, Warp, Free Transform (today's transform is Skew — see above —
-plus what Fabric's own selection handles give: move/scale/rotate); a
-literal drag-brush Spot Healing / Healing Brush / Patch Tool / Red Eye
+none exists in this codebase); Perspective Crop, Slice, Distort, Warp
+(today's transforms are Skew and the new Perspective — see above — plus
+what Fabric's own selection handles give: move/scale/rotate; a unified
+"Free Transform" UI wrapping all of these in one mode is still a separate,
+smaller follow-up); a literal drag-brush Spot Healing / Healing Brush / Patch Tool / Red Eye
 (distinct from the real selection-based Content-Aware Fill above); Smudge;
 Mixer Brush, Pattern Stamp; Freeform Pen as a separate tool from the
 existing real Pen; Shape tools inside Photo Studio specifically (Main
