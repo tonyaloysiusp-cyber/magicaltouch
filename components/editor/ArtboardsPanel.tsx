@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Plus, Trash2, Copy, ScanSearch, ChevronUp, ChevronDown, Download, FileDown, ClipboardCheck, ChevronRight } from 'lucide-react';
+import { Plus, Trash2, Copy, ScanSearch, ChevronUp, ChevronDown, Download, FileDown, ClipboardCheck, ChevronRight, Lock, Unlock } from 'lucide-react';
 import { ArtboardMeta, ArtboardPreset, ARTBOARD_PRESETS } from '@/lib/editor/artboards';
 import { ArtboardPrintSettings, ExportScope, EXPORT_SCOPE_LABELS } from '@/lib/editor/printSetup';
 import { DocUnit } from '@/lib/editor/types';
@@ -64,6 +64,9 @@ export function ArtboardsPanel({
   const [exportScope, setExportScope] = useState<ExportScope>('artboard');
   const [rangeFrom, setRangeFrom] = useState('1');
   const [rangeTo, setRangeTo] = useState('1');
+  const [ratioLocked, setRatioLocked] = useState(false);
+  const [widthError, setWidthError] = useState<string | null>(null);
+  const [heightError, setHeightError] = useState<string | null>(null);
 
   const active = artboards.find((a) => a.id === activeArtboardId) || null;
 
@@ -218,12 +221,19 @@ export function ArtboardsPanel({
               <label className="text-[10px] text-gray-500 block mb-0.5">X ({unit})</label>
               <input
                 type="text"
+                key={`x-${active.id}-${unit}-${active.x}`}
                 defaultValue={formatUnit(active.x, unit)}
                 onBlur={(e) => {
                   const val = parseFloat(e.target.value);
                   if (!isNaN(val)) onResize(active.id, { x: unitToPx(val, unit) });
                 }}
-                onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+                  if (e.key === 'Escape') {
+                    (e.target as HTMLInputElement).value = formatUnit(active.x, unit);
+                    (e.target as HTMLInputElement).blur();
+                  }
+                }}
                 className="w-full text-xs border rounded px-2 py-1"
               />
             </div>
@@ -231,40 +241,98 @@ export function ArtboardsPanel({
               <label className="text-[10px] text-gray-500 block mb-0.5">Y ({unit})</label>
               <input
                 type="text"
+                key={`y-${active.id}-${unit}-${active.y}`}
                 defaultValue={formatUnit(active.y, unit)}
                 onBlur={(e) => {
                   const val = parseFloat(e.target.value);
                   if (!isNaN(val)) onResize(active.id, { y: unitToPx(val, unit) });
                 }}
-                onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+                  if (e.key === 'Escape') {
+                    (e.target as HTMLInputElement).value = formatUnit(active.y, unit);
+                    (e.target as HTMLInputElement).blur();
+                  }
+                }}
                 className="w-full text-xs border rounded px-2 py-1"
               />
             </div>
-            <div>
-              <label className="text-[10px] text-gray-500 block mb-0.5">W ({unit})</label>
-              <input
-                type="text"
-                defaultValue={formatUnit(active.width, unit)}
-                onBlur={(e) => {
-                  const val = parseFloat(e.target.value);
-                  if (!isNaN(val) && val > 0) onResize(active.id, { width: unitToPx(val, unit) });
-                }}
-                onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
-                className="w-full text-xs border rounded px-2 py-1"
-              />
-            </div>
-            <div>
-              <label className="text-[10px] text-gray-500 block mb-0.5">H ({unit})</label>
-              <input
-                type="text"
-                defaultValue={formatUnit(active.height, unit)}
-                onBlur={(e) => {
-                  const val = parseFloat(e.target.value);
-                  if (!isNaN(val) && val > 0) onResize(active.id, { height: unitToPx(val, unit) });
-                }}
-                onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
-                className="w-full text-xs border rounded px-2 py-1"
-              />
+            <div className="col-span-2 grid grid-cols-[1fr_auto_1fr] gap-2 items-end">
+              <div>
+                <label className="text-[10px] text-gray-500 block mb-0.5">W ({unit})</label>
+                <input
+                  type="text"
+                  key={`w-${active.id}-${unit}-${active.width}`}
+                  defaultValue={formatUnit(active.width, unit)}
+                  onBlur={(e) => {
+                    const val = parseFloat(e.target.value);
+                    if (isNaN(val) || val <= 0) {
+                      setWidthError('Enter a valid size greater than 0.');
+                      return;
+                    }
+                    setWidthError(null);
+                    const newWidthPx = unitToPx(val, unit);
+                    if (ratioLocked && active.width > 0) {
+                      onResize(active.id, { width: newWidthPx, height: active.height * (newWidthPx / active.width) });
+                    } else {
+                      onResize(active.id, { width: newWidthPx });
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+                    if (e.key === 'Escape') {
+                      setWidthError(null);
+                      (e.target as HTMLInputElement).value = formatUnit(active.width, unit);
+                      (e.target as HTMLInputElement).blur();
+                    }
+                  }}
+                  className="w-full text-xs border rounded px-2 py-1"
+                />
+                {widthError && <p className="text-[9px] text-red-500 mt-0.5">{widthError}</p>}
+              </div>
+              <button
+                type="button"
+                onClick={() => setRatioLocked((v) => !v)}
+                title={ratioLocked ? 'Unlock aspect ratio' : 'Lock aspect ratio'}
+                aria-label={ratioLocked ? 'Unlock aspect ratio' : 'Lock aspect ratio'}
+                className={`mb-0.5 p-1.5 rounded-full border transition-colors ${
+                  ratioLocked ? 'bg-gray-800 text-white border-gray-800' : 'border-gray-300 text-gray-400 hover:text-gray-700'
+                }`}
+              >
+                {ratioLocked ? <Lock size={11} /> : <Unlock size={11} />}
+              </button>
+              <div>
+                <label className="text-[10px] text-gray-500 block mb-0.5">H ({unit})</label>
+                <input
+                  type="text"
+                  key={`h-${active.id}-${unit}-${active.height}`}
+                  defaultValue={formatUnit(active.height, unit)}
+                  onBlur={(e) => {
+                    const val = parseFloat(e.target.value);
+                    if (isNaN(val) || val <= 0) {
+                      setHeightError('Enter a valid size greater than 0.');
+                      return;
+                    }
+                    setHeightError(null);
+                    const newHeightPx = unitToPx(val, unit);
+                    if (ratioLocked && active.height > 0) {
+                      onResize(active.id, { height: newHeightPx, width: active.width * (newHeightPx / active.height) });
+                    } else {
+                      onResize(active.id, { height: newHeightPx });
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+                    if (e.key === 'Escape') {
+                      setHeightError(null);
+                      (e.target as HTMLInputElement).value = formatUnit(active.height, unit);
+                      (e.target as HTMLInputElement).blur();
+                    }
+                  }}
+                  className="w-full text-xs border rounded px-2 py-1"
+                />
+                {heightError && <p className="text-[9px] text-red-500 mt-0.5">{heightError}</p>}
+              </div>
             </div>
           </div>
 

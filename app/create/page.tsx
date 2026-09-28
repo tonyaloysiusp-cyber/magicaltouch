@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Sun, Moon } from 'lucide-react';
+import { Sun, Moon, Lock, Unlock } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { ARTBOARD_PRESETS, ArtboardPreset } from '@/lib/editor/artboards';
 import { DocUnit } from '@/lib/editor/types';
@@ -34,6 +34,9 @@ export default function CreateDesignPage() {
   const [widthPx, setWidthPx] = useState(1080);
   const [heightPx, setHeightPx] = useState(1080);
   const [selectedPresetId, setSelectedPresetId] = useState<string | null>('square');
+  const [ratioLocked, setRatioLocked] = useState(false);
+  const [widthError, setWidthError] = useState<string | null>(null);
+  const [heightError, setHeightError] = useState<string | null>(null);
 
   const [dpi, setDpi] = useState(300);
   const [customDpi, setCustomDpi] = useState(false);
@@ -78,16 +81,32 @@ export default function CreateDesignPage() {
     }
   };
 
+  // Runs only on blur/Enter (see the input's onBlur below) -- never on
+  // every keystroke -- so the document never resizes while the user is
+  // still typing. An invalid value (empty, non-numeric, zero, negative)
+  // shows an inline message and leaves widthPx/heightPx untouched.
   const handleWidthInput = (raw: string) => {
     const val = parseFloat(raw);
-    if (isNaN(val) || val <= 0) return;
-    setWidthPx(unitToPx(val, unit));
+    if (isNaN(val) || val <= 0) {
+      setWidthError('Enter a valid size greater than 0.');
+      return;
+    }
+    setWidthError(null);
+    const newWidthPx = unitToPx(val, unit);
+    if (ratioLocked && widthPx > 0) setHeightPx(heightPx * (newWidthPx / widthPx));
+    setWidthPx(newWidthPx);
     setSelectedPresetId(null);
   };
   const handleHeightInput = (raw: string) => {
     const val = parseFloat(raw);
-    if (isNaN(val) || val <= 0) return;
-    setHeightPx(unitToPx(val, unit));
+    if (isNaN(val) || val <= 0) {
+      setHeightError('Enter a valid size greater than 0.');
+      return;
+    }
+    setHeightError(null);
+    const newHeightPx = unitToPx(val, unit);
+    if (ratioLocked && heightPx > 0) setWidthPx(widthPx * (newHeightPx / heightPx));
+    setHeightPx(newHeightPx);
     setSelectedPresetId(null);
   };
 
@@ -181,7 +200,7 @@ export default function CreateDesignPage() {
             {/* Size */}
             <section className="border dark:border-white/10 rounded-xl p-4 bg-white dark:bg-[#1B1926]">
               <h2 className="text-sm font-semibold text-gray-700 dark:text-[#F3F1F7] mb-3">Canvas Size</h2>
-              <div className="grid grid-cols-3 gap-3 items-end">
+              <div className="grid grid-cols-[1fr_auto_1fr_1fr] gap-2 items-end">
                 <div>
                   <label className="text-[11px] text-gray-500 dark:text-[#B7B2C6] block mb-1">Width</label>
                   <input
@@ -189,10 +208,31 @@ export default function CreateDesignPage() {
                     key={`w-${unit}-${widthPx}`}
                     defaultValue={formatUnit(widthPx, unit)}
                     onBlur={(e) => handleWidthInput(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+                      if (e.key === 'Escape') {
+                        setWidthError(null);
+                        (e.target as HTMLInputElement).value = formatUnit(widthPx, unit);
+                        (e.target as HTMLInputElement).blur();
+                      }
+                    }}
                     className="w-full text-sm border dark:border-white/15 dark:bg-[#242131] dark:text-[#F3F1F7] rounded px-3 py-2"
                   />
+                  {widthError && <p className="text-[10px] text-red-500 mt-1">{widthError}</p>}
                 </div>
+                <button
+                  type="button"
+                  onClick={() => setRatioLocked((v) => !v)}
+                  title={ratioLocked ? 'Unlock aspect ratio' : 'Lock aspect ratio'}
+                  aria-label={ratioLocked ? 'Unlock aspect ratio' : 'Lock aspect ratio'}
+                  className={`mb-2 p-2 rounded-full border transition-colors ${
+                    ratioLocked
+                      ? 'bg-gray-800 text-white border-gray-800'
+                      : 'border-gray-300 dark:border-white/15 text-gray-400 dark:text-[#B7B2C6] hover:border-gray-500 dark:hover:border-white/30'
+                  }`}
+                >
+                  {ratioLocked ? <Lock size={14} /> : <Unlock size={14} />}
+                </button>
                 <div>
                   <label className="text-[11px] text-gray-500 dark:text-[#B7B2C6] block mb-1">Height</label>
                   <input
@@ -200,9 +240,17 @@ export default function CreateDesignPage() {
                     key={`h-${unit}-${heightPx}`}
                     defaultValue={formatUnit(heightPx, unit)}
                     onBlur={(e) => handleHeightInput(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+                      if (e.key === 'Escape') {
+                        setHeightError(null);
+                        (e.target as HTMLInputElement).value = formatUnit(heightPx, unit);
+                        (e.target as HTMLInputElement).blur();
+                      }
+                    }}
                     className="w-full text-sm border dark:border-white/15 dark:bg-[#242131] dark:text-[#F3F1F7] rounded px-3 py-2"
                   />
+                  {heightError && <p className="text-[10px] text-red-500 mt-1">{heightError}</p>}
                 </div>
                 <div>
                   <label className="text-[11px] text-gray-500 dark:text-[#B7B2C6] block mb-1">Unit</label>

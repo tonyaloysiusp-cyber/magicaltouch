@@ -35,6 +35,19 @@ interface Design {
   height: number;
   updated_at: string;
   thumbnail: string | null;
+  // Which editor produced this design (see
+  // supabase/migrations/0007_designs_editor_type.sql) -- 'design' routes
+  // to /editor, 'photo-studio' routes back to /photo-studio. Defaults to
+  // 'design' for any row read before that migration is applied, which is
+  // also the correct value for every pre-existing row (see the migration's
+  // own comment on why that's not just a placeholder).
+  editor_type?: string;
+}
+
+function editHref(design: Design): string {
+  return design.editor_type === 'photo-studio'
+    ? `/photo-studio?designId=${design.id}`
+    : `/editor?designId=${design.id}&w=${design.width}&h=${design.height}`;
 }
 
 export default function DashboardPage() {
@@ -56,20 +69,6 @@ export default function DashboardPage() {
     }
   };
 
-  // Lets the Photo Editor be used on its own, independent of manually
-  // building a Main Design document first — this drops straight into
-  // /editor with ?newPhoto=1, which prompts an image upload immediately
-  // and opens the Photo Editor on it as soon as that lands (see
-  // app/editor/page.tsx's startInPhotoEditor handling). Same design-count
-  // limit as "+ New Design" since it becomes a real saved design too.
-  const goToNewPhotoProject = () => {
-    if (designs.length >= MAX_DESIGNS) {
-      setShowLimitWarning(true);
-      return;
-    }
-    router.push(`/editor?w=1200&h=1200&newTab=${Date.now()}&newPhoto=1`);
-  };
-
   const fetchDesigns = async () => {
     const { data: { user } } = await supabase.auth.getUser();
 
@@ -84,21 +83,31 @@ export default function DashboardPage() {
 
     const { data, error } = await supabase
       .from('designs')
-      .select('id, name, width, height, updated_at, thumbnail')
+      .select('id, name, width, height, updated_at, thumbnail, editor_type')
       .order('updated_at', { ascending: false });
 
     if (error) {
-      // The thumbnail column may not exist yet on a database that predates
-      // this feature — fall back to the columns that definitely do, rather
-      // than showing the whole dashboard as broken.
-      const { data: fallbackData, error: fallbackError } = await supabase
+      // Either the thumbnail or editor_type column (or both) may not exist
+      // yet on a database that predates one or both features — fall back
+      // progressively rather than showing the whole dashboard as broken.
+      const { data: withThumbOnly, error: err2 } = await supabase
         .from('designs')
-        .select('id, name, width, height, updated_at')
+        .select('id, name, width, height, updated_at, thumbnail')
         .order('updated_at', { ascending: false });
-      if (fallbackError) {
-        console.error('Failed to fetch designs:', fallbackError);
+      if (!err2) {
+        const list = (withThumbOnly || []).map((d) => ({ ...d, editor_type: 'design' }));
+        setDesigns(list);
+        backfillMissingThumbnails(list);
       } else {
-        setDesigns((fallbackData || []).map((d) => ({ ...d, thumbnail: null })));
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .from('designs')
+          .select('id, name, width, height, updated_at')
+          .order('updated_at', { ascending: false });
+        if (fallbackError) {
+          console.error('Failed to fetch designs:', fallbackError);
+        } else {
+          setDesigns((fallbackData || []).map((d) => ({ ...d, thumbnail: null, editor_type: 'design' })));
+        }
       }
     } else {
       setDesigns(data || []);
@@ -280,13 +289,6 @@ export default function DashboardPage() {
             <Link href="/#pricing" className="text-sm font-medium text-[#4A4750] dark:text-[#B7B2C6] hover:text-[#17161B] dark:hover:text-white px-3 py-2">
               Pricing
             </Link>
-            <Link
-              href="/studio"
-              title="A new editor engine being built from scratch — only pan/zoom/layers/undo work so far, saved locally in this browser only"
-              className="text-sm font-medium text-[#4A4750]/50 dark:text-[#B7B2C6]/50 hover:text-[#4A4750] dark:hover:text-[#B7B2C6] px-3 py-2"
-            >
-              Studio (Preview)
-            </Link>
           </div>
           <div className="flex items-center gap-2 shrink-0">
             <button
@@ -297,15 +299,9 @@ export default function DashboardPage() {
             >
               {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
             </button>
-            <button
-              onClick={goToNewPhotoProject}
-              className="hidden sm:inline-flex items-center gap-1.5 border border-black/15 dark:border-white/15 text-[#17161B] dark:text-white px-4 py-2.5 rounded-full text-sm font-semibold hover:border-black/30 dark:hover:border-white/30 transition-colors"
-            >
-              + Photo Project
-            </button>
             <Link
               href="/photo-studio"
-              title="A full, standalone photo-editing workspace — layers, masks, curves, dodge/burn, clone stamp and real-world print units"
+              title="Photo Studio — professional photo editing and advanced image work: layers, masks, curves, dodge/burn, clone stamp and real-world print units"
               className="hidden md:inline-flex items-center gap-1.5 border border-black/15 dark:border-white/15 text-[#17161B] dark:text-white px-4 py-2.5 rounded-full text-sm font-semibold hover:border-black/30 dark:hover:border-white/30 transition-colors"
             >
               Photo Studio
@@ -313,6 +309,7 @@ export default function DashboardPage() {
             <Link
               href="/create"
               onClick={handleNewDesignClick}
+              title="New Design — quick design and everyday creative projects"
               className="relative overflow-hidden inline-flex items-center gap-1.5 text-white px-4 py-2.5 rounded-full text-sm font-semibold bg-brand-gradient shadow-[0_6px_16px_-6px_rgba(108,79,209,0.5)] hover:shadow-[0_10px_20px_-6px_rgba(108,79,209,0.6)] hover:-translate-y-0.5 transition-all before:content-[''] before:absolute before:inset-x-0 before:top-0 before:h-1/2 before:bg-white/25 before:rounded-t-full"
             >
               <Plus size={15} /> New Design
@@ -398,7 +395,7 @@ export default function DashboardPage() {
               key={design.id}
               className="group relative rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#1B1926] p-3 hover:shadow-[0_20px_40px_-20px_rgba(23,22,27,0.25)] hover:-translate-y-1 transition-all duration-300"
             >
-              <Link href={`/editor?designId=${design.id}&w=${design.width}&h=${design.height}`}>
+              <Link href={editHref(design)}>
                 <div className="aspect-square bg-[#F7F5F0] dark:bg-[#111015] rounded-xl mb-3 overflow-hidden flex items-center justify-center text-[#4A4750]/40 dark:text-[#B7B2C6]/40 text-xs">
                   {design.thumbnail ? (
                     // eslint-disable-next-line @next/next/no-img-element

@@ -199,3 +199,73 @@ None of these can be honestly completed in one pass without faking
 depth somewhere. Given this engagement's established pattern, the next
 step is to pick where to start rather than attempt all four broadly and
 shallowly.
+
+## 9. Photo Studio — professional tool status (2026-09-28 workspace/editor brief)
+
+The "Major Workspace & Editor Changes" brief asks for a large
+Photoshop-class tool list and explicitly forbids faking tool buttons.
+Before adding or renaming anything, here is what `components/photoEditor/
+PhotoEditorWorkspace.tsx` (2878 lines, shared by `/photo-studio` and
+Main Design's in-context Photo Editor) actually implements today, real
+mouse/keyboard behavior and all — this is dramatically more than a
+first read of the brief would assume, so the honest next step is mostly
+*connecting and being clear about* what's real, not building 40 new
+tools from zero.
+
+**Live** (real tool definition + activation + pointer/keyboard behavior +
+undo/redo, per `PhotoTool` in `PhotoEditorWorkspace.tsx:124-144`):
+
+| Brief's tool | Status | Evidence |
+|---|---|---|
+| Move | Live | `'select'` tool, drag-to-move on the active layer |
+| Marquee Rectangle / Ellipse | Live | `'marquee-rect'`/`'marquee-ellipse'`, `lib/editor/pixelSelection.ts` |
+| Lasso | Live | `'lasso'`, freeform polygon selection, `pixelSelection.ts` |
+| Magic Wand | Live | `'magic-wand'`, flood-fill color-similarity selection |
+| Crop | Live | `'crop'` tool with its own panel (`PhotoEditorWorkspace.tsx:2306`) |
+| Pen (real Bézier) | Live | `'pen'`/`'direct'`, real anchors/handles/add-delete-convert/open-close path (shipped as task #18/#40-42 in this engagement's own history) |
+| Brush / Eraser | Live | `'brush'`/`'eraser'`, real paintable mask via `lib/editor/photoBrush.ts` |
+| Dodge / Burn | Live | `'dodge'`/`'burn'`, `dodgeBurnInMask()` |
+| Clone Stamp | Live | `'clone'`, offset-sampling clone with a settable source point |
+| Gradient | Live | `'gradient'`, draggable linear gradient fill |
+| Eyedropper / Color Picker | Live | `'eyedropper'` |
+| Levels | Live | `'levels'` panel |
+| Curves | Live | `lib/editor/curves.ts` + `components/photoEditor/CurveEditor.tsx`, real per-channel curve + histogram |
+| Hue/Saturation | Live | `'hue-sat'` panel |
+| Exposure, Vibrance (+ full basic set) | Live | `lib/editor/photoFilters.ts`'s `DEFAULT_ADJUSTMENTS` |
+| Layer Mask (paint reveal/hide) | Live | `'mask-reveal'`/`'mask-hide'`, unified paintable + path-based mask (task #26) |
+| Healing / object removal | Live, different UX than a brush | "Remove Object (Content-Aware Fill)" menu action on a pixel selection (`lib/editor/inpaint.ts`'s `contentAwareFill` — real harmonic-diffusion reconstruction from real neighboring pixels, not a blur or solid fill; its own header honestly states it doesn't reproduce fine texture/pattern in a large hole) |
+| Layers (opacity, rename, reorder, visibility, lock) | Live | Shares `components/editor/LayersPanel.tsx` with Main Design |
+| Undo/redo + keyboard shortcuts | Live | `canUndo`/`canRedo`, full shortcut table (task #34) |
+
+**Not yet real — planned, not faked** (no tool id, no panel, no code path
+exists for these; do not show them as clickable until they are):
+Polygon Lasso, Magnetic Lasso, Object Selection, Quick Selection, Select
+Subject, Select and Mask (these five all imply ML-based segmentation —
+none exists in this codebase); Perspective Crop, Slice, Skew, Distort,
+Perspective, Warp, Free Transform (today's transform is limited to what
+Fabric's own selection handles give: move/scale/rotate); a literal
+drag-brush Spot Healing / Healing Brush / Patch Tool / Red Eye (distinct
+from the real selection-based Content-Aware Fill above); Blur, Sharpen,
+Smudge, Sponge; Mixer Brush, Pattern Stamp, Paint Bucket; Freeform Pen as
+a separate tool from the existing real Pen; Shape tools inside Photo
+Studio specifically (Main Design has real shape tools, Photo Studio does
+not yet); Color Balance, Selective Color, Gradient Map, Channel Mixer,
+Black & White, a full HSL panel (Hue/Saturation exists, the fuller
+Lightroom-style HSL-per-color-band panel does not); Texture, Clarity,
+Dehaze, Vignette, Grain; Linear/Radial Gradient *Mask* and Color Range
+Mask specifically (today's mask is a paintable reveal/hide mask, not yet
+gradient- or color-range-driven); layer blend modes and layer
+grouping/clipping (opacity/rename/reorder/visibility/lock exist per
+above, blend mode and grouping do not).
+
+**What this means for the brief's priorities:** items 1-2 (remove Studio
+Preview, merge Photo Project into Photo Studio), 9-11 (unit system),
+12-16 (confirm-on-blur resize, ESC-cancel, inline validation, aspect
+lock) and part of 20-21 (an `editor_type` column + Photo Studio's own
+reopen path) are implemented in this pass — see the changelog entry
+dated 2026-09-28. The tool list above is the honest state of item 4's
+"real professional workspace" requirement: a genuinely substantial
+subset is real today, and the remaining items are each their own
+scoped follow-up (e.g. "Select and Mask" alone is an ML-integration
+project, not an afternoon's work) rather than something to stub out with
+non-functional buttons.

@@ -2927,6 +2927,10 @@ function EditorContent() {
       width: firstAb ? Math.round(firstAb.width) : width,
       height: firstAb ? Math.round(firstAb.height) : height,
       updated_at: new Date().toISOString(),
+      // Lets the dashboard route "Edit" back to the same editor a design
+      // was made in (see supabase/migrations/0007_designs_editor_type.sql)
+      // — Main Design always writes 'design' here.
+      editor_type: 'design',
     };
     if (idToUse) payload.id = idToUse;
 
@@ -2966,6 +2970,19 @@ function EditorContent() {
       );
       const { thumbnail: _drop, ...withoutThumbnail } = payload;
       ({ data, error } = await supabase.from('designs').upsert(withoutThumbnail).select().single());
+    }
+
+    // Same defensive fallback for `editor_type` (0007_designs_editor_type.sql)
+    // on a database that hasn't had that migration applied yet — the save
+    // itself should never fail just because the dashboard can't yet route
+    // "Edit" back to the right editor.
+    if (error && /editor_type/i.test(error.message || '') && /column|does not exist/i.test(error.message || '')) {
+      console.warn(
+        'designs.editor_type column not found — saving without it. Add it with: ' +
+          "ALTER TABLE designs ADD COLUMN editor_type text NOT NULL DEFAULT 'design';"
+      );
+      const { editor_type: _dropType, ...withoutEditorType } = payload;
+      ({ data, error } = await supabase.from('designs').upsert(withoutEditorType).select().single());
     }
 
     setSaving(false);
