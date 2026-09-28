@@ -6,6 +6,95 @@ actually done, what was tested, and what's deliberately left for later.
 
 ---
 
+## 2026-09-28 — Photo Studio: Blur, Sharpen, Sponge, Paint Bucket, Skew, layer blend modes
+
+**Problem:** the previous audit (§9) mapped the "full Photoshop" brief's
+tool list against what's actually real in Photo Studio and found several
+Painting/Retouching/Transform/Layers items genuinely missing: Blur,
+Sharpen, Sponge, Paint Bucket, a transform beyond move/scale/rotate, and
+layer blend modes. This entry ships six of those for real, each reusing
+this codebase's existing, proven architecture rather than inventing a
+new pattern per tool.
+
+**What was done:**
+- `lib/editor/photoBrush.ts` gained three new pixel-math functions
+  following the file's own established signature
+  (`(source, mask, amount): string`): `blurInMask` (real Gaussian blur
+  via the canvas 2D context's own `filter`, blended into the mask by its
+  alpha — the same "feather overlapping dabs" convention `dodgeBurnInMask`
+  already uses), `sharpenInMask` (real unsharp-mask:
+  `original + amount*(original-blurred)`, clamped and mask-blended the
+  same way), and `spongeInMask` (reuses the same RGB↔HSL round-trip
+  `applyHueSaturation` already has, scaling saturation within the brush
+  stroke instead of the whole image).
+- `components/photoEditor/PhotoEditorWorkspace.tsx`: added `'blur'`,
+  `'sharpen'`, `'sponge'` to `PAINT_TOOLS` (so they get the existing
+  drag-brush mechanics — soft dabs, stroke smoothing, bake-on-mouse-up —
+  for free, with their own strength/radius property panels mirroring
+  Dodge/Burn's), `'paint-bucket'` as a single-click tool (reuses
+  `magicWandMask()` — the same flood-fill Background Removal already
+  used — to build the fill region, then the existing `paintColorInMask()`
+  to fill it), and `'skew'` as a tool whose panel sets the active layer's
+  real Fabric `skewX`/`skewY` properties directly via confirm-on-blur/
+  Enter number inputs (matching this engagement's established resize-
+  input pattern) with a Reset control. All five get real toolbar icons,
+  keyboard shortcuts, and toolbar-group placement.
+- `components/editor/LayersPanel.tsx`: a new opt-in `onBlendModeChange`
+  prop (following the exact same opt-in pattern `onOpacityChange` already
+  established) renders a blend-mode dropdown per layer when provided,
+  setting the real Fabric `globalCompositeOperation` — Main Design's own
+  usage of this shared component doesn't pass the new prop, so its layer
+  list is unaffected.
+
+**Real bug found and fixed while testing this:**
+`PhotoEditorWorkspace.tsx`'s `addLayerFromSource` loaded its base image
+via a plain `new Image()` with no `crossOrigin` set. Every source fed to
+it before the 2026-09-28 (workspace/editor) entry's Photo Studio reopen
+path was always a local `data:` URL, so this never mattered — but a
+cross-origin signed URL taints the crop canvas the moment it's drawn,
+throwing a `SecurityError` on the first `toDataURL()` after. Fixed by
+setting `crossOrigin = 'anonymous'` before assigning `.src`.
+
+**Deliberately not done in this pass** (see the audit's §9 table for the
+full remaining list): the ML-dependent selection tools (Magnetic Lasso,
+Select Subject, Select and Mask), a literal drag-brush healing/patch
+tool distinct from the existing Content-Aware Fill, Warp/Distort/
+Perspective/Free Transform, Gradient Map/Channel Mixer/Selective Color/
+Color Balance, a full Lightroom-style HSL-per-color-band panel, Texture/
+Clarity/Dehaze/Vignette/Grain, gradient- or color-range-driven masks, and
+layer grouping/clipping. None of these are stubbed with non-functional
+buttons — they simply don't appear yet.
+
+**Tested:** `npx tsc --noEmit` and `npm run build` clean. New Playwright
+suite (`test_photo_studio_pro_tools.js`, 12/12) against a real two-color
+test image: Blur and Sharpen strokes verified to genuinely change pixel
+data (tested against a moderate-contrast edge, not a saturated 0/255
+primary — an unsharp mask has no headroom to change a value already at
+0 or 255 in the direction that would clip straight back to itself, which
+looks like "no change" but is actually just clamping, not a bug); Sponge
+verified to move a solid color's RGB channels toward gray; Paint Bucket
+verified to fill the exact clicked region with the chosen color; Skew X/Y
+verified against the real Fabric object properties (including Reset);
+blend mode verified against the real `globalCompositeOperation`; Save
+still succeeds after exercising all six. Building this suite surfaced and
+required fixing two real test-driver issues along the way, noted here
+because they're the kind of thing worth knowing for future Photo Studio
+tests: (1) `page.mouse.move/down/up` with a page coordinate computed once
+goes stale the moment a taller property panel reflows the canvas
+container — later interactions need coordinates computed fresh,
+immediately before use; (2) Fabric stacks a non-interactive
+`lowerCanvasEl` behind the real interactive `upperCanvasEl`, so a generic
+`canvas` element locator can resolve to the wrong one. Re-ran the full
+adjacent regression surface: `test_photo_studio.js` (13/13),
+`test_workspace_editor_changes.js` (19/19), `test_maindesign_storage.js`
+(10/10), `test_storage_dedup.js` (8/8) — all still passing.
+
+**Not verified:** real Supabase Storage CORS/signed-URL behavior against
+production infrastructure (same standing limitation as every prior
+storage-related entry in this log).
+
+---
+
 ## 2026-09-28 — Workspace cleanup, unit-system UX, and Photo Studio/Main Design separation
 
 **Problem** (the "Major Workspace & Editor Changes" brief, a large,

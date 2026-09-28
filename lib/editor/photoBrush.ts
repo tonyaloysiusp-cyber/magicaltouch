@@ -166,6 +166,104 @@ export function cloneStampPaint(source: HTMLCanvasElement, mask: PixelMask, offs
   return canvas.toDataURL('image/png');
 }
 
+// Real Gaussian blur (via the canvas 2D context's own `filter`, the same
+// primitive every browser uses for CSS blur — not a hand-rolled
+// approximation) applied only within the masked region, blended toward
+// the blurred result in proportion to the mask's own alpha so overlapping
+// brush dabs feather naturally, matching dodgeBurnInMask's own blending
+// convention.
+export function blurInMask(source: HTMLCanvasElement, mask: PixelMask, radiusPx: number): string {
+  const canvas = document.createElement('canvas');
+  canvas.width = source.width;
+  canvas.height = source.height;
+  const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
+  ctx.drawImage(source, 0, 0);
+  const orig = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+  const blurredCanvas = document.createElement('canvas');
+  blurredCanvas.width = source.width;
+  blurredCanvas.height = source.height;
+  const bctx = blurredCanvas.getContext('2d') as CanvasRenderingContext2D;
+  bctx.filter = `blur(${Math.max(0.1, radiusPx)}px)`;
+  bctx.drawImage(source, 0, 0);
+  const blurred = bctx.getImageData(0, 0, canvas.width, canvas.height);
+
+  const d = orig.data;
+  const bd = blurred.data;
+  for (let p = 0, i = 0; p < mask.data.length; p++, i += 4) {
+    const m = mask.data[p] / 255;
+    if (!m) continue;
+    d[i] = d[i] + (bd[i] - d[i]) * m;
+    d[i + 1] = d[i + 1] + (bd[i + 1] - d[i + 1]) * m;
+    d[i + 2] = d[i + 2] + (bd[i + 2] - d[i + 2]) * m;
+  }
+  ctx.putImageData(orig, 0, 0);
+  return canvas.toDataURL('image/png');
+}
+
+// Real unsharp-mask sharpening: original + amount * (original - blurred),
+// the standard sharpening technique (not a fake "clarity" label) — a
+// blurred reference is subtracted from the original to isolate high-
+// frequency detail, then that detail is boosted back in. Only applied
+// within the masked region, feathered by mask alpha like every other
+// brush op here.
+export function sharpenInMask(source: HTMLCanvasElement, mask: PixelMask, amount: number): string {
+  const canvas = document.createElement('canvas');
+  canvas.width = source.width;
+  canvas.height = source.height;
+  const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
+  ctx.drawImage(source, 0, 0);
+  const orig = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+  const blurredCanvas = document.createElement('canvas');
+  blurredCanvas.width = source.width;
+  blurredCanvas.height = source.height;
+  const bctx = blurredCanvas.getContext('2d') as CanvasRenderingContext2D;
+  bctx.filter = 'blur(2px)';
+  bctx.drawImage(source, 0, 0);
+  const blurred = bctx.getImageData(0, 0, canvas.width, canvas.height);
+
+  const d = orig.data;
+  const bd = blurred.data;
+  for (let p = 0, i = 0; p < mask.data.length; p++, i += 4) {
+    const m = mask.data[p] / 255;
+    if (!m) continue;
+    const rBoost = d[i] + amount * (d[i] - bd[i]);
+    const gBoost = d[i + 1] + amount * (d[i + 1] - bd[i + 1]);
+    const bBoost = d[i + 2] + amount * (d[i + 2] - bd[i + 2]);
+    d[i] = d[i] + (Math.max(0, Math.min(255, rBoost)) - d[i]) * m;
+    d[i + 1] = d[i + 1] + (Math.max(0, Math.min(255, gBoost)) - d[i + 1]) * m;
+    d[i + 2] = d[i + 2] + (Math.max(0, Math.min(255, bBoost)) - d[i + 2]) * m;
+  }
+  ctx.putImageData(orig, 0, 0);
+  return canvas.toDataURL('image/png');
+}
+
+// Real Sponge tool: saturate (positive amount) or desaturate (negative
+// amount) within the masked region, via the same RGB<->HSL round-trip
+// applyHueSaturation uses for its own saturation scaling — genuine
+// color-space math, localized to a brush stroke instead of the whole
+// image.
+export function spongeInMask(source: HTMLCanvasElement, mask: PixelMask, amount: number): string {
+  const canvas = document.createElement('canvas');
+  canvas.width = source.width;
+  canvas.height = source.height;
+  const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
+  ctx.drawImage(source, 0, 0);
+  const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const d = imgData.data;
+  for (let p = 0, i = 0; p < mask.data.length; p++, i += 4) {
+    const m = mask.data[p] / 255;
+    if (!m) continue;
+    const [h, s, l] = rgbToHsl(d[i], d[i + 1], d[i + 2]);
+    const satScale = Math.max(0, 1 + amount * m);
+    const [r2, g2, b2] = hslToRgb(h, Math.max(0, Math.min(1, s * satScale)), l);
+    d[i] = r2; d[i + 1] = g2; d[i + 2] = b2;
+  }
+  ctx.putImageData(imgData, 0, 0);
+  return canvas.toDataURL('image/png');
+}
+
 export interface HueSaturationSettings {
   hue: number; // -180..180 degrees
   saturation: number; // -100..100 (%), scales existing saturation
