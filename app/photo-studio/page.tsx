@@ -10,6 +10,7 @@ import { DocUnit } from '@/lib/editor/types';
 import { physicalUnitToPx } from '@/lib/editor/units';
 import { DEFAULT_ADJUSTMENTS } from '@/lib/editor/photoFilters';
 import { buildPhotoDesignJson } from '@/lib/editor/buildPhotoDesignPayload';
+import { exportRasterToPDF } from '@/lib/editor/pdfExport';
 import { PhotoEditorWorkspace, PhotoEditorHandle, PhotoEditResult } from '@/components/photoEditor/PhotoEditorWorkspace';
 import { BrandLogo } from '@/components/BrandLogo';
 import { useAppTheme } from '@/hooks/useAppTheme';
@@ -102,6 +103,7 @@ function PhotoStudioContent() {
   const [saving, setSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saved' | 'error'>('idle');
   const [exporting, setExporting] = useState(false);
+  const [exportFormat, setExportFormat] = useState<'png' | 'pdf'>('png');
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -210,6 +212,14 @@ function PhotoStudioContent() {
       const result = captureCurrentComposite();
       if (!result) {
         alert('Nothing to export yet.');
+        return;
+      }
+      if (exportFormat === 'pdf') {
+        // Real current pixel size, not the possibly-stale docWidth/docHeight
+        // state (only updated on Save) -- same pattern handleSave already
+        // uses via loadImageSize on the just-captured composite.
+        const size = await loadImageSize(result.dataUrl);
+        await exportRasterToPDF(result.dataUrl, size.w, size.h, docDpi, `${docName || 'Untitled Photo'}.pdf`);
         return;
       }
       const a = document.createElement('a');
@@ -466,12 +476,21 @@ function PhotoStudioContent() {
             <span className="text-[11px] text-gray-400 dark:text-gray-500 w-14 text-center">
               {saving ? 'Saving…' : saveStatus === 'saved' ? 'Saved' : saveStatus === 'error' ? 'Error' : ''}
             </span>
+            <select
+              value={exportFormat}
+              onChange={(e) => setExportFormat(e.target.value as 'png' | 'pdf')}
+              title="Export format"
+              className="text-xs border rounded-full px-2 py-1.5 dark:bg-[#2B2B2B] dark:border-[#3A3A3A] dark:text-gray-100"
+            >
+              <option value="png">PNG</option>
+              <option value="pdf">PDF</option>
+            </select>
             <button
               onClick={handleExport}
               disabled={exporting}
               className="text-xs px-3 py-1.5 border rounded-full dark:border-[#3A3A3A] dark:text-gray-100 disabled:opacity-50"
             >
-              Export
+              {exporting ? 'Exporting…' : 'Export'}
             </button>
             <button
               onClick={handleSave}
