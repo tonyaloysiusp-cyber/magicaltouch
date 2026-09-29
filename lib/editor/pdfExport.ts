@@ -16,6 +16,7 @@
 import { getAbsolutePolygonPoints } from './geometry';
 import { createPdfFontCache, ensurePdfFont } from './pdfFonts';
 import { nativeResMultiplier, clampMultiplierForSafety } from './imageQuality';
+import { PT_PER_PX, toPt } from './units';
 
 interface ArtboardLike {
   id: string;
@@ -26,20 +27,20 @@ interface ArtboardLike {
 }
 
 // This app's whole document/canvas coordinate space is 96px = 1 inch
-// (see lib/editor/units.ts) regardless of the artboard's own target
-// print DPI, which is a raster-quality setting, not a geometry scale.
-// jsPDF's own `unit: 'px'` mode does not reliably apply this same 96px/
-// inch conversion for a custom `format: [w, h]` array in this jsPDF
-// version — verified empirically: a 336×192px page (meant to be a
-// 3.5"×2" business card) came out with a MediaBox of 448×256pt (4.67"×
-// 2.67", 33% too big in every dimension). To sidestep that, every
-// caller here builds the jsPDF document in 'pt' units and this module
-// converts every px coordinate/size to pt (1px = 0.75pt) right at the
-// point it's handed to a jsPDF drawing call — never earlier, so all the
-// intermediate Fabric-space geometry math above stays in the same units
-// Fabric itself uses.
-export const PT_PER_PX = 72 / 96;
-export const toPt = (px: number) => px * PT_PER_PX;
+// (see lib/editor/units.ts, the canonical home for PT_PER_PX/toPt)
+// regardless of the artboard's own target print DPI, which is a raster-
+// quality setting, not a geometry scale. jsPDF's own `unit: 'px'` mode
+// does not reliably apply this same 96px/inch conversion for a custom
+// `format: [w, h]` array in this jsPDF version — verified empirically: a
+// 336×192px page (meant to be a 3.5"×2" business card) came out with a
+// MediaBox of 448×256pt (4.67"×2.67", 33% too big in every dimension). To
+// sidestep that, every caller here builds the jsPDF document in 'pt'
+// units and this module converts every px coordinate/size to pt right at
+// the point it's handed to a jsPDF drawing call — never earlier, so all
+// the intermediate Fabric-space geometry math above stays in the same
+// units Fabric itself uses. Re-exported here since every existing caller
+// already imports these from this file.
+export { PT_PER_PX, toPt };
 
 function isPaintable(value: any): value is string {
   return typeof value === 'string' && value !== '';

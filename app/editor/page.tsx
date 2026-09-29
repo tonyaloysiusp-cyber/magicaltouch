@@ -11,6 +11,7 @@ import { Keyboard, Sun, Moon } from 'lucide-react';
 import { useAppTheme } from '@/hooks/useAppTheme';
 
 import { ToolMode, DocUnit, isDrawTool, PASTEBOARD_BG, RULER_SIZE } from '@/lib/editor/types';
+import { useDisplayUnit } from '@/lib/editor/units';
 import { allFontFacesCSS, ensureFontLoaded, ensureFontsLoadedForCanvasJSON, validateAllFonts } from '@/lib/editor/googleFonts';
 import { getAbsolutePolygonPoints, multiPolygonToPathD } from '@/lib/editor/geometry';
 import { exportCanvasToPDF, exportArtboardsToPDF, toPt } from '@/lib/editor/pdfExport';
@@ -231,7 +232,11 @@ function EditorContent() {
 
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
 
-  const [unit, setUnit] = useState<DocUnit>('px');
+  // Global display-unit preference (lib/editor/units.ts) -- shared live
+  // with /create and Photo Studio via localStorage, not a state local to
+  // this editor. Purely a display choice: it never touches the document's
+  // actual stored geometry (which stays in px, see units.ts's header).
+  const [unit, setUnit] = useDisplayUnit();
   const unitRef = useRef<DocUnit>(unit);
   useEffect(() => {
     unitRef.current = unit;
@@ -414,13 +419,15 @@ function EditorContent() {
   // every other open tab's canvas JSON, undo stack, artboards, zoom and
   // unit are frozen into tabSnapshotsRef until it's switched back to (see
   // activateTab()), so nothing bleeds between tabs.
+  // Deliberately no `unit` field: the display unit is now a single global
+  // preference (lib/editor/units.ts's useDisplayUnit) shared across every
+  // tab and page, not a per-tab setting to snapshot/restore.
   interface TabSnapshot {
     canvasJSON: any;
     history: { stack: string[]; index: number };
     artboards: ArtboardMeta[];
     activeArtboardId: string | null;
     zoom: number;
-    unit: DocUnit;
     designName: string;
     designId: string | null;
     vpt: number[] | null;
@@ -1532,7 +1539,6 @@ function EditorContent() {
           setArtboards(pendingSnapshot.artboards);
           setActiveArtboardId(pendingSnapshot.activeArtboardId);
           setZoom(pendingSnapshot.zoom);
-          setUnit(pendingSnapshot.unit);
           setDesignName(pendingSnapshot.designName);
           setDesignId(pendingSnapshot.designId);
           ensureFontsLoadedForCanvasJSON(pendingSnapshot.canvasJSON).then(() => canvas.requestRenderAll());
@@ -3014,7 +3020,6 @@ function EditorContent() {
           artboards,
           activeArtboardId,
           zoom,
-          unit,
           designName: nameToUse,
           designId: data.id,
           vpt: fabricCanvasRef.current.viewportTransform ? [...fabricCanvasRef.current.viewportTransform] : null,
@@ -3149,7 +3154,6 @@ function EditorContent() {
       artboards,
       activeArtboardId,
       zoom,
-      unit,
       designName,
       designId,
       vpt: canvas.viewportTransform ? [...canvas.viewportTransform] : null,

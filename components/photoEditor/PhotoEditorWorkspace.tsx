@@ -54,7 +54,7 @@ import {
 } from '@/lib/editor/photoBrush';
 import { imageObjectToDataURL, nativeResMultiplier, clampMultiplierForSafety, configureHighQualityContext, devicePixelRatioSafe } from '@/lib/editor/imageQuality';
 import { DocUnit } from '@/lib/editor/types';
-import { pxToPhysicalUnit, physicalUnitToPx } from '@/lib/editor/units';
+import { pxToPhysicalUnit, physicalUnitToPx, useDisplayUnit } from '@/lib/editor/units';
 import { LayersPanel } from '@/components/editor/LayersPanel';
 import {
   Hand,
@@ -1558,7 +1558,10 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
   // DISPLAYED and how a typed value is interpreted; switching it never
   // itself changes the document's actual pixel size.
   const [resizeInput, setResizeInput] = useState({ w: '', h: '', dpi: '300', lockAspect: true });
-  const [resizeUnit, setResizeUnit] = useState<DocUnit>('px');
+  // Global display-unit preference (lib/editor/units.ts), shared live with
+  // Main Design and Photo Studio's own document-creation screen -- not a
+  // state local to this dialog.
+  const [resizeUnit, setResizeUnit] = useDisplayUnit();
 
   const resizeDpiNum = () => Math.max(1, parseFloat(resizeInput.dpi) || 300);
   const displayResizeValue = (pxStr: string) => {
@@ -1577,7 +1580,6 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
     if (!img) return;
     const size = img.__naturalSize || { w: img.width, h: img.height };
     setResizeInput({ w: String(size.w), h: String(size.h), dpi: String(img.__dpi || 300), lockAspect: true });
-    setResizeUnit('px');
     setShowResizeDialog(true);
   };
 

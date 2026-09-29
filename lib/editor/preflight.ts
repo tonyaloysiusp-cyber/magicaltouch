@@ -7,6 +7,7 @@
 // ---------------------------------------------------------------------
 
 import { ArtboardPrintSettings } from './printSetup';
+import { PT_PER_PX, PX_PER_INCH } from './units';
 
 export type PreflightSeverity = 'warning' | 'error';
 
@@ -23,7 +24,6 @@ interface ArtboardLike {
 
 const MIN_FONT_PT = 6;
 const MIN_STROKE_PT = 0.25;
-const PT_PER_PX = 72 / 96;
 
 function isPaintableStroke(obj: any) {
   return typeof obj.stroke === 'string' && obj.stroke !== '' && (obj.strokeWidth || 0) > 0;
@@ -63,7 +63,7 @@ export function runPreflight(canvas: any, artboards: ArtboardLike[], printSettin
         const naturalW = el?.naturalWidth || 0;
         const displayW = obj.getScaledWidth ? obj.getScaledWidth() : (obj.width || 0) * (obj.scaleX || 1);
         if (naturalW > 0 && displayW > 0) {
-          const effectiveDpi = naturalW / (displayW / 96);
+          const effectiveDpi = naturalW / (displayW / PX_PER_INCH);
           if (effectiveDpi < settings.dpi * 0.85) {
             issues.push({
               severity: effectiveDpi < settings.dpi * 0.5 ? 'error' : 'warning',

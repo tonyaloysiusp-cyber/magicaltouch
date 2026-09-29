@@ -6,6 +6,68 @@ actually done, what was tested, and what's deliberately left for later.
 
 ---
 
+## 2026-09-29 (3) — Centralized global UnitSystem (Steps 3-6 of the platform brief)
+
+**Problem:** the previous audit found `lib/editor/units.ts` was already a
+real, correct conversion module, but nothing tied its consumers
+together: Main Design's editor, `/create`, Photo Studio's document-
+creation screen, and Photo Studio's Resize dialog each held their own
+disconnected `useState<DocUnit>('px')` -- choosing "mm" in one had zero
+effect on any other. `pdfExport.ts` and `preflight.ts` also each
+independently redefined the same `72/96` px-per-point constant instead
+of importing it.
+
+**Shipped:**
+- `lib/editor/units.ts` gains `PT_PER_PX`/`toPt` as their one canonical
+  home (re-exported from `pdfExport.ts` for every existing caller, so no
+  call site needed to change) and a real global display-unit preference:
+  `getDisplayUnit()`/`setDisplayUnit()`/`useDisplayUnit()`, backed by
+  `localStorage` (survives navigating between these separate Next.js
+  pages) and kept live across open tabs via the native `storage` event,
+  built on `useSyncExternalStore` (handles SSR/hydration correctly, no
+  mismatch warnings). It is deliberately a *display-only* preference --
+  no document geometry lives here, and nothing here can resize a
+  document, matching the brief's "changing the unit must never change
+  the document" requirement.
+- `preflight.ts` and `printSetup.ts` now import `PT_PER_PX`/`PX_PER_INCH`
+  from `units.ts` instead of each keeping their own copy.
+- Main Design's editor, `/create`, Photo Studio's document-creation
+  screen, and Photo Studio's Resize dialog all now call the same
+  `useDisplayUnit()` -- choosing "mm" anywhere is "mm" everywhere else,
+  persisted across page loads. Removed the now-meaningless per-tab
+  `unit` field from Main Design's tab-snapshot mechanism (unit is a
+  global preference now, not something a tab-switch should restore).
+
+**Real bug found and fixed along the way:** making the unit global
+exposed a genuine latent bug in Photo Studio's document-creation screen.
+Its Width/Height inputs stored the *displayed* number directly
+(`widthInput`/`heightInput` as raw strings), unlike `/create`'s already-
+correct pattern of keeping `widthPx`/`heightPx` as the source of truth
+and deriving the displayed value. Landing on that screen with the global
+unit set to "in" (e.g. from Main Design) while the stale default
+"1080"/"1080" was still showing would create a **1080-inch** document
+instead of a sane default -- exactly the "never store only the displayed
+unit" failure mode the brief warns about. Fixed by switching Photo
+Studio's creation screen to the same stable-px-source-of-truth pattern
+`/create` already used.
+
+**Tested:** a new suite (`test_global_unit_system.js`, 9/9) verifies the
+full flow end to end: set "mm" on `/create` → persists to localStorage →
+Main Design's editor opens already showing "mm" (not reset to px) →
+changing to "in" in the editor doesn't touch the document's real px
+size → Photo Studio's creation screen and its Resize dialog both already
+show "in" → no hydration-mismatch console warnings. Full regression
+re-run: 19/19 workspace/editor, 12/12 Photo Studio pro tools, 11/11
+Perspective, 7/7 Photo Studio PDF export, 12/12 + 5/5 PDF investigation,
+7/7 resize-bug repro -- 82 checks total, all passing, zero console
+errors.
+
+**Still open** on the unit-system front: DPI itself is still two
+disconnected sources within Photo Studio (`img.__dpi` on the Resize
+dialog vs. the artboard's own `__print.dpi`) -- unifying those is a
+separate, smaller follow-up from this pass's scope (making the *display
+unit* global).
+
 ## 2026-09-29 (2) — PDF export investigation + Photo Studio's first PDF export
 
 **Investigated:** a report that "PDF exporting across the application" is

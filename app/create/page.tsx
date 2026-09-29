@@ -6,7 +6,7 @@ import { Sun, Moon, Lock, Unlock } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { ARTBOARD_PRESETS, ArtboardPreset } from '@/lib/editor/artboards';
 import { DocUnit } from '@/lib/editor/types';
-import { formatUnit, unitToPx } from '@/lib/editor/units';
+import { formatUnit, unitToPx, useDisplayUnit } from '@/lib/editor/units';
 import { EdgeValues } from '@/lib/editor/printSetup';
 import { EdgeFields } from '@/components/editor/EdgeFields';
 import { BackBar } from '@/components/BackBar';
@@ -30,7 +30,9 @@ export default function CreateDesignPage() {
   const { theme, toggleTheme } = useAppTheme();
   const [checkingAuth, setCheckingAuth] = useState(true);
 
-  const [unit, setUnit] = useState<DocUnit>('px');
+  // Global display-unit preference, shared live with the open editor and
+  // Photo Studio (lib/editor/units.ts) -- not a state local to this page.
+  const [unit, setUnit] = useDisplayUnit();
   const [widthPx, setWidthPx] = useState(1080);
   const [heightPx, setHeightPx] = useState(1080);
   const [selectedPresetId, setSelectedPresetId] = useState<string | null>('square');
