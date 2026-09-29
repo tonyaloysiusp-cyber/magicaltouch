@@ -243,27 +243,31 @@ undo/redo, per `PhotoTool` in `PhotoEditorWorkspace.tsx:124-144`):
 | Skew | Live (2026-09-28) | `'skew'` tool, real Fabric `skewX`/`skewY` object properties set via a confirm-on-blur/Enter panel with a Reset control |
 | Layer blend modes | Live (2026-09-28) | `components/editor/LayersPanel.tsx`'s new opt-in `onBlendModeChange` dropdown sets the real Fabric `globalCompositeOperation` (Multiply, Screen, Overlay, Darken, Lighten, Color Dodge/Burn, Hard/Soft Light, Difference, Exclusion, Hue, Saturation, Color, Luminosity) — verified to actually composite correctly at both live render and flatten-on-apply (`handleApply`'s multi-layer path calls `canvas.toDataURL()`, which respects it natively) |
 | Perspective (corner-pin distort) | Live (2026-09-29) | `'perspective'` tool, `lib/editor/perspective.ts` — a real 4-point homography (DLT + Gaussian elimination) with inverse-mapped bilinear sampling, baked into a new raster on Apply (Fabric has no native projective transform for image objects, so this is a genuine pixel warp, not a CSS trick or a skew relabeled). No live per-pixel warp preview while dragging handles — see the file's own header for why; the live outline shows the target shape, the real warped pixels appear on Apply, same "position then commit" flow Crop/Resize already use |
+| Healing Brush (drag-brush spot healing) | Live (2026-09-29) | `'heal'` tool (Shift+J) — same real diffusion-based `contentAwareFill()` reconstruction "Remove Object" already used, but driven by a painted brush stroke instead of a selection, and with no source point to set (unlike Clone Stamp) since it reconstructs from the real surrounding pixels automatically |
+| Color Range mask | Live (2026-09-29) | `'mask-color-range'` tool — click a color; every pixel within tolerance anywhere in the image (a genuine global, non-contiguous match via `magicWandMask(..., false)`, not a flood fill) becomes the new layer mask, with an Invert option. Distinct from the existing paintable reveal/hide mask |
+| Gradient mask | Live (2026-09-29) | `'mask-gradient'` tool — drag a line; `linearGradientMask()` writes a real linear black-to-white ramp (projected onto the drag vector, clamped 0..1) into the layer mask alpha, with an Invert option. Reuses the same click-drag gesture as the existing Gradient (fill) tool, but writes to the mask instead of blending colors into the image |
 
 **Not yet real — planned, not faked** (no tool id, no panel, no code path
 exists for these; do not show them as clickable until they are):
 Polygon Lasso, Magnetic Lasso, Object Selection, Quick Selection, Select
 Subject, Select and Mask (these five all imply ML-based segmentation —
 none exists in this codebase); Perspective Crop, Slice, Distort, Warp
-(today's transforms are Skew and the new Perspective — see above — plus
-what Fabric's own selection handles give: move/scale/rotate; a unified
-"Free Transform" UI wrapping all of these in one mode is still a separate,
-smaller follow-up); a literal drag-brush Spot Healing / Healing Brush / Patch Tool / Red Eye
-(distinct from the real selection-based Content-Aware Fill above); Smudge;
-Mixer Brush, Pattern Stamp; Freeform Pen as a separate tool from the
-existing real Pen; Shape tools inside Photo Studio specifically (Main
-Design has real shape tools, Photo Studio does not yet); Color Balance,
-Selective Color, Gradient Map, Channel Mixer, Black & White, a full HSL
-panel (Hue/Saturation exists, the fuller Lightroom-style
-HSL-per-color-band panel does not); Texture, Clarity, Dehaze, Vignette,
-Grain; Linear/Radial Gradient *Mask* and Color Range Mask specifically
-(today's mask is a paintable reveal/hide mask, not yet gradient- or
-color-range-driven); layer grouping/clipping (blend mode is now live per
-above; grouping/clipping is not).
+(today's transforms are Skew and Perspective — see above — plus what
+Fabric's own selection handles give: move/scale/rotate; a unified "Free
+Transform" UI wrapping all of these in one mode is still a separate,
+smaller follow-up); Patch Tool, Red Eye; Smudge; Mixer Brush, Pattern
+Stamp; Freeform Pen as a separate tool from the existing real Pen; Shape
+tools inside Photo Studio specifically (Main Design has real shape tools,
+Photo Studio does not yet); Color Balance, Selective Color, Gradient Map,
+Channel Mixer, Black & White as its own adjustment (a `blackAndWhite`
+adjustment toggle already exists in the Adjustments panel — this item is
+about a dedicated Black & White *mixer* with per-channel response, which
+doesn't), a full HSL panel (Hue/Saturation exists, the fuller
+Lightroom-style HSL-per-color-band panel does not); Texture, Clarity,
+Dehaze, Vignette, Grain; Radial Gradient *Mask* and Luminosity Mask
+specifically (Linear Gradient Mask and Color Range Mask are now live per
+above); layer grouping/clipping (blend mode is now live per above;
+grouping/clipping is not).
 
 **What this means for the brief's priorities:** items 1-2 (remove Studio
 Preview, merge Photo Project into Photo Studio), 9-11 (unit system),

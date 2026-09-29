@@ -6,6 +6,79 @@ actually done, what was tested, and what's deliberately left for later.
 
 ---
 
+## 2026-09-29 (4) — Photo Studio: Healing Brush + Color Range/Gradient masks (Steps 7 + part of 12/14 of the platform brief)
+
+**Problem:** the honest tool-status audit (2026-09-28 entry) listed a
+literal drag-brush Healing Brush and gradient-/color-range-driven masks
+as "not yet real" -- Photo Studio only had the selection-based Content-
+Aware Fill ("Remove Object") and a plain paintable reveal/hide mask.
+These were explicitly requested (masking + healing brush, item 3 of the
+4-area advancement ask).
+
+**What was done:**
+- **Healing Brush** (`'heal'` tool, Shift+J): joins the existing brush-
+  stroke pipeline (`PAINT_TOOLS`) alongside Brush/Eraser/Clone/etc., but
+  its bake step calls the same `contentAwareFill()` diffusion
+  reconstruction "Remove Object" already used -- driven by a painted
+  stroke instead of a selection, with no source point to set (unlike
+  Clone Stamp), since it reconstructs from the real surrounding pixels
+  automatically. Not a new algorithm; a new, more direct way to reach a
+  real one that already existed.
+- **Color Range mask** (`'mask-color-range'` tool): click a color;
+  `magicWandMask(data, x, y, tolerance, /* contiguous */ false)` -- the
+  same function Magic Wand and Paint Bucket already use, just with
+  contiguous flood-fill turned off -- produces a genuine global color-
+  similarity mask, written into the layer's real mask data (replacing
+  it, matching Photoshop's own Color Range dialog), with an Invert
+  option.
+- **Gradient mask** (`'mask-gradient'` tool): reuses the existing
+  Gradient (fill) tool's click-drag line gesture, but the drag vector
+  now feeds a new `linearGradientMask()` (`lib/editor/pixelSelection.ts`)
+  -- a real linear black-to-white ramp (the pixel's projection onto the
+  drag vector, clamped 0..1) written into the mask alpha instead of
+  blended into the image's colors -- with an Invert option.
+- Both mask tools share a new `applyMaskShape()` helper (replaces the
+  whole mask in one gesture, unlike the incremental-stroke paint-mask
+  path `mask-reveal`/`mask-hide` already had).
+- Backfilled the Shift+J shortcut into `ShortcutsModal.tsx` and fixed a
+  stale doc-comment (claimed the toolbar's icon column was "44px"; it's
+  actually Tailwind's `w-44`, i.e. 176px) found while wiring the new
+  tool group entries.
+
+**Tested:** a new Playwright suite
+(`test_photo_studio_heal_masks.js`, 17/17) uploads a real two-color test
+image with a small bright-yellow "blemish" square and verifies, via real
+pixel/mask data (not just "the button exists"): Color Range mask reveals
+the clicked color (~255) and masks out a very different one (~0), with
+Invert flipping which side; Gradient mask produces a genuine monotonic
+ramp between the drag endpoints, with Invert flipping direction; the
+Healing Brush turns the pure-yellow blemish (255,255,0) into a pixel
+statistically reconstructed from its real red surroundings (measured:
+204,103,102 -- almost exactly the background's own color, 204,102,102);
+and the Shift+J shortcut activates the tool. All 5 existing regression
+suites (pro-tools, resize-bug, perspective, global-unit-system, PDF
+export -- 46 checks total) still pass with no changes.
+
+**Also fixed as part of this pass:** the misleading `w-44`/"44px" doc
+comment above (Step 7, code/CSS cleanup) -- the dead `/studio` route and
+`src/editor/core/` engine remain deliberately untouched per the user's
+own earlier explicit "keep it for now" instruction; a broader cleanup
+pass (the duplicated zoom-handling implementation between the Fabric-
+based Photo Editor and `src/editor/core/CoordinateSystem.ts`, and the
+handful of fixed non-responsive panel widths noted in the audit) is
+still deferred, not attempted here, since it's unrelated to any concrete
+bug and the brief says not to touch working code without reason.
+
+**Deliberately not done:** Radial Gradient mask and Luminosity mask
+(only Linear Gradient and Color Range are live); a literal drag-brush
+Spot Healing variant with its own separate blend-mode options (Photoshop
+draws a real distinction between "Healing Brush" and "Spot Healing
+Brush" -- the latter needs no user-set brush size/source at all and
+auto-detects the sampling area; what's live here is the former, the
+one the user's own "healing brush" wording named).
+
+---
+
 ## 2026-09-29 (3) — Centralized global UnitSystem (Steps 3-6 of the platform brief)
 
 **Problem:** the previous audit found `lib/editor/units.ts` was already a
