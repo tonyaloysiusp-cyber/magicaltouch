@@ -269,6 +269,29 @@ specifically (Linear Gradient Mask and Color Range Mask are now live per
 above); layer grouping/clipping (blend mode is now live per above;
 grouping/clipping is not).
 
+**Workspace structure — menu bar (2026-09-29):** `/photo-studio` now has
+a real File/Edit/Image/Layer/Select/Filter/View/Window/Help menu bar
+(`app/photo-studio/page.tsx`, reusing `components/editor/MenuBar.tsx` —
+the same component and "real action or a disabled Planned tag, never a
+fake button" contract Main Design's own menu bar already uses). Every
+item wraps a real, pre-existing function via an expanded, opt-in
+`PhotoEditorHandle` imperative ref (`zoomIn`/`zoomOut`/`fitToView`/
+`openResizeDialog`/`activateCropTool`/`selectAll`/`deselect`/
+`invertSelection`/`duplicateActiveLayer`/`deleteActiveLayer`/
+`addLayerFromFile`/`applyFilterBlur`/`applyFilterSharpen`) plus two new
+opt-in `showLayersPanel`/`showAdjustmentsPanel` props (both default
+`true`) for the Window menu's real panel-visibility toggles, and two new
+whole-layer Filter commands (`applyFilterBlur`/`applyFilterSharpen`)
+that reuse the exact same `blurInMask`/`sharpenInMask` math the
+Blur/Sharpen brush tools already use, just run over a full-canvas mask.
+`PhotoEditorWorkspace.tsx` is shared with Main Design's own embedded
+Photo Editing tab (`app/editor/page.tsx`), so every addition here is
+additive-and-optional specifically so that usage is completely
+unaffected — verified directly in `test_photo_studio_menubar.js`, which
+confirms Main Design's own menu bar still shows only its own items
+(File/Edit/Object/Type/Select/View/Window/Help) with no Photo-Studio-only
+menu leaking in.
+
 **What this means for the brief's priorities:** items 1-2 (remove Studio
 Preview, merge Photo Project into Photo Studio), 9-11 (unit system),
 12-16 (confirm-on-blur resize, ESC-cancel, inline validation, aspect
