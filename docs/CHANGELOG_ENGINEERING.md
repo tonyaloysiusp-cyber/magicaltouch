@@ -6,6 +6,50 @@ actually done, what was tested, and what's deliberately left for later.
 
 ---
 
+## 2026-09-29 (2) — PDF export investigation + Photo Studio's first PDF export
+
+**Investigated:** a report that "PDF exporting across the application" is
+not working correctly. Built two comprehensive Playwright suites against
+the running app (not just code review) covering the spec's own test
+matrix: create an A4 @ 300 DPI document, add a real image and real text,
+export, then parse the raw PDF bytes with pdfjs-dist to check page size/
+text/images rather than trusting appearances
+(`test_pdf_export_scenario.js`, 12/12), plus a harder path — transparency
+(real opacity), a gradient fill (the rasterization-fallback code path),
+and the full Export dialog with bleed + crop marks
+(`test_pdf_bleed_marks_transparency.js`, 5/5). Also re-confirmed
+changing the display unit (px→in) does not alter the exported PDF's
+physical size, per the spec's own critical requirement. Could not
+reproduce any Main Design PDF export failure under any scenario
+constructed, including the harder ones. Root cause of the report: **Photo
+Studio had no PDF export at all** (PNG only) — if that's what was tried,
+"PDF doesn't work" is accurate without any bug in Main Design's pipeline.
+
+**Shipped:** Photo Studio's first real PDF export. Added
+`exportRasterToPDF()` to the existing shared `lib/editor/pdfExport.ts`
+(not a new duplicate module) — Photo Studio's document model is a single
+flattened raster image rather than Fabric objects on an artboard, so this
+is a simpler entry point than `exportCanvasToPDF`/`exportArtboardsToPDF`:
+it computes the PDF's physical page size from the image's *real* pixel
+dimensions and *real* DPI (`widthPx / dpi * 72` for the page width in
+points), correctly distinct from `pdfExport.ts`'s own `toPt()` (which
+intentionally assumes Main Design's fixed 96px/inch document-geometry
+convention — see that file's header comment for why those are two
+different, both-correct conversions). Wired into `/photo-studio` via a
+small PNG/PDF format selector next to the existing Export button.
+Verified with a new suite (`test_photo_studio_pdf_export.js`, 7/7): a
+real embedded image XObject, correct A4 physical page size derived from
+the document's actual 2480×3508px @ 300 DPI, and no regression to the
+existing PNG export. Full regression re-run: 19/19 workspace/editor,
+12/12 Photo Studio pro tools, 11/11 Perspective — all still passing.
+
+**Still open** on the "unify PDF/export" front (spec sections 3-18, 35):
+the global `UnitSystem`/document-level unit preference (today: 4
+disconnected local unit states), consolidating `pdfExport.ts`'s and
+`preflight.ts`'s independently-redefined `72/96` constants into
+`lib/editor/units.ts`, and Photo Studio's own two disconnected DPI
+sources (`img.__dpi` vs. artboard `__print.dpi`).
+
 ## 2026-09-29 — Photo Studio: real Perspective transform + resize-bug investigation
 
 **Investigated:** a report that "canvas resizes while typing width/height"

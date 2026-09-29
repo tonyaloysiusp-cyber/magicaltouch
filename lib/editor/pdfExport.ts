@@ -436,3 +436,28 @@ export async function exportArtboardsToPDF(pdf: any, canvas: any, F: any, artboa
     await renderObjectsToPage(pdf, F, objects, ab.x, ab.y, fontCache);
   }
 }
+
+// Photo Studio's document model is a single flattened raster image, not
+// Fabric objects on an artboard -- there's nothing to walk vector-by-
+// vector here, so this is a different (and much simpler) entry point
+// than exportCanvasToPDF/exportArtboardsToPDF above: embed the composite
+// at its native resolution, on a page sized to its REAL physical
+// dimensions. Unlike this module's own `toPt` (which assumes Main
+// Design's fixed 96px/inch document-geometry convention -- see this
+// file's header comment), a photo's pixel dimensions genuinely represent
+// `dpi` pixels per inch, so the page size must be computed from that
+// image's own DPI, not the 96px/inch constant.
+export async function exportRasterToPDF(dataUrl: string, widthPx: number, heightPx: number, dpi: number, filename: string): Promise<void> {
+  const { jsPDF } = await import('jspdf');
+  const safeDpi = Math.max(1, dpi || 300);
+  const widthPt = (widthPx / safeDpi) * 72;
+  const heightPt = (heightPx / safeDpi) * 72;
+  const pdf = new jsPDF({
+    orientation: widthPt > heightPt ? 'landscape' : 'portrait',
+    unit: 'pt',
+    format: [widthPt, heightPt],
+  });
+  const format = /^data:image\/jpeg/.test(dataUrl) ? 'JPEG' : 'PNG';
+  pdf.addImage(dataUrl, format, 0, 0, widthPt, heightPt, undefined, 'FAST');
+  pdf.save(filename);
+}
