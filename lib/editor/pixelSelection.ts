@@ -78,6 +78,27 @@ export function ellipseMask(width: number, height: number, cx: number, cy: numbe
   return mask;
 }
 
+// A real linear gradient mask -- alpha at each pixel is the (clamped 0..1)
+// projection of that pixel onto the drag vector from (x1,y1) [0, hidden]
+// to (x2,y2) [255, revealed], exactly how a black-to-white gradient
+// painted onto a Photoshop layer mask behaves. Distinct from
+// applyGradientOverlay in photoBrush.ts, which blends two colors into
+// the image itself rather than producing a reusable mask.
+export function linearGradientMask(width: number, height: number, x1: number, y1: number, x2: number, y2: number): PixelMask {
+  const mask = createEmptyMask(width, height);
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  const lenSq = dx * dx + dy * dy || 1;
+  for (let y = 0; y < height; y++) {
+    const row = y * width;
+    for (let x = 0; x < width; x++) {
+      const t = ((x - x1) * dx + (y - y1) * dy) / lenSq;
+      mask.data[row + x] = Math.round(Math.max(0, Math.min(1, t)) * 255);
+    }
+  }
+  return mask;
+}
+
 // A real soft-edged (feathered) circular brush dab: full strength (255)
 // through the `hardness` fraction of the radius, then a smooth cosine
 // falloff to 0 at the edge — the same falloff shape a real paint/photo

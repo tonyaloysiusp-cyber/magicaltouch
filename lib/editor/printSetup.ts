@@ -6,7 +6,7 @@
 // so they round-trip through history/save automatically.
 // ---------------------------------------------------------------------
 
-import { PT_PER_PX } from './pdfExport';
+import { PT_PER_PX } from './units';
 
 export interface EdgeValues {
   top: number;

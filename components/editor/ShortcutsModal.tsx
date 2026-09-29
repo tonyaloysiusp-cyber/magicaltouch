@@ -67,6 +67,7 @@ const PHOTO_EDITOR_SHORTCUTS: { keys: string; label: string }[] = [
   { keys: 'O', label: 'Dodge tool (lighten)' },
   { keys: 'Shift + O', label: 'Burn tool (darken)' },
   { keys: 'S', label: 'Clone Stamp tool' },
+  { keys: 'Shift + J', label: 'Healing Brush tool' },
   { keys: 'F', label: 'Blur tool' },
   { keys: 'J', label: 'Sharpen tool' },
   { keys: 'X', label: 'Sponge tool' },

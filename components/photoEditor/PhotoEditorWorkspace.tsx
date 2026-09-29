@@ -22,6 +22,7 @@ import {
   maskToCanvas,
   cloneMask,
   createEmptyMask,
+  linearGradientMask,
   traceMaskBoundarySegments,
   BoundarySegment,
 } from '@/lib/editor/pixelSelection';
@@ -54,7 +55,7 @@ import {
 } from '@/lib/editor/photoBrush';
 import { imageObjectToDataURL, nativeResMultiplier, clampMultiplierForSafety, configureHighQualityContext, devicePixelRatioSafe } from '@/lib/editor/imageQuality';
 import { DocUnit } from '@/lib/editor/types';
-import { pxToPhysicalUnit, physicalUnitToPx } from '@/lib/editor/units';
+import { pxToPhysicalUnit, physicalUnitToPx, useDisplayUnit } from '@/lib/editor/units';
 import { LayersPanel } from '@/components/editor/LayersPanel';
 import {
   Hand,
@@ -83,6 +84,9 @@ import {
   PaintBucket as PaintBucketIcon,
   Italic,
   Move3d,
+  Sparkles,
+  Palette,
+  Contrast,
 } from 'lucide-react';
 import { warpQuadToCanvas, type Point as PerspectivePoint } from '@/lib/editor/perspective';
 
@@ -148,6 +152,7 @@ type PhotoTool =
   | 'dodge'
   | 'burn'
   | 'clone'
+  | 'heal'
   | 'blur'
   | 'sharpen'
   | 'sponge'
@@ -157,15 +162,17 @@ type PhotoTool =
   | 'levels'
   | 'hue-sat'
   | 'mask-reveal'
-  | 'mask-hide';
+  | 'mask-hide'
+  | 'mask-color-range'
+  | 'mask-gradient';
 
-const PAINT_TOOLS: PhotoTool[] = ['eraser', 'brush', 'dodge', 'burn', 'clone', 'blur', 'sharpen', 'sponge'];
+const PAINT_TOOLS: PhotoTool[] = ['eraser', 'brush', 'dodge', 'burn', 'clone', 'heal', 'blur', 'sharpen', 'sponge'];
 const MASK_PAINT_TOOLS: PhotoTool[] = ['mask-reveal', 'mask-hide'];
 
 // Icons + shortcut labels for every tool — matching Photoshop's own key
 // bindings (and icon meaning) wherever a real equivalent exists, so
 // nothing here is an invented convention. Rendered at size 16 to read
-// clearly in the toolbar's compact 44px column.
+// clearly in the toolbar's compact w-44 (176px) column.
 const ICON_SIZE = 16;
 const TOOL_ICONS: Record<PhotoTool, React.ReactNode> = {
   hand: <Hand size={ICON_SIZE} />,
@@ -184,6 +191,7 @@ const TOOL_ICONS: Record<PhotoTool, React.ReactNode> = {
   dodge: <Sun size={ICON_SIZE} />,
   burn: <Moon size={ICON_SIZE} />,
   clone: <Stamp size={ICON_SIZE} />,
+  heal: <Sparkles size={ICON_SIZE} />,
   blur: <CloudFog size={ICON_SIZE} />,
   sharpen: <Focus size={ICON_SIZE} />,
   sponge: <Droplets size={ICON_SIZE} />,
@@ -194,6 +202,8 @@ const TOOL_ICONS: Record<PhotoTool, React.ReactNode> = {
   'hue-sat': <Droplet size={ICON_SIZE} />,
   'mask-reveal': <Eye size={ICON_SIZE} />,
   'mask-hide': <EyeOff size={ICON_SIZE} />,
+  'mask-color-range': <Palette size={ICON_SIZE} />,
+  'mask-gradient': <Contrast size={ICON_SIZE} />,
 };
 
 const SHORTCUT_LABEL: Partial<Record<PhotoTool, string>> = {
@@ -214,6 +224,7 @@ const SHORTCUT_LABEL: Partial<Record<PhotoTool, string>> = {
   burn: 'Shift+O',
   eyedropper: 'I',
   clone: 'S',
+  heal: 'Shift+J',
   blur: 'F',
   sharpen: 'J',
   sponge: 'X',
@@ -502,6 +513,31 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
     gradientOpacityRef.current = gradientOpacity;
   }, [gradientOpacity]);
   const gradientDraftRef = useRef<{ start: { x: number; y: number }; line: any } | null>(null);
+
+  // Color Range mask: click a pixel, tolerance controls how far a color
+  // can be from it (in the same squared-distance metric magicWandMask
+  // already uses) and still count -- but unlike Magic Wand/Paint Bucket,
+  // this is a GLOBAL match (contiguous=false) written into the layer
+  // mask, not a flood-filled selection.
+  const [colorRangeTolerance, setColorRangeTolerance] = useState(40);
+  const [colorRangeInvert, setColorRangeInvert] = useState(false);
+  const colorRangeToleranceRef = useRef(40);
+  const colorRangeInvertRef = useRef(false);
+  useEffect(() => {
+    colorRangeToleranceRef.current = colorRangeTolerance;
+  }, [colorRangeTolerance]);
+  useEffect(() => {
+    colorRangeInvertRef.current = colorRangeInvert;
+  }, [colorRangeInvert]);
+
+  // Gradient mask: same click-drag line gesture as the Gradient (fill)
+  // tool, but the drag vector is written into the mask's alpha via
+  // linearGradientMask instead of blended into the image's colors.
+  const [gradientMaskInvert, setGradientMaskInvert] = useState(false);
+  const gradientMaskInvertRef = useRef(false);
+  useEffect(() => {
+    gradientMaskInvertRef.current = gradientMaskInvert;
+  }, [gradientMaskInvert]);
 
   const [levels, setLevels] = useState<LevelsSettings>(DEFAULT_LEVELS);
   const [hueSat, setHueSat] = useState<HueSaturationSettings>(DEFAULT_HUE_SATURATION);
@@ -1558,7 +1594,10 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
   // DISPLAYED and how a typed value is interpreted; switching it never
   // itself changes the document's actual pixel size.
   const [resizeInput, setResizeInput] = useState({ w: '', h: '', dpi: '300', lockAspect: true });
-  const [resizeUnit, setResizeUnit] = useState<DocUnit>('px');
+  // Global display-unit preference (lib/editor/units.ts), shared live with
+  // Main Design and Photo Studio's own document-creation screen -- not a
+  // state local to this dialog.
+  const [resizeUnit, setResizeUnit] = useDisplayUnit();
 
   const resizeDpiNum = () => Math.max(1, parseFloat(resizeInput.dpi) || 300);
   const displayResizeValue = (pxStr: string) => {
@@ -1577,7 +1616,6 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
     if (!img) return;
     const size = img.__naturalSize || { w: img.width, h: img.height };
     setResizeInput({ w: String(size.w), h: String(size.h), dpi: String(img.__dpi || 300), lockAspect: true });
-    setResizeUnit('px');
     setShowResizeDialog(true);
   };
 
@@ -2065,6 +2103,12 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
     else if (tool === 'burn') bakeAndPush(dodgeBurnInMask(pixelCanvas, mask, -dodgeBurnStrengthRef.current));
     else if (tool === 'clone' && cloneOffsetRef.current) {
       bakeAndPush(cloneStampPaint(pixelCanvas, mask, cloneOffsetRef.current.x, cloneOffsetRef.current.y));
+    } else if (tool === 'heal') {
+      // Same real diffusion-based reconstruction as "Remove Object", just
+      // driven by a painted brush stroke instead of a selection -- no
+      // source point to set, since it reconstructs from the surrounding
+      // real pixels automatically (lib/editor/inpaint.ts).
+      bakeAndPush(contentAwareFill(pixelCanvas, mask));
     } else if (tool === 'blur') {
       bakeAndPush(blurInMask(pixelCanvas, mask, blurRadiusRef.current));
     } else if (tool === 'sharpen') {
@@ -2073,6 +2117,25 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
       const signedAmount = spongeModeRef.current === 'saturate' ? spongeStrengthRef.current : -spongeStrengthRef.current;
       bakeAndPush(spongeInMask(pixelCanvas, mask, signedAmount));
     }
+  };
+
+  // Replaces the whole layer mask with a freshly computed shape -- shared
+  // by Color Range and Gradient Mask, which (like Photoshop's own Color
+  // Range dialog and a gradient dragged across a mask) generate a
+  // complete new mask from one gesture rather than painting an
+  // incremental stroke into the existing one.
+  const applyMaskShape = (shape: PixelMask, invert: boolean) => {
+    const img = imageRef.current;
+    const F = fabricModRef.current;
+    const canvas = fabricCanvasRef.current;
+    if (!img) return;
+    img.__maskData = invert ? invertMask(shape) : shape;
+    img.__maskEnabled = true;
+    setMaskEnabled(true);
+    setHasMask(true);
+    refreshMaskClip(img, F);
+    canvas.requestRenderAll();
+    pushLocalHistory(imageObjectToDataURL(img), img.__cropRect);
   };
 
   // ---- Gradient: click-drag draws a live preview line; releasing bakes
@@ -2171,7 +2234,25 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
       if (maskHasSelection(region)) bakeAndPush(paintColorInMask(pixelCanvas, region, brushColorRef.current));
       return;
     }
-    if (tool === 'gradient') {
+    if (tool === 'mask-color-range') {
+      // A single click, not a drag brush -- same magicWandMask algorithm
+      // as Magic Wand/Paint Bucket, but non-contiguous (a genuine global
+      // color match, not a flood fill) and written into the layer MASK
+      // rather than a selection or a color fill.
+      const img = imageRef.current;
+      if (!img) return;
+      const pixelCanvas = getImagePixelCanvas(img);
+      const local = canvasToImageLocal(canvas.getPointer(opt.e));
+      const cx = Math.round(local.x);
+      const cy = Math.round(local.y);
+      if (cx < 0 || cy < 0 || cx >= pixelCanvas.width || cy >= pixelCanvas.height) return;
+      const ctx = pixelCanvas.getContext('2d') as CanvasRenderingContext2D;
+      const data = ctx.getImageData(0, 0, pixelCanvas.width, pixelCanvas.height);
+      const shape = magicWandMask(data, cx, cy, colorRangeToleranceRef.current, false);
+      applyMaskShape(shape, colorRangeInvertRef.current);
+      return;
+    }
+    if (tool === 'gradient' || tool === 'mask-gradient') {
       const pointer = canvas.getPointer(opt.e);
       startGradientDraft(canvasToImageLocal(pointer), pointer);
       return;
@@ -2202,7 +2283,7 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
       continuePaintStroke(canvasToImageLocal(pointer));
       return;
     }
-    if (tool === 'gradient' && gradientDraftRef.current) {
+    if ((tool === 'gradient' || tool === 'mask-gradient') && gradientDraftRef.current) {
       const pointer = canvas.getPointer(opt.e);
       gradientDraftRef.current.line.set({ x2: pointer.x, y2: pointer.y });
       canvas.requestRenderAll();
@@ -2231,7 +2312,7 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
       setPaintPreviewMask(null);
       return;
     }
-    if (tool === 'gradient' && gradientDraftRef.current) {
+    if ((tool === 'gradient' || tool === 'mask-gradient') && gradientDraftRef.current) {
       const { start, line } = gradientDraftRef.current;
       const pointer = canvas.getPointer(opt.e);
       const end = canvasToImageLocal(pointer);
@@ -2239,7 +2320,11 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
       gradientDraftRef.current = null;
       const img = imageRef.current;
       if (img && Math.hypot(end.x - start.x, end.y - start.y) > 2) {
-        bakeAndPush(applyGradientOverlay(getImagePixelCanvas(img), start.x, start.y, end.x, end.y, gradientColor1Ref.current, gradientColor2Ref.current, gradientOpacityRef.current));
+        if (tool === 'mask-gradient') {
+          applyMaskShape(linearGradientMask(img.width, img.height, start.x, start.y, end.x, end.y), gradientMaskInvertRef.current);
+        } else {
+          bakeAndPush(applyGradientOverlay(getImagePixelCanvas(img), start.x, start.y, end.x, end.y, gradientColor1Ref.current, gradientColor2Ref.current, gradientOpacityRef.current));
+        }
       } else {
         canvas.requestRenderAll();
       }
@@ -2388,6 +2473,7 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
         if (key === 'o') { e.preventDefault(); selectTool('burn'); return; }
         if (key === 'r') { e.preventDefault(); selectTool('mask-hide'); return; }
         if (key === 't') { e.preventDefault(); selectTool('perspective'); return; }
+        if (key === 'j') { e.preventDefault(); selectTool('heal'); return; }
       }
     };
     const handleUp = (e: KeyboardEvent) => {
@@ -2528,6 +2614,7 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
         { id: 'dodge', label: 'Dodge' },
         { id: 'burn', label: 'Burn' },
         { id: 'clone', label: 'Clone Stamp' },
+        { id: 'heal', label: 'Healing Brush' },
         { id: 'blur', label: 'Blur' },
         { id: 'sharpen', label: 'Sharpen' },
         { id: 'sponge', label: 'Sponge' },
@@ -2554,6 +2641,8 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
       tools: [
         { id: 'mask-reveal', label: 'Reveal (paint)' },
         { id: 'mask-hide', label: 'Hide (paint)' },
+        { id: 'mask-color-range', label: 'Color Range' },
+        { id: 'mask-gradient', label: 'Gradient Mask' },
       ],
     },
     { label: 'Adjust', tools: [{ id: 'levels', label: 'Levels' }, { id: 'hue-sat', label: 'Hue/Saturation' }] },
@@ -2802,11 +2891,16 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
               </div>
             )}
 
-            {(activeTool === 'eraser' || activeTool === 'brush' || activeTool === 'dodge' || activeTool === 'burn' || activeTool === 'clone' || activeTool === 'blur' || activeTool === 'sharpen' || activeTool === 'sponge' || MASK_PAINT_TOOLS.includes(activeTool)) && (
+            {(activeTool === 'eraser' || activeTool === 'brush' || activeTool === 'dodge' || activeTool === 'burn' || activeTool === 'clone' || activeTool === 'heal' || activeTool === 'blur' || activeTool === 'sharpen' || activeTool === 'sponge' || MASK_PAINT_TOOLS.includes(activeTool)) && (
               <div className="border-t pt-3">
                 <p className="font-semibold text-gray-700 text-xs uppercase tracking-wide mb-2">
-                  {activeTool === 'eraser' ? 'Eraser' : activeTool === 'brush' ? 'Brush' : activeTool === 'dodge' ? 'Dodge (lighten)' : activeTool === 'burn' ? 'Burn (darken)' : activeTool === 'clone' ? 'Clone Stamp' : activeTool === 'blur' ? 'Blur' : activeTool === 'sharpen' ? 'Sharpen' : activeTool === 'sponge' ? 'Sponge' : activeTool === 'mask-reveal' ? 'Mask: Paint Reveal' : 'Mask: Paint Hide'}
+                  {activeTool === 'eraser' ? 'Eraser' : activeTool === 'brush' ? 'Brush' : activeTool === 'dodge' ? 'Dodge (lighten)' : activeTool === 'burn' ? 'Burn (darken)' : activeTool === 'clone' ? 'Clone Stamp' : activeTool === 'heal' ? 'Healing Brush' : activeTool === 'blur' ? 'Blur' : activeTool === 'sharpen' ? 'Sharpen' : activeTool === 'sponge' ? 'Sponge' : activeTool === 'mask-reveal' ? 'Mask: Paint Reveal' : 'Mask: Paint Hide'}
                 </p>
+                {activeTool === 'heal' && (
+                  <p className="text-[11px] text-gray-500 mb-2">
+                    Paint over a blemish — it's reconstructed from the surrounding real pixels. No source point needed (unlike Clone Stamp).
+                  </p>
+                )}
                 <div className="flex justify-between text-[11px] text-gray-500 mb-0.5">
                   <span>Brush size</span>
                   <span>{brushSize}px</span>
@@ -3051,6 +3145,44 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
                   <span>{gradientOpacity.toFixed(2)}</span>
                 </div>
                 <input type="range" min={0} max={1} step={0.05} value={gradientOpacity} onChange={(e) => setGradientOpacity(parseFloat(e.target.value))} className="w-full" />
+              </div>
+            )}
+
+            {activeTool === 'mask-color-range' && (
+              <div className="border-t pt-3">
+                <p className="font-semibold text-gray-700 text-xs uppercase tracking-wide mb-2">Color Range Mask</p>
+                <p className="text-[11px] text-gray-500 mb-2">
+                  Click a color anywhere on the image — every pixel close enough to it (regardless of position) becomes the new mask. Replaces any existing mask.
+                </p>
+                <div className="flex justify-between text-[11px] text-gray-500 mb-0.5">
+                  <span>Tolerance</span>
+                  <span>{colorRangeTolerance}</span>
+                </div>
+                <input
+                  type="range"
+                  min={1}
+                  max={128}
+                  value={colorRangeTolerance}
+                  onChange={(e) => setColorRangeTolerance(parseInt(e.target.value))}
+                  className="w-full mb-2"
+                />
+                <label className="flex items-center gap-1.5 text-[11px] text-gray-600">
+                  <input type="checkbox" checked={colorRangeInvert} onChange={(e) => setColorRangeInvert(e.target.checked)} />
+                  Invert (mask everything EXCEPT the matched color)
+                </label>
+              </div>
+            )}
+
+            {activeTool === 'mask-gradient' && (
+              <div className="border-t pt-3">
+                <p className="font-semibold text-gray-700 text-xs uppercase tracking-wide mb-2">Gradient Mask</p>
+                <p className="text-[11px] text-gray-500 mb-2">
+                  Click and drag across the image — a linear black-to-white gradient along that line becomes the new mask (white = revealed, black = hidden). Replaces any existing mask.
+                </p>
+                <label className="flex items-center gap-1.5 text-[11px] text-gray-600">
+                  <input type="checkbox" checked={gradientMaskInvert} onChange={(e) => setGradientMaskInvert(e.target.checked)} />
+                  Invert
+                </label>
               </div>
             )}
 

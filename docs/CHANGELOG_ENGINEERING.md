@@ -6,6 +6,141 @@ actually done, what was tested, and what's deliberately left for later.
 
 ---
 
+## 2026-09-29 (4) — Photo Studio: Healing Brush + Color Range/Gradient masks (Steps 7 + part of 12/14 of the platform brief)
+
+**Problem:** the honest tool-status audit (2026-09-28 entry) listed a
+literal drag-brush Healing Brush and gradient-/color-range-driven masks
+as "not yet real" -- Photo Studio only had the selection-based Content-
+Aware Fill ("Remove Object") and a plain paintable reveal/hide mask.
+These were explicitly requested (masking + healing brush, item 3 of the
+4-area advancement ask).
+
+**What was done:**
+- **Healing Brush** (`'heal'` tool, Shift+J): joins the existing brush-
+  stroke pipeline (`PAINT_TOOLS`) alongside Brush/Eraser/Clone/etc., but
+  its bake step calls the same `contentAwareFill()` diffusion
+  reconstruction "Remove Object" already used -- driven by a painted
+  stroke instead of a selection, with no source point to set (unlike
+  Clone Stamp), since it reconstructs from the real surrounding pixels
+  automatically. Not a new algorithm; a new, more direct way to reach a
+  real one that already existed.
+- **Color Range mask** (`'mask-color-range'` tool): click a color;
+  `magicWandMask(data, x, y, tolerance, /* contiguous */ false)` -- the
+  same function Magic Wand and Paint Bucket already use, just with
+  contiguous flood-fill turned off -- produces a genuine global color-
+  similarity mask, written into the layer's real mask data (replacing
+  it, matching Photoshop's own Color Range dialog), with an Invert
+  option.
+- **Gradient mask** (`'mask-gradient'` tool): reuses the existing
+  Gradient (fill) tool's click-drag line gesture, but the drag vector
+  now feeds a new `linearGradientMask()` (`lib/editor/pixelSelection.ts`)
+  -- a real linear black-to-white ramp (the pixel's projection onto the
+  drag vector, clamped 0..1) written into the mask alpha instead of
+  blended into the image's colors -- with an Invert option.
+- Both mask tools share a new `applyMaskShape()` helper (replaces the
+  whole mask in one gesture, unlike the incremental-stroke paint-mask
+  path `mask-reveal`/`mask-hide` already had).
+- Backfilled the Shift+J shortcut into `ShortcutsModal.tsx` and fixed a
+  stale doc-comment (claimed the toolbar's icon column was "44px"; it's
+  actually Tailwind's `w-44`, i.e. 176px) found while wiring the new
+  tool group entries.
+
+**Tested:** a new Playwright suite
+(`test_photo_studio_heal_masks.js`, 17/17) uploads a real two-color test
+image with a small bright-yellow "blemish" square and verifies, via real
+pixel/mask data (not just "the button exists"): Color Range mask reveals
+the clicked color (~255) and masks out a very different one (~0), with
+Invert flipping which side; Gradient mask produces a genuine monotonic
+ramp between the drag endpoints, with Invert flipping direction; the
+Healing Brush turns the pure-yellow blemish (255,255,0) into a pixel
+statistically reconstructed from its real red surroundings (measured:
+204,103,102 -- almost exactly the background's own color, 204,102,102);
+and the Shift+J shortcut activates the tool. All 5 existing regression
+suites (pro-tools, resize-bug, perspective, global-unit-system, PDF
+export -- 46 checks total) still pass with no changes.
+
+**Also fixed as part of this pass:** the misleading `w-44`/"44px" doc
+comment above (Step 7, code/CSS cleanup) -- the dead `/studio` route and
+`src/editor/core/` engine remain deliberately untouched per the user's
+own earlier explicit "keep it for now" instruction; a broader cleanup
+pass (the duplicated zoom-handling implementation between the Fabric-
+based Photo Editor and `src/editor/core/CoordinateSystem.ts`, and the
+handful of fixed non-responsive panel widths noted in the audit) is
+still deferred, not attempted here, since it's unrelated to any concrete
+bug and the brief says not to touch working code without reason.
+
+**Deliberately not done:** Radial Gradient mask and Luminosity mask
+(only Linear Gradient and Color Range are live); a literal drag-brush
+Spot Healing variant with its own separate blend-mode options (Photoshop
+draws a real distinction between "Healing Brush" and "Spot Healing
+Brush" -- the latter needs no user-set brush size/source at all and
+auto-detects the sampling area; what's live here is the former, the
+one the user's own "healing brush" wording named).
+
+---
+
+## 2026-09-29 (3) — Centralized global UnitSystem (Steps 3-6 of the platform brief)
+
+**Problem:** the previous audit found `lib/editor/units.ts` was already a
+real, correct conversion module, but nothing tied its consumers
+together: Main Design's editor, `/create`, Photo Studio's document-
+creation screen, and Photo Studio's Resize dialog each held their own
+disconnected `useState<DocUnit>('px')` -- choosing "mm" in one had zero
+effect on any other. `pdfExport.ts` and `preflight.ts` also each
+independently redefined the same `72/96` px-per-point constant instead
+of importing it.
+
+**Shipped:**
+- `lib/editor/units.ts` gains `PT_PER_PX`/`toPt` as their one canonical
+  home (re-exported from `pdfExport.ts` for every existing caller, so no
+  call site needed to change) and a real global display-unit preference:
+  `getDisplayUnit()`/`setDisplayUnit()`/`useDisplayUnit()`, backed by
+  `localStorage` (survives navigating between these separate Next.js
+  pages) and kept live across open tabs via the native `storage` event,
+  built on `useSyncExternalStore` (handles SSR/hydration correctly, no
+  mismatch warnings). It is deliberately a *display-only* preference --
+  no document geometry lives here, and nothing here can resize a
+  document, matching the brief's "changing the unit must never change
+  the document" requirement.
+- `preflight.ts` and `printSetup.ts` now import `PT_PER_PX`/`PX_PER_INCH`
+  from `units.ts` instead of each keeping their own copy.
+- Main Design's editor, `/create`, Photo Studio's document-creation
+  screen, and Photo Studio's Resize dialog all now call the same
+  `useDisplayUnit()` -- choosing "mm" anywhere is "mm" everywhere else,
+  persisted across page loads. Removed the now-meaningless per-tab
+  `unit` field from Main Design's tab-snapshot mechanism (unit is a
+  global preference now, not something a tab-switch should restore).
+
+**Real bug found and fixed along the way:** making the unit global
+exposed a genuine latent bug in Photo Studio's document-creation screen.
+Its Width/Height inputs stored the *displayed* number directly
+(`widthInput`/`heightInput` as raw strings), unlike `/create`'s already-
+correct pattern of keeping `widthPx`/`heightPx` as the source of truth
+and deriving the displayed value. Landing on that screen with the global
+unit set to "in" (e.g. from Main Design) while the stale default
+"1080"/"1080" was still showing would create a **1080-inch** document
+instead of a sane default -- exactly the "never store only the displayed
+unit" failure mode the brief warns about. Fixed by switching Photo
+Studio's creation screen to the same stable-px-source-of-truth pattern
+`/create` already used.
+
+**Tested:** a new suite (`test_global_unit_system.js`, 9/9) verifies the
+full flow end to end: set "mm" on `/create` → persists to localStorage →
+Main Design's editor opens already showing "mm" (not reset to px) →
+changing to "in" in the editor doesn't touch the document's real px
+size → Photo Studio's creation screen and its Resize dialog both already
+show "in" → no hydration-mismatch console warnings. Full regression
+re-run: 19/19 workspace/editor, 12/12 Photo Studio pro tools, 11/11
+Perspective, 7/7 Photo Studio PDF export, 12/12 + 5/5 PDF investigation,
+7/7 resize-bug repro -- 82 checks total, all passing, zero console
+errors.
+
+**Still open** on the unit-system front: DPI itself is still two
+disconnected sources within Photo Studio (`img.__dpi` on the Resize
+dialog vs. the artboard's own `__print.dpi`) -- unifying those is a
+separate, smaller follow-up from this pass's scope (making the *display
+unit* global).
+
 ## 2026-09-29 (2) — PDF export investigation + Photo Studio's first PDF export
 
 **Investigated:** a report that "PDF exporting across the application" is

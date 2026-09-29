@@ -7,7 +7,7 @@ import { ArrowLeft, Sun, Moon, Upload, FileImage } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { MAX_DESIGNS, getDesignCount } from '@/lib/profile';
 import { DocUnit } from '@/lib/editor/types';
-import { physicalUnitToPx } from '@/lib/editor/units';
+import { physicalUnitToPx, pxToPhysicalUnit, useDisplayUnit } from '@/lib/editor/units';
 import { DEFAULT_ADJUSTMENTS } from '@/lib/editor/photoFilters';
 import { buildPhotoDesignJson } from '@/lib/editor/buildPhotoDesignPayload';
 import { exportRasterToPDF } from '@/lib/editor/pdfExport';
@@ -82,12 +82,23 @@ function PhotoStudioContent() {
   // load effect below, right after the searchParams/designId, name state).
   const [loadingDesign, setLoadingDesign] = useState(() => !!searchParams.get('designId'));
 
-  // "Open" screen state -- a blank-canvas document's real-world size,
-  // independent of the Resize dialog's own unit (that one edits an
-  // already-open document; this one creates it).
-  const [unit, setUnit] = useState<DocUnit>('px');
-  const [widthInput, setWidthInput] = useState('1080');
-  const [heightInput, setHeightInput] = useState('1080');
+  // "Open" screen state -- a blank-canvas document's real-world size.
+  // Global display-unit preference, shared live with Main Design's
+  // editor and /create (lib/editor/units.ts), not a state local to this
+  // page -- so choosing "mm" here is still "mm" in the Resize dialog and
+  // in Main Design.
+  const [unit, setUnit] = useDisplayUnit();
+  // Real pixel dimensions are the stable source of truth here (same
+  // principle as /create's widthPx/heightPx) -- the Width/Height inputs
+  // below only ever DISPLAY these converted through the current unit/DPI;
+  // typing a value converts it back into pixels immediately. Without
+  // this, arriving on this page with the global unit already set to
+  // something other than px (e.g. "in") would reinterpret this stale
+  // "1080" default as 1080 of that unit instead of 1080px, since the
+  // unit and DPI can now change out from under this page independent of
+  // any click here.
+  const [widthPx, setWidthPx] = useState(1080);
+  const [heightPx, setHeightPx] = useState(1080);
   const [dpiInput, setDpiInput] = useState('300');
   const [creating, setCreating] = useState(false);
 
@@ -152,11 +163,13 @@ function PhotoStudioContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [checkingAuth]);
 
+  const dpiNum = Math.max(1, parseInt(dpiInput) || 300);
+
   const applyPreset = (p: (typeof CANVAS_PRESETS)[number]) => {
     setUnit(p.unit);
-    setWidthInput(String(p.w));
-    setHeightInput(String(p.h));
     setDpiInput(String(p.dpi));
+    setWidthPx(Math.round(physicalUnitToPx(p.w, p.unit, p.dpi)));
+    setHeightPx(Math.round(physicalUnitToPx(p.h, p.unit, p.dpi)));
   };
 
   const startWithSource = (dataUrl: string, w: number, h: number, dpi: number, name: string) => {
@@ -184,8 +197,8 @@ function PhotoStudioContent() {
     setCreating(true);
     try {
       const dpi = Math.max(1, parseInt(dpiInput) || 300);
-      const w = Math.max(1, Math.round(physicalUnitToPx(parseFloat(widthInput) || 0, unit, dpi)));
-      const h = Math.max(1, Math.round(physicalUnitToPx(parseFloat(heightInput) || 0, unit, dpi)));
+      const w = Math.max(1, Math.round(widthPx));
+      const h = Math.max(1, Math.round(heightPx));
       const dataUrl = blankCanvasDataUrl(w, h);
       startWithSource(dataUrl, w, h, dpi, 'Untitled Photo');
     } finally {
@@ -373,20 +386,28 @@ function PhotoStudioContent() {
                   <div>
                     <label className="text-[11px] text-gray-500 dark:text-[#B7B2C6] block mb-1">Width</label>
                     <input
+                      key={`w-${unit}-${dpiInput}-${widthPx}`}
                       type="number"
                       min={0}
-                      value={widthInput}
-                      onChange={(e) => setWidthInput(e.target.value)}
+                      defaultValue={unit === 'px' ? String(Math.round(widthPx)) : pxToPhysicalUnit(widthPx, unit, dpiNum).toFixed(2)}
+                      onChange={(e) => {
+                        const val = parseFloat(e.target.value);
+                        if (Number.isFinite(val) && val > 0) setWidthPx(physicalUnitToPx(val, unit, dpiNum));
+                      }}
                       className="w-full text-sm border dark:border-white/15 dark:bg-[#242131] dark:text-[#F3F1F7] rounded px-2 py-1.5"
                     />
                   </div>
                   <div>
                     <label className="text-[11px] text-gray-500 dark:text-[#B7B2C6] block mb-1">Height</label>
                     <input
+                      key={`h-${unit}-${dpiInput}-${heightPx}`}
                       type="number"
                       min={0}
-                      value={heightInput}
-                      onChange={(e) => setHeightInput(e.target.value)}
+                      defaultValue={unit === 'px' ? String(Math.round(heightPx)) : pxToPhysicalUnit(heightPx, unit, dpiNum).toFixed(2)}
+                      onChange={(e) => {
+                        const val = parseFloat(e.target.value);
+                        if (Number.isFinite(val) && val > 0) setHeightPx(physicalUnitToPx(val, unit, dpiNum));
+                      }}
                       className="w-full text-sm border dark:border-white/15 dark:bg-[#242131] dark:text-[#F3F1F7] rounded px-2 py-1.5"
                     />
                   </div>
