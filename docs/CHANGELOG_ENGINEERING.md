@@ -6,6 +6,75 @@ actually done, what was tested, and what's deliberately left for later.
 
 ---
 
+## 2026-09-29 (5) — Photo Studio: real File/Edit/Image/Layer/Select/Filter/View/Window/Help menu bar (start of Steps 8-9 of the platform brief)
+
+**Problem:** the brief's Photo Studio structural rebuild asks for a
+professional TOP MENU (File/Edit/Image/Layer/Select/Filter/View/Window/
+Help, per its own §2 layout). `/photo-studio` had none of this — just a
+single action-bar row (Dashboard link, doc name, Undo/Redo, Export
+format, Export, Save). Most of the underlying capability already
+existed inside `PhotoEditorWorkspace.tsx` (zoom, resize dialog, crop,
+selection ops, layer duplicate/delete/add, Layers panel); it just had no
+menu surface, and `PhotoEditorHandle` (the ref the host page drives it
+through) only exposed `undo`/`redo`/`applyNow`.
+
+**What was done:**
+- Reused `components/editor/MenuBar.tsx` -- the exact component Main
+  Design's own `/editor` page already uses, with its established "every
+  item is a real action, or a disabled `Planned` tag, never a fake
+  button" contract -- instead of building a second menu-bar
+  implementation.
+- Expanded `PhotoEditorHandle` (the imperative ref `photo-studio/page.tsx`
+  already held) with `zoomIn`/`zoomOut`/`fitToView`/`zoomTo100`/
+  `openResizeDialog`/`activateCropTool`/`selectAll`/`deselect`/
+  `invertSelection`/`duplicateActiveLayer`/`deleteActiveLayer`/
+  `addLayerFromFile`/`applyFilterBlur`/`applyFilterSharpen` -- every one
+  a thin wrapper around a function the toolbar/panels already called
+  internally, not a new implementation. Added the one genuinely missing
+  primitive, `selectAll` (a full-canvas `rectMask`, matching Photoshop's
+  Select > All), and two new whole-layer Filter commands
+  (`applyFilterBlur`/`applyFilterSharpen`) that reuse the Blur/Sharpen
+  brush tools' own `blurInMask`/`sharpenInMask` math over a full-canvas
+  mask instead of a stroke.
+- Added `showLayersPanel`/`showAdjustmentsPanel` (both default `true`)
+  as new opt-in props on `PhotoEditorWorkspace`, gating just the
+  Layers-panel and Adjustments-section JSX (not the surrounding
+  container, which also holds tool-option panels, History, and the
+  Apply/Cancel buttons) so the Window menu's "Layers"/"Adjustments"
+  toggles do something real without touching anything else.
+- Wired the pre-existing-but-unused `onShowShortcuts` prop (Main Design's
+  `/editor` already had it; Photo Studio never passed it, so its '?'
+  shortcut silently did nothing) to open the same `ShortcutsModal` Main
+  Design uses, and added it as Help > Keyboard Shortcuts.
+- `PhotoEditorWorkspace.tsx` is the SAME component embedded in Main
+  Design's own Photo Editing tab -- every change above is additive and
+  defaults to the original behavior, so nothing about Main Design's
+  embedded usage changes (per the brief's #1 standing rule to leave Main
+  Design exactly as-is).
+
+**Tested:** a new Playwright suite (`test_photo_studio_menubar.js`,
+17/17) drives every menu -- Zoom In/Fit to Screen (real Fabric zoom
+value changes), Image Size (opens the real dialog), Duplicate/Delete
+Layer (real layer count changes), Select All/Deselect (real selection
+mask state), Filter > Blur (runs against real pixel data), Window >
+Layers/Adjustments (the real panel DOM nodes genuinely appear/disappear),
+Help > Keyboard Shortcuts (opens the real modal) -- and explicitly
+confirms Main Design's `/editor` page still shows only its own menu bar
+(File/Edit/Object/Type/Select/View/Window/Help) with no Photo-Studio-only
+Layer/Filter menu leaking in. All 6 existing Photo Studio regression
+suites (63 checks total) still pass.
+
+**Deliberately not done:** a Filter menu limited to what's real today
+(whole-layer Blur/Sharpen) rather than the brief's full filter list
+(Motion Blur, Noise, distortion, etc. — still "not yet real" per the
+tool-status table above); per-item enabled/disabled sync for Select/Layer
+menu items against live selection/layer-count state (each item's own
+underlying function already no-ops safely when its preconditions aren't
+met, e.g. Delete Layer refusing to remove the last layer, so this is a
+polish item, not a correctness one).
+
+---
+
 ## 2026-09-29 (4) — Photo Studio: Healing Brush + Color Range/Gradient masks (Steps 7 + part of 12/14 of the platform brief)
 
 **Problem:** the honest tool-status audit (2026-09-28 entry) listed a

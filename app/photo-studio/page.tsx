@@ -14,6 +14,8 @@ import { exportRasterToPDF } from '@/lib/editor/pdfExport';
 import { PhotoEditorWorkspace, PhotoEditorHandle, PhotoEditResult } from '@/components/photoEditor/PhotoEditorWorkspace';
 import { BrandLogo } from '@/components/BrandLogo';
 import { useAppTheme } from '@/hooks/useAppTheme';
+import { MenuBar, MenuDef } from '@/components/editor/MenuBar';
+import { ShortcutsModal } from '@/components/editor/ShortcutsModal';
 
 const CANVAS_PRESETS: { label: string; w: number; h: number; unit: DocUnit; dpi: number }[] = [
   { label: 'Square (1080 × 1080px)', w: 1080, h: 1080, unit: 'px', dpi: 72 },
@@ -115,6 +117,13 @@ function PhotoStudioContent() {
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saved' | 'error'>('idle');
   const [exporting, setExporting] = useState(false);
   const [exportFormat, setExportFormat] = useState<'png' | 'pdf'>('png');
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  // Real, opt-in Window-menu panel visibility -- passed straight through
+  // to PhotoEditorWorkspace's own showLayersPanel/showAdjustmentsPanel
+  // props (both default true there too, so omitting them, as Main
+  // Design's embedded usage does, changes nothing for it).
+  const [showLayersPanel, setShowLayersPanel] = useState(true);
+  const [showAdjustmentsPanel, setShowAdjustmentsPanel] = useState(true);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -219,7 +228,11 @@ function PhotoStudioContent() {
     return lastResultRef.current;
   };
 
-  const handleExport = async () => {
+  // Accepts an explicit format so menu items (Export as PNG / Export as
+  // PDF) don't race the async setExportFormat state update -- the
+  // toolbar's own Export button still just calls handleExport() with no
+  // argument, defaulting to whatever the format <select> currently shows.
+  const handleExport = async (format: 'png' | 'pdf' = exportFormat) => {
     setExporting(true);
     try {
       const result = captureCurrentComposite();
@@ -227,7 +240,7 @@ function PhotoStudioContent() {
         alert('Nothing to export yet.');
         return;
       }
-      if (exportFormat === 'pdf') {
+      if (format === 'pdf') {
         // Real current pixel size, not the possibly-stale docWidth/docHeight
         // state (only updated on Save) -- same pattern handleSave already
         // uses via loadImageSize on the just-captured composite.
@@ -309,6 +322,14 @@ function PhotoStudioContent() {
     } finally {
       setSaving(false);
     }
+  };
+
+  // File > New Document: real navigation back to the Open screen (same
+  // place "Discard & Start Over" already goes), just gated behind a
+  // confirm since it discards whatever's on the canvas now.
+  const handleNewDocument = () => {
+    if (typeof window !== 'undefined' && !window.confirm('Start a new document? Unsaved changes to the current one will be lost.')) return;
+    setStage('open');
   };
 
   if (checkingAuth || loadingDesign) {
@@ -451,9 +472,92 @@ function PhotoStudioContent() {
     );
   }
 
+  // A real File/Edit/Image/Layer/Select/Filter/View/Window/Help menu
+  // bar, reusing the same MenuBar component Main Design's /editor
+  // already ships (same "real action or a disabled Planned tag, never a
+  // fake button" contract). Every item wraps a real function -- most via
+  // the expanded PhotoEditorHandle imperative ref, the rest (New/Save/
+  // Export/Close) are this page's own existing handlers.
+  const menus: MenuDef[] = [
+    {
+      label: 'File',
+      items: [
+        { label: 'New Document…', onClick: handleNewDocument },
+        { label: 'Save', shortcut: 'Ctrl/Cmd+S', onClick: handleSave, disabled: saving },
+        { divider: true },
+        { label: 'Export as PNG', onClick: () => { setExportFormat('png'); handleExport('png'); } },
+        { label: 'Export as PDF', onClick: () => { setExportFormat('pdf'); handleExport('pdf'); } },
+        { divider: true },
+        { label: 'Close', onClick: () => router.push('/dashboard') },
+      ],
+    },
+    {
+      label: 'Edit',
+      items: [
+        { label: 'Undo', shortcut: 'Ctrl/Cmd+Z', onClick: () => photoEditorRef.current?.undo(), disabled: !canUndo },
+        { label: 'Redo', shortcut: 'Ctrl/Cmd+Shift+Z', onClick: () => photoEditorRef.current?.redo(), disabled: !canRedo },
+      ],
+    },
+    {
+      label: 'Image',
+      items: [
+        { label: 'Image Size…', onClick: () => photoEditorRef.current?.openResizeDialog() },
+        { label: 'Crop', shortcut: 'C', onClick: () => photoEditorRef.current?.activateCropTool() },
+      ],
+    },
+    {
+      label: 'Layer',
+      items: [
+        { label: 'Add Image Layer…', onClick: () => photoEditorRef.current?.addLayerFromFile() },
+        { label: 'Duplicate Layer', onClick: () => photoEditorRef.current?.duplicateActiveLayer() },
+        { label: 'Delete Layer', onClick: () => photoEditorRef.current?.deleteActiveLayer() },
+      ],
+    },
+    {
+      label: 'Select',
+      items: [
+        { label: 'All', shortcut: 'Ctrl/Cmd+A', onClick: () => photoEditorRef.current?.selectAll() },
+        { label: 'Deselect', shortcut: 'Ctrl/Cmd+D', onClick: () => photoEditorRef.current?.deselect() },
+        { label: 'Inverse', shortcut: 'Ctrl/Cmd+Shift+I', onClick: () => photoEditorRef.current?.invertSelection() },
+      ],
+    },
+    {
+      label: 'Filter',
+      items: [
+        // The SAME blurInMask/sharpenInMask math the Blur/Sharpen brush
+        // tools use, run over the whole layer instead of a stroke --
+        // real full-image filters, not a separate/fake implementation.
+        { label: 'Blur (whole layer)', onClick: () => photoEditorRef.current?.applyFilterBlur() },
+        { label: 'Sharpen (whole layer)', onClick: () => photoEditorRef.current?.applyFilterSharpen() },
+      ],
+    },
+    {
+      label: 'View',
+      items: [
+        { label: 'Zoom In', shortcut: 'Ctrl/Cmd+"+"', onClick: () => photoEditorRef.current?.zoomIn() },
+        { label: 'Zoom Out', shortcut: 'Ctrl/Cmd+"-"', onClick: () => photoEditorRef.current?.zoomOut() },
+        { label: 'Fit to Screen', shortcut: 'Ctrl/Cmd+0', onClick: () => photoEditorRef.current?.fitToView() },
+        { label: '100%', shortcut: 'Ctrl/Cmd+1', onClick: () => photoEditorRef.current?.zoomTo100() },
+      ],
+    },
+    {
+      label: 'Window',
+      items: [
+        { label: 'Layers', checked: showLayersPanel, onClick: () => setShowLayersPanel((v) => !v) },
+        { label: 'Adjustments', checked: showAdjustmentsPanel, onClick: () => setShowAdjustmentsPanel((v) => !v) },
+      ],
+    },
+    {
+      label: 'Help',
+      items: [{ label: 'Keyboard Shortcuts', shortcut: '?', onClick: () => setShortcutsOpen(true) }],
+    },
+  ];
+
   return (
     <div className={theme === 'dark' ? 'dark' : ''}>
       <main className="h-screen flex flex-col bg-gray-50 dark:bg-[#1E1E1E] transition-colors duration-150">
+        <MenuBar menus={menus} />
+        <ShortcutsModal open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} workspace="photo" />
         <div className="flex items-center justify-between px-4 py-2 border-b bg-white dark:bg-[#242424] dark:border-[#3A3A3A]">
           <div className="flex items-center gap-3">
             <Link href="/" title="Go to homepage">
@@ -507,7 +611,7 @@ function PhotoStudioContent() {
               <option value="pdf">PDF</option>
             </select>
             <button
-              onClick={handleExport}
+              onClick={() => handleExport()}
               disabled={exporting}
               className="text-xs px-3 py-1.5 border rounded-full dark:border-[#3A3A3A] dark:text-gray-100 disabled:opacity-50"
             >
@@ -540,6 +644,9 @@ function PhotoStudioContent() {
                 setCanUndo(u);
                 setCanRedo(r);
               }}
+              onShowShortcuts={() => setShortcutsOpen(true)}
+              showLayersPanel={showLayersPanel}
+              showAdjustmentsPanel={showAdjustmentsPanel}
               applyLabel="Done"
               cancelLabel="Discard & Start Over"
             />

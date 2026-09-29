@@ -123,6 +123,13 @@ interface Props {
   // usage exactly, so nothing changes for it.
   applyLabel?: string;
   cancelLabel?: string;
+  // Opt-in, additive panel visibility for a host that wants a real
+  // Window menu (e.g. Photo Studio's own menu bar) to be able to show/
+  // hide the Layers and Adjustments panels. Both default to true (i.e.
+  // shown), so the original embedded-in-Main-Design usage is completely
+  // unaffected when these are omitted.
+  showLayersPanel?: boolean;
+  showAdjustmentsPanel?: boolean;
 }
 
 export interface PhotoEditorHandle {
@@ -133,6 +140,27 @@ export interface PhotoEditorHandle {
   // those never ship the Main Design canvas's stale, pre-edit image.
   // Returns false when there was nothing to apply (no layers yet).
   applyNow: () => boolean;
+  // The rest are opt-in, additive imperative escape hatches for a host
+  // that wants to drive this workspace from its OWN chrome (e.g. Photo
+  // Studio's menu bar) instead of only via clicks inside this
+  // component's own toolbar/panels. Each wraps a real internal function
+  // that the toolbar/panels already call -- nothing new is invented
+  // here, just a second way to reach it. Main Design's `/editor` page
+  // never calls any of these, so its own usage is unaffected.
+  zoomIn: () => void;
+  zoomOut: () => void;
+  fitToView: () => void;
+  zoomTo100: () => void;
+  openResizeDialog: () => void;
+  activateCropTool: () => void;
+  selectAll: () => void;
+  deselect: () => void;
+  invertSelection: () => void;
+  duplicateActiveLayer: () => void;
+  deleteActiveLayer: () => void;
+  addLayerFromFile: () => void;
+  applyFilterBlur: () => void;
+  applyFilterSharpen: () => void;
 }
 
 type PhotoTool =
@@ -339,6 +367,8 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
     onShowShortcuts,
     applyLabel = 'Apply to Design',
     cancelLabel = 'Cancel',
+    showLayersPanel = true,
+    showAdjustmentsPanel = true,
   },
   ref
 ) {
@@ -741,7 +771,25 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
   // Exposes undo/redo to the host page so its OWN top-bar Undo/Redo
   // buttons can drive this workspace's history while it's the one
   // showing, instead of staying wired to Main Design's (hidden) canvas.
-  useImperativeHandle(ref, () => ({ undo: undoLocal, redo: redoLocal, applyNow: handleApply }));
+  useImperativeHandle(ref, () => ({
+    undo: undoLocal,
+    redo: redoLocal,
+    applyNow: handleApply,
+    zoomIn,
+    zoomOut,
+    fitToView,
+    zoomTo100: () => setZoomLevel(100),
+    openResizeDialog,
+    activateCropTool: () => selectTool('crop'),
+    selectAll,
+    deselect,
+    invertSelection,
+    duplicateActiveLayer,
+    deleteActiveLayer,
+    addLayerFromFile: () => fileInputRef.current?.click(),
+    applyFilterBlur,
+    applyFilterSharpen,
+  }));
   useEffect(() => {
     onHistoryChange?.(canUndo, canRedo);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1952,6 +2000,14 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
     setSelectionMask(invertMask(selectionMaskRef.current));
     fabricCanvasRef.current?.requestRenderAll();
   };
+  // Select > All: the whole active layer, matching Photoshop's Ctrl/Cmd+A
+  // (real full-canvas rectMask, not a special "everything" sentinel).
+  const selectAll = () => {
+    const img = imageRef.current;
+    if (!img) return;
+    setSelectionMask(rectMask(img.width, img.height, 0, 0, img.width, img.height));
+    fabricCanvasRef.current?.requestRenderAll();
+  };
   const featherSelection = () => {
     if (!selectionMaskRef.current) return;
     setSelectionMask(featherMask(selectionMaskRef.current, selectionFeather || 4));
@@ -2136,6 +2192,25 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
     refreshMaskClip(img, F);
     canvas.requestRenderAll();
     pushLocalHistory(imageObjectToDataURL(img), img.__cropRect);
+  };
+
+  // Filter menu: the SAME real blur/sharpen math the Blur/Sharpen brush
+  // tools already use (blurInMask/sharpenInMask), just run over a
+  // full-canvas mask instead of a painted stroke -- a genuine "apply to
+  // the whole layer" filter command, not a separate/fake implementation.
+  const applyFilterBlur = () => {
+    const img = imageRef.current;
+    if (!img) return;
+    const pixelCanvas = getImagePixelCanvas(img);
+    const full = rectMask(img.width, img.height, 0, 0, img.width, img.height);
+    bakeAndPush(blurInMask(pixelCanvas, full, blurRadiusRef.current));
+  };
+  const applyFilterSharpen = () => {
+    const img = imageRef.current;
+    if (!img) return;
+    const pixelCanvas = getImagePixelCanvas(img);
+    const full = rectMask(img.width, img.height, 0, 0, img.width, img.height);
+    bakeAndPush(sharpenInMask(pixelCanvas, full, sharpenAmountRef.current));
   };
 
   // ---- Gradient: click-drag draws a live preview line; releasing bakes
@@ -2718,39 +2793,42 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
         </div>
 
         <div className="w-72 border-l bg-white overflow-y-auto flex flex-col text-sm">
-          <div className="border-b">
-            <LayersPanel
-              layers={layersForPanel}
-              selected={imageRef.current}
-              onSelect={setActiveLayer}
-              onToggleVisible={toggleLayerVisible}
-              onToggleLock={toggleLayerLock}
-              onRename={renameLayer}
-              onReorder={reorderLayers}
-              onOpacityChange={setLayerOpacity}
-              onDuplicate={duplicateActiveLayer}
-              onDelete={layersForPanel.length > 1 ? deleteActiveLayer : undefined}
-              getThumbnail={layerThumbnail}
-              onBlendModeChange={setLayerBlendMode}
-            />
-            <div className="px-3 pb-3 flex gap-1.5">
-              <button onClick={duplicateActiveLayer} className="flex-1 text-[11px] px-2 py-1.5 border rounded hover:bg-gray-50">Duplicate Layer</button>
-              <button onClick={() => fileInputRef.current?.click()} className="flex-1 text-[11px] px-2 py-1.5 border rounded hover:bg-gray-50">Add Image Layer</button>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) addImageLayerFromFile(file);
-                  e.target.value = '';
-                }}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) addImageLayerFromFile(file);
+              e.target.value = '';
+            }}
+          />
+          {showLayersPanel && (
+            <div className="border-b">
+              <LayersPanel
+                layers={layersForPanel}
+                selected={imageRef.current}
+                onSelect={setActiveLayer}
+                onToggleVisible={toggleLayerVisible}
+                onToggleLock={toggleLayerLock}
+                onRename={renameLayer}
+                onReorder={reorderLayers}
+                onOpacityChange={setLayerOpacity}
+                onDuplicate={duplicateActiveLayer}
+                onDelete={layersForPanel.length > 1 ? deleteActiveLayer : undefined}
+                getThumbnail={layerThumbnail}
+                onBlendModeChange={setLayerBlendMode}
               />
+              <div className="px-3 pb-3 flex gap-1.5">
+                <button onClick={duplicateActiveLayer} className="flex-1 text-[11px] px-2 py-1.5 border rounded hover:bg-gray-50">Duplicate Layer</button>
+                <button onClick={() => fileInputRef.current?.click()} className="flex-1 text-[11px] px-2 py-1.5 border rounded hover:bg-gray-50">Add Image Layer</button>
+              </div>
             </div>
-          </div>
+          )}
 
           <div className="p-3 flex flex-col gap-4">
+            {showAdjustmentsPanel && (
             <div>
               <div className="flex items-center justify-between mb-2">
                 <p className="font-semibold text-gray-700 text-xs uppercase tracking-wide">Adjustments — {activeLayerName}</p>
@@ -2798,6 +2876,7 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
                 Black &amp; White
               </label>
             </div>
+            )}
 
             {(isSelectTool(activeTool) || hasSelection) && (
               <div className="border-t pt-3">
