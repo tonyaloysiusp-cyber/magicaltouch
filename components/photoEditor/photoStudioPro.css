@@ -1,0 +1,64 @@
+/*
+ * Photo Studio's "professional editor" dark theme (VS Code-range
+ * palette: #1e1e1e / #252526 / #2d2d30) plus a compact icon-only
+ * toolbar, an options bar, and a checkerboard canvas backdrop.
+ *
+ * Every rule is scoped under the `.ps-pro` ancestor class, which
+ * PhotoEditorWorkspace.tsx only adds to its own outermost element when
+ * its `pro` prop is true (Photo Studio only). Main Design's embedded
+ * Photo Editing tab never passes `pro`, so none of these rules ever
+ * match there -- its existing light/dark theme is completely untouched.
+ * This file is imported globally (plain CSS, not a CSS Module) on
+ * purpose: the `.ps-pro` prefix on every selector IS the scoping
+ * mechanism, matching how the rest of this app already scopes its
+ * Tailwind `dark:` variants off an ancestor class.
+ */
+
+.ps-pro .bg-white { background-color: #252526 !important; }
+.ps-pro .bg-gray-50 { background-color: #1e1e1e !important; }
+.ps-pro .bg-gray-100 { background-color: #2d2d30 !important; }
+.ps-pro .bg-gray-200 { background-color: #1e1e1e !important; }
+.ps-pro .bg-gray-800 { background-color: #0e639c !important; }
+.ps-pro .hover\:bg-gray-50:hover,
+.ps-pro .hover\:bg-gray-100:hover { background-color: #2a2d2e !important; }
+.ps-pro .hover\:bg-white\/10:hover { background-color: rgba(255, 255, 255, 0.1) !important; }
+.ps-pro .text-gray-700,
+.ps-pro .text-gray-800,
+.ps-pro .text-gray-900 { color: #cccccc !important; }
+.ps-pro .text-gray-600 { color: #b3b3b3 !important; }
+.ps-pro .text-gray-500,
+.ps-pro .text-gray-400 { color: #9d9d9d !important; }
+.ps-pro .border,
+.ps-pro .border-t,
+.ps-pro .border-b,
+.ps-pro .border-l,
+.ps-pro .border-r { border-color: #3c3c3c !important; }
+.ps-pro input,
+.ps-pro select,
+.ps-pro textarea { background-color: #3c3c3c; color: #e8e8e8; border-color: #3c3c3c; }
+.ps-pro input[type='color'] { background: transparent; padding: 0; border: none; }
+.ps-pro input[type='checkbox'] { accent-color: #0e639c; }
+.ps-pro input[type='range'] { accent-color: #0e639c; }
+.ps-pro .text-sm { font-size: 11px !important; }
+.ps-pro .shadow,
+.ps-pro .shadow-xl { box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6) !important; }
+
+/* Icon-only 48px left toolbar */
+.ps-pro .w-44 { width: 48px !important; }
+.ps-pro .w-44 p { display: none !important; }
+.ps-pro .w-44 button { justify-content: center !important; padding: 8px 0 !important; }
+.ps-pro .tool-label { display: none; }
+
+/* Options bar under the menu */
+.ps-pro .ps-options-bar { height: 32px; background: #2d2d30; color: #cccccc; font-size: 11px; }
+
+/* Checkerboard transparency backdrop for the canvas viewport */
+.ps-pro .ps-canvas-viewport {
+  background-color: #1e1e1e !important;
+  background-image: linear-gradient(45deg, #333 25%, transparent 25%),
+    linear-gradient(-45deg, #333 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #333 75%),
+    linear-gradient(-45deg, transparent 75%, #333 75%);
+  background-size: 16px 16px;
+  background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+}

@@ -553,21 +553,27 @@ function PhotoStudioContent() {
     },
   ];
 
+  // The editing workspace itself is ALWAYS dark, independent of the
+  // site's own light/dark toggle (useAppTheme) -- matching every real
+  // professional creative tool (Photoshop, Lightroom, Figma, VS Code),
+  // which use one fixed dark chrome regardless of OS/site theme. Only
+  // the "Open a photo" landing screen above still follows the shared
+  // site theme, since that's a normal page, not the editor itself.
   return (
-    <div className={theme === 'dark' ? 'dark' : ''}>
-      <main className="h-screen flex flex-col bg-gray-50 dark:bg-[#1E1E1E] transition-colors duration-150">
+    <div className="dark">
+      <main className="h-[100dvh] flex flex-col bg-[#1e1e1e] transition-colors duration-150">
         <MenuBar menus={menus} />
         <ShortcutsModal open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} workspace="photo" />
-        <div className="flex items-center justify-between px-4 py-2 border-b bg-white dark:bg-[#242424] dark:border-[#3A3A3A]">
+        <div className="flex items-center justify-between px-4 py-1.5 border-b bg-[#252526] border-[#3c3c3c] shrink-0">
           <div className="flex items-center gap-3">
             <Link href="/" title="Go to homepage">
-              <BrandLogo theme={theme} width={130} height={26} />
+              <BrandLogo theme="dark" width={110} height={22} />
             </Link>
             <button
               onClick={() => setStage('open')}
-              className="flex items-center gap-1.5 text-sm text-gray-500 dark:text-[#B7B2C6] hover:text-gray-800 dark:hover:text-white"
+              className="flex items-center gap-1.5 text-xs text-[#b3b3b3] hover:text-white"
             >
-              <ArrowLeft size={15} /> Dashboard
+              <ArrowLeft size={13} /> Dashboard
             </button>
           </div>
           <div className="flex flex-col items-center gap-0.5">
@@ -575,9 +581,9 @@ function PhotoStudioContent() {
               type="text"
               value={docName}
               onChange={(e) => setDocName(e.target.value)}
-              className="text-sm border rounded px-2 py-1 w-56 text-center dark:bg-[#2B2B2B] dark:border-[#3A3A3A] dark:text-gray-100"
+              className="text-xs bg-[#3c3c3c] border border-[#3c3c3c] rounded px-2 py-1 w-56 text-center text-[#e8e8e8]"
             />
-            <span className="text-[10px] text-gray-400 dark:text-gray-500">
+            <span className="text-[10px] text-[#9d9d9d]">
               {docWidth} × {docHeight}px · {docDpi} DPI
             </span>
           </div>
@@ -585,7 +591,7 @@ function PhotoStudioContent() {
             <button
               onClick={() => photoEditorRef.current?.undo()}
               disabled={!canUndo}
-              className="p-1.5 border rounded text-gray-500 hover:bg-gray-50 disabled:opacity-30 dark:border-[#3A3A3A] dark:text-gray-300 dark:hover:bg-[#333333]"
+              className="p-1.5 border rounded text-[#b3b3b3] border-[#3c3c3c] hover:bg-[#333333] disabled:opacity-30"
               title="Undo"
             >
               ↶
@@ -593,19 +599,19 @@ function PhotoStudioContent() {
             <button
               onClick={() => photoEditorRef.current?.redo()}
               disabled={!canRedo}
-              className="p-1.5 border rounded text-gray-500 hover:bg-gray-50 disabled:opacity-30 dark:border-[#3A3A3A] dark:text-gray-300 dark:hover:bg-[#333333]"
+              className="p-1.5 border rounded text-[#b3b3b3] border-[#3c3c3c] hover:bg-[#333333] disabled:opacity-30"
               title="Redo"
             >
               ↷
             </button>
-            <span className="text-[11px] text-gray-400 dark:text-gray-500 w-14 text-center">
+            <span className="text-[11px] text-[#9d9d9d] w-14 text-center">
               {saving ? 'Saving…' : saveStatus === 'saved' ? 'Saved' : saveStatus === 'error' ? 'Error' : ''}
             </span>
             <select
               value={exportFormat}
               onChange={(e) => setExportFormat(e.target.value as 'png' | 'pdf')}
               title="Export format"
-              className="text-xs border rounded-full px-2 py-1.5 dark:bg-[#2B2B2B] dark:border-[#3A3A3A] dark:text-gray-100"
+              className="text-xs bg-[#3c3c3c] border border-[#3c3c3c] rounded-full px-2 py-1.5 text-[#e8e8e8]"
             >
               <option value="png">PNG</option>
               <option value="pdf">PDF</option>
@@ -613,7 +619,7 @@ function PhotoStudioContent() {
             <button
               onClick={() => handleExport()}
               disabled={exporting}
-              className="text-xs px-3 py-1.5 border rounded-full dark:border-[#3A3A3A] dark:text-gray-100 disabled:opacity-50"
+              className="text-xs px-3 py-1.5 border border-[#3c3c3c] rounded-full text-[#e8e8e8] disabled:opacity-50"
             >
               {exporting ? 'Exporting…' : 'Export'}
             </button>
@@ -624,14 +630,14 @@ function PhotoStudioContent() {
             >
               Save
             </button>
-            <ThemeToggle />
           </div>
         </div>
 
-        <div className="flex-1 overflow-hidden">
+        <div className="flex-1 overflow-hidden flex flex-col min-h-0">
           {sourceDataUrl && (
             <PhotoEditorWorkspace
               ref={photoEditorRef}
+              pro
               active
               sourceDataUrl={sourceDataUrl}
               initialAdjustments={DEFAULT_ADJUSTMENTS}

@@ -6,6 +6,102 @@ actually done, what was tested, and what's deliberately left for later.
 
 ---
 
+## 2026-09-30 — Photo Studio: professional workspace shell (dark theme, compact icon toolbar, options bar, checkerboard, cursor position, FG/BG swatches)
+
+**Problem:** a user audit (verified live against the running app, not
+code-reading) found Photo Studio's *tools* were mostly real but its
+*chrome* looked like "a basic demo, not a professional editor": light
+theme by default, a 176px icon+label toolbar instead of a compact
+icon-only rail, no options bar, no checkerboard transparency backdrop,
+no cursor-position readout, `h-screen` instead of `100dvh` (real risk on
+mobile Safari's collapsing address bar), and 14px right-panel text
+instead of the requested 11-12px.
+
+**What was done — all gated behind a new opt-in `pro` prop on
+`PhotoEditorWorkspace`** (default `false`; Main Design's embedded Photo
+Editing tab in `app/editor/page.tsx` never passes it, so its own
+rendering is provably unaffected — see the new test's explicit check):
+- **Dark theme.** A new `components/photoEditor/photoStudioPro.css`
+  (plain global CSS, imported once) scopes a VS Code-range palette
+  (`#1e1e1e`/`#252526`/`#2d2d30`) under a `.ps-pro` ancestor class that
+  only `pro` mode adds to its own root element — overriding the
+  existing hardcoded `bg-white`/`text-gray-*`/`border` Tailwind classes
+  used throughout the toolbar/panels (which had never had `dark:`
+  variants at all). Photo Studio's own editing-stage chrome
+  (`app/photo-studio/page.tsx`) is now unconditionally dark too,
+  independent of the site's shared light/dark toggle — matching how
+  every real creative tool (Photoshop, Lightroom, Figma, VS Code) uses
+  one fixed dark workspace regardless of OS/site theme. (Tried
+  `styled-jsx` first for automatic scoping; discovered it silently
+  doesn't work in this app's Next.js App Router setup without a
+  `StyleRegistry` this project doesn't have — the plain global CSS file
+  with a manual `.ps-pro` prefix is what's actually shipping, verified
+  by reading computed styles in a real browser, not just a clean build.)
+- **100dvh**, not `h-screen`, for Photo Studio's `<main>`.
+- **Compact typography**: the right panel's `text-sm` (14px) now
+  computes to 11px in pro mode (verified via `getComputedStyle`).
+- **Icon-only 48px left toolbar**: tool labels wrapped in a `.tool-label`
+  span, hidden via CSS in pro mode; measured 48px (was 176px). The
+  redundant bare-text Undo/Redo/Restore-Original toolbar buttons are
+  hidden in pro mode too (now reachable via the Edit menu and the top
+  bar's icon buttons, avoiding triplication).
+- **Options bar** under the menu bar: a new horizontal strip showing the
+  active tool's most common settings (brush size/hardness/opacity for
+  every paint-family tool; tolerance for Magic Wand/Paint Bucket/Color
+  Range Mask) — real, live-bound to the exact same state the tool
+  options previously only exposed in the right panel. Less-common
+  settings (skew degrees, gradient stops, clone-aligned, mask invert)
+  stay in the right panel's Properties-equivalent section rather than
+  cramming everything into one bar, matching Photoshop's own real split.
+- **Checkerboard transparency backdrop**: found and fixed a real reason
+  a CSS-only checkerboard wouldn't have worked — Fabric's own
+  `backgroundColor: '#e5e7eb'` canvas option paints an *opaque* fill
+  directly into the canvas bitmap on every render, which would have
+  hidden any CSS background behind it. Now set to `''` (transparent) in
+  pro mode specifically, letting the real checkerboard (CSS
+  `repeating` gradient on the wrapping div) show through.
+- **Live cursor position** (image-local px) tracked on every canvas
+  mouse move and shown in the status bar.
+- **Real FG/BG color swatches**: `brushColor` (already the real
+  foreground every paint/fill tool reads) plus a new `backgroundColor`
+  state, with a working swap control. Honestly noted: nothing consumes
+  `backgroundColor` yet (no tool does a "fill/erase to background"
+  operation) — the swatch is real and settable, just not yet wired to a
+  consumer.
+- **Found and fixed a real layout bug while building this**: the
+  toolbar's new internal scroll area never actually got a bounded
+  height, because an ancestor div in `photo-studio/page.tsx` used
+  `flex-1` without itself being `display:flex` — so instead of scrolling
+  internally, tools past a certain count (and the new swatches) were
+  silently clipped off-screen by a grandparent's `overflow-hidden`.
+  Fixed by making that wrapper an actual flex column (`flex flex-col
+  min-h-0`) so height correctly cascades down to the real scrollable
+  area. Verified via `getBoundingClientRect()`, not just a screenshot.
+
+**Tested:** re-ran all 6 existing Photo Studio regression suites (80
+checks total) — 3 checks broke from the icon-only toolbar (tests
+selected tools by now-hidden label text) and 1 from removing the
+redundant toolbar Undo button; all 4 fixed by pointing those specific
+test selectors at `title` attributes / the top-bar's icon button instead
+of visible text, since the underlying functionality never changed. Also
+verified: no page-level scroll and no horizontal chrome overflow on a
+simulated iPad Air viewport in both portrait (834×1194) and landscape
+(1194×834); real screenshots taken at desktop and both iPad orientations
+confirm the redesigned toolbar/panel/canvas visually.
+
+**Deliberately not done this pass** (Step 2 continues from here):
+real synced pixel rulers (a genuine measurement feature, not CSS —
+scoped as its own follow-up rather than compressed in); flyout/sub-tool
+popovers for the icon-only toolbar (it currently just scrolls, which is
+honest but not what the brief specifically asked for); the right panel
+is still one scrolling column, not real tabs (Layers/Adjustments/
+Properties/History/Color) — the Window menu's show/hide toggles from
+the previous pass are not the same thing as tabs; pinch-zoom/two-finger
+pan on iPad (zero touch/gesture handlers exist anywhere in this
+component, confirmed by grep — only mouse + wheel events).
+
+---
+
 ## 2026-09-29 (5) — Photo Studio: real File/Edit/Image/Layer/Select/Filter/View/Window/Help menu bar (start of Steps 8-9 of the platform brief)
 
 **Problem:** the brief's Photo Studio structural rebuild asks for a
