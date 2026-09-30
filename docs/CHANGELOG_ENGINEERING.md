@@ -6,6 +6,114 @@ actually done, what was tested, and what's deliberately left for later.
 
 ---
 
+## 2026-09-30 — Full-platform automatic test→find→fix→retest sweep (local build)
+
+**Scope:** an end-to-end pass over the running local build (not the live
+production site — auth, save, and destructive flows were exercised
+against mocked Supabase routes via Playwright, the same pattern used
+throughout this engagement, rather than real user data on
+magicaltouchdesign.com) covering Main Design's vector tools, Pen tool,
+text (incl. Tamil/Arabic/long/multi-line), the Layers panel's own UI
+controls, undo/redo, save/reopen, export, cross-user data isolation,
+a public-page crawl for console/network errors, tablet responsiveness,
+and basic performance. 85 individual checks were run across 5 scripts;
+every genuine failure was root-caused and fixed, then the whole set was
+re-run clean.
+
+**Real product bugs found and fixed:**
+1. **Editor top bar forces page-level horizontal scroll on tablets.**
+   `app/editor/page.tsx`'s top control bar (back link, design name,
+   workspace switcher, undo/redo, units, zoom, save status) had no
+   wrap/overflow handling, so at iPad portrait width (834px) its
+   combined content width (measured: 1180px) pushed the whole page
+   wider than the viewport, dragging the canvas and side toolbar into
+   page-level horizontal scroll. Fixed by making the bar itself
+   scroll internally (`overflow-x-auto`, its groups `shrink-0`) and
+   giving `<main>` `overflow-x-hidden` so nothing else can trigger the
+   same overflow — CSS-only, no layout redesign, verified with a real
+   `scrollWidth === clientWidth` measurement and before/after
+   screenshots at both desktop and iPad-portrait widths.
+
+**Investigated and found to be test-script bugs, not product bugs**
+(each confirmed by reading the actual implementation before concluding):
+- An "Align Left doesn't move the object" failure was the test itself
+  selecting the artboard's own backing rect (`type: 'rect'`, also
+  `__isArtboard: true`) instead of the user's drawn rectangle, then
+  "aligning" the artboard against its own just-shifted position — a
+  guaranteed no-op unrelated to `alignObject()`, which was reread and
+  confirmed correct.
+- A cross-user-isolation check initially used the wrong query param
+  (`?id=`) for the editor's real load-by-id route, which reads
+  `?designId=` (confirmed in `app/editor/page.tsx`) — fixed to use the
+  real param so the test actually exercises the `.eq('id', ...)`
+  Supabase query it claims to.
+- A `/pricing` 404 in the page crawl: there is no `/pricing` route —
+  "Pricing" is an in-page anchor (`/#pricing`) on the homepage,
+  confirmed in `app/dashboard/page.tsx`'s own nav link.
+
+**Verified working, no product bug (with evidence):**
+- Tamil and Arabic (RTL) text: accepted and rendered as real text
+  content, not mangled or silently dropped.
+- Layers panel's own rename / hide / lock / drag-reorder controls
+  (not just object-count) genuinely mutate the real Fabric objects.
+- Cross-user isolation: with correctly-enforced RLS simulated (empty
+  result for another user's design id), User B's page never renders
+  User A's content and User A's Fabric object never loads into User
+  B's canvas — the frontend has zero defense of its own here (no
+  client-side `user_id` filtering anywhere), so this is exactly the
+  boundary `0008_designs_rls.sql` (previous entry, same date) exists
+  to guarantee at the database level.
+- Editor cold-load and rapid-drawing performance stayed well within
+  reasonable bounds on this local dev build.
+- No broken (4xx/5xx) requests or console errors across a crawl of
+  the public homepage, templates, login, and signup pages.
+
+**Regression-tested after the fix:** the full Main Design sweep
+(30/30), the new layers/text/security suite (16/16), the crawl/
+performance/responsive suite (10/10), and Photo Studio's menu bar
+(17/17) and pro-tools (12/12) suites were all re-run against a fresh
+production rebuild and pass unchanged.
+
+**Not covered in this pass (stated honestly, not silently skipped):**
+anchor-level Pen tool editing on an existing path (add/delete/convert
+anchor, join/break/reverse via the menu items), Scale-via-handle-drag,
+Arrange (bring/send front/back), a dedicated code-quality/dead-code
+audit beyond this session's own diff, and testing directly against the
+live production URL (a deliberate scope decision, not an oversight —
+see the scope note above).
+
+---
+
+## 2026-09-30 — Security audit: RLS policies for `public.designs`
+
+**Problem:** the app's core `designs` table predates the tracked
+migrations folder — no migration in this repo ever creates it or
+enables Row Level Security on it. `app/dashboard/page.tsx`'s
+list/update/delete queries never filter by `user_id` at the
+application level, exactly the "RLS is the only boundary" pattern
+every other table in this schema (`design_versions`, `assets`,
+`profiles`) already uses. If `designs`' real RLS state (unknowable
+from the repo alone, since it was evidently set up by hand) is
+missing or wrong, any logged-in user could list, read, rename, or
+delete another user's designs via a direct API call, regardless of
+what the dashboard UI shows.
+
+**Fix:** `supabase/migrations/0008_designs_rls.sql` — purely additive,
+fully idempotent (`enable row level security` + `drop policy if
+exists`/`create policy` for select/insert/update/delete, all
+`auth.uid() = user_id`), safe to apply whether or not `designs`
+already has correct RLS today. Per this repo's established convention,
+it must be applied by hand in the Supabase SQL editor — there's no
+migration runner wired up.
+
+**Tested:** confirmed via the full-platform sweep (next entry, same
+date) that with this policy shape correctly enforced (simulated: an
+empty result for another user's design id), the frontend behaves
+safely — it has no defense of its own beyond this database-level
+policy, so the policy genuinely is the whole boundary.
+
+---
+
 ## 2026-09-30 — Photo Studio: professional workspace shell (dark theme, compact icon toolbar, options bar, checkerboard, cursor position, FG/BG swatches)
 
 **Problem:** a user audit (verified live against the running app, not
