@@ -6,7 +6,89 @@ actually done, what was tested, and what's deliberately left for later.
 
 ---
 
-## 2026-09-30 — Full-platform automatic test→find→fix→retest sweep (local build)
+## 2026-09-30 — Advanced autonomous test→fix→verify pass: two real save-architecture data-loss bugs
+
+**Scope:** targeted, deliberate repro-driven testing of the save/autosave
+architecture, object identity, double-submit behavior, and decimal
+precision (a curated subset of a much larger 35-section test mandate —
+see REMAINING note at the end of this entry) against the local build.
+
+**Real bugs found and fixed, both confirmed via deliberate reproduction
+before and after the fix, not inferred from reading code:**
+
+1. **Autosave/manual-save race condition (data loss).** `performSave` had
+   no in-flight guard: a manual Ctrl+S and a background autosave tick (or
+   two autosave ticks around a reconnect) could each start their own
+   Supabase upsert independently, with nothing enforcing write ordering.
+   Repro: click Save with content "VERSION-1" (artificially delayed
+   800ms), immediately edit to "VERSION-4" and click Save again (delayed
+   50ms) — confirmed the slower, earlier request could land in the
+   database AFTER the faster, later one, leaving VERSION-1 as the final
+   saved state despite VERSION-4 being what the user left on screen.
+   Fixed: `performSave` now queues a second call behind an in-flight one
+   instead of firing a concurrent request; the queued call re-serializes
+   the canvas fresh once it actually runs, keeping writes strictly
+   sequential. This also closes the double-submit risk from rapid-
+   clicking Save (verified: triple-clicking Save writes to one row, never
+   a duplicate).
+
+2. **First-save canvas-rebuild data loss (more severe, found while
+   debugging #1).** A brand-new document's first save assigns it a real
+   id and updates the URL via `router.replace`, which re-triggers the
+   effect that disposes and rebuilds the entire Fabric canvas for the new
+   `designId`. That rebuild restores content from a `pendingSnapshotRef`
+   captured BEFORE the save's network round trip (auth check + upsert) —
+   so any edit made while that first save was in flight was silently
+   discarded the instant the save completed, on literally every brand-new
+   document's first save, not just a contrived race. Repro: same test as
+   above, isolated to this path — content typed during a slow first save
+   reverted to what was on screen when Save was clicked. Fixed by
+   re-serializing the snapshot fresh immediately before the URL change
+   that triggers the rebuild, shrinking the loss window from a full
+   network round trip to one synchronous step. Extracted the duplicated
+   16-property `toJSON()` list both call sites share into `SAVE_JSON_PROPS`.
+
+3. **Object identity gap (lower severity).** A shape's `__uid` is
+   normally assigned by the `object:added` handler, but the very first
+   shape drawn on a fresh document is added to the canvas while still
+   flagged as an in-progress drag draft (which that handler deliberately
+   skips) and is never re-added once finalized — so it silently kept
+   `__uid` undefined forever, confirmed via a duplicate/group/ungroup
+   sweep where every OTHER object got a real id. Fixed by assigning it
+   explicitly at the same point `__artboardId` already gets an identical
+   late fix for the same underlying reason. No observed downstream
+   breakage (`LayersPanel` already falls back to array index for this
+   exact case), but worth closing since a missing id is exactly the kind
+   of gap the mandate's "object ID integrity" section warns can cause
+   wrong selection/deletion elsewhere later.
+
+**Verified working, no bug found:** decimal precision (100.25, 50.75,
+99.99, 0.5) survives save/reopen with zero floating-point drift.
+
+**Regression-tested:** all 85 previously-passing checks across 5 suites
+(full Main Design sweep, layers/text/security, crawl/performance/
+responsive, Photo Studio menu bar, Photo Studio pro-tools) plus 9 new
+checks targeting these exact fixes — 94/94 passing after a fresh
+production rebuild.
+
+**REMAINING — not covered in this pass, stated honestly:** the mandate
+this work was scoped from has 35 sections; this pass covered sections 4
+(autosave races), 8 (double-submit), 14 (precision), and 29 (object ID
+integrity) in depth, since the save-architecture investigation surfaced
+genuine, severe bugs worth following all the way through fix + verify +
+regression before moving on. NOT covered this pass: document version
+compatibility (§3), multiple browser tabs on the same design (§5),
+browser crash/recovery (§6), network-failure UI states (§7), file upload
+security (§9), image memory lifecycle (§10), canvas coordinates across
+zoom levels (§11), high-DPI rendering (§12), color management (§13),
+boundary values (§15), clipboard (§16), drag-and-drop (§17), zoom/pan
+stability (§18), selection boundaries (§19), rotation precision (§20),
+group transforms (§21), font-failure handling (§22), export regression
+diffing (§23), accessibility (§24), loading states (§25), error recovery
+(§26), template isolation (§27), duplicate-design isolation (§28), undo
+memory safety (§30), and a from-clean-install build test (§32). None of
+these were silently skipped as "fine" — they simply weren't reached in
+this pass and should not be reported as verified.
 
 **Scope:** an end-to-end pass over the running local build (not the live
 production site — auth, save, and destructive flows were exercised
