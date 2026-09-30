@@ -1,5 +1,6 @@
 'use client';
 
+import './photoStudioPro.css';
 import { useEffect, useRef, useState, useCallback, forwardRef, useImperativeHandle } from 'react';
 import {
   PixelMask,
@@ -130,6 +131,16 @@ interface Props {
   // unaffected when these are omitted.
   showLayersPanel?: boolean;
   showAdjustmentsPanel?: boolean;
+  // Opt-in "professional editor" chrome: a fixed dark (VS Code-range)
+  // theme independent of the site's own light/dark toggle, a compact
+  // icon-only toolbar, a checkerboard transparency backdrop, a live
+  // cursor-position readout, and an options bar for the active tool's
+  // most common settings. Real Photoshop/Lightroom/Figma-style tools all
+  // use one fixed dark workspace regardless of the surrounding site's
+  // theme, which is what this reproduces -- scoped entirely to a single
+  // wrapper class so Main Design's embedded usage (which never passes
+  // this) renders byte-for-byte as before.
+  pro?: boolean;
 }
 
 export interface PhotoEditorHandle {
@@ -369,6 +380,7 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
     cancelLabel = 'Cancel',
     showLayersPanel = true,
     showAdjustmentsPanel = true,
+    pro = false,
   },
   ref
 ) {
@@ -485,6 +497,15 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
   useEffect(() => {
     brushColorRef.current = brushColor;
   }, [brushColor]);
+  // Background swatch: the professional toolbar's real foreground/
+  // background pair (brushColor IS the foreground -- every paint/fill
+  // tool already reads it). Nothing consumes backgroundColor yet; it's
+  // provided as a real, working swatch (settable, swappable) ahead of
+  // wiring a background-fill/erase-to-background consumer, honestly
+  // noted rather than left unstated.
+  const [backgroundColor, setBackgroundColor] = useState('#ffffff');
+  // Live cursor position (image-local px), for the pro status bar.
+  const [cursorPos, setCursorPos] = useState<{ x: number; y: number } | null>(null);
 
   const [dodgeBurnStrength, setDodgeBurnStrength] = useState(0.35);
   const dodgeBurnStrengthRef = useRef(0.35);
@@ -1092,7 +1113,12 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
       const canvas = new F.Canvas(canvasElRef.current, {
         width: el?.clientWidth || 800,
         height: el?.clientHeight || 600,
-        backgroundColor: '#e5e7eb',
+        // In pro mode, leave the canvas bitmap transparent so the real
+        // checkerboard CSS background painted on the wrapping div (see
+        // photoStudioPro.css's .ps-canvas-viewport) actually shows
+        // through -- Fabric's own backgroundColor opaquely fills the
+        // whole canvas on every render otherwise, hiding it completely.
+        backgroundColor: pro ? '' : '#e5e7eb',
         enableRetinaScaling: true,
       });
       canvas.__retinaDpr = dpr;
@@ -2344,6 +2370,10 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
   };
   const handleCanvasMouseMove = (opt: any) => {
     const canvas = fabricCanvasRef.current;
+    if (pro && imageRef.current) {
+      const p = canvasToImageLocal(canvas.getPointer(opt.e));
+      setCursorPos({ x: Math.round(p.x), y: Math.round(p.y) });
+    }
     if (panningRef.current) {
       const dx = opt.e.clientX - lastPanPointRef.current.x;
       const dy = opt.e.clientY - lastPanPointRef.current.y;
@@ -2724,37 +2754,130 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
   ];
 
   return (
-    <div className="flex flex-1 overflow-hidden flex-col">
-      <div className="flex flex-1 overflow-hidden">
-        <div className="w-44 border-r bg-white p-2 flex flex-col gap-2 overflow-y-auto">
-          {toolGroups.map((group) => (
-            <div key={group.label}>
-              <p className="text-[10px] uppercase tracking-wide text-gray-400 mb-1 px-1">{group.label}</p>
-              <div className="flex flex-col gap-0.5">
-                {group.tools.map((t) => (
-                  <button
-                    key={t.id}
-                    onClick={() => selectTool(t.id)}
-                    title={`${t.label}${SHORTCUT_LABEL[t.id] ? ` (${SHORTCUT_LABEL[t.id]})` : ''}`}
-                    className={`flex items-center gap-2 text-left text-xs px-2 py-1.5 rounded ${activeTool === t.id ? 'bg-gray-800 text-white' : 'hover:bg-gray-100 text-gray-700'}`}
-                  >
-                    {TOOL_ICONS[t.id]}
-                    {t.label}
-                  </button>
-                ))}
+    <div className={`flex flex-1 overflow-hidden flex-col min-h-0${pro ? ' ps-pro' : ''}`}>
+      {pro && (
+        <div className="ps-options-bar flex items-center gap-4 px-3 border-b shrink-0 overflow-x-auto">
+          {PAINT_TOOLS.includes(activeTool) && (
+            <>
+              <label className="flex items-center gap-1.5 whitespace-nowrap">
+                Size
+                <input type="range" min={4} max={400} value={brushSize} onChange={(e) => setBrushSize(parseInt(e.target.value))} className="w-24" />
+                <span className="w-8 text-right tabular-nums">{brushSize}</span>
+              </label>
+              <label className="flex items-center gap-1.5 whitespace-nowrap">
+                Hardness
+                <input type="range" min={0} max={1} step={0.05} value={brushHardness} onChange={(e) => setBrushHardness(parseFloat(e.target.value))} className="w-24" />
+                <span className="w-10 text-right tabular-nums">{Math.round(brushHardness * 100)}%</span>
+              </label>
+              <label className="flex items-center gap-1.5 whitespace-nowrap">
+                Opacity
+                <input type="range" min={0.05} max={1} step={0.05} value={brushOpacity} onChange={(e) => setBrushOpacity(parseFloat(e.target.value))} className="w-24" />
+                <span className="w-10 text-right tabular-nums">{Math.round(brushOpacity * 100)}%</span>
+              </label>
+            </>
+          )}
+          {activeTool === 'magic-wand' && (
+            <>
+              <label className="flex items-center gap-1.5 whitespace-nowrap">
+                Tolerance
+                <input type="range" min={1} max={128} value={tolerance} onChange={(e) => setTolerance(parseInt(e.target.value))} className="w-24" />
+                <span className="w-8 text-right tabular-nums">{tolerance}</span>
+              </label>
+              <label className="flex items-center gap-1.5 whitespace-nowrap">
+                <input type="checkbox" checked={contiguous} onChange={(e) => setContiguous(e.target.checked)} /> Contiguous
+              </label>
+            </>
+          )}
+          {activeTool === 'paint-bucket' && (
+            <label className="flex items-center gap-1.5 whitespace-nowrap">
+              Tolerance
+              <input type="range" min={1} max={128} value={fillTolerance} onChange={(e) => setFillTolerance(parseInt(e.target.value))} className="w-24" />
+              <span className="w-8 text-right tabular-nums">{fillTolerance}</span>
+            </label>
+          )}
+          {activeTool === 'mask-color-range' && (
+            <>
+              <label className="flex items-center gap-1.5 whitespace-nowrap">
+                Tolerance
+                <input type="range" min={1} max={128} value={colorRangeTolerance} onChange={(e) => setColorRangeTolerance(parseInt(e.target.value))} className="w-24" />
+                <span className="w-8 text-right tabular-nums">{colorRangeTolerance}</span>
+              </label>
+              <label className="flex items-center gap-1.5 whitespace-nowrap">
+                <input type="checkbox" checked={colorRangeInvert} onChange={(e) => setColorRangeInvert(e.target.checked)} /> Invert
+              </label>
+            </>
+          )}
+          {!PAINT_TOOLS.includes(activeTool) && !['magic-wand', 'paint-bucket', 'mask-color-range'].includes(activeTool) && (
+            <span className="text-[#8a8a8a]">No options for this tool — see the Properties tab for less-common settings.</span>
+          )}
+        </div>
+      )}
+      <div className="flex flex-1 overflow-hidden min-h-0">
+        <div className="w-44 border-r bg-white flex flex-col">
+          <div className="p-2 flex flex-col gap-2 overflow-y-auto flex-1 min-h-0">
+            {toolGroups.map((group) => (
+              <div key={group.label}>
+                <p className="text-[10px] uppercase tracking-wide text-gray-400 mb-1 px-1">{group.label}</p>
+                <div className="flex flex-col gap-0.5">
+                  {group.tools.map((t) => (
+                    <button
+                      key={t.id}
+                      onClick={() => selectTool(t.id)}
+                      title={`${t.label}${SHORTCUT_LABEL[t.id] ? ` (${SHORTCUT_LABEL[t.id]})` : ''}`}
+                      className={`flex items-center gap-2 text-left text-xs px-2 py-1.5 rounded ${activeTool === t.id ? 'bg-gray-800 text-white' : 'hover:bg-gray-100 text-gray-700'}`}
+                    >
+                      {TOOL_ICONS[t.id]}
+                      <span className="tool-label">{t.label}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
 
-          <div className="border-t pt-2">
-            <p className="text-[10px] uppercase tracking-wide text-gray-400 mb-1 px-1">History</p>
-            <button onClick={undoLocal} disabled={!canUndo} className="w-full text-left text-xs px-2 py-1.5 rounded hover:bg-gray-100 disabled:opacity-30">↶ Undo</button>
-            <button onClick={redoLocal} disabled={!canRedo} className="w-full text-left text-xs px-2 py-1.5 rounded hover:bg-gray-100 disabled:opacity-30">↷ Redo</button>
-            <button onClick={restoreOriginal} className="w-full text-left text-xs px-2 py-1.5 rounded hover:bg-gray-100 text-gray-700">Restore Original</button>
+            {!pro && (
+              <div className="border-t pt-2">
+                <p className="text-[10px] uppercase tracking-wide text-gray-400 mb-1 px-1">History</p>
+                <button onClick={undoLocal} disabled={!canUndo} className="w-full text-left text-xs px-2 py-1.5 rounded hover:bg-gray-100 disabled:opacity-30">↶ Undo</button>
+                <button onClick={redoLocal} disabled={!canRedo} className="w-full text-left text-xs px-2 py-1.5 rounded hover:bg-gray-100 disabled:opacity-30">↷ Redo</button>
+                <button onClick={restoreOriginal} className="w-full text-left text-xs px-2 py-1.5 rounded hover:bg-gray-100 text-gray-700">Restore Original</button>
+              </div>
+            )}
           </div>
+
+          {pro && (
+            <div className="ps-swatches shrink-0 py-2 border-t flex items-center justify-center gap-1.5">
+              <div className="relative w-9 h-9 shrink-0" title="Foreground / Background color">
+                <input
+                  type="color"
+                  value={backgroundColor}
+                  onChange={(e) => setBackgroundColor(e.target.value)}
+                  className="absolute right-0 bottom-0 w-6 h-6 rounded border border-[#3c3c3c] cursor-pointer"
+                  title="Background color"
+                />
+                <input
+                  type="color"
+                  value={brushColor}
+                  onChange={(e) => setBrushColor(e.target.value)}
+                  className="absolute left-0 top-0 w-6 h-6 rounded border border-[#3c3c3c] cursor-pointer"
+                  title="Foreground color"
+                />
+              </div>
+              <button
+                onClick={() => {
+                  const fg = brushColor;
+                  setBrushColor(backgroundColor);
+                  setBackgroundColor(fg);
+                }}
+                title="Swap foreground/background"
+                className="text-[13px] leading-none px-1 py-0.5 rounded hover:bg-white/10"
+              >
+                ⇄
+              </button>
+            </div>
+          )}
         </div>
 
-        <div ref={containerRef} className="flex-1 relative bg-gray-200">
+        <div ref={containerRef} className="flex-1 relative bg-gray-200 ps-canvas-viewport">
           <canvas ref={canvasElRef} />
           {activeTool === 'crop' && (
             <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-white rounded-full shadow px-3 py-1.5">
@@ -3438,6 +3561,11 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
             {docSize.w} × {docSize.h} px
           </button>
           {layersForPanel.length > 1 && <span>· {layersForPanel.length} layers</span>}
+          {pro && cursorPos && (
+            <span className="tabular-nums">
+              · X: {cursorPos.x} Y: {cursorPos.y}
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-2">
           <button onClick={zoomOut} className="px-2 py-0.5 border rounded hover:bg-gray-50">−</button>

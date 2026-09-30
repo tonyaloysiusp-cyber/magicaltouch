@@ -292,6 +292,38 @@ confirms Main Design's own menu bar still shows only its own items
 (File/Edit/Object/Type/Select/View/Window/Help) with no Photo-Studio-only
 menu leaking in.
 
+**Workspace structure — dark theme + compact toolbar + options bar
+(2026-09-30):** a live-tested audit (Playwright against the running app,
+not code-reading) found the tool functionality above was mostly real,
+but the surrounding chrome still read as "a basic demo": light theme by
+default, a 176px icon+label toolbar, no options bar, no checkerboard
+transparency backdrop, no cursor-position readout, `h-screen` instead of
+`100dvh`, 14px panel text instead of 11-12px. All now real, gated behind
+a new opt-in `pro` prop (default `false` — Main Design's embedded usage
+never passes it, confirmed unaffected by the same menu-bar test):
+dark VS Code-range theme (`components/photoEditor/photoStudioPro.css`,
+scoped under a `.ps-pro` ancestor class — plain global CSS, not
+styled-jsx, which turned out not to work in this app's Next.js App
+Router setup without a `StyleRegistry`), a real 48px icon-only toolbar,
+a real options bar under the menu bar (brush size/hardness/opacity/
+tolerance, live-bound to the same state the right panel already used), a
+genuine checkerboard transparency backdrop (required making Fabric's own
+canvas `backgroundColor` transparent in pro mode, since it opaquely
+painted over any CSS background), a live cursor-position readout in the
+status bar, and real foreground/background color swatches (background
+color is a real, settable, swappable state — nothing consumes it yet,
+noted honestly rather than silently). Verified with real screenshots and
+`getBoundingClientRect()` measurements at desktop and simulated iPad
+portrait/landscape (no page-level scroll or chrome overflow in either
+orientation); a real pre-existing layout bug was found and fixed along
+the way (an ancestor `flex-1` div that wasn't itself `display:flex` was
+silently clipping toolbar overflow instead of letting it scroll). **Not
+yet real**: pixel rulers, toolbar flyout sub-tools (the icon rail just
+scrolls today), a tabbed right-panel dock (still one scrolling column;
+the Window menu's show/hide toggles are not the same as tabs), and
+pinch-zoom/two-finger pan on iPad (zero touch/gesture handlers exist in
+this component — confirmed by grep, only mouse + wheel events).
+
 **What this means for the brief's priorities:** items 1-2 (remove Studio
 Preview, merge Photo Project into Photo Studio), 9-11 (unit system),
 12-16 (confirm-on-blur resize, ESC-cancel, inline validation, aspect
