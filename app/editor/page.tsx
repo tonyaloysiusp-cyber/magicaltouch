@@ -70,6 +70,30 @@ import { imageObjectToDataURL } from '@/lib/editor/imageQuality';
 const isOpenVectorPath = (o: any): boolean =>
   !!o && o.isVectorPath && o.type === 'path' && Array.isArray(o.path) && o.path.length > 0 && o.path[o.path.length - 1][0] !== 'Z';
 
+// Custom Fabric object properties that must survive round-tripping through
+// canvas.toJSON()/loadFromJSON() -- shared by every place that serializes
+// the live canvas for a save (performSaveInner reuses this twice: once for
+// the upsert payload, once to re-snapshot fresh content for the post-save
+// canvas-recreation effect).
+const SAVE_JSON_PROPS = [
+  'name',
+  'locked',
+  'visible',
+  'isVectorPath',
+  'clipPath',
+  '__uid',
+  '__lockRatio',
+  '__isArtboard',
+  '__artboardId',
+  '__print',
+  '__originalSrc',
+  '__photoEdits',
+  '__cropRect',
+  '__isGuide',
+  '__guideAxis',
+  '__assetId',
+];
+
 function EditorContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -152,6 +176,20 @@ function EditorContent() {
   // connectivity loss.
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'unsaved' | 'error' | 'offline'>('idle');
   const dirtyRef = useRef(false);
+  // Guards performSave against out-of-order writes: a manual Ctrl+S and a
+  // background autosave tick (or two autosave ticks around a reconnect)
+  // can each start their own upsert independently, and nothing about a
+  // network response's arrival order guarantees the LAST one to finish
+  // is the one with the newest content — a slow save started first can
+  // resolve after a fast one started later and silently overwrite newer
+  // content with stale content. While a save is in flight, a second call
+  // queues itself here instead of firing a concurrent request; once the
+  // in-flight save resolves, the queued call re-runs performSave, which
+  // always re-serializes the canvas fresh at that moment — so the queued
+  // run captures whatever is on the canvas THEN, not a stale snapshot,
+  // and writes stay strictly sequential.
+  const saveInFlightRef = useRef(false);
+  const pendingSaveRef = useRef<{ idToUse: string | null; nameToUse: string; opts?: { silent?: boolean } } | null>(null);
   // Assigned once scheduleAutosave itself is defined further down (after
   // performSave) — indirected through a ref purely so the effect above,
   // which needs to exist before that point, can still call the latest
@@ -585,12 +623,20 @@ function EditorContent() {
         canvas.setActiveObject(obj);
         // The object was already sitting on the canvas as a live drag
         // preview (added/removed on every mousemove while __isShapeDraft
-        // was set, which recomputeMembership() deliberately skips) before
+        // was set, which the object:added handler's __uid assignment
+        // deliberately skips, same as recomputeMembership() below) before
         // it became "real" here — nothing re-fires object:added at this
-        // point, so its artboard membership was never actually computed
-        // against its final position/size. Do it explicitly now, or the
-        // shape can end up with no __artboardId at all and silently
-        // vanish from that artboard's PNG/PDF export.
+        // point, so it would otherwise keep __uid === undefined forever
+        // (confirmed via a real duplicate/group/ungroup sweep: every OTHER
+        // object gets a real __uid, but the very first shape drawn on a
+        // fresh document never does, since it's the one object that's
+        // always created through this exact draft-then-finalize path).
+        // Assign it explicitly here, matching the same scheme.
+        if (!obj.__uid) obj.__uid = `obj_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+        // Its artboard membership was never actually computed against its
+        // final position/size for the same reason — do it explicitly now,
+        // or the shape can end up with no __artboardId at all and
+        // silently vanish from that artboard's PNG/PDF export.
         recomputeMembership();
         refreshLayers();
         pushHistory();
@@ -2879,7 +2925,7 @@ function EditorContent() {
   // near-duplicate copies each reading designId/designName from the
   // component closure, which would go stale the instant Save As updates
   // that state right before saving.
-  const performSave = async (idToUse: string | null, nameToUse: string, opts?: { silent?: boolean }) => {
+  const performSaveInner = async (idToUse: string | null, nameToUse: string, opts?: { silent?: boolean }) => {
     const silent = !!opts?.silent;
     if (!fabricCanvasRef.current) return;
     // setSaving before the (possibly ~2s) auto-apply wait below so the
@@ -2904,24 +2950,7 @@ function EditorContent() {
       return;
     }
 
-    const canvasJson = fabricCanvasRef.current.toJSON([
-      'name',
-      'locked',
-      'visible',
-      'isVectorPath',
-      'clipPath',
-      '__uid',
-      '__lockRatio',
-      '__isArtboard',
-      '__artboardId',
-      '__print',
-      '__originalSrc',
-      '__photoEdits',
-      '__cropRect',
-      '__isGuide',
-      '__guideAxis',
-      '__assetId',
-    ]);
+    const canvasJson = fabricCanvasRef.current.toJSON(SAVE_JSON_PROPS);
     // width/height stay as the dashboard/thumbnail-facing summary size —
     // the first artboard's current dimensions, not the URL params a brand
     // new document happened to start from.
@@ -3013,9 +3042,23 @@ function EditorContent() {
       // it re-fetch what was just written. A plain re-save of an
       // already-loaded design leaves the URL (and so the effect) alone,
       // so there's nothing to hand off.
+      //
+      // canvasJSON is RE-SERIALIZED here, fresh, rather than reusing the
+      // `canvasJson` this save started with: that snapshot was taken
+      // before the `await`s above (auth check + the upsert's own network
+      // round trip), and the canvas-recreation effect this feeds is
+      // destructive -- it disposes the live Fabric canvas and rebuilds it
+      // from exactly this snapshot. Handing it the pre-network-call
+      // snapshot would silently discard any edit the user made *during*
+      // that round trip (confirmed with a real repro: type during a
+      // slow first save and the keystrokes vanish once the id-bearing
+      // URL swaps the canvas back in). Re-serializing right before the
+      // URL change that triggers the swap closes that window down to a
+      // single synchronous step.
       if (idToUse !== data.id) {
+        const freshCanvasJSON = fabricCanvasRef.current.toJSON(SAVE_JSON_PROPS);
         pendingSnapshotRef.current = {
-          canvasJSON: canvasJson,
+          canvasJSON: freshCanvasJSON,
           history: { stack: [...historyRef.current.stack], index: historyRef.current.index },
           artboards,
           activeArtboardId,
@@ -3044,6 +3087,30 @@ function EditorContent() {
         .then(({ error: versionError }) => {
           if (versionError) console.warn('Version snapshot not saved (design_versions table missing?):', versionError.message);
         });
+    }
+  };
+
+  // Public entry point: serializes concurrent saves through
+  // performSaveInner (see saveInFlightRef above) so a slow save started
+  // first can never complete after — and overwrite — a faster save
+  // started later with newer content.
+  const performSave = async (idToUse: string | null, nameToUse: string, opts?: { silent?: boolean }) => {
+    if (saveInFlightRef.current) {
+      pendingSaveRef.current = { idToUse, nameToUse, opts };
+      return;
+    }
+    saveInFlightRef.current = true;
+    try {
+      await performSaveInner(idToUse, nameToUse, opts);
+    } finally {
+      saveInFlightRef.current = false;
+      const next = pendingSaveRef.current;
+      if (next) {
+        pendingSaveRef.current = null;
+        // designIdRef is current by now even if `next` was queued before
+        // this design's very first save had assigned it a real id.
+        performSave(designIdRef.current ?? next.idToUse, next.nameToUse, next.opts);
+      }
     }
   };
 
