@@ -3883,7 +3883,7 @@ function EditorContent() {
           Checking access...
         </div>
       )}
-      <main className={`h-screen flex flex-col bg-gray-50 dark:bg-[#1E1E1E] transition-colors duration-150 ${isDark ? 'dark' : ''}`}>
+      <main className={`h-screen w-full overflow-x-hidden flex flex-col bg-gray-50 dark:bg-[#1E1E1E] transition-colors duration-150 ${isDark ? 'dark' : ''}`}>
       <MenuBar
         menus={photoOnlySession ? [] : menus}
         leading={
@@ -3895,8 +3895,8 @@ function EditorContent() {
 
       <TabBar tabs={tabs} activeTabId={activeTabId} onSwitch={switchTab} onClose={closeTab} onAdd={() => setShowOpenDialog(true)} />
 
-      <div className="flex items-center justify-between px-4 py-2 border-b bg-white dark:bg-[#242424] dark:border-[#3A3A3A] transition-colors duration-150">
-        <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between gap-3 px-4 py-2 border-b bg-white dark:bg-[#242424] dark:border-[#3A3A3A] transition-colors duration-150 overflow-x-auto">
+        <div className="flex items-center gap-2 shrink-0">
           <BackBar
             href={cameFromTemplate ? '/templates' : '/dashboard'}
             label={cameFromTemplate ? 'Templates' : 'Dashboard'}
@@ -3910,12 +3910,12 @@ function EditorContent() {
             setDesignName(name);
             setTabs((ts) => ts.map((t) => (t.id === activeTabIdRef.current ? { ...t, name } : t)));
           }}
-          className="text-sm border rounded px-2 py-1 w-48 text-center dark:bg-[#2B2B2B] dark:border-[#3A3A3A] dark:text-gray-100"
+          className="text-sm border rounded px-2 py-1 w-48 text-center shrink-0 dark:bg-[#2B2B2B] dark:border-[#3A3A3A] dark:text-gray-100"
         />
 
         {!hideWorkspaceSwitcherForPhotoFirst && <WorkspaceSwitcher workspace={workspace} onSwitch={handleWorkspaceSwitch} />}
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           {/* Undo/Redo target whichever workspace is actually showing —
               previously these stayed wired to Main Design even while the
               Photo Editor was open, so clicking them silently edited the
@@ -3949,7 +3949,7 @@ function EditorContent() {
           </button>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 shrink-0">
           <label className="text-xs text-gray-500 dark:text-gray-400">Units</label>
           <select
             value={unit}
@@ -3964,13 +3964,13 @@ function EditorContent() {
           </select>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 shrink-0">
           <button onClick={() => applyZoom(zoom - 10)} className="px-2 py-1 border rounded dark:border-[#3A3A3A] dark:text-gray-200 dark:hover:bg-[#333333]">-</button>
           <span className="text-sm text-gray-600 w-12 text-center dark:text-gray-300">{zoom}%</span>
           <button onClick={() => applyZoom(zoom + 10)} className="px-2 py-1 border rounded dark:border-[#3A3A3A] dark:text-gray-200 dark:hover:bg-[#333333]">+</button>
         </div>
 
-        <div className="flex items-center gap-2 relative">
+        <div className="flex items-center gap-2 relative shrink-0">
           <span
             className={
               'text-xs px-2 py-1 rounded-full ' +
