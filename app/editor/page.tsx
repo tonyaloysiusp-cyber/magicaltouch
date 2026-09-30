@@ -3950,7 +3950,19 @@ function EditorContent() {
           Checking access...
         </div>
       )}
-      <main className={`h-screen w-full overflow-x-hidden flex flex-col bg-gray-50 dark:bg-[#1E1E1E] transition-colors duration-150 ${isDark ? 'dark' : ''}`}>
+      {/* Tailwind's class-strategy dark: utilities compile to a descendant
+          selector (.dark .dark\:bg-x), which never matches an element that
+          carries `dark` and a dark:* class itself (same gotcha already
+          documented in components/home/HomePage.tsx) -- so the toggled
+          `dark` class lives on this wrapper, one level above <main> and
+          everything inside it that uses a dark: variant, not on <main>
+          itself. Previously both lived on <main>, which silently made
+          every dark: utility in the whole editor dead: confirmed via a
+          real Playwright check (main's computed background stayed
+          rgb(249,250,251) even with the `dark` class present and
+          localStorage's shared theme genuinely set to 'dark'). */}
+      <div className={isDark ? 'dark' : ''}>
+      <main className="h-screen w-full overflow-x-hidden flex flex-col bg-gray-50 dark:bg-[#1E1E1E] transition-colors duration-150">
       <MenuBar
         menus={photoOnlySession ? [] : menus}
         leading={
@@ -4296,6 +4308,7 @@ function EditorContent() {
       <RoadmapModal open={roadmap.open} highlightId={roadmap.id} onClose={() => setRoadmap({ open: false })} />
       <PreflightModal open={showPreflight} issues={preflightIssues} onClose={() => setShowPreflight(false)} />
       </main>
+      </div>
     </>
   );
 }
