@@ -3607,22 +3607,48 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
               <div className="flex-1">
                 <label className="text-[11px] text-gray-500">Width ({resizeUnit})</label>
                 <input
-                  type="number"
-                  min={0}
-                  step={resizeUnit === 'px' ? 1 : 0.01}
-                  value={displayResizeValue(resizeInput.w)}
-                  onChange={(e) => onResizeWidthChange(e.target.value)}
+                  type="text"
+                  inputMode="decimal"
+                  // Uncontrolled + remounted on unit/value changes FROM
+                  // OUTSIDE typing (unit switch, aspect-locked height
+                  // commit, dialog reopen) -- the same pattern app/create/
+                  // page.tsx already uses for exactly this reason. A fully
+                  // controlled input here (value={} + onChange firing on
+                  // every keystroke) round-trips each character through
+                  // unit->px->unit and Math.round()/.toFixed(2) immediately,
+                  // which overwrites a multi-digit or decimal value before
+                  // the user can finish typing it -- confirmed with a real
+                  // keystroke-by-keystroke repro: typing "10.5" into this
+                  // field while in inches got stuck at "1.00" after every
+                  // single character.
+                  key={`rw-${resizeUnit}-${resizeInput.w}`}
+                  defaultValue={displayResizeValue(resizeInput.w)}
+                  onBlur={(e) => onResizeWidthChange(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+                    if (e.key === 'Escape') {
+                      (e.target as HTMLInputElement).value = displayResizeValue(resizeInput.w);
+                      (e.target as HTMLInputElement).blur();
+                    }
+                  }}
                   className="w-full text-sm border rounded px-2 py-1 mt-0.5"
                 />
               </div>
               <div className="flex-1">
                 <label className="text-[11px] text-gray-500">Height ({resizeUnit})</label>
                 <input
-                  type="number"
-                  min={0}
-                  step={resizeUnit === 'px' ? 1 : 0.01}
-                  value={displayResizeValue(resizeInput.h)}
-                  onChange={(e) => onResizeHeightChange(e.target.value)}
+                  type="text"
+                  inputMode="decimal"
+                  key={`rh-${resizeUnit}-${resizeInput.h}`}
+                  defaultValue={displayResizeValue(resizeInput.h)}
+                  onBlur={(e) => onResizeHeightChange(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+                    if (e.key === 'Escape') {
+                      (e.target as HTMLInputElement).value = displayResizeValue(resizeInput.h);
+                      (e.target as HTMLInputElement).blur();
+                    }
+                  }}
                   className="w-full text-sm border rounded px-2 py-1 mt-0.5"
                 />
               </div>
