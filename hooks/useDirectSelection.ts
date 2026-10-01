@@ -510,6 +510,11 @@ export function useDirectSelection({ fabricCanvasRef, onAnchorMoved }: Args) {
     skewX: pathObj.skewX,
     skewY: pathObj.skewY,
     objectCaching: false,
+    // Matches usePenTool.ts's own path construction: Fabric's default
+    // resize/rotate controls would sit exactly where this module's own
+    // anchor/handle circles render and win the hit-test over them.
+    hasControls: false,
+    hasBorders: false,
   });
 
   // Reverses a path's direction — anchor order, segment order, and

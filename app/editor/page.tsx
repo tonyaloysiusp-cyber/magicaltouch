@@ -920,7 +920,12 @@ function EditorContent() {
 
           const d = multiPolygonToPathD(result);
           const baseFill = typeof ordered[0].fill === 'string' ? ordered[0].fill : '#3FA9E8';
-          const pathObj: any = new F.Path(d, { fill: baseFill, stroke: '#1A1A1A', strokeWidth: 2, fillRule: 'evenodd', objectCaching: false });
+          // hasControls/hasBorders: false for the same reason usePenTool.ts's
+          // own path construction sets them -- Direct Selection's anchor
+          // circles render at this path's corners, and Fabric's default
+          // resize controls would otherwise sit in the same spots and win
+          // the hit-test over them.
+          const pathObj: any = new F.Path(d, { fill: baseFill, stroke: '#1A1A1A', strokeWidth: 2, fillRule: 'evenodd', objectCaching: false, hasControls: false, hasBorders: false });
           pathObj.isVectorPath = true;
           pathObj.name = `Shape Builder (${op})`;
 
@@ -1009,6 +1014,20 @@ function EditorContent() {
         });
         canvas.defaultCursor = 'default';
         canvas.hoverCursor = 'move';
+        // Direct Selection's anchor handles only ever render from the
+        // canvas's own 'selection:created'/'selection:updated' events --
+        // which Fabric does NOT fire for a click that lands on whatever
+        // object was ALREADY the active one (nothing "changed"). A path
+        // is set as the active object the instant Pen finishes drawing
+        // it, so switching straight to Direct Selection and clicking
+        // that exact path again (the single most natural "draw it, then
+        // immediately refine it" sequence) would otherwise show no
+        // handles at all until the user deselected and clicked a second
+        // time. Render them explicitly for exactly this one case.
+        if (tool === 'direct') {
+          const active = canvas.getActiveObject();
+          if (active && active.isVectorPath) renderAnchorHandles(active);
+        }
       }
       // Guides get their own interactivity pass regardless of which branch
       // ran above (every branch's forEachObject would otherwise leave them
@@ -1017,7 +1036,7 @@ function EditorContent() {
       applyGuideInteractivity();
       canvas.requestRenderAll();
     },
-    [clearPenDraft, clearAnchorHandles, clearShapeDraft, clearArtboardDraft, applyGuideInteractivity]
+    [clearPenDraft, clearAnchorHandles, clearShapeDraft, clearArtboardDraft, applyGuideInteractivity, renderAnchorHandles]
   );
 
   // Ensures at least one locked, non-rotatable white artboard Rect exists.

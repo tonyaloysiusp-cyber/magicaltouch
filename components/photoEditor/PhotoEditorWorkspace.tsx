@@ -2651,12 +2651,30 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
     const canvas = fabricCanvasRef.current;
     const img = imageRef.current;
     if (!canvas || !img) return;
+    // A finished path is deliberately left evented:false right after
+    // Pen draws it (PhotoEditorWorkspace's onPathFinished), so a click
+    // meant to start the NEXT path doesn't instead grab the last one —
+    // but that same evented:false silently made Direct Selection unable
+    // to ever select ANY path at all (handleDirectClick's
+    // canvas.findTarget() only ever matches evented objects), so its
+    // anchors could never actually be edited after the path was drawn.
+    // Only Direct Selection re-enables them, matching Main Design's own
+    // setActiveTool (app/editor/page.tsx), which does the same split.
+    const vectorPaths = canvas.getObjects().filter((o: any) => o.isVectorPath);
     if (activeTool === 'pen' || activeTool === 'direct') {
       canvas.discardActiveObject();
       canvas.selection = false;
       getLayers().forEach((l: any) => (l.evented = false));
+      vectorPaths.forEach((p: any) => {
+        p.evented = activeTool === 'direct';
+        p.selectable = activeTool === 'direct';
+      });
     } else {
       getLayers().forEach((l: any) => (l.evented = !l.__locked));
+      vectorPaths.forEach((p: any) => {
+        p.evented = false;
+        p.selectable = false;
+      });
       canvas.selection = false;
       if (activeTool !== 'crop' && !isPanGesture()) canvas.setActiveObject(img);
     }
