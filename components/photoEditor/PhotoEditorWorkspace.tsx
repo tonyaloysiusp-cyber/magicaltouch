@@ -49,6 +49,7 @@ import {
   blurInMask,
   sharpenInMask,
   spongeInMask,
+  motionBlurInMask,
   LevelsSettings,
   DEFAULT_LEVELS,
   HueSaturationSettings,
@@ -172,6 +173,7 @@ export interface PhotoEditorHandle {
   addLayerFromFile: () => void;
   applyFilterBlur: () => void;
   applyFilterSharpen: () => void;
+  applyFilterMotionBlur: () => void;
 }
 
 type PhotoTool =
@@ -857,6 +859,7 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
     addLayerFromFile: () => fileInputRef.current?.click(),
     applyFilterBlur,
     applyFilterSharpen,
+    applyFilterMotionBlur,
   }));
   useEffect(() => {
     onHistoryChange?.(canUndo, canRedo);
@@ -2375,6 +2378,19 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
     const pixelCanvas = getImagePixelCanvas(img);
     const full = rectMask(img.width, img.height, 0, 0, img.width, img.height);
     bakeAndPush(sharpenInMask(pixelCanvas, full, sharpenAmountRef.current));
+  };
+  // A real directional streak (motion blur), distinct from the isotropic
+  // Gaussian above — genuine offset-averaging along an axis
+  // (motionBlurInMask), not blurInMask relabeled. No dedicated slider
+  // exists yet for angle/distance, so this applies a fixed, sensible
+  // horizontal streak; wiring a real angle/distance control is future
+  // work, not pretended here.
+  const applyFilterMotionBlur = () => {
+    const img = imageRef.current;
+    if (!img) return;
+    const pixelCanvas = getImagePixelCanvas(img);
+    const full = rectMask(img.width, img.height, 0, 0, img.width, img.height);
+    bakeAndPush(motionBlurInMask(pixelCanvas, full, 0, 24));
   };
 
   // ---- Gradient: click-drag draws a live preview line; releasing bakes

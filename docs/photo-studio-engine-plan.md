@@ -1,6 +1,6 @@
 # Photo Studio: professional-editor upgrade plan
 
-## Status: Phase 1, slice 2 of 8 phases complete
+## Status: Phase 1, slice 2 of 8 phases complete; filter system: Motion Blur added
 
 This tracks a large, explicitly-requested upgrade of `/photo-studio`
 (`components/photoEditor/PhotoEditorWorkspace.tsx`) toward professional,
@@ -120,10 +120,31 @@ mode, or lock state to the copy.
 unwired — still the right foundation for reorder's undo and for later
 phases, just not the mechanism this particular gap needed.
 
+## Filter system: Motion Blur (master-prompt priority #5)
+
+Added `motionBlurInMask` to `lib/editor/photoBrush.ts` — a real
+directional blur (offset-and-average a stack of copies of the source
+translated along `(cos(angle), sin(angle))` over a given distance),
+distinct from `blurInMask`'s isotropic Gaussian. Wired as
+`applyFilterMotionBlur` on `PhotoEditorHandle`, following the exact
+`getImagePixelCanvas` → full-canvas `rectMask` → filter fn → `bakeAndPush`
+pattern `applyFilterBlur`/`applyFilterSharpen` already use, and exposed
+as "Motion Blur (whole layer)" in `/photo-studio`'s Filter menu.
+
+No angle/distance dialog exists yet (applies a fixed horizontal streak);
+a real control for both is future work, not a hidden shortcut — noted
+honestly rather than silently shipped as "configurable" when it isn't.
+
+Verified with a new test (`test_motion_blur_filter.js`, 7 checks): a real
+uploaded sharp-edge PNG smears into neighboring pixels within the blur's
+reach, pixels outside that reach stay untouched, and Undo genuinely
+reverses the bake.
+
 ## Regression suite this work must keep passing
 
 `test_photo_studio_menubar.js` (17 checks), `test_photo_studio_pro_tools.js`
-(12 checks), plus the full-platform sweep and Main Design suites this
-engagement has already built — see `docs/CHANGELOG_ENGINEERING.md` for
-the running total. Re-run all of them, not just the ones that look
-related, after any slice that touches `PhotoEditorWorkspace.tsx` itself.
+(12 checks), `test_motion_blur_filter.js` (7 checks), plus the full-platform
+sweep and Main Design suites this engagement has already built — see
+`docs/CHANGELOG_ENGINEERING.md` for the running total. Re-run all of
+them, not just the ones that look related, after any slice that touches
+`PhotoEditorWorkspace.tsx` itself.
