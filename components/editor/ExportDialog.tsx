@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { X } from 'lucide-react';
 import { ArtboardMeta } from '@/lib/editor/artboards';
+import { PX_PER_INCH } from '@/lib/editor/units';
 
 export type ExportRangeMode = 'current' | 'range' | 'selected' | 'all';
 export type ExportFormat = 'png' | 'jpg' | 'pdf';
@@ -13,12 +14,25 @@ export interface ExportSettings {
   rangeTo: number;
   selectedIds: string[];
   format: ExportFormat;
+  // The real target DPI for the raster export -- document geometry is
+  // always stored at a fixed 96px = 1in (lib/editor/units.ts), so the
+  // multiplier fabric's toDataURL needs is derived here (dpi / 96),
+  // never asked for directly. This replaces a previous 1x/2x/3x-only
+  // control that couldn't express an exact print DPI (3x = 288, not
+  // the 300 a real print document needs).
+  dpi: number;
   multiplier: number;
   quality: number;
   includeBleed: boolean;
   includeMarks: boolean;
   transparentBackground: boolean;
 }
+
+const DPI_PRESETS = [
+  { dpi: 72, label: '72 DPI', hint: 'Screen' },
+  { dpi: 150, label: '150 DPI', hint: 'Draft print' },
+  { dpi: 300, label: '300 DPI', hint: 'Print quality' },
+];
 
 interface Props {
   artboards: ArtboardMeta[];
@@ -34,7 +48,10 @@ export function ExportDialog({ artboards, activeArtboardId, exporting, onClose, 
   const [rangeTo, setRangeTo] = useState(String(Math.max(artboards.length, 1)));
   const [selectedIds, setSelectedIds] = useState<string[]>(activeArtboardId ? [activeArtboardId] : []);
   const [format, setFormat] = useState<ExportFormat>('png');
-  const [multiplier, setMultiplier] = useState(2);
+  // Default to a real print-accurate 300 DPI (the previous "2x" default
+  // was 192 DPI -- a multiplier of the 96px/in document baseline, not an
+  // actual print DPI anyone asked for).
+  const [dpi, setDpi] = useState(300);
   const [quality, setQuality] = useState(0.9);
   const [includeBleed, setIncludeBleed] = useState(false);
   const [includeMarks, setIncludeMarks] = useState(false);
@@ -51,13 +68,31 @@ export function ExportDialog({ artboards, activeArtboardId, exporting, onClose, 
       rangeTo: parseInt(rangeTo, 10) || artboards.length,
       selectedIds,
       format,
-      multiplier,
+      dpi,
+      // Document geometry is always stored at a fixed 96px = 1in (see
+      // lib/editor/units.ts), so this is the exact multiplier fabric's
+      // toDataURL needs to produce a raster output whose real DPI is
+      // genuinely `dpi` -- e.g. a 210mm-wide artboard is 793.7px
+      // internally; at dpi=300 this multiplier (3.125) scales that to
+      // 2480px, which really is 210mm at 300 DPI, not an approximation.
+      multiplier: Math.max(0.01, dpi) / PX_PER_INCH,
       quality,
       includeBleed: includeBleed || includeMarks, // marks only make sense outside the trim edge
       includeMarks,
       transparentBackground,
     });
   };
+
+  // The artboard this export's size preview reflects -- whatever single
+  // page "Current" would resolve to, so the dialog can show real,
+  // verifiable output pixel dimensions instead of an unlabeled multiplier.
+  const previewArtboard =
+    (rangeMode === 'current' ? artboards.find((a) => a.id === activeArtboardId) : undefined) ||
+    artboards.find((a) => a.id === activeArtboardId) ||
+    artboards[0];
+  const previewMultiplier = Math.max(0.01, dpi) / PX_PER_INCH;
+  const previewPxWidth = previewArtboard ? Math.round(previewArtboard.width * previewMultiplier) : null;
+  const previewPxHeight = previewArtboard ? Math.round(previewArtboard.height * previewMultiplier) : null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
@@ -148,18 +183,47 @@ export function ExportDialog({ artboards, activeArtboardId, exporting, onClose, 
             <div>
               <label className="text-xs font-semibold text-gray-500 block mb-2">Resolution</label>
               <div className="flex gap-2">
-                {[1, 2, 3].map((m) => (
+                {DPI_PRESETS.map((p) => (
                   <button
-                    key={m}
-                    onClick={() => setMultiplier(m)}
+                    key={p.dpi}
+                    onClick={() => setDpi(p.dpi)}
+                    title={p.hint}
                     className={`flex-1 text-sm border rounded py-1.5 ${
-                      multiplier === m ? 'bg-gray-900 text-white border-gray-900' : 'hover:bg-gray-50'
+                      dpi === p.dpi ? 'bg-gray-900 text-white border-gray-900' : 'hover:bg-gray-50'
                     }`}
                   >
-                    {m}x
+                    {p.label}
                   </button>
                 ))}
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  title="Custom DPI"
+                  aria-label="Custom DPI"
+                  key={`dpi-${dpi}`}
+                  defaultValue={DPI_PRESETS.some((p) => p.dpi === dpi) ? '' : String(dpi)}
+                  placeholder="Custom"
+                  className="w-20 text-sm border rounded py-1.5 px-2 text-center"
+                  onBlur={(e) => {
+                    const parsed = parseFloat(e.target.value);
+                    if (Number.isFinite(parsed) && parsed > 0) setDpi(Math.round(parsed));
+                    else e.target.value = DPI_PRESETS.some((p) => p.dpi === dpi) ? '' : String(dpi);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+                    if (e.key === 'Escape') {
+                      (e.target as HTMLInputElement).value = DPI_PRESETS.some((p) => p.dpi === dpi) ? '' : String(dpi);
+                      (e.target as HTMLInputElement).blur();
+                    }
+                  }}
+                />
               </div>
+              {previewArtboard && previewPxWidth && previewPxHeight && (
+                <p className="text-xs text-gray-400 mt-1.5">
+                  Output: {previewPxWidth} × {previewPxHeight}px at {dpi} DPI
+                  {rangeMode !== 'current' && artboards.length > 1 ? ` (${previewArtboard.name})` : ''}
+                </p>
+              )}
             </div>
           )}
 

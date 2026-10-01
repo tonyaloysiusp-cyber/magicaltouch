@@ -529,6 +529,8 @@ function PhotoStudioContent() {
         // real full-image filters, not a separate/fake implementation.
         { label: 'Blur (whole layer)', onClick: () => photoEditorRef.current?.applyFilterBlur() },
         { label: 'Sharpen (whole layer)', onClick: () => photoEditorRef.current?.applyFilterSharpen() },
+        { label: 'Motion Blur (whole layer)', onClick: () => photoEditorRef.current?.applyFilterMotionBlur() },
+        { label: 'Box Blur (whole layer)', onClick: () => photoEditorRef.current?.applyFilterBoxBlur() },
       ],
     },
     {

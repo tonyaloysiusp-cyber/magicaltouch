@@ -1,6 +1,7 @@
 'use client';
 
 import { Sparkles, Wand2 } from 'lucide-react';
+import { AnimatedDesignBackground } from './AnimatedDesignBackground';
 
 const SWATCHES = ['#EC1E79', '#8B6FC4', '#3FA9E8', '#4FC8C0', '#7ED33E', '#C4DA3B'];
 
@@ -12,8 +13,7 @@ const SWATCHES = ['#EC1E79', '#8B6FC4', '#3FA9E8', '#4FC8C0', '#7ED33E', '#C4DA3
 export function CreativeHeroArt() {
   return (
     <div className="relative h-[420px] sm:h-[480px] flex items-center justify-center overflow-hidden sm:overflow-visible">
-      <span className="pointer-events-none absolute w-72 h-72 sm:w-96 sm:h-96 rounded-full bg-[#3FA9E8]/20 blur-3xl -translate-x-16 -translate-y-10" />
-      <span className="pointer-events-none absolute w-64 h-64 sm:w-80 sm:h-80 rounded-full bg-[#7ED33E]/20 blur-3xl translate-x-24 translate-y-16" />
+      <AnimatedDesignBackground />
 
       {/* Back card: abstract teal/blue panel with a large ring motif */}
       <div className="absolute w-48 h-60 sm:w-56 sm:h-72 rounded-[2rem] -rotate-12 -translate-x-24 translate-y-4 shadow-[0_30px_60px_-25px_rgba(23,22,27,0.4)] bg-gradient-to-br from-[#3FA9E8] to-[#4FC8C0] overflow-hidden">

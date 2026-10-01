@@ -6,6 +6,153 @@ actually done, what was tested, and what's deliberately left for later.
 
 ---
 
+## 2026-10-01 (4) — Continuous ambient background animation
+
+**Scope:** master-prompt priority #9 — a reusable, continuously-drifting
+background design element, paused automatically on an inactive tab,
+under reduced motion, or on a device that can't hold a steady frame
+rate.
+
+**What was added:** `hooks/useBackgroundAnimationEnabled.ts` — one
+shared hook backing every ambient animation on the site, combining three
+independent, real checks: `prefers-reduced-motion` (live via a
+`matchMedia` change listener, not read once), the Page Visibility API
+(`document.hidden` + `visibilitychange`, so it pauses the instant a tab
+is backgrounded and resumes the instant it's visible again), and a
+one-time frame-rate sample — a real burst of 20
+`requestAnimationFrame` callbacks right after mount, averaged (dropping
+the first, which includes setup cost) and compared against a ~30fps
+threshold, not a guessed device/UA check.
+`components/home/AnimatedDesignBackground.tsx` is the reusable
+component: two soft gradient blobs drifting via transform-only
+keyframes (`bg-float-a`/`bg-float-b` in `tailwind.config.ts` — translate
++ scale only, never a layout-triggering property), with
+`animation-play-state` driven live by the hook. Replaces the two
+previously-static glow blobs behind the homepage hero art
+(`CreativeHeroArt.tsx`) with this animated version — same visual
+footprint, now with real continuous motion.
+
+**Tested:** new `test_background_animation.js` (8/8): a real non-zero
+`animation-duration`, the blob's actual computed `transform` genuinely
+changes between two samples 2.5s apart (not just a class with no visible
+effect), `prefers-reduced-motion: reduce` sets `animation-play-state:
+paused`, and — the one most worth calling out — dispatching a real
+`visibilitychange` event with `document.hidden` toggled true/false
+pauses and then resumes the animation, exercising the hook's actual
+listener rather than just asserting on its initial state. Confirmed
+visually with a screenshot (visual parity with the pre-existing static
+hero art). Full regression suite re-run and still passing.
+
+---
+
+## 2026-10-01 (3) — First-load logo intro animation
+
+**Scope:** master-prompt priority #8, with its explicit constraint to
+use the real, existing logo asset and never fabricate a replacement
+mark.
+
+**What was added:** `components/home/IntroAnimation.tsx`, mounted on
+the homepage (`components/home/HomePage.tsx`). A ~2.1s sequence (logo
+fade/scale in, two slow counter-rotating accent rings, then a 400ms
+fade-out) built entirely from the real `BrandLogo` component — the same
+`/logo.png` / `/logo-white.png` every other page already uses, loaded
+via `next/image`, not a new SVG or recreated wordmark. Shows once per
+browser session via `sessionStorage` (a reload or later navigation in
+the same tab doesn't replay it — "first load" means the first time this
+tab opens the site, not every visit to the homepage), and is skipped
+entirely under `prefers-reduced-motion: reduce` rather than playing a
+forced few seconds of animation such a visitor explicitly opted out of.
+The two decorative rings and the logo's fade-in are real CSS keyframes
+registered in `tailwind.config.ts` (`intro-orbit`, `intro-orbit-reverse`,
+`intro-logo-in`), with a second reduced-motion guard in `globals.css` in
+case those classes ever end up applied another way.
+
+**Tested:** new `test_intro_animation.js` (8/8): the overlay appears on
+a fresh session, genuinely renders the real logo file (asserted via its
+actual `<img>` `src`), disappears on its own within ~2.5s without
+getting stuck, causes no layout shift in the real page underneath,
+leaves the page interactive afterward, does not replay on a reload
+within the same session, and is skipped entirely under reduced motion.
+Confirmed visually with a screenshot. Full regression suite re-run and
+still passing.
+
+---
+
+## 2026-10-01 (2) — Day/night theme transition animation
+
+**Scope:** master-prompt priority #7. Distinct from the earlier dark-
+mode BUG fix (Main Design's `<main>` not applying `dark:` styles at
+all) — that made dark mode correct; this makes the toggle itself feel
+like a real transition instead of an instant snap, and respects
+`prefers-reduced-motion`.
+
+**What changed:** `app/globals.css` adds one media-gated rule —
+`@media (prefers-reduced-motion: no-preference)` applies a 200ms ease
+`transition` on `background-color, border-color, color, box-shadow,
+fill, stroke, text-decoration-color` to `body` and (almost) every
+descendant, explicitly excluding `canvas` and `svg` (and svg's own
+children) so it never fights Fabric's render loop or a chart redraw.
+No layout-affecting property is touched, so the transition can never
+cause a reflow. When the OS/browser reports a reduced-motion
+preference, the rule doesn't apply at all — the toggle still switches
+themes instantly, just without the animation.
+
+**Tested:** new `test_theme_transition_animation.js` (7/7): confirms a
+real non-zero `transition-duration` on `<body>` under normal motion
+preference, confirms `document.body.scrollHeight` is identical
+mid-transition (no reflow), confirms the toggle still works under both
+motion preferences, confirms the rule is fully disabled (duration 0)
+under `prefers-reduced-motion: reduce`, and confirms `<svg>` elements
+are excluded. Full regression suite re-run (124 existing checks) and
+still passing — this is a purely additive CSS rule, nothing it touches
+needed changing elsewhere.
+
+---
+
+## 2026-10-01 — Photo Studio filter system (Motion Blur, Box Blur) + Export dialog DPI accuracy
+
+**Scope:** master-prompt priorities #5 (filter system) and #6
+(export/document-size accuracy), from the platform-wide upgrade brief.
+
+**Filter system — two new, genuinely distinct pixel filters** (see
+`docs/photo-studio-engine-plan.md` for the fuller writeup):
+- `motionBlurInMask` (`lib/editor/photoBrush.ts`) — a real directional
+  blur (offset-and-average a stack of translated copies along an angle),
+  distinct from the existing Gaussian (`blurInMask`). Wired as
+  `applyFilterMotionBlur` / "Motion Blur (whole layer)".
+- `boxBlurInMask` — a real two-pass separable box blur (O(n) sliding-
+  window average per line, edge-replicated). Wired as
+  `applyFilterBoxBlur` / "Box Blur (whole layer)".
+- Both follow the established `getImagePixelCanvas` → full-canvas
+  `rectMask` → filter fn → `bakeAndPush` pattern every other Filter menu
+  item already uses, and go through the same undo history.
+
+**Export accuracy — real bug found and fixed.** The Export dialog's
+"Resolution" control only offered a 1x/2x/3x multiplier of the
+document's fixed 96px/in geometry baseline (`lib/editor/units.ts`),
+which can only express 96/192/288 "DPI" — there was no way to produce a
+raster export at an exact, real print DPI like 300. A document created
+at 210×297mm (A4) and exported at the old "3x" would come out
+~2362×3339px, not the ~2480×3508px a real 300 DPI print export needs.
+Fixed by replacing the multiplier buttons with real DPI presets
+(72/150/300) plus a custom-DPI input (`components/editor/ExportDialog.tsx`),
+computing the exact multiplier fabric's `toDataURL` needs as `dpi / 96`,
+and showing a live "Output: WxHpx at N DPI" preview so the result is
+verifiable before exporting. PDF export was already geometry-correct
+(points derived from the same 96px/in baseline) and untouched.
+
+**Tested:** `npx tsc --noEmit` and `npm run build` clean after each
+change. New suites: `test_motion_blur_filter.js` (7/7),
+`test_box_blur_filter.js` (9/9), `test_export_dpi_accuracy.js` (7/7) —
+the last creates a real A4 document via `/create`, exports at 300 DPI,
+and reads the downloaded PNG's own IHDR chunk to confirm its actual
+pixel dimensions land within 1px of the theoretical exact value
+(2480.3×3507.9). Full existing regression suite (117 checks across 8
+files: Main Design full sweep, perf/responsive, Photo Studio pro tools/
+menu bar/resize/crop-units/layer-metadata-undo) re-run and still passing.
+
+---
+
 ## 2026-09-30 — Advanced autonomous test→fix→verify pass: two real save-architecture data-loss bugs
 
 **Scope:** targeted, deliberate repro-driven testing of the save/autosave

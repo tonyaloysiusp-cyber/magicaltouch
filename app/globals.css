@@ -11,3 +11,44 @@
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* ---------------------------------------------------------------------
+   Day/night theme transition
+   ---------------------------------------------------------------------
+   Every page toggles a `dark` class on a wrapper element (see
+   hooks/useAppTheme.ts); most elements already pick up the new colors
+   via Tailwind's `dark:` variants. Without this, that swap is an
+   instant, jarring snap. This makes the swap a real, smooth animation
+   site-wide -- including on elements that don't already carry an
+   explicit `transition-colors` utility class -- without touching any
+   layout-affecting property (width/height/position/transform aren't
+   listed, so this can never cause a reflow or visual jump).
+
+   Scoped to color-ish properties only, and skips canvas/SVG drawing
+   surfaces (the Fabric.js stage, chart canvases) where this would fight
+   a render loop repainting many times a second for no visible benefit.
+   Respects prefers-reduced-motion: reduce by not applying at all, the
+   same contract the rest of this codebase's animations use. */
+@media (prefers-reduced-motion: no-preference) {
+  :root {
+    --theme-transition-duration: 200ms;
+  }
+  body,
+  body *:not(canvas):not(svg):not(svg *) {
+    transition-property: background-color, border-color, color, box-shadow, fill, stroke, text-decoration-color;
+    transition-duration: var(--theme-transition-duration);
+    transition-timing-function: ease;
+  }
+}
+
+/* IntroAnimation (components/home/IntroAnimation.tsx) already skips
+   rendering the whole overlay under reduced motion; this is a second
+   line of defense in case the animation classes end up applied to an
+   element some other way. */
+@media (prefers-reduced-motion: reduce) {
+  .animate-intro-orbit,
+  .animate-intro-orbit-reverse,
+  .animate-intro-logo-in {
+    animation: none !important;
+  }
+}
