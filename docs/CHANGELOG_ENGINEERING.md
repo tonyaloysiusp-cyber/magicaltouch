@@ -6,6 +6,39 @@ actually done, what was tested, and what's deliberately left for later.
 
 ---
 
+## 2026-10-01 (3) — First-load logo intro animation
+
+**Scope:** master-prompt priority #8, with its explicit constraint to
+use the real, existing logo asset and never fabricate a replacement
+mark.
+
+**What was added:** `components/home/IntroAnimation.tsx`, mounted on
+the homepage (`components/home/HomePage.tsx`). A ~2.1s sequence (logo
+fade/scale in, two slow counter-rotating accent rings, then a 400ms
+fade-out) built entirely from the real `BrandLogo` component — the same
+`/logo.png` / `/logo-white.png` every other page already uses, loaded
+via `next/image`, not a new SVG or recreated wordmark. Shows once per
+browser session via `sessionStorage` (a reload or later navigation in
+the same tab doesn't replay it — "first load" means the first time this
+tab opens the site, not every visit to the homepage), and is skipped
+entirely under `prefers-reduced-motion: reduce` rather than playing a
+forced few seconds of animation such a visitor explicitly opted out of.
+The two decorative rings and the logo's fade-in are real CSS keyframes
+registered in `tailwind.config.ts` (`intro-orbit`, `intro-orbit-reverse`,
+`intro-logo-in`), with a second reduced-motion guard in `globals.css` in
+case those classes ever end up applied another way.
+
+**Tested:** new `test_intro_animation.js` (8/8): the overlay appears on
+a fresh session, genuinely renders the real logo file (asserted via its
+actual `<img>` `src`), disappears on its own within ~2.5s without
+getting stuck, causes no layout shift in the real page underneath,
+leaves the page interactive afterward, does not replay on a reload
+within the same session, and is skipped entirely under reduced motion.
+Confirmed visually with a screenshot. Full regression suite re-run and
+still passing.
+
+---
+
 ## 2026-10-01 (2) — Day/night theme transition animation
 
 **Scope:** master-prompt priority #7. Distinct from the earlier dark-

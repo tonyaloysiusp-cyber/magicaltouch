@@ -2,6 +2,7 @@
 
 import { Fraunces, Inter } from 'next/font/google';
 import { useAppTheme } from '@/hooks/useAppTheme';
+import { IntroAnimation } from './IntroAnimation';
 import { Navbar } from './Navbar';
 import { Hero } from './Hero';
 import { BrandStory } from './BrandStory';
@@ -41,6 +42,7 @@ export function HomePage() {
   // (including <main>) that actually uses a `dark:` variant.
   return (
     <div className={theme === 'dark' ? 'dark' : ''}>
+      <IntroAnimation theme={theme} />
       <main
         className={`${display.variable} ${body.variable} font-[family-name:var(--font-body)] bg-white dark:bg-[#111015] text-[#17161B] dark:text-[#F3F1F7] transition-colors duration-300`}
       >

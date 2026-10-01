@@ -40,3 +40,15 @@
     transition-timing-function: ease;
   }
 }
+
+/* IntroAnimation (components/home/IntroAnimation.tsx) already skips
+   rendering the whole overlay under reduced motion; this is a second
+   line of defense in case the animation classes end up applied to an
+   element some other way. */
+@media (prefers-reduced-motion: reduce) {
+  .animate-intro-orbit,
+  .animate-intro-orbit-reverse,
+  .animate-intro-logo-in {
+    animation: none !important;
+  }
+}
