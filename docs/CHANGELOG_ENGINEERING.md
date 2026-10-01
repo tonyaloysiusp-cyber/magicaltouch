@@ -6,6 +6,37 @@ actually done, what was tested, and what's deliberately left for later.
 
 ---
 
+## 2026-10-01 (2) — Day/night theme transition animation
+
+**Scope:** master-prompt priority #7. Distinct from the earlier dark-
+mode BUG fix (Main Design's `<main>` not applying `dark:` styles at
+all) — that made dark mode correct; this makes the toggle itself feel
+like a real transition instead of an instant snap, and respects
+`prefers-reduced-motion`.
+
+**What changed:** `app/globals.css` adds one media-gated rule —
+`@media (prefers-reduced-motion: no-preference)` applies a 200ms ease
+`transition` on `background-color, border-color, color, box-shadow,
+fill, stroke, text-decoration-color` to `body` and (almost) every
+descendant, explicitly excluding `canvas` and `svg` (and svg's own
+children) so it never fights Fabric's render loop or a chart redraw.
+No layout-affecting property is touched, so the transition can never
+cause a reflow. When the OS/browser reports a reduced-motion
+preference, the rule doesn't apply at all — the toggle still switches
+themes instantly, just without the animation.
+
+**Tested:** new `test_theme_transition_animation.js` (7/7): confirms a
+real non-zero `transition-duration` on `<body>` under normal motion
+preference, confirms `document.body.scrollHeight` is identical
+mid-transition (no reflow), confirms the toggle still works under both
+motion preferences, confirms the rule is fully disabled (duration 0)
+under `prefers-reduced-motion: reduce`, and confirms `<svg>` elements
+are excluded. Full regression suite re-run (124 existing checks) and
+still passing — this is a purely additive CSS rule, nothing it touches
+needed changing elsewhere.
+
+---
+
 ## 2026-10-01 — Photo Studio filter system (Motion Blur, Box Blur) + Export dialog DPI accuracy
 
 **Scope:** master-prompt priorities #5 (filter system) and #6
