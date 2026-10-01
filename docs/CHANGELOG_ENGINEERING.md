@@ -6,6 +6,50 @@ actually done, what was tested, and what's deliberately left for later.
 
 ---
 
+## 2026-10-01 — Photo Studio filter system (Motion Blur, Box Blur) + Export dialog DPI accuracy
+
+**Scope:** master-prompt priorities #5 (filter system) and #6
+(export/document-size accuracy), from the platform-wide upgrade brief.
+
+**Filter system — two new, genuinely distinct pixel filters** (see
+`docs/photo-studio-engine-plan.md` for the fuller writeup):
+- `motionBlurInMask` (`lib/editor/photoBrush.ts`) — a real directional
+  blur (offset-and-average a stack of translated copies along an angle),
+  distinct from the existing Gaussian (`blurInMask`). Wired as
+  `applyFilterMotionBlur` / "Motion Blur (whole layer)".
+- `boxBlurInMask` — a real two-pass separable box blur (O(n) sliding-
+  window average per line, edge-replicated). Wired as
+  `applyFilterBoxBlur` / "Box Blur (whole layer)".
+- Both follow the established `getImagePixelCanvas` → full-canvas
+  `rectMask` → filter fn → `bakeAndPush` pattern every other Filter menu
+  item already uses, and go through the same undo history.
+
+**Export accuracy — real bug found and fixed.** The Export dialog's
+"Resolution" control only offered a 1x/2x/3x multiplier of the
+document's fixed 96px/in geometry baseline (`lib/editor/units.ts`),
+which can only express 96/192/288 "DPI" — there was no way to produce a
+raster export at an exact, real print DPI like 300. A document created
+at 210×297mm (A4) and exported at the old "3x" would come out
+~2362×3339px, not the ~2480×3508px a real 300 DPI print export needs.
+Fixed by replacing the multiplier buttons with real DPI presets
+(72/150/300) plus a custom-DPI input (`components/editor/ExportDialog.tsx`),
+computing the exact multiplier fabric's `toDataURL` needs as `dpi / 96`,
+and showing a live "Output: WxHpx at N DPI" preview so the result is
+verifiable before exporting. PDF export was already geometry-correct
+(points derived from the same 96px/in baseline) and untouched.
+
+**Tested:** `npx tsc --noEmit` and `npm run build` clean after each
+change. New suites: `test_motion_blur_filter.js` (7/7),
+`test_box_blur_filter.js` (9/9), `test_export_dpi_accuracy.js` (7/7) —
+the last creates a real A4 document via `/create`, exports at 300 DPI,
+and reads the downloaded PNG's own IHDR chunk to confirm its actual
+pixel dimensions land within 1px of the theoretical exact value
+(2480.3×3507.9). Full existing regression suite (117 checks across 8
+files: Main Design full sweep, perf/responsive, Photo Studio pro tools/
+menu bar/resize/crop-units/layer-metadata-undo) re-run and still passing.
+
+---
+
 ## 2026-09-30 — Advanced autonomous test→fix→verify pass: two real save-architecture data-loss bugs
 
 **Scope:** targeted, deliberate repro-driven testing of the save/autosave
