@@ -50,6 +50,7 @@ import {
   sharpenInMask,
   spongeInMask,
   motionBlurInMask,
+  boxBlurInMask,
   LevelsSettings,
   DEFAULT_LEVELS,
   HueSaturationSettings,
@@ -174,6 +175,7 @@ export interface PhotoEditorHandle {
   applyFilterBlur: () => void;
   applyFilterSharpen: () => void;
   applyFilterMotionBlur: () => void;
+  applyFilterBoxBlur: () => void;
 }
 
 type PhotoTool =
@@ -860,6 +862,7 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
     applyFilterBlur,
     applyFilterSharpen,
     applyFilterMotionBlur,
+    applyFilterBoxBlur,
   }));
   useEffect(() => {
     onHistoryChange?.(canUndo, canRedo);
@@ -2391,6 +2394,16 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
     const pixelCanvas = getImagePixelCanvas(img);
     const full = rectMask(img.width, img.height, 0, 0, img.width, img.height);
     bakeAndPush(motionBlurInMask(pixelCanvas, full, 0, 24));
+  };
+  // A real separable box blur (boxBlurInMask) — distinct sliding-window
+  // average math from both blurInMask's Gaussian and motionBlurInMask's
+  // directional streak, using the current blur-radius amount.
+  const applyFilterBoxBlur = () => {
+    const img = imageRef.current;
+    if (!img) return;
+    const pixelCanvas = getImagePixelCanvas(img);
+    const full = rectMask(img.width, img.height, 0, 0, img.width, img.height);
+    bakeAndPush(boxBlurInMask(pixelCanvas, full, blurRadiusRef.current));
   };
 
   // ---- Gradient: click-drag draws a live preview line; releasing bakes

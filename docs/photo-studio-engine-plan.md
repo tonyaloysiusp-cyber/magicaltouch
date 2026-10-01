@@ -1,6 +1,6 @@
 # Photo Studio: professional-editor upgrade plan
 
-## Status: Phase 1, slice 2 of 8 phases complete; filter system: Motion Blur added
+## Status: Phase 1, slice 2 of 8 phases complete; filter system: Motion Blur + Box Blur added
 
 This tracks a large, explicitly-requested upgrade of `/photo-studio`
 (`components/photoEditor/PhotoEditorWorkspace.tsx`) toward professional,
@@ -140,11 +140,22 @@ uploaded sharp-edge PNG smears into neighboring pixels within the blur's
 reach, pixels outside that reach stay untouched, and Undo genuinely
 reverses the bake.
 
+Also added `boxBlurInMask` — a real two-pass (horizontal then vertical)
+separable box blur using an O(n) sliding-window average per line, edge-
+replicated at the borders. This is a third, genuinely distinct blur
+algorithm (not a third label over the same math as the Gaussian or the
+directional streak): wired as `applyFilterBoxBlur` / "Box Blur (whole
+layer)" the same way. Verified with `test_box_blur_filter.js` (9 checks):
+a real uploaded white-square-on-black PNG spreads brightness past BOTH
+its right and bottom edges (confirming the blur is genuinely two-
+dimensional, not just a horizontal pass left unfinished), a far corner
+outside the blur's reach stays untouched, and Undo reverses it.
+
 ## Regression suite this work must keep passing
 
 `test_photo_studio_menubar.js` (17 checks), `test_photo_studio_pro_tools.js`
-(12 checks), `test_motion_blur_filter.js` (7 checks), plus the full-platform
-sweep and Main Design suites this engagement has already built — see
-`docs/CHANGELOG_ENGINEERING.md` for the running total. Re-run all of
-them, not just the ones that look related, after any slice that touches
-`PhotoEditorWorkspace.tsx` itself.
+(12 checks), `test_motion_blur_filter.js` (7 checks), `test_box_blur_filter.js`
+(9 checks), plus the full-platform sweep and Main Design suites this
+engagement has already built — see `docs/CHANGELOG_ENGINEERING.md` for
+the running total. Re-run all of them, not just the ones that look
+related, after any slice that touches `PhotoEditorWorkspace.tsx` itself.
