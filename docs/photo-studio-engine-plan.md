@@ -1,6 +1,6 @@
 # Photo Studio: professional-editor upgrade plan
 
-## Status: Phase 1, slice 1 of 8 phases
+## Status: Phase 1, slice 2 of 8 phases complete
 
 This tracks a large, explicitly-requested upgrade of `/photo-studio`
 (`components/photoEditor/PhotoEditorWorkspace.tsx`) toward professional,
@@ -87,9 +87,38 @@ build). The existing per-layer, snapshot-based undo (`pushLayerHistory`,
 storage — corrected from an earlier, inaccurate claim in this same pass
 that it was unbounded) stays exactly as-is until a specific tool is
 migrated onto `CommandManager` in a later, carefully regression-tested
-slice. Migrating tools one at a time (starting with the simplest —
-opacity/visibility/rename/reorder — before anything raster/pixel-based)
-is the deliberate next step, not a single big-bang swap.
+slice.
+
+## Phase 1, slice 2: layer metadata is now undoable
+
+Started as "migrate opacity/visibility/rename/reorder onto
+`CommandManager`" per slice 1's stated plan — changed on contact: these
+operations pushed **no history entry at all** before this slice
+("only pixel bakes do," per a prior comment in the file), so the real
+task was making them undoable for the first time, not refactoring an
+existing undo path. Introducing a second, independent `CommandManager`
+stack running alongside the existing per-layer pixel-snapshot stack
+would have made undo/redo ordering incorrect whenever the two kinds of
+edits interleave (two separate stacks can't represent "undo in the
+exact order the user actually did things"). Extended the existing,
+proven per-layer mechanism instead: visibility, lock, rename, skew,
+and blend-mode changes now each push a real history entry (opacity is
+debounced to one entry per drag gesture, not one per slider tick, to
+avoid a full-image re-encode on every tick). Reorder is NOT covered —
+it's canvas-wide, not per-layer, and genuinely needs the
+`CommandManager` to do correctly; left as a stated gap.
+
+Found and fixed two real bugs surfaced while building this (both
+confirmed with live repros, documented in the commit): the two places
+that seed a layer's first history entry via a raw object literal
+(instead of through `pushLayerHistory`) didn't carry the new fields,
+so undoing the very first action on a layer silently did nothing;
+and `duplicateActiveLayer` never copied a source layer's skew, blend
+mode, or lock state to the copy.
+
+`CommandManager`/`Command`/`PhotoDocument` from slice 1 remain
+unwired — still the right foundation for reorder's undo and for later
+phases, just not the mechanism this particular gap needed.
 
 ## Regression suite this work must keep passing
 

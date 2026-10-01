@@ -344,6 +344,20 @@ interface HistoryEntry {
   maskDataUrl: string | null;
   maskEnabled: boolean;
   maskInverted: boolean;
+  // Per-layer metadata captured alongside the pixel snapshot, added so
+  // visibility/lock/rename/skew/blend-mode changes become genuinely
+  // undoable (they previously pushed no history entry at all -- "only
+  // pixel bakes do", per this file's own prior comment -- a real gap
+  // flagged in docs/photo-studio-engine-plan.md Phase 1). Optional so
+  // old entries already on a live __historyStack (created before this
+  // change, e.g. mid-session) still restore without these fields.
+  opacity?: number;
+  visible?: boolean;
+  locked?: boolean;
+  layerName?: string;
+  skewX?: number;
+  skewY?: number;
+  blendMode?: string;
 }
 
 let layerIdCounter = 0;
@@ -729,6 +743,13 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
       maskDataUrl: layer.__maskData ? maskToCanvas(layer.__maskData).toDataURL('image/png') : null,
       maskEnabled: !!layer.__maskEnabled,
       maskInverted: !!layer.__maskInverted,
+      opacity: layer.opacity ?? 1,
+      visible: layer.visible !== false,
+      locked: !!layer.__locked,
+      layerName: layer.__layerName,
+      skewX: layer.skewX || 0,
+      skewY: layer.skewY || 0,
+      blendMode: layer.globalCompositeOperation || 'normal',
     };
     const stack: HistoryEntry[] = layer.__historyStack || [];
     const trimmed = stack.slice(0, (layer.__historyIndex ?? -1) + 1);
@@ -766,7 +787,33 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
       layer.__maskInverted = entry.maskInverted;
       refreshMaskClip(layer, F);
       applyAdjustments(layer, F, layer.__adjustments || DEFAULT_ADJUSTMENTS);
-      layer.set({ left: 0, top: 0 });
+      // Falls back to a fixed pristine default (not "whatever the layer
+      // currently has") when an entry lacks one of these fields -- the
+      // seed entry every layer starts with used to be exactly this
+      // shape (written as a raw object literal, not through
+      // pushLayerHistory), so falling back to the CURRENT live value
+      // made restoring to that very first entry a silent no-op for
+      // every one of these fields: undo would move __historyIndex back
+      // to 0 but leave visibility/lock/skew/blend/opacity completely
+      // unchanged, confirmed with a real repro (Hide -> Undo left the
+      // layer hidden). Both seed-construction sites now also write
+      // these fields explicitly, so this fallback is a safety net for
+      // any entry that still predates this change, not something later
+      // restores should normally need.
+      layer.set({
+        left: 0,
+        top: 0,
+        opacity: entry.opacity ?? 1,
+        visible: entry.visible ?? true,
+        skewX: entry.skewX ?? 0,
+        skewY: entry.skewY ?? 0,
+        globalCompositeOperation: (entry.blendMode ?? 'normal') === 'normal' ? undefined : entry.blendMode,
+      });
+      layer.__locked = entry.locked ?? false;
+      layer.locked = layer.__locked;
+      layer.selectable = !layer.__locked;
+      layer.evented = !layer.__locked;
+      if (entry.layerName !== undefined) layer.__layerName = entry.layerName;
       layer.setCoords();
       layer.__historyIndex = index;
       if (imageRef.current === layer) syncUiFromActiveLayer(layer);
@@ -931,7 +978,20 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
         img.__maskData = null;
         img.__maskEnabled = true;
         img.__maskInverted = false;
-        img.__historyStack = [{ dataUrl: startDataUrl, cropRect: startRect, maskDataUrl: null, maskEnabled: true, maskInverted: false }] as HistoryEntry[];
+        img.__historyStack = [{
+          dataUrl: startDataUrl,
+          cropRect: startRect,
+          maskDataUrl: null,
+          maskEnabled: true,
+          maskInverted: false,
+          opacity: img.opacity ?? 1,
+          visible: true,
+          locked: false,
+          layerName: img.__layerName,
+          skewX: 0,
+          skewY: 0,
+          blendMode: 'normal',
+        }] as HistoryEntry[];
         img.__historyIndex = 0;
         applyAdjustments(img, F, img.__adjustments);
         canvas.add(img);
@@ -961,6 +1021,14 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
         scaleY: 1,
         opacity: layer.opacity,
         visible: layer.visible,
+        // Duplicate previously silently dropped a source layer's skew and
+        // blend mode (the copy always came out unskewed and Normal, even
+        // if the original had been skewed or set to Multiply) -- a real,
+        // separate bug found while adding history support for these same
+        // properties above.
+        skewX: layer.skewX || 0,
+        skewY: layer.skewY || 0,
+        globalCompositeOperation: layer.globalCompositeOperation,
         originX: 'left',
         originY: 'top',
         hasControls: false,
@@ -980,7 +1048,26 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
       img.__maskData = layer.__maskData ? cloneMask(layer.__maskData) : null;
       img.__maskEnabled = layer.__maskEnabled;
       img.__maskInverted = layer.__maskInverted;
-      img.__historyStack = [{ dataUrl, cropRect: img.__cropRect, maskDataUrl: layer.__maskData ? maskToCanvas(layer.__maskData).toDataURL('image/png') : null, maskEnabled: img.__maskEnabled, maskInverted: img.__maskInverted }] as HistoryEntry[];
+      // Locked is also a real Fabric selectability property, not just the
+      // __locked flag -- same "copy the source's own state" fix as above.
+      img.__locked = !!layer.__locked;
+      img.locked = img.__locked;
+      img.selectable = !img.__locked;
+      img.evented = !img.__locked;
+      img.__historyStack = [{
+        dataUrl,
+        cropRect: img.__cropRect,
+        maskDataUrl: layer.__maskData ? maskToCanvas(layer.__maskData).toDataURL('image/png') : null,
+        maskEnabled: img.__maskEnabled,
+        maskInverted: img.__maskInverted,
+        opacity: img.opacity ?? 1,
+        visible: img.visible !== false,
+        locked: img.__locked,
+        layerName: img.__layerName,
+        skewX: img.skewX || 0,
+        skewY: img.skewY || 0,
+        blendMode: img.globalCompositeOperation || 'normal',
+      }] as HistoryEntry[];
       img.__historyIndex = 0;
       refreshMaskClip(img, F);
       // Stack the duplicate directly above the original.
@@ -1015,10 +1102,17 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
     bump();
   };
 
+  // Discrete, single-fire layer-metadata changes -- each pushes its own
+  // history entry immediately (via pushLayerHistory, extended above to
+  // capture these fields) so they're genuinely undoable, a real gap this
+  // closes: these previously pushed NO history entry at all ("only pixel
+  // bakes do"). Safe to push on every call since each is one user action
+  // (a click or a committed blur/Enter), not a continuous stream -- unlike
+  // opacity below, which needs debouncing for exactly that reason.
   const toggleLayerVisible = (layer: any) => {
     layer.set({ visible: layer.visible === false });
     fabricCanvasRef.current?.requestRenderAll();
-    bump();
+    pushLayerHistory(layer, imageObjectToDataURL(layer), layer.__cropRect);
   };
   const toggleLayerLock = (layer: any) => {
     const nextLocked = !layer.__locked;
@@ -1030,40 +1124,63 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
       fabricCanvasRef.current.discardActiveObject();
     }
     fabricCanvasRef.current?.requestRenderAll();
-    bump();
+    pushLayerHistory(layer, imageObjectToDataURL(layer), layer.__cropRect);
   };
   const renameLayer = (layer: any, name: string) => {
     layer.__layerName = name;
-    bump();
+    pushLayerHistory(layer, imageObjectToDataURL(layer), layer.__cropRect);
   };
+  // Opacity is driven by a live <input type="range">, which fires on
+  // every drag tick, not just on release -- pushing a full-image history
+  // snapshot (a real PNG re-encode) per tick would be a genuine
+  // performance regression (exactly what the "debounce adjustment
+  // sliders" / "do not block the main thread" requirement warns about).
+  // The opacity change itself still applies and re-renders live on every
+  // tick; only the HISTORY PUSH is debounced to once per drag gesture, a
+  // short idle period after the last tick.
+  const opacityHistoryTimerRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const setLayerOpacity = (layer: any, opacity: number) => {
     layer.set({ opacity });
     fabricCanvasRef.current?.requestRenderAll();
     bump();
+    const key = layer.__layerId || 'unknown';
+    const timers = opacityHistoryTimerRef.current;
+    if (timers[key]) clearTimeout(timers[key]);
+    timers[key] = setTimeout(() => {
+      delete timers[key];
+      pushLayerHistory(layer, imageObjectToDataURL(layer), layer.__cropRect);
+    }, 400);
   };
   // Real skew via Fabric's own skewX/skewY object properties (the same
   // primitive its corner-drag transform controls would use) -- not a CSS
-  // filter or a cosmetic label. Matches setLayerOpacity's own precedent:
-  // a live object-property change re-renders and bumps immediately, with
-  // no separate undo/redo entry (opacity/rename/reorder don't push one
-  // either in this workspace -- only pixel bakes do).
+  // filter or a cosmetic label. Committed only on blur/Enter (see the
+  // Skew panel's inputs), so -- like visibility/lock/rename above --
+  // every call here is one discrete user action, safe to push history on
+  // immediately.
   const setLayerSkewX = (layer: any, skewX: number) => {
     layer.set({ skewX });
     layer.setCoords();
     fabricCanvasRef.current?.requestRenderAll();
-    bump();
+    pushLayerHistory(layer, imageObjectToDataURL(layer), layer.__cropRect);
   };
   const setLayerSkewY = (layer: any, skewY: number) => {
     layer.set({ skewY });
     layer.setCoords();
     fabricCanvasRef.current?.requestRenderAll();
-    bump();
+    pushLayerHistory(layer, imageObjectToDataURL(layer), layer.__cropRect);
   };
   const setLayerBlendMode = (layer: any, blendMode: string) => {
     layer.set({ globalCompositeOperation: blendMode === 'normal' ? undefined : blendMode });
     fabricCanvasRef.current?.requestRenderAll();
-    bump();
+    pushLayerHistory(layer, imageObjectToDataURL(layer), layer.__cropRect);
   };
+  // Not yet undoable, unlike the metadata operations above -- stacking
+  // order is a canvas-wide property, not one this file's PER-LAYER
+  // history mechanism (pushLayerHistory/__historyStack) can represent at
+  // all. Making it undoable needs a document-wide history instead of a
+  // per-layer one (the planned direction: components/photoEditor/engine/
+  // CommandManager.ts, already built, not yet wired in here). Left as a
+  // known, stated gap rather than bolted on incorrectly.
   const reorderLayers = (fromIndex: number, toIndex: number) => {
     const canvas = fabricCanvasRef.current;
     const displayLayers = getLayers().slice().reverse(); // top-of-stack first, matching LayersPanel's convention
