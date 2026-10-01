@@ -1348,6 +1348,31 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
   // freeform drag) — independent of the draggable crop rect's own
   // resize handles; "Set Size" below reads these and resizes the rect.
   const [cropSizeInput, setCropSizeInput] = useState<{ w: string; h: string }>({ w: '', h: '' });
+  // Global display-unit preference (lib/editor/units.ts) -- declared here,
+  // ahead of both the Crop and Resize sections below, since it's the ONE
+  // shared unit state both of them read/write (switching it in either
+  // place changes both, and both need it in scope; Crop's own section
+  // comes first in the component body).
+  const [resizeUnit, setResizeUnit] = useDisplayUnit();
+  // cropSizeInput.w/h stay raw PIXEL strings (same convention as
+  // resizeInput above) -- these two just format/parse them against
+  // whichever unit the shared global preference is set to (resizeUnit:
+  // the SAME useDisplayUnit() state the Resize dialog uses, deliberately
+  // reused rather than a second independent unit state, per the "one
+  // centralized unit system" requirement -- switching it in either place
+  // changes both). A real image layer's physical size depends on ITS OWN
+  // dpi, same as Resize.
+  const cropDpiNum = () => Math.max(1, imageRef.current?.__dpi || 300);
+  const displayCropValue = (pxStr: string) => {
+    const px = parseFloat(pxStr);
+    if (!Number.isFinite(px)) return '';
+    return resizeUnit === 'px' ? String(Math.round(px)) : pxToPhysicalUnit(px, resizeUnit, cropDpiNum()).toFixed(2);
+  };
+  const parseCropDisplayValue = (displayValue: string): string => {
+    const v = parseFloat(displayValue);
+    if (!Number.isFinite(v)) return displayValue;
+    return resizeUnit === 'px' ? String(Math.round(v)) : String(Math.round(physicalUnitToPx(v, resizeUnit, cropDpiNum())));
+  };
   const startCrop = () => {
     const canvas = fabricCanvasRef.current;
     const F = fabricModRef.current;
@@ -1668,10 +1693,6 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
   // DISPLAYED and how a typed value is interpreted; switching it never
   // itself changes the document's actual pixel size.
   const [resizeInput, setResizeInput] = useState({ w: '', h: '', dpi: '300', lockAspect: true });
-  // Global display-unit preference (lib/editor/units.ts), shared live with
-  // Main Design and Photo Studio's own document-creation screen -- not a
-  // state local to this dialog.
-  const [resizeUnit, setResizeUnit] = useDisplayUnit();
 
   const resizeDpiNum = () => Math.max(1, parseFloat(resizeInput.dpi) || 300);
   const displayResizeValue = (pxStr: string) => {
@@ -2882,22 +2903,57 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
           {activeTool === 'crop' && (
             <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-white rounded-full shadow px-3 py-1.5">
               <input
-                type="number"
-                min={1}
-                value={cropSizeInput.w}
-                onChange={(e) => setCropSizeInput((s) => ({ ...s, w: e.target.value }))}
+                type="text"
+                inputMode="decimal"
+                // Same uncontrolled + key-remount + onBlur-commit pattern
+                // as the Resize dialog's width/height above, for the same
+                // reason: a controlled input that reformats on every
+                // keystroke breaks typing a decimal value in a non-px
+                // unit. cropSizeInput.w/h stay raw px internally;
+                // displayCropValue/parseCropDisplayValue convert at the
+                // boundary.
+                key={`cw-${resizeUnit}-${cropSizeInput.w}`}
+                defaultValue={displayCropValue(cropSizeInput.w)}
+                onBlur={(e) => setCropSizeInput((s) => ({ ...s, w: parseCropDisplayValue(e.target.value) }))}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+                  if (e.key === 'Escape') {
+                    (e.target as HTMLInputElement).value = displayCropValue(cropSizeInput.w);
+                    (e.target as HTMLInputElement).blur();
+                  }
+                }}
                 className="w-16 text-xs border rounded px-1.5 py-1"
-                title="Crop width (px)"
+                title={`Crop width (${resizeUnit})`}
               />
               <span className="text-xs text-gray-400">×</span>
               <input
-                type="number"
-                min={1}
-                value={cropSizeInput.h}
-                onChange={(e) => setCropSizeInput((s) => ({ ...s, h: e.target.value }))}
+                type="text"
+                inputMode="decimal"
+                key={`ch-${resizeUnit}-${cropSizeInput.h}`}
+                defaultValue={displayCropValue(cropSizeInput.h)}
+                onBlur={(e) => setCropSizeInput((s) => ({ ...s, h: parseCropDisplayValue(e.target.value) }))}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+                  if (e.key === 'Escape') {
+                    (e.target as HTMLInputElement).value = displayCropValue(cropSizeInput.h);
+                    (e.target as HTMLInputElement).blur();
+                  }
+                }}
                 className="w-16 text-xs border rounded px-1.5 py-1"
-                title="Crop height (px)"
+                title={`Crop height (${resizeUnit})`}
               />
+              <select
+                value={resizeUnit}
+                onChange={(e) => setResizeUnit(e.target.value as DocUnit)}
+                className="text-[11px] border rounded px-1 py-1"
+                title="Display unit — Set Size still resizes the real pixel crop rect"
+              >
+                <option value="px">px</option>
+                <option value="in">in</option>
+                <option value="cm">cm</option>
+                <option value="mm">mm</option>
+                <option value="pt">pt</option>
+              </select>
               <button onClick={applyCropSizeInput} className="text-xs px-2.5 py-1 rounded-full border hover:bg-gray-50">Set Size</button>
               <div className="w-px h-4 bg-gray-200" />
               <button onClick={cancelCrop} className="text-xs px-3 py-1 rounded-full border">Cancel Crop</button>
