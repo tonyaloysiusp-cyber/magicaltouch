@@ -6,6 +6,45 @@ actually done, what was tested, and what's deliberately left for later.
 
 ---
 
+## 2026-10-01 (4) — Continuous ambient background animation
+
+**Scope:** master-prompt priority #9 — a reusable, continuously-drifting
+background design element, paused automatically on an inactive tab,
+under reduced motion, or on a device that can't hold a steady frame
+rate.
+
+**What was added:** `hooks/useBackgroundAnimationEnabled.ts` — one
+shared hook backing every ambient animation on the site, combining three
+independent, real checks: `prefers-reduced-motion` (live via a
+`matchMedia` change listener, not read once), the Page Visibility API
+(`document.hidden` + `visibilitychange`, so it pauses the instant a tab
+is backgrounded and resumes the instant it's visible again), and a
+one-time frame-rate sample — a real burst of 20
+`requestAnimationFrame` callbacks right after mount, averaged (dropping
+the first, which includes setup cost) and compared against a ~30fps
+threshold, not a guessed device/UA check.
+`components/home/AnimatedDesignBackground.tsx` is the reusable
+component: two soft gradient blobs drifting via transform-only
+keyframes (`bg-float-a`/`bg-float-b` in `tailwind.config.ts` — translate
++ scale only, never a layout-triggering property), with
+`animation-play-state` driven live by the hook. Replaces the two
+previously-static glow blobs behind the homepage hero art
+(`CreativeHeroArt.tsx`) with this animated version — same visual
+footprint, now with real continuous motion.
+
+**Tested:** new `test_background_animation.js` (8/8): a real non-zero
+`animation-duration`, the blob's actual computed `transform` genuinely
+changes between two samples 2.5s apart (not just a class with no visible
+effect), `prefers-reduced-motion: reduce` sets `animation-play-state:
+paused`, and — the one most worth calling out — dispatching a real
+`visibilitychange` event with `document.hidden` toggled true/false
+pauses and then resumes the animation, exercising the hook's actual
+listener rather than just asserting on its initial state. Confirmed
+visually with a screenshot (visual parity with the pre-existing static
+hero art). Full regression suite re-run and still passing.
+
+---
+
 ## 2026-10-01 (3) — First-load logo intro animation
 
 **Scope:** master-prompt priority #8, with its explicit constraint to

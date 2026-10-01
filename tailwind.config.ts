@@ -42,11 +42,26 @@ const config: Config = {
           '0%': { opacity: '0', transform: 'scale(0.92) translateY(4px)' },
           '100%': { opacity: '1', transform: 'scale(1) translateY(0)' },
         },
+        // Continuous ambient background drift
+        // (components/home/AnimatedDesignBackground.tsx) -- transform
+        // only (translate + scale), never a property that triggers
+        // layout, so this is cheap for the compositor to run
+        // indefinitely.
+        'bg-float-a': {
+          '0%, 100%': { transform: 'translate(-4rem, -2.5rem) scale(1)' },
+          '50%': { transform: 'translate(-2.5rem, -3.9rem) scale(1.05)' },
+        },
+        'bg-float-b': {
+          '0%, 100%': { transform: 'translate(6rem, 4rem) scale(1)' },
+          '50%': { transform: 'translate(7.2rem, 2.8rem) scale(0.96)' },
+        },
       },
       animation: {
         'intro-orbit': 'intro-orbit 3s linear infinite',
         'intro-orbit-reverse': 'intro-orbit-reverse 4s linear infinite',
         'intro-logo-in': 'intro-logo-in 0.7s ease-out 0.15s forwards',
+        'bg-float-a': 'bg-float-a 10s ease-in-out infinite',
+        'bg-float-b': 'bg-float-b 12s ease-in-out infinite',
       },
     },
   },
