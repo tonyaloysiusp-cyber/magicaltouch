@@ -59,7 +59,7 @@ import {
   DEFAULT_HUE_SATURATION,
 } from '@/lib/editor/photoBrush';
 import { imageObjectToDataURL, nativeResMultiplier, clampMultiplierForSafety, configureHighQualityContext, devicePixelRatioSafe } from '@/lib/editor/imageQuality';
-import { DocUnit } from '@/lib/editor/types';
+import { DocUnit, ANCHOR_HIT_RADIUS } from '@/lib/editor/types';
 import { pxToPhysicalUnit, physicalUnitToPx, useDisplayUnit } from '@/lib/editor/units';
 import { LayersPanel } from '@/components/editor/LayersPanel';
 import {
@@ -95,6 +95,7 @@ import {
   Puzzle,
   Waves,
   ScanEye,
+  Hexagon,
 } from 'lucide-react';
 import { warpQuadToCanvas, type Point as PerspectivePoint } from '@/lib/editor/perspective';
 
@@ -194,6 +195,7 @@ type PhotoTool =
   | 'marquee-rect'
   | 'marquee-ellipse'
   | 'lasso'
+  | 'polygon-lasso'
   | 'magic-wand'
   | 'eraser'
   | 'brush'
@@ -236,6 +238,7 @@ const TOOL_ICONS: Record<PhotoTool, React.ReactNode> = {
   'marquee-rect': <SquareDashedMousePointer size={ICON_SIZE} />,
   'marquee-ellipse': <CircleDashed size={ICON_SIZE} />,
   lasso: <LassoIcon size={ICON_SIZE} />,
+  'polygon-lasso': <Hexagon size={ICON_SIZE} />,
   'magic-wand': <Wand2 size={ICON_SIZE} />,
   eraser: <EraserIcon size={ICON_SIZE} />,
   brush: <Paintbrush size={ICON_SIZE} />,
@@ -271,6 +274,7 @@ const SHORTCUT_LABEL: Partial<Record<PhotoTool, string>> = {
   'marquee-rect': 'M',
   'marquee-ellipse': 'Shift+M',
   lasso: 'L',
+  'polygon-lasso': 'Shift+L',
   'magic-wand': 'W',
   eraser: 'E',
   brush: 'B',
@@ -741,6 +745,7 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
   // hook's own draftRef/liveRect for what these mirror.
   const selDraftRefHolder = useRef<any>(null);
   const liveRectRef = useRef<{ x: number; y: number; w: number; h: number } | null>(null);
+  const polygonLivePointRef = useRef<{ x: number; y: number } | null>(null);
 
   // ---- Vector path (Pen tool) — same reused hooks as before. A
   // finished path can be turned into a real mask contribution (painted
@@ -1408,6 +1413,35 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
                 ctx.lineTo(ox + draft.points[i].x * vt[0], oy + draft.points[i].y * vt[3]);
               }
             });
+          } else if (draft.tool === 'polygon-lasso' && draft.points.length >= 1) {
+            // Confirmed vertices (clicked so far) plus a rubber-band segment
+            // out to wherever the cursor currently is — the live cursor
+            // point is tracked separately from draft.points (see
+            // usePixelSelectionTool's polygonLivePoint), since it's not a
+            // confirmed vertex yet.
+            const live = polygonLivePointRef.current;
+            strokeAnts(ctx, () => {
+              ctx.moveTo(ox + draft.points[0].x * vt[0], oy + draft.points[0].y * vt[3]);
+              for (let i = 1; i < draft.points.length; i++) {
+                ctx.lineTo(ox + draft.points[i].x * vt[0], oy + draft.points[i].y * vt[3]);
+              }
+              if (live) ctx.lineTo(ox + live.x * vt[0], oy + live.y * vt[3]);
+            });
+            // Closing affordance at the first vertex, highlighted once the
+            // cursor is close enough to click-to-close — same visual
+            // language as the Pen tool's own anchor-closing indicator.
+            const first = draft.points[0];
+            const closeNear =
+              !!live && draft.points.length >= 3 && Math.hypot(live.x - first.x, live.y - first.y) <= ANCHOR_HIT_RADIUS;
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(ox + first.x * vt[0], oy + first.y * vt[3], 4, 0, Math.PI * 2);
+            ctx.fillStyle = closeNear ? '#3891ff' : '#ffffff';
+            ctx.strokeStyle = '#3891ff';
+            ctx.lineWidth = 1.5;
+            ctx.fill();
+            ctx.stroke();
+            ctx.restore();
           }
         }
 
@@ -1985,7 +2019,16 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
 
   // ---- Pixel selection tools (marquee/lasso/magic-wand), reused as-is
   // from the main editor's own hook. ----
-  const { handleMouseDown: selDown, handleMouseMove: selMove, handleMouseUp: selUp, liveRect: selLiveRect, draftRef: selDraftRef } = usePixelSelectionTool({
+  const {
+    handleMouseDown: selDown,
+    handleMouseMove: selMove,
+    handleMouseUp: selUp,
+    liveRect: selLiveRect,
+    draftRef: selDraftRef,
+    polygonLivePoint: selPolygonLivePoint,
+    finishPolygonLassoDraft,
+    cancelPolygonLassoDraft,
+  } = usePixelSelectionTool({
     fabricCanvasRef,
     activeToolRef: activeToolRef as any,
     toleranceRef,
@@ -2003,8 +2046,12 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
     liveRectRef.current = selLiveRect;
   }, [selLiveRect]);
   selDraftRefHolder.current = selDraftRef;
+  useEffect(() => {
+    polygonLivePointRef.current = selPolygonLivePoint;
+  }, [selPolygonLivePoint]);
 
-  const isSelectTool = (t: PhotoTool) => t === 'marquee-rect' || t === 'marquee-ellipse' || t === 'lasso' || t === 'magic-wand';
+  const isSelectTool = (t: PhotoTool) =>
+    t === 'marquee-rect' || t === 'marquee-ellipse' || t === 'lasso' || t === 'polygon-lasso' || t === 'magic-wand';
 
   // ---- Pen tool + Direct Selection (anchor editing), reused verbatim
   // from the main editor's own hooks — real bezier path drawing/editing,
@@ -3008,6 +3055,7 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
     if (activeTool !== 'pen') clearPenDraft();
     if (activeTool !== 'direct') clearHandles();
     if (activeTool !== 'patch') resetPatchDraft();
+    if (activeTool !== 'polygon-lasso') cancelPolygonLassoDraft();
     canvas.defaultCursor = activeTool === 'hand' ? 'grab' : 'default';
     canvas.requestRenderAll();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -3045,6 +3093,18 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
       if (activeToolRef.current === 'patch' && e.key === 'Escape') {
         e.preventDefault();
         resetPatchDraft();
+      }
+      if (activeToolRef.current === 'polygon-lasso') {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          finishPolygonLassoDraft(e);
+          return;
+        }
+        if (e.key === 'Escape') {
+          e.preventDefault();
+          cancelPolygonLassoDraft();
+          return;
+        }
       }
 
       const isMeta = e.ctrlKey || e.metaKey;
@@ -3099,6 +3159,7 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
         if (key === 't') { e.preventDefault(); selectTool('perspective'); return; }
         if (key === 'j') { e.preventDefault(); selectTool('heal'); return; }
         if (key === 's') { e.preventDefault(); selectTool('patch'); return; }
+        if (key === 'l') { e.preventDefault(); selectTool('polygon-lasso'); return; }
       }
     };
     const handleUp = (e: KeyboardEvent) => {
@@ -3114,7 +3175,7 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
       window.removeEventListener('keyup', handleUp);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [active, finishPenPath, clearPenDraft, deleteActiveAnchor]);
+  }, [active, finishPenPath, clearPenDraft, deleteActiveAnchor, finishPolygonLassoDraft, cancelPolygonLassoDraft]);
 
   // ---- Background removal (heuristic): flood-fills from all 4 corners
   // by color similarity and clears the matched pixels. Not ML-based
@@ -3227,6 +3288,7 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
         { id: 'marquee-rect', label: 'Marquee' },
         { id: 'marquee-ellipse', label: 'Ellipse' },
         { id: 'lasso', label: 'Lasso' },
+        { id: 'polygon-lasso', label: 'Polygon Lasso' },
         { id: 'magic-wand', label: 'Magic Wand' },
       ],
     },

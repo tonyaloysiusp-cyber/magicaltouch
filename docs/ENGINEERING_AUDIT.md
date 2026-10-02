@@ -249,11 +249,12 @@ undo/redo, per `PhotoTool` in `PhotoEditorWorkspace.tsx:124-144`):
 | Patch Tool | Live (2026-10-01) | `'patch'` tool — drag a freehand loop around a blemish, then drag it onto a clean area; releases to a feathered `cloneStampPaint` composite (`featherMask` applied to the drawn `polygonMask` first) |
 | Smudge | Live (2026-10-01) | `'smudge'` tool — `smudgeStepInPlace` pulls color from a step earlier along the stroke into the current dab, applied incrementally against a persistent working canvas (not deferred to mouse-up like every other brush here, since each dab's source is relative to the stroke's own motion) |
 | Red Eye | Live (2026-10-01) | `'red-eye'` tool — a single click; `removeRedEye` scans the clicked radius for genuinely red-dominant pixels (red clearly over both green and blue, not a generic red threshold) and desaturates/darkens exactly those, leaving a near-white specular highlight inside the pupil untouched |
+| Polygon Lasso | Live (2026-10-02) | `'polygon-lasso'` tool (Shift+L) — a real multi-click (not drag) gesture: each click adds a confirmed vertex, a rubber-band line previews the pending edge, clicking back within `ANCHOR_HIT_RADIUS` of the first vertex (or Enter) closes the shape into a real `polygonMask` fed through the same selection pipeline as Lasso/Marquee; Escape discards the draft |
 
 **Not yet real — planned, not faked** (no tool id, no panel, no code path
 exists for these; do not show them as clickable until they are):
-Polygon Lasso, Magnetic Lasso, Object Selection, Quick Selection, Select
-Subject, Select and Mask (these five all imply ML-based segmentation —
+Magnetic Lasso, Object Selection, Quick Selection, Select
+Subject, Select and Mask (these four all imply ML-based segmentation —
 none exists in this codebase); Perspective Crop, Slice, Distort, Warp
 (today's transforms are Skew and Perspective — see above — plus what
 Fabric's own selection handles give: move/scale/rotate; a unified "Free

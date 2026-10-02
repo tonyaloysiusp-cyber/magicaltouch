@@ -6,6 +6,53 @@ actually done, what was tested, and what's deliberately left for later.
 
 ---
 
+## 2026-10-02 (2) — Photo Studio: real Polygon Lasso tool
+
+**Scope:** continuing the Photoshop/Photopea tool-parity list (Patch,
+Smudge, Red Eye shipped previously). Adds Polygon Lasso (`'polygon-lasso'`
+tool, shortcut `Shift+L` — matching Photoshop's own Shift+L lasso-variant
+cycling).
+
+Unlike every other tool in `usePixelSelectionTool.ts` (Marquee/Ellipse/
+Lasso/Magic Wand), which finalize on a single mousedown→mouseup drag,
+Polygon Lasso is a genuine multi-click gesture spanning an arbitrary
+number of independent clicks over time: each click adds a confirmed
+vertex to the in-progress draft; clicking back within `ANCHOR_HIT_RADIUS`
+(8px, the same constant the Pen tool already uses for closing a path) of
+the first vertex — once at least 3 vertices exist — closes the shape into
+a real `polygonMask`. `Enter` force-closes with the points so far (mirrors
+the Pen tool's `finishPath(false)`); `Escape` discards the draft with no
+selection committed.
+
+This required restructuring `usePixelSelectionTool.ts`'s `handleMouseDown`/
+`handleMouseMove`/`handleMouseUp`, which were built around one continuous
+drag: `handleMouseUp` is now a no-op for `'polygon-lasso'` (finalization
+happens on the closing mousedown or via the new `finishPolygonLassoDraft`),
+and `handleMouseMove` no longer pushes into `draft.points` for this tool —
+confirmed vertices and the live rubber-band cursor position are tracked
+separately (`polygonLivePoint`), since only clicked points are real
+vertices. The live preview (confirmed vertices + rubber-band segment to
+the cursor + a highlighted closing affordance at the first vertex once in
+range) draws through the same `after:render` canvas-context hook
+Marquee/Lasso already use in `PhotoEditorWorkspace.tsx` — no new Fabric
+objects.
+
+**Tested:** `test_polygon_lasso.js` (9/9) — seeds a solid-color image,
+verifies mid-draft clicks commit no selection, verifies Escape cancels
+cleanly, clicks 4 vertices of a square and closes by clicking near the
+first vertex, deletes the selected pixels and confirms inside-the-shape
+pixels were cleared while outside-the-shape pixels are byte-identical to
+before, and confirms Undo restores them. Also re-ran the existing Pen
+tool Direct Selection, Patch, Smudge, and Red Eye regression tests (all
+still pass) since this touches the same selection-hook file area.
+
+**Left for later:** Magnetic Lasso, Quick Selection, Select Subject,
+Select and Mask (all imply ML-based segmentation this codebase doesn't
+have — an honest approach needs deciding before building any of these,
+not a fake stand-in).
+
+---
+
 ## 2026-10-02 — Photo Studio: real Smudge and Red Eye tools
 
 **Scope:** continuing the Photoshop/Photopea tool-parity list one at a
