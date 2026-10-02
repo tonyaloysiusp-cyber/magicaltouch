@@ -620,3 +620,50 @@ export function patternStampInMask(source: HTMLCanvasElement, mask: PixelMask, p
   ctx.drawImage(patternLayer, 0, 0);
   return canvas.toDataURL('image/png');
 }
+
+// ---------------------------------------------------------------------
+// Mixer Brush — blends the foreground color INTO the existing pixels,
+// at a "wetness" strength per dab, mutating a persistent working canvas
+// in place through the whole stroke (the exact same architecture
+// smudgeStepInPlace uses, for the same reason: repeated overlapping
+// passes must genuinely build up more paint, which a deferred single
+// bake over a union mask can't express). This is what makes it a
+// distinct real tool rather than a relabeled Brush or Smudge: Brush lays
+// down one flat, single-pass color; Smudge introduces no new color at
+// all (it only smears what's already there); Mixer Brush does both at
+// once — it pulls in a NEW foreground color while still letting the
+// canvas's own color show through underneath, more so the lower the
+// wetness and the fewer times a given pixel has been passed over.
+// ---------------------------------------------------------------------
+
+// Resolves any CSS color string to concrete 0-255 RGB via the canvas's
+// own color parsing (the same parser `fillStyle` already uses elsewhere
+// in this file), rather than a hand-rolled hex parser that could drift
+// out of sync with it.
+function cssColorToRgb(color: string): [number, number, number] {
+  const c = document.createElement('canvas');
+  c.width = 1;
+  c.height = 1;
+  const ctx = c.getContext('2d') as CanvasRenderingContext2D;
+  ctx.fillStyle = color;
+  ctx.fillRect(0, 0, 1, 1);
+  const d = ctx.getImageData(0, 0, 1, 1).data;
+  return [d[0], d[1], d[2]];
+}
+
+export function mixerBrushStepInPlace(working: HTMLCanvasElement, mask: PixelMask, color: string, wetness: number): void {
+  const ctx = working.getContext('2d') as CanvasRenderingContext2D;
+  const imgData = ctx.getImageData(0, 0, working.width, working.height);
+  const d = imgData.data;
+  const [r, g, b] = cssColorToRgb(color);
+  const w = Math.max(0, Math.min(1, wetness));
+  for (let p = 0, i = 0; p < mask.data.length; p++, i += 4) {
+    const m = mask.data[p] / 255;
+    if (!m) continue;
+    const blend = w * m;
+    d[i] = d[i] * (1 - blend) + r * blend;
+    d[i + 1] = d[i + 1] * (1 - blend) + g * blend;
+    d[i + 2] = d[i + 2] * (1 - blend) + b * blend;
+  }
+  ctx.putImageData(imgData, 0, 0);
+}

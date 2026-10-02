@@ -6,6 +6,46 @@ actually done, what was tested, and what's deliberately left for later.
 
 ---
 
+## 2026-10-02 (4) — Photo Studio: real Mixer Brush tool
+
+**Scope:** continuing the Photoshop/Photopea tool-parity list. Adds
+Mixer Brush (`'mixer-brush'` tool, shortcut `Shift+B` — matching
+Photoshop's own Shift+B Brush/Mixer Brush cycling).
+
+What makes this a genuinely distinct tool rather than a relabeled Brush
+or Smudge: Brush lays down one flat, single-pass color (deferred —
+accumulates a union mask over the whole stroke, baked once at mouse-up);
+Smudge introduces no new color at all (it only smears what's already
+there). Mixer Brush does both at once — it blends a NEW foreground color
+into the existing pixels at a "Wetness" strength, but unlike Brush this
+happens incrementally, per dab, against a persistent working canvas
+mutated in place through the whole stroke (`mixerBrushStepInPlace()` in
+`lib/editor/photoBrush.ts` — the exact same architecture `smudgeStepInPlace`
+uses, and for the same reason: passing over the same spot twice must
+genuinely deposit more paint, which a deferred single bake over a union
+mask can't express, since overlapping dabs there only ever contribute
+their MAX alpha, not a compounding effect).
+
+**Tested:** `test_mixer_brush.js` (8/8) — seeds a solid blue image, picks
+a red-orange brush color, and verifies: one light pass blends toward red
+WITHOUT fully replacing the blue (real partial wet-media mix, not an
+opaque flat stamp); a second pass over the exact same spot moves further
+toward red than the first pass did (real incremental buildup — the
+distinguishing property this tool needed to actually earn its own
+existence); pixels outside the dabs are untouched; and two separate
+Undos peel back one stroke at a time, down to the pristine original.
+Also re-ran Pattern Stamp, Polygon Lasso, Patch, Smudge, Red Eye, and Pen
+tool Direct Selection regression tests (all still pass).
+
+**Left for later:** Mixer Brush's real Photoshop options also include a
+"Load" setting (how much paint the brush holds before needing to reload,
+fading the effect over a long stroke) and sampling an actual "Clean
+Brush after Each Stroke" toggle against a second canvas-sampled color —
+this ships with Wetness only, the option that actually changes the
+tool's character; Load can follow as a smaller addition if wanted.
+
+---
+
 ## 2026-10-02 (3) — Photo Studio: real Pattern Stamp tool
 
 **Scope:** continuing the Photoshop/Photopea tool-parity list. Adds

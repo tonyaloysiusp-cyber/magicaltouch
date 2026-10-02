@@ -56,6 +56,7 @@ import {
   generatePatternTile,
   patternStampInMask,
   PatternStyle,
+  mixerBrushStepInPlace,
   LevelsSettings,
   DEFAULT_LEVELS,
   HueSaturationSettings,
@@ -100,6 +101,7 @@ import {
   ScanEye,
   Hexagon,
   Grid3x3,
+  PaintRoller,
 } from 'lucide-react';
 import { warpQuadToCanvas, type Point as PerspectivePoint } from '@/lib/editor/perspective';
 
@@ -211,6 +213,7 @@ type PhotoTool =
   | 'smudge'
   | 'red-eye'
   | 'pattern-stamp'
+  | 'mixer-brush'
   | 'blur'
   | 'sharpen'
   | 'sponge'
@@ -255,6 +258,7 @@ const TOOL_ICONS: Record<PhotoTool, React.ReactNode> = {
   smudge: <Waves size={ICON_SIZE} />,
   'red-eye': <ScanEye size={ICON_SIZE} />,
   'pattern-stamp': <Grid3x3 size={ICON_SIZE} />,
+  'mixer-brush': <PaintRoller size={ICON_SIZE} />,
   blur: <CloudFog size={ICON_SIZE} />,
   sharpen: <Focus size={ICON_SIZE} />,
   sponge: <Droplets size={ICON_SIZE} />,
@@ -290,6 +294,7 @@ const SHORTCUT_LABEL: Partial<Record<PhotoTool, string>> = {
   clone: 'S',
   heal: 'Shift+J',
   'pattern-stamp': 'N',
+  'mixer-brush': 'Shift+B',
   blur: 'F',
   sharpen: 'J',
   sponge: 'X',
@@ -655,6 +660,10 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
   // mouse-up, since its source point is relative to the stroke's own
   // motion, not a single offset a deferred mask could reconstruct. ----
   const smudgeLastPointRef = useRef<{ x: number; y: number } | null>(null);
+  // Mixer Brush's own "last point" for interpolation spacing (see below)
+  // — distinct from Smudge's, since Mixer Brush's dab math needs no
+  // from/to offset, only where the dab itself lands.
+  const mixerLastPointRef = useRef<{ x: number; y: number } | null>(null);
   const [smudgeStrength, setSmudgeStrength] = useState(0.5);
   const smudgeStrengthRef = useRef(0.5);
   useEffect(() => {
@@ -685,6 +694,19 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
   useEffect(() => {
     patternStyleRef.current = patternStyle;
   }, [patternStyle]);
+
+  // ---- Mixer Brush: blends the brush color into the canvas per dab at
+  // a "wetness" strength, mutating a persistent working canvas through
+  // the whole stroke so repeated overlapping passes genuinely build up
+  // more paint — the same incremental architecture Smudge uses, and for
+  // the same reason (a deferred single bake over a union mask can't
+  // express "passing over the same spot twice makes it more opaque"). ----
+  const mixerWorkingCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [mixerWetness, setMixerWetness] = useState(0.35);
+  const mixerWetnessRef = useRef(0.35);
+  useEffect(() => {
+    mixerWetnessRef.current = mixerWetness;
+  }, [mixerWetness]);
 
   // ---- Patch Tool: draw a freehand loop around a blemish, then drag
   // that loop onto a clean area — releasing replaces the blemish with
@@ -2779,6 +2801,49 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
     bakeAndPush(working.toDataURL('image/png'));
   };
 
+  // ---- Mixer Brush mouse handling (same persistent-working-canvas
+  // architecture as Smudge above, see mixerWorkingCanvasRef's own
+  // comment for why) ----
+  const mixerDabAt = (local: { x: number; y: number }) => {
+    const img = imageRef.current;
+    const working = mixerWorkingCanvasRef.current;
+    if (!img || !working) return;
+    const r = Math.max(1, brushSizeRef.current / 2);
+    let dab = softBrushMask(img.width, img.height, local.x, local.y, r, brushHardnessRef.current, 1);
+    const selection = selectionMaskRef.current;
+    if (selection && maskHasSelection(selection)) dab = combineMasks(selection, dab, 'intersect');
+    mixerBrushStepInPlace(working, dab, brushColorRef.current, mixerWetnessRef.current);
+  };
+  const beginMixerStroke = (local: { x: number; y: number }) => {
+    const img = imageRef.current;
+    mixerLastPointRef.current = local;
+    mixerWorkingCanvasRef.current = img ? getImagePixelCanvas(img) : null;
+    mixerDabAt(local);
+    const working = mixerWorkingCanvasRef.current;
+    if (working) bakeLive(working.toDataURL('image/png'));
+  };
+  const continueMixerStroke = (raw: { x: number; y: number }) => {
+    const from = mixerLastPointRef.current || raw;
+    const radius = Math.max(1, brushSizeRef.current / 2);
+    const spacing = Math.max(1, radius * 0.2);
+    const dist = Math.hypot(raw.x - from.x, raw.y - from.y);
+    const steps = Math.max(1, Math.round(dist / spacing));
+    for (let i = 1; i <= steps; i++) {
+      const t = i / steps;
+      mixerDabAt({ x: from.x + (raw.x - from.x) * t, y: from.y + (raw.y - from.y) * t });
+    }
+    mixerLastPointRef.current = raw;
+    const working = mixerWorkingCanvasRef.current;
+    if (working) bakeLive(working.toDataURL('image/png'));
+  };
+  const endMixerStroke = () => {
+    const working = mixerWorkingCanvasRef.current;
+    mixerLastPointRef.current = null;
+    mixerWorkingCanvasRef.current = null;
+    if (!working) return;
+    bakeAndPush(working.toDataURL('image/png'));
+  };
+
   // ---- Red Eye: a single click, not a drag -- same "immediate action"
   // pattern as Paint Bucket / Color Range. ----
   const applyRedEyeAt = (local: { x: number; y: number }) => {
@@ -2852,6 +2917,11 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
     if (tool === 'smudge') {
       paintingRef.current = true;
       beginSmudgeStroke(canvasToImageLocal(canvas.getPointer(opt.e)));
+      return;
+    }
+    if (tool === 'mixer-brush') {
+      paintingRef.current = true;
+      beginMixerStroke(canvasToImageLocal(canvas.getPointer(opt.e)));
       return;
     }
     if (tool === 'red-eye') {
@@ -2951,6 +3021,10 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
       continueSmudgeStroke(canvasToImageLocal(canvas.getPointer(opt.e)));
       return;
     }
+    if (tool === 'mixer-brush' && paintingRef.current) {
+      continueMixerStroke(canvasToImageLocal(canvas.getPointer(opt.e)));
+      return;
+    }
     if (isSelectTool(tool)) selMove(opt);
   };
   const handleCanvasMouseUp = (opt: any) => {
@@ -2999,6 +3073,11 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
     if (tool === 'smudge') {
       paintingRef.current = false;
       endSmudgeStroke();
+      return;
+    }
+    if (tool === 'mixer-brush') {
+      paintingRef.current = false;
+      endMixerStroke();
       return;
     }
     if (isSelectTool(tool)) selUp(opt);
@@ -3182,6 +3261,7 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
         if (key === 'j') { e.preventDefault(); selectTool('heal'); return; }
         if (key === 's') { e.preventDefault(); selectTool('patch'); return; }
         if (key === 'l') { e.preventDefault(); selectTool('polygon-lasso'); return; }
+        if (key === 'b') { e.preventDefault(); selectTool('mixer-brush'); return; }
       }
     };
     const handleUp = (e: KeyboardEvent) => {
@@ -3328,6 +3408,7 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
         { id: 'smudge', label: 'Smudge' },
         { id: 'red-eye', label: 'Red Eye' },
         { id: 'pattern-stamp', label: 'Pattern Stamp' },
+        { id: 'mixer-brush', label: 'Mixer Brush' },
         { id: 'blur', label: 'Blur' },
         { id: 'sharpen', label: 'Sharpen' },
         { id: 'sponge', label: 'Sponge' },
@@ -3736,11 +3817,16 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
               </div>
             )}
 
-            {(activeTool === 'eraser' || activeTool === 'brush' || activeTool === 'dodge' || activeTool === 'burn' || activeTool === 'clone' || activeTool === 'heal' || activeTool === 'smudge' || activeTool === 'blur' || activeTool === 'sharpen' || activeTool === 'sponge' || activeTool === 'pattern-stamp' || MASK_PAINT_TOOLS.includes(activeTool)) && (
+            {(activeTool === 'eraser' || activeTool === 'brush' || activeTool === 'dodge' || activeTool === 'burn' || activeTool === 'clone' || activeTool === 'heal' || activeTool === 'smudge' || activeTool === 'blur' || activeTool === 'sharpen' || activeTool === 'sponge' || activeTool === 'pattern-stamp' || activeTool === 'mixer-brush' || MASK_PAINT_TOOLS.includes(activeTool)) && (
               <div className="border-t pt-3">
                 <p className="font-semibold text-gray-700 text-xs uppercase tracking-wide mb-2">
-                  {activeTool === 'eraser' ? 'Eraser' : activeTool === 'brush' ? 'Brush' : activeTool === 'dodge' ? 'Dodge (lighten)' : activeTool === 'burn' ? 'Burn (darken)' : activeTool === 'clone' ? 'Clone Stamp' : activeTool === 'heal' ? 'Healing Brush' : activeTool === 'smudge' ? 'Smudge' : activeTool === 'blur' ? 'Blur' : activeTool === 'sharpen' ? 'Sharpen' : activeTool === 'sponge' ? 'Sponge' : activeTool === 'pattern-stamp' ? 'Pattern Stamp' : activeTool === 'mask-reveal' ? 'Mask: Paint Reveal' : 'Mask: Paint Hide'}
+                  {activeTool === 'eraser' ? 'Eraser' : activeTool === 'brush' ? 'Brush' : activeTool === 'dodge' ? 'Dodge (lighten)' : activeTool === 'burn' ? 'Burn (darken)' : activeTool === 'clone' ? 'Clone Stamp' : activeTool === 'heal' ? 'Healing Brush' : activeTool === 'smudge' ? 'Smudge' : activeTool === 'blur' ? 'Blur' : activeTool === 'sharpen' ? 'Sharpen' : activeTool === 'sponge' ? 'Sponge' : activeTool === 'pattern-stamp' ? 'Pattern Stamp' : activeTool === 'mixer-brush' ? 'Mixer Brush' : activeTool === 'mask-reveal' ? 'Mask: Paint Reveal' : 'Mask: Paint Hide'}
                 </p>
+                {activeTool === 'mixer-brush' && (
+                  <p className="text-[11px] text-gray-500 mb-2">
+                    Blends the brush color into the canvas as you paint — pass over the same spot again for more buildup, like a real wet medium.
+                  </p>
+                )}
                 {activeTool === 'pattern-stamp' && (
                   <div className="grid grid-cols-2 gap-1.5 mb-2">
                     {(['dots', 'stripes', 'checkerboard', 'grid'] as PatternStyle[]).map((style) => (
@@ -3774,20 +3860,29 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
                   <span>{Math.round(brushHardness * 100)}%</span>
                 </div>
                 <input type="range" min={0} max={1} step={0.05} value={brushHardness} onChange={(e) => setBrushHardness(parseFloat(e.target.value))} className="w-full mb-2" />
-                {activeTool !== 'smudge' && (
+                {activeTool !== 'smudge' && activeTool !== 'mixer-brush' && (
                   <>
                     <div className="flex justify-between text-[11px] text-gray-500 mb-0.5">
                       <span>Opacity</span>
                       <span>{Math.round(brushOpacity * 100)}%</span>
                     </div>
-                    {/* Smudge has its own "Strength" slider below instead --
-                        Opacity isn't wired into its math (smudgeInMask takes
-                        a strength parameter directly), so showing it here
-                        would be a control that visibly does nothing. */}
+                    {/* Smudge and Mixer Brush have their own "Strength"/
+                        "Wetness" sliders instead -- Opacity isn't wired
+                        into either's math, so showing it here would be a
+                        control that visibly does nothing. */}
                     <input type="range" min={0.05} max={1} step={0.05} value={brushOpacity} onChange={(e) => setBrushOpacity(parseFloat(e.target.value))} className="w-full mb-2" />
                   </>
                 )}
-                {(activeTool === 'brush' || activeTool === 'pattern-stamp') && (
+                {activeTool === 'mixer-brush' && (
+                  <>
+                    <div className="flex justify-between text-[11px] text-gray-500 mb-0.5">
+                      <span>Wetness</span>
+                      <span>{Math.round(mixerWetness * 100)}%</span>
+                    </div>
+                    <input type="range" min={0.05} max={1} step={0.05} value={mixerWetness} onChange={(e) => setMixerWetness(parseFloat(e.target.value))} className="w-full mb-2" />
+                  </>
+                )}
+                {(activeTool === 'brush' || activeTool === 'pattern-stamp' || activeTool === 'mixer-brush') && (
                   <div className="flex items-center gap-2">
                     <label className="text-[11px] text-gray-500">Color</label>
                     <input type="color" value={brushColor} onChange={(e) => setBrushColor(e.target.value)} className="w-11 h-11 border rounded cursor-pointer" />

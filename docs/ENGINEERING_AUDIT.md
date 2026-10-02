@@ -251,6 +251,7 @@ undo/redo, per `PhotoTool` in `PhotoEditorWorkspace.tsx:124-144`):
 | Red Eye | Live (2026-10-01) | `'red-eye'` tool — a single click; `removeRedEye` scans the clicked radius for genuinely red-dominant pixels (red clearly over both green and blue, not a generic red threshold) and desaturates/darkens exactly those, leaving a near-white specular highlight inside the pupil untouched |
 | Polygon Lasso | Live (2026-10-02) | `'polygon-lasso'` tool (Shift+L) — a real multi-click (not drag) gesture: each click adds a confirmed vertex, a rubber-band line previews the pending edge, clicking back within `ANCHOR_HIT_RADIUS` of the first vertex (or Enter) closes the shape into a real `polygonMask` fed through the same selection pipeline as Lasso/Marquee; Escape discards the draft |
 | Pattern Stamp | Live (2026-10-02) | `'pattern-stamp'` tool (N) — paints a real tiled pattern (dots/stripes/checkerboard/grid, generated procedurally, not Photoshop/Photopea assets) via `patternStampInMask()`, reusing the same accumulate-mask-then-bake brush pipeline every other static-source brush here uses; the tile is anchored to the image's own origin so repeated strokes stay seamlessly aligned |
+| Mixer Brush | Live (2026-10-02) | `'mixer-brush'` tool (Shift+B) — blends the brush color into existing pixels at a real "Wetness" strength via `mixerBrushStepInPlace()`, mutating a persistent working canvas per dab (Smudge's own incremental architecture) so repeated overlapping passes genuinely build up more paint, unlike a deferred single-bake brush; "Load" (paint reservoir fading over a stroke) not yet modeled |
 
 **Not yet real — planned, not faked** (no tool id, no panel, no code path
 exists for these; do not show them as clickable until they are):
@@ -260,7 +261,7 @@ none exists in this codebase); Perspective Crop, Slice, Distort, Warp
 (today's transforms are Skew and Perspective — see above — plus what
 Fabric's own selection handles give: move/scale/rotate; a unified "Free
 Transform" UI wrapping all of these in one mode is still a separate,
-smaller follow-up); Mixer Brush; Freeform Pen as a separate tool from the existing real Pen; Shape
+smaller follow-up); Freeform Pen as a separate tool from the existing real Pen; Shape
 tools inside Photo Studio specifically (Main Design has real shape tools,
 Photo Studio does not yet); Color Balance, Selective Color, Gradient Map,
 Channel Mixer, Black & White as its own adjustment (a `blackAndWhite`
