@@ -90,6 +90,7 @@ import {
   Sparkles,
   Palette,
   Contrast,
+  Puzzle,
 } from 'lucide-react';
 import { warpQuadToCanvas, type Point as PerspectivePoint } from '@/lib/editor/perspective';
 
@@ -196,6 +197,7 @@ type PhotoTool =
   | 'burn'
   | 'clone'
   | 'heal'
+  | 'patch'
   | 'blur'
   | 'sharpen'
   | 'sponge'
@@ -235,6 +237,7 @@ const TOOL_ICONS: Record<PhotoTool, React.ReactNode> = {
   burn: <Moon size={ICON_SIZE} />,
   clone: <Stamp size={ICON_SIZE} />,
   heal: <Sparkles size={ICON_SIZE} />,
+  patch: <Puzzle size={ICON_SIZE} />,
   blur: <CloudFog size={ICON_SIZE} />,
   sharpen: <Focus size={ICON_SIZE} />,
   sponge: <Droplets size={ICON_SIZE} />,
@@ -625,6 +628,31 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
     cloneAlignedRef.current = cloneAligned;
   }, [cloneAligned]);
   const [hasCloneSource, setHasCloneSource] = useState(false);
+
+  // ---- Patch Tool: draw a freehand loop around a blemish, then drag
+  // that loop onto a clean area — releasing replaces the blemish with
+  // the dragged-to content, feathered at the edges so the seam blends.
+  // Reuses cloneStampPaint's own offset-sampling + destination-in
+  // compositing (the exact real pixel operation Clone Stamp already
+  // uses) — the only difference is the mask comes from a drawn shape
+  // instead of a brush dab, and is feathered first for a seamless patch
+  // instead of a hard-edged stamp. ----
+  const patchPhaseRef = useRef<'drawing' | 'selected' | 'dragging'>('drawing');
+  const [patchPhase, setPatchPhase] = useState<'drawing' | 'selected' | 'dragging'>('drawing');
+  const setPatchPhaseBoth = (phase: 'drawing' | 'selected' | 'dragging') => {
+    patchPhaseRef.current = phase;
+    setPatchPhase(phase);
+  };
+  const patchPointsRef = useRef<{ x: number; y: number }[]>([]);
+  const patchMaskRef = useRef<PixelMask | null>(null);
+  const patchOutlineRef = useRef<any>(null);
+  const patchPreviewImgRef = useRef<any>(null);
+  const patchDragStartRef = useRef<{ x: number; y: number } | null>(null);
+  const [patchFeather, setPatchFeather] = useState(8);
+  const patchFeatherRef = useRef(8);
+  useEffect(() => {
+    patchFeatherRef.current = patchFeather;
+  }, [patchFeather]);
 
   const [selectionMask, setSelectionMask] = useState<PixelMask | null>(null);
   const selectionMaskRef = useRef<PixelMask | null>(null);
@@ -2422,6 +2450,147 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
     gradientDraftRef.current = { start: local, line };
   };
 
+  // ---- Patch Tool mouse handling ----
+  const resetPatchDraft = () => {
+    const canvas = fabricCanvasRef.current;
+    if (canvas && patchOutlineRef.current) canvas.remove(patchOutlineRef.current);
+    if (canvas && patchPreviewImgRef.current) canvas.remove(patchPreviewImgRef.current);
+    patchOutlineRef.current = null;
+    patchPreviewImgRef.current = null;
+    patchPointsRef.current = [];
+    patchMaskRef.current = null;
+    patchDragStartRef.current = null;
+    setPatchPhaseBoth('drawing');
+    canvas?.requestRenderAll();
+  };
+
+  const updatePatchOutlinePreview = () => {
+    const canvas = fabricCanvasRef.current;
+    const F = fabricModRef.current;
+    const img = imageRef.current;
+    if (!canvas || !F || !img || patchPointsRef.current.length < 2) return;
+    if (patchOutlineRef.current) canvas.remove(patchOutlineRef.current);
+    // Points are in image-local space; render the live outline in the
+    // same canvas/document space the image itself occupies.
+    const toCanvasPoint = (p: { x: number; y: number }) => ({
+      x: (img.left || 0) + p.x * (img.scaleX || 1),
+      y: (img.top || 0) + p.y * (img.scaleY || 1),
+    });
+    const pts = patchPointsRef.current.map(toCanvasPoint);
+    const d = `M ${pts.map((p) => `${p.x} ${p.y}`).join(' L ')}`;
+    const outline: any = new F.Path(d, {
+      fill: '',
+      stroke: '#3FA9E8',
+      strokeWidth: 1.5,
+      strokeDashArray: [5, 4],
+      selectable: false,
+      evented: false,
+      objectCaching: false,
+    });
+    outline.__isPenPreview = true;
+    patchOutlineRef.current = outline;
+    canvas.add(outline);
+    canvas.requestRenderAll();
+  };
+
+  const handlePatchMouseDown = (opt: any) => {
+    const canvas = fabricCanvasRef.current;
+    const img = imageRef.current;
+    if (!canvas || !img) return;
+    const pointer = canvas.getPointer(opt.e);
+    const local = canvasToImageLocal(pointer);
+
+    if (patchPhaseRef.current === 'drawing') {
+      patchPointsRef.current = [local];
+      return;
+    }
+    if (patchPhaseRef.current === 'selected' && patchMaskRef.current) {
+      const mask = patchMaskRef.current;
+      const ix = Math.round(local.x);
+      const iy = Math.round(local.y);
+      const inside = ix >= 0 && iy >= 0 && ix < mask.width && iy < mask.height && mask.data[iy * mask.width + ix] >= 10;
+      if (!inside) {
+        // Clicked outside the drawn loop -- start a fresh one instead of
+        // silently ignoring the click (matches a real Patch tool: you
+        // can always just draw a new selection).
+        resetPatchDraft();
+        patchPointsRef.current = [local];
+        return;
+      }
+      patchDragStartRef.current = local;
+      setPatchPhaseBoth('dragging');
+    }
+  };
+
+  const handlePatchMouseMove = (opt: any) => {
+    const canvas = fabricCanvasRef.current;
+    const img = imageRef.current;
+    const F = fabricModRef.current;
+    if (!canvas || !img) return;
+    const pointer = canvas.getPointer(opt.e);
+    const local = canvasToImageLocal(pointer);
+
+    if (patchPhaseRef.current === 'drawing' && patchPointsRef.current.length) {
+      patchPointsRef.current.push(local);
+      updatePatchOutlinePreview();
+      return;
+    }
+    if (patchPhaseRef.current === 'dragging' && patchDragStartRef.current && patchMaskRef.current && F) {
+      const dx = local.x - patchDragStartRef.current.x;
+      const dy = local.y - patchDragStartRef.current.y;
+      const feathered = patchFeatherRef.current > 0 ? featherMask(patchMaskRef.current, patchFeatherRef.current) : patchMaskRef.current;
+      const previewDataUrl = cloneStampPaint(getImagePixelCanvas(img), feathered, dx, dy);
+      if (patchPreviewImgRef.current) canvas.remove(patchPreviewImgRef.current);
+      F.Image.fromURL(previewDataUrl, (previewImg: any) => {
+        previewImg.set({
+          left: img.left,
+          top: img.top,
+          scaleX: img.scaleX,
+          scaleY: img.scaleY,
+          selectable: false,
+          evented: false,
+          objectCaching: false,
+        });
+        previewImg.__isPenPreview = true;
+        patchPreviewImgRef.current = previewImg;
+        canvas.add(previewImg);
+        canvas.requestRenderAll();
+      });
+    }
+  };
+
+  const handlePatchMouseUp = (opt: any) => {
+    const canvas = fabricCanvasRef.current;
+    const img = imageRef.current;
+    if (!canvas || !img) return;
+
+    if (patchPhaseRef.current === 'drawing') {
+      if (patchPointsRef.current.length >= 3) {
+        patchMaskRef.current = polygonMask(img.width, img.height, patchPointsRef.current);
+        setPatchPhaseBoth('selected');
+        if (patchOutlineRef.current) canvas.remove(patchOutlineRef.current);
+        patchOutlineRef.current = null;
+        canvas.requestRenderAll();
+      } else {
+        resetPatchDraft();
+      }
+      return;
+    }
+    if (patchPhaseRef.current === 'dragging' && patchDragStartRef.current && patchMaskRef.current) {
+      if (patchPreviewImgRef.current) {
+        canvas.remove(patchPreviewImgRef.current);
+        patchPreviewImgRef.current = null;
+      }
+      const pointer = canvas.getPointer(opt.e);
+      const local = canvasToImageLocal(pointer);
+      const dx = local.x - patchDragStartRef.current.x;
+      const dy = local.y - patchDragStartRef.current.y;
+      const feathered = patchFeatherRef.current > 0 ? featherMask(patchMaskRef.current, patchFeatherRef.current) : patchMaskRef.current;
+      bakeAndPush(cloneStampPaint(getImagePixelCanvas(img), feathered, dx, dy));
+      resetPatchDraft();
+    }
+  };
+
   // ---- Space+drag / Hand-tool pan, layered on top of every other tool's
   // own mouse handling so panning always works without switching tools —
   // a genuinely free-feeling canvas instead of one locked to whatever
@@ -2529,6 +2698,10 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
       handlePenMouseDown(opt);
       return;
     }
+    if (tool === 'patch') {
+      handlePatchMouseDown(opt);
+      return;
+    }
     if (tool === 'direct') {
       handleDirectClick(opt);
       return;
@@ -2563,6 +2736,10 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
     }
     if (tool === 'pen') {
       handlePenMouseMove(opt);
+      return;
+    }
+    if (tool === 'patch') {
+      handlePatchMouseMove(opt);
       return;
     }
     if (isSelectTool(tool)) selMove(opt);
@@ -2604,6 +2781,10 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
     }
     if (tool === 'pen') {
       handlePenMouseUp();
+      return;
+    }
+    if (tool === 'patch') {
+      handlePatchMouseUp(opt);
       return;
     }
     if (isSelectTool(tool)) selUp(opt);
@@ -2651,17 +2832,36 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
     const canvas = fabricCanvasRef.current;
     const img = imageRef.current;
     if (!canvas || !img) return;
+    // A finished path is deliberately left evented:false right after
+    // Pen draws it (PhotoEditorWorkspace's onPathFinished), so a click
+    // meant to start the NEXT path doesn't instead grab the last one —
+    // but that same evented:false silently made Direct Selection unable
+    // to ever select ANY path at all (handleDirectClick's
+    // canvas.findTarget() only ever matches evented objects), so its
+    // anchors could never actually be edited after the path was drawn.
+    // Only Direct Selection re-enables them, matching Main Design's own
+    // setActiveTool (app/editor/page.tsx), which does the same split.
+    const vectorPaths = canvas.getObjects().filter((o: any) => o.isVectorPath);
     if (activeTool === 'pen' || activeTool === 'direct') {
       canvas.discardActiveObject();
       canvas.selection = false;
       getLayers().forEach((l: any) => (l.evented = false));
+      vectorPaths.forEach((p: any) => {
+        p.evented = activeTool === 'direct';
+        p.selectable = activeTool === 'direct';
+      });
     } else {
       getLayers().forEach((l: any) => (l.evented = !l.__locked));
+      vectorPaths.forEach((p: any) => {
+        p.evented = false;
+        p.selectable = false;
+      });
       canvas.selection = false;
       if (activeTool !== 'crop' && !isPanGesture()) canvas.setActiveObject(img);
     }
     if (activeTool !== 'pen') clearPenDraft();
     if (activeTool !== 'direct') clearHandles();
+    if (activeTool !== 'patch') resetPatchDraft();
     canvas.defaultCursor = activeTool === 'hand' ? 'grab' : 'default';
     canvas.requestRenderAll();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -2695,6 +2895,10 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
       }
       if (activeToolRef.current === 'direct' && (e.key === 'Delete' || e.key === 'Backspace')) {
         if (deleteActiveAnchor()) e.preventDefault();
+      }
+      if (activeToolRef.current === 'patch' && e.key === 'Escape') {
+        e.preventDefault();
+        resetPatchDraft();
       }
 
       const isMeta = e.ctrlKey || e.metaKey;
@@ -2746,6 +2950,7 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
         if (key === 'r') { e.preventDefault(); selectTool('mask-hide'); return; }
         if (key === 't') { e.preventDefault(); selectTool('perspective'); return; }
         if (key === 'j') { e.preventDefault(); selectTool('heal'); return; }
+        if (key === 's') { e.preventDefault(); selectTool('patch'); return; }
       }
     };
     const handleUp = (e: KeyboardEvent) => {
@@ -2887,6 +3092,7 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
         { id: 'burn', label: 'Burn' },
         { id: 'clone', label: 'Clone Stamp' },
         { id: 'heal', label: 'Healing Brush' },
+        { id: 'patch', label: 'Patch' },
         { id: 'blur', label: 'Blur' },
         { id: 'sharpen', label: 'Sharpen' },
         { id: 'sponge', label: 'Sponge' },
@@ -3678,6 +3884,24 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
                 {hasVectorPath && (
                   <button onClick={addPathToMask} className="w-full text-[11px] px-2 py-1.5 border rounded hover:bg-gray-50">Add Path to Mask</button>
                 )}
+              </div>
+            )}
+
+            {activeTool === 'patch' && (
+              <div className="border-t pt-3">
+                <p className="font-semibold text-gray-700 text-xs uppercase tracking-wide mb-2">Patch</p>
+                <p className="text-[11px] text-gray-500 mb-2">
+                  {patchPhase === 'drawing'
+                    ? 'Drag a loop around the area to fix.'
+                    : patchPhase === 'dragging'
+                    ? 'Drop to patch from here.'
+                    : 'Drag the selected area onto a clean part of the image. Esc cancels.'}
+                </p>
+                <div className="flex justify-between text-[11px] text-gray-500 mb-0.5">
+                  <span>Feather</span>
+                  <span>{patchFeather}px</span>
+                </div>
+                <input type="range" min={0} max={40} value={patchFeather} onChange={(e) => setPatchFeather(parseInt(e.target.value))} className="w-full" />
               </div>
             )}
 

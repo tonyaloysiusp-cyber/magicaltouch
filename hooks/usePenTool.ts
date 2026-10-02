@@ -69,6 +69,16 @@ export function usePenTool({ fabricCanvasRef, onPathFinished }: Args) {
           stroke: '#1A1A1A',
           strokeWidth: 2,
           objectCaching: false,
+          // Direct Selection's own anchor/handle circles (useDirectSelection.ts)
+          // render exactly at this path's corners/bounding edges — Fabric's
+          // default resize/rotate controls would sit in those same spots and
+          // win the hit-test over them (confirmed: a mousedown placed exactly
+          // on a corner anchor circle resolved to the path's own corner
+          // control, not the circle, making anchor dragging silently do
+          // nothing). The path can still be selected/moved by its body; it
+          // just never shows its own competing transform handles.
+          hasControls: false,
+          hasBorders: false,
         });
         pathObj.isVectorPath = true;
         pathObj.name = closed ? 'Path (closed)' : 'Path (open)';

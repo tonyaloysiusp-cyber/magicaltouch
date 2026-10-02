@@ -6,6 +6,105 @@ actually done, what was tested, and what's deliberately left for later.
 
 ---
 
+## 2026-10-01 (6) — Photo Studio: real Patch Tool
+
+**Scope:** first of the "not yet real" tool list in `docs/ENGINEERING_AUDIT.md`
+§9 (Patch Tool, Smudge, Red Eye, selection/adjustment tools — the user
+asked for Photoshop/Photopea-level tool parity, working from that list
+one at a time).
+
+**What it does:** drag a freehand loop around a blemish, then drag that
+selection onto a clean area of the image — releasing replaces the
+blemish with the dragged-to content, feathered at the edges so the seam
+blends, with a live preview while dragging. New `'patch'` tool in
+`components/photoEditor/PhotoEditorWorkspace.tsx` (toolbar, Shift+S
+shortcut, Escape to cancel mid-gesture).
+
+**Not new pixel math** — reuses `cloneStampPaint`'s existing offset-
+sampling + destination-in compositing verbatim (the same real operation
+Clone Stamp already uses), with `featherMask` applied to the drawn
+selection first so the composite blends instead of hard-edging. The
+loop itself is built with the already-real `polygonMask`. This is
+exactly the kind of case this engagement keeps finding: most of the
+hard pixel-math work for a "new" professional tool was already real and
+proven elsewhere; the gap was the gesture/workflow wiring, not the math.
+
+**Tested:** new `test_patch_tool.js` (9/9) against a deterministic test
+image (solid blue background, a red-square blemish): confirms the
+blemish is genuinely replaced with real sampled content (not a filter
+or a blur), the clean source area used for the patch is itself
+untouched, a far unrelated pixel never changes (a local operation, not
+a global wash), and Undo genuinely restores the original blemish. Full
+regression suite (140 checks) re-run and still passing.
+
+---
+
+## 2026-10-01 (5) — Pen tool: fixed Direct Selection (anchor editing was completely non-functional)
+
+**Reported as:** "the pen tool doesn't really work." Investigated live
+in the running app (not just code-reading) rather than assuming the
+existing audit's "Live" status for Pen was still accurate.
+
+**Two real, confirmed bugs, both now fixed, affecting Photo Studio AND
+Main Design** (both use the same shared `hooks/usePenTool.ts` /
+`hooks/useDirectSelection.ts`):
+
+1. **A finished path could never be selected again.** `onPathFinished`
+   deliberately leaves a just-drawn path `evented:false` (so a click
+   meant to start the NEXT path doesn't grab the last one) — but nothing
+   ever turned it back on for the Direct Selection tool. In Photo Studio,
+   `handleDirectClick`'s `canvas.findTarget()` can never match an
+   `evented:false` object, so clicking a drawn path with Direct Selection
+   produced **zero anchor handles, always** — confirmed via a live
+   repro (`handleCount: 0`). Fixed in `PhotoEditorWorkspace.tsx`'s
+   `[activeTool]` effect: vector paths now become evented+selectable
+   specifically while Direct Selection is active, and non-interactive
+   again for every other tool (mirroring Main Design's own
+   `setActiveTool`, which already did this split correctly).
+
+2. **Even once selectable, the path's own resize/rotate controls stole
+   the click from the anchor circles sitting on top of them.** Neither
+   `usePenTool.ts`'s path construction nor `useDirectSelection.ts`'s
+   `cloneablePathStyle` (used when Break creates a new path) ever set
+   `hasControls`/`hasBorders` to `false`, so Fabric's default transform
+   handles render at exactly the same corners as the custom anchor
+   circles — and Fabric's own active-object corner-control hit-testing
+   wins over a general object search. Confirmed via a targeted repro: a
+   mousedown placed exactly on an anchor circle's own screen position
+   resolved to the path (grabbing its corner control), not the circle;
+   setting `hasControls:false` on the live object immediately fixed it.
+   Fixed at the three real path-construction sites: `usePenTool.ts`,
+   `useDirectSelection.ts`'s `cloneablePathStyle`, and Main Design's
+   Shape Builder boolean-path result (`app/editor/page.tsx`), which
+   would have hit the identical bug.
+
+3. **Main Design only, a third edge case:** Direct Selection's anchor
+   handles are rendered from Fabric's own `selection:created`/
+   `selection:updated` events — which do NOT fire for a click on
+   whatever object was ALREADY active, and a path is set active the
+   instant Pen finishes drawing it. So drawing a path, then immediately
+   pressing Direct Selection and clicking that exact path (the single
+   most natural sequence) showed no handles until the user deselected
+   and clicked a second time. Fixed in `setActiveTool`: entering Direct
+   Selection now explicitly renders handles for an already-active vector
+   path instead of waiting for an event that will never come. (Photo
+   Studio's own click handler calls `renderHandles` directly regardless
+   of whether the active object changed, so it never had this particular
+   edge case.)
+
+**Tested:** new `test_pen_tool_direct_select.js` (Photo Studio, 9/9) and
+`test_maindesign_direct_select.js` (Main Design, 3/3) — both exercise
+the real, full workflow: draw a closed path, switch to Direct Selection,
+click the just-drawn path, drag a real anchor (path command data
+genuinely changes), delete a real anchor (command count genuinely
+decreases), and — Photo Studio only — commit via "Add Path to Mask"
+(the layer genuinely gets real mask data, and the transient path is
+removed from the canvas). Full existing regression suite (131 checks)
+re-run and still passing, including Main Design's own full sweep (which
+draws straight and curved Pen segments) and every Photo Studio suite.
+
+---
+
 ## 2026-10-01 (4) — Continuous ambient background animation
 
 **Scope:** master-prompt priority #9 — a reusable, continuously-drifting

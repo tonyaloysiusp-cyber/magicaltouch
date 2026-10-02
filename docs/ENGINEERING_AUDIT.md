@@ -222,7 +222,7 @@ undo/redo, per `PhotoTool` in `PhotoEditorWorkspace.tsx:124-144`):
 | Lasso | Live | `'lasso'`, freeform polygon selection, `pixelSelection.ts` |
 | Magic Wand | Live | `'magic-wand'`, flood-fill color-similarity selection |
 | Crop | Live | `'crop'` tool with its own panel (`PhotoEditorWorkspace.tsx:2306`) |
-| Pen (real Bézier) | Live | `'pen'`/`'direct'`, real anchors/handles/add-delete-convert/open-close path (shipped as task #18/#40-42 in this engagement's own history) |
+| Pen (real Bézier) | Live (corrected 2026-10-01) | `'pen'`/`'direct'`, real anchors/handles/add-delete-convert/open-close path (shipped as task #18/#40-42). **Drawing was always real; anchor EDITING was not** — Direct Selection could never actually select a finished path at all (confirmed via live repro, both Photo Studio and Main Design), so the single most common Pen workflow (draw, then refine) was silently non-functional. Root-caused and fixed (`evented`/`hasControls` conflicts — see `docs/CHANGELOG_ENGINEERING.md`'s 2026-10-01 entry); re-verified live with real anchor-drag/delete repros, not just re-reading the code. |
 | Brush / Eraser | Live | `'brush'`/`'eraser'`, real paintable mask via `lib/editor/photoBrush.ts` |
 | Dodge / Burn | Live | `'dodge'`/`'burn'`, `dodgeBurnInMask()` |
 | Clone Stamp | Live | `'clone'`, offset-sampling clone with a settable source point |
@@ -255,7 +255,7 @@ none exists in this codebase); Perspective Crop, Slice, Distort, Warp
 (today's transforms are Skew and Perspective — see above — plus what
 Fabric's own selection handles give: move/scale/rotate; a unified "Free
 Transform" UI wrapping all of these in one mode is still a separate,
-smaller follow-up); Patch Tool, Red Eye; Smudge; Mixer Brush, Pattern
+smaller follow-up); Red Eye; Smudge; Mixer Brush, Pattern
 Stamp; Freeform Pen as a separate tool from the existing real Pen; Shape
 tools inside Photo Studio specifically (Main Design has real shape tools,
 Photo Studio does not yet); Color Balance, Selective Color, Gradient Map,
