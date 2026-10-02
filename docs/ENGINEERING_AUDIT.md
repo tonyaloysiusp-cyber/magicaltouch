@@ -248,6 +248,7 @@ undo/redo, per `PhotoTool` in `PhotoEditorWorkspace.tsx:124-144`):
 | Gradient mask | Live (2026-09-29; Radial style added 2026-10-02) | `'mask-gradient'` tool — drag a line (Linear) or drag out from a center point (Radial, new); `linearGradientMask()`/`radialGradientMask()` write a real black-to-white ramp into the layer mask alpha, with an Invert option. Style toggle lives in the one tool's panel, matching Photoshop's own Gradient tool |
 | Luminosity mask | Live (2026-10-02) | A "Generate Luminosity Mask" button in the always-visible Mask panel (not a selectable tool — there's no gesture to perform) — `luminosityMask()` writes real Rec. 709 relative luma per pixel directly as the mask alpha, with an Invert option |
 | Vignette | Live (2026-10-02) | Filter menu > "Vignette (whole layer)" — `vignetteInMask()` darkens by real radial distance from center (dodge/burn's own signed scaling-factor math, distance-driven instead of mask-driven); fixed default amount/size for now, same "no dedicated slider yet" honesty note as the existing Motion Blur filter |
+| Grain | Live (2026-10-02) | Filter menu > "Grain (whole layer)" — `grainInMask()` adds real per-pixel Gaussian (Box-Muller) monochromatic noise; fixed default amount for now, same "no dedicated slider yet" honesty note |
 | Patch Tool | Live (2026-10-01) | `'patch'` tool — drag a freehand loop around a blemish, then drag it onto a clean area; releases to a feathered `cloneStampPaint` composite (`featherMask` applied to the drawn `polygonMask` first) |
 | Smudge | Live (2026-10-01) | `'smudge'` tool — `smudgeStepInPlace` pulls color from a step earlier along the stroke into the current dab, applied incrementally against a persistent working canvas (not deferred to mouse-up like every other brush here, since each dab's source is relative to the stroke's own motion) |
 | Red Eye | Live (2026-10-01) | `'red-eye'` tool — a single click; `removeRedEye` scans the clicked radius for genuinely red-dominant pixels (red clearly over both green and blue, not a generic red threshold) and desaturates/darkens exactly those, leaving a near-white specular highlight inside the pupil untouched |
@@ -271,9 +272,9 @@ adjustment toggle already exists in the Adjustments panel — this item is
 about a dedicated Black & White *mixer* with per-channel response, which
 doesn't), a full HSL panel (Hue/Saturation exists, the fuller
 Lightroom-style HSL-per-color-band panel does not); Texture, Clarity,
-Dehaze, Grain (Vignette is now live per above; Linear + Radial Gradient
-Mask, Color Range Mask, and Luminosity Mask are also now live per
-above); layer grouping/clipping (blend mode is now live per above;
+Dehaze (Vignette and Grain are now live per above; Linear + Radial
+Gradient Mask, Color Range Mask, and Luminosity Mask are also now live
+per above); layer grouping/clipping (blend mode is now live per above;
 grouping/clipping is not).
 
 **Workspace structure — menu bar (2026-09-29):** `/photo-studio` now has

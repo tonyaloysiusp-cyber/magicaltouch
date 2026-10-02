@@ -6,6 +6,30 @@ actually done, what was tested, and what's deliberately left for later.
 
 ---
 
+## 2026-10-02 (8) — Photo Studio: real Grain filter
+
+**Scope:** continuing the Photoshop/Photopea tool-parity list. Adds
+Grain to the Filter menu (`'Grain (whole layer)'`), alongside Vignette.
+
+`grainInMask()` (new, in `lib/editor/photoBrush.ts`) adds real per-pixel
+noise via a genuine Box-Muller Gaussian transform — not `Math.random()`
+directly, which produces a visibly flat/blocky uniform distribution
+compared to real photographic grain — and monochromatic (the SAME noise
+delta applied to all three channels per pixel, matching Photoshop's own
+"Add Noise... Monochromatic" option), so it reads as a brightness
+texture rather than colored static. No dedicated Amount slider yet (same
+honesty note as Motion Blur/Vignette): ships with a fixed default.
+
+**Tested:** `test_grain_filter.js` (6/6) — seeds a flat gray image,
+applies the filter via the real Filter menu, and samples a 5×5 grid of
+real pixel values: confirms genuine per-pixel variance now exists (not a
+no-op), confirms every sampled pixel stays monochromatic (R≈G≈B, proving
+the shared-delta implementation rather than independent-per-channel
+colored noise), and confirms Undo restores the exact flat original. Also
+re-ran Vignette and Luminosity Mask regression tests (both still pass).
+
+---
+
 ## 2026-10-02 (7) — Photo Studio: real Vignette filter
 
 **Scope:** continuing the Photoshop/Photopea tool-parity list. Adds

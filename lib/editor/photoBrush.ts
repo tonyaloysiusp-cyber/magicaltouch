@@ -688,6 +688,38 @@ export function vignetteInMask(source: HTMLCanvasElement, mask: PixelMask, amoun
   return canvas.toDataURL('image/png');
 }
 
+// ---------------------------------------------------------------------
+// Grain — adds real per-pixel random noise, Gaussian-distributed (via a
+// genuine Box-Muller transform, not a uniform random() which looks
+// visibly blocky/flat compared to real photographic grain) and
+// monochromatic (the SAME noise delta applied to all three channels per
+// pixel, matching Photoshop's own "Add Noise... Monochromatic" option),
+// so grain reads as a brightness texture rather than colored static.
+// ---------------------------------------------------------------------
+export function grainInMask(source: HTMLCanvasElement, mask: PixelMask, amount: number): string {
+  const canvas = document.createElement('canvas');
+  canvas.width = source.width;
+  canvas.height = source.height;
+  const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
+  ctx.drawImage(source, 0, 0);
+  const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const d = imgData.data;
+  const strength = Math.max(0, amount) * 255;
+  for (let p = 0, i = 0; p < mask.data.length; p++, i += 4) {
+    const m = mask.data[p] / 255;
+    if (!m) continue;
+    const u1 = Math.max(1e-6, Math.random());
+    const u2 = Math.random();
+    const gaussian = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+    const delta = gaussian * strength * 0.3 * m;
+    d[i] = Math.max(0, Math.min(255, d[i] + delta));
+    d[i + 1] = Math.max(0, Math.min(255, d[i + 1] + delta));
+    d[i + 2] = Math.max(0, Math.min(255, d[i + 2] + delta));
+  }
+  ctx.putImageData(imgData, 0, 0);
+  return canvas.toDataURL('image/png');
+}
+
 export function mixerBrushStepInPlace(working: HTMLCanvasElement, mask: PixelMask, color: string, wetness: number): void {
   const ctx = working.getContext('2d') as CanvasRenderingContext2D;
   const imgData = ctx.getImageData(0, 0, working.width, working.height);

@@ -60,6 +60,7 @@ import {
   PatternStyle,
   mixerBrushStepInPlace,
   vignetteInMask,
+  grainInMask,
   LevelsSettings,
   DEFAULT_LEVELS,
   HueSaturationSettings,
@@ -192,6 +193,7 @@ export interface PhotoEditorHandle {
   applyFilterMotionBlur: () => void;
   applyFilterBoxBlur: () => void;
   applyFilterVignette: () => void;
+  applyFilterGrain: () => void;
 }
 
 type PhotoTool =
@@ -1000,6 +1002,7 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
     applyFilterMotionBlur,
     applyFilterBoxBlur,
     applyFilterVignette,
+    applyFilterGrain,
   }));
   useEffect(() => {
     onHistoryChange?.(canUndo, canRedo);
@@ -2609,6 +2612,16 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
     const pixelCanvas = getImagePixelCanvas(img);
     const full = rectMask(img.width, img.height, 0, 0, img.width, img.height);
     bakeAndPush(vignetteInMask(pixelCanvas, full, -0.6, 0.5));
+  };
+  // A real per-pixel Gaussian/monochromatic noise filter (grainInMask),
+  // same "no dedicated slider yet, fixed sensible default" honesty note
+  // as Motion Blur/Vignette above.
+  const applyFilterGrain = () => {
+    const img = imageRef.current;
+    if (!img) return;
+    const pixelCanvas = getImagePixelCanvas(img);
+    const full = rectMask(img.width, img.height, 0, 0, img.width, img.height);
+    bakeAndPush(grainInMask(pixelCanvas, full, 0.08));
   };
 
   // ---- Gradient: click-drag draws a live preview line (or, for a Radial
