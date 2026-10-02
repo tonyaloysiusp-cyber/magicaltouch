@@ -24,6 +24,8 @@ import {
   cloneMask,
   createEmptyMask,
   linearGradientMask,
+  radialGradientMask,
+  luminosityMask,
   traceMaskBoundarySegments,
   BoundarySegment,
 } from '@/lib/editor/pixelSelection';
@@ -53,13 +55,20 @@ import {
   boxBlurInMask,
   smudgeStepInPlace,
   removeRedEye,
+  generatePatternTile,
+  patternStampInMask,
+  PatternStyle,
+  mixerBrushStepInPlace,
+  vignetteInMask,
+  grainInMask,
+  clarityInMask,
   LevelsSettings,
   DEFAULT_LEVELS,
   HueSaturationSettings,
   DEFAULT_HUE_SATURATION,
 } from '@/lib/editor/photoBrush';
 import { imageObjectToDataURL, nativeResMultiplier, clampMultiplierForSafety, configureHighQualityContext, devicePixelRatioSafe } from '@/lib/editor/imageQuality';
-import { DocUnit } from '@/lib/editor/types';
+import { DocUnit, ANCHOR_HIT_RADIUS } from '@/lib/editor/types';
 import { pxToPhysicalUnit, physicalUnitToPx, useDisplayUnit } from '@/lib/editor/units';
 import { LayersPanel } from '@/components/editor/LayersPanel';
 import {
@@ -95,6 +104,9 @@ import {
   Puzzle,
   Waves,
   ScanEye,
+  Hexagon,
+  Grid3x3,
+  PaintRoller,
 } from 'lucide-react';
 import { warpQuadToCanvas, type Point as PerspectivePoint } from '@/lib/editor/perspective';
 
@@ -181,6 +193,9 @@ export interface PhotoEditorHandle {
   applyFilterSharpen: () => void;
   applyFilterMotionBlur: () => void;
   applyFilterBoxBlur: () => void;
+  applyFilterVignette: () => void;
+  applyFilterGrain: () => void;
+  applyFilterClarity: () => void;
 }
 
 type PhotoTool =
@@ -194,6 +209,7 @@ type PhotoTool =
   | 'marquee-rect'
   | 'marquee-ellipse'
   | 'lasso'
+  | 'polygon-lasso'
   | 'magic-wand'
   | 'eraser'
   | 'brush'
@@ -204,6 +220,8 @@ type PhotoTool =
   | 'patch'
   | 'smudge'
   | 'red-eye'
+  | 'pattern-stamp'
+  | 'mixer-brush'
   | 'blur'
   | 'sharpen'
   | 'sponge'
@@ -217,7 +235,7 @@ type PhotoTool =
   | 'mask-color-range'
   | 'mask-gradient';
 
-const PAINT_TOOLS: PhotoTool[] = ['eraser', 'brush', 'dodge', 'burn', 'clone', 'heal', 'blur', 'sharpen', 'sponge'];
+const PAINT_TOOLS: PhotoTool[] = ['eraser', 'brush', 'dodge', 'burn', 'clone', 'heal', 'blur', 'sharpen', 'sponge', 'pattern-stamp'];
 const MASK_PAINT_TOOLS: PhotoTool[] = ['mask-reveal', 'mask-hide'];
 
 // Icons + shortcut labels for every tool — matching Photoshop's own key
@@ -236,6 +254,7 @@ const TOOL_ICONS: Record<PhotoTool, React.ReactNode> = {
   'marquee-rect': <SquareDashedMousePointer size={ICON_SIZE} />,
   'marquee-ellipse': <CircleDashed size={ICON_SIZE} />,
   lasso: <LassoIcon size={ICON_SIZE} />,
+  'polygon-lasso': <Hexagon size={ICON_SIZE} />,
   'magic-wand': <Wand2 size={ICON_SIZE} />,
   eraser: <EraserIcon size={ICON_SIZE} />,
   brush: <Paintbrush size={ICON_SIZE} />,
@@ -246,6 +265,8 @@ const TOOL_ICONS: Record<PhotoTool, React.ReactNode> = {
   patch: <Puzzle size={ICON_SIZE} />,
   smudge: <Waves size={ICON_SIZE} />,
   'red-eye': <ScanEye size={ICON_SIZE} />,
+  'pattern-stamp': <Grid3x3 size={ICON_SIZE} />,
+  'mixer-brush': <PaintRoller size={ICON_SIZE} />,
   blur: <CloudFog size={ICON_SIZE} />,
   sharpen: <Focus size={ICON_SIZE} />,
   sponge: <Droplets size={ICON_SIZE} />,
@@ -271,6 +292,7 @@ const SHORTCUT_LABEL: Partial<Record<PhotoTool, string>> = {
   'marquee-rect': 'M',
   'marquee-ellipse': 'Shift+M',
   lasso: 'L',
+  'polygon-lasso': 'Shift+L',
   'magic-wand': 'W',
   eraser: 'E',
   brush: 'B',
@@ -279,6 +301,8 @@ const SHORTCUT_LABEL: Partial<Record<PhotoTool, string>> = {
   eyedropper: 'I',
   clone: 'S',
   heal: 'Shift+J',
+  'pattern-stamp': 'N',
+  'mixer-brush': 'Shift+B',
   blur: 'F',
   sharpen: 'J',
   sponge: 'X',
@@ -592,7 +616,7 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
   useEffect(() => {
     gradientOpacityRef.current = gradientOpacity;
   }, [gradientOpacity]);
-  const gradientDraftRef = useRef<{ start: { x: number; y: number }; line: any } | null>(null);
+  const gradientDraftRef = useRef<{ start: { x: number; y: number }; shape: any; kind: 'line' | 'circle' } | null>(null);
 
   // Color Range mask: click a pixel, tolerance controls how far a color
   // can be from it (in the same squared-distance metric magicWandMask
@@ -610,14 +634,38 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
     colorRangeInvertRef.current = colorRangeInvert;
   }, [colorRangeInvert]);
 
-  // Gradient mask: same click-drag line gesture as the Gradient (fill)
-  // tool, but the drag vector is written into the mask's alpha via
-  // linearGradientMask instead of blended into the image's colors.
+  // Gradient mask: same click-drag gesture as the Gradient (fill) tool,
+  // but the drag is written into the mask's alpha via linearGradientMask
+  // (style "linear" — a drag vector) or radialGradientMask (style
+  // "radial" — a drag-defined center + radius) instead of blended into
+  // the image's colors. Mirrors Photoshop's own Gradient tool, which
+  // offers both styles under the same tool button rather than as
+  // separate tools.
   const [gradientMaskInvert, setGradientMaskInvert] = useState(false);
   const gradientMaskInvertRef = useRef(false);
   useEffect(() => {
     gradientMaskInvertRef.current = gradientMaskInvert;
   }, [gradientMaskInvert]);
+  const [gradientMaskStyle, setGradientMaskStyle] = useState<'linear' | 'radial'>('linear');
+  const gradientMaskStyleRef = useRef<'linear' | 'radial'>('linear');
+  useEffect(() => {
+    gradientMaskStyleRef.current = gradientMaskStyle;
+  }, [gradientMaskStyle]);
+
+  // Luminosity mask: a pure function of the image's own pixels (see
+  // luminosityMask's own header) -- no click or drag gesture needed, so
+  // unlike Gradient/Color Range mask this isn't its own selectable tool,
+  // just an always-available "Generate" button in the Mask panel.
+  const [luminosityMaskInvert, setLuminosityMaskInvert] = useState(false);
+  const luminosityMaskInvertRef = useRef(false);
+  useEffect(() => {
+    luminosityMaskInvertRef.current = luminosityMaskInvert;
+  }, [luminosityMaskInvert]);
+  const applyLuminosityMask = () => {
+    const img = imageRef.current;
+    if (!img) return;
+    applyMaskShape(luminosityMask(getImagePixelCanvas(img)), luminosityMaskInvertRef.current);
+  };
 
   const [levels, setLevels] = useState<LevelsSettings>(DEFAULT_LEVELS);
   const [hueSat, setHueSat] = useState<HueSaturationSettings>(DEFAULT_HUE_SATURATION);
@@ -644,6 +692,10 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
   // mouse-up, since its source point is relative to the stroke's own
   // motion, not a single offset a deferred mask could reconstruct. ----
   const smudgeLastPointRef = useRef<{ x: number; y: number } | null>(null);
+  // Mixer Brush's own "last point" for interpolation spacing (see below)
+  // — distinct from Smudge's, since Mixer Brush's dab math needs no
+  // from/to offset, only where the dab itself lands.
+  const mixerLastPointRef = useRef<{ x: number; y: number } | null>(null);
   const [smudgeStrength, setSmudgeStrength] = useState(0.5);
   const smudgeStrengthRef = useRef(0.5);
   useEffect(() => {
@@ -662,6 +714,31 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
   useEffect(() => {
     redEyeDarkenRef.current = redEyeDarken;
   }, [redEyeDarken]);
+
+  // ---- Pattern Stamp: paints a repeating procedural tile (dots/
+  // stripes/checkerboard/grid — original patterns, not Photoshop/
+  // Photopea assets) instead of a flat color. Uses the shared
+  // accumulate-then-bake brush pipeline (PAINT_TOOLS), since — unlike
+  // Smudge/Clone — the source (the tile itself) never depends on the
+  // stroke's own history. ----
+  const [patternStyle, setPatternStyle] = useState<PatternStyle>('dots');
+  const patternStyleRef = useRef<PatternStyle>('dots');
+  useEffect(() => {
+    patternStyleRef.current = patternStyle;
+  }, [patternStyle]);
+
+  // ---- Mixer Brush: blends the brush color into the canvas per dab at
+  // a "wetness" strength, mutating a persistent working canvas through
+  // the whole stroke so repeated overlapping passes genuinely build up
+  // more paint — the same incremental architecture Smudge uses, and for
+  // the same reason (a deferred single bake over a union mask can't
+  // express "passing over the same spot twice makes it more opaque"). ----
+  const mixerWorkingCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [mixerWetness, setMixerWetness] = useState(0.35);
+  const mixerWetnessRef = useRef(0.35);
+  useEffect(() => {
+    mixerWetnessRef.current = mixerWetness;
+  }, [mixerWetness]);
 
   // ---- Patch Tool: draw a freehand loop around a blemish, then drag
   // that loop onto a clean area — releasing replaces the blemish with
@@ -741,6 +818,7 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
   // hook's own draftRef/liveRect for what these mirror.
   const selDraftRefHolder = useRef<any>(null);
   const liveRectRef = useRef<{ x: number; y: number; w: number; h: number } | null>(null);
+  const polygonLivePointRef = useRef<{ x: number; y: number } | null>(null);
 
   // ---- Vector path (Pen tool) — same reused hooks as before. A
   // finished path can be turned into a real mask contribution (painted
@@ -925,6 +1003,9 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
     applyFilterSharpen,
     applyFilterMotionBlur,
     applyFilterBoxBlur,
+    applyFilterVignette,
+    applyFilterGrain,
+    applyFilterClarity,
   }));
   useEffect(() => {
     onHistoryChange?.(canUndo, canRedo);
@@ -1408,6 +1489,35 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
                 ctx.lineTo(ox + draft.points[i].x * vt[0], oy + draft.points[i].y * vt[3]);
               }
             });
+          } else if (draft.tool === 'polygon-lasso' && draft.points.length >= 1) {
+            // Confirmed vertices (clicked so far) plus a rubber-band segment
+            // out to wherever the cursor currently is — the live cursor
+            // point is tracked separately from draft.points (see
+            // usePixelSelectionTool's polygonLivePoint), since it's not a
+            // confirmed vertex yet.
+            const live = polygonLivePointRef.current;
+            strokeAnts(ctx, () => {
+              ctx.moveTo(ox + draft.points[0].x * vt[0], oy + draft.points[0].y * vt[3]);
+              for (let i = 1; i < draft.points.length; i++) {
+                ctx.lineTo(ox + draft.points[i].x * vt[0], oy + draft.points[i].y * vt[3]);
+              }
+              if (live) ctx.lineTo(ox + live.x * vt[0], oy + live.y * vt[3]);
+            });
+            // Closing affordance at the first vertex, highlighted once the
+            // cursor is close enough to click-to-close — same visual
+            // language as the Pen tool's own anchor-closing indicator.
+            const first = draft.points[0];
+            const closeNear =
+              !!live && draft.points.length >= 3 && Math.hypot(live.x - first.x, live.y - first.y) <= ANCHOR_HIT_RADIUS;
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(ox + first.x * vt[0], oy + first.y * vt[3], 4, 0, Math.PI * 2);
+            ctx.fillStyle = closeNear ? '#3891ff' : '#ffffff';
+            ctx.strokeStyle = '#3891ff';
+            ctx.lineWidth = 1.5;
+            ctx.fill();
+            ctx.stroke();
+            ctx.restore();
           }
         }
 
@@ -1985,7 +2095,16 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
 
   // ---- Pixel selection tools (marquee/lasso/magic-wand), reused as-is
   // from the main editor's own hook. ----
-  const { handleMouseDown: selDown, handleMouseMove: selMove, handleMouseUp: selUp, liveRect: selLiveRect, draftRef: selDraftRef } = usePixelSelectionTool({
+  const {
+    handleMouseDown: selDown,
+    handleMouseMove: selMove,
+    handleMouseUp: selUp,
+    liveRect: selLiveRect,
+    draftRef: selDraftRef,
+    polygonLivePoint: selPolygonLivePoint,
+    finishPolygonLassoDraft,
+    cancelPolygonLassoDraft,
+  } = usePixelSelectionTool({
     fabricCanvasRef,
     activeToolRef: activeToolRef as any,
     toleranceRef,
@@ -2003,8 +2122,12 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
     liveRectRef.current = selLiveRect;
   }, [selLiveRect]);
   selDraftRefHolder.current = selDraftRef;
+  useEffect(() => {
+    polygonLivePointRef.current = selPolygonLivePoint;
+  }, [selPolygonLivePoint]);
 
-  const isSelectTool = (t: PhotoTool) => t === 'marquee-rect' || t === 'marquee-ellipse' || t === 'lasso' || t === 'magic-wand';
+  const isSelectTool = (t: PhotoTool) =>
+    t === 'marquee-rect' || t === 'marquee-ellipse' || t === 'lasso' || t === 'polygon-lasso' || t === 'magic-wand';
 
   // ---- Pen tool + Direct Selection (anchor editing), reused verbatim
   // from the main editor's own hooks — real bezier path drawing/editing,
@@ -2416,6 +2539,8 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
     } else if (tool === 'sponge') {
       const signedAmount = spongeModeRef.current === 'saturate' ? spongeStrengthRef.current : -spongeStrengthRef.current;
       bakeAndPush(spongeInMask(pixelCanvas, mask, signedAmount));
+    } else if (tool === 'pattern-stamp') {
+      bakeAndPush(patternStampInMask(pixelCanvas, mask, generatePatternTile(patternStyleRef.current, brushColorRef.current)));
     }
   };
 
@@ -2479,12 +2604,64 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
     const full = rectMask(img.width, img.height, 0, 0, img.width, img.height);
     bakeAndPush(boxBlurInMask(pixelCanvas, full, blurRadiusRef.current));
   };
+  // A real radial vignette (vignetteInMask) — genuine distance-from-center
+  // darkening, not an image overlay or CSS gradient. No dedicated slider
+  // exists yet for amount/size, so this applies a fixed, sensible default
+  // (darkened corners, falloff starting halfway out); wiring real amount/
+  // size controls is future work, same honesty note as Motion Blur above.
+  const applyFilterVignette = () => {
+    const img = imageRef.current;
+    if (!img) return;
+    const pixelCanvas = getImagePixelCanvas(img);
+    const full = rectMask(img.width, img.height, 0, 0, img.width, img.height);
+    bakeAndPush(vignetteInMask(pixelCanvas, full, -0.6, 0.5));
+  };
+  // A real per-pixel Gaussian/monochromatic noise filter (grainInMask),
+  // same "no dedicated slider yet, fixed sensible default" honesty note
+  // as Motion Blur/Vignette above.
+  const applyFilterGrain = () => {
+    const img = imageRef.current;
+    if (!img) return;
+    const pixelCanvas = getImagePixelCanvas(img);
+    const full = rectMask(img.width, img.height, 0, 0, img.width, img.height);
+    bakeAndPush(grainInMask(pixelCanvas, full, 0.08));
+  };
+  // Real midtone-weighted, large-radius local contrast boost
+  // (clarityInMask) — genuinely distinct math from Sharpen, not a
+  // relabeled copy (see clarityInMask's own header). Same "no dedicated
+  // slider yet" honesty note as the other filters above.
+  const applyFilterClarity = () => {
+    const img = imageRef.current;
+    if (!img) return;
+    const pixelCanvas = getImagePixelCanvas(img);
+    const full = rectMask(img.width, img.height, 0, 0, img.width, img.height);
+    bakeAndPush(clarityInMask(pixelCanvas, full, 0.6));
+  };
 
-  // ---- Gradient: click-drag draws a live preview line; releasing bakes
-  // a real two-stop linear gradient along it. ----
+  // ---- Gradient: click-drag draws a live preview line (or, for a Radial
+  // Gradient Mask, a live preview circle); releasing bakes a real
+  // two-stop gradient along it. ----
   const startGradientDraft = (local: { x: number; y: number }, canvasPoint: { x: number; y: number }) => {
     const F = fabricModRef.current;
     const canvas = fabricCanvasRef.current;
+    if (activeToolRef.current === 'mask-gradient' && gradientMaskStyleRef.current === 'radial') {
+      const circle = new F.Circle({
+        left: canvasPoint.x,
+        top: canvasPoint.y,
+        originX: 'center',
+        originY: 'center',
+        radius: 0,
+        fill: 'transparent',
+        stroke: '#3891ff',
+        strokeWidth: 2,
+        strokeDashArray: [6, 4],
+        selectable: false,
+        evented: false,
+      });
+      canvas.add(circle);
+      gradientDraftRef.current = { start: local, shape: circle, kind: 'circle' };
+      return;
+    }
     const line = new F.Line([canvasPoint.x, canvasPoint.y, canvasPoint.x, canvasPoint.y], {
       stroke: '#3891ff',
       strokeWidth: 2,
@@ -2493,7 +2670,7 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
       evented: false,
     });
     canvas.add(line);
-    gradientDraftRef.current = { start: local, line };
+    gradientDraftRef.current = { start: local, shape: line, kind: 'line' };
   };
 
   // ---- Patch Tool mouse handling ----
@@ -2711,6 +2888,49 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
     bakeAndPush(working.toDataURL('image/png'));
   };
 
+  // ---- Mixer Brush mouse handling (same persistent-working-canvas
+  // architecture as Smudge above, see mixerWorkingCanvasRef's own
+  // comment for why) ----
+  const mixerDabAt = (local: { x: number; y: number }) => {
+    const img = imageRef.current;
+    const working = mixerWorkingCanvasRef.current;
+    if (!img || !working) return;
+    const r = Math.max(1, brushSizeRef.current / 2);
+    let dab = softBrushMask(img.width, img.height, local.x, local.y, r, brushHardnessRef.current, 1);
+    const selection = selectionMaskRef.current;
+    if (selection && maskHasSelection(selection)) dab = combineMasks(selection, dab, 'intersect');
+    mixerBrushStepInPlace(working, dab, brushColorRef.current, mixerWetnessRef.current);
+  };
+  const beginMixerStroke = (local: { x: number; y: number }) => {
+    const img = imageRef.current;
+    mixerLastPointRef.current = local;
+    mixerWorkingCanvasRef.current = img ? getImagePixelCanvas(img) : null;
+    mixerDabAt(local);
+    const working = mixerWorkingCanvasRef.current;
+    if (working) bakeLive(working.toDataURL('image/png'));
+  };
+  const continueMixerStroke = (raw: { x: number; y: number }) => {
+    const from = mixerLastPointRef.current || raw;
+    const radius = Math.max(1, brushSizeRef.current / 2);
+    const spacing = Math.max(1, radius * 0.2);
+    const dist = Math.hypot(raw.x - from.x, raw.y - from.y);
+    const steps = Math.max(1, Math.round(dist / spacing));
+    for (let i = 1; i <= steps; i++) {
+      const t = i / steps;
+      mixerDabAt({ x: from.x + (raw.x - from.x) * t, y: from.y + (raw.y - from.y) * t });
+    }
+    mixerLastPointRef.current = raw;
+    const working = mixerWorkingCanvasRef.current;
+    if (working) bakeLive(working.toDataURL('image/png'));
+  };
+  const endMixerStroke = () => {
+    const working = mixerWorkingCanvasRef.current;
+    mixerLastPointRef.current = null;
+    mixerWorkingCanvasRef.current = null;
+    if (!working) return;
+    bakeAndPush(working.toDataURL('image/png'));
+  };
+
   // ---- Red Eye: a single click, not a drag -- same "immediate action"
   // pattern as Paint Bucket / Color Range. ----
   const applyRedEyeAt = (local: { x: number; y: number }) => {
@@ -2784,6 +3004,11 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
     if (tool === 'smudge') {
       paintingRef.current = true;
       beginSmudgeStroke(canvasToImageLocal(canvas.getPointer(opt.e)));
+      return;
+    }
+    if (tool === 'mixer-brush') {
+      paintingRef.current = true;
+      beginMixerStroke(canvasToImageLocal(canvas.getPointer(opt.e)));
       return;
     }
     if (tool === 'red-eye') {
@@ -2867,7 +3092,14 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
     }
     if ((tool === 'gradient' || tool === 'mask-gradient') && gradientDraftRef.current) {
       const pointer = canvas.getPointer(opt.e);
-      gradientDraftRef.current.line.set({ x2: pointer.x, y2: pointer.y });
+      const draft = gradientDraftRef.current;
+      if (draft.kind === 'circle') {
+        const dx = pointer.x - draft.shape.left;
+        const dy = pointer.y - draft.shape.top;
+        draft.shape.set({ radius: Math.hypot(dx, dy) });
+      } else {
+        draft.shape.set({ x2: pointer.x, y2: pointer.y });
+      }
       canvas.requestRenderAll();
       return;
     }
@@ -2881,6 +3113,10 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
     }
     if (tool === 'smudge' && paintingRef.current) {
       continueSmudgeStroke(canvasToImageLocal(canvas.getPointer(opt.e)));
+      return;
+    }
+    if (tool === 'mixer-brush' && paintingRef.current) {
+      continueMixerStroke(canvasToImageLocal(canvas.getPointer(opt.e)));
       return;
     }
     if (isSelectTool(tool)) selMove(opt);
@@ -2903,15 +3139,19 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
       return;
     }
     if ((tool === 'gradient' || tool === 'mask-gradient') && gradientDraftRef.current) {
-      const { start, line } = gradientDraftRef.current;
+      const { start, shape } = gradientDraftRef.current;
       const pointer = canvas.getPointer(opt.e);
       const end = canvasToImageLocal(pointer);
-      canvas.remove(line);
+      canvas.remove(shape);
       gradientDraftRef.current = null;
       const img = imageRef.current;
       if (img && Math.hypot(end.x - start.x, end.y - start.y) > 2) {
         if (tool === 'mask-gradient') {
-          applyMaskShape(linearGradientMask(img.width, img.height, start.x, start.y, end.x, end.y), gradientMaskInvertRef.current);
+          const shapeMask =
+            gradientMaskStyleRef.current === 'radial'
+              ? radialGradientMask(img.width, img.height, start.x, start.y, Math.hypot(end.x - start.x, end.y - start.y))
+              : linearGradientMask(img.width, img.height, start.x, start.y, end.x, end.y);
+          applyMaskShape(shapeMask, gradientMaskInvertRef.current);
         } else {
           bakeAndPush(applyGradientOverlay(getImagePixelCanvas(img), start.x, start.y, end.x, end.y, gradientColor1Ref.current, gradientColor2Ref.current, gradientOpacityRef.current));
         }
@@ -2931,6 +3171,11 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
     if (tool === 'smudge') {
       paintingRef.current = false;
       endSmudgeStroke();
+      return;
+    }
+    if (tool === 'mixer-brush') {
+      paintingRef.current = false;
+      endMixerStroke();
       return;
     }
     if (isSelectTool(tool)) selUp(opt);
@@ -3008,6 +3253,7 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
     if (activeTool !== 'pen') clearPenDraft();
     if (activeTool !== 'direct') clearHandles();
     if (activeTool !== 'patch') resetPatchDraft();
+    if (activeTool !== 'polygon-lasso') cancelPolygonLassoDraft();
     canvas.defaultCursor = activeTool === 'hand' ? 'grab' : 'default';
     canvas.requestRenderAll();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -3045,6 +3291,18 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
       if (activeToolRef.current === 'patch' && e.key === 'Escape') {
         e.preventDefault();
         resetPatchDraft();
+      }
+      if (activeToolRef.current === 'polygon-lasso') {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          finishPolygonLassoDraft(e);
+          return;
+        }
+        if (e.key === 'Escape') {
+          e.preventDefault();
+          cancelPolygonLassoDraft();
+          return;
+        }
       }
 
       const isMeta = e.ctrlKey || e.metaKey;
@@ -3090,6 +3348,7 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
         if (key === 't') { e.preventDefault(); selectTool('skew'); return; }
         if (key === 'u') { e.preventDefault(); selectTool('smudge'); return; }
         if (key === 'y') { e.preventDefault(); selectTool('red-eye'); return; }
+        if (key === 'n') { e.preventDefault(); selectTool('pattern-stamp'); return; }
       }
       if (!isMeta && e.shiftKey) {
         const key = e.key.toLowerCase();
@@ -3099,6 +3358,8 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
         if (key === 't') { e.preventDefault(); selectTool('perspective'); return; }
         if (key === 'j') { e.preventDefault(); selectTool('heal'); return; }
         if (key === 's') { e.preventDefault(); selectTool('patch'); return; }
+        if (key === 'l') { e.preventDefault(); selectTool('polygon-lasso'); return; }
+        if (key === 'b') { e.preventDefault(); selectTool('mixer-brush'); return; }
       }
     };
     const handleUp = (e: KeyboardEvent) => {
@@ -3114,7 +3375,7 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
       window.removeEventListener('keyup', handleUp);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [active, finishPenPath, clearPenDraft, deleteActiveAnchor]);
+  }, [active, finishPenPath, clearPenDraft, deleteActiveAnchor, finishPolygonLassoDraft, cancelPolygonLassoDraft]);
 
   // ---- Background removal (heuristic): flood-fills from all 4 corners
   // by color similarity and clears the matched pixels. Not ML-based
@@ -3227,6 +3488,7 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
         { id: 'marquee-rect', label: 'Marquee' },
         { id: 'marquee-ellipse', label: 'Ellipse' },
         { id: 'lasso', label: 'Lasso' },
+        { id: 'polygon-lasso', label: 'Polygon Lasso' },
         { id: 'magic-wand', label: 'Magic Wand' },
       ],
     },
@@ -3243,6 +3505,8 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
         { id: 'patch', label: 'Patch' },
         { id: 'smudge', label: 'Smudge' },
         { id: 'red-eye', label: 'Red Eye' },
+        { id: 'pattern-stamp', label: 'Pattern Stamp' },
+        { id: 'mixer-brush', label: 'Mixer Brush' },
         { id: 'blur', label: 'Blur' },
         { id: 'sharpen', label: 'Sharpen' },
         { id: 'sponge', label: 'Sponge' },
@@ -3651,11 +3915,29 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
               </div>
             )}
 
-            {(activeTool === 'eraser' || activeTool === 'brush' || activeTool === 'dodge' || activeTool === 'burn' || activeTool === 'clone' || activeTool === 'heal' || activeTool === 'smudge' || activeTool === 'blur' || activeTool === 'sharpen' || activeTool === 'sponge' || MASK_PAINT_TOOLS.includes(activeTool)) && (
+            {(activeTool === 'eraser' || activeTool === 'brush' || activeTool === 'dodge' || activeTool === 'burn' || activeTool === 'clone' || activeTool === 'heal' || activeTool === 'smudge' || activeTool === 'blur' || activeTool === 'sharpen' || activeTool === 'sponge' || activeTool === 'pattern-stamp' || activeTool === 'mixer-brush' || MASK_PAINT_TOOLS.includes(activeTool)) && (
               <div className="border-t pt-3">
                 <p className="font-semibold text-gray-700 text-xs uppercase tracking-wide mb-2">
-                  {activeTool === 'eraser' ? 'Eraser' : activeTool === 'brush' ? 'Brush' : activeTool === 'dodge' ? 'Dodge (lighten)' : activeTool === 'burn' ? 'Burn (darken)' : activeTool === 'clone' ? 'Clone Stamp' : activeTool === 'heal' ? 'Healing Brush' : activeTool === 'smudge' ? 'Smudge' : activeTool === 'blur' ? 'Blur' : activeTool === 'sharpen' ? 'Sharpen' : activeTool === 'sponge' ? 'Sponge' : activeTool === 'mask-reveal' ? 'Mask: Paint Reveal' : 'Mask: Paint Hide'}
+                  {activeTool === 'eraser' ? 'Eraser' : activeTool === 'brush' ? 'Brush' : activeTool === 'dodge' ? 'Dodge (lighten)' : activeTool === 'burn' ? 'Burn (darken)' : activeTool === 'clone' ? 'Clone Stamp' : activeTool === 'heal' ? 'Healing Brush' : activeTool === 'smudge' ? 'Smudge' : activeTool === 'blur' ? 'Blur' : activeTool === 'sharpen' ? 'Sharpen' : activeTool === 'sponge' ? 'Sponge' : activeTool === 'pattern-stamp' ? 'Pattern Stamp' : activeTool === 'mixer-brush' ? 'Mixer Brush' : activeTool === 'mask-reveal' ? 'Mask: Paint Reveal' : 'Mask: Paint Hide'}
                 </p>
+                {activeTool === 'mixer-brush' && (
+                  <p className="text-[11px] text-gray-500 mb-2">
+                    Blends the brush color into the canvas as you paint — pass over the same spot again for more buildup, like a real wet medium.
+                  </p>
+                )}
+                {activeTool === 'pattern-stamp' && (
+                  <div className="grid grid-cols-2 gap-1.5 mb-2">
+                    {(['dots', 'stripes', 'checkerboard', 'grid'] as PatternStyle[]).map((style) => (
+                      <button
+                        key={style}
+                        onClick={() => setPatternStyle(style)}
+                        className={`text-[11px] px-2 py-1 border rounded capitalize ${patternStyle === style ? 'bg-gray-800 text-white' : ''}`}
+                      >
+                        {style}
+                      </button>
+                    ))}
+                  </div>
+                )}
                 {activeTool === 'heal' && (
                   <p className="text-[11px] text-gray-500 mb-2">
                     Paint over a blemish — it's reconstructed from the surrounding real pixels. No source point needed (unlike Clone Stamp).
@@ -3676,20 +3958,29 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
                   <span>{Math.round(brushHardness * 100)}%</span>
                 </div>
                 <input type="range" min={0} max={1} step={0.05} value={brushHardness} onChange={(e) => setBrushHardness(parseFloat(e.target.value))} className="w-full mb-2" />
-                {activeTool !== 'smudge' && (
+                {activeTool !== 'smudge' && activeTool !== 'mixer-brush' && (
                   <>
                     <div className="flex justify-between text-[11px] text-gray-500 mb-0.5">
                       <span>Opacity</span>
                       <span>{Math.round(brushOpacity * 100)}%</span>
                     </div>
-                    {/* Smudge has its own "Strength" slider below instead --
-                        Opacity isn't wired into its math (smudgeInMask takes
-                        a strength parameter directly), so showing it here
-                        would be a control that visibly does nothing. */}
+                    {/* Smudge and Mixer Brush have their own "Strength"/
+                        "Wetness" sliders instead -- Opacity isn't wired
+                        into either's math, so showing it here would be a
+                        control that visibly does nothing. */}
                     <input type="range" min={0.05} max={1} step={0.05} value={brushOpacity} onChange={(e) => setBrushOpacity(parseFloat(e.target.value))} className="w-full mb-2" />
                   </>
                 )}
-                {activeTool === 'brush' && (
+                {activeTool === 'mixer-brush' && (
+                  <>
+                    <div className="flex justify-between text-[11px] text-gray-500 mb-0.5">
+                      <span>Wetness</span>
+                      <span>{Math.round(mixerWetness * 100)}%</span>
+                    </div>
+                    <input type="range" min={0.05} max={1} step={0.05} value={mixerWetness} onChange={(e) => setMixerWetness(parseFloat(e.target.value))} className="w-full mb-2" />
+                  </>
+                )}
+                {(activeTool === 'brush' || activeTool === 'pattern-stamp' || activeTool === 'mixer-brush') && (
                   <div className="flex items-center gap-2">
                     <label className="text-[11px] text-gray-500">Color</label>
                     <input type="color" value={brushColor} onChange={(e) => setBrushColor(e.target.value)} className="w-11 h-11 border rounded cursor-pointer" />
@@ -3967,8 +4258,24 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
               <div className="border-t pt-3">
                 <p className="font-semibold text-gray-700 text-xs uppercase tracking-wide mb-2">Gradient Mask</p>
                 <p className="text-[11px] text-gray-500 mb-2">
-                  Click and drag across the image — a linear black-to-white gradient along that line becomes the new mask (white = revealed, black = hidden). Replaces any existing mask.
+                  {gradientMaskStyle === 'radial'
+                    ? 'Click and drag out from a center point — a radial black-to-white gradient (black at the center, white at the drag radius) becomes the new mask. Replaces any existing mask.'
+                    : 'Click and drag across the image — a linear black-to-white gradient along that line becomes the new mask (white = revealed, black = hidden). Replaces any existing mask.'}
                 </p>
+                <div className="grid grid-cols-2 gap-1.5 mb-2">
+                  <button
+                    onClick={() => setGradientMaskStyle('linear')}
+                    className={`text-[11px] px-2 py-1 border rounded ${gradientMaskStyle === 'linear' ? 'bg-gray-800 text-white' : ''}`}
+                  >
+                    Linear
+                  </button>
+                  <button
+                    onClick={() => setGradientMaskStyle('radial')}
+                    className={`text-[11px] px-2 py-1 border rounded ${gradientMaskStyle === 'radial' ? 'bg-gray-800 text-white' : ''}`}
+                  >
+                    Radial
+                  </button>
+                </div>
                 <label className="flex items-center gap-1.5 text-[11px] text-gray-600">
                   <input type="checkbox" checked={gradientMaskInvert} onChange={(e) => setGradientMaskInvert(e.target.checked)} />
                   Invert
@@ -4137,6 +4444,18 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
                   </button>
                 </div>
               )}
+            </div>
+
+            <div className="border-t pt-3">
+              <p className="font-semibold text-gray-700 text-xs uppercase tracking-wide mb-2">Luminosity Mask</p>
+              <p className="text-[11px] text-gray-400 mb-2">
+                Generates a mask directly from this layer's own brightness — no click or drag needed, unlike Gradient/Color Range. Replaces any existing mask.
+              </p>
+              <label className="flex items-center gap-1.5 text-[11px] text-gray-600 mb-2">
+                <input type="checkbox" checked={luminosityMaskInvert} onChange={(e) => setLuminosityMaskInvert(e.target.checked)} />
+                Invert (dark areas revealed instead of bright)
+              </label>
+              <button onClick={applyLuminosityMask} className="w-full text-[11px] px-2 py-1.5 border rounded hover:bg-gray-50">Generate Luminosity Mask</button>
             </div>
 
             <div className="border-t pt-3">

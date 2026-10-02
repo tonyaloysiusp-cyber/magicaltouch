@@ -558,3 +558,225 @@ export function removeRedEye(source: HTMLCanvasElement, cx: number, cy: number, 
   ctx.putImageData(imgData, 0, 0);
   return canvas.toDataURL('image/png');
 }
+
+// ---------------------------------------------------------------------
+// Pattern Stamp — paints a small repeating tile instead of a flat color.
+// The four tile styles below are original/procedural (dots, stripes,
+// checkerboard, grid), not reproductions of any Photoshop/Photopea asset.
+// ---------------------------------------------------------------------
+
+export type PatternStyle = 'dots' | 'stripes' | 'checkerboard' | 'grid';
+
+export function generatePatternTile(style: PatternStyle, color: string, tileSize = 16): HTMLCanvasElement {
+  const tile = document.createElement('canvas');
+  tile.width = tileSize;
+  tile.height = tileSize;
+  const ctx = tile.getContext('2d') as CanvasRenderingContext2D;
+  ctx.clearRect(0, 0, tileSize, tileSize);
+  ctx.fillStyle = color;
+  if (style === 'dots') {
+    ctx.beginPath();
+    ctx.arc(tileSize / 2, tileSize / 2, tileSize / 4, 0, Math.PI * 2);
+    ctx.fill();
+  } else if (style === 'stripes') {
+    ctx.fillRect(0, 0, tileSize / 2, tileSize);
+  } else if (style === 'checkerboard') {
+    const half = tileSize / 2;
+    ctx.fillRect(0, 0, half, half);
+    ctx.fillRect(half, half, half, half);
+  } else {
+    const line = Math.max(1, tileSize * 0.15);
+    ctx.fillRect(0, 0, tileSize, line);
+    ctx.fillRect(0, 0, line, tileSize);
+  }
+  return tile;
+}
+
+// Composites a tiled pattern into exactly the masked pixels, the same
+// destination-in clipping paintColorInMask uses — but the fill is a
+// repeating pattern rather than a flat color. The tile is always anchored
+// to the image's own (0,0), not the mask's position, so separate dabs and
+// separate strokes line up seamlessly instead of each restarting the tile
+// at its own origin (Photoshop's "Aligned" Pattern Stamp behavior, which
+// is the only sensible default once there's no per-click "set source"
+// step the way Clone Stamp has).
+export function patternStampInMask(source: HTMLCanvasElement, mask: PixelMask, patternTile: HTMLCanvasElement): string {
+  const canvas = document.createElement('canvas');
+  canvas.width = source.width;
+  canvas.height = source.height;
+  const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
+  ctx.drawImage(source, 0, 0);
+
+  const patternLayer = document.createElement('canvas');
+  patternLayer.width = source.width;
+  patternLayer.height = source.height;
+  const pctx = patternLayer.getContext('2d') as CanvasRenderingContext2D;
+  const pat = pctx.createPattern(patternTile, 'repeat') as CanvasPattern;
+  pctx.fillStyle = pat;
+  pctx.fillRect(0, 0, patternLayer.width, patternLayer.height);
+  pctx.globalCompositeOperation = 'destination-in';
+  pctx.drawImage(maskToCanvas(mask), 0, 0);
+
+  ctx.drawImage(patternLayer, 0, 0);
+  return canvas.toDataURL('image/png');
+}
+
+// ---------------------------------------------------------------------
+// Mixer Brush — blends the foreground color INTO the existing pixels,
+// at a "wetness" strength per dab, mutating a persistent working canvas
+// in place through the whole stroke (the exact same architecture
+// smudgeStepInPlace uses, for the same reason: repeated overlapping
+// passes must genuinely build up more paint, which a deferred single
+// bake over a union mask can't express). This is what makes it a
+// distinct real tool rather than a relabeled Brush or Smudge: Brush lays
+// down one flat, single-pass color; Smudge introduces no new color at
+// all (it only smears what's already there); Mixer Brush does both at
+// once — it pulls in a NEW foreground color while still letting the
+// canvas's own color show through underneath, more so the lower the
+// wetness and the fewer times a given pixel has been passed over.
+// ---------------------------------------------------------------------
+
+// Resolves any CSS color string to concrete 0-255 RGB via the canvas's
+// own color parsing (the same parser `fillStyle` already uses elsewhere
+// in this file), rather than a hand-rolled hex parser that could drift
+// out of sync with it.
+function cssColorToRgb(color: string): [number, number, number] {
+  const c = document.createElement('canvas');
+  c.width = 1;
+  c.height = 1;
+  const ctx = c.getContext('2d') as CanvasRenderingContext2D;
+  ctx.fillStyle = color;
+  ctx.fillRect(0, 0, 1, 1);
+  const d = ctx.getImageData(0, 0, 1, 1).data;
+  return [d[0], d[1], d[2]];
+}
+
+// ---------------------------------------------------------------------
+// Vignette — darkens (or, with a positive amount, lightens) pixels
+// based on their real radial distance from the image's center, same
+// scaling-factor math dodgeBurnInMask uses, just driven by distance
+// instead of a painted mask's alpha. `size` is where the falloff starts
+// (0 = starts at the exact center, close to 1 = only the far corners
+// darken); `amount` is signed like dodge/burn (negative darkens,
+// positive lightens).
+// ---------------------------------------------------------------------
+export function vignetteInMask(source: HTMLCanvasElement, mask: PixelMask, amount: number, size: number): string {
+  const canvas = document.createElement('canvas');
+  canvas.width = source.width;
+  canvas.height = source.height;
+  const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
+  ctx.drawImage(source, 0, 0);
+  const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const d = imgData.data;
+  const cx = canvas.width / 2;
+  const cy = canvas.height / 2;
+  const maxDist = Math.sqrt(cx * cx + cy * cy) || 1;
+  const s = Math.max(0, Math.min(0.95, size));
+  for (let p = 0, i = 0; p < mask.data.length; p++, i += 4) {
+    const m = mask.data[p] / 255;
+    if (!m) continue;
+    const y = Math.floor(p / canvas.width);
+    const x = p - y * canvas.width;
+    const dist = Math.sqrt((x - cx) * (x - cx) + (y - cy) * (y - cy)) / maxDist;
+    const t = Math.max(0, Math.min(1, (dist - s) / Math.max(0.0001, 1 - s)));
+    const factor = 1 + amount * t * m;
+    d[i] = Math.max(0, Math.min(255, d[i] * factor));
+    d[i + 1] = Math.max(0, Math.min(255, d[i + 1] * factor));
+    d[i + 2] = Math.max(0, Math.min(255, d[i + 2] * factor));
+  }
+  ctx.putImageData(imgData, 0, 0);
+  return canvas.toDataURL('image/png');
+}
+
+// ---------------------------------------------------------------------
+// Grain — adds real per-pixel random noise, Gaussian-distributed (via a
+// genuine Box-Muller transform, not a uniform random() which looks
+// visibly blocky/flat compared to real photographic grain) and
+// monochromatic (the SAME noise delta applied to all three channels per
+// pixel, matching Photoshop's own "Add Noise... Monochromatic" option),
+// so grain reads as a brightness texture rather than colored static.
+// ---------------------------------------------------------------------
+export function grainInMask(source: HTMLCanvasElement, mask: PixelMask, amount: number): string {
+  const canvas = document.createElement('canvas');
+  canvas.width = source.width;
+  canvas.height = source.height;
+  const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
+  ctx.drawImage(source, 0, 0);
+  const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const d = imgData.data;
+  const strength = Math.max(0, amount) * 255;
+  for (let p = 0, i = 0; p < mask.data.length; p++, i += 4) {
+    const m = mask.data[p] / 255;
+    if (!m) continue;
+    const u1 = Math.max(1e-6, Math.random());
+    const u2 = Math.random();
+    const gaussian = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+    const delta = gaussian * strength * 0.3 * m;
+    d[i] = Math.max(0, Math.min(255, d[i] + delta));
+    d[i + 1] = Math.max(0, Math.min(255, d[i + 1] + delta));
+    d[i + 2] = Math.max(0, Math.min(255, d[i + 2] + delta));
+  }
+  ctx.putImageData(imgData, 0, 0);
+  return canvas.toDataURL('image/png');
+}
+
+// ---------------------------------------------------------------------
+// Clarity — real local-contrast enhancement, genuinely distinct from
+// Sharpen rather than a relabeled copy of it: Sharpen's unsharp mask
+// uses a small 2px blur radius to isolate FINE detail; Clarity uses a
+// much larger 24px radius to isolate MIDTONE-SCALE structure instead,
+// and additionally weights the boost by how close each pixel's
+// luminance is to the midpoint (full strength at luma 127.5, tapering
+// toward 0 at pure black/white) — the real reason Lightroom-style
+// Clarity can push local contrast hard without blowing out shadows and
+// highlights into clipped halos the way a plain large-radius unsharp
+// mask would.
+// ---------------------------------------------------------------------
+export function clarityInMask(source: HTMLCanvasElement, mask: PixelMask, amount: number): string {
+  const canvas = document.createElement('canvas');
+  canvas.width = source.width;
+  canvas.height = source.height;
+  const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
+  ctx.drawImage(source, 0, 0);
+  const orig = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+  const blurredCanvas = document.createElement('canvas');
+  blurredCanvas.width = source.width;
+  blurredCanvas.height = source.height;
+  const bctx = blurredCanvas.getContext('2d') as CanvasRenderingContext2D;
+  bctx.filter = 'blur(24px)';
+  bctx.drawImage(source, 0, 0);
+  const blurred = bctx.getImageData(0, 0, canvas.width, canvas.height);
+
+  const d = orig.data;
+  const bd = blurred.data;
+  for (let p = 0, i = 0; p < mask.data.length; p++, i += 4) {
+    const m = mask.data[p] / 255;
+    if (!m) continue;
+    const luma = 0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2];
+    const midtoneWeight = 1 - Math.pow(Math.abs(luma - 127.5) / 127.5, 2);
+    const localAmount = amount * midtoneWeight * m;
+    d[i] = Math.max(0, Math.min(255, d[i] + localAmount * (d[i] - bd[i])));
+    d[i + 1] = Math.max(0, Math.min(255, d[i + 1] + localAmount * (d[i + 1] - bd[i + 1])));
+    d[i + 2] = Math.max(0, Math.min(255, d[i + 2] + localAmount * (d[i + 2] - bd[i + 2])));
+  }
+  ctx.putImageData(orig, 0, 0);
+  return canvas.toDataURL('image/png');
+}
+
+export function mixerBrushStepInPlace(working: HTMLCanvasElement, mask: PixelMask, color: string, wetness: number): void {
+  const ctx = working.getContext('2d') as CanvasRenderingContext2D;
+  const imgData = ctx.getImageData(0, 0, working.width, working.height);
+  const d = imgData.data;
+  const [r, g, b] = cssColorToRgb(color);
+  const w = Math.max(0, Math.min(1, wetness));
+  for (let p = 0, i = 0; p < mask.data.length; p++, i += 4) {
+    const m = mask.data[p] / 255;
+    if (!m) continue;
+    const blend = w * m;
+    d[i] = d[i] * (1 - blend) + r * blend;
+    d[i + 1] = d[i + 1] * (1 - blend) + g * blend;
+    d[i + 2] = d[i + 2] * (1 - blend) + b * blend;
+  }
+  ctx.putImageData(imgData, 0, 0);
+}

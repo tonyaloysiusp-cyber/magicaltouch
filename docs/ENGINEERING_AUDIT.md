@@ -245,31 +245,37 @@ undo/redo, per `PhotoTool` in `PhotoEditorWorkspace.tsx:124-144`):
 | Perspective (corner-pin distort) | Live (2026-09-29) | `'perspective'` tool, `lib/editor/perspective.ts` — a real 4-point homography (DLT + Gaussian elimination) with inverse-mapped bilinear sampling, baked into a new raster on Apply (Fabric has no native projective transform for image objects, so this is a genuine pixel warp, not a CSS trick or a skew relabeled). No live per-pixel warp preview while dragging handles — see the file's own header for why; the live outline shows the target shape, the real warped pixels appear on Apply, same "position then commit" flow Crop/Resize already use |
 | Healing Brush (drag-brush spot healing) | Live (2026-09-29) | `'heal'` tool (Shift+J) — same real diffusion-based `contentAwareFill()` reconstruction "Remove Object" already used, but driven by a painted brush stroke instead of a selection, and with no source point to set (unlike Clone Stamp) since it reconstructs from the real surrounding pixels automatically |
 | Color Range mask | Live (2026-09-29) | `'mask-color-range'` tool — click a color; every pixel within tolerance anywhere in the image (a genuine global, non-contiguous match via `magicWandMask(..., false)`, not a flood fill) becomes the new layer mask, with an Invert option. Distinct from the existing paintable reveal/hide mask |
-| Gradient mask | Live (2026-09-29) | `'mask-gradient'` tool — drag a line; `linearGradientMask()` writes a real linear black-to-white ramp (projected onto the drag vector, clamped 0..1) into the layer mask alpha, with an Invert option. Reuses the same click-drag gesture as the existing Gradient (fill) tool, but writes to the mask instead of blending colors into the image |
+| Gradient mask | Live (2026-09-29; Radial style added 2026-10-02) | `'mask-gradient'` tool — drag a line (Linear) or drag out from a center point (Radial, new); `linearGradientMask()`/`radialGradientMask()` write a real black-to-white ramp into the layer mask alpha, with an Invert option. Style toggle lives in the one tool's panel, matching Photoshop's own Gradient tool |
+| Luminosity mask | Live (2026-10-02) | A "Generate Luminosity Mask" button in the always-visible Mask panel (not a selectable tool — there's no gesture to perform) — `luminosityMask()` writes real Rec. 709 relative luma per pixel directly as the mask alpha, with an Invert option |
+| Vignette | Live (2026-10-02) | Filter menu > "Vignette (whole layer)" — `vignetteInMask()` darkens by real radial distance from center (dodge/burn's own signed scaling-factor math, distance-driven instead of mask-driven); fixed default amount/size for now, same "no dedicated slider yet" honesty note as the existing Motion Blur filter |
+| Grain | Live (2026-10-02) | Filter menu > "Grain (whole layer)" — `grainInMask()` adds real per-pixel Gaussian (Box-Muller) monochromatic noise; fixed default amount for now, same "no dedicated slider yet" honesty note |
+| Clarity | Live (2026-10-02) | Filter menu > "Clarity (whole layer)" — `clarityInMask()`, a real midtone-weighted, large-radius (24px) unsharp mask, genuinely distinct from Sharpen's small-radius (2px) unweighted one rather than a relabeled copy; fixed default amount for now, same "no dedicated slider yet" honesty note |
 | Patch Tool | Live (2026-10-01) | `'patch'` tool — drag a freehand loop around a blemish, then drag it onto a clean area; releases to a feathered `cloneStampPaint` composite (`featherMask` applied to the drawn `polygonMask` first) |
 | Smudge | Live (2026-10-01) | `'smudge'` tool — `smudgeStepInPlace` pulls color from a step earlier along the stroke into the current dab, applied incrementally against a persistent working canvas (not deferred to mouse-up like every other brush here, since each dab's source is relative to the stroke's own motion) |
 | Red Eye | Live (2026-10-01) | `'red-eye'` tool — a single click; `removeRedEye` scans the clicked radius for genuinely red-dominant pixels (red clearly over both green and blue, not a generic red threshold) and desaturates/darkens exactly those, leaving a near-white specular highlight inside the pupil untouched |
+| Polygon Lasso | Live (2026-10-02) | `'polygon-lasso'` tool (Shift+L) — a real multi-click (not drag) gesture: each click adds a confirmed vertex, a rubber-band line previews the pending edge, clicking back within `ANCHOR_HIT_RADIUS` of the first vertex (or Enter) closes the shape into a real `polygonMask` fed through the same selection pipeline as Lasso/Marquee; Escape discards the draft |
+| Pattern Stamp | Live (2026-10-02) | `'pattern-stamp'` tool (N) — paints a real tiled pattern (dots/stripes/checkerboard/grid, generated procedurally, not Photoshop/Photopea assets) via `patternStampInMask()`, reusing the same accumulate-mask-then-bake brush pipeline every other static-source brush here uses; the tile is anchored to the image's own origin so repeated strokes stay seamlessly aligned |
+| Mixer Brush | Live (2026-10-02) | `'mixer-brush'` tool (Shift+B) — blends the brush color into existing pixels at a real "Wetness" strength via `mixerBrushStepInPlace()`, mutating a persistent working canvas per dab (Smudge's own incremental architecture) so repeated overlapping passes genuinely build up more paint, unlike a deferred single-bake brush; "Load" (paint reservoir fading over a stroke) not yet modeled |
 
 **Not yet real — planned, not faked** (no tool id, no panel, no code path
 exists for these; do not show them as clickable until they are):
-Polygon Lasso, Magnetic Lasso, Object Selection, Quick Selection, Select
-Subject, Select and Mask (these five all imply ML-based segmentation —
+Magnetic Lasso, Object Selection, Quick Selection, Select
+Subject, Select and Mask (these four all imply ML-based segmentation —
 none exists in this codebase); Perspective Crop, Slice, Distort, Warp
 (today's transforms are Skew and Perspective — see above — plus what
 Fabric's own selection handles give: move/scale/rotate; a unified "Free
 Transform" UI wrapping all of these in one mode is still a separate,
-smaller follow-up); Mixer Brush, Pattern
-Stamp; Freeform Pen as a separate tool from the existing real Pen; Shape
+smaller follow-up); Freeform Pen as a separate tool from the existing real Pen; Shape
 tools inside Photo Studio specifically (Main Design has real shape tools,
 Photo Studio does not yet); Color Balance, Selective Color, Gradient Map,
 Channel Mixer, Black & White as its own adjustment (a `blackAndWhite`
 adjustment toggle already exists in the Adjustments panel — this item is
 about a dedicated Black & White *mixer* with per-channel response, which
 doesn't), a full HSL panel (Hue/Saturation exists, the fuller
-Lightroom-style HSL-per-color-band panel does not); Texture, Clarity,
-Dehaze, Vignette, Grain; Radial Gradient *Mask* and Luminosity Mask
-specifically (Linear Gradient Mask and Color Range Mask are now live per
-above); layer grouping/clipping (blend mode is now live per above;
+Lightroom-style HSL-per-color-band panel does not); Texture, Dehaze
+(Clarity, Vignette, and Grain are now live per above; Linear + Radial
+Gradient Mask, Color Range Mask, and Luminosity Mask are also now live
+per above); layer grouping/clipping (blend mode is now live per above;
 grouping/clipping is not).
 
 **Workspace structure — menu bar (2026-09-29):** `/photo-studio` now has

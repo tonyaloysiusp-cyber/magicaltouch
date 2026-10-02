@@ -2,6 +2,7 @@
 
 import { useCallback, useRef, useState } from 'react';
 import { PixelMask, CombineMode, rectMask, ellipseMask, polygonMask, magicWandMask, combineMasks, featherMask } from '@/lib/editor/pixelSelection';
+import { ANCHOR_HIT_RADIUS } from '@/lib/editor/types';
 
 interface Args {
   fabricCanvasRef: React.MutableRefObject<any>;
@@ -74,10 +75,17 @@ export function usePixelSelectionTool({
     points: { x: number; y: number }[];
   }>({ tool: null, imageObj: null, startLocal: null, points: [] });
   const [liveRect, setLiveRect] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
+  // Polygon Lasso is a multi-click gesture (unlike every other tool here,
+  // which finalizes on a single mousedown->mouseup drag): each click adds a
+  // confirmed vertex to draftRef.current.points, and this tracks the live
+  // cursor position for the rubber-band preview segment drawn from the last
+  // confirmed vertex to wherever the mouse currently is.
+  const [polygonLivePoint, setPolygonLivePoint] = useState<{ x: number; y: number } | null>(null);
 
   const clearDraft = useCallback(() => {
     draftRef.current = { tool: null, imageObj: null, startLocal: null, points: [] };
     setLiveRect(null);
+    setPolygonLivePoint(null);
   }, []);
 
   const handleMouseDown = useCallback(
@@ -108,10 +116,34 @@ export function usePixelSelectionTool({
           return;
         }
 
+        if (tool === 'polygon-lasso') {
+          const existing = draftRef.current;
+          if (existing.tool === 'polygon-lasso' && existing.imageObj === imageObj && existing.points.length >= 1) {
+            const first = existing.points[0];
+            const dist = Math.hypot(local.x - first.x, local.y - first.y);
+            if (existing.points.length >= 3 && dist <= ANCHOR_HIT_RADIUS) {
+              let shape = polygonMask(imageObj.width, imageObj.height, existing.points);
+              if (featherRef?.current) shape = featherMask(shape, featherRef.current);
+              const mode = modeFromEvent(opt.e, modeRef);
+              const base = mode === 'new' ? null : getSelectionMask();
+              onSelectionChanged(imageObj.__uid, combineMasks(base, shape, mode));
+              clearDraft();
+              canvas.requestRenderAll();
+              return;
+            }
+            existing.points.push(local);
+            canvas.requestRenderAll();
+            return;
+          }
+          draftRef.current = { tool, imageObj, startLocal: local, points: [local] };
+          canvas.requestRenderAll();
+          return;
+        }
+
         draftRef.current = { tool, imageObj, startLocal: local, points: [local] };
       });
     },
-    [fabricCanvasRef, activeToolRef, toleranceRef, contiguousRef, getSelectionMask, onSelectionChanged, onNoImageSelected]
+    [fabricCanvasRef, activeToolRef, toleranceRef, contiguousRef, getSelectionMask, onSelectionChanged, onNoImageSelected, clearDraft, featherRef, modeRef]
   );
 
   const handleMouseMove = useCallback(
@@ -126,7 +158,12 @@ export function usePixelSelectionTool({
         const pointer = canvas.getPointer(opt.e);
         const local = toLocalPoint(F, draft.imageObj, pointer);
 
-        if (draft.tool === 'lasso') {
+        if (draft.tool === 'polygon-lasso') {
+          // Points array holds only confirmed (clicked) vertices; the live
+          // cursor position is tracked separately for the rubber-band
+          // preview segment, not pushed into draft.points.
+          setPolygonLivePoint(local);
+        } else if (draft.tool === 'lasso') {
           draft.points.push(local);
         } else if (draft.startLocal) {
           setLiveRect({
@@ -147,6 +184,12 @@ export function usePixelSelectionTool({
     (opt: any) => {
       const canvas = fabricCanvasRef.current;
       const draft = draftRef.current;
+      if (draft.tool === 'polygon-lasso') {
+        // Polygon Lasso spans multiple independent click (mousedown+mouseup)
+        // pairs over time; finalizing happens in handleMouseDown (click near
+        // the first vertex) or via finishPolygonLassoDraft (Enter), never here.
+        return;
+      }
       setLiveRect(null);
       if (!canvas || !draft.tool || !draft.imageObj || draft.tool === 'magic-wand') {
         clearDraft();
@@ -181,5 +224,43 @@ export function usePixelSelectionTool({
     [fabricCanvasRef, getSelectionMask, onSelectionChanged, clearDraft]
   );
 
-  return { liveRect, draftRef, clearDraft, handleMouseDown, handleMouseMove, handleMouseUp };
+  // Enter-key finalization (mirrors usePenTool.ts's finishPath(false) pattern):
+  // closes the polygon with the points confirmed so far even if the user
+  // never explicitly clicked back on the first vertex, relying on
+  // polygonMask's own implicit closing behavior (same as freehand Lasso).
+  const finishPolygonLassoDraft = useCallback(
+    (e?: any) => {
+      const draft = draftRef.current;
+      if (draft.tool !== 'polygon-lasso' || !draft.imageObj || draft.points.length < 3) {
+        clearDraft();
+        return;
+      }
+      const imageObj = draft.imageObj;
+      let shape = polygonMask(imageObj.width, imageObj.height, draft.points);
+      if (featherRef?.current) shape = featherMask(shape, featherRef.current);
+      const mode = modeFromEvent(e, modeRef);
+      const base = mode === 'new' ? null : getSelectionMask();
+      onSelectionChanged(imageObj.__uid, combineMasks(base, shape, mode));
+      clearDraft();
+    },
+    [getSelectionMask, onSelectionChanged, clearDraft, featherRef, modeRef]
+  );
+
+  // Escape-key cancellation: discards the in-progress polygon without
+  // committing any selection change.
+  const cancelPolygonLassoDraft = useCallback(() => {
+    if (draftRef.current.tool === 'polygon-lasso') clearDraft();
+  }, [clearDraft]);
+
+  return {
+    liveRect,
+    polygonLivePoint,
+    draftRef,
+    clearDraft,
+    handleMouseDown,
+    handleMouseMove,
+    handleMouseUp,
+    finishPolygonLassoDraft,
+    cancelPolygonLassoDraft,
+  };
 }

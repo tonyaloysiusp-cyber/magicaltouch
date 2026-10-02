@@ -531,6 +531,9 @@ function PhotoStudioContent() {
         { label: 'Sharpen (whole layer)', onClick: () => photoEditorRef.current?.applyFilterSharpen() },
         { label: 'Motion Blur (whole layer)', onClick: () => photoEditorRef.current?.applyFilterMotionBlur() },
         { label: 'Box Blur (whole layer)', onClick: () => photoEditorRef.current?.applyFilterBoxBlur() },
+        { label: 'Vignette (whole layer)', onClick: () => photoEditorRef.current?.applyFilterVignette() },
+        { label: 'Grain (whole layer)', onClick: () => photoEditorRef.current?.applyFilterGrain() },
+        { label: 'Clarity (whole layer)', onClick: () => photoEditorRef.current?.applyFilterClarity() },
       ],
     },
     {

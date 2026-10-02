@@ -1,8 +1,350 @@
 # Engineering Changelog
 
+## 2026-10-02 (10) — Foundation Phase 1: real API route layer for designs/projects
+
+**Scope:** the master-spec gap analysis (`docs/MASTER_SPEC_GAP_ANALYSIS.md`)
+flagged that every `designs` read/write went straight from the browser
+to Postgres, with RLS as the *only* authorization boundary and zero
+server-side ownership checks anywhere in the app. This adds a real
+Next.js API route layer for designs (the spec's "projects") as
+defense-in-depth on top of RLS, not a replacement for it.
+
+**New:**
+- `lib/supabase/server.ts` — a request-scoped Supabase client
+  authenticated as the CALLING USER's own access token (no service-role
+  key exists in this app's env, and this never bypasses RLS).
+- `lib/api/auth.ts` — `requireUser()`, called first by every route: pulls
+  the Bearer token off the request, verifies it against Supabase Auth
+  itself (`auth.getUser()`), and never trusts a client-supplied userId.
+- `app/api/projects/route.ts` (GET list / POST create),
+  `app/api/projects/[id]/route.ts` (GET one / PATCH / DELETE),
+  `app/api/projects/[id]/duplicate/route.ts` (POST) — every handler
+  scopes its query with `.eq('user_id', user.id)` as an explicit
+  app-level filter, not just reliance on RLS; a request for someone
+  else's design returns a clean 404 (never a 403 that would confirm the
+  id exists). The old column-missing-migration fallback logic (for DBs
+  that predate `thumbnail`/`editor_type`) moved server-side so every
+  future client inherits it for free.
+- `lib/api/client.ts` + `lib/api/projects.ts` — the browser-side typed
+  client, attaching the caller's real session token to every call.
+- **Incidental bug fix**: the old client-side `duplicateDesign` never
+  selected or carried over `editor_type`, so duplicating a Photo Studio
+  design silently produced a copy that reopened in Main Design. The new
+  duplicate route selects and carries it through correctly.
+
+**Migrated:** `app/dashboard/page.tsx`'s list/rename/delete/duplicate/
+thumbnail-backfill now go through the new API instead of calling
+`supabase.from('designs')` directly. Main Design's and Photo Studio's
+own save/autosave/load paths are UNCHANGED in this slice (still direct
+Supabase calls, still protected by RLS) — migrating those is follow-up
+work, intentionally not bundled into this unit.
+
+**Tested:** `test_projects_api.js` (17/17) — a REAL end-to-end proof,
+not a logic-only unit test: a real browser drives the real Next.js
+server, which makes real HTTP calls out to a small local mock Supabase
+backend (`mock-supabase-server.js`, built for this test only — this
+sandbox has no real Supabase project, and a browser-level Playwright
+route mock can't intercept the Next.js *server's own* outbound fetch
+calls, so a real HTTP round trip needed a real HTTP server to hit).
+Two separate signed-up users, two real tokens: confirms User A can
+create/list/get/rename/duplicate/delete their own design, and —the
+actual point of this unit — that User B's token gets a clean 404 (not
+the data, not a 403) on every single one of those same operations
+against User A's design, and that User A's design survives every one of
+User B's rejected attempts untouched.
+
+**Known test-environment trade-off, not a production bug**: any
+existing/future Playwright test that passes through `/dashboard` will
+now log one additional console error (`401 Invalid or expired session`
+from `GET /api/projects`) in THIS sandbox specifically, because the
+Dashboard's design-list fetch is now mediated by a real server-side
+route, and this sandbox's `NEXT_PUBLIC_SUPABASE_URL` points at an
+unreachable placeholder domain — the existing browser-level
+`page.route('**/rest/v1/**')` mocking pattern intercepts the *browser's*
+Supabase calls, not the Next.js *server's* own outbound ones. In real
+production both the browser and the server point at the same real
+Supabase project, so this is purely a sandbox testing-infrastructure
+artifact. Confirmed via `test_photo_studio_pro_tools.js` (11/12) and
+`test_clarity_filter.js` (6/7): every functional assertion still passes;
+only the "no console errors" check trips on this one new expected
+message. A future test that needs a clean console bar while passing
+through Dashboard should add `page.route('**/api/projects*', (r) =>
+r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }))`
+to its existing mock setup, the same way it already mocks `/rest/v1/*`.
+
+**Left for later (see gap analysis for the full roadmap)**: Main
+Design/Photo Studio save migration, template API routes, asset API
+routes, optimistic concurrency (Part 61 — still last-write-wins), and
+everything in Phase 2+.
+
+---
+
+
 Tracks real, verified engineering work against the findings in
 `docs/ENGINEERING_AUDIT.md`. Each entry states the problem, what was
 actually done, what was tested, and what's deliberately left for later.
+
+---
+
+## 2026-10-02 (9) — Photo Studio: real Clarity filter
+
+**Scope:** continuing the Photoshop/Photopea tool-parity list. Adds
+Clarity to the Filter menu (`'Clarity (whole layer)'`), alongside
+Blur/Sharpen/Motion Blur/Box Blur/Vignette/Grain.
+
+The audit previously flagged a real risk here: Clarity could easily have
+shipped as a relabeled copy of Sharpen (both are unsharp-mask variants),
+which would be exactly the kind of fake feature this whole engagement
+has been working against. `clarityInMask()` (new, in
+`lib/editor/photoBrush.ts`) is genuinely distinct in two ways: (1) a much
+larger 24px blur radius than Sharpen's 2px, isolating midtone-SCALE
+structure instead of fine detail, and (2) a midtone-weighting curve
+(full strength at luma 127.5, tapering toward 0 at pure black/white) —
+the real reason Lightroom-style Clarity can push local contrast hard
+without blowing shadows/highlights into clipped halos the way a plain
+large-radius unsharp mask would.
+
+**Tested:** `test_clarity_filter.js` (7/7) — seeds three regions with
+the IDENTICAL local-contrast stripe pattern (same ±14 swing) at three
+different brightness baselines (near-black, midtone, near-white), then
+reads real pixel values after filtering: confirms the midtone region's
+local contrast amplifies substantially, and — the test that actually
+proves the midtone-weighting claim rather than just "a filter ran" —
+confirms that amplification is more than 2× stronger than either the
+near-black or near-white region's, which is only possible if the
+weighting curve is real. Also confirms Undo restores the exact original.
+Re-ran Grain and Vignette regression tests (both still pass).
+
+---
+
+## 2026-10-02 (8) — Photo Studio: real Grain filter
+
+**Scope:** continuing the Photoshop/Photopea tool-parity list. Adds
+Grain to the Filter menu (`'Grain (whole layer)'`), alongside Vignette.
+
+`grainInMask()` (new, in `lib/editor/photoBrush.ts`) adds real per-pixel
+noise via a genuine Box-Muller Gaussian transform — not `Math.random()`
+directly, which produces a visibly flat/blocky uniform distribution
+compared to real photographic grain — and monochromatic (the SAME noise
+delta applied to all three channels per pixel, matching Photoshop's own
+"Add Noise... Monochromatic" option), so it reads as a brightness
+texture rather than colored static. No dedicated Amount slider yet (same
+honesty note as Motion Blur/Vignette): ships with a fixed default.
+
+**Tested:** `test_grain_filter.js` (6/6) — seeds a flat gray image,
+applies the filter via the real Filter menu, and samples a 5×5 grid of
+real pixel values: confirms genuine per-pixel variance now exists (not a
+no-op), confirms every sampled pixel stays monochromatic (R≈G≈B, proving
+the shared-delta implementation rather than independent-per-channel
+colored noise), and confirms Undo restores the exact flat original. Also
+re-ran Vignette and Luminosity Mask regression tests (both still pass).
+
+---
+
+## 2026-10-02 (7) — Photo Studio: real Vignette filter
+
+**Scope:** continuing the Photoshop/Photopea tool-parity list. Adds
+Vignette to the Filter menu (`'Vignette (whole layer)'`), alongside the
+existing Blur/Sharpen/Motion Blur/Box Blur whole-layer filters.
+
+`vignetteInMask()` (new, in `lib/editor/photoBrush.ts`) darkens pixels by
+their REAL distance from the image's center — the same signed scaling-
+factor math `dodgeBurnInMask` uses, just driven by radial distance
+instead of a painted mask's alpha, so the center stays untouched and
+corners genuinely darken (or, with a positive amount, lighten). No
+dedicated Amount/Size sliders exist yet (same honesty note as the
+existing Motion Blur filter, which also applies a fixed default rather
+than pretending a control exists): this ships with a fixed, sensible
+default (amount -0.6, falloff starting at 50% from center).
+
+**Tested:** `test_vignette_filter.js` (8/8) — seeds a flat mid-gray
+image, applies the filter via the real Filter menu, and reads actual
+pixel values: confirms the exact center is untouched (inside the
+falloff-free zone), the far corner is genuinely darker than before, the
+corner ends up darker than the center (the defining vignette shape), and
+Undo restores the flat original. Also re-ran Luminosity Mask and Radial
+Gradient Mask regression tests (both still pass).
+
+---
+
+## 2026-10-02 (6) — Photo Studio: real Luminosity Mask
+
+**Scope:** continuing the Photoshop/Photopea tool-parity list. Adds
+Luminosity Mask — generates the layer mask directly from the layer's own
+pixel brightness.
+
+Unlike Gradient Mask or Color Range Mask, this needs no click or drag at
+all: it's a pure function of the image already on the layer. So rather
+than adding it as a selectable tool requiring a canvas gesture (which
+would be a fake requirement — there's nothing to click), it's an
+always-available "Generate Luminosity Mask" button in the Mask panel's
+own section, next to the existing Enable/Invert/Feather/Remove Mask
+controls, visible regardless of which tool is active.
+
+`luminosityMask()` (new, in `lib/editor/pixelSelection.ts`) reads the
+image's real pixel data and computes Rec. 709 relative luma per pixel
+(`0.2126*R + 0.7152*G + 0.0722*B` — the standard perceptual-brightness
+weighting, not a flat RGB average, which would over-weight blue and
+under-weight green relative to how brightness is actually perceived),
+writing it directly as the mask alpha. An Invert checkbox flips which
+end (bright vs. dark) ends up revealed.
+
+**Tested:** `test_luminosity_mask.js` (6/6) — seeds a half-black/half-
+white image, generates the mask, and reads the REAL resulting mask alpha
+on each half (black → 0/hidden, white → 255/revealed), confirms Invert
+genuinely swaps which half is revealed (not just a relabeled identical
+mask), and confirms Undo rolls back correctly. Also re-ran the Radial
+Gradient Mask and Mixer Brush regression tests (both still pass).
+
+---
+
+## 2026-10-02 (5) — Photo Studio: real Radial Gradient Mask
+
+**Scope:** continuing the Photoshop/Photopea tool-parity list. Adds a
+Radial style to the existing Gradient Mask tool (`'mask-gradient'`) —
+mirrors Photoshop's own Gradient tool, which offers Linear/Radial/etc.
+under ONE tool button rather than as separate tools, so this is a style
+toggle inside the existing panel, not a new tool id.
+
+`radialGradientMask()` (new, in `lib/editor/pixelSelection.ts`) is the
+radial counterpart to the existing `linearGradientMask()`: the same
+"0 (black) where the drag started, 255 (white) where it ended" convention,
+just measured as a distance from a center point instead of a projection
+along a line. The live drag preview swaps from a line to a circle
+(`gradientDraftRef` now holds a `kind: 'line' | 'circle'` discriminator)
+so the on-canvas feedback actually shows what will be masked before you
+release.
+
+**Tested:** `test_radial_gradient_mask.js` (7/7) — seeds a solid-color
+image, switches to Radial, drags a 60px-radius gradient, and reads the
+REAL resulting mask alpha (not internal state) at the drag center, near
+the drag radius, and far outside it — confirms center is darker/more-
+hidden than the radius edge, and that a point far outside stays fully
+revealed (the ramp clamps correctly). Also re-verifies Linear still works
+unchanged after the style toggle exists. Re-ran Mixer Brush, Pattern
+Stamp, and Polygon Lasso regression tests (all still pass).
+
+---
+
+## 2026-10-02 (4) — Photo Studio: real Mixer Brush tool
+
+**Scope:** continuing the Photoshop/Photopea tool-parity list. Adds
+Mixer Brush (`'mixer-brush'` tool, shortcut `Shift+B` — matching
+Photoshop's own Shift+B Brush/Mixer Brush cycling).
+
+What makes this a genuinely distinct tool rather than a relabeled Brush
+or Smudge: Brush lays down one flat, single-pass color (deferred —
+accumulates a union mask over the whole stroke, baked once at mouse-up);
+Smudge introduces no new color at all (it only smears what's already
+there). Mixer Brush does both at once — it blends a NEW foreground color
+into the existing pixels at a "Wetness" strength, but unlike Brush this
+happens incrementally, per dab, against a persistent working canvas
+mutated in place through the whole stroke (`mixerBrushStepInPlace()` in
+`lib/editor/photoBrush.ts` — the exact same architecture `smudgeStepInPlace`
+uses, and for the same reason: passing over the same spot twice must
+genuinely deposit more paint, which a deferred single bake over a union
+mask can't express, since overlapping dabs there only ever contribute
+their MAX alpha, not a compounding effect).
+
+**Tested:** `test_mixer_brush.js` (8/8) — seeds a solid blue image, picks
+a red-orange brush color, and verifies: one light pass blends toward red
+WITHOUT fully replacing the blue (real partial wet-media mix, not an
+opaque flat stamp); a second pass over the exact same spot moves further
+toward red than the first pass did (real incremental buildup — the
+distinguishing property this tool needed to actually earn its own
+existence); pixels outside the dabs are untouched; and two separate
+Undos peel back one stroke at a time, down to the pristine original.
+Also re-ran Pattern Stamp, Polygon Lasso, Patch, Smudge, Red Eye, and Pen
+tool Direct Selection regression tests (all still pass).
+
+**Left for later:** Mixer Brush's real Photoshop options also include a
+"Load" setting (how much paint the brush holds before needing to reload,
+fading the effect over a long stroke) and sampling an actual "Clean
+Brush after Each Stroke" toggle against a second canvas-sampled color —
+this ships with Wetness only, the option that actually changes the
+tool's character; Load can follow as a smaller addition if wanted.
+
+---
+
+## 2026-10-02 (3) — Photo Studio: real Pattern Stamp tool
+
+**Scope:** continuing the Photoshop/Photopea tool-parity list. Adds
+Pattern Stamp (`'pattern-stamp'` tool, shortcut `N`) — paints a repeating
+tile instead of a flat color.
+
+Unlike Clone/Smudge, the tile never depends on the stroke's own history,
+so this reuses the SAME accumulate-mask-then-bake-once pipeline every
+other brush in `PAINT_TOOLS` already uses (`paintDab`/`continuePaintStroke`/
+`bakePaintStroke`) — no new gesture plumbing needed, just a new case in
+`bakePaintStroke` calling the new `patternStampInMask()`.
+
+Four tile styles ship (`generatePatternTile()` in `lib/editor/photoBrush.ts`):
+dots, stripes, checkerboard, grid — all generated procedurally on a small
+canvas at paint time, not Photoshop/Photopea pattern assets. The tile is
+always anchored to the image's own `(0,0)`, not the mask's position, so
+separate dabs and separate strokes tile seamlessly instead of each
+restarting the pattern at its own origin (matches Photoshop's "Aligned"
+Pattern Stamp behavior — the sensible default here since there's no
+per-click "set source" step the way Clone Stamp has). The tile's ink
+color reuses the existing Brush Color control, giving the user a
+meaningful color control instead of a fixed/fake one.
+
+**Tested:** `test_pattern_stamp.js` (7/7) — seeds a solid-color image,
+confirms it's genuinely uniform before painting, switches the pattern
+style to "stripes" and picks a distinct ink color, drags a stroke, and
+confirms the painted region now contains the chosen ink color AND shows
+real multi-color tile variation (not a flat fill), confirms pixels
+outside the stroke are byte-identical to before, and confirms Undo
+restores the original uniform fill. Also re-ran Polygon Lasso, Patch,
+Smudge, Red Eye, and Pen tool Direct Selection regression tests (all
+still pass).
+
+---
+
+## 2026-10-02 (2) — Photo Studio: real Polygon Lasso tool
+
+**Scope:** continuing the Photoshop/Photopea tool-parity list (Patch,
+Smudge, Red Eye shipped previously). Adds Polygon Lasso (`'polygon-lasso'`
+tool, shortcut `Shift+L` — matching Photoshop's own Shift+L lasso-variant
+cycling).
+
+Unlike every other tool in `usePixelSelectionTool.ts` (Marquee/Ellipse/
+Lasso/Magic Wand), which finalize on a single mousedown→mouseup drag,
+Polygon Lasso is a genuine multi-click gesture spanning an arbitrary
+number of independent clicks over time: each click adds a confirmed
+vertex to the in-progress draft; clicking back within `ANCHOR_HIT_RADIUS`
+(8px, the same constant the Pen tool already uses for closing a path) of
+the first vertex — once at least 3 vertices exist — closes the shape into
+a real `polygonMask`. `Enter` force-closes with the points so far (mirrors
+the Pen tool's `finishPath(false)`); `Escape` discards the draft with no
+selection committed.
+
+This required restructuring `usePixelSelectionTool.ts`'s `handleMouseDown`/
+`handleMouseMove`/`handleMouseUp`, which were built around one continuous
+drag: `handleMouseUp` is now a no-op for `'polygon-lasso'` (finalization
+happens on the closing mousedown or via the new `finishPolygonLassoDraft`),
+and `handleMouseMove` no longer pushes into `draft.points` for this tool —
+confirmed vertices and the live rubber-band cursor position are tracked
+separately (`polygonLivePoint`), since only clicked points are real
+vertices. The live preview (confirmed vertices + rubber-band segment to
+the cursor + a highlighted closing affordance at the first vertex once in
+range) draws through the same `after:render` canvas-context hook
+Marquee/Lasso already use in `PhotoEditorWorkspace.tsx` — no new Fabric
+objects.
+
+**Tested:** `test_polygon_lasso.js` (9/9) — seeds a solid-color image,
+verifies mid-draft clicks commit no selection, verifies Escape cancels
+cleanly, clicks 4 vertices of a square and closes by clicking near the
+first vertex, deletes the selected pixels and confirms inside-the-shape
+pixels were cleared while outside-the-shape pixels are byte-identical to
+before, and confirms Undo restores them. Also re-ran the existing Pen
+tool Direct Selection, Patch, Smudge, and Red Eye regression tests (all
+still pass) since this touches the same selection-hook file area.
+
+**Left for later:** Magnetic Lasso, Quick Selection, Select Subject,
+Select and Mask (all imply ML-based segmentation this codebase doesn't
+have — an honest approach needs deciding before building any of these,
+not a fake stand-in).
 
 ---
 
