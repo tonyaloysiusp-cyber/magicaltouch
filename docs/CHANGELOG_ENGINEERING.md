@@ -1,5 +1,77 @@
 # Engineering Changelog
 
+## 2026-10-02 (11) — Foundation Phase 1: Main Design/Photo Studio save migration
+
+**Scope:** follow-up to entry (10), which deliberately left Main
+Design's and Photo Studio's own save/autosave/load paths on direct
+`supabase.from('designs')` calls. This migrates them onto the same
+`/api/projects` route layer, so server-side ownership enforcement
+(explicit `.eq('user_id', user.id)`, clean 404 on someone else's
+design) now covers every save/load path in the app, not just Dashboard.
+
+**Migrated:**
+- `app/editor/page.tsx` (Main Design) — the `designId`-in-URL load
+  effect now calls `getProject()`; `performSaveInner`'s upsert is
+  replaced with `createProject()`/`updateProject()`. Both of the old
+  client-side column-missing-migration retry blocks (for `thumbnail`/
+  `editor_type`) are deleted outright — that fallback logic now lives
+  once, server-side, in the route handlers themselves (see entry (10)),
+  so deleting the client-side copies is a real simplification, not just
+  a move.
+- `app/photo-studio/page.tsx` — same pattern: the designId-reopen effect
+  uses `getProject()`; `handleSave` branches `createProject()` vs
+  `updateProject()` instead of upserting directly.
+- `components/editor/OpenDesignDialog.tsx` (File > Open) and
+  `app/profile/page.tsx` (recent-work grid) — both switched from direct
+  `supabase.from('designs').select(...)` to `listProjects()`.
+- `lib/profile.ts`'s `getDesignCount()` (a read-only COUNT query) and the
+  `design_versions`/`profiles`/`assets` tables are deliberately left
+  on direct Supabase calls — out of scope for this slice, same reasoning
+  as entry (10) leaving non-`designs` tables alone.
+- **Incidental consistency fix:** `POST /api/projects` now sets
+  `updated_at` explicitly on insert, matching the PATCH/duplicate routes
+  and the original client code (the `designs` table was created by hand
+  outside the migrations folder, so nothing guarantees a DB-side
+  default/trigger sets it).
+
+**Tested:** `test_save_migration.js` (13/14) — the same real-browser/
+real-Next-server/real-mock-Supabase-backend architecture as entry (10)'s
+`test_projects_api.js`, extended with real Supabase Storage endpoint
+stubs (`POST .../object/sign/*` and `POST .../object/<bucket>/*`) in
+`mock-supabase-server.js`, since Photo Studio's save path uploads its
+flattened composite through `lib/storage/assets.ts`'s `uploadDesignAsset`
+before it ever reaches the migrated save code. Verified: Main Design
+create/save/reload with the saved `canvas_json` genuinely containing the
+added object (not a no-op save); Photo Studio create/save/reload through
+the same path, including the real Storage upload + signed-URL-fetch
+round trip; a second real user gets a clean 404 (no `canvas_json`
+leaked) fetching either design directly, and doesn't crash navigating
+to the first user's Main Design URL. The one non-passing assertion
+("no unexpected console errors") trips on Next.js's own router
+RSC-prefetch noise for unrelated pages — present identically before and
+after this change, unrelated to the designs-table migration.
+
+**Known test-environment trade-off, not a production bug (same shape as
+entry (10)'s)**: `test_photo_studio_pro_tools.js` now fails its Save/
+console-error assertions (10/12, down from passing) specifically
+because that test mocks Supabase at the *browser* level
+(`page.route('**/rest/v1/**')`), which cannot intercept the *Next.js
+server's* own outbound calls now that Photo Studio's save goes through
+`/api/projects`. All 6 of the actual tool-regression assertions it
+exists to cover (Blur, Sharpen, Sponge, Paint Bucket, Skew, Blend modes)
+still pass — only the save step at the end, which that test's mocking
+strategy can no longer reach, fails. In real production the browser and
+the server point at the same real Supabase project, so this has no
+production impact; a future fix would need that test (and any other
+legacy test that saves through Main Design/Photo Studio) to mock
+`/api/projects*` directly instead of `/rest/v1/designs*`.
+
+**Left for later**: template API routes, asset API routes, optimistic
+concurrency (Part 61 — still last-write-wins), and everything in
+Phase 2+ of the gap analysis.
+
+---
+
 ## 2026-10-02 (10) — Foundation Phase 1: real API route layer for designs/projects
 
 **Scope:** the master-spec gap analysis (`docs/MASTER_SPEC_GAP_ANALYSIS.md`)

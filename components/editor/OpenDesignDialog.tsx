@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase';
+import { listProjects } from '@/lib/api/projects';
 
 export interface OpenableDesign {
   id: string;
@@ -29,25 +29,10 @@ export function OpenDesignDialog({ currentDesignId, openDesignIds, onClose, onPi
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase
-      .from('designs')
-      .select('id, name, width, height, updated_at, thumbnail')
-      .order('updated_at', { ascending: false })
-      .then(({ data, error }) => {
-        if (error) {
-          supabase
-            .from('designs')
-            .select('id, name, width, height, updated_at')
-            .order('updated_at', { ascending: false })
-            .then(({ data: fallback }) => {
-              setDesigns((fallback || []).map((d) => ({ ...d, thumbnail: null })));
-              setLoading(false);
-            });
-          return;
-        }
-        setDesigns(data || []);
-        setLoading(false);
-      });
+    listProjects()
+      .then((data) => setDesigns(data))
+      .catch((err) => console.error('Failed to load designs for Open dialog:', err))
+      .finally(() => setLoading(false));
   }, []);
 
   return (

@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { ArrowLeft, Sun, Moon, Upload, FileImage } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { MAX_DESIGNS, getDesignCount } from '@/lib/profile';
+import { getProject, createProject, updateProject } from '@/lib/api/projects';
 import { DocUnit } from '@/lib/editor/types';
 import { physicalUnitToPx, pxToPhysicalUnit, useDisplayUnit } from '@/lib/editor/units';
 import { DEFAULT_ADJUSTMENTS } from '@/lib/editor/photoFilters';
@@ -145,17 +146,16 @@ function PhotoStudioContent() {
     if (!designIdParam) return;
     let cancelled = false;
     (async () => {
-      const { data: row, error } = await supabase
-        .from('designs')
-        .select('id, name, width, height, canvas_json')
-        .eq('id', designIdParam)
-        .single();
-      if (cancelled) return;
-      if (error || !row) {
+      let row;
+      try {
+        row = await getProject(designIdParam);
+      } catch (error) {
+        if (cancelled) return;
         console.error('Failed to load design for Photo Studio:', error);
         setLoadingDesign(false);
         return;
       }
+      if (cancelled) return;
       const source = extractPhotoSource(row.canvas_json);
       if (!source) {
         console.warn('This design has no image content Photo Studio can reopen.');
@@ -285,39 +285,31 @@ function PhotoStudioContent() {
       const size = await loadImageSize(result.dataUrl);
       const { canvasJson, thumbnail } = await buildPhotoDesignJson(result.dataUrl, size.w, size.h, docDpi, user.id);
       const payload: any = {
-        user_id: user.id,
         name: docName || 'Untitled Photo',
         canvas_json: canvasJson,
         width: size.w,
         height: size.h,
-        updated_at: new Date().toISOString(),
         // Lets the dashboard route "Edit" back to Photo Studio instead of
         // the generic /editor (see supabase/migrations/0007_designs_editor_type.sql).
         editor_type: 'photo-studio',
       };
-      if (designId) payload.id = designId;
       if (thumbnail) payload.thumbnail = thumbnail;
 
-      let { data, error } = await supabase.from('designs').upsert(payload).select().single();
-      if (error && thumbnail && /thumbnail/i.test(error.message || '') && /column|does not exist/i.test(error.message || '')) {
-        const { thumbnail: _drop, ...withoutThumbnail } = payload;
-        ({ data, error } = await supabase.from('designs').upsert(withoutThumbnail).select().single());
-      }
-      if (error && /editor_type/i.test(error.message || '') && /column|does not exist/i.test(error.message || '')) {
-        const { editor_type: _dropType, ...withoutEditorType } = payload;
-        ({ data, error } = await supabase.from('designs').upsert(withoutEditorType).select().single());
-      }
-      if (error) {
-        console.error('Photo Studio save failed:', error);
+      // Ownership + the column-missing-migration fallbacks this used to
+      // do client-side now live server-side in the /api/projects route
+      // handlers themselves.
+      let data;
+      try {
+        data = designId ? await updateProject(designId, payload) : await createProject(payload);
+      } catch (err) {
+        console.error('Photo Studio save failed:', err);
         setSaveStatus('error');
         alert('Failed to save. Please try again.');
         return;
       }
-      if (data) {
-        setDesignId(data.id);
-        setDocWidth(size.w);
-        setDocHeight(size.h);
-      }
+      setDesignId(data.id);
+      setDocWidth(size.w);
+      setDocHeight(size.h);
       setSaveStatus('saved');
     } finally {
       setSaving(false);

@@ -14,6 +14,7 @@ import {
   updateProfile,
   uploadAvatar,
 } from '@/lib/profile';
+import { listProjects } from '@/lib/api/projects';
 import { Avatar, LevelBadge } from '@/components/ProfileMenu';
 import { BrandLogo } from '@/components/BrandLogo';
 import { useAppTheme } from '@/hooks/useAppTheme';
@@ -55,17 +56,16 @@ export default function ProfilePage() {
       const [p, count, designs] = await Promise.all([
         getOrCreateProfile(user.id, user.email?.split('@')[0]),
         getDesignCount(user.id),
-        supabase
-          .from('designs')
-          .select('id, name, width, height, updated_at, thumbnail')
-          .order('updated_at', { ascending: false })
-          .limit(6),
+        listProjects().catch((err) => {
+          console.error('Failed to load recent designs for profile:', err);
+          return [];
+        }),
       ]);
       setProfile(p);
       setName(p?.name || '');
       setPhone(p?.phone || '');
       setDesignCount(count);
-      setRecent(designs.data || []);
+      setRecent(designs.slice(0, 6));
       setCheckingAuth(false);
     });
   }, [router]);

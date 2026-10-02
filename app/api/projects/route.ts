@@ -67,6 +67,9 @@ export async function POST(request: NextRequest) {
       canvas_json: body.canvas_json ?? null,
       thumbnail: body.thumbnail ?? null,
       editor_type: body.editor_type === 'photo-studio' ? 'photo-studio' : 'design',
+      // Explicit, not relied on as a DB default/trigger -- matches the
+      // PATCH and duplicate routes, and the client code this replaces.
+      updated_at: new Date().toISOString(),
     };
 
     let { data, error } = await supabase

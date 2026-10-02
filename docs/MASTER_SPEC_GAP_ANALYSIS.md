@@ -191,7 +191,8 @@ committing weeks of work to one path over another.
 - Phase 0: **closed** (RLS confirmed live).
 - Phase 1: **in progress** — real API route layer (`/api/projects`)
   shipped with server-side ownership enforcement, verified end-to-end
-  against real cross-user access attempts (17/17 tests). Dashboard
-  migrated to use it. Main Design/Photo Studio save paths and template/
-  asset routes are not yet migrated — see `CHANGELOG_ENGINEERING.md`'s
-  2026-10-02 (10) entry for exactly what shipped and what didn't.
+  against real cross-user access attempts (17/17 tests). Dashboard,
+  Main Design, and Photo Studio's save/load/Open-dialog/profile-listing
+  paths are all migrated to use it. Template routes and asset routes
+  are not yet migrated — see `CHANGELOG_ENGINEERING.md`'s 2026-10-02
+  (10) and (11) entries for exactly what shipped and what didn't.

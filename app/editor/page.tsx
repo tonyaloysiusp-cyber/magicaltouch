@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { fetchTemplateById } from '@/lib/templatesData';
 import { dataUrlToBlob, uploadDesignAsset } from '@/lib/storage/assets';
+import { getProject, createProject, updateProject } from '@/lib/api/projects';
 import { Keyboard, Sun, Moon } from 'lucide-react';
 import { useAppTheme } from '@/hooks/useAppTheme';
 
@@ -1611,34 +1612,28 @@ function EditorContent() {
         });
       } else if (urlDesignId) {
         setDesignId(urlDesignId);
-        supabase
-          .from('designs')
-          .select('*')
-          .eq('id', urlDesignId)
-          .single()
-          .then(({ data, error }) => {
-            if (data) {
-              setDesignName(data.name);
-              setTabs((ts) => ts.map((t) => (t.designId === urlDesignId ? { ...t, name: data.name } : t)));
-              suppressHistoryRef.current = true;
-              canvas.loadFromJSON(data.canvas_json, function () {
-                ensureArtboards(canvas, F);
-                const first = canvas.getObjects().find((o: any) => o.__isArtboard);
-                fitToRect(canvas, {
-                  x: first?.left || 0,
-                  y: first?.top || 0,
-                  width: (first?.width || width) * (first?.scaleX || 1),
-                  height: (first?.height || height) * (first?.scaleY || 1),
-                });
-                canvas.renderAll();
-                refreshLayers();
-                seedInitialSnapshot();
-                ensureFontsLoadedForCanvasJSON(data.canvas_json).then(() => canvas.requestRenderAll());
-                suppressHistoryRef.current = false;
+        getProject(urlDesignId)
+          .then((data) => {
+            setDesignName(data.name);
+            setTabs((ts) => ts.map((t) => (t.designId === urlDesignId ? { ...t, name: data.name } : t)));
+            suppressHistoryRef.current = true;
+            canvas.loadFromJSON(data.canvas_json, function () {
+              ensureArtboards(canvas, F);
+              const first = canvas.getObjects().find((o: any) => o.__isArtboard);
+              fitToRect(canvas, {
+                x: first?.left || 0,
+                y: first?.top || 0,
+                width: (first?.width || width) * (first?.scaleX || 1),
+                height: (first?.height || height) * (first?.scaleY || 1),
               });
-            }
-            if (error) console.error('Failed to load design:', error);
-          });
+              canvas.renderAll();
+              refreshLayers();
+              seedInitialSnapshot();
+              ensureFontsLoadedForCanvasJSON(data.canvas_json).then(() => canvas.requestRenderAll());
+              suppressHistoryRef.current = false;
+            });
+          })
+          .catch((error) => console.error('Failed to load design:', error));
       } else if (cameFromTemplate) {
         // "Use Template" (see app/templates/page.tsx) -- a fresh,
         // never-saved document that starts from a real template's
@@ -2975,22 +2970,21 @@ function EditorContent() {
     // new document happened to start from.
     const firstAb = artboards[0];
     const payload: any = {
-      user_id: user.id,
       name: nameToUse,
       canvas_json: canvasJson,
       width: firstAb ? Math.round(firstAb.width) : width,
       height: firstAb ? Math.round(firstAb.height) : height,
-      updated_at: new Date().toISOString(),
       // Lets the dashboard route "Edit" back to the same editor a design
       // was made in (see supabase/migrations/0007_designs_editor_type.sql)
       // — Main Design always writes 'design' here.
       editor_type: 'design',
     };
-    if (idToUse) payload.id = idToUse;
 
     // A real preview generated from the first artboard's actual content —
     // not a placeholder — so the dashboard can show what the design looks
-    // like instead of just its pixel dimensions.
+    // like instead of just its pixel dimensions. Omitted entirely (not
+    // sent as null) when generation fails, so PATCH leaves any existing
+    // thumbnail alone rather than clobbering it with nothing.
     const thumbnail = firstAb
       ? (() => {
           const hiddenGuides = hideGuidesForExport();
@@ -3012,44 +3006,26 @@ function EditorContent() {
       : null;
     if (thumbnail) payload.thumbnail = thumbnail;
 
-    let { data, error } = await supabase.from('designs').upsert(payload).select().single();
-
-    // The `thumbnail` column may not exist yet on a database created before
-    // this feature — fall back to saving without it rather than failing the
-    // whole save over a missing preview image.
-    if (error && thumbnail && /thumbnail/i.test(error.message || '') && /column|does not exist/i.test(error.message || '')) {
-      console.warn(
-        'designs.thumbnail column not found — saving without a thumbnail. Add it with: ' +
-          'ALTER TABLE designs ADD COLUMN thumbnail text;'
-      );
-      const { thumbnail: _drop, ...withoutThumbnail } = payload;
-      ({ data, error } = await supabase.from('designs').upsert(withoutThumbnail).select().single());
-    }
-
-    // Same defensive fallback for `editor_type` (0007_designs_editor_type.sql)
-    // on a database that hasn't had that migration applied yet — the save
-    // itself should never fail just because the dashboard can't yet route
-    // "Edit" back to the right editor.
-    if (error && /editor_type/i.test(error.message || '') && /column|does not exist/i.test(error.message || '')) {
-      console.warn(
-        'designs.editor_type column not found — saving without it. Add it with: ' +
-          "ALTER TABLE designs ADD COLUMN editor_type text NOT NULL DEFAULT 'design';"
-      );
-      const { editor_type: _dropType, ...withoutEditorType } = payload;
-      ({ data, error } = await supabase.from('designs').upsert(withoutEditorType).select().single());
-    }
-
-    setSaving(false);
-
-    if (error) {
-      console.error('Save failed:', error);
+    // Ownership + the column-missing-migration fallbacks this used to do
+    // client-side now live server-side in the /api/projects route
+    // handlers themselves (see lib/api/auth.ts's requireUser and the
+    // route handlers' own retry logic) -- every future client inherits
+    // both for free instead of duplicating this per call site.
+    let data;
+    try {
+      data = idToUse ? await updateProject(idToUse, payload) : await createProject(payload);
+    } catch (err) {
+      setSaving(false);
+      console.error('Save failed:', err);
       setSaveStatus('error');
       if (!silent) alert('Failed to save design. Please try again.');
       return;
     }
+
+    setSaving(false);
     dirtyRef.current = false;
     setSaveStatus('saved');
-    if (data) {
+    {
       setDesignId(data.id);
       setDesignName(nameToUse);
       const savedTabId = activeTabIdRef.current;
