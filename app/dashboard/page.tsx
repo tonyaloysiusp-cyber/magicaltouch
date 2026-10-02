@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { Fraunces, Inter } from 'next/font/google';
 import { MoreVertical, Pencil, Copy, Download, Trash2, Plus, Sparkles, ArrowRight, Sun, Moon } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { listProjects, getProject, updateProject, deleteProject, duplicateProject } from '@/lib/api/projects';
 import { ProfileMenu } from '@/components/ProfileMenu';
 import { DesignLimitDialog } from '@/components/DesignLimitDialog';
 import { MAX_DESIGNS, getOrCreateProfile } from '@/lib/profile';
@@ -81,37 +82,15 @@ export default function DashboardPage() {
       if (p?.name) setDisplayName(p.name);
     });
 
-    const { data, error } = await supabase
-      .from('designs')
-      .select('id, name, width, height, updated_at, thumbnail, editor_type')
-      .order('updated_at', { ascending: false });
-
-    if (error) {
-      // Either the thumbnail or editor_type column (or both) may not exist
-      // yet on a database that predates one or both features — fall back
-      // progressively rather than showing the whole dashboard as broken.
-      const { data: withThumbOnly, error: err2 } = await supabase
-        .from('designs')
-        .select('id, name, width, height, updated_at, thumbnail')
-        .order('updated_at', { ascending: false });
-      if (!err2) {
-        const list = (withThumbOnly || []).map((d) => ({ ...d, editor_type: 'design' }));
-        setDesigns(list);
-        backfillMissingThumbnails(list);
-      } else {
-        const { data: fallbackData, error: fallbackError } = await supabase
-          .from('designs')
-          .select('id, name, width, height, updated_at')
-          .order('updated_at', { ascending: false });
-        if (fallbackError) {
-          console.error('Failed to fetch designs:', fallbackError);
-        } else {
-          setDesigns((fallbackData || []).map((d) => ({ ...d, thumbnail: null, editor_type: 'design' })));
-        }
-      }
-    } else {
-      setDesigns(data || []);
-      backfillMissingThumbnails(data || []);
+    // Column-fallback resilience (thumbnail/editor_type may not exist
+    // yet on a DB that predates those migrations) now lives server-side
+    // in GET /api/projects, so the client just asks for the list.
+    try {
+      const data = await listProjects();
+      setDesigns(data);
+      backfillMissingThumbnails(data);
+    } catch (err) {
+      console.error('Failed to fetch designs:', err);
     }
     setLoading(false);
   };
@@ -130,12 +109,8 @@ export default function DashboardPage() {
     const F = (await import('fabric')).fabric;
     for (const design of missing) {
       try {
-        const { data: full, error } = await supabase
-          .from('designs')
-          .select('canvas_json, width, height')
-          .eq('id', design.id)
-          .single();
-        if (error || !full?.canvas_json) continue;
+        const full = await getProject(design.id).catch(() => null);
+        if (!full?.canvas_json) continue;
 
         const thumbnail = await new Promise<string | null>((resolve) => {
           const canvas = new F.StaticCanvas(null, { width: full.width, height: full.height });
@@ -164,12 +139,13 @@ export default function DashboardPage() {
         });
         if (!thumbnail) continue;
 
-        const { error: updateError } = await supabase.from('designs').update({ thumbnail }).eq('id', design.id);
-        if (updateError) {
+        try {
+          await updateProject(design.id, { thumbnail });
+        } catch (updateError) {
           // Column genuinely missing (migration not applied yet) or some
           // other write failure -- either way, stop trying the rest of
           // this batch rather than repeating the same failure per design.
-          console.error('Thumbnail backfill save failed:', updateError.message);
+          console.error('Thumbnail backfill save failed:', updateError);
           break;
         }
         setDesigns((prev) => prev.map((d) => (d.id === design.id ? { ...d, thumbnail } : d)));
@@ -196,10 +172,10 @@ export default function DashboardPage() {
     const confirmed = window.confirm('Delete this design? This cannot be undone.');
     if (!confirmed) return;
 
-    const { error } = await supabase.from('designs').delete().eq('id', id);
-
-    if (error) {
-      console.error('Failed to delete design:', error);
+    try {
+      await deleteProject(id);
+    } catch (err) {
+      console.error('Failed to delete design:', err);
       alert('Failed to delete design.');
       return;
     }
@@ -213,9 +189,10 @@ export default function DashboardPage() {
     if (!trimmed) return;
     const prev = designs;
     setDesigns((ds) => ds.map((d) => (d.id === id ? { ...d, name: trimmed } : d)));
-    const { error } = await supabase.from('designs').update({ name: trimmed }).eq('id', id);
-    if (error) {
-      console.error('Failed to rename design:', error);
+    try {
+      await updateProject(id, { name: trimmed });
+    } catch (err) {
+      console.error('Failed to rename design:', err);
       alert('Failed to rename design.');
       setDesigns(prev);
     }
@@ -224,42 +201,15 @@ export default function DashboardPage() {
   const duplicateDesign = async (design: Design) => {
     setMenuOpenId(null);
     setBusyId(design.id);
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      setBusyId(null);
-      return;
-    }
-    const { data: full, error: fetchError } = await supabase
-      .from('designs')
-      .select('canvas_json, width, height')
-      .eq('id', design.id)
-      .single();
-    if (fetchError || !full) {
-      console.error('Failed to load design to duplicate:', fetchError);
+    try {
+      const created = await duplicateProject(design.id);
+      setDesigns((prev) => [created, ...prev]);
+    } catch (err) {
+      console.error('Failed to duplicate design:', err);
       alert('Failed to duplicate design.');
+    } finally {
       setBusyId(null);
-      return;
     }
-    const { data: created, error: insertError } = await supabase
-      .from('designs')
-      .insert({
-        user_id: user.id,
-        name: `${design.name} copy`,
-        canvas_json: full.canvas_json,
-        width: full.width,
-        height: full.height,
-        thumbnail: design.thumbnail,
-        updated_at: new Date().toISOString(),
-      })
-      .select('id, name, width, height, updated_at, thumbnail')
-      .single();
-    setBusyId(null);
-    if (insertError || !created) {
-      console.error('Failed to duplicate design:', insertError);
-      alert('Failed to duplicate design.');
-      return;
-    }
-    setDesigns((prev) => [created, ...prev]);
   };
 
   return (

@@ -1,5 +1,85 @@
 # Engineering Changelog
 
+## 2026-10-02 (10) — Foundation Phase 1: real API route layer for designs/projects
+
+**Scope:** the master-spec gap analysis (`docs/MASTER_SPEC_GAP_ANALYSIS.md`)
+flagged that every `designs` read/write went straight from the browser
+to Postgres, with RLS as the *only* authorization boundary and zero
+server-side ownership checks anywhere in the app. This adds a real
+Next.js API route layer for designs (the spec's "projects") as
+defense-in-depth on top of RLS, not a replacement for it.
+
+**New:**
+- `lib/supabase/server.ts` — a request-scoped Supabase client
+  authenticated as the CALLING USER's own access token (no service-role
+  key exists in this app's env, and this never bypasses RLS).
+- `lib/api/auth.ts` — `requireUser()`, called first by every route: pulls
+  the Bearer token off the request, verifies it against Supabase Auth
+  itself (`auth.getUser()`), and never trusts a client-supplied userId.
+- `app/api/projects/route.ts` (GET list / POST create),
+  `app/api/projects/[id]/route.ts` (GET one / PATCH / DELETE),
+  `app/api/projects/[id]/duplicate/route.ts` (POST) — every handler
+  scopes its query with `.eq('user_id', user.id)` as an explicit
+  app-level filter, not just reliance on RLS; a request for someone
+  else's design returns a clean 404 (never a 403 that would confirm the
+  id exists). The old column-missing-migration fallback logic (for DBs
+  that predate `thumbnail`/`editor_type`) moved server-side so every
+  future client inherits it for free.
+- `lib/api/client.ts` + `lib/api/projects.ts` — the browser-side typed
+  client, attaching the caller's real session token to every call.
+- **Incidental bug fix**: the old client-side `duplicateDesign` never
+  selected or carried over `editor_type`, so duplicating a Photo Studio
+  design silently produced a copy that reopened in Main Design. The new
+  duplicate route selects and carries it through correctly.
+
+**Migrated:** `app/dashboard/page.tsx`'s list/rename/delete/duplicate/
+thumbnail-backfill now go through the new API instead of calling
+`supabase.from('designs')` directly. Main Design's and Photo Studio's
+own save/autosave/load paths are UNCHANGED in this slice (still direct
+Supabase calls, still protected by RLS) — migrating those is follow-up
+work, intentionally not bundled into this unit.
+
+**Tested:** `test_projects_api.js` (17/17) — a REAL end-to-end proof,
+not a logic-only unit test: a real browser drives the real Next.js
+server, which makes real HTTP calls out to a small local mock Supabase
+backend (`mock-supabase-server.js`, built for this test only — this
+sandbox has no real Supabase project, and a browser-level Playwright
+route mock can't intercept the Next.js *server's own* outbound fetch
+calls, so a real HTTP round trip needed a real HTTP server to hit).
+Two separate signed-up users, two real tokens: confirms User A can
+create/list/get/rename/duplicate/delete their own design, and —the
+actual point of this unit — that User B's token gets a clean 404 (not
+the data, not a 403) on every single one of those same operations
+against User A's design, and that User A's design survives every one of
+User B's rejected attempts untouched.
+
+**Known test-environment trade-off, not a production bug**: any
+existing/future Playwright test that passes through `/dashboard` will
+now log one additional console error (`401 Invalid or expired session`
+from `GET /api/projects`) in THIS sandbox specifically, because the
+Dashboard's design-list fetch is now mediated by a real server-side
+route, and this sandbox's `NEXT_PUBLIC_SUPABASE_URL` points at an
+unreachable placeholder domain — the existing browser-level
+`page.route('**/rest/v1/**')` mocking pattern intercepts the *browser's*
+Supabase calls, not the Next.js *server's* own outbound ones. In real
+production both the browser and the server point at the same real
+Supabase project, so this is purely a sandbox testing-infrastructure
+artifact. Confirmed via `test_photo_studio_pro_tools.js` (11/12) and
+`test_clarity_filter.js` (6/7): every functional assertion still passes;
+only the "no console errors" check trips on this one new expected
+message. A future test that needs a clean console bar while passing
+through Dashboard should add `page.route('**/api/projects*', (r) =>
+r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }))`
+to its existing mock setup, the same way it already mocks `/rest/v1/*`.
+
+**Left for later (see gap analysis for the full roadmap)**: Main
+Design/Photo Studio save migration, template API routes, asset API
+routes, optimistic concurrency (Part 61 — still last-write-wins), and
+everything in Phase 2+.
+
+---
+
+
 Tracks real, verified engineering work against the findings in
 `docs/ENGINEERING_AUDIT.md`. Each entry states the problem, what was
 actually done, what was tested, and what's deliberately left for later.

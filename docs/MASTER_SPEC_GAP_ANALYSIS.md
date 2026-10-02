@@ -169,14 +169,29 @@ committing weeks of work to one path over another.
 | **4** | Template marketplace + creator economy — DB-managed categories, tags, template versioning fields, submission/review pipeline, idempotent creator credits, favorites, analytics, admin review queue | Large but mostly additive; no architectural blockers once Phase 1 exists |
 | **5** | Editor depth — multi-stop gradients, patterns, real adjustment-layer stack, command-pattern undo/redo migration, nested layer tree UI, text-on-path/vertical-type, scoped CMYK/print-color decision | Highest effort-per-feature; benefits most from Phase 1/3 groundwork being in place first |
 
-## 5. Open decisions (need your call before Phase 1+ starts)
+## 5. Decisions confirmed (2026-10-02)
 
-1. **Background jobs**: Supabase Edge Functions + `pg_cron`, or a
-   separate worker/queue? This affects Phase 2 and everything after.
-2. **MTD scope for v1**: ship the "wraps existing canvas_json" version
-   now (faster, real, but doesn't yet solve the deeper document-model
-   gap), or hold MTD until a real typed schema exists (slower, more
-   "correct," blocks a visible feature for longer)?
-3. **Priority order**: does Phase 0/1 (security + API layer) take
-   precedence over continuing the Photo Studio tool-parity work already
-   in flight this session, or run in parallel?
+1. **RLS status**: `0008_designs_rls.sql` is confirmed applied to the
+   live Supabase project. §0's risk is theoretical, not live — no
+   emergency action needed, but Phase 1's API layer still adds a real
+   server-side ownership check as defense-in-depth rather than leaving
+   RLS as the only gate.
+2. **Priority order**: Foundation first. Phase 0 (closed) → Phase 1 (API
+   route layer) starts now, ahead of further Photo Studio tool-parity
+   work.
+3. **MTD v1 scope**: Lightweight wrapper confirmed — package the
+   existing `canvas_json` + deduped assets into a real, re-importable
+   zip-based `.mtd` container now, rather than waiting on a ground-up
+   typed document schema. Revisit a real schema in Phase 5 if needed.
+4. **Background job mechanism**: not yet decided — defer until Phase 2
+   planning (retention/expiration), no need to lock in now.
+
+## 6. Status
+
+- Phase 0: **closed** (RLS confirmed live).
+- Phase 1: **in progress** — real API route layer (`/api/projects`)
+  shipped with server-side ownership enforcement, verified end-to-end
+  against real cross-user access attempts (17/17 tests). Dashboard
+  migrated to use it. Main Design/Photo Studio save paths and template/
+  asset routes are not yet migrated — see `CHANGELOG_ENGINEERING.md`'s
+  2026-10-02 (10) entry for exactly what shipped and what didn't.
