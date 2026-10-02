@@ -6,6 +6,37 @@ actually done, what was tested, and what's deliberately left for later.
 
 ---
 
+## 2026-10-02 (9) — Photo Studio: real Clarity filter
+
+**Scope:** continuing the Photoshop/Photopea tool-parity list. Adds
+Clarity to the Filter menu (`'Clarity (whole layer)'`), alongside
+Blur/Sharpen/Motion Blur/Box Blur/Vignette/Grain.
+
+The audit previously flagged a real risk here: Clarity could easily have
+shipped as a relabeled copy of Sharpen (both are unsharp-mask variants),
+which would be exactly the kind of fake feature this whole engagement
+has been working against. `clarityInMask()` (new, in
+`lib/editor/photoBrush.ts`) is genuinely distinct in two ways: (1) a much
+larger 24px blur radius than Sharpen's 2px, isolating midtone-SCALE
+structure instead of fine detail, and (2) a midtone-weighting curve
+(full strength at luma 127.5, tapering toward 0 at pure black/white) —
+the real reason Lightroom-style Clarity can push local contrast hard
+without blowing shadows/highlights into clipped halos the way a plain
+large-radius unsharp mask would.
+
+**Tested:** `test_clarity_filter.js` (7/7) — seeds three regions with
+the IDENTICAL local-contrast stripe pattern (same ±14 swing) at three
+different brightness baselines (near-black, midtone, near-white), then
+reads real pixel values after filtering: confirms the midtone region's
+local contrast amplifies substantially, and — the test that actually
+proves the midtone-weighting claim rather than just "a filter ran" —
+confirms that amplification is more than 2× stronger than either the
+near-black or near-white region's, which is only possible if the
+weighting curve is real. Also confirms Undo restores the exact original.
+Re-ran Grain and Vignette regression tests (both still pass).
+
+---
+
 ## 2026-10-02 (8) — Photo Studio: real Grain filter
 
 **Scope:** continuing the Photoshop/Photopea tool-parity list. Adds

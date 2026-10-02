@@ -61,6 +61,7 @@ import {
   mixerBrushStepInPlace,
   vignetteInMask,
   grainInMask,
+  clarityInMask,
   LevelsSettings,
   DEFAULT_LEVELS,
   HueSaturationSettings,
@@ -194,6 +195,7 @@ export interface PhotoEditorHandle {
   applyFilterBoxBlur: () => void;
   applyFilterVignette: () => void;
   applyFilterGrain: () => void;
+  applyFilterClarity: () => void;
 }
 
 type PhotoTool =
@@ -1003,6 +1005,7 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
     applyFilterBoxBlur,
     applyFilterVignette,
     applyFilterGrain,
+    applyFilterClarity,
   }));
   useEffect(() => {
     onHistoryChange?.(canUndo, canRedo);
@@ -2622,6 +2625,17 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
     const pixelCanvas = getImagePixelCanvas(img);
     const full = rectMask(img.width, img.height, 0, 0, img.width, img.height);
     bakeAndPush(grainInMask(pixelCanvas, full, 0.08));
+  };
+  // Real midtone-weighted, large-radius local contrast boost
+  // (clarityInMask) — genuinely distinct math from Sharpen, not a
+  // relabeled copy (see clarityInMask's own header). Same "no dedicated
+  // slider yet" honesty note as the other filters above.
+  const applyFilterClarity = () => {
+    const img = imageRef.current;
+    if (!img) return;
+    const pixelCanvas = getImagePixelCanvas(img);
+    const full = rectMask(img.width, img.height, 0, 0, img.width, img.height);
+    bakeAndPush(clarityInMask(pixelCanvas, full, 0.6));
   };
 
   // ---- Gradient: click-drag draws a live preview line (or, for a Radial

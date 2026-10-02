@@ -720,6 +720,50 @@ export function grainInMask(source: HTMLCanvasElement, mask: PixelMask, amount: 
   return canvas.toDataURL('image/png');
 }
 
+// ---------------------------------------------------------------------
+// Clarity — real local-contrast enhancement, genuinely distinct from
+// Sharpen rather than a relabeled copy of it: Sharpen's unsharp mask
+// uses a small 2px blur radius to isolate FINE detail; Clarity uses a
+// much larger 24px radius to isolate MIDTONE-SCALE structure instead,
+// and additionally weights the boost by how close each pixel's
+// luminance is to the midpoint (full strength at luma 127.5, tapering
+// toward 0 at pure black/white) — the real reason Lightroom-style
+// Clarity can push local contrast hard without blowing out shadows and
+// highlights into clipped halos the way a plain large-radius unsharp
+// mask would.
+// ---------------------------------------------------------------------
+export function clarityInMask(source: HTMLCanvasElement, mask: PixelMask, amount: number): string {
+  const canvas = document.createElement('canvas');
+  canvas.width = source.width;
+  canvas.height = source.height;
+  const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
+  ctx.drawImage(source, 0, 0);
+  const orig = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+  const blurredCanvas = document.createElement('canvas');
+  blurredCanvas.width = source.width;
+  blurredCanvas.height = source.height;
+  const bctx = blurredCanvas.getContext('2d') as CanvasRenderingContext2D;
+  bctx.filter = 'blur(24px)';
+  bctx.drawImage(source, 0, 0);
+  const blurred = bctx.getImageData(0, 0, canvas.width, canvas.height);
+
+  const d = orig.data;
+  const bd = blurred.data;
+  for (let p = 0, i = 0; p < mask.data.length; p++, i += 4) {
+    const m = mask.data[p] / 255;
+    if (!m) continue;
+    const luma = 0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2];
+    const midtoneWeight = 1 - Math.pow(Math.abs(luma - 127.5) / 127.5, 2);
+    const localAmount = amount * midtoneWeight * m;
+    d[i] = Math.max(0, Math.min(255, d[i] + localAmount * (d[i] - bd[i])));
+    d[i + 1] = Math.max(0, Math.min(255, d[i + 1] + localAmount * (d[i + 1] - bd[i + 1])));
+    d[i + 2] = Math.max(0, Math.min(255, d[i + 2] + localAmount * (d[i + 2] - bd[i + 2])));
+  }
+  ctx.putImageData(orig, 0, 0);
+  return canvas.toDataURL('image/png');
+}
+
 export function mixerBrushStepInPlace(working: HTMLCanvasElement, mask: PixelMask, color: string, wetness: number): void {
   const ctx = working.getContext('2d') as CanvasRenderingContext2D;
   const imgData = ctx.getImageData(0, 0, working.width, working.height);
