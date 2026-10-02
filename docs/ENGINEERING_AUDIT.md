@@ -255,7 +255,7 @@ none exists in this codebase); Perspective Crop, Slice, Distort, Warp
 (today's transforms are Skew and Perspective — see above — plus what
 Fabric's own selection handles give: move/scale/rotate; a unified "Free
 Transform" UI wrapping all of these in one mode is still a separate,
-smaller follow-up); Patch Tool, Red Eye; Smudge; Mixer Brush, Pattern
+smaller follow-up); Red Eye; Smudge; Mixer Brush, Pattern
 Stamp; Freeform Pen as a separate tool from the existing real Pen; Shape
 tools inside Photo Studio specifically (Main Design has real shape tools,
 Photo Studio does not yet); Color Balance, Selective Color, Gradient Map,

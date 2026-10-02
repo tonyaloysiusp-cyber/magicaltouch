@@ -6,6 +6,39 @@ actually done, what was tested, and what's deliberately left for later.
 
 ---
 
+## 2026-10-01 (6) — Photo Studio: real Patch Tool
+
+**Scope:** first of the "not yet real" tool list in `docs/ENGINEERING_AUDIT.md`
+§9 (Patch Tool, Smudge, Red Eye, selection/adjustment tools — the user
+asked for Photoshop/Photopea-level tool parity, working from that list
+one at a time).
+
+**What it does:** drag a freehand loop around a blemish, then drag that
+selection onto a clean area of the image — releasing replaces the
+blemish with the dragged-to content, feathered at the edges so the seam
+blends, with a live preview while dragging. New `'patch'` tool in
+`components/photoEditor/PhotoEditorWorkspace.tsx` (toolbar, Shift+S
+shortcut, Escape to cancel mid-gesture).
+
+**Not new pixel math** — reuses `cloneStampPaint`'s existing offset-
+sampling + destination-in compositing verbatim (the same real operation
+Clone Stamp already uses), with `featherMask` applied to the drawn
+selection first so the composite blends instead of hard-edging. The
+loop itself is built with the already-real `polygonMask`. This is
+exactly the kind of case this engagement keeps finding: most of the
+hard pixel-math work for a "new" professional tool was already real and
+proven elsewhere; the gap was the gesture/workflow wiring, not the math.
+
+**Tested:** new `test_patch_tool.js` (9/9) against a deterministic test
+image (solid blue background, a red-square blemish): confirms the
+blemish is genuinely replaced with real sampled content (not a filter
+or a blur), the clean source area used for the patch is itself
+untouched, a far unrelated pixel never changes (a local operation, not
+a global wash), and Undo genuinely restores the original blemish. Full
+regression suite (140 checks) re-run and still passing.
+
+---
+
 ## 2026-10-01 (5) — Pen tool: fixed Direct Selection (anchor editing was completely non-functional)
 
 **Reported as:** "the pen tool doesn't really work." Investigated live
