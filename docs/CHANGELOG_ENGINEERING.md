@@ -6,6 +6,65 @@ actually done, what was tested, and what's deliberately left for later.
 
 ---
 
+## 2026-10-02 — Photo Studio: real Smudge and Red Eye tools
+
+**Scope:** continuing the Photoshop/Photopea tool-parity list one at a
+time (Patch Tool shipped previously; this adds the next two: Smudge,
+Red Eye).
+
+**Smudge** (`'smudge'` tool, shortcut `U`) pushes/smears real pixel
+color in the direction of a drag, like dragging a finger through wet
+paint. Unlike every other brush tool in this file, it cannot use the
+shared "accumulate a union mask, bake once at mouse-up" pipeline: each
+dab's correct source is "what the stroke itself did one step earlier,"
+which only exists if the effect has already been applied incrementally.
+
+Two real bugs found and fixed while building this, both confirmed via
+live/isolated repros before and after:
+
+1. **Lost-update race.** The first implementation called `img.setSrc()`
+   (which is asynchronous — it decodes through a real `Image` element
+   before swapping Fabric's texture) once per dab, inside a tight
+   synchronous loop of several dabs per `mousemove` tick. Every dab
+   after the first read the same stale, pre-stroke pixels, since none
+   of the async `setSrc` calls had resolved yet — a full drag across a
+   hard edge produced zero visible change. Fixed by maintaining a
+   persistent working `HTMLCanvasElement` mutated synchronously in
+   place through the whole stroke (`smudgeStepInPlace` in
+   `lib/editor/photoBrush.ts`), only pushed to the live Fabric image
+   once per visible frame (and once more, as a single history entry,
+   at mouse-up) — the same "debounce continuous operations" rule the
+   opacity slider already follows, applied for a different reason.
+2. **Reversed offset sign.** Even after fixing the race, the tool still
+   did nothing: the offset passed to the underlying `drawImage`-based
+   sampling was computed backwards. `cloneStampPaint`'s own established
+   convention is `offset = destination − source`; this used
+   `source − destination`, which made every dab sample from the wrong
+   side of the stroke (silently, with no error — confirmed via a
+   from-scratch isolated math test before finding the sign flip).
+
+**Red Eye** (`'red-eye'` tool, shortcut `Y`) is a single click, not a
+drag: `removeRedEye` scans the clicked radius for pixels whose red
+channel is clearly dominant over both green and blue (the actual
+signature of flash reflecting off the retina, not a generic "is this
+red" threshold that would also catch an unrelated red object at the
+edge of the same radius) and desaturates + darkens exactly those pixels
+toward a neutral gray derived from their own green/blue average — a
+near-white specular highlight inside the pupil correctly survives
+untouched, matching a real red-eye tool's behavior.
+
+**Tested:** `test_smudge_tool.js` (5/5) against a hard black/white edge
+— confirms a drag from white into black genuinely lightens pixels along
+the drag path, a pixel off the path stays untouched, and Undo restores
+the original in one step. `test_red_eye_tool.js` (7/7) against a red
+"pupil" square plus a separate, unrelated red square placed away from
+the click — confirms the clicked pupil is genuinely desaturated while
+the unrelated red square (outside the click radius) is byte-for-byte
+unchanged, and Undo restores the original. Full regression suite (149
+checks) re-run and still passing.
+
+---
+
 ## 2026-10-01 (6) — Photo Studio: real Patch Tool
 
 **Scope:** first of the "not yet real" tool list in `docs/ENGINEERING_AUDIT.md`

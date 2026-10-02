@@ -51,6 +51,8 @@ import {
   spongeInMask,
   motionBlurInMask,
   boxBlurInMask,
+  smudgeStepInPlace,
+  removeRedEye,
   LevelsSettings,
   DEFAULT_LEVELS,
   HueSaturationSettings,
@@ -91,6 +93,8 @@ import {
   Palette,
   Contrast,
   Puzzle,
+  Waves,
+  ScanEye,
 } from 'lucide-react';
 import { warpQuadToCanvas, type Point as PerspectivePoint } from '@/lib/editor/perspective';
 
@@ -198,6 +202,8 @@ type PhotoTool =
   | 'clone'
   | 'heal'
   | 'patch'
+  | 'smudge'
+  | 'red-eye'
   | 'blur'
   | 'sharpen'
   | 'sponge'
@@ -238,6 +244,8 @@ const TOOL_ICONS: Record<PhotoTool, React.ReactNode> = {
   clone: <Stamp size={ICON_SIZE} />,
   heal: <Sparkles size={ICON_SIZE} />,
   patch: <Puzzle size={ICON_SIZE} />,
+  smudge: <Waves size={ICON_SIZE} />,
+  'red-eye': <ScanEye size={ICON_SIZE} />,
   blur: <CloudFog size={ICON_SIZE} />,
   sharpen: <Focus size={ICON_SIZE} />,
   sponge: <Droplets size={ICON_SIZE} />,
@@ -628,6 +636,32 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
     cloneAlignedRef.current = cloneAligned;
   }, [cloneAligned]);
   const [hasCloneSource, setHasCloneSource] = useState(false);
+
+  // ---- Smudge: pulls color from a step earlier along the stroke into
+  // the current dab (see smudgeInMask's own header). Unlike every other
+  // PAINT_TOOLS brush here, this bakes INCREMENTALLY at each dab (via
+  // bakeLive) instead of accumulating a union mask for one bake at
+  // mouse-up, since its source point is relative to the stroke's own
+  // motion, not a single offset a deferred mask could reconstruct. ----
+  const smudgeLastPointRef = useRef<{ x: number; y: number } | null>(null);
+  const [smudgeStrength, setSmudgeStrength] = useState(0.5);
+  const smudgeStrengthRef = useRef(0.5);
+  useEffect(() => {
+    smudgeStrengthRef.current = smudgeStrength;
+  }, [smudgeStrength]);
+
+  // ---- Red Eye: a single click (not a drag) within this radius darkens
+  // whatever red-dominant pixels removeRedEye finds there. ----
+  const [redEyeRadius, setRedEyeRadius] = useState(20);
+  const redEyeRadiusRef = useRef(20);
+  useEffect(() => {
+    redEyeRadiusRef.current = redEyeRadius;
+  }, [redEyeRadius]);
+  const [redEyeDarken, setRedEyeDarken] = useState(0.6);
+  const redEyeDarkenRef = useRef(0.6);
+  useEffect(() => {
+    redEyeDarkenRef.current = redEyeDarken;
+  }, [redEyeDarken]);
 
   // ---- Patch Tool: draw a freehand loop around a blemish, then drag
   // that loop onto a clean area — releasing replaces the blemish with
@@ -2137,14 +2171,26 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
     }
   };
 
-  const bakeAndPush = (dataUrl: string) => {
+  // Updates the live layer's real pixel data without pushing a history
+  // entry -- used by Smudge, which (unlike every other brush tool here)
+  // must apply its effect incrementally as the stroke moves rather than
+  // once at mouse-up, since each step's correct source is "a little
+  // earlier along this exact path", not a value a whole-stroke union
+  // mask could reconstruct after the fact. bakeAndPush below is just
+  // this plus the one history push every other real pixel op already does.
+  const bakeLive = (dataUrl: string, onDone?: () => void) => {
     const canvas = fabricCanvasRef.current;
     const img = imageRef.current;
     const F = fabricModRef.current;
     img.setSrc(dataUrl, () => {
       applyAdjustments(img, F, img.__adjustments);
       canvas.requestRenderAll();
-      pushLocalHistory(dataUrl, img.__cropRect);
+      onDone?.();
+    });
+  };
+  const bakeAndPush = (dataUrl: string) => {
+    bakeLive(dataUrl, () => {
+      pushLocalHistory(dataUrl, imageRef.current.__cropRect);
       bump(); // pixel data changed -- e.g. the Curves histogram needs a refresh
     });
   };
@@ -2591,6 +2637,88 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
     }
   };
 
+  // ---- Smudge Tool mouse handling ----
+  // A persistent canvas mutated synchronously through the whole stroke.
+  // Smudge's defining property is that each dab's source is "what the
+  // PREVIOUS dab in this same stroke just did", not the original pixels
+  // — so unlike every other brush tool here, it cannot read from the
+  // live Fabric image between dabs: img.setSrc() is asynchronous (it
+  // decodes through a real Image element before swapping the texture),
+  // so calling it from inside a tight synchronous loop of several dabs
+  // per mousemove tick would have every dab after the first read the
+  // SAME stale, pre-stroke pixels — a lost-update race that silently
+  // made every interior dab a no-op (confirmed via a live repro: a full
+  // drag across a hard edge produced zero visible change). Mutating
+  // this canvas directly in place sidesteps that entirely; it's only
+  // ever pushed to the real Fabric image (via bakeLive/bakeAndPush,
+  // which DOES need setSrc) once per visible frame and once at the end.
+  const smudgeWorkingCanvasRef = useRef<HTMLCanvasElement | null>(null);
+
+  const smudgeDabAt = (from: { x: number; y: number }, to: { x: number; y: number }) => {
+    const img = imageRef.current;
+    const working = smudgeWorkingCanvasRef.current;
+    if (!img || !working) return;
+    const r = Math.max(1, brushSizeRef.current / 2);
+    let dab = softBrushMask(img.width, img.height, to.x, to.y, r, brushHardnessRef.current, 1);
+    const selection = selectionMaskRef.current;
+    if (selection && maskHasSelection(selection)) dab = combineMasks(selection, dab, 'intersect');
+    // cloneStampPaint's own convention (which this mirrors): the offset
+    // passed to drawImage is (destination - source), so dest(x,y) reads
+    // as source(x - offset) -- i.e. the dab painted AT `to` must sample
+    // FROM `from`, so the offset is to-minus-from, not the other way
+    // around (confirmed via a direct repro: the reversed sign pulled
+    // color from the WRONG side of the stroke every time, which read as
+    // "smudge does nothing" on a flat-colored source region).
+    const dx = to.x - from.x;
+    const dy = to.y - from.y;
+    smudgeStepInPlace(working, dab, dx, dy, smudgeStrengthRef.current);
+  };
+  const beginSmudgeStroke = (local: { x: number; y: number }) => {
+    const img = imageRef.current;
+    smudgeLastPointRef.current = local;
+    smudgeWorkingCanvasRef.current = img ? getImagePixelCanvas(img) : null;
+  };
+  const continueSmudgeStroke = (raw: { x: number; y: number }) => {
+    const from = smudgeLastPointRef.current;
+    if (!from) {
+      smudgeLastPointRef.current = raw;
+      return;
+    }
+    const radius = Math.max(1, brushSizeRef.current / 2);
+    const spacing = Math.max(1, radius * 0.2);
+    const dist = Math.hypot(raw.x - from.x, raw.y - from.y);
+    const steps = Math.max(1, Math.round(dist / spacing));
+    let stepFrom = from;
+    for (let i = 1; i <= steps; i++) {
+      const t = i / steps;
+      const stepTo = { x: from.x + (raw.x - from.x) * t, y: from.y + (raw.y - from.y) * t };
+      smudgeDabAt(stepFrom, stepTo);
+      stepFrom = stepTo;
+    }
+    smudgeLastPointRef.current = raw;
+    // One live visual update per mousemove tick (not per interior dab)
+    // — a real-time preview of the accumulated smear so far.
+    const working = smudgeWorkingCanvasRef.current;
+    if (working) bakeLive(working.toDataURL('image/png'));
+  };
+  const endSmudgeStroke = () => {
+    const working = smudgeWorkingCanvasRef.current;
+    smudgeLastPointRef.current = null;
+    smudgeWorkingCanvasRef.current = null;
+    if (!working) return;
+    // One history entry for the whole stroke (same "debounce continuous
+    // operations" rule the opacity slider follows), not one per dab.
+    bakeAndPush(working.toDataURL('image/png'));
+  };
+
+  // ---- Red Eye: a single click, not a drag -- same "immediate action"
+  // pattern as Paint Bucket / Color Range. ----
+  const applyRedEyeAt = (local: { x: number; y: number }) => {
+    const img = imageRef.current;
+    if (!img) return;
+    bakeAndPush(removeRedEye(getImagePixelCanvas(img), local.x, local.y, redEyeRadiusRef.current, redEyeDarkenRef.current));
+  };
+
   // ---- Space+drag / Hand-tool pan, layered on top of every other tool's
   // own mouse handling so panning always works without switching tools —
   // a genuinely free-feeling canvas instead of one locked to whatever
@@ -2651,6 +2779,15 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
       const local = canvasToImageLocal(pointer);
       const picked = pickColorAt(getImagePixelCanvas(img), local.x, local.y);
       if (picked) setBrushColor(picked);
+      return;
+    }
+    if (tool === 'smudge') {
+      paintingRef.current = true;
+      beginSmudgeStroke(canvasToImageLocal(canvas.getPointer(opt.e)));
+      return;
+    }
+    if (tool === 'red-eye') {
+      applyRedEyeAt(canvasToImageLocal(canvas.getPointer(opt.e)));
       return;
     }
     if (tool === 'paint-bucket') {
@@ -2742,6 +2879,10 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
       handlePatchMouseMove(opt);
       return;
     }
+    if (tool === 'smudge' && paintingRef.current) {
+      continueSmudgeStroke(canvasToImageLocal(canvas.getPointer(opt.e)));
+      return;
+    }
     if (isSelectTool(tool)) selMove(opt);
   };
   const handleCanvasMouseUp = (opt: any) => {
@@ -2785,6 +2926,11 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
     }
     if (tool === 'patch') {
       handlePatchMouseUp(opt);
+      return;
+    }
+    if (tool === 'smudge') {
+      paintingRef.current = false;
+      endSmudgeStroke();
       return;
     }
     if (isSelectTool(tool)) selUp(opt);
@@ -2942,6 +3088,8 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
         if (key === 'x') { e.preventDefault(); selectTool('sponge'); return; }
         if (key === 'k') { e.preventDefault(); selectTool('paint-bucket'); return; }
         if (key === 't') { e.preventDefault(); selectTool('skew'); return; }
+        if (key === 'u') { e.preventDefault(); selectTool('smudge'); return; }
+        if (key === 'y') { e.preventDefault(); selectTool('red-eye'); return; }
       }
       if (!isMeta && e.shiftKey) {
         const key = e.key.toLowerCase();
@@ -3093,6 +3241,8 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
         { id: 'clone', label: 'Clone Stamp' },
         { id: 'heal', label: 'Healing Brush' },
         { id: 'patch', label: 'Patch' },
+        { id: 'smudge', label: 'Smudge' },
+        { id: 'red-eye', label: 'Red Eye' },
         { id: 'blur', label: 'Blur' },
         { id: 'sharpen', label: 'Sharpen' },
         { id: 'sponge', label: 'Sponge' },
@@ -3501,14 +3651,19 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
               </div>
             )}
 
-            {(activeTool === 'eraser' || activeTool === 'brush' || activeTool === 'dodge' || activeTool === 'burn' || activeTool === 'clone' || activeTool === 'heal' || activeTool === 'blur' || activeTool === 'sharpen' || activeTool === 'sponge' || MASK_PAINT_TOOLS.includes(activeTool)) && (
+            {(activeTool === 'eraser' || activeTool === 'brush' || activeTool === 'dodge' || activeTool === 'burn' || activeTool === 'clone' || activeTool === 'heal' || activeTool === 'smudge' || activeTool === 'blur' || activeTool === 'sharpen' || activeTool === 'sponge' || MASK_PAINT_TOOLS.includes(activeTool)) && (
               <div className="border-t pt-3">
                 <p className="font-semibold text-gray-700 text-xs uppercase tracking-wide mb-2">
-                  {activeTool === 'eraser' ? 'Eraser' : activeTool === 'brush' ? 'Brush' : activeTool === 'dodge' ? 'Dodge (lighten)' : activeTool === 'burn' ? 'Burn (darken)' : activeTool === 'clone' ? 'Clone Stamp' : activeTool === 'heal' ? 'Healing Brush' : activeTool === 'blur' ? 'Blur' : activeTool === 'sharpen' ? 'Sharpen' : activeTool === 'sponge' ? 'Sponge' : activeTool === 'mask-reveal' ? 'Mask: Paint Reveal' : 'Mask: Paint Hide'}
+                  {activeTool === 'eraser' ? 'Eraser' : activeTool === 'brush' ? 'Brush' : activeTool === 'dodge' ? 'Dodge (lighten)' : activeTool === 'burn' ? 'Burn (darken)' : activeTool === 'clone' ? 'Clone Stamp' : activeTool === 'heal' ? 'Healing Brush' : activeTool === 'smudge' ? 'Smudge' : activeTool === 'blur' ? 'Blur' : activeTool === 'sharpen' ? 'Sharpen' : activeTool === 'sponge' ? 'Sponge' : activeTool === 'mask-reveal' ? 'Mask: Paint Reveal' : 'Mask: Paint Hide'}
                 </p>
                 {activeTool === 'heal' && (
                   <p className="text-[11px] text-gray-500 mb-2">
                     Paint over a blemish — it's reconstructed from the surrounding real pixels. No source point needed (unlike Clone Stamp).
+                  </p>
+                )}
+                {activeTool === 'smudge' && (
+                  <p className="text-[11px] text-gray-500 mb-2">
+                    Drag to push and smear real pixel color in the direction of the stroke, like dragging a finger through wet paint.
                   </p>
                 )}
                 <div className="flex justify-between text-[11px] text-gray-500 mb-0.5">
@@ -3521,11 +3676,19 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
                   <span>{Math.round(brushHardness * 100)}%</span>
                 </div>
                 <input type="range" min={0} max={1} step={0.05} value={brushHardness} onChange={(e) => setBrushHardness(parseFloat(e.target.value))} className="w-full mb-2" />
-                <div className="flex justify-between text-[11px] text-gray-500 mb-0.5">
-                  <span>Opacity</span>
-                  <span>{Math.round(brushOpacity * 100)}%</span>
-                </div>
-                <input type="range" min={0.05} max={1} step={0.05} value={brushOpacity} onChange={(e) => setBrushOpacity(parseFloat(e.target.value))} className="w-full mb-2" />
+                {activeTool !== 'smudge' && (
+                  <>
+                    <div className="flex justify-between text-[11px] text-gray-500 mb-0.5">
+                      <span>Opacity</span>
+                      <span>{Math.round(brushOpacity * 100)}%</span>
+                    </div>
+                    {/* Smudge has its own "Strength" slider below instead --
+                        Opacity isn't wired into its math (smudgeInMask takes
+                        a strength parameter directly), so showing it here
+                        would be a control that visibly does nothing. */}
+                    <input type="range" min={0.05} max={1} step={0.05} value={brushOpacity} onChange={(e) => setBrushOpacity(parseFloat(e.target.value))} className="w-full mb-2" />
+                  </>
+                )}
                 {activeTool === 'brush' && (
                   <div className="flex items-center gap-2">
                     <label className="text-[11px] text-gray-500">Color</label>
@@ -3545,6 +3708,23 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
                       step={0.05}
                       value={dodgeBurnStrength}
                       onChange={(e) => setDodgeBurnStrength(parseFloat(e.target.value))}
+                      className="w-full"
+                    />
+                  </>
+                )}
+                {activeTool === 'smudge' && (
+                  <>
+                    <div className="flex justify-between text-[11px] text-gray-500 mb-0.5">
+                      <span>Strength</span>
+                      <span>{smudgeStrength.toFixed(2)}</span>
+                    </div>
+                    <input
+                      type="range"
+                      min={0.05}
+                      max={1}
+                      step={0.05}
+                      value={smudgeStrength}
+                      onChange={(e) => setSmudgeStrength(parseFloat(e.target.value))}
                       className="w-full"
                     />
                   </>
@@ -3902,6 +4082,25 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
                   <span>{patchFeather}px</span>
                 </div>
                 <input type="range" min={0} max={40} value={patchFeather} onChange={(e) => setPatchFeather(parseInt(e.target.value))} className="w-full" />
+              </div>
+            )}
+
+            {activeTool === 'red-eye' && (
+              <div className="border-t pt-3">
+                <p className="font-semibold text-gray-700 text-xs uppercase tracking-wide mb-2">Red Eye</p>
+                <p className="text-[11px] text-gray-500 mb-2">
+                  Click directly on a red pupil — real red-dominant pixels within this radius are desaturated and darkened.
+                </p>
+                <div className="flex justify-between text-[11px] text-gray-500 mb-0.5">
+                  <span>Pupil size</span>
+                  <span>{redEyeRadius}px</span>
+                </div>
+                <input type="range" min={4} max={100} value={redEyeRadius} onChange={(e) => setRedEyeRadius(parseInt(e.target.value))} className="w-full mb-2" />
+                <div className="flex justify-between text-[11px] text-gray-500 mb-0.5">
+                  <span>Darken amount</span>
+                  <span>{Math.round(redEyeDarken * 100)}%</span>
+                </div>
+                <input type="range" min={0.1} max={1} step={0.05} value={redEyeDarken} onChange={(e) => setRedEyeDarken(parseFloat(e.target.value))} className="w-full" />
               </div>
             )}
 

@@ -246,6 +246,9 @@ undo/redo, per `PhotoTool` in `PhotoEditorWorkspace.tsx:124-144`):
 | Healing Brush (drag-brush spot healing) | Live (2026-09-29) | `'heal'` tool (Shift+J) — same real diffusion-based `contentAwareFill()` reconstruction "Remove Object" already used, but driven by a painted brush stroke instead of a selection, and with no source point to set (unlike Clone Stamp) since it reconstructs from the real surrounding pixels automatically |
 | Color Range mask | Live (2026-09-29) | `'mask-color-range'` tool — click a color; every pixel within tolerance anywhere in the image (a genuine global, non-contiguous match via `magicWandMask(..., false)`, not a flood fill) becomes the new layer mask, with an Invert option. Distinct from the existing paintable reveal/hide mask |
 | Gradient mask | Live (2026-09-29) | `'mask-gradient'` tool — drag a line; `linearGradientMask()` writes a real linear black-to-white ramp (projected onto the drag vector, clamped 0..1) into the layer mask alpha, with an Invert option. Reuses the same click-drag gesture as the existing Gradient (fill) tool, but writes to the mask instead of blending colors into the image |
+| Patch Tool | Live (2026-10-01) | `'patch'` tool — drag a freehand loop around a blemish, then drag it onto a clean area; releases to a feathered `cloneStampPaint` composite (`featherMask` applied to the drawn `polygonMask` first) |
+| Smudge | Live (2026-10-01) | `'smudge'` tool — `smudgeStepInPlace` pulls color from a step earlier along the stroke into the current dab, applied incrementally against a persistent working canvas (not deferred to mouse-up like every other brush here, since each dab's source is relative to the stroke's own motion) |
+| Red Eye | Live (2026-10-01) | `'red-eye'` tool — a single click; `removeRedEye` scans the clicked radius for genuinely red-dominant pixels (red clearly over both green and blue, not a generic red threshold) and desaturates/darkens exactly those, leaving a near-white specular highlight inside the pupil untouched |
 
 **Not yet real — planned, not faked** (no tool id, no panel, no code path
 exists for these; do not show them as clickable until they are):
@@ -255,7 +258,7 @@ none exists in this codebase); Perspective Crop, Slice, Distort, Warp
 (today's transforms are Skew and Perspective — see above — plus what
 Fabric's own selection handles give: move/scale/rotate; a unified "Free
 Transform" UI wrapping all of these in one mode is still a separate,
-smaller follow-up); Red Eye; Smudge; Mixer Brush, Pattern
+smaller follow-up); Mixer Brush, Pattern
 Stamp; Freeform Pen as a separate tool from the existing real Pen; Shape
 tools inside Photo Studio specifically (Main Design has real shape tools,
 Photo Studio does not yet); Color Balance, Selective Color, Gradient Map,
