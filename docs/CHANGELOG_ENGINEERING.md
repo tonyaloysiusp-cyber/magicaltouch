@@ -6,6 +6,41 @@ actually done, what was tested, and what's deliberately left for later.
 
 ---
 
+## 2026-10-02 (3) — Photo Studio: real Pattern Stamp tool
+
+**Scope:** continuing the Photoshop/Photopea tool-parity list. Adds
+Pattern Stamp (`'pattern-stamp'` tool, shortcut `N`) — paints a repeating
+tile instead of a flat color.
+
+Unlike Clone/Smudge, the tile never depends on the stroke's own history,
+so this reuses the SAME accumulate-mask-then-bake-once pipeline every
+other brush in `PAINT_TOOLS` already uses (`paintDab`/`continuePaintStroke`/
+`bakePaintStroke`) — no new gesture plumbing needed, just a new case in
+`bakePaintStroke` calling the new `patternStampInMask()`.
+
+Four tile styles ship (`generatePatternTile()` in `lib/editor/photoBrush.ts`):
+dots, stripes, checkerboard, grid — all generated procedurally on a small
+canvas at paint time, not Photoshop/Photopea pattern assets. The tile is
+always anchored to the image's own `(0,0)`, not the mask's position, so
+separate dabs and separate strokes tile seamlessly instead of each
+restarting the pattern at its own origin (matches Photoshop's "Aligned"
+Pattern Stamp behavior — the sensible default here since there's no
+per-click "set source" step the way Clone Stamp has). The tile's ink
+color reuses the existing Brush Color control, giving the user a
+meaningful color control instead of a fixed/fake one.
+
+**Tested:** `test_pattern_stamp.js` (7/7) — seeds a solid-color image,
+confirms it's genuinely uniform before painting, switches the pattern
+style to "stripes" and picks a distinct ink color, drags a stroke, and
+confirms the painted region now contains the chosen ink color AND shows
+real multi-color tile variation (not a flat fill), confirms pixels
+outside the stroke are byte-identical to before, and confirms Undo
+restores the original uniform fill. Also re-ran Polygon Lasso, Patch,
+Smudge, Red Eye, and Pen tool Direct Selection regression tests (all
+still pass).
+
+---
+
 ## 2026-10-02 (2) — Photo Studio: real Polygon Lasso tool
 
 **Scope:** continuing the Photoshop/Photopea tool-parity list (Patch,

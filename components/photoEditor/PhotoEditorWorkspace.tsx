@@ -53,6 +53,9 @@ import {
   boxBlurInMask,
   smudgeStepInPlace,
   removeRedEye,
+  generatePatternTile,
+  patternStampInMask,
+  PatternStyle,
   LevelsSettings,
   DEFAULT_LEVELS,
   HueSaturationSettings,
@@ -96,6 +99,7 @@ import {
   Waves,
   ScanEye,
   Hexagon,
+  Grid3x3,
 } from 'lucide-react';
 import { warpQuadToCanvas, type Point as PerspectivePoint } from '@/lib/editor/perspective';
 
@@ -206,6 +210,7 @@ type PhotoTool =
   | 'patch'
   | 'smudge'
   | 'red-eye'
+  | 'pattern-stamp'
   | 'blur'
   | 'sharpen'
   | 'sponge'
@@ -219,7 +224,7 @@ type PhotoTool =
   | 'mask-color-range'
   | 'mask-gradient';
 
-const PAINT_TOOLS: PhotoTool[] = ['eraser', 'brush', 'dodge', 'burn', 'clone', 'heal', 'blur', 'sharpen', 'sponge'];
+const PAINT_TOOLS: PhotoTool[] = ['eraser', 'brush', 'dodge', 'burn', 'clone', 'heal', 'blur', 'sharpen', 'sponge', 'pattern-stamp'];
 const MASK_PAINT_TOOLS: PhotoTool[] = ['mask-reveal', 'mask-hide'];
 
 // Icons + shortcut labels for every tool — matching Photoshop's own key
@@ -249,6 +254,7 @@ const TOOL_ICONS: Record<PhotoTool, React.ReactNode> = {
   patch: <Puzzle size={ICON_SIZE} />,
   smudge: <Waves size={ICON_SIZE} />,
   'red-eye': <ScanEye size={ICON_SIZE} />,
+  'pattern-stamp': <Grid3x3 size={ICON_SIZE} />,
   blur: <CloudFog size={ICON_SIZE} />,
   sharpen: <Focus size={ICON_SIZE} />,
   sponge: <Droplets size={ICON_SIZE} />,
@@ -283,6 +289,7 @@ const SHORTCUT_LABEL: Partial<Record<PhotoTool, string>> = {
   eyedropper: 'I',
   clone: 'S',
   heal: 'Shift+J',
+  'pattern-stamp': 'N',
   blur: 'F',
   sharpen: 'J',
   sponge: 'X',
@@ -666,6 +673,18 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
   useEffect(() => {
     redEyeDarkenRef.current = redEyeDarken;
   }, [redEyeDarken]);
+
+  // ---- Pattern Stamp: paints a repeating procedural tile (dots/
+  // stripes/checkerboard/grid — original patterns, not Photoshop/
+  // Photopea assets) instead of a flat color. Uses the shared
+  // accumulate-then-bake brush pipeline (PAINT_TOOLS), since — unlike
+  // Smudge/Clone — the source (the tile itself) never depends on the
+  // stroke's own history. ----
+  const [patternStyle, setPatternStyle] = useState<PatternStyle>('dots');
+  const patternStyleRef = useRef<PatternStyle>('dots');
+  useEffect(() => {
+    patternStyleRef.current = patternStyle;
+  }, [patternStyle]);
 
   // ---- Patch Tool: draw a freehand loop around a blemish, then drag
   // that loop onto a clean area — releasing replaces the blemish with
@@ -2463,6 +2482,8 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
     } else if (tool === 'sponge') {
       const signedAmount = spongeModeRef.current === 'saturate' ? spongeStrengthRef.current : -spongeStrengthRef.current;
       bakeAndPush(spongeInMask(pixelCanvas, mask, signedAmount));
+    } else if (tool === 'pattern-stamp') {
+      bakeAndPush(patternStampInMask(pixelCanvas, mask, generatePatternTile(patternStyleRef.current, brushColorRef.current)));
     }
   };
 
@@ -3150,6 +3171,7 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
         if (key === 't') { e.preventDefault(); selectTool('skew'); return; }
         if (key === 'u') { e.preventDefault(); selectTool('smudge'); return; }
         if (key === 'y') { e.preventDefault(); selectTool('red-eye'); return; }
+        if (key === 'n') { e.preventDefault(); selectTool('pattern-stamp'); return; }
       }
       if (!isMeta && e.shiftKey) {
         const key = e.key.toLowerCase();
@@ -3305,6 +3327,7 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
         { id: 'patch', label: 'Patch' },
         { id: 'smudge', label: 'Smudge' },
         { id: 'red-eye', label: 'Red Eye' },
+        { id: 'pattern-stamp', label: 'Pattern Stamp' },
         { id: 'blur', label: 'Blur' },
         { id: 'sharpen', label: 'Sharpen' },
         { id: 'sponge', label: 'Sponge' },
@@ -3713,11 +3736,24 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
               </div>
             )}
 
-            {(activeTool === 'eraser' || activeTool === 'brush' || activeTool === 'dodge' || activeTool === 'burn' || activeTool === 'clone' || activeTool === 'heal' || activeTool === 'smudge' || activeTool === 'blur' || activeTool === 'sharpen' || activeTool === 'sponge' || MASK_PAINT_TOOLS.includes(activeTool)) && (
+            {(activeTool === 'eraser' || activeTool === 'brush' || activeTool === 'dodge' || activeTool === 'burn' || activeTool === 'clone' || activeTool === 'heal' || activeTool === 'smudge' || activeTool === 'blur' || activeTool === 'sharpen' || activeTool === 'sponge' || activeTool === 'pattern-stamp' || MASK_PAINT_TOOLS.includes(activeTool)) && (
               <div className="border-t pt-3">
                 <p className="font-semibold text-gray-700 text-xs uppercase tracking-wide mb-2">
-                  {activeTool === 'eraser' ? 'Eraser' : activeTool === 'brush' ? 'Brush' : activeTool === 'dodge' ? 'Dodge (lighten)' : activeTool === 'burn' ? 'Burn (darken)' : activeTool === 'clone' ? 'Clone Stamp' : activeTool === 'heal' ? 'Healing Brush' : activeTool === 'smudge' ? 'Smudge' : activeTool === 'blur' ? 'Blur' : activeTool === 'sharpen' ? 'Sharpen' : activeTool === 'sponge' ? 'Sponge' : activeTool === 'mask-reveal' ? 'Mask: Paint Reveal' : 'Mask: Paint Hide'}
+                  {activeTool === 'eraser' ? 'Eraser' : activeTool === 'brush' ? 'Brush' : activeTool === 'dodge' ? 'Dodge (lighten)' : activeTool === 'burn' ? 'Burn (darken)' : activeTool === 'clone' ? 'Clone Stamp' : activeTool === 'heal' ? 'Healing Brush' : activeTool === 'smudge' ? 'Smudge' : activeTool === 'blur' ? 'Blur' : activeTool === 'sharpen' ? 'Sharpen' : activeTool === 'sponge' ? 'Sponge' : activeTool === 'pattern-stamp' ? 'Pattern Stamp' : activeTool === 'mask-reveal' ? 'Mask: Paint Reveal' : 'Mask: Paint Hide'}
                 </p>
+                {activeTool === 'pattern-stamp' && (
+                  <div className="grid grid-cols-2 gap-1.5 mb-2">
+                    {(['dots', 'stripes', 'checkerboard', 'grid'] as PatternStyle[]).map((style) => (
+                      <button
+                        key={style}
+                        onClick={() => setPatternStyle(style)}
+                        className={`text-[11px] px-2 py-1 border rounded capitalize ${patternStyle === style ? 'bg-gray-800 text-white' : ''}`}
+                      >
+                        {style}
+                      </button>
+                    ))}
+                  </div>
+                )}
                 {activeTool === 'heal' && (
                   <p className="text-[11px] text-gray-500 mb-2">
                     Paint over a blemish — it's reconstructed from the surrounding real pixels. No source point needed (unlike Clone Stamp).
@@ -3751,7 +3787,7 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
                     <input type="range" min={0.05} max={1} step={0.05} value={brushOpacity} onChange={(e) => setBrushOpacity(parseFloat(e.target.value))} className="w-full mb-2" />
                   </>
                 )}
-                {activeTool === 'brush' && (
+                {(activeTool === 'brush' || activeTool === 'pattern-stamp') && (
                   <div className="flex items-center gap-2">
                     <label className="text-[11px] text-gray-500">Color</label>
                     <input type="color" value={brushColor} onChange={(e) => setBrushColor(e.target.value)} className="w-11 h-11 border rounded cursor-pointer" />

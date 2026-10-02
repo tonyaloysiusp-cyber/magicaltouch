@@ -558,3 +558,65 @@ export function removeRedEye(source: HTMLCanvasElement, cx: number, cy: number, 
   ctx.putImageData(imgData, 0, 0);
   return canvas.toDataURL('image/png');
 }
+
+// ---------------------------------------------------------------------
+// Pattern Stamp — paints a small repeating tile instead of a flat color.
+// The four tile styles below are original/procedural (dots, stripes,
+// checkerboard, grid), not reproductions of any Photoshop/Photopea asset.
+// ---------------------------------------------------------------------
+
+export type PatternStyle = 'dots' | 'stripes' | 'checkerboard' | 'grid';
+
+export function generatePatternTile(style: PatternStyle, color: string, tileSize = 16): HTMLCanvasElement {
+  const tile = document.createElement('canvas');
+  tile.width = tileSize;
+  tile.height = tileSize;
+  const ctx = tile.getContext('2d') as CanvasRenderingContext2D;
+  ctx.clearRect(0, 0, tileSize, tileSize);
+  ctx.fillStyle = color;
+  if (style === 'dots') {
+    ctx.beginPath();
+    ctx.arc(tileSize / 2, tileSize / 2, tileSize / 4, 0, Math.PI * 2);
+    ctx.fill();
+  } else if (style === 'stripes') {
+    ctx.fillRect(0, 0, tileSize / 2, tileSize);
+  } else if (style === 'checkerboard') {
+    const half = tileSize / 2;
+    ctx.fillRect(0, 0, half, half);
+    ctx.fillRect(half, half, half, half);
+  } else {
+    const line = Math.max(1, tileSize * 0.15);
+    ctx.fillRect(0, 0, tileSize, line);
+    ctx.fillRect(0, 0, line, tileSize);
+  }
+  return tile;
+}
+
+// Composites a tiled pattern into exactly the masked pixels, the same
+// destination-in clipping paintColorInMask uses — but the fill is a
+// repeating pattern rather than a flat color. The tile is always anchored
+// to the image's own (0,0), not the mask's position, so separate dabs and
+// separate strokes line up seamlessly instead of each restarting the tile
+// at its own origin (Photoshop's "Aligned" Pattern Stamp behavior, which
+// is the only sensible default once there's no per-click "set source"
+// step the way Clone Stamp has).
+export function patternStampInMask(source: HTMLCanvasElement, mask: PixelMask, patternTile: HTMLCanvasElement): string {
+  const canvas = document.createElement('canvas');
+  canvas.width = source.width;
+  canvas.height = source.height;
+  const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
+  ctx.drawImage(source, 0, 0);
+
+  const patternLayer = document.createElement('canvas');
+  patternLayer.width = source.width;
+  patternLayer.height = source.height;
+  const pctx = patternLayer.getContext('2d') as CanvasRenderingContext2D;
+  const pat = pctx.createPattern(patternTile, 'repeat') as CanvasPattern;
+  pctx.fillStyle = pat;
+  pctx.fillRect(0, 0, patternLayer.width, patternLayer.height);
+  pctx.globalCompositeOperation = 'destination-in';
+  pctx.drawImage(maskToCanvas(mask), 0, 0);
+
+  ctx.drawImage(patternLayer, 0, 0);
+  return canvas.toDataURL('image/png');
+}
