@@ -59,6 +59,7 @@ import {
   patternStampInMask,
   PatternStyle,
   mixerBrushStepInPlace,
+  vignetteInMask,
   LevelsSettings,
   DEFAULT_LEVELS,
   HueSaturationSettings,
@@ -190,6 +191,7 @@ export interface PhotoEditorHandle {
   applyFilterSharpen: () => void;
   applyFilterMotionBlur: () => void;
   applyFilterBoxBlur: () => void;
+  applyFilterVignette: () => void;
 }
 
 type PhotoTool =
@@ -997,6 +999,7 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
     applyFilterSharpen,
     applyFilterMotionBlur,
     applyFilterBoxBlur,
+    applyFilterVignette,
   }));
   useEffect(() => {
     onHistoryChange?.(canUndo, canRedo);
@@ -2594,6 +2597,18 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
     const pixelCanvas = getImagePixelCanvas(img);
     const full = rectMask(img.width, img.height, 0, 0, img.width, img.height);
     bakeAndPush(boxBlurInMask(pixelCanvas, full, blurRadiusRef.current));
+  };
+  // A real radial vignette (vignetteInMask) — genuine distance-from-center
+  // darkening, not an image overlay or CSS gradient. No dedicated slider
+  // exists yet for amount/size, so this applies a fixed, sensible default
+  // (darkened corners, falloff starting halfway out); wiring real amount/
+  // size controls is future work, same honesty note as Motion Blur above.
+  const applyFilterVignette = () => {
+    const img = imageRef.current;
+    if (!img) return;
+    const pixelCanvas = getImagePixelCanvas(img);
+    const full = rectMask(img.width, img.height, 0, 0, img.width, img.height);
+    bakeAndPush(vignetteInMask(pixelCanvas, full, -0.6, 0.5));
   };
 
   // ---- Gradient: click-drag draws a live preview line (or, for a Radial

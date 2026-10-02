@@ -651,6 +651,43 @@ function cssColorToRgb(color: string): [number, number, number] {
   return [d[0], d[1], d[2]];
 }
 
+// ---------------------------------------------------------------------
+// Vignette — darkens (or, with a positive amount, lightens) pixels
+// based on their real radial distance from the image's center, same
+// scaling-factor math dodgeBurnInMask uses, just driven by distance
+// instead of a painted mask's alpha. `size` is where the falloff starts
+// (0 = starts at the exact center, close to 1 = only the far corners
+// darken); `amount` is signed like dodge/burn (negative darkens,
+// positive lightens).
+// ---------------------------------------------------------------------
+export function vignetteInMask(source: HTMLCanvasElement, mask: PixelMask, amount: number, size: number): string {
+  const canvas = document.createElement('canvas');
+  canvas.width = source.width;
+  canvas.height = source.height;
+  const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
+  ctx.drawImage(source, 0, 0);
+  const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const d = imgData.data;
+  const cx = canvas.width / 2;
+  const cy = canvas.height / 2;
+  const maxDist = Math.sqrt(cx * cx + cy * cy) || 1;
+  const s = Math.max(0, Math.min(0.95, size));
+  for (let p = 0, i = 0; p < mask.data.length; p++, i += 4) {
+    const m = mask.data[p] / 255;
+    if (!m) continue;
+    const y = Math.floor(p / canvas.width);
+    const x = p - y * canvas.width;
+    const dist = Math.sqrt((x - cx) * (x - cx) + (y - cy) * (y - cy)) / maxDist;
+    const t = Math.max(0, Math.min(1, (dist - s) / Math.max(0.0001, 1 - s)));
+    const factor = 1 + amount * t * m;
+    d[i] = Math.max(0, Math.min(255, d[i] * factor));
+    d[i + 1] = Math.max(0, Math.min(255, d[i + 1] * factor));
+    d[i + 2] = Math.max(0, Math.min(255, d[i + 2] * factor));
+  }
+  ctx.putImageData(imgData, 0, 0);
+  return canvas.toDataURL('image/png');
+}
+
 export function mixerBrushStepInPlace(working: HTMLCanvasElement, mask: PixelMask, color: string, wetness: number): void {
   const ctx = working.getContext('2d') as CanvasRenderingContext2D;
   const imgData = ctx.getImageData(0, 0, working.width, working.height);

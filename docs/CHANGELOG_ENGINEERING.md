@@ -6,6 +6,32 @@ actually done, what was tested, and what's deliberately left for later.
 
 ---
 
+## 2026-10-02 (7) — Photo Studio: real Vignette filter
+
+**Scope:** continuing the Photoshop/Photopea tool-parity list. Adds
+Vignette to the Filter menu (`'Vignette (whole layer)'`), alongside the
+existing Blur/Sharpen/Motion Blur/Box Blur whole-layer filters.
+
+`vignetteInMask()` (new, in `lib/editor/photoBrush.ts`) darkens pixels by
+their REAL distance from the image's center — the same signed scaling-
+factor math `dodgeBurnInMask` uses, just driven by radial distance
+instead of a painted mask's alpha, so the center stays untouched and
+corners genuinely darken (or, with a positive amount, lighten). No
+dedicated Amount/Size sliders exist yet (same honesty note as the
+existing Motion Blur filter, which also applies a fixed default rather
+than pretending a control exists): this ships with a fixed, sensible
+default (amount -0.6, falloff starting at 50% from center).
+
+**Tested:** `test_vignette_filter.js` (8/8) — seeds a flat mid-gray
+image, applies the filter via the real Filter menu, and reads actual
+pixel values: confirms the exact center is untouched (inside the
+falloff-free zone), the far corner is genuinely darker than before, the
+corner ends up darker than the center (the defining vignette shape), and
+Undo restores the flat original. Also re-ran Luminosity Mask and Radial
+Gradient Mask regression tests (both still pass).
+
+---
+
 ## 2026-10-02 (6) — Photo Studio: real Luminosity Mask
 
 **Scope:** continuing the Photoshop/Photopea tool-parity list. Adds
