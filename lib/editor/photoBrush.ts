@@ -453,3 +453,108 @@ export function applyHueSaturation(source: HTMLCanvasElement, settings: HueSatur
   ctx.putImageData(imgData, 0, 0);
   return canvas.toDataURL('image/png');
 }
+
+// Real Smudge: pulls color from a SOURCE point a short step earlier
+// along the current stroke into the masked (destination) region, by
+// `strength` (0 = no change, 1 = a full clone-stamp-style replace).
+// `dx`/`dy` follow cloneStampPaint's own convention exactly:
+// (destination - source), NOT the other way around — dest(x,y) ends up
+// reading as source(x - dx, y - dy), so painting a dab AT the current
+// point while sampling FROM the previous point means dx/dy must be
+// (current - previous). Getting this backwards doesn't error, it just
+// silently samples from the wrong side of the stroke -- confirmed via a
+// live repro where the reversed sign made the tool read as doing
+// nothing at all against a flat-colored source region. Applied
+// incrementally at every step of a drag (not once at mouse-up, unlike
+// every other brush tool here) is what produces the classic "push wet
+// paint" smear when strung together — a single call only pulls one
+// step's worth of color, the same as a real smudge tool's own per-dab
+// behavior.
+//
+// Mutates `working` IN PLACE rather than returning a new canvas/data
+// URL — a live multi-dab stroke needs each dab to see the previous
+// one's result synchronously (no async encode/decode round trip in
+// between, which is what a naive "re-bake through img.setSrc after
+// every dab" approach would require, and img.setSrc is asynchronous).
+// smudgeInMask below is a one-shot convenience wrapper around this for
+// any caller that just wants a single pull encoded as a data URL.
+export function smudgeStepInPlace(working: HTMLCanvasElement, mask: PixelMask, dx: number, dy: number, strength: number): void {
+  const ctx = working.getContext('2d') as CanvasRenderingContext2D;
+  const orig = ctx.getImageData(0, 0, working.width, working.height);
+
+  const sampled = document.createElement('canvas');
+  sampled.width = working.width;
+  sampled.height = working.height;
+  const sctx = sampled.getContext('2d') as CanvasRenderingContext2D;
+  sctx.drawImage(working, dx, dy);
+  const sampledData = sctx.getImageData(0, 0, working.width, working.height);
+
+  const d = orig.data;
+  const sd = sampledData.data;
+  const s = Math.max(0, Math.min(1, strength));
+  for (let p = 0, i = 0; p < mask.data.length; p++, i += 4) {
+    const m = (mask.data[p] / 255) * s;
+    if (!m) continue;
+    d[i] = d[i] + (sd[i] - d[i]) * m;
+    d[i + 1] = d[i + 1] + (sd[i + 1] - d[i + 1]) * m;
+    d[i + 2] = d[i + 2] + (sd[i + 2] - d[i + 2]) * m;
+  }
+  ctx.putImageData(orig, 0, 0);
+}
+
+export function smudgeInMask(source: HTMLCanvasElement, mask: PixelMask, dx: number, dy: number, strength: number): string {
+  const canvas = document.createElement('canvas');
+  canvas.width = source.width;
+  canvas.height = source.height;
+  const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
+  ctx.drawImage(source, 0, 0);
+  smudgeStepInPlace(canvas, mask, dx, dy, strength);
+  return canvas.toDataURL('image/png');
+}
+
+// Real Red Eye correction: scans a clicked circular region for pixels
+// whose red channel clearly dominates both green and blue (the actual
+// signature of flash light reflecting off the retina's blood vessels,
+// not a generic "is this pixel red" threshold that would also catch a
+// red shirt collar at the edge of the same click radius) and desaturates
+// + darkens exactly those pixels toward a neutral gray derived from
+// their own green/blue average — so a bright circular specular highlight
+// within the pupil (which is usually near-white, not red-dominant)
+// correctly survives untouched, matching what a real red-eye tool does.
+export function removeRedEye(source: HTMLCanvasElement, cx: number, cy: number, radius: number, darken: number): string {
+  const canvas = document.createElement('canvas');
+  canvas.width = source.width;
+  canvas.height = source.height;
+  const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
+  ctx.drawImage(source, 0, 0);
+  const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const d = imgData.data;
+
+  const r2 = radius * radius;
+  const minX = Math.max(0, Math.floor(cx - radius));
+  const maxX = Math.min(canvas.width - 1, Math.ceil(cx + radius));
+  const minY = Math.max(0, Math.floor(cy - radius));
+  const maxY = Math.min(canvas.height - 1, Math.ceil(cy + radius));
+  const amount = Math.max(0, Math.min(1, darken));
+
+  for (let y = minY; y <= maxY; y++) {
+    for (let x = minX; x <= maxX; x++) {
+      const ddx = x - cx;
+      const ddy = y - cy;
+      if (ddx * ddx + ddy * ddy > r2) continue;
+      const i = (y * canvas.width + x) * 4;
+      const red = d[i];
+      const green = d[i + 1];
+      const blue = d[i + 2];
+      const isRedEye = red > 60 && red > green * 1.4 && red > blue * 1.4;
+      if (!isRedEye) continue;
+      const gray = (green + blue) / 2;
+      const newVal = gray * (1 - amount);
+      d[i] = newVal;
+      d[i + 1] = newVal;
+      d[i + 2] = newVal;
+    }
+  }
+  ctx.putImageData(imgData, 0, 0);
+  return canvas.toDataURL('image/png');
+}
