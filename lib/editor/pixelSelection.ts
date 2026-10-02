@@ -99,6 +99,26 @@ export function linearGradientMask(width: number, height: number, x1: number, y1
   return mask;
 }
 
+// The radial counterpart to linearGradientMask: 0 (black) at the drag's
+// center point, ramping to 255 (white) at `radius` distance away and
+// beyond — same "0 where the drag started, 255 where it ended" convention,
+// just measured as a distance from the center instead of a projection
+// along a line.
+export function radialGradientMask(width: number, height: number, cx: number, cy: number, radius: number): PixelMask {
+  const mask = createEmptyMask(width, height);
+  const r = Math.max(1, radius);
+  for (let y = 0; y < height; y++) {
+    const row = y * width;
+    for (let x = 0; x < width; x++) {
+      const dx = x - cx;
+      const dy = y - cy;
+      const t = Math.sqrt(dx * dx + dy * dy) / r;
+      mask.data[row + x] = Math.round(Math.max(0, Math.min(1, t)) * 255);
+    }
+  }
+  return mask;
+}
+
 // A real soft-edged (feathered) circular brush dab: full strength (255)
 // through the `hardness` fraction of the radius, then a smooth cosine
 // falloff to 0 at the edge — the same falloff shape a real paint/photo

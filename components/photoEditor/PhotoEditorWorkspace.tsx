@@ -24,6 +24,7 @@ import {
   cloneMask,
   createEmptyMask,
   linearGradientMask,
+  radialGradientMask,
   traceMaskBoundarySegments,
   BoundarySegment,
 } from '@/lib/editor/pixelSelection';
@@ -608,7 +609,7 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
   useEffect(() => {
     gradientOpacityRef.current = gradientOpacity;
   }, [gradientOpacity]);
-  const gradientDraftRef = useRef<{ start: { x: number; y: number }; line: any } | null>(null);
+  const gradientDraftRef = useRef<{ start: { x: number; y: number }; shape: any; kind: 'line' | 'circle' } | null>(null);
 
   // Color Range mask: click a pixel, tolerance controls how far a color
   // can be from it (in the same squared-distance metric magicWandMask
@@ -626,14 +627,23 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
     colorRangeInvertRef.current = colorRangeInvert;
   }, [colorRangeInvert]);
 
-  // Gradient mask: same click-drag line gesture as the Gradient (fill)
-  // tool, but the drag vector is written into the mask's alpha via
-  // linearGradientMask instead of blended into the image's colors.
+  // Gradient mask: same click-drag gesture as the Gradient (fill) tool,
+  // but the drag is written into the mask's alpha via linearGradientMask
+  // (style "linear" — a drag vector) or radialGradientMask (style
+  // "radial" — a drag-defined center + radius) instead of blended into
+  // the image's colors. Mirrors Photoshop's own Gradient tool, which
+  // offers both styles under the same tool button rather than as
+  // separate tools.
   const [gradientMaskInvert, setGradientMaskInvert] = useState(false);
   const gradientMaskInvertRef = useRef(false);
   useEffect(() => {
     gradientMaskInvertRef.current = gradientMaskInvert;
   }, [gradientMaskInvert]);
+  const [gradientMaskStyle, setGradientMaskStyle] = useState<'linear' | 'radial'>('linear');
+  const gradientMaskStyleRef = useRef<'linear' | 'radial'>('linear');
+  useEffect(() => {
+    gradientMaskStyleRef.current = gradientMaskStyle;
+  }, [gradientMaskStyle]);
 
   const [levels, setLevels] = useState<LevelsSettings>(DEFAULT_LEVELS);
   const [hueSat, setHueSat] = useState<HueSaturationSettings>(DEFAULT_HUE_SATURATION);
@@ -2570,11 +2580,30 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
     bakeAndPush(boxBlurInMask(pixelCanvas, full, blurRadiusRef.current));
   };
 
-  // ---- Gradient: click-drag draws a live preview line; releasing bakes
-  // a real two-stop linear gradient along it. ----
+  // ---- Gradient: click-drag draws a live preview line (or, for a Radial
+  // Gradient Mask, a live preview circle); releasing bakes a real
+  // two-stop gradient along it. ----
   const startGradientDraft = (local: { x: number; y: number }, canvasPoint: { x: number; y: number }) => {
     const F = fabricModRef.current;
     const canvas = fabricCanvasRef.current;
+    if (activeToolRef.current === 'mask-gradient' && gradientMaskStyleRef.current === 'radial') {
+      const circle = new F.Circle({
+        left: canvasPoint.x,
+        top: canvasPoint.y,
+        originX: 'center',
+        originY: 'center',
+        radius: 0,
+        fill: 'transparent',
+        stroke: '#3891ff',
+        strokeWidth: 2,
+        strokeDashArray: [6, 4],
+        selectable: false,
+        evented: false,
+      });
+      canvas.add(circle);
+      gradientDraftRef.current = { start: local, shape: circle, kind: 'circle' };
+      return;
+    }
     const line = new F.Line([canvasPoint.x, canvasPoint.y, canvasPoint.x, canvasPoint.y], {
       stroke: '#3891ff',
       strokeWidth: 2,
@@ -2583,7 +2612,7 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
       evented: false,
     });
     canvas.add(line);
-    gradientDraftRef.current = { start: local, line };
+    gradientDraftRef.current = { start: local, shape: line, kind: 'line' };
   };
 
   // ---- Patch Tool mouse handling ----
@@ -3005,7 +3034,14 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
     }
     if ((tool === 'gradient' || tool === 'mask-gradient') && gradientDraftRef.current) {
       const pointer = canvas.getPointer(opt.e);
-      gradientDraftRef.current.line.set({ x2: pointer.x, y2: pointer.y });
+      const draft = gradientDraftRef.current;
+      if (draft.kind === 'circle') {
+        const dx = pointer.x - draft.shape.left;
+        const dy = pointer.y - draft.shape.top;
+        draft.shape.set({ radius: Math.hypot(dx, dy) });
+      } else {
+        draft.shape.set({ x2: pointer.x, y2: pointer.y });
+      }
       canvas.requestRenderAll();
       return;
     }
@@ -3045,15 +3081,19 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
       return;
     }
     if ((tool === 'gradient' || tool === 'mask-gradient') && gradientDraftRef.current) {
-      const { start, line } = gradientDraftRef.current;
+      const { start, shape } = gradientDraftRef.current;
       const pointer = canvas.getPointer(opt.e);
       const end = canvasToImageLocal(pointer);
-      canvas.remove(line);
+      canvas.remove(shape);
       gradientDraftRef.current = null;
       const img = imageRef.current;
       if (img && Math.hypot(end.x - start.x, end.y - start.y) > 2) {
         if (tool === 'mask-gradient') {
-          applyMaskShape(linearGradientMask(img.width, img.height, start.x, start.y, end.x, end.y), gradientMaskInvertRef.current);
+          const shapeMask =
+            gradientMaskStyleRef.current === 'radial'
+              ? radialGradientMask(img.width, img.height, start.x, start.y, Math.hypot(end.x - start.x, end.y - start.y))
+              : linearGradientMask(img.width, img.height, start.x, start.y, end.x, end.y);
+          applyMaskShape(shapeMask, gradientMaskInvertRef.current);
         } else {
           bakeAndPush(applyGradientOverlay(getImagePixelCanvas(img), start.x, start.y, end.x, end.y, gradientColor1Ref.current, gradientColor2Ref.current, gradientOpacityRef.current));
         }
@@ -4160,8 +4200,24 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
               <div className="border-t pt-3">
                 <p className="font-semibold text-gray-700 text-xs uppercase tracking-wide mb-2">Gradient Mask</p>
                 <p className="text-[11px] text-gray-500 mb-2">
-                  Click and drag across the image — a linear black-to-white gradient along that line becomes the new mask (white = revealed, black = hidden). Replaces any existing mask.
+                  {gradientMaskStyle === 'radial'
+                    ? 'Click and drag out from a center point — a radial black-to-white gradient (black at the center, white at the drag radius) becomes the new mask. Replaces any existing mask.'
+                    : 'Click and drag across the image — a linear black-to-white gradient along that line becomes the new mask (white = revealed, black = hidden). Replaces any existing mask.'}
                 </p>
+                <div className="grid grid-cols-2 gap-1.5 mb-2">
+                  <button
+                    onClick={() => setGradientMaskStyle('linear')}
+                    className={`text-[11px] px-2 py-1 border rounded ${gradientMaskStyle === 'linear' ? 'bg-gray-800 text-white' : ''}`}
+                  >
+                    Linear
+                  </button>
+                  <button
+                    onClick={() => setGradientMaskStyle('radial')}
+                    className={`text-[11px] px-2 py-1 border rounded ${gradientMaskStyle === 'radial' ? 'bg-gray-800 text-white' : ''}`}
+                  >
+                    Radial
+                  </button>
+                </div>
                 <label className="flex items-center gap-1.5 text-[11px] text-gray-600">
                   <input type="checkbox" checked={gradientMaskInvert} onChange={(e) => setGradientMaskInvert(e.target.checked)} />
                   Invert

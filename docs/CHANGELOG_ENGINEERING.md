@@ -6,6 +6,34 @@ actually done, what was tested, and what's deliberately left for later.
 
 ---
 
+## 2026-10-02 (5) — Photo Studio: real Radial Gradient Mask
+
+**Scope:** continuing the Photoshop/Photopea tool-parity list. Adds a
+Radial style to the existing Gradient Mask tool (`'mask-gradient'`) —
+mirrors Photoshop's own Gradient tool, which offers Linear/Radial/etc.
+under ONE tool button rather than as separate tools, so this is a style
+toggle inside the existing panel, not a new tool id.
+
+`radialGradientMask()` (new, in `lib/editor/pixelSelection.ts`) is the
+radial counterpart to the existing `linearGradientMask()`: the same
+"0 (black) where the drag started, 255 (white) where it ended" convention,
+just measured as a distance from a center point instead of a projection
+along a line. The live drag preview swaps from a line to a circle
+(`gradientDraftRef` now holds a `kind: 'line' | 'circle'` discriminator)
+so the on-canvas feedback actually shows what will be masked before you
+release.
+
+**Tested:** `test_radial_gradient_mask.js` (7/7) — seeds a solid-color
+image, switches to Radial, drags a 60px-radius gradient, and reads the
+REAL resulting mask alpha (not internal state) at the drag center, near
+the drag radius, and far outside it — confirms center is darker/more-
+hidden than the radius edge, and that a point far outside stays fully
+revealed (the ramp clamps correctly). Also re-verifies Linear still works
+unchanged after the style toggle exists. Re-ran Mixer Brush, Pattern
+Stamp, and Polygon Lasso regression tests (all still pass).
+
+---
+
 ## 2026-10-02 (4) — Photo Studio: real Mixer Brush tool
 
 **Scope:** continuing the Photoshop/Photopea tool-parity list. Adds

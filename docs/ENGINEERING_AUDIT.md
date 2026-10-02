@@ -245,7 +245,7 @@ undo/redo, per `PhotoTool` in `PhotoEditorWorkspace.tsx:124-144`):
 | Perspective (corner-pin distort) | Live (2026-09-29) | `'perspective'` tool, `lib/editor/perspective.ts` — a real 4-point homography (DLT + Gaussian elimination) with inverse-mapped bilinear sampling, baked into a new raster on Apply (Fabric has no native projective transform for image objects, so this is a genuine pixel warp, not a CSS trick or a skew relabeled). No live per-pixel warp preview while dragging handles — see the file's own header for why; the live outline shows the target shape, the real warped pixels appear on Apply, same "position then commit" flow Crop/Resize already use |
 | Healing Brush (drag-brush spot healing) | Live (2026-09-29) | `'heal'` tool (Shift+J) — same real diffusion-based `contentAwareFill()` reconstruction "Remove Object" already used, but driven by a painted brush stroke instead of a selection, and with no source point to set (unlike Clone Stamp) since it reconstructs from the real surrounding pixels automatically |
 | Color Range mask | Live (2026-09-29) | `'mask-color-range'` tool — click a color; every pixel within tolerance anywhere in the image (a genuine global, non-contiguous match via `magicWandMask(..., false)`, not a flood fill) becomes the new layer mask, with an Invert option. Distinct from the existing paintable reveal/hide mask |
-| Gradient mask | Live (2026-09-29) | `'mask-gradient'` tool — drag a line; `linearGradientMask()` writes a real linear black-to-white ramp (projected onto the drag vector, clamped 0..1) into the layer mask alpha, with an Invert option. Reuses the same click-drag gesture as the existing Gradient (fill) tool, but writes to the mask instead of blending colors into the image |
+| Gradient mask | Live (2026-09-29; Radial style added 2026-10-02) | `'mask-gradient'` tool — drag a line (Linear) or drag out from a center point (Radial, new); `linearGradientMask()`/`radialGradientMask()` write a real black-to-white ramp into the layer mask alpha, with an Invert option. Style toggle lives in the one tool's panel, matching Photoshop's own Gradient tool |
 | Patch Tool | Live (2026-10-01) | `'patch'` tool — drag a freehand loop around a blemish, then drag it onto a clean area; releases to a feathered `cloneStampPaint` composite (`featherMask` applied to the drawn `polygonMask` first) |
 | Smudge | Live (2026-10-01) | `'smudge'` tool — `smudgeStepInPlace` pulls color from a step earlier along the stroke into the current dab, applied incrementally against a persistent working canvas (not deferred to mouse-up like every other brush here, since each dab's source is relative to the stroke's own motion) |
 | Red Eye | Live (2026-10-01) | `'red-eye'` tool — a single click; `removeRedEye` scans the clicked radius for genuinely red-dominant pixels (red clearly over both green and blue, not a generic red threshold) and desaturates/darkens exactly those, leaving a near-white specular highlight inside the pupil untouched |
@@ -269,10 +269,10 @@ adjustment toggle already exists in the Adjustments panel — this item is
 about a dedicated Black & White *mixer* with per-channel response, which
 doesn't), a full HSL panel (Hue/Saturation exists, the fuller
 Lightroom-style HSL-per-color-band panel does not); Texture, Clarity,
-Dehaze, Vignette, Grain; Radial Gradient *Mask* and Luminosity Mask
-specifically (Linear Gradient Mask and Color Range Mask are now live per
-above); layer grouping/clipping (blend mode is now live per above;
-grouping/clipping is not).
+Dehaze, Vignette, Grain; Luminosity Mask specifically (Linear + Radial
+Gradient Mask and Color Range Mask are now live per above); layer
+grouping/clipping (blend mode is now live per above; grouping/clipping
+is not).
 
 **Workspace structure — menu bar (2026-09-29):** `/photo-studio` now has
 a real File/Edit/Image/Layer/Select/Filter/View/Window/Help menu bar
