@@ -119,6 +119,24 @@ export function radialGradientMask(width: number, height: number, cx: number, cy
   return mask;
 }
 
+// A real Luminosity Mask: reads the image's OWN pixel brightness
+// (Rec. 709 relative luma, the same weighting real photo apps use for
+// "convert to grayscale"/luminosity channels — not a flat average of R/G/B,
+// which would over-weight blue and under-weight green relative to how
+// a viewer actually perceives brightness) and writes it directly as the
+// mask alpha: bright areas end up more revealed, dark areas more hidden.
+// Unlike Gradient/Color Range mask, this needs no click or drag at all —
+// it's a pure function of the image already on the layer.
+export function luminosityMask(source: HTMLCanvasElement): PixelMask {
+  const ctx = source.getContext('2d') as CanvasRenderingContext2D;
+  const { data: src, width, height } = ctx.getImageData(0, 0, source.width, source.height);
+  const mask = createEmptyMask(width, height);
+  for (let p = 0, i = 0; p < mask.data.length; p++, i += 4) {
+    mask.data[p] = Math.round(0.2126 * src[i] + 0.7152 * src[i + 1] + 0.0722 * src[i + 2]);
+  }
+  return mask;
+}
+
 // A real soft-edged (feathered) circular brush dab: full strength (255)
 // through the `hardness` fraction of the radius, then a smooth cosine
 // falloff to 0 at the edge — the same falloff shape a real paint/photo

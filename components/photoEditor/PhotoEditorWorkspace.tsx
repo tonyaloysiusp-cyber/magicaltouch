@@ -25,6 +25,7 @@ import {
   createEmptyMask,
   linearGradientMask,
   radialGradientMask,
+  luminosityMask,
   traceMaskBoundarySegments,
   BoundarySegment,
 } from '@/lib/editor/pixelSelection';
@@ -644,6 +645,21 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
   useEffect(() => {
     gradientMaskStyleRef.current = gradientMaskStyle;
   }, [gradientMaskStyle]);
+
+  // Luminosity mask: a pure function of the image's own pixels (see
+  // luminosityMask's own header) -- no click or drag gesture needed, so
+  // unlike Gradient/Color Range mask this isn't its own selectable tool,
+  // just an always-available "Generate" button in the Mask panel.
+  const [luminosityMaskInvert, setLuminosityMaskInvert] = useState(false);
+  const luminosityMaskInvertRef = useRef(false);
+  useEffect(() => {
+    luminosityMaskInvertRef.current = luminosityMaskInvert;
+  }, [luminosityMaskInvert]);
+  const applyLuminosityMask = () => {
+    const img = imageRef.current;
+    if (!img) return;
+    applyMaskShape(luminosityMask(getImagePixelCanvas(img)), luminosityMaskInvertRef.current);
+  };
 
   const [levels, setLevels] = useState<LevelsSettings>(DEFAULT_LEVELS);
   const [hueSat, setHueSat] = useState<HueSaturationSettings>(DEFAULT_HUE_SATURATION);
@@ -4386,6 +4402,18 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
                   </button>
                 </div>
               )}
+            </div>
+
+            <div className="border-t pt-3">
+              <p className="font-semibold text-gray-700 text-xs uppercase tracking-wide mb-2">Luminosity Mask</p>
+              <p className="text-[11px] text-gray-400 mb-2">
+                Generates a mask directly from this layer's own brightness — no click or drag needed, unlike Gradient/Color Range. Replaces any existing mask.
+              </p>
+              <label className="flex items-center gap-1.5 text-[11px] text-gray-600 mb-2">
+                <input type="checkbox" checked={luminosityMaskInvert} onChange={(e) => setLuminosityMaskInvert(e.target.checked)} />
+                Invert (dark areas revealed instead of bright)
+              </label>
+              <button onClick={applyLuminosityMask} className="w-full text-[11px] px-2 py-1.5 border rounded hover:bg-gray-50">Generate Luminosity Mask</button>
             </div>
 
             <div className="border-t pt-3">

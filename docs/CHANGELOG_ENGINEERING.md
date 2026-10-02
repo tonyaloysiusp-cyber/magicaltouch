@@ -6,6 +6,37 @@ actually done, what was tested, and what's deliberately left for later.
 
 ---
 
+## 2026-10-02 (6) — Photo Studio: real Luminosity Mask
+
+**Scope:** continuing the Photoshop/Photopea tool-parity list. Adds
+Luminosity Mask — generates the layer mask directly from the layer's own
+pixel brightness.
+
+Unlike Gradient Mask or Color Range Mask, this needs no click or drag at
+all: it's a pure function of the image already on the layer. So rather
+than adding it as a selectable tool requiring a canvas gesture (which
+would be a fake requirement — there's nothing to click), it's an
+always-available "Generate Luminosity Mask" button in the Mask panel's
+own section, next to the existing Enable/Invert/Feather/Remove Mask
+controls, visible regardless of which tool is active.
+
+`luminosityMask()` (new, in `lib/editor/pixelSelection.ts`) reads the
+image's real pixel data and computes Rec. 709 relative luma per pixel
+(`0.2126*R + 0.7152*G + 0.0722*B` — the standard perceptual-brightness
+weighting, not a flat RGB average, which would over-weight blue and
+under-weight green relative to how brightness is actually perceived),
+writing it directly as the mask alpha. An Invert checkbox flips which
+end (bright vs. dark) ends up revealed.
+
+**Tested:** `test_luminosity_mask.js` (6/6) — seeds a half-black/half-
+white image, generates the mask, and reads the REAL resulting mask alpha
+on each half (black → 0/hidden, white → 255/revealed), confirms Invert
+genuinely swaps which half is revealed (not just a relabeled identical
+mask), and confirms Undo rolls back correctly. Also re-ran the Radial
+Gradient Mask and Mixer Brush regression tests (both still pass).
+
+---
+
 ## 2026-10-02 (5) — Photo Studio: real Radial Gradient Mask
 
 **Scope:** continuing the Photoshop/Photopea tool-parity list. Adds a
