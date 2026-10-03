@@ -7,6 +7,7 @@ import { Fraunces, Inter } from 'next/font/google';
 import { MoreVertical, Pencil, Copy, Download, Trash2, Plus, Sparkles, ArrowRight, Sun, Moon } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { listProjects, getProject, updateProject, deleteProject, duplicateProject } from '@/lib/api/projects';
+import { apiFetch } from '@/lib/api/client';
 import { ProfileMenu } from '@/components/ProfileMenu';
 import { DesignLimitDialog } from '@/components/DesignLimitDialog';
 import { MAX_DESIGNS, getOrCreateProfile } from '@/lib/profile';
@@ -80,6 +81,17 @@ export default function DashboardPage() {
 
     getOrCreateProfile(user.id, user.email?.split('@')[0]).then((p) => {
       if (p?.name) setDisplayName(p.name);
+      // The welcome email is sent server-side, once per user (the route
+      // guards duplicates). Runs after the profile row exists, and only
+      // asks once per browser session so normal dashboard visits are free.
+      const welcomeKey = `mtd-welcome-checked:${user.id}`;
+      let alreadyChecked = false;
+      try { alreadyChecked = sessionStorage.getItem(welcomeKey) === '1'; } catch {}
+      if (p && user.email_confirmed_at && !alreadyChecked) {
+        apiFetch('/api/email/welcome', { method: 'POST' })
+          .then(() => { try { sessionStorage.setItem(welcomeKey, '1'); } catch {} })
+          .catch(() => {});
+      }
     });
 
     // Column-fallback resilience (thumbnail/editor_type may not exist
