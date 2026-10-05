@@ -13,6 +13,7 @@
     "jspdf": "^2.5.1",
     "lucide-react": "^0.400.0",
     "next": "14.2.5",
+    "nodemailer": "^6.9.14",
     "pdfjs-dist": "^4.10.38",
     "polygon-clipping": "^0.15.7",
     "react": "^18",
@@ -21,6 +22,7 @@
   "devDependencies": {
     "@types/fabric": "^5.3.7",
     "@types/node": "^20",
+    "@types/nodemailer": "^6.4.15",
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "autoprefixer": "^10.0.1",
