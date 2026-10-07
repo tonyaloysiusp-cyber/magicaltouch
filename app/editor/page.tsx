@@ -66,6 +66,10 @@ import { WorkspaceSwitcher, EditorWorkspace } from '@/components/editor/Workspac
 import { PhotoEditorWorkspace, PhotoEditResult, CropRect, PhotoEditorHandle } from '@/components/photoEditor/PhotoEditorWorkspace';
 import { PhotoAdjustments, DEFAULT_ADJUSTMENTS } from '@/lib/editor/photoFilters';
 import { imageObjectToDataURL } from '@/lib/editor/imageQuality';
+import { buildMtd, readMtd, MtdError, fileNameFor, nameFromFileName } from '@/lib/mtd/format';
+import { saveMtdFile, pickMtdFile, canWriteSilently, LocalFileRef } from '@/lib/mtd/fileAccess';
+import { putHandoff, peekHandoff, takeHandoff, newLocalKey, isLocalTabId } from '@/lib/mtd/handoff';
+import { rememberRecent } from '@/lib/mtd/recent';
 
 const isOpenVectorPath = (o: any): boolean =>
   !!o && o.isVectorPath && o.type === 'path' && Array.isArray(o.path) && o.path.length > 0 && o.path[o.path.length - 1][0] !== 'Z';
@@ -176,6 +180,12 @@ function EditorContent() {
   // connectivity loss.
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'unsaved' | 'error' | 'offline'>('idle');
   const dirtyRef = useRef(false);
+  // Tabs whose document lives in a .mtd file on the customer's computer,
+  // keyed by tab id: where the file is (a writable handle on Chrome/Edge,
+  // just its name elsewhere). These tabs are never autosaved to the
+  // Magical Touch Design server.
+  const localFilesRef = useRef<Map<string, LocalFileRef>>(new Map());
+  const [localNotice, setLocalNotice] = useState<string | null>(null);
   // Guards performSave against out-of-order writes: a manual Ctrl+S and a
   // background autosave tick (or two autosave ticks around a reconnect)
   // can each start their own upsert independently, and nothing about a
@@ -260,6 +270,12 @@ function EditorContent() {
   const { isOpen: isPanelOpen, toggle: togglePanel } = useWindowPanels(['properties', 'layers', 'artboards']);
 
   const [artboards, setArtboards] = useState<ArtboardMeta[]>([]);
+  // Always-current copy for code that runs from long-lived callbacks
+  // (autosave timers, keyboard shortcuts) -- used by .mtd saving.
+  const artboardsRef = useRef<ArtboardMeta[]>([]);
+  useEffect(() => {
+    artboardsRef.current = artboards;
+  }, [artboards]);
   const [activeArtboardId, setActiveArtboardId] = useState<string | null>(null);
   const [showPreflight, setShowPreflight] = useState(false);
   const [preflightIssues, setPreflightIssues] = useState<PreflightIssue[]>([]);
@@ -346,6 +362,9 @@ function EditorContent() {
   const height = parseInt(searchParams.get('h') || '1080');
   const urlDesignId = searchParams.get('designId');
   const cameFromTemplate = searchParams.get('templateId');
+  // A .mtd project opened from the customer's computer (see lib/mtd/).
+  // Its tab id IS this key; the parsed file waits in lib/mtd/handoff.
+  const urlLocalDoc = searchParams.get('localDoc');
   const autoExportFormat = searchParams.get('autoExport'); // 'png' | 'jpg' | 'pdf', from the dashboard's Download action
   const hasAutoExportedRef = useRef(false);
   // "New Photo Project" (dashboard) — lets the Photo Editor be used
@@ -511,7 +530,9 @@ function EditorContent() {
   useEffect(() => {
     const restored = loadTabSession();
     const newTabMarker = searchParams.get('newTab');
-    const freshId = urlDesignId || `new-${newTabMarker || Date.now()}`;
+    const localHandoff = peekHandoff(urlLocalDoc);
+    const freshId = (localHandoff && urlLocalDoc) || urlDesignId || `new-${newTabMarker || Date.now()}`;
+    const freshName = localHandoff ? localHandoff.opened.document.name : urlDesignId ? 'Loading…' : 'Untitled Design';
 
     if (restored && restored.tabs.length) {
       tabSnapshotsRef.current = new Map(Object.entries(restored.snapshots || {}));
@@ -520,7 +541,11 @@ function EditorContent() {
       // if it happens to land on the exact same blank w/h another already-
       // open tab started from (otherwise indistinguishable from a plain
       // reload of that other tab, since neither has a designId yet).
-      const existing = urlDesignId
+      const existing = localHandoff
+        ? undefined
+        : urlLocalDoc
+        ? restored.tabs.find((t) => t.id === urlLocalDoc)
+        : urlDesignId
         ? restored.tabs.find((t) => t.designId === urlDesignId)
         : newTabMarker
           ? undefined
@@ -534,7 +559,7 @@ function EditorContent() {
         const newTab: EditorTabInfo = {
           id: freshId,
           designId: urlDesignId,
-          name: urlDesignId ? 'Loading…' : 'Untitled Design',
+          name: freshName,
           width,
           height,
           dirty: false,
@@ -545,7 +570,7 @@ function EditorContent() {
       return;
     }
 
-    setTabs([{ id: freshId, designId: urlDesignId, name: urlDesignId ? 'Loading…' : 'Untitled Design', width, height, dirty: false }]);
+    setTabs([{ id: freshId, designId: urlDesignId, name: freshName, width, height, dirty: false }]);
     setActiveTabId(freshId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -1609,6 +1634,35 @@ function EditorContent() {
           ensureFontsLoadedForCanvasJSON(pendingSnapshot.canvasJSON).then(() => canvas.requestRenderAll());
           suppressHistoryRef.current = false;
         });
+      } else if (urlLocalDoc && peekHandoff(urlLocalDoc)) {
+        // A .mtd file just opened from the customer's computer.
+        const handoff = takeHandoff(urlLocalDoc)!;
+        localFilesRef.current.set(urlLocalDoc, handoff.file);
+        setDesignId(null);
+        setDesignName(handoff.opened.document.name);
+        suppressHistoryRef.current = true;
+        canvas.loadFromJSON(handoff.opened.canvas, function () {
+          ensureArtboards(canvas, F);
+          const first = canvas.getObjects().find((o: any) => o.__isArtboard);
+          fitToRect(canvas, {
+            x: first?.left || 0,
+            y: first?.top || 0,
+            width: (first?.width || width) * (first?.scaleX || 1),
+            height: (first?.height || height) * (first?.scaleY || 1),
+          });
+          canvas.renderAll();
+          refreshLayers();
+          refreshArtboards();
+          if (first) setActiveArtboardId(first.__artboardId);
+          seedInitialSnapshot();
+          ensureFontsLoadedForCanvasJSON(handoff.opened.canvas).then(() => canvas.requestRenderAll());
+          suppressHistoryRef.current = false;
+          dirtyRef.current = false;
+          setSaveStatus('saved');
+          if (handoff.opened.missingAssets.length) {
+            setLocalNotice(`${handoff.opened.missingAssets.length} image(s) were missing from this file and could not be shown.`);
+          }
+        });
       } else if (urlDesignId) {
         setDesignId(urlDesignId);
         supabase
@@ -1690,7 +1744,7 @@ function EditorContent() {
       if (fabricCanvasRef.current) fabricCanvasRef.current.dispose();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [width, height, urlDesignId]);
+  }, [width, height, urlDesignId, urlLocalDoc]);
 
   // "New Photo Project" entry point (dashboard) — opens the OS file
   // picker immediately once the canvas is ready, so using the Photo
@@ -2947,6 +3001,10 @@ function EditorContent() {
   const performSaveInner = async (idToUse: string | null, nameToUse: string, opts?: { silent?: boolean }) => {
     const silent = !!opts?.silent;
     if (!fabricCanvasRef.current) return;
+    if (isLocalTabId(activeTabIdRef.current)) {
+      await saveToComputer({ silent });
+      return;
+    }
     // setSaving before the (possibly ~2s) auto-apply wait below so the
     // button reads "Saving..." the whole time instead of looking stuck.
     setSaving(true);
@@ -3135,6 +3193,137 @@ function EditorContent() {
 
   const saveDesign = () => performSave(designId, designName);
 
+  // ---------- .mtd project files on the customer's computer ----------
+
+  const makeThumbnail = (): string | null => {
+    const firstAb = artboardsRef.current[0];
+    if (!firstAb || !fabricCanvasRef.current) return null;
+    const hiddenGuides = hideGuidesForExport();
+    try {
+      return fabricCanvasRef.current.toDataURL({
+        format: 'jpeg',
+        quality: 0.7,
+        ...getArtboardExportOptions(firstAb, 400 / Math.max(firstAb.width, 1)),
+      });
+    } catch {
+      return null;
+    } finally {
+      restoreGuidesAfterExport(hiddenGuides);
+    }
+  };
+
+  const buildCurrentMtd = async () => {
+    const firstAb = artboardsRef.current[0];
+    return buildMtd({
+      canvas: fabricCanvasRef.current.toJSON(SAVE_JSON_PROPS),
+      document: {
+        name: designNameRef.current || 'Untitled Design',
+        width: firstAb ? Math.round(firstAb.width) : width,
+        height: firstAb ? Math.round(firstAb.height) : height,
+        editor: 'design',
+      },
+      thumbnail: makeThumbnail(),
+      template: cameFromTemplate ? { id: cameFromTemplate } : null,
+    });
+  };
+
+  // Save for a tab whose master copy is a .mtd file. Autosave (silent)
+  // only writes when the browser already has permission to write to the
+  // same file (Chrome/Edge); otherwise the tab simply stays "unsaved"
+  // until the customer saves -- it never falls back to the server.
+  const saveToComputer = async (opts: { silent?: boolean; saveAs?: boolean } = {}) => {
+    const tabId = activeTabIdRef.current;
+    const existing = localFilesRef.current.get(tabId);
+    if (opts.silent && !(await canWriteSilently(existing?.handle))) {
+      setSaveStatus('unsaved');
+      return;
+    }
+    if (!opts.silent) await ensurePhotoEditsApplied();
+    setSaving(true);
+    setSaveStatus('saving');
+    try {
+      const { blob, unembedded } = await buildCurrentMtd();
+      const target = await saveMtdFile(blob, fileNameFor(designNameRef.current), opts.saveAs ? null : existing?.handle);
+      if (!target) {
+        setSaveStatus(dirtyRef.current ? 'unsaved' : 'saved');
+        return;
+      }
+      localFilesRef.current.set(tabId, target);
+      const name = nameFromFileName(target.fileName);
+      setDesignName(name);
+      dirtyRef.current = false;
+      setSaveStatus('saved');
+      setTabs((ts) => ts.map((t) => (t.id === tabId ? { ...t, name, dirty: false } : t)));
+      const firstAb = artboardsRef.current[0];
+      rememberRecent({
+        name,
+        fileName: target.fileName,
+        width: firstAb ? Math.round(firstAb.width) : width,
+        height: firstAb ? Math.round(firstAb.height) : height,
+        thumbnail: makeThumbnail(),
+        handle: target.handle,
+      });
+      if (!opts.silent) {
+        setLocalNotice(
+          (target.handle
+            ? `Saved to your computer as "${target.fileName}".`
+            : `"${target.fileName}" was downloaded. Keep it somewhere safe — it's your editable project.`) +
+            (unembedded ? ` ${unembedded} linked image(s) couldn't be packed into the file and still need internet.` : ''),
+        );
+      }
+    } catch (err) {
+      console.error('Saving .mtd failed:', err);
+      setSaveStatus('error');
+      if (!opts.silent) alert('Could not save the project file. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Any open design (even one stored in the account) can be saved as a
+  // portable .mtd copy without changing where the original lives.
+  const saveCopyToComputer = async () => {
+    if (isLocalTabId(activeTabIdRef.current)) return saveToComputer({ saveAs: true });
+    await ensurePhotoEditsApplied();
+    try {
+      const { blob } = await buildCurrentMtd();
+      const target = await saveMtdFile(blob, fileNameFor(designNameRef.current));
+      if (target) setLocalNotice(`A copy was saved to your computer as "${target.fileName}".`);
+    } catch (err) {
+      console.error('Saving .mtd copy failed:', err);
+      alert('Could not save the project file. Please try again.');
+    }
+  };
+
+  const openFromComputer = async () => {
+    const picked = await pickMtdFile();
+    if (!picked) return;
+    try {
+      const opened = await readMtd(picked.file);
+      if (opened.document.editor === 'photo-studio') {
+        alert('This project was made in Photo Studio. Open it from the dashboard instead.');
+        return;
+      }
+      const key = newLocalKey();
+      const file: LocalFileRef = { handle: picked.handle, fileName: picked.file.name };
+      putHandoff(key, { opened, file });
+      rememberRecent({
+        name: opened.document.name,
+        fileName: picked.file.name,
+        width: opened.document.width,
+        height: opened.document.height,
+        thumbnail: opened.thumbnail,
+        handle: picked.handle,
+      });
+      activateTab(
+        { id: key, designId: null, name: opened.document.name, width: opened.document.width, height: opened.document.height, dirty: false },
+        { isNew: true },
+      );
+    } catch (err) {
+      alert(err instanceof MtdError ? err.message : 'This file could not be opened.');
+    }
+  };
+
   // Replaces the live canvas with a past version's content, as one
   // undoable step (Ctrl/Cmd+Z reverts back to whatever was on screen
   // before the restore). The loadFromJSON itself is suppressed from
@@ -3220,6 +3409,10 @@ function EditorContent() {
     });
 
   const saveDesignAs = () => {
+    if (isLocalTabId(activeTabIdRef.current)) {
+      saveToComputer({ saveAs: true });
+      return;
+    }
     withDesignLimitCheck(() => {
       const suggested = designName ? `${designName} copy` : 'Untitled Design copy';
       const name = window.prompt('Save As — name for the new design:', suggested);
@@ -3291,6 +3484,8 @@ function EditorContent() {
     setActiveTabId(tab.id);
     const query = tab.designId
       ? `designId=${tab.designId}&w=${tab.width}&h=${tab.height}`
+      : isLocalTabId(tab.id)
+      ? `w=${tab.width}&h=${tab.height}&localDoc=${tab.id}`
       : `w=${tab.width}&h=${tab.height}`;
     router.replace(`/editor?${query}`, { scroll: false });
   };
@@ -3337,7 +3532,11 @@ function EditorContent() {
     persistTabSession(remaining);
     pendingSnapshotRef.current = tabSnapshotsRef.current.get(next.id) || null;
     setActiveTabId(next.id);
-    const query = next.designId ? `designId=${next.designId}&w=${next.width}&h=${next.height}` : `w=${next.width}&h=${next.height}`;
+    const query = next.designId
+      ? `designId=${next.designId}&w=${next.width}&h=${next.height}`
+      : isLocalTabId(next.id)
+      ? `w=${next.width}&h=${next.height}&localDoc=${next.id}`
+      : `w=${next.width}&h=${next.height}`;
     router.replace(`/editor?${query}`, { scroll: false });
   };
 
@@ -3797,11 +3996,13 @@ function EditorContent() {
       items: [
         { label: 'New Design', onClick: startNewDesign },
         { label: 'Open...', onClick: () => setShowOpenDialog(true) },
+        { label: 'Open from Computer (.mtd)...', onClick: openFromComputer },
         { label: 'Import...', onClick: () => importInputRef.current?.click() },
         { divider: true },
         { label: 'Save', shortcut: 'Ctrl/Cmd+S', onClick: saveDesign },
         { label: 'Save As...', shortcut: 'Ctrl/Cmd+Shift+S', onClick: saveDesignAs },
-        { label: 'Version History...', onClick: () => setShowVersionHistory(true) },
+        { label: 'Save a Copy to Computer (.mtd)...', onClick: saveCopyToComputer },
+        { label: 'Version History...', onClick: () => setShowVersionHistory(true), disabled: isLocalTabId(activeTabId) },
         { divider: true },
         { label: 'Export...', onClick: () => setShowExportDialog(true) },
         { label: 'Export as PNG', onClick: exportAsPNG },
@@ -4092,9 +4293,13 @@ function EditorContent() {
               : saveStatus === 'saving'
               ? 'Saving...'
               : saveStatus === 'unsaved'
-              ? 'Unsaved changes'
+              ? isLocalTabId(activeTabId)
+                ? 'Not saved to computer'
+                : 'Unsaved changes'
               : saveStatus === 'saved'
-              ? 'Saved'
+              ? isLocalTabId(activeTabId)
+                ? 'Saved to computer'
+                : 'Saved'
               : ''}
           </span>
           <button onClick={() => setShowExportDialog(true)} disabled={exporting} className="border border-gray-300 text-gray-700 px-4 py-2 rounded-full text-sm font-semibold disabled:opacity-50 dark:border-[#3A3A3A] dark:text-gray-200 dark:hover:bg-[#333333]">
@@ -4118,6 +4323,13 @@ function EditorContent() {
       )}
 
       {showDesignLimitDialog && <DesignLimitDialog onCancel={() => setShowDesignLimitDialog(false)} />}
+
+      {localNotice && (
+        <div className="fixed bottom-5 left-1/2 -translate-x-1/2 z-[70] max-w-md w-[calc(100%-2rem)] bg-[#14121F] text-white text-sm rounded-xl shadow-xl px-4 py-3 flex items-start gap-3">
+          <span className="flex-1">{localNotice}</span>
+          <button onClick={() => setLocalNotice(null)} className="text-white/60 hover:text-white shrink-0" aria-label="Dismiss">✕</button>
+        </div>
+      )}
 
       {showOpenDialog && (
         <OpenDesignDialog

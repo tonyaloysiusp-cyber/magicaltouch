@@ -4,7 +4,11 @@ import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Fraunces, Inter } from 'next/font/google';
-import { MoreVertical, Pencil, Copy, Download, Trash2, Plus, Sparkles, ArrowRight, Sun, Moon } from 'lucide-react';
+import { MoreVertical, Pencil, Copy, Download, Trash2, Plus, Sparkles, ArrowRight, Sun, Moon, FolderOpen, HardDrive, X } from 'lucide-react';
+import { readMtd, MtdError } from '@/lib/mtd/format';
+import { pickMtdFile, reopenFromHandle, LocalFileRef } from '@/lib/mtd/fileAccess';
+import { listRecent, rememberRecent, forgetRecent, RecentLocalFile } from '@/lib/mtd/recent';
+import { putHandoff, newLocalKey, editorUrlForLocal } from '@/lib/mtd/handoff';
 import { supabase } from '@/lib/supabase';
 import { listProjects, getProject, updateProject, deleteProject, duplicateProject } from '@/lib/api/projects';
 import { apiFetch } from '@/lib/api/client';
@@ -180,6 +184,62 @@ export default function DashboardPage() {
     return () => window.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // ---------- Projects stored on this computer (.mtd) ----------
+  // The list below lives only in this browser; the files themselves stay
+  // wherever the customer saved them (see lib/mtd/).
+  const [localFiles, setLocalFiles] = useState<RecentLocalFile[]>([]);
+  const [opening, setOpening] = useState(false);
+  useEffect(() => {
+    listRecent().then(setLocalFiles);
+  }, []);
+
+  const openLocalFile = async (file: File, handle: any | null) => {
+    setOpening(true);
+    try {
+      const opened = await readMtd(file);
+      if (opened.document.editor === 'photo-studio') {
+        alert('Photo Studio projects can be opened from inside Photo Studio.');
+        return;
+      }
+      const key = newLocalKey();
+      const ref: LocalFileRef = { handle, fileName: file.name };
+      putHandoff(key, { opened, file: ref });
+      await rememberRecent({
+        name: opened.document.name,
+        fileName: file.name,
+        width: opened.document.width,
+        height: opened.document.height,
+        thumbnail: opened.thumbnail,
+        handle,
+      });
+      router.push(editorUrlForLocal(key, opened.document.width, opened.document.height));
+    } catch (err) {
+      alert(err instanceof MtdError ? err.message : 'This file could not be opened.');
+    } finally {
+      setOpening(false);
+    }
+  };
+
+  const chooseLocalFile = async () => {
+    const picked = await pickMtdFile();
+    if (picked) await openLocalFile(picked.file, picked.handle);
+  };
+
+  const reopenRecent = async (item: RecentLocalFile) => {
+    if (item.handle) {
+      const file = await reopenFromHandle(item.handle);
+      if (file) return openLocalFile(file, item.handle);
+    }
+    // No remembered access (Safari/iPad, or the file moved): ask for it.
+    alert(`Please choose "${item.fileName}" from where you saved it.`);
+    await chooseLocalFile();
+  };
+
+  const forgetLocal = async (item: RecentLocalFile) => {
+    await forgetRecent(item.id);
+    setLocalFiles((list) => list.filter((f) => f.id !== item.id));
+  };
+
   const deleteDesign = async (id: string) => {
     const confirmed = window.confirm('Delete this design? This cannot be undone.');
     if (!confirmed) return;
@@ -294,13 +354,64 @@ export default function DashboardPage() {
             </h1>
             <p className="mt-3 text-[#4A4750] dark:text-[#B7B2C6]">Ready to make something magical?</p>
           </div>
-          <Link
-            href="/templates"
-            className="inline-flex items-center gap-2 text-sm font-semibold px-5 py-3 rounded-full border border-black/15 dark:border-white/15 hover:border-black/30 dark:hover:border-white/30 transition-colors shrink-0"
-          >
-            Explore Templates <ArrowRight size={14} />
-          </Link>
+          <div className="flex flex-wrap gap-2 shrink-0">
+            <button
+              onClick={chooseLocalFile}
+              disabled={opening}
+              title="Open a Magical Touch Design project (.mtd) from your computer"
+              className="inline-flex items-center gap-2 text-sm font-semibold px-5 py-3 rounded-full border border-black/15 dark:border-white/15 hover:border-black/30 dark:hover:border-white/30 transition-colors disabled:opacity-50"
+            >
+              <FolderOpen size={15} /> {opening ? 'Opening…' : 'Open .mtd file'}
+            </button>
+            <Link
+              href="/templates"
+              className="inline-flex items-center gap-2 text-sm font-semibold px-5 py-3 rounded-full border border-black/15 dark:border-white/15 hover:border-black/30 dark:hover:border-white/30 transition-colors"
+            >
+              Explore Templates <ArrowRight size={14} />
+            </Link>
+          </div>
         </div>
+
+        {localFiles.length > 0 && (
+          <section className="mb-12">
+            <h2 className="text-xs font-semibold text-[#4A4750] dark:text-[#B7B2C6] tracking-wide uppercase mb-1 flex items-center gap-1.5">
+              <HardDrive size={13} /> On this computer
+            </h2>
+            <p className="text-xs text-[#4A4750]/70 dark:text-[#B7B2C6]/70 mb-4">
+              Your own .mtd project files. They are stored on your computer, not on our servers.
+            </p>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-5">
+              {localFiles.map((f) => (
+                <div key={f.id} className="group relative rounded-2xl overflow-hidden border border-black/10 dark:border-white/10 bg-white dark:bg-[#1B1926]">
+                  <button onClick={() => reopenRecent(f)} disabled={opening} className="block w-full text-left">
+                    <div className="aspect-[4/3] bg-[#EEEAF6] dark:bg-[#14121F] flex items-center justify-center overflow-hidden">
+                      {f.thumbnail ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={f.thumbnail} alt="" className="w-full h-full object-contain" />
+                      ) : (
+                        <HardDrive size={28} className="text-[#6C4FD1]/40" />
+                      )}
+                    </div>
+                    <div className="p-3">
+                      <p className="text-sm font-semibold truncate">{f.name}</p>
+                      <p className="text-[11px] text-[#4A4750] dark:text-[#B7B2C6] mt-0.5">
+                        Stored on your computer · {new Date(f.savedAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => forgetLocal(f)}
+                    title="Remove from this list (the file itself is not deleted)"
+                    aria-label={`Remove ${f.name} from this list`}
+                    className="absolute top-2 right-2 p-1 rounded-full bg-white/90 dark:bg-black/60 text-[#4A4750] dark:text-[#B7B2C6] opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
+                  >
+                    <X size={13} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         {loading && <p className="text-[#4A4750]/60 dark:text-[#B7B2C6]/60">Loading your designs...</p>}
 
@@ -331,7 +442,9 @@ export default function DashboardPage() {
 
         {!loading && designs.length > 0 && (
           <>
-            <h2 className="text-xs font-semibold text-[#4A4750] dark:text-[#B7B2C6] tracking-wide uppercase mb-4">Recent Designs</h2>
+            <h2 className="text-xs font-semibold text-[#4A4750] dark:text-[#B7B2C6] tracking-wide uppercase mb-4">
+              Recent Designs <span className="normal-case font-normal tracking-normal opacity-70">· saved in your account</span>
+            </h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-5 mb-12">
               {designs.slice(0, RECENT_COUNT).map((design) => renderDesignCard(design))}
             </div>
