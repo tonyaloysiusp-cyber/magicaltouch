@@ -9,10 +9,19 @@
 
 import type { OpenedMtd } from './format';
 import type { LocalFileRef } from './fileAccess';
+import type { CloudTarget } from '@/lib/storage/cloudProject';
+
+// Where a non-account project lives: a file on this computer, or a file
+// in the customer's Google Drive / OneDrive / Dropbox.
+export type ExternalTarget = LocalFileRef | CloudTarget;
+
+export function isCloudTarget(t: ExternalTarget | null | undefined): t is CloudTarget {
+  return !!t && 'provider' in t;
+}
 
 export interface LocalHandoff {
   opened: OpenedMtd;
-  file: LocalFileRef;
+  file: ExternalTarget;
 }
 
 const pending = new Map<string, LocalHandoff>();

@@ -9,6 +9,12 @@ import { readMtd, MtdError } from '@/lib/mtd/format';
 import { pickMtdFile, reopenFromHandle, LocalFileRef } from '@/lib/mtd/fileAccess';
 import { listRecent, rememberRecent, forgetRecent, RecentLocalFile } from '@/lib/mtd/recent';
 import { putHandoff, newLocalKey, editorUrlForLocal } from '@/lib/mtd/handoff';
+import { Cloud } from 'lucide-react';
+import { CloudOpenDialog } from '@/components/storage/CloudOpenDialog';
+import { providerById, popupIfNeeded, CloudProviderId, CloudFile } from '@/lib/storage/providers';
+import { openFromCloud } from '@/lib/storage/cloudProject';
+import { listProjects as listCloudProjects, forgetProject, ProjectReference } from '@/lib/storage/registry';
+import type { OpenedMtd } from '@/lib/mtd/format';
 import { supabase } from '@/lib/supabase';
 import { listProjects, getProject, updateProject, deleteProject, duplicateProject } from '@/lib/api/projects';
 import { apiFetch } from '@/lib/api/client';
@@ -235,6 +241,56 @@ export default function DashboardPage() {
     await chooseLocalFile();
   };
 
+  // ---------- Projects in the customer's cloud drives ----------
+  // Only references are stored on our server (name, provider file id,
+  // small preview); the project itself is downloaded from the drive.
+  const [cloudProjects, setCloudProjects] = useState<ProjectReference[]>([]);
+  const [showCloudOpen, setShowCloudOpen] = useState(false);
+  const [cloudBusy, setCloudBusy] = useState<string | null>(null);
+  useEffect(() => {
+    listCloudProjects().then(setCloudProjects);
+  }, []);
+
+  const goToCloudProject = (opened: OpenedMtd, provider: CloudProviderId, file: CloudFile) => {
+    const key = newLocalKey();
+    putHandoff(key, { opened, file: { provider, file } });
+    router.push(editorUrlForLocal(key, opened.document.width, opened.document.height));
+  };
+
+  const openCloudProject = (ref: ProjectReference) => {
+    const provider = providerById(ref.provider);
+    if (!provider.configured) {
+      alert(`${provider.label} isn't available right now.`);
+      return;
+    }
+    let popup: Window | null;
+    try {
+      popup = popupIfNeeded(provider); // inside the tap, before any await
+    } catch (err) {
+      alert((err as Error).message);
+      return;
+    }
+    setCloudBusy(popup ? `Sign in to ${provider.label} in the window that opened…` : `Opening "${ref.projectName}"…`);
+    const file: CloudFile = { id: ref.fileId, name: ref.projectName, modifiedAt: ref.modifiedAt, size: null, path: ref.location };
+    openFromCloud(ref.provider, popup, file)
+      .then((opened) => goToCloudProject(opened, ref.provider, file))
+      .catch((err) => {
+        const missing = /not found/i.test(err?.message || '');
+        if (missing && window.confirm(`${err.message}\n\nRemove "${ref.projectName}" from this list?`)) {
+          forgetProject(ref.id).then(() => setCloudProjects((list) => list.filter((p) => p.id !== ref.id)));
+        } else if (!missing) {
+          alert(err?.message || 'Could not open this project.');
+        }
+      })
+      .finally(() => setCloudBusy(null));
+  };
+
+  const forgetCloud = async (ref: ProjectReference) => {
+    if (!window.confirm(`Remove "${ref.projectName}" from this list? The file stays in your ${providerById(ref.provider).label}.`)) return;
+    await forgetProject(ref.id);
+    setCloudProjects((list) => list.filter((p) => p.id !== ref.id));
+  };
+
   const forgetLocal = async (item: RecentLocalFile) => {
     await forgetRecent(item.id);
     setLocalFiles((list) => list.filter((f) => f.id !== item.id));
@@ -363,6 +419,13 @@ export default function DashboardPage() {
             >
               <FolderOpen size={15} /> {opening ? 'Opening…' : 'Open .mtd file'}
             </button>
+            <button
+              onClick={() => setShowCloudOpen(true)}
+              title="Open a project from Google Drive, OneDrive or Dropbox"
+              className="inline-flex items-center gap-2 text-sm font-semibold px-5 py-3 rounded-full border border-black/15 dark:border-white/15 hover:border-black/30 dark:hover:border-white/30 transition-colors"
+            >
+              <Cloud size={15} /> Open from cloud
+            </button>
             <Link
               href="/templates"
               className="inline-flex items-center gap-2 text-sm font-semibold px-5 py-3 rounded-full border border-black/15 dark:border-white/15 hover:border-black/30 dark:hover:border-white/30 transition-colors"
@@ -371,6 +434,61 @@ export default function DashboardPage() {
             </Link>
           </div>
         </div>
+
+        {showCloudOpen && (
+          <CloudOpenDialog
+            onOpened={({ opened, provider, file }) => {
+              setShowCloudOpen(false);
+              goToCloudProject(opened, provider, file);
+            }}
+            onClose={() => setShowCloudOpen(false)}
+          />
+        )}
+        {cloudBusy && (
+          <div className="fixed bottom-5 left-1/2 -translate-x-1/2 z-[70] bg-[#14121F] text-white text-sm rounded-xl shadow-xl px-4 py-3">{cloudBusy}</div>
+        )}
+
+        {cloudProjects.length > 0 && (
+          <section className="mb-12">
+            <h2 className="text-xs font-semibold text-[#4A4750] dark:text-[#B7B2C6] tracking-wide uppercase mb-1 flex items-center gap-1.5">
+              <Cloud size={13} /> In your cloud drives
+            </h2>
+            <p className="text-xs text-[#4A4750]/70 dark:text-[#B7B2C6]/70 mb-4">Stored in your own Google Drive, OneDrive or Dropbox.</p>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-5">
+              {cloudProjects.map((p) => (
+                <div key={p.id} className="group relative rounded-2xl overflow-hidden border border-black/10 dark:border-white/10 bg-white dark:bg-[#1B1926]">
+                  <button onClick={() => openCloudProject(p)} disabled={!!cloudBusy} className="block w-full text-left">
+                    <div className="aspect-[4/3] bg-[#EEEAF6] dark:bg-[#14121F] flex items-center justify-center overflow-hidden">
+                      {p.thumbnail ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={p.thumbnail} alt="" className="w-full h-full object-contain" />
+                      ) : (
+                        <Cloud size={28} className="text-[#6C4FD1]/40" />
+                      )}
+                    </div>
+                    <div className="p-3">
+                      <p className="text-sm font-semibold truncate">{p.projectName}</p>
+                      <p className="text-[10px] font-semibold tracking-wide text-[#6C4FD1] dark:text-[#B9A6F2] mt-1">
+                        {providerById(p.provider).label.toUpperCase()}
+                      </p>
+                      <p className="text-[11px] text-[#4A4750] dark:text-[#B7B2C6]">
+                        Last saved {new Date(p.modifiedAt || p.updatedAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => forgetCloud(p)}
+                    title="Remove from this list (the file stays in your drive)"
+                    aria-label={`Remove ${p.projectName} from this list`}
+                    className="absolute top-2 right-2 p-1 rounded-full bg-white/90 dark:bg-black/60 text-[#4A4750] dark:text-[#B7B2C6] opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
+                  >
+                    <X size={13} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         {localFiles.length > 0 && (
           <section className="mb-12">

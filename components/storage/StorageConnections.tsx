@@ -1,0 +1,95 @@
+'use client';
+
+// "Connected storage" (profile page): which cloud drives this account has
+// linked. We only ever stored the account e-mail/name -- passwords and
+// access tokens never reach our server -- so disconnecting just signs
+// this browser out of the drive and marks the link as disconnected.
+// Projects already in the drive stay there.
+
+import { useEffect, useState } from 'react';
+import { Cloud } from 'lucide-react';
+import { CLOUD_PROVIDERS, CloudProvider, CloudProviderId, popupIfNeeded, ensureSession } from '@/lib/storage/providers';
+import { clearSession, getSession } from '@/lib/storage/oauth';
+import { listConnections, recordConnection, markDisconnected, StorageConnection } from '@/lib/storage/registry';
+
+export function StorageConnections() {
+  const [connections, setConnections] = useState<StorageConnection[]>([]);
+  const [busy, setBusy] = useState<CloudProviderId | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    listConnections().then(setConnections);
+  }, []);
+
+  const connectionFor = (id: CloudProviderId) => connections.find((c) => c.provider === id && c.status === 'connected');
+
+  const connect = (p: CloudProvider) => {
+    setError(null);
+    let popup: Window | null;
+    try {
+      popup = popupIfNeeded(p);
+    } catch (err) {
+      setError((err as Error).message);
+      return;
+    }
+    setBusy(p.id);
+    ensureSession(p, popup)
+      .then(async (session) => {
+        await recordConnection(p.id, session.account);
+        setConnections(await listConnections());
+      })
+      .catch((err) => setError(err.message))
+      .finally(() => setBusy(null));
+  };
+
+  const disconnect = async (p: CloudProvider) => {
+    if (!window.confirm(`Disconnect ${p.label}? Your projects stay in your ${p.label}.`)) return;
+    setBusy(p.id);
+    const session = getSession(p.id);
+    if (session && p.revoke) await p.revoke(session);
+    clearSession(p.id);
+    await markDisconnected(p.id);
+    setConnections(await listConnections());
+    setBusy(null);
+  };
+
+  return (
+    <div className="border dark:border-white/10 rounded-xl p-5 mb-8 bg-white dark:bg-[#1B1926]">
+      <h2 className="text-sm font-semibold text-gray-700 dark:text-[#F3F1F7] mb-1">Connected storage</h2>
+      <p className="text-xs text-gray-500 dark:text-[#B7B2C6] mb-4">
+        Keep your projects in your own cloud drive. We never see your password, and we only use a Magical Touch Design folder in your drive.
+      </p>
+      <div className="divide-y dark:divide-white/10">
+        {CLOUD_PROVIDERS.map((p) => {
+          const c = connectionFor(p.id);
+          return (
+            <div key={p.id} className="flex items-center gap-3 py-3">
+              <Cloud size={18} className="text-[#6C4FD1] shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-gray-800 dark:text-[#F3F1F7]">{p.label}</p>
+                <p className="text-xs text-gray-500 dark:text-[#B7B2C6] truncate">
+                  {!p.configured ? 'Coming soon' : c ? `Connected${c.email ? ` as ${c.email}` : ''}` : 'Not connected'}
+                </p>
+              </div>
+              {p.configured &&
+                (c ? (
+                  <button onClick={() => disconnect(p)} disabled={busy === p.id} className="text-xs text-red-500 hover:underline disabled:opacity-50">
+                    Disconnect
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => connect(p)}
+                    disabled={busy === p.id}
+                    className="text-xs font-semibold text-white bg-brand-gradient rounded-full px-3 py-1.5 disabled:opacity-50"
+                  >
+                    {busy === p.id ? 'Connecting…' : 'Connect'}
+                  </button>
+                ))}
+            </div>
+          );
+        })}
+      </div>
+      {error && <p className="mt-3 text-xs text-red-500">{error}</p>}
+    </div>
+  );
+}
