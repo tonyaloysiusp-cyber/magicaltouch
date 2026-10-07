@@ -15,6 +15,7 @@ import {
   uploadAvatar,
 } from '@/lib/profile';
 import { Avatar, LevelBadge } from '@/components/ProfileMenu';
+import { AvatarError } from '@/lib/avatar/optimize';
 import { BrandLogo } from '@/components/BrandLogo';
 import { useAppTheme } from '@/hooks/useAppTheme';
 
@@ -84,11 +85,16 @@ export default function ProfilePage() {
     const file = e.target.files?.[0];
     if (!file) return;
     setUploadingAvatar(true);
-    const url = await uploadAvatar(userId, file);
-    setUploadingAvatar(false);
-    if (url) setProfile((p) => (p ? { ...p, avatar_url: url } : p));
-    else alert('Failed to upload profile picture.');
-    e.target.value = '';
+    try {
+      const url = await uploadAvatar(userId, file);
+      if (url) setProfile((p) => (p ? { ...p, avatar_url: url } : p));
+      else alert('Failed to upload profile picture.');
+    } catch (err) {
+      alert(err instanceof AvatarError ? err.message : 'Failed to upload profile picture.');
+    } finally {
+      setUploadingAvatar(false);
+      e.target.value = '';
+    }
   };
 
   if (checkingAuth) {
@@ -131,7 +137,7 @@ export default function ProfilePage() {
           >
             {uploadingAvatar ? '...' : 'Edit'}
           </button>
-          <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
+          <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif" className="hidden" onChange={handleAvatarChange} />
         </div>
         <div>
           <p className="font-semibold text-gray-800 dark:text-[#F3F1F7] text-lg">{profile?.name || 'Unnamed Creator'}</p>

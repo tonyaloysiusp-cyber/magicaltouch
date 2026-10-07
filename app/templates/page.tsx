@@ -4,10 +4,10 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Fraunces, Inter } from 'next/font/google';
-import { Menu, X, Search, ArrowUpRight, Sun, Moon, Instagram, Twitter, Facebook, Youtube } from 'lucide-react';
+import { Menu, X, Search, ArrowUpRight, Sun, Moon, Instagram, Twitter, Facebook, Youtube, BadgeCheck } from 'lucide-react';
 import { resolveAuthedPath } from '@/lib/authNav';
 import { MockDesignCard } from '@/components/MockDesignCard';
-import { Category, Template, CATEGORIES, TEMPLATES, fetchPublicTemplates } from '@/lib/templatesData';
+import { Template, TemplateCategory, CATEGORIES, TEMPLATES, fetchPublicTemplates, fetchCategories, fetchTemplateById } from '@/lib/templatesData';
 import { supabase } from '@/lib/supabase';
 import { ProfileMenu } from '@/components/ProfileMenu';
 import { BrandLogo } from '@/components/BrandLogo';
@@ -48,8 +48,14 @@ function tileHeight(t: Template): string {
 export default function TemplatesPage() {
   const { theme, toggleTheme } = useAppTheme();
   const [menuOpen, setMenuOpen] = useState(false);
-  const [activeCategory, setActiveCategory] = useState<Category | 'All'>('All');
+  // A category id from the database, or a plain name for the built-in
+  // fallback list when the database isn't reachable.
+  const [activeCategory, setActiveCategory] = useState<string>('All');
   const [query, setQuery] = useState('');
+  const [orientation, setOrientation] = useState<'all' | 'portrait' | 'landscape' | 'square'>('all');
+  const [freeOnly, setFreeOnly] = useState(false);
+  const [categories, setCategories] = useState<TemplateCategory[]>([]);
+  const [previewing, setPreviewing] = useState<Template | null>(null);
   const [loggedIn, setLoggedIn] = useState(false);
   const [templates, setTemplates] = useState<Template[]>(TEMPLATES);
   const router = useRouter();
@@ -61,7 +67,20 @@ export default function TemplatesPage() {
   // actually do anything with (see lib/templatesData.ts).
   useEffect(() => {
     fetchPublicTemplates().then(setTemplates);
+    fetchCategories().then(setCategories);
+    // Deep link from the admin "Preview" button: /templates?template=<id>.
+    // RLS lets admins preview drafts; customers only ever get published.
+    const id = new URLSearchParams(window.location.search).get('template');
+    if (id) fetchTemplateById(id).then((t) => t && setPreviewing({ ...t, canvasJson: undefined }));
   }, []);
+
+  // Close the preview with Escape.
+  useEffect(() => {
+    if (!previewing) return;
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setPreviewing(null);
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [previewing]);
 
   // Same gap as the homepage Navbar: this header showed "Log In" even
   // when the visitor was already signed in, since nothing checked auth
@@ -74,14 +93,39 @@ export default function TemplatesPage() {
     return () => sub.subscription.unsubscribe();
   }, []);
 
+  const usingDbCategories = categories.length > 0 && templates.some((t) => !!t.categoryId);
+  const parentOf = (id: string | null | undefined) => categories.find((c) => c.id === id)?.parentId ?? null;
+
+  // Category chips: top-level categories that actually have templates.
+  const chips = useMemo(() => {
+    if (!usingDbCategories) return CATEGORIES.map((c) => ({ id: c, label: c }));
+    const used = new Set<string>();
+    templates.forEach((t) => {
+      if (!t.categoryId) return;
+      used.add(parentOf(t.categoryId) || t.categoryId);
+    });
+    return categories.filter((c) => !c.parentId && used.has(c.id)).map((c) => ({ id: c.id, label: c.name }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [categories, templates, usingDbCategories]);
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return templates.filter((t) => {
-      const matchesCategory = activeCategory === 'All' || t.category === activeCategory;
-      const matchesQuery = !q || t.name.toLowerCase().includes(q) || t.category.toLowerCase().includes(q);
-      return matchesCategory && matchesQuery;
+      const matchesCategory =
+        activeCategory === 'All' ||
+        (usingDbCategories ? t.categoryId === activeCategory || parentOf(t.categoryId) === activeCategory : t.category === activeCategory);
+      const haystack = [t.name, t.category, t.description, t.searchKeywords, t.occasion, t.industry, ...(t.tags || [])]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+      const matchesQuery = !q || q.split(/\s+/).every((word) => haystack.includes(word));
+      const shape = t.orientation || (t.width > t.height ? 'landscape' : t.width < t.height ? 'portrait' : 'square');
+      const matchesOrientation = orientation === 'all' || shape === orientation;
+      const matchesFree = !freeOnly || t.isFree !== false;
+      return matchesCategory && matchesQuery && matchesOrientation && matchesFree;
     });
-  }, [activeCategory, query, templates]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeCategory, query, templates, orientation, freeOnly, usingDbCategories, categories]);
 
   const goToWorkspace = async () => {
     setMenuOpen(false);
@@ -212,7 +256,7 @@ export default function TemplatesPage() {
 
       <div className="max-w-7xl mx-auto px-6">
         <div className="flex gap-2 overflow-x-auto pb-2 -mx-6 px-6 md:mx-0 md:px-0 md:flex-wrap md:justify-center">
-          {(['All', ...CATEGORIES] as const).map((c) => (
+          {[{ id: 'All', label: 'All' }, ...chips].map(({ id: c, label }) => (
             <button
               key={c}
               onClick={() => setActiveCategory(c)}
@@ -222,33 +266,53 @@ export default function TemplatesPage() {
                   : 'text-[#14121F] dark:text-[#B7B2C6] border-black/10 dark:border-white/15 hover:border-[#6C4FD1]/40 hover:text-[#6C4FD1]'
               }`}
             >
-              {c}
+              {label}
             </button>
           ))}
+        </div>
+        <div className="mt-4 flex flex-wrap items-center justify-center gap-2 text-xs">
+          {(['all', 'portrait', 'landscape', 'square'] as const).map((o) => (
+            <button
+              key={o}
+              onClick={() => setOrientation(o)}
+              className={`rounded-full px-3 py-1.5 border transition-colors ${
+                orientation === o
+                  ? 'border-[#6C4FD1] text-[#6C4FD1] dark:text-[#B9A6F2] bg-[#6C4FD1]/5'
+                  : 'border-black/10 dark:border-white/15 text-[#4B4560] dark:text-[#B7B2C6]'
+              }`}
+            >
+              {o === 'all' ? 'Any shape' : o[0].toUpperCase() + o.slice(1)}
+            </button>
+          ))}
+          <label className="ml-1 inline-flex items-center gap-1.5 text-[#4B4560] dark:text-[#B7B2C6] cursor-pointer">
+            <input type="checkbox" checked={freeOnly} onChange={(e) => setFreeOnly(e.target.checked)} className="accent-[#6C4FD1]" />
+            Free only
+          </label>
         </div>
       </div>
 
       <section className="max-w-7xl mx-auto px-6 py-14">
         <div className="columns-1 sm:columns-2 lg:columns-3 gap-5 [&>*]:mb-5">
           {filtered.map((t) => (
-            <div key={t.name} className="group break-inside-avoid rounded-2xl overflow-hidden border border-black/5 dark:border-white/10 bg-white dark:bg-[#1B1926] shadow-sm hover:shadow-xl transition-shadow duration-300">
+            <div key={t.id || t.name} className="group break-inside-avoid rounded-2xl overflow-hidden border border-black/5 dark:border-white/10 bg-white dark:bg-[#1B1926] shadow-sm hover:shadow-xl transition-shadow duration-300">
               <div className={`relative overflow-hidden ${tileHeight(t)}`}>
                 <div className="absolute inset-0 transition-transform duration-500 group-hover:scale-105">
                   {t.thumbnail ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={t.thumbnail} alt={t.name} className="w-full h-full object-cover" />
+                    <img src={t.thumbnail} alt={t.name} loading="lazy" decoding="async" className="w-full h-full object-cover" />
                   ) : (
                     <MockDesignCard colors={t.colors} label={t.category} />
                   )}
                 </div>
-                <div className="absolute inset-0 bg-[#14121F]/0 group-hover:bg-[#14121F]/40 transition-colors duration-300 flex items-center justify-center">
-                  <button
-                    onClick={() => useTemplate(t)}
-                    className="opacity-0 group-hover:opacity-100 transition-opacity inline-flex items-center gap-1.5 text-sm font-semibold text-[#14121F] bg-white px-4 py-2 rounded-full"
-                  >
-                    Use Template <ArrowUpRight size={14} />
-                  </button>
-                </div>
+                <button
+                  onClick={() => setPreviewing(t)}
+                  aria-label={`Preview ${t.name}`}
+                  className="absolute inset-0 bg-[#14121F]/0 group-hover:bg-[#14121F]/40 transition-colors duration-300 flex items-center justify-center"
+                >
+                  <span className="opacity-0 group-hover:opacity-100 transition-opacity inline-flex items-center gap-1.5 text-sm font-semibold text-[#14121F] bg-white px-4 py-2 rounded-full">
+                    Preview <ArrowUpRight size={14} />
+                  </span>
+                </button>
               </div>
               <div className="p-4 flex items-center justify-between">
                 <div>
@@ -270,6 +334,80 @@ export default function TemplatesPage() {
           </div>
         )}
       </section>
+
+      {previewing && (
+        <div className="fixed inset-0 z-[60] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setPreviewing(null)}>
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label={previewing.name}
+            className="bg-white dark:bg-[#1B1926] rounded-2xl w-full max-w-4xl max-h-[92vh] overflow-y-auto grid md:grid-cols-[1.4fr_1fr]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="bg-[#F1EEF8] dark:bg-[#14121F] flex items-center justify-center p-6 min-h-[260px]">
+              {previewing.preview || previewing.thumbnail ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={previewing.preview || previewing.thumbnail!} alt={previewing.name} className="max-h-[70vh] w-auto object-contain rounded-lg shadow-lg" />
+              ) : (
+                <div className="w-full h-72">
+                  <MockDesignCard colors={previewing.colors} label={previewing.category} />
+                </div>
+              )}
+            </div>
+            <div className="p-6 flex flex-col">
+              <button onClick={() => setPreviewing(null)} className="self-end p-1 -mt-2 -mr-2 text-[#4B4560] dark:text-[#B7B2C6]" aria-label="Close">
+                <X size={20} />
+              </button>
+              <p className="inline-flex items-center gap-1.5 text-xs font-medium text-[#6C4FD1] dark:text-[#B9A6F2]">
+                <BadgeCheck size={14} /> Provided by Magical Touch Design
+              </p>
+              <h2 className="mt-2 font-[family-name:var(--font-display)] text-3xl leading-tight">{previewing.name}</h2>
+              {previewing.description && <p className="mt-3 text-sm text-[#4B4560] dark:text-[#B7B2C6] leading-relaxed">{previewing.description}</p>}
+              <dl className="mt-5 grid grid-cols-2 gap-y-2 text-sm">
+                <dt className="text-[#4B4560] dark:text-[#B7B2C6]">Category</dt>
+                <dd>{previewing.category}</dd>
+                <dt className="text-[#4B4560] dark:text-[#B7B2C6]">Size</dt>
+                <dd>
+                  {previewing.width} × {previewing.height} {previewing.unit || 'px'}
+                </dd>
+                {previewing.isFree !== undefined && (
+                  <>
+                    <dt className="text-[#4B4560] dark:text-[#B7B2C6]">Price</dt>
+                    <dd>{previewing.isFree ? 'Free' : 'Premium'}</dd>
+                  </>
+                )}
+              </dl>
+              {!!previewing.tags?.length && (
+                <div className="mt-4 flex flex-wrap gap-1.5">
+                  {previewing.tags.map((tag) => (
+                    <button
+                      key={tag}
+                      onClick={() => {
+                        setQuery(tag);
+                        setPreviewing(null);
+                      }}
+                      className="text-xs rounded-full px-2.5 py-1 bg-black/5 dark:bg-white/10 text-[#4B4560] dark:text-[#B7B2C6]"
+                    >
+                      #{tag}
+                    </button>
+                  ))}
+                </div>
+              )}
+              <div className="mt-auto pt-6">
+                <button
+                  onClick={() => useTemplate(previewing)}
+                  className="w-full inline-flex items-center justify-center gap-1.5 text-sm font-semibold text-white bg-brand-gradient px-5 py-3 rounded-full"
+                >
+                  Use This Template <ArrowUpRight size={15} />
+                </button>
+                <p className="mt-3 text-xs text-center text-[#4B4560] dark:text-[#B7B2C6]">
+                  You get your own copy to edit. The original template never changes.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <footer className="border-t border-black/5 dark:border-white/10">
         <div className="max-w-7xl mx-auto px-6 py-12 flex flex-col sm:flex-row items-center justify-between gap-6">
