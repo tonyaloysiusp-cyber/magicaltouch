@@ -24,4 +24,5 @@ export const links = {
   login: `${site}/login`,
   privacy: `${site}/privacy`,
   terms: `${site}/terms`,
+  unsubscribe: `${site}/unsubscribe`,
 };

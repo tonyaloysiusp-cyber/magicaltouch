@@ -34,6 +34,15 @@ export async function sendEmail(to: string, email: RenderedEmail): Promise<strin
     subject: email.subject,
     html: email.html,
     text: email.text,
+    // One-click unsubscribe (RFC 8058) for marketing mail.
+    ...(email.unsubscribeUrl
+      ? {
+          headers: {
+            'List-Unsubscribe': `<${email.unsubscribeUrl.replace('/unsubscribe?', '/api/unsubscribe?')}>, <mailto:${C.officialEmail}?subject=unsubscribe>`,
+            'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+          },
+        }
+      : {}),
   });
   return info.messageId;
 }

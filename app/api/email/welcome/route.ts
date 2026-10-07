@@ -44,6 +44,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ sent: false, reason: 'already-sent' });
     }
 
+    // Record the marketing choice made at signup, once the address is
+    // verified -- only if they ticked the box and haven't decided since.
+    if (user.user_metadata?.marketing_consent === true) {
+      await supabase
+        .from('profiles')
+        .update({ marketing_status: 'subscribed', marketing_consent_at: new Date().toISOString() })
+        .eq('id', user.id)
+        .eq('marketing_status', 'none');
+    }
+
     try {
       const email = welcomeEmail({ firstName: firstNameFor(claimed[0].name, user.email) });
       await sendEmail(user.email, email);

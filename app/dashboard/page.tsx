@@ -203,10 +203,6 @@ export default function DashboardPage() {
     setOpening(true);
     try {
       const opened = await readMtd(file);
-      if (opened.document.editor === 'photo-studio') {
-        alert('Photo Studio projects can be opened from inside Photo Studio.');
-        return;
-      }
       const key = newLocalKey();
       const ref: LocalFileRef = { handle, fileName: file.name };
       putHandoff(key, { opened, file: ref });
@@ -218,7 +214,11 @@ export default function DashboardPage() {
         thumbnail: opened.thumbnail,
         handle,
       });
-      router.push(editorUrlForLocal(key, opened.document.width, opened.document.height));
+      router.push(
+        opened.document.editor === 'photo-studio'
+          ? `/photo-studio?localDoc=${encodeURIComponent(key)}`
+          : editorUrlForLocal(key, opened.document.width, opened.document.height),
+      );
     } catch (err) {
       alert(err instanceof MtdError ? err.message : 'This file could not be opened.');
     } finally {

@@ -74,6 +74,7 @@ import { saveToCloud, canSaveSilently } from '@/lib/storage/cloudProject';
 import { SaveLocationDialog, SaveLocation } from '@/components/storage/SaveLocationDialog';
 import { CloudOpenDialog } from '@/components/storage/CloudOpenDialog';
 import { rememberRecent } from '@/lib/mtd/recent';
+import { missingFontsIn, fontRequiredMessage } from '@/lib/editor/missingFonts';
 
 const isOpenVectorPath = (o: any): boolean =>
   !!o && o.isVectorPath && o.type === 'path' && Array.isArray(o.path) && o.path.length > 0 && o.path[o.path.length - 1][0] !== 'Z';
@@ -1666,9 +1667,13 @@ function EditorContent() {
           suppressHistoryRef.current = false;
           dirtyRef.current = false;
           setSaveStatus('saved');
-          if (handoff.opened.missingAssets.length) {
-            setLocalNotice(`${handoff.opened.missingAssets.length} image(s) were missing from this file and could not be shown.`);
-          }
+          const notes = [
+            handoff.opened.missingAssets.length
+              ? `${handoff.opened.missingAssets.length} image(s) were missing from this file and could not be shown.`
+              : null,
+            fontRequiredMessage(missingFontsIn(handoff.opened.canvas)),
+          ].filter(Boolean);
+          if (notes.length) setLocalNotice(notes.join(' '));
         });
       } else if (urlDesignId) {
         setDesignId(urlDesignId);
@@ -1723,6 +1728,8 @@ function EditorContent() {
               refreshLayers();
               seedInitialSnapshot();
               ensureFontsLoadedForCanvasJSON(template.canvasJson).then(() => canvas.requestRenderAll());
+              const fontNote = fontRequiredMessage(missingFontsIn(template.canvasJson));
+              if (fontNote) setLocalNotice(fontNote);
               suppressHistoryRef.current = false;
             });
           } else {

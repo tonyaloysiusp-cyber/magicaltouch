@@ -18,6 +18,8 @@ export interface RenderedEmail {
   subject: string;
   html: string;
   text: string;
+  // Marketing mail only: shown in the footer and sent as List-Unsubscribe.
+  unsubscribeUrl?: string;
 }
 
 const esc = (s: string) =>
@@ -45,7 +47,7 @@ export const officialNotice = () => `
     </div>
   </td></tr>`;
 
-const footer = () => `
+const footer = (unsubscribeUrl?: string) => `
   <tr><td style="padding:24px 32px 32px;border-top:1px solid #ece9f5;text-align:center;font:13px/1.6 Arial,Helvetica,sans-serif;color:#6b6580;">
     <p style="margin:0;font-weight:700;color:#2e1065;">${C.companyName}</p>
     <p style="margin:4px 0;">Official email: <a href="mailto:${C.officialEmail}" style="color:#6d28d9;">${C.officialEmail}</a></p>
@@ -54,11 +56,13 @@ const footer = () => `
       <a href="${C.website}" style="color:#6b6580;">Website</a> &nbsp;|&nbsp;
       <a href="${links.privacy}" style="color:#6b6580;">Privacy Policy</a> &nbsp;|&nbsp;
       <a href="${links.terms}" style="color:#6b6580;">Terms of Service</a>
+      ${unsubscribeUrl ? `&nbsp;|&nbsp; <a href="${unsubscribeUrl}" style="color:#6b6580;">Unsubscribe</a>` : ''}
     </p>
+    ${unsubscribeUrl ? `<p style="margin:8px 0 0;font-size:12px;">You are receiving this because you chose to get offers and news from ${C.companyName}.</p>` : ''}
     <p style="margin:10px 0 0;font-size:12px;">This email was sent by ${C.companyName} from our official email address.</p>
   </td></tr>`;
 
-export const layout = (preheader: string, body: string) => `<!doctype html>
+export const layout = (preheader: string, body: string, unsubscribeUrl?: string) => `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${C.companyName}</title>
 <style>@media (max-width:620px){.card{width:100%!important;border-radius:0!important}.pad{padding-left:20px!important;padding-right:20px!important}.feat{display:block!important;width:100%!important}}</style>
@@ -71,7 +75,7 @@ export const layout = (preheader: string, body: string) => `<!doctype html>
     <span style="font:700 22px/1 Georgia,'Times New Roman',serif;color:#ffffff;letter-spacing:.5px;">&#10022; ${C.companyName}</span>
   </td></tr>
   ${body}
-  ${footer()}
+  ${footer(unsubscribeUrl)}
 </table>
 </td></tr></table>
 </body></html>`;
@@ -209,4 +213,50 @@ export function supabaseResetTemplate(link = '{{ .ConfirmationURL }}'): string {
       ${p('If you did not request a password reset, you can safely ignore this email. Your password will not change unless you complete the reset process.')}
     `) + officialNotice(),
   );
+}
+
+// ---------------------------------------------------------------------
+// Marketing campaigns (offers, announcements, newsletters, new templates).
+// Only ever sent to people who opted in; always carries an unsubscribe
+// link. Content is plain text from the admin (escaped), split into
+// paragraphs on blank lines.
+// ---------------------------------------------------------------------
+export interface CampaignContent {
+  subject: string;
+  preheader?: string | null;
+  content: string;
+  imageUrl?: string | null;
+  ctaLabel?: string | null;
+  ctaUrl?: string | null;
+}
+
+const safeUrl = (u?: string | null) => (u && /^https:\/\//i.test(u.trim()) ? u.trim() : null);
+
+export function campaignEmail(c: CampaignContent, d: EmailData & { unsubscribeUrl: string }): RenderedEmail {
+  const paragraphs = c.content.split(/\n{2,}/).map((t) => t.trim()).filter(Boolean);
+  const img = safeUrl(c.imageUrl);
+  const cta = safeUrl(c.ctaUrl);
+  const body = section(`
+      ${p(greet(d))}
+      ${img ? `<img src="${esc(img)}" alt="" width="536" style="display:block;width:100%;max-width:536px;height:auto;border-radius:12px;margin:0 0 20px;">` : ''}
+      ${paragraphs.map((t) => p(esc(t).replace(/\n/g, '<br>'))).join('')}
+      ${cta && c.ctaLabel ? button(c.ctaLabel.toUpperCase(), esc(cta)) : ''}
+    `) + officialNotice();
+  const text = `${greetText(d)}
+
+${paragraphs.join('\n\n')}${cta ? `\n\n${c.ctaLabel || 'Learn more'}: ${cta}` : ''}
+
+Unsubscribe: ${d.unsubscribeUrl}`;
+  const subject = c.subject.trim() || C.companyName;
+  const out: RenderedEmail = {
+    subject,
+    html: layout(c.preheader || subject, body, d.unsubscribeUrl),
+    text: `${text}\n${textFooter()}`,
+    unsubscribeUrl: d.unsubscribeUrl,
+  };
+  return out;
+}
+
+export function unsubscribeUrlFor(token: string, campaignId?: string): string {
+  return `${links.unsubscribe}?t=${encodeURIComponent(token)}${campaignId ? `&c=${encodeURIComponent(campaignId)}` : ''}`;
 }

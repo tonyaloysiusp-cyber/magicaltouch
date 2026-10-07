@@ -265,6 +265,10 @@ export default function AdminTemplatesPage() {
     if (problem) return flash(problem);
     await reload();
     flash(`"${t.name}" is now ${STATUS_LABEL[status].toLowerCase()}.`);
+    // Spec §34: offer an announcement, but never e-mail anyone automatically.
+    if (status === 'published' && window.confirm(`Would you like to announce "${t.name}" by e-mail?`)) {
+      router.push(`/admin/email?announce=${t.id}`);
+    }
   };
 
   const duplicate = async (t: Template) => {
@@ -437,6 +441,7 @@ export default function AdminTemplatesPage() {
         </div>
         <div className="flex items-center gap-4 text-sm">
           <Link href="/templates" target="_blank" className="text-[#6C4FD1] hover:underline">View gallery</Link>
+          <Link href="/admin/email" className="text-[#6C4FD1] hover:underline">Email Center</Link>
           <Link href="/dashboard" className="text-gray-500 hover:underline">Dashboard</Link>
         </div>
       </header>
