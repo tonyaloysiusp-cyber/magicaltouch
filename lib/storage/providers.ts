@@ -430,6 +430,11 @@ export const dropbox: CloudProvider = {
 
 export const CLOUD_PROVIDERS: CloudProvider[] = [googleDrive, oneDrive, dropbox];
 
+// Only drives whose keys are set up in Vercel are shown to customers --
+// never a "coming soon" row.
+export const AVAILABLE_CLOUD_PROVIDERS: CloudProvider[] = CLOUD_PROVIDERS.filter((p) => p.configured);
+export const HAS_CLOUD_DRIVES = AVAILABLE_CLOUD_PROVIDERS.length > 0;
+
 export function providerById(id: CloudProviderId): CloudProvider {
   return CLOUD_PROVIDERS.find((p) => p.id === id)!;
 }

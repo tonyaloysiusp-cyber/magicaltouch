@@ -565,9 +565,9 @@ function PhotoStudioContent() {
       label: 'File',
       items: [
         { label: 'New Document…', onClick: handleNewDocument },
-        { label: 'Open from Computer (.mtd)…', onClick: openFromComputer },
+        { label: 'Open from Device (.mtd)…', onClick: openFromComputer },
         { label: 'Save', shortcut: 'Ctrl/Cmd+S', onClick: handleSave, disabled: saving },
-        { label: 'Save to Computer (.mtd)…', onClick: saveToComputer, disabled: saving || stage !== 'editing' },
+        { label: 'Save to Device (.mtd)…', onClick: saveToComputer, disabled: saving || stage !== 'editing' },
         { divider: true },
         { label: 'Export as PNG', onClick: () => { setExportFormat('png'); handleExport('png'); } },
         { label: 'Export as PDF', onClick: () => { setExportFormat('pdf'); handleExport('pdf'); } },

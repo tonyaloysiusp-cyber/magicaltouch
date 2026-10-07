@@ -28,7 +28,7 @@ export default function PrivacyPage() {
 
       <h2>What we do not collect</h2>
       <ul>
-        <li>Projects you save to <strong>your computer</strong> (.mtd files) never reach our servers. The &quot;On this computer&quot; list on your dashboard is kept only in your browser.</li>
+        <li>Projects you save to <strong>your own device</strong> (computer, iPad or phone, as .mtd files) never reach our servers. The &quot;On this device&quot; list on your dashboard is kept only in your browser.</li>
         <li>Projects you save to <strong>Google Drive, OneDrive or Dropbox</strong> stay in your drive. We never store their contents, your passwords for those services, or their access keys — sign-in keys stay in your browser and expire within about an hour.</li>
         <li>We only ever access a <strong>Magical Touch Design folder</strong> in your cloud drive, never the rest of it.</li>
         <li>We do not sell your personal information.</li>
