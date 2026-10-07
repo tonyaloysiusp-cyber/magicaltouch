@@ -17,6 +17,7 @@ import {
 import { Avatar, LevelBadge } from '@/components/ProfileMenu';
 import { AvatarError } from '@/lib/avatar/optimize';
 import { StorageConnections } from '@/components/storage/StorageConnections';
+import { AccountSettings } from '@/components/account/AccountSettings';
 import { BrandLogo } from '@/components/BrandLogo';
 import { useAppTheme } from '@/hooks/useAppTheme';
 
@@ -186,6 +187,7 @@ export default function ProfilePage() {
       </div>
 
       <StorageConnections />
+      {userId && <AccountSettings userId={userId} />}
 
       <div>
         <div className="flex items-center justify-between mb-3">

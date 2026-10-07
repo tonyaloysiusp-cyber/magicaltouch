@@ -14,6 +14,8 @@ function SignupForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [phone, setPhone] = useState('');
+  // Marketing is opt-in only and off by default (never pre-ticked).
+  const [marketingOptIn, setMarketingOptIn] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [confirmSent, setConfirmSent] = useState(false);
@@ -26,7 +28,13 @@ function SignupForm() {
     setLoading(true);
     setError('');
 
-    const { data, error } = await supabase.auth.signUp({ email, password });
+    // The choice travels with the account until the e-mail is verified,
+    // then the welcome step records it on the profile.
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: { marketing_consent: marketingOptIn } },
+    });
 
     if (error) {
       setError(error.message);
@@ -40,6 +48,12 @@ function SignupForm() {
       // credential — this app's login stays email+password only.
       const profile = await getOrCreateProfile(data.user!.id, email.split('@')[0]);
       if (profile && phone.trim()) await updateProfile(data.user!.id, { phone: phone.trim() });
+      if (profile && marketingOptIn) {
+        await supabase
+          .from('profiles')
+          .update({ marketing_status: 'subscribed', marketing_consent_at: new Date().toISOString() })
+          .eq('id', data.user!.id);
+      }
       router.push(next);
     }
   };
@@ -119,6 +133,15 @@ function SignupForm() {
             onChange={(e) => setPhone(e.target.value)}
             className="border border-gray-300 dark:border-white/15 dark:bg-[#1B1926] dark:text-[#F3F1F7] p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-blue"
           />
+          <label className="flex items-start gap-2 text-sm text-gray-600 dark:text-[#B7B2C6] cursor-pointer">
+            <input
+              type="checkbox"
+              checked={marketingOptIn}
+              onChange={(e) => setMarketingOptIn(e.target.checked)}
+              className="mt-0.5 accent-[#6C4FD1]"
+            />
+            <span>Send me new templates, offers and news by e-mail (optional — unsubscribe any time).</span>
+          </label>
           {error && <p className="text-red-500 text-sm">{error}</p>}
           <button
             type="submit"

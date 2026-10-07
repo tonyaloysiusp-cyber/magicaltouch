@@ -16,6 +16,12 @@ import { BrandLogo } from '@/components/BrandLogo';
 import { useAppTheme } from '@/hooks/useAppTheme';
 import { MenuBar, MenuDef } from '@/components/editor/MenuBar';
 import { ShortcutsModal } from '@/components/editor/ShortcutsModal';
+import { createDefaultPrintSettings } from '@/lib/editor/printSetup';
+import { buildMtd, readMtd, MtdError, fileNameFor, nameFromFileName } from '@/lib/mtd/format';
+import { saveMtdFile, pickMtdFile } from '@/lib/mtd/fileAccess';
+import { rememberRecent } from '@/lib/mtd/recent';
+import { takeHandoff } from '@/lib/mtd/handoff';
+import { encodeImage } from '@/lib/templates/media';
 
 const CANVAS_PRESETS: { label: string; w: number; h: number; unit: DocUnit; dpi: number }[] = [
   { label: 'Square (1080 × 1080px)', w: 1080, h: 1080, unit: 'px', dpi: 72 },
@@ -141,6 +147,14 @@ function PhotoStudioContent() {
   // extractPhotoSource's own comment for what "reopen" means here.
   useEffect(() => {
     if (checkingAuth) return;
+    const localKey = searchParams.get('localDoc');
+    if (localKey) {
+      const handoff = takeHandoff(localKey);
+      const source = handoff ? extractPhotoSource(handoff.opened.canvas) : null;
+      if (handoff && source) startWithSource(source.src, handoff.opened.document.width, handoff.opened.document.height, source.dpi, handoff.opened.document.name);
+      setLoadingDesign(false);
+      return;
+    }
     const designIdParam = searchParams.get('designId');
     if (!designIdParam) return;
     let cancelled = false;
@@ -256,6 +270,74 @@ function PhotoStudioContent() {
       a.remove();
     } finally {
       setExporting(false);
+    }
+  };
+
+  // ---------- .mtd project files on the customer's computer ----------
+  // A Photo Studio .mtd holds the flattened photo plus its page size and
+  // DPI, in the same Main-Design-compatible layout used for account saves,
+  // so it also opens in the Design editor.
+  const saveToComputer = async () => {
+    const result = captureCurrentComposite();
+    if (!result) {
+      alert('Nothing to save yet.');
+      return;
+    }
+    setSaving(true);
+    try {
+      const size = await loadImageSize(result.dataUrl);
+      const canvas = {
+        version: '5.3.0',
+        objects: [
+          {
+            type: 'rect', left: 0, top: 0, width: size.w, height: size.h, fill: '#ffffff',
+            selectable: false, evented: false, hasControls: false, lockRotation: true, objectCaching: false,
+            name: 'Artboard 1', __isArtboard: true, __artboardId: `ab_${Date.now()}`,
+            __print: { ...createDefaultPrintSettings(), dpi: docDpi },
+          },
+          { type: 'image', left: 0, top: 0, width: size.w, height: size.h, scaleX: 1, scaleY: 1, src: result.dataUrl, name: docName || 'Photo', __uid: `obj_${Date.now()}` },
+        ],
+      };
+      const thumbBlob = await encodeImage(result.dataUrl, 400).catch(() => null);
+      const thumbnail = thumbBlob
+        ? await new Promise<string>((res) => {
+            const r = new FileReader();
+            r.onload = () => res(String(r.result));
+            r.readAsDataURL(thumbBlob);
+          })
+        : null;
+      const { blob } = await buildMtd({
+        canvas,
+        document: { name: docName || 'Untitled Photo', width: size.w, height: size.h, editor: 'photo-studio' },
+        thumbnail,
+      });
+      const target = await saveMtdFile(blob, fileNameFor(docName || 'Untitled Photo'));
+      if (target) {
+        setDocName(nameFromFileName(target.fileName));
+        rememberRecent({ name: nameFromFileName(target.fileName), fileName: target.fileName, width: size.w, height: size.h, thumbnail, handle: target.handle });
+        alert(target.handle ? `Saved to your computer as "${target.fileName}".` : `"${target.fileName}" was downloaded. Keep it somewhere safe.`);
+      }
+    } catch (err) {
+      console.error('Photo Studio .mtd save failed:', err);
+      alert('Could not save the project file. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const openFromComputer = async () => {
+    const picked = await pickMtdFile();
+    if (!picked) return;
+    try {
+      const opened = await readMtd(picked.file);
+      const source = extractPhotoSource(opened.canvas);
+      if (!source) {
+        alert('This project has no photo Photo Studio can open. Open it in the Design editor instead.');
+        return;
+      }
+      startWithSource(source.src, opened.document.width, opened.document.height, source.dpi, opened.document.name);
+    } catch (err) {
+      alert(err instanceof MtdError ? err.message : 'This file could not be opened.');
     }
   };
 
@@ -483,7 +565,9 @@ function PhotoStudioContent() {
       label: 'File',
       items: [
         { label: 'New Document…', onClick: handleNewDocument },
+        { label: 'Open from Computer (.mtd)…', onClick: openFromComputer },
         { label: 'Save', shortcut: 'Ctrl/Cmd+S', onClick: handleSave, disabled: saving },
+        { label: 'Save to Computer (.mtd)…', onClick: saveToComputer, disabled: saving || stage !== 'editing' },
         { divider: true },
         { label: 'Export as PNG', onClick: () => { setExportFormat('png'); handleExport('png'); } },
         { label: 'Export as PDF', onClick: () => { setExportFormat('pdf'); handleExport('pdf'); } },
