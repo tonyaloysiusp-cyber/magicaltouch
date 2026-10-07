@@ -101,7 +101,7 @@ export function AccountSettings({ userId }: { userId: string }) {
       <div className="border border-red-200 dark:border-red-900/50 rounded-xl p-5 mb-8 bg-white dark:bg-[#1B1926]">
         <h2 className="text-sm font-semibold text-red-600 mb-1">Delete my account</h2>
         <p className="text-xs text-gray-500 dark:text-[#B7B2C6] mb-3">
-          Permanently deletes your Magical Touch Design account, profile photo and the designs saved in your account. Projects you saved to your computer, Google Drive, OneDrive or Dropbox are yours and are not touched — save copies of any account designs first (File → Save a Copy to Computer).
+          Permanently deletes your Magical Touch Design account, profile photo and the designs saved in your account. Projects you saved on your own computer, iPad, phone or cloud drive are yours and are not touched — save copies of any account designs first (File → Save a Copy to Device).
         </p>
         {!confirming ? (
           <button onClick={() => setConfirming(true)} className="text-sm font-semibold text-red-600 border border-red-200 rounded-full px-4 py-2 hover:bg-red-50">

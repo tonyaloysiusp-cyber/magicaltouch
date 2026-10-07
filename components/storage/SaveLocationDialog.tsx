@@ -5,7 +5,7 @@
 // synchronously in the tap so a cloud sign-in popup is never blocked.
 
 import { HardDrive, Cloud, UserRound, X } from 'lucide-react';
-import { CLOUD_PROVIDERS, CloudProviderId } from '@/lib/storage/providers';
+import { AVAILABLE_CLOUD_PROVIDERS, CloudProviderId } from '@/lib/storage/providers';
 import { supportsSaveInPlace } from '@/lib/mtd/fileAccess';
 
 export type SaveLocation = 'computer' | CloudProviderId | 'account';
@@ -42,20 +42,20 @@ export function SaveLocationDialog({ busy, error, onChoose, onCancel }: Props) {
           <button className={row} disabled={!!busy} onClick={() => onChoose('computer')}>
             <HardDrive size={20} className="text-[#6C4FD1] shrink-0" />
             <span className="flex-1">
-              <span className="block text-sm font-semibold">This computer</span>
+              <span className="block text-sm font-semibold">This device (computer, iPad or phone)</span>
               <span className="block text-xs text-gray-500 dark:text-gray-400">
                 {supportsSaveInPlace() ? 'A .mtd file in a folder you choose' : 'Downloads a .mtd file to your device'}
               </span>
             </span>
           </button>
 
-          {CLOUD_PROVIDERS.map((p) => (
-            <button key={p.id} className={row} disabled={!!busy || !p.configured} onClick={() => onChoose(p.id)}>
+          {AVAILABLE_CLOUD_PROVIDERS.map((p) => (
+            <button key={p.id} className={row} disabled={!!busy} onClick={() => onChoose(p.id)}>
               <Cloud size={20} className="text-[#6C4FD1] shrink-0" />
               <span className="flex-1">
                 <span className="block text-sm font-semibold">{p.label}</span>
                 <span className="block text-xs text-gray-500 dark:text-gray-400">
-                  {p.configured ? `Saved in your ${p.label}: ${p.folderLabel}` : 'Coming soon'}
+                  Saved in your {p.label}: {p.folderLabel}
                 </span>
               </span>
             </button>
@@ -64,8 +64,8 @@ export function SaveLocationDialog({ busy, error, onChoose, onCancel }: Props) {
           <button className={row} disabled={!!busy} onClick={() => onChoose('account')}>
             <UserRound size={20} className="text-[#6C4FD1] shrink-0" />
             <span className="flex-1">
-              <span className="block text-sm font-semibold">My Magical Touch account</span>
-              <span className="block text-xs text-gray-500 dark:text-gray-400">Kept on our servers, with automatic version history</span>
+              <span className="block text-sm font-semibold">Online — my Magical Touch account</span>
+              <span className="block text-xs text-gray-500 dark:text-gray-400">Open it from any computer, iPad or phone. Saved automatically.</span>
             </span>
           </button>
         </div>

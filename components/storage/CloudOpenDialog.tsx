@@ -6,7 +6,7 @@
 
 import { useRef, useState } from 'react';
 import { Cloud, X, ArrowLeft } from 'lucide-react';
-import { CLOUD_PROVIDERS, CloudFile, CloudProviderId, providerById, popupIfNeeded } from '@/lib/storage/providers';
+import { AVAILABLE_CLOUD_PROVIDERS, CloudFile, CloudProviderId, providerById, popupIfNeeded } from '@/lib/storage/providers';
 import { listCloud, openFromCloud } from '@/lib/storage/cloudProject';
 import type { OpenedMtd } from '@/lib/mtd/format';
 
@@ -83,17 +83,17 @@ export function CloudOpenDialog({ onOpened, onClose }: Props) {
 
         {!provider && (
           <div className="flex flex-col gap-2">
-            {CLOUD_PROVIDERS.map((p) => (
+            {AVAILABLE_CLOUD_PROVIDERS.map((p) => (
               <button
                 key={p.id}
-                disabled={!!busy || !p.configured}
+                disabled={!!busy}
                 onClick={() => browse(p.id)}
                 className="flex items-center gap-3 px-4 py-3 rounded-xl border border-gray-200 dark:border-[#3A3A3A] hover:border-[#6C4FD1] disabled:opacity-50 text-left"
               >
                 <Cloud size={20} className="text-[#6C4FD1]" />
                 <span className="flex-1">
                   <span className="block text-sm font-semibold">{p.label}</span>
-                  <span className="block text-xs text-gray-500">{p.configured ? p.folderLabel : 'Coming soon'}</span>
+                  <span className="block text-xs text-gray-500">{p.folderLabel}</span>
                 </span>
               </button>
             ))}

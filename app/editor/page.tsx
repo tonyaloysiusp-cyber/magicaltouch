@@ -69,7 +69,7 @@ import { imageObjectToDataURL } from '@/lib/editor/imageQuality';
 import { buildMtd, readMtd, MtdError, fileNameFor, nameFromFileName } from '@/lib/mtd/format';
 import { saveMtdFile, pickMtdFile, canWriteSilently, LocalFileRef } from '@/lib/mtd/fileAccess';
 import { putHandoff, peekHandoff, takeHandoff, newLocalKey, isLocalTabId, ExternalTarget, isCloudTarget } from '@/lib/mtd/handoff';
-import { providerById, popupIfNeeded, CloudProviderId } from '@/lib/storage/providers';
+import { HAS_CLOUD_DRIVES, providerById, popupIfNeeded, CloudProviderId } from '@/lib/storage/providers';
 import { saveToCloud, canSaveSilently } from '@/lib/storage/cloudProject';
 import { SaveLocationDialog, SaveLocation } from '@/components/storage/SaveLocationDialog';
 import { CloudOpenDialog } from '@/components/storage/CloudOpenDialog';
@@ -4166,13 +4166,13 @@ function EditorContent() {
       items: [
         { label: 'New Design', onClick: startNewDesign },
         { label: 'Open...', onClick: () => setShowOpenDialog(true) },
-        { label: 'Open from Computer (.mtd)...', onClick: openFromComputer },
-        { label: 'Open from Cloud Drive...', onClick: () => setShowCloudOpen(true) },
+        { label: 'Open from Device (.mtd)...', onClick: openFromComputer },
+        ...(HAS_CLOUD_DRIVES ? [{ label: 'Open from Cloud Drive...', onClick: () => setShowCloudOpen(true) }] : []),
         { label: 'Import...', onClick: () => importInputRef.current?.click() },
         { divider: true },
         { label: 'Save', shortcut: 'Ctrl/Cmd+S', onClick: saveDesign },
         { label: 'Save As...', shortcut: 'Ctrl/Cmd+Shift+S', onClick: saveDesignAs },
-        { label: 'Save a Copy to Computer (.mtd)...', onClick: saveCopyToComputer },
+        { label: 'Save a Copy to Device (.mtd)...', onClick: saveCopyToComputer },
         { label: 'Version History...', onClick: () => setShowVersionHistory(true), disabled: isLocalTabId(activeTabId) },
         { divider: true },
         { label: 'Export...', onClick: () => setShowExportDialog(true) },

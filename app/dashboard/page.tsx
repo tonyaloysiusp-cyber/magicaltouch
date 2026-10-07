@@ -11,7 +11,7 @@ import { listRecent, rememberRecent, forgetRecent, RecentLocalFile } from '@/lib
 import { putHandoff, newLocalKey, editorUrlForLocal } from '@/lib/mtd/handoff';
 import { Cloud } from 'lucide-react';
 import { CloudOpenDialog } from '@/components/storage/CloudOpenDialog';
-import { providerById, popupIfNeeded, CloudProviderId, CloudFile } from '@/lib/storage/providers';
+import { HAS_CLOUD_DRIVES, providerById, popupIfNeeded, CloudProviderId, CloudFile } from '@/lib/storage/providers';
 import { openFromCloud } from '@/lib/storage/cloudProject';
 import { listProjects as listCloudProjects, forgetProject, ProjectReference } from '@/lib/storage/registry';
 import type { OpenedMtd } from '@/lib/mtd/format';
@@ -419,6 +419,7 @@ export default function DashboardPage() {
             >
               <FolderOpen size={15} /> {opening ? 'Opening…' : 'Open .mtd file'}
             </button>
+            {HAS_CLOUD_DRIVES && (
             <button
               onClick={() => setShowCloudOpen(true)}
               title="Open a project from Google Drive, OneDrive or Dropbox"
@@ -426,6 +427,7 @@ export default function DashboardPage() {
             >
               <Cloud size={15} /> Open from cloud
             </button>
+            )}
             <Link
               href="/templates"
               className="inline-flex items-center gap-2 text-sm font-semibold px-5 py-3 rounded-full border border-black/15 dark:border-white/15 hover:border-black/30 dark:hover:border-white/30 transition-colors"
@@ -493,7 +495,7 @@ export default function DashboardPage() {
         {localFiles.length > 0 && (
           <section className="mb-12">
             <h2 className="text-xs font-semibold text-[#4A4750] dark:text-[#B7B2C6] tracking-wide uppercase mb-1 flex items-center gap-1.5">
-              <HardDrive size={13} /> On this computer
+              <HardDrive size={13} /> On this device
             </h2>
             <p className="text-xs text-[#4A4750]/70 dark:text-[#B7B2C6]/70 mb-4">
               Your own .mtd project files. They are stored on your computer, not on our servers.
