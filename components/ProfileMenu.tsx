@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { User, Settings, LogOut, FolderOpen, LayoutTemplate } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { Profile, CreatorLevel, getOrCreateProfile, getDesignCount, creatorLevelForCount } from '@/lib/profile';
+import { avatarVariant } from '@/lib/avatar/optimize';
 
 const LEVEL_STYLES: Record<CreatorLevel, string> = {
   'New Creator': 'bg-gray-100 text-gray-600',
@@ -27,7 +28,13 @@ export function Avatar({ profile, email, size = 36 }: { profile: Profile | null;
     // eslint-disable-next-line @next/next/no-img-element
     return (
       <img
-        src={profile.avatar_url}
+        // Smallest variant that's still sharp on 2x screens (36px -> 128).
+        src={avatarVariant(profile.avatar_url, size * 2 <= 64 ? 64 : size * 2 <= 128 ? 128 : 512) || profile.avatar_url}
+        onError={(e) => {
+          // Avatars uploaded before variants existed only have one file.
+          if (e.currentTarget.src !== profile.avatar_url) e.currentTarget.src = profile.avatar_url!;
+        }}
+        loading="lazy"
         alt={profile.name || email}
         style={{ width: size, height: size }}
         className="rounded-full object-cover border border-black/10"
