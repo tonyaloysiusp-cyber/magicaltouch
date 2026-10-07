@@ -142,6 +142,11 @@ function SignupForm() {
             />
             <span>Send me new templates, offers and news by e-mail (optional — unsubscribe any time).</span>
           </label>
+          <p className="text-xs text-gray-400 dark:text-[#8A8496] -mt-1">
+            By creating an account you agree to our{' '}
+            <a href="/terms" className="underline">Terms of Service</a> and{' '}
+            <a href="/privacy" className="underline">Privacy Policy</a>.
+          </p>
           {error && <p className="text-red-500 text-sm">{error}</p>}
           <button
             type="submit"
