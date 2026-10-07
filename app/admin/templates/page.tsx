@@ -19,6 +19,9 @@ import { MoreVertical, Plus, Search, X } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { getOrCreateProfile } from '@/lib/profile';
 import { listProjects, getProject, ProjectSummary } from '@/lib/api/projects';
+import { readMtd, MtdError, OpenedMtd } from '@/lib/mtd/format';
+import { pickMtdFile } from '@/lib/mtd/fileAccess';
+import { validateTemplateMtd, TemplateValidation } from '@/lib/templates/validateMtd';
 import {
   Template,
   TemplateCategory,
@@ -126,6 +129,9 @@ export default function AdminTemplatesPage() {
   const [versionNotes, setVersionNotes] = useState('');
   const [busy, setBusy] = useState(false);
   const [generating, setGenerating] = useState(false);
+
+  // Upload a native .mtd project as a template's content (spec §14, §21-22).
+  const [mtdUpload, setMtdUpload] = useState<{ template: Template; fileName: string; opened: OpenedMtd; result: TemplateValidation } | null>(null);
 
   const thumbInput = useRef<HTMLInputElement>(null);
   const thumbTarget = useRef<Template | null>(null);
@@ -314,6 +320,32 @@ export default function AdminTemplatesPage() {
     setBusy(false);
   };
 
+  const uploadMtd = async (t: Template) => {
+    setMenuFor(null);
+    const picked = await pickMtdFile();
+    if (!picked) return;
+    try {
+      const opened = await readMtd(picked.file);
+      setMtdUpload({ template: t, fileName: picked.file.name, opened, result: validateTemplateMtd(opened) });
+    } catch (err) {
+      flash(err instanceof MtdError ? err.message : 'That file could not be read.');
+    }
+  };
+
+  const applyMtdUpload = async () => {
+    if (!mtdUpload?.template.id) return;
+    const { template: t, opened } = mtdUpload;
+    setBusy(true);
+    const ok = await setTemplateContent(t.id!, t.currentVersion || '1.0', opened.canvas, opened.thumbnail);
+    if (ok && (opened.document.width !== t.width || opened.document.height !== t.height)) {
+      await updateTemplate(t.id!, { name: t.name, category: t.category, width: opened.document.width, height: opened.document.height, colors: t.colors });
+    }
+    setBusy(false);
+    setMtdUpload(null);
+    await reload();
+    flash(ok ? `"${t.name}" now uses ${mtdUpload.fileName}.` : 'Could not save the template content.');
+  };
+
   const pickThumbnail = (t: Template) => {
     setMenuFor(null);
     thumbTarget.current = t;
@@ -491,6 +523,7 @@ export default function AdminTemplatesPage() {
                           <div className="absolute right-0 top-8 z-20 w-52 bg-white border rounded-lg shadow-lg py-1 text-sm">
                             <MenuItem onClick={() => { setMenuFor(null); startEdit(t); }}>Edit details</MenuItem>
                             <MenuItem onClick={() => openContent(t)}>Set content from a design</MenuItem>
+                            <MenuItem onClick={() => uploadMtd(t)}>Upload .mtd file</MenuItem>
                             <MenuItem onClick={() => pickThumbnail(t)}>Replace thumbnail</MenuItem>
                             <MenuItem onClick={() => { setMenuFor(null); window.open(`/templates?template=${t.id}`, '_blank'); }}>Preview</MenuItem>
                             <MenuItem onClick={() => duplicate(t)}>Duplicate</MenuItem>
@@ -609,6 +642,45 @@ export default function AdminTemplatesPage() {
             </div>
           )}
           {busy && <p className="text-xs text-[#6C4FD1] mt-3">Saving content and images…</p>}
+        </Modal>
+      )}
+
+      {/* ---------- Upload .mtd: validation report ---------- */}
+      {mtdUpload && (
+        <Modal title={`Upload: ${mtdUpload.fileName}`} onClose={() => !busy && setMtdUpload(null)}>
+          <p className="text-xs text-gray-500 mb-3">
+            {mtdUpload.opened.document.width}×{mtdUpload.opened.document.height}px · {mtdUpload.result.stats.layers} layers · {mtdUpload.result.stats.images} images ·{' '}
+            {mtdUpload.result.stats.texts} text · fonts: {mtdUpload.result.stats.fonts.join(', ') || 'none'}
+          </p>
+          {mtdUpload.opened.thumbnail && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={mtdUpload.opened.thumbnail} alt="" className="w-full max-h-48 object-contain bg-gray-100 rounded-lg mb-3" />
+          )}
+          {mtdUpload.result.errors.length > 0 ? (
+            <div className="bg-red-50 text-red-700 rounded-lg p-3 text-sm mb-3">
+              <p className="font-semibold mb-1">Template validation failed.</p>
+              <ul className="list-disc pl-5 space-y-0.5">
+                {mtdUpload.result.errors.map((e) => <li key={e}>{e}</li>)}
+              </ul>
+            </div>
+          ) : (
+            <p className="bg-emerald-50 text-emerald-700 rounded-lg p-3 text-sm mb-3 font-medium">Checks passed. This file can be used.</p>
+          )}
+          {mtdUpload.result.warnings.length > 0 && (
+            <ul className="text-xs text-amber-700 list-disc pl-5 mb-3 space-y-0.5">
+              {mtdUpload.result.warnings.map((w) => <li key={w}>{w}</li>)}
+            </ul>
+          )}
+          <div className="flex justify-end gap-2">
+            <button onClick={() => setMtdUpload(null)} disabled={busy} className="text-sm px-4 py-2 rounded-full border text-gray-600">Cancel</button>
+            <button
+              onClick={applyMtdUpload}
+              disabled={busy || mtdUpload.result.errors.length > 0}
+              className="text-sm px-4 py-2 rounded-full bg-brand-gradient text-white disabled:opacity-40"
+            >
+              {busy ? 'Saving…' : `Use for "${mtdUpload.template.name}"`}
+            </button>
+          </div>
         </Modal>
       )}
 
