@@ -125,6 +125,8 @@ export default function EmailCenterPage() {
   const [sendCheck, setSendCheck] = useState<{ campaign: Campaign; eligible: number; invalid: number } | null>(null);
   const [editingOffer, setEditingOffer] = useState<Partial<Offer> | null>(null);
   const [templatePreview, setTemplatePreview] = useState<string>('welcome');
+  const [sheets, setSheets] = useState<{ configured: boolean; serviceAccount: string | null } | null>(null);
+  const [lastSync, setLastSync] = useState<{ sheetUrl: string; syncedAt: string; written: Record<string, number> } | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -193,7 +195,10 @@ export default function EmailCenterPage() {
     if (!isAdmin) return;
     if (tab === 'users') loadUsers();
     if (tab === 'log') loadLog();
-    if (tab === 'dashboard') loadStats();
+    if (tab === 'dashboard') {
+      loadStats();
+      apiFetch('/api/admin/sheets-sync').then((r: any) => setSheets(r)).catch(() => setSheets({ configured: false, serviceAccount: null }));
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab, isAdmin]);
 
@@ -347,6 +352,19 @@ export default function EmailCenterPage() {
     });
   };
 
+  // ---------- Google Sheets ----------
+  const syncSheets = async () => {
+    setBusy('Updating Google Sheets…');
+    try {
+      const r: any = await apiFetch('/api/admin/sheets-sync', { method: 'POST' });
+      setLastSync({ sheetUrl: r.sheetUrl, syncedAt: r.syncedAt, written: r.written });
+      flash('Google Sheets updated.');
+    } catch (err: any) {
+      flash(err.message || 'Google Sheets sync failed.');
+    }
+    setBusy(null);
+  };
+
   // ---------- users export ----------
   const exportUsers = () => {
     const header = ['Email', 'Name', 'Email verified', 'Joined', 'Last login', 'Marketing'];
@@ -443,6 +461,29 @@ export default function EmailCenterPage() {
                 <p className="text-2xl font-semibold text-gray-800 mt-1">{stat(k)}</p>
               </div>
             ))}
+            <div className="col-span-full bg-white border rounded-xl p-4 mt-2 flex flex-wrap items-center gap-3">
+              <div className="flex-1 min-w-[220px]">
+                <p className="text-sm font-semibold text-gray-800">Google Sheets</p>
+                <p className="text-xs text-gray-500">
+                  {sheets === null
+                    ? 'Checking…'
+                    : sheets.configured
+                    ? `Copies Users, Marketing list, Campaigns, Offers and Email logs to your spreadsheet. Shared with ${sheets.serviceAccount}.`
+                    : 'Not set up yet. Add GOOGLE_SHEETS_ID and GOOGLE_SERVICE_ACCOUNT in Vercel to turn this on.'}
+                  {' '}Passwords and sign-in tokens are never copied.
+                </p>
+                {lastSync && (
+                  <p className="text-xs text-emerald-700 mt-1">
+                    Synced {new Date(lastSync.syncedAt).toLocaleString()} ·{' '}
+                    {Object.entries(lastSync.written).map(([k, v]) => `${k}: ${v}`).join(' · ')} ·{' '}
+                    <a href={lastSync.sheetUrl} target="_blank" rel="noreferrer" className="underline">Open sheet</a>
+                  </p>
+                )}
+              </div>
+              <button onClick={syncSheets} disabled={!sheets?.configured || !!busy} className="text-sm font-semibold text-white bg-brand-gradient rounded-full px-4 py-2 disabled:opacity-40">
+                Sync to Google Sheets
+              </button>
+            </div>
             <p className="col-span-full text-xs text-gray-500 mt-2">
               Gmail allows about 500 e-mails a day. Campaigns stop at 400 a day so account e-mails always get through, and continue when you press Send again.
             </p>
