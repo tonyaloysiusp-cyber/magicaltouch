@@ -68,7 +68,11 @@ import { PhotoAdjustments, DEFAULT_ADJUSTMENTS } from '@/lib/editor/photoFilters
 import { imageObjectToDataURL } from '@/lib/editor/imageQuality';
 import { buildMtd, readMtd, MtdError, fileNameFor, nameFromFileName } from '@/lib/mtd/format';
 import { saveMtdFile, pickMtdFile, canWriteSilently, LocalFileRef } from '@/lib/mtd/fileAccess';
-import { putHandoff, peekHandoff, takeHandoff, newLocalKey, isLocalTabId } from '@/lib/mtd/handoff';
+import { putHandoff, peekHandoff, takeHandoff, newLocalKey, isLocalTabId, ExternalTarget, isCloudTarget } from '@/lib/mtd/handoff';
+import { providerById, popupIfNeeded, CloudProviderId } from '@/lib/storage/providers';
+import { saveToCloud, canSaveSilently } from '@/lib/storage/cloudProject';
+import { SaveLocationDialog, SaveLocation } from '@/components/storage/SaveLocationDialog';
+import { CloudOpenDialog } from '@/components/storage/CloudOpenDialog';
 import { rememberRecent } from '@/lib/mtd/recent';
 
 const isOpenVectorPath = (o: any): boolean =>
@@ -184,7 +188,10 @@ function EditorContent() {
   // keyed by tab id: where the file is (a writable handle on Chrome/Edge,
   // just its name elsewhere). These tabs are never autosaved to the
   // Magical Touch Design server.
-  const localFilesRef = useRef<Map<string, LocalFileRef>>(new Map());
+  const localFilesRef = useRef<Map<string, ExternalTarget>>(new Map());
+  // "Choose where to keep it" -- shown on the first save of a new design.
+  const [saveChooser, setSaveChooser] = useState<{ mode: 'first' | 'saveAs'; busy: string | null; error: string | null } | null>(null);
+  const [showCloudOpen, setShowCloudOpen] = useState(false);
   const [localNotice, setLocalNotice] = useState<string | null>(null);
   // Guards performSave against out-of-order writes: a manual Ctrl+S and a
   // background autosave tick (or two autosave ticks around a reconnect)
@@ -199,7 +206,7 @@ function EditorContent() {
   // run captures whatever is on the canvas THEN, not a stale snapshot,
   // and writes stay strictly sequential.
   const saveInFlightRef = useRef(false);
-  const pendingSaveRef = useRef<{ idToUse: string | null; nameToUse: string; opts?: { silent?: boolean } } | null>(null);
+  const pendingSaveRef = useRef<{ idToUse: string | null; nameToUse: string; opts?: { silent?: boolean; skipChooser?: boolean } } | null>(null);
   // Assigned once scheduleAutosave itself is defined further down (after
   // performSave) — indirected through a ref purely so the effect above,
   // which needs to exist before that point, can still call the latest
@@ -2998,11 +3005,21 @@ function EditorContent() {
   // near-duplicate copies each reading designId/designName from the
   // component closure, which would go stale the instant Save As updates
   // that state right before saving.
-  const performSaveInner = async (idToUse: string | null, nameToUse: string, opts?: { silent?: boolean }) => {
+  const performSaveInner = async (idToUse: string | null, nameToUse: string, opts?: { silent?: boolean; skipChooser?: boolean }) => {
     const silent = !!opts?.silent;
     if (!fabricCanvasRef.current) return;
     if (isLocalTabId(activeTabIdRef.current)) {
       await saveToComputer({ silent });
+      return;
+    }
+    // A design that has never been saved anywhere: the customer decides
+    // where it lives before anything is stored. Autosave waits for that.
+    if (!idToUse && !opts?.skipChooser) {
+      if (silent) {
+        setSaveStatus('unsaved');
+      } else {
+        setSaveChooser({ mode: 'first', busy: null, error: null });
+      }
       return;
     }
     // setSaving before the (possibly ~2s) auto-apply wait below so the
@@ -3171,7 +3188,7 @@ function EditorContent() {
   // performSaveInner (see saveInFlightRef above) so a slow save started
   // first can never complete after — and overwrite — a faster save
   // started later with newer content.
-  const performSave = async (idToUse: string | null, nameToUse: string, opts?: { silent?: boolean }) => {
+  const performSave = async (idToUse: string | null, nameToUse: string, opts?: { silent?: boolean; skipChooser?: boolean }) => {
     if (saveInFlightRef.current) {
       pendingSaveRef.current = { idToUse, nameToUse, opts };
       return;
@@ -3233,7 +3250,9 @@ function EditorContent() {
   // until the customer saves -- it never falls back to the server.
   const saveToComputer = async (opts: { silent?: boolean; saveAs?: boolean } = {}) => {
     const tabId = activeTabIdRef.current;
-    const existing = localFilesRef.current.get(tabId);
+    const stored = localFilesRef.current.get(tabId);
+    if (isCloudTarget(stored) && !opts.saveAs) return saveToCloudTarget(stored.provider, { silent: opts.silent });
+    const existing = isCloudTarget(stored) ? undefined : stored;
     if (opts.silent && !(await canWriteSilently(existing?.handle))) {
       setSaveStatus('unsaved');
       return;
@@ -3280,6 +3299,143 @@ function EditorContent() {
     }
   };
 
+  const providerLabel = (id: CloudProviderId) => providerById(id).label;
+  const storageLabel = (tabId: string) => {
+    const t = localFilesRef.current.get(tabId);
+    return isCloudTarget(t) ? providerLabel(t.provider) : 'computer';
+  };
+
+  // Gives the active tab a new id, e.g. when a never-saved design becomes
+  // a computer/cloud project ("local-…") or an account design ("new-…").
+  const reassignActiveTab = (newId: string) => {
+    const oldId = activeTabIdRef.current;
+    if (oldId === newId) return;
+    const snap = tabSnapshotsRef.current.get(oldId);
+    if (snap) {
+      tabSnapshotsRef.current.delete(oldId);
+      tabSnapshotsRef.current.set(newId, snap);
+    }
+    const target = localFilesRef.current.get(oldId);
+    localFilesRef.current.delete(oldId);
+    if (target && isLocalTabId(newId)) localFilesRef.current.set(newId, target);
+    setTabs((ts) => ts.map((t) => (t.id === oldId ? { ...t, id: newId, designId: null } : t)));
+    activeTabIdRef.current = newId;
+    setActiveTabId(newId);
+    // The copy is no longer the account design it came from.
+    designIdRef.current = null;
+    setDesignId(null);
+  };
+
+  // Save for a tab whose master copy is a file in Google Drive / OneDrive
+  // / Dropbox. `popup` must be opened inside the tap (popupIfNeeded).
+  const saveToCloudTarget = async (provider: CloudProviderId, opts: { silent?: boolean; popup?: Window | null; isNew?: boolean } = {}) => {
+    const tabId = activeTabIdRef.current;
+    const stored = localFilesRef.current.get(tabId);
+    const existing = !opts.isNew && isCloudTarget(stored) && stored.provider === provider ? stored.file : null;
+    if (opts.silent && !canSaveSilently(provider)) {
+      setSaveStatus('unsaved');
+      return false;
+    }
+    let popup = opts.popup ?? null;
+    if (!opts.silent && opts.popup === undefined) {
+      try {
+        popup = popupIfNeeded(providerById(provider));
+      } catch (err) {
+        alert((err as Error).message);
+        return false;
+      }
+    }
+    if (!opts.silent) await ensurePhotoEditsApplied();
+    setSaving(true);
+    setSaveStatus('saving');
+    try {
+      const { blob, unembedded } = await buildCurrentMtd();
+      const firstAb = artboardsRef.current[0];
+      const file = await saveToCloud(provider, popup, {
+        fileName: fileNameFor(designNameRef.current),
+        projectName: designNameRef.current || 'Untitled Design',
+        blob,
+        existing,
+        thumbnail: makeThumbnail(),
+        width: firstAb ? firstAb.width : width,
+        height: firstAb ? firstAb.height : height,
+      });
+      const key = activeTabIdRef.current;
+      localFilesRef.current.set(key, { provider, file });
+      dirtyRef.current = false;
+      setSaveStatus('saved');
+      setTabs((ts) => ts.map((t) => (t.id === key ? { ...t, dirty: false } : t)));
+      if (!opts.silent) {
+        setLocalNotice(
+          `Saved to your ${providerLabel(provider)} as "${file.name}".` +
+            (unembedded ? ` ${unembedded} linked image(s) couldn't be packed into the file and still need internet.` : ''),
+        );
+      }
+      return true;
+    } catch (err) {
+      console.error('Cloud save failed:', err);
+      setSaveStatus(opts.silent ? 'unsaved' : 'error');
+      if (!opts.silent) alert((err as Error).message || `Could not save to ${providerLabel(provider)}.`);
+      return false;
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // The customer picked a location in "Save your project".
+  const chooseSaveLocation = (location: SaveLocation) => {
+    if (!saveChooser) return;
+    const mode = saveChooser.mode;
+
+    if (location === 'account') {
+      setSaveChooser(null);
+      withDesignLimitCheck(() => {
+        let name = designNameRef.current || 'Untitled Design';
+        if (mode === 'saveAs') {
+          const picked = window.prompt('Name for the copy in your account:', `${name} copy`);
+          if (!picked || !picked.trim()) return;
+          name = picked.trim();
+        }
+        if (isLocalTabId(activeTabIdRef.current)) reassignActiveTab(`new-${Date.now()}`);
+        performSave(null, name, { skipChooser: true });
+      });
+      return;
+    }
+
+    if (location === 'computer') {
+      setSaveChooser(null);
+      if (!isLocalTabId(activeTabIdRef.current)) reassignActiveTab(newLocalKey());
+      saveToComputer({ saveAs: true });
+      return;
+    }
+
+    // A cloud drive: open the sign-in window now, while we still have the tap.
+    let popup: Window | null;
+    try {
+      popup = popupIfNeeded(providerById(location));
+    } catch (err) {
+      setSaveChooser({ mode, busy: null, error: (err as Error).message });
+      return;
+    }
+    setSaveChooser({
+      mode,
+      busy: popup ? `Sign in to ${providerLabel(location)} in the window that opened…` : `Saving to ${providerLabel(location)}…`,
+      error: null,
+    });
+    (async () => {
+      const wasLocal = isLocalTabId(activeTabIdRef.current);
+      const previousId = activeTabIdRef.current;
+      if (!wasLocal) reassignActiveTab(newLocalKey());
+      const ok = await saveToCloudTarget(location, { popup, isNew: true });
+      if (ok) {
+        setSaveChooser(null);
+      } else {
+        if (!wasLocal) reassignActiveTab(previousId);
+        setSaveChooser({ mode, busy: null, error: `Could not save to ${providerLabel(location)}. Please try again.` });
+      }
+    })();
+  };
+
   // Any open design (even one stored in the account) can be saved as a
   // portable .mtd copy without changing where the original lives.
   const saveCopyToComputer = async () => {
@@ -3293,6 +3449,14 @@ function EditorContent() {
       console.error('Saving .mtd copy failed:', err);
       alert('Could not save the project file. Please try again.');
     }
+  };
+
+  const openCloudResult = (result: { opened: any; provider: CloudProviderId; file: any }) => {
+    setShowCloudOpen(false);
+    const key = newLocalKey();
+    putHandoff(key, { opened: result.opened, file: { provider: result.provider, file: result.file } });
+    const d = result.opened.document;
+    activateTab({ id: key, designId: null, name: d.name, width: d.width, height: d.height, dirty: false }, { isNew: true });
   };
 
   const openFromComputer = async () => {
@@ -3409,16 +3573,9 @@ function EditorContent() {
     });
 
   const saveDesignAs = () => {
-    if (isLocalTabId(activeTabIdRef.current)) {
-      saveToComputer({ saveAs: true });
-      return;
-    }
-    withDesignLimitCheck(() => {
-      const suggested = designName ? `${designName} copy` : 'Untitled Design copy';
-      const name = window.prompt('Save As — name for the new design:', suggested);
-      if (!name || !name.trim()) return;
-      performSave(null, name.trim());
-    });
+    // "Save As" always asks where the copy should live (spec step 12:
+    // a Drive project can become a local file, and vice versa).
+    setSaveChooser({ mode: 'saveAs', busy: null, error: null });
   };
 
   // Freezes the tab currently on screen into tabSnapshotsRef so it can be
@@ -3557,6 +3714,12 @@ function EditorContent() {
 
   const handleCloseConfirmSave = () => {
     if (!closeConfirm) return;
+    if (!designIdRef.current && !isLocalTabId(activeTabIdRef.current)) {
+      // Never saved yet: ask where to keep it; the tab stays open.
+      setCloseConfirm(null);
+      setSaveChooser({ mode: 'first', busy: null, error: null });
+      return;
+    }
     const id = closeConfirm.id;
     Promise.resolve(saveDesign()).then(() => {
       setCloseConfirm(null);
@@ -3997,6 +4160,7 @@ function EditorContent() {
         { label: 'New Design', onClick: startNewDesign },
         { label: 'Open...', onClick: () => setShowOpenDialog(true) },
         { label: 'Open from Computer (.mtd)...', onClick: openFromComputer },
+        { label: 'Open from Cloud Drive...', onClick: () => setShowCloudOpen(true) },
         { label: 'Import...', onClick: () => importInputRef.current?.click() },
         { divider: true },
         { label: 'Save', shortcut: 'Ctrl/Cmd+S', onClick: saveDesign },
@@ -4294,11 +4458,11 @@ function EditorContent() {
               ? 'Saving...'
               : saveStatus === 'unsaved'
               ? isLocalTabId(activeTabId)
-                ? 'Not saved to computer'
+                ? `Not saved to ${storageLabel(activeTabId)}`
                 : 'Unsaved changes'
               : saveStatus === 'saved'
               ? isLocalTabId(activeTabId)
-                ? 'Saved to computer'
+                ? `Saved to ${storageLabel(activeTabId)}`
                 : 'Saved'
               : ''}
           </span>
@@ -4323,6 +4487,16 @@ function EditorContent() {
       )}
 
       {showDesignLimitDialog && <DesignLimitDialog onCancel={() => setShowDesignLimitDialog(false)} />}
+
+      {saveChooser && (
+        <SaveLocationDialog
+          busy={saveChooser.busy}
+          error={saveChooser.error}
+          onChoose={chooseSaveLocation}
+          onCancel={() => setSaveChooser(null)}
+        />
+      )}
+      {showCloudOpen && <CloudOpenDialog onOpened={openCloudResult} onClose={() => setShowCloudOpen(false)} />}
 
       {localNotice && (
         <div className="fixed bottom-5 left-1/2 -translate-x-1/2 z-[70] max-w-md w-[calc(100%-2rem)] bg-[#14121F] text-white text-sm rounded-xl shadow-xl px-4 py-3 flex items-start gap-3">

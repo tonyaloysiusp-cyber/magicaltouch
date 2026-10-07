@@ -16,6 +16,7 @@ import {
 } from '@/lib/profile';
 import { Avatar, LevelBadge } from '@/components/ProfileMenu';
 import { AvatarError } from '@/lib/avatar/optimize';
+import { StorageConnections } from '@/components/storage/StorageConnections';
 import { BrandLogo } from '@/components/BrandLogo';
 import { useAppTheme } from '@/hooks/useAppTheme';
 
@@ -183,6 +184,8 @@ export default function ProfilePage() {
           {saving ? 'Saving...' : 'Save Changes'}
         </button>
       </div>
+
+      <StorageConnections />
 
       <div>
         <div className="flex items-center justify-between mb-3">
