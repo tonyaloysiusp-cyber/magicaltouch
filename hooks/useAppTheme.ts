@@ -36,9 +36,11 @@ export function useAppTheme() {
   // reports as a hydration mismatch (error #418) rather than silently
   // repainting.
   const [theme, setTheme] = useState<AppTheme>('light');
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
     setTheme(readStoredTheme());
+    setReady(true);
 
     // Keeps every other open tab/route in sync the instant the theme
     // changes anywhere else -- `storage` only fires in OTHER documents,
@@ -51,13 +53,18 @@ export function useAppTheme() {
   }, []);
 
   useEffect(() => {
+    if (!ready) return;
+    // The whole document follows the theme, so pages and parts that
+    // never wrap themselves in a `dark` element (admin, legal pages,
+    // dialogs rendered at the root) still switch with everything else.
+    document.documentElement.classList.toggle('dark', theme === 'dark');
     try {
       window.localStorage.setItem(STORAGE_KEY, theme);
     } catch {
       // Private browsing / storage disabled — theme just won't persist
       // across a refresh or sync to other tabs, a harmless degradation.
     }
-  }, [theme]);
+  }, [theme, ready]);
 
   const toggleTheme = useCallback(() => {
     setTheme((t) => (t === 'dark' ? 'light' : 'dark'));

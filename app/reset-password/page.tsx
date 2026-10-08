@@ -9,6 +9,7 @@
 // with auth.updateUser, and sends the "password changed" security email.
 // ---------------------------------------------------------------------
 
+import { ThemeSwitch } from '@/components/ThemeSwitch';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Sun, Moon } from 'lucide-react';
@@ -62,33 +63,26 @@ export default function ResetPasswordPage() {
   };
 
   const input =
-    'border border-gray-300 dark:border-white/15 dark:bg-[#1B1926] dark:text-[#F3F1F7] p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-blue';
+    'border border-mt-border dark:border-white/15 dark:bg-mt-surface dark:text-mt-ink p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-blue';
 
   return (
     <div className={theme === 'dark' ? 'dark' : ''}>
-      <main className="min-h-screen lg:grid lg:grid-cols-2 bg-white dark:bg-[#111015] transition-colors duration-300">
+      <main className="min-h-screen lg:grid lg:grid-cols-2 bg-mt-surface dark:bg-mt-bg transition-colors duration-300">
         <div className="hidden lg:block h-screen sticky top-0">
           <ArtworkPanel variant={theme === 'dark' ? 'night' : 'day'} />
         </div>
         <div className="relative flex flex-col items-center justify-center p-6 min-h-screen">
-          <button
-            onClick={toggleTheme}
-            title={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
-            aria-label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
-            className="absolute top-6 right-6 p-2 rounded-full border border-black/10 dark:border-white/15 text-gray-500 dark:text-[#B7B2C6] hover:border-black/25 dark:hover:border-white/30 transition-colors"
-          >
-            {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
-          </button>
+          <ThemeSwitch theme={theme} onToggle={toggleTheme} className="absolute top-6 right-6" />
           <BrandLogo theme={theme} width={280} height={56} className="mb-8" />
           <div className="w-full max-w-sm">
             {status === 'checking' && (
-              <p className="text-center text-sm text-gray-500 dark:text-[#B7B2C6]">Checking your reset link…</p>
+              <p className="text-center text-sm text-mt-muted dark:text-mt-muted">Checking your reset link…</p>
             )}
 
             {status === 'invalid' && (
               <div className="text-center">
-                <h1 className="text-2xl font-bold mb-3 text-gray-800 dark:text-[#F3F1F7]">This link has expired</h1>
-                <p className="text-sm text-gray-500 dark:text-[#B7B2C6]">
+                <h1 className="text-2xl font-bold mb-3 text-mt-ink dark:text-mt-ink">This link has expired</h1>
+                <p className="text-sm text-mt-muted dark:text-mt-muted">
                   Password reset links can only be used once and expire after a short time. Please request a new one.
                 </p>
                 <a href="/login" className="mt-6 inline-block text-brand-blue font-medium hover:underline">
@@ -99,8 +93,8 @@ export default function ResetPasswordPage() {
 
             {(status === 'ready' || status === 'saving') && (
               <>
-                <h1 className="text-2xl font-bold mb-2 text-center text-gray-800 dark:text-[#F3F1F7]">Choose a new password</h1>
-                <p className="text-sm text-gray-500 dark:text-[#B7B2C6] text-center mb-6">
+                <h1 className="text-2xl font-bold mb-2 text-center text-mt-ink dark:text-mt-ink">Choose a new password</h1>
+                <p className="text-sm text-mt-muted dark:text-mt-muted text-center mb-6">
                   Enter a new password for your Magical Touch Design account.
                 </p>
                 <form onSubmit={handleSubmit} className="flex flex-col gap-4">
@@ -136,8 +130,8 @@ export default function ResetPasswordPage() {
 
             {status === 'done' && (
               <div className="text-center">
-                <h1 className="text-2xl font-bold mb-3 text-gray-800 dark:text-[#F3F1F7]">Password updated</h1>
-                <p className="text-sm text-gray-500 dark:text-[#B7B2C6]">
+                <h1 className="text-2xl font-bold mb-3 text-mt-ink dark:text-mt-ink">Password updated</h1>
+                <p className="text-sm text-mt-muted dark:text-mt-muted">
                   Your password has been changed. Taking you to your dashboard…
                 </p>
               </div>

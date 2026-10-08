@@ -17,7 +17,7 @@ export function CreativeShowcase({ theme }: { theme: AppTheme }) {
     <section className="max-w-6xl mx-auto px-6 py-20 overflow-hidden">
       <div className="grid lg:grid-cols-[1fr_0.85fr] gap-14 items-center">
         <Reveal>
-          <p className="text-xs font-semibold text-[#6C4FD1] dark:text-[#B9A6F2] tracking-wide uppercase">
+          <p className="text-xs font-semibold text-mt-accent dark:text-mt-accent tracking-wide uppercase">
             Day or night
           </p>
           <h2 className="mt-3 font-[family-name:var(--font-display)] text-4xl sm:text-5xl leading-[1.05] tracking-tight">
@@ -25,7 +25,7 @@ export function CreativeShowcase({ theme }: { theme: AppTheme }) {
             <br />
             Create through the night.
           </h2>
-          <p className="mt-5 text-[#4A4750] dark:text-[#B7B2C6] max-w-md leading-relaxed">
+          <p className="mt-5 text-mt-muted dark:text-mt-muted max-w-md leading-relaxed">
             Flip the switch up top and the whole workspace follows — bright
             and airy for a daytime session, moody and neon-accented for
             late-night inspiration.

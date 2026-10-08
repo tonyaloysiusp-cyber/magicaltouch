@@ -18,7 +18,7 @@ interface Props {
 }
 
 const row =
-  'w-full flex items-center gap-3 text-left px-4 py-3 rounded-xl border border-gray-200 dark:border-[#3A3A3A] hover:border-[#6C4FD1] hover:bg-purple-50/50 dark:hover:bg-[#333333] disabled:opacity-50 disabled:hover:border-gray-200 disabled:hover:bg-transparent transition-colors';
+  'w-full flex items-center gap-3 text-left px-4 py-3 rounded-xl border border-mt-border dark:border-mt-border hover:border-mt-accent hover:bg-purple-50/50 dark:hover:bg-mt-surface2 disabled:opacity-50 disabled:hover:border-mt-border disabled:hover:bg-transparent transition-colors';
 
 export function SaveLocationDialog({ busy, error, onChoose, onCancel }: Props) {
   return (
@@ -27,23 +27,23 @@ export function SaveLocationDialog({ busy, error, onChoose, onCancel }: Props) {
         role="dialog"
         aria-modal="true"
         aria-labelledby="save-location-title"
-        className="w-full max-w-md bg-white dark:bg-[#242424] text-gray-800 dark:text-gray-100 rounded-2xl shadow-2xl p-5"
+        className="w-full max-w-md bg-mt-surface dark:bg-mt-surface text-mt-ink dark:text-mt-ink rounded-2xl shadow-2xl p-5"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between mb-1">
           <h2 id="save-location-title" className="text-lg font-semibold">Save your project</h2>
-          <button onClick={onCancel} disabled={!!busy} className="p-1 text-gray-400 hover:text-gray-600" aria-label="Close">
+          <button onClick={onCancel} disabled={!!busy} className="p-1 text-mt-faint hover:text-mt-muted" aria-label="Close">
             <X size={18} />
           </button>
         </div>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Choose where to keep it. You can always save a copy somewhere else later.</p>
+        <p className="text-sm text-mt-muted dark:text-mt-muted mb-4">Choose where to keep it. You can always save a copy somewhere else later.</p>
 
         <div className="flex flex-col gap-2">
           <button className={row} disabled={!!busy} onClick={() => onChoose('computer')}>
-            <HardDrive size={20} className="text-[#6C4FD1] shrink-0" />
+            <HardDrive size={20} className="text-mt-accent shrink-0" />
             <span className="flex-1">
               <span className="block text-sm font-semibold">This device (computer, iPad or phone)</span>
-              <span className="block text-xs text-gray-500 dark:text-gray-400">
+              <span className="block text-xs text-mt-muted dark:text-mt-muted">
                 {supportsSaveInPlace() ? 'A .mtd file in a folder you choose' : 'Downloads a .mtd file to your device'}
               </span>
             </span>
@@ -51,10 +51,10 @@ export function SaveLocationDialog({ busy, error, onChoose, onCancel }: Props) {
 
           {AVAILABLE_CLOUD_PROVIDERS.map((p) => (
             <button key={p.id} className={row} disabled={!!busy} onClick={() => onChoose(p.id)}>
-              <Cloud size={20} className="text-[#6C4FD1] shrink-0" />
+              <Cloud size={20} className="text-mt-accent shrink-0" />
               <span className="flex-1">
                 <span className="block text-sm font-semibold">{p.label}</span>
-                <span className="block text-xs text-gray-500 dark:text-gray-400">
+                <span className="block text-xs text-mt-muted dark:text-mt-muted">
                   Saved in your {p.label}: {p.folderLabel}
                 </span>
               </span>
@@ -62,15 +62,15 @@ export function SaveLocationDialog({ busy, error, onChoose, onCancel }: Props) {
           ))}
 
           <button className={row} disabled={!!busy} onClick={() => onChoose('account')}>
-            <UserRound size={20} className="text-[#6C4FD1] shrink-0" />
+            <UserRound size={20} className="text-mt-accent shrink-0" />
             <span className="flex-1">
               <span className="block text-sm font-semibold">Online — my Magical Touch account</span>
-              <span className="block text-xs text-gray-500 dark:text-gray-400">Open it from any computer, iPad or phone. Saved automatically.</span>
+              <span className="block text-xs text-mt-muted dark:text-mt-muted">Open it from any computer, iPad or phone. Saved automatically.</span>
             </span>
           </button>
         </div>
 
-        {busy && <p className="mt-4 text-sm text-[#6C4FD1]">{busy}</p>}
+        {busy && <p className="mt-4 text-sm text-mt-accent">{busy}</p>}
         {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
       </div>
     </div>

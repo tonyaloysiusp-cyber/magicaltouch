@@ -1,11 +1,12 @@
 'use client';
 
+import { ThemeSwitch } from '@/components/ThemeSwitch';
 import { useEffect, useRef, useState, useCallback, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { BrandLogo } from '@/components/BrandLogo';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
-import { fetchTemplateById } from '@/lib/templatesData';
+import { fetchTemplateById, setTemplateContent, createVersion, Template as TemplateRecord } from '@/lib/templatesData';
 import { dataUrlToBlob, uploadDesignAsset } from '@/lib/storage/assets';
 import { Keyboard, Sun, Moon } from 'lucide-react';
 import { useAppTheme } from '@/hooks/useAppTheme';
@@ -147,7 +148,7 @@ function EditorContent() {
   // The pasteboard (area outside every artboard) is a real Fabric canvas
   // fill, not CSS — it has to be updated on the canvas object itself
   // whenever the theme changes, not just via a className.
-  const pasteboardBgFor = (t: 'light' | 'dark') => (t === 'dark' ? '#2B2B2B' : PASTEBOARD_BG);
+  const pasteboardBgFor = (t: 'light' | 'dark') => (t === 'dark' ? '#1C1930' : '#ECE8F4');
 
   // The editor is a protected route: a logged-out visitor who lands here
   // directly (typed URL, bookmark, back button) must be bounced to login
@@ -370,6 +371,12 @@ function EditorContent() {
   const height = parseInt(searchParams.get('h') || '1080');
   const urlDesignId = searchParams.get('designId');
   const cameFromTemplate = searchParams.get('templateId');
+  // Admin "Edit design" from the Template Manager: the template's own
+  // content is edited and saved back to the template (with a version
+  // snapshot) instead of becoming a customer copy.
+  const wantsTemplateEdit = searchParams.get('editTemplate') === '1';
+  const [templateEdit, setTemplateEdit] = useState<TemplateRecord | null>(null);
+  const [templateSave, setTemplateSave] = useState<{ busy: boolean; msg: string | null }>({ busy: false, msg: null });
   // A .mtd project opened from the customer's computer (see lib/mtd/).
   // Its tab id IS this key; the parsed file waits in lib/mtd/handoff.
   const urlLocalDoc = searchParams.get('localDoc');
@@ -1712,7 +1719,14 @@ function EditorContent() {
         // unset, so the first Save creates a brand-new design rather
         // than overwriting the template itself (copy-on-use, matching
         // how every template-based design tool works).
-        fetchTemplateById(cameFromTemplate).then((template) => {
+        fetchTemplateById(cameFromTemplate).then(async (template) => {
+          if (template && wantsTemplateEdit) {
+            const { data: auth } = await supabase.auth.getUser();
+            if (auth.user) {
+              const { data: prof } = await supabase.from('profiles').select('is_admin').eq('id', auth.user.id).single();
+              if (prof?.is_admin) setTemplateEdit({ ...template, canvasJson: undefined });
+            }
+          }
           if (template?.canvasJson) {
             suppressHistoryRef.current = true;
             canvas.loadFromJSON(template.canvasJson, function () {
@@ -3217,6 +3231,36 @@ function EditorContent() {
 
   const saveDesign = () => performSave(designId, designName);
 
+  // Saves the canvas back into the template being edited (admins only;
+  // RLS enforces it server-side too). The previous content is kept as a
+  // version first, so nothing is ever lost.
+  const saveToTemplate = async () => {
+    const canvas = fabricCanvasRef.current;
+    const firstAb = artboardsRef.current[0];
+    if (!templateEdit?.id || !canvas || !firstAb) return;
+    setTemplateSave({ busy: true, msg: null });
+    try {
+      const { data: auth } = await supabase.auth.getUser();
+      if (auth.user) {
+        const next = await createVersion(templateEdit, auth.user.id, 'Before design edit');
+        if (next) setTemplateEdit((t) => (t ? { ...t, currentVersion: next } : t));
+      }
+      const canvasJson = canvas.toJSON(SAVE_JSON_PROPS);
+      const hidden = hideGuidesForExport();
+      let image: string | null = null;
+      try {
+        image = canvas.toDataURL({ format: 'jpeg', quality: 0.88, ...getArtboardExportOptions(firstAb, 1200 / Math.max(firstAb.width, firstAb.height, 1)) });
+      } finally {
+        restoreGuidesAfterExport(hidden);
+      }
+      const ok = await setTemplateContent(templateEdit.id, templateEdit.currentVersion || '1.0', canvasJson, image);
+      setTemplateSave({ busy: false, msg: ok ? 'Template saved. Customers now get the updated design.' : 'Could not save the template. Please try again.' });
+    } catch (err) {
+      console.error('Template save failed:', err);
+      setTemplateSave({ busy: false, msg: 'Could not save the template. Please try again.' });
+    }
+  };
+
   // ---------- .mtd project files on the customer's computer ----------
 
   const makeThumbnail = (): string | null => {
@@ -4337,7 +4381,7 @@ function EditorContent() {
           hydration's server/client text comparison on a plain child. */}
       <style dangerouslySetInnerHTML={{ __html: allFontFacesCSS() }} />
       {checkingAuth && (
-        <div className="fixed inset-0 z-[999] flex items-center justify-center bg-gray-50 text-gray-400">
+        <div className="fixed inset-0 z-[999] flex items-center justify-center bg-mt-bg text-mt-faint">
           Checking access...
         </div>
       )}
@@ -4353,7 +4397,7 @@ function EditorContent() {
           rgb(249,250,251) even with the `dark` class present and
           localStorage's shared theme genuinely set to 'dark'). */}
       <div className={isDark ? 'dark' : ''}>
-      <main className="h-screen w-full overflow-x-hidden flex flex-col bg-gray-50 dark:bg-[#1E1E1E] transition-colors duration-150">
+      <main className="h-screen w-full overflow-x-hidden flex flex-col bg-mt-bg dark:bg-mt-bg transition-colors duration-150">
       <MenuBar
         menus={photoOnlySession ? [] : menus}
         leading={
@@ -4365,7 +4409,7 @@ function EditorContent() {
 
       <TabBar tabs={tabs} activeTabId={activeTabId} onSwitch={switchTab} onClose={closeTab} onAdd={() => setShowOpenDialog(true)} />
 
-      <div className="flex items-center justify-between gap-3 px-4 py-2 border-b bg-white dark:bg-[#242424] dark:border-[#3A3A3A] transition-colors duration-150 overflow-x-auto">
+      <div className="flex items-center justify-between gap-3 px-4 py-2 border-b bg-mt-surface dark:bg-mt-surface dark:border-mt-border transition-colors duration-150 overflow-x-auto">
         <div className="flex items-center gap-2 shrink-0">
           <BackBar
             href={cameFromTemplate ? '/templates' : '/dashboard'}
@@ -4380,7 +4424,7 @@ function EditorContent() {
             setDesignName(name);
             setTabs((ts) => ts.map((t) => (t.id === activeTabIdRef.current ? { ...t, name } : t)));
           }}
-          className="text-sm border rounded px-2 py-1 w-48 text-center shrink-0 dark:bg-[#2B2B2B] dark:border-[#3A3A3A] dark:text-gray-100"
+          className="text-sm border rounded px-2 py-1 w-48 text-center shrink-0 dark:bg-mt-surface dark:border-mt-border dark:text-mt-ink"
         />
 
         {!hideWorkspaceSwitcherForPhotoFirst && <WorkspaceSwitcher workspace={workspace} onSwitch={handleWorkspaceSwitch} />}
@@ -4394,7 +4438,7 @@ function EditorContent() {
             onClick={workspace === 'photo' ? () => photoEditorRef.current?.undo() : undo}
             disabled={workspace === 'photo' ? !photoCanUndo : !canUndo}
             title="Undo (Ctrl/Cmd+Z)"
-            className="px-2 py-1 border rounded disabled:opacity-30 dark:border-[#3A3A3A] dark:text-gray-200 dark:hover:bg-[#333333]"
+            className="px-2 py-1 border rounded disabled:opacity-30 dark:border-mt-border dark:text-mt-ink dark:hover:bg-mt-surface2"
           >
             ↶ Undo
           </button>
@@ -4402,29 +4446,22 @@ function EditorContent() {
             onClick={workspace === 'photo' ? () => photoEditorRef.current?.redo() : redo}
             disabled={workspace === 'photo' ? !photoCanRedo : !canRedo}
             title="Redo (Ctrl/Cmd+Shift+Z)"
-            className="px-2 py-1 border rounded disabled:opacity-30 dark:border-[#3A3A3A] dark:text-gray-200 dark:hover:bg-[#333333]"
+            className="px-2 py-1 border rounded disabled:opacity-30 dark:border-mt-border dark:text-mt-ink dark:hover:bg-mt-surface2"
           >
             ↷ Redo
           </button>
-          <button onClick={() => setShowShortcuts(true)} title="Keyboard shortcuts (?)" className="p-1.5 border rounded text-gray-500 hover:bg-gray-50 dark:border-[#3A3A3A] dark:text-gray-300 dark:hover:bg-[#333333]">
+          <button onClick={() => setShowShortcuts(true)} title="Keyboard shortcuts (?)" className="p-1.5 border rounded text-mt-muted hover:bg-mt-surface2 dark:border-mt-border dark:text-mt-muted dark:hover:bg-mt-surface2">
             <Keyboard size={16} />
           </button>
-          <button
-            onClick={toggleTheme}
-            title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
-            aria-label={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
-            className="p-1.5 border rounded text-gray-500 hover:bg-gray-50 dark:border-[#3A3A3A] dark:text-gray-300 dark:hover:bg-[#333333]"
-          >
-            {isDark ? <Sun size={16} /> : <Moon size={16} />}
-          </button>
+          <ThemeSwitch theme={theme} onToggle={toggleTheme} size="sm" />
         </div>
 
         <div className="flex items-center gap-3 shrink-0">
-          <label className="text-xs text-gray-500 dark:text-gray-400">Units</label>
+          <label className="text-xs text-mt-muted dark:text-mt-muted">Units</label>
           <select
             value={unit}
             onChange={(e) => setUnit(e.target.value as DocUnit)}
-            className="text-xs border rounded px-1.5 py-1 dark:bg-[#2B2B2B] dark:border-[#3A3A3A] dark:text-gray-100"
+            className="text-xs border rounded px-1.5 py-1 dark:bg-mt-surface dark:border-mt-border dark:text-mt-ink"
           >
             <option value="px">px</option>
             <option value="mm">mm</option>
@@ -4435,9 +4472,9 @@ function EditorContent() {
         </div>
 
         <div className="flex items-center gap-3 shrink-0">
-          <button onClick={() => applyZoom(zoom - 10)} className="px-2 py-1 border rounded dark:border-[#3A3A3A] dark:text-gray-200 dark:hover:bg-[#333333]">-</button>
-          <span className="text-sm text-gray-600 w-12 text-center dark:text-gray-300">{zoom}%</span>
-          <button onClick={() => applyZoom(zoom + 10)} className="px-2 py-1 border rounded dark:border-[#3A3A3A] dark:text-gray-200 dark:hover:bg-[#333333]">+</button>
+          <button onClick={() => applyZoom(zoom - 10)} className="px-2 py-1 border rounded dark:border-mt-border dark:text-mt-ink dark:hover:bg-mt-surface2">-</button>
+          <span className="text-sm text-mt-muted w-12 text-center dark:text-mt-muted">{zoom}%</span>
+          <button onClick={() => applyZoom(zoom + 10)} className="px-2 py-1 border rounded dark:border-mt-border dark:text-mt-ink dark:hover:bg-mt-surface2">+</button>
         </div>
 
         <div className="flex items-center gap-2 relative shrink-0">
@@ -4449,9 +4486,9 @@ function EditorContent() {
                 : saveStatus === 'error'
                 ? 'text-red-600 bg-red-50'
                 : saveStatus === 'saving'
-                ? 'text-gray-500 bg-gray-50'
+                ? 'text-mt-muted bg-mt-bg'
                 : saveStatus === 'unsaved'
-                ? 'text-gray-400 bg-gray-50'
+                ? 'text-mt-faint bg-mt-bg'
                 : saveStatus === 'saved'
                 ? 'text-green-600 bg-green-50'
                 : 'text-transparent')
@@ -4473,7 +4510,7 @@ function EditorContent() {
                 : 'Saved'
               : ''}
           </span>
-          <button onClick={() => setShowExportDialog(true)} disabled={exporting} className="border border-gray-300 text-gray-700 px-4 py-2 rounded-full text-sm font-semibold disabled:opacity-50 dark:border-[#3A3A3A] dark:text-gray-200 dark:hover:bg-[#333333]">
+          <button onClick={() => setShowExportDialog(true)} disabled={exporting} className="border border-mt-border text-mt-ink px-4 py-2 rounded-full text-sm font-semibold disabled:opacity-50 dark:border-mt-border dark:text-mt-ink dark:hover:bg-mt-surface2">
             {exporting ? 'Exporting...' : 'Export'}
           </button>
           <button onClick={saveDesign} disabled={saving} className="bg-brand-gradient text-white px-4 py-2 rounded-full text-sm font-semibold disabled:opacity-50">
@@ -4504,6 +4541,25 @@ function EditorContent() {
         />
       )}
       {showCloudOpen && <CloudOpenDialog onOpened={openCloudResult} onClose={() => setShowCloudOpen(false)} />}
+
+      {templateEdit && (
+        <div className="fixed top-3 left-1/2 -translate-x-1/2 z-[75] max-w-xl w-[calc(100%-2rem)] bg-[#14121F] text-white text-sm rounded-xl shadow-xl px-4 py-2.5 flex items-center gap-3">
+          <span className="flex-1 min-w-0 truncate">
+            Editing template: <strong>{templateEdit.name}</strong>
+            {templateSave.msg && <span className="block text-xs text-white/70 truncate">{templateSave.msg}</span>}
+          </span>
+          <button
+            onClick={saveToTemplate}
+            disabled={templateSave.busy}
+            className="shrink-0 text-xs font-semibold bg-brand-gradient rounded-full px-4 py-2 disabled:opacity-60"
+          >
+            {templateSave.busy ? 'Saving…' : 'Save to template'}
+          </button>
+          <a href="/admin/templates" className="shrink-0 text-xs text-white/70 hover:text-white underline">
+            Back
+          </a>
+        </div>
+      )}
 
       {localNotice && (
         <div className="fixed bottom-5 left-1/2 -translate-x-1/2 z-[70] max-w-md w-[calc(100%-2rem)] bg-[#14121F] text-white text-sm rounded-xl shadow-xl px-4 py-3 flex items-start gap-3">
@@ -4589,10 +4645,10 @@ function EditorContent() {
           <ContextMenu x={contextMenu.x} y={contextMenu.y} items={contextMenuItems()} onClose={() => setContextMenu(null)} />
         )}
 
-        <div className="w-64 bg-white border-l flex flex-col overflow-y-auto dark:bg-[#242424] dark:border-[#3A3A3A] transition-colors duration-150">
+        <div className="w-64 bg-mt-surface border-l flex flex-col overflow-y-auto dark:bg-mt-surface dark:border-mt-border transition-colors duration-150">
           {isPanelOpen('properties') && (
-            <div className="p-3 border-b dark:border-[#3A3A3A]">
-              <p className="font-semibold text-gray-700 mb-3 text-sm dark:text-gray-200">Properties</p>
+            <div className="p-3 border-b dark:border-mt-border">
+              <p className="font-semibold text-mt-ink mb-3 text-sm dark:text-mt-ink">Properties</p>
               <PropertiesPanel
                 activeTool={activeTool}
                 selected={selected}

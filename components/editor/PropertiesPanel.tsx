@@ -97,10 +97,10 @@ function PrecisionNumberInput({
             commit(String(next), e.target as HTMLInputElement);
           }
         }}
-        className={`w-full text-xs border rounded px-2 py-1 text-right disabled:opacity-40 dark:bg-[#2B2B2B] dark:border-[#3A3A3A] dark:text-gray-100 ${className}`}
+        className={`w-full text-xs border rounded px-2 py-1 text-right disabled:opacity-40 dark:bg-mt-surface dark:border-mt-border dark:text-mt-ink ${className}`}
       />
       {suffix && (
-        <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-gray-400">
+        <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-mt-faint">
           {suffix}
         </span>
       )}
@@ -133,11 +133,11 @@ export function PropertiesPanel({
   onReplaceImage,
   onEditPhoto,
 }: Props) {
-  const kbd = 'bg-gray-100 dark:bg-[#333333] border dark:border-[#3A3A3A] rounded px-1';
+  const kbd = 'bg-mt-surface2 dark:bg-mt-surface2 border dark:border-mt-border rounded px-1';
 
   if (activeTool === 'pen') {
     return (
-      <p className="text-xs text-gray-500 dark:text-gray-400">
+      <p className="text-xs text-mt-muted dark:text-mt-muted">
         Pen tool active. Click to place anchors, click + drag for curved handles. Hold{' '}
         <kbd className={kbd}>Alt/Option</kbd> while dragging a handle to
         break it (curve one side only). Press <kbd className={kbd}>Enter</kbd>{' '}
@@ -150,7 +150,7 @@ export function PropertiesPanel({
   if (activeTool === 'direct' && (!selected || selected.__isAnchorHandle)) {
     if (selected?.__isAnchorHandle && !selected.__isMidpointMarker) {
       return (
-        <p className="text-xs text-gray-500 dark:text-gray-400">
+        <p className="text-xs text-mt-muted dark:text-mt-muted">
           {selected.__isHandlePoint ? 'Curve handle selected. Drag to reshape the curve.' : (
             <>
               Anchor point selected. Drag to move it,{' '}
@@ -163,7 +163,7 @@ export function PropertiesPanel({
       );
     }
     return (
-      <p className="text-xs text-gray-500 dark:text-gray-400">
+      <p className="text-xs text-mt-muted dark:text-mt-muted">
         Direct Selection active. Select a vector path to edit it: drag an anchor (blue outline) or a
         curve handle (filled blue) to reshape it. <kbd className={kbd}>Alt/Option</kbd>+click
         an anchor to toggle it between a sharp corner and a smooth curve point. Click a green square on a
@@ -175,7 +175,7 @@ export function PropertiesPanel({
 
   if (activeTool === 'pan') {
     return (
-      <p className="text-xs text-gray-500 dark:text-gray-400">
+      <p className="text-xs text-mt-muted dark:text-mt-muted">
         Hand tool active. Click and drag anywhere on the pasteboard to pan around the canvas.
       </p>
     );
@@ -183,17 +183,17 @@ export function PropertiesPanel({
 
   if (activeTool === 'artboard') {
     return (
-      <p className="text-xs text-gray-500 dark:text-gray-400">
+      <p className="text-xs text-mt-muted dark:text-mt-muted">
         Artboard tool active. Drag on the pasteboard to create a new artboard, or click and drag an
         existing one to move/resize it. Rename, duplicate, delete, and export artboards from the{' '}
-        <span className="font-medium text-gray-600 dark:text-gray-300">Artboards</span> panel.
+        <span className="font-medium text-mt-muted dark:text-mt-muted">Artboards</span> panel.
       </p>
     );
   }
 
   if (isDrawTool(activeTool)) {
     return (
-      <p className="text-xs text-gray-500 dark:text-gray-400">
+      <p className="text-xs text-mt-muted dark:text-mt-muted">
         {TOOL_LABELS[activeTool as DrawTool]} tool active. Click and drag on the canvas to draw. Hold{' '}
         <kbd className={kbd}>Shift</kbd> to constrain proportions,{' '}
         <kbd className={kbd}>Alt/Option</kbd> to draw from the center.{' '}
@@ -203,7 +203,7 @@ export function PropertiesPanel({
   }
 
   if (!selected) {
-    return <p className="text-xs text-gray-400 dark:text-gray-500">Select an object to edit its properties.</p>;
+    return <p className="text-xs text-mt-faint dark:text-mt-muted">Select an object to edit its properties.</p>;
   }
 
   const isMultiple = selected.type === 'activeSelection';
@@ -241,15 +241,15 @@ export function PropertiesPanel({
       {!isMultiple && (
         <div
           key={`${selected.__uid || 'obj'}-${unit}`}
-          className="border rounded-lg p-3 bg-gray-50 dark:bg-[#2B2B2B] dark:border-[#3A3A3A] flex flex-col gap-2"
+          className="border rounded-lg p-3 bg-mt-bg dark:bg-mt-surface dark:border-mt-border flex flex-col gap-2"
         >
           <div className="flex items-center justify-between">
-            <p className="text-xs font-semibold text-gray-500 dark:text-gray-400">Transform</p>
+            <p className="text-xs font-semibold text-mt-muted dark:text-mt-muted">Transform</p>
             <button
               type="button"
               onClick={toggleLockRatio}
               title={selected.__lockRatio ? 'Unlock aspect ratio' : 'Lock aspect ratio'}
-              className={`hover:text-gray-700 dark:hover:text-gray-200 ${selected.__lockRatio ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400'}`}
+              className={`hover:text-mt-ink dark:hover:text-mt-ink ${selected.__lockRatio ? 'text-blue-600 dark:text-blue-400' : 'text-mt-faint'}`}
             >
               {selected.__lockRatio ? <Lock size={13} /> : <Unlock size={13} />}
             </button>
@@ -257,7 +257,7 @@ export function PropertiesPanel({
 
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="text-[10px] text-gray-500 dark:text-gray-400 block mb-0.5">X ({unit})</label>
+              <label className="text-[10px] text-mt-muted dark:text-mt-muted block mb-0.5">X ({unit})</label>
               <input
                 type="text"
                 disabled={isLocked}
@@ -267,11 +267,11 @@ export function PropertiesPanel({
                   if (!isNaN(val)) applyProp({ left: unitToPx(val, unit) });
                 }}
                 onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
-                className="w-full text-xs border rounded px-2 py-1 disabled:opacity-40 dark:bg-[#242424] dark:border-[#3A3A3A] dark:text-gray-100"
+                className="w-full text-xs border rounded px-2 py-1 disabled:opacity-40 dark:bg-mt-surface dark:border-mt-border dark:text-mt-ink"
               />
             </div>
             <div>
-              <label className="text-[10px] text-gray-500 dark:text-gray-400 block mb-0.5">Y ({unit})</label>
+              <label className="text-[10px] text-mt-muted dark:text-mt-muted block mb-0.5">Y ({unit})</label>
               <input
                 type="text"
                 disabled={isLocked}
@@ -281,11 +281,11 @@ export function PropertiesPanel({
                   if (!isNaN(val)) applyProp({ top: unitToPx(val, unit) });
                 }}
                 onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
-                className="w-full text-xs border rounded px-2 py-1 disabled:opacity-40 dark:bg-[#242424] dark:border-[#3A3A3A] dark:text-gray-100"
+                className="w-full text-xs border rounded px-2 py-1 disabled:opacity-40 dark:bg-mt-surface dark:border-mt-border dark:text-mt-ink"
               />
             </div>
             <div>
-              <label className="text-[10px] text-gray-500 dark:text-gray-400 block mb-0.5">W ({unit})</label>
+              <label className="text-[10px] text-mt-muted dark:text-mt-muted block mb-0.5">W ({unit})</label>
               <input
                 type="text"
                 disabled={isLocked}
@@ -295,11 +295,11 @@ export function PropertiesPanel({
                   if (!isNaN(val)) applyExactSize(unitToPx(val, unit), null);
                 }}
                 onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
-                className="w-full text-xs border rounded px-2 py-1 disabled:opacity-40 dark:bg-[#242424] dark:border-[#3A3A3A] dark:text-gray-100"
+                className="w-full text-xs border rounded px-2 py-1 disabled:opacity-40 dark:bg-mt-surface dark:border-mt-border dark:text-mt-ink"
               />
             </div>
             <div>
-              <label className="text-[10px] text-gray-500 dark:text-gray-400 block mb-0.5">H ({unit})</label>
+              <label className="text-[10px] text-mt-muted dark:text-mt-muted block mb-0.5">H ({unit})</label>
               <input
                 type="text"
                 disabled={isLocked || selected.type === 'textbox'}
@@ -310,13 +310,13 @@ export function PropertiesPanel({
                   if (!isNaN(val)) applyExactSize(null, unitToPx(val, unit));
                 }}
                 onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
-                className="w-full text-xs border rounded px-2 py-1 disabled:opacity-40 dark:bg-[#242424] dark:border-[#3A3A3A] dark:text-gray-100"
+                className="w-full text-xs border rounded px-2 py-1 disabled:opacity-40 dark:bg-mt-surface dark:border-mt-border dark:text-mt-ink"
               />
             </div>
           </div>
 
           <div>
-            <label className="text-[10px] text-gray-500 dark:text-gray-400 block mb-0.5">Rotation (°)</label>
+            <label className="text-[10px] text-mt-muted dark:text-mt-muted block mb-0.5">Rotation (°)</label>
             <input
               type="text"
               disabled={isLocked}
@@ -326,67 +326,67 @@ export function PropertiesPanel({
                 if (!isNaN(val)) applyProp({ angle: val });
               }}
               onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
-              className="w-full text-xs border rounded px-2 py-1 disabled:opacity-40 dark:bg-[#242424] dark:border-[#3A3A3A] dark:text-gray-100"
+              className="w-full text-xs border rounded px-2 py-1 disabled:opacity-40 dark:bg-mt-surface dark:border-mt-border dark:text-mt-ink"
             />
           </div>
         </div>
       )}
 
       <div>
-        <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">Align to Canvas</p>
+        <p className="text-xs font-semibold text-mt-muted dark:text-mt-muted mb-2">Align to Canvas</p>
         <div className="grid grid-cols-3 gap-1">
-          <button onClick={() => alignObject('left')} className="text-xs border rounded py-1 hover:bg-gray-50 dark:border-[#3A3A3A] dark:text-gray-200 dark:hover:bg-[#333333]">⟸</button>
-          <button onClick={() => alignObject('centerH')} className="text-xs border rounded py-1 hover:bg-gray-50 dark:border-[#3A3A3A] dark:text-gray-200 dark:hover:bg-[#333333]">↔</button>
-          <button onClick={() => alignObject('right')} className="text-xs border rounded py-1 hover:bg-gray-50 dark:border-[#3A3A3A] dark:text-gray-200 dark:hover:bg-[#333333]">⟹</button>
-          <button onClick={() => alignObject('top')} className="text-xs border rounded py-1 hover:bg-gray-50 dark:border-[#3A3A3A] dark:text-gray-200 dark:hover:bg-[#333333]">⟰</button>
-          <button onClick={() => alignObject('centerV')} className="text-xs border rounded py-1 hover:bg-gray-50 dark:border-[#3A3A3A] dark:text-gray-200 dark:hover:bg-[#333333]">↕</button>
-          <button onClick={() => alignObject('bottom')} className="text-xs border rounded py-1 hover:bg-gray-50 dark:border-[#3A3A3A] dark:text-gray-200 dark:hover:bg-[#333333]">⟱</button>
+          <button onClick={() => alignObject('left')} className="text-xs border rounded py-1 hover:bg-mt-surface2 dark:border-mt-border dark:text-mt-ink dark:hover:bg-mt-surface2">⟸</button>
+          <button onClick={() => alignObject('centerH')} className="text-xs border rounded py-1 hover:bg-mt-surface2 dark:border-mt-border dark:text-mt-ink dark:hover:bg-mt-surface2">↔</button>
+          <button onClick={() => alignObject('right')} className="text-xs border rounded py-1 hover:bg-mt-surface2 dark:border-mt-border dark:text-mt-ink dark:hover:bg-mt-surface2">⟹</button>
+          <button onClick={() => alignObject('top')} className="text-xs border rounded py-1 hover:bg-mt-surface2 dark:border-mt-border dark:text-mt-ink dark:hover:bg-mt-surface2">⟰</button>
+          <button onClick={() => alignObject('centerV')} className="text-xs border rounded py-1 hover:bg-mt-surface2 dark:border-mt-border dark:text-mt-ink dark:hover:bg-mt-surface2">↕</button>
+          <button onClick={() => alignObject('bottom')} className="text-xs border rounded py-1 hover:bg-mt-surface2 dark:border-mt-border dark:text-mt-ink dark:hover:bg-mt-surface2">⟱</button>
         </div>
       </div>
 
       {isMultiple && (
-        <button onClick={groupSelected} className="text-xs border rounded py-2 hover:bg-gray-50 dark:border-[#3A3A3A] dark:text-gray-200 dark:hover:bg-[#333333]">
+        <button onClick={groupSelected} className="text-xs border rounded py-2 hover:bg-mt-surface2 dark:border-mt-border dark:text-mt-ink dark:hover:bg-mt-surface2">
           Group Selection (Cmd+G)
         </button>
       )}
 
       {isMultiple && (
-        <div className="border rounded-lg p-2.5 bg-purple-50/50 dark:bg-purple-950/20 dark:border-[#3A3A3A] flex flex-col gap-2">
-          <p className="text-xs font-semibold text-gray-700 dark:text-gray-200">Shape Builder</p>
-          <p className="text-[10px] text-gray-500 dark:text-gray-400">
+        <div className="border rounded-lg p-2.5 bg-purple-50/50 dark:bg-purple-950/20 dark:border-mt-border flex flex-col gap-2">
+          <p className="text-xs font-semibold text-mt-ink dark:text-mt-ink">Shape Builder</p>
+          <p className="text-[10px] text-mt-muted dark:text-mt-muted">
             Combines the selected shapes into one real, editable vector path.
           </p>
           <div className="grid grid-cols-2 gap-1.5">
-            <button onClick={() => runShapeBuilder('union')} className="text-xs border rounded py-1.5 hover:bg-white dark:border-[#3A3A3A] dark:text-gray-200 dark:hover:bg-[#333333]">Unite</button>
-            <button onClick={() => runShapeBuilder('subtract')} className="text-xs border rounded py-1.5 hover:bg-white dark:border-[#3A3A3A] dark:text-gray-200 dark:hover:bg-[#333333]">Subtract</button>
-            <button onClick={() => runShapeBuilder('intersect')} className="text-xs border rounded py-1.5 hover:bg-white dark:border-[#3A3A3A] dark:text-gray-200 dark:hover:bg-[#333333]">Intersect</button>
-            <button onClick={() => runShapeBuilder('exclude')} className="text-xs border rounded py-1.5 hover:bg-white dark:border-[#3A3A3A] dark:text-gray-200 dark:hover:bg-[#333333]">Exclude</button>
+            <button onClick={() => runShapeBuilder('union')} className="text-xs border rounded py-1.5 hover:bg-mt-surface dark:border-mt-border dark:text-mt-ink dark:hover:bg-mt-surface2">Unite</button>
+            <button onClick={() => runShapeBuilder('subtract')} className="text-xs border rounded py-1.5 hover:bg-mt-surface dark:border-mt-border dark:text-mt-ink dark:hover:bg-mt-surface2">Subtract</button>
+            <button onClick={() => runShapeBuilder('intersect')} className="text-xs border rounded py-1.5 hover:bg-mt-surface dark:border-mt-border dark:text-mt-ink dark:hover:bg-mt-surface2">Intersect</button>
+            <button onClick={() => runShapeBuilder('exclude')} className="text-xs border rounded py-1.5 hover:bg-mt-surface dark:border-mt-border dark:text-mt-ink dark:hover:bg-mt-surface2">Exclude</button>
           </div>
         </div>
       )}
       {isGroup && (
-        <button onClick={ungroupSelected} className="text-xs border rounded py-2 hover:bg-gray-50 dark:border-[#3A3A3A] dark:text-gray-200 dark:hover:bg-[#333333]">
+        <button onClick={ungroupSelected} className="text-xs border rounded py-2 hover:bg-mt-surface2 dark:border-mt-border dark:text-mt-ink dark:hover:bg-mt-surface2">
           Ungroup (Cmd+Shift+G)
         </button>
       )}
 
       {isPath && (
-        <div className="border rounded-lg p-2.5 bg-blue-50/50 dark:bg-blue-950/20 dark:border-[#3A3A3A] flex flex-col gap-2">
-          <p className="text-xs font-semibold text-gray-700 dark:text-gray-200 flex items-center gap-1.5">
+        <div className="border rounded-lg p-2.5 bg-blue-50/50 dark:bg-blue-950/20 dark:border-mt-border flex flex-col gap-2">
+          <p className="text-xs font-semibold text-mt-ink dark:text-mt-ink flex items-center gap-1.5">
             <Scissors size={12} /> Path → Mask
           </p>
-          <p className="text-[10px] text-gray-500 dark:text-gray-400">
-            Press <kbd className={`${kbd} bg-white dark:bg-[#333333]`}>A</kbd> to switch to Direct Selection
+          <p className="text-[10px] text-mt-muted dark:text-mt-muted">
+            Press <kbd className={`${kbd} bg-mt-surface dark:bg-mt-surface2`}>A</kbd> to switch to Direct Selection
             and drag anchors to reshape this path.
           </p>
           {imageLayerOptions.length === 0 ? (
-            <p className="text-[10px] text-gray-400 dark:text-gray-500">Upload an image to mask it with this path.</p>
+            <p className="text-[10px] text-mt-faint dark:text-mt-muted">Upload an image to mask it with this path.</p>
           ) : (
             <>
               <select
                 value={maskTargetId}
                 onChange={(e) => setMaskTargetId(e.target.value)}
-                className="w-full text-xs border rounded px-2 py-1 dark:bg-[#2B2B2B] dark:border-[#3A3A3A] dark:text-gray-100"
+                className="w-full text-xs border rounded px-2 py-1 dark:bg-mt-surface dark:border-mt-border dark:text-mt-ink"
               >
                 <option value="">Choose target image…</option>
                 {imageLayerOptions.map((img, i) => (
@@ -409,7 +409,7 @@ export function PropertiesPanel({
 
       <div>
         <div className="flex items-center justify-between mb-1">
-          <label className="text-xs font-semibold text-gray-500 dark:text-gray-400">Opacity</label>
+          <label className="text-xs font-semibold text-mt-muted dark:text-mt-muted">Opacity</label>
           <input
             key={`opacity-${selected.__uid || 'obj'}`}
             type="text"
@@ -426,7 +426,7 @@ export function PropertiesPanel({
               }
             }}
             onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
-            className="w-14 text-xs border rounded px-1.5 py-0.5 text-right disabled:opacity-40 dark:bg-[#2B2B2B] dark:border-[#3A3A3A] dark:text-gray-100"
+            className="w-14 text-xs border rounded px-1.5 py-0.5 text-right disabled:opacity-40 dark:bg-mt-surface dark:border-mt-border dark:text-mt-ink"
           />
         </div>
         <input
@@ -455,7 +455,7 @@ export function PropertiesPanel({
       {!isText && !isImage && hasFillStroke && (
         <>
           <div>
-            <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 block mb-1">Fill Type</label>
+            <label className="text-xs font-semibold text-mt-muted dark:text-mt-muted block mb-1">Fill Type</label>
             <select
               value={isGradientFill ? gradType : isNoneFill ? 'none' : 'solid'}
               disabled={isLocked}
@@ -474,7 +474,7 @@ export function PropertiesPanel({
                   );
                 }
               }}
-              className="w-full text-xs border rounded px-2 py-1 disabled:opacity-40 dark:bg-[#2B2B2B] dark:border-[#3A3A3A] dark:text-gray-100"
+              className="w-full text-xs border rounded px-2 py-1 disabled:opacity-40 dark:bg-mt-surface dark:border-mt-border dark:text-mt-ink"
             >
               <option value="none">None</option>
               <option value="solid">Solid</option>
@@ -484,7 +484,7 @@ export function PropertiesPanel({
           </div>
 
           {isGradientFill ? (
-            <div className="border rounded-lg p-2.5 bg-gray-50 dark:bg-[#2B2B2B] dark:border-[#3A3A3A] flex flex-col gap-2">
+            <div className="border rounded-lg p-2.5 bg-mt-bg dark:bg-mt-surface dark:border-mt-border flex flex-col gap-2">
               <GradientPresetPicker
                 disabled={isLocked}
                 onPick={(p) => applyGradientFill(gradType, p.c1, p.c2, gradAngleRef.current)}
@@ -511,7 +511,7 @@ export function PropertiesPanel({
               </div>
               {gradType === 'linear' && (
                 <div>
-                  <label className="text-[10px] text-gray-500 dark:text-gray-400 block mb-1">Angle</label>
+                  <label className="text-[10px] text-mt-muted dark:text-mt-muted block mb-1">Angle</label>
                   <input
                     type="range"
                     min={0}
@@ -552,7 +552,7 @@ export function PropertiesPanel({
           />
 
           <div>
-            <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 block mb-1">Stroke Width ({selected.strokeWidth || 0})</label>
+            <label className="text-xs font-semibold text-mt-muted dark:text-mt-muted block mb-1">Stroke Width ({selected.strokeWidth || 0})</label>
             <input
               type="range"
               min={0}
@@ -567,7 +567,7 @@ export function PropertiesPanel({
 
           {selected.type === 'rect' && (
             <div>
-              <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 block mb-1">Corner Radius ({selected.rx || 0})</label>
+              <label className="text-xs font-semibold text-mt-muted dark:text-mt-muted block mb-1">Corner Radius ({selected.rx || 0})</label>
               <input
                 type="range"
                 min={0}
@@ -588,16 +588,16 @@ export function PropertiesPanel({
           <button
             disabled={isLocked}
             onClick={onEditPhoto}
-            className="text-xs font-semibold border rounded py-1.5 hover:bg-gray-50 disabled:opacity-40 bg-gray-800 text-white hover:bg-gray-700 dark:bg-gray-700 dark:hover:bg-gray-600 dark:border-[#3A3A3A]"
+            className="text-xs font-semibold border rounded py-1.5 hover:bg-mt-surface2 disabled:opacity-40 bg-mt-accent text-white hover:bg-mt-accent/90 dark:bg-gray-700 dark:hover:bg-gray-600 dark:border-mt-border"
           >
             Edit Photo
           </button>
-          <p className="text-[10px] text-gray-400 dark:text-gray-500 -mt-2">
+          <p className="text-[10px] text-mt-faint dark:text-mt-muted -mt-2">
             Opens the Photo Editor workspace for crop, adjustments, pixel selection/erase and
             background removal — Apply syncs the result back into this exact layer.
           </p>
           <label
-            className={`flex items-center justify-center gap-1.5 text-xs font-semibold border rounded py-1.5 cursor-pointer hover:bg-gray-50 dark:border-[#3A3A3A] dark:text-gray-200 dark:hover:bg-[#333333] ${
+            className={`flex items-center justify-center gap-1.5 text-xs font-semibold border rounded py-1.5 cursor-pointer hover:bg-mt-surface2 dark:border-mt-border dark:text-mt-ink dark:hover:bg-mt-surface2 ${
               isLocked ? 'opacity-40 pointer-events-none' : ''
             }`}
           >
@@ -613,15 +613,15 @@ export function PropertiesPanel({
               }}
             />
           </label>
-          <p className="text-[10px] text-gray-400 dark:text-gray-500 -mt-2">
+          <p className="text-[10px] text-mt-faint dark:text-mt-muted -mt-2">
             Swaps this layer's photo in place — same position, size and crop. The new image is scaled
             proportionally to fill the frame, never stretched.
           </p>
           <div className="grid grid-cols-2 gap-1">
-            <button disabled={isLocked} onClick={() => applyProp({ flipX: !selected.flipX })} className="text-xs border rounded py-1 hover:bg-gray-50 disabled:opacity-40 dark:border-[#3A3A3A] dark:text-gray-200 dark:hover:bg-[#333333]">
+            <button disabled={isLocked} onClick={() => applyProp({ flipX: !selected.flipX })} className="text-xs border rounded py-1 hover:bg-mt-surface2 disabled:opacity-40 dark:border-mt-border dark:text-mt-ink dark:hover:bg-mt-surface2">
               Flip H
             </button>
-            <button disabled={isLocked} onClick={() => applyProp({ flipY: !selected.flipY })} className="text-xs border rounded py-1 hover:bg-gray-50 disabled:opacity-40 dark:border-[#3A3A3A] dark:text-gray-200 dark:hover:bg-[#333333]">
+            <button disabled={isLocked} onClick={() => applyProp({ flipY: !selected.flipY })} className="text-xs border rounded py-1 hover:bg-mt-surface2 disabled:opacity-40 dark:border-mt-border dark:text-mt-ink dark:hover:bg-mt-surface2">
               Flip V
             </button>
           </div>
@@ -630,7 +630,7 @@ export function PropertiesPanel({
               Remove Mask
             </button>
           ) : (
-            <p className="text-[10px] text-gray-400 dark:text-gray-500">
+            <p className="text-[10px] text-mt-faint dark:text-mt-muted">
               Draw a closed path with the Pen tool, then apply it as a mask from the path's properties.
             </p>
           )}
@@ -689,10 +689,10 @@ function TextControls({
   return (
     <>
       <div>
-        <p className="text-[11px] font-bold uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-2">Character</p>
+        <p className="text-[11px] font-bold uppercase tracking-wide text-mt-faint dark:text-mt-muted mb-2">Character</p>
         <div className="flex flex-col gap-3">
           <div>
-            <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 block mb-1">Font</label>
+            <label className="text-xs font-semibold text-mt-muted dark:text-mt-muted block mb-1">Font</label>
             <FontPicker
               value={font.mixed ? undefined : font.value || 'Arial'}
               mixed={font.mixed}
@@ -703,7 +703,7 @@ function TextControls({
 
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 block mb-1">Size</label>
+              <label className="text-xs font-semibold text-mt-muted dark:text-mt-muted block mb-1">Size</label>
               <PrecisionNumberInput
                 value={size.mixed ? undefined : size.value ?? 40}
                 min={1}
@@ -715,7 +715,7 @@ function TextControls({
               />
             </div>
             <div>
-              <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 block mb-1">Baseline</label>
+              <label className="text-xs font-semibold text-mt-muted dark:text-mt-muted block mb-1">Baseline</label>
               <PrecisionNumberInput
                 value={baseline.mixed ? undefined : baseline.value ?? 0}
                 min={-500}
@@ -743,7 +743,7 @@ function TextControls({
               disabled={isLocked}
               onClick={() => applyCharProp({ fontWeight: isBold ? 'normal' : 'bold' })}
               title="Bold"
-              className={`flex-1 text-xs font-bold border rounded py-1 disabled:opacity-40 dark:border-[#3A3A3A] dark:text-gray-200 ${isBold ? 'bg-gray-200 dark:bg-[#3A3A3A]' : 'hover:bg-gray-50 dark:hover:bg-[#333333]'}`}
+              className={`flex-1 text-xs font-bold border rounded py-1 disabled:opacity-40 dark:border-mt-border dark:text-mt-ink ${isBold ? 'bg-mt-surface2 dark:bg-mt-surface2' : 'hover:bg-mt-surface2 dark:hover:bg-mt-surface2'}`}
             >
               B
             </button>
@@ -751,7 +751,7 @@ function TextControls({
               disabled={isLocked}
               onClick={() => applyCharProp({ fontStyle: isItalic ? 'normal' : 'italic' })}
               title="Italic"
-              className={`flex-1 text-xs italic border rounded py-1 disabled:opacity-40 dark:border-[#3A3A3A] dark:text-gray-200 ${isItalic ? 'bg-gray-200 dark:bg-[#3A3A3A]' : 'hover:bg-gray-50 dark:hover:bg-[#333333]'}`}
+              className={`flex-1 text-xs italic border rounded py-1 disabled:opacity-40 dark:border-mt-border dark:text-mt-ink ${isItalic ? 'bg-mt-surface2 dark:bg-mt-surface2' : 'hover:bg-mt-surface2 dark:hover:bg-mt-surface2'}`}
             >
               I
             </button>
@@ -759,12 +759,12 @@ function TextControls({
               disabled={isLocked}
               onClick={() => applyCharProp({ underline: !isUnderline })}
               title="Underline"
-              className={`flex-1 text-xs underline border rounded py-1 disabled:opacity-40 dark:border-[#3A3A3A] dark:text-gray-200 ${isUnderline ? 'bg-gray-200 dark:bg-[#3A3A3A]' : 'hover:bg-gray-50 dark:hover:bg-[#333333]'}`}
+              className={`flex-1 text-xs underline border rounded py-1 disabled:opacity-40 dark:border-mt-border dark:text-mt-ink ${isUnderline ? 'bg-mt-surface2 dark:bg-mt-surface2' : 'hover:bg-mt-surface2 dark:hover:bg-mt-surface2'}`}
             >
               U
             </button>
           </div>
-          <p className="text-[10px] text-gray-400 dark:text-gray-500 -mt-1">
+          <p className="text-[10px] text-mt-faint dark:text-mt-muted -mt-1">
             Highlight part of the text (double-click to enter editing) to format only that selection —
             with nothing selected, changes apply to the whole text box.
           </p>
@@ -772,17 +772,17 @@ function TextControls({
       </div>
 
       <div>
-        <p className="text-[11px] font-bold uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-2">Paragraph</p>
+        <p className="text-[11px] font-bold uppercase tracking-wide text-mt-faint dark:text-mt-muted mb-2">Paragraph</p>
         <div className="flex flex-col gap-3">
           <div>
-            <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 block mb-1">Alignment</label>
+            <label className="text-xs font-semibold text-mt-muted dark:text-mt-muted block mb-1">Alignment</label>
             <div className="grid grid-cols-4 gap-1">
               {['left', 'center', 'right', 'justify'].map((a) => (
                 <button
                   key={a}
                   disabled={isLocked}
                   onClick={() => applyProp({ textAlign: a })}
-                  className={`text-xs border rounded py-1 disabled:opacity-40 dark:border-[#3A3A3A] dark:text-gray-200 ${selected.textAlign === a ? 'bg-gray-200 dark:bg-[#3A3A3A]' : 'hover:bg-gray-50 dark:hover:bg-[#333333]'}`}
+                  className={`text-xs border rounded py-1 disabled:opacity-40 dark:border-mt-border dark:text-mt-ink ${selected.textAlign === a ? 'bg-mt-surface2 dark:bg-mt-surface2' : 'hover:bg-mt-surface2 dark:hover:bg-mt-surface2'}`}
                 >
                   {a[0].toUpperCase()}
                 </button>
@@ -792,7 +792,7 @@ function TextControls({
 
           <div className="grid grid-cols-2 gap-2 items-end">
             <div>
-              <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 block mb-1">Tracking</label>
+              <label className="text-xs font-semibold text-mt-muted dark:text-mt-muted block mb-1">Tracking</label>
               <PrecisionNumberInput
                 value={selected.charSpacing || 0}
                 min={-500}
@@ -803,7 +803,7 @@ function TextControls({
               />
             </div>
             <div>
-              <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 block mb-1">Leading</label>
+              <label className="text-xs font-semibold text-mt-muted dark:text-mt-muted block mb-1">Leading</label>
               <PrecisionNumberInput
                 value={selected.lineHeight ?? 1.16}
                 min={0.1}
@@ -817,7 +817,7 @@ function TextControls({
           <button
             disabled={isLocked}
             onClick={() => applyProp({ lineHeight: 1.16 })}
-            className="text-[10px] text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 -mt-2 self-start disabled:opacity-40"
+            className="text-[10px] text-mt-muted dark:text-mt-muted hover:text-mt-ink dark:hover:text-mt-ink -mt-2 self-start disabled:opacity-40"
           >
             Reset leading to Auto (1.16)
           </button>

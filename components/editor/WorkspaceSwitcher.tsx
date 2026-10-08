@@ -13,16 +13,16 @@ interface WorkspaceSwitcherProps {
 // in-progress crop/adjustments, and without leaving the page.
 export function WorkspaceSwitcher({ workspace, onSwitch }: WorkspaceSwitcherProps) {
   return (
-    <div className="flex items-center bg-gray-100 dark:bg-[#1E1E1E] rounded-full p-0.5 text-xs font-medium">
+    <div className="flex items-center bg-mt-surface2 dark:bg-mt-bg rounded-full p-0.5 text-xs font-medium">
       <button
         onClick={() => onSwitch('design')}
-        className={`px-3 py-1 rounded-full ${workspace === 'design' ? 'bg-white dark:bg-[#333333] shadow text-gray-800 dark:text-gray-100' : 'text-gray-500 dark:text-gray-400'}`}
+        className={`px-3 py-1 rounded-full ${workspace === 'design' ? 'bg-mt-surface dark:bg-mt-surface2 shadow text-mt-ink dark:text-mt-ink' : 'text-mt-muted dark:text-mt-muted'}`}
       >
         Main Design
       </button>
       <button
         onClick={() => onSwitch('photo')}
-        className={`px-3 py-1 rounded-full ${workspace === 'photo' ? 'bg-white dark:bg-[#333333] shadow text-gray-800 dark:text-gray-100' : 'text-gray-500 dark:text-gray-400'}`}
+        className={`px-3 py-1 rounded-full ${workspace === 'photo' ? 'bg-mt-surface dark:bg-mt-surface2 shadow text-mt-ink dark:text-mt-ink' : 'text-mt-muted dark:text-mt-muted'}`}
       >
         Photo Editing
       </button>

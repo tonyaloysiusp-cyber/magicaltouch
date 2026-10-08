@@ -67,11 +67,11 @@ export function ContextMenu({ x, y, items, onClose }: Props) {
       ref={ref}
       data-testid="context-menu"
       style={{ position: 'fixed', left: Math.max(4, left), top: Math.max(4, top), zIndex: 100 }}
-      className="min-w-[190px] bg-white dark:bg-[#2B2B2B] border dark:border-[#3A3A3A] rounded-md shadow-lg py-1 text-[13px] select-none"
+      className="min-w-[190px] bg-mt-surface dark:bg-mt-surface border dark:border-mt-border rounded-md shadow-lg py-1 text-[13px] select-none"
     >
       {items.map((item, i) =>
         isDivider(item) ? (
-          <div key={i} className="my-1 border-t border-gray-100 dark:border-[#3A3A3A]" />
+          <div key={i} className="my-1 border-t border-mt-border dark:border-mt-border" />
         ) : (
           <button
             key={item.label}
@@ -82,10 +82,10 @@ export function ContextMenu({ x, y, items, onClose }: Props) {
             }}
             className={`w-full text-left px-3 py-1.5 ${
               item.disabled
-                ? 'text-gray-300 dark:text-gray-600 cursor-default'
+                ? 'text-mt-faint dark:text-mt-faint cursor-default'
                 : item.danger
                 ? 'text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30'
-                : 'text-gray-700 dark:text-gray-200 hover:bg-purple-50 dark:hover:bg-[#333333]'
+                : 'text-mt-ink dark:text-mt-ink hover:bg-purple-50 dark:hover:bg-mt-surface2'
             }`}
           >
             {item.label}

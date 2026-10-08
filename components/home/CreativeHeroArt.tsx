@@ -1,56 +1,104 @@
 'use client';
 
-import { Sparkles, Wand2 } from 'lucide-react';
-import { AnimatedDesignBackground } from './AnimatedDesignBackground';
+import { useEffect, useRef } from 'react';
+import { Sparkles, Wand2, Layers, Palette } from 'lucide-react';
 
 const SWATCHES = ['#EC1E79', '#8B6FC4', '#3FA9E8', '#4FC8C0', '#7ED33E', '#C4DA3B'];
 
-// The hero's visual, deliberately NOT a literal app screenshot — the
-// actual product is demonstrated later in ProductWorkspace. Here it's a
-// bold, art-directed collage of tilted gradient cards (the kind of
-// editorial composition a design studio's own poster would use), so the
-// hero reads as a brand statement rather than a UI mockup.
+// Real templates from the library, fanned out in 3D.
+const CARDS = [
+  { slug: 'summer-music-festival', x: -190, y: 30, z: -120, r: -14, w: 150, ratio: 1.5 },
+  { slug: 'classic-wedding-invitation', x: 170, y: 40, z: -110, r: 12, w: 140, ratio: 1.43 },
+  { slug: 'eighteen-neon-night', x: -95, y: -120, z: -40, r: -8, w: 130, ratio: 1 },
+  { slug: 'black-friday-deals', x: 120, y: -125, z: -30, r: 9, w: 132, ratio: 1.25 },
+  { slug: 'balloon-bash-invitation', x: 0, y: 10, z: 60, r: -3, w: 190, ratio: 1.43 },
+];
+
+// The hero's 3D stage: real template cards floating on a tilted plane
+// that gently follows the pointer, with glowing brand-gradient orbs and
+// glass "tool" chips. Transform-only animation, so it stays smooth.
 export function CreativeHeroArt() {
+  const stage = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = stage.current;
+    if (!el || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const onMove = (e: PointerEvent) => {
+      const r = el.getBoundingClientRect();
+      const dx = (e.clientX - (r.left + r.width / 2)) / r.width;
+      const dy = (e.clientY - (r.top + r.height / 2)) / r.height;
+      el.style.setProperty('--ry', `${(-14 + dx * 14).toFixed(2)}deg`);
+      el.style.setProperty('--rx', `${(10 - dy * 10).toFixed(2)}deg`);
+    };
+    window.addEventListener('pointermove', onMove);
+    return () => window.removeEventListener('pointermove', onMove);
+  }, []);
+
   return (
-    <div className="relative h-[420px] sm:h-[480px] flex items-center justify-center overflow-hidden sm:overflow-visible">
-      <AnimatedDesignBackground />
+    <div className="relative h-[440px] sm:h-[520px] flex items-center justify-center [perspective:1400px]">
+      {/* Glowing brand orbs */}
+      <div className="pointer-events-none absolute -top-6 left-6 w-56 h-56 rounded-full bg-[#EC1E79]/30 blur-3xl animate-bg-float-a" />
+      <div className="pointer-events-none absolute bottom-0 right-0 w-64 h-64 rounded-full bg-[#3FA9E8]/30 blur-3xl animate-bg-float-b" />
+      <div className="pointer-events-none absolute top-1/3 right-1/4 w-40 h-40 rounded-full bg-[#7ED33E]/20 blur-3xl animate-bg-float-a" />
 
-      {/* Back card: abstract teal/blue panel with a large ring motif */}
-      <div className="absolute w-48 h-60 sm:w-56 sm:h-72 rounded-[2rem] -rotate-12 -translate-x-24 translate-y-4 shadow-[0_30px_60px_-25px_rgba(23,22,27,0.4)] bg-gradient-to-br from-[#3FA9E8] to-[#4FC8C0] overflow-hidden">
-        <span className="absolute w-40 h-40 rounded-full border-[10px] border-white/25 -right-10 -top-10" />
-        <span className="absolute w-24 h-24 rounded-full bg-white/15 left-4 bottom-6" />
-      </div>
+      {/* Rotating gradient ring (3D) */}
+      <div
+        className="pointer-events-none absolute w-[420px] h-[420px] rounded-full opacity-60 animate-mt-spin-slow"
+        style={{
+          background: 'conic-gradient(from 0deg, #EC1E79, #8B6FC4, #3FA9E8, #4FC8C0, #7ED33E, #C4DA3B, #EC1E79)',
+          WebkitMask: 'radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px))',
+          mask: 'radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px))',
+          transform: 'rotateX(68deg)',
+        }}
+      />
 
-      {/* Back card 2: warm poster panel */}
-      <div className="absolute w-40 h-52 sm:w-48 sm:h-60 rounded-[2rem] rotate-[18deg] translate-x-28 -translate-y-6 shadow-[0_30px_60px_-25px_rgba(23,22,27,0.4)] bg-gradient-to-br from-[#F5B942] to-[#FF6F91] overflow-hidden">
-        <span className="absolute inset-x-6 bottom-6 h-1.5 rounded-full bg-white/70" />
-        <span className="absolute inset-x-6 bottom-10 h-1.5 w-2/3 rounded-full bg-white/50" />
-      </div>
-
-      {/* Main card: the brand mark itself, front and center */}
-      <div className="relative w-56 h-64 sm:w-64 sm:h-72 rounded-[2rem] rotate-[-3deg] shadow-[0_40px_80px_-30px_rgba(108,79,209,0.55)] bg-brand-gradient flex flex-col items-center justify-center text-center px-6 overflow-hidden">
-        <span className="pointer-events-none absolute -right-10 -top-10 w-32 h-32 rounded-full bg-white/10" />
-        <span className="pointer-events-none absolute -left-8 -bottom-12 w-28 h-28 rounded-full bg-black/10" />
-        <span className="relative w-12 h-12 rounded-full bg-white/90 flex items-center justify-center mb-4">
-          <Sparkles size={20} className="text-[#6C4FD1]" />
-        </span>
-        <p className="relative font-[family-name:var(--font-display)] italic text-2xl sm:text-3xl text-white leading-tight">
-          Make it
-          <br />
-          magical.
-        </p>
-      </div>
-
-      {/* Floating palette sticker */}
-      <div className="hidden sm:flex absolute -bottom-4 left-1/2 -translate-x-1/2 items-center gap-1.5 bg-white rounded-full shadow-[0_16px_28px_-10px_rgba(23,22,27,0.3)] px-3 py-2 rotate-2">
-        {SWATCHES.map((c) => (
-          <span key={c} className="w-3.5 h-3.5 rounded-full" style={{ background: c }} />
+      <div
+        ref={stage}
+        className="relative w-full h-full transition-transform duration-300 ease-out [transform-style:preserve-3d]"
+        style={{ transform: 'rotateX(var(--rx, 10deg)) rotateY(var(--ry, -14deg))' }}
+      >
+        {CARDS.map((c, i) => (
+          <div
+            key={c.slug}
+            className="absolute left-1/2 top-1/2 [transform-style:preserve-3d]"
+            style={{ transform: `translate3d(${c.x - c.w / 2}px, ${c.y - (c.w * c.ratio) / 2}px, ${c.z}px)` }}
+          >
+            <div className="animate-mt-float" style={{ ['--r' as any]: `${c.r}deg`, animationDelay: `${i * -1.3}s` }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={`/templates/collection/${c.slug}.jpg`}
+                alt=""
+                width={c.w}
+                height={Math.round(c.w * c.ratio)}
+                className="rounded-2xl ring-1 ring-black/5 dark:ring-white/10 shadow-[0_30px_60px_-20px_rgba(23,20,42,0.55)] object-cover"
+                style={{ width: c.w, height: c.w * c.ratio }}
+              />
+            </div>
+          </div>
         ))}
-      </div>
 
-      {/* Floating tool badge */}
-      <div className="absolute top-2 right-2 sm:top-4 sm:right-6 w-14 h-14 rounded-2xl flex items-center justify-center rotate-6 hover:rotate-0 transition-transform duration-300 bg-[#17161B] shadow-[0_16px_28px_-8px_rgba(23,22,27,0.5)]">
-        <Wand2 size={22} className="text-white" />
+        {/* Glass tool chips floating in front */}
+        <div className="absolute left-[8%] top-[14%] [transform:translateZ(120px)]">
+          <div className="mt-glass border border-mt-border rounded-2xl px-3 py-2 flex items-center gap-2 shadow-xl animate-mt-float">
+            <span className="w-7 h-7 rounded-lg bg-brand-gradient flex items-center justify-center"><Wand2 size={14} className="text-white" /></span>
+            <span className="text-xs font-semibold text-mt-ink">Magic edit</span>
+          </div>
+        </div>
+        <div className="absolute right-[6%] top-[46%] [transform:translateZ(140px)]">
+          <div className="mt-glass border border-mt-border rounded-2xl px-3 py-2 flex items-center gap-2 shadow-xl animate-mt-float" style={{ animationDelay: '-2s' }}>
+            <Layers size={15} className="text-mt-accent" />
+            <span className="text-xs font-semibold text-mt-ink">200+ templates</span>
+          </div>
+        </div>
+        <div className="absolute left-[30%] bottom-[6%] mt-glass border border-mt-border rounded-full px-3 py-2 flex items-center gap-1.5 shadow-xl [transform:translateZ(100px)]">
+          <Palette size={14} className="text-mt-accent mr-1" />
+          {SWATCHES.map((c) => (
+            <span key={c} className="w-3.5 h-3.5 rounded-full ring-2 ring-white/60" style={{ background: c }} />
+          ))}
+        </div>
+        <div className="absolute right-[18%] top-[6%] w-12 h-12 rounded-2xl bg-brand-gradient flex items-center justify-center shadow-xl [transform:translateZ(160px)_rotate(8deg)]">
+          <Sparkles size={20} className="text-white" />
+        </div>
       </div>
     </div>
   );

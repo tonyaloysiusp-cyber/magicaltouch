@@ -1,5 +1,6 @@
 'use client';
 
+import { ThemeSwitch } from '@/components/ThemeSwitch';
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -79,7 +80,13 @@ export default function TemplatesPage() {
     fetchCategories().then(setCategories);
     // Deep link from the admin "Preview" button: /templates?template=<id>.
     // RLS lets admins preview drafts; customers only ever get published.
-    const id = new URLSearchParams(window.location.search).get('template');
+    const params = new URLSearchParams(window.location.search);
+    const wantCategory = params.get('category');
+    if (wantCategory) fetchCategories().then((cats) => {
+      const hit = cats.find((c) => c.name.toLowerCase() === wantCategory.toLowerCase());
+      if (hit) setActiveCategory(hit.id);
+    });
+    const id = params.get('template');
     if (id) fetchTemplateById(id).then((t) => t && setPreviewing({ ...t, canvasJson: undefined }));
   }, []);
 
@@ -168,9 +175,9 @@ export default function TemplatesPage() {
   return (
     <div className={theme === 'dark' ? 'dark' : ''}>
     <main
-      className={`${display.variable} ${body.variable} font-[family-name:var(--font-body)] bg-[#FAF9F6] dark:bg-[#111015] text-[#14121F] dark:text-[#F3F1F7] min-h-screen transition-colors duration-300`}
+      className={`${display.variable} ${body.variable} font-[family-name:var(--font-body)] bg-mt-bg dark:bg-mt-bg text-mt-ink dark:text-mt-ink min-h-screen transition-colors duration-300`}
     >
-      <header className="sticky top-0 z-50 bg-[#FAF9F6]/90 dark:bg-[#151320]/90 backdrop-blur border-b border-black/5 dark:border-white/10">
+      <header className="sticky top-0 z-50 bg-mt-bg/90 dark:bg-mt-bg/90 backdrop-blur border-b border-black/5 dark:border-white/10">
         <nav className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center shrink-0">
             <BrandLogo theme={theme} width={140} height={28} priority />
@@ -183,8 +190,8 @@ export default function TemplatesPage() {
                 href={l.href}
                 className={`text-sm transition-colors ${
                   l.label === 'Templates'
-                    ? 'text-[#14121F] dark:text-white font-semibold'
-                    : 'text-[#4B4560] dark:text-[#B7B2C6] hover:text-[#14121F] dark:hover:text-white'
+                    ? 'text-mt-ink dark:text-white font-semibold'
+                    : 'text-mt-muted dark:text-mt-muted hover:text-mt-ink dark:hover:text-white'
                 }`}
               >
                 {l.label}
@@ -193,22 +200,15 @@ export default function TemplatesPage() {
           </div>
 
           <div className="hidden md:flex items-center gap-3">
-            <button
-              onClick={toggleTheme}
-              title={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
-              aria-label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
-              className="p-2 rounded-full border border-black/10 dark:border-white/15 text-[#4B4560] dark:text-[#B7B2C6] hover:border-black/25 dark:hover:border-white/30 transition-colors"
-            >
-              {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
-            </button>
+            <ThemeSwitch theme={theme} onToggle={toggleTheme} />
             {!loggedIn && (
-              <Link href="/login" className="text-sm font-medium text-[#4B4560] dark:text-[#B7B2C6] hover:text-[#14121F] dark:hover:text-white px-3 py-2">
+              <Link href="/login" className="text-sm font-medium text-mt-muted dark:text-mt-muted hover:text-mt-ink dark:hover:text-white px-3 py-2">
                 Log In
               </Link>
             )}
             <button
               onClick={goToWorkspace}
-              className="relative overflow-hidden text-sm font-semibold text-white px-5 py-2.5 rounded-full bg-brand-gradient shadow-[0_6px_16px_-6px_rgba(108,79,209,0.5)] hover:shadow-[0_10px_20px_-6px_rgba(108,79,209,0.6)] hover:-translate-y-0.5 transition-all before:content-[''] before:absolute before:inset-x-0 before:top-0 before:h-1/2 before:bg-white/25 before:rounded-t-full"
+              className="relative overflow-hidden text-sm font-semibold text-white px-5 py-2.5 rounded-full bg-brand-gradient shadow-[0_6px_16px_-6px_rgba(108,79,209,0.5)] hover:shadow-[0_10px_20px_-6px_rgba(108,79,209,0.6)] hover:-translate-y-0.5 transition-all before:content-[''] before:absolute before:inset-x-0 before:top-0 before:h-1/2 before:bg-mt-surface/25 before:rounded-t-full"
             >
               Start Designing
             </button>
@@ -216,15 +216,9 @@ export default function TemplatesPage() {
           </div>
 
           <div className="flex md:hidden items-center gap-1">
+            <ThemeSwitch theme={theme} onToggle={toggleTheme} />
             <button
-              onClick={toggleTheme}
-              aria-label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
-              className="p-2 text-[#4B4560] dark:text-[#B7B2C6]"
-            >
-              {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
-            </button>
-            <button
-              className="p-2 -mr-2 text-[#14121F] dark:text-white"
+              className="p-2 -mr-2 text-mt-ink dark:text-white"
               onClick={() => setMenuOpen((v) => !v)}
               aria-label={menuOpen ? 'Close menu' : 'Open menu'}
             >
@@ -234,16 +228,16 @@ export default function TemplatesPage() {
         </nav>
 
         {menuOpen && (
-          <div className="md:hidden border-t border-black/5 dark:border-white/10 bg-[#FAF9F6] dark:bg-[#151320] px-6 py-4 flex flex-col gap-1">
+          <div className="md:hidden border-t border-black/5 dark:border-white/10 bg-mt-bg dark:bg-mt-bg px-6 py-4 flex flex-col gap-1">
             {NAV_LINKS.map((l) => (
-              <Link key={l.label} href={l.href} className="py-2.5 text-sm text-[#4B4560] dark:text-[#B7B2C6]" onClick={() => setMenuOpen(false)}>
+              <Link key={l.label} href={l.href} className="py-2.5 text-sm text-mt-muted dark:text-mt-muted" onClick={() => setMenuOpen(false)}>
                 {l.label}
               </Link>
             ))}
             <div className="flex flex-col gap-2 mt-3">
               <Link
                 href={loggedIn ? '/dashboard' : '/login'}
-                className="text-center text-sm font-medium border border-black/10 dark:border-white/15 text-[#14121F] dark:text-white rounded-full py-2.5"
+                className="text-center text-sm font-medium border border-black/10 dark:border-white/15 text-mt-ink dark:text-white rounded-full py-2.5"
                 onClick={() => setMenuOpen(false)}
               >
                 {loggedIn ? 'Dashboard' : 'Log In'}
@@ -257,21 +251,21 @@ export default function TemplatesPage() {
       </header>
 
       <section className="max-w-4xl mx-auto px-6 pt-20 pb-12 text-center">
-        <p className="text-xs font-semibold text-[#6C4FD1] dark:text-[#B9A6F2] tracking-wide uppercase">Templates</p>
+        <p className="text-xs font-semibold text-mt-accent dark:text-mt-accent tracking-wide uppercase">Templates</p>
         <h1 className="mt-4 font-[family-name:var(--font-display)] text-5xl sm:text-6xl leading-[1.05] tracking-tight">
           Start somewhere brilliant.
         </h1>
-        <p className="mt-5 text-lg text-[#4B4560] dark:text-[#B7B2C6] max-w-lg mx-auto leading-relaxed">
+        <p className="mt-5 text-lg text-mt-muted dark:text-mt-muted max-w-lg mx-auto leading-relaxed">
           Choose a starting point. Add your style. Make it yours.
         </p>
 
         <div className="mt-8 max-w-md mx-auto relative">
-          <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#4B4560]/60 dark:text-[#B7B2C6]/60" />
+          <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-mt-muted/60 dark:text-mt-muted/60" />
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search templates..."
-            className="w-full pl-11 pr-4 py-3 rounded-full border border-black/10 dark:border-white/15 bg-white dark:bg-[#1B1926] text-sm placeholder:text-[#4B4560]/60 dark:placeholder:text-[#B7B2C6]/60 focus:outline-none focus:border-[#6C4FD1]/50 focus:ring-2 focus:ring-[#6C4FD1]/15 transition-all"
+            className="w-full pl-11 pr-4 py-3 rounded-full border border-black/10 dark:border-white/15 bg-mt-surface dark:bg-mt-surface text-sm placeholder:text-mt-muted/60 dark:placeholder:text-mt-muted/60 focus:outline-none focus:border-mt-accent/50 focus:ring-2 focus:ring-[#6C4FD1]/15 transition-all"
           />
         </div>
       </section>
@@ -285,7 +279,7 @@ export default function TemplatesPage() {
               className={`shrink-0 text-sm font-medium rounded-full px-4 py-2 border transition-colors ${
                 activeCategory === c
                   ? 'bg-[#14121F] dark:bg-white text-white dark:text-[#14121F] border-[#14121F] dark:border-white'
-                  : 'text-[#14121F] dark:text-[#B7B2C6] border-black/10 dark:border-white/15 hover:border-[#6C4FD1]/40 hover:text-[#6C4FD1]'
+                  : 'text-mt-ink dark:text-mt-muted border-black/10 dark:border-white/15 hover:border-mt-accent/40 hover:text-mt-accent'
               }`}
             >
               {label}
@@ -299,23 +293,23 @@ export default function TemplatesPage() {
               onClick={() => setOrientation(o)}
               className={`rounded-full px-3 py-1.5 border transition-colors ${
                 orientation === o
-                  ? 'border-[#6C4FD1] text-[#6C4FD1] dark:text-[#B9A6F2] bg-[#6C4FD1]/5'
-                  : 'border-black/10 dark:border-white/15 text-[#4B4560] dark:text-[#B7B2C6]'
+                  ? 'border-mt-accent text-mt-accent dark:text-mt-accent bg-[#6C4FD1]/5'
+                  : 'border-black/10 dark:border-white/15 text-mt-muted dark:text-mt-muted'
               }`}
             >
               {o === 'all' ? 'Any shape' : o[0].toUpperCase() + o.slice(1)}
             </button>
           ))}
-          <label className="ml-1 inline-flex items-center gap-1.5 text-[#4B4560] dark:text-[#B7B2C6] cursor-pointer">
+          <label className="ml-1 inline-flex items-center gap-1.5 text-mt-muted dark:text-mt-muted cursor-pointer">
             <input type="checkbox" checked={freeOnly} onChange={(e) => setFreeOnly(e.target.checked)} className="accent-[#6C4FD1]" />
             Free only
           </label>
-          <label className="ml-1 inline-flex items-center gap-1.5 text-[#4B4560] dark:text-[#B7B2C6]">
+          <label className="ml-1 inline-flex items-center gap-1.5 text-mt-muted dark:text-mt-muted">
             <span className="sr-only">Sort by</span>
             <select
               value={sort}
               onChange={(e) => setSort(e.target.value as SortKey)}
-              className="rounded-full px-3 py-1.5 border border-black/10 dark:border-white/15 bg-white dark:bg-[#1B1926] text-[#14121F] dark:text-[#F3F1F7] text-xs focus:outline-none focus:border-[#6C4FD1]/50"
+              className="rounded-full px-3 py-1.5 border border-black/10 dark:border-white/15 bg-mt-surface dark:bg-mt-surface text-mt-ink dark:text-mt-ink text-xs focus:outline-none focus:border-mt-accent/50"
             >
               {SORTS.map((o) => (
                 <option key={o.id} value={o.id}>
@@ -325,7 +319,7 @@ export default function TemplatesPage() {
             </select>
           </label>
         </div>
-        <p className="mt-4 text-center text-xs text-[#4B4560] dark:text-[#B7B2C6]">
+        <p className="mt-4 text-center text-xs text-mt-muted dark:text-mt-muted">
           {filtered.length} {filtered.length === 1 ? 'template' : 'templates'}
         </p>
       </div>
@@ -333,8 +327,8 @@ export default function TemplatesPage() {
       <section className="max-w-[1400px] mx-auto px-4 sm:px-6 py-10">
         <div className="columns-2 md:columns-3 lg:columns-4 xl:columns-5 gap-4 [&>*]:mb-4">
           {filtered.map((t) => (
-            <div key={t.id || t.name} className="group break-inside-avoid rounded-xl overflow-hidden border border-black/5 dark:border-white/10 bg-white dark:bg-[#1B1926] shadow-sm hover:shadow-xl transition-shadow duration-300">
-              <div className="relative overflow-hidden bg-[#F1EEF8] dark:bg-[#14121F]" style={{ aspectRatio: tileRatio(t) }}>
+            <div key={t.id || t.name} className="group break-inside-avoid rounded-xl overflow-hidden border border-black/5 dark:border-white/10 bg-mt-surface dark:bg-mt-surface shadow-sm hover:shadow-xl transition-shadow duration-300">
+              <div className="relative overflow-hidden bg-mt-accentsoft dark:bg-mt-bg" style={{ aspectRatio: tileRatio(t) }}>
                 <div className="absolute inset-0 transition-transform duration-500 group-hover:scale-[1.03]">
                   {t.thumbnail ? (
                     // eslint-disable-next-line @next/next/no-img-element
@@ -344,7 +338,7 @@ export default function TemplatesPage() {
                   )}
                 </div>
                 {t.isFree === false ? (
-                  <span className="absolute top-2 left-2 z-10 inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-[#14121F] bg-[#F5B942] px-2 py-1 rounded-full shadow">
+                  <span className="absolute top-2 left-2 z-10 inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-mt-ink bg-[#F5B942] px-2 py-1 rounded-full shadow">
                     <Crown size={11} /> Premium
                   </span>
                 ) : (
@@ -357,15 +351,15 @@ export default function TemplatesPage() {
                   aria-label={`Preview ${t.name}`}
                   className="absolute inset-0 bg-[#14121F]/0 group-hover:bg-[#14121F]/40 transition-colors duration-300 flex items-center justify-center"
                 >
-                  <span className="opacity-0 group-hover:opacity-100 transition-opacity inline-flex items-center gap-1.5 text-sm font-semibold text-[#14121F] bg-white px-4 py-2 rounded-full">
+                  <span className="opacity-0 group-hover:opacity-100 transition-opacity inline-flex items-center gap-1.5 text-sm font-semibold text-mt-ink bg-mt-surface px-4 py-2 rounded-full">
                     Preview <ArrowUpRight size={14} />
                   </span>
                 </button>
               </div>
               <div className="px-3 py-2.5">
                 <p className="text-sm font-semibold leading-snug truncate" title={t.name}>{t.name}</p>
-                <div className="mt-1 flex items-center justify-between gap-2 text-[11px] text-[#4B4560] dark:text-[#B7B2C6]">
-                  <span className="truncate rounded-full bg-[#6C4FD1]/10 text-[#6C4FD1] dark:text-[#B9A6F2] px-2 py-0.5">{t.category}</span>
+                <div className="mt-1 flex items-center justify-between gap-2 text-[11px] text-mt-muted dark:text-mt-muted">
+                  <span className="truncate rounded-full bg-[#6C4FD1]/10 text-mt-accent dark:text-mt-accent px-2 py-0.5">{t.category}</span>
                   <span className="shrink-0">{t.width}×{t.height}</span>
                 </div>
               </div>
@@ -376,7 +370,7 @@ export default function TemplatesPage() {
         {filtered.length === 0 && (
           <div className="text-center py-20">
             <p className="text-lg font-[family-name:var(--font-display)]">No templates match yet.</p>
-            <p className="mt-2 text-sm text-[#4B4560] dark:text-[#B7B2C6]">Try a different search or category.</p>
+            <p className="mt-2 text-sm text-mt-muted dark:text-mt-muted">Try a different search or category.</p>
           </div>
         )}
       </section>
@@ -387,10 +381,10 @@ export default function TemplatesPage() {
             role="dialog"
             aria-modal="true"
             aria-label={previewing.name}
-            className="bg-white dark:bg-[#1B1926] rounded-2xl w-full max-w-4xl max-h-[92vh] overflow-y-auto grid md:grid-cols-[1.4fr_1fr]"
+            className="bg-mt-surface dark:bg-mt-surface rounded-2xl w-full max-w-4xl max-h-[92vh] overflow-y-auto grid md:grid-cols-[1.4fr_1fr]"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="bg-[#F1EEF8] dark:bg-[#14121F] flex items-center justify-center p-6 min-h-[260px]">
+            <div className="bg-mt-accentsoft dark:bg-mt-bg flex items-center justify-center p-6 min-h-[260px]">
               {previewing.preview || previewing.thumbnail ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={previewing.preview || previewing.thumbnail!} alt={previewing.name} className="max-h-[70vh] w-auto object-contain rounded-lg shadow-lg" />
@@ -401,24 +395,24 @@ export default function TemplatesPage() {
               )}
             </div>
             <div className="p-6 flex flex-col">
-              <button onClick={() => setPreviewing(null)} className="self-end p-1 -mt-2 -mr-2 text-[#4B4560] dark:text-[#B7B2C6]" aria-label="Close">
+              <button onClick={() => setPreviewing(null)} className="self-end p-1 -mt-2 -mr-2 text-mt-muted dark:text-mt-muted" aria-label="Close">
                 <X size={20} />
               </button>
-              <p className="inline-flex items-center gap-1.5 text-xs font-medium text-[#6C4FD1] dark:text-[#B9A6F2]">
+              <p className="inline-flex items-center gap-1.5 text-xs font-medium text-mt-accent dark:text-mt-accent">
                 <BadgeCheck size={14} /> Provided by Magical Touch Design
               </p>
               <h2 className="mt-2 font-[family-name:var(--font-display)] text-3xl leading-tight">{previewing.name}</h2>
-              {previewing.description && <p className="mt-3 text-sm text-[#4B4560] dark:text-[#B7B2C6] leading-relaxed">{previewing.description}</p>}
+              {previewing.description && <p className="mt-3 text-sm text-mt-muted dark:text-mt-muted leading-relaxed">{previewing.description}</p>}
               <dl className="mt-5 grid grid-cols-2 gap-y-2 text-sm">
-                <dt className="text-[#4B4560] dark:text-[#B7B2C6]">Category</dt>
+                <dt className="text-mt-muted dark:text-mt-muted">Category</dt>
                 <dd>{previewing.category}</dd>
-                <dt className="text-[#4B4560] dark:text-[#B7B2C6]">Size</dt>
+                <dt className="text-mt-muted dark:text-mt-muted">Size</dt>
                 <dd>
                   {previewing.width} × {previewing.height} {previewing.unit || 'px'}
                 </dd>
                 {previewing.isFree !== undefined && (
                   <>
-                    <dt className="text-[#4B4560] dark:text-[#B7B2C6]">Price</dt>
+                    <dt className="text-mt-muted dark:text-mt-muted">Price</dt>
                     <dd>{previewing.isFree ? 'Free' : 'Premium'}</dd>
                   </>
                 )}
@@ -432,7 +426,7 @@ export default function TemplatesPage() {
                         setQuery(tag);
                         setPreviewing(null);
                       }}
-                      className="text-xs rounded-full px-2.5 py-1 bg-black/5 dark:bg-white/10 text-[#4B4560] dark:text-[#B7B2C6]"
+                      className="text-xs rounded-full px-2.5 py-1 bg-black/5 dark:bg-white/10 text-mt-muted dark:text-mt-muted"
                     >
                       #{tag}
                     </button>
@@ -446,7 +440,7 @@ export default function TemplatesPage() {
                 >
                   Use This Template <ArrowUpRight size={15} />
                 </button>
-                <p className="mt-3 text-xs text-center text-[#4B4560] dark:text-[#B7B2C6]">
+                <p className="mt-3 text-xs text-center text-mt-muted dark:text-mt-muted">
                   You get your own copy to edit. The original template never changes.
                 </p>
               </div>
@@ -459,9 +453,9 @@ export default function TemplatesPage() {
         <div className="max-w-7xl mx-auto px-6 py-12 flex flex-col sm:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-3">
             <BrandLogo theme={theme} width={120} height={24} />
-            <span className="text-xs text-[#4B4560] dark:text-[#B7B2C6]">© {new Date().getFullYear()} Magical Touch</span>
+            <span className="text-xs text-mt-muted dark:text-mt-muted">© {new Date().getFullYear()} Magical Touch</span>
           </div>
-          <div className="flex gap-3 text-[#4B4560] dark:text-[#B7B2C6]">
+          <div className="flex gap-3 text-mt-muted dark:text-mt-muted">
             <Instagram size={16} />
             <Twitter size={16} />
             <Facebook size={16} />

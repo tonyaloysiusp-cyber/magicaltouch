@@ -176,13 +176,13 @@ export function Rulers({ fabricCanvasRef, unit, originX, originY, artboardWidth,
   return (
     <>
       <div
-        className="absolute top-0 left-0 z-20 bg-gray-100 border-b border-r border-gray-300"
+        className="absolute top-0 left-0 z-20 bg-mt-surface2 border-b border-r border-mt-border"
         style={{ width: RULER_SIZE, height: RULER_SIZE }}
       />
       <canvas
         ref={topRef}
         data-testid="ruler-top"
-        className="absolute top-0 z-20 border-b border-gray-300"
+        className="absolute top-0 z-20 border-b border-mt-border"
         style={{ left: RULER_SIZE, right: 0, height: RULER_SIZE, cursor: onGuideDragStart ? 'row-resize' : undefined }}
         onMouseDown={(e) => {
           if (onGuideDragStart) onGuideDragStart('h', e.clientX, e.clientY);
@@ -191,7 +191,7 @@ export function Rulers({ fabricCanvasRef, unit, originX, originY, artboardWidth,
       <canvas
         ref={leftRef}
         data-testid="ruler-left"
-        className="absolute left-0 z-20 border-r border-gray-300"
+        className="absolute left-0 z-20 border-r border-mt-border"
         style={{ top: RULER_SIZE, bottom: 0, width: RULER_SIZE, cursor: onGuideDragStart ? 'col-resize' : undefined }}
         onMouseDown={(e) => {
           if (onGuideDragStart) onGuideDragStart('v', e.clientX, e.clientY);

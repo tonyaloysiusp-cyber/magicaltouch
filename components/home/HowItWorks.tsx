@@ -13,7 +13,7 @@ export function HowItWorks() {
   return (
     <section className="max-w-6xl mx-auto px-6 py-24">
       <Reveal>
-        <p className="text-xs font-semibold text-[#6C4FD1] dark:text-[#B9A6F2] tracking-wide uppercase text-center">How it works</p>
+        <p className="text-xs font-semibold text-mt-accent dark:text-mt-accent tracking-wide uppercase text-center">How it works</p>
         <h2 className="mt-3 font-[family-name:var(--font-display)] text-4xl sm:text-5xl leading-[1.05] tracking-tight text-center">
           From idea to finished design.
         </h2>
@@ -26,8 +26,8 @@ export function HowItWorks() {
               <span className="block font-[family-name:var(--font-display)] text-7xl sm:text-8xl leading-none tracking-tight bg-brand-gradient bg-clip-text text-transparent opacity-90">
                 {s.n}
               </span>
-              <h3 className="mt-2 font-semibold text-xl text-[#17161B] dark:text-[#F3F1F7]">{s.title}</h3>
-              <p className="mt-1.5 text-sm text-[#4A4750] dark:text-[#B7B2C6] leading-relaxed max-w-[13rem]">{s.body}</p>
+              <h3 className="mt-2 font-semibold text-xl text-mt-ink dark:text-mt-ink">{s.title}</h3>
+              <p className="mt-1.5 text-sm text-mt-muted dark:text-mt-muted leading-relaxed max-w-[13rem]">{s.body}</p>
             </div>
           </Reveal>
         ))}

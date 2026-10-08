@@ -39,7 +39,7 @@ interface Props {
 export function GradientPresetPicker({ onPick, disabled }: Props) {
   return (
     <div>
-      <label className="text-[10px] text-gray-500 dark:text-gray-400 block mb-1">Presets</label>
+      <label className="text-[10px] text-mt-muted dark:text-mt-muted block mb-1">Presets</label>
       <div className="grid grid-cols-4 gap-1.5">
         {GRADIENT_PRESETS.map((p) => (
           <button
@@ -48,7 +48,7 @@ export function GradientPresetPicker({ onPick, disabled }: Props) {
             title={p.name}
             disabled={disabled}
             onClick={() => onPick(p)}
-            className="h-7 rounded border border-gray-200 dark:border-[#3A3A3A] disabled:opacity-40 hover:scale-105 transition-transform"
+            className="h-7 rounded border border-mt-border dark:border-mt-border disabled:opacity-40 hover:scale-105 transition-transform"
             style={{ background: `linear-gradient(135deg, ${p.c1}, ${p.c2})` }}
           />
         ))}

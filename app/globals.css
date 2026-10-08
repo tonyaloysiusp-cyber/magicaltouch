@@ -2,6 +2,60 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ---------------------------------------------------------------------
+   Magical Touch Design — ONE theme for every page.
+   Day (default) and night (`.dark` on <html>, set before first paint
+   by the script in app/layout.tsx and toggled by hooks/useAppTheme.ts).
+   Values are RGB triplets so Tailwind opacity modifiers work
+   (e.g. bg-mt-surface/80).
+   --------------------------------------------------------------------- */
+:root {
+  --mt-bg: 250 248 252;        /* page */
+  --mt-surface: 255 255 255;   /* cards, panels, menus */
+  --mt-surface2: 243 239 250;  /* inputs, hovers, subtle tints */
+  --mt-ink: 23 20 42;          /* main text */
+  --mt-muted: 92 85 113;       /* secondary text */
+  --mt-faint: 150 143 168;     /* hints, placeholders */
+  --mt-border: 229 224 239;
+  --mt-accent: 108 79 209;     /* brand purple */
+  --mt-accent-soft: 237 232 252;
+  color-scheme: light;
+}
+.dark {
+  --mt-bg: 14 12 24;
+  --mt-surface: 25 22 39;
+  --mt-surface2: 36 32 54;
+  --mt-ink: 243 241 247;
+  --mt-muted: 183 178 198;
+  --mt-faint: 128 121 148;
+  --mt-border: 49 44 70;
+  --mt-accent: 157 133 240;
+  --mt-accent-soft: 44 36 78;
+  color-scheme: dark;
+}
+html,
+body {
+  background-color: rgb(var(--mt-bg));
+  color: rgb(var(--mt-ink));
+}
+/* Brand gradient text + animated gradient helpers */
+.mt-gradient-text {
+  background-image: linear-gradient(90deg, #EC1E79, #8B6FC4, #3FA9E8, #4FC8C0, #7ED33E);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.mt-glass {
+  background-color: rgb(var(--mt-surface) / 0.72);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+input::placeholder,
+textarea::placeholder {
+  color: rgb(var(--mt-faint));
+}
+
 /* Hides the scrollbar on horizontally-scrolling strips (category chips,
    mobile card rows) while keeping them scrollable — purely cosmetic. */
 .no-scrollbar::-webkit-scrollbar {

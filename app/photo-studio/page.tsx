@@ -1,5 +1,6 @@
 'use client';
 
+import { ThemeSwitch } from '@/components/ThemeSwitch';
 import { useRef, useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
@@ -416,29 +417,22 @@ function PhotoStudioContent() {
 
   if (checkingAuth || loadingDesign) {
     return (
-      <main className="min-h-screen flex items-center justify-center text-gray-400 dark:bg-[#111015] dark:text-[#B7B2C6]">
+      <main className="min-h-screen flex items-center justify-center text-mt-faint dark:bg-mt-bg dark:text-mt-muted">
         Loading...
       </main>
     );
   }
 
   const ThemeToggle = () => (
-    <button
-      onClick={toggleTheme}
-      title={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
-      aria-label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
-      className="p-2 rounded-full border border-black/10 dark:border-white/15 text-gray-500 dark:text-[#B7B2C6] hover:border-black/25 dark:hover:border-white/30 transition-colors"
-    >
-      {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
-    </button>
+    <ThemeSwitch theme={theme} onToggle={toggleTheme} size="sm" />
   );
 
   if (stage === 'open') {
     return (
       <div className={theme === 'dark' ? 'dark' : ''}>
-        <main className="min-h-screen bg-gray-50 dark:bg-[#111015] transition-colors duration-300">
+        <main className="min-h-screen bg-mt-bg dark:bg-mt-bg transition-colors duration-300">
           <div className="max-w-3xl mx-auto px-6 py-6 flex items-center justify-between">
-            <Link href="/dashboard" className="flex items-center gap-1.5 text-sm text-gray-500 dark:text-[#B7B2C6] hover:text-gray-800 dark:hover:text-white">
+            <Link href="/dashboard" className="flex items-center gap-1.5 text-sm text-mt-muted dark:text-mt-muted hover:text-mt-ink dark:hover:text-white">
               <ArrowLeft size={15} /> Dashboard
             </Link>
             <div className="flex items-center gap-3">
@@ -448,17 +442,17 @@ function PhotoStudioContent() {
           </div>
 
           <div className="max-w-3xl mx-auto px-6 pb-16">
-            <h1 className="text-3xl font-bold text-gray-800 dark:text-[#F3F1F7] mb-1">Photo Studio</h1>
-            <p className="text-gray-500 dark:text-[#B7B2C6] mb-8">
+            <h1 className="text-3xl font-bold text-mt-ink dark:text-mt-ink mb-1">Photo Studio</h1>
+            <p className="text-mt-muted dark:text-mt-muted mb-8">
               A full, standalone photo-editing workspace — layers, masks, curves, dodge/burn, clone stamp and more, working directly in real pixels and real-world print units.
             </p>
 
             <div className="grid md:grid-cols-2 gap-6">
-              <section className="border dark:border-white/10 rounded-xl p-5 bg-white dark:bg-[#1B1926]">
-                <h2 className="text-sm font-semibold text-gray-700 dark:text-[#F3F1F7] mb-3 flex items-center gap-2">
+              <section className="border dark:border-white/10 rounded-xl p-5 bg-mt-surface dark:bg-mt-surface">
+                <h2 className="text-sm font-semibold text-mt-ink dark:text-mt-ink mb-3 flex items-center gap-2">
                   <Upload size={15} /> Open a photo
                 </h2>
-                <p className="text-xs text-gray-500 dark:text-[#B7B2C6] mb-4">
+                <p className="text-xs text-mt-muted dark:text-mt-muted mb-4">
                   Upload an image to start editing it at its full native resolution.
                 </p>
                 <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleUpload} />
@@ -470,8 +464,8 @@ function PhotoStudioContent() {
                 </button>
               </section>
 
-              <section className="border dark:border-white/10 rounded-xl p-5 bg-white dark:bg-[#1B1926]">
-                <h2 className="text-sm font-semibold text-gray-700 dark:text-[#F3F1F7] mb-3 flex items-center gap-2">
+              <section className="border dark:border-white/10 rounded-xl p-5 bg-mt-surface dark:bg-mt-surface">
+                <h2 className="text-sm font-semibold text-mt-ink dark:text-mt-ink mb-3 flex items-center gap-2">
                   <FileImage size={15} /> Start from a blank canvas
                 </h2>
                 <div className="flex flex-wrap gap-1.5 mb-3">
@@ -479,7 +473,7 @@ function PhotoStudioContent() {
                     <button
                       key={p.label}
                       onClick={() => applyPreset(p)}
-                      className="text-[11px] px-2.5 py-1 rounded-full border dark:border-white/15 text-gray-600 dark:text-[#B7B2C6] hover:border-gray-500 dark:hover:border-white/30"
+                      className="text-[11px] px-2.5 py-1 rounded-full border dark:border-white/15 text-mt-muted dark:text-mt-muted hover:border-gray-500 dark:hover:border-white/30"
                     >
                       {p.label}
                     </button>
@@ -487,7 +481,7 @@ function PhotoStudioContent() {
                 </div>
                 <div className="grid grid-cols-3 gap-2 mb-3">
                   <div>
-                    <label className="text-[11px] text-gray-500 dark:text-[#B7B2C6] block mb-1">Width</label>
+                    <label className="text-[11px] text-mt-muted dark:text-mt-muted block mb-1">Width</label>
                     <input
                       key={`w-${unit}-${dpiInput}-${widthPx}`}
                       type="number"
@@ -497,11 +491,11 @@ function PhotoStudioContent() {
                         const val = parseFloat(e.target.value);
                         if (Number.isFinite(val) && val > 0) setWidthPx(physicalUnitToPx(val, unit, dpiNum));
                       }}
-                      className="w-full text-sm border dark:border-white/15 dark:bg-[#242131] dark:text-[#F3F1F7] rounded px-2 py-1.5"
+                      className="w-full text-sm border dark:border-white/15 dark:bg-mt-surface2 dark:text-mt-ink rounded px-2 py-1.5"
                     />
                   </div>
                   <div>
-                    <label className="text-[11px] text-gray-500 dark:text-[#B7B2C6] block mb-1">Height</label>
+                    <label className="text-[11px] text-mt-muted dark:text-mt-muted block mb-1">Height</label>
                     <input
                       key={`h-${unit}-${dpiInput}-${heightPx}`}
                       type="number"
@@ -511,15 +505,15 @@ function PhotoStudioContent() {
                         const val = parseFloat(e.target.value);
                         if (Number.isFinite(val) && val > 0) setHeightPx(physicalUnitToPx(val, unit, dpiNum));
                       }}
-                      className="w-full text-sm border dark:border-white/15 dark:bg-[#242131] dark:text-[#F3F1F7] rounded px-2 py-1.5"
+                      className="w-full text-sm border dark:border-white/15 dark:bg-mt-surface2 dark:text-mt-ink rounded px-2 py-1.5"
                     />
                   </div>
                   <div>
-                    <label className="text-[11px] text-gray-500 dark:text-[#B7B2C6] block mb-1">Unit</label>
+                    <label className="text-[11px] text-mt-muted dark:text-mt-muted block mb-1">Unit</label>
                     <select
                       value={unit}
                       onChange={(e) => setUnit(e.target.value as DocUnit)}
-                      className="w-full text-sm border dark:border-white/15 dark:bg-[#242131] dark:text-[#F3F1F7] rounded px-2 py-1.5"
+                      className="w-full text-sm border dark:border-white/15 dark:bg-mt-surface2 dark:text-mt-ink rounded px-2 py-1.5"
                     >
                       <option value="px">px</option>
                       <option value="in">in</option>
@@ -530,19 +524,19 @@ function PhotoStudioContent() {
                   </div>
                 </div>
                 <div className="mb-4">
-                  <label className="text-[11px] text-gray-500 dark:text-[#B7B2C6] block mb-1">DPI</label>
+                  <label className="text-[11px] text-mt-muted dark:text-mt-muted block mb-1">DPI</label>
                   <input
                     type="number"
                     min={1}
                     value={dpiInput}
                     onChange={(e) => setDpiInput(e.target.value)}
-                    className="w-full text-sm border dark:border-white/15 dark:bg-[#242131] dark:text-[#F3F1F7] rounded px-2 py-1.5"
+                    className="w-full text-sm border dark:border-white/15 dark:bg-mt-surface2 dark:text-mt-ink rounded px-2 py-1.5"
                   />
                 </div>
                 <button
                   onClick={handleCreateBlank}
                   disabled={creating}
-                  className="w-full bg-gray-800 dark:bg-[#242131] text-white font-semibold py-2.5 rounded-full text-sm disabled:opacity-50"
+                  className="w-full bg-mt-accent dark:bg-mt-surface2 text-white font-semibold py-2.5 rounded-full text-sm disabled:opacity-50"
                 >
                   {creating ? 'Creating…' : 'Create Blank Canvas'}
                 </button>
@@ -642,25 +636,21 @@ function PhotoStudioContent() {
     },
   ];
 
-  // The editing workspace itself is ALWAYS dark, independent of the
-  // site's own light/dark toggle (useAppTheme) -- matching every real
-  // professional creative tool (Photoshop, Lightroom, Figma, VS Code),
-  // which use one fixed dark chrome regardless of OS/site theme. Only
-  // the "Open a photo" landing screen above still follows the shared
-  // site theme, since that's a normal page, not the editor itself.
+  // The editing workspace follows the same site-wide day/night theme as
+  // every other page (one theme everywhere).
   return (
-    <div className="dark">
-      <main className="h-[100dvh] flex flex-col bg-[#1e1e1e] transition-colors duration-150">
+    <div className={theme === 'dark' ? 'dark' : ''}>
+      <main className="h-[100dvh] flex flex-col bg-mt-bg text-mt-ink transition-colors duration-150">
         <MenuBar menus={menus} />
         <ShortcutsModal open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} workspace="photo" />
-        <div className="flex items-center justify-between px-4 py-1.5 border-b bg-[#252526] border-[#3c3c3c] shrink-0">
+        <div className="flex items-center justify-between px-4 py-1.5 border-b bg-mt-surface border-mt-border shrink-0">
           <div className="flex items-center gap-3">
             <Link href="/" title="Go to homepage">
-              <BrandLogo theme="dark" width={110} height={22} />
+              <BrandLogo theme={theme} width={110} height={22} />
             </Link>
             <button
               onClick={() => setStage('open')}
-              className="flex items-center gap-1.5 text-xs text-[#b3b3b3] hover:text-white"
+              className="flex items-center gap-1.5 text-xs text-mt-muted hover:text-mt-ink"
             >
               <ArrowLeft size={13} /> Dashboard
             </button>
@@ -670,17 +660,18 @@ function PhotoStudioContent() {
               type="text"
               value={docName}
               onChange={(e) => setDocName(e.target.value)}
-              className="text-xs bg-[#3c3c3c] border border-[#3c3c3c] rounded px-2 py-1 w-56 text-center text-[#e8e8e8]"
+              className="text-xs bg-mt-surface2 border border-mt-border rounded px-2 py-1 w-56 text-center text-mt-ink"
             />
-            <span className="text-[10px] text-[#9d9d9d]">
+            <span className="text-[10px] text-mt-muted">
               {docWidth} × {docHeight}px · {docDpi} DPI
             </span>
           </div>
           <div className="flex items-center gap-2">
+            <ThemeToggle />
             <button
               onClick={() => photoEditorRef.current?.undo()}
               disabled={!canUndo}
-              className="p-1.5 border rounded text-[#b3b3b3] border-[#3c3c3c] hover:bg-[#333333] disabled:opacity-30"
+              className="p-1.5 border rounded text-mt-muted border-mt-border hover:bg-mt-surface2 disabled:opacity-30"
               title="Undo"
             >
               ↶
@@ -688,19 +679,19 @@ function PhotoStudioContent() {
             <button
               onClick={() => photoEditorRef.current?.redo()}
               disabled={!canRedo}
-              className="p-1.5 border rounded text-[#b3b3b3] border-[#3c3c3c] hover:bg-[#333333] disabled:opacity-30"
+              className="p-1.5 border rounded text-mt-muted border-mt-border hover:bg-mt-surface2 disabled:opacity-30"
               title="Redo"
             >
               ↷
             </button>
-            <span className="text-[11px] text-[#9d9d9d] w-14 text-center">
+            <span className="text-[11px] text-mt-muted w-14 text-center">
               {saving ? 'Saving…' : saveStatus === 'saved' ? 'Saved' : saveStatus === 'error' ? 'Error' : ''}
             </span>
             <select
               value={exportFormat}
               onChange={(e) => setExportFormat(e.target.value as 'png' | 'pdf')}
               title="Export format"
-              className="text-xs bg-[#3c3c3c] border border-[#3c3c3c] rounded-full px-2 py-1.5 text-[#e8e8e8]"
+              className="text-xs bg-mt-surface2 border border-mt-border rounded-full px-2 py-1.5 text-mt-ink"
             >
               <option value="png">PNG</option>
               <option value="pdf">PDF</option>
@@ -708,7 +699,7 @@ function PhotoStudioContent() {
             <button
               onClick={() => handleExport()}
               disabled={exporting}
-              className="text-xs px-3 py-1.5 border border-[#3c3c3c] rounded-full text-[#e8e8e8] disabled:opacity-50"
+              className="text-xs px-3 py-1.5 border border-mt-border rounded-full text-mt-ink disabled:opacity-50"
             >
               {exporting ? 'Exporting…' : 'Export'}
             </button>

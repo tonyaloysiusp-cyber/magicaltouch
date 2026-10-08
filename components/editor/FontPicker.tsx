@@ -59,28 +59,28 @@ export function FontPicker({ value, mixed, disabled, onChange }: Props) {
         type="button"
         disabled={disabled}
         onClick={() => setOpen((v) => !v)}
-        className="w-full flex items-center justify-between text-xs border rounded px-2 py-1 disabled:opacity-40 bg-white text-left dark:bg-[#2B2B2B] dark:border-[#3A3A3A] dark:text-gray-100"
+        className="w-full flex items-center justify-between text-xs border rounded px-2 py-1 disabled:opacity-40 bg-mt-surface text-left dark:bg-mt-surface dark:border-mt-border dark:text-mt-ink"
       >
         <span className="truncate" style={mixed ? undefined : { fontFamily: value }}>
           {mixed ? 'Mixed' : value || 'Select font'}
         </span>
-        <ChevronDown size={12} className="shrink-0 ml-1 text-gray-400" />
+        <ChevronDown size={12} className="shrink-0 ml-1 text-mt-faint" />
       </button>
       {open && (
-        <div className="absolute z-30 mt-1 w-64 max-h-72 overflow-hidden flex flex-col bg-white border rounded shadow-lg dark:bg-[#2B2B2B] dark:border-[#3A3A3A]">
-          <div className="flex items-center gap-1.5 px-2 py-1.5 border-b dark:border-[#3A3A3A]">
-            <Search size={12} className="text-gray-400 shrink-0" />
+        <div className="absolute z-30 mt-1 w-64 max-h-72 overflow-hidden flex flex-col bg-mt-surface border rounded shadow-lg dark:bg-mt-surface dark:border-mt-border">
+          <div className="flex items-center gap-1.5 px-2 py-1.5 border-b dark:border-mt-border">
+            <Search size={12} className="text-mt-faint shrink-0" />
             <input
               ref={inputRef}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search fonts…"
-              className="w-full text-xs outline-none bg-transparent dark:text-gray-100"
+              className="w-full text-xs outline-none bg-transparent dark:text-mt-ink"
             />
           </div>
           <div className="overflow-y-auto">
             {filtered.length === 0 && (
-              <p className="text-xs text-gray-400 px-3 py-3">No fonts match &quot;{query}&quot;</p>
+              <p className="text-xs text-mt-faint px-3 py-3">No fonts match &quot;{query}&quot;</p>
             )}
             {filtered.map((f) => (
               <button
@@ -90,8 +90,8 @@ export function FontPicker({ value, mixed, disabled, onChange }: Props) {
                   onChange(f.family);
                   setOpen(false);
                 }}
-                className={`w-full text-left text-sm px-3 py-1.5 hover:bg-gray-50 dark:hover:bg-[#333333] dark:text-gray-100 ${
-                  f.family === value ? 'bg-gray-100 dark:bg-[#3A3A3A]' : ''
+                className={`w-full text-left text-sm px-3 py-1.5 hover:bg-mt-surface2 dark:hover:bg-mt-surface2 dark:text-mt-ink ${
+                  f.family === value ? 'bg-mt-surface2 dark:bg-mt-surface2' : ''
                 }`}
                 style={{ fontFamily: f.family }}
               >

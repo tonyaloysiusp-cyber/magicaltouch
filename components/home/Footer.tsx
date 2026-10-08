@@ -35,57 +35,57 @@ export function Footer({ theme }: { theme: AppTheme }) {
   };
 
   return (
-    <footer className="border-t border-black/10 dark:border-white/10 bg-white dark:bg-[#111015]">
+    <footer className="border-t border-black/10 dark:border-white/10 bg-mt-surface dark:bg-mt-bg">
       <div className="max-w-6xl mx-auto px-6 py-16">
         <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-10">
           <div className="col-span-2 md:col-span-1">
             <BrandLogo theme={theme} width={140} height={28} />
-            <p className="mt-4 text-sm text-[#4A4750] dark:text-[#8A8496] max-w-[16rem] leading-relaxed">
+            <p className="mt-4 text-sm text-mt-muted dark:text-mt-faint max-w-[16rem] leading-relaxed">
               Your creative space for turning ideas into designs people
               remember.
             </p>
           </div>
 
           <div>
-            <p className="text-xs font-semibold text-[#17161B] dark:text-[#F3F1F7] tracking-wide uppercase">Product</p>
-            <ul className="mt-4 space-y-2.5 text-sm text-[#4A4750] dark:text-[#B7B2C6]">
-              <li><button onClick={goToCreate} className="hover:text-[#17161B] dark:hover:text-white">Create a Design</button></li>
-              <li><Link href="/templates" className="hover:text-[#17161B] dark:hover:text-white">Templates</Link></li>
-              <li><Link href="#features" className="hover:text-[#17161B] dark:hover:text-white">Features</Link></li>
-              <li><Link href="#pricing" className="hover:text-[#17161B] dark:hover:text-white">Pricing</Link></li>
-              <li><button onClick={goToDashboard} className="hover:text-[#17161B] dark:hover:text-white">Your Dashboard</button></li>
+            <p className="text-xs font-semibold text-mt-ink dark:text-mt-ink tracking-wide uppercase">Product</p>
+            <ul className="mt-4 space-y-2.5 text-sm text-mt-muted dark:text-mt-muted">
+              <li><button onClick={goToCreate} className="hover:text-mt-ink dark:hover:text-white">Create a Design</button></li>
+              <li><Link href="/templates" className="hover:text-mt-ink dark:hover:text-white">Templates</Link></li>
+              <li><Link href="#features" className="hover:text-mt-ink dark:hover:text-white">Features</Link></li>
+              <li><Link href="#pricing" className="hover:text-mt-ink dark:hover:text-white">Pricing</Link></li>
+              <li><button onClick={goToDashboard} className="hover:text-mt-ink dark:hover:text-white">Your Dashboard</button></li>
             </ul>
           </div>
 
           <div>
-            <p className="text-xs font-semibold text-[#17161B] dark:text-[#F3F1F7] tracking-wide uppercase">Account</p>
-            <ul className="mt-4 space-y-2.5 text-sm text-[#4A4750] dark:text-[#B7B2C6]">
+            <p className="text-xs font-semibold text-mt-ink dark:text-mt-ink tracking-wide uppercase">Account</p>
+            <ul className="mt-4 space-y-2.5 text-sm text-mt-muted dark:text-mt-muted">
               {loggedIn ? (
                 <>
-                  <li><Link href="/profile" className="hover:text-[#17161B] dark:hover:text-white">Profile</Link></li>
-                  <li><button onClick={logout} className="hover:text-[#17161B] dark:hover:text-white">Log Out</button></li>
+                  <li><Link href="/profile" className="hover:text-mt-ink dark:hover:text-white">Profile</Link></li>
+                  <li><button onClick={logout} className="hover:text-mt-ink dark:hover:text-white">Log Out</button></li>
                 </>
               ) : (
                 <>
-                  <li><Link href="/login" className="hover:text-[#17161B] dark:hover:text-white">Log In</Link></li>
-                  <li><Link href="/signup" className="hover:text-[#17161B] dark:hover:text-white">Sign Up</Link></li>
+                  <li><Link href="/login" className="hover:text-mt-ink dark:hover:text-white">Log In</Link></li>
+                  <li><Link href="/signup" className="hover:text-mt-ink dark:hover:text-white">Sign Up</Link></li>
                 </>
               )}
             </ul>
           </div>
 
           <div>
-            <p className="text-xs font-semibold text-[#17161B] dark:text-[#F3F1F7] tracking-wide uppercase">Company</p>
-            <ul className="mt-4 space-y-2.5 text-sm text-[#4A4750] dark:text-[#B7B2C6]">
-              <li className="text-[#4A4750]/70 dark:text-[#8A8496]/70">Magical Touch Design</li>
-              <li><Link href="/privacy" className="hover:text-[#17161B] dark:hover:text-white">Privacy Policy</Link></li>
-              <li><Link href="/terms" className="hover:text-[#17161B] dark:hover:text-white">Terms of Service</Link></li>
-              <li><a href="mailto:hellomagicaltouch.design@gmail.com" className="hover:text-[#17161B] dark:hover:text-white">Contact us</a></li>
+            <p className="text-xs font-semibold text-mt-ink dark:text-mt-ink tracking-wide uppercase">Company</p>
+            <ul className="mt-4 space-y-2.5 text-sm text-mt-muted dark:text-mt-muted">
+              <li className="text-mt-muted/70 dark:text-mt-faint/70">Magical Touch Design</li>
+              <li><Link href="/privacy" className="hover:text-mt-ink dark:hover:text-white">Privacy Policy</Link></li>
+              <li><Link href="/terms" className="hover:text-mt-ink dark:hover:text-white">Terms of Service</Link></li>
+              <li><a href="mailto:hellomagicaltouch.design@gmail.com" className="hover:text-mt-ink dark:hover:text-white">Contact us</a></li>
             </ul>
           </div>
         </div>
 
-        <div className="mt-14 pt-8 border-t border-black/10 dark:border-white/10 text-xs text-[#4A4750] dark:text-[#8A8496]">
+        <div className="mt-14 pt-8 border-t border-black/10 dark:border-white/10 text-xs text-mt-muted dark:text-mt-faint">
           © {new Date().getFullYear()} Magical Touch. All rights reserved.
         </div>
       </div>

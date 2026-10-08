@@ -50,13 +50,13 @@ export function ColorSwatchPicker({ value, onChange, disabled, allowNone, label 
 
   return (
     <div className="relative" ref={rootRef}>
-      {label && <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 block mb-1">{label}</label>}
+      {label && <label className="text-xs font-semibold text-mt-muted dark:text-mt-muted block mb-1">{label}</label>}
       <button
         type="button"
         disabled={disabled}
         onClick={() => setOpen((v) => !v)}
         title={isNone ? 'None' : value || undefined}
-        className="w-full h-8 border rounded cursor-pointer disabled:opacity-40 dark:border-[#3A3A3A] overflow-hidden relative"
+        className="w-full h-8 border rounded cursor-pointer disabled:opacity-40 dark:border-mt-border overflow-hidden relative"
         style={
           isNone
             ? { background: 'repeating-conic-gradient(#d1d5db 0 25%, white 0 50%) 0 0/10px 10px' }
@@ -71,7 +71,7 @@ export function ColorSwatchPicker({ value, onChange, disabled, allowNone, label 
       </button>
 
       {open && (
-        <div className="absolute z-30 mt-1 w-56 bg-white dark:bg-[#2B2B2B] border dark:border-[#3A3A3A] rounded-md shadow-lg p-2.5 flex flex-col gap-2">
+        <div className="absolute z-30 mt-1 w-56 bg-mt-surface dark:bg-mt-surface border dark:border-mt-border rounded-md shadow-lg p-2.5 flex flex-col gap-2">
           {allowNone && (
             <button
               type="button"
@@ -79,12 +79,12 @@ export function ColorSwatchPicker({ value, onChange, disabled, allowNone, label 
                 onChange(null);
                 setOpen(false);
               }}
-              className={`w-full flex items-center gap-2 text-xs px-2 py-1.5 rounded hover:bg-gray-50 dark:hover:bg-[#333333] dark:text-gray-200 ${
-                isNone ? 'bg-gray-100 dark:bg-[#3A3A3A]' : ''
+              className={`w-full flex items-center gap-2 text-xs px-2 py-1.5 rounded hover:bg-mt-surface2 dark:hover:bg-mt-surface2 dark:text-mt-ink ${
+                isNone ? 'bg-mt-surface2 dark:bg-mt-surface2' : ''
               }`}
             >
               <span
-                className="w-4 h-4 rounded-sm border border-gray-300 dark:border-gray-600 shrink-0 relative overflow-hidden"
+                className="w-4 h-4 rounded-sm border border-mt-border dark:border-mt-border shrink-0 relative overflow-hidden"
                 style={{ background: 'repeating-conic-gradient(#d1d5db 0 25%, white 0 50%) 0 0/6px 6px' }}
               >
                 <span className="absolute inset-0 flex items-center justify-center">
@@ -106,20 +106,20 @@ export function ColorSwatchPicker({ value, onChange, disabled, allowNone, label 
                   setOpen(false);
                 }}
                 className={`w-full aspect-square rounded-sm border ${
-                  value === c ? 'border-2 border-blue-500' : 'border-gray-200 dark:border-[#3A3A3A]'
+                  value === c ? 'border-2 border-blue-500' : 'border-mt-border dark:border-mt-border'
                 }`}
                 style={{ background: c }}
               />
             ))}
           </div>
 
-          <label className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 pt-1 border-t dark:border-[#3A3A3A] cursor-pointer">
+          <label className="flex items-center gap-2 text-xs text-mt-muted dark:text-mt-muted pt-1 border-t dark:border-mt-border cursor-pointer">
             Custom
             <input
               type="color"
               value={isNone ? '#000000' : value || '#000000'}
               onChange={(e) => onChange(e.target.value)}
-              className="flex-1 h-7 border rounded cursor-pointer dark:border-[#3A3A3A]"
+              className="flex-1 h-7 border rounded cursor-pointer dark:border-mt-border"
             />
           </label>
         </div>

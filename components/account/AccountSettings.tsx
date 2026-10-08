@@ -81,8 +81,8 @@ export function AccountSettings({ userId }: { userId: string }) {
 
   return (
     <>
-      <div className="border dark:border-white/10 rounded-xl p-5 mb-8 bg-white dark:bg-[#1B1926]">
-        <h2 className="text-sm font-semibold text-gray-700 dark:text-[#F3F1F7] mb-3">E-mail preferences</h2>
+      <div className="border dark:border-white/10 rounded-xl p-5 mb-8 bg-mt-surface dark:bg-mt-surface">
+        <h2 className="text-sm font-semibold text-mt-ink dark:text-mt-ink mb-3">E-mail preferences</h2>
         <label className="flex items-start gap-3 cursor-pointer">
           <input
             type="checkbox"
@@ -92,15 +92,15 @@ export function AccountSettings({ userId }: { userId: string }) {
             onChange={(e) => toggleMarketing(e.target.checked)}
           />
           <span>
-            <span className="block text-sm text-gray-800 dark:text-[#F3F1F7]">E-mail me new templates, offers and news</span>
-            <span className="block text-xs text-gray-500 dark:text-[#B7B2C6]">Account e-mails (password resets, security notices) are always sent.</span>
+            <span className="block text-sm text-mt-ink dark:text-mt-ink">E-mail me new templates, offers and news</span>
+            <span className="block text-xs text-mt-muted dark:text-mt-muted">Account e-mails (password resets, security notices) are always sent.</span>
           </span>
         </label>
       </div>
 
-      <div className="border border-red-200 dark:border-red-900/50 rounded-xl p-5 mb-8 bg-white dark:bg-[#1B1926]">
+      <div className="border border-red-200 dark:border-red-900/50 rounded-xl p-5 mb-8 bg-mt-surface dark:bg-mt-surface">
         <h2 className="text-sm font-semibold text-red-600 mb-1">Delete my account</h2>
-        <p className="text-xs text-gray-500 dark:text-[#B7B2C6] mb-3">
+        <p className="text-xs text-mt-muted dark:text-mt-muted mb-3">
           Permanently deletes your Magical Touch Design account, profile photo and the designs saved in your account. Projects you saved on your own computer, iPad, phone or cloud drive are yours and are not touched — save copies of any account designs first (File → Save a Copy to Device).
         </p>
         {!confirming ? (
@@ -113,7 +113,7 @@ export function AccountSettings({ userId }: { userId: string }) {
               value={typed}
               onChange={(e) => setTyped(e.target.value)}
               placeholder='Type "DELETE" to confirm'
-              className="flex-1 border border-red-200 rounded-lg px-3 py-2 text-sm dark:bg-[#242131] dark:text-[#F3F1F7]"
+              className="flex-1 border border-red-200 rounded-lg px-3 py-2 text-sm dark:bg-mt-surface2 dark:text-mt-ink"
               autoFocus
             />
             <button
@@ -123,7 +123,7 @@ export function AccountSettings({ userId }: { userId: string }) {
             >
               {deleting ? 'Deleting…' : 'Delete permanently'}
             </button>
-            <button onClick={() => { setConfirming(false); setTyped(''); }} disabled={deleting} className="text-sm text-gray-500 px-3">
+            <button onClick={() => { setConfirming(false); setTyped(''); }} disabled={deleting} className="text-sm text-mt-muted px-3">
               Cancel
             </button>
           </div>
