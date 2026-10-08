@@ -5976,7 +5976,7 @@ function EditorContent() {
         />
       )}
       <input ref={importInputRef} type="file" accept="image/*,.pdf,application/pdf" onChange={handleImportFileSelected} className="hidden" />
-      <input ref={replaceInputRef} type="file" accept="image/*" onChange={onReplacePicked} className="hidden" />
+      <input ref={replaceInputRef} data-testid="replace-input" type="file" accept="image/*" onChange={onReplacePicked} className="hidden" />
       <input id="mainImageUploadInput" type="file" accept="image/*" multiple onChange={handleImageUpload} className="hidden" />
 
       {closeConfirm && (

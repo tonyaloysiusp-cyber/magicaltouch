@@ -46,7 +46,7 @@ async function drawRect(t, x1, y1, x2, y2) {
   await key(t, 'v');
 }
 
-export default [
+const scenarios = [
   {
     name: 'smoke',
     async run(t) {
@@ -202,3 +202,231 @@ export default [
     },
   },
 ];
+
+// ---------------------------------------------------------------------
+// New interface & tools
+// ---------------------------------------------------------------------
+const PHOTO = 'public/templates/collection/summer-music-festival.jpg';
+async function rail(t, name) {
+  await t.page.locator('nav[aria-label="Editor panels"] button', { hasText: name }).first().click();
+  await t.page.waitForTimeout(400);
+}
+const ACTIVE = () => {
+  const o = window.__fabricCanvas.getActiveObject();
+  if (!o) return null;
+  return { type: o.type, frame: o.__frame || null, framed: !!(o.clipPath && !o.clipPath.absolutePositioned), filters: (o.filters || []).length, shadow: !!o.shadow, path: !!o.path, text: o.text, w: Math.round(o.getScaledWidth()), h: Math.round(o.getScaledHeight()) };
+};
+
+scenarios.push(
+  {
+    name: 'ui-panels',
+    async run(t) {
+      await t.editor('w=1080&h=1350');
+      await t.shot('default');
+      for (const p of ['Templates', 'Elements', 'Text', 'Uploads', 'Draw', 'Background', 'Brand', 'Layers', 'Help']) {
+        await rail(t, p);
+        await t.page.waitForTimeout(p === 'Templates' ? 2500 : 300);
+        await t.shot(`panel-${p.toLowerCase()}`);
+        await rail(t, p); // close
+      }
+    },
+  },
+  {
+    name: 'onboarding',
+    onboarding: true,
+    async run(t) {
+      await t.editor();
+      await t.page.waitForTimeout(800);
+      await t.shot('quickstart');
+      const visible = await t.page.getByText('What are you making today?').isVisible().catch(() => false);
+      t.check('quick start shows for a new user', visible);
+      await t.page.getByRole('button', { name: /Instagram post/ }).click();
+      await t.page.waitForTimeout(2500);
+      const ab = await t.eval(() => { const a = window.__fabricCanvas.getObjects().find((o) => o.__isArtboard); return [Math.round(a.width), Math.round(a.height)]; });
+      t.check('page resized to Instagram post', ab[0] === 1080 && ab[1] === 1350, ab.join('x'));
+      await t.shot('after-pick');
+    },
+  },
+  {
+    name: 'template-apply',
+    async run(t) {
+      await t.editor('w=1080&h=1080');
+      await rail(t, 'Templates');
+      await t.page.waitForTimeout(3000);
+      const first = t.page.locator('aside img').first();
+      await first.click();
+      await t.page.waitForTimeout(4000);
+      const art = await t.eval(ART);
+      t.check('template objects placed on the page', art.length > 2, art.length);
+      await t.shot('applied');
+      await key(t, `${MOD}+z`);
+      await t.page.waitForTimeout(600);
+      t.check('undo removes the template in one step', (await t.eval(ART)).length === 0, (await t.eval(ART)).length);
+    },
+  },
+  {
+    name: 'frames-crop-replace',
+    async run(t) {
+      await t.editor('w=1080&h=1080');
+      await rail(t, 'Elements');
+      await t.page.locator('aside button[title="Circle frame"]').click();
+      await t.page.waitForTimeout(800);
+      let a = await t.eval(ACTIVE);
+      t.check('empty circle frame added and selected', a && a.type === 'image' && a.frame && a.frame.empty && a.framed, JSON.stringify(a));
+      await t.page.setInputFiles('[data-testid="replace-input"]', PHOTO);
+      await t.page.waitForTimeout(1500);
+      a = await t.eval(ACTIVE);
+      const before = a;
+      t.check('photo fills the frame', a && a.frame && !a.frame.empty && a.framed, JSON.stringify(a));
+      const geo1 = await t.eval(() => { const o = window.__fabricCanvas.getActiveObject(); const c = o.clipPath; const M = window.fabric.util.multiplyTransformMatrices(o.calcTransformMatrix(), c.calcOwnMatrix()); const d = window.fabric.util.qrDecompose(M); return [Math.round(d.translateX), Math.round(d.translateY), Math.round(c.rx * 2 * d.scaleX)]; });
+      await t.shot('filled');
+      // Replace again: frame must stay put
+      await t.page.setInputFiles('[data-testid="replace-input"]', 'public/templates/collection/balloon-bash-invitation.jpg');
+      await t.page.waitForTimeout(1500);
+      const geo2 = await t.eval(() => { const o = window.__fabricCanvas.getActiveObject(); const c = o.clipPath; const M = window.fabric.util.multiplyTransformMatrices(o.calcTransformMatrix(), c.calcOwnMatrix()); const d = window.fabric.util.qrDecompose(M); return [Math.round(d.translateX), Math.round(d.translateY), Math.round(c.rx * 2 * d.scaleX)]; });
+      t.check('replace keeps the frame position and size', JSON.stringify(geo1) === JSON.stringify(geo2), `${geo1} vs ${geo2}`);
+      // Crop mode
+      await t.page.getByRole('button', { name: /^Crop/ }).first().click();
+      await t.page.waitForTimeout(500);
+      await t.shot('crop-mode');
+      await t.page.getByRole('button', { name: 'Done' }).click();
+      await t.page.waitForTimeout(400);
+      a = await t.eval(ACTIVE);
+      t.check('crop done keeps the frame', a && a.framed, JSON.stringify(a));
+      void before;
+    },
+  },
+  {
+    name: 'image-adjust',
+    async run(t) {
+      await t.editor('w=1080&h=1080');
+      await t.page.setInputFiles('#mainImageUploadInput', PHOTO);
+      await t.page.waitForTimeout(1500);
+      await t.page.getByRole('button', { name: /^Adjust/ }).first().click();
+      await t.page.waitForTimeout(1500);
+      await t.page.locator('aside button', { hasText: 'Mono' }).click();
+      await t.page.waitForTimeout(800);
+      const a = await t.eval(ACTIVE);
+      t.check('filter applied as live filters', a && a.filters > 0, JSON.stringify(a));
+      await t.shot('mono');
+      await key(t, `${MOD}+z`);
+      await t.page.waitForTimeout(600);
+      const after = await t.eval(() => (window.__fabricCanvas.getObjects().find((o) => o.type === 'image')?.filters || []).length);
+      t.check('undo removes the filter', after === 0, after);
+    },
+  },
+  {
+    name: 'text-effects',
+    async run(t) {
+      await t.editor('w=1080&h=1080');
+      await rail(t, 'Text');
+      await t.page.locator('aside button', { hasText: 'Add a heading' }).click();
+      await t.page.waitForTimeout(600);
+      await t.page.getByRole('button', { name: /^Effects/ }).click();
+      await t.page.waitForTimeout(300);
+      await t.page.locator('[role=dialog] button', { hasText: 'Glow' }).click();
+      await t.page.waitForTimeout(300);
+      let a = await t.eval(ACTIVE);
+      t.check('glow adds a shadow', a && a.shadow, JSON.stringify(a));
+      // curve via slider: set value then dispatch events
+      await t.page.locator('[role=dialog] label', { hasText: 'Curve' }).locator('input[type=range]').fill('60');
+      await t.page.waitForTimeout(400);
+      a = await t.eval(ACTIVE);
+      t.check('curve puts the text on a path', a && a.path, JSON.stringify(a));
+      await t.page.keyboard.press('Escape');
+      await t.shot('glow-curve');
+      // gradient text styles from the panel
+      await t.page.locator('aside button[title="Add “Magical”"]').click();
+      await t.page.waitForTimeout(800);
+      await t.shot('styles');
+    },
+  },
+  {
+    name: 'shapes-library',
+    async run(t) {
+      await t.editor('w=1080&h=1080');
+      await rail(t, 'Elements');
+      for (const k of ['Star', 'Heart', 'Speech bubble', 'Burst', 'Arrow right', 'Cloud']) {
+        await t.page.locator(`aside button[title="${k}"]`).click();
+        await t.page.waitForTimeout(150);
+      }
+      const art = await t.eval(ART);
+      t.check('six shapes added', art.length === 6, art.length);
+      await t.shot('shapes');
+    },
+  },
+  {
+    name: 'draw-erase',
+    async run(t) {
+      await t.editor('w=1080&h=1080');
+      await rail(t, 'Draw');
+      await t.page.locator('aside button', { hasText: 'Brush' }).first().click();
+      const a = await toScreen(t, 200, 300);
+      await drag(t, a, { x: a.x + 300, y: a.y + 60 }, 20);
+      await t.page.waitForTimeout(300);
+      const n = await t.eval(() => window.__fabricCanvas.getObjects().filter((o) => o.__brush).length);
+      t.check('brush stroke created', n === 1, n);
+      await t.page.locator('aside button', { hasText: 'Eraser' }).first().click();
+      const b = await toScreen(t, 350, 250);
+      await drag(t, b, { x: b.x + 10, y: b.y + 200 }, 15);
+      await t.page.waitForTimeout(300);
+      const cut = await t.eval(() => { const o = window.__fabricCanvas.getObjects().find((x) => x.__brush); return !!(o && o.clipPath && o.clipPath.inverted); });
+      t.check('eraser cuts the stroke (live mask)', cut);
+      await t.shot('drawn');
+    },
+  },
+  {
+    name: 'resize-copy',
+    async run(t) {
+      await t.editor('w=1080&h=1080');
+      await drawRect(t, 100, 100, 500, 500);
+      await t.page.getByRole('button', { name: /^Resize$/ }).first().click();
+      await t.page.locator('[role=dialog] button', { hasText: 'Instagram story' }).click();
+      await t.page.locator('[role=dialog] button', { hasText: /^Resize$/ }).click();
+      await t.page.waitForTimeout(1200);
+      const pages = await t.eval(() => window.__fabricCanvas.getObjects().filter((o) => o.__isArtboard).map((o) => [Math.round(o.width), Math.round(o.height)]));
+      t.check('a 1080×1920 copy was added', pages.length === 2 && pages[1][0] === 1080 && pages[1][1] === 1920, JSON.stringify(pages));
+      await t.shot('resized');
+    },
+  },
+  {
+    name: 'bg-remove',
+    async run(t) {
+      await t.editor('w=1080&h=1080');
+      await t.page.setInputFiles('#mainImageUploadInput', PHOTO);
+      await t.page.waitForTimeout(1500);
+      await t.page.getByRole('button', { name: /^Remove BG/ }).first().click();
+      const apply = t.page.locator('[role=dialog] button', { hasText: 'Apply' });
+      await t.page.waitForFunction(() => { const b = [...document.querySelectorAll('[role=dialog] button')].find((x) => x.textContent?.trim() === 'Apply'); return b && !b.disabled; }, null, { timeout: 60000 });
+      await t.shot('preview');
+      await apply.click();
+      await t.page.waitForTimeout(2000);
+      const src = await t.eval(() => { const o = window.__fabricCanvas.getObjects().find((x) => x.type === 'image'); return (o.getSrc() || '').slice(0, 22); });
+      t.check('image replaced by transparent PNG', src.startsWith('data:image/png'), src);
+      await t.shot('applied');
+    },
+  },
+  {
+    name: 'dark-pro',
+    init: () => { try { localStorage.setItem('appTheme', 'dark'); localStorage.setItem('mt:editorMode', 'pro'); } catch {} },
+    async run(t) {
+      await t.editor('w=1080&h=1350');
+      await drawRect(t, 100, 100, 600, 500);
+      await t.shot('pro-dark');
+    },
+  },
+  {
+    name: 'phone',
+    viewport: { width: 390, height: 844 },
+    touch: true,
+    async run(t) {
+      await t.editor('w=1080&h=1350');
+      await t.shot('open');
+      await t.page.locator('nav[aria-label="Editor panels"] button', { hasText: 'Text' }).click();
+      await t.page.waitForTimeout(500);
+      await t.shot('sheet');
+    },
+  },
+);
+
+export default scenarios;

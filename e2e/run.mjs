@@ -15,6 +15,8 @@ const browser = await chromium.launch();
 for (const sc of scenarios) {
   if (only && !sc.name.includes(only)) continue;
   const ctx = await browser.newContext({ viewport: sc.viewport || { width: 1440, height: 900 }, hasTouch: !!sc.touch, deviceScaleFactor: 1 });
+  if (!sc.onboarding) await ctx.addInitScript(() => { try { localStorage.setItem('mt:onboarded', '1'); } catch {} });
+  if (sc.init) await ctx.addInitScript(sc.init);
   const page = await ctx.newPage();
   const logs = [];
   page.on('console', (m) => { if (m.type() === 'error' || m.type() === 'warning') logs.push(`${m.type()}: ${m.text()}`.slice(0, 400)); });
