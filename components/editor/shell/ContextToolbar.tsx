@@ -28,7 +28,7 @@ import {
   Group,
   Ungroup,
   Droplet,
-  SquareDashed,
+  Square as SquareRound,
   Spline,
   FlipHorizontal2,
   FlipVertical2,
@@ -523,7 +523,7 @@ export function ContextToolbar({
             width={240}
             trigger={({ toggle, open }) => (
               <IconButton label="Rounded corners" onClick={toggle} active={open}>
-                <SquareDashed size={16} />
+                <SquareRound size={16} />
               </IconButton>
             )}
           >
@@ -587,7 +587,7 @@ export function ContextToolbar({
           width={240}
           trigger={({ toggle, open }) => (
             <IconButton label="Rounded corners" onClick={toggle} active={open}>
-              <SquareDashed size={16} />
+              <SquareRound size={16} />
             </IconButton>
           )}
         >
