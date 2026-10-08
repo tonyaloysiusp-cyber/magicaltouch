@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Fraunces, Inter } from 'next/font/google';
-import { Menu, X, Search, ArrowUpRight, Sun, Moon, Instagram, Twitter, Facebook, Youtube, BadgeCheck } from 'lucide-react';
+import { Menu, X, Search, ArrowUpRight, Sun, Moon, Instagram, Twitter, Facebook, Youtube, BadgeCheck, Crown } from 'lucide-react';
 import { resolveAuthedPath } from '@/lib/authNav';
 import { MockDesignCard } from '@/components/MockDesignCard';
 import { Template, TemplateCategory, CATEGORIES, TEMPLATES, fetchPublicTemplates, fetchCategories, fetchTemplateById } from '@/lib/templatesData';
@@ -33,17 +33,25 @@ const NAV_LINKS = [
   { label: 'Pricing', href: '/#pricing' },
 ];
 
-// A varied tile height per template, keyed off its own aspect ratio, so
-// the gallery reads as a curated visual wall rather than a uniform grid
-// of identical boxes — the same masonry approach the homepage's own
-// design showcase uses.
-function tileHeight(t: Template): string {
-  const ratio = t.height / t.width;
-  if (ratio >= 1.5) return 'h-96';
-  if (ratio >= 1.05) return 'h-80';
-  if (ratio >= 0.85) return 'h-64';
-  return 'h-52';
+// Each tile keeps its template's real proportions (clamped for very
+// tall or wide sizes), so the gallery reads as a masonry wall and no
+// preview is ever cropped.
+function tileRatio(t: Template): string {
+  const r = Math.min(2.1, Math.max(0.42, t.height / Math.max(t.width, 1)));
+  return `${1} / ${r}`;
 }
+
+// High-demand categories first; anything else follows in its own order.
+const CATEGORY_ORDER = ['Birthday', 'Events', 'Wedding', 'Business', 'Social Media', 'Marketing', 'Menus', 'Certificates', 'Resume', 'Cards'];
+
+type SortKey = 'popular' | 'newest' | 'trending';
+const SORTS: { id: SortKey; label: string }[] = [
+  { id: 'popular', label: 'Popular' },
+  { id: 'trending', label: 'Trending' },
+  { id: 'newest', label: 'Newest' },
+];
+
+const time = (t: Template) => (t.publishedAt ? new Date(t.publishedAt).getTime() : 0);
 
 export default function TemplatesPage() {
   const { theme, toggleTheme } = useAppTheme();
@@ -54,6 +62,7 @@ export default function TemplatesPage() {
   const [query, setQuery] = useState('');
   const [orientation, setOrientation] = useState<'all' | 'portrait' | 'landscape' | 'square'>('all');
   const [freeOnly, setFreeOnly] = useState(false);
+  const [sort, setSort] = useState<SortKey>('popular');
   const [categories, setCategories] = useState<TemplateCategory[]>([]);
   const [previewing, setPreviewing] = useState<Template | null>(null);
   const [loggedIn, setLoggedIn] = useState(false);
@@ -104,13 +113,17 @@ export default function TemplatesPage() {
       if (!t.categoryId) return;
       used.add(parentOf(t.categoryId) || t.categoryId);
     });
-    return categories.filter((c) => !c.parentId && used.has(c.id)).map((c) => ({ id: c.id, label: c.name }));
+    const rank = (name: string) => { const i = CATEGORY_ORDER.indexOf(name); return i === -1 ? 99 : i; };
+    return categories
+      .filter((c) => !c.parentId && used.has(c.id))
+      .sort((a, b) => rank(a.name) - rank(b.name))
+      .map((c) => ({ id: c.id, label: c.name }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [categories, templates, usingDbCategories]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return templates.filter((t) => {
+    const list = templates.filter((t) => {
       const matchesCategory =
         activeCategory === 'All' ||
         (usingDbCategories ? t.categoryId === activeCategory || parentOf(t.categoryId) === activeCategory : t.category === activeCategory);
@@ -124,8 +137,17 @@ export default function TemplatesPage() {
       const matchesFree = !freeOnly || t.isFree !== false;
       return matchesCategory && matchesQuery && matchesOrientation && matchesFree;
     });
+    // Popular keeps the curated order (featured first, then sort order).
+    if (sort === 'newest') return [...list].sort((a, b) => time(b) - time(a));
+    if (sort === 'trending') {
+      // Featured picks published recently rise to the top.
+      const now = Date.now();
+      const score = (t: Template) => (t.isFeatured ? 2 : 0) + Math.max(0, 1 - (now - time(t)) / (60 * 86400000));
+      return [...list].sort((a, b) => score(b) - score(a));
+    }
+    return list;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeCategory, query, templates, orientation, freeOnly, usingDbCategories, categories]);
+  }, [activeCategory, query, templates, orientation, freeOnly, sort, usingDbCategories, categories]);
 
   const goToWorkspace = async () => {
     setMenuOpen(false);
@@ -288,15 +310,32 @@ export default function TemplatesPage() {
             <input type="checkbox" checked={freeOnly} onChange={(e) => setFreeOnly(e.target.checked)} className="accent-[#6C4FD1]" />
             Free only
           </label>
+          <label className="ml-1 inline-flex items-center gap-1.5 text-[#4B4560] dark:text-[#B7B2C6]">
+            <span className="sr-only">Sort by</span>
+            <select
+              value={sort}
+              onChange={(e) => setSort(e.target.value as SortKey)}
+              className="rounded-full px-3 py-1.5 border border-black/10 dark:border-white/15 bg-white dark:bg-[#1B1926] text-[#14121F] dark:text-[#F3F1F7] text-xs focus:outline-none focus:border-[#6C4FD1]/50"
+            >
+              {SORTS.map((o) => (
+                <option key={o.id} value={o.id}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
+        <p className="mt-4 text-center text-xs text-[#4B4560] dark:text-[#B7B2C6]">
+          {filtered.length} {filtered.length === 1 ? 'template' : 'templates'}
+        </p>
       </div>
 
-      <section className="max-w-7xl mx-auto px-6 py-14">
-        <div className="columns-1 sm:columns-2 lg:columns-3 gap-5 [&>*]:mb-5">
+      <section className="max-w-[1400px] mx-auto px-4 sm:px-6 py-10">
+        <div className="columns-2 md:columns-3 lg:columns-4 xl:columns-5 gap-4 [&>*]:mb-4">
           {filtered.map((t) => (
-            <div key={t.id || t.name} className="group break-inside-avoid rounded-2xl overflow-hidden border border-black/5 dark:border-white/10 bg-white dark:bg-[#1B1926] shadow-sm hover:shadow-xl transition-shadow duration-300">
-              <div className={`relative overflow-hidden ${tileHeight(t)}`}>
-                <div className="absolute inset-0 transition-transform duration-500 group-hover:scale-105">
+            <div key={t.id || t.name} className="group break-inside-avoid rounded-xl overflow-hidden border border-black/5 dark:border-white/10 bg-white dark:bg-[#1B1926] shadow-sm hover:shadow-xl transition-shadow duration-300">
+              <div className="relative overflow-hidden bg-[#F1EEF8] dark:bg-[#14121F]" style={{ aspectRatio: tileRatio(t) }}>
+                <div className="absolute inset-0 transition-transform duration-500 group-hover:scale-[1.03]">
                   {t.thumbnail ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={t.thumbnail} alt={t.name} loading="lazy" decoding="async" className="w-full h-full object-cover" />
@@ -304,6 +343,15 @@ export default function TemplatesPage() {
                     <MockDesignCard colors={t.colors} label={t.category} />
                   )}
                 </div>
+                {t.isFree === false ? (
+                  <span className="absolute top-2 left-2 z-10 inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-[#14121F] bg-[#F5B942] px-2 py-1 rounded-full shadow">
+                    <Crown size={11} /> Premium
+                  </span>
+                ) : (
+                  <span className="absolute top-2 left-2 z-10 text-[10px] font-semibold uppercase tracking-wide text-white bg-[#14121F]/75 px-2 py-1 rounded-full">
+                    Free
+                  </span>
+                )}
                 <button
                   onClick={() => setPreviewing(t)}
                   aria-label={`Preview ${t.name}`}
@@ -314,14 +362,12 @@ export default function TemplatesPage() {
                   </span>
                 </button>
               </div>
-              <div className="p-4 flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-semibold">{t.name}</p>
-                  <p className="text-xs text-[#4B4560] dark:text-[#B7B2C6] mt-0.5">{t.category}</p>
+              <div className="px-3 py-2.5">
+                <p className="text-sm font-semibold leading-snug truncate" title={t.name}>{t.name}</p>
+                <div className="mt-1 flex items-center justify-between gap-2 text-[11px] text-[#4B4560] dark:text-[#B7B2C6]">
+                  <span className="truncate rounded-full bg-[#6C4FD1]/10 text-[#6C4FD1] dark:text-[#B9A6F2] px-2 py-0.5">{t.category}</span>
+                  <span className="shrink-0">{t.width}×{t.height}</span>
                 </div>
-                <span className="text-[11px] text-[#4B4560] dark:text-[#B7B2C6] shrink-0">
-                  {t.width}×{t.height}
-                </span>
               </div>
             </div>
           ))}
