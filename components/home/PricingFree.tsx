@@ -1,52 +1,39 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
-import { ArrowRight } from 'lucide-react';
-import { resolveAuthedPath } from '@/lib/authNav';
+import { Check } from 'lucide-react';
 import { Reveal } from './Reveal';
 
-const POINTS = ['No complicated plans.', 'No creative roadblocks.', 'Just a space to create.'];
+const POINTS = ['Every template', 'Every editing tool', 'Photo Studio', 'Downloads in PNG, JPG and PDF'];
 
-// Deliberately not a pricing table — Magical Touch has one tier, so this
-// section makes that a strength (free, no catch) rather than dressing it
-// up as a "Free" column next to fake Pro/Business tiers that don't exist.
+// Magical Touch has one tier, so this says so plainly instead of
+// dressing it up as a pricing table.
 export function PricingFree() {
-  const router = useRouter();
-
-  const goToCreate = async () => {
-    router.push(await resolveAuthedPath('/create'));
-  };
-
   return (
-    <section id="pricing" className="max-w-4xl mx-auto px-6 py-24 sm:py-32 text-center">
-      <Reveal>
-        <p className="text-xs font-semibold text-mt-accent dark:text-mt-accent tracking-wide uppercase">Free, always</p>
-        <h2 className="mt-4 font-[family-name:var(--font-display)] text-5xl sm:text-6xl leading-[1.05] tracking-tight">
-          Your creativity has no limits.
-        </h2>
-        <p className="mt-6 text-lg text-mt-muted dark:text-mt-muted max-w-md mx-auto leading-relaxed">
-          Create freely. Explore freely. Make it magical.
-        </p>
-      </Reveal>
-
-      <Reveal delayMs={100}>
-        <div className="mt-10 flex flex-wrap items-center justify-center gap-x-8 gap-y-3">
-          {POINTS.map((p) => (
-            <span key={p} className="text-sm font-medium text-mt-muted dark:text-mt-muted">
-              {p}
-            </span>
-          ))}
-        </div>
-      </Reveal>
-
-      <Reveal delayMs={160}>
-        <button
-          onClick={goToCreate}
-          className="relative overflow-hidden mt-10 inline-flex items-center gap-2 text-sm font-semibold text-white px-7 py-4 rounded-full bg-brand-gradient shadow-[0_10px_24px_-8px_rgba(9,9,11,0.16)] hover:shadow-[0_14px_30px_-8px_rgba(9,9,11,0.16)] hover:-translate-y-0.5 transition-all before:content-[''] before:absolute before:inset-x-0 before:top-0 before:h-1/2 before:bg-mt-surface/25 before:rounded-t-full"
-        >
-          Start Creating — It's Free <ArrowRight size={15} />
-        </button>
-      </Reveal>
+    <section id="pricing" className="border-t border-mt-border">
+      <div className="max-w-6xl mx-auto px-5 sm:px-6 py-24 sm:py-28 grid gap-10 md:grid-cols-2 md:items-end">
+        <Reveal>
+          <h2 className="font-[family-name:var(--font-display)] font-medium text-3xl sm:text-5xl leading-[1.08] tracking-[-0.03em]">
+            Free to use.
+            <br />
+            <span className="mt-spectrum-text">No catch.</span>
+          </h2>
+          <p className="mt-5 text-mt-muted text-lg max-w-md leading-relaxed">
+            No trials, no locked tools and no plans to compare. Sign up and start designing.
+          </p>
+        </Reveal>
+        <Reveal delayMs={100}>
+          <ul className="grid sm:grid-cols-2 gap-3">
+            {POINTS.map((p) => (
+              <li key={p} className="flex items-center gap-3 rounded-2xl border border-mt-border px-4 py-4 text-sm font-medium text-mt-ink">
+                <span className="w-6 h-6 rounded-full mt-spectrum flex items-center justify-center shrink-0">
+                  <Check size={13} strokeWidth={3} className="text-white" />
+                </span>
+                {p}
+              </li>
+            ))}
+          </ul>
+        </Reveal>
+      </div>
     </section>
   );
 }

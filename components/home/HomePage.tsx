@@ -1,28 +1,21 @@
 'use client';
 
-import { Fraunces, Inter } from 'next/font/google';
+import { Unbounded, Inter } from 'next/font/google';
 import { useAppTheme } from '@/hooks/useAppTheme';
 import { IntroAnimation } from './IntroAnimation';
 import { Navbar } from './Navbar';
-import { Hero } from './Hero';
-import { BrandStory } from './BrandStory';
-import { CreatePossibilities } from './CreatePossibilities';
-import { CreativeCarousel } from './CreativeCarousel';
-import { CreativeShowcase } from './CreativeShowcase';
-import { ProductWorkspace } from './ProductWorkspace';
-import { Features } from './Features';
+import { WorkspaceHero } from './WorkspaceHero';
+import { StudioTools } from './StudioTools';
 import { TemplateShowcase } from './TemplateShowcase';
 import { HowItWorks } from './HowItWorks';
-import { CreatorSection } from './CreatorSection';
-import { BusinessSection } from './BusinessSection';
 import { PricingFree } from './PricingFree';
 import { FinalCTA } from './FinalCTA';
 import { Footer } from './Footer';
 
-const display = Fraunces({
+// Unbounded's wide, rounded geometry echoes the Magical Touch wordmark.
+const display = Unbounded({
   subsets: ['latin'],
   weight: ['400', '500', '600'],
-  style: ['normal', 'italic'],
   variable: '--font-display',
 });
 
@@ -44,20 +37,13 @@ export function HomePage() {
     <div className={theme === 'dark' ? 'dark' : ''}>
       <IntroAnimation theme={theme} />
       <main
-        className={`${display.variable} ${body.variable} font-[family-name:var(--font-body)] bg-mt-surface2 text-mt-ink transition-colors duration-300`}
+        className={`${display.variable} ${body.variable} font-[family-name:var(--font-body)] bg-mt-bg text-mt-ink transition-colors duration-300`}
       >
         <Navbar theme={theme} onToggleTheme={toggleTheme} />
-        <Hero />
+        <WorkspaceHero />
         <TemplateShowcase />
-        <BrandStory />
-        <CreatePossibilities />
-        <CreativeShowcase theme={theme} />
-        <CreativeCarousel />
-        <ProductWorkspace />
-        <Features />
+        <StudioTools />
         <HowItWorks />
-        <CreatorSection />
-        <BusinessSection />
         <PricingFree />
         <FinalCTA />
         <Footer theme={theme} />

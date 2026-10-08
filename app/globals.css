@@ -55,17 +55,23 @@
   --mt-gradient: linear-gradient(135deg, #8CCBFF, #F3A6B8);
   --mt-gradient-text: linear-gradient(90deg, #3B82C4, #D9778F, #3B82C4);
   --mt-highlight: linear-gradient(135deg, rgba(140, 203, 255, 0.12), rgba(243, 166, 184, 0.10));
+  /* Brand spectrum -- sampled from the logo mark (rose, lilac, sky,
+     teal, leaf, lime). The bright signature; used for the ribbon,
+     key headline words and hairlines, never as a page wash. */
+  --mt-spectrum: linear-gradient(90deg, #F2708F 0%, #A69BD3 22%, #35C2F1 45%, #5DCCB8 64%, #8CC84B 82%, #DDE23B 100%);
+  /* Text version: lime drops out on white, so it ends on leaf. */
+  --mt-spectrum-text: linear-gradient(90deg, #EC5F84 0%, #8E7FD0 30%, #1FAEE6 58%, #33B79C 80%, #6DB33A 100%);
   color-scheme: light;
 }
 .dark {
-  --mt-bg: 5 5 5;                /* #050505 */
-  --mt-surface: 17 17 20;        /* #111114 card */
-  --mt-surface2: 23 23 26;       /* #17171A elevated */
-  --mt-studio: 5 5 5;
+  --mt-bg: 0 0 0;                /* #000000 solid black */
+  --mt-surface: 10 10 12;        /* #0A0A0C card */
+  --mt-surface2: 20 20 23;       /* #141417 elevated */
+  --mt-studio: 0 0 0;
   --mt-ink: 255 255 255;
   --mt-muted: 161 161 170;       /* #A1A1AA */
   --mt-faint: 113 113 122;
-  --mt-border: 39 39 42;         /* #27272A */
+  --mt-border: 36 36 40;         /* #242428 */
   --mt-input-border: 63 63 70;   /* #3F3F46 */
   --mt-accent: 140 203 255;      /* light blue reads well on black */
   --mt-accent-soft: 14 29 43;
@@ -83,6 +89,7 @@
   --mt-card-glow: 0 15px 40px rgba(140, 203, 255, 0.10);
   --mt-card-glow-rose: 0 15px 45px rgba(243, 166, 184, 0.10);
   --mt-highlight: linear-gradient(135deg, rgba(140, 203, 255, 0.10), rgba(243, 166, 184, 0.08));
+  --mt-spectrum-text: linear-gradient(90deg, #F2708F 0%, #A69BD3 25%, #35C2F1 50%, #5DCCB8 72%, #B5D84A 100%);
   color-scheme: dark;
 }
 html,
@@ -92,9 +99,22 @@ body {
 }
 /* Soft blue + rose light floating in at the top of every page. */
 body {
-  background-image: var(--mt-page-light);
-  background-repeat: no-repeat;
   min-height: 100vh;
+}
+
+/* Brand spectrum utilities */
+.mt-spectrum { background: var(--mt-spectrum); }
+.mt-spectrum-text {
+  background: var(--mt-spectrum-text);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+}
+/* 1px spectrum hairline around a special panel */
+.mt-spectrum-border {
+  border: 1px solid transparent;
+  background: linear-gradient(rgb(var(--mt-surface)), rgb(var(--mt-surface))) padding-box, var(--mt-spectrum) border-box;
 }
 
 /* Hero / feature atmosphere (reusable master gradient) */
@@ -213,4 +233,16 @@ textarea::placeholder {
   .animate-intro-logo-in {
     animation: none !important;
   }
+}
+
+/* Home hero ribbon: drawn once on load, echoing the logo's stroke. */
+.mt-ribbon-path {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: mt-draw 2s cubic-bezier(0.65, 0, 0.35, 1) 0.15s forwards;
+}
+@keyframes mt-draw { to { stroke-dashoffset: 0; } }
+.dark .mt-ribbon { filter: drop-shadow(0 0 22px rgba(53, 194, 241, 0.35)) drop-shadow(0 0 40px rgba(242, 112, 143, 0.2)); }
+@media (prefers-reduced-motion: reduce) {
+  .mt-ribbon-path { animation: none; stroke-dashoffset: 0; }
 }
