@@ -38,19 +38,7 @@ body {
   background-color: rgb(var(--mt-bg));
   color: rgb(var(--mt-ink));
 }
-/* Day = pure white, night = pure black, with only a whisper of brand
-   colour in the far corners (barely visible) so it stays clean. */
-body {
-  background-image:
-    radial-gradient(36rem 26rem at 100% 0%, rgba(63, 169, 232, 0.035), transparent 70%),
-    radial-gradient(36rem 26rem at 0% 100%, rgba(139, 111, 196, 0.035), transparent 70%);
-  background-attachment: fixed;
-  background-repeat: no-repeat;
-  min-height: 100vh;
-}
-html.dark body {
-  background-image: none;
-}
+/* Day = pure white, night = pure black. No background tints. */
 /* Brand gradient text + animated gradient helpers */
 .mt-gradient-text {
   background-image: linear-gradient(90deg, #EC1E79, #8B6FC4, #3FA9E8, #4FC8C0, #7ED33E);
