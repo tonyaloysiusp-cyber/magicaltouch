@@ -82,8 +82,13 @@ function ToolButton({
     <button
       onClick={() => (isLive ? onClick() : onPlanned(id, label))}
       title={isLive ? (shortcut ? `${label} (${shortcut})` : label) : `${label} — planned, not yet available`}
-      className={`relative flex flex-col items-center gap-1 w-full ${
-        active ? 'text-blue-600 dark:text-blue-400' : isLive ? 'text-mt-ink dark:text-mt-muted' : 'text-mt-faint dark:text-mt-faint'
+      aria-pressed={active}
+      className={`relative flex flex-col items-center gap-1 w-[60px] py-1.5 rounded-xl border transition-colors ${
+        active
+          ? 'mt-active-blue text-mt-ink font-semibold'
+          : isLive
+          ? 'border-transparent text-mt-muted hover:text-mt-ink hover:bg-mt-surface2'
+          : 'border-transparent text-mt-faint'
       }`}
     >
       {icon}
@@ -224,7 +229,7 @@ export function Toolbar({
       <label className="flex flex-col items-center gap-1 text-mt-ink cursor-pointer w-full">
         <ImagePlus size={18} />
         <span className="text-[10px] leading-none">Upload</span>
-        <input id="mainImageUploadInput" type="file" accept="image/*" onChange={onImageUpload} className="hidden" />
+        <input id="mainImageUploadInput" type="file" accept="image/*" multiple onChange={onImageUpload} className="hidden" />
       </label>
 
       <div className="w-full h-px bg-mt-surface2 dark:bg-mt-surface2" />

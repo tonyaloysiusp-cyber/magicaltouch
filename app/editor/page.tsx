@@ -66,7 +66,7 @@ import { loadTabSession, saveTabSession, clearTabSession } from '@/lib/editor/ta
 import { WorkspaceSwitcher, EditorWorkspace } from '@/components/editor/WorkspaceSwitcher';
 import { PhotoEditorWorkspace, PhotoEditResult, CropRect, PhotoEditorHandle } from '@/components/photoEditor/PhotoEditorWorkspace';
 import { PhotoAdjustments, DEFAULT_ADJUSTMENTS } from '@/lib/editor/photoFilters';
-import { imageObjectToDataURL } from '@/lib/editor/imageQuality';
+import { imageSourceDataURL } from '@/lib/editor/imageQuality';
 import { buildMtd, readMtd, MtdError, fileNameFor, nameFromFileName } from '@/lib/mtd/format';
 import { saveMtdFile, pickMtdFile, canWriteSilently, LocalFileRef } from '@/lib/mtd/fileAccess';
 import { putHandoff, peekHandoff, takeHandoff, newLocalKey, isLocalTabId, ExternalTarget, isCloudTarget } from '@/lib/mtd/handoff';
@@ -76,33 +76,14 @@ import { SaveLocationDialog, SaveLocation } from '@/components/storage/SaveLocat
 import { CloudOpenDialog } from '@/components/storage/CloudOpenDialog';
 import { rememberRecent } from '@/lib/mtd/recent';
 import { missingFontsIn, fontRequiredMessage } from '@/lib/editor/missingFonts';
+import { PERSIST_PROPS, isHelperObject, isArtwork, applyStoredLocks, lockProps } from '@/lib/editor/persist';
 
 const isOpenVectorPath = (o: any): boolean =>
   !!o && o.isVectorPath && o.type === 'path' && Array.isArray(o.path) && o.path.length > 0 && o.path[o.path.length - 1][0] !== 'Z';
 
-// Custom Fabric object properties that must survive round-tripping through
-// canvas.toJSON()/loadFromJSON() -- shared by every place that serializes
-// the live canvas for a save (performSaveInner reuses this twice: once for
-// the upsert payload, once to re-snapshot fresh content for the post-save
-// canvas-recreation effect).
-const SAVE_JSON_PROPS = [
-  'name',
-  'locked',
-  'visible',
-  'isVectorPath',
-  'clipPath',
-  '__uid',
-  '__lockRatio',
-  '__isArtboard',
-  '__artboardId',
-  '__print',
-  '__originalSrc',
-  '__photoEdits',
-  '__cropRect',
-  '__isGuide',
-  '__guideAxis',
-  '__assetId',
-];
+// Custom object properties that survive saves and undo (one shared list,
+// see lib/editor/persist.ts).
+const SAVE_JSON_PROPS = PERSIST_PROPS;
 
 function EditorContent() {
   const searchParams = useSearchParams();
@@ -292,6 +273,10 @@ function EditorContent() {
     artboardsRef.current = artboards;
   }, [artboards]);
   const [activeArtboardId, setActiveArtboardId] = useState<string | null>(null);
+  const activeArtboardIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    activeArtboardIdRef.current = activeArtboardId;
+  }, [activeArtboardId]);
   const [showPreflight, setShowPreflight] = useState(false);
   const [preflightIssues, setPreflightIssues] = useState<PreflightIssue[]>([]);
 
@@ -439,7 +424,7 @@ function EditorContent() {
     setLayers(
       canvas
         .getObjects()
-        .filter((o: any) => !o.__isAnchorHandle && !o.__isPenPreview && !o.__isShapeDraft && !o.__isArtboard && !o.__isGuide)
+        .filter((o: any) => isArtwork(o))
         .slice()
         .reverse()
     );
@@ -479,7 +464,7 @@ function EditorContent() {
     if (!canvas) return;
     const metas = getArtboardMetas();
     canvas.getObjects().forEach((obj: any) => {
-      if (obj.__isArtboard || obj.__isAnchorHandle || obj.__isPenPreview || obj.__isShapeDraft || obj.__isPrintMark || obj.__isGuide) return;
+      if (!isArtwork(obj)) return;
       const center = obj.getCenterPoint();
       obj.__artboardId = findOwningArtboard(center.x, center.y, metas);
     });
@@ -596,11 +581,26 @@ function EditorContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const { historyRef, suppressHistoryRef, canUndo, canRedo, pushHistory: pushHistoryRaw, undo, redo, seedInitialSnapshot, restoreHistory, SNAPSHOT_PROPS } =
+  // Set once setActiveTool exists (further down); undo/redo uses it to
+  // re-apply the current tool's selectability to the restored objects.
+  const reapplyToolRef = useRef<(() => void) | null>(null);
+  const setActiveToolRef = useRef<((tool: ToolMode) => void) | null>(null);
+  const { historyRef, suppressHistoryRef, canUndo, canRedo, pushHistory: pushHistoryRaw, flushHistory, undo, redo, seedInitialSnapshot, restoreHistory, SNAPSHOT_PROPS } =
     useEditorHistory(fabricCanvasRef, () => {
+      const canvas = fabricCanvasRef.current;
+      if (canvas) {
+        applyStoredLocks(canvas);
+        pinArtboardsBack();
+        recomputeMembership();
+        refreshArtboards();
+        reapplyToolRef.current?.();
+      }
       refreshLayers();
       setSelected(fabricCanvasRef.current?.getActiveObject() || null);
+      // An undo is a real change to the document: mark it for saving.
+      markDirtyRef.current?.();
     });
+  const markDirtyRef = useRef<(() => void) | null>(null);
 
   // Marks the active tab dirty on every edit. pushHistory is already
   // called from every mutation site in this file (see grep: ~40 call
@@ -615,13 +615,23 @@ function EditorContent() {
     // dirty/autosave tracking needs the same guard or every first save of
     // a new document would immediately re-mark itself unsaved and loop.
     if (suppressHistoryRef.current) return;
+    markDirty();
+  }, [pushHistoryRaw]);
+
+  // Marks the document as changed: unsaved indicator, autosave, and a
+  // revision counter so a save that finishes after a newer edit never
+  // clears the "unsaved" state for that edit.
+  const editRevRef = useRef(0);
+  function markDirty() {
     const id = activeTabIdRef.current;
     if (!id) return;
+    editRevRef.current += 1;
     setTabs((ts) => (ts.some((t) => t.id === id && !t.dirty) ? ts.map((t) => (t.id === id ? { ...t, dirty: true } : t)) : ts));
     dirtyRef.current = true;
     setSaveStatus((s) => (s === 'saving' ? s : 'unsaved'));
     scheduleAutosaveRef.current?.();
-  }, [pushHistoryRaw]);
+  }
+  markDirtyRef.current = markDirty;
 
   const {
     stateRef: directSelectionStateRef,
@@ -637,16 +647,24 @@ function EditorContent() {
     onAnchorMoved: pushHistory,
   });
 
-  const { draftRef: penDraftRef, clearDraft: clearPenDraft, finishPath: finishPenPath, handleMouseDown: handlePenMouseDown, handleMouseMove: handlePenMouseMove, handleMouseUp: handlePenMouseUp } =
+  const {
+    draftRef: penDraftRef,
+    clearDraft: clearPenDraft,
+    finishPath: finishPenPath,
+    removeLastAnchor: removeLastPenAnchor,
+    handleMouseDown: handlePenMouseDown,
+    handleMouseMove: handlePenMouseMove,
+    handleMouseUp: handlePenMouseUp,
+    drawOverlay: penDrawOverlay,
+  } =
     usePenTool({
       fabricCanvasRef,
       onPathFinished: (pathObj) => {
         const canvas = fabricCanvasRef.current;
         canvas.add(pathObj);
-        canvas.setActiveObject(pathObj);
         if (returnToSelectAfterCreateRef.current) {
-          setActiveToolState('select');
-          activeToolRef.current = 'select';
+          setActiveToolRef.current?.('select');
+          canvas.setActiveObject(pathObj);
         } else {
           // Pen tool stays active (Illustrator's own behavior) — the
           // finished path must go back to non-interactive like every
@@ -687,8 +705,8 @@ function EditorContent() {
         refreshLayers();
         pushHistory();
         if (returnToSelectAfterCreateRef.current) {
-          setActiveToolState('select');
-          activeToolRef.current = 'select';
+          setActiveToolRef.current?.('select');
+          canvas.setActiveObject(obj);
         } else {
           // The shape tool stays loaded (Illustrator's own behavior: draw
           // several rectangles in a row without reselecting the tool) —
@@ -1006,8 +1024,17 @@ function EditorContent() {
       activeToolRef.current = tool;
       setActiveToolState(tool);
 
-      if (tool !== 'pen') clearPenDraft();
+      if (tool !== 'pen') {
+        // Leaving the Pen tool keeps a path that already has 2+ points.
+        if (penDraftRef.current.anchors.length >= 2) finishPenPath(false);
+        else clearPenDraft();
+      }
       if (tool !== 'direct') clearAnchorHandles();
+      // Paths show their resize/rotate handles everywhere except while
+      // their points are being edited with Direct Selection.
+      canvas?.getObjects().forEach((o: any) => {
+        if (o.isVectorPath) o.set({ hasControls: tool !== 'direct' && !o.locked, hasBorders: tool !== 'direct' });
+      });
       clearShapeDraft();
       if (tool !== 'artboard') clearArtboardDraft();
 
@@ -1055,8 +1082,12 @@ function EditorContent() {
             o.hasControls = false;
             return;
           }
+          if (isHelperObject(o)) {
+            if (o.__isAnchorHandle) o.evented = true;
+            return;
+          }
           o.evented = true;
-          if (!o.locked && !o.__isAnchorHandle && !o.__isPenPreview) o.selectable = true;
+          o.selectable = true;
         });
         canvas.defaultCursor = 'default';
         canvas.hoverCursor = 'move';
@@ -1084,6 +1115,8 @@ function EditorContent() {
     },
     [clearPenDraft, clearAnchorHandles, clearShapeDraft, clearArtboardDraft, applyGuideInteractivity, renderAnchorHandles]
   );
+  reapplyToolRef.current = () => setActiveTool(activeToolRef.current);
+  setActiveToolRef.current = setActiveTool;
 
   // Ensures at least one locked, non-rotatable white artboard Rect exists.
   // Everything outside every artboard is the dark pasteboard
@@ -1139,6 +1172,7 @@ function EditorContent() {
         rect.set({ selectable: false, evented: false, hasControls: false, lockRotation: true });
       });
     }
+    applyStoredLocks(canvas);
     pinArtboardsBack();
     recomputeMembership();
     refreshArtboards();
@@ -1152,7 +1186,7 @@ function EditorContent() {
     if (!vw || !vh || rect.width <= 0 || rect.height <= 0) return;
     let z = Math.min((vw - pad * 2) / rect.width, (vh - pad * 2) / rect.height);
     if (!isFinite(z) || z <= 0) z = 1;
-    z = Math.max(0.1, Math.min(2, z));
+    z = Math.max(0.05, Math.min(4, z));
     const panX = (vw - rect.width * z) / 2 - rect.x * z;
     const panY = (vh - rect.height * z) / 2 - rect.y * z;
     canvas.setViewportTransform([z, 0, 0, z, panX, panY]);
@@ -1177,12 +1211,24 @@ function EditorContent() {
       // z-order, history) directly instead of guessing from pixels.
       (window as any).__fabricCanvas = canvas;
 
-      const onLayersChanged = () => refreshLayers();
-      const onHistoryChanged = () => pushHistory();
+      // Tool previews, anchor handles and other helpers are never part of
+      // the document: keep them out of saves, undo and the layers list.
+      const onLayersChanged = (e: any) => {
+        if (isHelperObject(e?.target)) return;
+        refreshLayers();
+      };
+      const onHistoryChanged = (e: any) => {
+        if (isHelperObject(e?.target)) return;
+        pushHistory();
+      };
 
       canvas.on('object:added', (e: any) => {
         const obj: any = e.target;
-        if (obj && !obj.__isAnchorHandle && !obj.__isPenPreview && !obj.__isShapeDraft && !obj.__isArtboard && !obj.__uid) {
+        if (isHelperObject(obj)) {
+          obj.excludeFromExport = true;
+          return;
+        }
+        if (obj && !obj.__isArtboard && !obj.__uid) {
           obj.__uid = `obj_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
         }
         // 'editing:entered'/'editing:exited' fire on the text object
@@ -1207,11 +1253,13 @@ function EditorContent() {
       // Multi-artboard bookkeeping: keep each object's owning artboard
       // current, and normalize an artboard's own scale into width/height
       // whenever it's moved/resized via the Artboard tool.
-      canvas.on('object:added', () => {
+      canvas.on('object:added', (e: any) => {
+        if (isHelperObject(e?.target)) return;
         recomputeMembership();
         refreshArtboards();
       });
-      canvas.on('object:removed', () => {
+      canvas.on('object:removed', (e: any) => {
+        if (isHelperObject(e?.target)) return;
         recomputeMembership();
         refreshArtboards();
       });
@@ -1290,15 +1338,14 @@ function EditorContent() {
           let smartGuideLines: GuideLine[] = [];
 
           if (snapToObjectsRef.current) {
+            const movingSet = obj.type === 'activeSelection' ? new Set(obj.getObjects()) : null;
             const targets = canvas
               .getObjects()
               .filter(
                 (o: any) =>
                   o !== obj &&
-                  !o.__isAnchorHandle &&
-                  !o.__isPenPreview &&
-                  !o.__isShapeDraft &&
-                  !o.__isPrintMark &&
+                  !(movingSet && movingSet.has(o)) &&
+                  !isHelperObject(o) &&
                   !o.__isGuide &&
                   o.visible !== false
               )
@@ -1487,6 +1534,7 @@ function EditorContent() {
           return;
         }
         if (activeToolRef.current === 'pen') handlePenMouseUp();
+
         else if (isDrawTool(activeToolRef.current)) handleShapeMouseUp();
       });
 
@@ -1497,7 +1545,7 @@ function EditorContent() {
         if (e.ctrlKey || e.metaKey) {
           let z = canvas.getZoom();
           z *= 0.999 ** e.deltaY;
-          z = Math.max(0.1, Math.min(2, z));
+          z = Math.max(0.05, Math.min(8, z));
           canvas.zoomToPoint(new F.Point(e.offsetX, e.offsetY), z);
           setZoom(Math.round(z * 100));
         } else {
@@ -1609,6 +1657,8 @@ function EditorContent() {
           ctx.restore();
         }
 
+        penDrawOverlay(ctx, vt as any, activeToolRef.current === 'pen');
+
         // Curve-handle connector lines for the Direct Selection tool — a
         // thin line from each bezier handle back to the anchor it controls,
         // read straight off the live handle/anchor circles so it always
@@ -1716,7 +1766,15 @@ function EditorContent() {
                 suppressHistoryRef.current = false;
               });
             }
-            if (error) console.error('Failed to load design:', error);
+            if (error || !data) {
+              console.error('Failed to load design:', error);
+              loadFailedIdRef.current = urlDesignId;
+              setDesignName('Could not open design');
+              setLocalNotice("This design couldn't be opened. Check your connection and reload the page. Nothing has been changed.");
+              ensureArtboards(canvas, F);
+              fitToRect(canvas, { x: 0, y: 0, width, height });
+              seedInitialSnapshot();
+            }
           });
       } else if (cameFromTemplate) {
         // "Use Template" (see app/templates/page.tsx) -- a fresh,
@@ -1821,7 +1879,7 @@ function EditorContent() {
   const applyZoom = useCallback((updater: number | ((z: number) => number)) => {
     setZoom((prev) => {
       const next = typeof updater === 'function' ? (updater as (z: number) => number)(prev) : updater;
-      const clamped = Math.max(10, Math.min(200, Math.round(next)));
+      const clamped = Math.max(5, Math.min(800, Math.round(next)));
       const canvas = fabricCanvasRef.current;
       if (canvas) {
         const center = new (window as any).fabric.Point(canvas.getWidth() / 2, canvas.getHeight() / 2);
@@ -1834,8 +1892,10 @@ function EditorContent() {
   // Where new content should land: the active artboard if one exists,
   // otherwise the (0,0)-(width,height) box a brand-new document starts with
   // (id is undefined only in that startup-edge-case fallback).
+  // Reads refs, not state, so it's correct inside long-lived handlers too.
   const getActiveArtboardRect = (): { id?: string; x: number; y: number; width: number; height: number } => {
-    const ab = artboards.find((a) => a.id === activeArtboardId) || artboards[0];
+    const list = artboardsRef.current.length ? artboardsRef.current : artboards;
+    const ab = list.find((a) => a.id === activeArtboardIdRef.current) || list[0];
     return ab || { x: 0, y: 0, width, height };
   };
 
@@ -1877,6 +1937,10 @@ function EditorContent() {
   const backgroundUploadAsset = (img: any) => {
     const dataUrl = img.getSrc ? img.getSrc() : img._originalElement?.src;
     if (!dataUrl || !dataUrl.startsWith('data:')) return;
+    // If the picture is replaced or edited before this upload finishes,
+    // the finished upload must not put the old pixels back.
+    const token = `${Date.now()}_${Math.random()}`;
+    img.__uploadToken = token;
     supabase.auth.getUser().then(({ data }) => {
       const user = data.user;
       if (!user) return;
@@ -1884,6 +1948,7 @@ function EditorContent() {
         .then((uploaded) => {
           const canvas = fabricCanvasRef.current;
           if (!canvas || !canvas.getObjects().includes(img)) return;
+          if (img.__uploadToken !== token) return;
           img.setSrc(
             uploaded.url,
             () => {
@@ -1901,31 +1966,21 @@ function EditorContent() {
 
   const nextImageIdRef = useRef(0);
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files ? e.target.files[0] : null;
-    if (!file) return;
-    const ab = getActiveArtboardRect();
-    const reader = new FileReader();
-    reader.onload = function (event) {
-      import('fabric').then((mod) => {
-        mod.fabric.Image.fromURL(event.target ? (event.target.result as string) : '', function (img: any) {
-          img.scaleToWidth(300);
-          img.set({ left: ab.x + 20, top: ab.y + 20 });
-          img.__id = `img_${Date.now()}_${nextImageIdRef.current++}`;
-          fabricCanvasRef.current.add(img);
-          fabricCanvasRef.current.setActiveObject(img);
-          backgroundUploadAsset(img);
-          if (pendingPhotoStartRef.current) {
-            pendingPhotoStartRef.current = false;
-            openPhotoEditor();
-            // Drop ?newPhoto=1 so refreshing this tab later doesn't
-            // re-arm the auto-open behavior on an unrelated upload.
-            const base = `/editor?w=${width}&h=${height}`;
-            router.replace(designIdRef.current ? `${base}&designId=${designIdRef.current}` : base);
-          }
-        });
-      });
-    };
-    reader.readAsDataURL(file);
+    const files = Array.from(e.target.files || []) as File[];
+    e.target.value = '';
+    if (!files.length) return;
+    files.forEach((file, i) =>
+      insertImageFile(file, i).then(() => {
+        if (i === 0 && pendingPhotoStartRef.current) {
+          pendingPhotoStartRef.current = false;
+          openPhotoEditor();
+          // Drop ?newPhoto=1 so refreshing this tab later doesn't re-arm
+          // the auto-open behaviour on an unrelated upload.
+          const base = `/editor?w=${width}&h=${height}`;
+          router.replace(designIdRef.current ? `${base}&designId=${designIdRef.current}` : base);
+        }
+      })
+    );
   };
 
   // Shared by both the plain-image and PDF-page-rasterized import paths
@@ -1933,13 +1988,23 @@ function EditorContent() {
   // artboard. object:added's own canvas listeners (already wired at
   // canvas-init time) pick up layers-panel refresh and history recording
   // automatically, the same way handleImageUpload's own canvas.add() does.
-  const insertImageDataUrl = (dataUrl: string, cascadeIndex = 0): Promise<void> => {
+  const insertImageDataUrl = (dataUrl: string, cascadeIndex = 0, at?: { x: number; y: number }): Promise<void> => {
     return new Promise((resolve) => {
       const ab = getActiveArtboardRect();
       import('fabric').then((mod) => {
         mod.fabric.Image.fromURL(dataUrl, (img: any) => {
-          img.scaleToWidth(300);
-          img.set({ left: ab.x + 20 + cascadeIndex * 24, top: ab.y + 20 + cascadeIndex * 24 });
+          if (!img || !img.width) {
+            setLocalNotice("That image couldn't be opened. Try a JPG or PNG file.");
+            resolve();
+            return;
+          }
+          // Fit inside half the page, never upscaled past its real size.
+          const target = Math.min(img.width, ab.width * 0.5, (ab.height * 0.5 * img.width) / img.height);
+          img.scaleToWidth(Math.max(40, target));
+          const w = img.getScaledWidth();
+          const h = img.getScaledHeight();
+          if (at) img.set({ left: at.x - w / 2 + cascadeIndex * 24, top: at.y - h / 2 + cascadeIndex * 24 });
+          else img.set({ left: ab.x + (ab.width - w) / 2 + cascadeIndex * 24, top: ab.y + (ab.height - h) / 2 + cascadeIndex * 24 });
           img.__id = `img_${Date.now()}_${nextImageIdRef.current++}`;
           fabricCanvasRef.current.add(img);
           fabricCanvasRef.current.setActiveObject(img);
@@ -1950,11 +2015,15 @@ function EditorContent() {
     });
   };
 
-  const insertImageFile = (file: File, cascadeIndex = 0): Promise<void> => {
+  const insertImageFile = (file: File, cascadeIndex = 0, at?: { x: number; y: number }): Promise<void> => {
     return new Promise((resolve) => {
       const reader = new FileReader();
       reader.onload = (event) => {
-        insertImageDataUrl(event.target ? (event.target.result as string) : '', cascadeIndex).then(resolve);
+        insertImageDataUrl(event.target ? (event.target.result as string) : '', cascadeIndex, at).then(resolve);
+      };
+      reader.onerror = () => {
+        setLocalNotice("That file couldn't be read. Try another image.");
+        resolve();
       };
       reader.readAsDataURL(file);
     });
@@ -2040,12 +2109,18 @@ function EditorContent() {
         // scale — rescale it by the same ratio so its absolute size and
         // position on screen stay exactly where they were, regardless of
         // how the new image's natural size compares to the old one's.
-        if (active.clipPath) {
+        if (active.clipPath && active.clipPath.absolutePositioned) {
+          // A mask fixed to the page stays exactly where it is.
+        } else if (active.clipPath) {
+          // The crop/frame lives in the image's own space: rescale its size
+          // and offset so it covers the same area on the page.
           const ratioX = prevScaleX / scale;
           const ratioY = prevScaleY / scale;
           active.clipPath.set({
             scaleX: (active.clipPath.scaleX || 1) * ratioX,
             scaleY: (active.clipPath.scaleY || 1) * ratioY,
+            left: (active.clipPath.left || 0) * ratioX,
+            top: (active.clipPath.top || 0) * ratioY,
           });
         } else {
           // No existing crop/mask: a "cover" fit can still overhang the
@@ -2064,13 +2139,19 @@ function EditorContent() {
         }
 
         active.set({ scaleX: scale, scaleY: scale, dirty: true });
-        // A stale "restore original" backup from the previous photo no
-        // longer applies to this one.
+        // The previous photo's backup, crop, edits and stored copy don't
+        // describe this one. Live adjustments (__adjust filters) are kept
+        // and re-applied, so the new photo gets the same look.
         delete active.__originalSrc;
+        delete active.__cropRect;
+        delete active.__photoEdits;
+        active.__assetId = undefined;
+        if (active.filters && active.filters.length && active.applyFilters) active.applyFilters();
         active.setCoords();
         canvas.requestRenderAll();
         bumpSel();
         pushHistory();
+        backgroundUploadAsset(active);
       });
     };
     reader.readAsDataURL(file);
@@ -2093,7 +2174,7 @@ function EditorContent() {
     // imageObjectToDataURL restores the native pixel data regardless of
     // on-canvas scale, so the Photo Editor always starts from the best
     // available source instead of a display-sized preview.
-    if (!active.__originalSrc) active.__originalSrc = imageObjectToDataURL(active);
+    if (!active.__originalSrc) active.__originalSrc = imageSourceDataURL(active);
     setPhotoEditSession({
       targetUid: active.__uid,
       sourceDataUrl: active.__originalSrc,
@@ -2273,10 +2354,9 @@ function EditorContent() {
       return;
     }
     if (active.type === 'activeSelection') {
-      active.forEachObject((obj: any) => {
-        if (!obj.locked) canvas.remove(obj);
-      });
+      const members = active.getObjects().filter((obj: any) => !obj.locked);
       canvas.discardActiveObject();
+      members.forEach((obj: any) => canvas.remove(obj));
     } else {
       canvas.remove(active);
     }
@@ -2364,6 +2444,32 @@ function EditorContent() {
     const shift = PASTE_STEP * pasteCountRef.current;
     addClonesToCanvas(clones, shift, shift);
   };
+
+  // Drop images from the computer onto the canvas. Dropping onto an
+  // existing image (or image frame) replaces it, keeping its size,
+  // position, crop and effects.
+  const handleCanvasDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    const canvas = fabricCanvasRef.current;
+    if (!canvas) return;
+    const asset = e.dataTransfer.getData('application/x-mt-asset');
+    const pointer = canvas.getPointer(e.nativeEvent as any);
+    if (asset) {
+      dropAssetRef.current?.(asset, pointer, e.nativeEvent);
+      return;
+    }
+    const files = (Array.from(e.dataTransfer.files || []) as File[]).filter((f) => f.type.startsWith('image/'));
+    if (!files.length) return;
+    const target = canvas.findTarget(e.nativeEvent as any, false);
+    if (target && (target.type === 'image' || target.__frame) && !target.locked && files.length === 1) {
+      canvas.setActiveObject(target);
+      replaceSelectedImage(files[0]);
+      return;
+    }
+    files.forEach((f, i) => insertImageFile(f, i, { x: pointer.x, y: pointer.y }));
+  };
+  // Set by the side panels (templates, shapes, frames…) to handle their own drags.
+  const dropAssetRef = useRef<((asset: string, pointer: { x: number; y: number }, ev: any) => void) | null>(null);
 
   // Right-click: selects whatever's under the cursor (if anything) before
   // opening the menu, matching how a real app's context menu always acts
@@ -2532,29 +2638,36 @@ function EditorContent() {
     refreshLayers();
   };
 
+  // Locking keeps an object selectable (so it can be right-clicked and
+  // unlocked) but stops it moving, resizing or rotating. Works on a
+  // multi-selection by locking every object in it.
   const toggleLock = (obj: any) => {
     const canvas = fabricCanvasRef.current;
-    const nextLocked = !obj.locked;
-    obj.set({
-      locked: nextLocked,
-      selectable: !nextLocked,
-      evented: !nextLocked,
-      lockMovementX: nextLocked,
-      lockMovementY: nextLocked,
-      lockScalingX: nextLocked,
-      lockScalingY: nextLocked,
-      lockRotation: nextLocked,
+    if (!obj) return;
+    const targets: any[] = obj.type === 'activeSelection' ? obj.getObjects() : [obj];
+    const nextLocked = !targets.every((t) => t.locked);
+    if (obj.type === 'activeSelection') canvas.discardActiveObject();
+    targets.forEach((t) => {
+      t.set(lockProps(nextLocked));
+      t.setCoords();
     });
-    if (nextLocked && canvas.getActiveObject() === obj) canvas.discardActiveObject();
+    if (obj.type === 'activeSelection' && targets.length > 1) {
+      const F = (window as any).fabric;
+      canvas.setActiveObject(new F.ActiveSelection(targets, { canvas }));
+    }
     canvas.requestRenderAll();
+    refreshLayers();
     bumpSel();
     pushHistory();
   };
 
   const toggleVisible = (obj: any) => {
     const canvas = fabricCanvasRef.current;
-    obj.set({ visible: obj.visible === false ? true : false });
-    if (obj.visible === false && canvas.getActiveObject() === obj) canvas.discardActiveObject();
+    if (!obj) return;
+    const targets: any[] = obj.type === 'activeSelection' ? obj.getObjects() : [obj];
+    const nextVisible = targets.some((t) => t.visible === false);
+    if (!nextVisible) canvas.discardActiveObject();
+    targets.forEach((t) => t.set({ visible: nextVisible }));
     canvas.requestRenderAll();
     refreshLayers();
     bumpSel();
@@ -2569,11 +2682,37 @@ function EditorContent() {
 
   const layerLabel = (obj: any, index: number) => obj.name || `${obj.type} ${index + 1}`;
 
+  // Small previews for the Layers panel, cached until the document changes.
+  const thumbCacheRef = useRef<{ rev: number; map: WeakMap<any, string | null> }>({ rev: -1, map: new WeakMap() });
+  const layerThumbnail = (obj: any): string | null => {
+    const cache = thumbCacheRef.current;
+    if (cache.rev !== editRevRef.current) {
+      cache.rev = editRevRef.current;
+      cache.map = new WeakMap();
+    }
+    if (cache.map.has(obj)) return cache.map.get(obj) ?? null;
+    let url: string | null = null;
+    try {
+      const w = Math.max(1, obj.getScaledWidth());
+      const h = Math.max(1, obj.getScaledHeight());
+      const mult = Math.min(1, 64 / Math.max(w, h));
+      url = obj.toDataURL({ format: 'png', multiplier: mult });
+    } catch {
+      url = null;
+    }
+    cache.map.set(obj, url);
+    return url;
+  };
+
+  // The layers list hides artboards, guides and helpers, so positions are
+  // translated through the object that's currently at the drop target.
   const reorderLayers = (fromIndex: number, targetIndex: number) => {
     const canvas = fabricCanvasRef.current;
     const obj = layers[fromIndex];
-    const objs = canvas.getObjects();
-    const targetCanvasIdx = objs.length - 1 - targetIndex;
+    const target = layers[Math.max(0, Math.min(layers.length - 1, targetIndex))];
+    if (!obj || !target || obj === target) return;
+    const targetCanvasIdx = canvas.getObjects().indexOf(target);
+    if (targetCanvasIdx < 0) return;
     canvas.moveTo(obj, targetCanvasIdx);
     canvas.requestRenderAll();
     refreshLayers();
@@ -2581,36 +2720,131 @@ function EditorContent() {
     pushHistory();
   };
 
-  const alignObject = (mode: 'left' | 'centerH' | 'right' | 'top' | 'centerV' | 'bottom') => {
+  // Align / distribute. A single object aligns to its page (artboard);
+  // several selected objects align to the selection's own bounds unless
+  // `relativeTo` says 'page'. Bounding boxes are used throughout so
+  // rotated objects line up by what you actually see.
+  type AlignMode = 'left' | 'centerH' | 'right' | 'top' | 'centerV' | 'bottom';
+  const alignObject = (mode: AlignMode, relativeTo: 'auto' | 'page' | 'selection' = 'auto') => {
     const canvas = fabricCanvasRef.current;
     const active = canvas.getActiveObject();
     if (!active || active.locked) return;
-    const objW = active.getScaledWidth();
-    const objH = active.getScaledHeight();
-    // Align relative to whichever artboard the object is actually on,
-    // falling back to the active artboard for objects on the pasteboard.
-    const ownAb = artboards.find((a) => a.id === active.__artboardId);
-    const ab = ownAb || getActiveArtboardRect();
+    const isMulti = active.type === 'activeSelection';
+    const members: any[] = isMulti ? active.getObjects().filter((o: any) => !o.locked) : [active];
+    if (!members.length) return;
+    if (isMulti) canvas.discardActiveObject();
 
-    switch (mode) {
-      case 'left': active.set({ left: ab.x }); break;
-      case 'centerH': active.set({ left: ab.x + ab.width / 2 - objW / 2 }); break;
-      case 'right': active.set({ left: ab.x + ab.width - objW }); break;
-      case 'top': active.set({ top: ab.y }); break;
-      case 'centerV': active.set({ top: ab.y + ab.height / 2 - objH / 2 }); break;
-      case 'bottom': active.set({ top: ab.y + ab.height - objH }); break;
+    const rects = members.map((o) => o.getBoundingRect(true, true));
+    let ref: { x: number; y: number; width: number; height: number };
+    if (isMulti && relativeTo !== 'page') {
+      const minX = Math.min(...rects.map((r) => r.left));
+      const minY = Math.min(...rects.map((r) => r.top));
+      const maxX = Math.max(...rects.map((r) => r.left + r.width));
+      const maxY = Math.max(...rects.map((r) => r.top + r.height));
+      ref = { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
+    } else {
+      const own = artboardsRef.current.find((a) => a.id === members[0].__artboardId);
+      ref = own || getActiveArtboardRect();
     }
-    active.setCoords();
+
+    members.forEach((o, i) => {
+      const r = rects[i];
+      let dx = 0;
+      let dy = 0;
+      if (mode === 'left') dx = ref.x - r.left;
+      if (mode === 'centerH') dx = ref.x + ref.width / 2 - (r.left + r.width / 2);
+      if (mode === 'right') dx = ref.x + ref.width - (r.left + r.width);
+      if (mode === 'top') dy = ref.y - r.top;
+      if (mode === 'centerV') dy = ref.y + ref.height / 2 - (r.top + r.height / 2);
+      if (mode === 'bottom') dy = ref.y + ref.height - (r.top + r.height);
+      o.set({ left: (o.left || 0) + dx, top: (o.top || 0) + dy });
+      o.setCoords();
+    });
+    reselect(isMulti ? active.getObjects() : null);
+    recomputeMembership();
     canvas.requestRenderAll();
     pushHistory();
     bumpSel();
   };
 
+  // Equal spacing between 3+ selected objects (edge to edge).
+  const distributeObjects = (axis: 'h' | 'v') => {
+    const canvas = fabricCanvasRef.current;
+    const active = canvas.getActiveObject();
+    if (!active || active.type !== 'activeSelection') return;
+    const all = active.getObjects();
+    const members: any[] = all.filter((o: any) => !o.locked);
+    if (members.length < 3) return;
+    canvas.discardActiveObject();
+    const items = members
+      .map((o) => ({ o, r: o.getBoundingRect(true, true) }))
+      .sort((a, b) => (axis === 'h' ? a.r.left - b.r.left : a.r.top - b.r.top));
+    const first = items[0].r;
+    const last = items[items.length - 1].r;
+    const start = axis === 'h' ? first.left : first.top;
+    const end = axis === 'h' ? last.left + last.width : last.top + last.height;
+    const total = items.reduce((sum, it) => sum + (axis === 'h' ? it.r.width : it.r.height), 0);
+    const gap = (end - start - total) / (items.length - 1);
+    let cursor = start;
+    items.forEach(({ o, r }) => {
+      const current = axis === 'h' ? r.left : r.top;
+      const delta = cursor - current;
+      if (axis === 'h') o.set({ left: (o.left || 0) + delta });
+      else o.set({ top: (o.top || 0) + delta });
+      o.setCoords();
+      cursor += (axis === 'h' ? r.width : r.height) + gap;
+    });
+    reselect(all);
+    recomputeMembership();
+    canvas.requestRenderAll();
+    pushHistory();
+    bumpSel();
+  };
+
+  const reselect = (objs: any[] | null) => {
+    const canvas = fabricCanvasRef.current;
+    if (!objs || !objs.length) return;
+    const F = (window as any).fabric;
+    if (objs.length === 1) canvas.setActiveObject(objs[0]);
+    else canvas.setActiveObject(new F.ActiveSelection(objs, { canvas }));
+  };
+
+  // Style properties that, on a multi-selection or group, belong on each
+  // object inside it rather than on the invisible wrapper.
+  const CHILD_STYLE_PROPS = ['fill', 'stroke', 'strokeWidth', 'strokeDashArray', 'fontFamily', 'fontWeight', 'fontStyle', 'underline', 'linethrough', 'textAlign', 'charSpacing', 'lineHeight', 'shadow'];
+
   const applyProp = (props: Record<string, any>, record = true) => {
     const canvas = fabricCanvasRef.current;
     const active = canvas.getActiveObject();
     if (!active || active.locked) return;
-    active.set(props);
+    const { angle, ...rest } = props;
+    const isContainer = active.type === 'activeSelection' || active.type === 'group';
+    const childProps: Record<string, any> = {};
+    const ownProps: Record<string, any> = {};
+    Object.entries(rest).forEach(([k, v]) => {
+      if (isContainer && CHILD_STYLE_PROPS.includes(k)) childProps[k] = v;
+      else ownProps[k] = v;
+    });
+    if (Object.keys(childProps).length) {
+      const walk = (o: any) => {
+        if (o.type === 'group' && o.getObjects) o.getObjects().forEach(walk);
+        else if (!o.locked) {
+          // Only text takes text properties; shapes take fill/stroke.
+          const isTextObj = o.type === 'textbox' || o.type === 'i-text' || o.type === 'text';
+          const applicable = Object.fromEntries(
+            Object.entries(childProps).filter(([k]) => isTextObj || ['fill', 'stroke', 'strokeWidth', 'strokeDashArray', 'shadow'].includes(k))
+          );
+          if (o.type === 'image') delete (applicable as any).fill;
+          o.set(applicable);
+          o.dirty = true;
+        }
+      };
+      active.getObjects().forEach(walk);
+      if (active.type === 'group') active.dirty = true;
+    }
+    if (Object.keys(ownProps).length) active.set(ownProps);
+    // Rotation pivots on the object's centre, like every design app.
+    if (angle !== undefined) active.rotate(angle);
     active.setCoords();
     canvas.requestRenderAll();
     bumpSel();
@@ -2904,6 +3138,54 @@ function EditorContent() {
     moveArtboardUp(index + 1);
   };
 
+  const nudgeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const spacePanRef = useRef<ToolMode | null>(null);
+
+  const cutSelected = async () => {
+    const canvas = fabricCanvasRef.current;
+    const active = canvas?.getActiveObject();
+    if (!active || active.locked || active.__isArtboard || isHelperObject(active)) return;
+    await copySelected();
+    deleteSelected();
+  };
+
+  const fitActiveArtboard = () => {
+    const canvas = fabricCanvasRef.current;
+    if (!canvas) return;
+    fitToRect(canvas, getActiveArtboardRect());
+  };
+
+  // Pasting: images copied from another app (or a screenshot) arrive in
+  // the browser's paste event; objects copied inside the editor live in
+  // our own clipboard. Whichever applies wins.
+  const pasteHandledRef = useRef(false);
+  const armPasteFallback = () => {
+    pasteHandledRef.current = false;
+    setTimeout(() => {
+      if (!pasteHandledRef.current) pasteClipboard();
+    }, 120);
+  };
+  useEffect(() => {
+    const onPaste = (e: ClipboardEvent) => {
+      if (workspaceRef.current !== 'design') return;
+      const el = document.activeElement as HTMLElement | null;
+      if (el && (['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName) || el.isContentEditable)) return;
+      const active = fabricCanvasRef.current?.getActiveObject();
+      if (active?.isEditing) return;
+      const files = (Array.from(e.clipboardData?.files || []) as File[]).filter((f) => f.type.startsWith('image/'));
+      pasteHandledRef.current = true;
+      e.preventDefault();
+      if (files.length) {
+        files.forEach((f, i) => insertImageFile(f, i));
+      } else {
+        pasteClipboard();
+      }
+    };
+    window.addEventListener('paste', onPaste);
+    return () => window.removeEventListener('paste', onPaste);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // While the Photo Editor workspace is showing, its own keyboard
@@ -2952,6 +3234,7 @@ function EditorContent() {
       if (canUseToolShortcuts && activeToolRef.current === 'pen') {
         if (e.key === 'Enter') { e.preventDefault(); finishPenPath(false); return; }
         if (e.key === 'Escape') { e.preventDefault(); clearPenDraft(); return; }
+        if ((e.key === 'Backspace' || e.key === 'Delete') && penDraftRef.current.anchors.length) { e.preventDefault(); removeLastPenAnchor(); return; }
       }
 
       if (canUseToolShortcuts && isDrawTool(activeToolRef.current) && e.key === 'Escape') {
@@ -2963,13 +3246,14 @@ function EditorContent() {
 
       if (canUseToolShortcuts && e.shiftKey && e.key === 'Enter') { e.preventDefault(); applyPathAsMask(); return; }
 
-      if (isMeta && e.key.toLowerCase() === 'z' && !e.shiftKey) { e.preventDefault(); undo(); return; }
-      if ((isMeta && e.key.toLowerCase() === 'z' && e.shiftKey) || (isMeta && e.key.toLowerCase() === 'y')) { e.preventDefault(); redo(); return; }
+      // Undo/redo and select-all belong to a text field while typing in one.
+      if (isMeta && e.key.toLowerCase() === 'z' && !e.shiftKey && canUseToolShortcuts) { e.preventDefault(); undo(); return; }
+      if (((isMeta && e.key.toLowerCase() === 'z' && e.shiftKey) || (isMeta && e.key.toLowerCase() === 'y')) && canUseToolShortcuts) { e.preventDefault(); redo(); return; }
       if (isMeta && e.key.toLowerCase() === 's' && e.shiftKey) { e.preventDefault(); saveDesignAs(); return; }
       if (isMeta && e.key.toLowerCase() === 's') { e.preventDefault(); saveDesign(); return; }
-      if (isMeta && e.key.toLowerCase() === 'a' && !isEditingText) {
+      if (isMeta && e.key.toLowerCase() === 'a' && canUseToolShortcuts) {
         e.preventDefault();
-        const objs = canvas.getObjects().filter((o: any) => !o.locked && !o.__isAnchorHandle && !o.__isPenPreview && !o.__isShapeDraft && !o.__isArtboard);
+        const objs = canvas.getObjects().filter((o: any) => isArtwork(o) && !o.locked && o.visible !== false);
         if (objs.length) {
           canvas.discardActiveObject();
           const sel = new (window as any).fabric.ActiveSelection(objs, { canvas });
@@ -2990,7 +3274,10 @@ function EditorContent() {
       if (isMeta && e.key.toLowerCase() === 'd' && canUseToolShortcuts) { e.preventDefault(); duplicateSelected(); return; }
       if (isMeta && e.key.toLowerCase() === 'j' && canUseToolShortcuts) { e.preventDefault(); joinSelectedPaths(); return; }
       if (isMeta && e.key.toLowerCase() === 'c' && canUseToolShortcuts) { e.preventDefault(); copySelected(); return; }
-      if (isMeta && e.key.toLowerCase() === 'v' && canUseToolShortcuts) { e.preventDefault(); pasteClipboard(); return; }
+      if (isMeta && e.key.toLowerCase() === 'x' && canUseToolShortcuts) { e.preventDefault(); cutSelected(); return; }
+      // Ctrl/Cmd+V is handled by the 'paste' event below, which can also
+      // see images copied from other apps; this only arms the fallback.
+      if (isMeta && e.key.toLowerCase() === 'v' && canUseToolShortcuts) { armPasteFallback(); return; }
       if (isMeta && e.key.toLowerCase() === 'l' && canUseToolShortcuts) { e.preventDefault(); active && toggleLock(active); return; }
       if (isMeta && e.key.toLowerCase() === 'h' && canUseToolShortcuts) { e.preventDefault(); active && toggleVisible(active); return; }
       if ((e.key === 'Delete' || e.key === 'Backspace') && canUseToolShortcuts && activeToolRef.current !== 'pen' && !isDrawTool(activeToolRef.current)) {
@@ -2998,13 +3285,21 @@ function EditorContent() {
         deleteSelected();
         return;
       }
-      if (isMeta && e.key === ']' && !e.shiftKey) { e.preventDefault(); bringForward(); return; }
-      if (isMeta && e.key === '[' && !e.shiftKey) { e.preventDefault(); sendBackward(); return; }
-      if (isMeta && e.shiftKey && e.key === ']') { e.preventDefault(); bringToFront(); return; }
-      if (isMeta && e.shiftKey && e.key === '[') { e.preventDefault(); sendToBack(); return; }
-      if (isMeta && (e.key === '=' || e.key === '+')) { e.preventDefault(); applyZoom((z) => z + 10); return; }
-      if (isMeta && e.key === '-') { e.preventDefault(); applyZoom((z) => z - 10); return; }
-      if (isMeta && e.key === '0') { e.preventDefault(); applyZoom(100); return; }
+      // e.code, not e.key: with Shift held most keyboards report } and {.
+      if (isMeta && e.code === 'BracketRight' && !e.shiftKey && canUseToolShortcuts) { e.preventDefault(); bringForward(); return; }
+      if (isMeta && e.code === 'BracketLeft' && !e.shiftKey && canUseToolShortcuts) { e.preventDefault(); sendBackward(); return; }
+      if (isMeta && e.shiftKey && e.code === 'BracketRight' && canUseToolShortcuts) { e.preventDefault(); bringToFront(); return; }
+      if (isMeta && e.shiftKey && e.code === 'BracketLeft' && canUseToolShortcuts) { e.preventDefault(); sendToBack(); return; }
+      if (isMeta && (e.key === '=' || e.key === '+')) { e.preventDefault(); applyZoom((z) => z * 1.25); return; }
+      if (isMeta && e.key === '-') { e.preventDefault(); applyZoom((z) => z / 1.25); return; }
+      if (isMeta && e.key === '0') { e.preventDefault(); fitActiveArtboard(); return; }
+      if (isMeta && e.key === '1') { e.preventDefault(); applyZoom(100); return; }
+      if (e.code === 'Space' && canUseToolShortcuts && !e.repeat && activeToolRef.current !== 'pan') {
+        e.preventDefault();
+        spacePanRef.current = activeToolRef.current;
+        setActiveTool('pan');
+        return;
+      }
       if (isMeta && e.key === ';') { e.preventDefault(); setShowGuides((v) => !v); return; }
       if (isMeta && e.key.toLowerCase() === 'r' && !isEditingText) { e.preventDefault(); setShowRulers((v) => !v); return; }
 
@@ -3018,11 +3313,28 @@ function EditorContent() {
         active.setCoords();
         canvas.requestRenderAll();
         bumpSel();
+        // Holding an arrow key repeats; record one undo step once it stops.
+        if (nudgeTimerRef.current) clearTimeout(nudgeTimerRef.current);
+        nudgeTimerRef.current = setTimeout(() => {
+          recomputeMembership();
+          canvas.fire('object:modified', { target: active });
+        }, 350);
+      }
+    };
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.code === 'Space' && spacePanRef.current) {
+        const back = spacePanRef.current;
+        spacePanRef.current = null;
+        setActiveTool(back);
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [undo, redo, finishPenPath, clearPenDraft, applyPathAsMask, setActiveTool, clearAnchorHandles, clearShapeDraft]);
 
@@ -3071,11 +3383,20 @@ function EditorContent() {
       return;
     }
 
+    if (idToUse && loadFailedIdRef.current === idToUse) {
+      // The design never loaded, so what's on screen isn't it: never write
+      // over the real one.
+      setSaving(false);
+      setSaveStatus('error');
+      if (!silent) alert("This design didn't open properly, so it can't be saved over. Reload the page to try again.");
+      return;
+    }
+    const revAtSave = editRevRef.current;
     const canvasJson = fabricCanvasRef.current.toJSON(SAVE_JSON_PROPS);
     // width/height stay as the dashboard/thumbnail-facing summary size —
     // the first artboard's current dimensions, not the URL params a brand
     // new document happened to start from.
-    const firstAb = artboards[0];
+    const firstAb = artboardsRef.current[0];
     const payload: any = {
       user_id: user.id,
       name: nameToUse,
@@ -3149,13 +3470,20 @@ function EditorContent() {
       if (!silent) alert('Failed to save design. Please try again.');
       return;
     }
-    dirtyRef.current = false;
-    setSaveStatus('saved');
+    if (editRevRef.current === revAtSave) {
+      dirtyRef.current = false;
+      setSaveStatus('saved');
+    } else {
+      // Something changed while this save was on its way: save again.
+      setSaveStatus('unsaved');
+      scheduleAutosaveRef.current?.();
+    }
     if (data) {
       setDesignId(data.id);
       setDesignName(nameToUse);
       const savedTabId = activeTabIdRef.current;
-      setTabs((ts) => ts.map((t) => (t.id === savedTabId ? { ...t, id: data.id, designId: data.id, name: nameToUse, dirty: false } : t)));
+      const stillClean = editRevRef.current === revAtSave;
+      setTabs((ts) => ts.map((t) => (t.id === savedTabId ? { ...t, id: data.id, designId: data.id, name: nameToUse, dirty: stillClean ? false : t.dirty } : t)));
       if (savedTabId !== data.id) setActiveTabId(data.id);
       // Only a first save (idToUse null) or Save As actually changes the
       // URL's designId, which re-triggers the canvas load effect below —
@@ -3181,8 +3509,8 @@ function EditorContent() {
         pendingSnapshotRef.current = {
           canvasJSON: freshCanvasJSON,
           history: { stack: [...historyRef.current.stack], index: historyRef.current.index },
-          artboards,
-          activeArtboardId,
+          artboards: artboardsRef.current,
+          activeArtboardId: activeArtboardIdRef.current,
           zoom,
           designName: nameToUse,
           designId: data.id,
@@ -3235,7 +3563,12 @@ function EditorContent() {
     }
   };
 
-  const saveDesign = () => performSave(designId, designName);
+  // Long-lived timers call the latest performSave through this ref.
+  const performSaveRef = useRef(performSave);
+  performSaveRef.current = performSave;
+  const loadFailedIdRef = useRef<string | null>(null);
+
+  const saveDesign = () => performSave(designIdRef.current ?? designId, designNameRef.current || designName);
 
   // Saves the canvas back into the template being edited (admins only;
   // RLS enforces it server-side too). The previous content is kept as a
@@ -3586,7 +3919,7 @@ function EditorContent() {
           setSaveStatus('offline');
           return;
         }
-        performSave(designIdRef.current, designNameRef.current, { silent: true });
+        performSaveRef.current?.(designIdRef.current, designNameRef.current, { silent: true });
       }, delayMs);
     },
     // designId/designName are read from refs at fire time (see below) so
@@ -3679,7 +4012,14 @@ function EditorContent() {
   // in startNewDesign is what fixes the actual reported bug — a real
   // in-app navigation to /create and back).
   useEffect(() => {
-    const handler = () => persistTabSession();
+    const handler = (e: BeforeUnloadEvent) => {
+      persistTabSession();
+      // Unsaved work: ask the browser to confirm leaving.
+      if (dirtyRef.current || saveInFlightRef.current) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
     window.addEventListener('beforeunload', handler);
     return () => window.removeEventListener('beforeunload', handler);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -3865,6 +4205,10 @@ function EditorContent() {
     fabricCanvasRef.current?.requestRenderAll();
   };
 
+  // Raster exports default to the document's print resolution (e.g. a
+  // 300 DPI flyer exports at 300 DPI), at least 2x for screen designs.
+  const exportMultiplierFor = (ab: ArtboardMeta) => Math.max(2, (ab.print?.dpi || 0) / 96);
+
   const exportArtboardPNG = (id: string, opts?: { silent?: boolean; scope?: ExportScope }) => {
     const canvas = fabricCanvasRef.current;
     const ab = artboards.find((a) => a.id === id);
@@ -3872,12 +4216,18 @@ function EditorContent() {
     const scope = opts?.scope || 'artboard';
     const exportRect = getExportRect(ab, ab.print, scope);
     suppressHistoryRef.current = true;
-    const marks = buildAndInsertMarks(ab, scope);
-    const hiddenGuides = hideGuidesForExport();
-    const dataUrl = canvas.toDataURL({ format: 'png', quality: 1, ...getArtboardExportOptions(exportRect, 2) });
-    restoreGuidesAfterExport(hiddenGuides);
-    removeTemporaryMarks(marks);
-    suppressHistoryRef.current = false;
+    let marks: any[] = [];
+    let hiddenGuides: any[] = [];
+    let dataUrl = '';
+    try {
+      marks = buildAndInsertMarks(ab, scope);
+      hiddenGuides = hideGuidesForExport();
+      dataUrl = canvas.toDataURL({ format: 'png', quality: 1, ...getArtboardExportOptions(exportRect, exportMultiplierFor(ab)) });
+    } finally {
+      restoreGuidesAfterExport(hiddenGuides);
+      removeTemporaryMarks(marks);
+      suppressHistoryRef.current = false;
+    }
     downloadFile(dataUrl, `${designName || 'design'} - ${ab.name}${scope !== 'artboard' ? ` (${scope})` : ''}.png`);
     if (!opts?.silent) {
       setExporting(false);
@@ -3896,6 +4246,7 @@ function EditorContent() {
       const rect = getExportRect(ab, ab.print, scope);
       suppressHistoryRef.current = true;
       const marks = buildAndInsertMarks(ab, scope);
+      try {
       // jsPDF's own 'px' unit doesn't reliably convert a custom [w,h]
       // format array in this version (verified: it comes out ~33% too
       // big in every dimension) — build in 'pt' and convert ourselves.
@@ -3906,9 +4257,11 @@ function EditorContent() {
         format: [toPt(rect.width), toPt(rect.height)],
       });
       await exportArtboardsToPDF(pdf, canvas, F, [{ id: ab.id, x: rect.x, y: rect.y, width: rect.width, height: rect.height }]);
-      removeTemporaryMarks(marks);
-      suppressHistoryRef.current = false;
       pdf.save(`${designName || 'design'} - ${ab.name}${scope !== 'artboard' ? ` (${scope})` : ''}.pdf`);
+      } finally {
+        removeTemporaryMarks(marks);
+        suppressHistoryRef.current = false;
+      }
     } catch (err) {
       console.error('Print PDF export failed:', err);
       alert('Failed to export PDF. Please try again.');
@@ -4044,14 +4397,20 @@ function EditorContent() {
       });
 
       suppressHistoryRef.current = true;
-      for (let i = 0; i < pages.length; i++) {
-        const { ab, rect } = pages[i];
-        if (i > 0) pdf.addPage([toPt(rect.width), toPt(rect.height)], rect.width > rect.height ? 'landscape' : 'portrait');
-        const marks = buildAndInsertMarks(ab, scope);
-        await exportArtboardsToPDF(pdf, canvas, F, [{ id: ab.id, x: rect.x, y: rect.y, width: rect.width, height: rect.height }]);
-        removeTemporaryMarks(marks);
+      try {
+        for (let i = 0; i < pages.length; i++) {
+          const { ab, rect } = pages[i];
+          if (i > 0) pdf.addPage([toPt(rect.width), toPt(rect.height)], rect.width > rect.height ? 'landscape' : 'portrait');
+          const marks = buildAndInsertMarks(ab, scope);
+          try {
+            await exportArtboardsToPDF(pdf, canvas, F, [{ id: ab.id, x: rect.x, y: rect.y, width: rect.width, height: rect.height }]);
+          } finally {
+            removeTemporaryMarks(marks);
+          }
+        }
+      } finally {
+        suppressHistoryRef.current = false;
       }
-      suppressHistoryRef.current = false;
 
       const rangeLabel = lo === hi ? `page ${lo}` : `pages ${lo}-${hi}`;
       pdf.save(`${designName || 'design'} (${rangeLabel}).pdf`);
@@ -4134,14 +4493,20 @@ function EditorContent() {
         });
 
         suppressHistoryRef.current = true;
-        for (let i = 0; i < pages.length; i++) {
-          const { ab, print, rect } = pages[i];
-          if (i > 0) pdf.addPage([toPt(rect.width), toPt(rect.height)], rect.width > rect.height ? 'landscape' : 'portrait');
-          const marks = buildAndInsertMarks(ab, scope, print);
-          await exportArtboardsToPDF(pdf, canvas, F, [{ id: ab.id, x: rect.x, y: rect.y, width: rect.width, height: rect.height }]);
-          removeTemporaryMarks(marks);
+        try {
+          for (let i = 0; i < pages.length; i++) {
+            const { ab, print, rect } = pages[i];
+            if (i > 0) pdf.addPage([toPt(rect.width), toPt(rect.height)], rect.width > rect.height ? 'landscape' : 'portrait');
+            const marks = buildAndInsertMarks(ab, scope, print);
+            try {
+              await exportArtboardsToPDF(pdf, canvas, F, [{ id: ab.id, x: rect.x, y: rect.y, width: rect.width, height: rect.height }]);
+            } finally {
+              removeTemporaryMarks(marks);
+            }
+          }
+        } finally {
+          suppressHistoryRef.current = false;
         }
-        suppressHistoryRef.current = false;
 
         const rangeLabel = pages.length === 1 ? pages[0].ab.name : `${pages.length} pages`;
         pdf.save(`${designName || 'design'} (${rangeLabel}).${settings.format}`);
@@ -4167,22 +4532,33 @@ function EditorContent() {
           }
 
           suppressHistoryRef.current = true;
-          const marks = buildAndInsertMarks(ab, scope, print);
-          const dataUrl = canvas.toDataURL({
-            format: settings.format,
-            quality: settings.format === 'jpg' ? settings.quality : 1,
-            ...getArtboardExportOptions(rect, settings.multiplier),
-          });
-          removeTemporaryMarks(marks);
-          suppressHistoryRef.current = false;
-
-          if (wantsTransparency) {
-            canvas.backgroundColor = savedCanvasBg;
-            if (artboardRectObj) artboardRectObj.set('fill', savedArtboardFill);
-            canvas.requestRenderAll();
+          let marks: any[] = [];
+          let hiddenGuides: any[] = [];
+          let dataUrl = '';
+          // Fabric expects a real MIME subtype ('jpeg', not 'jpg').
+          const mime = settings.format === 'jpg' ? 'jpeg' : settings.format;
+          try {
+            marks = buildAndInsertMarks(ab, scope, print);
+            hiddenGuides = hideGuidesForExport();
+            canvas.discardActiveObject();
+            dataUrl = canvas.toDataURL({
+              format: mime,
+              quality: settings.format === 'png' ? 1 : settings.quality,
+              ...getArtboardExportOptions(rect, settings.multiplier),
+            });
+          } finally {
+            restoreGuidesAfterExport(hiddenGuides);
+            removeTemporaryMarks(marks);
+            suppressHistoryRef.current = false;
+            if (wantsTransparency) {
+              canvas.backgroundColor = savedCanvasBg;
+              if (artboardRectObj) artboardRectObj.set('fill', savedArtboardFill);
+              canvas.requestRenderAll();
+            }
           }
-
-          downloadFile(dataUrl, `${designName || 'design'} - ${ab.name}.${settings.format}`);
+          // Browsers without WebP encoding hand back PNG instead.
+          const realExt = dataUrl.startsWith('data:image/webp') ? 'webp' : dataUrl.startsWith('data:image/jpeg') ? 'jpg' : 'png';
+          downloadFile(dataUrl, `${designName || 'design'} - ${ab.name}.${realExt}`);
         }
       }
     } catch (err) {
@@ -4294,7 +4670,7 @@ function EditorContent() {
           shortcut: 'Ctrl/Cmd+A',
           onClick: () => {
             const canvas = fabricCanvasRef.current;
-            const objs = canvas.getObjects().filter((o: any) => !o.locked && !o.__isAnchorHandle && !o.__isPenPreview && !o.__isShapeDraft && !o.__isArtboard);
+            const objs = canvas.getObjects().filter((o: any) => isArtwork(o) && !o.locked && o.visible !== false);
             if (objs.length) {
               canvas.discardActiveObject();
               const sel = new (window as any).fabric.ActiveSelection(objs, { canvas });
@@ -4642,6 +5018,13 @@ function EditorContent() {
             className="absolute overflow-hidden"
             style={{ top: RULER_SIZE, left: RULER_SIZE, right: 0, bottom: 0 }}
             onContextMenu={handleCanvasContextMenu}
+            onDragOver={(e) => {
+              if (Array.from(e.dataTransfer.types).includes('Files') || e.dataTransfer.types.includes('application/x-mt-asset')) {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'copy';
+              }
+            }}
+            onDrop={handleCanvasDrop}
           >
             <canvas ref={canvasRef} />
             <GridOverlay fabricCanvasRef={fabricCanvasRef} visible={showGrid} gridSize={gridSize} ready={canvasReady} />
@@ -4679,6 +5062,10 @@ function EditorContent() {
                 layerLabel={layerLabel}
                 onReplaceImage={replaceSelectedImage}
                 onEditPhoto={openPhotoEditor}
+                artboardOrigin={(() => {
+                  const ab = artboards.find((a) => a.id === selected?.__artboardId) || getActiveArtboardRect();
+                  return { x: ab.x, y: ab.y };
+                })()}
               />
             </div>
           )}
@@ -4710,7 +5097,12 @@ function EditorContent() {
 
           {isPanelOpen('align') && (
             <div className="border-b">
-              <AlignPanel alignObject={alignObject} hasSelection={hasSelection} />
+              <AlignPanel
+                alignObject={alignObject}
+                distribute={distributeObjects}
+                hasSelection={hasSelection}
+                selectionCount={selected?.type === 'activeSelection' ? selected.getObjects().length : selected ? 1 : 0}
+              />
             </div>
           )}
 
@@ -4727,6 +5119,27 @@ function EditorContent() {
               onToggleLock={toggleLock}
               onRename={renameLayer}
               onReorder={reorderLayers}
+              onDuplicate={(obj) => {
+                fabricCanvasRef.current.setActiveObject(obj);
+                duplicateSelected();
+              }}
+              onDelete={(obj) => {
+                if (obj.locked) return;
+                fabricCanvasRef.current.discardActiveObject();
+                fabricCanvasRef.current.remove(obj);
+                fabricCanvasRef.current.requestRenderAll();
+              }}
+              onOpacityChange={(obj, opacity) => {
+                obj.set({ opacity });
+                fabricCanvasRef.current.requestRenderAll();
+                pushHistory();
+              }}
+              onBlendModeChange={(obj, mode) => {
+                obj.set({ globalCompositeOperation: mode === 'normal' ? 'source-over' : mode });
+                fabricCanvasRef.current.requestRenderAll();
+                pushHistory();
+              }}
+              getThumbnail={layerThumbnail}
             />
           )}
         </div>

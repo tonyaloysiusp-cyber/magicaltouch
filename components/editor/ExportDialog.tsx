@@ -6,7 +6,7 @@ import { ArtboardMeta } from '@/lib/editor/artboards';
 import { PX_PER_INCH } from '@/lib/editor/units';
 
 export type ExportRangeMode = 'current' | 'range' | 'selected' | 'all';
-export type ExportFormat = 'png' | 'jpg' | 'pdf';
+export type ExportFormat = 'png' | 'jpg' | 'webp' | 'pdf';
 
 export interface ExportSettings {
   rangeMode: ExportRangeMode;
@@ -164,12 +164,12 @@ export function ExportDialog({ artboards, activeArtboardId, exporting, onClose, 
           <div>
             <label className="text-xs font-semibold text-mt-muted block mb-2">Format</label>
             <div className="flex gap-2">
-              {(['png', 'jpg', 'pdf'] as ExportFormat[]).map((f) => (
+              {(['png', 'jpg', 'webp', 'pdf'] as ExportFormat[]).map((f) => (
                 <button
                   key={f}
                   onClick={() => setFormat(f)}
                   className={`flex-1 text-sm border rounded py-1.5 uppercase ${
-                    format === f ? 'bg-gray-900 text-white border-gray-900' : 'hover:bg-mt-surface2'
+                    format === f ? 'bg-mt-primary text-mt-onprimary border-mt-primary' : 'hover:bg-mt-surface2'
                   }`}
                 >
                   {f}
@@ -189,7 +189,7 @@ export function ExportDialog({ artboards, activeArtboardId, exporting, onClose, 
                     onClick={() => setDpi(p.dpi)}
                     title={p.hint}
                     className={`flex-1 text-sm border rounded py-1.5 ${
-                      dpi === p.dpi ? 'bg-gray-900 text-white border-gray-900' : 'hover:bg-mt-surface2'
+                      dpi === p.dpi ? 'bg-mt-primary text-mt-onprimary border-mt-primary' : 'hover:bg-mt-surface2'
                     }`}
                   >
                     {p.label}
@@ -227,7 +227,7 @@ export function ExportDialog({ artboards, activeArtboardId, exporting, onClose, 
             </div>
           )}
 
-          {format === 'jpg' && (
+          {(format === 'jpg' || format === 'webp') && (
             <div>
               <label className="text-xs font-semibold text-mt-muted block mb-1">
                 Quality ({Math.round(quality * 100)}%)

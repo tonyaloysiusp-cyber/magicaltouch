@@ -56,8 +56,20 @@ export function useDirectSelection({ fabricCanvasRef, onAnchorMoved }: Args) {
   // constructed — after we mutate .path in place (move/add/remove/reshape
   // an anchor) we have to call it ourselves, or the object's bounding box
   // and canvas position silently drift out of sync with what's drawn.
+  // Keeps every untouched point exactly where it is on the page: the
+  // object's centre is moved by however much the bounding box's centre
+  // moved, through the object's own transform (so a moved, scaled or
+  // rotated path no longer jumps back when a point is edited).
   const recalcPathGeometry = (F: any, pathObj: any) => {
-    F.Polyline.prototype._setPositionDimensions.call(pathObj, {});
+    const oldOffset = { x: pathObj.pathOffset?.x || 0, y: pathObj.pathOffset?.y || 0 };
+    const matrix = pathObj.calcTransformMatrix();
+    const dims = pathObj._calcDimensions();
+    const newOffset = { x: dims.left + dims.width / 2, y: dims.top + dims.height / 2 };
+    const newCenter = F.util.transformPoint(new F.Point(newOffset.x - oldOffset.x, newOffset.y - oldOffset.y), matrix);
+    pathObj.set({ width: dims.width, height: dims.height });
+    pathObj.pathOffset = new F.Point(newOffset.x, newOffset.y);
+    pathObj.setPositionByOrigin(newCenter, 'center', 'center');
+    pathObj.dirty = true;
     pathObj.setCoords();
   };
 
@@ -197,10 +209,13 @@ export function useDirectSelection({ fabricCanvasRef, onAnchorMoved }: Args) {
             top: world.y,
             radius: ANCHOR_HANDLE_SIZE / 2,
             fill: '#ffffff',
-            stroke: '#3FA9E8',
+            stroke: '#3B82C4',
             strokeWidth: 2,
             originX: 'center',
             originY: 'center',
+            // Constant on-screen size at any zoom level.
+            scaleX: 1 / (fabricCanvasRef.current?.getZoom?.() || 1),
+            scaleY: 1 / (fabricCanvasRef.current?.getZoom?.() || 1),
             hasControls: false,
             hasBorders: false,
             selectable: true,
@@ -295,10 +310,13 @@ export function useDirectSelection({ fabricCanvasRef, onAnchorMoved }: Args) {
             width: ANCHOR_HANDLE_SIZE - 2,
             height: ANCHOR_HANDLE_SIZE - 2,
             fill: '#ffffff',
-            stroke: '#7ED33E',
+            stroke: '#D9778F',
             strokeWidth: 2,
             originX: 'center',
             originY: 'center',
+            // Constant on-screen size at any zoom level.
+            scaleX: 1 / (fabricCanvasRef.current?.getZoom?.() || 1),
+            scaleY: 1 / (fabricCanvasRef.current?.getZoom?.() || 1),
             hasControls: false,
             hasBorders: false,
             selectable: false,
@@ -343,6 +361,9 @@ export function useDirectSelection({ fabricCanvasRef, onAnchorMoved }: Args) {
       strokeWidth: 1.5,
       originX: 'center',
       originY: 'center',
+            // Constant on-screen size at any zoom level.
+            scaleX: 1 / (fabricCanvasRef.current?.getZoom?.() || 1),
+            scaleY: 1 / (fabricCanvasRef.current?.getZoom?.() || 1),
       hasControls: false,
       hasBorders: false,
       selectable: true,

@@ -451,6 +451,7 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
   const [ready, setReady] = useState(false);
   const [activeTool, setActiveTool] = useState<PhotoTool>('select');
   const activeToolRef = useRef<PhotoTool>('select');
+  const penOverlayRef = useRef<((ctx: CanvasRenderingContext2D, vt: number[], active: boolean) => void) | null>(null);
   useEffect(() => {
     activeToolRef.current = activeTool;
   }, [activeTool]);
@@ -1427,6 +1428,8 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
       canvas.on('after:render', () => {
         const ctx = canvasElRef.current?.getContext('2d');
         const vt = canvas.viewportTransform;
+        // The in-progress pen path is drawn as an overlay, at screen size.
+        if (ctx && vt) penOverlayRef.current?.(ctx, vt, activeToolRef.current === 'pen');
         const layer = imageRef.current;
         if (!ctx || !vt || !layer) return;
         const ox = (layer.left || 0) * vt[0] + vt[4];
@@ -2133,12 +2136,13 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
   // from the main editor's own hooks — real bezier path drawing/editing,
   // not a simplified stand-in. A finished path can be painted into the
   // active layer's mask (see addPathToMask below). ----
-  const { clearDraft: clearPenDraft, finishPath: finishPenPath, handleMouseDown: handlePenMouseDown, handleMouseMove: handlePenMouseMove, handleMouseUp: handlePenMouseUp } =
+  const { clearDraft: clearPenDraft, finishPath: finishPenPath, handleMouseDown: handlePenMouseDown, handleMouseMove: handlePenMouseMove, handleMouseUp: handlePenMouseUp, drawOverlay: penDrawOverlay } =
     usePenTool({
       fabricCanvasRef,
       onPathFinished: (pathObj) => {
         const canvas = fabricCanvasRef.current;
-        pathObj.set({ stroke: '#3891ff', strokeWidth: 1.5, fill: '' });
+        // Thin at any zoom level: the photo is usually shown zoomed out.
+        pathObj.set({ stroke: '#3891ff', strokeWidth: 1.5, strokeUniform: true, fill: '' });
         canvas.add(pathObj);
         canvas.setActiveObject(pathObj);
         lastPathRef.current = pathObj;
@@ -2157,6 +2161,8 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
         canvas.requestRenderAll();
       },
     });
+
+  penOverlayRef.current = penDrawOverlay;
 
   const { clearHandles, renderHandles, deleteActiveAnchor } = useDirectSelection({
     fabricCanvasRef,
