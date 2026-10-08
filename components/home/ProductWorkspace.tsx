@@ -34,12 +34,12 @@ const LAYERS = [
 ];
 
 const TEMPLATE_TILES: [string, string][] = [
-  ['#EC1E79', '#8B6FC4'],
-  ['#3FA9E8', '#4FC8C0'],
-  ['#F5B942', '#FF6F91'],
-  ['#7ED33E', '#4FC8C0'],
-  ['#6C4FD1', '#EC1E79'],
-  ['#17161B', '#6C4FD1'],
+  ['#F3A6B8', '#B9E2FF'],
+  ['#8CCBFF', '#B9E2FF'],
+  ['#F3A6B8', '#D9778F'],
+  ['#F8C7D2', '#B9E2FF'],
+  ['#3B82C4', '#F3A6B8'],
+  ['#09090B', '#3B82C4'],
 ];
 
 const EXPORT_FORMATS = [
@@ -76,7 +76,7 @@ export function ProductWorkspace() {
               onClick={() => setTab(t.id)}
               className={`text-sm font-medium px-4 py-2 rounded-full border transition-colors ${
                 tab === t.id
-                  ? 'bg-[#17161B] dark:bg-white text-white dark:text-[#17161B] border-[#17161B] dark:border-white'
+                  ? 'bg-[#09090B] dark:bg-white text-white dark:text-[#09090B] border-[#09090B] dark:border-white'
                   : 'border-black/15 dark:border-white/20 text-mt-muted dark:text-mt-muted hover:border-black/40 dark:hover:border-white/40'
               }`}
             >
@@ -99,7 +99,7 @@ export function ProductWorkspace() {
                 </div>
                 <div className="absolute inset-0 border-2 border-white/40 rounded-xl" />
               </div>
-              <div className="hidden sm:block absolute translate-x-40 -translate-y-24 w-20 h-28 rounded-lg shadow-lg bg-gradient-to-b from-[#3FA9E8] to-[#4FC8C0] opacity-80 rotate-6" />
+              <div className="hidden sm:block absolute translate-x-40 -translate-y-24 w-20 h-28 rounded-lg shadow-lg bg-gradient-to-b from-[#8CCBFF] to-[#B9E2FF] opacity-80 rotate-6" />
               <div className="hidden sm:block absolute -translate-x-44 translate-y-16 w-24 h-16 rounded-lg shadow-lg bg-mt-surface border border-black/10 -rotate-6" />
             </div>
           )}

@@ -18,10 +18,10 @@ export function CreatorSection() {
       <div className="grid lg:grid-cols-2 gap-14 items-center">
         <Reveal className="grid grid-cols-2 gap-4">
           <div className="rounded-2xl overflow-hidden shadow-sm h-56 mt-8">
-            <MockDesignCard colors={['#EC1E79', '#8B6FC4']} label="Portfolio Cover" />
+            <MockDesignCard colors={['#F3A6B8', '#B9E2FF']} label="Portfolio Cover" />
           </div>
           <div className="rounded-2xl overflow-hidden shadow-sm h-56">
-            <MockDesignCard colors={['#F5B942', '#FF6F91']} label="Zine Layout" />
+            <MockDesignCard colors={['#F3A6B8', '#D9778F']} label="Zine Layout" />
           </div>
         </Reveal>
 

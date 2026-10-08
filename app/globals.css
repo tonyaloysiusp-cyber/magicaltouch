@@ -3,34 +3,86 @@
 @tailwind utilities;
 
 /* ---------------------------------------------------------------------
-   Magical Touch Design — ONE theme for every page.
-   Day (default) and night (`.dark` on <html>, set before first paint
-   by the script in app/layout.tsx and toggled by hooks/useAppTheme.ts).
-   Values are RGB triplets so Tailwind opacity modifiers work
-   (e.g. bg-mt-surface/80).
+   MAGICAL TOUCH DESIGN — centralized colour system
+   White = environment · Black = structure, text, primary action ·
+   Light blue = technology, active elements · Soft rose = creativity,
+   special elements · Blue/rose gradient = premium highlight only.
+   Day is the default; night is `.dark` on <html> (set before first
+   paint in app/layout.tsx, toggled by hooks/useAppTheme.ts).
+   Tailwind reads these as RGB triplets (bg-mt-surface/80 etc.).
    --------------------------------------------------------------------- */
 :root {
-  --mt-bg: 255 255 255;        /* page: clean white */
-  --mt-surface: 255 255 255;   /* cards, panels, menus */
-  --mt-surface2: 245 246 250;  /* inputs, hovers: cool neutral, no pink */
-  --mt-ink: 17 17 27;          /* main text */
-  --mt-muted: 88 92 110;       /* secondary text */
-  --mt-faint: 146 150 166;     /* hints, placeholders */
-  --mt-border: 230 232 239;
-  --mt-accent: 108 79 209;     /* brand purple */
-  --mt-accent-soft: 242 239 253;
+  /* raw palette */
+  --white: #FFFFFF;
+  --black: #09090B;
+  --blue: #8CCBFF;
+  --blue-2: #B9E2FF;
+  --blue-soft: #E8F5FF;
+  --blue-dark: #3B82C4;
+  --rose: #F3A6B8;
+  --rose-2: #F8C7D2;
+  --rose-soft: #FFF0F3;
+  --rose-dark: #D9778F;
+
+  /* semantic tokens (RGB triplets) */
+  --mt-bg: 255 255 255;          /* #FFFFFF page */
+  --mt-surface: 255 255 255;     /* #FFFFFF cards, panels, menus */
+  --mt-surface2: 248 250 252;    /* #F8FAFC secondary background, hovers */
+  --mt-studio: 248 250 252;      /* Photo Studio / editor workspace */
+  --mt-ink: 9 9 11;              /* #09090B primary text */
+  --mt-muted: 82 82 91;          /* #52525B secondary text */
+  --mt-faint: 113 113 122;       /* #71717A muted text */
+  --mt-border: 229 231 235;      /* #E5E7EB */
+  --mt-input-border: 212 212 216;/* #D4D4D8 */
+  --mt-accent: 59 130 196;       /* #3B82C4 accent text / icons (AA on white) */
+  --mt-accent-soft: 232 245 255; /* #E8F5FF */
+  --mt-blue: 140 203 255;        /* #8CCBFF active indicator */
+  --mt-rose: 243 166 184;        /* #F3A6B8 creative indicator */
+  --mt-rose-dark: 217 119 143;   /* #D9778F */
+  --mt-rose-soft: 255 240 243;   /* #FFF0F3 */
+  --mt-primary: 9 9 11;          /* primary button: black */
+  --mt-on-primary: 255 255 255;  /* text on primary */
+
+  --mt-atmosphere:
+    radial-gradient(circle at 10% 20%, rgba(140, 203, 255, 0.25), transparent 30%),
+    radial-gradient(circle at 90% 20%, rgba(243, 166, 184, 0.20), transparent 30%),
+    linear-gradient(180deg, #FFFFFF 0%, #FAFAFC 100%);
+  --mt-page-light:
+    radial-gradient(60rem 36rem at 8% -6rem, rgba(140, 203, 255, 0.16), transparent 70%),
+    radial-gradient(56rem 34rem at 92% -6rem, rgba(243, 166, 184, 0.13), transparent 70%);
+  --mt-card-glow: 0 15px 40px rgba(140, 203, 255, 0.18);
+  --mt-card-glow-rose: 0 15px 45px rgba(243, 166, 184, 0.16);
+  --mt-gradient: linear-gradient(135deg, #8CCBFF, #F3A6B8);
+  --mt-gradient-text: linear-gradient(90deg, #3B82C4, #D9778F, #3B82C4);
+  --mt-highlight: linear-gradient(135deg, rgba(140, 203, 255, 0.12), rgba(243, 166, 184, 0.10));
   color-scheme: light;
 }
 .dark {
-  --mt-bg: 0 0 0;              /* page: true black */
-  --mt-surface: 16 16 18;      /* cards, panels, menus */
-  --mt-surface2: 28 28 32;     /* inputs, hovers */
-  --mt-ink: 245 245 247;
-  --mt-muted: 168 168 178;
-  --mt-faint: 118 118 128;
-  --mt-border: 40 40 46;
-  --mt-accent: 157 133 240;
-  --mt-accent-soft: 30 26 48;
+  --mt-bg: 5 5 5;                /* #050505 */
+  --mt-surface: 17 17 20;        /* #111114 card */
+  --mt-surface2: 23 23 26;       /* #17171A elevated */
+  --mt-studio: 5 5 5;
+  --mt-ink: 255 255 255;
+  --mt-muted: 161 161 170;       /* #A1A1AA */
+  --mt-faint: 113 113 122;
+  --mt-border: 39 39 42;         /* #27272A */
+  --mt-input-border: 63 63 70;   /* #3F3F46 */
+  --mt-accent: 140 203 255;      /* light blue reads well on black */
+  --mt-accent-soft: 14 29 43;
+  --mt-rose-soft: 40 20 26;
+  --mt-primary: 255 255 255;     /* primary button: white */
+  --mt-on-primary: 9 9 11;
+
+  --mt-atmosphere:
+    radial-gradient(circle at 10% 20%, rgba(140, 203, 255, 0.15), transparent 30%),
+    radial-gradient(circle at 90% 20%, rgba(243, 166, 184, 0.12), transparent 30%),
+    linear-gradient(180deg, #050505 0%, #0A0A0D 100%);
+  --mt-page-light:
+    radial-gradient(60rem 36rem at 8% -6rem, rgba(140, 203, 255, 0.16), transparent 70%),
+    radial-gradient(56rem 34rem at 92% -6rem, rgba(243, 166, 184, 0.12), transparent 70%);
+  --mt-card-glow: 0 15px 40px rgba(140, 203, 255, 0.10);
+  --mt-card-glow-rose: 0 15px 45px rgba(243, 166, 184, 0.10);
+  --mt-highlight: linear-gradient(135deg, rgba(140, 203, 255, 0.10), rgba(243, 166, 184, 0.08));
   color-scheme: dark;
 }
 html,
@@ -38,11 +90,66 @@ body {
   background-color: rgb(var(--mt-bg));
   color: rgb(var(--mt-ink));
 }
-/* Day = pure white, night = pure black. No background tints. */
+/* Soft blue + rose light floating in at the top of every page. */
+body {
+  background-image: var(--mt-page-light);
+  background-repeat: no-repeat;
+  min-height: 100vh;
+}
+
+/* Hero / feature atmosphere (reusable master gradient) */
+.mt-atmosphere { background: var(--mt-atmosphere); }
+/* Premium highlight panel (AI, premium, featured, announcements) */
+.mt-highlight { background: var(--mt-highlight); }
+/* Creative accent (Create, Explore, Premium) -- use sparingly */
+.mt-creative { background: var(--mt-gradient); color: #09090B; }
+/* Gradient border for special / selected cards only */
+.mt-gradient-border {
+  border: 1px solid transparent;
+  background: linear-gradient(rgb(var(--mt-surface)), rgb(var(--mt-surface))) padding-box, var(--mt-gradient) border-box;
+}
+.dark .mt-gradient-border {
+  background: linear-gradient(rgb(var(--mt-surface)), rgb(var(--mt-surface))) padding-box,
+    linear-gradient(135deg, rgba(140, 203, 255, 0.7), rgba(243, 166, 184, 0.6)) border-box;
+}
+/* Card hover atmosphere */
+.mt-card-hover { transition: box-shadow 0.35s ease, transform 0.35s ease; }
+.mt-card-hover:hover { box-shadow: var(--mt-card-glow); }
+/* Active states */
+.mt-active-blue { background: rgba(140, 203, 255, 0.15) !important; border-color: #8CCBFF !important; }
+.mt-active-rose { background: rgba(243, 166, 184, 0.15) !important; border-color: #F3A6B8 !important; }
+
+/* Primary actions are black (day) / white (night). Every
+   bg-brand-gradient button in the app follows this automatically. */
+.bg-brand-gradient,
+.bg-brand-gradient.text-white,
+.bg-brand-gradient .text-white {
+  color: rgb(var(--mt-on-primary)) !important;
+}
+.bg-brand-gradient::before { display: none !important; }
+
+/* Form inputs */
+input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='color']):not([type='file']),
+select,
+textarea {
+  border-color: rgb(var(--mt-input-border));
+}
+input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='color']):focus,
+select:focus,
+textarea:focus {
+  border-color: #8CCBFF !important;
+  box-shadow: 0 0 0 3px rgba(140, 203, 255, 0.18) !important;
+  outline: none !important;
+}
+input[type='checkbox'],
+input[type='radio'],
+input[type='range'] { accent-color: #3B82C4; }
+
 /* Brand gradient text + animated gradient helpers */
 .mt-gradient-text {
-  background-image: linear-gradient(90deg, #EC1E79, #8B6FC4, #3FA9E8, #4FC8C0, #7ED33E);
+  background-image: var(--mt-gradient-text);
   background-size: 200% 100%;
+  -webkit-text-fill-color: transparent;
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -86,7 +193,7 @@ textarea::placeholder {
    same contract the rest of this codebase's animations use. */
 @media (prefers-reduced-motion: no-preference) {
   :root {
-    --theme-transition-duration: 200ms;
+    --theme-transition-duration: 400ms;
   }
   body,
   body *:not(canvas):not(svg):not(svg *) {

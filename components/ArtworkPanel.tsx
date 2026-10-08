@@ -19,8 +19,8 @@ export function ArtworkPanel({ variant }: { variant: 'day' | 'night' }) {
   const cardBorder = isNight ? '#3A355A' : 'rgba(20,18,31,0.08)';
   const textMuted = isNight ? '#8B85AE' : '#8A8496';
   const swatches = isNight
-    ? ['#FF6F91', '#8B6FC4', '#3FA9E8', '#4FC8C0', '#C4DA3B']
-    : ['#EC1E79', '#8B6FC4', '#3FA9E8', '#4FC8C0', '#7ED33E'];
+    ? ['#D9778F', '#B9E2FF', '#8CCBFF', '#B9E2FF', '#E8F5FF']
+    : ['#F3A6B8', '#B9E2FF', '#8CCBFF', '#B9E2FF', '#F8C7D2'];
 
   return (
     <div className="relative w-full h-full overflow-hidden" style={{ background: bg }}>
@@ -32,11 +32,11 @@ export function ArtworkPanel({ variant }: { variant: 'day' | 'night' }) {
       >
         <defs>
           <linearGradient id={`blob1-${variant}`} x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor={isNight ? '#8B6FC4' : '#EC1E79'} stopOpacity={isNight ? 0.35 : 0.25} />
-            <stop offset="100%" stopColor={isNight ? '#3FA9E8' : '#8B6FC4'} stopOpacity={isNight ? 0.25 : 0.18} />
+            <stop offset="0%" stopColor={isNight ? '#B9E2FF' : '#F3A6B8'} stopOpacity={isNight ? 0.35 : 0.25} />
+            <stop offset="100%" stopColor={isNight ? '#8CCBFF' : '#B9E2FF'} stopOpacity={isNight ? 0.25 : 0.18} />
           </linearGradient>
           <linearGradient id={`blob2-${variant}`} x1="1" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={isNight ? '#4FC8C0' : '#4FC8C0'} stopOpacity={isNight ? 0.3 : 0.2} />
+            <stop offset="0%" stopColor={isNight ? '#B9E2FF' : '#B9E2FF'} stopOpacity={isNight ? 0.3 : 0.2} />
             <stop offset="100%" stopColor={isNight ? '#14121F' : '#FFFFFF'} stopOpacity="0" />
           </linearGradient>
         </defs>
@@ -63,15 +63,15 @@ export function ArtworkPanel({ variant }: { variant: 'day' | 'night' }) {
         <path
           d="M90 260 C 180 180, 260 340, 340 240 S 480 140, 540 220"
           fill="none"
-          stroke={isNight ? '#4FC8C0' : '#3FA9E8'}
+          stroke={isNight ? '#B9E2FF' : '#8CCBFF'}
           strokeWidth="2.5"
           strokeLinecap="round"
           strokeDasharray="1 10"
           opacity="0.6"
         />
-        <circle cx="90" cy="260" r="5" fill={isNight ? '#4FC8C0' : '#3FA9E8'} opacity="0.8" />
-        <circle cx="340" cy="240" r="5" fill={isNight ? '#4FC8C0' : '#3FA9E8'} opacity="0.8" />
-        <circle cx="540" cy="220" r="5" fill={isNight ? '#4FC8C0' : '#3FA9E8'} opacity="0.8" />
+        <circle cx="90" cy="260" r="5" fill={isNight ? '#B9E2FF' : '#8CCBFF'} opacity="0.8" />
+        <circle cx="340" cy="240" r="5" fill={isNight ? '#B9E2FF' : '#8CCBFF'} opacity="0.8" />
+        <circle cx="540" cy="220" r="5" fill={isNight ? '#B9E2FF' : '#8CCBFF'} opacity="0.8" />
       </svg>
 
       {/* Floating "artboard" card — an abstract sample design, not a

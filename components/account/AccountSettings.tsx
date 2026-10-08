@@ -86,7 +86,7 @@ export function AccountSettings({ userId }: { userId: string }) {
         <label className="flex items-start gap-3 cursor-pointer">
           <input
             type="checkbox"
-            className="mt-1 accent-[#6C4FD1]"
+            className="mt-1 accent-[#3B82C4]"
             checked={!!marketing}
             disabled={marketing === null || savingPref}
             onChange={(e) => toggleMarketing(e.target.checked)}

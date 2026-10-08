@@ -23,7 +23,7 @@ export function ThemeSwitch({ theme, onToggle, size = 'md', className = '' }: { 
       <span
         className={`absolute left-0.5 rounded-full flex items-center justify-center shadow-md transition-transform duration-300 ${
           sm ? 'w-5 h-5' : 'w-6 h-6 left-1'
-        } ${isDark ? `${sm ? 'translate-x-5' : 'translate-x-6'} bg-[#2E2E34] text-[#C4DA3B]` : 'translate-x-0 bg-white text-[#F5B942]'}`}
+        } ${isDark ? `${sm ? 'translate-x-5' : 'translate-x-6'} bg-[#2E2E34] text-[#E8F5FF]` : 'translate-x-0 bg-white text-[#F3A6B8]'}`}
       >
         {isDark ? <Moon size={sm ? 11 : 13} /> : <Sun size={sm ? 11 : 13} />}
       </span>

@@ -41,7 +41,7 @@ export function AppHeader({ theme, onToggleTheme, active }: { theme: AppTheme; o
           {active !== 'create' && (
             <Link
               href="/create"
-              className="hidden sm:inline-flex items-center gap-1.5 text-white px-4 py-2.5 rounded-full text-sm font-semibold bg-brand-gradient shadow-[0_6px_16px_-6px_rgba(108,79,209,0.5)] hover:-translate-y-0.5 transition-transform"
+              className="hidden sm:inline-flex items-center gap-1.5 text-white px-4 py-2.5 rounded-full text-sm font-semibold bg-brand-gradient shadow-[0_6px_16px_-6px_rgba(9,9,11,0.16)] hover:-translate-y-0.5 transition-transform"
             >
               <Plus size={15} /> New Design
             </Link>

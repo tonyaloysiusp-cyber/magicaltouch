@@ -63,7 +63,7 @@ export function TemplateShowcase() {
             </div>
             <Link
               href="/templates"
-              className="inline-flex items-center gap-2 text-sm font-semibold text-white px-6 py-3.5 rounded-full bg-brand-gradient shadow-[0_10px_24px_-8px_rgba(108,79,209,0.55)] hover:-translate-y-0.5 transition-transform shrink-0"
+              className="inline-flex items-center gap-2 text-sm font-semibold text-white px-6 py-3.5 rounded-full bg-brand-gradient shadow-[0_10px_24px_-8px_rgba(9,9,11,0.16)] hover:-translate-y-0.5 transition-transform shrink-0"
             >
               Explore all templates <ArrowRight size={15} />
             </Link>
@@ -76,7 +76,7 @@ export function TemplateShowcase() {
             <Reveal key={c.name} delayMs={i * 50}>
               <Link
                 href={`/templates?category=${encodeURIComponent(c.name)}`}
-                className="group block rounded-2xl border border-mt-border bg-mt-surface p-4 hover:-translate-y-1 hover:shadow-xl transition-all duration-300"
+                className="group block rounded-2xl border border-mt-border bg-mt-surface p-4 mt-card-hover hover:-translate-y-1"
               >
                 <div className="relative h-28 [perspective:600px]">
                   {c.covers.map((t, k) => (
@@ -124,13 +124,13 @@ export function TemplateShowcase() {
             <Link
               key={t.id}
               href={`/templates?template=${t.id}`}
-              className="group block break-inside-avoid rounded-xl overflow-hidden border border-mt-border bg-mt-surface shadow-sm hover:shadow-xl transition-shadow"
+              className="group block break-inside-avoid rounded-xl overflow-hidden border border-mt-border bg-mt-surface shadow-sm mt-card-hover"
             >
               <div className="relative overflow-hidden" style={{ aspectRatio: `${t.width} / ${Math.min(t.height, t.width * 2.1)}` }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={t.thumbnail!} alt={t.name} loading="lazy" className="w-full h-full object-cover group-hover:scale-[1.04] transition-transform duration-500" />
                 {t.isFree === false && (
-                  <span className="absolute top-2 left-2 inline-flex items-center gap-1 text-[10px] font-semibold uppercase text-[#14121F] bg-[#F5B942] px-2 py-0.5 rounded-full">
+                  <span className="absolute top-2 left-2 inline-flex items-center gap-1 text-[10px] font-semibold uppercase text-[#09090B] bg-mt-creative px-2 py-0.5 rounded-full">
                     <Crown size={10} /> Premium
                   </span>
                 )}

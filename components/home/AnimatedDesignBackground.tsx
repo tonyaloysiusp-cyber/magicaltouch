@@ -33,11 +33,11 @@ export function AnimatedDesignBackground({ className }: Props) {
           class here would just get overridden the instant the
           animation starts. */}
       <span
-        className="absolute w-72 h-72 sm:w-96 sm:h-96 rounded-full bg-[#3FA9E8]/20 blur-3xl animate-bg-float-a"
+        className="absolute w-72 h-72 sm:w-96 sm:h-96 rounded-full bg-[#8CCBFF]/20 blur-3xl animate-bg-float-a"
         style={{ animationPlayState: playState }}
       />
       <span
-        className="absolute w-64 h-64 sm:w-80 sm:h-80 rounded-full bg-[#7ED33E]/20 blur-3xl animate-bg-float-b"
+        className="absolute w-64 h-64 sm:w-80 sm:h-80 rounded-full bg-[#F8C7D2]/20 blur-3xl animate-bg-float-b"
         style={{ animationPlayState: playState }}
       />
     </div>

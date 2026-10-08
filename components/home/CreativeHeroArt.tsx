@@ -3,7 +3,7 @@
 import { useEffect, useRef } from 'react';
 import { Sparkles, Wand2, Layers, Palette } from 'lucide-react';
 
-const SWATCHES = ['#EC1E79', '#8B6FC4', '#3FA9E8', '#4FC8C0', '#7ED33E', '#C4DA3B'];
+const SWATCHES = ['#09090B', '#3B82C4', '#8CCBFF', '#E8F5FF', '#F3A6B8', '#D9778F'];
 
 // Real templates from the library, fanned out in 3D.
 const CARDS = [
@@ -41,7 +41,7 @@ export function CreativeHeroArt() {
       <div
         className="pointer-events-none absolute w-[420px] h-[420px] rounded-full opacity-60 animate-mt-spin-slow"
         style={{
-          background: 'conic-gradient(from 0deg, #EC1E79, #8B6FC4, #3FA9E8, #4FC8C0, #7ED33E, #C4DA3B, #EC1E79)',
+          background: 'conic-gradient(from 0deg, #8CCBFF, #F3A6B8, #8CCBFF)',
           WebkitMask: 'radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px))',
           mask: 'radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px))',
           transform: 'rotateX(68deg)',
@@ -66,7 +66,7 @@ export function CreativeHeroArt() {
                 alt=""
                 width={c.w}
                 height={Math.round(c.w * c.ratio)}
-                className="rounded-2xl ring-1 ring-black/5 dark:ring-white/10 shadow-[0_30px_60px_-20px_rgba(23,20,42,0.55)] object-cover"
+                className="rounded-2xl ring-1 ring-black/5 dark:ring-white/10 shadow-[0_30px_60px_-20px_rgba(9,9,11,0.35)] object-cover"
                 style={{ width: c.w, height: c.w * c.ratio }}
               />
             </div>
@@ -92,8 +92,8 @@ export function CreativeHeroArt() {
             <span key={c} className="w-3.5 h-3.5 rounded-full ring-2 ring-white/60" style={{ background: c }} />
           ))}
         </div>
-        <div className="absolute right-[18%] top-[6%] w-12 h-12 rounded-2xl bg-brand-gradient flex items-center justify-center shadow-xl [transform:translateZ(160px)_rotate(8deg)]">
-          <Sparkles size={20} className="text-white" />
+        <div className="absolute right-[18%] top-[6%] w-12 h-12 rounded-2xl bg-mt-creative flex items-center justify-center shadow-xl [transform:translateZ(160px)_rotate(8deg)]">
+          <Sparkles size={20} className="text-[#09090B]" />
         </div>
       </div>
     </div>

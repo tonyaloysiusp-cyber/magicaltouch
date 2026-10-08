@@ -148,7 +148,7 @@ function EditorContent() {
   // The pasteboard (area outside every artboard) is a real Fabric canvas
   // fill, not CSS — it has to be updated on the canvas object itself
   // whenever the theme changes, not just via a className.
-  const pasteboardBgFor = (t: 'light' | 'dark') => (t === 'dark' ? '#1C1930' : '#ECE8F4');
+  const pasteboardBgFor = (t: 'light' | 'dark') => (t === 'dark' ? '#0B0B0D' : '#F1F3F6');
 
   // The editor is a protected route: a logged-out visitor who lands here
   // directly (typed URL, bookmark, back button) must be bounced to login

@@ -15,7 +15,7 @@ export function Hero() {
   };
 
   return (
-    <section className="relative">
+    <section className="relative mt-atmosphere">
     <div className="relative max-w-6xl mx-auto px-6 pt-14 pb-20 md:pt-20">
       <div className="grid lg:grid-cols-[1fr_1.15fr] gap-14 items-center">
         <Reveal>
@@ -39,7 +39,7 @@ export function Hero() {
           <div className="mt-8 flex flex-wrap gap-3">
             <button
               onClick={goToCreate}
-              className="relative overflow-hidden inline-flex items-center gap-2 text-sm font-semibold text-white px-6 py-3.5 rounded-full bg-brand-gradient shadow-[0_10px_24px_-8px_rgba(108,79,209,0.55)] hover:shadow-[0_14px_30px_-8px_rgba(108,79,209,0.65)] hover:-translate-y-0.5 transition-all before:content-[''] before:absolute before:inset-x-0 before:top-0 before:h-1/2 before:bg-mt-surface/25 before:rounded-t-full"
+              className="relative overflow-hidden inline-flex items-center gap-2 text-sm font-semibold text-white px-6 py-3.5 rounded-full bg-brand-gradient shadow-[0_10px_24px_-8px_rgba(9,9,11,0.16)] hover:shadow-[0_14px_30px_-8px_rgba(9,9,11,0.16)] hover:-translate-y-0.5 transition-all before:content-[''] before:absolute before:inset-x-0 before:top-0 before:h-1/2 before:bg-mt-surface/25 before:rounded-t-full"
             >
               Start Creating <ArrowRight size={15} />
             </button>

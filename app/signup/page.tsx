@@ -162,7 +162,7 @@ function SignupForm() {
               type="checkbox"
               checked={marketingOptIn}
               onChange={(e) => setMarketingOptIn(e.target.checked)}
-              className="mt-0.5 accent-[#6C4FD1]"
+              className="mt-0.5 accent-[#3B82C4]"
             />
             <span>Send me new templates, offers and news by e-mail (optional — unsubscribe any time).</span>
           </label>

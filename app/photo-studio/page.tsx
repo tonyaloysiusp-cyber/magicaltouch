@@ -640,7 +640,7 @@ function PhotoStudioContent() {
   // every other page (one theme everywhere).
   return (
     <div className={theme === 'dark' ? 'dark' : ''}>
-      <main className="h-[100dvh] flex flex-col bg-transparent text-mt-ink transition-colors duration-150">
+      <main className="h-[100dvh] flex flex-col bg-mt-studio text-mt-ink transition-colors duration-300">
         <MenuBar menus={menus} />
         <ShortcutsModal open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} workspace="photo" />
         <div className="flex items-center justify-between px-4 py-1.5 border-b bg-mt-surface border-mt-border shrink-0">
