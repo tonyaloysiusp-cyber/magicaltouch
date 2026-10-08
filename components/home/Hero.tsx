@@ -16,11 +16,6 @@ export function Hero() {
 
   return (
     <section className="relative">
-      {/* Soft dotted grid + gradient wash behind the hero */}
-      <div
-        className="pointer-events-none absolute inset-0 opacity-[0.22] dark:opacity-[0.12] [mask-image:radial-gradient(ellipse_at_center,#000_30%,transparent_75%)]"
-        style={{ backgroundImage: 'radial-gradient(rgb(var(--mt-muted)) 1px, transparent 1px)', backgroundSize: '22px 22px' }}
-      />
     <div className="relative max-w-6xl mx-auto px-6 pt-14 pb-20 md:pt-20">
       <div className="grid lg:grid-cols-[1fr_1.15fr] gap-14 items-center">
         <Reveal>
