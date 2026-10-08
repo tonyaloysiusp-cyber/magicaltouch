@@ -6,7 +6,7 @@ step() { local name=$1; shift; echo "== $name" >> e2e-out/steps.txt; if ! "$@" >
 step npm-install npm install --no-audit --no-fund || status=npm
 if [ $status = ok ]; then
   step tsc npx tsc --noEmit -p . || true
-  step unit node --test e2e/unit/ || true
+  step unit node --test 'e2e/unit/*.test.mjs' || true
   step build npm run build || status=build
 fi
 if [ $status = ok ]; then

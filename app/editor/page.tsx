@@ -1771,7 +1771,9 @@ function EditorContent() {
               loadFailedIdRef.current = urlDesignId;
               setDesignName('Could not open design');
               setLocalNotice("This design couldn't be opened. Check your connection and reload the page. Nothing has been changed.");
+              suppressHistoryRef.current = true;
               ensureArtboards(canvas, F);
+              suppressHistoryRef.current = false;
               fitToRect(canvas, { x: 0, y: 0, width, height });
               seedInitialSnapshot();
             }
@@ -1815,7 +1817,9 @@ function EditorContent() {
             // template, or the static fallback list has no id) -- degrade
             // to the same blank-canvas-at-the-right-size behavior as
             // before this feature existed.
+            suppressHistoryRef.current = true;
             ensureArtboards(canvas, F);
+            suppressHistoryRef.current = false;
             fitToRect(canvas, { x: 0, y: 0, width, height });
             seedInitialSnapshot();
           }
@@ -1823,7 +1827,10 @@ function EditorContent() {
         });
         return;
       } else {
+        // Setting up a blank page isn't an edit.
+        suppressHistoryRef.current = true;
         ensureArtboards(canvas, F);
+        suppressHistoryRef.current = false;
         fitToRect(canvas, { x: 0, y: 0, width, height });
         seedInitialSnapshot();
       }

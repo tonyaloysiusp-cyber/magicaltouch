@@ -151,6 +151,8 @@ export function useShapeTools({
       canvas.remove(obj);
     } else {
       delete obj.__isShapeDraft;
+      // It was a preview until now; it's real artwork from here on.
+      obj.excludeFromExport = false;
       obj.set({ selectable: true, evented: true });
       obj.setCoords();
       onShapeFinished(obj);
