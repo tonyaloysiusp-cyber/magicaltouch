@@ -4,7 +4,7 @@ import { chromium } from 'playwright';
 import fs from 'node:fs';
 
 const BASE = process.env.E2E_BASE || 'http://localhost:3000';
-const OUT = 'e2e-out';
+const OUT = "e2e-out/shots"; fs.mkdirSync("e2e-out", { recursive: true });
 fs.mkdirSync(OUT, { recursive: true });
 const results = [];
 
@@ -39,6 +39,6 @@ for (const sc of scenarios) {
   await ctx.close();
 }
 await browser.close();
-fs.writeFileSync(`${OUT}/results.json`, JSON.stringify(results, null, 2));
+fs.writeFileSync('e2e-out/results.json', JSON.stringify(results, null, 2));
 const failed = results.filter((r) => r.error || r.checks.some((c) => !c.ok));
 console.log(`${results.length} scenarios, ${failed.length} with failures`);

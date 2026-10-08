@@ -20,25 +20,12 @@ jobs:
         with:
           node-version: 20
           cache: npm
-      - run: npm ci
-      - name: Type check
-        run: npx tsc --noEmit -p . > e2e-tsc.txt 2>&1 || true
-      - name: Unit tests
-        run: node --test e2e/unit/ > e2e-unit.txt 2>&1 || true
-      - run: npm run build 2>&1 | tee e2e-build.txt
-      - run: npx -y playwright@1.47.2 install --with-deps chromium
-      - name: Run editor scenarios
-        run: |
-          npx next start -p 3000 > e2e-server.txt 2>&1 &
-          npx -y wait-on@7 http://localhost:3000 -t 60000
-          npm i --no-save playwright@1.47.2
-          node e2e/run.mjs || true
+      - name: Build and test
+        run: bash e2e/ci.sh
       - name: Publish results
         if: always()
         run: |
           mkdir -p e2e-out
-          cp e2e-*.txt e2e-out/ 2>/dev/null || true
-          echo "{\"sha\":\"$GITHUB_SHA\",\"ref\":\"$GITHUB_REF_NAME\",\"run\":\"$GITHUB_RUN_ID\"}" > e2e-out/meta.json
           cd e2e-out
           git init -q -b e2e-results
           git config user.name "mt-e2e"
