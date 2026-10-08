@@ -517,7 +517,7 @@ export default function AdminTemplatesPage() {
                     <span className={`absolute top-2 left-2 text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full ${STATUS_STYLE[status]}`}>
                       {STATUS_LABEL[status]}
                     </span>
-                    {t.isFeatured && <span className="absolute top-2 right-2 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#6C4FD1] text-white">Featured</span>}
+                    {t.isFeatured && <span className="absolute top-2 right-2 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-mt-creative text-[#09090B]">Featured</span>}
                   </div>
                   <div className="p-3 flex-1 flex flex-col">
                     <div className="flex items-start justify-between gap-2">

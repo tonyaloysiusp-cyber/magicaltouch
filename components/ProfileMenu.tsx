@@ -10,8 +10,8 @@ import { avatarVariant } from '@/lib/avatar/optimize';
 
 const LEVEL_STYLES: Record<CreatorLevel, string> = {
   'New Creator': 'bg-mt-surface2 text-mt-muted',
-  Creator: 'bg-[#EC1E79]/10 text-[#EC1E79]',
-  'Pro Creator': 'bg-gradient-to-r from-[#EC1E79] to-[#8B6FC4] text-white',
+  Creator: 'bg-[#F3A6B8]/10 text-[#F3A6B8]',
+  'Pro Creator': 'bg-gradient-to-r from-[#F3A6B8] to-[#B9E2FF] text-white',
 };
 
 export function LevelBadge({ level }: { level: CreatorLevel }) {

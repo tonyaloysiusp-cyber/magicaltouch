@@ -17,7 +17,7 @@ export function LegalPage({ title, updated, children }: { title: string; updated
           </nav>
         </div>
       </header>
-      <article className="max-w-3xl mx-auto px-6 py-12 leading-relaxed text-[15px] text-[#2b2540] [&_h2]:mt-10 [&_h2]:mb-3 [&_h2]:text-xl [&_h2]:font-semibold [&_h2]:text-[#14121F] [&_p]:mb-4 [&_ul]:mb-4 [&_ul]:list-disc [&_ul]:pl-6 [&_li]:mb-1.5 [&_a]:text-[#6C4FD1] [&_a]:underline">
+      <article className="max-w-3xl mx-auto px-6 py-12 leading-relaxed text-[15px] text-mt-muted [&_h2]:mt-10 [&_h2]:mb-3 [&_h2]:text-xl [&_h2]:font-semibold [&_h2]:text-mt-ink [&_p]:mb-4 [&_ul]:mb-4 [&_ul]:list-disc [&_ul]:pl-6 [&_li]:mb-1.5 [&_a]:text-mt-accent [&_a]:underline">
         <h1 className="text-4xl font-semibold tracking-tight text-mt-ink">{title}</h1>
         <p className="mt-2 mb-10 text-sm text-mt-muted">Last updated {updated}</p>
         {children}

@@ -23,21 +23,31 @@ const config: Config = {
           border: 'rgb(var(--mt-border) / <alpha-value>)',
           accent: 'rgb(var(--mt-accent) / <alpha-value>)',
           accentsoft: 'rgb(var(--mt-accent-soft) / <alpha-value>)',
+          studio: 'rgb(var(--mt-studio) / <alpha-value>)',
+          blue: 'rgb(var(--mt-blue) / <alpha-value>)',
+          rose: 'rgb(var(--mt-rose) / <alpha-value>)',
+          rosedark: 'rgb(var(--mt-rose-dark) / <alpha-value>)',
+          rosesoft: 'rgb(var(--mt-rose-soft) / <alpha-value>)',
+          primary: 'rgb(var(--mt-primary) / <alpha-value>)',
+          onprimary: 'rgb(var(--mt-on-primary) / <alpha-value>)',
         },
         brand: {
-          pink: "#EC1E79",
-          purple: "#8B6FC4",
-          blue: "#3FA9E8",
-          teal: "#4FC8C0",
-          green: "#7ED33E",
-          yellowgreen: "#C4DA3B",
+          pink: "#D9778F",
+          purple: "#3B82C4",
+          blue: "#3B82C4",
+          teal: "#8CCBFF",
+          green: "#3B82C4",
+          yellowgreen: "#F3A6B8",
         },
       },
       borderColor: {
         DEFAULT: 'rgb(var(--mt-border) / <alpha-value>)',
       },
       backgroundImage: {
-        'brand-gradient': 'linear-gradient(90deg, #EC1E79, #8B6FC4, #3FA9E8, #4FC8C0, #7ED33E, #C4DA3B)',
+        // Primary action: solid black (day) / white (night).
+        'brand-gradient': 'linear-gradient(rgb(var(--mt-primary)), rgb(var(--mt-primary)))',
+        // Premium creative accent: soft blue -> soft rose.
+        'mt-creative': 'linear-gradient(135deg, #8CCBFF, #F3A6B8)',
       },
       // Decorative rings + logo reveal for the first-load intro
       // animation (components/home/IntroAnimation.tsx) -- CSS-only,

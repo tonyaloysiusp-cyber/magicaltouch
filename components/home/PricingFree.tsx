@@ -42,7 +42,7 @@ export function PricingFree() {
       <Reveal delayMs={160}>
         <button
           onClick={goToCreate}
-          className="relative overflow-hidden mt-10 inline-flex items-center gap-2 text-sm font-semibold text-white px-7 py-4 rounded-full bg-brand-gradient shadow-[0_10px_24px_-8px_rgba(108,79,209,0.55)] hover:shadow-[0_14px_30px_-8px_rgba(108,79,209,0.65)] hover:-translate-y-0.5 transition-all before:content-[''] before:absolute before:inset-x-0 before:top-0 before:h-1/2 before:bg-mt-surface/25 before:rounded-t-full"
+          className="relative overflow-hidden mt-10 inline-flex items-center gap-2 text-sm font-semibold text-white px-7 py-4 rounded-full bg-brand-gradient shadow-[0_10px_24px_-8px_rgba(9,9,11,0.16)] hover:shadow-[0_14px_30px_-8px_rgba(9,9,11,0.16)] hover:-translate-y-0.5 transition-all before:content-[''] before:absolute before:inset-x-0 before:top-0 before:h-1/2 before:bg-mt-surface/25 before:rounded-t-full"
         >
           Start Creating — It's Free <ArrowRight size={15} />
         </button>

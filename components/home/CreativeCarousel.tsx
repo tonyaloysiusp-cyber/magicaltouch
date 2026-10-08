@@ -20,31 +20,31 @@ const SLIDES: Slide[] = [
     label: 'Social',
     title: 'Posts that stop the scroll.',
     body: 'Instagram, TikTok, Stories — sized right and ready to post in minutes.',
-    colors: ['#EC1E79', '#8B6FC4', '#3FA9E8'],
+    colors: ['#F3A6B8', '#B9E2FF', '#8CCBFF'],
   },
   {
     label: 'Branding',
     title: 'A brand that looks like one.',
     body: 'Logos, business cards and a consistent look across everything you make.',
-    colors: ['#17161B', '#6C4FD1', '#3FA9E8'],
+    colors: ['#09090B', '#3B82C4', '#8CCBFF'],
   },
   {
     label: 'Print',
     title: 'Print-ready, no guesswork.',
     body: 'Bleed, safe area and CMYK-aware exports mean it prints exactly as designed.',
-    colors: ['#F5B942', '#FF6F91', '#8B6FC4'],
+    colors: ['#F3A6B8', '#D9778F', '#B9E2FF'],
   },
   {
     label: 'Events',
     title: 'Posters people actually notice.',
     body: 'Flyers, invitations and signage with real presence, not a template that looks like one.',
-    colors: ['#7ED33E', '#4FC8C0', '#3FA9E8'],
+    colors: ['#F8C7D2', '#B9E2FF', '#8CCBFF'],
   },
   {
     label: 'Presentations',
     title: 'Decks that feel designed.',
     body: 'A cover slide worth opening, and a deck that matches the rest of your brand.',
-    colors: ['#6C4FD1', '#EC1E79', '#F5B942'],
+    colors: ['#3B82C4', '#F3A6B8', '#F3A6B8'],
   },
 ];
 

@@ -27,14 +27,14 @@ interface Possibility {
 // rather than auto-generated, while every tile still shares one visual
 // language (brand-palette gradient + icon + label).
 const POSSIBILITIES: Possibility[] = [
-  { label: 'Social', icon: Share2, colors: ['#EC1E79', '#8B6FC4'], big: true },
-  { label: 'Branding', icon: Sparkles, colors: ['#17161B', '#6C4FD1'], big: true },
-  { label: 'Print', icon: Printer, colors: ['#F5B942', '#FF6F91'] },
-  { label: 'Events', icon: PartyPopper, colors: ['#7ED33E', '#4FC8C0'] },
-  { label: 'Presentations', icon: Presentation, colors: ['#3FA9E8', '#4FC8C0'] },
-  { label: 'Marketing', icon: Megaphone, colors: ['#8B6FC4', '#3FA9E8'] },
-  { label: 'Business', icon: Briefcase, colors: ['#6C4FD1', '#EC1E79'] },
-  { label: 'Content', icon: FileText, colors: ['#4FC8C0', '#7ED33E'] },
+  { label: 'Social', icon: Share2, colors: ['#F3A6B8', '#B9E2FF'], big: true },
+  { label: 'Branding', icon: Sparkles, colors: ['#09090B', '#3B82C4'], big: true },
+  { label: 'Print', icon: Printer, colors: ['#F3A6B8', '#D9778F'] },
+  { label: 'Events', icon: PartyPopper, colors: ['#F8C7D2', '#B9E2FF'] },
+  { label: 'Presentations', icon: Presentation, colors: ['#8CCBFF', '#B9E2FF'] },
+  { label: 'Marketing', icon: Megaphone, colors: ['#B9E2FF', '#8CCBFF'] },
+  { label: 'Business', icon: Briefcase, colors: ['#3B82C4', '#F3A6B8'] },
+  { label: 'Content', icon: FileText, colors: ['#B9E2FF', '#F8C7D2'] },
 ];
 
 export function CreatePossibilities() {

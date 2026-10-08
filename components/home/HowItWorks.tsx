@@ -23,7 +23,7 @@ export function HowItWorks() {
         {STEPS.map((s, i) => (
           <Reveal key={s.n} delayMs={i * 100}>
             <div className="relative">
-              <span className="block font-[family-name:var(--font-display)] text-7xl sm:text-8xl leading-none tracking-tight bg-brand-gradient bg-clip-text text-transparent opacity-90">
+              <span className="block font-[family-name:var(--font-display)] text-7xl sm:text-8xl leading-none tracking-tight mt-gradient-text opacity-90">
                 {s.n}
               </span>
               <h3 className="mt-2 font-semibold text-xl text-mt-ink dark:text-mt-ink">{s.title}</h3>

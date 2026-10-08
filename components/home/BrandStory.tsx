@@ -26,8 +26,8 @@ const STAGES = [
 function StageVisual({ stage }: { stage: 0 | 1 | 2 }) {
   if (stage === 0) {
     return (
-      <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-full flex items-center justify-center bg-[#17161B]/[0.04] dark:bg-white/[0.06]">
-        <span className="w-3 h-3 rounded-full bg-[#17161B] dark:bg-white" />
+      <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-full flex items-center justify-center bg-[#09090B]/[0.04] dark:bg-white/[0.06]">
+        <span className="w-3 h-3 rounded-full bg-[#09090B] dark:bg-white" />
         <span className="absolute inset-0 rounded-full border border-dashed border-black/15 dark:border-white/20 animate-[spin_18s_linear_infinite]" />
       </div>
     );
@@ -35,14 +35,14 @@ function StageVisual({ stage }: { stage: 0 | 1 | 2 }) {
   if (stage === 1) {
     return (
       <div className="relative w-20 h-20 sm:w-24 sm:h-24 flex items-center justify-center">
-        <span className="absolute w-14 h-14 sm:w-16 sm:h-16 rounded-2xl rotate-6 border-2 border-[#3FA9E8]" />
-        <span className="absolute w-10 h-10 sm:w-12 sm:h-12 rounded-full -translate-x-3 translate-y-3 border-2 border-[#EC1E79]" />
-        <span className="absolute w-6 h-6 sm:w-7 sm:h-7 rounded-md translate-x-4 -translate-y-2 bg-[#7ED33E]/70" />
+        <span className="absolute w-14 h-14 sm:w-16 sm:h-16 rounded-2xl rotate-6 border-2 border-[#8CCBFF]" />
+        <span className="absolute w-10 h-10 sm:w-12 sm:h-12 rounded-full -translate-x-3 translate-y-3 border-2 border-[#F3A6B8]" />
+        <span className="absolute w-6 h-6 sm:w-7 sm:h-7 rounded-md translate-x-4 -translate-y-2 bg-[#F8C7D2]/70" />
       </div>
     );
   }
   return (
-    <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden shadow-[0_16px_32px_-12px_rgba(108,79,209,0.55)] bg-brand-gradient flex items-center justify-center">
+    <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden shadow-[0_16px_32px_-12px_rgba(9,9,11,0.16)] bg-brand-gradient flex items-center justify-center">
       <Sparkles size={26} className="text-white drop-shadow-sm" />
     </div>
   );

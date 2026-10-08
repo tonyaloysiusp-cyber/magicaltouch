@@ -208,7 +208,7 @@ export default function TemplatesPage() {
             )}
             <button
               onClick={goToWorkspace}
-              className="relative overflow-hidden text-sm font-semibold text-white px-5 py-2.5 rounded-full bg-brand-gradient shadow-[0_6px_16px_-6px_rgba(108,79,209,0.5)] hover:shadow-[0_10px_20px_-6px_rgba(108,79,209,0.6)] hover:-translate-y-0.5 transition-all before:content-[''] before:absolute before:inset-x-0 before:top-0 before:h-1/2 before:bg-mt-surface/25 before:rounded-t-full"
+              className="relative overflow-hidden text-sm font-semibold text-white px-5 py-2.5 rounded-full bg-brand-gradient shadow-[0_6px_16px_-6px_rgba(9,9,11,0.16)] hover:shadow-[0_10px_20px_-6px_rgba(9,9,11,0.16)] hover:-translate-y-0.5 transition-all before:content-[''] before:absolute before:inset-x-0 before:top-0 before:h-1/2 before:bg-mt-surface/25 before:rounded-t-full"
             >
               Start Designing
             </button>
@@ -265,7 +265,7 @@ export default function TemplatesPage() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search templates..."
-            className="w-full pl-11 pr-4 py-3 rounded-full border border-black/10 dark:border-white/15 bg-mt-surface dark:bg-mt-surface text-sm placeholder:text-mt-muted/60 dark:placeholder:text-mt-muted/60 focus:outline-none focus:border-mt-accent/50 focus:ring-2 focus:ring-[#6C4FD1]/15 transition-all"
+            className="w-full pl-11 pr-4 py-3 rounded-full border border-black/10 dark:border-white/15 bg-mt-surface dark:bg-mt-surface text-sm placeholder:text-mt-muted/60 dark:placeholder:text-mt-muted/60 focus:outline-none focus:border-mt-accent/50 focus:ring-2 focus:ring-[#3B82C4]/15 transition-all"
           />
         </div>
       </section>
@@ -293,7 +293,7 @@ export default function TemplatesPage() {
               onClick={() => setOrientation(o)}
               className={`rounded-full px-3 py-1.5 border transition-colors ${
                 orientation === o
-                  ? 'border-mt-accent text-mt-accent dark:text-mt-accent bg-[#6C4FD1]/5'
+                  ? 'mt-active-blue text-mt-ink'
                   : 'border-black/10 dark:border-white/15 text-mt-muted dark:text-mt-muted'
               }`}
             >
@@ -301,7 +301,7 @@ export default function TemplatesPage() {
             </button>
           ))}
           <label className="ml-1 inline-flex items-center gap-1.5 text-mt-muted dark:text-mt-muted cursor-pointer">
-            <input type="checkbox" checked={freeOnly} onChange={(e) => setFreeOnly(e.target.checked)} className="accent-[#6C4FD1]" />
+            <input type="checkbox" checked={freeOnly} onChange={(e) => setFreeOnly(e.target.checked)} className="accent-[#3B82C4]" />
             Free only
           </label>
           <label className="ml-1 inline-flex items-center gap-1.5 text-mt-muted dark:text-mt-muted">
@@ -327,7 +327,7 @@ export default function TemplatesPage() {
       <section className="max-w-[1400px] mx-auto px-4 sm:px-6 py-10">
         <div className="columns-2 md:columns-3 lg:columns-4 xl:columns-5 gap-4 [&>*]:mb-4">
           {filtered.map((t) => (
-            <div key={t.id || t.name} className="group break-inside-avoid rounded-xl overflow-hidden border border-black/5 dark:border-white/10 bg-mt-surface dark:bg-mt-surface shadow-sm hover:shadow-xl transition-shadow duration-300">
+            <div key={t.id || t.name} className="group break-inside-avoid rounded-xl overflow-hidden border border-black/5 dark:border-white/10 bg-mt-surface dark:bg-mt-surface shadow-sm mt-card-hover">
               <div className="relative overflow-hidden bg-mt-accentsoft dark:bg-mt-bg" style={{ aspectRatio: tileRatio(t) }}>
                 <div className="absolute inset-0 transition-transform duration-500 group-hover:scale-[1.03]">
                   {t.thumbnail ? (
@@ -338,7 +338,7 @@ export default function TemplatesPage() {
                   )}
                 </div>
                 {t.isFree === false ? (
-                  <span className="absolute top-2 left-2 z-10 inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-mt-ink bg-[#F5B942] px-2 py-1 rounded-full shadow">
+                  <span className="absolute top-2 left-2 z-10 inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-mt-ink bg-[#F3A6B8] px-2 py-1 rounded-full shadow">
                     <Crown size={11} /> Premium
                   </span>
                 ) : (
@@ -359,7 +359,7 @@ export default function TemplatesPage() {
               <div className="px-3 py-2.5">
                 <p className="text-sm font-semibold leading-snug truncate" title={t.name}>{t.name}</p>
                 <div className="mt-1 flex items-center justify-between gap-2 text-[11px] text-mt-muted dark:text-mt-muted">
-                  <span className="truncate rounded-full bg-[#6C4FD1]/10 text-mt-accent dark:text-mt-accent px-2 py-0.5">{t.category}</span>
+                  <span className="truncate rounded-full bg-mt-accentsoft text-mt-accent px-2 py-0.5">{t.category}</span>
                   <span className="shrink-0">{t.width}×{t.height}</span>
                 </div>
               </div>

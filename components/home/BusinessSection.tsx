@@ -15,10 +15,10 @@ export function BusinessSection() {
   };
 
   return (
-    <section className="bg-[#17161B] text-white">
+    <section className="bg-[#09090B] text-white">
       <div className="max-w-6xl mx-auto px-6 py-24 grid lg:grid-cols-2 gap-14 items-center">
         <Reveal>
-          <p className="text-xs font-semibold text-[#C4DA3B] tracking-wide uppercase">For business</p>
+          <p className="text-xs font-semibold text-[#E8F5FF] tracking-wide uppercase">For business</p>
           <h2 className="mt-3 font-[family-name:var(--font-display)] text-4xl sm:text-5xl leading-[1.05] tracking-tight">
             Make your brand
             <br />
