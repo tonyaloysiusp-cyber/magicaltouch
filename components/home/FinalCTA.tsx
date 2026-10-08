@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowRight } from 'lucide-react';
 import { resolveAuthedPath } from '@/lib/authNav';
+import { BrandRibbon } from './BrandRibbon';
 import { Reveal } from './Reveal';
 
 export function FinalCTA() {
@@ -14,27 +15,26 @@ export function FinalCTA() {
   };
 
   return (
-    <section className="max-w-6xl mx-auto px-6 py-24">
+    <section className="max-w-6xl mx-auto px-5 sm:px-6 pb-24">
       <Reveal>
-        <div className="rounded-3xl bg-brand-gradient px-8 py-16 sm:py-24 text-center">
-          <h2 className="font-[family-name:var(--font-display)] text-4xl sm:text-6xl text-white leading-[1.05] tracking-tight max-w-2xl mx-auto">
-            Ready to make something magical?
+        <div className="relative overflow-hidden rounded-[28px] bg-[#09090B] ring-1 ring-white/10 px-6 pt-16 pb-28 sm:pt-20 sm:pb-36 text-center">
+          <BrandRibbon still className="absolute left-1/2 -translate-x-1/2 -bottom-40 sm:-bottom-52 w-[1500px] max-w-none pointer-events-none opacity-90" />
+          <h2 className="relative font-[family-name:var(--font-display)] font-medium text-3xl sm:text-5xl text-white leading-[1.08] tracking-[-0.03em] max-w-2xl mx-auto">
+            Your next design starts here.
           </h2>
-          <p className="mt-5 text-white/90 text-lg max-w-md mx-auto">
-            Your next great design can start right now.
-          </p>
-          <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
+          <p className="relative mt-5 text-white/70 text-lg max-w-md mx-auto">Pick a template and make it yours in minutes.</p>
+          <div className="relative mt-9 flex flex-wrap items-center justify-center gap-3">
             <button
               onClick={goToCreate}
-              className="inline-flex items-center gap-2 text-sm font-semibold text-mt-ink px-7 py-3.5 rounded-full bg-mt-surface shadow-[inset_0_1px_0_rgba(255,255,255,0.9),inset_0_-2px_4px_rgba(0,0,0,0.06),0_10px_24px_-8px_rgba(0,0,0,0.3)] hover:-translate-y-0.5 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.9),inset_0_-2px_4px_rgba(0,0,0,0.06),0_16px_30px_-8px_rgba(0,0,0,0.35)] transition-all"
+              className="inline-flex items-center gap-2 text-sm font-semibold text-[#09090B] px-6 py-3.5 rounded-full bg-white hover:-translate-y-0.5 transition-transform"
             >
-              Start Creating <ArrowRight size={15} />
+              Start designing <ArrowRight size={15} />
             </button>
             <Link
               href="/templates"
-              className="inline-flex items-center gap-2 text-sm font-semibold text-white px-7 py-3.5 rounded-full border border-white/40 hover:bg-mt-surface/10 transition-colors"
+              className="inline-flex items-center gap-2 text-sm font-semibold text-white px-6 py-3.5 rounded-full border border-white/30 hover:border-white/60 transition-colors"
             >
-              Explore Templates
+              Browse templates
             </Link>
           </div>
         </div>

@@ -47,15 +47,16 @@ export function TemplateShowcase() {
   if (!templates.length) return null;
 
   return (
-    <section id="templates" className="relative overflow-hidden bg-transparent border-y border-mt-border">
+    <section id="templates" className="relative overflow-hidden bg-transparent border-t border-mt-border">
 
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 py-24">
+      <div className="relative max-w-6xl mx-auto px-5 sm:px-6 py-24 sm:py-28">
         <Reveal>
           <div className="flex flex-wrap items-end justify-between gap-6">
             <div>
-              <p className="text-xs font-semibold text-mt-accent tracking-wide uppercase">Template library</p>
-              <h2 className="mt-3 font-[family-name:var(--font-display)] text-4xl sm:text-6xl leading-[1.02] tracking-tight">
-                {templates.length}+ designs, <span className="italic mt-gradient-text animate-mt-shine">ready to make yours.</span>
+              <h2 className="font-[family-name:var(--font-display)] font-medium text-3xl sm:text-5xl leading-[1.08] tracking-[-0.03em]">
+                {templates.length}+ designs,
+                <br />
+                ready to make yours.
               </h2>
               <p className="mt-4 text-mt-muted max-w-lg leading-relaxed">
                 Birthdays, weddings, events, menus, résumés and more — every one fully editable, every colour and word.
@@ -63,9 +64,9 @@ export function TemplateShowcase() {
             </div>
             <Link
               href="/templates"
-              className="inline-flex items-center gap-2 text-sm font-semibold text-white px-6 py-3.5 rounded-full bg-brand-gradient shadow-[0_10px_24px_-8px_rgba(9,9,11,0.16)] hover:-translate-y-0.5 transition-transform shrink-0"
+              className="inline-flex items-center gap-2 text-sm font-semibold px-6 py-3.5 rounded-full border border-mt-border text-mt-ink hover:border-mt-ink/40 transition-colors shrink-0"
             >
-              Explore all templates <ArrowRight size={15} />
+              Browse all templates <ArrowRight size={15} />
             </Link>
           </div>
         </Reveal>

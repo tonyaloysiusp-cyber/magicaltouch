@@ -2,35 +2,37 @@
 
 import { Reveal } from './Reveal';
 
+// A real sequence, so the numbers carry meaning. Each takes one of the
+// logo's colours.
 const STEPS = [
-  { n: '01', title: 'Start', body: 'Choose a template or blank canvas.' },
-  { n: '02', title: 'Create', body: 'Build your design.' },
-  { n: '03', title: 'Refine', body: 'Perfect every detail.' },
-  { n: '04', title: 'Export', body: 'Download and share.' },
+  { n: '1', color: '#EC5F84', title: 'Pick a template', body: 'Choose from 175+ designs for birthdays, weddings, business, menus and more, or start blank.' },
+  { n: '2', color: '#1FAEE6', title: 'Make it yours', body: 'Change the words, colours, fonts and photos. Everything on the page can be edited.' },
+  { n: '3', color: '#6DB33A', title: 'Download or share', body: 'Save it as an image or a print-ready PDF, or keep it in your account for later.' },
 ];
 
 export function HowItWorks() {
   return (
-    <section className="max-w-6xl mx-auto px-6 py-24">
-      <Reveal>
-        <p className="text-xs font-semibold text-mt-accent dark:text-mt-accent tracking-wide uppercase text-center">How it works</p>
-        <h2 className="mt-3 font-[family-name:var(--font-display)] text-4xl sm:text-5xl leading-[1.05] tracking-tight text-center">
-          From idea to finished design.
-        </h2>
-      </Reveal>
+    <section className="border-t border-mt-border">
+      <div className="max-w-6xl mx-auto px-5 sm:px-6 py-24 sm:py-28">
+        <Reveal>
+          <h2 className="font-[family-name:var(--font-display)] font-medium text-3xl sm:text-5xl leading-[1.08] tracking-[-0.03em]">
+            From idea to finished design.
+          </h2>
+        </Reveal>
 
-      <div className="mt-16 grid sm:grid-cols-2 lg:grid-cols-4 gap-10 lg:gap-6">
-        {STEPS.map((s, i) => (
-          <Reveal key={s.n} delayMs={i * 100}>
-            <div className="relative">
-              <span className="block font-[family-name:var(--font-display)] text-7xl sm:text-8xl leading-none tracking-tight mt-gradient-text opacity-90">
-                {s.n}
-              </span>
-              <h3 className="mt-2 font-semibold text-xl text-mt-ink dark:text-mt-ink">{s.title}</h3>
-              <p className="mt-1.5 text-sm text-mt-muted dark:text-mt-muted leading-relaxed max-w-[13rem]">{s.body}</p>
-            </div>
-          </Reveal>
-        ))}
+        <ol className="mt-14 grid gap-10 md:grid-cols-3 md:gap-8">
+          {STEPS.map((s, i) => (
+            <Reveal key={s.n} delayMs={i * 80}>
+              <li className="border-t-2 pt-6" style={{ borderColor: s.color }}>
+                <span className="font-[family-name:var(--font-display)] text-4xl font-medium" style={{ color: s.color }}>
+                  {s.n}
+                </span>
+                <h3 className="mt-4 text-lg font-semibold text-mt-ink">{s.title}</h3>
+                <p className="mt-2 text-sm text-mt-muted leading-relaxed max-w-xs">{s.body}</p>
+              </li>
+            </Reveal>
+          ))}
+        </ol>
       </div>
     </section>
   );

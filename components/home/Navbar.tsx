@@ -29,7 +29,7 @@ export function Navbar({ theme, onToggleTheme }: { theme: AppTheme; onToggleThem
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  // The homepage previously showed "Log In" / "Start Designing" even to
+  // The homepage previously showed "Log In" / "Start designing" even to
   // an already-logged-in visitor — there was no auth check backing the
   // nav UI at all (goToCreate below checks auth only at click time, not
   // for what the header displays). This keeps the header itself in sync,
@@ -87,7 +87,7 @@ export function Navbar({ theme, onToggleTheme }: { theme: AppTheme; onToggleThem
             onClick={goToCreate}
             className="relative overflow-hidden text-sm font-semibold text-white px-5 py-2.5 rounded-full bg-brand-gradient shadow-[0_6px_16px_-6px_rgba(9,9,11,0.16)] hover:shadow-[0_10px_20px_-6px_rgba(9,9,11,0.16)] hover:-translate-y-0.5 transition-all before:content-[''] before:absolute before:inset-x-0 before:top-0 before:h-1/2 before:bg-mt-surface/25 before:rounded-t-full"
           >
-            Start Designing
+            Start designing
           </button>
           {loggedIn && <ProfileMenu />}
         </div>
@@ -119,7 +119,7 @@ export function Navbar({ theme, onToggleTheme }: { theme: AppTheme; onToggleThem
               {loggedIn ? 'Dashboard' : 'Log In'}
             </Link>
             <button onClick={goToCreate} className="text-center text-sm font-semibold text-white rounded-full py-2.5 bg-brand-gradient">
-              Start Designing
+              Start designing
             </button>
           </div>
         </div>
