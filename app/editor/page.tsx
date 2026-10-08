@@ -8,7 +8,44 @@ import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { fetchTemplateById, setTemplateContent, createVersion, Template as TemplateRecord } from '@/lib/templatesData';
 import { dataUrlToBlob, uploadDesignAsset } from '@/lib/storage/assets';
-import { Keyboard, Sun, Moon } from 'lucide-react';
+import {
+  Keyboard,
+  ChevronLeft,
+  CloudOff,
+  Loader2,
+  RefreshCw,
+  Check,
+  Undo2,
+  Redo2,
+  Wand2,
+  Download,
+  LayoutTemplate,
+  Shapes as ShapesIcon,
+  Type as TypeIcon,
+  Upload as UploadIcon,
+  Brush as BrushIcon,
+  PaintBucket,
+  Palette,
+  Layers as LayersIcon,
+  Files,
+  HelpCircle,
+} from 'lucide-react';
+import { LeftRail, RailItem } from '@/components/editor/shell/LeftRail';
+import { ContextToolbar, ToolbarActions } from '@/components/editor/shell/ContextToolbar';
+import { PagesBar } from '@/components/editor/shell/PagesBar';
+import { IconButton, Segmented, cx } from '@/components/editor/shell/ui';
+import { BgRemoveDialog } from '@/components/editor/shell/BgRemoveDialog';
+import { ResizeDialog } from '@/components/editor/shell/ResizeDialog';
+import { OnboardingDialog } from '@/components/editor/shell/OnboardingDialog';
+import { TemplatesPanel } from '@/components/editor/shell/panels/TemplatesPanel';
+import { ElementsPanel } from '@/components/editor/shell/panels/ElementsPanel';
+import { TextPanel } from '@/components/editor/shell/panels/TextPanel';
+import { UploadsPanel } from '@/components/editor/shell/panels/UploadsPanel';
+import { DrawPanel } from '@/components/editor/shell/panels/DrawPanel';
+import { BackgroundPanel } from '@/components/editor/shell/panels/BackgroundPanel';
+import { BrandPanel } from '@/components/editor/shell/panels/BrandPanel';
+import { HelpPanel } from '@/components/editor/shell/panels/HelpPanel';
+import { AdjustPanel } from '@/components/editor/shell/panels/AdjustPanel';
 import { useAppTheme } from '@/hooks/useAppTheme';
 
 import { ToolMode, DocUnit, isDrawTool, PASTEBOARD_BG, RULER_SIZE } from '@/lib/editor/types';
@@ -76,7 +113,17 @@ import { SaveLocationDialog, SaveLocation } from '@/components/storage/SaveLocat
 import { CloudOpenDialog } from '@/components/storage/CloudOpenDialog';
 import { rememberRecent } from '@/lib/mtd/recent';
 import { missingFontsIn, fontRequiredMessage } from '@/lib/editor/missingFonts';
-import { PERSIST_PROPS, isHelperObject, isArtwork, applyStoredLocks, lockProps } from '@/lib/editor/persist';
+import { PERSIST_PROPS, isHelperObject, isArtwork, applyStoredLocks, lockProps, reviveTextPaths } from '@/lib/editor/persist';
+import { ensureImageFilters } from '@/lib/editor/imageAdjust';
+import { drawCropOverlay, isFramed } from '@/lib/editor/frames';
+import { BrushSettings, DEFAULT_BRUSH, StrokePoint, strokePathD, createStrokeObject, eraseWithStroke } from '@/lib/editor/brush';
+import { useEditorFeatures, TextPreset } from '@/hooks/useEditorFeatures';
+import { planResize } from '@/lib/editor/smartResize';
+import { BrandKit, EMPTY_KIT, loadBrandKit, saveBrandKit, applyBrandToObjects } from '@/lib/editor/brandKit';
+import { fromFabricGradient, toFabricGradient, GradientSpec } from '@/lib/editor/gradients';
+import { documentColors as collectDocumentColors } from '@/lib/editor/color';
+import type { QuickStart } from '@/components/editor/shell/OnboardingDialog';
+import { TEXT_BASICS, TEXT_STYLES } from '@/lib/editor/catalog';
 
 const isOpenVectorPath = (o: any): boolean =>
   !!o && o.isVectorPath && o.type === 'path' && Array.isArray(o.path) && o.path.length > 0 && o.path[o.path.length - 1][0] !== 'Z';
@@ -590,6 +637,7 @@ function EditorContent() {
       const canvas = fabricCanvasRef.current;
       if (canvas) {
         applyStoredLocks(canvas);
+        reviveTextPaths((window as any).fabric, canvas);
         pinArtboardsBack();
         recomputeMembership();
         refreshArtboards();
@@ -622,10 +670,12 @@ function EditorContent() {
   // revision counter so a save that finishes after a newer edit never
   // clears the "unsaved" state for that edit.
   const editRevRef = useRef(0);
+  const setDocRevRef = useRef<((f: (n: number) => number) => void) | null>(null);
   function markDirty() {
     const id = activeTabIdRef.current;
     if (!id) return;
     editRevRef.current += 1;
+    setDocRevRef.current?.((n: number) => n + 1);
     setTabs((ts) => (ts.some((t) => t.id === id && !t.dirty) ? ts.map((t) => (t.id === id ? { ...t, dirty: true } : t)) : ts));
     dirtyRef.current = true;
     setSaveStatus((s) => (s === 'saving' ? s : 'unsaved'));
@@ -1173,6 +1223,7 @@ function EditorContent() {
       });
     }
     applyStoredLocks(canvas);
+    reviveTextPaths(F, canvas);
     pinArtboardsBack();
     recomputeMembership();
     refreshArtboards();
@@ -1199,10 +1250,18 @@ function EditorContent() {
       const initialW = viewportRef.current?.clientWidth || 900;
       const initialH = viewportRef.current?.clientHeight || 600;
 
+      // Saved designs can contain this app's own photo filters; they must be
+      // known before anything is loaded.
+      ensureImageFilters(F);
       const canvas = new F.Canvas(canvasRef.current, {
         width: initialW,
         height: initialH,
         backgroundColor: pasteboardBgFor(theme),
+        // Pointer events carry stylus pressure (Apple Pencil) and work the
+        // same for mouse, touch and pen.
+        enablePointerEvents: true,
+        preserveObjectStacking: true,
+        fireRightClick: false,
       });
       fabricCanvasRef.current = canvas;
       (window as any).fabric = F;
@@ -1397,9 +1456,47 @@ function EditorContent() {
       // claimed by "delete the selected design object").
       canvas.on('mouse:dblclick', (opt: any) => {
         if (opt.target?.__isGuide) deleteGuide(opt.target);
+        const t = opt.target;
+        if (t && t.type === 'image' && !t.locked && activeToolRef.current === 'select') {
+          // Empty frame: choose a photo. Otherwise: adjust the photo inside.
+          if (t.__frame?.empty) {
+            canvas.setActiveObject(t);
+            replaceInputRef.current?.click();
+          } else featuresRef.current?.startCrop(t);
+        }
       });
+      // While cropping, keep the photo covering its frame.
+      const keepCrop = (e: any) => {
+        if (featuresRef.current?.cropRef.current && e.target === featuresRef.current.cropRef.current.session.img) featuresRef.current.onCropTransform();
+      };
+      canvas.on('object:moving', keepCrop);
+      canvas.on('object:scaling', keepCrop);
+      canvas.on('object:rotating', keepCrop);
+      canvas.on('selection:cleared', () => featuresRef.current?.cropRef.current && featuresRef.current.finishCrop(true));
 
       canvas.on('mouse:down', (opt: any) => {
+        if (pickColorRef.current) {
+          const cb = pickColorRef.current;
+          pickColorRef.current = null;
+          canvas.defaultCursor = 'default';
+          const el = canvasRef.current;
+          const ctx = el?.getContext('2d');
+          if (el && ctx) {
+            const r = el.getBoundingClientRect();
+            const k = el.width / r.width;
+            const e = opt.e;
+            const d = ctx.getImageData(Math.round((e.clientX - r.left) * k), Math.round((e.clientY - r.top) * k), 1, 1).data;
+            cb('#' + [d[0], d[1], d[2]].map((v) => v.toString(16).padStart(2, '0')).join('').toUpperCase());
+          }
+          setLocalNotice(null);
+          return;
+        }
+        if (drawingRef.current) {
+          const p = canvas.getPointer(opt.e);
+          const pressure = typeof opt.e.pressure === 'number' && opt.e.pointerType === 'pen' ? opt.e.pressure : 0.5;
+          strokeRef.current = { points: [[p.x, p.y, pressure]], pen: opt.e.pointerType === 'pen' };
+          return;
+        }
         if (
           activeToolRef.current === 'select' &&
           opt.target &&
@@ -1474,6 +1571,13 @@ function EditorContent() {
         } else if (isDrawTool(activeToolRef.current)) handleShapeMouseDown(opt);
       });
       canvas.on('mouse:move', (opt: any) => {
+        if (drawingRef.current && strokeRef.current) {
+          const p = canvas.getPointer(opt.e);
+          const pressure = typeof opt.e.pressure === 'number' && strokeRef.current.pen ? opt.e.pressure : 0.5;
+          strokeRef.current.points.push([p.x, p.y, pressure]);
+          canvas.requestRenderAll();
+          return;
+        }
         if (panRef.current.active) {
           const dx = opt.e.clientX - panRef.current.lastX;
           const dy = opt.e.clientY - panRef.current.lastY;
@@ -1490,6 +1594,23 @@ function EditorContent() {
         else if (isDrawTool(activeToolRef.current)) handleShapeMouseMove(opt);
       });
       canvas.on('mouse:up', (opt: any) => {
+        if (drawingRef.current && strokeRef.current) {
+          const stroke = strokeRef.current;
+          strokeRef.current = null;
+          const settings = brushRef.current;
+          const obj = createStrokeObject(F, stroke.points, settings, stroke.pen);
+          if (obj) {
+            if (settings.kind === 'eraser') {
+              const n = eraseWithStroke(F, canvas, obj);
+              if (n) pushHistory();
+            } else {
+              canvas.add(obj);
+              obj.set({ selectable: false, evented: false });
+            }
+          }
+          canvas.requestRenderAll();
+          return;
+        }
         if (altDragRef.current?.triggered) {
           const { obj, startLeft, startTop } = altDragRef.current;
           // Total distance THIS drag moved the object(s) — subtracting it
@@ -1658,6 +1779,28 @@ function EditorContent() {
         }
 
         penDrawOverlay(ctx, vt as any, activeToolRef.current === 'pen');
+
+        // Live brush stroke while drawing.
+        if (drawingRef.current && strokeRef.current) {
+          const d = strokePathD(strokeRef.current.points, brushRef.current, strokeRef.current.pen);
+          if (d) {
+            try {
+              ctx.save();
+              ctx.transform(vt[0], vt[1], vt[2], vt[3], vt[4], vt[5]);
+              const b = brushRef.current;
+              ctx.fillStyle = b.kind === 'eraser' ? 'rgba(239,68,68,0.35)' : b.color;
+              ctx.globalAlpha = b.kind === 'highlighter' ? Math.min(b.opacity, 0.45) : b.kind === 'eraser' ? 1 : b.opacity;
+              ctx.fill(new Path2D(d));
+              ctx.restore();
+            } catch {
+              ctx.restore();
+            }
+          }
+        }
+
+        // Crop mode: dim everything outside the frame.
+        const crop = featuresRef.current?.cropRef.current;
+        if (crop) drawCropOverlay(ctx, vt as any, crop.session.geo, canvas.getWidth(), canvas.getHeight());
 
         // Curve-handle connector lines for the Direct Selection tool — a
         // thin line from each bezier handle back to the anchor it controls,
@@ -1969,6 +2112,593 @@ function EditorContent() {
           console.warn('Background asset upload failed — image stays embedded for this session:', err);
         });
     });
+  };
+
+
+  // ===================================================================
+  // New editor interface: modes, panels, drawing, crop, templates,
+  // brand kit, resize. The design actions themselves live in
+  // hooks/useEditorFeatures.ts and lib/editor/*.
+  // ===================================================================
+  const features = useEditorFeatures({
+    fabricCanvasRef,
+    pushHistory,
+    getActivePage: () => getActiveArtboardRect(),
+    refreshLayers,
+    bumpSel,
+    notify: (m) => setLocalNotice(m),
+    recomputeMembership,
+    backgroundUploadAsset,
+  });
+  const featuresRef = useRef(features);
+  featuresRef.current = features;
+
+  // Simple mode shows the essentials; Pro mode adds rulers, menus, the
+  // tool strip, layers and precise properties.
+  const [mode, setModeState] = useState<'simple' | 'pro'>('simple');
+  useEffect(() => {
+    try {
+      const m = localStorage.getItem('mt:editorMode');
+      if (m === 'pro' || m === 'simple') setModeState(m);
+    } catch {
+      // keep default
+    }
+  }, []);
+  const setMode = (m: 'simple' | 'pro') => {
+    setModeState(m);
+    try {
+      localStorage.setItem('mt:editorMode', m);
+    } catch {
+      // not critical
+    }
+    if (m === 'simple' && activeToolRef.current !== 'select') setActiveTool('select');
+  };
+  const pro = mode === 'pro';
+
+  // Phones get a bottom navigation and bottom sheets.
+  const [compact, setCompact] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 767px)');
+    const on = () => setCompact(mq.matches);
+    on();
+    mq.addEventListener?.('change', on);
+    return () => mq.removeEventListener?.('change', on);
+  }, []);
+
+  const [leftPanel, setLeftPanel] = useState<string | null>(null);
+  const [templateCategory, setTemplateCategory] = useState<string | null>(null);
+  const [showResize, setShowResize] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [bgRemoveTarget, setBgRemoveTarget] = useState<any>(null);
+  const [templateBusy, setTemplateBusy] = useState<string | null>(null);
+  const [sessionUploads, setSessionUploads] = useState<{ id: string; url: string }[]>([]);
+  const replaceInputRef = useRef<HTMLInputElement>(null);
+  const pickColorRef = useRef<((hex: string) => void) | null>(null);
+
+  // ---- drawing ----
+  const [brush, setBrushState] = useState<BrushSettings>(DEFAULT_BRUSH);
+  const brushRef = useRef<BrushSettings>(DEFAULT_BRUSH);
+  const [drawing, setDrawing] = useState(false);
+  const drawingRef = useRef(false);
+  const strokeRef = useRef<{ points: StrokePoint[]; pen: boolean } | null>(null);
+  const setBrush = (b: BrushSettings) => {
+    brushRef.current = b;
+    setBrushState(b);
+  };
+  const startDrawing = (kind: BrushSettings['kind']) => {
+    const canvas = fabricCanvasRef.current;
+    if (!canvas) return;
+    setActiveTool('select');
+    const next = { ...brushRef.current, kind };
+    setBrush(next);
+    drawingRef.current = true;
+    setDrawing(true);
+    canvas.discardActiveObject();
+    canvas.selection = false;
+    canvas.forEachObject((o: any) => {
+      o.selectable = false;
+      o.evented = false;
+    });
+    canvas.defaultCursor = 'crosshair';
+    canvas.hoverCursor = 'crosshair';
+    canvas.requestRenderAll();
+  };
+  const stopDrawing = () => {
+    drawingRef.current = false;
+    strokeRef.current = null;
+    setDrawing(false);
+    setActiveTool('select');
+  };
+
+  // Eyedropper fallback for browsers without the EyeDropper API.
+  const pickFromCanvas = (cb: (hex: string) => void) => {
+    const canvas = fabricCanvasRef.current;
+    if (!canvas) return;
+    pickColorRef.current = cb;
+    canvas.defaultCursor = 'crosshair';
+    setLocalNotice('Tap anywhere on the page to pick a colour.');
+  };
+
+  // ---- images: add / replace / remove background ----
+  const readFile = (f: File) =>
+    new Promise<string>((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(String(r.result));
+      r.onerror = () => reject(r.error);
+      r.readAsDataURL(f);
+    });
+
+  const addImageFiles = async (files: File[], at?: { x: number; y: number }) => {
+    for (let i = 0; i < files.length; i++) {
+      const url = await readFile(files[i]).catch(() => null);
+      if (!url) {
+        setLocalNotice("That file couldn't be read. Try another image.");
+        continue;
+      }
+      setSessionUploads((u) => [{ id: `u${Date.now()}_${i}`, url }, ...u].slice(0, 40));
+      // An empty frame is selected: fill it instead of adding a new picture.
+      const active = fabricCanvasRef.current?.getActiveObject();
+      if (i === 0 && files.length === 1 && active?.__frame?.empty && !at) {
+        await features.putImageInto(active, url);
+        continue;
+      }
+      await insertImageDataUrl(url, i, at);
+    }
+  };
+
+  const placeImageUrl = async (url: string, at?: { x: number; y: number }, target?: any) => {
+    const active = target || fabricCanvasRef.current?.getActiveObject();
+    if (active && active.type === 'image' && (active.__frame?.empty || target)) {
+      await features.putImageInto(active, url);
+      return;
+    }
+    await insertImageDataUrl(url, 0, at);
+  };
+
+  const onReplacePicked = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    e.target.value = '';
+    const target = fabricCanvasRef.current?.getActiveObject();
+    if (!f || !target || target.type !== 'image') return;
+    const url = await readFile(f).catch(() => null);
+    if (!url) {
+      setLocalNotice("That file couldn't be read. Try another image.");
+      return;
+    }
+    await features.putImageInto(target, url);
+  };
+
+  const applyBackgroundRemoval = async (dataUrl: string) => {
+    const img = bgRemoveTarget;
+    const canvas = fabricCanvasRef.current;
+    if (!img || !canvas) return;
+    if (!img.__originalSrc) img.__originalSrc = imageSourceDataURL(img);
+    const oldW = img.width || 1;
+    await new Promise<void>((resolve, reject) =>
+      img.setSrc(
+        dataUrl,
+        (_o: any, err?: boolean) => (err ? reject(new Error('load')) : resolve()),
+        { crossOrigin: 'anonymous' }
+      )
+    );
+    // Same size on the page even if the cut-out has a different pixel size.
+    const ratio = oldW / (img.width || 1);
+    img.set({ scaleX: (img.scaleX || 1) * ratio, scaleY: (img.scaleY || 1) * ratio });
+    if (img.clipPath && !img.clipPath.absolutePositioned) {
+      img.clipPath.set({
+        scaleX: (img.clipPath.scaleX || 1) / ratio,
+        scaleY: (img.clipPath.scaleY || 1) / ratio,
+        left: (img.clipPath.left || 0) / ratio,
+        top: (img.clipPath.top || 0) / ratio,
+      });
+    }
+    if (img.filters?.length) img.applyFilters();
+    img.__assetId = undefined;
+    img.dirty = true;
+    img.setCoords();
+    canvas.requestRenderAll();
+    backgroundUploadAsset(img);
+    pushHistory();
+    bumpSel();
+  };
+
+  const addSticker = (emoji: string, at?: { x: number; y: number }) => {
+    const F = (window as any).fabric;
+    const canvas = fabricCanvasRef.current;
+    if (!F || !canvas) return;
+    const page = getActiveArtboardRect();
+    const size = Math.min(page.width, page.height) * 0.18;
+    const t = new F.Text(emoji, { fontSize: size, fontFamily: 'system-ui, "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif' });
+    t.setPositionByOrigin(new F.Point(at?.x ?? page.x + page.width / 2, at?.y ?? page.y + page.height / 2), 'center', 'center');
+    t.name = 'Sticker';
+    canvas.add(t);
+    canvas.setActiveObject(t);
+    canvas.requestRenderAll();
+  };
+
+  const addFontPairing = (heading: string, body: string) => {
+    const page = getActiveArtboardRect();
+    const F = (window as any).fabric;
+    features.addTextPreset({ id: 'pair-h', label: 'Heading', text: 'Your heading here', fontFamily: heading, fontSize: 90, fontWeight: 700 }, F ? { x: page.x + page.width / 2, y: page.y + page.height * 0.42 } : undefined);
+    features.addTextPreset({ id: 'pair-b', label: 'Body', text: 'Add a little bit of body text that goes with your heading.', fontFamily: body, fontSize: 34, lineHeight: 1.4, fill: '#3F3F46' }, F ? { x: page.x + page.width / 2, y: page.y + page.height * 0.56 } : undefined);
+  };
+
+
+  // ---------------------------------------------------------------------
+  // Templates, smart resize, pages and brand kit
+  // ---------------------------------------------------------------------
+
+  // Moves/scales a set of objects laid out for page `from` onto page `to`
+  // without stretching (see lib/editor/smartResize.ts).
+  const fitObjectsToPage = (objs: any[], from: { x: number; y: number; width: number; height: number }, to: { x: number; y: number; width: number; height: number }) => {
+    const plan = planResize(
+      objs.map((o) => {
+        const r = o.getBoundingRect(true, true);
+        return {
+          box: { left: r.left - from.x, top: r.top - from.y, width: r.width, height: r.height },
+          isImage: o.type === 'image',
+          isShape: o.type !== 'image' && !(o.type === 'textbox' || o.type === 'i-text' || o.type === 'text') && o.type !== 'group',
+        };
+      }),
+      from,
+      to
+    );
+    const F = (window as any).fabric;
+    objs.forEach((o, i) => {
+      const p = plan[i];
+      const isTxt = o.type === 'textbox' || o.type === 'i-text' || o.type === 'text';
+      if (isTxt && Math.abs(p.scaleX - p.scaleY) < 1e-6) {
+        // Text is re-sized by its font size so it stays crisp and editable.
+        const k = p.scaleX;
+        o.set({ fontSize: (o.fontSize || 40) * k });
+        if (o.type === 'textbox') o.set({ width: (o.width || 100) * k });
+        if (o.styles) {
+          Object.values(o.styles).forEach((line: any) =>
+            Object.values(line || {}).forEach((st: any) => {
+              if (st && st.fontSize) st.fontSize *= k;
+            })
+          );
+        }
+        o.initDimensions?.();
+      } else {
+        o.set({ scaleX: (o.scaleX || 1) * p.scaleX, scaleY: (o.scaleY || 1) * p.scaleY });
+      }
+      o.setPositionByOrigin(new F.Point(to.x + p.cx, to.y + p.cy), 'center', 'center');
+      o.setCoords();
+    });
+  };
+
+  const artboardRectById = (id?: string) => fabricCanvasRef.current?.getObjects().find((o: any) => o.__isArtboard && (!id || o.__artboardId === id));
+
+  // Puts a template's design onto the current page (replacing what's there)
+  // or onto a new page, adapted to the page's size.
+  const applyTemplate = async (t: TemplateRecord, mode: 'replace' | 'newPage') => {
+    const canvas = fabricCanvasRef.current;
+    const F = (window as any).fabric;
+    if (!canvas || !F || !t.id) return;
+    setTemplateBusy(t.id);
+    try {
+      const full = await fetchTemplateById(t.id);
+      const json = full?.canvasJson;
+      if (!json || !Array.isArray(json.objects)) throw new Error('no-content');
+      await ensureFontsLoadedForCanvasJSON(json).catch(() => {});
+      const abJson = json.objects.find((o: any) => o.__isArtboard);
+      const src = abJson
+        ? { x: abJson.left || 0, y: abJson.top || 0, width: (abJson.width || t.width) * (abJson.scaleX || 1), height: (abJson.height || t.height) * (abJson.scaleY || 1) }
+        : { x: 0, y: 0, width: t.width, height: t.height };
+      const items = json.objects.filter((o: any) => !o.__isArtboard && !o.__isGuide);
+      const objs: any[] = await new Promise((resolve) => F.util.enlivenObjects(items, (list: any[]) => resolve(list), 'fabric'));
+
+      let page = getActiveArtboardRect();
+      if (mode === 'newPage') {
+        const metas = getArtboardMetas();
+        const pos = nextArtboardPosition(metas);
+        const rect = createArtboardRect(F, pos.x, pos.y, src.width, src.height, nextArtboardName(metas));
+        suppressHistoryRef.current = true;
+        canvas.add(rect);
+        suppressHistoryRef.current = false;
+        pinArtboardsBack();
+        page = { id: rect.__artboardId, x: pos.x, y: pos.y, width: src.width, height: src.height };
+        setActiveArtboardId(rect.__artboardId);
+      } else {
+        // Replace: clear this page's own artwork first.
+        canvas.discardActiveObject();
+        canvas.getObjects().filter((o: any) => isArtwork(o) && (o.__artboardId === page.id || !page.id)).forEach((o: any) => canvas.remove(o));
+      }
+      const rect = artboardRectById(page.id);
+      if (rect && abJson) {
+        const fill = abJson.fill;
+        if (fill && typeof fill === 'object' && fill.colorStops) rect.set({ fill: new F.Gradient(fill) });
+        else if (typeof fill === 'string') rect.set({ fill });
+        rect.dirty = true;
+      }
+      objs.forEach((o) => {
+        delete o.__uid;
+        canvas.add(o);
+      });
+      // Line the template's own page up with ours before fitting.
+      objs.forEach((o) => {
+        o.set({ left: (o.left || 0) - src.x + page.x, top: (o.top || 0) - src.y + page.y });
+        o.setCoords();
+      });
+      if (Math.abs(src.width - page.width) > 1 || Math.abs(src.height - page.height) > 1) {
+        fitObjectsToPage(objs, { x: page.x, y: page.y, width: src.width, height: src.height }, page);
+      }
+      applyStoredLocks(canvas);
+      reviveTextPaths(F, canvas);
+      setActiveTool('select');
+      recomputeMembership();
+      refreshLayers();
+      refreshArtboards();
+      fitToRect(canvas, page);
+      canvas.requestRenderAll();
+      pushHistory();
+      const note = fontRequiredMessage(missingFontsIn(json));
+      if (note) setLocalNotice(note);
+      if (compact) setLeftPanel(null);
+    } catch (err) {
+      console.error('Template could not be applied:', err);
+      setLocalNotice("That template couldn't be opened. Check your connection and try again.");
+    } finally {
+      setTemplateBusy(null);
+    }
+  };
+
+  // Resize: the current page (or a resized copy of it) to a new size.
+  const resizePage = (size: { width: number; height: number; dpi?: number }, mode: 'this' | 'copy') => {
+    const canvas = fabricCanvasRef.current;
+    const F = (window as any).fabric;
+    if (!canvas || !F) return;
+    const page = getActiveArtboardRect();
+    const rect = artboardRectById(page.id);
+    if (!rect) return;
+    const doResize = (targetRect: any, members: any[], from: { x: number; y: number; width: number; height: number }) => {
+      targetRect.set({ width: size.width, height: size.height, scaleX: 1, scaleY: 1 });
+      if (size.dpi) targetRect.__print = { ...(targetRect.__print || createDefaultPrintSettings()), dpi: size.dpi };
+      targetRect.setCoords();
+      // Pattern/photo backgrounds re-cover the page.
+      const to = { x: targetRect.left || 0, y: targetRect.top || 0, width: size.width, height: size.height };
+      fitObjectsToPage(members, from, to);
+      recomputeMembership();
+      refreshArtboards();
+      refreshLayers();
+      setActiveArtboardId(targetRect.__artboardId);
+      fitToRect(canvas, to);
+      canvas.requestRenderAll();
+      pushHistory();
+    };
+    if (mode === 'this') {
+      const members = canvas.getObjects().filter((o: any) => isArtwork(o) && o.__artboardId === page.id);
+      doResize(rect, members, page);
+      return;
+    }
+    // Copy: clone the page next to the others, then resize the copy.
+    const metas = getArtboardMetas();
+    const pos = nextArtboardPosition(metas);
+    const members = canvas.getObjects().filter((o: any) => isArtwork(o) && o.__artboardId === page.id);
+    rect.clone((nr: any) => {
+      nr.set({ left: pos.x, top: pos.y, name: `${rect.name || 'Page'} (resized)` });
+      nr.__isArtboard = true;
+      nr.__artboardId = createArtboardId();
+      nr.__print = JSON.parse(JSON.stringify(rect.__print || createDefaultPrintSettings()));
+      suppressHistoryRef.current = true;
+      canvas.add(nr);
+      Promise.all(members.map((m: any) => new Promise<any>((res) => m.clone((c: any) => res(c), PERSIST_PROPS)))).then((clones) => {
+        clones.forEach((c: any) => {
+          delete c.__uid;
+          c.set({ left: (c.left || 0) - page.x + pos.x, top: (c.top || 0) - page.y + pos.y });
+          c.setCoords();
+          canvas.add(c);
+        });
+        suppressHistoryRef.current = false;
+        pinArtboardsBack();
+        applyStoredLocks(canvas);
+        doResize(nr, clones, { x: pos.x, y: pos.y, width: page.width, height: page.height });
+      });
+    });
+  };
+
+  // Adds a page the same size as the current one.
+  const addPage = () => {
+    const page = getActiveArtboardRect();
+    addArtboardWithSize(page.width, page.height);
+  };
+
+  // Small previews of each page for the page strip.
+  const [pageThumbs, setPageThumbs] = useState<Record<string, string>>({});
+  const [docRev, setDocRev] = useState(0);
+  setDocRevRef.current = setDocRev;
+  useEffect(() => {
+    const t = setTimeout(() => {
+      const canvas = fabricCanvasRef.current;
+      if (!canvas || !canvasReady) return;
+      const out: Record<string, string> = {};
+      const hidden = hideGuidesForExport();
+      try {
+        artboardsRef.current.forEach((ab) => {
+          try {
+            out[ab.id] = canvas.toDataURL({ format: 'jpeg', quality: 0.6, ...getArtboardExportOptions(ab, 120 / Math.max(ab.width, ab.height, 1)) });
+          } catch {
+            // A cross-site picture without permission: no preview for this page.
+          }
+        });
+      } finally {
+        restoreGuidesAfterExport(hidden);
+      }
+      setPageThumbs(out);
+    }, 900);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [docRev, artboards.length, canvasReady]);
+
+  // ---- brand kit ----
+  const [brandKit, setBrandKit] = useState<BrandKit>(EMPTY_KIT);
+  const [brandSaving, setBrandSaving] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const brandTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    loadBrandKit().then(setBrandKit);
+  }, []);
+  const updateBrandKit = (k: BrandKit) => {
+    setBrandKit(k);
+    setBrandSaving('saving');
+    if (brandTimer.current) clearTimeout(brandTimer.current);
+    brandTimer.current = setTimeout(() => {
+      saveBrandKit(k).then((ok) => setBrandSaving(ok ? 'saved' : 'error'));
+    }, 700);
+  };
+  const applyBrandToPage = () => {
+    const canvas = fabricCanvasRef.current;
+    if (!canvas) return;
+    const page = getActiveArtboardRect();
+    const objs = canvas.getObjects().filter((o: any) => isArtwork(o) && (o.__artboardId === page.id || !page.id));
+    if (!objs.length) {
+      setLocalNotice('Add a template or some content first, then apply your brand.');
+      return;
+    }
+    applyBrandToObjects(objs, brandKit);
+    canvas.requestRenderAll();
+    pushHistory();
+    bumpSel();
+    setLocalNotice('Your brand colours and fonts were applied. Undo (Ctrl/Cmd+Z) if you’d like it back.');
+  };
+  const uploadBrandLogo = async (file: File) => {
+    const url = await readFile(file).catch(() => null);
+    if (!url) return;
+    let finalUrl = url;
+    try {
+      const { data } = await supabase.auth.getUser();
+      if (data.user) finalUrl = (await uploadDesignAsset(dataUrlToBlob(url), data.user.id)).url;
+    } catch {
+      // keep the embedded copy
+    }
+    updateBrandKit({ ...brandKit, logoUrl: finalUrl });
+  };
+  const addBrandInfo = () => {
+    const i = brandKit.info;
+    const lines = [i.business, i.tagline, [i.phone, i.email].filter(Boolean).join('  ·  '), i.website, i.address].filter(Boolean);
+    if (!lines.length) {
+      setLocalNotice('Fill in your business details in the Brand panel first.');
+      return;
+    }
+    features.addTextPreset({
+      id: 'brand-info',
+      label: 'Business details',
+      text: lines.join('\n'),
+      fontFamily: brandKit.fonts.body || 'Inter',
+      fontSize: 30,
+      lineHeight: 1.45,
+      fill: '#09090B',
+    });
+  };
+
+  // ---- quick start ("Let's create something") ----
+  const runQuickStart = async (q: QuickStart) => {
+    setShowOnboarding(false);
+    try {
+      localStorage.setItem('mt:onboarded', '1');
+    } catch {
+      // not critical
+    }
+    const { presetToPx } = await import('@/lib/editor/sizePresets');
+    const size = presetToPx(q.preset);
+    const page = getActiveArtboardRect();
+    const rect = artboardRectById(page.id);
+    if (rect) {
+      rect.set({ width: size.width, height: size.height });
+      if (q.preset.dpi) rect.__print = { ...(rect.__print || createDefaultPrintSettings()), dpi: q.preset.dpi };
+      rect.setCoords();
+      refreshArtboards();
+      fitToRect(fabricCanvasRef.current, { x: page.x, y: page.y, width: size.width, height: size.height });
+      pushHistory();
+    }
+    setTemplateCategory(q.category || null);
+    if (!q.wizard) {
+      setLeftPanel('templates');
+      return;
+    }
+    // Wizard: pick a matching template, then put the details in.
+    const { fetchPublicTemplates } = await import('@/lib/templatesData');
+    const list = (await fetchPublicTemplates()).filter((t) => t.id && (t.category === q.category || !q.category));
+    const styleWord = q.wizard.style.toLowerCase();
+    const pick =
+      list.find((t) => `${t.name} ${(t.tags || []).join(' ')}`.toLowerCase().includes(styleWord)) ||
+      list[Math.floor(Math.random() * Math.max(1, list.length))];
+    if (!pick) {
+      setLeftPanel('templates');
+      return;
+    }
+    await applyTemplate(pick, 'replace');
+    const canvas = fabricCanvasRef.current;
+    const pg = getActiveArtboardRect();
+    const objs = canvas.getObjects().filter((o: any) => isArtwork(o) && o.__artboardId === pg.id);
+    const texts = objs.filter((o: any) => o.type === 'textbox' || o.type === 'i-text' || o.type === 'text');
+    const byMonthDay = /(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|monday|tuesday|wednesday|thursday|friday|saturday|sunday|\d{1,2}[\/.]\d{1,2}|\d{1,2}(st|nd|rd|th)|\bpm\b|\bam\b)/i;
+    if (q.wizard.title) {
+      const biggest = texts.slice().sort((a: any, b: any) => b.fontSize * (b.scaleY || 1) - a.fontSize * (a.scaleY || 1))[0];
+      if (biggest) {
+        biggest.set({ text: q.wizard.title });
+        biggest.initDimensions?.();
+      }
+    }
+    if (q.wizard.date) {
+      const dateText = texts.find((t: any) => byMonthDay.test(t.text || ''));
+      if (dateText) {
+        dateText.set({ text: q.wizard.date });
+        dateText.initDimensions?.();
+      }
+    }
+    if (q.wizard.photo) {
+      const url = await readFile(q.wizard.photo).catch(() => null);
+      const frame = objs.find((o: any) => o.type === 'image');
+      if (url && frame) await features.putImageInto(frame, url);
+      else if (url) await insertImageDataUrl(url);
+    }
+    canvas.requestRenderAll();
+    pushHistory();
+    setLocalNotice('Your design is ready. Tap anything to change it.');
+  };
+
+  // First visit to a blank editor: offer the quick start.
+  useEffect(() => {
+    if (!canvasReady || urlDesignId || cameFromTemplate || urlLocalDoc || startInPhotoEditor) return;
+    try {
+      if (searchParams.get('onboard') === '1' || !localStorage.getItem('mt:onboarded')) setShowOnboarding(true);
+    } catch {
+      // ignore
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canvasReady]);
+
+  // Handles things dragged from the side panels onto the page.
+  const handleAssetDrop = (asset: string, pointer: { x: number; y: number }, ev: any) => {
+    const [kind, ...rest] = asset.split(':');
+    const value = rest.join(':');
+    const canvas = fabricCanvasRef.current;
+    if (kind === 'shape') features.addShape(value as any, pointer);
+    else if (kind === 'frame') features.addFrame(value as any, pointer);
+    else if (kind === 'sticker') addSticker(value, pointer);
+    else if (kind === 'text') {
+      const all = [...TEXT_BASICS, ...TEXT_STYLES];
+      const p = all.find((x) => x.id === value);
+      if (p) features.addTextPreset(p, pointer);
+    } else if (kind === 'image') {
+      const target = canvas?.findTarget(ev, false);
+      if (target && target.type === 'image' && !target.locked) placeImageUrl(value, pointer, target);
+      else placeImageUrl(value, pointer);
+    } else if (kind === 'template') {
+      import('@/lib/templatesData').then(({ fetchTemplateById: f }) => f(value).then((t) => t && applyTemplate(t, 'replace')));
+    }
+  };
+
+  const pageBackgroundValue = (): string | GradientSpec | null => {
+    const rect = artboardRectById(getActiveArtboardRect().id);
+    if (!rect) return '#FFFFFF';
+    if (rect.fill && typeof rect.fill === 'object' && rect.fill.colorStops) return fromFabricGradient(rect.fill);
+    return typeof rect.fill === 'string' ? rect.fill || null : '#FFFFFF';
+  };
+  const setPageBackgroundValue = (v: string | GradientSpec | null, commit: boolean) => {
+    if (v && typeof v === 'object') features.setPageBackground({ gradient: v }, commit);
+    else features.setPageBackground({ color: v }, commit);
   };
 
   const nextImageIdRef = useRef(0);
@@ -2468,15 +3198,45 @@ function EditorContent() {
     const files = (Array.from(e.dataTransfer.files || []) as File[]).filter((f) => f.type.startsWith('image/'));
     if (!files.length) return;
     const target = canvas.findTarget(e.nativeEvent as any, false);
-    if (target && (target.type === 'image' || target.__frame) && !target.locked && files.length === 1) {
-      canvas.setActiveObject(target);
-      replaceSelectedImage(files[0]);
+    if (target && target.type === 'image' && !target.locked && files.length === 1) {
+      // Dropped onto a photo or frame: replace it, keeping frame and effects.
+      readFile(files[0]).then((url) => features.putImageInto(target, url)).catch(() => setLocalNotice("That file couldn't be read."));
       return;
     }
-    files.forEach((f, i) => insertImageFile(f, i, { x: pointer.x, y: pointer.y }));
+    const isShapeTarget =
+      target && !target.locked && isArtwork(target) && ['rect', 'circle', 'ellipse', 'triangle', 'polygon', 'path'].includes(target.type) && !target.__brush;
+    if (isShapeTarget && files.length === 1) {
+      // Dropped onto a shape: the photo goes inside the shape.
+      readFile(files[0])
+        .then(
+          (url) =>
+            new Promise<void>((resolve) => {
+              const F = (window as any).fabric;
+              F.Image.fromURL(
+                url,
+                async (img: any) => {
+                  if (!img || !img.width) {
+                    setLocalNotice("That image couldn't be opened.");
+                    return resolve();
+                  }
+                  img.__id = `img_${Date.now()}`;
+                  canvas.add(img);
+                  await features.placeInShape(img, target);
+                  backgroundUploadAsset(img);
+                  resolve();
+                },
+                { crossOrigin: 'anonymous' }
+              );
+            })
+        )
+        .catch(() => setLocalNotice("That file couldn't be read."));
+      return;
+    }
+    addImageFiles(files, { x: pointer.x, y: pointer.y });
   };
-  // Set by the side panels (templates, shapes, frames…) to handle their own drags.
+  // Things dragged from the side panels (templates, shapes, frames…).
   const dropAssetRef = useRef<((asset: string, pointer: { x: number; y: number }, ev: any) => void) | null>(null);
+  dropAssetRef.current = handleAssetDrop;
 
   // Right-click: selects whatever's under the cursor (if anything) before
   // opening the menu, matching how a real app's context menu always acts
@@ -4739,6 +5499,253 @@ function EditorContent() {
     },
   ];
 
+
+  // ---------------------------------------------------------------------
+  // Pieces of the new interface
+  // ---------------------------------------------------------------------
+  const docColors = canvasReady ? collectDocumentColors(fabricCanvasRef.current) : [];
+  const selectedImage = selected && selected.type === 'image' ? selected : null;
+
+  const toolbarActions: ToolbarActions = {
+    applyProp,
+    applyCharProp,
+    getTextPropValue,
+    setFill: features.setFill,
+    setStroke: features.setStroke,
+    setShadow: features.setShadow,
+    setCornerRadius: features.setCornerRadius,
+    setShapeParams: features.setShapeParams,
+    setTextFx: features.setTextFx,
+    setOpacity: features.setOpacity,
+    flip: features.flip,
+    replaceImage: () => replaceInputRef.current?.click(),
+    startCrop: () => features.startCrop(),
+    openAdjust: () => setLeftPanel('adjust'),
+    removeBackground: () => {
+      const t = fabricCanvasRef.current?.getActiveObject();
+      if (t && t.type === 'image') setBgRemoveTarget(t);
+    },
+    maskWithShape: features.maskWithShape,
+    detachFromFrame: features.detachFromFrame,
+    placeInShape: () => {
+      const sel = fabricCanvasRef.current?.getActiveObject();
+      if (!sel || sel.type !== 'activeSelection') return;
+      const objs = sel.getObjects();
+      const img = objs.find((o: any) => o.type === 'image');
+      const shape = objs.find((o: any) => o !== img);
+      if (img && shape) features.placeInShape(img, shape);
+    },
+    duplicate: duplicateSelected,
+    remove: deleteSelected,
+    toggleLock: () => {
+      const t = fabricCanvasRef.current?.getActiveObject();
+      if (t) toggleLock(t);
+    },
+    group: groupSelected,
+    ungroup: ungroupSelected,
+    align: (m, rel) => alignObject(m, rel || 'auto'),
+    distribute: distributeObjects,
+    bringForward,
+    sendBackward,
+    bringToFront,
+    sendToBack,
+    pageBackground: pageBackgroundValue,
+    setPageBackground: setPageBackgroundValue,
+    openResize: () => setShowResize(true),
+    pickFromCanvas,
+  };
+
+  const propertiesPanelEl = (
+    <PropertiesPanel
+      activeTool={activeTool}
+      selected={selected}
+      unit={unit}
+      layers={layers}
+      maskTargetId={maskTargetId}
+      setMaskTargetId={setMaskTargetId}
+      applyProp={applyProp}
+      applyCharProp={applyCharProp}
+      getTextPropValue={getTextPropValue}
+      applyExactSize={applyExactSize}
+      toggleLockRatio={toggleLockRatio}
+      alignObject={alignObject}
+      groupSelected={groupSelected}
+      ungroupSelected={ungroupSelected}
+      runShapeBuilder={runShapeBuilder}
+      applyPathAsMask={applyPathAsMask}
+      removeMask={removeMask}
+      applyGradientFill={applyGradientFill}
+      gradAngleRef={gradAngleRef}
+      pushHistory={pushHistory}
+      layerLabel={layerLabel}
+      onReplaceImage={(file) => {
+        const t = fabricCanvasRef.current?.getActiveObject();
+        if (t) readFile(file).then((url) => features.putImageInto(t, url));
+      }}
+      onEditPhoto={openPhotoEditor}
+      artboardOrigin={(() => {
+        const ab = artboards.find((a) => a.id === selected?.__artboardId) || getActiveArtboardRect();
+        return { x: ab.x, y: ab.y };
+      })()}
+    />
+  );
+
+  const artboardsPanelEl = (
+    <ArtboardsPanel
+      artboards={artboards}
+      activeArtboardId={activeArtboardId}
+      unit={unit}
+      onSelect={selectArtboard}
+      onRename={renameArtboard}
+      onResize={resizeArtboard}
+      onDuplicate={duplicateArtboard}
+      onDelete={deleteArtboard}
+      onMoveUp={moveArtboardUp}
+      onMoveDown={moveArtboardDown}
+      onAddPreset={addArtboardFromPreset}
+      onAddCustom={addArtboardCustom}
+      onFitAll={fitAllArtboards}
+      onExportOne={(id) => exportArtboardPNG(id)}
+      onExportAll={exportAllArtboardsPNG}
+      onExportAllPDF={exportAsPDF}
+      onExportRangePDF={exportArtboardRangePDF}
+      onUpdatePrint={updateArtboardPrint}
+      onExportPrint={exportArtboardForPrint}
+      onRunPreflight={runPreflightCheck}
+    />
+  );
+
+  const layersPanelEl = (
+    <LayersPanel
+      layers={layers}
+      selected={selected}
+      onSelect={(obj) => {
+        fabricCanvasRef.current.setActiveObject(obj);
+        fabricCanvasRef.current.requestRenderAll();
+        setSelected(obj);
+      }}
+      onToggleVisible={toggleVisible}
+      onToggleLock={toggleLock}
+      onRename={renameLayer}
+      onReorder={reorderLayers}
+      onDuplicate={(obj) => {
+        fabricCanvasRef.current.setActiveObject(obj);
+        duplicateSelected();
+      }}
+      onDelete={(obj) => {
+        if (obj.locked) return;
+        fabricCanvasRef.current.discardActiveObject();
+        fabricCanvasRef.current.remove(obj);
+        fabricCanvasRef.current.requestRenderAll();
+      }}
+      onOpacityChange={(obj, opacity) => {
+        obj.set({ opacity });
+        fabricCanvasRef.current.requestRenderAll();
+        pushHistory();
+      }}
+      onBlendModeChange={(obj, m) => {
+        obj.set({ globalCompositeOperation: m === 'normal' ? 'source-over' : m });
+        fabricCanvasRef.current.requestRenderAll();
+        pushHistory();
+      }}
+      getThumbnail={layerThumbnail}
+    />
+  );
+
+  const railItems: RailItem[] = [
+    {
+      id: 'templates',
+      label: 'Templates',
+      icon: <LayoutTemplate size={20} />,
+      render: () => <TemplatesPanel onUse={applyTemplate} busyId={templateBusy} initialCategory={templateCategory} />,
+    },
+    {
+      id: 'elements',
+      label: 'Elements',
+      icon: <ShapesIcon size={20} />,
+      render: () => <ElementsPanel onAddShape={(k) => features.addShape(k)} onAddFrame={(k) => features.addFrame(k)} onAddSticker={(e) => addSticker(e)} />,
+    },
+    { id: 'text', label: 'Text', icon: <TypeIcon size={20} />, render: () => <TextPanel onAdd={(p: TextPreset) => features.addTextPreset(p)} onAddPairing={addFontPairing} /> },
+    {
+      id: 'uploads',
+      label: 'Uploads',
+      icon: <UploadIcon size={20} />,
+      render: () => <UploadsPanel sessionUploads={sessionUploads} onFiles={(f) => addImageFiles(f)} onUse={(url) => placeImageUrl(url)} />,
+    },
+    {
+      id: 'draw',
+      label: 'Draw',
+      icon: <BrushIcon size={20} />,
+      render: () => (
+        <DrawPanel
+          drawing={drawing}
+          settings={brush}
+          onChange={setBrush}
+          onStart={startDrawing}
+          onStop={stopDrawing}
+          pro={pro}
+          vectorTool={activeTool}
+          onVectorTool={(t) => {
+            if (drawingRef.current) stopDrawing();
+            setActiveTool(t);
+          }}
+        />
+      ),
+    },
+    {
+      id: 'background',
+      label: 'Background',
+      icon: <PaintBucket size={20} />,
+      render: () => (
+        <BackgroundPanel
+          current={pageBackgroundValue()}
+          brandColors={brandKit.colors}
+          documentColors={docColors}
+          onPickFromCanvas={pickFromCanvas}
+          onSet={(bg, commit = true) => features.setPageBackground(bg, commit)}
+        />
+      ),
+    },
+    {
+      id: 'brand',
+      label: 'Brand',
+      icon: <Palette size={20} />,
+      special: true,
+      render: () => (
+        <BrandPanel
+          kit={brandKit}
+          onChange={updateBrandKit}
+          saving={brandSaving}
+          onApply={applyBrandToPage}
+          onAddLogo={() => brandKit.logoUrl && placeImageUrl(brandKit.logoUrl)}
+          onAddInfo={addBrandInfo}
+          onUploadLogo={uploadBrandLogo}
+          documentColors={docColors}
+        />
+      ),
+    },
+    { id: 'layers', label: 'Layers', icon: <LayersIcon size={20} />, render: () => layersPanelEl },
+    { id: 'pages', label: 'Pages', icon: <Files size={20} />, title: 'Pages & print setup', render: () => artboardsPanelEl },
+    { id: 'help', label: 'Help', icon: <HelpCircle size={20} />, title: 'Help & shortcuts', render: () => <HelpPanel onOpenShortcuts={() => setShowShortcuts(true)} /> },
+    {
+      id: 'adjust',
+      label: 'Adjust',
+      title: 'Adjust photo',
+      hiddenInRail: true,
+      icon: null,
+      render: () => (
+        <AdjustPanel
+          img={selectedImage}
+          value={features.readImageAdjust(selectedImage)}
+          onChange={(a, commit) => features.adjustImage(a, commit)}
+          onRemoveBackground={() => selectedImage && setBgRemoveTarget(selectedImage)}
+          onCrop={() => features.startCrop()}
+          onFlip={features.flip}
+        />
+      ),
+    },
+  ];
+
   // While the first photo of a "New Photo Project" session is still open
   // (not yet applied to a real document), Main Design's own chrome —
   // its File/Edit/Object/Type menus and the Main Design/Photo Editing
@@ -4786,128 +5793,122 @@ function EditorContent() {
           rgb(249,250,251) even with the `dark` class present and
           localStorage's shared theme genuinely set to 'dark'). */}
       <div className={isDark ? 'dark' : ''}>
-      <main className="h-screen w-full overflow-x-hidden flex flex-col bg-transparent transition-colors duration-150">
-      <MenuBar
-        menus={photoOnlySession ? [] : menus}
-        leading={
-          <Link href="/" title="Go to homepage">
-            <BrandLogo theme={theme} width={140} height={28} priority />
+      <main className="h-[100dvh] w-full overflow-hidden flex flex-col bg-mt-bg text-mt-ink transition-colors duration-150">
+      {pro && (
+        <MenuBar
+          menus={photoOnlySession ? [] : menus}
+          leading={
+            <Link href="/" title="Go to homepage">
+              <BrandLogo theme={theme} width={120} height={24} priority />
+            </Link>
+          }
+        />
+      )}
+
+      {/* ------------------------------------------------ top bar */}
+      <header className="h-14 shrink-0 flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 border-b border-mt-border bg-mt-surface">
+        <Link
+          href={cameFromTemplate ? '/templates' : '/dashboard'}
+          title={cameFromTemplate ? 'Back to templates' : 'Back to dashboard'}
+          aria-label={cameFromTemplate ? 'Back to templates' : 'Back to dashboard'}
+          className="h-9 w-9 shrink-0 inline-flex items-center justify-center rounded-lg text-mt-muted hover:text-mt-ink hover:bg-mt-surface2"
+        >
+          <ChevronLeft size={20} />
+        </Link>
+        {!pro && !compact && (
+          <Link href="/" title="Go to homepage" className="shrink-0 hidden lg:block">
+            <BrandLogo theme={theme} width={118} height={24} priority />
           </Link>
-        }
-      />
-
-      <TabBar tabs={tabs} activeTabId={activeTabId} onSwitch={switchTab} onClose={closeTab} onAdd={() => setShowOpenDialog(true)} />
-
-      <div className="flex items-center justify-between gap-3 px-4 py-2 border-b bg-mt-surface dark:bg-mt-surface dark:border-mt-border transition-colors duration-150 overflow-x-auto">
-        <div className="flex items-center gap-2 shrink-0">
-          <BackBar
-            href={cameFromTemplate ? '/templates' : '/dashboard'}
-            label={cameFromTemplate ? 'Templates' : 'Dashboard'}
-          />
-        </div>
+        )}
         <input
           type="text"
           value={designName}
+          aria-label="Design name"
           onChange={(e) => {
             const name = e.target.value;
             setDesignName(name);
             setTabs((ts) => ts.map((t) => (t.id === activeTabIdRef.current ? { ...t, name } : t)));
+            markDirty();
           }}
-          className="text-sm border rounded px-2 py-1 w-48 text-center shrink-0 dark:bg-mt-surface dark:border-mt-border dark:text-mt-ink"
+          className="min-w-0 w-28 sm:w-48 h-9 rounded-lg border border-transparent hover:border-mt-border focus:border-[#8CCBFF] bg-transparent px-2 text-sm font-medium text-mt-ink truncate"
         />
-
-        {!hideWorkspaceSwitcherForPhotoFirst && <WorkspaceSwitcher workspace={workspace} onSwitch={handleWorkspaceSwitch} />}
-
-        <div className="flex items-center gap-2 shrink-0">
-          {/* Undo/Redo target whichever workspace is actually showing —
-              previously these stayed wired to Main Design even while the
-              Photo Editor was open, so clicking them silently edited the
-              hidden canvas instead of undoing the visible one. */}
-          <button
-            onClick={workspace === 'photo' ? () => photoEditorRef.current?.undo() : undo}
-            disabled={workspace === 'photo' ? !photoCanUndo : !canUndo}
-            title="Undo (Ctrl/Cmd+Z)"
-            className="px-2 py-1 border rounded disabled:opacity-30 dark:border-mt-border dark:text-mt-ink dark:hover:bg-mt-surface2"
-          >
-            ↶ Undo
-          </button>
-          <button
-            onClick={workspace === 'photo' ? () => photoEditorRef.current?.redo() : redo}
-            disabled={workspace === 'photo' ? !photoCanRedo : !canRedo}
-            title="Redo (Ctrl/Cmd+Shift+Z)"
-            className="px-2 py-1 border rounded disabled:opacity-30 dark:border-mt-border dark:text-mt-ink dark:hover:bg-mt-surface2"
-          >
-            ↷ Redo
-          </button>
-          <button onClick={() => setShowShortcuts(true)} title="Keyboard shortcuts (?)" className="p-1.5 border rounded text-mt-muted hover:bg-mt-surface2 dark:border-mt-border dark:text-mt-muted dark:hover:bg-mt-surface2">
-            <Keyboard size={16} />
-          </button>
-          <ThemeSwitch theme={theme} onToggle={toggleTheme} size="sm" />
-        </div>
-
-        <div className="flex items-center gap-3 shrink-0">
-          <label className="text-xs text-mt-muted dark:text-mt-muted">Units</label>
-          <select
-            value={unit}
-            onChange={(e) => setUnit(e.target.value as DocUnit)}
-            className="text-xs border rounded px-1.5 py-1 dark:bg-mt-surface dark:border-mt-border dark:text-mt-ink"
-          >
+        <span
+          aria-live="polite"
+          title={
+            !isOnline
+              ? 'You’re offline. Changes are kept and saved when you’re back online.'
+              : saveStatus === 'error'
+              ? 'The last save didn’t go through. Try Save again.'
+              : undefined
+          }
+          className={cx(
+            'hidden sm:inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full whitespace-nowrap shrink-0',
+            !isOnline ? 'text-amber-700 bg-amber-50 dark:bg-amber-950/40' : saveStatus === 'error' ? 'text-red-600 bg-red-50 dark:bg-red-950/40' : 'text-mt-muted'
+          )}
+        >
+          {!isOnline ? (
+            <><CloudOff size={13} /> Offline</>
+          ) : saveStatus === 'saving' ? (
+            <><Loader2 size={13} className="animate-spin" /> Saving…</>
+          ) : saveStatus === 'error' ? (
+            <><CloudOff size={13} /> Not saved</>
+          ) : saveStatus === 'unsaved' ? (
+            isLocalTabId(activeTabId) ? `Not saved to ${storageLabel(activeTabId)}` : designId ? <><RefreshCw size={12} /> Syncing soon</> : 'Not saved yet'
+          ) : saveStatus === 'saved' ? (
+            <><Check size={13} /> {isLocalTabId(activeTabId) ? `Saved to ${storageLabel(activeTabId)}` : 'Saved'}</>
+          ) : null}
+        </span>
+        <div className="flex-1" />
+        <IconButton label="Undo" hint="Ctrl/Cmd+Z" onClick={workspace === 'photo' ? () => photoEditorRef.current?.undo() : undo} disabled={workspace === 'photo' ? !photoCanUndo : !canUndo}>
+          <Undo2 size={18} />
+        </IconButton>
+        <IconButton label="Redo" hint="Ctrl/Cmd+Shift+Z" onClick={workspace === 'photo' ? () => photoEditorRef.current?.redo() : redo} disabled={workspace === 'photo' ? !photoCanRedo : !canRedo}>
+          <Redo2 size={18} />
+        </IconButton>
+        {!compact && (
+          <div className="hidden md:block mx-1">
+            <Segmented
+              size="sm"
+              value={mode}
+              onChange={setMode}
+              options={[
+                { value: 'simple', label: 'Simple', hint: 'The essentials, for quick designs' },
+                { value: 'pro', label: 'Pro', hint: 'Pen, rulers, layers, precise sizes and print settings' },
+              ]}
+            />
+          </div>
+        )}
+        {pro && !hideWorkspaceSwitcherForPhotoFirst && !compact && <WorkspaceSwitcher workspace={workspace} onSwitch={handleWorkspaceSwitch} />}
+        {pro && !compact && (
+          <select value={unit} onChange={(e) => setUnit(e.target.value as DocUnit)} aria-label="Units" title="Units" className="hidden lg:block h-9 text-xs border border-mt-border rounded-lg px-1.5 bg-mt-surface text-mt-ink">
             <option value="px">px</option>
             <option value="mm">mm</option>
             <option value="cm">cm</option>
             <option value="in">in</option>
             <option value="pt">pt</option>
           </select>
-        </div>
-
-        <div className="flex items-center gap-3 shrink-0">
-          <button onClick={() => applyZoom(zoom - 10)} className="px-2 py-1 border rounded dark:border-mt-border dark:text-mt-ink dark:hover:bg-mt-surface2">-</button>
-          <span className="text-sm text-mt-muted w-12 text-center dark:text-mt-muted">{zoom}%</span>
-          <button onClick={() => applyZoom(zoom + 10)} className="px-2 py-1 border rounded dark:border-mt-border dark:text-mt-ink dark:hover:bg-mt-surface2">+</button>
-        </div>
-
-        <div className="flex items-center gap-2 relative shrink-0">
-          <span
-            className={
-              'text-xs px-2 py-1 rounded-full ' +
-              (!isOnline
-                ? 'text-amber-700 bg-amber-50'
-                : saveStatus === 'error'
-                ? 'text-red-600 bg-red-50'
-                : saveStatus === 'saving'
-                ? 'text-mt-muted bg-mt-surface2'
-                : saveStatus === 'unsaved'
-                ? 'text-mt-faint bg-mt-surface2'
-                : saveStatus === 'saved'
-                ? 'text-green-600 bg-green-50'
-                : 'text-transparent')
-            }
-          >
-            {!isOnline
-              ? 'Offline'
-              : saveStatus === 'error'
-              ? 'Save failed'
-              : saveStatus === 'saving'
-              ? 'Saving...'
-              : saveStatus === 'unsaved'
-              ? isLocalTabId(activeTabId)
-                ? `Not saved to ${storageLabel(activeTabId)}`
-                : 'Unsaved changes'
-              : saveStatus === 'saved'
-              ? isLocalTabId(activeTabId)
-                ? `Saved to ${storageLabel(activeTabId)}`
-                : 'Saved'
-              : ''}
-          </span>
-          <button onClick={() => setShowExportDialog(true)} disabled={exporting} className="border border-mt-border text-mt-ink px-4 py-2 rounded-full text-sm font-semibold disabled:opacity-50 dark:border-mt-border dark:text-mt-ink dark:hover:bg-mt-surface2">
-            {exporting ? 'Exporting...' : 'Export'}
+        )}
+        {!compact && (
+          <button type="button" onClick={() => setShowResize(true)} title="Resize your design to another size" className="hidden lg:inline-flex h-9 items-center gap-1.5 px-3 rounded-lg text-sm font-medium text-mt-ink hover:bg-mt-surface2">
+            <Wand2 size={15} className="text-mt-accent" /> Resize
           </button>
-          <button onClick={saveDesign} disabled={saving} className="bg-brand-gradient text-white px-4 py-2 rounded-full text-sm font-semibold disabled:opacity-50">
-            {saving ? 'Saving...' : 'Save'}
-          </button>
-          <ProfileMenu />
-        </div>
-      </div>
+        )}
+        {!compact && <ThemeSwitch theme={theme} onToggle={toggleTheme} size="sm" />}
+        <button
+          type="button"
+          onClick={() => setShowExportDialog(true)}
+          disabled={exporting}
+          className="h-9 inline-flex items-center gap-1.5 px-3 sm:px-4 rounded-full border border-mt-border text-sm font-semibold text-mt-ink hover:bg-mt-surface2 disabled:opacity-50"
+        >
+          <Download size={15} /> <span className="hidden sm:inline">{exporting ? 'Exporting…' : 'Export'}</span>
+        </button>
+        <button type="button" onClick={saveDesign} disabled={saving} className="h-9 px-4 rounded-full bg-mt-primary text-mt-onprimary text-sm font-semibold disabled:opacity-50">
+          {saving ? 'Saving…' : 'Save'}
+        </button>
+        {!compact && <ProfileMenu />}
+      </header>
+
+      {(pro || tabs.length > 1) && <TabBar tabs={tabs} activeTabId={activeTabId} onSwitch={switchTab} onClose={closeTab} onAdd={() => setShowOpenDialog(true)} />}
 
       {showExportDialog && (
         <ExportDialog
@@ -4940,7 +5941,7 @@ function EditorContent() {
           <button
             onClick={saveToTemplate}
             disabled={templateSave.busy}
-            className="shrink-0 text-xs font-semibold bg-brand-gradient rounded-full px-4 py-2 disabled:opacity-60"
+            className="shrink-0 text-xs font-semibold bg-white text-[#09090B] rounded-full px-4 py-2 disabled:opacity-60"
           >
             {templateSave.busy ? 'Saving…' : 'Save to template'}
           </button>
@@ -4951,7 +5952,7 @@ function EditorContent() {
       )}
 
       {localNotice && (
-        <div className="fixed bottom-5 left-1/2 -translate-x-1/2 z-[70] max-w-md w-[calc(100%-2rem)] bg-[#14121F] text-white text-sm rounded-xl shadow-xl px-4 py-3 flex items-start gap-3">
+        <div role="status" className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[125] max-w-md w-[calc(100%-2rem)] bg-[#09090B] text-white text-sm rounded-2xl shadow-xl px-4 py-3 flex items-start gap-3">
           <span className="flex-1">{localNotice}</span>
           <button onClick={() => setLocalNotice(null)} className="text-white/60 hover:text-white shrink-0" aria-label="Dismiss">✕</button>
         </div>
@@ -4974,13 +5975,9 @@ function EditorContent() {
           onConfirm={confirmPdfImport}
         />
       )}
-      <input
-        ref={importInputRef}
-        type="file"
-        accept="image/*,.pdf,application/pdf"
-        onChange={handleImportFileSelected}
-        className="hidden"
-      />
+      <input ref={importInputRef} type="file" accept="image/*,.pdf,application/pdf" onChange={handleImportFileSelected} className="hidden" />
+      <input ref={replaceInputRef} type="file" accept="image/*" onChange={onReplacePicked} className="hidden" />
+      <input id="mainImageUploadInput" type="file" accept="image/*" multiple onChange={handleImageUpload} className="hidden" />
 
       {closeConfirm && (
         <UnsavedChangesDialog
@@ -4991,39 +5988,80 @@ function EditorContent() {
           onCancel={handleCloseConfirmCancel}
         />
       )}
-
-      <div className="flex flex-1 overflow-hidden" style={{ display: workspace === 'design' ? 'flex' : 'none' }}>
-        <Toolbar
-          activeTool={activeTool}
-          onSelectTool={setActiveTool}
-          onAddText={addText}
-          onImageUpload={handleImageUpload}
-          onDuplicate={duplicateSelected}
-          onBringForward={bringForward}
-          onSendBackward={sendBackward}
-          onBringToFront={bringToFront}
-          onSendToBack={sendToBack}
-          onDelete={deleteSelected}
-          onOpenShapeBuilder={openShapeBuilder}
-          onOpenRoadmap={(id) => setRoadmap({ open: true, id })}
+      {bgRemoveTarget && <BgRemoveDialog img={bgRemoveTarget} onApply={applyBackgroundRemoval} onClose={() => setBgRemoveTarget(null)} />}
+      {showResize && (
+        <ResizeDialog
+          current={getActiveArtboardRect()}
+          onClose={() => setShowResize(false)}
+          onResize={(size, m) => {
+            setShowResize(false);
+            resizePage(size, m);
+          }}
         />
+      )}
+      {showOnboarding && (
+        <OnboardingDialog
+          onPick={runQuickStart}
+          onCustom={() => {
+            setShowOnboarding(false);
+            try {
+              localStorage.setItem('mt:onboarded', '1');
+            } catch {
+              // ignore
+            }
+            setShowResize(true);
+          }}
+          onClose={() => {
+            setShowOnboarding(false);
+            try {
+              localStorage.setItem('mt:onboarded', '1');
+            } catch {
+              // ignore
+            }
+          }}
+        />
+      )}
 
-        <div className="flex-1 overflow-hidden relative" style={{ background: pasteboardBgFor(theme) }}>
-          <Rulers
-            fabricCanvasRef={fabricCanvasRef}
-            unit={unit}
-            originX={getActiveArtboardRect().x}
-            originY={getActiveArtboardRect().y}
-            artboardWidth={getActiveArtboardRect().width}
-            artboardHeight={getActiveArtboardRect().height}
-            ready={canvasReady}
-            visible={showRulers}
-            onGuideDragStart={(axis, clientX, clientY) => startGuideFromRuler(axis, clientX, clientY)}
+      <div className="flex flex-1 min-h-0 overflow-hidden" style={{ display: workspace === 'design' ? 'flex' : 'none' }}>
+        {!compact && <LeftRail items={railItems} active={leftPanel} onActivate={setLeftPanel} compact={false} />}
+        {pro && !compact && (
+          <Toolbar
+            activeTool={activeTool}
+            onSelectTool={(t) => {
+              if (drawingRef.current) stopDrawing();
+              setActiveTool(t);
+            }}
+            onAddText={addText}
+            onImageUpload={handleImageUpload}
+            onDuplicate={duplicateSelected}
+            onBringForward={bringForward}
+            onSendBackward={sendBackward}
+            onBringToFront={bringToFront}
+            onSendToBack={sendToBack}
+            onDelete={deleteSelected}
+            onOpenShapeBuilder={openShapeBuilder}
+            onOpenRoadmap={(id) => setRoadmap({ open: true, id })}
           />
+        )}
+
+        <div className="flex-1 min-w-0 overflow-hidden relative" style={{ background: pasteboardBgFor(theme) }}>
+          {pro && (
+            <Rulers
+              fabricCanvasRef={fabricCanvasRef}
+              unit={unit}
+              originX={getActiveArtboardRect().x}
+              originY={getActiveArtboardRect().y}
+              artboardWidth={getActiveArtboardRect().width}
+              artboardHeight={getActiveArtboardRect().height}
+              ready={canvasReady}
+              visible={showRulers}
+              onGuideDragStart={(axis, clientX, clientY) => startGuideFromRuler(axis, clientX, clientY)}
+            />
+          )}
           <div
             ref={viewportRef}
-            className="absolute overflow-hidden"
-            style={{ top: RULER_SIZE, left: RULER_SIZE, right: 0, bottom: 0 }}
+            className="absolute overflow-hidden touch-none"
+            style={{ top: pro && showRulers ? RULER_SIZE : 0, left: pro && showRulers ? RULER_SIZE : 0, right: 0, bottom: 0 }}
             onContextMenu={handleCanvasContextMenu}
             onDragOver={(e) => {
               if (Array.from(e.dataTransfer.types).includes('Files') || e.dataTransfer.types.includes('application/x-mt-asset')) {
@@ -5036,124 +6074,59 @@ function EditorContent() {
             <canvas ref={canvasRef} />
             <GridOverlay fabricCanvasRef={fabricCanvasRef} visible={showGrid} gridSize={gridSize} ready={canvasReady} />
           </div>
+          {canvasReady && activeTool === 'select' && !drawing && (
+            <div className={cx('absolute left-1/2 -translate-x-1/2 z-20 pointer-events-none flex justify-center', compact ? 'bottom-2' : pro && showRulers ? 'top-8' : 'top-3')}>
+              <ContextToolbar
+                sel={selected}
+                a={toolbarActions}
+                brandColors={brandKit.colors}
+                documentColors={docColors}
+                cropping={!!features.cropping}
+                cropAspect={features.cropping?.aspect ?? null}
+                onCropRatio={features.setCropRatio}
+                onCropReset={features.resetCrop}
+                onCropDone={features.finishCrop}
+                pro={pro}
+              />
+            </div>
+          )}
+          {drawing && (
+            <div className={cx('absolute left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 rounded-2xl border border-mt-border bg-mt-surface/95 backdrop-blur px-3 py-1.5 shadow-lg', compact ? 'bottom-2' : 'top-3')}>
+              <span className="text-[13px] font-semibold capitalize">{brush.kind}</span>
+              {brush.kind !== 'eraser' && <input type="color" value={brush.color} aria-label="Brush colour" onChange={(e) => setBrush({ ...brush, color: e.target.value })} className="h-7 w-8 rounded border border-mt-border bg-transparent" />}
+              <input type="range" min={1} max={120} value={brush.size} aria-label="Brush size" onChange={(e) => setBrush({ ...brush, size: Number(e.target.value) })} className="w-28 accent-[#3B82C4]" />
+              <button type="button" onClick={stopDrawing} className="h-8 px-3 rounded-lg bg-mt-primary text-mt-onprimary text-xs font-semibold">Done</button>
+            </div>
+          )}
         </div>
-        {contextMenu && (
-          <ContextMenu x={contextMenu.x} y={contextMenu.y} items={contextMenuItems()} onClose={() => setContextMenu(null)} />
+        {contextMenu && <ContextMenu x={contextMenu.x} y={contextMenu.y} items={contextMenuItems()} onClose={() => setContextMenu(null)} />}
+
+        {pro && !compact && (
+          <div className="w-72 shrink-0 bg-mt-surface border-l border-mt-border flex flex-col overflow-y-auto mt-scroll">
+            {isPanelOpen('properties') && (
+              <div className="p-3 border-b border-mt-border">
+                <p className="font-semibold text-mt-ink mb-3 text-sm">Properties</p>
+                {propertiesPanelEl}
+              </div>
+            )}
+            {isPanelOpen('artboards') && artboardsPanelEl}
+            {isPanelOpen('align') && (
+              <div className="border-b border-mt-border">
+                <AlignPanel
+                  alignObject={alignObject}
+                  distribute={distributeObjects}
+                  hasSelection={hasSelection}
+                  selectionCount={selected?.type === 'activeSelection' ? selected.getObjects().length : selected ? 1 : 0}
+                />
+              </div>
+            )}
+            {isPanelOpen('layers') && layersPanelEl}
+          </div>
         )}
-
-        <div className="w-64 bg-mt-surface border-l flex flex-col overflow-y-auto dark:bg-mt-surface dark:border-mt-border transition-colors duration-150">
-          {isPanelOpen('properties') && (
-            <div className="p-3 border-b dark:border-mt-border">
-              <p className="font-semibold text-mt-ink mb-3 text-sm dark:text-mt-ink">Properties</p>
-              <PropertiesPanel
-                activeTool={activeTool}
-                selected={selected}
-                unit={unit}
-                layers={layers}
-                maskTargetId={maskTargetId}
-                setMaskTargetId={setMaskTargetId}
-                applyProp={applyProp}
-                applyCharProp={applyCharProp}
-                getTextPropValue={getTextPropValue}
-                applyExactSize={applyExactSize}
-                toggleLockRatio={toggleLockRatio}
-                alignObject={alignObject}
-                groupSelected={groupSelected}
-                ungroupSelected={ungroupSelected}
-                runShapeBuilder={runShapeBuilder}
-                applyPathAsMask={applyPathAsMask}
-                removeMask={removeMask}
-                applyGradientFill={applyGradientFill}
-                gradAngleRef={gradAngleRef}
-                pushHistory={pushHistory}
-                layerLabel={layerLabel}
-                onReplaceImage={replaceSelectedImage}
-                onEditPhoto={openPhotoEditor}
-                artboardOrigin={(() => {
-                  const ab = artboards.find((a) => a.id === selected?.__artboardId) || getActiveArtboardRect();
-                  return { x: ab.x, y: ab.y };
-                })()}
-              />
-            </div>
-          )}
-
-          {isPanelOpen('artboards') && (
-            <ArtboardsPanel
-              artboards={artboards}
-              activeArtboardId={activeArtboardId}
-              unit={unit}
-              onSelect={selectArtboard}
-              onRename={renameArtboard}
-              onResize={resizeArtboard}
-              onDuplicate={duplicateArtboard}
-              onDelete={deleteArtboard}
-              onMoveUp={moveArtboardUp}
-              onMoveDown={moveArtboardDown}
-              onAddPreset={addArtboardFromPreset}
-              onAddCustom={addArtboardCustom}
-              onFitAll={fitAllArtboards}
-              onExportOne={(id) => exportArtboardPNG(id)}
-              onExportAll={exportAllArtboardsPNG}
-              onExportAllPDF={exportAsPDF}
-              onExportRangePDF={exportArtboardRangePDF}
-              onUpdatePrint={updateArtboardPrint}
-              onExportPrint={exportArtboardForPrint}
-              onRunPreflight={runPreflightCheck}
-            />
-          )}
-
-          {isPanelOpen('align') && (
-            <div className="border-b">
-              <AlignPanel
-                alignObject={alignObject}
-                distribute={distributeObjects}
-                hasSelection={hasSelection}
-                selectionCount={selected?.type === 'activeSelection' ? selected.getObjects().length : selected ? 1 : 0}
-              />
-            </div>
-          )}
-
-          {isPanelOpen('layers') && (
-            <LayersPanel
-              layers={layers}
-              selected={selected}
-              onSelect={(obj) => {
-                fabricCanvasRef.current.setActiveObject(obj);
-                fabricCanvasRef.current.requestRenderAll();
-                setSelected(obj);
-              }}
-              onToggleVisible={toggleVisible}
-              onToggleLock={toggleLock}
-              onRename={renameLayer}
-              onReorder={reorderLayers}
-              onDuplicate={(obj) => {
-                fabricCanvasRef.current.setActiveObject(obj);
-                duplicateSelected();
-              }}
-              onDelete={(obj) => {
-                if (obj.locked) return;
-                fabricCanvasRef.current.discardActiveObject();
-                fabricCanvasRef.current.remove(obj);
-                fabricCanvasRef.current.requestRenderAll();
-              }}
-              onOpacityChange={(obj, opacity) => {
-                obj.set({ opacity });
-                fabricCanvasRef.current.requestRenderAll();
-                pushHistory();
-              }}
-              onBlendModeChange={(obj, mode) => {
-                obj.set({ globalCompositeOperation: mode === 'normal' ? 'source-over' : mode });
-                fabricCanvasRef.current.requestRenderAll();
-                pushHistory();
-              }}
-              getThumbnail={layerThumbnail}
-            />
-          )}
-        </div>
       </div>
 
       {photoEditSession && (
-        <div className="flex flex-1 overflow-hidden" style={{ display: workspace === 'photo' ? 'flex' : 'none' }}>
+        <div className="flex flex-1 min-h-0 overflow-hidden" style={{ display: workspace === 'photo' ? 'flex' : 'none' }}>
           <PhotoEditorWorkspace
             ref={photoEditorRef}
             active={workspace === 'photo'}
@@ -5167,6 +6140,24 @@ function EditorContent() {
           />
         </div>
       )}
+
+      {workspace === 'design' && !compact && (
+        <PagesBar
+          pages={artboards.map((ab) => ({ id: ab.id, name: ab.name, width: ab.width, height: ab.height, thumb: pageThumbs[ab.id] || null }))}
+          activeId={activeArtboardId}
+          onSelect={selectArtboard}
+          onAdd={addPage}
+          onDuplicate={duplicateArtboard}
+          onDelete={deleteArtboard}
+          onMove={(i, dir) => (dir < 0 ? moveArtboardUp(i) : moveArtboardDown(i))}
+          zoom={zoom}
+          onZoom={(z) => applyZoom(z)}
+          onFit={fitActiveArtboard}
+          onHelp={() => setLeftPanel('help')}
+          compact={false}
+        />
+      )}
+      {workspace === 'design' && compact && <LeftRail items={railItems} active={leftPanel} onActivate={setLeftPanel} compact />}
 
       {liveDim && (
         <div style={{ position: 'fixed', left: liveDim.x + 16, top: liveDim.y + 16, pointerEvents: 'none' }} className="z-50 bg-black/80 text-white text-[11px] font-mono px-2 py-1 rounded shadow">

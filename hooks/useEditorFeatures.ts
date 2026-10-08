@@ -293,7 +293,7 @@ export function useEditorFeatures(ctx: Ctx) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const setTextFx = useCallback((fx: TextFx) => {
+  const setTextFx = useCallback((fx: TextFx, record = true) => {
     const F = F_();
     const c = canvas();
     const o = c?.getActiveObject();
@@ -301,7 +301,11 @@ export function useEditorFeatures(ctx: Ctx) {
     const targets: any[] = o.type === 'activeSelection' ? o.getObjects().filter(isText) : isText(o) ? [o] : [];
     targets.forEach((t) => applyTextFx(F, t, fx));
     if (!targets.length) return;
-    done(o);
+    if (record) done(o);
+    else {
+      c.requestRenderAll();
+      ctxRef.current.bumpSel();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -394,6 +398,7 @@ export function useEditorFeatures(ctx: Ctx) {
     applyAdjust(F, o, a);
     c.requestRenderAll();
     if (record) done(o);
+    else ctxRef.current.bumpSel();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -408,7 +413,7 @@ export function useEditorFeatures(ctx: Ctx) {
   }, []);
 
   // ---------------- page background ----------------
-  const setPageBackground = useCallback((bg: { color?: string | null; gradient?: GradientSpec; imageUrl?: string; pattern?: string }) => {
+  const setPageBackground = useCallback((bg: { color?: string | null; gradient?: GradientSpec; imageUrl?: string; pattern?: string }, record = true) => {
     const F = F_();
     const c = canvas();
     if (!F || !c) return;
@@ -418,7 +423,7 @@ export function useEditorFeatures(ctx: Ctx) {
     const finish = () => {
       rect.dirty = true;
       c.requestRenderAll();
-      ctxRef.current.pushHistory();
+      if (record) ctxRef.current.pushHistory();
       ctxRef.current.bumpSel();
     };
     if (bg.gradient) {
