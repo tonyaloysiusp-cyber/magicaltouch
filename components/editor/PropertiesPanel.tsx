@@ -241,7 +241,7 @@ export function PropertiesPanel({
       {!isMultiple && (
         <div
           key={`${selected.__uid || 'obj'}-${unit}`}
-          className="border rounded-lg p-3 bg-mt-bg dark:bg-mt-surface dark:border-mt-border flex flex-col gap-2"
+          className="border rounded-lg p-3 bg-mt-surface2 dark:bg-mt-surface dark:border-mt-border flex flex-col gap-2"
         >
           <div className="flex items-center justify-between">
             <p className="text-xs font-semibold text-mt-muted dark:text-mt-muted">Transform</p>
@@ -484,7 +484,7 @@ export function PropertiesPanel({
           </div>
 
           {isGradientFill ? (
-            <div className="border rounded-lg p-2.5 bg-mt-bg dark:bg-mt-surface dark:border-mt-border flex flex-col gap-2">
+            <div className="border rounded-lg p-2.5 bg-mt-surface2 dark:bg-mt-surface dark:border-mt-border flex flex-col gap-2">
               <GradientPresetPicker
                 disabled={isLocked}
                 onPick={(p) => applyGradientFill(gradType, p.c1, p.c2, gradAngleRef.current)}

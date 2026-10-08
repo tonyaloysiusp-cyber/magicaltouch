@@ -1,6 +1,6 @@
 'use client';
 
-import { ThemeSwitch } from '@/components/ThemeSwitch';
+import { AppHeader } from '@/components/AppHeader';
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Sun, Moon, Lock, Unlock } from 'lucide-react';
@@ -153,16 +153,10 @@ export default function CreateDesignPage() {
 
   return (
     <div className={theme === 'dark' ? 'dark' : ''}>
-    <main className="min-h-screen bg-mt-bg dark:bg-mt-bg transition-colors duration-300">
-      <div className="max-w-5xl mx-auto px-6 py-4">
-        <BackBar href="/dashboard" label="Dashboard" />
-      </div>
+    <main className="min-h-screen bg-transparent transition-colors duration-300">
+      <AppHeader theme={theme} onToggleTheme={toggleTheme} active="create" />
 
-      <div className="max-w-5xl mx-auto px-6 pb-16">
-        <div className="mb-8 flex items-center justify-between">
-          <BrandLogo theme={theme} width={150} height={30} />
-          <ThemeSwitch theme={theme} onToggle={toggleTheme} />
-        </div>
+      <div className="max-w-5xl mx-auto px-6 pt-10 pb-16">
         <h1 className="text-3xl font-bold text-mt-ink dark:text-mt-ink mb-1">Create New Design</h1>
         <p className="text-mt-muted dark:text-mt-muted mb-8">Set up your document, then jump straight into the editor.</p>
 

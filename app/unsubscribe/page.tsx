@@ -38,7 +38,7 @@ export default function UnsubscribePage() {
   };
 
   return (
-    <main className="min-h-screen bg-mt-bg flex flex-col items-center justify-center p-6 text-center text-mt-ink">
+    <main className="min-h-screen bg-transparent flex flex-col items-center justify-center p-6 text-center text-mt-ink">
       <BrandLogo theme="light" width={220} height={44} className="mb-8" />
       <div className="w-full max-w-md bg-mt-surface rounded-2xl border border-black/5 shadow-sm p-7">
         {state === 'done' ? (

@@ -67,7 +67,7 @@ export default function ResetPasswordPage() {
 
   return (
     <div className={theme === 'dark' ? 'dark' : ''}>
-      <main className="min-h-screen lg:grid lg:grid-cols-2 bg-mt-surface dark:bg-mt-bg transition-colors duration-300">
+      <main className="min-h-screen lg:grid lg:grid-cols-2 bg-transparent transition-colors duration-300">
         <div className="hidden lg:block h-screen sticky top-0">
           <ArtworkPanel variant={theme === 'dark' ? 'night' : 'day'} />
         </div>

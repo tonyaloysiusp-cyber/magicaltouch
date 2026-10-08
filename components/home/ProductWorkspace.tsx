@@ -89,7 +89,7 @@ export function ProductWorkspace() {
       <Reveal delayMs={160}>
         <div className="mt-8 rounded-2xl border border-black/10 dark:border-white/10 bg-mt-surface dark:bg-mt-surface shadow-[0_40px_80px_-40px_rgba(23,22,27,0.35)] overflow-hidden min-h-[22rem] sm:min-h-[26rem]">
           {tab === 'canvas' && (
-            <div className="h-full min-h-[22rem] sm:min-h-[26rem] flex items-center justify-center bg-mt-bg dark:bg-mt-bg p-8 sm:p-12">
+            <div className="h-full min-h-[22rem] sm:min-h-[26rem] flex items-center justify-center bg-mt-surface2 dark:bg-mt-bg p-8 sm:p-12">
               <div className="relative w-56 h-56 sm:w-64 sm:h-64 rounded-xl shadow-2xl overflow-hidden bg-brand-gradient">
                 <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6">
                   <span className="w-9 h-9 rounded-full bg-mt-surface/90 mb-3" />
@@ -113,7 +113,7 @@ export function ProductWorkspace() {
                 {LAYERS.map((l, i) => (
                   <div
                     key={l.name}
-                    className={`flex items-center gap-3 px-4 py-3 text-sm ${i === 0 ? 'bg-mt-bg dark:bg-white/5' : ''}`}
+                    className={`flex items-center gap-3 px-4 py-3 text-sm ${i === 0 ? 'bg-mt-surface2 dark:bg-white/5' : ''}`}
                   >
                     <l.icon size={15} className="text-mt-muted dark:text-mt-muted shrink-0" />
                     <span className="truncate text-mt-ink dark:text-mt-ink">{l.name}</span>

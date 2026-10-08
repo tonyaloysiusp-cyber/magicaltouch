@@ -44,7 +44,7 @@ export function HomePage() {
     <div className={theme === 'dark' ? 'dark' : ''}>
       <IntroAnimation theme={theme} />
       <main
-        className={`${display.variable} ${body.variable} font-[family-name:var(--font-body)] bg-mt-bg text-mt-ink transition-colors duration-300`}
+        className={`${display.variable} ${body.variable} font-[family-name:var(--font-body)] bg-mt-surface2 text-mt-ink transition-colors duration-300`}
       >
         <Navbar theme={theme} onToggleTheme={toggleTheme} />
         <Hero />

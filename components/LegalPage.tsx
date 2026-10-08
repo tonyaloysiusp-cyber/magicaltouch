@@ -5,7 +5,7 @@ import { BrandLogo } from '@/components/BrandLogo';
 
 export function LegalPage({ title, updated, children }: { title: string; updated: string; children: React.ReactNode }) {
   return (
-    <main className="min-h-screen bg-mt-bg text-mt-ink">
+    <main className="min-h-screen bg-transparent text-mt-ink">
       <header className="border-b border-black/5 bg-mt-surface/80">
         <div className="max-w-3xl mx-auto px-6 h-16 flex items-center justify-between">
           <Link href="/" aria-label="Magical Touch Design home">

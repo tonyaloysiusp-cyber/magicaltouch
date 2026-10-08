@@ -88,7 +88,7 @@ export function ArtboardsPanel({
       </div>
 
       {showAddMenu && (
-        <div className="mb-3 border rounded p-2 bg-mt-bg space-y-2">
+        <div className="mb-3 border rounded p-2 bg-mt-surface2 space-y-2">
           {PRESET_CATEGORIES.map((cat) => (
             <div key={cat}>
               <p className="text-[10px] uppercase text-mt-faint mb-1">{cat}</p>
@@ -345,7 +345,7 @@ export function ArtboardsPanel({
           </button>
 
           {showPrintSetup && (
-            <div key={active.id + '-print'} className="mt-2 space-y-2 border rounded p-2 bg-mt-bg">
+            <div key={active.id + '-print'} className="mt-2 space-y-2 border rounded p-2 bg-mt-surface2">
               <EdgeFields
                 label="Bleed"
                 unit={unit}

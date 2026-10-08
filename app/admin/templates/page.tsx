@@ -438,7 +438,7 @@ export default function AdminTemplatesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-mt-bg" onClick={() => setMenuFor(null)}>
+    <div className="min-h-screen bg-transparent" onClick={() => setMenuFor(null)}>
       <input ref={thumbInput} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={onThumbnailFile} />
 
       <header className="bg-mt-surface border-b px-4 sm:px-6 py-4 flex flex-wrap items-center justify-between gap-3">

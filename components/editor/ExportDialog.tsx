@@ -272,7 +272,7 @@ export function ExportDialog({ artboards, activeArtboardId, exporting, onClose, 
           </div>
         </div>
 
-        <div className="flex items-center justify-end gap-2 px-5 py-4 border-t bg-mt-bg rounded-b-xl">
+        <div className="flex items-center justify-end gap-2 px-5 py-4 border-t bg-mt-surface2 rounded-b-xl">
           <button onClick={onClose} className="text-sm px-4 py-2 rounded-full border hover:bg-mt-surface2">
             Cancel
           </button>
