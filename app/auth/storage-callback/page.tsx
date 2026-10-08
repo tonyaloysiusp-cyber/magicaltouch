@@ -23,7 +23,7 @@ export default function StorageCallbackPage() {
   }, []);
 
   return (
-    <main className="min-h-screen flex items-center justify-center p-6 text-center bg-mt-bg text-mt-ink">
+    <main className="min-h-screen flex items-center justify-center p-6 text-center bg-transparent text-mt-ink">
       <p className="text-sm">{message}</p>
     </main>
   );

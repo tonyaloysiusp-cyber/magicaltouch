@@ -175,7 +175,7 @@ export default function TemplatesPage() {
   return (
     <div className={theme === 'dark' ? 'dark' : ''}>
     <main
-      className={`${display.variable} ${body.variable} font-[family-name:var(--font-body)] bg-mt-bg dark:bg-mt-bg text-mt-ink dark:text-mt-ink min-h-screen transition-colors duration-300`}
+      className={`${display.variable} ${body.variable} font-[family-name:var(--font-body)] bg-transparent text-mt-ink dark:text-mt-ink min-h-screen transition-colors duration-300`}
     >
       <header className="sticky top-0 z-50 bg-mt-bg/90 dark:bg-mt-bg/90 backdrop-blur border-b border-black/5 dark:border-white/10">
         <nav className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
@@ -228,7 +228,7 @@ export default function TemplatesPage() {
         </nav>
 
         {menuOpen && (
-          <div className="md:hidden border-t border-black/5 dark:border-white/10 bg-mt-bg dark:bg-mt-bg px-6 py-4 flex flex-col gap-1">
+          <div className="md:hidden border-t border-black/5 dark:border-white/10 bg-mt-surface2 dark:bg-mt-bg px-6 py-4 flex flex-col gap-1">
             {NAV_LINKS.map((l) => (
               <Link key={l.label} href={l.href} className="py-2.5 text-sm text-mt-muted dark:text-mt-muted" onClick={() => setMenuOpen(false)}>
                 {l.label}

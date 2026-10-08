@@ -406,7 +406,7 @@ export default function EmailCenterPage() {
   const stat = (k: string) => (stats ? stats[k] ?? 0 : '…');
 
   return (
-    <div className="min-h-screen bg-mt-bg">
+    <div className="min-h-screen bg-transparent">
       <header className="bg-mt-surface border-b px-4 sm:px-6 py-4 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-lg font-semibold text-mt-ink">Email Center</h1>
@@ -568,7 +568,7 @@ export default function EmailCenterPage() {
             </div>
             <div className="bg-mt-surface border rounded-xl overflow-x-auto">
               <table className="w-full text-sm">
-                <thead className="bg-mt-bg text-left text-[11px] uppercase tracking-wide text-mt-muted">
+                <thead className="bg-mt-surface2 text-left text-[11px] uppercase tracking-wide text-mt-muted">
                   <tr>
                     <th className="px-4 py-2">User</th>
                     <th className="px-4 py-2">Verified</th>
@@ -626,7 +626,7 @@ export default function EmailCenterPage() {
         {tab === 'log' && (
           <div className="bg-mt-surface border rounded-xl overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-mt-bg text-left text-[11px] uppercase tracking-wide text-mt-muted">
+              <thead className="bg-mt-surface2 text-left text-[11px] uppercase tracking-wide text-mt-muted">
                 <tr>
                   <th className="px-4 py-2">When</th>
                   <th className="px-4 py-2">To</th>
@@ -718,7 +718,7 @@ export default function EmailCenterPage() {
               </div>
               {preview &&
                 (previewMode === 'text' ? (
-                  <pre className="whitespace-pre-wrap text-xs bg-mt-bg border rounded-xl p-4 h-[65vh] overflow-auto">{preview.text}</pre>
+                  <pre className="whitespace-pre-wrap text-xs bg-mt-surface2 border rounded-xl p-4 h-[65vh] overflow-auto">{preview.text}</pre>
                 ) : (
                   <div className="bg-mt-surface2 border rounded-xl p-2 flex justify-center">
                     <iframe title="Campaign preview" srcDoc={preview.html} sandbox="" className="bg-mt-surface h-[65vh] rounded-lg" style={{ width: previewMode === 'mobile' ? 375 : '100%' }} />

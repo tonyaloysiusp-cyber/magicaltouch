@@ -4381,7 +4381,7 @@ function EditorContent() {
           hydration's server/client text comparison on a plain child. */}
       <style dangerouslySetInnerHTML={{ __html: allFontFacesCSS() }} />
       {checkingAuth && (
-        <div className="fixed inset-0 z-[999] flex items-center justify-center bg-mt-bg text-mt-faint">
+        <div className="fixed inset-0 z-[999] flex items-center justify-center bg-mt-surface text-mt-faint">
           Checking access...
         </div>
       )}
@@ -4397,7 +4397,7 @@ function EditorContent() {
           rgb(249,250,251) even with the `dark` class present and
           localStorage's shared theme genuinely set to 'dark'). */}
       <div className={isDark ? 'dark' : ''}>
-      <main className="h-screen w-full overflow-x-hidden flex flex-col bg-mt-bg dark:bg-mt-bg transition-colors duration-150">
+      <main className="h-screen w-full overflow-x-hidden flex flex-col bg-transparent transition-colors duration-150">
       <MenuBar
         menus={photoOnlySession ? [] : menus}
         leading={
@@ -4486,9 +4486,9 @@ function EditorContent() {
                 : saveStatus === 'error'
                 ? 'text-red-600 bg-red-50'
                 : saveStatus === 'saving'
-                ? 'text-mt-muted bg-mt-bg'
+                ? 'text-mt-muted bg-mt-surface2'
                 : saveStatus === 'unsaved'
-                ? 'text-mt-faint bg-mt-bg'
+                ? 'text-mt-faint bg-mt-surface2'
                 : saveStatus === 'saved'
                 ? 'text-green-600 bg-green-50'
                 : 'text-transparent')

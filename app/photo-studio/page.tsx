@@ -430,7 +430,7 @@ function PhotoStudioContent() {
   if (stage === 'open') {
     return (
       <div className={theme === 'dark' ? 'dark' : ''}>
-        <main className="min-h-screen bg-mt-bg dark:bg-mt-bg transition-colors duration-300">
+        <main className="min-h-screen bg-transparent transition-colors duration-300">
           <div className="max-w-3xl mx-auto px-6 py-6 flex items-center justify-between">
             <Link href="/dashboard" className="flex items-center gap-1.5 text-sm text-mt-muted dark:text-mt-muted hover:text-mt-ink dark:hover:text-white">
               <ArrowLeft size={15} /> Dashboard
@@ -640,7 +640,7 @@ function PhotoStudioContent() {
   // every other page (one theme everywhere).
   return (
     <div className={theme === 'dark' ? 'dark' : ''}>
-      <main className="h-[100dvh] flex flex-col bg-mt-bg text-mt-ink transition-colors duration-150">
+      <main className="h-[100dvh] flex flex-col bg-transparent text-mt-ink transition-colors duration-150">
         <MenuBar menus={menus} />
         <ShortcutsModal open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} workspace="photo" />
         <div className="flex items-center justify-between px-4 py-1.5 border-b bg-mt-surface border-mt-border shrink-0">

@@ -343,7 +343,7 @@ export default function DashboardPage() {
 
   return (
     <div className={theme === 'dark' ? 'dark' : ''}>
-    <main className={`${display.variable} ${body.variable} font-[family-name:var(--font-body)] min-h-screen bg-mt-bg dark:bg-mt-bg text-mt-ink dark:text-mt-ink transition-colors duration-300`}>
+    <main className={`${display.variable} ${body.variable} font-[family-name:var(--font-body)] min-h-screen bg-transparent text-mt-ink dark:text-mt-ink transition-colors duration-300`}>
       {/* Same same-origin font-face proxy the editor declares -- the
           off-screen thumbnail backfill above needs these @font-face rules
           present somewhere in the document for document.fonts.load() to
@@ -585,7 +585,7 @@ export default function DashboardPage() {
               className="group relative rounded-2xl border border-black/10 dark:border-white/10 bg-mt-surface dark:bg-mt-surface p-3 hover:shadow-[0_20px_40px_-20px_rgba(23,22,27,0.25)] hover:-translate-y-1 transition-all duration-300"
             >
               <Link href={editHref(design)}>
-                <div className="aspect-square bg-mt-bg dark:bg-mt-bg rounded-xl mb-3 overflow-hidden flex items-center justify-center text-mt-muted/40 dark:text-mt-muted/40 text-xs">
+                <div className="aspect-square bg-mt-surface2 dark:bg-mt-bg rounded-xl mb-3 overflow-hidden flex items-center justify-center text-mt-muted/40 dark:text-mt-muted/40 text-xs">
                   {design.thumbnail ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={design.thumbnail} alt={design.name} className="w-full h-full object-contain" />

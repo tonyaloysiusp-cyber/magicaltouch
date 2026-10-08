@@ -47,7 +47,7 @@ export function TemplateShowcase() {
   if (!templates.length) return null;
 
   return (
-    <section id="templates" className="relative overflow-hidden bg-mt-bg border-y border-mt-border">
+    <section id="templates" className="relative overflow-hidden bg-transparent border-y border-mt-border">
       <div className="pointer-events-none absolute -top-40 -left-40 w-[520px] h-[520px] rounded-full bg-[#8B6FC4]/15 blur-3xl" />
       <div className="pointer-events-none absolute -bottom-40 -right-40 w-[520px] h-[520px] rounded-full bg-[#3FA9E8]/15 blur-3xl" />
 

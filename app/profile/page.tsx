@@ -1,6 +1,6 @@
 'use client';
 
-import { ThemeSwitch } from '@/components/ThemeSwitch';
+import { AppHeader } from '@/components/AppHeader';
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -110,16 +110,9 @@ export default function ProfilePage() {
 
   return (
     <div className={theme === 'dark' ? 'dark' : ''}>
-    <main className="min-h-screen p-6 max-w-3xl mx-auto bg-mt-surface dark:bg-mt-bg transition-colors duration-300">
-      <div className="flex items-center justify-between mb-8">
-        <Link href="/dashboard" className="flex items-center gap-1.5 text-sm text-mt-muted dark:text-mt-muted hover:text-mt-ink dark:hover:text-white">
-          <ArrowLeft size={15} /> Dashboard
-        </Link>
-        <div className="flex items-center gap-3">
-          <ThemeSwitch theme={theme} onToggle={toggleTheme} />
-          <BrandLogo theme={theme} width={150} height={30} />
-        </div>
-      </div>
+    <main className="min-h-screen bg-transparent transition-colors duration-300">
+      <AppHeader theme={theme} onToggleTheme={toggleTheme} active="profile" />
+      <div className="p-6 pt-10 max-w-3xl mx-auto">
 
       <h1 className="text-2xl font-bold text-mt-ink dark:text-mt-ink mb-6">Profile</h1>
 
@@ -168,7 +161,7 @@ export default function ProfilePage() {
           </div>
           <div className="sm:col-span-2">
             <label className="text-xs text-mt-muted dark:text-mt-muted block mb-1">Email</label>
-            <input value={email} disabled className="w-full border dark:border-white/15 rounded-lg px-3 py-2 text-sm bg-mt-bg dark:bg-mt-bg text-mt-faint dark:text-mt-muted" />
+            <input value={email} disabled className="w-full border dark:border-white/15 rounded-lg px-3 py-2 text-sm bg-mt-surface2 dark:bg-mt-bg text-mt-faint dark:text-mt-muted" />
           </div>
         </div>
         <button
@@ -213,6 +206,7 @@ export default function ProfilePage() {
             ))}
           </div>
         )}
+      </div>
       </div>
     </main>
     </div>
