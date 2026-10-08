@@ -155,7 +155,8 @@ export function usePenTool({ fabricCanvasRef, onPathFinished }: Args) {
       try {
         const path = new Path2D(d);
         ctx.save();
-        ctx.setTransform(vt[0], vt[1], vt[2], vt[3], vt[4], vt[5]);
+        // Multiply onto the canvas's own (retina) transform.
+        ctx.transform(vt[0], vt[1], vt[2], vt[3], vt[4], vt[5]);
         ctx.lineWidth = 1.5 / vt[0];
         ctx.strokeStyle = '#3B82C4';
         ctx.stroke(path);

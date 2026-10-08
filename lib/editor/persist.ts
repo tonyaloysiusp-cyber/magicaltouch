@@ -29,6 +29,10 @@ export const PERSIST_PROPS = [
   '__shape',
   // Text effects (lib/editor/textEffects.ts)
   '__textFx',
+  '__fxStroke',
+  '__fxHighlight',
+  '__fxHollowFill',
+  '__preCurveWidth',
   // Image adjustments kept as live filters (lib/editor/imageAdjust.ts)
   '__adjust',
   // Non-destructive crop (lib/editor/crop.ts)
@@ -92,4 +96,25 @@ export function applyStoredLocks(canvas: any) {
     if (isHelperObject(o)) return;
     if (o.locked) o.set(lockProps(true));
   });
+}
+
+// Curved text keeps its baseline as a path. Text boxes don't rebuild that
+// path by themselves when a design is opened, so do it here.
+export function reviveTextPaths(F: any, canvas: any) {
+  if (!F) return;
+  const visit = (o: any) => {
+    if (o.type === 'group' && o.getObjects) o.getObjects().forEach(visit);
+    if ((o.type === 'textbox' || o.type === 'i-text' || o.type === 'text') && o.path && !(o.path instanceof F.Path)) {
+      const raw = o.path;
+      const d = Array.isArray(raw.path) ? raw.path : null;
+      if (d) {
+        o.set({ path: new F.Path(d, { visible: false, fill: '', stroke: '' }) });
+        if (o.initDimensions) o.initDimensions();
+        o.setCoords();
+      } else {
+        o.set({ path: null });
+      }
+    }
+  };
+  canvas.getObjects().forEach(visit);
 }

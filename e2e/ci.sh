@@ -7,7 +7,7 @@ step npm-install npm install --no-audit --no-fund || status=npm
 if [ $status = ok ]; then
   step tsc npx tsc --noEmit -p . || true
   step unit node --test 'e2e/unit/*.test.mjs' || true
-  step build npm run build || status=build
+  step build npm run build || { sleep 10; step build-retry npm run build; } || status=build
 fi
 if [ $status = ok ]; then
   step pw-install npx -y playwright@1.47.2 install --with-deps chromium || status=pw
