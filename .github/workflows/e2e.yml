@@ -1,0 +1,48 @@
+name: Editor E2E
+on:
+  push:
+    branches-ignore: [main, e2e-results]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: https://rqkjogzljsbufbrdlbfr.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJxa2pvZ3psanNidWZicmRsYmZyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkyNzgyMDcsImV4cCI6MjEwNDg1NDIwN30.-OHCqhZNWsdlbkIE3qUV6It5VUoAN1lQDUFCRLtUaPM
+      NEXT_PUBLIC_E2E: '1'
+      NEXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Type check
+        run: npx tsc --noEmit -p . > e2e-tsc.txt 2>&1 || true
+      - name: Unit tests
+        run: node --test e2e/unit/ > e2e-unit.txt 2>&1 || true
+      - run: npm run build 2>&1 | tee e2e-build.txt
+      - run: npx -y playwright@1.47.2 install --with-deps chromium
+      - name: Run editor scenarios
+        run: |
+          npx next start -p 3000 > e2e-server.txt 2>&1 &
+          npx -y wait-on@7 http://localhost:3000 -t 60000
+          npm i --no-save playwright@1.47.2
+          node e2e/run.mjs || true
+      - name: Publish results
+        if: always()
+        run: |
+          mkdir -p e2e-out
+          cp e2e-*.txt e2e-out/ 2>/dev/null || true
+          echo "{\"sha\":\"$GITHUB_SHA\",\"ref\":\"$GITHUB_REF_NAME\",\"run\":\"$GITHUB_RUN_ID\"}" > e2e-out/meta.json
+          cd e2e-out
+          git init -q -b e2e-results
+          git config user.name "mt-e2e"
+          git config user.email "e2e@users.noreply.github.com"
+          git add -A
+          git commit -qm "E2E results for $GITHUB_SHA"
+          git push -fq "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" e2e-results

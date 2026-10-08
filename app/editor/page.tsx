@@ -155,6 +155,12 @@ function EditorContent() {
   // before they can touch the canvas, not just when they click a CTA on
   // the homepage. The overlay below blocks interaction until this resolves.
   useEffect(() => {
+    // Automated browser tests (CI only, flag set at build time) run the
+    // editor without an account; production builds never set this.
+    if (process.env.NEXT_PUBLIC_E2E === '1') {
+      setCheckingAuth(false);
+      return;
+    }
     supabase.auth.getUser().then(({ data }) => {
       if (!data.user) {
         router.push(`/login?next=${encodeURIComponent(window.location.pathname + window.location.search)}`);
