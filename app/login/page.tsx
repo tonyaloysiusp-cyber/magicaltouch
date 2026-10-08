@@ -1,5 +1,7 @@
 'use client';
 
+import { ThemeSwitch } from '@/components/ThemeSwitch';
+import { friendlyAuthError } from '@/lib/authErrors';
 import { Suspense, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -17,6 +19,7 @@ function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const next = searchParams.get('next') || '/dashboard';
+  const justConfirmed = searchParams.get('confirmed') === '1';
 
   const [showForgot, setShowForgot] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
@@ -32,7 +35,7 @@ function LoginForm() {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
 
     if (error) {
-      setError(error.message);
+      setError(friendlyAuthError(error.message));
       setLoading(false);
     } else {
       router.push(next);
@@ -51,7 +54,7 @@ function LoginForm() {
     setResetLoading(false);
 
     if (error) {
-      setResetError(error.message);
+      setResetError(friendlyAuthError(error.message));
     } else {
       setResetSent(true);
     }
@@ -59,32 +62,30 @@ function LoginForm() {
 
   return (
     <div className={theme === 'dark' ? 'dark' : ''}>
-    <main className="min-h-screen lg:grid lg:grid-cols-2 bg-white dark:bg-[#111015] transition-colors duration-300">
+    <main className="min-h-screen lg:grid lg:grid-cols-2 bg-mt-surface dark:bg-mt-bg transition-colors duration-300">
       <div className="hidden lg:block h-screen sticky top-0">
         <ArtworkPanel variant={theme === 'dark' ? 'night' : 'day'} />
       </div>
       <div className="relative flex flex-col items-center justify-center p-6 min-h-screen">
-      <button
-        onClick={toggleTheme}
-        title={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
-        aria-label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
-        className="absolute top-6 right-6 p-2 rounded-full border border-black/10 dark:border-white/15 text-gray-500 dark:text-[#B7B2C6] hover:border-black/25 dark:hover:border-white/30 transition-colors"
-      >
-        {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
-      </button>
+      <ThemeSwitch theme={theme} onToggle={toggleTheme} className="absolute top-6 right-6" />
       <BrandLogo theme={theme} width={280} height={56} className="mb-8" />
       <div className="w-full max-w-sm">
         {!showForgot ? (
           <>
-            <h1 className="text-2xl font-bold mb-6 text-center text-gray-800 dark:text-[#F3F1F7]">Log In</h1>
+            <h1 className="text-2xl font-bold mb-6 text-center text-mt-ink dark:text-mt-ink">Log In</h1>
 
+            {justConfirmed && (
+              <p className="mb-4 text-sm text-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-3 py-2">
+                Your email is confirmed. Log in to start designing.
+              </p>
+            )}
             <form onSubmit={handleLogin} className="flex flex-col gap-4">
               <input
                 type="email"
                 placeholder="Email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="border border-gray-300 dark:border-white/15 dark:bg-[#1B1926] dark:text-[#F3F1F7] p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-blue"
+                className="border border-mt-border dark:border-white/15 dark:bg-mt-surface dark:text-mt-ink p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-blue"
                 required
               />
               <input
@@ -92,7 +93,7 @@ function LoginForm() {
                 placeholder="Password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="border border-gray-300 dark:border-white/15 dark:bg-[#1B1926] dark:text-[#F3F1F7] p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-blue"
+                className="border border-mt-border dark:border-white/15 dark:bg-mt-surface dark:text-mt-ink p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-blue"
                 required
               />
 
@@ -120,7 +121,7 @@ function LoginForm() {
                 {loading ? 'Logging in...' : 'Log In'}
               </button>
             </form>
-            <p className="mt-4 text-center text-sm text-gray-500 dark:text-[#B7B2C6]">
+            <p className="mt-4 text-center text-sm text-mt-muted dark:text-mt-muted">
               Don&apos;t have an account?{' '}
               <a
                 href={`/signup${next !== '/dashboard' ? `?next=${encodeURIComponent(next)}` : ''}`}
@@ -132,14 +133,14 @@ function LoginForm() {
           </>
         ) : (
           <>
-            <h1 className="text-2xl font-bold mb-2 text-center text-gray-800 dark:text-[#F3F1F7]">Reset your password</h1>
-            <p className="text-sm text-gray-500 dark:text-[#B7B2C6] text-center mb-6">
+            <h1 className="text-2xl font-bold mb-2 text-center text-mt-ink dark:text-mt-ink">Reset your password</h1>
+            <p className="text-sm text-mt-muted dark:text-mt-muted text-center mb-6">
               Enter your email and we&apos;ll send you a link to reset your password.
             </p>
 
             {resetSent ? (
               <div className="flex flex-col gap-4 text-center">
-                <p className="text-sm text-gray-700 dark:text-[#B7B2C6]">
+                <p className="text-sm text-mt-ink dark:text-mt-muted">
                   If an account exists for <span className="font-medium">{resetEmail}</span>, a reset
                   link is on its way. Check your inbox (and spam folder).
                 </p>
@@ -157,7 +158,7 @@ function LoginForm() {
                   placeholder="Email"
                   value={resetEmail}
                   onChange={(e) => setResetEmail(e.target.value)}
-                  className="border border-gray-300 dark:border-white/15 dark:bg-[#1B1926] dark:text-[#F3F1F7] p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-blue"
+                  className="border border-mt-border dark:border-white/15 dark:bg-mt-surface dark:text-mt-ink p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-blue"
                   required
                 />
                 {resetError && <p className="text-red-500 text-sm">{resetError}</p>}
@@ -171,7 +172,7 @@ function LoginForm() {
                 <button
                   type="button"
                   onClick={() => setShowForgot(false)}
-                  className="text-sm text-gray-500 dark:text-[#B7B2C6] hover:text-gray-700 dark:hover:text-white"
+                  className="text-sm text-mt-muted dark:text-mt-muted hover:text-mt-ink dark:hover:text-white"
                 >
                   Back to log in
                 </button>

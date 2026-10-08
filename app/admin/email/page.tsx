@@ -91,10 +91,10 @@ const EMPTY_CAMPAIGN: Partial<Campaign> = {
   scheduled_at: null,
 };
 
-const input = 'mt-1 w-full border rounded-lg px-2.5 py-2 text-sm text-gray-800 bg-white';
-const label = 'text-xs text-gray-500';
+const input = 'mt-1 w-full border rounded-lg px-2.5 py-2 text-sm text-mt-ink bg-mt-surface';
+const label = 'text-xs text-mt-muted';
 const STATUS_STYLE: Record<string, string> = {
-  draft: 'bg-gray-100 text-gray-600',
+  draft: 'bg-mt-surface2 text-mt-muted',
   scheduled: 'bg-sky-100 text-sky-700',
   sending: 'bg-amber-100 text-amber-700',
   sent: 'bg-emerald-100 text-emerald-700',
@@ -393,12 +393,12 @@ export default function EmailCenterPage() {
   }, [templatePreview]);
 
   // ---------- render ----------
-  if (loading) return <div className="min-h-screen flex items-center justify-center text-sm text-gray-400">Loading…</div>;
+  if (loading) return <div className="min-h-screen flex items-center justify-center text-sm text-mt-faint">Loading…</div>;
   if (!isAdmin) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-3 px-6 text-center">
-        <p className="text-lg font-semibold text-gray-800">Not authorized</p>
-        <Link href="/dashboard" className="text-sm text-[#6C4FD1] hover:underline">Back to Dashboard</Link>
+        <p className="text-lg font-semibold text-mt-ink">Not authorized</p>
+        <Link href="/dashboard" className="text-sm text-mt-accent hover:underline">Back to Dashboard</Link>
       </div>
     );
   }
@@ -406,15 +406,15 @@ export default function EmailCenterPage() {
   const stat = (k: string) => (stats ? stats[k] ?? 0 : '…');
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b px-4 sm:px-6 py-4 flex flex-wrap items-center justify-between gap-3">
+    <div className="min-h-screen bg-mt-bg">
+      <header className="bg-mt-surface border-b px-4 sm:px-6 py-4 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-lg font-semibold text-gray-800">Email Center</h1>
-          <p className="text-xs text-gray-500 mt-0.5">Sent from hellomagicaltouch.design@gmail.com · marketing goes only to people who opted in.</p>
+          <h1 className="text-lg font-semibold text-mt-ink">Email Center</h1>
+          <p className="text-xs text-mt-muted mt-0.5">Sent from hellomagicaltouch.design@gmail.com · marketing goes only to people who opted in.</p>
         </div>
         <div className="flex items-center gap-4 text-sm">
-          <Link href="/admin/templates" className="text-[#6C4FD1] hover:underline">Template Manager</Link>
-          <Link href="/dashboard" className="text-gray-500 hover:underline">Dashboard</Link>
+          <Link href="/admin/templates" className="text-mt-accent hover:underline">Template Manager</Link>
+          <Link href="/dashboard" className="text-mt-muted hover:underline">Dashboard</Link>
         </div>
       </header>
 
@@ -424,13 +424,13 @@ export default function EmailCenterPage() {
             <button
               key={t.id}
               onClick={() => setTab(t.id)}
-              className={`shrink-0 px-4 py-2 text-sm font-medium -mb-px border-b-2 ${tab === t.id ? 'border-[#6C4FD1] text-[#6C4FD1]' : 'border-transparent text-gray-500'}`}
+              className={`shrink-0 px-4 py-2 text-sm font-medium -mb-px border-b-2 ${tab === t.id ? 'border-mt-accent text-mt-accent' : 'border-transparent text-mt-muted'}`}
             >
               {t.label}
             </button>
           ))}
         </div>
-        {notice && <div className="mt-3 text-sm bg-[#F3F0FF] text-[#4B2FB0] rounded-lg px-4 py-2.5">{notice}</div>}
+        {notice && <div className="mt-3 text-sm bg-mt-accentsoft text-[#4B2FB0] rounded-lg px-4 py-2.5">{notice}</div>}
         {busy && <div className="mt-3 text-sm bg-amber-50 text-amber-800 rounded-lg px-4 py-2.5">{busy}</div>}
         {dueCampaigns.length > 0 && (
           <div className="mt-3 text-sm bg-sky-50 text-sky-800 rounded-lg px-4 py-2.5 flex flex-wrap items-center gap-2">
@@ -456,15 +456,15 @@ export default function EmailCenterPage() {
               ['Campaigns', 'campaigns'],
               ['Scheduled', 'scheduled_campaigns'],
             ].map(([l, k]) => (
-              <div key={k} className="bg-white border rounded-xl p-4">
-                <p className="text-xs text-gray-500">{l}</p>
-                <p className="text-2xl font-semibold text-gray-800 mt-1">{stat(k)}</p>
+              <div key={k} className="bg-mt-surface border rounded-xl p-4">
+                <p className="text-xs text-mt-muted">{l}</p>
+                <p className="text-2xl font-semibold text-mt-ink mt-1">{stat(k)}</p>
               </div>
             ))}
-            <div className="col-span-full bg-white border rounded-xl p-4 mt-2 flex flex-wrap items-center gap-3">
+            <div className="col-span-full bg-mt-surface border rounded-xl p-4 mt-2 flex flex-wrap items-center gap-3">
               <div className="flex-1 min-w-[220px]">
-                <p className="text-sm font-semibold text-gray-800">Google Sheets</p>
-                <p className="text-xs text-gray-500">
+                <p className="text-sm font-semibold text-mt-ink">Google Sheets</p>
+                <p className="text-xs text-mt-muted">
                   {sheets === null
                     ? 'Checking…'
                     : sheets.configured
@@ -484,7 +484,7 @@ export default function EmailCenterPage() {
                 Sync to Google Sheets
               </button>
             </div>
-            <p className="col-span-full text-xs text-gray-500 mt-2">
+            <p className="col-span-full text-xs text-mt-muted mt-2">
               Gmail allows about 500 e-mails a day. Campaigns stop at 400 a day so account e-mails always get through, and continue when you press Send again.
             </p>
           </div>
@@ -497,12 +497,12 @@ export default function EmailCenterPage() {
                 + New campaign
               </button>
             </div>
-            <div className="bg-white border rounded-xl divide-y">
+            <div className="bg-mt-surface border rounded-xl divide-y">
               {campaigns.map((c) => (
                 <div key={c.id} className="p-4 flex flex-wrap items-center gap-3">
                   <div className="flex-1 min-w-[200px]">
-                    <p className="font-medium text-gray-800">{c.name}</p>
-                    <p className="text-xs text-gray-500">
+                    <p className="font-medium text-mt-ink">{c.name}</p>
+                    <p className="text-xs text-mt-muted">
                       {c.subject || 'No subject yet'} · {CAMPAIGN_TYPES.find((t) => t[0] === c.campaign_type)?.[1]}
                       {c.status === 'scheduled' && c.scheduled_at ? ` · scheduled ${new Date(c.scheduled_at).toLocaleString()}` : ''}
                       {c.total_recipients ? ` · ${c.sent_count}/${c.total_recipients} sent${c.failed_count ? `, ${c.failed_count} failed` : ''}` : ''}
@@ -510,8 +510,8 @@ export default function EmailCenterPage() {
                   </div>
                   <span className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full ${STATUS_STYLE[c.status] || ''}`}>{c.status}</span>
                   <div className="flex gap-3 text-xs">
-                    {c.status !== 'sent' && <button onClick={() => setEditing(c)} className="text-[#6C4FD1]">Edit</button>}
-                    {c.status !== 'sent' && <button onClick={() => sendTest(c)} disabled={!!busy} className="text-gray-600">Send test</button>}
+                    {c.status !== 'sent' && <button onClick={() => setEditing(c)} className="text-mt-accent">Edit</button>}
+                    {c.status !== 'sent' && <button onClick={() => sendTest(c)} disabled={!!busy} className="text-mt-muted">Send test</button>}
                     {(c.status === 'draft' || c.status === 'scheduled' || c.status === 'sending' || c.status === 'failed') && (
                       <button onClick={() => prepareSend(c)} disabled={!!busy} className="text-emerald-700 font-semibold">
                         {c.status === 'sending' ? 'Continue sending' : 'Send'}
@@ -521,7 +521,7 @@ export default function EmailCenterPage() {
                   </div>
                 </div>
               ))}
-              {campaigns.length === 0 && <p className="p-8 text-center text-sm text-gray-400">No campaigns yet.</p>}
+              {campaigns.length === 0 && <p className="p-8 text-center text-sm text-mt-faint">No campaigns yet.</p>}
             </div>
           </>
         )}
@@ -533,23 +533,23 @@ export default function EmailCenterPage() {
                 + New offer
               </button>
             </div>
-            <div className="bg-white border rounded-xl divide-y">
+            <div className="bg-mt-surface border rounded-xl divide-y">
               {offers.map((o) => (
                 <div key={o.id} className="p-4 flex flex-wrap items-center gap-3">
                   <div className="flex-1 min-w-[200px]">
-                    <p className="font-medium text-gray-800">{o.name} {o.discount && <span className="text-[#6C4FD1]">· {o.discount}</span>}</p>
-                    <p className="text-xs text-gray-500">
+                    <p className="font-medium text-mt-ink">{o.name} {o.discount && <span className="text-mt-accent">· {o.discount}</span>}</p>
+                    <p className="text-xs text-mt-muted">
                       {o.start_date || '—'} → {o.end_date || '—'} {o.landing_page ? `· ${o.landing_page}` : ''}
                     </p>
                   </div>
                   <span className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full ${STATUS_STYLE[o.status] || ''}`}>{o.status}</span>
                   <div className="flex gap-3 text-xs">
-                    <button onClick={() => setEditingOffer(o)} className="text-[#6C4FD1]">Edit</button>
+                    <button onClick={() => setEditingOffer(o)} className="text-mt-accent">Edit</button>
                     <button onClick={() => campaignFromOffer(o)} className="text-emerald-700 font-semibold">Create campaign</button>
                   </div>
                 </div>
               ))}
-              {offers.length === 0 && <p className="p-8 text-center text-sm text-gray-400">No offers yet.</p>}
+              {offers.length === 0 && <p className="p-8 text-center text-sm text-mt-faint">No offers yet.</p>}
             </div>
           </>
         )}
@@ -562,13 +562,13 @@ export default function EmailCenterPage() {
                 onChange={(e) => setUserSearch(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && loadUsers()}
                 placeholder="Search e-mail or name, then press Enter"
-                className="flex-1 min-w-[220px] border rounded-full px-4 py-2 text-sm bg-white"
+                className="flex-1 min-w-[220px] border rounded-full px-4 py-2 text-sm bg-mt-surface"
               />
-              <button onClick={exportUsers} className="text-sm border rounded-full px-4 py-2 bg-white">Export CSV</button>
+              <button onClick={exportUsers} className="text-sm border rounded-full px-4 py-2 bg-mt-surface">Export CSV</button>
             </div>
-            <div className="bg-white border rounded-xl overflow-x-auto">
+            <div className="bg-mt-surface border rounded-xl overflow-x-auto">
               <table className="w-full text-sm">
-                <thead className="bg-gray-50 text-left text-[11px] uppercase tracking-wide text-gray-500">
+                <thead className="bg-mt-bg text-left text-[11px] uppercase tracking-wide text-mt-muted">
                   <tr>
                     <th className="px-4 py-2">User</th>
                     <th className="px-4 py-2">Verified</th>
@@ -581,8 +581,8 @@ export default function EmailCenterPage() {
                   {users.map((u) => (
                     <tr key={u.user_id} className="border-t">
                       <td className="px-4 py-2">
-                        <p className="text-gray-800">{u.name || '—'} {u.is_admin && <span className="text-[10px] text-[#6C4FD1] font-semibold">ADMIN</span>}</p>
-                        <p className="text-xs text-gray-500">{u.email}</p>
+                        <p className="text-mt-ink">{u.name || '—'} {u.is_admin && <span className="text-[10px] text-mt-accent font-semibold">ADMIN</span>}</p>
+                        <p className="text-xs text-mt-muted">{u.email}</p>
                       </td>
                       <td className="px-4 py-2 text-xs">{u.email_verified ? 'Yes' : 'No'}</td>
                       <td className="px-4 py-2 text-xs">{new Date(u.created_at).toLocaleDateString()}</td>
@@ -592,9 +592,9 @@ export default function EmailCenterPage() {
                   ))}
                 </tbody>
               </table>
-              {users.length === 0 && <p className="p-8 text-center text-sm text-gray-400">No users found.</p>}
+              {users.length === 0 && <p className="p-8 text-center text-sm text-mt-faint">No users found.</p>}
             </div>
-            <p className="text-xs text-gray-500 mt-2">Passwords, password hashes and sign-in tokens are never shown or exported.</p>
+            <p className="text-xs text-mt-muted mt-2">Passwords, password hashes and sign-in tokens are never shown or exported.</p>
           </>
         )}
 
@@ -610,23 +610,23 @@ export default function EmailCenterPage() {
                 <button
                   key={id}
                   onClick={() => setTemplatePreview(id)}
-                  className={`text-left text-sm px-3 py-2 rounded-lg border ${templatePreview === id ? 'border-[#6C4FD1] bg-[#F3F0FF]' : 'bg-white'}`}
+                  className={`text-left text-sm px-3 py-2 rounded-lg border ${templatePreview === id ? 'border-mt-accent bg-mt-accentsoft' : 'bg-mt-surface'}`}
                 >
                   {l}
                 </button>
               ))}
-              <p className="text-xs text-gray-500 md:mt-2">
+              <p className="text-xs text-mt-muted md:mt-2">
                 Preview uses sample data (John). Verify and Reset are sent by Supabase — their wording is pasted in Supabase → Authentication → Email Templates.
               </p>
             </div>
-            <iframe title="Email preview" srcDoc={templateHtml} sandbox="" className="w-full h-[75vh] bg-white border rounded-xl" />
+            <iframe title="Email preview" srcDoc={templateHtml} sandbox="" className="w-full h-[75vh] bg-mt-surface border rounded-xl" />
           </div>
         )}
 
         {tab === 'log' && (
-          <div className="bg-white border rounded-xl overflow-x-auto">
+          <div className="bg-mt-surface border rounded-xl overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-gray-50 text-left text-[11px] uppercase tracking-wide text-gray-500">
+              <thead className="bg-mt-bg text-left text-[11px] uppercase tracking-wide text-mt-muted">
                 <tr>
                   <th className="px-4 py-2">When</th>
                   <th className="px-4 py-2">To</th>
@@ -650,8 +650,8 @@ export default function EmailCenterPage() {
                 ))}
               </tbody>
             </table>
-            {log.length === 0 && <p className="p-8 text-center text-sm text-gray-400">No campaign e-mails sent yet.</p>}
-            <p className="text-xs text-gray-500 px-4 py-2 border-t">
+            {log.length === 0 && <p className="p-8 text-center text-sm text-mt-faint">No campaign e-mails sent yet.</p>}
+            <p className="text-xs text-mt-muted px-4 py-2 border-t">
               &quot;Sent&quot; means Gmail accepted the message; Gmail doesn&apos;t report final delivery.
             </p>
           </div>
@@ -661,11 +661,11 @@ export default function EmailCenterPage() {
       {/* ---------- Campaign editor ---------- */}
       {editing && (
         <div className="fixed inset-0 bg-black/30 z-50 flex items-start sm:items-center justify-center p-2 sm:p-4 overflow-y-auto" onClick={() => !busy && setEditing(null)}>
-          <div className="bg-white rounded-2xl w-full max-w-5xl p-5 grid lg:grid-cols-2 gap-5" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-mt-surface rounded-2xl w-full max-w-5xl p-5 grid lg:grid-cols-2 gap-5" onClick={(e) => e.stopPropagation()}>
             <div>
               <div className="flex items-center justify-between mb-3">
-                <h2 className="font-semibold text-gray-800">{editing.id ? 'Edit campaign' : 'New campaign'}</h2>
-                <button onClick={() => setEditing(null)} className="p-1 text-gray-400" aria-label="Close"><X size={18} /></button>
+                <h2 className="font-semibold text-mt-ink">{editing.id ? 'Edit campaign' : 'New campaign'}</h2>
+                <button onClick={() => setEditing(null)} className="p-1 text-mt-faint" aria-label="Close"><X size={18} /></button>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <label className={`${label} col-span-2`}>Campaign name (internal)<input value={editing.name || ''} onChange={(e) => setEditing({ ...editing, name: e.target.value })} className={input} /></label>
@@ -699,12 +699,12 @@ export default function EmailCenterPage() {
                     onChange={(e) => setEditing({ ...editing, scheduled_at: e.target.value ? new Date(e.target.value).toISOString() : null })}
                     className={input}
                   />
-                  <span className="block mt-1 text-[11px] text-gray-400">When it&apos;s due, the Email Center shows a &quot;send now&quot; reminder.</span>
+                  <span className="block mt-1 text-[11px] text-mt-faint">When it&apos;s due, the Email Center shows a &quot;send now&quot; reminder.</span>
                 </label>
               </div>
               <div className="flex flex-wrap justify-end gap-2 mt-5">
-                <button onClick={() => saveCampaign()} disabled={!!busy} className="text-sm px-4 py-2 rounded-full border text-gray-700">Save {editing.scheduled_at ? '& schedule' : 'draft'}</button>
-                <button onClick={() => saveCampaign('test')} disabled={!!busy} className="text-sm px-4 py-2 rounded-full border text-gray-700">Send test to me</button>
+                <button onClick={() => saveCampaign()} disabled={!!busy} className="text-sm px-4 py-2 rounded-full border text-mt-ink">Save {editing.scheduled_at ? '& schedule' : 'draft'}</button>
+                <button onClick={() => saveCampaign('test')} disabled={!!busy} className="text-sm px-4 py-2 rounded-full border text-mt-ink">Send test to me</button>
                 <button onClick={() => saveCampaign('send')} disabled={!!busy} className="text-sm px-4 py-2 rounded-full bg-brand-gradient text-white">Review &amp; send</button>
               </div>
             </div>
@@ -718,10 +718,10 @@ export default function EmailCenterPage() {
               </div>
               {preview &&
                 (previewMode === 'text' ? (
-                  <pre className="whitespace-pre-wrap text-xs bg-gray-50 border rounded-xl p-4 h-[65vh] overflow-auto">{preview.text}</pre>
+                  <pre className="whitespace-pre-wrap text-xs bg-mt-bg border rounded-xl p-4 h-[65vh] overflow-auto">{preview.text}</pre>
                 ) : (
-                  <div className="bg-gray-100 border rounded-xl p-2 flex justify-center">
-                    <iframe title="Campaign preview" srcDoc={preview.html} sandbox="" className="bg-white h-[65vh] rounded-lg" style={{ width: previewMode === 'mobile' ? 375 : '100%' }} />
+                  <div className="bg-mt-surface2 border rounded-xl p-2 flex justify-center">
+                    <iframe title="Campaign preview" srcDoc={preview.html} sandbox="" className="bg-mt-surface h-[65vh] rounded-lg" style={{ width: previewMode === 'mobile' ? 375 : '100%' }} />
                   </div>
                 ))}
             </div>
@@ -732,18 +732,18 @@ export default function EmailCenterPage() {
       {/* ---------- Pre-send check ---------- */}
       {sendCheck && (
         <div className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center p-4" onClick={() => setSendCheck(null)}>
-          <div className="bg-white rounded-2xl w-full max-w-md p-5" onClick={(e) => e.stopPropagation()}>
-            <h2 className="font-semibold text-gray-800 mb-3">Send &quot;{sendCheck.campaign.name}&quot;?</h2>
+          <div className="bg-mt-surface rounded-2xl w-full max-w-md p-5" onClick={(e) => e.stopPropagation()}>
+            <h2 className="font-semibold text-mt-ink mb-3">Send &quot;{sendCheck.campaign.name}&quot;?</h2>
             <dl className="grid grid-cols-2 gap-y-1.5 text-sm mb-4">
-              <dt className="text-gray-500">Eligible recipients</dt><dd className="font-semibold">{sendCheck.eligible}</dd>
-              <dt className="text-gray-500">Excluded (not opted in)</dt>
+              <dt className="text-mt-muted">Eligible recipients</dt><dd className="font-semibold">{sendCheck.eligible}</dd>
+              <dt className="text-mt-muted">Excluded (not opted in)</dt>
               <dd>{Math.max(0, Number(stat('total_users')) - sendCheck.eligible - Number(stat('unsubscribed')) - sendCheck.invalid)}</dd>
-              <dt className="text-gray-500">Unsubscribed</dt><dd>{stat('unsubscribed')}</dd>
-              <dt className="text-gray-500">Invalid addresses</dt><dd>{sendCheck.invalid}</dd>
+              <dt className="text-mt-muted">Unsubscribed</dt><dd>{stat('unsubscribed')}</dd>
+              <dt className="text-mt-muted">Invalid addresses</dt><dd>{sendCheck.invalid}</dd>
             </dl>
-            <p className="text-xs text-gray-500 mb-4">Sent in small batches with an unsubscribe link. Keep this page open until it finishes; if it stops, press Send again — nobody gets it twice.</p>
+            <p className="text-xs text-mt-muted mb-4">Sent in small batches with an unsubscribe link. Keep this page open until it finishes; if it stops, press Send again — nobody gets it twice.</p>
             <div className="flex justify-end gap-2">
-              <button onClick={() => setSendCheck(null)} className="text-sm px-4 py-2 rounded-full border text-gray-600">Cancel</button>
+              <button onClick={() => setSendCheck(null)} className="text-sm px-4 py-2 rounded-full border text-mt-muted">Cancel</button>
               <button onClick={sendNow} disabled={sendCheck.eligible === 0} className="text-sm px-4 py-2 rounded-full bg-brand-gradient text-white disabled:opacity-40">
                 Send to {sendCheck.eligible}
               </button>
@@ -755,8 +755,8 @@ export default function EmailCenterPage() {
       {/* ---------- Offer editor ---------- */}
       {editingOffer && (
         <div className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center p-4" onClick={() => setEditingOffer(null)}>
-          <div className="bg-white rounded-2xl w-full max-w-md p-5" onClick={(e) => e.stopPropagation()}>
-            <h2 className="font-semibold text-gray-800 mb-3">{editingOffer.id ? 'Edit offer' : 'New offer'}</h2>
+          <div className="bg-mt-surface rounded-2xl w-full max-w-md p-5" onClick={(e) => e.stopPropagation()}>
+            <h2 className="font-semibold text-mt-ink mb-3">{editingOffer.id ? 'Edit offer' : 'New offer'}</h2>
             <div className="grid grid-cols-2 gap-3">
               <label className={`${label} col-span-2`}>Offer name<input value={editingOffer.name || ''} onChange={(e) => setEditingOffer({ ...editingOffer, name: e.target.value })} className={input} /></label>
               <label className={`${label} col-span-2`}>Description<textarea rows={3} value={editingOffer.description || ''} onChange={(e) => setEditingOffer({ ...editingOffer, description: e.target.value })} className={input} /></label>
@@ -772,7 +772,7 @@ export default function EmailCenterPage() {
               <label className={`${label} col-span-2`}>Landing page (https)<input value={editingOffer.landing_page || ''} onChange={(e) => setEditingOffer({ ...editingOffer, landing_page: e.target.value })} className={input} /></label>
             </div>
             <div className="flex justify-end gap-2 mt-5">
-              <button onClick={() => setEditingOffer(null)} className="text-sm px-4 py-2 rounded-full border text-gray-600">Cancel</button>
+              <button onClick={() => setEditingOffer(null)} className="text-sm px-4 py-2 rounded-full border text-mt-muted">Cancel</button>
               <button onClick={saveOffer} className="text-sm px-4 py-2 rounded-full bg-brand-gradient text-white">Save</button>
             </div>
           </div>

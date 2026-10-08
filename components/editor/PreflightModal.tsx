@@ -17,10 +17,10 @@ export function PreflightModal({ open, issues, onClose }: Props) {
 
   return (
     <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center" onClick={onClose}>
-      <div className="bg-white rounded-lg shadow-xl w-[480px] max-h-[70vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-mt-surface rounded-lg shadow-xl w-[480px] max-h-[70vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between px-4 py-3 border-b">
           <h2 className="font-semibold text-sm">Preflight</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-700">
+          <button onClick={onClose} className="text-mt-faint hover:text-mt-ink">
             <X size={16} />
           </button>
         </div>
@@ -35,14 +35,14 @@ export function PreflightModal({ open, issues, onClose }: Props) {
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 space-y-2">
-          {issues.length === 0 && <p className="text-sm text-gray-500">No issues found on any artboard.</p>}
+          {issues.length === 0 && <p className="text-sm text-mt-muted">No issues found on any artboard.</p>}
           {issues.map((issue, i) => (
             <div key={i} className="flex items-start gap-2 text-xs">
               {issue.severity === 'warning' && <AlertTriangle className="text-amber-500 shrink-0 mt-0.5" size={13} />}
               {issue.severity === 'error' && <AlertCircle className="text-red-600 shrink-0 mt-0.5" size={13} />}
               <div>
-                <span className="font-medium text-gray-600">{issue.artboardName}:</span>{' '}
-                <span className="text-gray-600">{issue.message}</span>
+                <span className="font-medium text-mt-muted">{issue.artboardName}:</span>{' '}
+                <span className="text-mt-muted">{issue.message}</span>
               </div>
             </div>
           ))}

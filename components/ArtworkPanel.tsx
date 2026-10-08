@@ -85,7 +85,7 @@ export function ArtworkPanel({ variant }: { variant: 'day' | 'night' }) {
           className="h-32 flex flex-col items-center justify-center gap-2 text-center px-4"
           style={{ background: `linear-gradient(135deg, ${swatches[0]}, ${swatches[1]})` }}
         >
-          <span className="w-8 h-8 rounded-full bg-white/90" />
+          <span className="w-8 h-8 rounded-full bg-mt-surface/90" />
           <span className="text-white text-xs font-semibold tracking-wide">Make it magical</span>
         </div>
         <div className="p-3 flex items-center gap-1.5">

@@ -9,7 +9,7 @@ import { Profile, CreatorLevel, getOrCreateProfile, getDesignCount, creatorLevel
 import { avatarVariant } from '@/lib/avatar/optimize';
 
 const LEVEL_STYLES: Record<CreatorLevel, string> = {
-  'New Creator': 'bg-gray-100 text-gray-600',
+  'New Creator': 'bg-mt-surface2 text-mt-muted',
   Creator: 'bg-[#EC1E79]/10 text-[#EC1E79]',
   'Pro Creator': 'bg-gradient-to-r from-[#EC1E79] to-[#8B6FC4] text-white',
 };
@@ -115,33 +115,33 @@ export function ProfileMenu() {
       </button>
 
       {open && (
-        <div className="absolute top-full right-0 mt-2 w-64 bg-white border rounded-xl shadow-lg py-2 z-20 text-sm">
+        <div className="absolute top-full right-0 mt-2 w-64 bg-mt-surface border rounded-xl shadow-lg py-2 z-20 text-sm">
           <div className="flex items-center gap-3 px-4 py-3 border-b">
             <Avatar profile={profile} email={email} size={44} />
             <div className="min-w-0">
-              <p className="font-semibold text-gray-800 truncate">{profile?.name || email}</p>
-              <p className="text-xs text-gray-400 truncate">{email}</p>
+              <p className="font-semibold text-mt-ink truncate">{profile?.name || email}</p>
+              <p className="text-xs text-mt-faint truncate">{email}</p>
               <div className="mt-1">
                 <LevelBadge level={level} />
               </div>
             </div>
           </div>
-          <Link href="/profile" onClick={() => setOpen(false)} className="flex items-center gap-2 px-4 py-2 hover:bg-gray-50 text-gray-700">
+          <Link href="/profile" onClick={() => setOpen(false)} className="flex items-center gap-2 px-4 py-2 hover:bg-mt-surface2 text-mt-ink">
             <User size={14} /> Profile
           </Link>
-          <Link href="/dashboard" onClick={() => setOpen(false)} className="flex items-center gap-2 px-4 py-2 hover:bg-gray-50 text-gray-700">
+          <Link href="/dashboard" onClick={() => setOpen(false)} className="flex items-center gap-2 px-4 py-2 hover:bg-mt-surface2 text-mt-ink">
             <FolderOpen size={14} /> My Designs
           </Link>
-          <Link href="/profile" onClick={() => setOpen(false)} className="flex items-center gap-2 px-4 py-2 hover:bg-gray-50 text-gray-700">
+          <Link href="/profile" onClick={() => setOpen(false)} className="flex items-center gap-2 px-4 py-2 hover:bg-mt-surface2 text-mt-ink">
             <Settings size={14} /> Account Settings
           </Link>
           {profile?.is_admin && (
-            <Link href="/admin/templates" onClick={() => setOpen(false)} className="flex items-center gap-2 px-4 py-2 hover:bg-gray-50 text-gray-700">
+            <Link href="/admin/templates" onClick={() => setOpen(false)} className="flex items-center gap-2 px-4 py-2 hover:bg-mt-surface2 text-mt-ink">
               <LayoutTemplate size={14} /> Manage Templates
             </Link>
           )}
           {profile?.is_admin && (
-            <Link href="/admin/email" onClick={() => setOpen(false)} className="flex items-center gap-2 px-4 py-2 hover:bg-gray-50 text-gray-700">
+            <Link href="/admin/email" onClick={() => setOpen(false)} className="flex items-center gap-2 px-4 py-2 hover:bg-mt-surface2 text-mt-ink">
               <Mail size={14} /> Email Center
             </Link>
           )}

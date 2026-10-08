@@ -47,19 +47,19 @@ export function ImportDialog({ file, onCancel, onConfirm, importing }: ImportDia
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onCancel}>
-      <div className="bg-white rounded-xl shadow-xl w-[420px] p-6" onClick={(e) => e.stopPropagation()}>
-        <h2 className="font-semibold text-gray-800 mb-1">Import PDF</h2>
-        <p className="text-sm text-gray-500 mb-4 truncate" title={file.name}>
+      <div className="bg-mt-surface rounded-xl shadow-xl w-[420px] p-6" onClick={(e) => e.stopPropagation()}>
+        <h2 className="font-semibold text-mt-ink mb-1">Import PDF</h2>
+        <p className="text-sm text-mt-muted mb-4 truncate" title={file.name}>
           {file.name}
         </p>
 
         {error && <p className="text-xs text-red-500 mb-3">{error}</p>}
 
         {pageCount === null && !error ? (
-          <p className="text-sm text-gray-400 py-4">Reading PDF…</p>
+          <p className="text-sm text-mt-faint py-4">Reading PDF…</p>
         ) : pageCount !== null ? (
           <div className="flex flex-col gap-2 mb-2">
-            <label className="text-xs font-semibold text-gray-500">
+            <label className="text-xs font-semibold text-mt-muted">
               Pages to import ({pageCount} total)
             </label>
             <input
@@ -71,14 +71,14 @@ export function ImportDialog({ file, onCancel, onConfirm, importing }: ImportDia
               className="text-sm border rounded px-3 py-2"
               autoFocus
             />
-            <p className="text-[11px] text-gray-400">
+            <p className="text-[11px] text-mt-faint">
               Each imported page is placed as its own editable image layer on the current artboard.
             </p>
           </div>
         ) : null}
 
         <div className="flex justify-end gap-2 mt-4">
-          <button onClick={onCancel} disabled={importing} className="text-sm px-4 py-2 rounded-full border hover:bg-gray-50 disabled:opacity-50">
+          <button onClick={onCancel} disabled={importing} className="text-sm px-4 py-2 rounded-full border hover:bg-mt-surface2 disabled:opacity-50">
             Cancel
           </button>
           <button

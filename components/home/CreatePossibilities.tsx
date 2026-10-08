@@ -47,11 +47,11 @@ export function CreatePossibilities() {
   return (
     <section className="max-w-6xl mx-auto px-6 py-24">
       <Reveal>
-        <p className="text-xs font-semibold text-[#6C4FD1] dark:text-[#B9A6F2] tracking-wide uppercase">Create</p>
+        <p className="text-xs font-semibold text-mt-accent dark:text-mt-accent tracking-wide uppercase">Create</p>
         <h2 className="mt-3 font-[family-name:var(--font-display)] text-4xl sm:text-5xl leading-[1.05] tracking-tight max-w-xl">
           Create without limits.
         </h2>
-        <p className="mt-5 text-[#4A4750] dark:text-[#B7B2C6] max-w-md leading-relaxed">
+        <p className="mt-5 text-mt-muted dark:text-mt-muted max-w-md leading-relaxed">
           Start with a blank canvas, a template, an image or simply an idea.
           Build it your way.
         </p>
@@ -71,7 +71,7 @@ export function CreatePossibilities() {
               }`}
               style={{ background: `linear-gradient(135deg, ${p.colors[0]}, ${p.colors[1]})` }}
             >
-              <span className="pointer-events-none absolute -right-6 -bottom-6 w-28 h-28 rounded-full bg-white/10 group-hover:scale-110 transition-transform duration-500" />
+              <span className="pointer-events-none absolute -right-6 -bottom-6 w-28 h-28 rounded-full bg-mt-surface/10 group-hover:scale-110 transition-transform duration-500" />
               <p.icon size={22} className="text-white/90 relative" />
               <span className="relative text-white font-semibold text-lg">{p.label}</span>
             </button>

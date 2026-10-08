@@ -64,19 +64,19 @@ export function CloudOpenDialog({ onOpened, onClose }: Props) {
       <div
         role="dialog"
         aria-modal="true"
-        className="w-full max-w-lg bg-white dark:bg-[#242424] text-gray-800 dark:text-gray-100 rounded-2xl shadow-2xl p-5 max-h-[85vh] flex flex-col"
+        className="w-full max-w-lg bg-mt-surface dark:bg-mt-surface text-mt-ink dark:text-mt-ink rounded-2xl shadow-2xl p-5 max-h-[85vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             {provider && !busy && (
-              <button onClick={() => { setProvider(null); setFiles(null); }} className="p-1 text-gray-500" aria-label="Back">
+              <button onClick={() => { setProvider(null); setFiles(null); }} className="p-1 text-mt-muted" aria-label="Back">
                 <ArrowLeft size={18} />
               </button>
             )}
             <h2 className="text-lg font-semibold">{provider ? `Open from ${providerById(provider).label}` : 'Open from a cloud drive'}</h2>
           </div>
-          <button onClick={onClose} className="p-1 text-gray-400 hover:text-gray-600" aria-label="Close">
+          <button onClick={onClose} className="p-1 text-mt-faint hover:text-mt-muted" aria-label="Close">
             <X size={18} />
           </button>
         </div>
@@ -88,12 +88,12 @@ export function CloudOpenDialog({ onOpened, onClose }: Props) {
                 key={p.id}
                 disabled={!!busy}
                 onClick={() => browse(p.id)}
-                className="flex items-center gap-3 px-4 py-3 rounded-xl border border-gray-200 dark:border-[#3A3A3A] hover:border-[#6C4FD1] disabled:opacity-50 text-left"
+                className="flex items-center gap-3 px-4 py-3 rounded-xl border border-mt-border dark:border-mt-border hover:border-mt-accent disabled:opacity-50 text-left"
               >
-                <Cloud size={20} className="text-[#6C4FD1]" />
+                <Cloud size={20} className="text-mt-accent" />
                 <span className="flex-1">
                   <span className="block text-sm font-semibold">{p.label}</span>
-                  <span className="block text-xs text-gray-500">{p.folderLabel}</span>
+                  <span className="block text-xs text-mt-muted">{p.folderLabel}</span>
                 </span>
               </button>
             ))}
@@ -103,14 +103,14 @@ export function CloudOpenDialog({ onOpened, onClose }: Props) {
         {provider && files && (
           <div className="overflow-y-auto -mx-1 px-1">
             {files.length === 0 ? (
-              <p className="text-sm text-gray-500 py-8 text-center">No Magical Touch Design projects here yet.</p>
+              <p className="text-sm text-mt-muted py-8 text-center">No Magical Touch Design projects here yet.</p>
             ) : (
-              <ul className="divide-y dark:divide-[#3A3A3A]">
+              <ul className="divide-y dark:divide-mt-border">
                 {files.map((f) => (
                   <li key={f.id}>
-                    <button disabled={!!busy} onClick={() => open(f)} className="w-full text-left py-3 px-1 hover:bg-gray-50 dark:hover:bg-[#2B2B2B] disabled:opacity-50">
+                    <button disabled={!!busy} onClick={() => open(f)} className="w-full text-left py-3 px-1 hover:bg-mt-surface2 dark:hover:bg-mt-surface2 disabled:opacity-50">
                       <span className="block text-sm font-medium truncate">{f.name.replace(/\.mtd$/i, '')}</span>
-                      <span className="block text-xs text-gray-500">
+                      <span className="block text-xs text-mt-muted">
                         {f.modifiedAt ? new Date(f.modifiedAt).toLocaleString() : ''} {f.size ? `· ${(f.size / 1024 / 1024).toFixed(1)} MB` : ''}
                       </span>
                     </button>
@@ -123,8 +123,8 @@ export function CloudOpenDialog({ onOpened, onClose }: Props) {
 
         {busy && (
           <div className="mt-4 flex items-center justify-between gap-3">
-            <p className="text-sm text-[#6C4FD1]">{busy}</p>
-            <button onClick={() => abortRef.current?.abort()} className="text-xs text-gray-500 underline shrink-0">Cancel</button>
+            <p className="text-sm text-mt-accent">{busy}</p>
+            <button onClick={() => abortRef.current?.abort()} className="text-xs text-mt-muted underline shrink-0">Cancel</button>
           </div>
         )}
         {error && <p className="mt-4 text-sm text-red-600">{error}</p>}

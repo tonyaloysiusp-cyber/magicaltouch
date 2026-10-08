@@ -97,12 +97,12 @@ export function ExportDialog({ artboards, activeArtboardId, exporting, onClose, 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
       <div
-        className="bg-white rounded-xl shadow-xl w-[420px] max-h-[85vh] overflow-y-auto"
+        className="bg-mt-surface rounded-xl shadow-xl w-[420px] max-h-[85vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between px-5 py-4 border-b">
-          <h2 className="font-semibold text-gray-800">Export</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-700">
+          <h2 className="font-semibold text-mt-ink">Export</h2>
+          <button onClick={onClose} className="text-mt-faint hover:text-mt-ink">
             <X size={18} />
           </button>
         </div>
@@ -110,7 +110,7 @@ export function ExportDialog({ artboards, activeArtboardId, exporting, onClose, 
         <div className="p-5 flex flex-col gap-5">
           {/* ---------------------------------------------------- RANGE */}
           <div>
-            <label className="text-xs font-semibold text-gray-500 block mb-2">Export Range</label>
+            <label className="text-xs font-semibold text-mt-muted block mb-2">Export Range</label>
             <div className="flex flex-col gap-1.5">
               {([
                 ['current', 'Current page'],
@@ -118,7 +118,7 @@ export function ExportDialog({ artboards, activeArtboardId, exporting, onClose, 
                 ['range', 'Page range'],
                 ['all', 'All pages'],
               ] as [ExportRangeMode, string][]).map(([mode, label]) => (
-                <label key={mode} className="flex items-center gap-2 text-sm text-gray-700">
+                <label key={mode} className="flex items-center gap-2 text-sm text-mt-ink">
                   <input type="radio" name="range" checked={rangeMode === mode} onChange={() => setRangeMode(mode)} />
                   {label}
                 </label>
@@ -135,7 +135,7 @@ export function ExportDialog({ artboards, activeArtboardId, exporting, onClose, 
                   onChange={(e) => setRangeFrom(e.target.value)}
                   className="w-16 text-sm border rounded px-2 py-1"
                 />
-                <span className="text-sm text-gray-500">to</span>
+                <span className="text-sm text-mt-muted">to</span>
                 <input
                   type="number"
                   min={1}
@@ -144,14 +144,14 @@ export function ExportDialog({ artboards, activeArtboardId, exporting, onClose, 
                   onChange={(e) => setRangeTo(e.target.value)}
                   className="w-16 text-sm border rounded px-2 py-1"
                 />
-                <span className="text-xs text-gray-400">of {artboards.length}</span>
+                <span className="text-xs text-mt-faint">of {artboards.length}</span>
               </div>
             )}
 
             {rangeMode === 'selected' && (
               <div className="mt-2 pl-6 flex flex-col gap-1 max-h-32 overflow-y-auto">
                 {artboards.map((ab) => (
-                  <label key={ab.id} className="flex items-center gap-2 text-sm text-gray-700">
+                  <label key={ab.id} className="flex items-center gap-2 text-sm text-mt-ink">
                     <input type="checkbox" checked={selectedIds.includes(ab.id)} onChange={() => toggleSelected(ab.id)} />
                     {ab.name}
                   </label>
@@ -162,14 +162,14 @@ export function ExportDialog({ artboards, activeArtboardId, exporting, onClose, 
 
           {/* --------------------------------------------------- FORMAT */}
           <div>
-            <label className="text-xs font-semibold text-gray-500 block mb-2">Format</label>
+            <label className="text-xs font-semibold text-mt-muted block mb-2">Format</label>
             <div className="flex gap-2">
               {(['png', 'jpg', 'pdf'] as ExportFormat[]).map((f) => (
                 <button
                   key={f}
                   onClick={() => setFormat(f)}
                   className={`flex-1 text-sm border rounded py-1.5 uppercase ${
-                    format === f ? 'bg-gray-900 text-white border-gray-900' : 'hover:bg-gray-50'
+                    format === f ? 'bg-gray-900 text-white border-gray-900' : 'hover:bg-mt-surface2'
                   }`}
                 >
                   {f}
@@ -181,7 +181,7 @@ export function ExportDialog({ artboards, activeArtboardId, exporting, onClose, 
           {/* ----------------------------------------- RESOLUTION/QUALITY */}
           {format !== 'pdf' && (
             <div>
-              <label className="text-xs font-semibold text-gray-500 block mb-2">Resolution</label>
+              <label className="text-xs font-semibold text-mt-muted block mb-2">Resolution</label>
               <div className="flex gap-2">
                 {DPI_PRESETS.map((p) => (
                   <button
@@ -189,7 +189,7 @@ export function ExportDialog({ artboards, activeArtboardId, exporting, onClose, 
                     onClick={() => setDpi(p.dpi)}
                     title={p.hint}
                     className={`flex-1 text-sm border rounded py-1.5 ${
-                      dpi === p.dpi ? 'bg-gray-900 text-white border-gray-900' : 'hover:bg-gray-50'
+                      dpi === p.dpi ? 'bg-gray-900 text-white border-gray-900' : 'hover:bg-mt-surface2'
                     }`}
                   >
                     {p.label}
@@ -219,7 +219,7 @@ export function ExportDialog({ artboards, activeArtboardId, exporting, onClose, 
                 />
               </div>
               {previewArtboard && previewPxWidth && previewPxHeight && (
-                <p className="text-xs text-gray-400 mt-1.5">
+                <p className="text-xs text-mt-faint mt-1.5">
                   Output: {previewPxWidth} × {previewPxHeight}px at {dpi} DPI
                   {rangeMode !== 'current' && artboards.length > 1 ? ` (${previewArtboard.name})` : ''}
                 </p>
@@ -229,7 +229,7 @@ export function ExportDialog({ artboards, activeArtboardId, exporting, onClose, 
 
           {format === 'jpg' && (
             <div>
-              <label className="text-xs font-semibold text-gray-500 block mb-1">
+              <label className="text-xs font-semibold text-mt-muted block mb-1">
                 Quality ({Math.round(quality * 100)}%)
               </label>
               <input
@@ -246,7 +246,7 @@ export function ExportDialog({ artboards, activeArtboardId, exporting, onClose, 
 
           {/* ------------------------------------------- PRINT SETTINGS */}
           <div className="flex flex-col gap-2 border-t pt-4">
-            <label className="flex items-center gap-2 text-sm text-gray-700">
+            <label className="flex items-center gap-2 text-sm text-mt-ink">
               <input
                 type="checkbox"
                 checked={includeBleed || includeMarks}
@@ -255,12 +255,12 @@ export function ExportDialog({ artboards, activeArtboardId, exporting, onClose, 
               />
               Include bleed
             </label>
-            <label className="flex items-center gap-2 text-sm text-gray-700">
+            <label className="flex items-center gap-2 text-sm text-mt-ink">
               <input type="checkbox" checked={includeMarks} onChange={(e) => setIncludeMarks(e.target.checked)} />
               Include crop marks &amp; color bar
             </label>
             {format === 'png' && (
-              <label className="flex items-center gap-2 text-sm text-gray-700">
+              <label className="flex items-center gap-2 text-sm text-mt-ink">
                 <input
                   type="checkbox"
                   checked={transparentBackground}
@@ -272,8 +272,8 @@ export function ExportDialog({ artboards, activeArtboardId, exporting, onClose, 
           </div>
         </div>
 
-        <div className="flex items-center justify-end gap-2 px-5 py-4 border-t bg-gray-50 rounded-b-xl">
-          <button onClick={onClose} className="text-sm px-4 py-2 rounded-full border hover:bg-gray-100">
+        <div className="flex items-center justify-end gap-2 px-5 py-4 border-t bg-mt-bg rounded-b-xl">
+          <button onClick={onClose} className="text-sm px-4 py-2 rounded-full border hover:bg-mt-surface2">
             Cancel
           </button>
           <button

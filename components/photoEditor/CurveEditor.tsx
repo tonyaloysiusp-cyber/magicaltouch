@@ -78,7 +78,7 @@ export function CurveEditor({ points, histogram, onChange }: Props) {
     <svg
       ref={svgRef}
       viewBox={`0 0 ${SIZE} ${SIZE}`}
-      className="w-full aspect-square border rounded bg-gray-50 touch-none select-none"
+      className="w-full aspect-square border rounded bg-mt-bg touch-none select-none"
       onClick={handleBackgroundClick}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}

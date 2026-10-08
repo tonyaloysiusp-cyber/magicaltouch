@@ -3600,18 +3600,18 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
         </div>
       )}
       <div className="flex flex-1 overflow-hidden min-h-0">
-        <div className="w-44 border-r bg-white flex flex-col">
+        <div className="w-44 border-r bg-mt-surface flex flex-col">
           <div className="p-2 flex flex-col gap-2 overflow-y-auto flex-1 min-h-0">
             {toolGroups.map((group) => (
               <div key={group.label}>
-                <p className="text-[10px] uppercase tracking-wide text-gray-400 mb-1 px-1">{group.label}</p>
+                <p className="text-[10px] uppercase tracking-wide text-mt-faint mb-1 px-1">{group.label}</p>
                 <div className="flex flex-col gap-0.5">
                   {group.tools.map((t) => (
                     <button
                       key={t.id}
                       onClick={() => selectTool(t.id)}
                       title={`${t.label}${SHORTCUT_LABEL[t.id] ? ` (${SHORTCUT_LABEL[t.id]})` : ''}`}
-                      className={`flex items-center gap-2 text-left text-xs px-2 py-1.5 rounded ${activeTool === t.id ? 'bg-gray-800 text-white' : 'hover:bg-gray-100 text-gray-700'}`}
+                      className={`flex items-center gap-2 text-left text-xs px-2 py-1.5 rounded ${activeTool === t.id ? 'bg-mt-accent text-white' : 'hover:bg-mt-surface2 text-mt-ink'}`}
                     >
                       {TOOL_ICONS[t.id]}
                       <span className="tool-label">{t.label}</span>
@@ -3623,10 +3623,10 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
 
             {!pro && (
               <div className="border-t pt-2">
-                <p className="text-[10px] uppercase tracking-wide text-gray-400 mb-1 px-1">History</p>
-                <button onClick={undoLocal} disabled={!canUndo} className="w-full text-left text-xs px-2 py-1.5 rounded hover:bg-gray-100 disabled:opacity-30">↶ Undo</button>
-                <button onClick={redoLocal} disabled={!canRedo} className="w-full text-left text-xs px-2 py-1.5 rounded hover:bg-gray-100 disabled:opacity-30">↷ Redo</button>
-                <button onClick={restoreOriginal} className="w-full text-left text-xs px-2 py-1.5 rounded hover:bg-gray-100 text-gray-700">Restore Original</button>
+                <p className="text-[10px] uppercase tracking-wide text-mt-faint mb-1 px-1">History</p>
+                <button onClick={undoLocal} disabled={!canUndo} className="w-full text-left text-xs px-2 py-1.5 rounded hover:bg-mt-surface2 disabled:opacity-30">↶ Undo</button>
+                <button onClick={redoLocal} disabled={!canRedo} className="w-full text-left text-xs px-2 py-1.5 rounded hover:bg-mt-surface2 disabled:opacity-30">↷ Redo</button>
+                <button onClick={restoreOriginal} className="w-full text-left text-xs px-2 py-1.5 rounded hover:bg-mt-surface2 text-mt-ink">Restore Original</button>
               </div>
             )}
           </div>
@@ -3638,14 +3638,14 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
                   type="color"
                   value={backgroundColor}
                   onChange={(e) => setBackgroundColor(e.target.value)}
-                  className="absolute right-0 bottom-0 w-6 h-6 rounded border border-[#3c3c3c] cursor-pointer"
+                  className="absolute right-0 bottom-0 w-6 h-6 rounded border border-mt-border cursor-pointer"
                   title="Background color"
                 />
                 <input
                   type="color"
                   value={brushColor}
                   onChange={(e) => setBrushColor(e.target.value)}
-                  className="absolute left-0 top-0 w-6 h-6 rounded border border-[#3c3c3c] cursor-pointer"
+                  className="absolute left-0 top-0 w-6 h-6 rounded border border-mt-border cursor-pointer"
                   title="Foreground color"
                 />
               </div>
@@ -3656,7 +3656,7 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
                   setBackgroundColor(fg);
                 }}
                 title="Swap foreground/background"
-                className="text-[13px] leading-none px-1 py-0.5 rounded hover:bg-white/10"
+                className="text-[13px] leading-none px-1 py-0.5 rounded hover:bg-mt-surface/10"
               >
                 ⇄
               </button>
@@ -3664,10 +3664,10 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
           )}
         </div>
 
-        <div ref={containerRef} className="flex-1 relative bg-gray-200 ps-canvas-viewport">
+        <div ref={containerRef} className="flex-1 relative bg-mt-surface2 ps-canvas-viewport">
           <canvas ref={canvasElRef} />
           {activeTool === 'crop' && (
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-white rounded-full shadow px-3 py-1.5">
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-mt-surface rounded-full shadow px-3 py-1.5">
               <input
                 type="text"
                 inputMode="decimal"
@@ -3691,7 +3691,7 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
                 className="w-16 text-xs border rounded px-1.5 py-1"
                 title={`Crop width (${resizeUnit})`}
               />
-              <span className="text-xs text-gray-400">×</span>
+              <span className="text-xs text-mt-faint">×</span>
               <input
                 type="text"
                 inputMode="decimal"
@@ -3720,24 +3720,24 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
                 <option value="mm">mm</option>
                 <option value="pt">pt</option>
               </select>
-              <button onClick={applyCropSizeInput} className="text-xs px-2.5 py-1 rounded-full border hover:bg-gray-50">Set Size</button>
-              <div className="w-px h-4 bg-gray-200" />
+              <button onClick={applyCropSizeInput} className="text-xs px-2.5 py-1 rounded-full border hover:bg-mt-surface2">Set Size</button>
+              <div className="w-px h-4 bg-mt-surface2" />
               <button onClick={cancelCrop} className="text-xs px-3 py-1 rounded-full border">Cancel Crop</button>
-              <button onClick={applyCrop} className="text-xs px-3 py-1 rounded-full bg-gray-800 text-white">Apply Crop</button>
+              <button onClick={applyCrop} className="text-xs px-3 py-1 rounded-full bg-mt-accent text-white">Apply Crop</button>
             </div>
           )}
           {activeTool === 'perspective' && (
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-white rounded-full shadow px-3 py-1.5">
-              <span className="text-xs text-gray-500 px-1">Drag the 4 corners, then apply</span>
-              <div className="w-px h-4 bg-gray-200" />
-              <button onClick={resetPerspectiveHandles} className="text-xs px-2.5 py-1 rounded-full border hover:bg-gray-50">Reset</button>
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-mt-surface rounded-full shadow px-3 py-1.5">
+              <span className="text-xs text-mt-muted px-1">Drag the 4 corners, then apply</span>
+              <div className="w-px h-4 bg-mt-surface2" />
+              <button onClick={resetPerspectiveHandles} className="text-xs px-2.5 py-1 rounded-full border hover:bg-mt-surface2">Reset</button>
               <button onClick={cancelPerspective} className="text-xs px-3 py-1 rounded-full border">Cancel Perspective</button>
-              <button onClick={applyPerspective} className="text-xs px-3 py-1 rounded-full bg-gray-800 text-white">Apply Perspective</button>
+              <button onClick={applyPerspective} className="text-xs px-3 py-1 rounded-full bg-mt-accent text-white">Apply Perspective</button>
             </div>
           )}
         </div>
 
-        <div className="w-72 border-l bg-white overflow-y-auto flex flex-col text-sm">
+        <div className="w-72 border-l bg-mt-surface overflow-y-auto flex flex-col text-sm">
           <input
             ref={fileInputRef}
             type="file"
@@ -3766,8 +3766,8 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
                 onBlendModeChange={setLayerBlendMode}
               />
               <div className="px-3 pb-3 flex gap-1.5">
-                <button onClick={duplicateActiveLayer} className="flex-1 text-[11px] px-2 py-1.5 border rounded hover:bg-gray-50">Duplicate Layer</button>
-                <button onClick={() => fileInputRef.current?.click()} className="flex-1 text-[11px] px-2 py-1.5 border rounded hover:bg-gray-50">Add Image Layer</button>
+                <button onClick={duplicateActiveLayer} className="flex-1 text-[11px] px-2 py-1.5 border rounded hover:bg-mt-surface2">Duplicate Layer</button>
+                <button onClick={() => fileInputRef.current?.click()} className="flex-1 text-[11px] px-2 py-1.5 border rounded hover:bg-mt-surface2">Add Image Layer</button>
               </div>
             </div>
           )}
@@ -3776,8 +3776,8 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
             {showAdjustmentsPanel && (
             <div>
               <div className="flex items-center justify-between mb-2">
-                <p className="font-semibold text-gray-700 text-xs uppercase tracking-wide">Adjustments — {activeLayerName}</p>
-                <button onClick={() => { const layer = imageRef.current; if (layer) { layer.__adjustments = DEFAULT_ADJUSTMENTS; } setAdjustments(DEFAULT_ADJUSTMENTS); const F = fabricModRef.current; if (layer && F) { applyAdjustments(layer, F, DEFAULT_ADJUSTMENTS); fabricCanvasRef.current?.requestRenderAll(); } }} className="text-[11px] text-gray-400 hover:text-gray-700">Reset</button>
+                <p className="font-semibold text-mt-ink text-xs uppercase tracking-wide">Adjustments — {activeLayerName}</p>
+                <button onClick={() => { const layer = imageRef.current; if (layer) { layer.__adjustments = DEFAULT_ADJUSTMENTS; } setAdjustments(DEFAULT_ADJUSTMENTS); const F = fabricModRef.current; if (layer && F) { applyAdjustments(layer, F, DEFAULT_ADJUSTMENTS); fabricCanvasRef.current?.requestRenderAll(); } }} className="text-[11px] text-mt-faint hover:text-mt-ink">Reset</button>
               </div>
               {([
                 ['exposure', 'Exposure', -2, 2],
@@ -3790,7 +3790,7 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
                 ['sharpen', 'Sharpen', 0, 1],
               ] as [keyof PhotoAdjustments, string, number, number][]).map(([key, label, min, max]) => (
                 <div key={key} className="mb-2">
-                  <div className="flex justify-between text-[11px] text-gray-500 mb-0.5">
+                  <div className="flex justify-between text-[11px] text-mt-muted mb-0.5">
                     <span>{label}</span>
                     <span>{(adjustments[key] as number).toFixed(2)}</span>
                   </div>
@@ -3807,12 +3807,12 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
               ))}
               <div className="mt-2">
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-[11px] text-gray-500">Curves (drag points, click to add, double-click to remove)</span>
-                  <button onClick={() => setCurvePoints(DEFAULT_CURVE_POINTS)} className="text-[11px] text-gray-400 hover:text-gray-700">Reset</button>
+                  <span className="text-[11px] text-mt-muted">Curves (drag points, click to add, double-click to remove)</span>
+                  <button onClick={() => setCurvePoints(DEFAULT_CURVE_POINTS)} className="text-[11px] text-mt-faint hover:text-mt-ink">Reset</button>
                 </div>
                 <CurveEditor points={adjustments.curvePoints} histogram={curveHistogram} onChange={setCurvePoints} />
               </div>
-              <label className="flex items-center gap-1.5 text-[11px] text-gray-600 mt-2">
+              <label className="flex items-center gap-1.5 text-[11px] text-mt-muted mt-2">
                 <input
                   type="checkbox"
                   checked={adjustments.blackAndWhite}
@@ -3825,18 +3825,18 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
 
             {(isSelectTool(activeTool) || hasSelection) && (
               <div className="border-t pt-3">
-                <p className="font-semibold text-gray-700 text-xs uppercase tracking-wide mb-2">Selection</p>
+                <p className="font-semibold text-mt-ink text-xs uppercase tracking-wide mb-2">Selection</p>
                 {isSelectTool(activeTool) && (
                   <>
                     <div className="mb-2">
-                      <div className="text-[11px] text-gray-500 mb-1">Mode (Shift=Add, Alt=Subtract, Shift+Alt=Intersect)</div>
+                      <div className="text-[11px] text-mt-muted mb-1">Mode (Shift=Add, Alt=Subtract, Shift+Alt=Intersect)</div>
                       <div className="grid grid-cols-4 gap-1">
                         {(['new', 'add', 'subtract', 'intersect'] as CombineMode[]).map((m) => (
                           <button
                             key={m}
                             onClick={() => setSelectionMode(m)}
                             title={MODE_TITLE[m]}
-                            className={`text-[10px] px-1 py-1 border rounded ${selectionMode === m ? 'bg-gray-800 text-white border-gray-800' : 'text-gray-600'}`}
+                            className={`text-[10px] px-1 py-1 border rounded ${selectionMode === m ? 'bg-mt-accent text-white border-mt-accent' : 'text-mt-muted'}`}
                           >
                             {MODE_LABEL[m]}
                           </button>
@@ -3844,7 +3844,7 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
                       </div>
                     </div>
                     <div className="mb-2">
-                      <div className="flex justify-between text-[11px] text-gray-500 mb-0.5">
+                      <div className="flex justify-between text-[11px] text-mt-muted mb-0.5">
                         <span>Feather (new selections)</span>
                         <span>{selectionFeather}px</span>
                       </div>
@@ -3855,19 +3855,19 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
                 {activeTool === 'magic-wand' && (
                   <>
                     <div className="mb-2">
-                      <div className="flex justify-between text-[11px] text-gray-500 mb-0.5">
+                      <div className="flex justify-between text-[11px] text-mt-muted mb-0.5">
                         <span>Tolerance</span>
                         <span>{tolerance}</span>
                       </div>
                       <input type="range" min={0} max={100} value={tolerance} onChange={(e) => setTolerance(parseInt(e.target.value))} className="w-full" />
                     </div>
-                    <label className="flex items-center gap-1.5 text-[11px] text-gray-600 mb-2">
+                    <label className="flex items-center gap-1.5 text-[11px] text-mt-muted mb-2">
                       <input type="checkbox" checked={contiguous} onChange={(e) => setContiguous(e.target.checked)} /> Contiguous
                     </label>
                   </>
                 )}
                 <div className="mb-2">
-                  <div className="flex justify-between text-[11px] text-gray-500 mb-0.5">
+                  <div className="flex justify-between text-[11px] text-mt-muted mb-0.5">
                     <span>Expand / Contract / Grow amount</span>
                     <span>{selectionGrowAmount}px</span>
                   </div>
@@ -3890,7 +3890,7 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
                     onClick={removeSelectedObject}
                     disabled={!hasSelection || removingObject}
                     title="Reconstructs the selected area from its surrounding pixels — select the object to remove first"
-                    className="col-span-2 text-[11px] px-2 py-1.5 border rounded bg-gray-800 text-white disabled:opacity-30"
+                    className="col-span-2 text-[11px] px-2 py-1.5 border rounded bg-mt-accent text-white disabled:opacity-30"
                   >
                     {removingObject ? 'Removing…' : 'Remove Object (Content-Aware Fill)'}
                   </button>
@@ -3901,7 +3901,7 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
                     <div className="mt-1.5 space-y-1">
                       {savedSelections.map((s) => (
                         <div key={s.name} className="flex items-center gap-1 text-[11px]">
-                          <button onClick={() => loadSelection(s.name)} title="Load this saved selection" className="flex-1 text-left px-2 py-1 border rounded hover:bg-gray-50 truncate">
+                          <button onClick={() => loadSelection(s.name)} title="Load this saved selection" className="flex-1 text-left px-2 py-1 border rounded hover:bg-mt-surface2 truncate">
                             {s.name}
                           </button>
                           <button onClick={() => deleteSavedSelection(s.name)} title="Delete this saved selection" className="px-1.5 py-1 border rounded text-red-400 hover:text-red-600">
@@ -3917,11 +3917,11 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
 
             {(activeTool === 'eraser' || activeTool === 'brush' || activeTool === 'dodge' || activeTool === 'burn' || activeTool === 'clone' || activeTool === 'heal' || activeTool === 'smudge' || activeTool === 'blur' || activeTool === 'sharpen' || activeTool === 'sponge' || activeTool === 'pattern-stamp' || activeTool === 'mixer-brush' || MASK_PAINT_TOOLS.includes(activeTool)) && (
               <div className="border-t pt-3">
-                <p className="font-semibold text-gray-700 text-xs uppercase tracking-wide mb-2">
+                <p className="font-semibold text-mt-ink text-xs uppercase tracking-wide mb-2">
                   {activeTool === 'eraser' ? 'Eraser' : activeTool === 'brush' ? 'Brush' : activeTool === 'dodge' ? 'Dodge (lighten)' : activeTool === 'burn' ? 'Burn (darken)' : activeTool === 'clone' ? 'Clone Stamp' : activeTool === 'heal' ? 'Healing Brush' : activeTool === 'smudge' ? 'Smudge' : activeTool === 'blur' ? 'Blur' : activeTool === 'sharpen' ? 'Sharpen' : activeTool === 'sponge' ? 'Sponge' : activeTool === 'pattern-stamp' ? 'Pattern Stamp' : activeTool === 'mixer-brush' ? 'Mixer Brush' : activeTool === 'mask-reveal' ? 'Mask: Paint Reveal' : 'Mask: Paint Hide'}
                 </p>
                 {activeTool === 'mixer-brush' && (
-                  <p className="text-[11px] text-gray-500 mb-2">
+                  <p className="text-[11px] text-mt-muted mb-2">
                     Blends the brush color into the canvas as you paint — pass over the same spot again for more buildup, like a real wet medium.
                   </p>
                 )}
@@ -3931,7 +3931,7 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
                       <button
                         key={style}
                         onClick={() => setPatternStyle(style)}
-                        className={`text-[11px] px-2 py-1 border rounded capitalize ${patternStyle === style ? 'bg-gray-800 text-white' : ''}`}
+                        className={`text-[11px] px-2 py-1 border rounded capitalize ${patternStyle === style ? 'bg-mt-accent text-white' : ''}`}
                       >
                         {style}
                       </button>
@@ -3939,28 +3939,28 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
                   </div>
                 )}
                 {activeTool === 'heal' && (
-                  <p className="text-[11px] text-gray-500 mb-2">
+                  <p className="text-[11px] text-mt-muted mb-2">
                     Paint over a blemish — it's reconstructed from the surrounding real pixels. No source point needed (unlike Clone Stamp).
                   </p>
                 )}
                 {activeTool === 'smudge' && (
-                  <p className="text-[11px] text-gray-500 mb-2">
+                  <p className="text-[11px] text-mt-muted mb-2">
                     Drag to push and smear real pixel color in the direction of the stroke, like dragging a finger through wet paint.
                   </p>
                 )}
-                <div className="flex justify-between text-[11px] text-gray-500 mb-0.5">
+                <div className="flex justify-between text-[11px] text-mt-muted mb-0.5">
                   <span>Brush size</span>
                   <span>{brushSize}px</span>
                 </div>
                 <input type="range" min={4} max={400} value={brushSize} onChange={(e) => setBrushSize(parseInt(e.target.value))} className="w-full mb-2" />
-                <div className="flex justify-between text-[11px] text-gray-500 mb-0.5">
+                <div className="flex justify-between text-[11px] text-mt-muted mb-0.5">
                   <span>Hardness</span>
                   <span>{Math.round(brushHardness * 100)}%</span>
                 </div>
                 <input type="range" min={0} max={1} step={0.05} value={brushHardness} onChange={(e) => setBrushHardness(parseFloat(e.target.value))} className="w-full mb-2" />
                 {activeTool !== 'smudge' && activeTool !== 'mixer-brush' && (
                   <>
-                    <div className="flex justify-between text-[11px] text-gray-500 mb-0.5">
+                    <div className="flex justify-between text-[11px] text-mt-muted mb-0.5">
                       <span>Opacity</span>
                       <span>{Math.round(brushOpacity * 100)}%</span>
                     </div>
@@ -3973,7 +3973,7 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
                 )}
                 {activeTool === 'mixer-brush' && (
                   <>
-                    <div className="flex justify-between text-[11px] text-gray-500 mb-0.5">
+                    <div className="flex justify-between text-[11px] text-mt-muted mb-0.5">
                       <span>Wetness</span>
                       <span>{Math.round(mixerWetness * 100)}%</span>
                     </div>
@@ -3982,13 +3982,13 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
                 )}
                 {(activeTool === 'brush' || activeTool === 'pattern-stamp' || activeTool === 'mixer-brush') && (
                   <div className="flex items-center gap-2">
-                    <label className="text-[11px] text-gray-500">Color</label>
+                    <label className="text-[11px] text-mt-muted">Color</label>
                     <input type="color" value={brushColor} onChange={(e) => setBrushColor(e.target.value)} className="w-11 h-11 border rounded cursor-pointer" />
                   </div>
                 )}
                 {(activeTool === 'dodge' || activeTool === 'burn') && (
                   <>
-                    <div className="flex justify-between text-[11px] text-gray-500 mb-0.5">
+                    <div className="flex justify-between text-[11px] text-mt-muted mb-0.5">
                       <span>Strength</span>
                       <span>{dodgeBurnStrength.toFixed(2)}</span>
                     </div>
@@ -4005,7 +4005,7 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
                 )}
                 {activeTool === 'smudge' && (
                   <>
-                    <div className="flex justify-between text-[11px] text-gray-500 mb-0.5">
+                    <div className="flex justify-between text-[11px] text-mt-muted mb-0.5">
                       <span>Strength</span>
                       <span>{smudgeStrength.toFixed(2)}</span>
                     </div>
@@ -4022,7 +4022,7 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
                 )}
                 {activeTool === 'blur' && (
                   <>
-                    <div className="flex justify-between text-[11px] text-gray-500 mb-0.5">
+                    <div className="flex justify-between text-[11px] text-mt-muted mb-0.5">
                       <span>Blur radius</span>
                       <span>{blurRadius}px</span>
                     </div>
@@ -4038,7 +4038,7 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
                 )}
                 {activeTool === 'sharpen' && (
                   <>
-                    <div className="flex justify-between text-[11px] text-gray-500 mb-0.5">
+                    <div className="flex justify-between text-[11px] text-mt-muted mb-0.5">
                       <span>Amount</span>
                       <span>{sharpenAmount.toFixed(2)}</span>
                     </div>
@@ -4058,18 +4058,18 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
                     <div className="grid grid-cols-2 gap-1.5 mb-2">
                       <button
                         onClick={() => setSpongeMode('saturate')}
-                        className={`text-[11px] px-2 py-1 border rounded ${spongeMode === 'saturate' ? 'bg-gray-800 text-white' : ''}`}
+                        className={`text-[11px] px-2 py-1 border rounded ${spongeMode === 'saturate' ? 'bg-mt-accent text-white' : ''}`}
                       >
                         Saturate
                       </button>
                       <button
                         onClick={() => setSpongeMode('desaturate')}
-                        className={`text-[11px] px-2 py-1 border rounded ${spongeMode === 'desaturate' ? 'bg-gray-800 text-white' : ''}`}
+                        className={`text-[11px] px-2 py-1 border rounded ${spongeMode === 'desaturate' ? 'bg-mt-accent text-white' : ''}`}
                       >
                         Desaturate
                       </button>
                     </div>
-                    <div className="flex justify-between text-[11px] text-gray-500 mb-0.5">
+                    <div className="flex justify-between text-[11px] text-mt-muted mb-0.5">
                       <span>Strength</span>
                       <span>{spongeStrength.toFixed(2)}</span>
                     </div>
@@ -4086,11 +4086,11 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
                 )}
                 {activeTool === 'clone' && (
                   <>
-                    <label className="flex items-center gap-1.5 text-[11px] text-gray-600 mb-2">
+                    <label className="flex items-center gap-1.5 text-[11px] text-mt-muted mb-2">
                       <input type="checkbox" checked={cloneAligned} onChange={(e) => setCloneAligned(e.target.checked)} />
                       Aligned
                     </label>
-                    <p className="text-[11px] text-gray-500 mb-1">
+                    <p className="text-[11px] text-mt-muted mb-1">
                       {hasCloneSource ? '✓ Source set' : 'Alt+Click on the image to set a source'}
                     </p>
                     {hasCloneSource && (
@@ -4102,7 +4102,7 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
                           setHasCloneSource(false);
                           fabricCanvasRef.current?.requestRenderAll();
                         }}
-                        className="text-[11px] px-2 py-1 border rounded hover:bg-gray-50"
+                        className="text-[11px] px-2 py-1 border rounded hover:bg-mt-surface2"
                       >
                         Clear Source
                       </button>
@@ -4114,24 +4114,24 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
 
             {activeTool === 'eyedropper' && (
               <div className="border-t pt-3">
-                <p className="font-semibold text-gray-700 text-xs uppercase tracking-wide mb-2">Color Picker</p>
-                <p className="text-[11px] text-gray-500 mb-2">Click anywhere on the image to pick its color — sets the Brush color.</p>
+                <p className="font-semibold text-mt-ink text-xs uppercase tracking-wide mb-2">Color Picker</p>
+                <p className="text-[11px] text-mt-muted mb-2">Click anywhere on the image to pick its color — sets the Brush color.</p>
                 <div className="flex items-center gap-2">
                   <span className="w-8 h-6 border rounded" style={{ background: brushColor }} />
-                  <span className="text-[11px] text-gray-600 font-mono">{brushColor}</span>
+                  <span className="text-[11px] text-mt-muted font-mono">{brushColor}</span>
                 </div>
               </div>
             )}
 
             {activeTool === 'paint-bucket' && (
               <div className="border-t pt-3">
-                <p className="font-semibold text-gray-700 text-xs uppercase tracking-wide mb-2">Paint Bucket</p>
-                <p className="text-[11px] text-gray-500 mb-2">Click a region to fill connected, similarly-colored pixels with the current color.</p>
+                <p className="font-semibold text-mt-ink text-xs uppercase tracking-wide mb-2">Paint Bucket</p>
+                <p className="text-[11px] text-mt-muted mb-2">Click a region to fill connected, similarly-colored pixels with the current color.</p>
                 <div className="flex items-center gap-2 mb-2">
-                  <label className="text-[11px] text-gray-500">Color</label>
+                  <label className="text-[11px] text-mt-muted">Color</label>
                   <input type="color" value={brushColor} onChange={(e) => setBrushColor(e.target.value)} className="w-11 h-11 border rounded cursor-pointer" />
                 </div>
-                <div className="flex justify-between text-[11px] text-gray-500 mb-0.5">
+                <div className="flex justify-between text-[11px] text-mt-muted mb-0.5">
                   <span>Tolerance</span>
                   <span>{fillTolerance}</span>
                 </div>
@@ -4148,11 +4148,11 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
 
             {activeTool === 'skew' && (
               <div className="border-t pt-3">
-                <p className="font-semibold text-gray-700 text-xs uppercase tracking-wide mb-2">Skew</p>
-                <p className="text-[11px] text-gray-500 mb-2">
+                <p className="font-semibold text-mt-ink text-xs uppercase tracking-wide mb-2">Skew</p>
+                <p className="text-[11px] text-mt-muted mb-2">
                   {imageRef.current ? 'Skews the active layer along X/Y, in degrees.' : 'Select a layer first.'}
                 </p>
-                <label className="text-[11px] text-gray-500 block mb-0.5">Skew X (°)</label>
+                <label className="text-[11px] text-mt-muted block mb-0.5">Skew X (°)</label>
                 <input
                   type="text"
                   key={`skewx-${imageRef.current?.__layerId}-${imageRef.current?.skewX ?? 0}`}
@@ -4174,7 +4174,7 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
                   }}
                   className="w-full text-xs border rounded px-2 py-1 mb-2 disabled:opacity-40"
                 />
-                <label className="text-[11px] text-gray-500 block mb-0.5">Skew Y (°)</label>
+                <label className="text-[11px] text-mt-muted block mb-0.5">Skew Y (°)</label>
                 <input
                   type="text"
                   key={`skewy-${imageRef.current?.__layerId}-${imageRef.current?.skewY ?? 0}`}
@@ -4213,15 +4213,15 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
 
             {activeTool === 'gradient' && (
               <div className="border-t pt-3">
-                <p className="font-semibold text-gray-700 text-xs uppercase tracking-wide mb-2">Gradient</p>
-                <p className="text-[11px] text-gray-500 mb-2">Click and drag across the image to draw a linear gradient.</p>
+                <p className="font-semibold text-mt-ink text-xs uppercase tracking-wide mb-2">Gradient</p>
+                <p className="text-[11px] text-mt-muted mb-2">Click and drag across the image to draw a linear gradient.</p>
                 <div className="flex items-center gap-2 mb-2">
-                  <label className="text-[11px] text-gray-500">From</label>
+                  <label className="text-[11px] text-mt-muted">From</label>
                   <input type="color" value={gradientColor1} onChange={(e) => setGradientColor1(e.target.value)} className="w-11 h-11 border rounded cursor-pointer" />
-                  <label className="text-[11px] text-gray-500">To</label>
+                  <label className="text-[11px] text-mt-muted">To</label>
                   <input type="color" value={gradientColor2} onChange={(e) => setGradientColor2(e.target.value)} className="w-11 h-11 border rounded cursor-pointer" />
                 </div>
-                <div className="flex justify-between text-[11px] text-gray-500 mb-0.5">
+                <div className="flex justify-between text-[11px] text-mt-muted mb-0.5">
                   <span>Opacity</span>
                   <span>{gradientOpacity.toFixed(2)}</span>
                 </div>
@@ -4231,11 +4231,11 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
 
             {activeTool === 'mask-color-range' && (
               <div className="border-t pt-3">
-                <p className="font-semibold text-gray-700 text-xs uppercase tracking-wide mb-2">Color Range Mask</p>
-                <p className="text-[11px] text-gray-500 mb-2">
+                <p className="font-semibold text-mt-ink text-xs uppercase tracking-wide mb-2">Color Range Mask</p>
+                <p className="text-[11px] text-mt-muted mb-2">
                   Click a color anywhere on the image — every pixel close enough to it (regardless of position) becomes the new mask. Replaces any existing mask.
                 </p>
-                <div className="flex justify-between text-[11px] text-gray-500 mb-0.5">
+                <div className="flex justify-between text-[11px] text-mt-muted mb-0.5">
                   <span>Tolerance</span>
                   <span>{colorRangeTolerance}</span>
                 </div>
@@ -4247,7 +4247,7 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
                   onChange={(e) => setColorRangeTolerance(parseInt(e.target.value))}
                   className="w-full mb-2"
                 />
-                <label className="flex items-center gap-1.5 text-[11px] text-gray-600">
+                <label className="flex items-center gap-1.5 text-[11px] text-mt-muted">
                   <input type="checkbox" checked={colorRangeInvert} onChange={(e) => setColorRangeInvert(e.target.checked)} />
                   Invert (mask everything EXCEPT the matched color)
                 </label>
@@ -4256,8 +4256,8 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
 
             {activeTool === 'mask-gradient' && (
               <div className="border-t pt-3">
-                <p className="font-semibold text-gray-700 text-xs uppercase tracking-wide mb-2">Gradient Mask</p>
-                <p className="text-[11px] text-gray-500 mb-2">
+                <p className="font-semibold text-mt-ink text-xs uppercase tracking-wide mb-2">Gradient Mask</p>
+                <p className="text-[11px] text-mt-muted mb-2">
                   {gradientMaskStyle === 'radial'
                     ? 'Click and drag out from a center point — a radial black-to-white gradient (black at the center, white at the drag radius) becomes the new mask. Replaces any existing mask.'
                     : 'Click and drag across the image — a linear black-to-white gradient along that line becomes the new mask (white = revealed, black = hidden). Replaces any existing mask.'}
@@ -4265,18 +4265,18 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
                 <div className="grid grid-cols-2 gap-1.5 mb-2">
                   <button
                     onClick={() => setGradientMaskStyle('linear')}
-                    className={`text-[11px] px-2 py-1 border rounded ${gradientMaskStyle === 'linear' ? 'bg-gray-800 text-white' : ''}`}
+                    className={`text-[11px] px-2 py-1 border rounded ${gradientMaskStyle === 'linear' ? 'bg-mt-accent text-white' : ''}`}
                   >
                     Linear
                   </button>
                   <button
                     onClick={() => setGradientMaskStyle('radial')}
-                    className={`text-[11px] px-2 py-1 border rounded ${gradientMaskStyle === 'radial' ? 'bg-gray-800 text-white' : ''}`}
+                    className={`text-[11px] px-2 py-1 border rounded ${gradientMaskStyle === 'radial' ? 'bg-mt-accent text-white' : ''}`}
                   >
                     Radial
                   </button>
                 </div>
-                <label className="flex items-center gap-1.5 text-[11px] text-gray-600">
+                <label className="flex items-center gap-1.5 text-[11px] text-mt-muted">
                   <input type="checkbox" checked={gradientMaskInvert} onChange={(e) => setGradientMaskInvert(e.target.checked)} />
                   Invert
                 </label>
@@ -4285,13 +4285,13 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
 
             {activeTool === 'levels' && (
               <div className="border-t pt-3">
-                <p className="font-semibold text-gray-700 text-xs uppercase tracking-wide mb-2">Levels</p>
+                <p className="font-semibold text-mt-ink text-xs uppercase tracking-wide mb-2">Levels</p>
                 {([
                   ['inputBlack', 'Input black', 0, 254],
                   ['inputWhite', 'Input white', 1, 255],
                 ] as [keyof LevelsSettings, string, number, number][]).map(([key, label, min, max]) => (
                   <div key={key} className="mb-2">
-                    <div className="flex justify-between text-[11px] text-gray-500 mb-0.5">
+                    <div className="flex justify-between text-[11px] text-mt-muted mb-0.5">
                       <span>{label}</span>
                       <span>{levels[key]}</span>
                     </div>
@@ -4306,7 +4306,7 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
                   </div>
                 ))}
                 <div className="mb-2">
-                  <div className="flex justify-between text-[11px] text-gray-500 mb-0.5">
+                  <div className="flex justify-between text-[11px] text-mt-muted mb-0.5">
                     <span>Gamma</span>
                     <span>{levels.gamma.toFixed(2)}</span>
                   </div>
@@ -4321,15 +4321,15 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
                   />
                 </div>
                 <div className="flex gap-1.5">
-                  <button onClick={() => setLevels(DEFAULT_LEVELS)} className="flex-1 text-[11px] px-2 py-1.5 border rounded hover:bg-gray-50">Reset</button>
-                  <button onClick={applyLevelsNow} className="flex-1 text-[11px] px-2 py-1.5 border rounded bg-gray-800 text-white hover:bg-gray-700">Apply</button>
+                  <button onClick={() => setLevels(DEFAULT_LEVELS)} className="flex-1 text-[11px] px-2 py-1.5 border rounded hover:bg-mt-surface2">Reset</button>
+                  <button onClick={applyLevelsNow} className="flex-1 text-[11px] px-2 py-1.5 border rounded bg-mt-accent text-white hover:bg-mt-accent/90">Apply</button>
                 </div>
               </div>
             )}
 
             {activeTool === 'hue-sat' && (
               <div className="border-t pt-3">
-                <p className="font-semibold text-gray-700 text-xs uppercase tracking-wide mb-2">Hue / Saturation</p>
+                <p className="font-semibold text-mt-ink text-xs uppercase tracking-wide mb-2">Hue / Saturation</p>
                 {hasSelection && <p className="text-[11px] text-amber-600 mb-2">Applies only within the active selection.</p>}
                 {([
                   ['hue', 'Hue', -180, 180],
@@ -4337,7 +4337,7 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
                   ['lightness', 'Lightness', -100, 100],
                 ] as [keyof HueSaturationSettings, string, number, number][]).map(([key, label, min, max]) => (
                   <div key={key} className="mb-2">
-                    <div className="flex justify-between text-[11px] text-gray-500 mb-0.5">
+                    <div className="flex justify-between text-[11px] text-mt-muted mb-0.5">
                       <span>{label}</span>
                       <span>{hueSat[key]}</span>
                     </div>
@@ -4352,39 +4352,39 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
                   </div>
                 ))}
                 <div className="flex gap-1.5">
-                  <button onClick={() => setHueSat(DEFAULT_HUE_SATURATION)} className="flex-1 text-[11px] px-2 py-1.5 border rounded hover:bg-gray-50">Reset</button>
-                  <button onClick={applyHueSaturationNow} className="flex-1 text-[11px] px-2 py-1.5 border rounded bg-gray-800 text-white hover:bg-gray-700">Apply</button>
+                  <button onClick={() => setHueSat(DEFAULT_HUE_SATURATION)} className="flex-1 text-[11px] px-2 py-1.5 border rounded hover:bg-mt-surface2">Reset</button>
+                  <button onClick={applyHueSaturationNow} className="flex-1 text-[11px] px-2 py-1.5 border rounded bg-mt-accent text-white hover:bg-mt-accent/90">Apply</button>
                 </div>
               </div>
             )}
 
             {(activeTool === 'pen' || activeTool === 'direct') && (
               <div className="border-t pt-3">
-                <p className="font-semibold text-gray-700 text-xs uppercase tracking-wide mb-2">
+                <p className="font-semibold text-mt-ink text-xs uppercase tracking-wide mb-2">
                   {activeTool === 'pen' ? 'Pen' : 'Direct Selection'}
                 </p>
-                <p className="text-[11px] text-gray-500 mb-2">
+                <p className="text-[11px] text-mt-muted mb-2">
                   {activeTool === 'pen'
                     ? 'Click to place anchors, drag for curve handles. Enter finishes an open path; click the first anchor to close it. Esc cancels.'
                     : 'Drag an anchor to move it. Alt/Option-click toggles corner/smooth. Click a green square to add an anchor. Delete removes the selected anchor.'}
                 </p>
                 {hasVectorPath && (
-                  <button onClick={addPathToMask} className="w-full text-[11px] px-2 py-1.5 border rounded hover:bg-gray-50">Add Path to Mask</button>
+                  <button onClick={addPathToMask} className="w-full text-[11px] px-2 py-1.5 border rounded hover:bg-mt-surface2">Add Path to Mask</button>
                 )}
               </div>
             )}
 
             {activeTool === 'patch' && (
               <div className="border-t pt-3">
-                <p className="font-semibold text-gray-700 text-xs uppercase tracking-wide mb-2">Patch</p>
-                <p className="text-[11px] text-gray-500 mb-2">
+                <p className="font-semibold text-mt-ink text-xs uppercase tracking-wide mb-2">Patch</p>
+                <p className="text-[11px] text-mt-muted mb-2">
                   {patchPhase === 'drawing'
                     ? 'Drag a loop around the area to fix.'
                     : patchPhase === 'dragging'
                     ? 'Drop to patch from here.'
                     : 'Drag the selected area onto a clean part of the image. Esc cancels.'}
                 </p>
-                <div className="flex justify-between text-[11px] text-gray-500 mb-0.5">
+                <div className="flex justify-between text-[11px] text-mt-muted mb-0.5">
                   <span>Feather</span>
                   <span>{patchFeather}px</span>
                 </div>
@@ -4394,16 +4394,16 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
 
             {activeTool === 'red-eye' && (
               <div className="border-t pt-3">
-                <p className="font-semibold text-gray-700 text-xs uppercase tracking-wide mb-2">Red Eye</p>
-                <p className="text-[11px] text-gray-500 mb-2">
+                <p className="font-semibold text-mt-ink text-xs uppercase tracking-wide mb-2">Red Eye</p>
+                <p className="text-[11px] text-mt-muted mb-2">
                   Click directly on a red pupil — real red-dominant pixels within this radius are desaturated and darkened.
                 </p>
-                <div className="flex justify-between text-[11px] text-gray-500 mb-0.5">
+                <div className="flex justify-between text-[11px] text-mt-muted mb-0.5">
                   <span>Pupil size</span>
                   <span>{redEyeRadius}px</span>
                 </div>
                 <input type="range" min={4} max={100} value={redEyeRadius} onChange={(e) => setRedEyeRadius(parseInt(e.target.value))} className="w-full mb-2" />
-                <div className="flex justify-between text-[11px] text-gray-500 mb-0.5">
+                <div className="flex justify-between text-[11px] text-mt-muted mb-0.5">
                   <span>Darken amount</span>
                   <span>{Math.round(redEyeDarken * 100)}%</span>
                 </div>
@@ -4413,7 +4413,7 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
 
             <div className="border-t pt-3">
               <div className="flex items-center justify-between mb-2">
-                <p className="font-semibold text-gray-700 text-xs uppercase tracking-wide">Mask — {activeLayerName}</p>
+                <p className="font-semibold text-mt-ink text-xs uppercase tracking-wide">Mask — {activeLayerName}</p>
                 {hasMask && (
                   <span className="w-8 h-8 rounded border overflow-hidden bg-[repeating-conic-gradient(#e5e7eb_0_25%,white_0_50%)] bg-[length:6px_6px]">
                     {maskThumbUrl && <img src={maskThumbUrl} alt="Mask preview" className="w-full h-full object-cover" />}
@@ -4421,21 +4421,21 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
                 )}
               </div>
               {!hasMask ? (
-                <p className="text-[11px] text-gray-400 mb-2">
+                <p className="text-[11px] text-mt-faint mb-2">
                   Use the Pen tool + "Add Path to Mask", a selection's "Add to Mask", or the Mask Reveal/Hide brushes (Paths group / Mask group in the toolbar) to add a real, editable layer mask — black hides, white reveals, gray is partial.
                 </p>
               ) : (
                 <div className="flex flex-col gap-1.5">
                   <div className="grid grid-cols-2 gap-1.5">
-                    <button onClick={toggleMaskEnabled} className="text-[11px] px-2 py-1 border rounded hover:bg-gray-50">
+                    <button onClick={toggleMaskEnabled} className="text-[11px] px-2 py-1 border rounded hover:bg-mt-surface2">
                       {maskEnabled ? 'Disable' : 'Enable'}
                     </button>
-                    <button onClick={toggleMaskInverted} className="text-[11px] px-2 py-1 border rounded hover:bg-gray-50">
+                    <button onClick={toggleMaskInverted} className="text-[11px] px-2 py-1 border rounded hover:bg-mt-surface2">
                       {maskInverted ? 'Un-invert' : 'Invert'}
                     </button>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <span className="text-[11px] text-gray-500 shrink-0">Feather</span>
+                    <span className="text-[11px] text-mt-muted shrink-0">Feather</span>
                     <input type="range" min={0} max={40} value={maskFeather} onChange={(e) => setMaskFeather(parseInt(e.target.value))} className="flex-1" />
                     <button onClick={applyMaskFeather} disabled={maskFeather <= 0} className="text-[11px] px-2 py-1 border rounded disabled:opacity-30">Apply</button>
                   </div>
@@ -4447,26 +4447,26 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
             </div>
 
             <div className="border-t pt-3">
-              <p className="font-semibold text-gray-700 text-xs uppercase tracking-wide mb-2">Luminosity Mask</p>
-              <p className="text-[11px] text-gray-400 mb-2">
+              <p className="font-semibold text-mt-ink text-xs uppercase tracking-wide mb-2">Luminosity Mask</p>
+              <p className="text-[11px] text-mt-faint mb-2">
                 Generates a mask directly from this layer's own brightness — no click or drag needed, unlike Gradient/Color Range. Replaces any existing mask.
               </p>
-              <label className="flex items-center gap-1.5 text-[11px] text-gray-600 mb-2">
+              <label className="flex items-center gap-1.5 text-[11px] text-mt-muted mb-2">
                 <input type="checkbox" checked={luminosityMaskInvert} onChange={(e) => setLuminosityMaskInvert(e.target.checked)} />
                 Invert (dark areas revealed instead of bright)
               </label>
-              <button onClick={applyLuminosityMask} className="w-full text-[11px] px-2 py-1.5 border rounded hover:bg-gray-50">Generate Luminosity Mask</button>
+              <button onClick={applyLuminosityMask} className="w-full text-[11px] px-2 py-1.5 border rounded hover:bg-mt-surface2">Generate Luminosity Mask</button>
             </div>
 
             <div className="border-t pt-3">
-              <p className="font-semibold text-gray-700 text-xs uppercase tracking-wide mb-2">Background Removal</p>
-              <p className="text-[11px] text-gray-400 mb-2">Heuristic edge-color removal — works best on a flat background, not ML segmentation.</p>
-              <div className="flex justify-between text-[11px] text-gray-500 mb-0.5">
+              <p className="font-semibold text-mt-ink text-xs uppercase tracking-wide mb-2">Background Removal</p>
+              <p className="text-[11px] text-mt-faint mb-2">Heuristic edge-color removal — works best on a flat background, not ML segmentation.</p>
+              <div className="flex justify-between text-[11px] text-mt-muted mb-0.5">
                 <span>Tolerance</span>
                 <span>{bgTolerance}</span>
               </div>
               <input type="range" min={0} max={100} value={bgTolerance} onChange={(e) => setBgTolerance(parseInt(e.target.value))} className="w-full mb-2" />
-              <button onClick={removeBackground} className="w-full text-[11px] px-2 py-1.5 border rounded hover:bg-gray-50">Remove Background</button>
+              <button onClick={removeBackground} className="w-full text-[11px] px-2 py-1.5 border rounded hover:bg-mt-surface2">Remove Background</button>
             </div>
 
             {(() => {
@@ -4475,13 +4475,13 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
               if (stack.length <= 1) return null;
               return (
                 <div className="border-t pt-3">
-                  <p className="font-semibold text-gray-700 text-xs uppercase tracking-wide mb-2">History — {activeLayerName}</p>
+                  <p className="font-semibold text-mt-ink text-xs uppercase tracking-wide mb-2">History — {activeLayerName}</p>
                   <div className="flex flex-col gap-0.5 max-h-40 overflow-y-auto">
                     {stack.map((_entry, i) => (
                       <button
                         key={i}
                         onClick={() => restoreLayerHistory(imageRef.current, i)}
-                        className={`text-left text-[11px] px-2 py-1 rounded ${i === idx ? 'bg-gray-800 text-white' : 'hover:bg-gray-100 text-gray-600'}`}
+                        className={`text-left text-[11px] px-2 py-1 rounded ${i === idx ? 'bg-mt-accent text-white' : 'hover:bg-mt-surface2 text-mt-muted'}`}
                       >
                         {i === 0 ? 'Original' : `Step ${i}`}
                       </button>
@@ -4499,7 +4499,7 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
         </div>
       </div>
 
-      <div className="h-9 border-t bg-white flex items-center justify-between px-3 text-[11px] text-gray-500 shrink-0">
+      <div className="h-9 border-t bg-mt-surface flex items-center justify-between px-3 text-[11px] text-mt-muted shrink-0">
         <div className="flex items-center gap-2">
           <button onClick={openResizeDialog} className="hover:underline" title="Resize Image / DPI">
             {docSize.w} × {docSize.h} px
@@ -4512,7 +4512,7 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
           )}
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={zoomOut} className="px-2 py-0.5 border rounded hover:bg-gray-50">−</button>
+          <button onClick={zoomOut} className="px-2 py-0.5 border rounded hover:bg-mt-surface2">−</button>
           <select
             value={ZOOM_PRESETS.includes(zoomPct) ? zoomPct : ''}
             onChange={(e) => e.target.value && setZoomLevel(parseInt(e.target.value))}
@@ -4523,17 +4523,17 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
               <option key={p} value={p}>{p}%</option>
             ))}
           </select>
-          <button onClick={zoomIn} className="px-2 py-0.5 border rounded hover:bg-gray-50">+</button>
-          <button onClick={fitToView} className="px-2 py-0.5 border rounded hover:bg-gray-50">Fit</button>
-          <button onClick={() => setZoomLevel(100)} className="px-2 py-0.5 border rounded hover:bg-gray-50">100%</button>
+          <button onClick={zoomIn} className="px-2 py-0.5 border rounded hover:bg-mt-surface2">+</button>
+          <button onClick={fitToView} className="px-2 py-0.5 border rounded hover:bg-mt-surface2">Fit</button>
+          <button onClick={() => setZoomLevel(100)} className="px-2 py-0.5 border rounded hover:bg-mt-surface2">100%</button>
         </div>
       </div>
 
       {showResizeDialog && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-6" onClick={() => setShowResizeDialog(false)}>
-          <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-xl shadow-xl w-full max-w-xs p-4">
+          <div onClick={(e) => e.stopPropagation()} className="bg-mt-surface rounded-xl shadow-xl w-full max-w-xs p-4">
             <div className="flex items-center justify-between mb-3">
-              <p className="font-semibold text-sm text-gray-800">Resize Image</p>
+              <p className="font-semibold text-sm text-mt-ink">Resize Image</p>
               <select
                 value={resizeUnit}
                 onChange={(e) => setResizeUnit(e.target.value as DocUnit)}
@@ -4549,7 +4549,7 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
             </div>
             <div className="flex items-center gap-2 mb-2">
               <div className="flex-1">
-                <label className="text-[11px] text-gray-500">Width ({resizeUnit})</label>
+                <label className="text-[11px] text-mt-muted">Width ({resizeUnit})</label>
                 <input
                   type="text"
                   inputMode="decimal"
@@ -4579,7 +4579,7 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
                 />
               </div>
               <div className="flex-1">
-                <label className="text-[11px] text-gray-500">Height ({resizeUnit})</label>
+                <label className="text-[11px] text-mt-muted">Height ({resizeUnit})</label>
                 <input
                   type="text"
                   inputMode="decimal"
@@ -4597,7 +4597,7 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
                 />
               </div>
             </div>
-            <label className="flex items-center gap-1.5 text-[11px] text-gray-600 mb-3">
+            <label className="flex items-center gap-1.5 text-[11px] text-mt-muted mb-3">
               <input
                 type="checkbox"
                 checked={resizeInput.lockAspect}
@@ -4606,7 +4606,7 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
               Lock aspect ratio
             </label>
             <div className="mb-3">
-              <label className="text-[11px] text-gray-500">DPI</label>
+              <label className="text-[11px] text-mt-muted">DPI</label>
               <input
                 type="number"
                 min={1}
@@ -4621,14 +4621,14 @@ export const PhotoEditorWorkspace = forwardRef<PhotoEditorHandle, Props>(functio
               const dpi = parseFloat(resizeInput.dpi);
               const valid = Number.isFinite(w) && Number.isFinite(h) && Number.isFinite(dpi) && dpi > 0;
               return (
-                <p className="text-[11px] text-gray-400 mb-3">
+                <p className="text-[11px] text-mt-faint mb-3">
                   {valid ? `Prints at ${(w / dpi).toFixed(2)} × ${(h / dpi).toFixed(2)} in at ${dpi} DPI` : ''}
                 </p>
               );
             })()}
             <div className="flex gap-2">
               <button onClick={() => setShowResizeDialog(false)} className="flex-1 text-xs px-3 py-2 rounded-full border">Cancel</button>
-              <button onClick={applyResizeImage} className="flex-1 text-xs px-3 py-2 rounded-full bg-gray-800 text-white font-semibold">Apply</button>
+              <button onClick={applyResizeImage} className="flex-1 text-xs px-3 py-2 rounded-full bg-mt-accent text-white font-semibold">Apply</button>
             </div>
           </div>
         </div>

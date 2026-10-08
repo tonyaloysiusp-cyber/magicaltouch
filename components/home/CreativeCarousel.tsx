@@ -72,7 +72,7 @@ export function CreativeCarousel() {
       <Reveal>
         <div className="flex items-end justify-between mb-6">
           <div>
-            <p className="text-xs font-semibold text-[#6C4FD1] dark:text-[#B9A6F2] tracking-wide uppercase">
+            <p className="text-xs font-semibold text-mt-accent dark:text-mt-accent tracking-wide uppercase">
               Creative possibilities
             </p>
             <h2 className="mt-2 font-[family-name:var(--font-display)] text-4xl sm:text-5xl leading-[1.05] tracking-tight">
@@ -83,14 +83,14 @@ export function CreativeCarousel() {
             <button
               onClick={() => goTo(index - 1)}
               aria-label="Previous slide"
-              className="w-9 h-9 flex items-center justify-center rounded-full border border-black/10 dark:border-white/15 text-[#17161B] dark:text-white hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
+              className="w-9 h-9 flex items-center justify-center rounded-full border border-black/10 dark:border-white/15 text-mt-ink dark:text-white hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
             >
               <ChevronLeft size={16} />
             </button>
             <button
               onClick={() => goTo(index + 1)}
               aria-label="Next slide"
-              className="w-9 h-9 flex items-center justify-center rounded-full border border-black/10 dark:border-white/15 text-[#17161B] dark:text-white hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
+              className="w-9 h-9 flex items-center justify-center rounded-full border border-black/10 dark:border-white/15 text-mt-ink dark:text-white hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
             >
               <ChevronRight size={16} />
             </button>
@@ -115,11 +115,11 @@ export function CreativeCarousel() {
                   {/* Soft translucent circles for depth, echoing the day/night
                       ArtworkPanel's ambient-blob treatment elsewhere on this
                       page -- pure CSS, no image assets. */}
-                  <div className="pointer-events-none absolute -right-16 -top-16 w-72 h-72 rounded-full bg-white/10" />
+                  <div className="pointer-events-none absolute -right-16 -top-16 w-72 h-72 rounded-full bg-mt-surface/10" />
                   <div className="pointer-events-none absolute -left-10 -bottom-24 w-64 h-64 rounded-full bg-black/10" />
 
                   <div className="relative max-w-md">
-                    <span className="inline-block text-[11px] font-semibold tracking-wide uppercase text-white/90 bg-white/15 rounded-full px-3 py-1">
+                    <span className="inline-block text-[11px] font-semibold tracking-wide uppercase text-white/90 bg-mt-surface/15 rounded-full px-3 py-1">
                       {slide.label}
                     </span>
                     <h3 className="mt-4 font-[family-name:var(--font-display)] text-2xl sm:text-3xl text-white leading-tight">
@@ -138,7 +138,7 @@ export function CreativeCarousel() {
                 key={slide.label}
                 onClick={() => goTo(i)}
                 aria-label={`Go to slide ${i + 1}`}
-                className={`h-1.5 rounded-full transition-all ${i === index ? 'w-6 bg-white' : 'w-1.5 bg-white/50 hover:bg-white/75'}`}
+                className={`h-1.5 rounded-full transition-all ${i === index ? 'w-6 bg-mt-surface' : 'w-1.5 bg-mt-surface/50 hover:bg-mt-surface/75'}`}
               />
             ))}
           </div>

@@ -1,5 +1,6 @@
 'use client';
 
+import { ThemeSwitch } from '@/components/ThemeSwitch';
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Sun, Moon, Lock, Unlock } from 'lucide-react';
@@ -138,7 +139,7 @@ export default function CreateDesignPage() {
 
   if (checkingAuth) {
     return (
-      <main className="min-h-screen flex items-center justify-center text-gray-400 dark:bg-[#111015] dark:text-[#B7B2C6]">
+      <main className="min-h-screen flex items-center justify-center text-mt-faint dark:bg-mt-bg dark:text-mt-muted">
         Loading...
       </main>
     );
@@ -152,7 +153,7 @@ export default function CreateDesignPage() {
 
   return (
     <div className={theme === 'dark' ? 'dark' : ''}>
-    <main className="min-h-screen bg-gray-50 dark:bg-[#111015] transition-colors duration-300">
+    <main className="min-h-screen bg-mt-bg dark:bg-mt-bg transition-colors duration-300">
       <div className="max-w-5xl mx-auto px-6 py-4">
         <BackBar href="/dashboard" label="Dashboard" />
       </div>
@@ -160,26 +161,19 @@ export default function CreateDesignPage() {
       <div className="max-w-5xl mx-auto px-6 pb-16">
         <div className="mb-8 flex items-center justify-between">
           <BrandLogo theme={theme} width={150} height={30} />
-          <button
-            onClick={toggleTheme}
-            title={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
-            aria-label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
-            className="p-2 rounded-full border border-black/10 dark:border-white/15 text-gray-500 dark:text-[#B7B2C6] hover:border-black/25 dark:hover:border-white/30 transition-colors"
-          >
-            {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
-          </button>
+          <ThemeSwitch theme={theme} onToggle={toggleTheme} />
         </div>
-        <h1 className="text-3xl font-bold text-gray-800 dark:text-[#F3F1F7] mb-1">Create New Design</h1>
-        <p className="text-gray-500 dark:text-[#B7B2C6] mb-8">Set up your document, then jump straight into the editor.</p>
+        <h1 className="text-3xl font-bold text-mt-ink dark:text-mt-ink mb-1">Create New Design</h1>
+        <p className="text-mt-muted dark:text-mt-muted mb-8">Set up your document, then jump straight into the editor.</p>
 
         <div className="grid md:grid-cols-[1fr_300px] gap-8">
           <div className="flex flex-col gap-8">
             {/* Presets */}
             <section>
-              <h2 className="text-sm font-semibold text-gray-700 dark:text-[#F3F1F7] mb-3">Presets</h2>
+              <h2 className="text-sm font-semibold text-mt-ink dark:text-mt-ink mb-3">Presets</h2>
               {PRESET_CATEGORIES.map((cat) => (
                 <div key={cat} className="mb-3">
-                  <p className="text-[11px] uppercase tracking-wide text-gray-400 dark:text-[#B7B2C6] mb-1.5">{cat}</p>
+                  <p className="text-[11px] uppercase tracking-wide text-mt-faint dark:text-mt-muted mb-1.5">{cat}</p>
                   <div className="flex flex-wrap gap-2">
                     {ARTBOARD_PRESETS.filter((p) => p.category === cat).map((p) => (
                       <button
@@ -188,7 +182,7 @@ export default function CreateDesignPage() {
                         className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
                           selectedPresetId === p.id
                             ? 'bg-brand-gradient text-white border-transparent'
-                            : 'border-gray-300 dark:border-white/15 text-gray-600 dark:text-[#B7B2C6] hover:border-gray-500 dark:hover:border-white/30'
+                            : 'border-mt-border dark:border-white/15 text-mt-muted dark:text-mt-muted hover:border-gray-500 dark:hover:border-white/30'
                         }`}
                       >
                         {p.label}
@@ -200,11 +194,11 @@ export default function CreateDesignPage() {
             </section>
 
             {/* Size */}
-            <section className="border dark:border-white/10 rounded-xl p-4 bg-white dark:bg-[#1B1926]">
-              <h2 className="text-sm font-semibold text-gray-700 dark:text-[#F3F1F7] mb-3">Canvas Size</h2>
+            <section className="border dark:border-white/10 rounded-xl p-4 bg-mt-surface dark:bg-mt-surface">
+              <h2 className="text-sm font-semibold text-mt-ink dark:text-mt-ink mb-3">Canvas Size</h2>
               <div className="grid grid-cols-[1fr_auto_1fr_1fr] gap-2 items-end">
                 <div>
-                  <label className="text-[11px] text-gray-500 dark:text-[#B7B2C6] block mb-1">Width</label>
+                  <label className="text-[11px] text-mt-muted dark:text-mt-muted block mb-1">Width</label>
                   <input
                     type="text"
                     key={`w-${unit}-${widthPx}`}
@@ -218,7 +212,7 @@ export default function CreateDesignPage() {
                         (e.target as HTMLInputElement).blur();
                       }
                     }}
-                    className="w-full text-sm border dark:border-white/15 dark:bg-[#242131] dark:text-[#F3F1F7] rounded px-3 py-2"
+                    className="w-full text-sm border dark:border-white/15 dark:bg-mt-surface2 dark:text-mt-ink rounded px-3 py-2"
                   />
                   {widthError && <p className="text-[10px] text-red-500 mt-1">{widthError}</p>}
                 </div>
@@ -229,14 +223,14 @@ export default function CreateDesignPage() {
                   aria-label={ratioLocked ? 'Unlock aspect ratio' : 'Lock aspect ratio'}
                   className={`mb-2 p-2 rounded-full border transition-colors ${
                     ratioLocked
-                      ? 'bg-gray-800 text-white border-gray-800'
-                      : 'border-gray-300 dark:border-white/15 text-gray-400 dark:text-[#B7B2C6] hover:border-gray-500 dark:hover:border-white/30'
+                      ? 'bg-mt-accent text-white border-mt-accent'
+                      : 'border-mt-border dark:border-white/15 text-mt-faint dark:text-mt-muted hover:border-gray-500 dark:hover:border-white/30'
                   }`}
                 >
                   {ratioLocked ? <Lock size={14} /> : <Unlock size={14} />}
                 </button>
                 <div>
-                  <label className="text-[11px] text-gray-500 dark:text-[#B7B2C6] block mb-1">Height</label>
+                  <label className="text-[11px] text-mt-muted dark:text-mt-muted block mb-1">Height</label>
                   <input
                     type="text"
                     key={`h-${unit}-${heightPx}`}
@@ -250,16 +244,16 @@ export default function CreateDesignPage() {
                         (e.target as HTMLInputElement).blur();
                       }
                     }}
-                    className="w-full text-sm border dark:border-white/15 dark:bg-[#242131] dark:text-[#F3F1F7] rounded px-3 py-2"
+                    className="w-full text-sm border dark:border-white/15 dark:bg-mt-surface2 dark:text-mt-ink rounded px-3 py-2"
                   />
                   {heightError && <p className="text-[10px] text-red-500 mt-1">{heightError}</p>}
                 </div>
                 <div>
-                  <label className="text-[11px] text-gray-500 dark:text-[#B7B2C6] block mb-1">Unit</label>
+                  <label className="text-[11px] text-mt-muted dark:text-mt-muted block mb-1">Unit</label>
                   <select
                     value={unit}
                     onChange={(e) => setUnit(e.target.value as DocUnit)}
-                    className="w-full text-sm border dark:border-white/15 dark:bg-[#242131] dark:text-[#F3F1F7] rounded px-3 py-2"
+                    className="w-full text-sm border dark:border-white/15 dark:bg-mt-surface2 dark:text-mt-ink rounded px-3 py-2"
                   >
                     <option value="px">px</option>
                     <option value="mm">mm</option>
@@ -271,7 +265,7 @@ export default function CreateDesignPage() {
               </div>
 
               <div className="mt-4">
-                <label className="text-[11px] text-gray-500 dark:text-[#B7B2C6] block mb-1.5">Orientation</label>
+                <label className="text-[11px] text-mt-muted dark:text-mt-muted block mb-1.5">Orientation</label>
                 <div className="flex gap-2">
                   {(['portrait', 'landscape', 'square'] as Orientation[]).map((o) => (
                     <button
@@ -279,8 +273,8 @@ export default function CreateDesignPage() {
                       onClick={() => applyOrientation(o)}
                       className={`text-xs px-3 py-1.5 rounded-full border capitalize transition-colors ${
                         orientation === o
-                          ? 'bg-gray-800 text-white border-gray-800'
-                          : 'border-gray-300 dark:border-white/15 text-gray-600 dark:text-[#B7B2C6] hover:border-gray-500 dark:hover:border-white/30'
+                          ? 'bg-mt-accent text-white border-mt-accent'
+                          : 'border-mt-border dark:border-white/15 text-mt-muted dark:text-mt-muted hover:border-gray-500 dark:hover:border-white/30'
                       }`}
                     >
                       {o}
@@ -291,8 +285,8 @@ export default function CreateDesignPage() {
             </section>
 
             {/* Resolution */}
-            <section className="border dark:border-white/10 rounded-xl p-4 bg-white dark:bg-[#1B1926]">
-              <h2 className="text-sm font-semibold text-gray-700 dark:text-[#F3F1F7] mb-3">Resolution</h2>
+            <section className="border dark:border-white/10 rounded-xl p-4 bg-mt-surface dark:bg-mt-surface">
+              <h2 className="text-sm font-semibold text-mt-ink dark:text-mt-ink mb-3">Resolution</h2>
               <div className="flex flex-wrap gap-2 items-center">
                 {DPI_OPTIONS.map((d) => (
                   <button
@@ -303,8 +297,8 @@ export default function CreateDesignPage() {
                     }}
                     className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
                       !customDpi && dpi === d
-                        ? 'bg-gray-800 text-white border-gray-800'
-                        : 'border-gray-300 dark:border-white/15 text-gray-600 dark:text-[#B7B2C6] hover:border-gray-500 dark:hover:border-white/30'
+                        ? 'bg-mt-accent text-white border-mt-accent'
+                        : 'border-mt-border dark:border-white/15 text-mt-muted dark:text-mt-muted hover:border-gray-500 dark:hover:border-white/30'
                     }`}
                   >
                     {d} DPI
@@ -313,7 +307,7 @@ export default function CreateDesignPage() {
                 <button
                   onClick={() => setCustomDpi(true)}
                   className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
-                    customDpi ? 'bg-gray-800 text-white border-gray-800' : 'border-gray-300 dark:border-white/15 text-gray-600 dark:text-[#B7B2C6] hover:border-gray-500 dark:hover:border-white/30'
+                    customDpi ? 'bg-mt-accent text-white border-mt-accent' : 'border-mt-border dark:border-white/15 text-mt-muted dark:text-mt-muted hover:border-gray-500 dark:hover:border-white/30'
                   }`}
                 >
                   Custom
@@ -324,19 +318,19 @@ export default function CreateDesignPage() {
                     min={1}
                     value={dpi}
                     onChange={(e) => setDpi(Math.max(1, parseInt(e.target.value) || 1))}
-                    className="w-20 text-xs border dark:border-white/15 dark:bg-[#242131] dark:text-[#F3F1F7] rounded px-2 py-1.5"
+                    className="w-20 text-xs border dark:border-white/15 dark:bg-mt-surface2 dark:text-mt-ink rounded px-2 py-1.5"
                   />
                 )}
               </div>
-              <p className="text-[11px] text-gray-400 dark:text-[#B7B2C6] mt-2">
+              <p className="text-[11px] text-mt-faint dark:text-mt-muted mt-2">
                 Used for the preflight image-resolution check and print export sizing. This is a real
                 document setting the editor reads back, not a decorative label.
               </p>
             </section>
 
             {/* Background */}
-            <section className="border dark:border-white/10 rounded-xl p-4 bg-white dark:bg-[#1B1926]">
-              <h2 className="text-sm font-semibold text-gray-700 dark:text-[#F3F1F7] mb-3">Background</h2>
+            <section className="border dark:border-white/10 rounded-xl p-4 bg-mt-surface dark:bg-mt-surface">
+              <h2 className="text-sm font-semibold text-mt-ink dark:text-mt-ink mb-3">Background</h2>
               <div className="flex gap-2 items-center">
                 {(['transparent', 'white', 'custom'] as Background[]).map((b) => (
                   <button
@@ -344,8 +338,8 @@ export default function CreateDesignPage() {
                     onClick={() => setBackground(b)}
                     className={`text-xs px-3 py-1.5 rounded-full border capitalize transition-colors ${
                       background === b
-                        ? 'bg-gray-800 text-white border-gray-800'
-                        : 'border-gray-300 dark:border-white/15 text-gray-600 dark:text-[#B7B2C6] hover:border-gray-500 dark:hover:border-white/30'
+                        ? 'bg-mt-accent text-white border-mt-accent'
+                        : 'border-mt-border dark:border-white/15 text-mt-muted dark:text-mt-muted hover:border-gray-500 dark:hover:border-white/30'
                     }`}
                   >
                     {b}
@@ -363,7 +357,7 @@ export default function CreateDesignPage() {
             </section>
 
             {/* Bleed & Safe Area */}
-            <section className="border dark:border-white/10 rounded-xl p-4 bg-white dark:bg-[#1B1926] grid grid-cols-2 gap-4">
+            <section className="border dark:border-white/10 rounded-xl p-4 bg-mt-surface dark:bg-mt-surface grid grid-cols-2 gap-4">
               <EdgeFields
                 label="Bleed"
                 unit={unit}
@@ -383,8 +377,8 @@ export default function CreateDesignPage() {
             </section>
 
             <section className="border rounded-xl p-4 bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800/40">
-              <h2 className="text-sm font-semibold text-gray-700 dark:text-[#F3F1F7] mb-1">Color Mode</h2>
-              <p className="text-[11px] text-gray-600 dark:text-[#B7B2C6] leading-relaxed">
+              <h2 className="text-sm font-semibold text-mt-ink dark:text-mt-ink mb-1">Color Mode</h2>
+              <p className="text-[11px] text-mt-muted dark:text-mt-muted leading-relaxed">
                 This document is edited in RGB — there is no in-browser CMYK color pipeline, so a CMYK
                 toggle here would just be a label with nothing behind it. Bleed, crop marks, and
                 registration marks are still prepared correctly for print handoff; full CMYK conversion
@@ -395,9 +389,9 @@ export default function CreateDesignPage() {
 
           {/* Preview + create */}
           <div className="flex flex-col gap-4">
-            <div className="border dark:border-white/10 rounded-xl p-4 bg-white dark:bg-[#1B1926] sticky top-4">
-              <p className="text-[11px] uppercase tracking-wide text-gray-400 dark:text-[#B7B2C6] mb-3">Preview</p>
-              <div className="flex items-center justify-center bg-gray-100 dark:bg-[#242131] rounded-lg p-4 min-h-[180px]">
+            <div className="border dark:border-white/10 rounded-xl p-4 bg-mt-surface dark:bg-mt-surface sticky top-4">
+              <p className="text-[11px] uppercase tracking-wide text-mt-faint dark:text-mt-muted mb-3">Preview</p>
+              <div className="flex items-center justify-center bg-mt-surface2 dark:bg-mt-surface2 rounded-lg p-4 min-h-[180px]">
                 <div
                   style={{
                     ...previewStyle,
@@ -408,10 +402,10 @@ export default function CreateDesignPage() {
                         ? customColor
                         : '#ffffff',
                   }}
-                  className="border border-gray-300 dark:border-white/15 shadow-sm max-w-full"
+                  className="border border-mt-border dark:border-white/15 shadow-sm max-w-full"
                 />
               </div>
-              <p className="text-xs text-gray-500 dark:text-[#B7B2C6] mt-3">
+              <p className="text-xs text-mt-muted dark:text-mt-muted mt-3">
                 {formatUnit(widthPx, unit)} × {formatUnit(heightPx, unit)} {unit} · {dpi} DPI
               </p>
               <button

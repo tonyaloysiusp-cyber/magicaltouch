@@ -44,16 +44,16 @@ export function HomePage() {
     <div className={theme === 'dark' ? 'dark' : ''}>
       <IntroAnimation theme={theme} />
       <main
-        className={`${display.variable} ${body.variable} font-[family-name:var(--font-body)] bg-white dark:bg-[#111015] text-[#17161B] dark:text-[#F3F1F7] transition-colors duration-300`}
+        className={`${display.variable} ${body.variable} font-[family-name:var(--font-body)] bg-mt-bg text-mt-ink transition-colors duration-300`}
       >
         <Navbar theme={theme} onToggleTheme={toggleTheme} />
         <Hero />
+        <TemplateShowcase />
         <BrandStory />
         <CreatePossibilities />
         <CreativeShowcase theme={theme} />
         <CreativeCarousel />
         <ProductWorkspace />
-        <TemplateShowcase />
         <Features />
         <HowItWorks />
         <CreatorSection />

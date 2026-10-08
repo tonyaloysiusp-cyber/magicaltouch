@@ -32,19 +32,19 @@ export function PreferencesModal({ open, onClose, returnToSelectAfterCreate, onT
     <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-6" onClick={onClose}>
       <div
         onClick={(e) => e.stopPropagation()}
-        className="bg-white rounded-xl shadow-xl w-full max-w-sm"
+        className="bg-mt-surface rounded-xl shadow-xl w-full max-w-sm"
       >
         <div className="flex items-center justify-between px-4 py-3 border-b">
           <div className="flex items-center gap-2">
-            <Settings size={16} className="text-gray-500" />
-            <p className="font-semibold text-sm text-gray-800">Preferences</p>
+            <Settings size={16} className="text-mt-muted" />
+            <p className="font-semibold text-sm text-mt-ink">Preferences</p>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-700">
+          <button onClick={onClose} className="text-mt-faint hover:text-mt-ink">
             <X size={16} />
           </button>
         </div>
         <div className="p-4 flex flex-col gap-3">
-          <label className="flex items-start gap-2.5 text-xs text-gray-700 cursor-pointer">
+          <label className="flex items-start gap-2.5 text-xs text-mt-ink cursor-pointer">
             <input
               type="checkbox"
               className="mt-0.5"
@@ -53,16 +53,16 @@ export function PreferencesModal({ open, onClose, returnToSelectAfterCreate, onT
             />
             <span>
               Return to Selection tool after creating an object
-              <span className="block text-[11px] text-gray-400 mt-0.5">
+              <span className="block text-[11px] text-mt-faint mt-0.5">
                 Off by default — Rectangle, Ellipse, Line, Polygon, Star and Pen stay active so you can draw several objects in a row, matching Illustrator's own behavior.
               </span>
             </span>
           </label>
 
-          <label className="flex items-center justify-between gap-3 text-xs text-gray-700 pt-1 border-t">
+          <label className="flex items-center justify-between gap-3 text-xs text-mt-ink pt-1 border-t">
             <span className="pt-2">
               Grid size (px)
-              <span className="block text-[11px] text-gray-400 mt-0.5">Spacing between grid lines and the snap-to-grid step.</span>
+              <span className="block text-[11px] text-mt-faint mt-0.5">Spacing between grid lines and the snap-to-grid step.</span>
             </span>
             <input
               type="number"

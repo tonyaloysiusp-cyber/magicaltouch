@@ -57,7 +57,7 @@ export function BrandStory() {
           <br />
           starts with an <span className="italic">idea.</span>
         </h2>
-        <p className="mt-6 text-base sm:text-lg text-[#4A4750] dark:text-[#B7B2C6] max-w-lg mx-auto leading-relaxed">
+        <p className="mt-6 text-base sm:text-lg text-mt-muted dark:text-mt-muted max-w-lg mx-auto leading-relaxed">
           Magical Touch gives that idea a place to become something real.
         </p>
       </Reveal>
@@ -69,8 +69,8 @@ export function BrandStory() {
               <div className="flex flex-col items-center gap-4 w-24 sm:w-32">
                 <StageVisual stage={i as 0 | 1 | 2} />
                 <div>
-                  <p className="text-sm font-semibold text-[#17161B] dark:text-[#F3F1F7]">{s.label}</p>
-                  <p className="mt-1 text-xs text-[#4A4750] dark:text-[#8A8496] leading-snug">{s.caption}</p>
+                  <p className="text-sm font-semibold text-mt-ink dark:text-mt-ink">{s.label}</p>
+                  <p className="mt-1 text-xs text-mt-muted dark:text-mt-faint leading-snug">{s.caption}</p>
                 </div>
               </div>
             </Reveal>

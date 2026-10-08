@@ -129,26 +129,26 @@ export function ShortcutsModal({ open, onClose, workspace = 'design' }: Props) {
     <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-6" onClick={onClose}>
       <div
         onClick={(e) => e.stopPropagation()}
-        className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[80vh] overflow-y-auto"
+        className="bg-mt-surface rounded-xl shadow-xl w-full max-w-lg max-h-[80vh] overflow-y-auto"
       >
-        <div className="flex items-center justify-between px-4 py-3 border-b sticky top-0 bg-white">
+        <div className="flex items-center justify-between px-4 py-3 border-b sticky top-0 bg-mt-surface">
           <div className="flex items-center gap-2">
-            <Keyboard size={16} className="text-gray-500" />
-            <p className="font-semibold text-sm text-gray-800">Keyboard shortcuts</p>
+            <Keyboard size={16} className="text-mt-muted" />
+            <p className="font-semibold text-sm text-mt-ink">Keyboard shortcuts</p>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-700">
+          <button onClick={onClose} className="text-mt-faint hover:text-mt-ink">
             <X size={16} />
           </button>
         </div>
         <div className="p-4 flex flex-col gap-5">
           {sections.map((section) => (
             <div key={section.title}>
-              <p className="text-[11px] uppercase tracking-wide text-gray-400 font-semibold mb-2">{section.title}</p>
+              <p className="text-[11px] uppercase tracking-wide text-mt-faint font-semibold mb-2">{section.title}</p>
               <div className="flex flex-col gap-1.5">
                 {section.items.map((s) => (
                   <div key={s.label} className="flex items-center justify-between text-xs py-1">
-                    <span className="text-gray-600">{s.label}</span>
-                    <kbd className="bg-gray-100 border border-gray-300 rounded px-2 py-0.5 font-mono text-[11px] text-gray-700 shrink-0 ml-3">
+                    <span className="text-mt-muted">{s.label}</span>
+                    <kbd className="bg-mt-surface2 border border-mt-border rounded px-2 py-0.5 font-mono text-[11px] text-mt-ink shrink-0 ml-3">
                       {s.keys}
                     </kbd>
                   </div>
@@ -156,7 +156,7 @@ export function ShortcutsModal({ open, onClose, workspace = 'design' }: Props) {
               </div>
             </div>
           ))}
-          <div className="text-[11px] text-gray-400 border-t pt-3">Press ? anytime to open this panel.</div>
+          <div className="text-[11px] text-mt-faint border-t pt-3">Press ? anytime to open this panel.</div>
         </div>
       </div>
     </div>

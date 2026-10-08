@@ -53,20 +53,20 @@ export function OpenDesignDialog({ currentDesignId, openDesignIds, onClose, onPi
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
       <div
-        className="bg-white rounded-xl shadow-xl w-[560px] max-h-[70vh] flex flex-col p-5"
+        className="bg-mt-surface rounded-xl shadow-xl w-[560px] max-h-[70vh] flex flex-col p-5"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-4">
-          <h2 className="font-semibold text-gray-800">Open a design</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-700 text-sm">
+          <h2 className="font-semibold text-mt-ink">Open a design</h2>
+          <button onClick={onClose} className="text-mt-faint hover:text-mt-ink text-sm">
             Close
           </button>
         </div>
 
-        {loading && <p className="text-sm text-gray-400">Loading your designs...</p>}
+        {loading && <p className="text-sm text-mt-faint">Loading your designs...</p>}
 
         {!loading && designs.length === 0 && (
-          <p className="text-sm text-gray-400">You don't have any saved designs yet.</p>
+          <p className="text-sm text-mt-faint">You don't have any saved designs yet.</p>
         )}
 
         {!loading && designs.length > 0 && (
@@ -78,7 +78,7 @@ export function OpenDesignDialog({ currentDesignId, openDesignIds, onClose, onPi
                 disabled={d.id === currentDesignId}
                 className="text-left border rounded-lg overflow-hidden hover:shadow-md transition disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                <div className="aspect-square bg-gray-100 flex items-center justify-center text-gray-300 text-[10px]">
+                <div className="aspect-square bg-mt-surface2 flex items-center justify-center text-mt-faint text-[10px]">
                   {d.thumbnail ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={d.thumbnail} alt={d.name} className="w-full h-full object-contain" />
@@ -86,7 +86,7 @@ export function OpenDesignDialog({ currentDesignId, openDesignIds, onClose, onPi
                     <span>{d.width}×{d.height}</span>
                   )}
                 </div>
-                <p className="text-xs font-medium text-gray-700 px-2 py-1.5 truncate">
+                <p className="text-xs font-medium text-mt-ink px-2 py-1.5 truncate">
                   {d.name}
                   {openDesignIds.includes(d.id) ? ' (open)' : ''}
                 </p>

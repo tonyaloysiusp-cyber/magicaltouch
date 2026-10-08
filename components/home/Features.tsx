@@ -51,9 +51,9 @@ function FeatureVisual({ colors, Icon }: { colors: [string, string]; Icon: typeo
       className="relative aspect-[4/3] w-full rounded-3xl overflow-hidden flex items-center justify-center shadow-[0_30px_60px_-30px_rgba(23,22,27,0.35)]"
       style={{ background: `linear-gradient(135deg, ${colors[0]}, ${colors[1]})` }}
     >
-      <span className="pointer-events-none absolute -right-10 -top-10 w-40 h-40 rounded-full bg-white/10" />
+      <span className="pointer-events-none absolute -right-10 -top-10 w-40 h-40 rounded-full bg-mt-surface/10" />
       <span className="pointer-events-none absolute -left-8 -bottom-14 w-36 h-36 rounded-full bg-black/10" />
-      <div className="relative w-20 h-20 rounded-2xl bg-white/15 backdrop-blur-sm flex items-center justify-center">
+      <div className="relative w-20 h-20 rounded-2xl bg-mt-surface/15 backdrop-blur-sm flex items-center justify-center">
         <Icon size={32} className="text-white" strokeWidth={1.75} />
       </div>
     </div>
@@ -64,7 +64,7 @@ export function Features() {
   return (
     <section id="features" className="max-w-6xl mx-auto px-6 py-24 space-y-20 sm:space-y-28">
       <Reveal>
-        <p className="text-xs font-semibold text-[#6C4FD1] dark:text-[#B9A6F2] tracking-wide uppercase">Features</p>
+        <p className="text-xs font-semibold text-mt-accent dark:text-mt-accent tracking-wide uppercase">Features</p>
       </Reveal>
 
       {FEATURES.map((f, i) => (
@@ -82,7 +82,7 @@ export function Features() {
               <h3 className="mt-3 font-[family-name:var(--font-display)] text-4xl sm:text-5xl leading-[1.05] tracking-tight">
                 {f.title}
               </h3>
-              <p className="mt-5 text-lg text-[#4A4750] dark:text-[#B7B2C6] leading-relaxed max-w-md">{f.body}</p>
+              <p className="mt-5 text-lg text-mt-muted dark:text-mt-muted leading-relaxed max-w-md">{f.body}</p>
             </div>
           </div>
         </Reveal>

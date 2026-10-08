@@ -57,7 +57,7 @@ export function IntroAnimation({ theme }: { theme: AppTheme }) {
       role="presentation"
       aria-hidden="true"
       data-intro-phase={phase}
-      className={`fixed inset-0 z-[9999] flex items-center justify-center bg-white dark:bg-[#111015] transition-opacity duration-400 ease-out ${
+      className={`fixed inset-0 z-[9999] flex items-center justify-center bg-mt-surface dark:bg-mt-bg transition-opacity duration-400 ease-out ${
         phase === 'leaving' ? 'opacity-0 pointer-events-none' : 'opacity-100'
       }`}
     >

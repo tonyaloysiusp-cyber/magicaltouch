@@ -1,5 +1,8 @@
 'use client';
 
+import { ThemeSwitch } from '@/components/ThemeSwitch';
+import { friendlyAuthError } from '@/lib/authErrors';
+import { Eye, EyeOff } from 'lucide-react';
 import { Suspense, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -19,25 +22,40 @@ function SignupForm() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [confirmSent, setConfirmSent] = useState(false);
+  const [showPw, setShowPw] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
   const next = searchParams.get('next') || '/dashboard';
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
     setError('');
+    const cleanEmail = email.trim().toLowerCase();
+    if (password.length < 8) {
+      setError('Please use at least 8 characters for your password.');
+      return;
+    }
+    setLoading(true);
 
     // The choice travels with the account until the e-mail is verified,
     // then the welcome step records it on the profile.
     const { data, error } = await supabase.auth.signUp({
-      email,
+      email: cleanEmail,
       password,
-      options: { data: { marketing_consent: marketingOptIn } },
+      options: {
+        data: { marketing_consent: marketingOptIn },
+        // The confirmation link brings people back to this site.
+        emailRedirectTo: `${window.location.origin}/login?confirmed=1${next !== '/dashboard' ? `&next=${encodeURIComponent(next)}` : ''}`,
+      },
     });
 
     if (error) {
-      setError(error.message);
+      setError(friendlyAuthError(error.message));
+      setLoading(false);
+    } else if (data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
+      // Supabase answers "success" for an email that is already
+      // registered (so addresses can't be probed); tell the person.
+      setError('An account with this email already exists. Please log in instead.');
       setLoading(false);
     } else if (!data.session) {
       // Email confirmation is required before a session exists.
@@ -46,7 +64,7 @@ function SignupForm() {
     } else {
       // Phone is optional contact info on the profile, not an auth
       // credential — this app's login stays email+password only.
-      const profile = await getOrCreateProfile(data.user!.id, email.split('@')[0]);
+      const profile = await getOrCreateProfile(data.user!.id, cleanEmail.split('@')[0]);
       if (profile && phone.trim()) await updateProfile(data.user!.id, { phone: phone.trim() });
       if (profile && marketingOptIn) {
         await supabase
@@ -59,20 +77,13 @@ function SignupForm() {
   };
 
   const ThemeToggle = () => (
-    <button
-      onClick={toggleTheme}
-      title={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
-      aria-label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
-      className="absolute top-6 right-6 p-2 rounded-full border border-black/10 dark:border-white/15 text-gray-500 dark:text-[#B7B2C6] hover:border-black/25 dark:hover:border-white/30 transition-colors"
-    >
-      {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
-    </button>
+    <ThemeSwitch theme={theme} onToggle={toggleTheme} className="absolute top-6 right-6" />
   );
 
   if (confirmSent) {
     return (
       <div className={theme === 'dark' ? 'dark' : ''}>
-      <main className="min-h-screen lg:grid lg:grid-cols-2 bg-white dark:bg-[#111015] transition-colors duration-300">
+      <main className="min-h-screen lg:grid lg:grid-cols-2 bg-mt-surface dark:bg-mt-bg transition-colors duration-300">
         <div className="hidden lg:block h-screen sticky top-0">
           <ArtworkPanel variant={theme === 'dark' ? 'night' : 'day'} />
         </div>
@@ -80,8 +91,8 @@ function SignupForm() {
         <ThemeToggle />
         <BrandLogo theme={theme} width={280} height={56} className="mb-8" />
         <div className="w-full max-w-sm text-center">
-          <h1 className="text-2xl font-bold mb-3 text-gray-800 dark:text-[#F3F1F7]">Check your email</h1>
-          <p className="text-sm text-gray-500 dark:text-[#B7B2C6]">
+          <h1 className="text-2xl font-bold mb-3 text-mt-ink dark:text-mt-ink">Check your email</h1>
+          <p className="text-sm text-mt-muted dark:text-mt-muted">
             We sent a confirmation link to <span className="font-medium">{email}</span>. Confirm your
             address, then log in to continue.
           </p>
@@ -100,7 +111,7 @@ function SignupForm() {
 
   return (
     <div className={theme === 'dark' ? 'dark' : ''}>
-    <main className="min-h-screen lg:grid lg:grid-cols-2 bg-white dark:bg-[#111015] transition-colors duration-300">
+    <main className="min-h-screen lg:grid lg:grid-cols-2 bg-mt-surface dark:bg-mt-bg transition-colors duration-300">
       <div className="hidden lg:block h-screen sticky top-0">
         <ArtworkPanel variant={theme === 'dark' ? 'night' : 'day'} />
       </div>
@@ -108,32 +119,45 @@ function SignupForm() {
       <ThemeToggle />
       <BrandLogo theme={theme} width={280} height={56} className="mb-8" />
       <div className="w-full max-w-sm">
-        <h1 className="text-2xl font-bold mb-6 text-center text-gray-800 dark:text-[#F3F1F7]">Create Your Account</h1>
+        <h1 className="text-2xl font-bold mb-6 text-center text-mt-ink dark:text-mt-ink">Create Your Account</h1>
         <form onSubmit={handleSignup} className="flex flex-col gap-4">
           <input
             type="email"
+            autoComplete="email"
             placeholder="Email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="border border-gray-300 dark:border-white/15 dark:bg-[#1B1926] dark:text-[#F3F1F7] p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-blue"
+            className="border border-mt-border bg-mt-surface text-mt-ink p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-blue"
             required
           />
-          <input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="border border-gray-300 dark:border-white/15 dark:bg-[#1B1926] dark:text-[#F3F1F7] p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-blue"
-            required
-          />
+          <div className="relative">
+            <input
+              type={showPw ? 'text' : 'password'}
+              placeholder="Password (at least 8 characters)"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete="new-password"
+              minLength={8}
+              className="w-full border border-mt-border bg-mt-surface text-mt-ink p-3 pr-11 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-blue"
+              required
+            />
+            <button
+              type="button"
+              onClick={() => setShowPw((v) => !v)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-mt-muted hover:text-mt-ink"
+              aria-label={showPw ? 'Hide password' : 'Show password'}
+            >
+              {showPw ? <EyeOff size={18} /> : <Eye size={18} />}
+            </button>
+          </div>
           <input
             type="tel"
             placeholder="Phone number (optional)"
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
-            className="border border-gray-300 dark:border-white/15 dark:bg-[#1B1926] dark:text-[#F3F1F7] p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-blue"
+            className="border border-mt-border bg-mt-surface text-mt-ink p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-blue"
           />
-          <label className="flex items-start gap-2 text-sm text-gray-600 dark:text-[#B7B2C6] cursor-pointer">
+          <label className="flex items-start gap-2 text-sm text-mt-muted dark:text-mt-muted cursor-pointer">
             <input
               type="checkbox"
               checked={marketingOptIn}
@@ -142,7 +166,7 @@ function SignupForm() {
             />
             <span>Send me new templates, offers and news by e-mail (optional — unsubscribe any time).</span>
           </label>
-          <p className="text-xs text-gray-400 dark:text-[#8A8496] -mt-1">
+          <p className="text-xs text-mt-faint dark:text-mt-faint -mt-1">
             By creating an account you agree to our{' '}
             <a href="/terms" className="underline">Terms of Service</a> and{' '}
             <a href="/privacy" className="underline">Privacy Policy</a>.
@@ -151,12 +175,12 @@ function SignupForm() {
           <button
             type="submit"
             disabled={loading}
-            className="bg-brand-gradient text-white font-semibold p-3 rounded-full shadow-md"
+            className="bg-brand-gradient text-white font-semibold p-3 rounded-full shadow-md disabled:opacity-60"
           >
             {loading ? 'Signing up...' : 'Sign Up'}
           </button>
         </form>
-        <p className="mt-4 text-center text-sm text-gray-500 dark:text-[#B7B2C6]">
+        <p className="mt-4 text-center text-sm text-mt-muted dark:text-mt-muted">
           Already have an account?{' '}
           <a
             href={`/login${next !== '/dashboard' ? `?next=${encodeURIComponent(next)}` : ''}`}

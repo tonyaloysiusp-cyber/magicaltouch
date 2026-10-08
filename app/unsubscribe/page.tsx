@@ -38,29 +38,29 @@ export default function UnsubscribePage() {
   };
 
   return (
-    <main className="min-h-screen bg-[#FAF9F6] flex flex-col items-center justify-center p-6 text-center text-[#14121F]">
+    <main className="min-h-screen bg-mt-bg flex flex-col items-center justify-center p-6 text-center text-mt-ink">
       <BrandLogo theme="light" width={220} height={44} className="mb-8" />
-      <div className="w-full max-w-md bg-white rounded-2xl border border-black/5 shadow-sm p-7">
+      <div className="w-full max-w-md bg-mt-surface rounded-2xl border border-black/5 shadow-sm p-7">
         {state === 'done' ? (
           <>
             <h1 className="text-2xl font-semibold mb-2">You&apos;re unsubscribed</h1>
-            <p className="text-sm text-[#4B4560]">
+            <p className="text-sm text-mt-muted">
               You won&apos;t receive offers or news from Magical Touch Design any more. Important account e-mails, like password resets, will still arrive.
             </p>
-            <p className="text-xs text-[#4B4560] mt-4">Changed your mind? You can turn offers back on from your Profile page.</p>
+            <p className="text-xs text-mt-muted mt-4">Changed your mind? You can turn offers back on from your Profile page.</p>
           </>
         ) : state === 'invalid' ? (
           <>
             <h1 className="text-2xl font-semibold mb-2">This link isn&apos;t valid</h1>
-            <p className="text-sm text-[#4B4560]">
+            <p className="text-sm text-mt-muted">
               Please use the Unsubscribe link from a recent e-mail, or turn off offers from your Profile page. You can also write to us at hellomagicaltouch.design@gmail.com.
             </p>
           </>
         ) : (
           <>
             <h1 className="text-2xl font-semibold mb-2">Unsubscribe from offers and news?</h1>
-            <p className="text-sm text-[#4B4560] mb-5">You&apos;ll still get important account e-mails.</p>
-            <label className="block text-left text-xs text-[#4B4560] mb-1">Reason (optional)</label>
+            <p className="text-sm text-mt-muted mb-5">You&apos;ll still get important account e-mails.</p>
+            <label className="block text-left text-xs text-mt-muted mb-1">Reason (optional)</label>
             <select value={reason} onChange={(e) => setReason(e.target.value)} className="w-full border rounded-lg px-3 py-2 text-sm mb-5">
               <option value="">Prefer not to say</option>
               {REASONS.map((r) => (
@@ -76,7 +76,7 @@ export default function UnsubscribePage() {
             </button>
           </>
         )}
-        <Link href="/" className="inline-block mt-6 text-sm text-[#6C4FD1]">Go to Magical Touch Design</Link>
+        <Link href="/" className="inline-block mt-6 text-sm text-mt-accent">Go to Magical Touch Design</Link>
       </div>
     </main>
   );

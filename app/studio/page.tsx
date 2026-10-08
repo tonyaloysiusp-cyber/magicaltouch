@@ -29,7 +29,7 @@ function StudioContent() {
   }, [router]);
 
   if (checkingAuth) {
-    return <div className="h-screen flex items-center justify-center text-sm text-gray-400">Checking access…</div>;
+    return <div className="h-screen flex items-center justify-center text-sm text-mt-faint">Checking access…</div>;
   }
 
   return <EditorShell documentId={documentId} />;
@@ -37,7 +37,7 @@ function StudioContent() {
 
 export default function StudioPage() {
   return (
-    <Suspense fallback={<div className="h-screen flex items-center justify-center text-sm text-gray-400">Loading…</div>}>
+    <Suspense fallback={<div className="h-screen flex items-center justify-center text-sm text-mt-faint">Loading…</div>}>
       <StudioContent />
     </Suspense>
   );

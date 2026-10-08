@@ -15,10 +15,17 @@ export function Hero() {
   };
 
   return (
-    <section className="max-w-6xl mx-auto px-6 pt-14 pb-20 md:pt-20">
+    <section className="relative">
+      {/* Soft dotted grid + gradient wash behind the hero */}
+      <div
+        className="pointer-events-none absolute inset-0 opacity-[0.35] dark:opacity-[0.18] [mask-image:radial-gradient(ellipse_at_center,#000_30%,transparent_75%)]"
+        style={{ backgroundImage: 'radial-gradient(rgb(var(--mt-muted)) 1px, transparent 1px)', backgroundSize: '22px 22px' }}
+      />
+      <div className="pointer-events-none absolute -top-32 right-0 w-[640px] h-[640px] rounded-full bg-gradient-to-br from-[#EC1E79]/20 via-[#8B6FC4]/20 to-[#3FA9E8]/20 blur-3xl" />
+    <div className="relative max-w-6xl mx-auto px-6 pt-14 pb-20 md:pt-20">
       <div className="grid lg:grid-cols-[1fr_1.15fr] gap-14 items-center">
         <Reveal>
-          <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#6C4FD1] dark:text-[#B9A6F2] tracking-wide uppercase">
+          <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-mt-accent dark:text-mt-accent tracking-wide uppercase">
             <Sparkles size={13} />
             <span>Your Creative Space</span>
           </div>
@@ -28,17 +35,17 @@ export function Hero() {
             <br />
             Design.
             <br />
-            <span className="italic bg-brand-gradient bg-clip-text text-transparent">Make it magical.</span>
+            <span className="italic mt-gradient-text animate-mt-shine">Make it magical.</span>
           </h1>
 
-          <p className="mt-7 text-lg text-[#4A4750] dark:text-[#B7B2C6] max-w-md leading-relaxed">
-            Your creative space for turning ideas into designs people remember.
+          <p className="mt-7 text-lg text-mt-muted dark:text-mt-muted max-w-md leading-relaxed">
+            Your creative space for turning ideas into designs people remember — start from 200+ templates or a blank canvas.
           </p>
 
           <div className="mt-8 flex flex-wrap gap-3">
             <button
               onClick={goToCreate}
-              className="relative overflow-hidden inline-flex items-center gap-2 text-sm font-semibold text-white px-6 py-3.5 rounded-full bg-brand-gradient shadow-[0_10px_24px_-8px_rgba(108,79,209,0.55)] hover:shadow-[0_14px_30px_-8px_rgba(108,79,209,0.65)] hover:-translate-y-0.5 transition-all before:content-[''] before:absolute before:inset-x-0 before:top-0 before:h-1/2 before:bg-white/25 before:rounded-t-full"
+              className="relative overflow-hidden inline-flex items-center gap-2 text-sm font-semibold text-white px-6 py-3.5 rounded-full bg-brand-gradient shadow-[0_10px_24px_-8px_rgba(108,79,209,0.55)] hover:shadow-[0_14px_30px_-8px_rgba(108,79,209,0.65)] hover:-translate-y-0.5 transition-all before:content-[''] before:absolute before:inset-x-0 before:top-0 before:h-1/2 before:bg-mt-surface/25 before:rounded-t-full"
             >
               Start Creating <ArrowRight size={15} />
             </button>
@@ -50,13 +57,14 @@ export function Hero() {
             </Link>
           </div>
 
-          <p className="mt-4 text-xs text-[#4A4750] dark:text-[#8A8496]">Free to create. No complicated plans.</p>
+          <p className="mt-4 text-xs text-mt-muted dark:text-mt-faint">Free to create. No complicated plans.</p>
         </Reveal>
 
         <Reveal delayMs={150}>
           <CreativeHeroArt />
         </Reveal>
       </div>
+    </div>
     </section>
   );
 }

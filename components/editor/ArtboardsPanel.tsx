@@ -73,25 +73,25 @@ export function ArtboardsPanel({
   return (
     <div className="p-3 border-b">
       <div className="flex items-center justify-between mb-2">
-        <p className="font-semibold text-gray-700 text-sm">Artboards</p>
+        <p className="font-semibold text-mt-ink text-sm">Artboards</p>
         <div className="flex items-center gap-2">
-          <button onClick={onRunPreflight} title="Run preflight check" className="text-gray-400 hover:text-gray-700">
+          <button onClick={onRunPreflight} title="Run preflight check" className="text-mt-faint hover:text-mt-ink">
             <ClipboardCheck size={14} />
           </button>
-          <button onClick={onFitAll} title="Fit all artboards" className="text-gray-400 hover:text-gray-700">
+          <button onClick={onFitAll} title="Fit all artboards" className="text-mt-faint hover:text-mt-ink">
             <ScanSearch size={14} />
           </button>
-          <button onClick={() => setShowAddMenu((v) => !v)} title="Add artboard" className="text-gray-400 hover:text-gray-700">
+          <button onClick={() => setShowAddMenu((v) => !v)} title="Add artboard" className="text-mt-faint hover:text-mt-ink">
             <Plus size={14} />
           </button>
         </div>
       </div>
 
       {showAddMenu && (
-        <div className="mb-3 border rounded p-2 bg-gray-50 space-y-2">
+        <div className="mb-3 border rounded p-2 bg-mt-bg space-y-2">
           {PRESET_CATEGORIES.map((cat) => (
             <div key={cat}>
-              <p className="text-[10px] uppercase text-gray-400 mb-1">{cat}</p>
+              <p className="text-[10px] uppercase text-mt-faint mb-1">{cat}</p>
               <div className="flex flex-wrap gap-1">
                 {ARTBOARD_PRESETS.filter((p) => p.category === cat).map((p) => (
                   <button
@@ -100,7 +100,7 @@ export function ArtboardsPanel({
                       onAddPreset(p);
                       setShowAddMenu(false);
                     }}
-                    className="text-[11px] border rounded px-1.5 py-1 bg-white hover:bg-purple-50"
+                    className="text-[11px] border rounded px-1.5 py-1 bg-mt-surface hover:bg-purple-50"
                   >
                     {p.label}
                   </button>
@@ -109,7 +109,7 @@ export function ArtboardsPanel({
             </div>
           ))}
           <div>
-            <p className="text-[10px] uppercase text-gray-400 mb-1">Custom (px)</p>
+            <p className="text-[10px] uppercase text-mt-faint mb-1">Custom (px)</p>
             <div className="flex items-center gap-1">
               <input
                 value={customW}
@@ -117,7 +117,7 @@ export function ArtboardsPanel({
                 className="w-16 text-xs border rounded px-1.5 py-1"
                 placeholder="W"
               />
-              <span className="text-gray-400">×</span>
+              <span className="text-mt-faint">×</span>
               <input
                 value={customH}
                 onChange={(e) => setCustomH(e.target.value)}
@@ -133,7 +133,7 @@ export function ArtboardsPanel({
                     setShowAddMenu(false);
                   }
                 }}
-                className="text-[11px] border rounded px-2 py-1 bg-white hover:bg-purple-50"
+                className="text-[11px] border rounded px-2 py-1 bg-mt-surface hover:bg-purple-50"
               >
                 Add
               </button>
@@ -143,12 +143,12 @@ export function ArtboardsPanel({
       )}
 
       <div className="flex flex-col gap-1 mb-2">
-        {artboards.length === 0 && <p className="text-xs text-gray-400">No artboards</p>}
+        {artboards.length === 0 && <p className="text-xs text-mt-faint">No artboards</p>}
         {artboards.map((ab, i) => {
           const isActive = ab.id === activeArtboardId;
           const isRenaming = renamingId === ab.id;
           return (
-            <div key={ab.id} className={`border rounded p-1.5 text-xs ${isActive ? 'bg-gray-100 border-gray-400' : ''}`}>
+            <div key={ab.id} className={`border rounded p-1.5 text-xs ${isActive ? 'bg-mt-surface2 border-gray-400' : ''}`}>
               <div className="flex items-center gap-1.5">
                 <button onClick={() => onSelect(ab.id)} className="flex-1 min-w-0 text-left truncate" title="Select and fit">
                   {isRenaming ? (
@@ -179,21 +179,21 @@ export function ArtboardsPanel({
                     </span>
                   )}
                 </button>
-                <button onClick={() => onMoveUp(i)} disabled={i === 0} className="text-gray-300 hover:text-gray-700 disabled:opacity-30" title="Move up">
+                <button onClick={() => onMoveUp(i)} disabled={i === 0} className="text-mt-faint hover:text-mt-ink disabled:opacity-30" title="Move up">
                   <ChevronUp size={12} />
                 </button>
                 <button
                   onClick={() => onMoveDown(i)}
                   disabled={i === artboards.length - 1}
-                  className="text-gray-300 hover:text-gray-700 disabled:opacity-30"
+                  className="text-mt-faint hover:text-mt-ink disabled:opacity-30"
                   title="Move down"
                 >
                   <ChevronDown size={12} />
                 </button>
-                <button onClick={() => onDuplicate(ab.id)} className="text-gray-300 hover:text-gray-700" title="Duplicate artboard">
+                <button onClick={() => onDuplicate(ab.id)} className="text-mt-faint hover:text-mt-ink" title="Duplicate artboard">
                   <Copy size={12} />
                 </button>
-                <button onClick={() => onExportOne(ab.id)} className="text-gray-300 hover:text-gray-700" title="Export this artboard (PNG)">
+                <button onClick={() => onExportOne(ab.id)} className="text-mt-faint hover:text-mt-ink" title="Export this artboard (PNG)">
                   <Download size={12} />
                 </button>
                 <button
@@ -205,7 +205,7 @@ export function ArtboardsPanel({
                   <Trash2 size={12} />
                 </button>
               </div>
-              <p className="text-[10px] text-gray-400 mt-0.5">
+              <p className="text-[10px] text-mt-faint mt-0.5">
                 {Math.round(ab.width)} × {Math.round(ab.height)} px
               </p>
             </div>
@@ -215,10 +215,10 @@ export function ArtboardsPanel({
 
       {active && (
         <div key={active.id} className="border-t pt-2">
-          <p className="text-[10px] text-gray-500 mb-1">Active artboard</p>
+          <p className="text-[10px] text-mt-muted mb-1">Active artboard</p>
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="text-[10px] text-gray-500 block mb-0.5">X ({unit})</label>
+              <label className="text-[10px] text-mt-muted block mb-0.5">X ({unit})</label>
               <input
                 type="text"
                 key={`x-${active.id}-${unit}-${active.x}`}
@@ -238,7 +238,7 @@ export function ArtboardsPanel({
               />
             </div>
             <div>
-              <label className="text-[10px] text-gray-500 block mb-0.5">Y ({unit})</label>
+              <label className="text-[10px] text-mt-muted block mb-0.5">Y ({unit})</label>
               <input
                 type="text"
                 key={`y-${active.id}-${unit}-${active.y}`}
@@ -259,7 +259,7 @@ export function ArtboardsPanel({
             </div>
             <div className="col-span-2 grid grid-cols-[1fr_auto_1fr] gap-2 items-end">
               <div>
-                <label className="text-[10px] text-gray-500 block mb-0.5">W ({unit})</label>
+                <label className="text-[10px] text-mt-muted block mb-0.5">W ({unit})</label>
                 <input
                   type="text"
                   key={`w-${active.id}-${unit}-${active.width}`}
@@ -296,13 +296,13 @@ export function ArtboardsPanel({
                 title={ratioLocked ? 'Unlock aspect ratio' : 'Lock aspect ratio'}
                 aria-label={ratioLocked ? 'Unlock aspect ratio' : 'Lock aspect ratio'}
                 className={`mb-0.5 p-1.5 rounded-full border transition-colors ${
-                  ratioLocked ? 'bg-gray-800 text-white border-gray-800' : 'border-gray-300 text-gray-400 hover:text-gray-700'
+                  ratioLocked ? 'bg-mt-accent text-white border-mt-accent' : 'border-mt-border text-mt-faint hover:text-mt-ink'
                 }`}
               >
                 {ratioLocked ? <Lock size={11} /> : <Unlock size={11} />}
               </button>
               <div>
-                <label className="text-[10px] text-gray-500 block mb-0.5">H ({unit})</label>
+                <label className="text-[10px] text-mt-muted block mb-0.5">H ({unit})</label>
                 <input
                   type="text"
                   key={`h-${active.id}-${unit}-${active.height}`}
@@ -338,14 +338,14 @@ export function ArtboardsPanel({
 
           <button
             onClick={() => setShowPrintSetup((v) => !v)}
-            className="flex items-center gap-1 text-[11px] text-gray-500 hover:text-gray-700 mt-2"
+            className="flex items-center gap-1 text-[11px] text-mt-muted hover:text-mt-ink mt-2"
           >
             <ChevronRight size={12} className={`transition-transform ${showPrintSetup ? 'rotate-90' : ''}`} />
             Print Setup
           </button>
 
           {showPrintSetup && (
-            <div key={active.id + '-print'} className="mt-2 space-y-2 border rounded p-2 bg-gray-50">
+            <div key={active.id + '-print'} className="mt-2 space-y-2 border rounded p-2 bg-mt-bg">
               <EdgeFields
                 label="Bleed"
                 unit={unit}
@@ -372,7 +372,7 @@ export function ArtboardsPanel({
               />
 
               <div>
-                <label className="text-[10px] text-gray-500 block mb-0.5">Target Print DPI</label>
+                <label className="text-[10px] text-mt-muted block mb-0.5">Target Print DPI</label>
                 <input
                   type="text"
                   defaultValue={String(active.print.dpi)}
@@ -386,7 +386,7 @@ export function ArtboardsPanel({
               </div>
 
               <div className="flex flex-col gap-1">
-                <label className="flex items-center gap-1.5 text-[11px] text-gray-600">
+                <label className="flex items-center gap-1.5 text-[11px] text-mt-muted">
                   <input
                     type="checkbox"
                     checked={active.print.marks.crop}
@@ -394,7 +394,7 @@ export function ArtboardsPanel({
                   />
                   Crop marks
                 </label>
-                <label className="flex items-center gap-1.5 text-[11px] text-gray-600">
+                <label className="flex items-center gap-1.5 text-[11px] text-mt-muted">
                   <input
                     type="checkbox"
                     checked={active.print.marks.registration}
@@ -402,7 +402,7 @@ export function ArtboardsPanel({
                   />
                   Registration marks
                 </label>
-                <label className="flex items-center gap-1.5 text-[11px] text-gray-600">
+                <label className="flex items-center gap-1.5 text-[11px] text-mt-muted">
                   <input
                     type="checkbox"
                     checked={active.print.marks.colorBar}
@@ -413,7 +413,7 @@ export function ArtboardsPanel({
               </div>
 
               <div>
-                <label className="text-[10px] text-gray-500 block mb-0.5">Export for Print</label>
+                <label className="text-[10px] text-mt-muted block mb-0.5">Export for Print</label>
                 <select
                   value={exportScope}
                   onChange={(e) => setExportScope(e.target.value as ExportScope)}
@@ -428,13 +428,13 @@ export function ArtboardsPanel({
                 <div className="flex gap-1">
                   <button
                     onClick={() => onExportPrint(active.id, exportScope, 'png')}
-                    className="flex-1 text-[11px] border rounded px-2 py-1 bg-white hover:bg-purple-50"
+                    className="flex-1 text-[11px] border rounded px-2 py-1 bg-mt-surface hover:bg-purple-50"
                   >
                     PNG
                   </button>
                   <button
                     onClick={() => onExportPrint(active.id, exportScope, 'pdf')}
-                    className="flex-1 text-[11px] border rounded px-2 py-1 bg-white hover:bg-purple-50"
+                    className="flex-1 text-[11px] border rounded px-2 py-1 bg-mt-surface hover:bg-purple-50"
                   >
                     PDF
                   </button>
@@ -446,17 +446,17 @@ export function ArtboardsPanel({
       )}
 
       <div className="flex gap-2 mt-3">
-        <button onClick={onExportAll} className="flex-1 flex items-center justify-center gap-1 text-[11px] border rounded px-2 py-1.5 hover:bg-gray-50">
+        <button onClick={onExportAll} className="flex-1 flex items-center justify-center gap-1 text-[11px] border rounded px-2 py-1.5 hover:bg-mt-surface2">
           <Download size={12} /> All (PNG)
         </button>
-        <button onClick={onExportAllPDF} className="flex-1 flex items-center justify-center gap-1 text-[11px] border rounded px-2 py-1.5 hover:bg-gray-50">
+        <button onClick={onExportAllPDF} className="flex-1 flex items-center justify-center gap-1 text-[11px] border rounded px-2 py-1.5 hover:bg-mt-surface2">
           <FileDown size={12} /> All (PDF)
         </button>
       </div>
 
       {artboards.length > 1 && (
         <div className="mt-2 pt-2 border-t">
-          <label className="text-[10px] text-gray-500 block mb-1">
+          <label className="text-[10px] text-mt-muted block mb-1">
             Export page range (PDF) — 1–{artboards.length}
           </label>
           <select
@@ -479,7 +479,7 @@ export function ArtboardsPanel({
               onChange={(e) => setRangeFrom(e.target.value)}
               className="w-14 text-xs border rounded px-2 py-1"
             />
-            <span className="text-[11px] text-gray-500">to</span>
+            <span className="text-[11px] text-mt-muted">to</span>
             <input
               type="number"
               min={1}
@@ -494,14 +494,14 @@ export function ArtboardsPanel({
                 const to = parseInt(rangeTo, 10);
                 if (!isNaN(from) && !isNaN(to)) onExportRangePDF(from, to, exportScope);
               }}
-              className="flex-1 flex items-center justify-center gap-1 text-[11px] border rounded px-2 py-1.5 hover:bg-gray-50"
+              className="flex-1 flex items-center justify-center gap-1 text-[11px] border rounded px-2 py-1.5 hover:bg-mt-surface2"
             >
               <FileDown size={12} /> Export Range
             </button>
           </div>
           <button
             onClick={() => onExportRangePDF(1, artboards.length, exportScope)}
-            className="w-full mt-1.5 flex items-center justify-center gap-1 text-[11px] border rounded px-2 py-1.5 hover:bg-gray-50"
+            className="w-full mt-1.5 flex items-center justify-center gap-1 text-[11px] border rounded px-2 py-1.5 hover:bg-mt-surface2"
           >
             <FileDown size={12} /> Export All Pages ({EXPORT_SCOPE_LABELS[exportScope]})
           </button>

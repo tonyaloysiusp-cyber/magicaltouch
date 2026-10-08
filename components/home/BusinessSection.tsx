@@ -29,7 +29,7 @@ export function BusinessSection() {
           </p>
           <button
             onClick={goToCreate}
-            className="mt-7 inline-flex items-center gap-2 text-sm font-semibold text-[#17161B] px-6 py-3.5 rounded-full bg-white hover:-translate-y-0.5 hover:shadow-lg transition-all"
+            className="mt-7 inline-flex items-center gap-2 text-sm font-semibold text-mt-ink px-6 py-3.5 rounded-full bg-mt-surface hover:-translate-y-0.5 hover:shadow-lg transition-all"
           >
             Start Designing <ArrowRight size={15} />
           </button>

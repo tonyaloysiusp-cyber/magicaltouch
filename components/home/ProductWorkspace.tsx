@@ -62,7 +62,7 @@ export function ProductWorkspace() {
   return (
     <section className="max-w-6xl mx-auto px-6 py-24">
       <Reveal>
-        <p className="text-xs font-semibold text-[#6C4FD1] dark:text-[#B9A6F2] tracking-wide uppercase text-center">Workspace</p>
+        <p className="text-xs font-semibold text-mt-accent dark:text-mt-accent tracking-wide uppercase text-center">Workspace</p>
         <h2 className="mt-3 font-[family-name:var(--font-display)] text-4xl sm:text-5xl leading-[1.05] tracking-tight text-center">
           Everything you need to create.
         </h2>
@@ -77,7 +77,7 @@ export function ProductWorkspace() {
               className={`text-sm font-medium px-4 py-2 rounded-full border transition-colors ${
                 tab === t.id
                   ? 'bg-[#17161B] dark:bg-white text-white dark:text-[#17161B] border-[#17161B] dark:border-white'
-                  : 'border-black/15 dark:border-white/20 text-[#4A4750] dark:text-[#B7B2C6] hover:border-black/40 dark:hover:border-white/40'
+                  : 'border-black/15 dark:border-white/20 text-mt-muted dark:text-mt-muted hover:border-black/40 dark:hover:border-white/40'
               }`}
             >
               {t.label}
@@ -87,12 +87,12 @@ export function ProductWorkspace() {
       </Reveal>
 
       <Reveal delayMs={160}>
-        <div className="mt-8 rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#1B1926] shadow-[0_40px_80px_-40px_rgba(23,22,27,0.35)] overflow-hidden min-h-[22rem] sm:min-h-[26rem]">
+        <div className="mt-8 rounded-2xl border border-black/10 dark:border-white/10 bg-mt-surface dark:bg-mt-surface shadow-[0_40px_80px_-40px_rgba(23,22,27,0.35)] overflow-hidden min-h-[22rem] sm:min-h-[26rem]">
           {tab === 'canvas' && (
-            <div className="h-full min-h-[22rem] sm:min-h-[26rem] flex items-center justify-center bg-[#F7F5F0] dark:bg-[#111015] p-8 sm:p-12">
+            <div className="h-full min-h-[22rem] sm:min-h-[26rem] flex items-center justify-center bg-mt-bg dark:bg-mt-bg p-8 sm:p-12">
               <div className="relative w-56 h-56 sm:w-64 sm:h-64 rounded-xl shadow-2xl overflow-hidden bg-brand-gradient">
                 <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6">
-                  <span className="w-9 h-9 rounded-full bg-white/90 mb-3" />
+                  <span className="w-9 h-9 rounded-full bg-mt-surface/90 mb-3" />
                   <span className="text-white font-[family-name:var(--font-display)] italic text-lg leading-tight">
                     Make it magical
                   </span>
@@ -100,25 +100,25 @@ export function ProductWorkspace() {
                 <div className="absolute inset-0 border-2 border-white/40 rounded-xl" />
               </div>
               <div className="hidden sm:block absolute translate-x-40 -translate-y-24 w-20 h-28 rounded-lg shadow-lg bg-gradient-to-b from-[#3FA9E8] to-[#4FC8C0] opacity-80 rotate-6" />
-              <div className="hidden sm:block absolute -translate-x-44 translate-y-16 w-24 h-16 rounded-lg shadow-lg bg-white border border-black/10 -rotate-6" />
+              <div className="hidden sm:block absolute -translate-x-44 translate-y-16 w-24 h-16 rounded-lg shadow-lg bg-mt-surface border border-black/10 -rotate-6" />
             </div>
           )}
 
           {tab === 'layers' && (
             <div className="h-full min-h-[22rem] sm:min-h-[26rem] flex items-center justify-center p-8 sm:p-12">
               <div className="w-full max-w-sm rounded-xl border border-black/10 dark:border-white/10 overflow-hidden">
-                <div className="px-4 py-3 border-b border-black/10 dark:border-white/10 flex items-center gap-2 text-sm font-semibold text-[#17161B] dark:text-[#F3F1F7]">
+                <div className="px-4 py-3 border-b border-black/10 dark:border-white/10 flex items-center gap-2 text-sm font-semibold text-mt-ink dark:text-mt-ink">
                   <Layers size={15} /> Layers
                 </div>
                 {LAYERS.map((l, i) => (
                   <div
                     key={l.name}
-                    className={`flex items-center gap-3 px-4 py-3 text-sm ${i === 0 ? 'bg-[#F7F5F0] dark:bg-white/5' : ''}`}
+                    className={`flex items-center gap-3 px-4 py-3 text-sm ${i === 0 ? 'bg-mt-bg dark:bg-white/5' : ''}`}
                   >
-                    <l.icon size={15} className="text-[#4A4750] dark:text-[#B7B2C6] shrink-0" />
-                    <span className="truncate text-[#17161B] dark:text-[#F3F1F7]">{l.name}</span>
-                    <Eye size={13} className={`ml-auto shrink-0 ${l.hidden ? 'text-[#4A4750]/30 dark:text-white/20' : 'text-[#4A4750]/60 dark:text-white/50'}`} />
-                    <Lock size={12} className="text-[#4A4750]/30 dark:text-white/20 shrink-0" />
+                    <l.icon size={15} className="text-mt-muted dark:text-mt-muted shrink-0" />
+                    <span className="truncate text-mt-ink dark:text-mt-ink">{l.name}</span>
+                    <Eye size={13} className={`ml-auto shrink-0 ${l.hidden ? 'text-mt-muted/30 dark:text-white/20' : 'text-mt-muted/60 dark:text-white/50'}`} />
+                    <Lock size={12} className="text-mt-muted/30 dark:text-white/20 shrink-0" />
                   </div>
                 ))}
               </div>
@@ -153,10 +153,10 @@ export function ProductWorkspace() {
                       <f.icon size={15} />
                     </span>
                     <div className="min-w-0">
-                      <p className="text-sm font-semibold text-[#17161B] dark:text-[#F3F1F7]">{f.name}</p>
-                      <p className="text-xs text-[#4A4750] dark:text-[#8A8496] truncate">{f.hint}</p>
+                      <p className="text-sm font-semibold text-mt-ink dark:text-mt-ink">{f.name}</p>
+                      <p className="text-xs text-mt-muted dark:text-mt-faint truncate">{f.hint}</p>
                     </div>
-                    <Download size={15} className="ml-auto text-[#4A4750] dark:text-[#B7B2C6] shrink-0" />
+                    <Download size={15} className="ml-auto text-mt-muted dark:text-mt-muted shrink-0" />
                   </div>
                 ))}
               </div>

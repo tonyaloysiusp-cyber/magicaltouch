@@ -54,15 +54,15 @@ export function StorageConnections() {
   };
 
   const rowCls = 'flex items-center gap-3 py-3';
-  const iconCls = 'text-[#6C4FD1] shrink-0';
-  const title = 'text-sm font-medium text-gray-800 dark:text-[#F3F1F7]';
-  const sub = 'text-xs text-gray-500 dark:text-[#B7B2C6]';
+  const iconCls = 'text-mt-accent shrink-0';
+  const title = 'text-sm font-medium text-mt-ink dark:text-mt-ink';
+  const sub = 'text-xs text-mt-muted dark:text-mt-muted';
   const ready = <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 shrink-0">Ready</span>;
 
   return (
-    <div className="border dark:border-white/10 rounded-xl p-5 mb-8 bg-white dark:bg-[#1B1926]">
-      <h2 className="text-sm font-semibold text-gray-700 dark:text-[#F3F1F7] mb-1">Where your projects are saved</h2>
-      <p className="text-xs text-gray-500 dark:text-[#B7B2C6] mb-4">
+    <div className="border dark:border-white/10 rounded-xl p-5 mb-8 bg-mt-surface dark:bg-mt-surface">
+      <h2 className="text-sm font-semibold text-mt-ink dark:text-mt-ink mb-1">Where your projects are saved</h2>
+      <p className="text-xs text-mt-muted dark:text-mt-muted mb-4">
         Choose a place each time you save a new design. You can always save a copy somewhere else from the File menu.
       </p>
       <div className="divide-y dark:divide-white/10">
