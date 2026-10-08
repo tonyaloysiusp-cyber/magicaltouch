@@ -22,15 +22,15 @@
   color-scheme: light;
 }
 .dark {
-  --mt-bg: 12 11 20;
-  --mt-surface: 23 21 35;
-  --mt-surface2: 33 30 48;
-  --mt-ink: 243 241 247;
-  --mt-muted: 180 176 196;
-  --mt-faint: 126 121 145;
-  --mt-border: 45 41 63;
+  --mt-bg: 0 0 0;              /* page: true black */
+  --mt-surface: 16 16 18;      /* cards, panels, menus */
+  --mt-surface2: 28 28 32;     /* inputs, hovers */
+  --mt-ink: 245 245 247;
+  --mt-muted: 168 168 178;
+  --mt-faint: 118 118 128;
+  --mt-border: 40 40 46;
   --mt-accent: 157 133 240;
-  --mt-accent-soft: 40 33 70;
+  --mt-accent-soft: 30 26 48;
   color-scheme: dark;
 }
 html,
@@ -38,26 +38,18 @@ body {
   background-color: rgb(var(--mt-bg));
   color: rgb(var(--mt-ink));
 }
-/* A big clean white page with a few very pale, blurred brand-colour
-   glows fixed behind everything -- the same on every page. Page-level
-   backgrounds are transparent so the glows show; cards and panels
-   (bg-mt-surface) stay solid. */
+/* Day = pure white, night = pure black, with only a whisper of brand
+   colour in the far corners (barely visible) so it stays clean. */
 body {
   background-image:
-    radial-gradient(42rem 32rem at 0% 0%, rgba(236, 30, 121, 0.07), transparent 70%),
-    radial-gradient(46rem 34rem at 100% 4%, rgba(63, 169, 232, 0.09), transparent 70%),
-    radial-gradient(40rem 32rem at 100% 100%, rgba(126, 211, 62, 0.06), transparent 70%),
-    radial-gradient(44rem 34rem at 0% 100%, rgba(139, 111, 196, 0.08), transparent 70%);
+    radial-gradient(36rem 26rem at 100% 0%, rgba(63, 169, 232, 0.035), transparent 70%),
+    radial-gradient(36rem 26rem at 0% 100%, rgba(139, 111, 196, 0.035), transparent 70%);
   background-attachment: fixed;
   background-repeat: no-repeat;
   min-height: 100vh;
 }
 html.dark body {
-  background-image:
-    radial-gradient(42rem 32rem at 0% 0%, rgba(236, 30, 121, 0.10), transparent 70%),
-    radial-gradient(46rem 34rem at 100% 4%, rgba(63, 169, 232, 0.10), transparent 70%),
-    radial-gradient(40rem 32rem at 100% 100%, rgba(126, 211, 62, 0.06), transparent 70%),
-    radial-gradient(44rem 34rem at 0% 100%, rgba(139, 111, 196, 0.12), transparent 70%);
+  background-image: none;
 }
 /* Brand gradient text + animated gradient helpers */
 .mt-gradient-text {

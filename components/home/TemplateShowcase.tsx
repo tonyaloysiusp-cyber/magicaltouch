@@ -48,8 +48,8 @@ export function TemplateShowcase() {
 
   return (
     <section id="templates" className="relative overflow-hidden bg-transparent border-y border-mt-border">
-      <div className="pointer-events-none absolute -top-40 -left-40 w-[520px] h-[520px] rounded-full bg-[#8B6FC4]/15 blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-40 -right-40 w-[520px] h-[520px] rounded-full bg-[#3FA9E8]/15 blur-3xl" />
+      <div className="pointer-events-none absolute -top-40 -left-40 w-[520px] h-[520px] rounded-full bg-[#8B6FC4]/[0.05] blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-40 -right-40 w-[520px] h-[520px] rounded-full bg-[#3FA9E8]/[0.05] blur-3xl" />
 
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 py-24">
         <Reveal>
