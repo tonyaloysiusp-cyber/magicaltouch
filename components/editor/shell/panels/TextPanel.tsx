@@ -32,7 +32,7 @@ function previewStyle(p: TextPreset): React.CSSProperties {
   return s;
 }
 
-export function TextPanel({ onAdd, onAddPairing }: { onAdd: (p: TextPreset) => void; onAddPairing: (heading: string, body: string) => void }) {
+export function TextPanel({ onAdd, onAddPairing, onAddPageNumber }: { onAdd: (p: TextPreset) => void; onAddPairing: (heading: string, body: string) => void; onAddPageNumber: () => void }) {
   const drag = (id: string) => (e: React.DragEvent) => e.dataTransfer.setData('application/x-mt-asset', `text:${id}`);
   return (
     <div>
@@ -51,6 +51,14 @@ export function TextPanel({ onAdd, onAddPairing }: { onAdd: (p: TextPreset) => v
           </button>
         ))}
       </div>
+      <button
+        type="button"
+        onClick={onAddPageNumber}
+        title="Adds a number that always matches the page it's on"
+        className="w-full mb-5 h-10 rounded-xl border border-dashed border-mt-border text-sm text-mt-muted hover:text-mt-ink hover:bg-mt-surface2"
+      >
+        # Add page number
+      </button>
       <PanelSection title="Text styles">
         <div className="grid grid-cols-2 gap-2">
           {TEXT_STYLES.map((p) => (

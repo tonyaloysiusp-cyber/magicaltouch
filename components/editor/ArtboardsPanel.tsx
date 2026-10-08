@@ -370,6 +370,42 @@ export function ArtboardsPanel({
                 onChange={(next) => onUpdatePrint(active.id, { safeArea: next })}
                 onToggleLinked={() => onUpdatePrint(active.id, { safeAreaLinked: !active.print.safeAreaLinked })}
               />
+              <EdgeFields
+                label="Margins"
+                unit={unit}
+                values={active.print.margins || { top: 0, right: 0, bottom: 0, left: 0 }}
+                linked={active.print.marginsLinked !== false}
+                onChange={(next) => onUpdatePrint(active.id, { margins: next })}
+                onToggleLinked={() => onUpdatePrint(active.id, { marginsLinked: active.print.marginsLinked === false })}
+              />
+              <div className="grid grid-cols-2 gap-2">
+                <label className="block">
+                  <span className="text-[10px] text-mt-muted block mb-0.5">Columns</span>
+                  <input
+                    type="number"
+                    min={1}
+                    max={12}
+                    key={`cols-${active.id}-${active.print.columns || 1}`}
+                    defaultValue={active.print.columns || 1}
+                    onBlur={(e) => {
+                      const n = Math.max(1, Math.min(12, Math.round(Number(e.target.value) || 1)));
+                      onUpdatePrint(active.id, { columns: n });
+                    }}
+                    className="w-full text-xs border rounded px-2 py-1"
+                  />
+                </label>
+                <label className="block">
+                  <span className="text-[10px] text-mt-muted block mb-0.5">Gutter (px)</span>
+                  <input
+                    type="number"
+                    min={0}
+                    key={`gut-${active.id}-${active.print.gutter ?? 16}`}
+                    defaultValue={active.print.gutter ?? 16}
+                    onBlur={(e) => onUpdatePrint(active.id, { gutter: Math.max(0, Number(e.target.value) || 0) })}
+                    className="w-full text-xs border rounded px-2 py-1"
+                  />
+                </label>
+              </div>
 
               <div>
                 <label className="text-[10px] text-mt-muted block mb-0.5">Target Print DPI</label>

@@ -65,8 +65,18 @@ function hasMultipleSubpaths(obj: any): boolean {
   return false;
 }
 
+const EMOJI = new RegExp('\\p{Extended_Pictographic}', 'u');
+
 function needsRasterFallback(obj: any): boolean {
   if (obj.clipPath) return true;
+  // Effects a PDF can't express as plain vectors are drawn as a sharp
+  // high-resolution picture of just that object.
+  if (obj.shadow) return true;
+  if (obj.path && (obj.type === 'textbox' || obj.type === 'i-text' || obj.type === 'text')) return true;
+  if (obj.globalCompositeOperation && obj.globalCompositeOperation !== 'source-over') return true;
+  if (obj.strokeDashArray && obj.strokeDashArray.length) return true;
+  if (typeof obj.text === 'string' && EMOJI.test(obj.text)) return true;
+  if (obj.textBackgroundColor) return true;
   if (obj.fill && typeof obj.fill === 'object') return true;
   if (obj.stroke && typeof obj.stroke === 'object') return true;
   if (obj.type === 'group' || obj.type === 'activeSelection') return true;

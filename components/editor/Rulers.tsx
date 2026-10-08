@@ -58,11 +58,13 @@ function drawRulers(
   const screenToWorldX = (x: number) => (x - panX) / zoom;
   const screenToWorldY = (y: number) => (y - panY) / zoom;
 
-  const bg = '#f3f4f6';
-  const line = '#9ca3af';
-  const majorLine = '#6b7280';
-  const text = '#374151';
-  const artboardTint = 'rgba(63,169,232,0.12)';
+  // Follows the light/dark theme.
+  const dark = typeof document !== 'undefined' && !!document.querySelector('.dark');
+  const bg = dark ? '#0B0B0D' : '#FFFFFF';
+  const line = dark ? '#3F3F46' : '#D4D4D8';
+  const majorLine = dark ? '#71717A' : '#A1A1AA';
+  const text = dark ? '#A1A1AA' : '#52525B';
+  const artboardTint = 'rgba(140,203,255,0.18)';
 
   // --- Top ruler ---
   if (topCanvas.width !== vw) topCanvas.width = vw;

@@ -29,7 +29,7 @@ export function DrawPanel({
   onStart: (kind: BrushKind) => void;
   onStop: () => void;
   pro: boolean;
-  onVectorTool: (t: 'pen' | 'direct' | 'select') => void;
+  onVectorTool: (t: 'pen' | 'direct' | 'select' | 'pencil') => void;
   vectorTool: string;
 }) {
   return (
@@ -97,9 +97,10 @@ export function DrawPanel({
       )}
       {pro && (
         <PanelSection title="Vector tools">
-          <div className="grid grid-cols-3 gap-1.5">
+          <div className="grid grid-cols-2 gap-1.5">
             {[
               { id: 'pen', label: 'Pen', icon: <PenTool size={16} />, hint: 'Create editable vector paths: click for corners, drag for curves' },
+              { id: 'pencil', label: 'Pencil path', icon: <Pencil size={16} />, hint: 'Draw a freehand vector line you can edit point by point' },
               { id: 'direct', label: 'Edit points', icon: <Spline size={16} />, hint: 'Move, add and delete the points of a path' },
               { id: 'select', label: 'Select', icon: <MousePointer2 size={16} />, hint: 'Select and move objects' },
             ].map((t) => (

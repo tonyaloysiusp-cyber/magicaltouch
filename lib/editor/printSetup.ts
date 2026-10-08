@@ -34,6 +34,11 @@ export interface ArtboardPrintSettings {
   safeAreaLinked: boolean;
   dpi: number;
   marks: PrintMarksSettings;
+  // Layout guides (InDesign-style): page margins and text columns.
+  margins?: EdgeValues;
+  marginsLinked?: boolean;
+  columns?: number;
+  gutter?: number; // px between columns
 }
 
 export function createDefaultPrintSettings(): ArtboardPrintSettings {

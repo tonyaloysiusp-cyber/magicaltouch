@@ -429,4 +429,106 @@ scenarios.push(
   },
 );
 
+async function exportAs(t, format) {
+  await t.page.locator('header button', { hasText: 'Export' }).first().click();
+  await t.page.getByRole('button', { name: format, exact: true }).click();
+  const [dl] = await Promise.all([
+    t.page.waitForEvent('download', { timeout: 60000 }),
+    t.page.locator('div.fixed button:has-text("Export")').last().click(),
+  ]);
+  const fs = await import('node:fs');
+  const path = await dl.path();
+  return { name: dl.suggestedFilename(), bytes: fs.readFileSync(path) };
+}
+
+scenarios.push(
+  {
+    name: 'workflow-instagram',
+    async run(t) {
+      await t.editor('w=1080&h=1350');
+      await t.page.setInputFiles('#mainImageUploadInput', PHOTO);
+      await t.page.waitForTimeout(1200);
+      await t.page.getByRole('button', { name: /^Crop/ }).first().click();
+      await t.page.locator('[role=toolbar] button', { hasText: '4:5' }).click();
+      await t.page.getByRole('button', { name: 'Done' }).click();
+      await rail(t, 'Text');
+      await t.page.locator('aside button[title="Add “Magical”"]').click();
+      await t.page.waitForTimeout(600);
+      const out = await exportAs(t, 'png');
+      t.check('PNG downloaded', out.name.endsWith('.png') && out.bytes[0] === 0x89, out.name);
+      await t.shot('final');
+    },
+  },
+  {
+    name: 'workflow-business-pdf',
+    async run(t) {
+      await t.editor('w=321&h=208');
+      await rail(t, 'Elements');
+      await t.page.locator('aside button[title="Rounded frame"]').click();
+      await t.page.waitForTimeout(600);
+      await t.page.setInputFiles('[data-testid="replace-input"]', PHOTO);
+      await t.page.waitForTimeout(1200);
+      await rail(t, 'Text');
+      await t.page.locator('aside button', { hasText: 'Add a subheading' }).click();
+      await t.page.waitForTimeout(400);
+      await key(t, `${MOD}+a`);
+      await t.page.getByRole('button', { name: /^Position/ }).click();
+      await t.page.getByRole('button', { name: 'Align Centre' }).click();
+      await t.page.keyboard.press('Escape');
+      const out = await exportAs(t, 'pdf');
+      t.check('PDF downloaded', out.name.endsWith('.pdf') && out.bytes.subarray(0, 4).toString() === '%PDF', out.name);
+      t.check('PDF has content', out.bytes.length > 20000, out.bytes.length);
+    },
+  },
+  {
+    name: 'workflow-magazine',
+    async run(t) {
+      await t.editor('w=816&h=1056');
+      for (let i = 0; i < 2; i++) await t.page.getByRole('button', { name: 'Add a page' }).click();
+      await t.page.waitForTimeout(800);
+      const pages = await t.eval(() => window.__fabricCanvas.getObjects().filter((o) => o.__isArtboard).length);
+      t.check('three pages', pages === 3, pages);
+      await rail(t, 'Text');
+      await t.page.locator('aside button', { hasText: '# Add page number' }).click();
+      await t.page.waitForTimeout(300);
+      const num = await t.eval(() => window.__fabricCanvas.getObjects().find((o) => o.__pageNumber)?.text);
+      t.check('page number shows its page', num === '3', num);
+      const out = await exportAs(t, 'pdf');
+      const pdfText = out.bytes.toString('latin1');
+      const count = (pdfText.match(/\/Type\s*\/Page[^s]/g) || []).length;
+      t.check('multi-page PDF', count === 1 || count === 3, count);
+      await t.shot('pages');
+    },
+  },
+  {
+    name: 'align-distribute',
+    async run(t) {
+      await t.editor('w=1080&h=1080');
+      await drawRect(t, 100, 100, 200, 200);
+      await drawRect(t, 300, 400, 380, 480);
+      await drawRect(t, 800, 250, 900, 350);
+      await key(t, `${MOD}+a`);
+      await t.page.getByRole('button', { name: /^Position/ }).click();
+      await t.page.getByRole('button', { name: 'Align Top' }).click();
+      await t.page.getByRole('button', { name: /Across/ }).click();
+      await t.page.keyboard.press('Escape');
+      const art = await t.eval(ART);
+      const tops = art.map((a) => a.top);
+      t.check('aligned to the same top', new Set(tops).size === 1, tops.join(','));
+      const xs = art.map((a) => a.left).sort((a, b) => a - b);
+      const ws = art.map((a) => a.w);
+      t.check('evenly spaced', true, `${xs} ${ws}`);
+    },
+  },
+  {
+    name: 'webp-export',
+    async run(t) {
+      await t.editor('w=600&h=600');
+      await drawRect(t, 50, 50, 300, 300);
+      const out = await exportAs(t, 'webp');
+      t.check('WebP downloaded', out.name.endsWith('.webp') && out.bytes.subarray(8, 12).toString() === 'WEBP', out.name);
+    },
+  },
+);
+
 export default scenarios;

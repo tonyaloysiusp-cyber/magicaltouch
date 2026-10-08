@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { X, Cake, CreditCard, Instagram, Mail, FileText, Image as ImageIcon, BookOpen, Ruler, Sparkles, ArrowLeft, Upload } from 'lucide-react';
-import { ALL_PRESETS, presetToPx, SizePreset } from '@/lib/editor/sizePresets';
+import { ALL_PRESETS, presetLabel, SizePreset } from '@/lib/editor/sizePresets';
 import { cx } from './ui';
 
 export interface QuickStart {
@@ -72,7 +72,7 @@ export function OnboardingDialog({ onPick, onCustom, onClose }: { onPick: (q: Qu
                 >
                   <span className="text-mt-accent group-hover:scale-110 transition-transform">{c.icon}</span>
                   <span className="text-sm font-medium">{c.label}</span>
-                  <span className="text-[11px] text-mt-faint">{(() => { const s = presetToPx(presetOf(c.preset)); return `${Math.round(s.width)}×${Math.round(s.height)}`; })()}</span>
+                  <span className="text-[11px] text-mt-faint">{presetLabel(presetOf(c.preset))}</span>
                 </button>
               ))}
             </div>

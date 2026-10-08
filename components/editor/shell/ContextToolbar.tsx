@@ -132,6 +132,7 @@ export function ContextToolbar({
   onCropRatio,
   onCropReset,
   onCropDone,
+  onSmartCrop,
   cropAspect,
   pro,
 }: {
@@ -144,6 +145,7 @@ export function ContextToolbar({
   onCropRatio: (r: number | null) => void;
   onCropReset: () => void;
   onCropDone: (apply: boolean) => void;
+  onSmartCrop?: () => void;
   pro: boolean;
 }) {
   const wrap = (children: React.ReactNode) => (
@@ -280,7 +282,7 @@ export function ContextToolbar({
             disabled={r === 0}
             className={cx(
               'h-8 px-2.5 rounded-lg text-xs font-medium whitespace-nowrap border',
-              (r === 0 && cropAspect === null) || cropAspect === r ? 'mt-active-blue text-mt-ink' : 'border-transparent text-mt-muted hover:text-mt-ink hover:bg-mt-surface2',
+              (r === 0 && cropAspect === null) || (r !== null && r !== 0 && cropAspect === r) ? 'mt-active-blue text-mt-ink' : 'border-transparent text-mt-muted hover:text-mt-ink hover:bg-mt-surface2',
               r === 0 && 'disabled:opacity-100'
             )}
             title={r === 0 ? 'Drag the photo to reposition; drag its corners to zoom' : `Crop to ${l}`}
@@ -289,6 +291,11 @@ export function ContextToolbar({
           </button>
         ))}
         <Divider />
+        {onSmartCrop && (
+          <button type="button" onClick={onSmartCrop} title="Find the subject and centre it" className="h-8 px-2.5 rounded-lg text-xs font-semibold mt-spectrum-border inline-flex items-center gap-1 whitespace-nowrap">
+            <Sparkles size={13} /> Smart
+          </button>
+        )}
         <IconButton label="Reset crop" onClick={onCropReset}>
           <RotateCcw size={16} />
         </IconButton>

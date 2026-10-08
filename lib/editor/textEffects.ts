@@ -93,23 +93,9 @@ export function applyTextEffect(F: any, obj: any, fx: TextFx) {
 
 // --- Curved and wavy text ---------------------------------------------------
 
-// Width of the text laid out on one line (used to size the curve).
-function singleLineWidth(obj: any) {
-  try {
-    const lines = (obj.text || '').split('\n');
-    const ctx = document.createElement('canvas').getContext('2d')!;
-    ctx.font = `${obj.fontStyle || 'normal'} ${obj.fontWeight || 'normal'} ${obj.fontSize || 40}px "${obj.fontFamily || 'Arial'}"`;
-    const extra = ((obj.charSpacing || 0) / 1000) * (obj.fontSize || 40);
-    return Math.max(...lines.map((l: string) => ctx.measureText(l).width + extra * l.length), 10);
-  } catch {
-    return (obj.text || '').length * (obj.fontSize || 40) * 0.55;
-  }
-}
-
-// Builds the baseline path for curve (-100..100) or wave (0..100).
-export function textPathD(obj: any, curve: number, wave: number): string | null {
-  const w = singleLineWidth(obj);
-  const size = obj.fontSize || 40;
+// Builds the baseline path for curve (-100..100) or wave (0..100) for a
+// line of text `w` wide.
+export function textPathD(w: number, size: number, curve: number, wave: number): string | null {
   if (wave > 0) {
     const amp = size * 0.5 * (wave / 100);
     const segs = Math.max(2, Math.round(w / (size * 2.2)));
@@ -128,21 +114,21 @@ export function textPathD(obj: any, curve: number, wave: number): string | null 
   const R = w / (2 * phi);
   const x0 = -R * Math.sin(phi);
   const x1 = R * Math.sin(phi);
+  const yEdge = R * Math.cos(phi);
   if (curve > 0) {
-    // Rainbow: text on the top of a circle.
-    const y = -R * Math.cos(phi);
-    return `M ${x0} ${y + R} A ${R} ${R} 0 0 1 ${x1} ${y + R}`;
+    // Rainbow: along the top of a circle.
+    return `M ${x0} ${R - yEdge} A ${R} ${R} 0 0 1 ${x1} ${R - yEdge}`;
   }
-  // Smile: text along the bottom of a circle.
-  const y = R * Math.cos(phi);
-  return `M ${x0} ${-y + R} A ${R} ${R} 0 0 0 ${x1} ${-y + R}`.replace(/NaN/g, '0');
+  // Smile: along the bottom of a circle.
+  return `M ${x0} ${yEdge - R} A ${R} ${R} 0 0 0 ${x1} ${yEdge - R}`;
 }
 
-// Applies curve/wave. Curved text stays live, editable text on a path.
+// Applies curve/wave. Curved text stays live, editable text on a path
+// (always one line, so it never wraps onto itself).
 export function applyTextShape(F: any, obj: any, curve: number, wave: number) {
   const center = obj.getCenterPoint();
-  const d = textPathD(obj, curve, wave);
-  if (!d) {
+  const straight = !curve && !wave;
+  if (straight) {
     if (obj.path) {
       obj.set({ path: null });
       if (obj.__preCurveWidth) obj.set({ width: obj.__preCurveWidth });
@@ -150,11 +136,17 @@ export function applyTextShape(F: any, obj: any, curve: number, wave: number) {
     }
   } else {
     if (!obj.path && obj.type === 'textbox') obj.__preCurveWidth = obj.width;
+    // Measure the text on one line with Fabric's own metrics.
+    if (obj.path) obj.set({ path: null });
+    if (obj.type === 'textbox') obj.set({ width: 100000 });
+    obj.initDimensions?.();
+    const w = Math.max(10, obj.calcTextWidth ? obj.calcTextWidth() : obj.width);
+    if (obj.type === 'textbox') obj.set({ width: w + 2 });
+    const d = textPathD(w, obj.fontSize || 40, curve, wave)!;
     const path = new F.Path(d, { visible: false, fill: '', stroke: '' });
     obj.set({ path, pathAlign: 'baseline', pathSide: 'left', pathStartOffset: 0 });
-    if (obj.type === 'textbox') obj.set({ width: singleLineWidth(obj) + 2 });
   }
-  if (obj.initDimensions) obj.initDimensions();
+  obj.initDimensions?.();
   obj.setPositionByOrigin(center, 'center', 'center');
   obj.dirty = true;
   obj.setCoords();

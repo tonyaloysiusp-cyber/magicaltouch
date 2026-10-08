@@ -124,6 +124,7 @@ import { fromFabricGradient, toFabricGradient, GradientSpec } from '@/lib/editor
 import { documentColors as collectDocumentColors } from '@/lib/editor/color';
 import type { QuickStart } from '@/components/editor/shell/OnboardingDialog';
 import { TEXT_BASICS, TEXT_STYLES } from '@/lib/editor/catalog';
+import { putDraft, getDraft, deleteDraft, Draft, UNSAVED_KEY } from '@/lib/editor/draftStore';
 
 const isOpenVectorPath = (o: any): boolean =>
   !!o && o.isVectorPath && o.type === 'path' && Array.isArray(o.path) && o.path.length > 0 && o.path[o.path.length - 1][0] !== 'Z';
@@ -499,7 +500,21 @@ function EditorContent() {
   }, []);
 
   const refreshArtboards = useCallback(() => {
-    setArtboards(getArtboardMetas());
+    const metas = getArtboardMetas();
+    setArtboards(metas);
+    // Page-number boxes always show the number of the page they're on.
+    const canvas = fabricCanvasRef.current;
+    canvas?.getObjects().forEach((o: any) => {
+      if (!o.__pageNumber) return;
+      const i = metas.findIndex((m) => m.id === o.__artboardId);
+      const label = i >= 0 ? String(i + 1) : '#';
+      if (o.text !== label) {
+        o.set({ text: label });
+        o.initDimensions?.();
+        o.dirty = true;
+        canvas.requestRenderAll();
+      }
+    });
   }, [getArtboardMetas]);
 
   // Stamps __artboardId on every non-artboard object based on which
@@ -632,6 +647,7 @@ function EditorContent() {
   // re-apply the current tool's selectability to the restored objects.
   const reapplyToolRef = useRef<(() => void) | null>(null);
   const setActiveToolRef = useRef<((tool: ToolMode) => void) | null>(null);
+  const setPencilOnRef = useRef<((on: boolean) => void) | null>(null);
   const { historyRef, suppressHistoryRef, canUndo, canRedo, pushHistory: pushHistoryRaw, flushHistory, undo, redo, seedInitialSnapshot, restoreHistory, SNAPSHOT_PROPS } =
     useEditorHistory(fabricCanvasRef, () => {
       const canvas = fabricCanvasRef.current;
@@ -680,8 +696,38 @@ function EditorContent() {
     dirtyRef.current = true;
     setSaveStatus((s) => (s === 'saving' ? s : 'unsaved'));
     scheduleAutosaveRef.current?.();
+    scheduleDraftBackup();
   }
   markDirtyRef.current = markDirty;
+
+  // A copy of unsaved work is kept on this device until it's saved.
+  const draftTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  function draftKey() {
+    if (isLocalTabId(activeTabIdRef.current)) return null;
+    return designIdRef.current || UNSAVED_KEY;
+  }
+  function scheduleDraftBackup() {
+    if (draftTimerRef.current) clearTimeout(draftTimerRef.current);
+    draftTimerRef.current = setTimeout(() => {
+      const canvas = fabricCanvasRef.current;
+      const key = draftKey();
+      if (!canvas || !key || loadFailedIdRef.current) return;
+      try {
+        const first = artboardsRef.current[0];
+        putDraft({
+          key,
+          json: canvas.toJSON(PERSIST_PROPS),
+          name: designNameRef.current || 'Untitled Design',
+          width: first ? first.width : width,
+          height: first ? first.height : height,
+          savedAt: Date.now(),
+        });
+      } catch {
+        // Not critical.
+      }
+    }, 1500);
+  }
+  const [draftOffer, setDraftOffer] = useState<Draft | null>(null);
 
   const {
     stateRef: directSelectionStateRef,
@@ -1089,6 +1135,10 @@ function EditorContent() {
       if (tool !== 'artboard') clearArtboardDraft();
 
       if (!canvas) return;
+      if (canvas.isDrawingMode) {
+        canvas.isDrawingMode = false;
+        setPencilOnRef.current?.(false);
+      }
 
       if (tool === 'pan') {
         canvas.discardActiveObject();
@@ -1366,7 +1416,17 @@ function EditorContent() {
       // values were true at the START of editing instead of the current
       // real cursor/selection position.
       canvas.on('text:selection:changed', () => bumpSel());
-      canvas.on('text:changed', () => bumpSel());
+      canvas.on('text:changed', (e: any) => {
+        // Curved/wavy text re-fits its baseline as the words change.
+        const t = e?.target;
+        if (t && t.__textFx && (t.__textFx.curve || t.__textFx.wave)) {
+          import('@/lib/editor/textEffects').then(({ applyTextShape }) => {
+            applyTextShape(F, t, t.__textFx.curve, t.__textFx.wave);
+            canvas.requestRenderAll();
+          });
+        }
+        bumpSel();
+      });
       canvas.on('object:scaling', () => bumpSel());
       canvas.on('object:moving', (e: any) => {
         bumpSel();
@@ -1454,6 +1514,13 @@ function EditorContent() {
       // every other design tool uses, since guides otherwise have no
       // delete affordance of their own (Delete/Backspace is already
       // claimed by "delete the selected design object").
+      canvas.on('path:created', (e: any) => {
+        const path = e.path;
+        if (!path) return;
+        path.isVectorPath = true;
+        path.set({ fill: '', strokeLineCap: 'round', strokeLineJoin: 'round' });
+        path.name = 'Pencil path';
+      });
       canvas.on('mouse:dblclick', (opt: any) => {
         if (opt.target?.__isGuide) deleteGuide(opt.target);
         const t = opt.target;
@@ -1678,7 +1745,10 @@ function EditorContent() {
       // each render. toDataURL()/toCanvasElement() render objects into a fresh
       // offscreen canvas instead of this element, so this never leaks into
       // PNG/JPG/PDF exports.
-      canvas.on('after:render', () => {
+      canvas.on('after:render', (opt: any) => {
+        // Exports and thumbnails render into their own temporary canvas
+        // (and fire this event too): only decorate the visible canvas.
+        if (opt?.ctx && opt.ctx !== canvas.contextContainer) return;
         const ctx = canvasRef.current?.getContext('2d');
         const vt = canvas.viewportTransform;
         if (!ctx || !vt) return;
@@ -1737,6 +1807,38 @@ function EditorContent() {
           }
 
           strokeOutset(print.bleed, 'rgba(239,68,68,0.9)');
+
+          // Margins (magenta) and column guides (violet), like a layout app.
+          const m = print.margins;
+          const hasMargins = m && (m.top || m.right || m.bottom || m.left);
+          const cols = Math.max(1, print.columns || 1);
+          if (hasMargins || cols > 1) {
+            const mm = m || { top: 0, right: 0, bottom: 0, left: 0 };
+            const ix = x + mm.left * vt[0];
+            const iy = y + mm.top * vt[3];
+            const iw = w - (mm.left + mm.right) * vt[0];
+            const ih = h - (mm.top + mm.bottom) * vt[3];
+            ctx.setLineDash([]);
+            ctx.lineWidth = 1;
+            if (hasMargins) {
+              ctx.strokeStyle = 'rgba(217,70,239,0.75)';
+              ctx.strokeRect(ix + 0.5, iy + 0.5, Math.max(iw - 1, 0), Math.max(ih - 1, 0));
+            }
+            if (cols > 1) {
+              const g = (print.gutter ?? 16) * vt[0];
+              const colW = (iw - g * (cols - 1)) / cols;
+              ctx.strokeStyle = 'rgba(139,92,246,0.6)';
+              for (let c = 1; c < cols; c++) {
+                const cx0 = ix + c * colW + (c - 1) * g;
+                ctx.beginPath();
+                ctx.moveTo(cx0 + 0.5, iy);
+                ctx.lineTo(cx0 + 0.5, iy + ih);
+                ctx.moveTo(cx0 + g + 0.5, iy);
+                ctx.lineTo(cx0 + g + 0.5, iy + ih);
+                ctx.stroke();
+              }
+            }
+          }
 
           const b = print.bleed || { top: 0, right: 0, bottom: 0, left: 0 };
           const s = print.slug;
@@ -1907,6 +2009,11 @@ function EditorContent() {
                 seedInitialSnapshot();
                 ensureFontsLoadedForCanvasJSON(data.canvas_json).then(() => canvas.requestRenderAll());
                 suppressHistoryRef.current = false;
+                // Newer unsaved work on this device than in the account?
+                getDraft(urlDesignId).then((d) => {
+                  const serverTime = Date.parse(data.updated_at || '') || 0;
+                  if (d && d.savedAt > serverTime + 2000) setDraftOffer(d);
+                });
               });
             }
             if (error || !data) {
@@ -2210,6 +2317,29 @@ function EditorContent() {
     setActiveTool('select');
   };
 
+  // Vector pencil: a freehand line that becomes an editable path.
+  const [pencilOn, setPencilOn] = useState(false);
+  setPencilOnRef.current = setPencilOn;
+  const setVectorPencil = (on: boolean) => {
+    const canvas = fabricCanvasRef.current;
+    const F = (window as any).fabric;
+    if (!canvas || !F) return;
+    if (on) {
+      if (drawingRef.current) stopDrawing();
+      setActiveTool('select');
+      canvas.discardActiveObject();
+      const b = new F.PencilBrush(canvas);
+      b.width = Math.max(1, brushRef.current.size / 3);
+      b.color = brushRef.current.color;
+      b.decimate = 3;
+      canvas.freeDrawingBrush = b;
+      canvas.isDrawingMode = true;
+    } else {
+      canvas.isDrawingMode = false;
+    }
+    setPencilOn(on);
+  };
+
   // Eyedropper fallback for browsers without the EyeDropper API.
   const pickFromCanvas = (cb: (hex: string) => void) => {
     const canvas = fabricCanvasRef.current;
@@ -2313,6 +2443,23 @@ function EditorContent() {
     t.name = 'Sticker';
     canvas.add(t);
     canvas.setActiveObject(t);
+    canvas.requestRenderAll();
+  };
+
+  // A page number that updates itself when pages are added or reordered.
+  const addPageNumber = () => {
+    const F = (window as any).fabric;
+    const canvas = fabricCanvasRef.current;
+    if (!F || !canvas) return;
+    const page = getActiveArtboardRect();
+    const k = Math.max(page.width, page.height) / 1080;
+    const t = new F.Textbox('1', { width: 80 * k, fontSize: 28 * k, fontFamily: 'Inter', fill: '#52525B', textAlign: 'center' });
+    t.setPositionByOrigin(new F.Point(page.x + page.width / 2, page.y + page.height - 48 * k), 'center', 'center');
+    t.__pageNumber = true;
+    t.name = 'Page number';
+    canvas.add(t);
+    canvas.setActiveObject(t);
+    refreshArtboards();
     canvas.requestRenderAll();
   };
 
@@ -2661,13 +2808,42 @@ function EditorContent() {
   // First visit to a blank editor: offer the quick start.
   useEffect(() => {
     if (!canvasReady || urlDesignId || cameFromTemplate || urlLocalDoc || startInPhotoEditor) return;
-    try {
-      if (searchParams.get('onboard') === '1' || !localStorage.getItem('mt:onboarded')) setShowOnboarding(true);
-    } catch {
-      // ignore
-    }
+    getDraft(UNSAVED_KEY).then((d) => {
+      const recent = d && Date.now() - d.savedAt < 7 * 24 * 3600 * 1000;
+      const hasArt = recent && Array.isArray(d!.json?.objects) && d!.json.objects.some((o: any) => !o.__isArtboard && !o.__isGuide);
+      if (hasArt && !searchParams.get('newTab')) {
+        setDraftOffer(d);
+        return;
+      }
+      try {
+        if (searchParams.get('onboard') === '1' || !localStorage.getItem('mt:onboarded')) setShowOnboarding(true);
+      } catch {
+        // ignore
+      }
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [canvasReady]);
+
+  const restoreDraft = (d: Draft) => {
+    const canvas = fabricCanvasRef.current;
+    const F = (window as any).fabric;
+    if (!canvas || !F) return;
+    setDraftOffer(null);
+    suppressHistoryRef.current = true;
+    canvas.loadFromJSON(d.json, () => {
+      ensureArtboards(canvas, F);
+      const first = canvas.getObjects().find((o: any) => o.__isArtboard);
+      if (first) fitToRect(canvas, { x: first.left || 0, y: first.top || 0, width: (first.width || width) * (first.scaleX || 1), height: (first.height || height) * (first.scaleY || 1) });
+      canvas.renderAll();
+      refreshLayers();
+      refreshArtboards();
+      suppressHistoryRef.current = false;
+      if (d.key === UNSAVED_KEY) setDesignName(d.name);
+      ensureFontsLoadedForCanvasJSON(d.json).then(() => canvas.requestRenderAll());
+      pushHistory();
+      setLocalNotice('Your unsaved changes are back.');
+    });
+  };
 
   // Handles things dragged from the side panels onto the page.
   const handleAssetDrop = (asset: string, pointer: { x: number; y: number }, ev: any) => {
@@ -3112,8 +3288,9 @@ function EditorContent() {
     return [active];
   };
 
+  // Clones keep this app's own properties (frames, effects, names…).
   const cloneObjectsAsync = (objects: any[]): Promise<any[]> =>
-    Promise.all(objects.map((obj) => new Promise<any>((resolve) => obj.clone((c: any) => resolve(c)))));
+    Promise.all(objects.map((obj) => new Promise<any>((resolve) => obj.clone((c: any) => resolve(c), PERSIST_PROPS))));
 
   // Adds a set of already-cloned objects back to the canvas as one atomic
   // undo step, shifted by (dx,dy) from their source position, and leaves
@@ -3126,7 +3303,8 @@ function EditorContent() {
     canvas.discardActiveObject();
     clones.forEach((obj: any) => {
       delete obj.__uid;
-      obj.set({ left: (obj.left || 0) + dx, top: (obj.top || 0) + dy, evented: true, locked: false });
+      if (obj.__id) obj.__id = `img_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+      obj.set({ left: (obj.left || 0) + dx, top: (obj.top || 0) + dy, evented: true, ...lockProps(false) });
       obj.setCoords();
       canvas.add(obj);
     });
@@ -3165,11 +3343,33 @@ function EditorContent() {
     if (!objects.length) return;
     clipboardRef.current = await cloneObjectsAsync(objects);
     pasteCountRef.current = 0;
+    // Also kept on the device so it can be pasted into another design,
+    // even one open in a different browser tab.
+    try {
+      const json = JSON.stringify(objects.map((o: any) => o.toObject(PERSIST_PROPS)));
+      if (json.length < 4_000_000) localStorage.setItem('mt:clipboard', json);
+    } catch {
+      // Too big or storage unavailable: in-editor clipboard still works.
+    }
   };
 
   const PASTE_STEP = 20;
 
   const pasteClipboard = async () => {
+    if (!clipboardRef.current || clipboardRef.current.length === 0) {
+      // Copied in another design or browser tab.
+      try {
+        const raw = localStorage.getItem('mt:clipboard');
+        const F = (window as any).fabric;
+        if (raw && F) {
+          const objs: any[] = await new Promise((resolve) => F.util.enlivenObjects(JSON.parse(raw), (l: any[]) => resolve(l), 'fabric'));
+          clipboardRef.current = objs;
+          pasteCountRef.current = 0;
+        }
+      } catch {
+        // nothing to paste
+      }
+    }
     if (!clipboardRef.current || clipboardRef.current.length === 0) return;
     pasteCountRef.current += 1;
     // Re-clone from the stored clipboard on every paste (rather than
@@ -4240,6 +4440,9 @@ function EditorContent() {
     if (editRevRef.current === revAtSave) {
       dirtyRef.current = false;
       setSaveStatus('saved');
+      if (draftTimerRef.current) clearTimeout(draftTimerRef.current);
+      if (data?.id) deleteDraft(data.id);
+      if (!idToUse) deleteDraft(UNSAVED_KEY);
     } else {
       // Something changed while this save was on its way: save again.
       setSaveStatus('unsaved');
@@ -5665,7 +5868,12 @@ function EditorContent() {
       icon: <ShapesIcon size={20} />,
       render: () => <ElementsPanel onAddShape={(k) => features.addShape(k)} onAddFrame={(k) => features.addFrame(k)} onAddSticker={(e) => addSticker(e)} />,
     },
-    { id: 'text', label: 'Text', icon: <TypeIcon size={20} />, render: () => <TextPanel onAdd={(p: TextPreset) => features.addTextPreset(p)} onAddPairing={addFontPairing} /> },
+    {
+      id: 'text',
+      label: 'Text',
+      icon: <TypeIcon size={20} />,
+      render: () => <TextPanel onAdd={(p: TextPreset) => features.addTextPreset(p)} onAddPairing={addFontPairing} onAddPageNumber={addPageNumber} />,
+    },
     {
       id: 'uploads',
       label: 'Uploads',
@@ -5684,9 +5892,14 @@ function EditorContent() {
           onStart={startDrawing}
           onStop={stopDrawing}
           pro={pro}
-          vectorTool={activeTool}
+          vectorTool={pencilOn ? 'pencil' : activeTool}
           onVectorTool={(t) => {
             if (drawingRef.current) stopDrawing();
+            if (t === 'pencil') {
+              setVectorPencil(!pencilOn);
+              return;
+            }
+            if (pencilOn) setVectorPencil(false);
             setActiveTool(t);
           }}
         />
@@ -5958,6 +6171,20 @@ function EditorContent() {
         </div>
       )}
 
+      {draftOffer && (
+        <div role="alert" className="fixed top-16 left-1/2 -translate-x-1/2 z-[126] max-w-lg w-[calc(100%-2rem)] bg-mt-surface text-mt-ink border border-mt-border rounded-2xl shadow-xl px-4 py-3 flex flex-wrap items-center gap-3">
+          <span className="flex-1 min-w-[12rem] text-sm">
+            You have unsaved changes{draftOffer.key === UNSAVED_KEY ? ` to “${draftOffer.name}”` : ''} from {new Date(draftOffer.savedAt).toLocaleString()}.
+          </span>
+          <button type="button" onClick={() => { deleteDraft(draftOffer.key); setDraftOffer(null); }} className="h-9 px-3 rounded-full border border-mt-border text-sm">
+            Discard
+          </button>
+          <button type="button" onClick={() => restoreDraft(draftOffer)} className="h-9 px-4 rounded-full bg-mt-primary text-mt-onprimary text-sm font-semibold">
+            Restore
+          </button>
+        </div>
+      )}
+
       {showOpenDialog && (
         <OpenDesignDialog
           currentDesignId={designId}
@@ -6086,6 +6313,7 @@ function EditorContent() {
                 onCropRatio={features.setCropRatio}
                 onCropReset={features.resetCrop}
                 onCropDone={features.finishCrop}
+                onSmartCrop={features.smartCrop}
                 pro={pro}
               />
             </div>

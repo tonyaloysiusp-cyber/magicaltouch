@@ -244,6 +244,38 @@ export function useEditorFeatures(ctx: Ctx) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Smart crop: finds the subject of the photo and centres it in the frame.
+  const smartCrop = useCallback(async () => {
+    const F = F_();
+    const c = canvas();
+    const cur = cropRef.current;
+    if (!F || !c || !cur) return;
+    const img = cur.session.img;
+    const el: any = img._originalElement || img.getElement();
+    try {
+      const { detectSubject, subjectBounds } = await import('@/lib/editor/bgRemove');
+      ctxRef.current.notify('Finding the subject…');
+      const mask = await detectSubject(el);
+      const b = subjectBounds(mask, 0.5);
+      if (!b) {
+        ctxRef.current.notify('No clear subject found in this photo.');
+        return;
+      }
+      const local = new F.Point((b.x + b.w / 2 - 0.5) * img.width, (b.y + b.h / 2 - 0.5) * img.height);
+      const pageSubject = F.util.transformPoint(local, img.calcTransformMatrix());
+      const g = cur.session.geo;
+      const center = img.getCenterPoint();
+      img.setPositionByOrigin(new F.Point(center.x + (g.center.x - pageSubject.x), center.y + (g.center.y - pageSubject.y)), 'center', 'center');
+      keepCovering(cur.session);
+      img.setCoords();
+      c.requestRenderAll();
+      ctxRef.current.notify('Centred on the subject. Choose Done to keep it.');
+    } catch {
+      ctxRef.current.notify("Smart crop couldn't run. Check your connection and try again.");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Keeps the photo covering the frame while it's dragged/scaled in crop mode.
   const onCropTransform = useCallback(() => {
     const cur = cropRef.current;
@@ -487,6 +519,7 @@ export function useEditorFeatures(ctx: Ctx) {
     setCropRatio,
     resetCrop,
     finishCrop,
+    smartCrop,
     onCropTransform,
     cropping,
     cropRef,

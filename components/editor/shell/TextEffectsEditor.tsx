@@ -31,7 +31,12 @@ export function TextEffectsEditor({ value, onChange }: { value: TextFx; onChange
           <button
             key={e.id}
             type="button"
-            onClick={() => set({ effect: e.id })}
+            onClick={() => {
+              // A sensible colour for each look the first time it's picked.
+              const defaults: Record<string, string> = { glow: '#8CCBFF', neon: '#F2708F', highlight: '#DDE23B', echo: '#8CCBFF', outline: '#09090B', hollow: '#09090B', shadow: '#09090B' };
+              const keep = value.effect !== 'none' && value.color !== '#09090B';
+              set({ effect: e.id, color: keep ? value.color : defaults[e.id] || value.color });
+            }}
             aria-pressed={value.effect === e.id}
             className={cx(
               'rounded-xl border flex flex-col items-center justify-center gap-0.5 py-2',
