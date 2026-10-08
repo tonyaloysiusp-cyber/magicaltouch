@@ -37,9 +37,9 @@ export function CreativeHeroArt() {
   return (
     <div className="relative h-[440px] sm:h-[520px] flex items-center justify-center [perspective:1400px]">
       {/* Glowing brand orbs */}
-      <div className="pointer-events-none absolute -top-6 left-6 w-56 h-56 rounded-full bg-[#EC1E79]/30 blur-3xl animate-bg-float-a" />
-      <div className="pointer-events-none absolute bottom-0 right-0 w-64 h-64 rounded-full bg-[#3FA9E8]/30 blur-3xl animate-bg-float-b" />
-      <div className="pointer-events-none absolute top-1/3 right-1/4 w-40 h-40 rounded-full bg-[#7ED33E]/20 blur-3xl animate-bg-float-a" />
+      <div className="pointer-events-none absolute -top-6 left-6 w-56 h-56 rounded-full bg-[#EC1E79]/10 blur-3xl animate-bg-float-a" />
+      <div className="pointer-events-none absolute bottom-0 right-0 w-64 h-64 rounded-full bg-[#3FA9E8]/10 blur-3xl animate-bg-float-b" />
+      <div className="pointer-events-none absolute top-1/3 right-1/4 w-40 h-40 rounded-full bg-[#7ED33E]/[0.06] blur-3xl animate-bg-float-a" />
 
       {/* Rotating gradient ring (3D) */}
       <div
