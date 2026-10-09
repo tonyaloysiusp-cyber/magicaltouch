@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import type { TextPreset } from '@/hooks/useEditorFeatures';
 import { TEXT_BASICS, TEXT_STYLES, FONT_PAIRINGS } from '@/lib/editor/catalog';
 import { gradientCss } from '@/lib/editor/gradients';
@@ -32,7 +33,7 @@ function previewStyle(p: TextPreset): React.CSSProperties {
   return s;
 }
 
-export function TextPanel({ onAdd, onAddPairing, onAddPageNumber, onAddArticle }: { onAdd: (p: TextPreset) => void; onAddPairing: (heading: string, body: string) => void; onAddPageNumber: () => void; onAddArticle?: (columns: number) => void }) {
+export function TextPanel({ onAdd, onAddPairing, onAddPageNumber, onAddArticle }: { onAdd: (p: TextPreset) => void; onAddPairing: (heading: string, body: string) => void; onAddPageNumber: (format?: string, everyPage?: boolean) => void; onAddArticle?: (columns: number) => void }) {
   const drag = (id: string) => (e: React.DragEvent) => e.dataTransfer.setData('application/x-mt-asset', `text:${id}`);
   return (
     <div>
@@ -51,14 +52,7 @@ export function TextPanel({ onAdd, onAddPairing, onAddPageNumber, onAddArticle }
           </button>
         ))}
       </div>
-      <button
-        type="button"
-        onClick={onAddPageNumber}
-        title="Adds a number that always matches the page it's on"
-        className="w-full mb-5 h-10 rounded-xl border border-dashed border-mt-border text-sm text-mt-muted hover:text-mt-ink hover:bg-mt-surface2"
-      >
-        # Add page number
-      </button>
+      <PageNumbers onAdd={onAddPageNumber} />
       {onAddArticle && (
         <PanelSection title="Articles & columns">
           <p className="text-xs text-mt-muted -mt-1 mb-2.5 leading-relaxed">A headline and a story that flows from column to column — and on to new pages.</p>
@@ -129,6 +123,45 @@ export function TextPanel({ onAdd, onAddPairing, onAddPageNumber, onAddArticle }
           ))}
         </div>
       </PanelSection>
+    </div>
+  );
+}
+
+const PAGE_NUMBER_FORMATS = [
+  { f: '{n}', label: '3' },
+  { f: 'Page {n}', label: 'Page 3' },
+  { f: '{n} / {total}', label: '3 / 12' },
+  { f: 'Page {n} of {total}', label: 'Page 3 of 12' },
+];
+
+// Page numbers that always match their page (and the page count).
+function PageNumbers({ onAdd }: { onAdd: (format?: string, everyPage?: boolean) => void }) {
+  const [fmt, setFmt] = useState('{n}');
+  return (
+    <div className="mb-5 rounded-xl border border-dashed border-mt-border p-3">
+      <p className="text-[13px] font-semibold text-mt-ink"># Page numbers</p>
+      <div className="mt-2 grid grid-cols-2 gap-1.5" role="radiogroup" aria-label="Page number style">
+        {PAGE_NUMBER_FORMATS.map((o) => (
+          <button
+            key={o.f}
+            type="button"
+            role="radio"
+            aria-checked={fmt === o.f}
+            onClick={() => setFmt(o.f)}
+            className={`h-8 rounded-lg border text-xs tabular-nums ${fmt === o.f ? 'mt-active-blue text-mt-ink' : 'border-mt-border text-mt-muted hover:text-mt-ink'}`}
+          >
+            {o.label}
+          </button>
+        ))}
+      </div>
+      <div className="mt-2 grid grid-cols-2 gap-1.5">
+        <button type="button" onClick={() => onAdd(fmt, false)} className="h-9 rounded-lg border border-mt-border text-xs font-medium text-mt-ink hover:bg-mt-surface2">
+          This page
+        </button>
+        <button type="button" onClick={() => onAdd(fmt, true)} className="h-9 rounded-lg bg-mt-primary text-mt-onprimary text-xs font-semibold">
+          Every page
+        </button>
+      </div>
     </div>
   );
 }
