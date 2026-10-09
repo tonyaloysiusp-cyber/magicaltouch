@@ -370,11 +370,53 @@ export function ArtboardsPanel({
                 onChange={(next) => onUpdatePrint(active.id, { safeArea: next })}
                 onToggleLinked={() => onUpdatePrint(active.id, { safeAreaLinked: !active.print.safeAreaLinked })}
               />
+              <EdgeFields
+                label="Margins"
+                unit={unit}
+                values={active.print.margins || { top: 0, right: 0, bottom: 0, left: 0 }}
+                linked={active.print.marginsLinked !== false}
+                onChange={(next) => onUpdatePrint(active.id, { margins: next })}
+                onToggleLinked={() => onUpdatePrint(active.id, { marginsLinked: active.print.marginsLinked === false })}
+              />
+              <div className="grid grid-cols-2 gap-2">
+                <label className="block">
+                  <span className="text-[10px] text-mt-muted block mb-0.5">Columns</span>
+                  <input
+                    type="number"
+                    min={1}
+                    max={12}
+                    key={`cols-${active.id}-${active.print.columns || 1}`}
+                    defaultValue={active.print.columns || 1}
+                    onBlur={(e) => {
+                      const n = Math.max(1, Math.min(12, Math.round(Number(e.target.value) || 1)));
+                      onUpdatePrint(active.id, { columns: n });
+                    }}
+                    className="w-full text-xs border rounded px-2 py-1"
+                  />
+                </label>
+                <label className="block">
+                  <span className="text-[10px] text-mt-muted block mb-0.5">Gutter ({unit})</span>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    key={`gut-${active.id}-${active.print.gutter ?? 16}-${unit}`}
+                    defaultValue={formatUnit(active.print.gutter ?? 16, unit)}
+                    onBlur={(e) => {
+                      const n = parseFloat(e.target.value);
+                      if (Number.isFinite(n) && n >= 0) onUpdatePrint(active.id, { gutter: unitToPx(n, unit) });
+                    }}
+                    onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
+                    className="w-full text-xs border rounded px-2 py-1"
+                  />
+                </label>
+              </div>
 
               <div>
                 <label className="text-[10px] text-mt-muted block mb-0.5">Target Print DPI</label>
                 <input
                   type="text"
+                  inputMode="numeric"
+                  key={`dpi-${active.id}-${active.print.dpi}`}
                   defaultValue={String(active.print.dpi)}
                   onBlur={(e) => {
                     const val = parseFloat(e.target.value);

@@ -37,7 +37,18 @@ interface Props {
   layerLabel: (obj: any, index: number) => string;
   onReplaceImage: (file: File) => void;
   onEditPhoto: () => void;
+  // Top-left of the artboard the selection sits on: X/Y are shown
+  // relative to it, like every design app.
+  artboardOrigin?: { x: number; y: number };
 }
+
+// Range sliders commit one undo step when the drag ends — on mouse, touch,
+// pen and keyboard alike (iPad has no mouseup).
+const commitHandlers = (commit: () => void) => ({
+  onPointerUp: commit,
+  onKeyUp: commit,
+  onTouchEnd: commit,
+});
 
 // A precise numeric input: types/pastes/arrow-keys any decimal (and
 // negative, when allowed) value, commits on blur/Enter, and never
@@ -132,6 +143,7 @@ export function PropertiesPanel({
   layerLabel,
   onReplaceImage,
   onEditPhoto,
+  artboardOrigin = { x: 0, y: 0 },
 }: Props) {
   const kbd = 'bg-mt-surface2 dark:bg-mt-surface2 border dark:border-mt-border rounded px-1';
 
@@ -238,9 +250,9 @@ export function PropertiesPanel({
         </div>
       )}
 
-      {!isMultiple && (
+      {(
         <div
-          key={`${selected.__uid || 'obj'}-${unit}`}
+          key={`${selected.__uid || 'obj'}-${unit}-${Math.round((selected.left ?? 0) * 100)}-${Math.round((selected.top ?? 0) * 100)}-${Math.round(pixelSize.w * 100)}-${Math.round(pixelSize.h * 100)}-${Math.round((selected.angle || 0) * 100)}`}
           className="border rounded-lg p-3 bg-mt-surface2 dark:bg-mt-surface dark:border-mt-border flex flex-col gap-2"
         >
           <div className="flex items-center justify-between">
@@ -261,10 +273,13 @@ export function PropertiesPanel({
               <input
                 type="text"
                 disabled={isLocked}
-                defaultValue={formatUnit(selected.left ?? 0, unit)}
+                defaultValue={formatUnit((selected.left ?? 0) - artboardOrigin.x, unit)}
                 onBlur={(e) => {
                   const val = parseFloat(e.target.value);
-                  if (!isNaN(val)) applyProp({ left: unitToPx(val, unit) });
+                  if (!isNaN(val)) {
+                    const next = unitToPx(val, unit) + artboardOrigin.x;
+                    if (Math.abs(next - (selected.left ?? 0)) > 0.001) applyProp({ left: next });
+                  }
                 }}
                 onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
                 className="w-full text-xs border rounded px-2 py-1 disabled:opacity-40 dark:bg-mt-surface dark:border-mt-border dark:text-mt-ink"
@@ -275,10 +290,13 @@ export function PropertiesPanel({
               <input
                 type="text"
                 disabled={isLocked}
-                defaultValue={formatUnit(selected.top ?? 0, unit)}
+                defaultValue={formatUnit((selected.top ?? 0) - artboardOrigin.y, unit)}
                 onBlur={(e) => {
                   const val = parseFloat(e.target.value);
-                  if (!isNaN(val)) applyProp({ top: unitToPx(val, unit) });
+                  if (!isNaN(val)) {
+                    const next = unitToPx(val, unit) + artboardOrigin.y;
+                    if (Math.abs(next - (selected.top ?? 0)) > 0.001) applyProp({ top: next });
+                  }
                 }}
                 onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
                 className="w-full text-xs border rounded px-2 py-1 disabled:opacity-40 dark:bg-mt-surface dark:border-mt-border dark:text-mt-ink"
@@ -292,7 +310,7 @@ export function PropertiesPanel({
                 defaultValue={formatUnit(pixelSize.w, unit)}
                 onBlur={(e) => {
                   const val = parseFloat(e.target.value);
-                  if (!isNaN(val)) applyExactSize(unitToPx(val, unit), null);
+                  if (!isNaN(val) && val > 0 && e.target.value !== formatUnit(pixelSize.w, unit)) applyExactSize(unitToPx(val, unit), null);
                 }}
                 onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
                 className="w-full text-xs border rounded px-2 py-1 disabled:opacity-40 dark:bg-mt-surface dark:border-mt-border dark:text-mt-ink"
@@ -307,7 +325,7 @@ export function PropertiesPanel({
                 defaultValue={formatUnit(pixelSize.h, unit)}
                 onBlur={(e) => {
                   const val = parseFloat(e.target.value);
-                  if (!isNaN(val)) applyExactSize(null, unitToPx(val, unit));
+                  if (!isNaN(val) && val > 0 && e.target.value !== formatUnit(pixelSize.h, unit)) applyExactSize(null, unitToPx(val, unit));
                 }}
                 onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
                 className="w-full text-xs border rounded px-2 py-1 disabled:opacity-40 dark:bg-mt-surface dark:border-mt-border dark:text-mt-ink"
@@ -320,10 +338,10 @@ export function PropertiesPanel({
             <input
               type="text"
               disabled={isLocked}
-              defaultValue={Math.round(selected.angle || 0).toString()}
+              defaultValue={(Math.round((selected.angle || 0) * 10) / 10).toString()}
               onBlur={(e) => {
                 const val = parseFloat(e.target.value);
-                if (!isNaN(val)) applyProp({ angle: val });
+                if (!isNaN(val) && Math.abs((((val % 360) + 360) % 360) - (selected.angle || 0)) > 0.01) applyProp({ angle: ((val % 360) + 360) % 360 });
               }}
               onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
               className="w-full text-xs border rounded px-2 py-1 disabled:opacity-40 dark:bg-mt-surface dark:border-mt-border dark:text-mt-ink"
@@ -333,7 +351,7 @@ export function PropertiesPanel({
       )}
 
       <div>
-        <p className="text-xs font-semibold text-mt-muted dark:text-mt-muted mb-2">Align to Canvas</p>
+        <p className="text-xs font-semibold text-mt-muted dark:text-mt-muted mb-2">{isMultiple ? 'Align to each other' : 'Align to page'}</p>
         <div className="grid grid-cols-3 gap-1">
           <button onClick={() => alignObject('left')} className="text-xs border rounded py-1 hover:bg-mt-surface2 dark:border-mt-border dark:text-mt-ink dark:hover:bg-mt-surface2">⟸</button>
           <button onClick={() => alignObject('centerH')} className="text-xs border rounded py-1 hover:bg-mt-surface2 dark:border-mt-border dark:text-mt-ink dark:hover:bg-mt-surface2">↔</button>
@@ -411,7 +429,7 @@ export function PropertiesPanel({
         <div className="flex items-center justify-between mb-1">
           <label className="text-xs font-semibold text-mt-muted dark:text-mt-muted">Opacity</label>
           <input
-            key={`opacity-${selected.__uid || 'obj'}`}
+            key={`opacity-${selected.__uid || 'obj'}-${Math.round((selected.opacity ?? 1) * 100)}`}
             type="text"
             inputMode="numeric"
             disabled={isLocked}
@@ -436,7 +454,7 @@ export function PropertiesPanel({
           disabled={isLocked}
           value={Math.round((selected.opacity ?? 1) * 100)}
           onChange={(e) => applyProp({ opacity: Number(e.target.value) / 100 }, false)}
-          onMouseUp={() => pushHistory()}
+          {...commitHandlers(pushHistory)}
           className="w-full disabled:opacity-40"
         />
       </div>
@@ -559,8 +577,8 @@ export function PropertiesPanel({
               max={40}
               disabled={isLocked}
               value={selected.strokeWidth || 0}
-              onChange={(e) => applyProp({ strokeWidth: Number(e.target.value) }, false)}
-              onMouseUp={() => pushHistory()}
+              onChange={(e) => applyProp({ strokeWidth: Number(e.target.value), strokeUniform: true, ...(selected.stroke ? {} : { stroke: '#09090B' }) }, false)}
+              {...commitHandlers(pushHistory)}
               className="w-full disabled:opacity-40"
             />
           </div>
@@ -575,7 +593,7 @@ export function PropertiesPanel({
                 disabled={isLocked}
                 value={selected.rx || 0}
                 onChange={(e) => applyProp({ rx: Number(e.target.value), ry: Number(e.target.value) }, false)}
-                onMouseUp={() => pushHistory()}
+                {...commitHandlers(pushHistory)}
                 className="w-full disabled:opacity-40"
               />
             </div>

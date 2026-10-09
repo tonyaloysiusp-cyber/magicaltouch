@@ -16,6 +16,7 @@ export interface ContextMenuAction {
   onClick: () => void;
   disabled?: boolean;
   danger?: boolean;
+  shortcut?: string;
   divider?: false;
 }
 export interface ContextMenuDivider {
@@ -57,7 +58,7 @@ export function ContextMenu({ x, y, items, onClose }: Props) {
   }, [onClose]);
 
   // Keep the menu on-screen even when the right-click lands near an edge.
-  const MENU_WIDTH = 200;
+  const MENU_WIDTH = 240;
   const MENU_HEIGHT_ESTIMATE = items.length * 30 + 16;
   const left = Math.min(x, (typeof window !== 'undefined' ? window.innerWidth : x) - MENU_WIDTH - 8);
   const top = Math.min(y, (typeof window !== 'undefined' ? window.innerHeight : y) - MENU_HEIGHT_ESTIMATE - 8);
@@ -67,7 +68,8 @@ export function ContextMenu({ x, y, items, onClose }: Props) {
       ref={ref}
       data-testid="context-menu"
       style={{ position: 'fixed', left: Math.max(4, left), top: Math.max(4, top), zIndex: 100 }}
-      className="min-w-[190px] bg-mt-surface dark:bg-mt-surface border dark:border-mt-border rounded-md shadow-lg py-1 text-[13px] select-none"
+      role="menu"
+      className="min-w-[220px] bg-mt-surface border border-mt-border rounded-xl shadow-[0_20px_50px_-12px_rgba(9,9,11,0.28)] p-1 text-[13px] select-none"
     >
       {items.map((item, i) =>
         isDivider(item) ? (
@@ -75,20 +77,22 @@ export function ContextMenu({ x, y, items, onClose }: Props) {
         ) : (
           <button
             key={item.label}
+            role="menuitem"
             disabled={item.disabled}
             onClick={() => {
               item.onClick();
               onClose();
             }}
-            className={`w-full text-left px-3 py-1.5 ${
+            className={`w-full flex items-center justify-between gap-4 text-left px-2.5 py-1.5 rounded-lg ${
               item.disabled
-                ? 'text-mt-faint dark:text-mt-faint cursor-default'
+                ? 'text-mt-faint cursor-default'
                 : item.danger
                 ? 'text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30'
-                : 'text-mt-ink dark:text-mt-ink hover:bg-purple-50 dark:hover:bg-mt-surface2'
+                : 'text-mt-ink hover:bg-mt-surface2'
             }`}
           >
-            {item.label}
+            <span>{item.label}</span>
+            {item.shortcut && <span className="text-[11px] text-mt-faint tabular-nums">{item.shortcut}</span>}
           </button>
         )
       )}

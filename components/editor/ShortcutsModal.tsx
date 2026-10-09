@@ -48,7 +48,12 @@ const MAIN_DESIGN_SHORTCUTS: { keys: string; label: string }[] = [
   { keys: 'Shift + Arrow keys', label: 'Nudge 10px' },
   { keys: 'Ctrl/Cmd + "+"', label: 'Zoom in' },
   { keys: 'Ctrl/Cmd + "-"', label: 'Zoom out' },
-  { keys: 'Ctrl/Cmd + 0', label: 'Reset zoom to 100%' },
+  { keys: 'Ctrl/Cmd + 0', label: 'Fit page to screen' },
+  { keys: 'Ctrl/Cmd + 1', label: 'Zoom to 100%' },
+  { keys: 'Space + drag', label: 'Pan (any tool)' },
+  { keys: 'Two-finger pinch', label: 'Zoom (touch screens and trackpads)' },
+  { keys: 'Shift while rotating', label: 'Rotate in 15° steps' },
+  { keys: 'Alt/Option + drag an object', label: 'Drag out a copy (Selection tool)' },
 ];
 
 const PHOTO_EDITOR_SHORTCUTS: { keys: string; label: string }[] = [

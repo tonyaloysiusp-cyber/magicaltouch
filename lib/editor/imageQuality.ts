@@ -82,6 +82,41 @@ export function imageObjectToDataURL(obj: any, options: { format?: 'png' | 'jpeg
   });
 }
 
+// The picture's own pixels, without the rotation, flip, mask or live
+// filters applied to it on the page (the page keeps applying those), at
+// its full resolution. Used to hand a placed photo to the Photo Editor.
+export function imageSourceDataURL(obj: any, options: { format?: 'png' | 'jpeg'; quality?: number } = {}): string {
+  const el: any = obj?._originalElement || obj?.getElement?.();
+  const w = el?.naturalWidth || el?.width || 0;
+  const h = el?.naturalHeight || el?.height || 0;
+  if (el && w && h && typeof document !== 'undefined') {
+    try {
+      const longest = Math.max(w, h);
+      const k = longest > MAX_EXPORT_DIMENSION ? MAX_EXPORT_DIMENSION / longest : 1;
+      const c = document.createElement('canvas');
+      c.width = Math.round(w * k);
+      c.height = Math.round(h * k);
+      const ctx = c.getContext('2d');
+      if (ctx) {
+        configureHighQualityContext(ctx);
+        ctx.drawImage(el, 0, 0, c.width, c.height);
+        const type = options.format === 'jpeg' ? 'image/jpeg' : 'image/png';
+        return c.toDataURL(type, options.quality ?? 1);
+      }
+    } catch {
+      // Fall through to Fabric's own rendering below.
+    }
+  }
+  const multiplier = clampMultiplierForSafety(obj, nativeResMultiplier(obj));
+  const saved = { angle: obj.angle, flipX: obj.flipX, flipY: obj.flipY, clipPath: obj.clipPath };
+  obj.set({ angle: 0, flipX: false, flipY: false, clipPath: undefined });
+  try {
+    return obj.toDataURL({ format: options.format || 'png', quality: options.quality ?? 1, multiplier });
+  } finally {
+    obj.set(saved);
+  }
+}
+
 // Enables the browser's best available image resampling on a 2D context
 // — used for every offscreen canvas this app draws a photo into (crop,
 // mask compositing, brush pixel ops, zoom-independent thumbnails), so

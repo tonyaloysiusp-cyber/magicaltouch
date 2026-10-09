@@ -65,8 +65,27 @@ function hasMultipleSubpaths(obj: any): boolean {
   return false;
 }
 
+const EMOJI = new RegExp('\\p{Extended_Pictographic}', 'u');
+
+const isTextObj = (o: any) => o.type === 'textbox' || o.type === 'i-text' || o.type === 'text';
+const hasCharStyles = (o: any) => !!o.styles && Object.values(o.styles).some((row: any) => row && Object.keys(row).length > 0);
+const isSeeThrough = (c: any) => typeof c === 'string' && /rgba?\([^)]*,[^)]*,[^)]*,\s*0?\.\d+\s*\)|^#[0-9a-f]{8}$/i.test(c.trim());
+
 function needsRasterFallback(obj: any): boolean {
   if (obj.clipPath) return true;
+  // Text with letter-by-letter formatting or letter spacing, and colours
+  // with their own transparency, are drawn as a sharp picture so they
+  // look exactly as on screen.
+  if (isTextObj(obj) && (hasCharStyles(obj) || (obj.charSpacing && obj.charSpacing !== 0))) return true;
+  if (isSeeThrough(obj.fill) || isSeeThrough(obj.stroke)) return true;
+  // Effects a PDF can't express as plain vectors are drawn as a sharp
+  // high-resolution picture of just that object.
+  if (obj.shadow) return true;
+  if (obj.path && (obj.type === 'textbox' || obj.type === 'i-text' || obj.type === 'text')) return true;
+  if (obj.globalCompositeOperation && obj.globalCompositeOperation !== 'source-over') return true;
+  if (obj.strokeDashArray && obj.strokeDashArray.length) return true;
+  if (typeof obj.text === 'string' && EMOJI.test(obj.text)) return true;
+  if (obj.textBackgroundColor) return true;
   if (obj.fill && typeof obj.fill === 'object') return true;
   if (obj.stroke && typeof obj.stroke === 'object') return true;
   if (obj.type === 'group' || obj.type === 'activeSelection') return true;
@@ -102,7 +121,9 @@ function applyPaintAndGetStyle(pdf: any, F: any, obj: any): string | null {
   if (hasStroke) {
     const [r, g, b] = colorToRGB(F, obj.stroke);
     pdf.setDrawColor(r, g, b);
-    const avgScale = ((obj.scaleX || 1) + (obj.scaleY || 1)) / 2;
+    // A border that keeps its thickness when the shape is resized
+    // (strokeUniform) isn't scaled with the shape.
+    const avgScale = obj.strokeUniform ? 1 : ((Math.abs(obj.scaleX || 1) + Math.abs(obj.scaleY || 1)) / 2);
     pdf.setLineWidth(Math.max(toPt((obj.strokeWidth || 1) * avgScale), 0.01));
   }
 
@@ -204,7 +225,7 @@ function drawLineObject(pdf: any, F: any, obj: any, offsetX: number, offsetY: nu
 
   const [r, g, b] = colorToRGB(F, obj.stroke);
   pdf.setDrawColor(r, g, b);
-  const avgScale = ((obj.scaleX || 1) + (obj.scaleY || 1)) / 2;
+  const avgScale = obj.strokeUniform ? 1 : (Math.abs(obj.scaleX || 1) + Math.abs(obj.scaleY || 1)) / 2;
   pdf.setLineWidth(Math.max(toPt((obj.strokeWidth || 1) * avgScale), 0.01));
   pdf.line(toPt(p1.x - offsetX), toPt(p1.y - offsetY), toPt(p2.x - offsetX), toPt(p2.y - offsetY));
 }

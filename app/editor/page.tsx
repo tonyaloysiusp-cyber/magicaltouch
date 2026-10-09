@@ -8,16 +8,54 @@ import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { fetchTemplateById, setTemplateContent, createVersion, Template as TemplateRecord } from '@/lib/templatesData';
 import { dataUrlToBlob, uploadDesignAsset } from '@/lib/storage/assets';
-import { Keyboard, Sun, Moon } from 'lucide-react';
+import {
+  Keyboard,
+  ChevronLeft,
+  CloudOff,
+  Loader2,
+  RefreshCw,
+  Check,
+  Undo2,
+  Redo2,
+  Wand2,
+  Download,
+  LayoutTemplate,
+  Shapes as ShapesIcon,
+  Type as TypeIcon,
+  Upload as UploadIcon,
+  Brush as BrushIcon,
+  PaintBucket,
+  Palette,
+  Layers as LayersIcon,
+  Files,
+  HelpCircle,
+  ChevronDown,
+} from 'lucide-react';
+import { LeftRail, RailItem } from '@/components/editor/shell/LeftRail';
+import { ContextToolbar, ToolbarActions } from '@/components/editor/shell/ContextToolbar';
+import { PagesBar } from '@/components/editor/shell/PagesBar';
+import { IconButton, Segmented, Popover, cx } from '@/components/editor/shell/ui';
+import { BgRemoveDialog } from '@/components/editor/shell/BgRemoveDialog';
+import { ResizeDialog } from '@/components/editor/shell/ResizeDialog';
+import { OnboardingDialog } from '@/components/editor/shell/OnboardingDialog';
+import { TemplatesPanel } from '@/components/editor/shell/panels/TemplatesPanel';
+import { ElementsPanel } from '@/components/editor/shell/panels/ElementsPanel';
+import { TextPanel } from '@/components/editor/shell/panels/TextPanel';
+import { UploadsPanel } from '@/components/editor/shell/panels/UploadsPanel';
+import { DrawPanel } from '@/components/editor/shell/panels/DrawPanel';
+import { BackgroundPanel } from '@/components/editor/shell/panels/BackgroundPanel';
+import { BrandPanel } from '@/components/editor/shell/panels/BrandPanel';
+import { HelpPanel } from '@/components/editor/shell/panels/HelpPanel';
+import { AdjustPanel } from '@/components/editor/shell/panels/AdjustPanel';
 import { useAppTheme } from '@/hooks/useAppTheme';
 
 import { ToolMode, DocUnit, isDrawTool, PASTEBOARD_BG, RULER_SIZE } from '@/lib/editor/types';
-import { useDisplayUnit } from '@/lib/editor/units';
-import { allFontFacesCSS, ensureFontLoaded, ensureFontsLoadedForCanvasJSON, validateAllFonts } from '@/lib/editor/googleFonts';
+import { useDisplayUnit, formatUnit } from '@/lib/editor/units';
+import { allFontFacesCSS, ensureFontLoaded, ensureFontsLoadedForCanvasJSON, validateAllFonts, refreshTextMetrics } from '@/lib/editor/googleFonts';
 import { getAbsolutePolygonPoints, multiPolygonToPathD } from '@/lib/editor/geometry';
 import { exportCanvasToPDF, exportArtboardsToPDF, toPt } from '@/lib/editor/pdfExport';
 import { exportArtboardToSVG } from '@/lib/editor/svgExport';
-import { computeSnap, computeGuideSnap, computeGridSnap, GuideLine } from '@/lib/editor/snapping';
+import { computeSnap, computeGuideSnap, computeGridSnap, computeSpacingSnap, computeEdgeSnap, allXAnchors, allYAnchors, GuideLine, SpacingMark } from '@/lib/editor/snapping';
 import {
   ArtboardMeta,
   ArtboardPreset,
@@ -40,7 +78,7 @@ import { useGuides } from '@/hooks/useGuides';
 
 import { Toolbar } from '@/components/editor/Toolbar';
 import { PropertiesPanel } from '@/components/editor/PropertiesPanel';
-import { LayersPanel } from '@/components/editor/LayersPanel';
+import { DesignLayersPanel } from '@/components/editor/DesignLayersPanel';
 import { ArtboardsPanel } from '@/components/editor/ArtboardsPanel';
 import { ExportDialog, ExportSettings } from '@/components/editor/ExportDialog';
 import { DesignLimitDialog } from '@/components/DesignLimitDialog';
@@ -66,7 +104,8 @@ import { loadTabSession, saveTabSession, clearTabSession } from '@/lib/editor/ta
 import { WorkspaceSwitcher, EditorWorkspace } from '@/components/editor/WorkspaceSwitcher';
 import { PhotoEditorWorkspace, PhotoEditResult, CropRect, PhotoEditorHandle } from '@/components/photoEditor/PhotoEditorWorkspace';
 import { PhotoAdjustments, DEFAULT_ADJUSTMENTS } from '@/lib/editor/photoFilters';
-import { imageObjectToDataURL } from '@/lib/editor/imageQuality';
+import { imageSourceDataURL } from '@/lib/editor/imageQuality';
+import { prepareImageDataUrl } from '@/lib/editor/imagePrep';
 import { buildMtd, readMtd, MtdError, fileNameFor, nameFromFileName } from '@/lib/mtd/format';
 import { saveMtdFile, pickMtdFile, canWriteSilently, LocalFileRef } from '@/lib/mtd/fileAccess';
 import { putHandoff, peekHandoff, takeHandoff, newLocalKey, isLocalTabId, ExternalTarget, isCloudTarget } from '@/lib/mtd/handoff';
@@ -76,33 +115,26 @@ import { SaveLocationDialog, SaveLocation } from '@/components/storage/SaveLocat
 import { CloudOpenDialog } from '@/components/storage/CloudOpenDialog';
 import { rememberRecent } from '@/lib/mtd/recent';
 import { missingFontsIn, fontRequiredMessage } from '@/lib/editor/missingFonts';
+import { PERSIST_PROPS, isHelperObject, isArtwork, applyStoredLocks, lockProps, reviveTextPaths } from '@/lib/editor/persist';
+import { ensureImageFilters, reviveImageAdjust } from '@/lib/editor/imageAdjust';
+import { drawCropOverlay, isFramed, fillFrame, cropHandleAt, dragCropHandle, keepCovering, CROP_CURSORS, CropHandle } from '@/lib/editor/frames';
+import { BrushSettings, DEFAULT_BRUSH, StrokePoint, strokePathD, createStrokeObject, eraseWithStroke } from '@/lib/editor/brush';
+import { useEditorFeatures, TextPreset, clearCharStyle } from '@/hooks/useEditorFeatures';
+import { planResize } from '@/lib/editor/smartResize';
+import { BrandKit, EMPTY_KIT, loadBrandKit, saveBrandKit, applyBrandToObjects } from '@/lib/editor/brandKit';
+import { fromFabricGradient, toFabricGradient, GradientSpec } from '@/lib/editor/gradients';
+import { documentColors as collectDocumentColors } from '@/lib/editor/color';
+import type { QuickStart } from '@/components/editor/shell/OnboardingDialog';
+import { TEXT_BASICS, TEXT_STYLES } from '@/lib/editor/catalog';
+import { putDraft, getDraft, deleteDraft, Draft, UNSAVED_KEY } from '@/lib/editor/draftStore';
+import { buildZip, dataUrlToBytes } from '@/lib/editor/zip';
 
 const isOpenVectorPath = (o: any): boolean =>
   !!o && o.isVectorPath && o.type === 'path' && Array.isArray(o.path) && o.path.length > 0 && o.path[o.path.length - 1][0] !== 'Z';
 
-// Custom Fabric object properties that must survive round-tripping through
-// canvas.toJSON()/loadFromJSON() -- shared by every place that serializes
-// the live canvas for a save (performSaveInner reuses this twice: once for
-// the upsert payload, once to re-snapshot fresh content for the post-save
-// canvas-recreation effect).
-const SAVE_JSON_PROPS = [
-  'name',
-  'locked',
-  'visible',
-  'isVectorPath',
-  'clipPath',
-  '__uid',
-  '__lockRatio',
-  '__isArtboard',
-  '__artboardId',
-  '__print',
-  '__originalSrc',
-  '__photoEdits',
-  '__cropRect',
-  '__isGuide',
-  '__guideAxis',
-  '__assetId',
-];
+// Custom object properties that survive saves and undo (one shared list,
+// see lib/editor/persist.ts).
+const SAVE_JSON_PROPS = PERSIST_PROPS;
 
 function EditorContent() {
   const searchParams = useSearchParams();
@@ -112,6 +144,8 @@ function EditorContent() {
   const viewportRef = useRef<HTMLDivElement>(null);
   const panRef = useRef<{ active: boolean; lastX: number; lastY: number }>({ active: false, lastX: 0, lastY: 0 });
   const [canvasReady, setCanvasReady] = useState(false);
+  // "Opening your design…" while a saved design or template downloads.
+  const [opening, setOpening] = useState<string | null>(null);
   const [checkingAuth, setCheckingAuth] = useState(true);
   const { theme, toggleTheme } = useAppTheme();
   const isDark = theme === 'dark';
@@ -155,6 +189,12 @@ function EditorContent() {
   // before they can touch the canvas, not just when they click a CTA on
   // the homepage. The overlay below blocks interaction until this resolves.
   useEffect(() => {
+    // Automated browser tests (CI only, flag set at build time) run the
+    // editor without an account; production builds never set this.
+    if (process.env.NEXT_PUBLIC_E2E === '1') {
+      setCheckingAuth(false);
+      return;
+    }
     supabase.auth.getUser().then(({ data }) => {
       if (!data.user) {
         router.push(`/login?next=${encodeURIComponent(window.location.pathname + window.location.search)}`);
@@ -208,6 +248,7 @@ function EditorContent() {
   // run captures whatever is on the canvas THEN, not a stale snapshot,
   // and writes stay strictly sequential.
   const saveInFlightRef = useRef(false);
+  const lastVersionAtRef = useRef(0);
   const pendingSaveRef = useRef<{ idToUse: string | null; nameToUse: string; opts?: { silent?: boolean; skipChooser?: boolean } } | null>(null);
   // Assigned once scheduleAutosave itself is defined further down (after
   // performSave) — indirected through a ref purely so the effect above,
@@ -286,12 +327,26 @@ function EditorContent() {
     artboardsRef.current = artboards;
   }, [artboards]);
   const [activeArtboardId, setActiveArtboardId] = useState<string | null>(null);
+  const activeArtboardIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    activeArtboardIdRef.current = activeArtboardId;
+  }, [activeArtboardId]);
   const [showPreflight, setShowPreflight] = useState(false);
   const [preflightIssues, setPreflightIssues] = useState<PreflightIssue[]>([]);
 
   const [selected, setSelected] = useState<any>(null);
   const [, setSelVersion] = useState(0);
   const bumpSel = () => setSelVersion((v) => v + 1);
+  // Dragging fires dozens of events a second; the panels only need to
+  // catch up once per frame.
+  const bumpRafRef = useRef(0);
+  const bumpSelSoon = () => {
+    if (bumpRafRef.current) return;
+    bumpRafRef.current = requestAnimationFrame(() => {
+      bumpRafRef.current = 0;
+      bumpSel();
+    });
+  };
 
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
 
@@ -315,6 +370,15 @@ function EditorContent() {
   const [snapToGuides, setSnapToGuides] = useState(true);
   const [snapToGrid, setSnapToGrid] = useState(false);
   const [gridSize, setGridSize] = useState(20);
+  // Bleed, safe area, margins and columns on screen (never in exports).
+  const [showPrintGuides, setShowPrintGuides] = useState(true);
+  const showPrintGuidesRef = useRef(true);
+  useEffect(() => {
+    showPrintGuidesRef.current = showPrintGuides;
+    fabricCanvasRef.current?.requestRenderAll();
+  }, [showPrintGuides]);
+  // Space held down = temporary hand tool, without changing the tool.
+  const spaceHeldRef = useRef(false);
   const showGuidesRef = useRef(showGuides);
   const snapToObjectsRef = useRef(snapToObjects);
   const snapToGuidesRef = useRef(snapToGuides);
@@ -343,6 +407,7 @@ function EditorContent() {
   // Smart-guide snap lines, live only while an object is actively being
   // dragged. Cleared on mouse-up so the guides never persist after a drop.
   const snapGuidesRef = useRef<GuideLine[]>([]);
+  const snapSpacingRef = useRef<SpacingMark[]>([]);
 
   // Alt/Option-drag-to-duplicate (Move tool): captured at mousedown on a
   // real object, live-checked on every 'object:moving' tick so pressing
@@ -364,11 +429,18 @@ function EditorContent() {
   // duplicate in the wrong place. Cloning members individually and
   // shifting each by the same delta keeps their relative layout exact.
   const clipboardRef = useRef<any[] | null>(null);
+  const clipboardAtRef = useRef(0);
   const pasteCountRef = useRef(0);
   const gradAngleRef = useRef<number>(90);
 
-  const width = parseInt(searchParams.get('w') || '1080');
-  const height = parseInt(searchParams.get('h') || '1080');
+  // Fractional sizes are kept (a 148mm page is 559.37px); anything that
+  // isn't a sensible number falls back to the default square.
+  const sizeParam = (key: string) => {
+    const v = parseFloat(searchParams.get(key) || '');
+    return Number.isFinite(v) && v >= 1 && v <= 30000 ? v : 1080;
+  };
+  const width = sizeParam('w');
+  const height = sizeParam('h');
   const urlDesignId = searchParams.get('designId');
   const cameFromTemplate = searchParams.get('templateId');
   // Admin "Edit design" from the Template Manager: the template's own
@@ -433,7 +505,7 @@ function EditorContent() {
     setLayers(
       canvas
         .getObjects()
-        .filter((o: any) => !o.__isAnchorHandle && !o.__isPenPreview && !o.__isShapeDraft && !o.__isArtboard && !o.__isGuide)
+        .filter((o: any) => isArtwork(o))
         .slice()
         .reverse()
     );
@@ -461,7 +533,21 @@ function EditorContent() {
   }, []);
 
   const refreshArtboards = useCallback(() => {
-    setArtboards(getArtboardMetas());
+    const metas = getArtboardMetas();
+    setArtboards(metas);
+    // Page-number boxes always show the number of the page they're on.
+    const canvas = fabricCanvasRef.current;
+    canvas?.getObjects().forEach((o: any) => {
+      if (!o.__pageNumber) return;
+      const i = metas.findIndex((m) => m.id === o.__artboardId);
+      const label = i >= 0 ? String(i + 1) : '#';
+      if (o.text !== label) {
+        o.set({ text: label });
+        o.initDimensions?.();
+        o.dirty = true;
+        canvas.requestRenderAll();
+      }
+    });
   }, [getArtboardMetas]);
 
   // Stamps __artboardId on every non-artboard object based on which
@@ -473,7 +559,7 @@ function EditorContent() {
     if (!canvas) return;
     const metas = getArtboardMetas();
     canvas.getObjects().forEach((obj: any) => {
-      if (obj.__isArtboard || obj.__isAnchorHandle || obj.__isPenPreview || obj.__isShapeDraft || obj.__isPrintMark || obj.__isGuide) return;
+      if (!isArtwork(obj)) return;
       const center = obj.getCenterPoint();
       obj.__artboardId = findOwningArtboard(center.x, center.y, metas);
     });
@@ -590,11 +676,29 @@ function EditorContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const { historyRef, suppressHistoryRef, canUndo, canRedo, pushHistory: pushHistoryRaw, undo, redo, seedInitialSnapshot, restoreHistory, SNAPSHOT_PROPS } =
+  // Set once setActiveTool exists (further down); undo/redo uses it to
+  // re-apply the current tool's selectability to the restored objects.
+  const reapplyToolRef = useRef<(() => void) | null>(null);
+  const setActiveToolRef = useRef<((tool: ToolMode) => void) | null>(null);
+  const setPencilOnRef = useRef<((on: boolean) => void) | null>(null);
+  const { historyRef, suppressHistoryRef, canUndo, canRedo, pushHistory: pushHistoryRaw, flushHistory, undo, redo, seedInitialSnapshot, restoreHistory, SNAPSHOT_PROPS } =
     useEditorHistory(fabricCanvasRef, () => {
+      const canvas = fabricCanvasRef.current;
+      if (canvas) {
+        applyStoredLocks(canvas);
+        reviveTextPaths((window as any).fabric, canvas);
+        reviveImageAdjust((window as any).fabric, canvas);
+        pinArtboardsBack();
+        recomputeMembership();
+        refreshArtboards();
+        reapplyToolRef.current?.();
+      }
       refreshLayers();
       setSelected(fabricCanvasRef.current?.getActiveObject() || null);
+      // An undo is a real change to the document: mark it for saving.
+      markDirtyRef.current?.();
     });
+  const markDirtyRef = useRef<(() => void) | null>(null);
 
   // Marks the active tab dirty on every edit. pushHistory is already
   // called from every mutation site in this file (see grep: ~40 call
@@ -609,13 +713,55 @@ function EditorContent() {
     // dirty/autosave tracking needs the same guard or every first save of
     // a new document would immediately re-mark itself unsaved and loop.
     if (suppressHistoryRef.current) return;
+    markDirty();
+  }, [pushHistoryRaw]);
+
+  // Marks the document as changed: unsaved indicator, autosave, and a
+  // revision counter so a save that finishes after a newer edit never
+  // clears the "unsaved" state for that edit.
+  const editRevRef = useRef(0);
+  const setDocRevRef = useRef<((f: (n: number) => number) => void) | null>(null);
+  function markDirty() {
     const id = activeTabIdRef.current;
     if (!id) return;
+    editRevRef.current += 1;
+    setDocRevRef.current?.((n: number) => n + 1);
     setTabs((ts) => (ts.some((t) => t.id === id && !t.dirty) ? ts.map((t) => (t.id === id ? { ...t, dirty: true } : t)) : ts));
     dirtyRef.current = true;
     setSaveStatus((s) => (s === 'saving' ? s : 'unsaved'));
     scheduleAutosaveRef.current?.();
-  }, [pushHistoryRaw]);
+    scheduleDraftBackup();
+  }
+  markDirtyRef.current = markDirty;
+
+  // A copy of unsaved work is kept on this device until it's saved.
+  const draftTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  function draftKey() {
+    if (isLocalTabId(activeTabIdRef.current)) return null;
+    return designIdRef.current || UNSAVED_KEY;
+  }
+  function scheduleDraftBackup() {
+    if (draftTimerRef.current) clearTimeout(draftTimerRef.current);
+    draftTimerRef.current = setTimeout(() => {
+      const canvas = fabricCanvasRef.current;
+      const key = draftKey();
+      if (!canvas || !key || loadFailedIdRef.current) return;
+      try {
+        const first = artboardsRef.current[0];
+        putDraft({
+          key,
+          json: canvas.toJSON(PERSIST_PROPS),
+          name: designNameRef.current || 'Untitled Design',
+          width: first ? first.width : width,
+          height: first ? first.height : height,
+          savedAt: Date.now(),
+        });
+      } catch {
+        // Not critical.
+      }
+    }, 1500);
+  }
+  const [draftOffer, setDraftOffer] = useState<Draft | null>(null);
 
   const {
     stateRef: directSelectionStateRef,
@@ -631,16 +777,24 @@ function EditorContent() {
     onAnchorMoved: pushHistory,
   });
 
-  const { draftRef: penDraftRef, clearDraft: clearPenDraft, finishPath: finishPenPath, handleMouseDown: handlePenMouseDown, handleMouseMove: handlePenMouseMove, handleMouseUp: handlePenMouseUp } =
+  const {
+    draftRef: penDraftRef,
+    clearDraft: clearPenDraft,
+    finishPath: finishPenPath,
+    removeLastAnchor: removeLastPenAnchor,
+    handleMouseDown: handlePenMouseDown,
+    handleMouseMove: handlePenMouseMove,
+    handleMouseUp: handlePenMouseUp,
+    drawOverlay: penDrawOverlay,
+  } =
     usePenTool({
       fabricCanvasRef,
       onPathFinished: (pathObj) => {
         const canvas = fabricCanvasRef.current;
         canvas.add(pathObj);
-        canvas.setActiveObject(pathObj);
         if (returnToSelectAfterCreateRef.current) {
-          setActiveToolState('select');
-          activeToolRef.current = 'select';
+          setActiveToolRef.current?.('select');
+          canvas.setActiveObject(pathObj);
         } else {
           // Pen tool stays active (Illustrator's own behavior) — the
           // finished path must go back to non-interactive like every
@@ -681,8 +835,8 @@ function EditorContent() {
         refreshLayers();
         pushHistory();
         if (returnToSelectAfterCreateRef.current) {
-          setActiveToolState('select');
-          activeToolRef.current = 'select';
+          setActiveToolRef.current?.('select');
+          canvas.setActiveObject(obj);
         } else {
           // The shape tool stays loaded (Illustrator's own behavior: draw
           // several rectangles in a row without reselecting the tool) —
@@ -761,16 +915,16 @@ function EditorContent() {
     if (!canvas) return;
     const pathObj = canvas.getActiveObject();
     if (!pathObj || !pathObj.isVectorPath) {
-      alert('Select a closed vector path first, then choose a target image below.');
+      setLocalNotice('Select a closed vector path first, then choose a target image below.');
       return;
     }
     if (!maskTargetId) {
-      alert('Choose a target image to mask in the Properties panel.');
+      setLocalNotice('Choose a target image to mask in the Properties panel.');
       return;
     }
     const targetImage = canvas.getObjects().find((o: any) => o.type === 'image' && o.__id === maskTargetId);
     if (!targetImage) {
-      alert('Target image not found.');
+      setLocalNotice('Target image not found.');
       return;
     }
 
@@ -893,12 +1047,22 @@ function EditorContent() {
     [pushHistory]
   );
 
+  // Keep proportions: the side handles (which stretch) are hidden, so the
+  // corner handles, typed sizes and resizing all keep the shape's ratio.
+  const applyRatioLockControls = (o: any) => {
+    if (!o?.setControlsVisibility || o.type === 'textbox') return;
+    const show = !o.__lockRatio;
+    o.setControlsVisibility({ ml: show, mr: show, mt: show, mb: show });
+  };
   const toggleLockRatio = () => {
     const canvas = fabricCanvasRef.current;
     const active = canvas?.getActiveObject();
     if (!active) return;
     active.__lockRatio = !active.__lockRatio;
+    applyRatioLockControls(active);
+    canvas.requestRenderAll();
     bumpSel();
+    pushHistory();
   };
 
   const runShapeBuilder = useCallback(
@@ -906,17 +1070,17 @@ function EditorContent() {
       const canvas = fabricCanvasRef.current;
       const active = canvas?.getActiveObject();
       if (!active || active.type !== 'activeSelection') {
-        alert('Select two or more shapes first (drag a selection box, or Shift-click each one).');
+        setLocalNotice('Select two or more shapes first (drag a selection box, or Shift-click each one).');
         return;
       }
       const objs: any[] = active.getObjects ? active.getObjects() : [];
       if (objs.length < 2) {
-        alert('Shape Builder needs at least two selected objects.');
+        setLocalNotice('Shape Builder needs at least two selected objects.');
         return;
       }
       const unsupported = objs.filter((o) => !['rect', 'triangle', 'circle', 'ellipse', 'polygon', 'path'].includes(o.type));
       if (unsupported.length > 0) {
-        alert('Shape Builder only works on vector shapes and paths right now — remove images/text from the selection first.');
+        setLocalNotice('Shape Builder only works on vector shapes and paths right now — remove images/text from the selection first.');
         return;
       }
 
@@ -928,7 +1092,7 @@ function EditorContent() {
             polygonClipping = (await import('polygon-clipping')).default;
           } catch (err) {
             console.error(err);
-            alert("Shape Builder needs the 'polygon-clipping' package. Run: npm install polygon-clipping");
+            setLocalNotice("Shape Builder needs the 'polygon-clipping' package. Run: npm install polygon-clipping");
             return;
           }
 
@@ -943,7 +1107,7 @@ function EditorContent() {
 
           const geoms = ordered.map(toGeom).filter((g) => g.length > 0);
           if (geoms.length < 2) {
-            alert('Could not read enough valid shape geometry to run this operation.');
+            setLocalNotice('Could not read enough valid shape geometry to run this operation.');
             return;
           }
 
@@ -954,7 +1118,7 @@ function EditorContent() {
           else result = polygonClipping.difference(geoms[0], ...geoms.slice(1));
 
           if (!result || result.length === 0) {
-            alert('This operation produced an empty shape — the selected objects may not overlap the way this operation expects.');
+            setLocalNotice('This operation produced an empty shape — the selected objects may not overlap the way this operation expects.');
             return;
           }
 
@@ -979,7 +1143,7 @@ function EditorContent() {
         })
         .catch((err) => {
           console.error('Shape Builder failed:', err);
-          alert('Shape Builder failed on this selection. Please try again.');
+          setLocalNotice('Shape Builder failed on this selection. Please try again.');
         });
     },
     [pushHistory, refreshLayers]
@@ -989,7 +1153,7 @@ function EditorContent() {
     const canvas = fabricCanvasRef.current;
     const active = canvas?.getActiveObject();
     if (!active || active.type !== 'activeSelection') {
-      alert('Select two or more shapes first (drag a selection box, or Shift-click each one), then use Shape Builder in the Properties panel.');
+      setLocalNotice('Select two or more shapes first (drag a selection box, or Shift-click each one), then use Shape Builder in the Properties panel.');
       return;
     }
   };
@@ -1000,12 +1164,25 @@ function EditorContent() {
       activeToolRef.current = tool;
       setActiveToolState(tool);
 
-      if (tool !== 'pen') clearPenDraft();
+      if (tool !== 'pen') {
+        // Leaving the Pen tool keeps a path that already has 2+ points.
+        if (penDraftRef.current.anchors.length >= 2) finishPenPath(false);
+        else clearPenDraft();
+      }
       if (tool !== 'direct') clearAnchorHandles();
+      // Paths show their resize/rotate handles everywhere except while
+      // their points are being edited with Direct Selection.
+      canvas?.getObjects().forEach((o: any) => {
+        if (o.isVectorPath) o.set({ hasControls: tool !== 'direct' && !o.locked, hasBorders: tool !== 'direct' });
+      });
       clearShapeDraft();
       if (tool !== 'artboard') clearArtboardDraft();
 
       if (!canvas) return;
+      if (canvas.isDrawingMode) {
+        canvas.isDrawingMode = false;
+        setPencilOnRef.current?.(false);
+      }
 
       if (tool === 'pan') {
         canvas.discardActiveObject();
@@ -1049,8 +1226,12 @@ function EditorContent() {
             o.hasControls = false;
             return;
           }
+          if (isHelperObject(o)) {
+            if (o.__isAnchorHandle) o.evented = true;
+            return;
+          }
           o.evented = true;
-          if (!o.locked && !o.__isAnchorHandle && !o.__isPenPreview) o.selectable = true;
+          o.selectable = true;
         });
         canvas.defaultCursor = 'default';
         canvas.hoverCursor = 'move';
@@ -1078,6 +1259,8 @@ function EditorContent() {
     },
     [clearPenDraft, clearAnchorHandles, clearShapeDraft, clearArtboardDraft, applyGuideInteractivity, renderAnchorHandles]
   );
+  reapplyToolRef.current = () => setActiveTool(activeToolRef.current);
+  setActiveToolRef.current = setActiveTool;
 
   // Ensures at least one locked, non-rotatable white artboard Rect exists.
   // Everything outside every artboard is the dark pasteboard
@@ -1133,6 +1316,9 @@ function EditorContent() {
         rect.set({ selectable: false, evented: false, hasControls: false, lockRotation: true });
       });
     }
+    applyStoredLocks(canvas);
+    reviveTextPaths(F, canvas);
+    reviveImageAdjust(F, canvas);
     pinArtboardsBack();
     recomputeMembership();
     refreshArtboards();
@@ -1146,7 +1332,7 @@ function EditorContent() {
     if (!vw || !vh || rect.width <= 0 || rect.height <= 0) return;
     let z = Math.min((vw - pad * 2) / rect.width, (vh - pad * 2) / rect.height);
     if (!isFinite(z) || z <= 0) z = 1;
-    z = Math.max(0.1, Math.min(2, z));
+    z = Math.max(0.05, Math.min(4, z));
     const panX = (vw - rect.width * z) / 2 - rect.x * z;
     const panY = (vh - rect.height * z) / 2 - rect.y * z;
     canvas.setViewportTransform([z, 0, 0, z, panX, panY]);
@@ -1159,24 +1345,86 @@ function EditorContent() {
       const initialW = viewportRef.current?.clientWidth || 900;
       const initialH = viewportRef.current?.clientHeight || 600;
 
+      // Saved designs can contain this app's own photo filters; they must be
+      // known before anything is loaded.
+      ensureImageFilters(F);
       const canvas = new F.Canvas(canvasRef.current, {
         width: initialW,
         height: initialH,
         backgroundColor: pasteboardBgFor(theme),
+        // Pointer events carry stylus pressure (Apple Pencil) and work the
+        // same for mouse, touch and pen.
+        enablePointerEvents: true,
+        preserveObjectStacking: true,
+        fireRightClick: false,
       });
       fabricCanvasRef.current = canvas;
       (window as any).fabric = F;
+
+      // Ruler guides stay one screen pixel thick at any zoom.
+      canvas.on('before:render', () => {
+        const z = canvas.getZoom() || 1;
+        canvas.getObjects().forEach((o: any) => {
+          if (o.__isGuide && o.strokeWidth !== 1 / z) o.strokeWidth = 1 / z;
+        });
+      });
+
+      // A transparent page shows the usual grey-and-white checkerboard on
+      // screen only (exports render into their own canvas and skip this).
+      const checker = document.createElement('canvas');
+      checker.width = checker.height = 16;
+      const cctx = checker.getContext('2d');
+      if (cctx) {
+        cctx.fillStyle = '#FFFFFF';
+        cctx.fillRect(0, 0, 16, 16);
+        cctx.fillStyle = '#E4E4E7';
+        cctx.fillRect(0, 0, 8, 8);
+        cctx.fillRect(8, 8, 8, 8);
+      }
+      const baseRenderBackground = canvas._renderBackground.bind(canvas);
+      canvas._renderBackground = function (ctx: CanvasRenderingContext2D) {
+        baseRenderBackground(ctx);
+        if (ctx !== canvas.contextContainer) return;
+        const vt = canvas.viewportTransform;
+        const see = canvas.getObjects().filter((o: any) => o.__isArtboard && (!o.fill || o.fill === 'transparent'));
+        if (!see.length || !vt) return;
+        const pattern = ctx.createPattern(checker, 'repeat');
+        if (!pattern) return;
+        ctx.save();
+        ctx.fillStyle = pattern;
+        see.forEach((ab: any) => {
+          const x = (ab.left || 0) * vt[0] + vt[4];
+          const y = (ab.top || 0) * vt[3] + vt[5];
+          ctx.fillRect(x, y, (ab.width || 0) * (ab.scaleX || 1) * vt[0], (ab.height || 0) * (ab.scaleY || 1) * vt[3]);
+        });
+        ctx.restore();
+      };
       // Exposed the same way `window.fabric` already is — lets tests and
       // debugging tools inspect real document state (anchors, handles,
       // z-order, history) directly instead of guessing from pixels.
       (window as any).__fabricCanvas = canvas;
 
-      const onLayersChanged = () => refreshLayers();
-      const onHistoryChanged = () => pushHistory();
+      // Tool previews, anchor handles and other helpers are never part of
+      // the document: keep them out of saves, undo and the layers list.
+      const onLayersChanged = (e: any) => {
+        if (isHelperObject(e?.target)) return;
+        refreshLayers();
+      };
+      const onHistoryChanged = (e: any) => {
+        if (isHelperObject(e?.target)) return;
+        // While cropping, the photo is moved freely inside its frame; the
+        // crop becomes one undo step when it's finished.
+        if (featuresRef.current?.cropRef.current) return;
+        pushHistory();
+      };
 
       canvas.on('object:added', (e: any) => {
         const obj: any = e.target;
-        if (obj && !obj.__isAnchorHandle && !obj.__isPenPreview && !obj.__isShapeDraft && !obj.__isArtboard && !obj.__uid) {
+        if (isHelperObject(obj)) {
+          obj.excludeFromExport = true;
+          return;
+        }
+        if (obj && !obj.__isArtboard && !obj.__uid) {
           obj.__uid = `obj_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
         }
         // 'editing:entered'/'editing:exited' fire on the text object
@@ -1201,11 +1449,13 @@ function EditorContent() {
       // Multi-artboard bookkeeping: keep each object's owning artboard
       // current, and normalize an artboard's own scale into width/height
       // whenever it's moved/resized via the Artboard tool.
-      canvas.on('object:added', () => {
+      canvas.on('object:added', (e: any) => {
+        if (isHelperObject(e?.target)) return;
         recomputeMembership();
         refreshArtboards();
       });
-      canvas.on('object:removed', () => {
+      canvas.on('object:removed', (e: any) => {
+        if (isHelperObject(e?.target)) return;
         recomputeMembership();
         refreshArtboards();
       });
@@ -1221,6 +1471,33 @@ function EditorContent() {
         refreshArtboards();
       });
 
+      // A multi-selection that contains a locked object can't be moved,
+      // resized or rotated (the locked one would move with it).
+      const guardLockedSelection = () => {
+        const sel = canvas.getActiveObject();
+        if (!sel || sel.type !== 'activeSelection') return;
+        const anyLocked = sel.getObjects().some((o: any) => o.locked);
+        sel.set({
+          lockMovementX: anyLocked,
+          lockMovementY: anyLocked,
+          lockScalingX: anyLocked,
+          lockScalingY: anyLocked,
+          lockRotation: anyLocked,
+          hasControls: !anyLocked,
+        });
+      };
+      canvas.on('selection:created', guardLockedSelection);
+      canvas.on('selection:updated', guardLockedSelection);
+      canvas.on('object:rotating', (e: any) => {
+        const t = e.target;
+        if (t && e.e?.shiftKey) {
+          const snapped = Math.round((t.angle || 0) / 15) * 15;
+          if (snapped !== t.angle) {
+            t.rotate(snapped);
+            t.setCoords();
+          }
+        }
+      });
       canvas.on('selection:created', (e: any) => {
         const obj: any = e.selected ? canvas.getActiveObject() : null;
         setSelected(obj);
@@ -1253,10 +1530,20 @@ function EditorContent() {
       // values were true at the START of editing instead of the current
       // real cursor/selection position.
       canvas.on('text:selection:changed', () => bumpSel());
-      canvas.on('text:changed', () => bumpSel());
-      canvas.on('object:scaling', () => bumpSel());
-      canvas.on('object:moving', (e: any) => {
+      canvas.on('text:changed', (e: any) => {
+        // Curved/wavy text re-fits its baseline as the words change.
+        const t = e?.target;
+        if (t && t.__textFx && (t.__textFx.curve || t.__textFx.wave)) {
+          import('@/lib/editor/textEffects').then(({ applyTextShape }) => {
+            applyTextShape(F, t, t.__textFx.curve, t.__textFx.wave);
+            canvas.requestRenderAll();
+          });
+        }
         bumpSel();
+      });
+      canvas.on('object:scaling', () => bumpSelSoon());
+      canvas.on('object:moving', (e: any) => {
+        bumpSelSoon();
         const obj = e.target;
         if (altDragRef.current && obj === altDragRef.current.obj && e.e?.altKey) {
           altDragRef.current.triggered = true;
@@ -1284,23 +1571,41 @@ function EditorContent() {
           let smartGuideLines: GuideLine[] = [];
 
           if (snapToObjectsRef.current) {
-            const targets = canvas
+            const movingSet = obj.type === 'activeSelection' ? new Set(obj.getObjects()) : null;
+            const targetObjs = canvas
               .getObjects()
               .filter(
                 (o: any) =>
                   o !== obj &&
-                  !o.__isAnchorHandle &&
-                  !o.__isPenPreview &&
-                  !o.__isShapeDraft &&
-                  !o.__isPrintMark &&
+                  !(movingSet && movingSet.has(o)) &&
+                  !isHelperObject(o) &&
                   !o.__isGuide &&
                   o.visible !== false
-              )
-              .map((o: any) => o.getBoundingRect(true, true));
+              );
+            const targets = targetObjs.map((o: any) => o.getBoundingRect(true, true));
             const objSnap = computeSnap(moving, targets, threshold);
             dx = objSnap.dx;
             dy = objSnap.dy;
             smartGuideLines = objSnap.guides;
+            // Equal spacing between neighbours (only on an axis that didn't
+            // already line up with an edge or centre).
+            const realTargets = targets.filter((_: any, i: number) => !targetObjs[i].__isArtboard);
+            const spacingMarks: SpacingMark[] = [];
+            if (!dx) {
+              const sp = computeSpacingSnap(moving, realTargets, threshold, 'h');
+              if (sp.d || sp.marks.length) {
+                dx = sp.d;
+                spacingMarks.push(...sp.marks);
+              }
+            }
+            if (!dy) {
+              const sp = computeSpacingSnap({ ...moving, left: moving.left + dx }, realTargets, threshold, 'v');
+              if (sp.d || sp.marks.length) {
+                dy = sp.d;
+                spacingMarks.push(...sp.marks);
+              }
+            }
+            snapSpacingRef.current = spacingMarks;
           }
 
           if (snapToGuidesRef.current && showGuidesRef.current && (!dx || !dy)) {
@@ -1317,11 +1622,13 @@ function EditorContent() {
           }
 
           if (snapToGridRef.current && (!dx || !dy)) {
+            const page = getActiveArtboardRect();
             const gridSnap = computeGridSnap(
               { ...moving, left: moving.left + dx, top: moving.top + dy },
               gridSizeRef.current,
               !!dx,
-              !!dy
+              !!dy,
+              { x: page.x, y: page.y }
             );
             if (!dx) dx = gridSnap.dx;
             if (!dy) dy = gridSnap.dy;
@@ -1334,19 +1641,163 @@ function EditorContent() {
           snapGuidesRef.current = smartGuideLines;
         } else {
           snapGuidesRef.current = [];
+          snapSpacingRef.current = [];
         }
         renderAnchorHandles(e.target);
+      });
+
+      // Resizing snaps the dragged edges to other objects and the page.
+      canvas.on('object:scaling', (e: any) => {
+        const t = e.target;
+        const corner: string = e.transform?.corner || '';
+        if (!t || !snapToObjectsRef.current || activeToolRef.current !== 'select' || e.e?.ctrlKey || e.e?.metaKey) return;
+        if (((t.angle || 0) % 360) !== 0 || t.type === 'textbox' || featuresRef.current?.cropRef.current) return;
+        const zoom = canvas.getZoom() || 1;
+        const threshold = 8 / zoom;
+        const br = t.getBoundingRect(true, true);
+        const movingSet = t.type === 'activeSelection' ? new Set(t.getObjects()) : null;
+        const targets = canvas
+          .getObjects()
+          .filter((o: any) => o !== t && !(movingSet && movingSet.has(o)) && !isHelperObject(o) && !o.__isGuide && o.visible !== false)
+          .map((o: any) => o.getBoundingRect(true, true));
+        const xEdge = /l/.test(corner) && corner !== 'mtr' ? 'l' : /r/.test(corner) ? 'r' : null;
+        const yEdge = /t/.test(corner) && corner !== 'mtr' && corner !== 'mt' ? 't' : corner === 'mt' ? 't' : /b/.test(corner) ? 'b' : null;
+        const sx = xEdge ? computeEdgeSnap(xEdge === 'l' ? br.left : br.left + br.width, allXAnchors(targets), threshold) : { d: 0, at: null };
+        const sy = yEdge ? computeEdgeSnap(yEdge === 't' ? br.top : br.top + br.height, allYAnchors(targets), threshold) : { d: 0, at: null };
+        if (!sx.d && !sy.d) {
+          snapGuidesRef.current = [];
+          return;
+        }
+        let kx = xEdge && sx.d ? (br.width + (xEdge === 'r' ? sx.d : -sx.d)) / br.width : 1;
+        let ky = yEdge && sy.d ? (br.height + (yEdge === 'b' ? sy.d : -sy.d)) / br.height : 1;
+        const uniform = corner.length === 2 && corner !== 'mt' && corner !== 'mb' && corner !== 'ml' && corner !== 'mr' && !e.e?.shiftKey && !t.lockUniScaling;
+        const guides: GuideLine[] = [];
+        if (uniform) {
+          // Keep the proportions: use whichever edge is closer to snapping.
+          const k = Math.abs(sx.d) && (!sy.d || Math.abs(sx.d) <= Math.abs(sy.d)) ? kx : ky;
+          kx = k;
+          ky = k;
+          if (k === kx && sx.at != null && Math.abs(sx.d) && (!sy.d || Math.abs(sx.d) <= Math.abs(sy.d))) guides.push({ axis: 'v', position: sx.at });
+          else if (sy.at != null) guides.push({ axis: 'h', position: sy.at });
+        } else {
+          if (sx.at != null && sx.d) guides.push({ axis: 'v', position: sx.at });
+          if (sy.at != null && sy.d) guides.push({ axis: 'h', position: sy.at });
+        }
+        if (!(kx > 0.01 && ky > 0.01)) return;
+        // The opposite corner stays where it is.
+        const fixedX = xEdge === 'l' ? br.left + br.width : br.left;
+        const fixedY = yEdge === 't' ? br.top + br.height : br.top;
+        t.set({ scaleX: (t.scaleX || 1) * kx, scaleY: (t.scaleY || 1) * ky });
+        const nb = t.getBoundingRect(true, true);
+        t.set({
+          left: (t.left || 0) + (xEdge === 'l' ? fixedX - (nb.left + nb.width) : xEdge === 'r' ? fixedX - nb.left : br.left + br.width / 2 - (nb.left + nb.width / 2)),
+          top: (t.top || 0) + (yEdge === 't' ? fixedY - (nb.top + nb.height) : yEdge === 'b' ? fixedY - nb.top : br.top + br.height / 2 - (nb.top + nb.height / 2)),
+        });
+        t.setCoords();
+        snapGuidesRef.current = guides;
       });
 
       // Double-click a ruler guide to delete it -- the same convention
       // every other design tool uses, since guides otherwise have no
       // delete affordance of their own (Delete/Backspace is already
       // claimed by "delete the selected design object").
+      canvas.on('path:created', (e: any) => {
+        const path = e.path;
+        if (!path) return;
+        path.isVectorPath = true;
+        path.set({ fill: '', strokeLineCap: 'round', strokeLineJoin: 'round', strokeUniform: true });
+        path.name = 'Pencil path';
+      });
       canvas.on('mouse:dblclick', (opt: any) => {
         if (opt.target?.__isGuide) deleteGuide(opt.target);
+        const t = opt.target;
+        if (t && t.type === 'image' && !t.locked && activeToolRef.current === 'select') {
+          // Empty frame: choose a photo. Otherwise: adjust the photo inside.
+          if (t.__frame?.empty) {
+            canvas.setActiveObject(t);
+            replaceInputRef.current?.click();
+          } else featuresRef.current?.startCrop(t);
+        }
+      });
+      // While cropping, keep the photo covering its frame.
+      const keepCrop = (e: any) => {
+        if (featuresRef.current?.cropRef.current && e.target === featuresRef.current.cropRef.current.session.img) featuresRef.current.onCropTransform();
+      };
+      canvas.on('object:moving', keepCrop);
+      canvas.on('object:scaling', keepCrop);
+      canvas.on('object:rotating', keepCrop);
+      canvas.on('selection:cleared', () => featuresRef.current?.cropRef.current && featuresRef.current.finishCrop(true));
+      // Crop frame handles: drag an edge or corner to change the crop
+      // (the photo itself is dragged to reposition it inside the frame).
+      const cropDrag = { handle: null as CropHandle | null };
+      const cropHit = (opt: any): CropHandle | null => {
+        const crop = featuresRef.current?.cropRef.current;
+        if (!crop) return null;
+        const p = canvas.getPointer(opt.e);
+        return cropHandleAt(crop.session.geo, p.x, p.y, 12 / (canvas.getZoom() || 1));
+      };
+      canvas.on('mouse:down', (opt: any) => {
+        const h = cropHit(opt);
+        if (!h) return;
+        // Cancel whatever Fabric was about to do with the photo.
+        const t = canvas._currentTransform;
+        if (t?.target && t.original) t.target.set({ left: t.original.left, top: t.original.top, scaleX: t.original.scaleX, scaleY: t.original.scaleY });
+        canvas._currentTransform = null;
+        cropDrag.handle = h;
+      });
+      canvas.on('mouse:move', (opt: any) => {
+        const crop = featuresRef.current?.cropRef.current;
+        if (!crop) return;
+        if (cropDrag.handle) {
+          const p = canvas.getPointer(opt.e);
+          dragCropHandle(crop.session, cropDrag.handle, p.x, p.y, 8 / (canvas.getZoom() || 1));
+          keepCovering(crop.session);
+          canvas.requestRenderAll();
+          return;
+        }
+        const h = cropHit(opt);
+        if (h) canvas.setCursor(CROP_CURSORS[h]);
+      });
+      canvas.on('mouse:up', () => {
+        if (!cropDrag.handle) {
+          if (featuresRef.current?.cropRef.current) featuresRef.current.refreshCropState();
+          return;
+        }
+        cropDrag.handle = null;
+        const crop = featuresRef.current?.cropRef.current;
+        if (crop) keepCovering(crop.session);
+        featuresRef.current?.refreshCropState();
+        canvas.requestRenderAll();
       });
 
       canvas.on('mouse:down', (opt: any) => {
+        if (pickColorRef.current) {
+          const cb = pickColorRef.current;
+          pickColorRef.current = null;
+          canvas.defaultCursor = 'default';
+          const el = canvasRef.current;
+          const ctx = el?.getContext('2d');
+          if (el && ctx) {
+            const r = el.getBoundingClientRect();
+            const k = el.width / r.width;
+            const e = opt.e;
+            const d = ctx.getImageData(Math.round((e.clientX - r.left) * k), Math.round((e.clientY - r.top) * k), 1, 1).data;
+            cb('#' + [d[0], d[1], d[2]].map((v) => v.toString(16).padStart(2, '0')).join('').toUpperCase());
+          }
+          setLocalNotice(null);
+          return;
+        }
+        if (spaceHeldRef.current) {
+          panRef.current = { active: true, lastX: opt.e.clientX, lastY: opt.e.clientY };
+          canvas.setCursor('grabbing');
+          return;
+        }
+        if (drawingRef.current) {
+          const p = canvas.getPointer(opt.e);
+          const pressure = typeof opt.e.pressure === 'number' && opt.e.pointerType === 'pen' ? opt.e.pressure : 0.5;
+          strokeRef.current = { points: [[p.x, p.y, pressure]], pen: opt.e.pointerType === 'pen' };
+          return;
+        }
         if (
           activeToolRef.current === 'select' &&
           opt.target &&
@@ -1421,6 +1872,13 @@ function EditorContent() {
         } else if (isDrawTool(activeToolRef.current)) handleShapeMouseDown(opt);
       });
       canvas.on('mouse:move', (opt: any) => {
+        if (drawingRef.current && strokeRef.current) {
+          const p = canvas.getPointer(opt.e);
+          const pressure = typeof opt.e.pressure === 'number' && strokeRef.current.pen ? opt.e.pressure : 0.5;
+          strokeRef.current.points.push([p.x, p.y, pressure]);
+          canvas.requestRenderAll();
+          return;
+        }
         if (panRef.current.active) {
           const dx = opt.e.clientX - panRef.current.lastX;
           const dy = opt.e.clientY - panRef.current.lastY;
@@ -1437,6 +1895,23 @@ function EditorContent() {
         else if (isDrawTool(activeToolRef.current)) handleShapeMouseMove(opt);
       });
       canvas.on('mouse:up', (opt: any) => {
+        if (drawingRef.current && strokeRef.current) {
+          const stroke = strokeRef.current;
+          strokeRef.current = null;
+          const settings = brushRef.current;
+          const obj = createStrokeObject(F, stroke.points, settings, stroke.pen);
+          if (obj) {
+            if (settings.kind === 'eraser') {
+              const n = eraseWithStroke(F, canvas, obj);
+              if (n) pushHistory();
+            } else {
+              canvas.add(obj);
+              obj.set({ selectable: false, evented: false });
+            }
+          }
+          canvas.requestRenderAll();
+          return;
+        }
         if (altDragRef.current?.triggered) {
           const { obj, startLeft, startTop } = altDragRef.current;
           // Total distance THIS drag moved the object(s) — subtracting it
@@ -1449,17 +1924,27 @@ function EditorContent() {
           const dx = (obj.left ?? 0) - startLeft;
           const dy = (obj.top ?? 0) - startTop;
           altDragRef.current = null;
-          const objectsToClone = obj.type === 'activeSelection' ? obj.getObjects() : [obj];
+          // Page positions first (see withPagePositions), then clone with
+          // every custom property, and leave the copy where the drag began.
+          const isMulti = obj.type === 'activeSelection';
+          const members = isMulti ? obj.getObjects() : [obj];
+          if (isMulti) canvas.discardActiveObject();
           Promise.all(
-            objectsToClone.map((o: any) => new Promise<any>((resolve) => o.clone((c: any) => resolve(c))))
+            members.map((o: any) => new Promise<any>((resolve) => o.clone((c: any) => resolve(c), PERSIST_PROPS)))
           ).then((clones) => {
+            suppressHistoryRef.current = true;
             clones.forEach((c: any) => {
               delete c.__uid;
-              c.set({ left: (c.left ?? 0) - dx, top: (c.top ?? 0) - dy, evented: true, locked: false });
+              c.set({ left: (c.left ?? 0) - dx, top: (c.top ?? 0) - dy, evented: true, ...lockProps(false) });
               c.setCoords();
               canvas.add(c);
+              // The copy sits right under the dragged original.
+              canvas.moveTo(c, Math.max(0, canvas.getObjects().indexOf(members[0])));
             });
+            suppressHistoryRef.current = false;
+            if (isMulti) canvas.setActiveObject(new F.ActiveSelection(members, { canvas }));
             canvas.requestRenderAll();
+            recomputeMembership();
             refreshLayers();
             pinArtboardsBack();
             pushHistory();
@@ -1467,13 +1952,14 @@ function EditorContent() {
         } else {
           altDragRef.current = null;
         }
-        if (snapGuidesRef.current.length > 0) {
+        if (snapGuidesRef.current.length > 0 || snapSpacingRef.current.length > 0) {
           snapGuidesRef.current = [];
+          snapSpacingRef.current = [];
           canvas.requestRenderAll();
         }
         if (panRef.current.active) {
           panRef.current.active = false;
-          canvas.setCursor(activeToolRef.current === 'pan' ? 'grab' : 'default');
+          canvas.setCursor(activeToolRef.current === 'pan' || spaceHeldRef.current ? 'grab' : 'default');
           return;
         }
         if (activeToolRef.current === 'artboard') {
@@ -1481,6 +1967,7 @@ function EditorContent() {
           return;
         }
         if (activeToolRef.current === 'pen') handlePenMouseUp();
+
         else if (isDrawTool(activeToolRef.current)) handleShapeMouseUp();
       });
 
@@ -1491,7 +1978,7 @@ function EditorContent() {
         if (e.ctrlKey || e.metaKey) {
           let z = canvas.getZoom();
           z *= 0.999 ** e.deltaY;
-          z = Math.max(0.1, Math.min(2, z));
+          z = Math.max(0.05, Math.min(8, z));
           canvas.zoomToPoint(new F.Point(e.offsetX, e.offsetY), z);
           setZoom(Math.round(z * 100));
         } else {
@@ -1503,7 +1990,10 @@ function EditorContent() {
       // each render. toDataURL()/toCanvasElement() render objects into a fresh
       // offscreen canvas instead of this element, so this never leaks into
       // PNG/JPG/PDF exports.
-      canvas.on('after:render', () => {
+      canvas.on('after:render', (opt: any) => {
+        // Exports and thumbnails render into their own temporary canvas
+        // (and fire this event too): only decorate the visible canvas.
+        if (opt?.ctx && opt.ctx !== canvas.contextContainer) return;
         const ctx = canvasRef.current?.getContext('2d');
         const vt = canvas.viewportTransform;
         if (!ctx || !vt) return;
@@ -1531,7 +2021,7 @@ function EditorContent() {
         ctx.shadowBlur = 0;
         abs.forEach((abRect: any) => {
           const print = abRect.__print;
-          if (!print) return;
+          if (!print || !showPrintGuidesRef.current) return;
           const x = (abRect.left || 0) * vt[0] + vt[4];
           const y = (abRect.top || 0) * vt[3] + vt[5];
           const w = (abRect.width || 0) * (abRect.scaleX || 1) * vt[0];
@@ -1562,6 +2052,38 @@ function EditorContent() {
           }
 
           strokeOutset(print.bleed, 'rgba(239,68,68,0.9)');
+
+          // Margins (magenta) and column guides (violet), like a layout app.
+          const m = print.margins;
+          const hasMargins = m && (m.top || m.right || m.bottom || m.left);
+          const cols = Math.max(1, print.columns || 1);
+          if (hasMargins || cols > 1) {
+            const mm = m || { top: 0, right: 0, bottom: 0, left: 0 };
+            const ix = x + mm.left * vt[0];
+            const iy = y + mm.top * vt[3];
+            const iw = w - (mm.left + mm.right) * vt[0];
+            const ih = h - (mm.top + mm.bottom) * vt[3];
+            ctx.setLineDash([]);
+            ctx.lineWidth = 1;
+            if (hasMargins) {
+              ctx.strokeStyle = 'rgba(217,70,239,0.75)';
+              ctx.strokeRect(ix + 0.5, iy + 0.5, Math.max(iw - 1, 0), Math.max(ih - 1, 0));
+            }
+            if (cols > 1) {
+              const g = (print.gutter ?? 16) * vt[0];
+              const colW = (iw - g * (cols - 1)) / cols;
+              ctx.strokeStyle = 'rgba(139,92,246,0.6)';
+              for (let c = 1; c < cols; c++) {
+                const cx0 = ix + c * colW + (c - 1) * g;
+                ctx.beginPath();
+                ctx.moveTo(cx0 + 0.5, iy);
+                ctx.lineTo(cx0 + 0.5, iy + ih);
+                ctx.moveTo(cx0 + g + 0.5, iy);
+                ctx.lineTo(cx0 + g + 0.5, iy + ih);
+                ctx.stroke();
+              }
+            }
+          }
 
           const b = print.bleed || { top: 0, right: 0, bottom: 0, left: 0 };
           const s = print.slug;
@@ -1602,6 +2124,73 @@ function EditorContent() {
           });
           ctx.restore();
         }
+
+        // Equal-spacing marks: a short line with end ticks across each
+        // matching gap, and the gap size.
+        const spacing = snapSpacingRef.current;
+        if (spacing.length > 0) {
+          ctx.save();
+          ctx.strokeStyle = 'rgba(255,0,200,0.9)';
+          ctx.fillStyle = 'rgba(255,0,200,0.95)';
+          ctx.lineWidth = 1;
+          ctx.font = '600 10px system-ui, sans-serif';
+          ctx.textAlign = 'center';
+          spacing.forEach((m) => {
+            const unitLabel = formatUnit(Math.max(0, m.to - m.from), unitRef.current);
+            if (m.axis === 'h') {
+              const y = m.at * vt[3] + vt[5];
+              const x1 = m.from * vt[0] + vt[4];
+              const x2 = m.to * vt[0] + vt[4];
+              ctx.beginPath();
+              ctx.moveTo(x1, y);
+              ctx.lineTo(x2, y);
+              ctx.moveTo(x1, y - 4);
+              ctx.lineTo(x1, y + 4);
+              ctx.moveTo(x2, y - 4);
+              ctx.lineTo(x2, y + 4);
+              ctx.stroke();
+              ctx.fillText(String(unitLabel), (x1 + x2) / 2, y - 6);
+            } else {
+              const x = m.at * vt[0] + vt[4];
+              const y1 = m.from * vt[3] + vt[5];
+              const y2 = m.to * vt[3] + vt[5];
+              ctx.beginPath();
+              ctx.moveTo(x, y1);
+              ctx.lineTo(x, y2);
+              ctx.moveTo(x - 4, y1);
+              ctx.lineTo(x + 4, y1);
+              ctx.moveTo(x - 4, y2);
+              ctx.lineTo(x + 4, y2);
+              ctx.stroke();
+              ctx.fillText(String(unitLabel), x + 14, (y1 + y2) / 2 + 3);
+            }
+          });
+          ctx.restore();
+        }
+
+        penDrawOverlay(ctx, vt as any, activeToolRef.current === 'pen');
+
+        // Live brush stroke while drawing.
+        if (drawingRef.current && strokeRef.current) {
+          const d = strokePathD(strokeRef.current.points, brushRef.current, strokeRef.current.pen);
+          if (d) {
+            try {
+              ctx.save();
+              ctx.transform(vt[0], vt[1], vt[2], vt[3], vt[4], vt[5]);
+              const b = brushRef.current;
+              ctx.fillStyle = b.kind === 'eraser' ? 'rgba(239,68,68,0.35)' : b.color;
+              ctx.globalAlpha = b.kind === 'highlighter' ? Math.min(b.opacity, 0.45) : b.kind === 'eraser' ? 1 : b.opacity;
+              ctx.fill(new Path2D(d));
+              ctx.restore();
+            } catch {
+              ctx.restore();
+            }
+          }
+        }
+
+        // Crop mode: dim everything outside the frame.
+        const crop = featuresRef.current?.cropRef.current;
+        if (crop) drawCropOverlay(ctx, vt as any, crop.session.geo, canvas.getWidth(), canvas.getHeight());
 
         // Curve-handle connector lines for the Direct Selection tool — a
         // thin line from each bezier handle back to the anchor it controls,
@@ -1646,7 +2235,7 @@ function EditorContent() {
           setZoom(pendingSnapshot.zoom);
           setDesignName(pendingSnapshot.designName);
           setDesignId(pendingSnapshot.designId);
-          ensureFontsLoadedForCanvasJSON(pendingSnapshot.canvasJSON).then(() => canvas.requestRenderAll());
+          ensureFontsLoadedForCanvasJSON(pendingSnapshot.canvasJSON).then(() => refreshTextMetrics(canvas));
           suppressHistoryRef.current = false;
         });
       } else if (urlLocalDoc && peekHandoff(urlLocalDoc)) {
@@ -1670,7 +2259,7 @@ function EditorContent() {
           refreshArtboards();
           if (first) setActiveArtboardId(first.__artboardId);
           seedInitialSnapshot();
-          ensureFontsLoadedForCanvasJSON(handoff.opened.canvas).then(() => canvas.requestRenderAll());
+          ensureFontsLoadedForCanvasJSON(handoff.opened.canvas).then(() => refreshTextMetrics(canvas));
           suppressHistoryRef.current = false;
           dirtyRef.current = false;
           setSaveStatus('saved');
@@ -1684,12 +2273,14 @@ function EditorContent() {
         });
       } else if (urlDesignId) {
         setDesignId(urlDesignId);
+        setOpening('Opening your design…');
         supabase
           .from('designs')
           .select('*')
           .eq('id', urlDesignId)
           .single()
           .then(({ data, error }) => {
+            setOpening(null);
             if (data) {
               setDesignName(data.name);
               setTabs((ts) => ts.map((t) => (t.designId === urlDesignId ? { ...t, name: data.name } : t)));
@@ -1706,11 +2297,26 @@ function EditorContent() {
                 canvas.renderAll();
                 refreshLayers();
                 seedInitialSnapshot();
-                ensureFontsLoadedForCanvasJSON(data.canvas_json).then(() => canvas.requestRenderAll());
+                ensureFontsLoadedForCanvasJSON(data.canvas_json).then(() => refreshTextMetrics(canvas));
                 suppressHistoryRef.current = false;
+                // Newer unsaved work on this device than in the account?
+                getDraft(urlDesignId).then((d) => {
+                  const serverTime = Date.parse(data.updated_at || '') || 0;
+                  if (d && d.savedAt > serverTime + 2000) setDraftOffer(d);
+                });
               });
             }
-            if (error) console.error('Failed to load design:', error);
+            if (error || !data) {
+              console.error('Failed to load design:', error);
+              loadFailedIdRef.current = urlDesignId;
+              setDesignName('Could not open design');
+              setLocalNotice("This design couldn't be opened. Check your connection and reload the page. Nothing has been changed.");
+              suppressHistoryRef.current = true;
+              ensureArtboards(canvas, F);
+              suppressHistoryRef.current = false;
+              fitToRect(canvas, { x: 0, y: 0, width, height });
+              seedInitialSnapshot();
+            }
           });
       } else if (cameFromTemplate) {
         // "Use Template" (see app/templates/page.tsx) -- a fresh,
@@ -1719,7 +2325,9 @@ function EditorContent() {
         // unset, so the first Save creates a brand-new design rather
         // than overwriting the template itself (copy-on-use, matching
         // how every template-based design tool works).
+        setOpening('Opening the template…');
         fetchTemplateById(cameFromTemplate).then(async (template) => {
+          setOpening(null);
           if (template && wantsTemplateEdit) {
             const { data: auth } = await supabase.auth.getUser();
             if (auth.user) {
@@ -1741,7 +2349,7 @@ function EditorContent() {
               canvas.renderAll();
               refreshLayers();
               seedInitialSnapshot();
-              ensureFontsLoadedForCanvasJSON(template.canvasJson).then(() => canvas.requestRenderAll());
+              ensureFontsLoadedForCanvasJSON(template.canvasJson).then(() => refreshTextMetrics(canvas));
               const fontNote = fontRequiredMessage(missingFontsIn(template.canvasJson));
               if (fontNote) setLocalNotice(fontNote);
               suppressHistoryRef.current = false;
@@ -1751,7 +2359,9 @@ function EditorContent() {
             // template, or the static fallback list has no id) -- degrade
             // to the same blank-canvas-at-the-right-size behavior as
             // before this feature existed.
+            suppressHistoryRef.current = true;
             ensureArtboards(canvas, F);
+            suppressHistoryRef.current = false;
             fitToRect(canvas, { x: 0, y: 0, width, height });
             seedInitialSnapshot();
           }
@@ -1759,7 +2369,10 @@ function EditorContent() {
         });
         return;
       } else {
+        // Setting up a blank page isn't an edit.
+        suppressHistoryRef.current = true;
         ensureArtboards(canvas, F);
+        suppressHistoryRef.current = false;
         fitToRect(canvas, { x: 0, y: 0, width, height });
         seedInitialSnapshot();
       }
@@ -1802,6 +2415,110 @@ function EditorContent() {
     return () => ro.disconnect();
   }, [canvasReady]);
 
+  // Touch screens (iPad, phones): two fingers pinch to zoom and drag to
+  // pan, like every other design app. The second finger cancels whatever
+  // the first one started (moving an object, a selection box), so a pinch
+  // never drags artwork by accident. Safari's trackpad pinch arrives as
+  // gesture events instead.
+  useEffect(() => {
+    const el = viewportRef.current;
+    if (!el || !canvasReady) return;
+    const pts = new Map<number, { x: number; y: number }>();
+    let pinch: { dist: number; mid: { x: number; y: number } } | null = null;
+    let swallowing = false;
+    const local = (e: PointerEvent) => {
+      const r = el.getBoundingClientRect();
+      return { x: e.clientX - r.left, y: e.clientY - r.top };
+    };
+    const measure = () => {
+      const [a, b] = Array.from(pts.values());
+      return { dist: Math.hypot(a.x - b.x, a.y - b.y) || 1, mid: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 } };
+    };
+    const down = (e: PointerEvent) => {
+      if (e.pointerType !== 'touch') return;
+      pts.set(e.pointerId, local(e));
+      if (pts.size === 2) {
+        const canvas = fabricCanvasRef.current;
+        const t = canvas?._currentTransform;
+        if (t?.target && t.original) {
+          t.target.set({
+            left: t.original.left,
+            top: t.original.top,
+            scaleX: t.original.scaleX,
+            scaleY: t.original.scaleY,
+            angle: t.original.angle,
+          });
+          t.target.setCoords();
+        }
+        if (canvas) {
+          canvas._currentTransform = null;
+          canvas._groupSelector = null;
+          canvas.requestRenderAll();
+        }
+        pinch = measure();
+        swallowing = true;
+      }
+      if (swallowing) {
+        e.stopPropagation();
+        e.preventDefault();
+      }
+    };
+    const move = (e: PointerEvent) => {
+      if (e.pointerType !== 'touch' || !pts.has(e.pointerId)) return;
+      pts.set(e.pointerId, local(e));
+      if (!swallowing) return;
+      e.stopPropagation();
+      e.preventDefault();
+      const canvas = fabricCanvasRef.current;
+      const F = (window as any).fabric;
+      if (!pinch || pts.size < 2 || !canvas || !F) return;
+      const now = measure();
+      const z = Math.max(0.05, Math.min(8, canvas.getZoom() * (now.dist / pinch.dist)));
+      canvas.zoomToPoint(new F.Point(now.mid.x, now.mid.y), z);
+      canvas.relativePan(new F.Point(now.mid.x - pinch.mid.x, now.mid.y - pinch.mid.y));
+      pinch = now;
+      setZoom(Math.round(z * 100));
+    };
+    const up = (e: PointerEvent) => {
+      if (e.pointerType !== 'touch') return;
+      pts.delete(e.pointerId);
+      if (pts.size < 2) pinch = null;
+      if (swallowing) {
+        e.stopPropagation();
+        if (pts.size === 0) swallowing = false;
+      }
+    };
+    let gestureStart = 1;
+    const gStart = (e: any) => {
+      e.preventDefault();
+      gestureStart = fabricCanvasRef.current?.getZoom() || 1;
+    };
+    const gChange = (e: any) => {
+      e.preventDefault();
+      const canvas = fabricCanvasRef.current;
+      const F = (window as any).fabric;
+      if (!canvas || !F) return;
+      const r = el.getBoundingClientRect();
+      const z = Math.max(0.05, Math.min(8, gestureStart * e.scale));
+      canvas.zoomToPoint(new F.Point(e.clientX - r.left, e.clientY - r.top), z);
+      setZoom(Math.round(z * 100));
+    };
+    el.addEventListener('pointerdown', down, true);
+    el.addEventListener('pointermove', move, true);
+    el.addEventListener('pointerup', up, true);
+    el.addEventListener('pointercancel', up, true);
+    el.addEventListener('gesturestart', gStart as any);
+    el.addEventListener('gesturechange', gChange as any);
+    return () => {
+      el.removeEventListener('pointerdown', down, true);
+      el.removeEventListener('pointermove', move, true);
+      el.removeEventListener('pointerup', up, true);
+      el.removeEventListener('pointercancel', up, true);
+      el.removeEventListener('gesturestart', gStart as any);
+      el.removeEventListener('gesturechange', gChange as any);
+    };
+  }, [canvasReady]);
+
   // The pasteboard fill is baked into the Fabric canvas itself (not CSS),
   // so switching themes has to explicitly repaint it — nothing else about
   // a design (artboard colors, object fills) changes with the theme.
@@ -1815,7 +2532,7 @@ function EditorContent() {
   const applyZoom = useCallback((updater: number | ((z: number) => number)) => {
     setZoom((prev) => {
       const next = typeof updater === 'function' ? (updater as (z: number) => number)(prev) : updater;
-      const clamped = Math.max(10, Math.min(200, Math.round(next)));
+      const clamped = Math.max(5, Math.min(800, Math.round(next)));
       const canvas = fabricCanvasRef.current;
       if (canvas) {
         const center = new (window as any).fabric.Point(canvas.getWidth() / 2, canvas.getHeight() / 2);
@@ -1828,8 +2545,10 @@ function EditorContent() {
   // Where new content should land: the active artboard if one exists,
   // otherwise the (0,0)-(width,height) box a brand-new document starts with
   // (id is undefined only in that startup-edge-case fallback).
+  // Reads refs, not state, so it's correct inside long-lived handlers too.
   const getActiveArtboardRect = (): { id?: string; x: number; y: number; width: number; height: number } => {
-    const ab = artboards.find((a) => a.id === activeArtboardId) || artboards[0];
+    const list = artboardsRef.current.length ? artboardsRef.current : artboards;
+    const ab = list.find((a) => a.id === activeArtboardIdRef.current) || list[0];
     return ab || { x: 0, y: 0, width, height };
   };
 
@@ -1851,7 +2570,7 @@ function EditorContent() {
       });
       fabricCanvasRef.current.add(text);
       fabricCanvasRef.current.setActiveObject(text);
-      ensureFontLoaded(text.fontFamily || 'Arial').then(() => fabricCanvasRef.current?.requestRenderAll());
+      ensureFontLoaded(text.fontFamily || 'Arial').then(() => refreshTextMetrics(fabricCanvasRef.current));
     });
   };
 
@@ -1871,6 +2590,10 @@ function EditorContent() {
   const backgroundUploadAsset = (img: any) => {
     const dataUrl = img.getSrc ? img.getSrc() : img._originalElement?.src;
     if (!dataUrl || !dataUrl.startsWith('data:')) return;
+    // If the picture is replaced or edited before this upload finishes,
+    // the finished upload must not put the old pixels back.
+    const token = `${Date.now()}_${Math.random()}`;
+    img.__uploadToken = token;
     supabase.auth.getUser().then(({ data }) => {
       const user = data.user;
       if (!user) return;
@@ -1878,6 +2601,7 @@ function EditorContent() {
         .then((uploaded) => {
           const canvas = fabricCanvasRef.current;
           if (!canvas || !canvas.getObjects().includes(img)) return;
+          if (img.__uploadToken !== token) return;
           img.setSrc(
             uploaded.url,
             () => {
@@ -1893,33 +2617,716 @@ function EditorContent() {
     });
   };
 
+
+  // ===================================================================
+  // New editor interface: modes, panels, drawing, crop, templates,
+  // brand kit, resize. The design actions themselves live in
+  // hooks/useEditorFeatures.ts and lib/editor/*.
+  // ===================================================================
+  const features = useEditorFeatures({
+    fabricCanvasRef,
+    pushHistory,
+    getActivePage: () => getActiveArtboardRect(),
+    refreshLayers,
+    bumpSel,
+    notify: (m) => setLocalNotice(m),
+    recomputeMembership,
+    backgroundUploadAsset,
+  });
+  const featuresRef = useRef(features);
+  featuresRef.current = features;
+
+  // Simple mode shows the essentials; Pro mode adds rulers, menus, the
+  // tool strip, layers and precise properties.
+  const [mode, setModeState] = useState<'simple' | 'pro'>('simple');
+  useEffect(() => {
+    try {
+      const m = localStorage.getItem('mt:editorMode');
+      if (m === 'pro' || m === 'simple') setModeState(m);
+    } catch {
+      // keep default
+    }
+  }, []);
+  const setMode = (m: 'simple' | 'pro') => {
+    setModeState(m);
+    try {
+      localStorage.setItem('mt:editorMode', m);
+    } catch {
+      // not critical
+    }
+    if (m === 'simple' && activeToolRef.current !== 'select') setActiveTool('select');
+  };
+  const pro = mode === 'pro';
+
+  // Phones get a bottom navigation and bottom sheets.
+  const [compact, setCompact] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 767px)');
+    const on = () => setCompact(mq.matches);
+    on();
+    mq.addEventListener?.('change', on);
+    return () => mq.removeEventListener?.('change', on);
+  }, []);
+
+  const [leftPanel, setLeftPanel] = useState<string | null>(null);
+  const [templateCategory, setTemplateCategory] = useState<string | null>(null);
+  const [showResize, setShowResize] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [bgRemoveTarget, setBgRemoveTarget] = useState<any>(null);
+  const [templateBusy, setTemplateBusy] = useState<string | null>(null);
+  const [sessionUploads, setSessionUploads] = useState<{ id: string; url: string }[]>([]);
+  const replaceInputRef = useRef<HTMLInputElement>(null);
+  const pickColorRef = useRef<((hex: string) => void) | null>(null);
+
+  // ---- drawing ----
+  const [brush, setBrushState] = useState<BrushSettings>(DEFAULT_BRUSH);
+  const brushRef = useRef<BrushSettings>(DEFAULT_BRUSH);
+  const [drawing, setDrawing] = useState(false);
+  const drawingRef = useRef(false);
+  const strokeRef = useRef<{ points: StrokePoint[]; pen: boolean } | null>(null);
+  const setBrush = (b: BrushSettings) => {
+    brushRef.current = b;
+    setBrushState(b);
+    // The vector pencil follows colour and size changes straight away.
+    const fb = fabricCanvasRef.current?.freeDrawingBrush;
+    if (fabricCanvasRef.current?.isDrawingMode && fb) {
+      fb.color = b.color;
+      fb.width = Math.max(1, b.size / 3);
+    }
+  };
+  const startDrawing = (kind: BrushSettings['kind']) => {
+    const canvas = fabricCanvasRef.current;
+    if (!canvas) return;
+    setActiveTool('select');
+    const next = { ...brushRef.current, kind };
+    setBrush(next);
+    drawingRef.current = true;
+    setDrawing(true);
+    canvas.discardActiveObject();
+    canvas.selection = false;
+    canvas.forEachObject((o: any) => {
+      o.selectable = false;
+      o.evented = false;
+    });
+    canvas.defaultCursor = 'crosshair';
+    canvas.hoverCursor = 'crosshair';
+    canvas.requestRenderAll();
+  };
+  const stopDrawing = () => {
+    drawingRef.current = false;
+    strokeRef.current = null;
+    setDrawing(false);
+    setActiveTool('select');
+  };
+
+  // Vector pencil: a freehand line that becomes an editable path.
+  const [pencilOn, setPencilOn] = useState(false);
+  setPencilOnRef.current = setPencilOn;
+  const setVectorPencil = (on: boolean) => {
+    const canvas = fabricCanvasRef.current;
+    const F = (window as any).fabric;
+    if (!canvas || !F) return;
+    if (on) {
+      if (drawingRef.current) stopDrawing();
+      setActiveTool('select');
+      canvas.discardActiveObject();
+      const b = new F.PencilBrush(canvas);
+      b.width = Math.max(1, brushRef.current.size / 3);
+      b.color = brushRef.current.color;
+      b.decimate = 3;
+      canvas.freeDrawingBrush = b;
+      canvas.isDrawingMode = true;
+    } else {
+      canvas.isDrawingMode = false;
+    }
+    setPencilOn(on);
+  };
+
+  // Eyedropper fallback for browsers without the EyeDropper API.
+  const pickFromCanvas = (cb: (hex: string) => void) => {
+    const canvas = fabricCanvasRef.current;
+    if (!canvas) return;
+    pickColorRef.current = cb;
+    canvas.defaultCursor = 'crosshair';
+    setLocalNotice('Tap anywhere on the page to pick a colour.');
+  };
+
+  // ---- images: add / replace / remove background ----
+  // Reads a picture file, scaled to a sensible working size (see
+  // lib/editor/imagePrep.ts).
+  const readFile = (f: File) =>
+    new Promise<string>((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(String(r.result));
+      r.onerror = () => reject(r.error);
+      r.readAsDataURL(f);
+    }).then((url) => prepareImageDataUrl(url));
+
+  const addImageFiles = async (files: File[], at?: { x: number; y: number }) => {
+    for (let i = 0; i < files.length; i++) {
+      const url = await readFile(files[i]).catch(() => null);
+      if (!url) {
+        setLocalNotice("That file couldn't be read. Try another image.");
+        continue;
+      }
+      setSessionUploads((u) => [{ id: `u${Date.now()}_${i}`, url }, ...u].slice(0, 40));
+      // An empty frame is selected: fill it instead of adding a new picture.
+      const active = fabricCanvasRef.current?.getActiveObject();
+      if (i === 0 && files.length === 1 && active?.__frame?.empty && !at) {
+        await features.putImageInto(active, url);
+        continue;
+      }
+      await insertImageDataUrl(url, i, at);
+    }
+  };
+
+  const addImageFilesRef = useRef<((files: File[]) => void) | null>(null);
+  addImageFilesRef.current = (files: File[]) => addImageFiles(files);
+
+  const placeImageUrl = async (url: string, at?: { x: number; y: number }, target?: any) => {
+    const active = target || fabricCanvasRef.current?.getActiveObject();
+    if (active && active.type === 'image' && (active.__frame?.empty || target)) {
+      await features.putImageInto(active, url);
+      return;
+    }
+    await insertImageDataUrl(url, 0, at);
+  };
+
+  const onReplacePicked = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    e.target.value = '';
+    const target = fabricCanvasRef.current?.getActiveObject();
+    if (!f || !target || target.type !== 'image') return;
+    const url = await readFile(f).catch(() => null);
+    if (!url) {
+      setLocalNotice("That file couldn't be read. Try another image.");
+      return;
+    }
+    await features.putImageInto(target, url);
+  };
+
+  const applyBackgroundRemoval = async (dataUrl: string) => {
+    const img = bgRemoveTarget;
+    const canvas = fabricCanvasRef.current;
+    if (!img || !canvas) return;
+    const oldW = img.width || 1;
+    await new Promise<void>((resolve, reject) =>
+      img.setSrc(
+        dataUrl,
+        (_o: any, err?: boolean) => (err ? reject(new Error('load')) : resolve()),
+        { crossOrigin: 'anonymous' }
+      )
+    );
+    // Same size on the page even if the cut-out has a different pixel size.
+    const ratio = oldW / (img.width || 1);
+    img.set({ scaleX: (img.scaleX || 1) * ratio, scaleY: (img.scaleY || 1) * ratio });
+    if (img.clipPath && !img.clipPath.absolutePositioned) {
+      img.clipPath.set({
+        scaleX: (img.clipPath.scaleX || 1) / ratio,
+        scaleY: (img.clipPath.scaleY || 1) / ratio,
+        left: (img.clipPath.left || 0) / ratio,
+        top: (img.clipPath.top || 0) / ratio,
+      });
+    }
+    if (img.filters?.length) img.applyFilters();
+    img.__assetId = undefined;
+    // The cut-out is what later photo edits start from (undo brings the
+    // original back).
+    delete img.__originalSrc;
+    delete img.__photoEdits;
+    delete img.__cropRect;
+    img.dirty = true;
+    img.setCoords();
+    canvas.requestRenderAll();
+    backgroundUploadAsset(img);
+    pushHistory();
+    bumpSel();
+  };
+
+  const addSticker = (emoji: string, at?: { x: number; y: number }) => {
+    const F = (window as any).fabric;
+    const canvas = fabricCanvasRef.current;
+    if (!F || !canvas) return;
+    const page = getActiveArtboardRect();
+    const size = Math.min(page.width, page.height) * 0.18;
+    const t = new F.Text(emoji, { fontSize: size, fontFamily: 'system-ui, "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif' });
+    t.setPositionByOrigin(new F.Point(at?.x ?? page.x + page.width / 2, at?.y ?? page.y + page.height / 2), 'center', 'center');
+    t.name = 'Sticker';
+    canvas.add(t);
+    canvas.setActiveObject(t);
+    canvas.requestRenderAll();
+  };
+
+  // A page number that updates itself when pages are added or reordered.
+  const addPageNumber = () => {
+    const F = (window as any).fabric;
+    const canvas = fabricCanvasRef.current;
+    if (!F || !canvas) return;
+    const page = getActiveArtboardRect();
+    const k = Math.max(page.width, page.height) / 1080;
+    const t = new F.Textbox('1', { width: 80 * k, fontSize: 28 * k, fontFamily: 'Inter', fill: '#52525B', textAlign: 'center' });
+    t.setPositionByOrigin(new F.Point(page.x + page.width / 2, page.y + page.height - 48 * k), 'center', 'center');
+    t.__pageNumber = true;
+    t.name = 'Page number';
+    canvas.add(t);
+    canvas.setActiveObject(t);
+    refreshArtboards();
+    canvas.requestRenderAll();
+  };
+
+  const addFontPairing = (heading: string, body: string) => {
+    const page = getActiveArtboardRect();
+    const F = (window as any).fabric;
+    features.addTextPreset({ id: 'pair-h', label: 'Heading', text: 'Your heading here', fontFamily: heading, fontSize: 90, fontWeight: 700 }, F ? { x: page.x + page.width / 2, y: page.y + page.height * 0.42 } : undefined);
+    features.addTextPreset({ id: 'pair-b', label: 'Body', text: 'Add a little bit of body text that goes with your heading.', fontFamily: body, fontSize: 34, lineHeight: 1.4, fill: '#3F3F46' }, F ? { x: page.x + page.width / 2, y: page.y + page.height * 0.56 } : undefined);
+  };
+
+
+  // ---------------------------------------------------------------------
+  // Templates, smart resize, pages and brand kit
+  // ---------------------------------------------------------------------
+
+  // Moves/scales a set of objects laid out for page `from` onto page `to`
+  // without stretching (see lib/editor/smartResize.ts).
+  const fitObjectsToPage = (objs: any[], from: { x: number; y: number; width: number; height: number }, to: { x: number; y: number; width: number; height: number }) => {
+    const plan = planResize(
+      objs.map((o) => {
+        const r = o.getBoundingRect(true, true);
+        return {
+          box: { left: r.left - from.x, top: r.top - from.y, width: r.width, height: r.height },
+          isImage: o.type === 'image',
+          isShape: o.type !== 'image' && !(o.type === 'textbox' || o.type === 'i-text' || o.type === 'text') && o.type !== 'group',
+        };
+      }),
+      from,
+      to
+    );
+    const F = (window as any).fabric;
+    objs.forEach((o, i) => {
+      const p = plan[i];
+      const isTxt = o.type === 'textbox' || o.type === 'i-text' || o.type === 'text';
+      if (isTxt && Math.abs(p.scaleX - p.scaleY) < 1e-6) {
+        // Text is re-sized by its font size so it stays crisp and editable.
+        const k = p.scaleX;
+        o.set({ fontSize: (o.fontSize || 40) * k });
+        if (o.type === 'textbox') o.set({ width: (o.width || 100) * k });
+        if (o.styles) {
+          Object.values(o.styles).forEach((line: any) =>
+            Object.values(line || {}).forEach((st: any) => {
+              if (st && st.fontSize) st.fontSize *= k;
+            })
+          );
+        }
+        o.initDimensions?.();
+      } else {
+        o.set({ scaleX: (o.scaleX || 1) * p.scaleX, scaleY: (o.scaleY || 1) * p.scaleY });
+      }
+      o.setPositionByOrigin(new F.Point(to.x + p.cx, to.y + p.cy), 'center', 'center');
+      o.setCoords();
+    });
+  };
+
+  const artboardRectById = (id?: string) => fabricCanvasRef.current?.getObjects().find((o: any) => o.__isArtboard && (!id || o.__artboardId === id));
+
+  // Puts a template's design onto the current page (replacing what's there)
+  // or onto a new page, adapted to the page's size.
+  const applyTemplate = async (t: TemplateRecord, mode: 'replace' | 'newPage') => {
+    const canvas = fabricCanvasRef.current;
+    const F = (window as any).fabric;
+    if (!canvas || !F || !t.id) return;
+    setTemplateBusy(t.id);
+    try {
+      const full = await fetchTemplateById(t.id);
+      const json = full?.canvasJson;
+      if (!json || !Array.isArray(json.objects)) throw new Error('no-content');
+      await ensureFontsLoadedForCanvasJSON(json).catch(() => {});
+      try { F.util.clearFabricFontCache?.(); } catch { /* ignore */ }
+      const abJson = json.objects.find((o: any) => o.__isArtboard);
+      const src = abJson
+        ? { x: abJson.left || 0, y: abJson.top || 0, width: (abJson.width || t.width) * (abJson.scaleX || 1), height: (abJson.height || t.height) * (abJson.scaleY || 1) }
+        : { x: 0, y: 0, width: t.width, height: t.height };
+      const items = json.objects.filter((o: any) => !o.__isArtboard && !o.__isGuide);
+      const objs: any[] = await new Promise((resolve) => F.util.enlivenObjects(items, (list: any[]) => resolve(list), 'fabric'));
+
+      let page = getActiveArtboardRect();
+      if (mode === 'newPage') {
+        const metas = getArtboardMetas();
+        const pos = nextArtboardPosition(metas);
+        const rect = createArtboardRect(F, pos.x, pos.y, src.width, src.height, nextArtboardName(metas));
+        suppressHistoryRef.current = true;
+        canvas.add(rect);
+        suppressHistoryRef.current = false;
+        pinArtboardsBack();
+        page = { id: rect.__artboardId, x: pos.x, y: pos.y, width: src.width, height: src.height };
+        setActiveArtboardId(rect.__artboardId);
+      } else {
+        // Replace: clear this page's own artwork first.
+        canvas.discardActiveObject();
+        canvas.getObjects().filter((o: any) => isArtwork(o) && (o.__artboardId === page.id || !page.id)).forEach((o: any) => canvas.remove(o));
+      }
+      const rect = artboardRectById(page.id);
+      if (rect && abJson) {
+        const fill = abJson.fill;
+        if (fill && typeof fill === 'object' && fill.colorStops) rect.set({ fill: new F.Gradient(fill) });
+        else if (typeof fill === 'string') rect.set({ fill });
+        rect.dirty = true;
+      }
+      objs.forEach((o) => {
+        delete o.__uid;
+        canvas.add(o);
+      });
+      // Line the template's own page up with ours before fitting.
+      objs.forEach((o) => {
+        o.set({ left: (o.left || 0) - src.x + page.x, top: (o.top || 0) - src.y + page.y });
+        o.setCoords();
+      });
+      if (Math.abs(src.width - page.width) > 1 || Math.abs(src.height - page.height) > 1) {
+        fitObjectsToPage(objs, { x: page.x, y: page.y, width: src.width, height: src.height }, page);
+      }
+      applyStoredLocks(canvas);
+      reviveTextPaths(F, canvas);
+    reviveImageAdjust(F, canvas);
+      setActiveTool('select');
+      recomputeMembership();
+      refreshLayers();
+      refreshArtboards();
+      fitToRect(canvas, page);
+      canvas.requestRenderAll();
+      pushHistory();
+      const note = fontRequiredMessage(missingFontsIn(json));
+      if (note) setLocalNotice(note);
+      if (compact) setLeftPanel(null);
+    } catch (err) {
+      console.error('Template could not be applied:', err);
+      setLocalNotice("That template couldn't be opened. Check your connection and try again.");
+    } finally {
+      setTemplateBusy(null);
+    }
+  };
+
+  // Resize: the current page (or a resized copy of it) to a new size.
+  const resizePage = (size: { width: number; height: number; dpi?: number }, mode: 'this' | 'copy') => {
+    const canvas = fabricCanvasRef.current;
+    const F = (window as any).fabric;
+    if (!canvas || !F) return;
+    const page = getActiveArtboardRect();
+    const rect = artboardRectById(page.id);
+    if (!rect) return;
+    const doResize = (targetRect: any, members: any[], from: { x: number; y: number; width: number; height: number }) => {
+      targetRect.set({ width: size.width, height: size.height, scaleX: 1, scaleY: 1 });
+      if (size.dpi) targetRect.__print = { ...(targetRect.__print || createDefaultPrintSettings()), dpi: size.dpi };
+      targetRect.setCoords();
+      // Pattern/photo backgrounds re-cover the page.
+      const to = { x: targetRect.left || 0, y: targetRect.top || 0, width: size.width, height: size.height };
+      fitObjectsToPage(members, from, to);
+      recomputeMembership();
+      refreshArtboards();
+      refreshLayers();
+      setActiveArtboardId(targetRect.__artboardId);
+      fitToRect(canvas, to);
+      canvas.requestRenderAll();
+      pushHistory();
+    };
+    if (mode === 'this') {
+      const members = canvas.getObjects().filter((o: any) => isArtwork(o) && o.__artboardId === page.id);
+      doResize(rect, members, page);
+      return;
+    }
+    // Copy: clone the page next to the others, then resize the copy.
+    const metas = getArtboardMetas();
+    const pos = nextArtboardPosition(metas);
+    const members = canvas.getObjects().filter((o: any) => isArtwork(o) && o.__artboardId === page.id);
+    rect.clone((nr: any) => {
+      nr.set({ left: pos.x, top: pos.y, name: `${rect.name || 'Page'} (resized)` });
+      nr.__isArtboard = true;
+      nr.__artboardId = createArtboardId();
+      nr.__print = JSON.parse(JSON.stringify(rect.__print || createDefaultPrintSettings()));
+      suppressHistoryRef.current = true;
+      canvas.add(nr);
+      Promise.all(members.map((m: any) => new Promise<any>((res) => m.clone((c: any) => res(c), PERSIST_PROPS)))).then((clones) => {
+        clones.forEach((c: any) => {
+          delete c.__uid;
+          c.set({ left: (c.left || 0) - page.x + pos.x, top: (c.top || 0) - page.y + pos.y });
+          c.setCoords();
+          canvas.add(c);
+        });
+        suppressHistoryRef.current = false;
+        pinArtboardsBack();
+        applyStoredLocks(canvas);
+        doResize(nr, clones, { x: pos.x, y: pos.y, width: page.width, height: page.height });
+      });
+    });
+  };
+
+  // Adds a page the same size as the current one.
+  const addPage = () => {
+    const page = getActiveArtboardRect();
+    addArtboardWithSize(page.width, page.height);
+  };
+
+  // Small previews of each page for the page strip.
+  const [pageThumbs, setPageThumbs] = useState<Record<string, string>>({});
+  const pageThumbsRef = useRef<Record<string, string>>({});
+  const [docRev, setDocRev] = useState(0);
+  setDocRevRef.current = setDocRev;
+  const lastThumbRevRef = useRef(-1);
+  useEffect(() => {
+    // Only the page being edited (plus any page with no preview yet) is
+    // re-rendered, and only once the browser is idle, so typing and
+    // dragging on a many-page document stay smooth.
+    const run = () => {
+      const canvas = fabricCanvasRef.current;
+      if (!canvas || !canvasReady) return;
+      const editedSince = lastThumbRevRef.current !== docRev;
+      lastThumbRevRef.current = docRev;
+      const ids = new Set(artboardsRef.current.map((a) => a.id));
+      const next: Record<string, string> = {};
+      Object.entries(pageThumbsRef.current as Record<string, string>).forEach(([k, v]) => ids.has(k) && (next[k] = v as string));
+      const todo = artboardsRef.current.filter((ab) => !next[ab.id] || (editedSince && ab.id === activeArtboardIdRef.current));
+      if (!todo.length && Object.keys(next).length === Object.keys(pageThumbsRef.current).length) return;
+      // Never while the user is dragging or typing: wait for the next idle moment.
+      if (canvas._currentTransform || canvas.getActiveObject()?.isEditing || featuresRef.current?.cropRef.current) return;
+      todo.forEach((ab) => {
+        try {
+          next[ab.id] = capturePicture(ab, { format: 'jpeg', quality: 0.6, multiplier: 120 / Math.max(ab.width, ab.height, 1) }).dataUrl;
+        } catch {
+          // A cross-site picture without permission: no preview for this page.
+        }
+      });
+      pageThumbsRef.current = next;
+      setPageThumbs(next);
+    };
+    let idle: number | null = null;
+    const t = setTimeout(() => {
+      const ric = (window as any).requestIdleCallback;
+      if (ric) idle = ric(run, { timeout: 2000 });
+      else run();
+    }, 700);
+    return () => {
+      clearTimeout(t);
+      if (idle != null) (window as any).cancelIdleCallback?.(idle);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [docRev, artboards.length, activeArtboardId, canvasReady]);
+
+  // ---- brand kit ----
+  const [brandKit, setBrandKit] = useState<BrandKit>(EMPTY_KIT);
+  const [brandSaving, setBrandSaving] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const brandTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    loadBrandKit().then(setBrandKit);
+  }, []);
+  const updateBrandKit = (k: BrandKit) => {
+    setBrandKit(k);
+    setBrandSaving('saving');
+    if (brandTimer.current) clearTimeout(brandTimer.current);
+    brandTimer.current = setTimeout(() => {
+      saveBrandKit(k).then((ok) => setBrandSaving(ok ? 'saved' : 'error'));
+    }, 700);
+  };
+  const applyBrandToPage = () => {
+    const canvas = fabricCanvasRef.current;
+    if (!canvas) return;
+    const page = getActiveArtboardRect();
+    const objs = canvas.getObjects().filter((o: any) => isArtwork(o) && (o.__artboardId === page.id || !page.id));
+    if (!objs.length) {
+      setLocalNotice('Add a template or some content first, then apply your brand.');
+      return;
+    }
+    applyBrandToObjects(objs, brandKit);
+    canvas.requestRenderAll();
+    // Brand fonts may still be downloading: measure the text again once they arrive.
+    Promise.all([brandKit.fonts.heading, brandKit.fonts.body].filter(Boolean).flatMap((f) => [ensureFontLoaded(f as string, 400), ensureFontLoaded(f as string, 700)])).then(() => refreshTextMetrics(canvas));
+    pushHistory();
+    bumpSel();
+    setLocalNotice('Your brand colours and fonts were applied. Undo (Ctrl/Cmd+Z) if you’d like it back.');
+  };
+  const uploadBrandLogo = async (file: File) => {
+    const url = await readFile(file).catch(() => null);
+    if (!url) return;
+    let finalUrl = url;
+    try {
+      const { data } = await supabase.auth.getUser();
+      if (data.user) finalUrl = (await uploadDesignAsset(dataUrlToBlob(url), data.user.id)).url;
+    } catch {
+      // keep the embedded copy
+    }
+    updateBrandKit({ ...brandKit, logoUrl: finalUrl });
+  };
+  const addBrandInfo = () => {
+    const i = brandKit.info;
+    const lines = [i.business, i.tagline, [i.phone, i.email].filter(Boolean).join('  ·  '), i.website, i.address].filter(Boolean);
+    if (!lines.length) {
+      setLocalNotice('Fill in your business details in the Brand panel first.');
+      return;
+    }
+    features.addTextPreset({
+      id: 'brand-info',
+      label: 'Business details',
+      text: lines.join('\n'),
+      fontFamily: brandKit.fonts.body || 'Inter',
+      fontSize: 30,
+      lineHeight: 1.45,
+      fill: '#09090B',
+    });
+  };
+
+  // ---- quick start ("Let's create something") ----
+  const runQuickStart = async (q: QuickStart) => {
+    setShowOnboarding(false);
+    try {
+      localStorage.setItem('mt:onboarded', '1');
+    } catch {
+      // not critical
+    }
+    const { presetToPx } = await import('@/lib/editor/sizePresets');
+    const size = presetToPx(q.preset);
+    const page = getActiveArtboardRect();
+    const rect = artboardRectById(page.id);
+    if (rect) {
+      rect.set({ width: size.width, height: size.height });
+      if (q.preset.dpi) rect.__print = { ...(rect.__print || createDefaultPrintSettings()), dpi: q.preset.dpi };
+      rect.setCoords();
+      refreshArtboards();
+      fitToRect(fabricCanvasRef.current, { x: page.x, y: page.y, width: size.width, height: size.height });
+      pushHistory();
+    }
+    setTemplateCategory(q.category || null);
+    if (!q.wizard) {
+      setLeftPanel('templates');
+      return;
+    }
+    // Wizard: pick a matching template, then put the details in.
+    const { fetchPublicTemplates } = await import('@/lib/templatesData');
+    const list = (await fetchPublicTemplates()).filter((t) => t.id && (t.category === q.category || !q.category));
+    const styleWord = q.wizard.style.toLowerCase();
+    const pick =
+      list.find((t) => `${t.name} ${(t.tags || []).join(' ')}`.toLowerCase().includes(styleWord)) ||
+      list[Math.floor(Math.random() * Math.max(1, list.length))];
+    if (!pick) {
+      setLeftPanel('templates');
+      return;
+    }
+    await applyTemplate(pick, 'replace');
+    const canvas = fabricCanvasRef.current;
+    const pg = getActiveArtboardRect();
+    const objs = canvas.getObjects().filter((o: any) => isArtwork(o) && o.__artboardId === pg.id);
+    const texts = objs.filter((o: any) => o.type === 'textbox' || o.type === 'i-text' || o.type === 'text');
+    const byMonthDay = /(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|monday|tuesday|wednesday|thursday|friday|saturday|sunday|\d{1,2}[\/.]\d{1,2}|\d{1,2}(st|nd|rd|th)|\bpm\b|\bam\b)/i;
+    if (q.wizard.title) {
+      const biggest = texts.slice().sort((a: any, b: any) => b.fontSize * (b.scaleY || 1) - a.fontSize * (a.scaleY || 1))[0];
+      if (biggest) {
+        biggest.set({ text: q.wizard.title });
+        biggest.initDimensions?.();
+      }
+    }
+    if (q.wizard.date) {
+      const dateText = texts.find((t: any) => byMonthDay.test(t.text || ''));
+      if (dateText) {
+        dateText.set({ text: q.wizard.date });
+        dateText.initDimensions?.();
+      }
+    }
+    if (q.wizard.photo) {
+      const url = await readFile(q.wizard.photo).catch(() => null);
+      const frame = objs.find((o: any) => o.type === 'image');
+      if (url && frame) await features.putImageInto(frame, url);
+      else if (url) await insertImageDataUrl(url);
+    }
+    canvas.requestRenderAll();
+    pushHistory();
+    setLocalNotice('Your design is ready. Tap anything to change it.');
+  };
+
+  // First visit to a blank editor: offer the quick start.
+  useEffect(() => {
+    if (!canvasReady || urlDesignId || cameFromTemplate || urlLocalDoc || startInPhotoEditor) return;
+    getDraft(UNSAVED_KEY).then((d) => {
+      const recent = d && Date.now() - d.savedAt < 7 * 24 * 3600 * 1000;
+      const hasArt = recent && Array.isArray(d!.json?.objects) && d!.json.objects.some((o: any) => !o.__isArtboard && !o.__isGuide);
+      if (hasArt && !searchParams.get('newTab')) {
+        setDraftOffer(d);
+        return;
+      }
+      try {
+        if (searchParams.get('onboard') === '1' || !localStorage.getItem('mt:onboarded')) setShowOnboarding(true);
+      } catch {
+        // ignore
+      }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canvasReady]);
+
+  const restoreDraft = (d: Draft) => {
+    const canvas = fabricCanvasRef.current;
+    const F = (window as any).fabric;
+    if (!canvas || !F) return;
+    setDraftOffer(null);
+    suppressHistoryRef.current = true;
+    canvas.loadFromJSON(d.json, () => {
+      ensureArtboards(canvas, F);
+      const first = canvas.getObjects().find((o: any) => o.__isArtboard);
+      if (first) fitToRect(canvas, { x: first.left || 0, y: first.top || 0, width: (first.width || width) * (first.scaleX || 1), height: (first.height || height) * (first.scaleY || 1) });
+      canvas.renderAll();
+      refreshLayers();
+      refreshArtboards();
+      suppressHistoryRef.current = false;
+      if (d.key === UNSAVED_KEY) setDesignName(d.name);
+      ensureFontsLoadedForCanvasJSON(d.json).then(() => refreshTextMetrics(canvas));
+      pushHistory();
+      setLocalNotice('Your unsaved changes are back.');
+    });
+  };
+
+  // Handles things dragged from the side panels onto the page.
+  const handleAssetDrop = (asset: string, pointer: { x: number; y: number }, ev: any) => {
+    const [kind, ...rest] = asset.split(':');
+    const value = rest.join(':');
+    const canvas = fabricCanvasRef.current;
+    if (kind === 'shape') features.addShape(value as any, pointer);
+    else if (kind === 'frame') features.addFrame(value as any, pointer);
+    else if (kind === 'sticker') addSticker(value, pointer);
+    else if (kind === 'text') {
+      const all = [...TEXT_BASICS, ...TEXT_STYLES];
+      const p = all.find((x) => x.id === value);
+      if (p) features.addTextPreset(p, pointer);
+    } else if (kind === 'image') {
+      const target = canvas?.findTarget(ev, false);
+      if (target && target.type === 'image' && !target.locked) placeImageUrl(value, pointer, target);
+      else placeImageUrl(value, pointer);
+    } else if (kind === 'template') {
+      import('@/lib/templatesData').then(({ fetchTemplateById: f }) => f(value).then((t) => t && applyTemplate(t, 'replace')));
+    }
+  };
+
+  const pageBackgroundValue = (): string | GradientSpec | null => {
+    const rect = artboardRectById(getActiveArtboardRect().id);
+    if (!rect) return '#FFFFFF';
+    if (rect.fill && typeof rect.fill === 'object' && rect.fill.colorStops) return fromFabricGradient(rect.fill);
+    return typeof rect.fill === 'string' ? rect.fill || null : '#FFFFFF';
+  };
+  const setPageBackgroundValue = (v: string | GradientSpec | null, commit: boolean) => {
+    if (v && typeof v === 'object') features.setPageBackground({ gradient: v }, commit);
+    else features.setPageBackground({ color: v }, commit);
+  };
+
   const nextImageIdRef = useRef(0);
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files ? e.target.files[0] : null;
-    if (!file) return;
-    const ab = getActiveArtboardRect();
-    const reader = new FileReader();
-    reader.onload = function (event) {
-      import('fabric').then((mod) => {
-        mod.fabric.Image.fromURL(event.target ? (event.target.result as string) : '', function (img: any) {
-          img.scaleToWidth(300);
-          img.set({ left: ab.x + 20, top: ab.y + 20 });
-          img.__id = `img_${Date.now()}_${nextImageIdRef.current++}`;
-          fabricCanvasRef.current.add(img);
-          fabricCanvasRef.current.setActiveObject(img);
-          backgroundUploadAsset(img);
-          if (pendingPhotoStartRef.current) {
-            pendingPhotoStartRef.current = false;
-            openPhotoEditor();
-            // Drop ?newPhoto=1 so refreshing this tab later doesn't
-            // re-arm the auto-open behavior on an unrelated upload.
-            const base = `/editor?w=${width}&h=${height}`;
-            router.replace(designIdRef.current ? `${base}&designId=${designIdRef.current}` : base);
-          }
-        });
-      });
-    };
-    reader.readAsDataURL(file);
+    const files = Array.from(e.target.files || []) as File[];
+    e.target.value = '';
+    if (!files.length) return;
+    files.forEach((file, i) =>
+      insertImageFile(file, i).then(() => {
+        if (i === 0 && pendingPhotoStartRef.current) {
+          pendingPhotoStartRef.current = false;
+          openPhotoEditor();
+          // Drop ?newPhoto=1 so refreshing this tab later doesn't re-arm
+          // the auto-open behaviour on an unrelated upload.
+          const base = `/editor?w=${width}&h=${height}`;
+          router.replace(designIdRef.current ? `${base}&designId=${designIdRef.current}` : base);
+        }
+      })
+    );
   };
 
   // Shared by both the plain-image and PDF-page-rasterized import paths
@@ -1927,28 +3334,44 @@ function EditorContent() {
   // artboard. object:added's own canvas listeners (already wired at
   // canvas-init time) pick up layers-panel refresh and history recording
   // automatically, the same way handleImageUpload's own canvas.add() does.
-  const insertImageDataUrl = (dataUrl: string, cascadeIndex = 0): Promise<void> => {
+  const insertImageDataUrl = (dataUrl: string, cascadeIndex = 0, at?: { x: number; y: number }): Promise<void> => {
     return new Promise((resolve) => {
       const ab = getActiveArtboardRect();
       import('fabric').then((mod) => {
-        mod.fabric.Image.fromURL(dataUrl, (img: any) => {
-          img.scaleToWidth(300);
-          img.set({ left: ab.x + 20 + cascadeIndex * 24, top: ab.y + 20 + cascadeIndex * 24 });
+        mod.fabric.Image.fromURL(dataUrl, (img: any, isError?: boolean) => {
+          if (!img || !img.width || isError) {
+            setLocalNotice("That image couldn't be opened. Try a JPG or PNG file.");
+            resolve();
+            return;
+          }
+          // Fit inside half the page, never upscaled past its real size.
+          const target = Math.min(img.width, ab.width * 0.5, (ab.height * 0.5 * img.width) / img.height);
+          img.scaleToWidth(Math.max(40, target));
+          const w = img.getScaledWidth();
+          const h = img.getScaledHeight();
+          if (at) img.set({ left: at.x - w / 2 + cascadeIndex * 24, top: at.y - h / 2 + cascadeIndex * 24 });
+          else img.set({ left: ab.x + (ab.width - w) / 2 + cascadeIndex * 24, top: ab.y + (ab.height - h) / 2 + cascadeIndex * 24 });
           img.__id = `img_${Date.now()}_${nextImageIdRef.current++}`;
           fabricCanvasRef.current.add(img);
           fabricCanvasRef.current.setActiveObject(img);
           backgroundUploadAsset(img);
           resolve();
-        });
+        }, { crossOrigin: 'anonymous' });
       });
     });
   };
 
-  const insertImageFile = (file: File, cascadeIndex = 0): Promise<void> => {
+  const insertImageFile = (file: File, cascadeIndex = 0, at?: { x: number; y: number }): Promise<void> => {
     return new Promise((resolve) => {
       const reader = new FileReader();
       reader.onload = (event) => {
-        insertImageDataUrl(event.target ? (event.target.result as string) : '', cascadeIndex).then(resolve);
+        prepareImageDataUrl(event.target ? (event.target.result as string) : '')
+          .then((url) => insertImageDataUrl(url, cascadeIndex, at))
+          .then(resolve);
+      };
+      reader.onerror = () => {
+        setLocalNotice("That file couldn't be read. Try another image.");
+        resolve();
       };
       reader.readAsDataURL(file);
     });
@@ -1988,7 +3411,7 @@ function EditorContent() {
       fabricCanvasRef.current?.requestRenderAll();
     } catch (err) {
       console.error('PDF import failed:', err);
-      window.alert('Could not import this PDF — it may be corrupted or password-protected.');
+      setLocalNotice('Could not import this PDF — it may be corrupted or password-protected.');
     } finally {
       setImportingPdf(false);
       setImportFile(null);
@@ -2034,12 +3457,18 @@ function EditorContent() {
         // scale — rescale it by the same ratio so its absolute size and
         // position on screen stay exactly where they were, regardless of
         // how the new image's natural size compares to the old one's.
-        if (active.clipPath) {
+        if (active.clipPath && active.clipPath.absolutePositioned) {
+          // A mask fixed to the page stays exactly where it is.
+        } else if (active.clipPath) {
+          // The crop/frame lives in the image's own space: rescale its size
+          // and offset so it covers the same area on the page.
           const ratioX = prevScaleX / scale;
           const ratioY = prevScaleY / scale;
           active.clipPath.set({
             scaleX: (active.clipPath.scaleX || 1) * ratioX,
             scaleY: (active.clipPath.scaleY || 1) * ratioY,
+            left: (active.clipPath.left || 0) * ratioX,
+            top: (active.clipPath.top || 0) * ratioY,
           });
         } else {
           // No existing crop/mask: a "cover" fit can still overhang the
@@ -2058,13 +3487,19 @@ function EditorContent() {
         }
 
         active.set({ scaleX: scale, scaleY: scale, dirty: true });
-        // A stale "restore original" backup from the previous photo no
-        // longer applies to this one.
+        // The previous photo's backup, crop, edits and stored copy don't
+        // describe this one. Live adjustments (__adjust filters) are kept
+        // and re-applied, so the new photo gets the same look.
         delete active.__originalSrc;
+        delete active.__cropRect;
+        delete active.__photoEdits;
+        active.__assetId = undefined;
+        if (active.filters && active.filters.length && active.applyFilters) active.applyFilters();
         active.setCoords();
         canvas.requestRenderAll();
         bumpSel();
         pushHistory();
+        backgroundUploadAsset(active);
       });
     };
     reader.readAsDataURL(file);
@@ -2087,7 +3522,10 @@ function EditorContent() {
     // imageObjectToDataURL restores the native pixel data regardless of
     // on-canvas scale, so the Photo Editor always starts from the best
     // available source instead of a display-sized preview.
-    if (!active.__originalSrc) active.__originalSrc = imageObjectToDataURL(active);
+    if (!active.__originalSrc) {
+      const src = active.getSrc ? active.getSrc() : '';
+      active.__originalSrc = /^https?:/.test(src) && active.__assetId ? src : imageSourceDataURL(active);
+    }
     setPhotoEditSession({
       targetUid: active.__uid,
       sourceDataUrl: active.__originalSrc,
@@ -2113,7 +3551,7 @@ function EditorContent() {
       if (active && active.type === 'image') {
         openPhotoEditor();
       } else {
-        alert('Select an image in Main Design first, then switch to Photo Editing.');
+        setLocalNotice('Select an image in Main Design first, then switch to Photo Editing.');
       }
       return;
     }
@@ -2144,49 +3582,48 @@ function EditorContent() {
       return;
     }
 
-    const frameW = (target.width || 1) * (target.scaleX || 1);
-    const frameH = (target.height || 1) * (target.scaleY || 1);
-    const prevScaleX = target.scaleX || 1;
-    const prevScaleY = target.scaleY || 1;
-
-    target.setSrc(result.dataUrl, () => {
-      const naturalW = target.width || 1;
-      const naturalH = target.height || 1;
-      const scale = Math.max(frameW / naturalW, frameH / naturalH);
-
-      if (target.clipPath) {
-        const ratioX = prevScaleX / scale;
-        const ratioY = prevScaleY / scale;
-        target.clipPath.set({
-          scaleX: (target.clipPath.scaleX || 1) * ratioX,
-          scaleY: (target.clipPath.scaleY || 1) * ratioY,
+    // Same as Replace: the frame (size, position, shape, rotation) stays
+    // exactly where it is and the edited photo fills it.
+    const F = (window as any).fabric;
+    const keep = { photoEdits: result.adjustments, cropRect: result.cropRect };
+    const hadFrame = isFramed(target) || !!target.clipPath;
+    const place = hadFrame
+      ? fillFrame(F, target, result.dataUrl)
+      : new Promise<void>((resolve, reject) => {
+          // Not in a frame: the edited photo keeps the same width and
+          // centre, at its own (possibly newly cropped) shape.
+          const center = target.getCenterPoint();
+          const oldW = target.getScaledWidth();
+          target.setSrc(
+            result.dataUrl,
+            (_o: any, isError?: boolean) => {
+              if (isError || !target.width) return reject(new Error('load'));
+              const k = oldW / (target.width || 1);
+              target.set({ scaleX: k * Math.sign(target.scaleX || 1), scaleY: k });
+              target.setPositionByOrigin(center, 'center', 'center');
+              if (target.filters?.length) target.applyFilters();
+              resolve();
+            },
+            { crossOrigin: 'anonymous' }
+          );
         });
-      } else {
-        const F = (window as any).fabric;
-        target.clipPath = new F.Rect({
-          width: frameW / scale,
-          height: frameH / scale,
-          originX: 'center',
-          originY: 'center',
-        });
-      }
-
-      target.set({ scaleX: scale, scaleY: scale, dirty: true });
-      target.__photoEdits = result.adjustments;
-      target.__cropRect = result.cropRect;
-      // The pixels just changed -- any __assetId from before this edit no
-      // longer describes what's actually on the object now. Clear it
-      // immediately rather than leaving stale metadata around; the
-      // background upload below sets a fresh, correct one once it lands.
-      target.__assetId = undefined;
-      target.setCoords();
-      canvas.requestRenderAll();
-      bumpSel();
-      pushHistory();
-      backgroundUploadAsset(target);
-      closePhotoEditor();
-      resolvePending();
-    });
+    place
+      .then(() => {
+        target.__photoEdits = keep.photoEdits;
+        target.__cropRect = keep.cropRect;
+        target.__assetId = undefined;
+        target.dirty = true;
+        target.setCoords();
+        canvas.requestRenderAll();
+        bumpSel();
+        pushHistory();
+        backgroundUploadAsset(target);
+      })
+      .catch(() => setLocalNotice("The edited photo couldn't be placed. Please try again."))
+      .finally(() => {
+        closePhotoEditor();
+        resolvePending();
+      });
   };
 
   // Export/Save read the Main Design canvas directly -- while the Photo
@@ -2267,10 +3704,9 @@ function EditorContent() {
       return;
     }
     if (active.type === 'activeSelection') {
-      active.forEachObject((obj: any) => {
-        if (!obj.locked) canvas.remove(obj);
-      });
+      const members = active.getObjects().filter((obj: any) => !obj.locked);
       canvas.discardActiveObject();
+      members.forEach((obj: any) => canvas.remove(obj));
     } else {
       canvas.remove(active);
     }
@@ -2289,8 +3725,29 @@ function EditorContent() {
     return [active];
   };
 
+  // Objects inside a multi-selection store their position relative to
+  // the selection's centre, not the page. Anything that clones or
+  // serializes them must first take them out of the selection (which
+  // puts real page positions back), then select them again.
+  const withPagePositions = async <T,>(canvas: any, fn: (objs: any[]) => Promise<T> | T): Promise<T> => {
+    const active = canvas.getActiveObject();
+    const objs = getSelectedObjects(canvas);
+    const wasMulti = active?.type === 'activeSelection';
+    if (wasMulti) canvas.discardActiveObject();
+    try {
+      return await fn(objs);
+    } finally {
+      if (wasMulti && objs.every((o: any) => canvas.getObjects().includes(o)) && !canvas.getActiveObject()) {
+        const F = (window as any).fabric;
+        canvas.setActiveObject(new F.ActiveSelection(objs, { canvas }));
+        canvas.requestRenderAll();
+      }
+    }
+  };
+
+  // Clones keep this app's own properties (frames, effects, names…).
   const cloneObjectsAsync = (objects: any[]): Promise<any[]> =>
-    Promise.all(objects.map((obj) => new Promise<any>((resolve) => obj.clone((c: any) => resolve(c)))));
+    Promise.all(objects.map((obj) => new Promise<any>((resolve) => obj.clone((c: any) => resolve(c), PERSIST_PROPS))));
 
   // Adds a set of already-cloned objects back to the canvas as one atomic
   // undo step, shifted by (dx,dy) from their source position, and leaves
@@ -2303,7 +3760,8 @@ function EditorContent() {
     canvas.discardActiveObject();
     clones.forEach((obj: any) => {
       delete obj.__uid;
-      obj.set({ left: (obj.left || 0) + dx, top: (obj.top || 0) + dy, evented: true, locked: false });
+      if (obj.__id) obj.__id = `img_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+      obj.set({ left: (obj.left || 0) + dx, top: (obj.top || 0) + dy, evented: true, ...lockProps(false) });
       obj.setCoords();
       canvas.add(obj);
     });
@@ -2328,9 +3786,8 @@ function EditorContent() {
       duplicateArtboard(active.__artboardId);
       return;
     }
-    const objects = getSelectedObjects(canvas);
-    if (!objects.length) return;
-    const clones = await cloneObjectsAsync(objects);
+    if (!getSelectedObjects(canvas).length) return;
+    const clones = await withPagePositions(canvas, (objs) => cloneObjectsAsync(objs));
     addClonesToCanvas(clones, 20, 20);
   };
 
@@ -2338,15 +3795,51 @@ function EditorContent() {
     const canvas = fabricCanvasRef.current;
     const active = canvas.getActiveObject();
     if (!active) return;
-    const objects = getSelectedObjects(canvas);
-    if (!objects.length) return;
-    clipboardRef.current = await cloneObjectsAsync(objects);
-    pasteCountRef.current = 0;
+    if (!getSelectedObjects(canvas).length) return;
+    await withPagePositions(canvas, async (objects) => {
+      clipboardRef.current = await cloneObjectsAsync(objects);
+      pasteCountRef.current = 0;
+      clipboardAtRef.current = Date.now();
+      // Also kept on the device so it can be pasted into another design,
+      // even one open in a different browser tab.
+      try {
+        const json = JSON.stringify({ at: clipboardAtRef.current, objects: objects.map((o: any) => o.toObject(PERSIST_PROPS)) });
+        if (json.length < 4_000_000) localStorage.setItem('mt:clipboard', json);
+      } catch {
+        // Too big or storage unavailable: in-editor clipboard still works.
+      }
+    });
+    // A copy inside the editor replaces whatever picture was on the
+    // system clipboard, so the next paste is this copy, not an old image.
+    try {
+      (navigator as any).clipboard?.writeText?.('Magical Touch design objects').catch(() => {});
+    } catch {
+      // Clipboard access not allowed here; the editor's own copy still works.
+    }
   };
 
   const PASTE_STEP = 20;
 
   const pasteClipboard = async () => {
+    // The newest copy wins, even if it was made in another design or
+    // browser tab.
+    try {
+      const raw = localStorage.getItem('mt:clipboard');
+      const F = (window as any).fabric;
+      if (raw && F) {
+        const parsed = JSON.parse(raw);
+        const list = Array.isArray(parsed) ? parsed : parsed.objects;
+        const at = Array.isArray(parsed) ? 0 : parsed.at || 0;
+        if (Array.isArray(list) && list.length && (!clipboardRef.current?.length || at > clipboardAtRef.current)) {
+          const objs: any[] = await new Promise((resolve) => F.util.enlivenObjects(list, (l: any[]) => resolve(l), 'fabric'));
+          clipboardRef.current = objs;
+          clipboardAtRef.current = at;
+          pasteCountRef.current = 0;
+        }
+      }
+    } catch {
+      // nothing to paste from other tabs
+    }
     if (!clipboardRef.current || clipboardRef.current.length === 0) return;
     pasteCountRef.current += 1;
     // Re-clone from the stored clipboard on every paste (rather than
@@ -2358,6 +3851,65 @@ function EditorContent() {
     const shift = PASTE_STEP * pasteCountRef.current;
     addClonesToCanvas(clones, shift, shift);
   };
+
+  // Drop images from the computer onto the canvas. Dropping onto an
+  // existing image (or image frame) replaces it, keeping its size,
+  // position, crop and effects.
+  const handleCanvasDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    const canvas = fabricCanvasRef.current;
+    if (!canvas) return;
+    const asset = e.dataTransfer.getData('application/x-mt-asset');
+    const pointer = canvas.getPointer(e.nativeEvent as any);
+    if (asset) {
+      dropAssetRef.current?.(asset, pointer, e.nativeEvent);
+      return;
+    }
+    const files = (Array.from(e.dataTransfer.files || []) as File[]).filter((f) => f.type.startsWith('image/'));
+    if (!files.length) return;
+    const target = canvas.findTarget(e.nativeEvent as any, false);
+    if (target && target.type === 'image' && !target.locked && files.length === 1) {
+      // Dropped onto a photo or frame: replace it, keeping frame and effects.
+      readFile(files[0]).then((url) => features.putImageInto(target, url)).catch(() => setLocalNotice("That file couldn't be read."));
+      return;
+    }
+    const isShapeTarget =
+      target && !target.locked && isArtwork(target) && ['rect', 'circle', 'ellipse', 'triangle', 'polygon', 'path'].includes(target.type) && !target.__brush;
+    if (isShapeTarget && files.length === 1) {
+      // Dropped onto a shape: the photo goes inside the shape.
+      readFile(files[0])
+        .then(
+          (url) =>
+            new Promise<void>((resolve) => {
+              const F = (window as any).fabric;
+              F.Image.fromURL(
+                url,
+                async (img: any) => {
+                  if (!img || !img.width) {
+                    setLocalNotice("That image couldn't be opened.");
+                    return resolve();
+                  }
+                  img.__id = `img_${Date.now()}`;
+                  // One undo step: placeInShape records it.
+                  suppressHistoryRef.current = true;
+                  canvas.add(img);
+                  suppressHistoryRef.current = false;
+                  await features.placeInShape(img, target);
+                  backgroundUploadAsset(img);
+                  resolve();
+                },
+                { crossOrigin: 'anonymous' }
+              );
+            })
+        )
+        .catch(() => setLocalNotice("That file couldn't be read."));
+      return;
+    }
+    addImageFiles(files, { x: pointer.x, y: pointer.y });
+  };
+  // Things dragged from the side panels (templates, shapes, frames…).
+  const dropAssetRef = useRef<((asset: string, pointer: { x: number; y: number }, ev: any) => void) | null>(null);
+  dropAssetRef.current = handleAssetDrop;
 
   // Right-click: selects whatever's under the cursor (if anything) before
   // opening the menu, matching how a real app's context menu always acts
@@ -2384,17 +3936,31 @@ function EditorContent() {
     const has = !!active;
     const isGroupable = active?.type === 'activeSelection';
     const isGroup = active?.type === 'group';
+    const members: any[] = active?.type === 'activeSelection' ? active.getObjects() : active ? [active] : [];
+    const isImage = active?.type === 'image';
+    const pairImg = members.length === 2 ? members.find((o) => o.type === 'image') : null;
+    const pairShape = pairImg ? members.find((o) => o !== pairImg && o.type !== 'image' && !(o.type === 'textbox' || o.type === 'i-text' || o.type === 'text')) : null;
+    let canPaste = !!clipboardRef.current?.length;
+    try {
+      canPaste = canPaste || !!localStorage.getItem('mt:clipboard');
+    } catch {
+      // storage unavailable
+    }
     return [
-      { label: 'Copy', onClick: copySelected, disabled: !has },
-      { label: 'Paste', onClick: pasteClipboard, disabled: !clipboardRef.current?.length },
-      { label: 'Duplicate', onClick: duplicateSelected, disabled: !has },
+      { label: 'Cut', shortcut: 'Ctrl/Cmd+X', onClick: cutSelected, disabled: !has || !!active?.locked },
+      { label: 'Copy', shortcut: 'Ctrl/Cmd+C', onClick: copySelected, disabled: !has },
+      { label: 'Paste', shortcut: 'Ctrl/Cmd+V', onClick: pasteClipboard, disabled: !canPaste },
+      { label: 'Duplicate', shortcut: 'Ctrl/Cmd+D', onClick: duplicateSelected, disabled: !has },
+      ...(isImage ? [{ divider: true } as ContextMenuEntry, { label: active.__frame?.empty ? 'Add Photo…' : 'Replace Image…', onClick: () => replaceInputRef.current?.click(), disabled: !!active.locked }, { label: 'Crop', onClick: () => features.startCrop(), disabled: !!active.locked || !!active.__frame?.empty }] : []),
+      ...(pairImg && pairShape ? [{ divider: true } as ContextMenuEntry, { label: 'Add to Frame (photo inside shape)', onClick: () => features.placeInShape(pairImg, pairShape) }] : []),
       { divider: true },
       { label: 'Bring to Front', onClick: bringToFront, disabled: !has },
       { label: 'Bring Forward', onClick: bringForward, disabled: !has },
       { label: 'Send Backward', onClick: sendBackward, disabled: !has },
       { label: 'Send to Back', onClick: sendToBack, disabled: !has },
       { divider: true },
-      { label: active?.locked ? 'Unlock' : 'Lock', onClick: () => active && toggleLock(active), disabled: !has },
+      { label: active?.locked ? 'Unlock' : 'Lock', shortcut: 'Ctrl/Cmd+L', onClick: () => active && toggleLock(active), disabled: !has },
+      { label: 'Hide', shortcut: 'Ctrl/Cmd+H', onClick: () => active && toggleVisible(active), disabled: !has },
       ...(isGroupable ? [{ label: 'Group', onClick: groupSelected, disabled: false }] : []),
       ...(isGroup ? [{ label: 'Ungroup', onClick: ungroupSelected, disabled: false }] : []),
       { divider: true },
@@ -2447,7 +4013,14 @@ function EditorContent() {
     const canvas = fabricCanvasRef.current;
     const active = canvas.getActiveObject();
     if (!active || active.type !== 'activeSelection') return;
+    // Fabric puts a new group on top of everything; put it back where the
+    // highest of its objects was, so grouping never changes what's in front.
+    const order = canvas.getObjects();
+    const members = active.getObjects();
+    const topIndex = Math.max(...members.map((o: any) => order.indexOf(o)));
+    const below = order.slice(0, topIndex + 1).filter((o: any) => !members.includes(o)).length;
     const group = active.toGroup();
+    canvas.moveTo(group, below);
     canvas.setActiveObject(group);
     canvas.requestRenderAll();
     refreshLayers();
@@ -2476,7 +4049,7 @@ function EditorContent() {
     const canvas = fabricCanvasRef.current;
     const active = canvas?.getActiveObject();
     if (!active || active.type !== 'path' || !active.isVectorPath) {
-      alert('Select a single vector path to reverse its direction.');
+      setLocalNotice('Select a single vector path to reverse its direction.');
       return;
     }
     if (!reversePathObject(active)) return;
@@ -2493,13 +4066,13 @@ function EditorContent() {
       const objs: any[] = active.getObjects ? active.getObjects() : [];
       const openPaths = objs.filter(isOpenVectorPath);
       if (openPaths.length !== 2 || objs.length !== 2) {
-        alert('Join needs exactly two selected open paths.');
+        setLocalNotice('Join needs exactly two selected open paths.');
         return;
       }
       const [a, b] = openPaths;
       canvas.discardActiveObject();
       if (!joinPathObjects(a, b)) {
-        alert('Could not join these paths.');
+        setLocalNotice('Could not join these paths.');
         return;
       }
       canvas.setActiveObject(a);
@@ -2512,7 +4085,7 @@ function EditorContent() {
       canvas.requestRenderAll();
       return;
     }
-    alert('Select an open path (to close it) or two open paths (to join them) first.');
+    setLocalNotice('Select an open path (to close it) or two open paths (to join them) first.');
   };
 
   // Object > Path > Break: opens a closed path, or splits an open path
@@ -2520,35 +4093,45 @@ function EditorContent() {
   // Selection.
   const breakSelectedPath = () => {
     if (!breakActiveAnchor()) {
-      alert('Select an anchor point in Direct Selection first (press A, then click an anchor).');
+      setLocalNotice('Select an anchor point in Direct Selection first (press A, then click an anchor).');
       return;
     }
     refreshLayers();
   };
 
+  // Locking keeps an object selectable (so it can be right-clicked and
+  // unlocked) but stops it moving, resizing or rotating. Works on a
+  // multi-selection by locking every object in it.
   const toggleLock = (obj: any) => {
     const canvas = fabricCanvasRef.current;
-    const nextLocked = !obj.locked;
-    obj.set({
-      locked: nextLocked,
-      selectable: !nextLocked,
-      evented: !nextLocked,
-      lockMovementX: nextLocked,
-      lockMovementY: nextLocked,
-      lockScalingX: nextLocked,
-      lockScalingY: nextLocked,
-      lockRotation: nextLocked,
+    if (!obj) return;
+    const targets: any[] = obj.type === 'activeSelection' ? obj.getObjects() : [obj];
+    const nextLocked = !targets.every((t) => t.locked);
+    if (obj.type === 'activeSelection') canvas.discardActiveObject();
+    targets.forEach((t) => {
+      t.set(lockProps(nextLocked));
+      t.setCoords();
     });
-    if (nextLocked && canvas.getActiveObject() === obj) canvas.discardActiveObject();
+    if (obj.type === 'activeSelection' && targets.length > 1) {
+      const F = (window as any).fabric;
+      canvas.setActiveObject(new F.ActiveSelection(targets, { canvas }));
+    }
     canvas.requestRenderAll();
+    refreshLayers();
     bumpSel();
     pushHistory();
   };
 
   const toggleVisible = (obj: any) => {
     const canvas = fabricCanvasRef.current;
-    obj.set({ visible: obj.visible === false ? true : false });
-    if (obj.visible === false && canvas.getActiveObject() === obj) canvas.discardActiveObject();
+    if (!obj) return;
+    const targets: any[] = obj.type === 'activeSelection' ? obj.getObjects() : [obj];
+    const nextVisible = targets.some((t) => t.visible === false);
+    if (!nextVisible) canvas.discardActiveObject();
+    targets.forEach((t) => {
+      t.set({ visible: nextVisible });
+      if (t.group) t.group.dirty = true;
+    });
     canvas.requestRenderAll();
     refreshLayers();
     bumpSel();
@@ -2563,11 +4146,37 @@ function EditorContent() {
 
   const layerLabel = (obj: any, index: number) => obj.name || `${obj.type} ${index + 1}`;
 
+  // Small previews for the Layers panel, cached until the document changes.
+  const thumbCacheRef = useRef<{ rev: number; map: WeakMap<any, string | null> }>({ rev: -1, map: new WeakMap() });
+  const layerThumbnail = (obj: any): string | null => {
+    const cache = thumbCacheRef.current;
+    if (cache.rev !== editRevRef.current) {
+      cache.rev = editRevRef.current;
+      cache.map = new WeakMap();
+    }
+    if (cache.map.has(obj)) return cache.map.get(obj) ?? null;
+    let url: string | null = null;
+    try {
+      const w = Math.max(1, obj.getScaledWidth());
+      const h = Math.max(1, obj.getScaledHeight());
+      const mult = Math.min(1, 64 / Math.max(w, h));
+      url = obj.toDataURL({ format: 'png', multiplier: mult });
+    } catch {
+      url = null;
+    }
+    cache.map.set(obj, url);
+    return url;
+  };
+
+  // The layers list hides artboards, guides and helpers, so positions are
+  // translated through the object that's currently at the drop target.
   const reorderLayers = (fromIndex: number, targetIndex: number) => {
     const canvas = fabricCanvasRef.current;
     const obj = layers[fromIndex];
-    const objs = canvas.getObjects();
-    const targetCanvasIdx = objs.length - 1 - targetIndex;
+    const target = layers[Math.max(0, Math.min(layers.length - 1, targetIndex))];
+    if (!obj || !target || obj === target) return;
+    const targetCanvasIdx = canvas.getObjects().indexOf(target);
+    if (targetCanvasIdx < 0) return;
     canvas.moveTo(obj, targetCanvasIdx);
     canvas.requestRenderAll();
     refreshLayers();
@@ -2575,36 +4184,144 @@ function EditorContent() {
     pushHistory();
   };
 
-  const alignObject = (mode: 'left' | 'centerH' | 'right' | 'top' | 'centerV' | 'bottom') => {
+  // Align / distribute. A single object aligns to its page (artboard);
+  // several selected objects align to the selection's own bounds unless
+  // `relativeTo` says 'page'. Bounding boxes are used throughout so
+  // rotated objects line up by what you actually see.
+  type AlignMode = 'left' | 'centerH' | 'right' | 'top' | 'centerV' | 'bottom';
+  const alignObject = (mode: AlignMode, relativeTo: 'auto' | 'page' | 'selection' = 'auto') => {
     const canvas = fabricCanvasRef.current;
     const active = canvas.getActiveObject();
     if (!active || active.locked) return;
-    const objW = active.getScaledWidth();
-    const objH = active.getScaledHeight();
-    // Align relative to whichever artboard the object is actually on,
-    // falling back to the active artboard for objects on the pasteboard.
-    const ownAb = artboards.find((a) => a.id === active.__artboardId);
-    const ab = ownAb || getActiveArtboardRect();
+    const isMulti = active.type === 'activeSelection';
+    const members: any[] = isMulti ? active.getObjects().filter((o: any) => !o.locked) : [active];
+    if (!members.length) return;
+    if (isMulti) canvas.discardActiveObject();
 
-    switch (mode) {
-      case 'left': active.set({ left: ab.x }); break;
-      case 'centerH': active.set({ left: ab.x + ab.width / 2 - objW / 2 }); break;
-      case 'right': active.set({ left: ab.x + ab.width - objW }); break;
-      case 'top': active.set({ top: ab.y }); break;
-      case 'centerV': active.set({ top: ab.y + ab.height / 2 - objH / 2 }); break;
-      case 'bottom': active.set({ top: ab.y + ab.height - objH }); break;
+    const rects = members.map((o) => o.getBoundingRect(true, true));
+    let ref: { x: number; y: number; width: number; height: number };
+    if (isMulti && relativeTo !== 'page') {
+      const minX = Math.min(...rects.map((r) => r.left));
+      const minY = Math.min(...rects.map((r) => r.top));
+      const maxX = Math.max(...rects.map((r) => r.left + r.width));
+      const maxY = Math.max(...rects.map((r) => r.top + r.height));
+      ref = { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
+    } else {
+      const own = artboardsRef.current.find((a) => a.id === members[0].__artboardId);
+      ref = own || getActiveArtboardRect();
     }
-    active.setCoords();
+
+    members.forEach((o, i) => {
+      const r = rects[i];
+      let dx = 0;
+      let dy = 0;
+      if (mode === 'left') dx = ref.x - r.left;
+      if (mode === 'centerH') dx = ref.x + ref.width / 2 - (r.left + r.width / 2);
+      if (mode === 'right') dx = ref.x + ref.width - (r.left + r.width);
+      if (mode === 'top') dy = ref.y - r.top;
+      if (mode === 'centerV') dy = ref.y + ref.height / 2 - (r.top + r.height / 2);
+      if (mode === 'bottom') dy = ref.y + ref.height - (r.top + r.height);
+      o.set({ left: (o.left || 0) + dx, top: (o.top || 0) + dy });
+      o.setCoords();
+    });
+    reselect(isMulti ? active.getObjects() : null);
+    recomputeMembership();
     canvas.requestRenderAll();
     pushHistory();
     bumpSel();
   };
 
+  // Equal spacing between 3+ selected objects (edge to edge).
+  const distributeObjects = (axis: 'h' | 'v') => {
+    const canvas = fabricCanvasRef.current;
+    const active = canvas.getActiveObject();
+    if (!active || active.type !== 'activeSelection') return;
+    const all = active.getObjects();
+    const members: any[] = all.filter((o: any) => !o.locked);
+    if (members.length < 3) return;
+    canvas.discardActiveObject();
+    const items = members
+      .map((o) => ({ o, r: o.getBoundingRect(true, true) }))
+      .sort((a, b) => (axis === 'h' ? a.r.left - b.r.left : a.r.top - b.r.top));
+    const first = items[0].r;
+    const last = items[items.length - 1].r;
+    const start = axis === 'h' ? first.left : first.top;
+    const end = axis === 'h' ? last.left + last.width : last.top + last.height;
+    const total = items.reduce((sum, it) => sum + (axis === 'h' ? it.r.width : it.r.height), 0);
+    const gap = (end - start - total) / (items.length - 1);
+    let cursor = start;
+    items.forEach(({ o, r }) => {
+      const current = axis === 'h' ? r.left : r.top;
+      const delta = cursor - current;
+      if (axis === 'h') o.set({ left: (o.left || 0) + delta });
+      else o.set({ top: (o.top || 0) + delta });
+      o.setCoords();
+      cursor += (axis === 'h' ? r.width : r.height) + gap;
+    });
+    reselect(all);
+    recomputeMembership();
+    canvas.requestRenderAll();
+    pushHistory();
+    bumpSel();
+  };
+
+  const reselect = (objs: any[] | null) => {
+    const canvas = fabricCanvasRef.current;
+    if (!objs || !objs.length) return;
+    const F = (window as any).fabric;
+    if (objs.length === 1) canvas.setActiveObject(objs[0]);
+    else canvas.setActiveObject(new F.ActiveSelection(objs, { canvas }));
+  };
+
+  // Style properties that, on a multi-selection or group, belong on each
+  // object inside it rather than on the invisible wrapper.
+  const CHAR_STYLE_PROPS = ['fill', 'stroke', 'strokeWidth', 'fontFamily', 'fontSize', 'fontWeight', 'fontStyle', 'underline', 'linethrough', 'overline', 'deltaY', 'textBackgroundColor'];
+  const CHILD_STYLE_PROPS = ['fill', 'stroke', 'strokeWidth', 'strokeDashArray', 'fontFamily', 'fontWeight', 'fontStyle', 'underline', 'linethrough', 'textAlign', 'charSpacing', 'lineHeight', 'shadow'];
+
   const applyProp = (props: Record<string, any>, record = true) => {
     const canvas = fabricCanvasRef.current;
     const active = canvas.getActiveObject();
     if (!active || active.locked) return;
-    active.set(props);
+    const { angle, ...rest } = props;
+    const isContainer = active.type === 'activeSelection' || active.type === 'group';
+    const childProps: Record<string, any> = {};
+    const ownProps: Record<string, any> = {};
+    Object.entries(rest).forEach(([k, v]) => {
+      // A multi-selection is a temporary wrapper: transparency belongs on
+      // the objects inside it (a real group keeps its own).
+      if (isContainer && (CHILD_STYLE_PROPS.includes(k) || (k === 'opacity' && active.type === 'activeSelection'))) childProps[k] = v;
+      else ownProps[k] = v;
+    });
+    if (Object.keys(childProps).length) {
+      const walk = (o: any) => {
+        if (o.type === 'group' && o.getObjects) o.getObjects().forEach(walk);
+        else if (!o.locked) {
+          // Only text takes text properties; shapes take fill/stroke.
+          const isTextObj = o.type === 'textbox' || o.type === 'i-text' || o.type === 'text';
+          const applicable = Object.fromEntries(
+            Object.entries(childProps).filter(([k]) => isTextObj || ['fill', 'stroke', 'strokeWidth', 'strokeDashArray', 'shadow', 'opacity'].includes(k))
+          );
+          if (o.type === 'image') delete (applicable as any).fill;
+          o.set(applicable);
+          if (isTextObj) CHAR_STYLE_PROPS.forEach((k) => k in applicable && clearCharStyle(o, k));
+          o.dirty = true;
+        }
+      };
+      active.getObjects().forEach(walk);
+      if (active.type === 'group') active.dirty = true;
+    }
+    if (Object.keys(ownProps).length) {
+      active.set(ownProps);
+      // Whole-box text formatting replaces formatting given earlier to
+      // single letters (otherwise those letters would ignore the change).
+      const isTextActive = active.type === 'textbox' || active.type === 'i-text' || active.type === 'text';
+      if (isTextActive && !active.isEditing) {
+        CHAR_STYLE_PROPS.forEach((k) => k in ownProps && clearCharStyle(active, k));
+        active.initDimensions?.();
+      }
+    }
+    // Rotation pivots on the object's centre, like every design app.
+    if (angle !== undefined) active.rotate(angle);
     active.setCoords();
     canvas.requestRenderAll();
     bumpSel();
@@ -2623,8 +4340,7 @@ function EditorContent() {
     ) {
       const bold = active.fontWeight === 'bold' || (typeof active.fontWeight === 'number' && active.fontWeight >= 600);
       const italic = active.fontStyle === 'italic';
-      const spec = `${italic ? 'italic ' : ''}${bold ? '700' : '400'} 16px "${active.fontFamily}"`;
-      (document as any).fonts.load(spec).then(() => canvas.requestRenderAll()).catch(() => {});
+      ensureFontLoaded(active.fontFamily, active.fontWeight ?? (bold ? 700 : 400), italic).then(() => refreshTextMetrics(canvas));
     }
   };
 
@@ -2679,8 +4395,7 @@ function EditorContent() {
       const styleVal = props.fontStyle !== undefined ? props.fontStyle : styleAtStart.fontStyle ?? active.fontStyle;
       const bold = weight === 'bold' || (typeof weight === 'number' && weight >= 600);
       const italic = styleVal === 'italic';
-      const spec = `${italic ? 'italic ' : ''}${bold ? '700' : '400'} 16px "${family}"`;
-      (document as any).fonts.load(spec).then(() => canvas.requestRenderAll()).catch(() => {});
+      ensureFontLoaded(family, weight ?? (bold ? 700 : 400), italic).then(() => refreshTextMetrics(canvas));
     }
   };
 
@@ -2808,7 +4523,8 @@ function EditorContent() {
 
   const duplicateArtboard = (id: string) => {
     const canvas = fabricCanvasRef.current;
-    if (!canvas) return;
+    const F = (window as any).fabric;
+    if (!canvas || !F) return;
     const srcRect = canvas.getObjects().find((o: any) => o.__isArtboard && o.__artboardId === id);
     if (!srcRect) return;
 
@@ -2835,13 +4551,17 @@ function EditorContent() {
       clonedRect.__isArtboard = true;
       clonedRect.__artboardId = newId;
       clonedRect.__print = JSON.parse(JSON.stringify(srcRect.__print || createDefaultPrintSettings()));
+      // One undo step for the whole duplicate (finish() records it).
+      suppressHistoryRef.current = true;
       canvas.add(clonedRect);
 
       if (members.length === 0) {
+        suppressHistoryRef.current = false;
         finish();
         return;
       }
       let pending = members.length;
+      canvas.discardActiveObject();
       members.forEach((obj: any) => {
         obj.clone((clonedObj: any) => {
           clonedObj.set({ left: (clonedObj.left || 0) + dx, top: (clonedObj.top || 0) + dy });
@@ -2849,8 +4569,14 @@ function EditorContent() {
           clonedObj.__artboardId = newId;
           canvas.add(clonedObj);
           pending -= 1;
-          if (pending === 0) finish();
-        });
+          if (pending === 0) {
+            suppressHistoryRef.current = false;
+            applyStoredLocks(canvas);
+            reviveTextPaths(F, canvas);
+    reviveImageAdjust(F, canvas);
+            finish();
+          }
+        }, PERSIST_PROPS);
       });
     });
   };
@@ -2860,12 +4586,19 @@ function EditorContent() {
     if (!canvas) return;
     const metas = getArtboardMetas();
     if (metas.length <= 1) {
-      alert("You can't delete the only artboard in a document.");
+      setLocalNotice('A design needs at least one page, so the last page can’t be deleted.');
       return;
     }
     const rect = canvas.getObjects().find((o: any) => o.__isArtboard && o.__artboardId === id);
     if (!rect) return;
+    const members = canvas.getObjects().filter((o: any) => isArtwork(o) && o.__artboardId === id);
+    if (members.length && !window.confirm(`Delete “${rect.name || 'this page'}” and everything on it? You can undo this.`)) return;
+    canvas.discardActiveObject();
+    suppressHistoryRef.current = true;
+    members.forEach((o: any) => canvas.remove(o));
     canvas.remove(rect);
+    suppressHistoryRef.current = false;
+    refreshLayers();
     recomputeMembership();
     refreshArtboards();
     if (activeArtboardId === id) {
@@ -2897,6 +4630,60 @@ function EditorContent() {
     if (index >= abObjs.length - 1) return;
     moveArtboardUp(index + 1);
   };
+
+  const nudgeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const cutSelected = async () => {
+    const canvas = fabricCanvasRef.current;
+    const active = canvas?.getActiveObject();
+    if (!active || active.locked || active.__isArtboard || isHelperObject(active)) return;
+    await copySelected();
+    deleteSelected();
+  };
+
+  const fitActiveArtboard = () => {
+    const canvas = fabricCanvasRef.current;
+    if (!canvas) return;
+    fitToRect(canvas, getActiveArtboardRect());
+  };
+
+  // Pasting: images copied from another app (or a screenshot) arrive in
+  // the browser's paste event; objects copied inside the editor live in
+  // our own clipboard. Whichever applies wins.
+  const pasteHandledRef = useRef(false);
+  const armPasteFallback = () => {
+    pasteHandledRef.current = false;
+    setTimeout(() => {
+      if (!pasteHandledRef.current) pasteClipboard();
+    }, 120);
+  };
+  useEffect(() => {
+    const onPaste = (e: ClipboardEvent) => {
+      if (workspaceRef.current !== 'design') return;
+      const el = document.activeElement as HTMLElement | null;
+      if (el && (['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName) || el.isContentEditable)) return;
+      const active = fabricCanvasRef.current?.getActiveObject();
+      if (active?.isEditing) return;
+      const fromItems = (Array.from(e.clipboardData?.items || []) as DataTransferItem[])
+        .filter((it) => it.kind === 'file' && it.type.startsWith('image/'))
+        .map((it) => it.getAsFile())
+        .filter(Boolean) as File[];
+      const files = fromItems.length ? fromItems : (Array.from(e.clipboardData?.files || []) as File[]).filter((f) => f.type.startsWith('image/'));
+      pasteHandledRef.current = true;
+      e.preventDefault();
+      // A copy made inside the editor is newer than any picture on the
+      // system clipboard (copying writes a text marker there).
+      const text = e.clipboardData?.getData('text/plain') || '';
+      if (files.length && text !== 'Magical Touch design objects') {
+        addImageFilesRef.current?.(files);
+      } else {
+        pasteClipboard();
+      }
+    };
+    window.addEventListener('paste', onPaste);
+    return () => window.removeEventListener('paste', onPaste);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -2946,6 +4733,7 @@ function EditorContent() {
       if (canUseToolShortcuts && activeToolRef.current === 'pen') {
         if (e.key === 'Enter') { e.preventDefault(); finishPenPath(false); return; }
         if (e.key === 'Escape') { e.preventDefault(); clearPenDraft(); return; }
+        if ((e.key === 'Backspace' || e.key === 'Delete') && penDraftRef.current.anchors.length) { e.preventDefault(); removeLastPenAnchor(); return; }
       }
 
       if (canUseToolShortcuts && isDrawTool(activeToolRef.current) && e.key === 'Escape') {
@@ -2957,13 +4745,14 @@ function EditorContent() {
 
       if (canUseToolShortcuts && e.shiftKey && e.key === 'Enter') { e.preventDefault(); applyPathAsMask(); return; }
 
-      if (isMeta && e.key.toLowerCase() === 'z' && !e.shiftKey) { e.preventDefault(); undo(); return; }
-      if ((isMeta && e.key.toLowerCase() === 'z' && e.shiftKey) || (isMeta && e.key.toLowerCase() === 'y')) { e.preventDefault(); redo(); return; }
+      // Undo/redo and select-all belong to a text field while typing in one.
+      if (isMeta && e.key.toLowerCase() === 'z' && !e.shiftKey && canUseToolShortcuts) { e.preventDefault(); undo(); return; }
+      if (((isMeta && e.key.toLowerCase() === 'z' && e.shiftKey) || (isMeta && e.key.toLowerCase() === 'y')) && canUseToolShortcuts) { e.preventDefault(); redo(); return; }
       if (isMeta && e.key.toLowerCase() === 's' && e.shiftKey) { e.preventDefault(); saveDesignAs(); return; }
       if (isMeta && e.key.toLowerCase() === 's') { e.preventDefault(); saveDesign(); return; }
-      if (isMeta && e.key.toLowerCase() === 'a' && !isEditingText) {
+      if (isMeta && e.key.toLowerCase() === 'a' && canUseToolShortcuts) {
         e.preventDefault();
-        const objs = canvas.getObjects().filter((o: any) => !o.locked && !o.__isAnchorHandle && !o.__isPenPreview && !o.__isShapeDraft && !o.__isArtboard);
+        const objs = canvas.getObjects().filter((o: any) => isArtwork(o) && !o.locked && o.visible !== false);
         if (objs.length) {
           canvas.discardActiveObject();
           const sel = new (window as any).fabric.ActiveSelection(objs, { canvas });
@@ -2973,6 +4762,21 @@ function EditorContent() {
         return;
       }
       if (e.key === 'Escape') {
+        if (featuresRef.current?.cropRef.current) {
+          // Escape cancels a crop (Done keeps it).
+          e.preventDefault();
+          featuresRef.current.finishCrop(false);
+          return;
+        }
+        if (isTypingInField) {
+          (document.activeElement as HTMLElement)?.blur?.();
+          return;
+        }
+        if (isEditingText) {
+          active.exitEditing?.();
+          canvas.requestRenderAll();
+          return;
+        }
         canvas.discardActiveObject();
         clearAnchorHandles();
         canvas.requestRenderAll();
@@ -2984,7 +4788,10 @@ function EditorContent() {
       if (isMeta && e.key.toLowerCase() === 'd' && canUseToolShortcuts) { e.preventDefault(); duplicateSelected(); return; }
       if (isMeta && e.key.toLowerCase() === 'j' && canUseToolShortcuts) { e.preventDefault(); joinSelectedPaths(); return; }
       if (isMeta && e.key.toLowerCase() === 'c' && canUseToolShortcuts) { e.preventDefault(); copySelected(); return; }
-      if (isMeta && e.key.toLowerCase() === 'v' && canUseToolShortcuts) { e.preventDefault(); pasteClipboard(); return; }
+      if (isMeta && e.key.toLowerCase() === 'x' && canUseToolShortcuts) { e.preventDefault(); cutSelected(); return; }
+      // Ctrl/Cmd+V is handled by the 'paste' event below, which can also
+      // see images copied from other apps; this only arms the fallback.
+      if (isMeta && e.key.toLowerCase() === 'v' && canUseToolShortcuts) { armPasteFallback(); return; }
       if (isMeta && e.key.toLowerCase() === 'l' && canUseToolShortcuts) { e.preventDefault(); active && toggleLock(active); return; }
       if (isMeta && e.key.toLowerCase() === 'h' && canUseToolShortcuts) { e.preventDefault(); active && toggleVisible(active); return; }
       if ((e.key === 'Delete' || e.key === 'Backspace') && canUseToolShortcuts && activeToolRef.current !== 'pen' && !isDrawTool(activeToolRef.current)) {
@@ -2992,17 +4799,31 @@ function EditorContent() {
         deleteSelected();
         return;
       }
-      if (isMeta && e.key === ']' && !e.shiftKey) { e.preventDefault(); bringForward(); return; }
-      if (isMeta && e.key === '[' && !e.shiftKey) { e.preventDefault(); sendBackward(); return; }
-      if (isMeta && e.shiftKey && e.key === ']') { e.preventDefault(); bringToFront(); return; }
-      if (isMeta && e.shiftKey && e.key === '[') { e.preventDefault(); sendToBack(); return; }
-      if (isMeta && (e.key === '=' || e.key === '+')) { e.preventDefault(); applyZoom((z) => z + 10); return; }
-      if (isMeta && e.key === '-') { e.preventDefault(); applyZoom((z) => z - 10); return; }
-      if (isMeta && e.key === '0') { e.preventDefault(); applyZoom(100); return; }
+      // e.code, not e.key: with Shift held most keyboards report } and {.
+      if (isMeta && e.code === 'BracketRight' && !e.shiftKey && canUseToolShortcuts) { e.preventDefault(); bringForward(); return; }
+      if (isMeta && e.code === 'BracketLeft' && !e.shiftKey && canUseToolShortcuts) { e.preventDefault(); sendBackward(); return; }
+      if (isMeta && e.shiftKey && e.code === 'BracketRight' && canUseToolShortcuts) { e.preventDefault(); bringToFront(); return; }
+      if (isMeta && e.shiftKey && e.code === 'BracketLeft' && canUseToolShortcuts) { e.preventDefault(); sendToBack(); return; }
+      if (isMeta && (e.key === '=' || e.key === '+')) { e.preventDefault(); applyZoom((z) => z * 1.25); return; }
+      if (isMeta && e.key === '-') { e.preventDefault(); applyZoom((z) => z / 1.25); return; }
+      if (isMeta && e.key === '0') { e.preventDefault(); fitActiveArtboard(); return; }
+      if (isMeta && e.key === '1') { e.preventDefault(); applyZoom(100); return; }
+      if (e.code === 'Space' && canUseToolShortcuts && activeToolRef.current !== 'pan') {
+        e.preventDefault();
+        if (!spaceHeldRef.current) {
+          spaceHeldRef.current = true;
+          canvas.__selectionBeforeSpace = canvas.selection;
+          canvas.selection = false;
+          canvas.skipTargetFind = true;
+          canvas.defaultCursor = 'grab';
+          canvas.setCursor('grab');
+        }
+        return;
+      }
       if (isMeta && e.key === ';') { e.preventDefault(); setShowGuides((v) => !v); return; }
       if (isMeta && e.key.toLowerCase() === 'r' && !isEditingText) { e.preventDefault(); setShowRulers((v) => !v); return; }
 
-      if (!isEditingText && active && !active.locked && activeToolRef.current !== 'pen' && !isDrawTool(activeToolRef.current) && e.key.startsWith('Arrow')) {
+      if (canUseToolShortcuts && active && !active.locked && !active.lockMovementX && activeToolRef.current !== 'pen' && !isDrawTool(activeToolRef.current) && e.key.startsWith('Arrow')) {
         const step = e.shiftKey ? 10 : 1;
         e.preventDefault();
         if (e.key === 'ArrowUp') active.top -= step;
@@ -3012,11 +4833,37 @@ function EditorContent() {
         active.setCoords();
         canvas.requestRenderAll();
         bumpSel();
+        // Holding an arrow key repeats; record one undo step once it stops.
+        if (nudgeTimerRef.current) clearTimeout(nudgeTimerRef.current);
+        nudgeTimerRef.current = setTimeout(() => {
+          recomputeMembership();
+          canvas.fire('object:modified', { target: active });
+        }, 350);
       }
+    };
+    const endSpacePan = () => {
+      const canvas = fabricCanvasRef.current;
+      if (!spaceHeldRef.current || !canvas) return;
+      spaceHeldRef.current = false;
+      panRef.current.active = false;
+      canvas.skipTargetFind = false;
+      canvas.selection = canvas.__selectionBeforeSpace ?? activeToolRef.current === 'select';
+      const t = activeToolRef.current;
+      canvas.defaultCursor = t === 'select' || t === 'direct' ? 'default' : 'crosshair';
+      canvas.setCursor(canvas.defaultCursor);
+    };
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.code === 'Space') endSpacePan();
     };
 
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    window.addEventListener('blur', endSpacePan);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+      window.removeEventListener('blur', endSpacePan);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [undo, redo, finishPenPath, clearPenDraft, applyPathAsMask, setActiveTool, clearAnchorHandles, clearShapeDraft]);
 
@@ -3060,16 +4907,25 @@ function EditorContent() {
         setSaveStatus('error');
         return;
       }
-      alert('You must be logged in to save a design.');
+      setLocalNotice('You must be logged in to save a design.');
       setSaveStatus('unsaved');
       return;
     }
 
+    if (idToUse && loadFailedIdRef.current === idToUse) {
+      // The design never loaded, so what's on screen isn't it: never write
+      // over the real one.
+      setSaving(false);
+      setSaveStatus('error');
+      if (!silent) setLocalNotice("This design didn't open properly, so it can't be saved over. Reload the page to try again.");
+      return;
+    }
+    const revAtSave = editRevRef.current;
     const canvasJson = fabricCanvasRef.current.toJSON(SAVE_JSON_PROPS);
     // width/height stay as the dashboard/thumbnail-facing summary size —
     // the first artboard's current dimensions, not the URL params a brand
     // new document happened to start from.
-    const firstAb = artboards[0];
+    const firstAb = artboardsRef.current[0];
     const payload: any = {
       user_id: user.id,
       name: nameToUse,
@@ -3087,25 +4943,7 @@ function EditorContent() {
     // A real preview generated from the first artboard's actual content —
     // not a placeholder — so the dashboard can show what the design looks
     // like instead of just its pixel dimensions.
-    const thumbnail = firstAb
-      ? (() => {
-          const hiddenGuides = hideGuidesForExport();
-          try {
-            const THUMB_WIDTH = 400;
-            const mult = THUMB_WIDTH / Math.max(firstAb.width, 1);
-            return fabricCanvasRef.current.toDataURL({
-              format: 'jpeg',
-              quality: 0.7,
-              ...getArtboardExportOptions(firstAb, mult),
-            });
-          } catch (err) {
-            console.error('Thumbnail generation failed:', err);
-            return null;
-          } finally {
-            restoreGuidesAfterExport(hiddenGuides);
-          }
-        })()
-      : null;
+    const thumbnail = makeThumbnail();
     if (thumbnail) payload.thumbnail = thumbnail;
 
     let { data, error } = await supabase.from('designs').upsert(payload).select().single();
@@ -3140,16 +4978,26 @@ function EditorContent() {
     if (error) {
       console.error('Save failed:', error);
       setSaveStatus('error');
-      if (!silent) alert('Failed to save design. Please try again.');
+      if (!silent) setLocalNotice('Failed to save design. Please try again.');
       return;
     }
-    dirtyRef.current = false;
-    setSaveStatus('saved');
+    if (editRevRef.current === revAtSave) {
+      dirtyRef.current = false;
+      setSaveStatus('saved');
+      if (draftTimerRef.current) clearTimeout(draftTimerRef.current);
+      if (data?.id) deleteDraft(data.id);
+      if (!idToUse) deleteDraft(UNSAVED_KEY);
+    } else {
+      // Something changed while this save was on its way: save again.
+      setSaveStatus('unsaved');
+      scheduleAutosaveRef.current?.();
+    }
     if (data) {
       setDesignId(data.id);
       setDesignName(nameToUse);
       const savedTabId = activeTabIdRef.current;
-      setTabs((ts) => ts.map((t) => (t.id === savedTabId ? { ...t, id: data.id, designId: data.id, name: nameToUse, dirty: false } : t)));
+      const stillClean = editRevRef.current === revAtSave;
+      setTabs((ts) => ts.map((t) => (t.id === savedTabId ? { ...t, id: data.id, designId: data.id, name: nameToUse, dirty: stillClean ? false : t.dirty } : t)));
       if (savedTabId !== data.id) setActiveTabId(data.id);
       // Only a first save (idToUse null) or Save As actually changes the
       // URL's designId, which re-triggers the canvas load effect below —
@@ -3175,8 +5023,8 @@ function EditorContent() {
         pendingSnapshotRef.current = {
           canvasJSON: freshCanvasJSON,
           history: { stack: [...historyRef.current.stack], index: historyRef.current.index },
-          artboards,
-          activeArtboardId,
+          artboards: artboardsRef.current,
+          activeArtboardId: activeArtboardIdRef.current,
           zoom,
           designName: nameToUse,
           designId: data.id,
@@ -3189,7 +5037,9 @@ function EditorContent() {
       // since a migration-less/placeholder Supabase project (or one that
       // hasn't applied 0002_design_versions.sql yet) must never break the
       // save itself over a missing table.
-      supabase
+      const wantVersion = !silent || Date.now() - lastVersionAtRef.current > 10 * 60 * 1000 || idToUse !== data.id;
+      if (wantVersion) lastVersionAtRef.current = Date.now();
+      if (wantVersion) supabase
         .from('design_versions')
         .insert({
           design_id: data.id,
@@ -3211,7 +5061,8 @@ function EditorContent() {
   // started later with newer content.
   const performSave = async (idToUse: string | null, nameToUse: string, opts?: { silent?: boolean; skipChooser?: boolean }) => {
     if (saveInFlightRef.current) {
-      pendingSaveRef.current = { idToUse, nameToUse, opts };
+      // A queued Save As (a brand-new copy) must stay a new copy.
+      pendingSaveRef.current = { idToUse, nameToUse, opts, forceNew: idToUse === null && !!opts?.skipChooser } as any;
       return;
     }
     saveInFlightRef.current = true;
@@ -3224,12 +5075,17 @@ function EditorContent() {
         pendingSaveRef.current = null;
         // designIdRef is current by now even if `next` was queued before
         // this design's very first save had assigned it a real id.
-        performSave(designIdRef.current ?? next.idToUse, next.nameToUse, next.opts);
+        performSave((next as any).forceNew ? null : designIdRef.current ?? next.idToUse, next.nameToUse, next.opts);
       }
     }
   };
 
-  const saveDesign = () => performSave(designId, designName);
+  // Long-lived timers call the latest performSave through this ref.
+  const performSaveRef = useRef(performSave);
+  performSaveRef.current = performSave;
+  const loadFailedIdRef = useRef<string | null>(null);
+
+  const saveDesign = () => performSave(designIdRef.current ?? designId, designNameRef.current || designName);
 
   // Saves the canvas back into the template being edited (admins only;
   // RLS enforces it server-side too). The previous content is kept as a
@@ -3246,13 +5102,7 @@ function EditorContent() {
         if (next) setTemplateEdit((t) => (t ? { ...t, currentVersion: next } : t));
       }
       const canvasJson = canvas.toJSON(SAVE_JSON_PROPS);
-      const hidden = hideGuidesForExport();
-      let image: string | null = null;
-      try {
-        image = canvas.toDataURL({ format: 'jpeg', quality: 0.88, ...getArtboardExportOptions(firstAb, 1200 / Math.max(firstAb.width, firstAb.height, 1)) });
-      } finally {
-        restoreGuidesAfterExport(hidden);
-      }
+      const image: string | null = capturePicture(firstAb, { format: 'jpeg', quality: 0.88, multiplier: 1200 / Math.max(firstAb.width, firstAb.height, 1) }).dataUrl;
       const ok = await setTemplateContent(templateEdit.id, templateEdit.currentVersion || '1.0', canvasJson, image);
       setTemplateSave({ busy: false, msg: ok ? 'Template saved. Customers now get the updated design.' : 'Could not save the template. Please try again.' });
     } catch (err) {
@@ -3266,17 +5116,11 @@ function EditorContent() {
   const makeThumbnail = (): string | null => {
     const firstAb = artboardsRef.current[0];
     if (!firstAb || !fabricCanvasRef.current) return null;
-    const hiddenGuides = hideGuidesForExport();
     try {
-      return fabricCanvasRef.current.toDataURL({
-        format: 'jpeg',
-        quality: 0.7,
-        ...getArtboardExportOptions(firstAb, 400 / Math.max(firstAb.width, 1)),
-      });
-    } catch {
+      return capturePicture(firstAb, { format: 'jpeg', quality: 0.7, multiplier: 400 / Math.max(firstAb.width, 1) }).dataUrl;
+    } catch (err) {
+      console.warn('Thumbnail generation failed:', err);
       return null;
-    } finally {
-      restoreGuidesAfterExport(hiddenGuides);
     }
   };
 
@@ -3344,7 +5188,7 @@ function EditorContent() {
     } catch (err) {
       console.error('Saving .mtd failed:', err);
       setSaveStatus('error');
-      if (!opts.silent) alert('Could not save the project file. Please try again.');
+      if (!opts.silent) setLocalNotice('Could not save the project file. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -3392,7 +5236,7 @@ function EditorContent() {
       try {
         popup = popupIfNeeded(providerById(provider));
       } catch (err) {
-        alert((err as Error).message);
+        setLocalNotice((err as Error).message);
         return false;
       }
     }
@@ -3426,7 +5270,7 @@ function EditorContent() {
     } catch (err) {
       console.error('Cloud save failed:', err);
       setSaveStatus(opts.silent ? 'unsaved' : 'error');
-      if (!opts.silent) alert((err as Error).message || `Could not save to ${providerLabel(provider)}.`);
+      if (!opts.silent) setLocalNotice((err as Error).message || `Could not save to ${providerLabel(provider)}.`);
       return false;
     } finally {
       setSaving(false);
@@ -3498,7 +5342,7 @@ function EditorContent() {
       if (target) setLocalNotice(`A copy was saved to your computer as "${target.fileName}".`);
     } catch (err) {
       console.error('Saving .mtd copy failed:', err);
-      alert('Could not save the project file. Please try again.');
+      setLocalNotice('Could not save the project file. Please try again.');
     }
   };
 
@@ -3516,7 +5360,7 @@ function EditorContent() {
     try {
       const opened = await readMtd(picked.file);
       if (opened.document.editor === 'photo-studio') {
-        alert('This project was made in Photo Studio. Open it from the dashboard instead.');
+        setLocalNotice('This project was made in Photo Studio. Open it from the dashboard instead.');
         return;
       }
       const key = newLocalKey();
@@ -3535,7 +5379,7 @@ function EditorContent() {
         { isNew: true },
       );
     } catch (err) {
-      alert(err instanceof MtdError ? err.message : 'This file could not be opened.');
+      setLocalNotice(err instanceof MtdError ? err.message : 'This file could not be opened.');
     }
   };
 
@@ -3558,7 +5402,7 @@ function EditorContent() {
       refreshArtboards();
       const first = canvas.getObjects().find((o: any) => o.__isArtboard);
       if (first) setActiveArtboardId(first.__artboardId);
-      ensureFontsLoadedForCanvasJSON(canvasJson).then(() => canvas.requestRenderAll());
+      ensureFontsLoadedForCanvasJSON(canvasJson).then(() => refreshTextMetrics(canvas));
       suppressHistoryRef.current = false;
       pushHistory();
     });
@@ -3580,7 +5424,7 @@ function EditorContent() {
           setSaveStatus('offline');
           return;
         }
-        performSave(designIdRef.current, designNameRef.current, { silent: true });
+        performSaveRef.current?.(designIdRef.current, designNameRef.current, { silent: true });
       }, delayMs);
     },
     // designId/designName are read from refs at fire time (see below) so
@@ -3673,7 +5517,14 @@ function EditorContent() {
   // in startNewDesign is what fixes the actual reported bug — a real
   // in-app navigation to /create and back).
   useEffect(() => {
-    const handler = () => persistTabSession();
+    const handler = (e: BeforeUnloadEvent) => {
+      persistTabSession();
+      // Unsaved work: ask the browser to confirm leaving.
+      if (dirtyRef.current || saveInFlightRef.current) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
     window.addEventListener('beforeunload', handler);
     return () => window.removeEventListener('beforeunload', handler);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -3859,24 +5710,75 @@ function EditorContent() {
     fabricCanvasRef.current?.requestRenderAll();
   };
 
+  // One safe way to turn part of the page into a picture: guides and the
+  // selection outline hidden, the grey editor background replaced by
+  // paper white (or nothing, for transparent PNGs), production marks
+  // added when asked, and the size kept within what phones and iPads can
+  // draw (about 16 million pixels). Everything is put back afterwards.
+  const MAX_EXPORT_PIXELS = 16_000_000;
+  const capturePicture = (
+    rect: { x: number; y: number; width: number; height: number },
+    opts: { format: 'png' | 'jpeg' | 'webp'; quality?: number; multiplier: number; transparent?: boolean; artboardId?: string; marks?: () => any[] }
+  ): { dataUrl: string; reduced: boolean } => {
+    const canvas = fabricCanvasRef.current;
+    const area = Math.max(1, rect.width * rect.height);
+    const m = Math.min(opts.multiplier, Math.sqrt(MAX_EXPORT_PIXELS / area));
+    const reduced = m < opts.multiplier - 1e-6;
+    const savedBg = canvas.backgroundColor;
+    const page = opts.transparent && opts.artboardId ? canvas.getObjects().find((o: any) => o.__isArtboard && o.__artboardId === opts.artboardId) : null;
+    const savedFill = page ? page.fill : undefined;
+    let marks: any[] = [];
+    let hidden: any[] = [];
+    // Selection outlines live on a separate layer and never appear in the
+    // picture, so the selection is left alone.
+    suppressHistoryRef.current = true;
+    try {
+      canvas.backgroundColor = opts.transparent ? '' : '#FFFFFF';
+      if (page) page.set('fill', '');
+      marks = opts.marks ? opts.marks() : [];
+      hidden = hideGuidesForExport();
+      const dataUrl = canvas.toDataURL({ format: opts.format, quality: opts.quality ?? 1, ...getArtboardExportOptions(rect, m) });
+      return { dataUrl, reduced };
+    } finally {
+      restoreGuidesAfterExport(hidden);
+      removeTemporaryMarks(marks);
+      canvas.backgroundColor = savedBg;
+      if (page) page.set('fill', savedFill);
+      canvas.requestRenderAll();
+      suppressHistoryRef.current = false;
+    }
+  };
+  const exportErrorMessage = (err: any) =>
+    err && (err.name === 'SecurityError' || /tainted/i.test(String(err.message)))
+      ? 'One of the pictures in this design comes from another website that doesn’t allow downloading it. Replace that picture and try again.'
+      : 'The download couldn’t be created. Please try again.';
+
+  // Raster exports default to the document's print resolution (e.g. a
+  // 300 DPI flyer exports at 300 DPI), at least 2x for screen designs.
+  const exportMultiplierFor = (ab: ArtboardMeta) => Math.max(2, (ab.print?.dpi || 0) / 96);
+
   const exportArtboardPNG = (id: string, opts?: { silent?: boolean; scope?: ExportScope }) => {
     const canvas = fabricCanvasRef.current;
     const ab = artboards.find((a) => a.id === id);
-    if (!canvas || !ab) return;
+    if (!canvas || !ab) return null;
     const scope = opts?.scope || 'artboard';
     const exportRect = getExportRect(ab, ab.print, scope);
-    suppressHistoryRef.current = true;
-    const marks = buildAndInsertMarks(ab, scope);
-    const hiddenGuides = hideGuidesForExport();
-    const dataUrl = canvas.toDataURL({ format: 'png', quality: 1, ...getArtboardExportOptions(exportRect, 2) });
-    restoreGuidesAfterExport(hiddenGuides);
-    removeTemporaryMarks(marks);
-    suppressHistoryRef.current = false;
-    downloadFile(dataUrl, `${designName || 'design'} - ${ab.name}${scope !== 'artboard' ? ` (${scope})` : ''}.png`);
-    if (!opts?.silent) {
-      setExporting(false);
-      setShowExportDialog(false);
+    let out: { dataUrl: string; reduced: boolean } | null = null;
+    try {
+      out = capturePicture(exportRect, { format: 'png', multiplier: exportMultiplierFor(ab), artboardId: ab.id, marks: () => buildAndInsertMarks(ab, scope) });
+      const name = `${designName || 'design'} - ${ab.name}${scope !== 'artboard' ? ` (${scope})` : ''}.png`;
+      if (!opts?.silent) downloadFile(out.dataUrl, name);
+      if (out.reduced) setLocalNotice('This page was very large, so the download was made a little smaller so it opens on every device.');
+    } catch (err) {
+      console.error('PNG export failed:', err);
+      setLocalNotice(exportErrorMessage(err));
+    } finally {
+      if (!opts?.silent) {
+        setExporting(false);
+        setShowExportDialog(false);
+      }
     }
+    return out ? { name: `${ab.name}.png`, dataUrl: out.dataUrl } : null;
   };
 
   const exportArtboardPDF = async (id: string, scope: ExportScope) => {
@@ -3890,6 +5792,7 @@ function EditorContent() {
       const rect = getExportRect(ab, ab.print, scope);
       suppressHistoryRef.current = true;
       const marks = buildAndInsertMarks(ab, scope);
+      try {
       // jsPDF's own 'px' unit doesn't reliably convert a custom [w,h]
       // format array in this version (verified: it comes out ~33% too
       // big in every dimension) — build in 'pt' and convert ourselves.
@@ -3900,12 +5803,14 @@ function EditorContent() {
         format: [toPt(rect.width), toPt(rect.height)],
       });
       await exportArtboardsToPDF(pdf, canvas, F, [{ id: ab.id, x: rect.x, y: rect.y, width: rect.width, height: rect.height }]);
-      removeTemporaryMarks(marks);
-      suppressHistoryRef.current = false;
       pdf.save(`${designName || 'design'} - ${ab.name}${scope !== 'artboard' ? ` (${scope})` : ''}.pdf`);
+      } finally {
+        removeTemporaryMarks(marks);
+        suppressHistoryRef.current = false;
+      }
     } catch (err) {
       console.error('Print PDF export failed:', err);
-      alert('Failed to export PDF. Please try again.');
+      setLocalNotice('Failed to export PDF. Please try again.');
     }
     setExporting(false);
   };
@@ -3923,40 +5828,41 @@ function EditorContent() {
     setShowPreflight(true);
   };
 
+  // Every page in one .zip (browsers block several downloads at once).
   const exportAllArtboardsPNG = () => {
     setExporting(true);
-    artboards.forEach((ab) => exportArtboardPNG(ab.id, { silent: true }));
-    setExporting(false);
+    try {
+      const files = artboards.map((ab) => exportArtboardPNG(ab.id, { silent: true })).filter(Boolean) as { name: string; dataUrl: string }[];
+      if (files.length === 1) downloadFile(files[0].dataUrl, `${designName || 'design'} - ${files[0].name}`);
+      else if (files.length > 1) {
+        const url = URL.createObjectURL(buildZip(files.map((f) => ({ name: f.name, data: dataUrlToBytes(f.dataUrl) }))));
+        downloadFile(url, `${designName || 'design'} (${files.length} pages).zip`);
+        setTimeout(() => URL.revokeObjectURL(url), 4000);
+      }
+    } finally {
+      setExporting(false);
+    }
   };
 
-  const exportAsPNG = async () => {
+  const exportQuick = async (format: 'png' | 'jpeg') => {
     setExporting(true);
-    await ensurePhotoEditsApplied();
-    const ab = getActiveArtboardRect();
-    if (ab.id) {
-      exportArtboardPNG(ab.id);
-      return;
+    try {
+      await ensurePhotoEditsApplied();
+      const ab = getActiveArtboardRect();
+      const meta = artboards.find((a) => a.id === ab.id);
+      const out = capturePicture(ab, { format, quality: format === 'jpeg' ? 0.92 : 1, multiplier: meta ? exportMultiplierFor(meta) : 2, artboardId: ab.id });
+      downloadFile(out.dataUrl, `${designName || 'design'}${meta ? ` - ${meta.name}` : ''}.${format === 'jpeg' ? 'jpg' : 'png'}`);
+      if (out.reduced) setLocalNotice('This page was very large, so the download was made a little smaller so it opens on every device.');
+    } catch (err) {
+      console.error('Export failed:', err);
+      setLocalNotice(exportErrorMessage(err));
+    } finally {
+      setExporting(false);
+      setShowExportDialog(false);
     }
-    const canvas = fabricCanvasRef.current;
-    const hiddenGuides = hideGuidesForExport();
-    const dataUrl = canvas.toDataURL({ format: 'png', quality: 1, ...getArtboardExportOptions(ab, 2) });
-    restoreGuidesAfterExport(hiddenGuides);
-    downloadFile(dataUrl, `${designName || 'design'}.png`);
-    setExporting(false);
-    setShowExportDialog(false);
   };
-  const exportAsJPG = async () => {
-    setExporting(true);
-    await ensurePhotoEditsApplied();
-    const canvas = fabricCanvasRef.current;
-    const ab = getActiveArtboardRect();
-    const hiddenGuides = hideGuidesForExport();
-    const dataUrl = canvas.toDataURL({ format: 'jpeg', quality: 0.9, ...getArtboardExportOptions(ab, 2) });
-    restoreGuidesAfterExport(hiddenGuides);
-    downloadFile(dataUrl, `${designName || 'design'}.jpg`);
-    setExporting(false);
-    setShowExportDialog(false);
-  };
+  const exportAsPNG = () => exportQuick('png');
+  const exportAsJPG = () => exportQuick('jpeg');
 
   // File > Export as SVG serializes the active artboard's real object
   // geometry (see lib/editor/svgExport.ts) — a pen-drawn path comes out as
@@ -3976,7 +5882,7 @@ function EditorContent() {
       URL.revokeObjectURL(url);
     } catch (err) {
       console.error('SVG export failed:', err);
-      alert('Failed to export SVG. Please try again.');
+      setLocalNotice('Failed to export SVG. Please try again.');
     }
     setExporting(false);
     setShowExportDialog(false);
@@ -3987,6 +5893,7 @@ function EditorContent() {
   const exportAsPDF = async () => {
     setExporting(true);
     await ensurePhotoEditsApplied();
+    fabricCanvasRef.current?.discardActiveObject();
     try {
       const [{ jsPDF }, mod] = await Promise.all([import('jspdf'), import('fabric')]);
       const list = artboards.length ? artboards : [{ id: '', x: 0, y: 0, width, height, name: '', print: createDefaultPrintSettings() }];
@@ -4001,7 +5908,7 @@ function EditorContent() {
       pdf.save(`${designName || 'design'}.pdf`);
     } catch (err) {
       console.error('PDF export failed:', err);
-      alert('Failed to export PDF. Please try again.');
+      setLocalNotice('Failed to export PDF. Please try again.');
     }
     setExporting(false);
     setShowExportDialog(false);
@@ -4038,20 +5945,26 @@ function EditorContent() {
       });
 
       suppressHistoryRef.current = true;
-      for (let i = 0; i < pages.length; i++) {
-        const { ab, rect } = pages[i];
-        if (i > 0) pdf.addPage([toPt(rect.width), toPt(rect.height)], rect.width > rect.height ? 'landscape' : 'portrait');
-        const marks = buildAndInsertMarks(ab, scope);
-        await exportArtboardsToPDF(pdf, canvas, F, [{ id: ab.id, x: rect.x, y: rect.y, width: rect.width, height: rect.height }]);
-        removeTemporaryMarks(marks);
+      try {
+        for (let i = 0; i < pages.length; i++) {
+          const { ab, rect } = pages[i];
+          if (i > 0) pdf.addPage([toPt(rect.width), toPt(rect.height)], rect.width > rect.height ? 'landscape' : 'portrait');
+          const marks = buildAndInsertMarks(ab, scope);
+          try {
+            await exportArtboardsToPDF(pdf, canvas, F, [{ id: ab.id, x: rect.x, y: rect.y, width: rect.width, height: rect.height }]);
+          } finally {
+            removeTemporaryMarks(marks);
+          }
+        }
+      } finally {
+        suppressHistoryRef.current = false;
       }
-      suppressHistoryRef.current = false;
 
       const rangeLabel = lo === hi ? `page ${lo}` : `pages ${lo}-${hi}`;
       pdf.save(`${designName || 'design'} (${rangeLabel}).pdf`);
     } catch (err) {
       console.error('PDF range export failed:', err);
-      alert('Failed to export PDF. Please try again.');
+      setLocalNotice('Failed to export PDF. Please try again.');
     }
     setExporting(false);
   };
@@ -4105,10 +6018,13 @@ function EditorContent() {
     const canvas = fabricCanvasRef.current;
     const list = resolveExportArtboards(settings);
     if (!list.length) {
-      alert('No pages match the selected export range.');
+      setLocalNotice('No pages match the selected export range.');
       setExporting(false);
       return;
     }
+    // Objects inside a multi-selection have relative positions; export
+    // needs their real place on the page.
+    canvas.discardActiveObject();
 
     const scope: ExportScope = settings.includeMarks ? 'marks' : settings.includeBleed ? 'bleed' : 'artboard';
 
@@ -4128,64 +6044,59 @@ function EditorContent() {
         });
 
         suppressHistoryRef.current = true;
-        for (let i = 0; i < pages.length; i++) {
-          const { ab, print, rect } = pages[i];
-          if (i > 0) pdf.addPage([toPt(rect.width), toPt(rect.height)], rect.width > rect.height ? 'landscape' : 'portrait');
-          const marks = buildAndInsertMarks(ab, scope, print);
-          await exportArtboardsToPDF(pdf, canvas, F, [{ id: ab.id, x: rect.x, y: rect.y, width: rect.width, height: rect.height }]);
-          removeTemporaryMarks(marks);
+        try {
+          for (let i = 0; i < pages.length; i++) {
+            const { ab, print, rect } = pages[i];
+            if (i > 0) pdf.addPage([toPt(rect.width), toPt(rect.height)], rect.width > rect.height ? 'landscape' : 'portrait');
+            const marks = buildAndInsertMarks(ab, scope, print);
+            try {
+              await exportArtboardsToPDF(pdf, canvas, F, [{ id: ab.id, x: rect.x, y: rect.y, width: rect.width, height: rect.height }]);
+            } finally {
+              removeTemporaryMarks(marks);
+            }
+          }
+        } finally {
+          suppressHistoryRef.current = false;
         }
-        suppressHistoryRef.current = false;
 
         const rangeLabel = pages.length === 1 ? pages[0].ab.name : `${pages.length} pages`;
         pdf.save(`${designName || 'design'} (${rangeLabel}).${settings.format}`);
       } else {
+        const files: { name: string; dataUrl: string }[] = [];
+        let reduced = false;
+        // Fabric expects a real MIME subtype ('jpeg', not 'jpg').
+        const mime = settings.format === 'jpg' ? 'jpeg' : (settings.format as 'png' | 'webp');
         for (const ab of list) {
           const print = exportPrintFor(ab, settings);
           const rect = getExportRect(ab, print, scope);
-
-          // A transparent PNG needs both the canvas's own backgroundColor
-          // and this artboard's own white background rect cleared for the
-          // capture, then restored right after — this editor's canvas
-          // always has both, so without this the "transparent" export
-          // would just come back opaque.
-          const wantsTransparency = settings.format === 'png' && settings.transparentBackground;
-          const savedCanvasBg = canvas.backgroundColor;
-          const artboardRectObj = wantsTransparency
-            ? canvas.getObjects().find((o: any) => o.__isArtboard && o.__artboardId === ab.id)
-            : null;
-          const savedArtboardFill = artboardRectObj ? artboardRectObj.fill : undefined;
-          if (wantsTransparency) {
-            canvas.backgroundColor = '';
-            if (artboardRectObj) artboardRectObj.set('fill', '');
-          }
-
-          suppressHistoryRef.current = true;
-          const marks = buildAndInsertMarks(ab, scope, print);
-          const dataUrl = canvas.toDataURL({
-            format: settings.format,
-            quality: settings.format === 'jpg' ? settings.quality : 1,
-            ...getArtboardExportOptions(rect, settings.multiplier),
+          const out = capturePicture(rect, {
+            format: mime,
+            quality: settings.format === 'png' ? 1 : settings.quality,
+            multiplier: settings.multiplier,
+            transparent: settings.format === 'png' && settings.transparentBackground,
+            artboardId: ab.id,
+            marks: () => buildAndInsertMarks(ab, scope, print),
           });
-          removeTemporaryMarks(marks);
-          suppressHistoryRef.current = false;
-
-          if (wantsTransparency) {
-            canvas.backgroundColor = savedCanvasBg;
-            if (artboardRectObj) artboardRectObj.set('fill', savedArtboardFill);
-            canvas.requestRenderAll();
-          }
-
-          downloadFile(dataUrl, `${designName || 'design'} - ${ab.name}.${settings.format}`);
+          reduced = reduced || out.reduced;
+          // Browsers without WebP encoding hand back PNG instead.
+          const realExt = out.dataUrl.startsWith('data:image/webp') ? 'webp' : out.dataUrl.startsWith('data:image/jpeg') ? 'jpg' : 'png';
+          files.push({ name: `${ab.name}.${realExt}`, dataUrl: out.dataUrl });
         }
+        if (files.length === 1) downloadFile(files[0].dataUrl, `${designName || 'design'} - ${files[0].name}`);
+        else {
+          const url = URL.createObjectURL(buildZip(files.map((f) => ({ name: f.name, data: dataUrlToBytes(f.dataUrl) }))));
+          downloadFile(url, `${designName || 'design'} (${files.length} pages).zip`);
+          setTimeout(() => URL.revokeObjectURL(url), 4000);
+        }
+        if (reduced) setLocalNotice('Some pages were very large, so they were made a little smaller so they open on every device.');
       }
     } catch (err) {
       console.error('Export failed:', err);
-      alert('Failed to export. Please try again.');
+      setLocalNotice(exportErrorMessage(err));
+    } finally {
+      setExporting(false);
+      setShowExportDialog(false);
     }
-
-    setExporting(false);
-    setShowExportDialog(false);
   };
 
   // The dashboard's "Download" action opens the editor with ?autoExport=
@@ -4203,6 +6114,26 @@ function EditorContent() {
   }, [canvasReady, artboards, autoExportFormat]);
 
   const hasSelection = !!selected;
+
+  // Select > Same …: everything on the page that shares the selected
+  // object's fill colour, border colour or kind.
+  const selectSame = (what: 'fill' | 'stroke' | 'type') => {
+    const canvas = fabricCanvasRef.current;
+    const F = (window as any).fabric;
+    const ref = selected?.type === 'activeSelection' ? selected.getObjects()[0] : selected;
+    if (!canvas || !F || !ref) return;
+    const key = (o: any) => {
+      const v = what === 'type' ? (o.__shape?.kind ? `shape:${o.__shape.kind}` : o.type) : o[what];
+      return typeof v === 'string' ? v.toUpperCase() : v && v.colorStops ? JSON.stringify(v.colorStops) : String(v);
+    };
+    const want = key(ref);
+    const matches = canvas.getObjects().filter((o: any) => isArtwork(o) && !o.locked && o.visible !== false && key(o) === want);
+    canvas.discardActiveObject();
+    if (matches.length === 1) canvas.setActiveObject(matches[0]);
+    else if (matches.length > 1) canvas.setActiveObject(new F.ActiveSelection(matches, { canvas }));
+    canvas.requestRenderAll();
+    setSelected(canvas.getActiveObject() || null);
+  };
 
   const menus: MenuDef[] = [
     {
@@ -4227,8 +6158,7 @@ function EditorContent() {
         { label: 'Download (PNG)', onClick: exportAsPNG },
         { divider: true },
         { label: 'Preflight...', onClick: runPreflightCheck },
-        { label: 'Print Setup (Bleed/Slug/Marks)', onClick: () => togglePanel('artboards') },
-        { label: 'Document Setup', planned: true },
+        { label: 'Document & Print Setup (size, bleed, margins, marks)', onClick: () => togglePanel('artboards') },
         { divider: true },
         { label: 'Close Design', onClick: () => closeTab(activeTabId) },
         { label: 'Back to Dashboard', onClick: () => router.push('/dashboard') },
@@ -4265,7 +6195,6 @@ function EditorContent() {
         { label: 'Join', shortcut: 'Ctrl/Cmd+J', onClick: joinSelectedPaths, disabled: !hasSelection },
         { label: 'Break Path at Anchor', onClick: breakSelectedPath, disabled: !hasSelection },
         { label: 'Reverse Path Direction', onClick: reverseSelectedPath, disabled: !hasSelection },
-        { label: 'Path Operations (Offset, Simplify...)', planned: true },
         { label: 'Artboard Tool', shortcut: 'Shift+O', onClick: () => setActiveTool('artboard') },
         { label: 'Artboards Panel', onClick: () => togglePanel('artboards') },
       ],
@@ -4273,11 +6202,7 @@ function EditorContent() {
     {
       label: 'Type',
       items: [
-        { label: 'Add Text', onClick: addText },
-        { divider: true },
-        { label: 'Area Type', planned: true },
-        { label: 'Type on a Path', planned: true },
-        { label: 'Vertical Type', planned: true },
+        { label: 'Add Text', shortcut: 'T', onClick: addText },
       ],
     },
     {
@@ -4288,7 +6213,7 @@ function EditorContent() {
           shortcut: 'Ctrl/Cmd+A',
           onClick: () => {
             const canvas = fabricCanvasRef.current;
-            const objs = canvas.getObjects().filter((o: any) => !o.locked && !o.__isAnchorHandle && !o.__isPenPreview && !o.__isShapeDraft && !o.__isArtboard);
+            const objs = canvas.getObjects().filter((o: any) => isArtwork(o) && !o.locked && o.visible !== false);
             if (objs.length) {
               canvas.discardActiveObject();
               const sel = new (window as any).fabric.ActiveSelection(objs, { canvas });
@@ -4306,17 +6231,21 @@ function EditorContent() {
           },
         },
         { divider: true },
-        { label: 'Same Fill Color', planned: true },
-        { label: 'Same Stroke Color', planned: true },
+        { label: 'Same Fill Colour', onClick: () => selectSame('fill'), disabled: !hasSelection },
+        { label: 'Same Border Colour', onClick: () => selectSame('stroke'), disabled: !hasSelection },
+        { label: 'Same Kind of Object', onClick: () => selectSame('type'), disabled: !hasSelection },
       ],
     },
     {
       label: 'View',
       items: [
-        { label: 'Zoom In', shortcut: 'Ctrl/Cmd+"+"', onClick: () => applyZoom((z) => z + 10) },
-        { label: 'Zoom Out', shortcut: 'Ctrl/Cmd+"-"', onClick: () => applyZoom((z) => z - 10) },
-        { label: 'Actual Size', shortcut: 'Ctrl/Cmd+0', onClick: () => applyZoom(100) },
+        { label: 'Zoom In', shortcut: 'Ctrl/Cmd+"+"', onClick: () => applyZoom((z) => z * 1.25) },
+        { label: 'Zoom Out', shortcut: 'Ctrl/Cmd+"-"', onClick: () => applyZoom((z) => z / 1.25) },
+        { label: 'Fit Page', shortcut: 'Ctrl/Cmd+0', onClick: fitActiveArtboard },
+        { label: 'Fit All Pages', onClick: fitAllArtboards },
+        { label: 'Actual Size (100%)', shortcut: 'Ctrl/Cmd+1', onClick: () => applyZoom(100) },
         { divider: true },
+        { label: 'Show Bleed, Margins & Safe Area', checked: showPrintGuides, onClick: () => setShowPrintGuides((v) => !v) },
         { label: 'Show Rulers', shortcut: 'Ctrl/Cmd+R', checked: showRulers, onClick: () => setShowRulers((v) => !v) },
         { label: 'Show Grid', checked: showGrid, onClick: () => setShowGrid((v) => !v) },
         { label: 'Show Guides', shortcut: 'Ctrl/Cmd+;', checked: showGuides, onClick: () => setShowGuides((v) => !v) },
@@ -4334,19 +6263,284 @@ function EditorContent() {
         { label: 'Properties', onClick: () => togglePanel('properties') },
         { label: 'Layers', onClick: () => togglePanel('layers') },
         { label: 'Align', onClick: () => togglePanel('align') },
-        { divider: true },
-        { label: 'Swatches', planned: true },
-        { label: 'Character', planned: true },
-        { label: 'Pathfinder', planned: true },
-        { label: 'History', planned: true },
+        { label: 'Pages & Print Setup', onClick: () => togglePanel('artboards') },
       ],
     },
     {
       label: 'Help',
       items: [
         { label: 'Keyboard Shortcuts', shortcut: '?', onClick: () => setShowShortcuts(true) },
-        { label: 'Feature Roadmap', onClick: () => setRoadmap({ open: true }) },
+        { label: 'Help & Learn', onClick: () => setLeftPanel('help') },
       ],
+    },
+  ];
+
+
+  // ---------------------------------------------------------------------
+  // Pieces of the new interface
+  // ---------------------------------------------------------------------
+  const docColors = canvasReady ? collectDocumentColors(fabricCanvasRef.current) : [];
+  const selectedImage = selected && selected.type === 'image' ? selected : null;
+
+  const toolbarActions: ToolbarActions = {
+    applyProp,
+    applyCharProp,
+    getTextPropValue,
+    setFill: features.setFill,
+    setStroke: features.setStroke,
+    setShadow: features.setShadow,
+    setCornerRadius: features.setCornerRadius,
+    setShapeParams: features.setShapeParams,
+    setTextFx: features.setTextFx,
+    setOpacity: features.setOpacity,
+    flip: features.flip,
+    replaceImage: () => replaceInputRef.current?.click(),
+    startCrop: () => features.startCrop(),
+    openAdjust: () => setLeftPanel('adjust'),
+    removeBackground: () => {
+      const t = fabricCanvasRef.current?.getActiveObject();
+      if (t && t.type === 'image') setBgRemoveTarget(t);
+    },
+    maskWithShape: features.maskWithShape,
+    detachFromFrame: features.detachFromFrame,
+    placeInShape: () => {
+      const sel = fabricCanvasRef.current?.getActiveObject();
+      if (!sel || sel.type !== 'activeSelection') return;
+      const objs = sel.getObjects();
+      const img = objs.find((o: any) => o.type === 'image');
+      const shape = objs.find((o: any) => o !== img);
+      if (img && shape) features.placeInShape(img, shape);
+    },
+    duplicate: duplicateSelected,
+    remove: deleteSelected,
+    toggleLock: () => {
+      const t = fabricCanvasRef.current?.getActiveObject();
+      if (t) toggleLock(t);
+    },
+    group: groupSelected,
+    ungroup: ungroupSelected,
+    align: (m, rel) => alignObject(m, rel || 'auto'),
+    distribute: distributeObjects,
+    bringForward,
+    sendBackward,
+    bringToFront,
+    sendToBack,
+    pageBackground: pageBackgroundValue,
+    setPageBackground: setPageBackgroundValue,
+    openResize: () => setShowResize(true),
+    pickFromCanvas,
+  };
+
+  const propertiesPanelEl = (
+    <PropertiesPanel
+      activeTool={activeTool}
+      selected={selected}
+      unit={unit}
+      layers={layers}
+      maskTargetId={maskTargetId}
+      setMaskTargetId={setMaskTargetId}
+      applyProp={applyProp}
+      applyCharProp={applyCharProp}
+      getTextPropValue={getTextPropValue}
+      applyExactSize={applyExactSize}
+      toggleLockRatio={toggleLockRatio}
+      alignObject={alignObject}
+      groupSelected={groupSelected}
+      ungroupSelected={ungroupSelected}
+      runShapeBuilder={runShapeBuilder}
+      applyPathAsMask={applyPathAsMask}
+      removeMask={removeMask}
+      applyGradientFill={applyGradientFill}
+      gradAngleRef={gradAngleRef}
+      pushHistory={pushHistory}
+      layerLabel={layerLabel}
+      onReplaceImage={(file) => {
+        const t = fabricCanvasRef.current?.getActiveObject();
+        if (t) readFile(file).then((url) => features.putImageInto(t, url));
+      }}
+      onEditPhoto={openPhotoEditor}
+      artboardOrigin={(() => {
+        const ab = artboards.find((a) => a.id === selected?.__artboardId) || getActiveArtboardRect();
+        return { x: ab.x, y: ab.y };
+      })()}
+    />
+  );
+
+  const artboardsPanelEl = (
+    <ArtboardsPanel
+      artboards={artboards}
+      activeArtboardId={activeArtboardId}
+      unit={unit}
+      onSelect={selectArtboard}
+      onRename={renameArtboard}
+      onResize={resizeArtboard}
+      onDuplicate={duplicateArtboard}
+      onDelete={deleteArtboard}
+      onMoveUp={moveArtboardUp}
+      onMoveDown={moveArtboardDown}
+      onAddPreset={addArtboardFromPreset}
+      onAddCustom={addArtboardCustom}
+      onFitAll={fitAllArtboards}
+      onExportOne={(id) => exportArtboardPNG(id)}
+      onExportAll={exportAllArtboardsPNG}
+      onExportAllPDF={exportAsPDF}
+      onExportRangePDF={exportArtboardRangePDF}
+      onUpdatePrint={updateArtboardPrint}
+      onExportPrint={exportArtboardForPrint}
+      onRunPreflight={runPreflightCheck}
+    />
+  );
+
+  const selectionMembers: any[] = selected ? (selected.type === 'activeSelection' ? selected.getObjects() : [selected]) : [];
+  const layersPanelEl = (
+    <DesignLayersPanel
+      layers={layers}
+      selection={selectionMembers}
+      onSelect={(obj, additive) => {
+        const canvas = fabricCanvasRef.current;
+        const F = (window as any).fabric;
+        let next = [obj];
+        if (additive) {
+          const cur = selectionMembers.filter((o) => o !== obj);
+          next = selectionMembers.includes(obj) ? cur : [...selectionMembers, obj];
+        }
+        canvas.discardActiveObject();
+        if (next.length === 1) canvas.setActiveObject(next[0]);
+        else if (next.length > 1) canvas.setActiveObject(new F.ActiveSelection(next, { canvas }));
+        canvas.requestRenderAll();
+        setSelected(canvas.getActiveObject() || null);
+      }}
+      onToggleVisible={toggleVisible}
+      onToggleLock={toggleLock}
+      onRename={renameLayer}
+      onReorder={reorderLayers}
+      onDuplicate={(obj) => {
+        fabricCanvasRef.current.setActiveObject(obj);
+        duplicateSelected();
+      }}
+      onDelete={(obj) => {
+        if (obj.locked) return;
+        fabricCanvasRef.current.discardActiveObject();
+        fabricCanvasRef.current.remove(obj);
+        fabricCanvasRef.current.requestRenderAll();
+      }}
+      onOpacityChange={(obj, opacity, commit) => {
+        obj.set({ opacity });
+        fabricCanvasRef.current.requestRenderAll();
+        bumpSel();
+        if (commit) pushHistory();
+      }}
+      onBlendModeChange={(obj, m) => {
+        obj.set({ globalCompositeOperation: m === 'normal' ? 'source-over' : m });
+        fabricCanvasRef.current.requestRenderAll();
+        bumpSel();
+        pushHistory();
+      }}
+      getThumbnail={layerThumbnail}
+    />
+  );
+
+  const railItems: RailItem[] = [
+    {
+      id: 'templates',
+      label: 'Templates',
+      icon: <LayoutTemplate size={20} />,
+      render: () => <TemplatesPanel onUse={applyTemplate} busyId={templateBusy} initialCategory={templateCategory} />,
+    },
+    {
+      id: 'elements',
+      label: 'Elements',
+      icon: <ShapesIcon size={20} />,
+      render: () => <ElementsPanel onAddShape={(k) => features.addShape(k)} onAddFrame={(k) => features.addFrame(k)} onAddSticker={(e) => addSticker(e)} />,
+    },
+    {
+      id: 'text',
+      label: 'Text',
+      icon: <TypeIcon size={20} />,
+      render: () => <TextPanel onAdd={(p: TextPreset) => features.addTextPreset(p)} onAddPairing={addFontPairing} onAddPageNumber={addPageNumber} />,
+    },
+    {
+      id: 'uploads',
+      label: 'Uploads',
+      icon: <UploadIcon size={20} />,
+      render: () => <UploadsPanel sessionUploads={sessionUploads} onFiles={(f) => addImageFiles(f)} onUse={(url) => placeImageUrl(url)} />,
+    },
+    {
+      id: 'draw',
+      label: 'Draw',
+      icon: <BrushIcon size={20} />,
+      render: () => (
+        <DrawPanel
+          drawing={drawing}
+          settings={brush}
+          onChange={setBrush}
+          onStart={startDrawing}
+          onStop={stopDrawing}
+          pro={pro}
+          vectorTool={pencilOn ? 'pencil' : activeTool}
+          onVectorTool={(t) => {
+            if (drawingRef.current) stopDrawing();
+            if (t === 'pencil') {
+              setVectorPencil(!pencilOn);
+              return;
+            }
+            if (pencilOn) setVectorPencil(false);
+            setActiveTool(t);
+          }}
+        />
+      ),
+    },
+    {
+      id: 'background',
+      label: 'Background',
+      icon: <PaintBucket size={20} />,
+      render: () => (
+        <BackgroundPanel
+          current={pageBackgroundValue()}
+          brandColors={brandKit.colors}
+          documentColors={docColors}
+          onPickFromCanvas={pickFromCanvas}
+          onSet={(bg, commit = true) => features.setPageBackground(bg, commit)}
+        />
+      ),
+    },
+    {
+      id: 'brand',
+      label: 'Brand',
+      icon: <Palette size={20} />,
+      special: true,
+      render: () => (
+        <BrandPanel
+          kit={brandKit}
+          onChange={updateBrandKit}
+          saving={brandSaving}
+          onApply={applyBrandToPage}
+          onAddLogo={() => brandKit.logoUrl && placeImageUrl(brandKit.logoUrl)}
+          onAddInfo={addBrandInfo}
+          onUploadLogo={uploadBrandLogo}
+          documentColors={docColors}
+        />
+      ),
+    },
+    { id: 'layers', label: 'Layers', icon: <LayersIcon size={20} />, render: () => layersPanelEl },
+    { id: 'pages', label: 'Pages', icon: <Files size={20} />, title: 'Pages & print setup', render: () => artboardsPanelEl },
+    { id: 'help', label: 'Help', icon: <HelpCircle size={20} />, title: 'Help & shortcuts', render: () => <HelpPanel onOpenShortcuts={() => setShowShortcuts(true)} /> },
+    {
+      id: 'adjust',
+      label: 'Adjust',
+      title: 'Adjust photo',
+      hiddenInRail: true,
+      icon: null,
+      render: () => (
+        <AdjustPanel
+          img={selectedImage}
+          value={features.readImageAdjust(selectedImage)}
+          onChange={(a, commit) => features.adjustImage(a, commit)}
+          onRemoveBackground={() => selectedImage && setBgRemoveTarget(selectedImage)}
+          onCrop={() => features.startCrop()}
+          onFlip={features.flip}
+        />
+      ),
     },
   ];
 
@@ -4397,128 +6591,168 @@ function EditorContent() {
           rgb(249,250,251) even with the `dark` class present and
           localStorage's shared theme genuinely set to 'dark'). */}
       <div className={isDark ? 'dark' : ''}>
-      <main className="h-screen w-full overflow-x-hidden flex flex-col bg-transparent transition-colors duration-150">
-      <MenuBar
-        menus={photoOnlySession ? [] : menus}
-        leading={
-          <Link href="/" title="Go to homepage">
-            <BrandLogo theme={theme} width={140} height={28} priority />
+      <main className="h-[100dvh] w-full overflow-hidden flex flex-col bg-mt-bg text-mt-ink transition-colors duration-150">
+      {pro && (
+        <MenuBar
+          menus={photoOnlySession ? [] : menus}
+          leading={
+            <Link href="/" title="Go to homepage">
+              <BrandLogo theme={theme} width={120} height={24} priority />
+            </Link>
+          }
+        />
+      )}
+
+      {/* ------------------------------------------------ top bar */}
+      <header className="h-14 shrink-0 flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 border-b border-mt-border bg-mt-surface">
+        <Link
+          href={cameFromTemplate ? '/templates' : '/dashboard'}
+          title={cameFromTemplate ? 'Back to templates' : 'Back to dashboard'}
+          aria-label={cameFromTemplate ? 'Back to templates' : 'Back to dashboard'}
+          className="h-9 w-9 shrink-0 inline-flex items-center justify-center rounded-lg text-mt-muted hover:text-mt-ink hover:bg-mt-surface2"
+        >
+          <ChevronLeft size={20} />
+        </Link>
+        {!pro && !compact && (
+          <Link href="/" title="Go to homepage" className="shrink-0 hidden lg:block">
+            <BrandLogo theme={theme} width={118} height={24} priority />
           </Link>
-        }
-      />
-
-      <TabBar tabs={tabs} activeTabId={activeTabId} onSwitch={switchTab} onClose={closeTab} onAdd={() => setShowOpenDialog(true)} />
-
-      <div className="flex items-center justify-between gap-3 px-4 py-2 border-b bg-mt-surface dark:bg-mt-surface dark:border-mt-border transition-colors duration-150 overflow-x-auto">
-        <div className="flex items-center gap-2 shrink-0">
-          <BackBar
-            href={cameFromTemplate ? '/templates' : '/dashboard'}
-            label={cameFromTemplate ? 'Templates' : 'Dashboard'}
-          />
-        </div>
+        )}
         <input
           type="text"
           value={designName}
+          aria-label="Design name"
           onChange={(e) => {
             const name = e.target.value;
             setDesignName(name);
             setTabs((ts) => ts.map((t) => (t.id === activeTabIdRef.current ? { ...t, name } : t)));
+            markDirty();
           }}
-          className="text-sm border rounded px-2 py-1 w-48 text-center shrink-0 dark:bg-mt-surface dark:border-mt-border dark:text-mt-ink"
+          className="min-w-[6.5rem] w-28 sm:w-40 xl:w-52 h-9 rounded-lg border border-transparent hover:border-mt-border focus:border-[#8CCBFF] bg-transparent px-2 text-sm font-medium text-mt-ink truncate"
         />
-
-        {!hideWorkspaceSwitcherForPhotoFirst && <WorkspaceSwitcher workspace={workspace} onSwitch={handleWorkspaceSwitch} />}
-
-        <div className="flex items-center gap-2 shrink-0">
-          {/* Undo/Redo target whichever workspace is actually showing —
-              previously these stayed wired to Main Design even while the
-              Photo Editor was open, so clicking them silently edited the
-              hidden canvas instead of undoing the visible one. */}
-          <button
-            onClick={workspace === 'photo' ? () => photoEditorRef.current?.undo() : undo}
-            disabled={workspace === 'photo' ? !photoCanUndo : !canUndo}
-            title="Undo (Ctrl/Cmd+Z)"
-            className="px-2 py-1 border rounded disabled:opacity-30 dark:border-mt-border dark:text-mt-ink dark:hover:bg-mt-surface2"
+        <span
+          aria-live="polite"
+          title={
+            !isOnline
+              ? 'You’re offline. Changes are kept and saved when you’re back online.'
+              : saveStatus === 'error'
+              ? 'The last save didn’t go through. Try Save again.'
+              : undefined
+          }
+          className={cx(
+            'hidden lg:inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full whitespace-nowrap shrink-0',
+            !isOnline ? 'text-amber-700 bg-amber-50 dark:bg-amber-950/40' : saveStatus === 'error' ? 'text-red-600 bg-red-50 dark:bg-red-950/40' : 'text-mt-muted'
+          )}
+        >
+          {!isOnline ? (
+            <><CloudOff size={13} /> Offline</>
+          ) : saveStatus === 'saving' ? (
+            <><Loader2 size={13} className="animate-spin" /> Saving…</>
+          ) : saveStatus === 'error' ? (
+            <><CloudOff size={13} /> Not saved</>
+          ) : saveStatus === 'unsaved' ? (
+            isLocalTabId(activeTabId) ? `Not saved to ${storageLabel(activeTabId)}` : designId ? <><RefreshCw size={12} /> Syncing soon</> : 'Not saved yet'
+          ) : saveStatus === 'saved' ? (
+            <><Check size={13} /> {isLocalTabId(activeTabId) ? `Saved to ${storageLabel(activeTabId)}` : 'Saved'}</>
+          ) : null}
+        </span>
+        {/* Narrow screens: the same status as a small icon. */}
+        {(!isOnline || saveStatus !== 'idle') && (
+          <span
+            className={cx('lg:hidden shrink-0 inline-flex items-center', !isOnline ? 'text-amber-600' : saveStatus === 'error' ? 'text-red-600' : 'text-mt-faint')}
+            title={!isOnline ? 'Offline — changes are kept' : saveStatus === 'saving' ? 'Saving…' : saveStatus === 'saved' ? 'Saved' : saveStatus === 'error' ? 'Not saved' : 'Not saved yet'}
+            aria-hidden
           >
-            ↶ Undo
-          </button>
-          <button
-            onClick={workspace === 'photo' ? () => photoEditorRef.current?.redo() : redo}
-            disabled={workspace === 'photo' ? !photoCanRedo : !canRedo}
-            title="Redo (Ctrl/Cmd+Shift+Z)"
-            className="px-2 py-1 border rounded disabled:opacity-30 dark:border-mt-border dark:text-mt-ink dark:hover:bg-mt-surface2"
-          >
-            ↷ Redo
-          </button>
-          <button onClick={() => setShowShortcuts(true)} title="Keyboard shortcuts (?)" className="p-1.5 border rounded text-mt-muted hover:bg-mt-surface2 dark:border-mt-border dark:text-mt-muted dark:hover:bg-mt-surface2">
-            <Keyboard size={16} />
-          </button>
-          <ThemeSwitch theme={theme} onToggle={toggleTheme} size="sm" />
-        </div>
-
-        <div className="flex items-center gap-3 shrink-0">
-          <label className="text-xs text-mt-muted dark:text-mt-muted">Units</label>
-          <select
-            value={unit}
-            onChange={(e) => setUnit(e.target.value as DocUnit)}
-            className="text-xs border rounded px-1.5 py-1 dark:bg-mt-surface dark:border-mt-border dark:text-mt-ink"
-          >
+            {!isOnline || saveStatus === 'error' ? <CloudOff size={15} /> : saveStatus === 'saving' ? <Loader2 size={15} className="animate-spin" /> : saveStatus === 'saved' ? <Check size={15} /> : <RefreshCw size={14} />}
+          </span>
+        )}
+        <div className="flex-1" />
+        <IconButton label="Undo" hint="Ctrl/Cmd+Z" onClick={workspace === 'photo' ? () => photoEditorRef.current?.undo() : undo} disabled={workspace === 'photo' ? !photoCanUndo : !canUndo}>
+          <Undo2 size={18} />
+        </IconButton>
+        <IconButton label="Redo" hint="Ctrl/Cmd+Shift+Z" onClick={workspace === 'photo' ? () => photoEditorRef.current?.redo() : redo} disabled={workspace === 'photo' ? !photoCanRedo : !canRedo}>
+          <Redo2 size={18} />
+        </IconButton>
+        {!compact && (
+          <div className="hidden md:block mx-1">
+            <Segmented
+              size="sm"
+              value={mode}
+              onChange={setMode}
+              options={[
+                { value: 'simple', label: 'Simple', hint: 'The essentials, for quick designs' },
+                { value: 'pro', label: 'Pro', hint: 'Pen, rulers, layers, precise sizes and print settings' },
+              ]}
+            />
+          </div>
+        )}
+        {pro && !hideWorkspaceSwitcherForPhotoFirst && !compact && <WorkspaceSwitcher workspace={workspace} onSwitch={handleWorkspaceSwitch} />}
+        {pro && !compact && (
+          <select value={unit} onChange={(e) => setUnit(e.target.value as DocUnit)} aria-label="Units" title="Units" className="hidden lg:block h-9 text-xs border border-mt-border rounded-lg px-1.5 bg-mt-surface text-mt-ink">
             <option value="px">px</option>
             <option value="mm">mm</option>
             <option value="cm">cm</option>
             <option value="in">in</option>
             <option value="pt">pt</option>
           </select>
-        </div>
-
-        <div className="flex items-center gap-3 shrink-0">
-          <button onClick={() => applyZoom(zoom - 10)} className="px-2 py-1 border rounded dark:border-mt-border dark:text-mt-ink dark:hover:bg-mt-surface2">-</button>
-          <span className="text-sm text-mt-muted w-12 text-center dark:text-mt-muted">{zoom}%</span>
-          <button onClick={() => applyZoom(zoom + 10)} className="px-2 py-1 border rounded dark:border-mt-border dark:text-mt-ink dark:hover:bg-mt-surface2">+</button>
-        </div>
-
-        <div className="flex items-center gap-2 relative shrink-0">
-          <span
-            className={
-              'text-xs px-2 py-1 rounded-full ' +
-              (!isOnline
-                ? 'text-amber-700 bg-amber-50'
-                : saveStatus === 'error'
-                ? 'text-red-600 bg-red-50'
-                : saveStatus === 'saving'
-                ? 'text-mt-muted bg-mt-surface2'
-                : saveStatus === 'unsaved'
-                ? 'text-mt-faint bg-mt-surface2'
-                : saveStatus === 'saved'
-                ? 'text-green-600 bg-green-50'
-                : 'text-transparent')
-            }
+        )}
+        {!compact && (
+          <button type="button" onClick={() => setShowResize(true)} title="Resize your design to another size" className="hidden md:inline-flex h-9 items-center gap-1.5 px-3 rounded-lg text-sm font-medium text-mt-ink hover:bg-mt-surface2">
+            <Wand2 size={15} className="text-mt-accent" /> Resize
+          </button>
+        )}
+        {!compact && <ThemeSwitch theme={theme} onToggle={toggleTheme} size="sm" />}
+        <button
+          type="button"
+          onClick={() => setShowExportDialog(true)}
+          disabled={exporting}
+          className="h-9 inline-flex items-center gap-1.5 px-3 sm:px-4 rounded-full border border-mt-border text-sm font-semibold text-mt-ink hover:bg-mt-surface2 disabled:opacity-50"
+        >
+          <Download size={15} /> <span className="hidden sm:inline">{exporting ? 'Exporting…' : 'Export'}</span>
+        </button>
+        <div className="inline-flex rounded-full bg-mt-primary text-mt-onprimary">
+          <button type="button" onClick={saveDesign} disabled={saving} title="Save (Ctrl/Cmd+S)" className="h-9 pl-4 pr-3 rounded-l-full text-sm font-semibold disabled:opacity-50">
+            {saving ? 'Saving…' : 'Save'}
+          </button>
+          <Popover
+            width={260}
+            align="end"
+            trigger={({ toggle, open }) => (
+              <button type="button" onClick={toggle} aria-label="More ways to save" aria-expanded={open} className="h-9 pl-1.5 pr-2.5 rounded-r-full border-l border-white/20 dark:border-black/15">
+                <ChevronDown size={15} />
+              </button>
+            )}
           >
-            {!isOnline
-              ? 'Offline'
-              : saveStatus === 'error'
-              ? 'Save failed'
-              : saveStatus === 'saving'
-              ? 'Saving...'
-              : saveStatus === 'unsaved'
-              ? isLocalTabId(activeTabId)
-                ? `Not saved to ${storageLabel(activeTabId)}`
-                : 'Unsaved changes'
-              : saveStatus === 'saved'
-              ? isLocalTabId(activeTabId)
-                ? `Saved to ${storageLabel(activeTabId)}`
-                : 'Saved'
-              : ''}
-          </span>
-          <button onClick={() => setShowExportDialog(true)} disabled={exporting} className="border border-mt-border text-mt-ink px-4 py-2 rounded-full text-sm font-semibold disabled:opacity-50 dark:border-mt-border dark:text-mt-ink dark:hover:bg-mt-surface2">
-            {exporting ? 'Exporting...' : 'Export'}
-          </button>
-          <button onClick={saveDesign} disabled={saving} className="bg-brand-gradient text-white px-4 py-2 rounded-full text-sm font-semibold disabled:opacity-50">
-            {saving ? 'Saving...' : 'Save'}
-          </button>
-          <ProfileMenu />
+            {(close) => (
+              <div className="flex flex-col text-sm">
+                {[
+                  { label: 'Save as a new copy…', hint: 'Ctrl/Cmd+Shift+S', run: saveDesignAs },
+                  { label: 'Save a copy to this device (.mtd)', run: saveCopyToComputer },
+                  { label: 'Open a project from this device…', run: openFromComputer },
+                  ...(HAS_CLOUD_DRIVES ? [{ label: 'Open from a cloud drive…', run: () => setShowCloudOpen(true) }] : []),
+                  ...(!isLocalTabId(activeTabId) && designId ? [{ label: 'Version history…', run: () => setShowVersionHistory(true) }] : []),
+                ].map((it: any) => (
+                  <button
+                    key={it.label}
+                    type="button"
+                    onClick={() => {
+                      close();
+                      it.run();
+                    }}
+                    className="text-left px-2.5 py-2 rounded-lg hover:bg-mt-surface2 text-mt-ink flex justify-between gap-3"
+                  >
+                    <span>{it.label}</span>
+                    {it.hint && <span className="text-[11px] text-mt-faint">{it.hint}</span>}
+                  </button>
+                ))}
+              </div>
+            )}
+          </Popover>
         </div>
-      </div>
+        {!compact && <ProfileMenu />}
+      </header>
+
+      {(pro || tabs.length > 1) && <TabBar tabs={tabs} activeTabId={activeTabId} onSwitch={switchTab} onClose={closeTab} onAdd={() => setShowOpenDialog(true)} />}
 
       {showExportDialog && (
         <ExportDialog
@@ -4551,7 +6785,7 @@ function EditorContent() {
           <button
             onClick={saveToTemplate}
             disabled={templateSave.busy}
-            className="shrink-0 text-xs font-semibold bg-brand-gradient rounded-full px-4 py-2 disabled:opacity-60"
+            className="shrink-0 text-xs font-semibold bg-white text-[#09090B] rounded-full px-4 py-2 disabled:opacity-60"
           >
             {templateSave.busy ? 'Saving…' : 'Save to template'}
           </button>
@@ -4561,10 +6795,31 @@ function EditorContent() {
         </div>
       )}
 
+      {opening && (
+        <div role="status" aria-live="polite" className="fixed inset-x-0 top-1/2 -translate-y-1/2 z-[124] flex justify-center pointer-events-none">
+          <div className="inline-flex items-center gap-2.5 rounded-2xl bg-mt-surface border border-mt-border shadow-xl px-5 py-3 text-sm text-mt-ink">
+            <Loader2 size={17} className="animate-spin text-mt-accent" /> {opening}
+          </div>
+        </div>
+      )}
       {localNotice && (
-        <div className="fixed bottom-5 left-1/2 -translate-x-1/2 z-[70] max-w-md w-[calc(100%-2rem)] bg-[#14121F] text-white text-sm rounded-xl shadow-xl px-4 py-3 flex items-start gap-3">
+        <div role="status" className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[125] max-w-md w-[calc(100%-2rem)] bg-[#09090B] text-white text-sm rounded-2xl shadow-xl px-4 py-3 flex items-start gap-3">
           <span className="flex-1">{localNotice}</span>
           <button onClick={() => setLocalNotice(null)} className="text-white/60 hover:text-white shrink-0" aria-label="Dismiss">✕</button>
+        </div>
+      )}
+
+      {draftOffer && (
+        <div role="alert" className="fixed top-16 left-1/2 -translate-x-1/2 z-[126] max-w-lg w-[calc(100%-2rem)] bg-mt-surface text-mt-ink border border-mt-border rounded-2xl shadow-xl px-4 py-3 flex flex-wrap items-center gap-3">
+          <span className="flex-1 min-w-[12rem] text-sm">
+            You have unsaved changes{draftOffer.key === UNSAVED_KEY ? ` to “${draftOffer.name}”` : ''} from {new Date(draftOffer.savedAt).toLocaleString()}.
+          </span>
+          <button type="button" onClick={() => { deleteDraft(draftOffer.key); setDraftOffer(null); }} className="h-9 px-3 rounded-full border border-mt-border text-sm">
+            Discard
+          </button>
+          <button type="button" onClick={() => restoreDraft(draftOffer)} className="h-9 px-4 rounded-full bg-mt-primary text-mt-onprimary text-sm font-semibold">
+            Restore
+          </button>
         </div>
       )}
 
@@ -4585,13 +6840,9 @@ function EditorContent() {
           onConfirm={confirmPdfImport}
         />
       )}
-      <input
-        ref={importInputRef}
-        type="file"
-        accept="image/*,.pdf,application/pdf"
-        onChange={handleImportFileSelected}
-        className="hidden"
-      />
+      <input ref={importInputRef} type="file" accept="image/*,.pdf,application/pdf" onChange={handleImportFileSelected} className="hidden" />
+      <input ref={replaceInputRef} data-testid="replace-input" type="file" accept="image/*" onChange={onReplacePicked} className="hidden" />
+      <input id="mainImageUploadInput" type="file" accept="image/*" multiple onChange={handleImageUpload} className="hidden" />
 
       {closeConfirm && (
         <UnsavedChangesDialog
@@ -4602,132 +6853,157 @@ function EditorContent() {
           onCancel={handleCloseConfirmCancel}
         />
       )}
-
-      <div className="flex flex-1 overflow-hidden" style={{ display: workspace === 'design' ? 'flex' : 'none' }}>
-        <Toolbar
-          activeTool={activeTool}
-          onSelectTool={setActiveTool}
-          onAddText={addText}
-          onImageUpload={handleImageUpload}
-          onDuplicate={duplicateSelected}
-          onBringForward={bringForward}
-          onSendBackward={sendBackward}
-          onBringToFront={bringToFront}
-          onSendToBack={sendToBack}
-          onDelete={deleteSelected}
-          onOpenShapeBuilder={openShapeBuilder}
-          onOpenRoadmap={(id) => setRoadmap({ open: true, id })}
+      {bgRemoveTarget && <BgRemoveDialog img={bgRemoveTarget} onApply={applyBackgroundRemoval} onClose={() => setBgRemoveTarget(null)} />}
+      {showResize && (
+        <ResizeDialog
+          current={getActiveArtboardRect()}
+          onClose={() => setShowResize(false)}
+          onResize={(size, m) => {
+            setShowResize(false);
+            resizePage(size, m);
+          }}
         />
+      )}
+      {showOnboarding && (
+        <OnboardingDialog
+          onPick={runQuickStart}
+          onCustom={() => {
+            setShowOnboarding(false);
+            try {
+              localStorage.setItem('mt:onboarded', '1');
+            } catch {
+              // ignore
+            }
+            setShowResize(true);
+          }}
+          onClose={() => {
+            setShowOnboarding(false);
+            try {
+              localStorage.setItem('mt:onboarded', '1');
+            } catch {
+              // ignore
+            }
+          }}
+        />
+      )}
 
-        <div className="flex-1 overflow-hidden relative" style={{ background: pasteboardBgFor(theme) }}>
-          <Rulers
-            fabricCanvasRef={fabricCanvasRef}
-            unit={unit}
-            originX={getActiveArtboardRect().x}
-            originY={getActiveArtboardRect().y}
-            artboardWidth={getActiveArtboardRect().width}
-            artboardHeight={getActiveArtboardRect().height}
-            ready={canvasReady}
-            visible={showRulers}
-            onGuideDragStart={(axis, clientX, clientY) => startGuideFromRuler(axis, clientX, clientY)}
+      <div className="flex flex-1 min-h-0 overflow-hidden" style={{ display: workspace === 'design' ? 'flex' : 'none' }}>
+        {!compact && <LeftRail items={railItems} active={leftPanel} onActivate={setLeftPanel} compact={false} />}
+        {pro && !compact && (
+          <Toolbar
+            activeTool={activeTool}
+            onSelectTool={(t) => {
+              if (drawingRef.current) stopDrawing();
+              setActiveTool(t);
+            }}
+            onAddText={addText}
+            onImageUpload={handleImageUpload}
+            onDuplicate={duplicateSelected}
+            onBringForward={bringForward}
+            onSendBackward={sendBackward}
+            onBringToFront={bringToFront}
+            onSendToBack={sendToBack}
+            onDelete={deleteSelected}
+            onOpenShapeBuilder={openShapeBuilder}
+            onOpenRoadmap={(id) => setRoadmap({ open: true, id })}
           />
-          <div
-            ref={viewportRef}
-            className="absolute overflow-hidden"
-            style={{ top: RULER_SIZE, left: RULER_SIZE, right: 0, bottom: 0 }}
-            onContextMenu={handleCanvasContextMenu}
-          >
-            <canvas ref={canvasRef} />
-            <GridOverlay fabricCanvasRef={fabricCanvasRef} visible={showGrid} gridSize={gridSize} ready={canvasReady} />
-          </div>
-        </div>
-        {contextMenu && (
-          <ContextMenu x={contextMenu.x} y={contextMenu.y} items={contextMenuItems()} onClose={() => setContextMenu(null)} />
         )}
 
-        <div className="w-64 bg-mt-surface border-l flex flex-col overflow-y-auto dark:bg-mt-surface dark:border-mt-border transition-colors duration-150">
-          {isPanelOpen('properties') && (
-            <div className="p-3 border-b dark:border-mt-border">
-              <p className="font-semibold text-mt-ink mb-3 text-sm dark:text-mt-ink">Properties</p>
-              <PropertiesPanel
-                activeTool={activeTool}
-                selected={selected}
-                unit={unit}
-                layers={layers}
-                maskTargetId={maskTargetId}
-                setMaskTargetId={setMaskTargetId}
-                applyProp={applyProp}
-                applyCharProp={applyCharProp}
-                getTextPropValue={getTextPropValue}
-                applyExactSize={applyExactSize}
-                toggleLockRatio={toggleLockRatio}
-                alignObject={alignObject}
-                groupSelected={groupSelected}
-                ungroupSelected={ungroupSelected}
-                runShapeBuilder={runShapeBuilder}
-                applyPathAsMask={applyPathAsMask}
-                removeMask={removeMask}
-                applyGradientFill={applyGradientFill}
-                gradAngleRef={gradAngleRef}
-                pushHistory={pushHistory}
-                layerLabel={layerLabel}
-                onReplaceImage={replaceSelectedImage}
-                onEditPhoto={openPhotoEditor}
+        <div className="flex-1 min-w-0 overflow-hidden relative" style={{ background: pasteboardBgFor(theme) }}>
+          {pro && (
+            <Rulers
+              fabricCanvasRef={fabricCanvasRef}
+              unit={unit}
+              originX={getActiveArtboardRect().x}
+              originY={getActiveArtboardRect().y}
+              artboardWidth={getActiveArtboardRect().width}
+              artboardHeight={getActiveArtboardRect().height}
+              ready={canvasReady}
+              visible={showRulers}
+              onGuideDragStart={(axis, clientX, clientY) => startGuideFromRuler(axis, clientX, clientY)}
+            />
+          )}
+          <div
+            ref={viewportRef}
+            className="absolute overflow-hidden touch-none"
+            style={{ top: pro && showRulers ? RULER_SIZE : 0, left: pro && showRulers ? RULER_SIZE : 0, right: 0, bottom: 0 }}
+            onContextMenu={handleCanvasContextMenu}
+            onDragOver={(e) => {
+              if (Array.from(e.dataTransfer.types).includes('Files') || e.dataTransfer.types.includes('application/x-mt-asset')) {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'copy';
+              }
+            }}
+            onDrop={handleCanvasDrop}
+          >
+            <canvas ref={canvasRef} />
+            <GridOverlay
+              fabricCanvasRef={fabricCanvasRef}
+              visible={showGrid}
+              gridSize={gridSize}
+              ready={canvasReady}
+              originX={getActiveArtboardRect().x}
+              originY={getActiveArtboardRect().y}
+            />
+          </div>
+          {canvasReady && activeTool === 'select' && !drawing && (
+            <div className={cx('absolute inset-x-2 z-20 pointer-events-none flex justify-center', compact ? 'bottom-2' : pro && showRulers ? 'top-8' : 'top-3')}>
+              <ContextToolbar
+                sel={selected}
+                a={toolbarActions}
+                brandColors={brandKit.colors}
+                documentColors={docColors}
+                cropping={!!features.cropping}
+                cropAspect={features.cropping?.aspect ?? null}
+                cropZoom={features.cropping?.zoom ?? 1}
+                cropStraighten={features.cropping?.straighten ?? 0}
+                onCropZoom={features.setCropZoomLevel}
+                onCropStraighten={features.setCropStraightenAngle}
+                onCropRatio={features.setCropRatio}
+                onCropReset={features.resetCrop}
+                onCropDone={features.finishCrop}
+                onSmartCrop={features.smartCrop}
+                pro={pro}
               />
             </div>
           )}
-
-          {isPanelOpen('artboards') && (
-            <ArtboardsPanel
-              artboards={artboards}
-              activeArtboardId={activeArtboardId}
-              unit={unit}
-              onSelect={selectArtboard}
-              onRename={renameArtboard}
-              onResize={resizeArtboard}
-              onDuplicate={duplicateArtboard}
-              onDelete={deleteArtboard}
-              onMoveUp={moveArtboardUp}
-              onMoveDown={moveArtboardDown}
-              onAddPreset={addArtboardFromPreset}
-              onAddCustom={addArtboardCustom}
-              onFitAll={fitAllArtboards}
-              onExportOne={(id) => exportArtboardPNG(id)}
-              onExportAll={exportAllArtboardsPNG}
-              onExportAllPDF={exportAsPDF}
-              onExportRangePDF={exportArtboardRangePDF}
-              onUpdatePrint={updateArtboardPrint}
-              onExportPrint={exportArtboardForPrint}
-              onRunPreflight={runPreflightCheck}
-            />
-          )}
-
-          {isPanelOpen('align') && (
-            <div className="border-b">
-              <AlignPanel alignObject={alignObject} hasSelection={hasSelection} />
+          {drawing && (
+            <div className={cx('absolute left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 rounded-2xl border border-mt-border bg-mt-surface/95 backdrop-blur px-3 py-1.5 shadow-lg', compact ? 'bottom-2' : 'top-3')}>
+              <span className="text-[13px] font-semibold capitalize">{brush.kind}</span>
+              {brush.kind !== 'eraser' && <input type="color" value={brush.color} aria-label="Brush colour" onChange={(e) => setBrush({ ...brush, color: e.target.value })} className="h-7 w-8 rounded border border-mt-border bg-transparent" />}
+              <input type="range" min={1} max={120} value={brush.size} aria-label="Brush size" onChange={(e) => setBrush({ ...brush, size: Number(e.target.value) })} className="w-28 accent-[#3B82C4]" />
+              <button type="button" onClick={stopDrawing} className="h-8 px-3 rounded-lg bg-mt-primary text-mt-onprimary text-xs font-semibold">Done</button>
             </div>
           )}
-
-          {isPanelOpen('layers') && (
-            <LayersPanel
-              layers={layers}
-              selected={selected}
-              onSelect={(obj) => {
-                fabricCanvasRef.current.setActiveObject(obj);
-                fabricCanvasRef.current.requestRenderAll();
-                setSelected(obj);
-              }}
-              onToggleVisible={toggleVisible}
-              onToggleLock={toggleLock}
-              onRename={renameLayer}
-              onReorder={reorderLayers}
-            />
-          )}
         </div>
+        {contextMenu && <ContextMenu x={contextMenu.x} y={contextMenu.y} items={contextMenuItems()} onClose={() => setContextMenu(null)} />}
+
+        {pro && !compact && (
+          <div className="w-72 shrink-0 bg-mt-surface border-l border-mt-border flex flex-col overflow-y-auto mt-scroll">
+            {isPanelOpen('properties') && (
+              <div className="p-3 border-b border-mt-border">
+                <p className="font-semibold text-mt-ink mb-3 text-sm">Properties</p>
+                {propertiesPanelEl}
+              </div>
+            )}
+            {isPanelOpen('artboards') && artboardsPanelEl}
+            {isPanelOpen('align') && (
+              <div className="border-b border-mt-border">
+                <AlignPanel
+                  alignObject={alignObject}
+                  distribute={distributeObjects}
+                  hasSelection={hasSelection}
+                  selectionCount={selected?.type === 'activeSelection' ? selected.getObjects().length : selected ? 1 : 0}
+                />
+              </div>
+            )}
+            {isPanelOpen('layers') && layersPanelEl}
+          </div>
+        )}
       </div>
 
       {photoEditSession && (
-        <div className="flex flex-1 overflow-hidden" style={{ display: workspace === 'photo' ? 'flex' : 'none' }}>
+        <div className="flex flex-1 min-h-0 overflow-hidden" style={{ display: workspace === 'photo' ? 'flex' : 'none' }}>
           <PhotoEditorWorkspace
             ref={photoEditorRef}
             active={workspace === 'photo'}
@@ -4741,6 +7017,24 @@ function EditorContent() {
           />
         </div>
       )}
+
+      {workspace === 'design' && (
+        <PagesBar
+          pages={artboards.map((ab) => ({ id: ab.id, name: ab.name, width: ab.width, height: ab.height, thumb: pageThumbs[ab.id] || null }))}
+          activeId={activeArtboardId}
+          onSelect={selectArtboard}
+          onAdd={addPage}
+          onDuplicate={duplicateArtboard}
+          onDelete={deleteArtboard}
+          onMove={(i, dir) => (dir < 0 ? moveArtboardUp(i) : moveArtboardDown(i))}
+          zoom={zoom}
+          onZoom={(z) => applyZoom(z)}
+          onFit={fitActiveArtboard}
+          onHelp={() => setLeftPanel('help')}
+          compact={compact}
+        />
+      )}
+      {workspace === 'design' && compact && <LeftRail items={railItems} active={leftPanel} onActivate={setLeftPanel} compact />}
 
       {liveDim && (
         <div style={{ position: 'fixed', left: liveDim.x + 16, top: liveDim.y + 16, pointerEvents: 'none' }} className="z-50 bg-black/80 text-white text-[11px] font-mono px-2 py-1 rounded shadow">

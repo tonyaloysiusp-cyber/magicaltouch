@@ -43,6 +43,7 @@ export function EdgeFields({
       </div>
       {linked ? (
         <input
+          key={`${unit}-${values.top}`}
           type="text"
           defaultValue={formatUnit(values.top, unit)}
           onBlur={(e) => set('top', e.target.value)}
@@ -53,7 +54,7 @@ export function EdgeFields({
         <div className="grid grid-cols-4 gap-1">
           {(['top', 'right', 'bottom', 'left'] as const).map((edge) => (
             <input
-              key={edge}
+              key={`${edge}-${unit}-${values[edge]}`}
               type="text"
               title={edge}
               defaultValue={formatUnit(values[edge], unit)}

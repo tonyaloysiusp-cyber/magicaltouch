@@ -281,9 +281,41 @@ export function allFontFacesCSS(): string {
 // fonts only ship 400) and is handled by falling back to the nearest
 // weight that exists, not by hiding the whole family — so only the
 // plain 400/non-italic check ever marks something unavailable.
+// The closest weight a family actually has (e.g. 600 → 700 for a family
+// that only ships 400 and 700).
+export function nearestWeight(fontFamily: string, weight: number | string = 400): number {
+  const want = typeof weight === 'number' ? weight : weight === 'bold' ? 700 : parseInt(String(weight), 10) || 400;
+  const def = googleFontByName(fontFamily);
+  const list = def?.weights?.length ? def.weights : [400, 700];
+  return list.reduce((best, w) => (Math.abs(w - want) < Math.abs(best - want) ? w : best), list[0]);
+}
+
+// After web fonts arrive, Fabric must forget the letter widths it measured
+// with the fallback font, or wrapping, justified text and the cursor stay
+// wrong until the text is edited.
+export function refreshTextMetrics(canvas: any) {
+  const F = typeof window !== 'undefined' ? (window as any).fabric : null;
+  if (!canvas) return;
+  try {
+    F?.util?.clearFabricFontCache?.();
+  } catch {
+    // older Fabric: nothing to clear
+  }
+  const visit = (o: any) => {
+    if (o.type === 'group' && o.getObjects) o.getObjects().forEach(visit);
+    if (o.type === 'textbox' || o.type === 'i-text' || o.type === 'text') {
+      o.initDimensions?.();
+      o.setCoords?.();
+      o.dirty = true;
+    }
+  };
+  canvas.getObjects?.().forEach(visit);
+  canvas.requestRenderAll?.();
+}
+
 export function ensureFontLoaded(fontFamily: string, weight: number | string = 400, italic = false): Promise<void> {
   if (typeof document === 'undefined' || !(document as any).fonts?.load) return Promise.resolve();
-  const w = typeof weight === 'number' ? (weight >= 600 ? 700 : 400) : weight === 'bold' ? 700 : 400;
+  const w = nearestWeight(fontFamily, weight);
   const spec = `${italic ? 'italic ' : ''}${w} 16px "${fontFamily}"`;
   const isAvailabilityProbe = !italic && w === 400;
   return (document as any).fonts
@@ -322,20 +354,33 @@ export function validateAllFonts(): void {
 // rather than trying to track exactly which weight/style pairs appear.
 export function ensureFontsLoadedForCanvasJSON(json: any): Promise<void> {
   if (typeof document === 'undefined' || !(document as any).fonts?.load) return Promise.resolve();
-  const families = new Set<string>();
+  // Every family / weight / style actually used — including formatting
+  // given to single letters.
+  const wanted = new Map<string, { family: string; weight: number | string; italic: boolean }>();
+  const add = (family: any, weight: any, style: any) => {
+    if (typeof family !== 'string' || !family) return;
+    const w = weight ?? 400;
+    const it = style === 'italic';
+    wanted.set(`${family}|${w}|${it}`, { family, weight: w, italic: it });
+  };
   const visit = (obj: any) => {
     if (!obj || typeof obj !== 'object') return;
-    if (typeof obj.fontFamily === 'string') families.add(obj.fontFamily);
+    if (typeof obj.fontFamily === 'string') {
+      add(obj.fontFamily, obj.fontWeight, obj.fontStyle);
+      add(obj.fontFamily, 400, 'normal');
+      const styles = obj.styles;
+      if (styles && typeof styles === 'object') {
+        const rows = Array.isArray(styles) ? styles : Object.values(styles);
+        rows.forEach((row: any) => {
+          // Fabric 5 keeps letters as {line: {char: style}}; newer saves as [{start,end,style}].
+          const cells = Array.isArray(row) ? row.map((r: any) => r?.style || r) : Object.values(row || {});
+          cells.forEach((st: any) => st && add(st.fontFamily || obj.fontFamily, st.fontWeight ?? obj.fontWeight, st.fontStyle ?? obj.fontStyle));
+        });
+      }
+    }
     if (Array.isArray(obj.objects)) obj.objects.forEach(visit);
   };
   visit(json);
-  if (families.size === 0) return Promise.resolve();
-  const loads: Promise<void>[] = [];
-  families.forEach((f) => {
-    loads.push(ensureFontLoaded(f, 400));
-    loads.push(ensureFontLoaded(f, 700));
-    loads.push(ensureFontLoaded(f, 400, true));
-    loads.push(ensureFontLoaded(f, 700, true));
-  });
-  return Promise.all(loads).then(() => undefined);
+  if (wanted.size === 0) return Promise.resolve();
+  return Promise.all([...wanted.values()].map((f) => ensureFontLoaded(f.family, f.weight, f.italic))).then(() => undefined);
 }

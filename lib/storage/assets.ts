@@ -137,3 +137,24 @@ export async function uploadDesignAsset(blob: Blob, userId: string): Promise<Upl
   const url = await signedUrlFor(storageKey);
   return { assetId: inserted.id, url, width: w, height: h, mimeType };
 }
+
+// The signed-in user's own uploaded pictures, newest first (for the
+// editor's Uploads panel). Short-lived preview links are fine here — the
+// picture itself is re-linked with a long-lived URL when it's placed.
+export async function listUserAssets(limit = 60): Promise<{ id: string; url: string; width: number; height: number }[]> {
+  const { data: auth } = await supabase.auth.getUser();
+  if (!auth.user) return [];
+  const { data, error } = await supabase
+    .from('assets')
+    .select('id, storage_key, width, height, mime_type')
+    .eq('user_id', auth.user.id)
+    .like('mime_type', 'image/%')
+    .order('created_at', { ascending: false })
+    .limit(limit);
+  if (error || !data || !data.length) return [];
+  const keys = data.map((d: any) => d.storage_key);
+  const { data: signed } = await supabase.storage.from(BUCKET).createSignedUrls(keys, SIGNED_URL_EXPIRY_SECONDS);
+  return data
+    .map((d: any, i: number) => ({ id: d.id, url: signed?.[i]?.signedUrl || '', width: d.width || 0, height: d.height || 0 }))
+    .filter((d) => d.url);
+}
