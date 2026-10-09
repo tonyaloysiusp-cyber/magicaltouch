@@ -1,9 +1,13 @@
 'use client';
 
-import { useState } from 'react';
-import { X } from 'lucide-react';
+// "Download": pick a format, a quality and which pages. Every choice shows
+// what it's for and what you'll get (pixel size, number of files).
+
+import { useEffect, useState } from 'react';
+import { X, Image as ImageIcon, FileImage, FileText, Printer, Loader2, Download, Check } from 'lucide-react';
 import { ArtboardMeta } from '@/lib/editor/artboards';
 import { PX_PER_INCH } from '@/lib/editor/units';
+import { cx } from './shell/ui';
 
 export type ExportRangeMode = 'current' | 'range' | 'selected' | 'all';
 export type ExportFormat = 'png' | 'jpg' | 'webp' | 'pdf';
@@ -14,12 +18,8 @@ export interface ExportSettings {
   rangeTo: number;
   selectedIds: string[];
   format: ExportFormat;
-  // The real target DPI for the raster export -- document geometry is
-  // always stored at a fixed 96px = 1in (lib/editor/units.ts), so the
-  // multiplier fabric's toDataURL needs is derived here (dpi / 96),
-  // never asked for directly. This replaces a previous 1x/2x/3x-only
-  // control that couldn't express an exact print DPI (3x = 288, not
-  // the 300 a real print document needs).
+  // Document geometry is stored at 96 px = 1 in, so the picture size for a
+  // DPI is dpi / 96 times the page size.
   dpi: number;
   multiplier: number;
   quality: number;
@@ -28,10 +28,20 @@ export interface ExportSettings {
   transparentBackground: boolean;
 }
 
+type Choice = 'png' | 'jpg' | 'webp' | 'pdf' | 'pdf-print';
+
+const CHOICES: { id: Choice; label: string; hint: string; icon: React.ReactNode }[] = [
+  { id: 'png', label: 'PNG', hint: 'Sharp graphics and text. Can be transparent.', icon: <ImageIcon size={18} /> },
+  { id: 'jpg', label: 'JPG', hint: 'Small files, great for photos and sharing.', icon: <FileImage size={18} /> },
+  { id: 'pdf', label: 'PDF', hint: 'For sending and printing at home.', icon: <FileText size={18} /> },
+  { id: 'pdf-print', label: 'PDF for print shops', hint: 'With bleed and crop marks.', icon: <Printer size={18} /> },
+  { id: 'webp', label: 'WebP', hint: 'Small, high-quality pictures for websites.', icon: <FileImage size={18} /> },
+];
+
 const DPI_PRESETS = [
-  { dpi: 72, label: '72 DPI', hint: 'Screen' },
-  { dpi: 150, label: '150 DPI', hint: 'Draft print' },
-  { dpi: 300, label: '300 DPI', hint: 'Print quality' },
+  { dpi: 72, label: 'Screen', hint: '72 DPI' },
+  { dpi: 150, label: 'Standard', hint: '150 DPI' },
+  { dpi: 300, label: 'Print', hint: '300 DPI' },
 ];
 
 interface Props {
@@ -42,246 +52,238 @@ interface Props {
   onExport: (settings: ExportSettings) => void;
 }
 
+function Switch({ checked, onChange, label, hint, disabled }: { checked: boolean; onChange: (v: boolean) => void; label: string; hint?: string; disabled?: boolean }) {
+  return (
+    <label className={cx('flex items-center justify-between gap-3 py-1.5', disabled && 'opacity-50')}>
+      <span className="min-w-0">
+        <span className="block text-sm text-mt-ink">{label}</span>
+        {hint && <span className="block text-[11px] text-mt-faint">{hint}</span>}
+      </span>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        aria-label={label}
+        disabled={disabled}
+        onClick={() => onChange(!checked)}
+        className={cx('relative shrink-0 w-10 h-6 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8CCBFF]', checked ? 'bg-[#3B82C4]' : 'bg-mt-border')}
+      >
+        <span className={cx('absolute left-0 top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform', checked ? 'translate-x-[18px]' : 'translate-x-0.5')} />
+      </button>
+    </label>
+  );
+}
+
 export function ExportDialog({ artboards, activeArtboardId, exporting, onClose, onExport }: Props) {
-  const [rangeMode, setRangeMode] = useState<ExportRangeMode>('current');
-  const [rangeFrom, setRangeFrom] = useState('1');
-  const [rangeTo, setRangeTo] = useState(String(Math.max(artboards.length, 1)));
+  const multi = artboards.length > 1;
+  const [choice, setChoice] = useState<Choice>('png');
+  const [rangeMode, setRangeMode] = useState<ExportRangeMode>(multi ? 'all' : 'current');
   const [selectedIds, setSelectedIds] = useState<string[]>(activeArtboardId ? [activeArtboardId] : []);
-  const [format, setFormat] = useState<ExportFormat>('png');
-  // Default to a real print-accurate 300 DPI (the previous "2x" default
-  // was 192 DPI -- a multiplier of the 96px/in document baseline, not an
-  // actual print DPI anyone asked for).
   const [dpi, setDpi] = useState(300);
   const [quality, setQuality] = useState(0.9);
-  const [includeBleed, setIncludeBleed] = useState(false);
-  const [includeMarks, setIncludeMarks] = useState(false);
-  const [transparentBackground, setTransparentBackground] = useState(false);
+  const [bleed, setBleed] = useState(false);
+  const [marks, setMarks] = useState(false);
+  const [transparent, setTransparent] = useState(false);
 
-  const toggleSelected = (id: string) => {
-    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
-  };
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  const format: ExportFormat = choice === 'pdf-print' ? 'pdf' : choice;
+  const printPreset = choice === 'pdf-print';
+  const isRaster = format !== 'pdf';
+  const includeMarks = printPreset || marks;
+  const includeBleed = printPreset || bleed || marks;
+
+  const pages =
+    rangeMode === 'all'
+      ? artboards
+      : rangeMode === 'selected'
+      ? artboards.filter((a) => selectedIds.includes(a.id))
+      : artboards.filter((a) => a.id === activeArtboardId).slice(0, 1).concat(activeArtboardId ? [] : artboards.slice(0, 1));
+  const preview = pages[0] || artboards[0];
+  const k = Math.max(0.01, dpi) / PX_PER_INCH;
+  const outW = preview ? Math.round(preview.width * k) : 0;
+  const outH = preview ? Math.round(preview.height * k) : 0;
+  const tooBig = outW * outH > 16_000_000;
 
   const submit = () => {
     onExport({
       rangeMode,
-      rangeFrom: parseInt(rangeFrom, 10) || 1,
-      rangeTo: parseInt(rangeTo, 10) || artboards.length,
+      rangeFrom: 1,
+      rangeTo: artboards.length,
       selectedIds,
       format,
       dpi,
-      // Document geometry is always stored at a fixed 96px = 1in (see
-      // lib/editor/units.ts), so this is the exact multiplier fabric's
-      // toDataURL needs to produce a raster output whose real DPI is
-      // genuinely `dpi` -- e.g. a 210mm-wide artboard is 793.7px
-      // internally; at dpi=300 this multiplier (3.125) scales that to
-      // 2480px, which really is 210mm at 300 DPI, not an approximation.
-      multiplier: Math.max(0.01, dpi) / PX_PER_INCH,
+      multiplier: k,
       quality,
-      includeBleed: includeBleed || includeMarks, // marks only make sense outside the trim edge
+      includeBleed,
       includeMarks,
-      transparentBackground,
+      transparentBackground: format === 'png' && transparent,
     });
   };
 
-  // The artboard this export's size preview reflects -- whatever single
-  // page "Current" would resolve to, so the dialog can show real,
-  // verifiable output pixel dimensions instead of an unlabeled multiplier.
-  const previewArtboard =
-    (rangeMode === 'current' ? artboards.find((a) => a.id === activeArtboardId) : undefined) ||
-    artboards.find((a) => a.id === activeArtboardId) ||
-    artboards[0];
-  const previewMultiplier = Math.max(0.01, dpi) / PX_PER_INCH;
-  const previewPxWidth = previewArtboard ? Math.round(previewArtboard.width * previewMultiplier) : null;
-  const previewPxHeight = previewArtboard ? Math.round(previewArtboard.height * previewMultiplier) : null;
+  const fileNote = pages.length > 1 && isRaster ? `${pages.length} pictures in one .zip file` : pages.length > 1 ? `One PDF with ${pages.length} pages` : format === 'pdf' ? 'One PDF' : 'One picture';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
+    <div className="fixed inset-0 z-[110] flex items-end sm:items-center justify-center bg-black/40 p-0 sm:p-4" onClick={onClose}>
       <div
-        className="bg-mt-surface rounded-xl shadow-xl w-[420px] max-h-[85vh] overflow-y-auto"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Download your design"
+        className="bg-mt-surface text-mt-ink w-full sm:max-w-[520px] max-h-[92vh] rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between px-5 py-4 border-b">
-          <h2 className="font-semibold text-mt-ink">Export</h2>
-          <button onClick={onClose} className="text-mt-faint hover:text-mt-ink">
+        <div className="flex items-center justify-between px-5 h-14 border-b border-mt-border shrink-0">
+          <h2 className="font-semibold inline-flex items-center gap-2">
+            <Download size={17} className="text-mt-accent" /> Download
+          </h2>
+          <button type="button" onClick={onClose} aria-label="Close" className="h-9 w-9 inline-flex items-center justify-center rounded-lg text-mt-muted hover:text-mt-ink hover:bg-mt-surface2">
             <X size={18} />
           </button>
         </div>
 
-        <div className="p-5 flex flex-col gap-5">
-          {/* ---------------------------------------------------- RANGE */}
-          <div>
-            <label className="text-xs font-semibold text-mt-muted block mb-2">Export Range</label>
-            <div className="flex flex-col gap-1.5">
-              {([
-                ['current', 'Current page'],
-                ['selected', 'Selected pages'],
-                ['range', 'Page range'],
-                ['all', 'All pages'],
-              ] as [ExportRangeMode, string][]).map(([mode, label]) => (
-                <label key={mode} className="flex items-center gap-2 text-sm text-mt-ink">
-                  <input type="radio" name="range" checked={rangeMode === mode} onChange={() => setRangeMode(mode)} />
-                  {label}
-                </label>
-              ))}
-            </div>
-
-            {rangeMode === 'range' && (
-              <div className="mt-2 flex items-center gap-2 pl-6">
-                <input
-                  type="number"
-                  min={1}
-                  max={artboards.length}
-                  value={rangeFrom}
-                  onChange={(e) => setRangeFrom(e.target.value)}
-                  className="w-16 text-sm border rounded px-2 py-1"
-                />
-                <span className="text-sm text-mt-muted">to</span>
-                <input
-                  type="number"
-                  min={1}
-                  max={artboards.length}
-                  value={rangeTo}
-                  onChange={(e) => setRangeTo(e.target.value)}
-                  className="w-16 text-sm border rounded px-2 py-1"
-                />
-                <span className="text-xs text-mt-faint">of {artboards.length}</span>
-              </div>
-            )}
-
-            {rangeMode === 'selected' && (
-              <div className="mt-2 pl-6 flex flex-col gap-1 max-h-32 overflow-y-auto">
-                {artboards.map((ab) => (
-                  <label key={ab.id} className="flex items-center gap-2 text-sm text-mt-ink">
-                    <input type="checkbox" checked={selectedIds.includes(ab.id)} onChange={() => toggleSelected(ab.id)} />
-                    {ab.name}
-                  </label>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* --------------------------------------------------- FORMAT */}
-          <div>
-            <label className="text-xs font-semibold text-mt-muted block mb-2">Format</label>
-            <div className="flex gap-2">
-              {(['png', 'jpg', 'webp', 'pdf'] as ExportFormat[]).map((f) => (
+        <div className="p-5 overflow-y-auto flex flex-col gap-6">
+          <section>
+            <p className="text-[13px] font-semibold mb-2">File type</p>
+            <div className="grid grid-cols-2 gap-2">
+              {CHOICES.map((c) => (
                 <button
-                  key={f}
-                  onClick={() => setFormat(f)}
-                  className={`flex-1 text-sm border rounded py-1.5 uppercase ${
-                    format === f ? 'bg-mt-primary text-mt-onprimary border-mt-primary' : 'hover:bg-mt-surface2'
-                  }`}
+                  key={c.id}
+                  type="button"
+                  onClick={() => setChoice(c.id)}
+                  aria-pressed={choice === c.id}
+                  className={cx(
+                    'relative text-left rounded-2xl border p-3 transition-colors',
+                    choice === c.id ? 'mt-active-blue' : 'border-mt-border hover:bg-mt-surface2',
+                    c.id === 'webp' && 'col-span-2 sm:col-span-1'
+                  )}
                 >
-                  {f}
+                  <span className="flex items-center gap-2 text-sm font-semibold">
+                    <span className="text-mt-accent">{c.icon}</span>
+                    {c.label}
+                  </span>
+                  <span className="block mt-1 text-[11px] leading-snug text-mt-muted">{c.hint}</span>
+                  {choice === c.id && <Check size={15} className="absolute top-3 right-3 text-mt-accent" />}
                 </button>
               ))}
             </div>
-          </div>
+          </section>
 
-          {/* ----------------------------------------- RESOLUTION/QUALITY */}
-          {format !== 'pdf' && (
-            <div>
-              <label className="text-xs font-semibold text-mt-muted block mb-2">Resolution</label>
+          {isRaster && (
+            <section>
+              <p className="text-[13px] font-semibold mb-2">Quality</p>
               <div className="flex gap-2">
                 {DPI_PRESETS.map((p) => (
                   <button
                     key={p.dpi}
+                    type="button"
                     onClick={() => setDpi(p.dpi)}
-                    title={p.hint}
-                    className={`flex-1 text-sm border rounded py-1.5 ${
-                      dpi === p.dpi ? 'bg-mt-primary text-mt-onprimary border-mt-primary' : 'hover:bg-mt-surface2'
-                    }`}
+                    aria-pressed={dpi === p.dpi}
+                    className={cx('flex-1 rounded-xl border py-2 text-sm', dpi === p.dpi ? 'mt-active-blue font-semibold' : 'border-mt-border hover:bg-mt-surface2')}
                   >
                     {p.label}
+                    <span className="block text-[10px] text-mt-faint font-normal">{p.hint}</span>
                   </button>
                 ))}
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  title="Custom DPI"
-                  aria-label="Custom DPI"
-                  key={`dpi-${dpi}`}
-                  defaultValue={DPI_PRESETS.some((p) => p.dpi === dpi) ? '' : String(dpi)}
-                  placeholder="Custom"
-                  className="w-20 text-sm border rounded py-1.5 px-2 text-center"
-                  onBlur={(e) => {
-                    const parsed = parseFloat(e.target.value);
-                    if (Number.isFinite(parsed) && parsed > 0) setDpi(Math.round(parsed));
-                    else e.target.value = DPI_PRESETS.some((p) => p.dpi === dpi) ? '' : String(dpi);
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
-                    if (e.key === 'Escape') {
-                      (e.target as HTMLInputElement).value = DPI_PRESETS.some((p) => p.dpi === dpi) ? '' : String(dpi);
-                      (e.target as HTMLInputElement).blur();
-                    }
-                  }}
-                />
+                <label className="w-24">
+                  <span className="sr-only">Custom DPI</span>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    key={`dpi-${dpi}`}
+                    defaultValue={DPI_PRESETS.some((p) => p.dpi === dpi) ? '' : String(dpi)}
+                    placeholder="Custom"
+                    className="w-full h-full rounded-xl border border-mt-input-border bg-mt-surface px-2 text-center text-sm"
+                    onBlur={(e) => {
+                      const v = parseFloat(e.target.value);
+                      if (Number.isFinite(v) && v >= 10 && v <= 1200) setDpi(Math.round(v));
+                      else e.target.value = DPI_PRESETS.some((p) => p.dpi === dpi) ? '' : String(dpi);
+                    }}
+                    onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
+                  />
+                </label>
               </div>
-              {previewArtboard && previewPxWidth && previewPxHeight && (
-                <p className="text-xs text-mt-faint mt-1.5">
-                  Output: {previewPxWidth} × {previewPxHeight}px at {dpi} DPI
-                  {rangeMode !== 'current' && artboards.length > 1 ? ` (${previewArtboard.name})` : ''}
+              {preview && (
+                <p className={cx('text-xs mt-2', tooBig ? 'text-amber-700 dark:text-amber-400' : 'text-mt-faint')}>
+                  {outW.toLocaleString()} × {outH.toLocaleString()} px at {dpi} DPI
+                  {tooBig ? ' — very large; it will be made a little smaller so it opens on phones and iPads.' : ''}
                 </p>
               )}
-            </div>
+              {(format === 'jpg' || format === 'webp') && (
+                <label className="block mt-3 text-xs text-mt-muted">
+                  <span className="flex justify-between">
+                    <span>Compression</span>
+                    <span className="tabular-nums text-mt-ink">{Math.round(quality * 100)}%</span>
+                  </span>
+                  <input type="range" min={0.5} max={1} step={0.05} value={quality} onChange={(e) => setQuality(Number(e.target.value))} className="w-full accent-[#3B82C4]" />
+                </label>
+              )}
+            </section>
           )}
 
-          {(format === 'jpg' || format === 'webp') && (
-            <div>
-              <label className="text-xs font-semibold text-mt-muted block mb-1">
-                Quality ({Math.round(quality * 100)}%)
-              </label>
-              <input
-                type="range"
-                min={0.5}
-                max={1}
-                step={0.05}
-                value={quality}
-                onChange={(e) => setQuality(Number(e.target.value))}
-                className="w-full"
-              />
-            </div>
+          {multi && (
+            <section>
+              <p className="text-[13px] font-semibold mb-2">Pages</p>
+              <div className="flex flex-wrap gap-1.5">
+                {(
+                  [
+                    ['all', `All ${artboards.length} pages`],
+                    ['current', 'This page'],
+                    ['selected', 'Choose pages'],
+                  ] as [ExportRangeMode, string][]
+                ).map(([m, l]) => (
+                  <button key={m} type="button" onClick={() => setRangeMode(m)} aria-pressed={rangeMode === m} className={cx('h-9 px-3 rounded-full border text-sm', rangeMode === m ? 'mt-active-blue font-semibold' : 'border-mt-border text-mt-muted hover:text-mt-ink')}>
+                    {l}
+                  </button>
+                ))}
+              </div>
+              {rangeMode === 'selected' && (
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                  {artboards.map((ab, i) => {
+                    const on = selectedIds.includes(ab.id);
+                    return (
+                      <button
+                        key={ab.id}
+                        type="button"
+                        onClick={() => setSelectedIds((prev) => (on ? prev.filter((x) => x !== ab.id) : [...prev, ab.id]))}
+                        aria-pressed={on}
+                        className={cx('h-8 min-w-8 px-2.5 rounded-lg border text-xs tabular-nums', on ? 'mt-active-blue font-semibold' : 'border-mt-border text-mt-muted')}
+                        title={ab.name}
+                      >
+                        {i + 1}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </section>
           )}
 
-          {/* ------------------------------------------- PRINT SETTINGS */}
-          <div className="flex flex-col gap-2 border-t pt-4">
-            <label className="flex items-center gap-2 text-sm text-mt-ink">
-              <input
-                type="checkbox"
-                checked={includeBleed || includeMarks}
-                disabled={includeMarks}
-                onChange={(e) => setIncludeBleed(e.target.checked)}
-              />
-              Include bleed
-            </label>
-            <label className="flex items-center gap-2 text-sm text-mt-ink">
-              <input type="checkbox" checked={includeMarks} onChange={(e) => setIncludeMarks(e.target.checked)} />
-              Include crop marks &amp; color bar
-            </label>
-            {format === 'png' && (
-              <label className="flex items-center gap-2 text-sm text-mt-ink">
-                <input
-                  type="checkbox"
-                  checked={transparentBackground}
-                  onChange={(e) => setTransparentBackground(e.target.checked)}
-                />
-                Transparent background
-              </label>
+          <section className="rounded-2xl border border-mt-border px-3 py-1">
+            {format === 'png' && <Switch checked={transparent} onChange={setTransparent} label="Transparent background" hint="Only what you added, no page colour" />}
+            {!printPreset && (
+              <>
+                <Switch checked={includeBleed} onChange={setBleed} disabled={marks} label="Include bleed" hint="The extra edge printers trim off" />
+                <Switch checked={marks} onChange={setMarks} label="Crop marks & colour bar" hint="For professional printing" />
+              </>
             )}
-          </div>
+            {printPreset && <p className="text-xs text-mt-muted py-2">Bleed, crop marks and a colour bar are included, the way print shops expect.</p>}
+          </section>
         </div>
 
-        <div className="flex items-center justify-end gap-2 px-5 py-4 border-t bg-mt-surface2 rounded-b-xl">
-          <button onClick={onClose} className="text-sm px-4 py-2 rounded-full border hover:bg-mt-surface2">
-            Cancel
-          </button>
+        <div className="flex items-center justify-between gap-3 px-5 py-4 border-t border-mt-border shrink-0">
+          <span className="text-xs text-mt-muted">{fileNote}</span>
           <button
+            type="button"
             onClick={submit}
-            disabled={exporting || (rangeMode === 'selected' && selectedIds.length === 0)}
-            className="text-sm px-5 py-2 rounded-full bg-brand-gradient text-white font-semibold disabled:opacity-50"
+            disabled={exporting || pages.length === 0}
+            className="h-11 px-6 rounded-full bg-mt-primary text-mt-onprimary text-sm font-semibold inline-flex items-center gap-2 disabled:opacity-50"
           >
-            {exporting ? 'Exporting...' : 'Export'}
+            {exporting ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
+            {exporting ? 'Preparing…' : 'Download'}
           </button>
         </div>
       </div>

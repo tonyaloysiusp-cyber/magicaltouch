@@ -206,6 +206,7 @@ export function createFrame(F: any, kind: FrameKind, box: { left: number; top: n
 // has a crop/frame): same frame position, size, shape, rotation, opacity,
 // shadow and filters — only the picture changes, centred and covering.
 export function fillFrame(F: any, img: any, src: string): Promise<any> {
+  normalizeMask(F, img);
   const geo = isFramed(img) ? frameGeometry(F, img) : { center: img.getCenterPoint(), width: img.getScaledWidth(), height: img.getScaledHeight(), angle: img.angle || 0 };
   return new Promise((resolve, reject) => {
     img.setSrc(
@@ -226,6 +227,33 @@ export function fillFrame(F: any, img: any, src: string): Promise<any> {
       { crossOrigin: 'anonymous' }
     );
   });
+}
+
+// A mask made from a pen path ("absolutely positioned" on the page) is
+// turned into an ordinary frame that moves with the photo, so crop,
+// replace and photo edits keep its exact outline.
+export function normalizeMask(F: any, img: any) {
+  const clip = img?.clipPath;
+  if (!clip || !clip.absolutePositioned) return;
+  img.setCoords();
+  const M = img.calcTransformMatrix();
+  const P = clip.calcTransformMatrix();
+  const L = F.util.multiplyTransformMatrices(F.util.invertTransform(M), P);
+  const d = F.util.qrDecompose(L);
+  clip.set({
+    left: d.translateX,
+    top: d.translateY,
+    angle: d.angle,
+    scaleX: d.scaleX,
+    scaleY: d.scaleY,
+    skewX: d.skewX || 0,
+    skewY: 0,
+    originX: 'center',
+    originY: 'center',
+    absolutePositioned: false,
+  });
+  img.__frame = { kind: 'custom', empty: false } as FrameMeta;
+  img.dirty = true;
 }
 
 export const isFramed = (img: any) => !!img && img.type === 'image' && !!img.clipPath && !img.clipPath.absolutePositioned;
@@ -300,13 +328,23 @@ export function releaseFrame(img: any) {
 export interface CropSession {
   img: any;
   geo: FrameGeometry;
-  saved: { clipPath: any; lockRotation: boolean; lockUniScaling: boolean; hasControls: boolean };
+  // The frame as it was when cropping started; ratio presets fit inside it.
+  base: FrameGeometry;
+  // Locked aspect ratio of the frame (w / h), or null for free.
+  aspect: number | null;
+  saved: { clipPath: any; lockRotation: boolean; lockUniScaling: boolean; hasControls: boolean; padding: number; controls: Record<string, boolean> };
 }
+
+const CONTROL_KEYS = ['tl', 'tr', 'bl', 'br', 'ml', 'mr', 'mt', 'mb', 'mtr'];
+const readControls = (img: any) => Object.fromEntries(CONTROL_KEYS.map((k) => [k, img.isControlVisible ? img.isControlVisible(k) : true]));
+
+export type CropHandle = 'tl' | 't' | 'tr' | 'r' | 'br' | 'b' | 'bl' | 'l';
 
 // Starts adjusting the photo inside its frame: the clip is lifted so the
 // whole photo shows; the frame outline stays fixed (drawn by the caller
 // with drawCropOverlay). Ratio presets change the frame, not the photo.
 export function beginCrop(F: any, img: any): CropSession {
+  normalizeMask(F, img);
   if (!isFramed(img)) {
     if (!img.__frame) img.__frame = { kind: 'rect' };
     setFrameGeometry(F, img, { center: img.getCenterPoint(), width: img.getScaledWidth(), height: img.getScaledHeight(), angle: img.angle || 0 });
@@ -315,27 +353,156 @@ export function beginCrop(F: any, img: any): CropSession {
   const session: CropSession = {
     img,
     geo,
-    saved: { clipPath: img.clipPath, lockRotation: !!img.lockRotation, lockUniScaling: !!img.lockUniScaling, hasControls: img.hasControls !== false },
+    base: { ...geo, center: { ...geo.center } },
+    aspect: null,
+    saved: { clipPath: img.clipPath, lockRotation: !!img.lockRotation, lockUniScaling: !!img.lockUniScaling, hasControls: img.hasControls !== false, padding: img.padding || 0, controls: readControls(img) },
   };
   img.clipPath = null;
-  img.set({ lockRotation: false, lockUniScaling: true, hasControls: true });
+  // While cropping, only the photo's corners show (to zoom it); the frame
+  // has its own handles.
+  img.setControlsVisibility?.({ ml: false, mr: false, mt: false, mb: false, mtr: false, tl: true, tr: true, bl: true, br: true });
+  // Extra hit area so the frame's edge handles are easy to grab.
+  img.set({ lockRotation: true, lockUniScaling: true, hasControls: true, padding: 12 });
   img.dirty = true;
   return session;
 }
 
-// Changes the frame to an aspect ratio (w / h), keeping its centre and
-// fitting inside the current frame.
+// Changes the frame to an aspect ratio (w / h): the largest frame of that
+// shape that fits inside the frame cropping started with, kept centred.
+// Switching between ratios never shrinks the frame step by step.
+// `aspect` 0 = free (keep the current frame, unlock the ratio).
 export function setCropAspect(session: CropSession, aspect: number | null, original?: { w: number; h: number }) {
   const g = session.geo;
+  if (aspect === 0) {
+    session.aspect = null;
+    return;
+  }
   const target = aspect ?? (original ? original.w / original.h : g.width / g.height);
-  const area = Math.max(g.width, g.height);
-  let w = g.width;
-  let h = g.width / target;
-  if (h > area) {
-    h = area;
+  const b = session.base;
+  let w = b.width;
+  let h = w / target;
+  if (h > b.height) {
+    h = b.height;
     w = h * target;
   }
-  session.geo = { ...g, width: w, height: h };
+  session.aspect = target;
+  session.geo = { ...g, center: { ...b.center }, width: w, height: h };
+}
+
+// Frame-local coordinates of a page point (frame centre = 0,0, unrotated).
+function toFrameLocal(g: FrameGeometry, x: number, y: number) {
+  const a = (-g.angle * Math.PI) / 180;
+  const dx = x - g.center.x;
+  const dy = y - g.center.y;
+  return { x: dx * Math.cos(a) - dy * Math.sin(a), y: dx * Math.sin(a) + dy * Math.cos(a) };
+}
+
+// Which frame handle (if any) is under a page point. `tol` is in page units.
+export function cropHandleAt(g: FrameGeometry, x: number, y: number, tol: number): CropHandle | null {
+  const p = toFrameLocal(g, x, y);
+  const hw = g.width / 2;
+  const hh = g.height / 2;
+  const nearL = Math.abs(p.x + hw) <= tol;
+  const nearR = Math.abs(p.x - hw) <= tol;
+  const nearT = Math.abs(p.y + hh) <= tol;
+  const nearB = Math.abs(p.y - hh) <= tol;
+  const inX = p.x >= -hw - tol && p.x <= hw + tol;
+  const inY = p.y >= -hh - tol && p.y <= hh + tol;
+  if (nearT && nearL) return 'tl';
+  if (nearT && nearR) return 'tr';
+  if (nearB && nearR) return 'br';
+  if (nearB && nearL) return 'bl';
+  if (nearT && inX) return 't';
+  if (nearB && inX) return 'b';
+  if (nearL && inY) return 'l';
+  if (nearR && inY) return 'r';
+  return null;
+}
+
+export const CROP_CURSORS: Record<CropHandle, string> = { tl: 'nwse-resize', br: 'nwse-resize', tr: 'nesw-resize', bl: 'nesw-resize', t: 'ns-resize', b: 'ns-resize', l: 'ew-resize', r: 'ew-resize' };
+
+// Drags one frame handle to a page point; the opposite side stays put.
+// With a locked ratio, corners keep it and edges resize around the middle.
+export function dragCropHandle(session: CropSession, handle: CropHandle, x: number, y: number, minSize = 8) {
+  const g = session.geo;
+  const p = toFrameLocal(g, x, y);
+  let l = -g.width / 2;
+  let r = g.width / 2;
+  let t = -g.height / 2;
+  let b = g.height / 2;
+  if (handle.includes('l')) l = Math.min(p.x, r - minSize);
+  if (handle.includes('r')) r = Math.max(p.x, l + minSize);
+  if (handle === 't' || handle === 'tl' || handle === 'tr') t = Math.min(p.y, b - minSize);
+  if (handle === 'b' || handle === 'bl' || handle === 'br') b = Math.max(p.y, t + minSize);
+  let w = r - l;
+  let h = b - t;
+  const ar = session.aspect;
+  if (ar) {
+    if (handle === 't' || handle === 'b') {
+      w = h * ar;
+      const cx = (l + r) / 2;
+      l = cx - w / 2;
+      r = cx + w / 2;
+    } else if (handle === 'l' || handle === 'r') {
+      h = w / ar;
+      const cy = (t + b) / 2;
+      t = cy - h / 2;
+      b = cy + h / 2;
+    } else {
+      // Corner: follow whichever side moved more, keep the ratio.
+      if (w / h > ar) w = h * ar;
+      else h = w / ar;
+      if (handle.includes('l')) l = r - w;
+      else r = l + w;
+      if (handle.startsWith('t')) t = b - h;
+      else b = t + h;
+    }
+  }
+  const lc = { x: (l + r) / 2, y: (t + b) / 2 };
+  const a = (g.angle * Math.PI) / 180;
+  session.geo = {
+    ...g,
+    center: { x: g.center.x + lc.x * Math.cos(a) - lc.y * Math.sin(a), y: g.center.y + lc.x * Math.sin(a) + lc.y * Math.cos(a) },
+    width: r - l,
+    height: b - t,
+  };
+}
+
+// Zoom of the photo inside the frame, 1 = just covering it.
+export function cropZoom(session: CropSession): number {
+  const img = session.img;
+  const g = session.geo;
+  const rel = (((g.angle - (img.angle || 0)) % 360) + 360) % 360;
+  const rad = (rel * Math.PI) / 180;
+  const c = Math.abs(Math.cos(rad));
+  const s = Math.abs(Math.sin(rad));
+  const cover = Math.max((g.width * c + g.height * s) / (img.width || 1), (g.width * s + g.height * c) / (img.height || 1));
+  return Math.abs(img.scaleX || 1) / cover;
+}
+
+export function setCropZoom(session: CropSession, zoom: number) {
+  const img = session.img;
+  const cur = cropZoom(session);
+  if (!cur) return;
+  const k = Math.max(1, zoom) / cur;
+  const c0 = img.getCenterPoint();
+  img.set({ scaleX: (img.scaleX || 1) * k, scaleY: (img.scaleY || 1) * k });
+  img.setPositionByOrigin(c0, 'center', 'center');
+  keepCovering(session);
+}
+
+// Straighten: turns the photo (not the frame) by up to ±45°.
+export function setCropStraighten(session: CropSession, degrees: number) {
+  const img = session.img;
+  const c0 = img.getCenterPoint();
+  img.rotate(session.geo.angle + Math.max(-45, Math.min(45, degrees)));
+  img.setPositionByOrigin(c0, 'center', 'center');
+  keepCovering(session);
+}
+
+export function cropStraighten(session: CropSession): number {
+  const d = (session.img.angle || 0) - session.geo.angle;
+  return Math.round((((d + 180) % 360) + 360) % 360 - 180);
 }
 
 // Ensures the photo still covers the whole frame (scales it up if needed).
@@ -393,7 +560,8 @@ export function endCrop(F: any, session: CropSession) {
   keepCovering(session);
   img.setCoords();
   const clip = session.saved.clipPath;
-  img.set({ lockRotation: session.saved.lockRotation, lockUniScaling: session.saved.lockUniScaling, hasControls: session.saved.hasControls });
+  img.set({ lockRotation: session.saved.lockRotation, lockUniScaling: session.saved.lockUniScaling, hasControls: session.saved.hasControls, padding: session.saved.padding });
+  img.setControlsVisibility?.(session.saved.controls);
   img.clipPath = clip || null;
   setFrameGeometry(F, img, session.geo);
   img.setCoords();
@@ -403,7 +571,8 @@ export function cancelCrop(session: CropSession, snapshot: any) {
   const img = session.img;
   img.set(snapshot);
   img.clipPath = session.saved.clipPath;
-  img.set({ lockRotation: session.saved.lockRotation, lockUniScaling: session.saved.lockUniScaling, hasControls: session.saved.hasControls });
+  img.set({ lockRotation: session.saved.lockRotation, lockUniScaling: session.saved.lockUniScaling, hasControls: session.saved.hasControls, padding: session.saved.padding });
+  img.setControlsVisibility?.(session.saved.controls);
   img.dirty = true;
   img.setCoords();
 }
@@ -439,6 +608,34 @@ export function drawCropOverlay(ctx: CanvasRenderingContext2D, vt: number[], geo
   ctx.strokeStyle = '#8CCBFF';
   ctx.lineWidth = 2;
   ctx.stroke();
+  // Frame handles: L-shaped corners and short bars on each side.
+  const toScreen = (u: number, v: number) => [cx + u * Math.cos(a) - v * Math.sin(a), cy + u * Math.sin(a) + v * Math.cos(a)];
+  const L = Math.min(22, w / 4, h / 4);
+  ctx.strokeStyle = '#FFFFFF';
+  ctx.lineWidth = 4;
+  ctx.lineCap = 'round';
+  ctx.shadowColor = 'rgba(0,0,0,0.45)';
+  ctx.shadowBlur = 3;
+  const seg = (pts: number[][]) => {
+    ctx.beginPath();
+    pts.forEach(([u, v], i) => {
+      const [X, Y] = toScreen(u, v);
+      if (i) ctx.lineTo(X, Y);
+      else ctx.moveTo(X, Y);
+    });
+    ctx.stroke();
+  };
+  const hw = w / 2;
+  const hh = h / 2;
+  seg([[-hw, -hh + L], [-hw, -hh], [-hw + L, -hh]]);
+  seg([[hw - L, -hh], [hw, -hh], [hw, -hh + L]]);
+  seg([[hw, hh - L], [hw, hh], [hw - L, hh]]);
+  seg([[-hw + L, hh], [-hw, hh], [-hw, hh - L]]);
+  seg([[-L / 2, -hh], [L / 2, -hh]]);
+  seg([[-L / 2, hh], [L / 2, hh]]);
+  seg([[-hw, -L / 2], [-hw, L / 2]]);
+  seg([[hw, -L / 2], [hw, L / 2]]);
+  ctx.shadowBlur = 0;
   // Rule-of-thirds grid
   ctx.strokeStyle = 'rgba(255,255,255,0.55)';
   ctx.lineWidth = 1;

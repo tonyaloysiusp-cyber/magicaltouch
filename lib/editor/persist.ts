@@ -35,8 +35,6 @@ export const PERSIST_PROPS = [
   '__preCurveWidth',
   // Image adjustments kept as live filters (lib/editor/imageAdjust.ts)
   '__adjust',
-  // Non-destructive crop (lib/editor/crop.ts)
-  '__crop',
   // Free-drawing strokes (brush/marker/highlighter)
   '__brush',
   // Page-number placeholder text
@@ -88,13 +86,19 @@ export function lockProps(locked: boolean) {
 // undo/redo: Fabric doesn't restore these, so locked objects would
 // otherwise become draggable again and artboards selectable.
 export function applyStoredLocks(canvas: any) {
+  const visit = (o: any) => {
+    if (o.type === 'group' && o.getObjects) o.getObjects().forEach(visit);
+    if (o.locked) o.set(lockProps(true));
+    // "Keep proportions": no side handles, so it can't be stretched.
+    if (o.__lockRatio && o.setControlsVisibility && o.type !== 'textbox') o.setControlsVisibility({ ml: false, mr: false, mt: false, mb: false });
+  };
   canvas.getObjects().forEach((o: any) => {
     if (o.__isArtboard) {
       o.set({ selectable: false, evented: false, hasControls: false, lockRotation: true });
       return;
     }
     if (isHelperObject(o)) return;
-    if (o.locked) o.set(lockProps(true));
+    visit(o);
   });
 }
 

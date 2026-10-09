@@ -19,6 +19,10 @@ import {
   cancelCrop,
   setCropAspect,
   keepCovering,
+  cropZoom,
+  setCropZoom,
+  cropStraighten,
+  setCropStraighten,
   CropSession,
   FrameKind,
   frameGeometry,
@@ -26,6 +30,7 @@ import {
 import { GradientSpec, toFabricGradient } from '@/lib/editor/gradients';
 import { applyTextFx, TextFx } from '@/lib/editor/textEffects';
 import { Adjust, applyAdjust, readAdjust } from '@/lib/editor/imageAdjust';
+import { ensureFontLoaded, refreshTextMetrics } from '@/lib/editor/googleFonts';
 
 export interface PageRect {
   id?: string;
@@ -67,13 +72,41 @@ const F_ = () => (typeof window !== 'undefined' ? (window as any).fabric : null)
 
 const isText = (o: any) => !!o && (o.type === 'textbox' || o.type === 'i-text' || o.type === 'text');
 
+// Removes one property from every letter's own style in a text box.
+export function clearCharStyle(t: any, prop: string) {
+  const styles = t?.styles;
+  if (!styles) return;
+  Object.keys(styles).forEach((line) => {
+    const row = styles[line];
+    Object.keys(row || {}).forEach((ch) => {
+      if (row[ch] && prop in row[ch]) {
+        delete row[ch][prop];
+        if (!Object.keys(row[ch]).length) delete row[ch];
+      }
+    });
+    if (!Object.keys(row || {}).length) delete styles[line];
+  });
+}
+
 export function useEditorFeatures(ctx: Ctx) {
   const ctxRef = useRef(ctx);
   ctxRef.current = ctx;
-  const [cropping, setCropping] = useState<{ aspect: number | null } | null>(null);
+  // aspect: null = original/free frame, 0 = free (unlocked), n = locked w/h
+  const [cropping, setCropping] = useState<{ aspect: number | null; zoom: number; straighten: number } | null>(null);
+  const cropState = (aspect: number | null) => {
+    const cur = cropRef.current;
+    return { aspect, zoom: cur ? cropZoom(cur.session) : 1, straighten: cur ? cropStraighten(cur.session) : 0 };
+  };
   const cropRef = useRef<{ session: CropSession; snapshot: any } | null>(null);
 
   const canvas = () => ctxRef.current.fabricCanvasRef.current;
+  // Live preview while a slider is dragged: redraw only, no undo step.
+  const preview = () => {
+    const c = canvas();
+    if (!c) return;
+    c.requestRenderAll();
+    ctxRef.current.bumpSel();
+  };
   const done = (obj?: any, select = true) => {
     const c = canvas();
     if (!c) return;
@@ -97,13 +130,14 @@ export function useEditorFeatures(ctx: Ctx) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const setShapeParams = useCallback((patch: ShapeParams) => {
+  const setShapeParams = useCallback((patch: ShapeParams, record = true) => {
     const F = F_();
     const c = canvas();
     const o = c?.getActiveObject();
     if (!F || !o || !o.__shape || o.locked) return;
     updateShapeParams(F, o, patch);
-    done(o);
+    if (record) done(o);
+    else preview();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -196,7 +230,7 @@ export function useEditorFeatures(ctx: Ctx) {
     const session = beginCrop(F, img);
     cropRef.current = { session, snapshot };
     c.setActiveObject(img);
-    setCropping({ aspect: null });
+    setCropping(cropState(0));
     c.requestRenderAll();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -208,7 +242,7 @@ export function useEditorFeatures(ctx: Ctx) {
     const img = cur.session.img;
     setCropAspect(cur.session, aspect, aspect === null ? { w: img.width, h: img.height } : undefined);
     keepCovering(cur.session);
-    setCropping({ aspect });
+    setCropping(cropState(aspect));
     c.requestRenderAll();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -221,8 +255,10 @@ export function useEditorFeatures(ctx: Ctx) {
     // The whole photo, unrotated relative to the frame.
     img.set({ angle: cur.session.geo.angle });
     cur.session.geo = { ...cur.session.geo, width: img.getScaledWidth(), height: img.getScaledHeight(), center: img.getCenterPoint() };
+    cur.session.base = { ...cur.session.geo, center: { ...cur.session.geo.center } };
+    cur.session.aspect = null;
     keepCovering(cur.session);
-    setCropping({ aspect: null });
+    setCropping(cropState(0));
     c.requestRenderAll();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -283,6 +319,31 @@ export function useEditorFeatures(ctx: Ctx) {
     keepCovering(cur.session);
   }, []);
 
+  // Crop toolbar sliders: zoom the photo inside the frame, straighten it.
+  const setCropZoomLevel = useCallback((z: number) => {
+    const cur = cropRef.current;
+    const c = canvas();
+    if (!cur || !c) return;
+    setCropZoom(cur.session, z);
+    setCropping((st) => (st ? { ...st, zoom: cropZoom(cur.session) } : st));
+    c.requestRenderAll();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const setCropStraightenAngle = useCallback((deg: number) => {
+    const cur = cropRef.current;
+    const c = canvas();
+    if (!cur || !c) return;
+    setCropStraighten(cur.session, deg);
+    setCropping((st) => (st ? { ...st, straighten: cropStraighten(cur.session), zoom: cropZoom(cur.session) } : st));
+    c.requestRenderAll();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const refreshCropState = useCallback(() => {
+    const cur = cropRef.current;
+    if (!cur) return;
+    setCropping((st) => (st ? { ...st, zoom: cropZoom(cur.session), straighten: cropStraighten(cur.session) } : st));
+  }, []);
+
   // ---------------- text ----------------
   const addTextPreset = useCallback((preset: TextPreset, at?: { x: number; y: number }) => {
     const F = F_();
@@ -310,18 +371,7 @@ export function useEditorFeatures(ctx: Ctx) {
     c.add(t);
     if (preset.fx) applyTextFx(F, t, { effect: 'none', color: '#09090B', amount: 50, curve: 0, wave: 0, ...preset.fx });
     done(t);
-    const fonts: any = (document as any).fonts;
-    if (fonts?.load) {
-      const spec = `${preset.fontStyle === 'italic' ? 'italic ' : ''}${preset.fontWeight ?? 400} 32px "${preset.fontFamily}"`;
-      fonts
-        .load(spec)
-        .then(() => {
-          t.initDimensions?.();
-          t.dirty = true;
-          c.requestRenderAll();
-        })
-        .catch(() => {});
-    }
+    ensureFontLoaded(preset.fontFamily, preset.fontWeight ?? 400, preset.fontStyle === 'italic').then(() => refreshTextMetrics(c));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -355,16 +405,19 @@ export function useEditorFeatures(ctx: Ctx) {
     return o;
   };
 
-  const setFill = useCallback((fill: string | GradientSpec | null) => {
+  const setFill = useCallback((fill: string | GradientSpec | null, record = true) => {
     const F = F_();
     if (!F) return;
     const o = forEachTarget((x) => {
       if (x.type === 'image') return;
       if (fill && typeof fill === 'object') x.set({ fill: toFabricGradient(F, fill) });
       else x.set({ fill: fill ?? '' });
+      // A colour for the whole text box replaces colours given earlier to
+      // single letters, or those letters would keep their old colour.
+      if (isText(x) && !x.isEditing) clearCharStyle(x, 'fill');
       x.dirty = true;
     });
-    if (o) done(o);
+    if (o) (record ? done(o) : preview());
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -388,19 +441,19 @@ export function useEditorFeatures(ctx: Ctx) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const setShadow = useCallback((s: { color: string; blur: number; x: number; y: number } | null) => {
+  const setShadow = useCallback((s: { color: string; blur: number; x: number; y: number } | null, record = true) => {
     const F = F_();
     if (!F) return;
-    const c = canvas();
-    const o = c?.getActiveObject();
-    if (!o || o.locked) return;
-    o.set({ shadow: s ? new F.Shadow({ color: s.color, blur: s.blur, offsetX: s.x, offsetY: s.y }) : null });
-    o.dirty = true;
-    done(o);
+    // Every object in a multi-selection gets its own shadow.
+    const o = forEachTarget((x) => {
+      x.set({ shadow: s ? new F.Shadow({ color: s.color, blur: s.blur, offsetX: s.x, offsetY: s.y }) : null });
+      x.dirty = true;
+    });
+    if (o) (record ? done(o) : preview());
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const setCornerRadius = useCallback((r: number) => {
+  const setCornerRadius = useCallback((r: number, record = true) => {
     const F = F_();
     const c = canvas();
     const o = c?.getActiveObject();
@@ -417,7 +470,9 @@ export function useEditorFeatures(ctx: Ctx) {
       o.clipPath.set({ rx: r / (Math.abs(o.scaleX || 1) * s), ry: r / (Math.abs(o.scaleY || 1) * s) });
       o.dirty = true;
     } else return;
-    done(o);
+    o.dirty = true;
+    if (record) done(o);
+    else preview();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -498,7 +553,11 @@ export function useEditorFeatures(ctx: Ctx) {
     const c = canvas();
     const o = c?.getActiveObject();
     if (!o || o.locked) return;
-    o.set({ opacity: Math.max(0, Math.min(1, v)) });
+    const value = Math.max(0, Math.min(1, v));
+    // A multi-selection is only a temporary wrapper: the objects inside it
+    // keep the transparency.
+    if (o.type === 'activeSelection') o.getObjects().forEach((x: any) => !x.locked && x.set({ opacity: value }));
+    else o.set({ opacity: value });
     c.requestRenderAll();
     ctxRef.current.bumpSel();
     if (record) ctxRef.current.pushHistory();
@@ -521,6 +580,9 @@ export function useEditorFeatures(ctx: Ctx) {
     finishCrop,
     smartCrop,
     onCropTransform,
+    setCropZoomLevel,
+    setCropStraightenAngle,
+    refreshCropState,
     cropping,
     cropRef,
     addTextPreset,

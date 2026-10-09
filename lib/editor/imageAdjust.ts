@@ -88,7 +88,18 @@ export function ensureImageFilters(F: any) {
   registered = true;
   const Base = F.Image.filters.BaseFilter;
   const define = (type: string, props: Record<string, any>) => {
-    const klass = F.util.createClass(Base, { type, ...props });
+    // Every setting is saved with the filter (Fabric's default only saves
+    // one "main" value), so undo, saving and reopening keep the look.
+    const params = Object.keys(props).filter((k) => typeof props[k] !== 'function' && k !== 'mainParameter');
+    const klass = F.util.createClass(Base, {
+      type,
+      ...props,
+      toObject(this: any) {
+        const o: Record<string, any> = { type: this.type };
+        params.forEach((k) => (o[k] = this[k]));
+        return o;
+      },
+    });
     klass.fromObject = Base.fromObject;
     F.Image.filters[type] = klass;
   };
@@ -247,8 +258,27 @@ export function readAdjust(img: any): Adjust {
 export const adjustIsDefault = (a: Adjust) =>
   (Object.keys(DEFAULT_ADJUST) as (keyof Adjust)[]).every((k) => a[k] === DEFAULT_ADJUST[k]);
 
-// Applies slider values to an image. Very large photos are filtered at a
-// capped working size by Fabric's own resize cache, so this stays quick.
+// Rebuilds every image's filters from its saved slider values (after a
+// design is opened or an undo), so a look is never lost even if an older
+// save didn't store all of a filter's settings.
+export function reviveImageAdjust(F: any, canvas: any) {
+  if (!F || !canvas) return;
+  const visit = (o: any) => {
+    if (o.type === 'group' && o.getObjects) o.getObjects().forEach(visit);
+    if (o.type === 'image' && o.__adjust && !adjustIsDefault(readAdjust(o))) {
+      try {
+        o.filters = buildAdjustFilters(F, readAdjust(o));
+        o.applyFilters();
+        o.dirty = true;
+      } catch {
+        // A picture that can't be read (e.g. still loading) keeps its filters.
+      }
+    }
+  };
+  canvas.getObjects().forEach(visit);
+}
+
+// Applies slider values to an image.
 export function applyAdjust(F: any, img: any, a: Adjust) {
   img.filters = buildAdjustFilters(F, a);
   img.__adjust = adjustIsDefault(a) ? undefined : { ...a };

@@ -50,6 +50,7 @@ export function usePenTool({ fabricCanvasRef, onPathFinished }: Args) {
         strokeWidth: 2,
         strokeLineCap: 'round',
         strokeLineJoin: 'round',
+        strokeUniform: true,
         objectCaching: false,
       });
       pathObj.isVectorPath = true;

@@ -114,19 +114,22 @@ export default function CreateDesignPage() {
   };
 
   const handleCreate = () => {
+    // Exact sizes (to 1/1000 px) so mm/in documents and 3 mm bleeds come
+    // through without rounding.
+    const exact = (n: number) => String(Math.round(n * 1000) / 1000);
     const params = new URLSearchParams();
-    params.set('w', String(Math.round(widthPx)));
-    params.set('h', String(Math.round(heightPx)));
+    params.set('w', exact(widthPx));
+    params.set('h', exact(heightPx));
     params.set('dpi', String(dpi));
     params.set('bg', background === 'custom' ? `custom:${customColor.replace('#', '')}` : background);
-    params.set('bleedT', String(Math.round(bleed.top)));
-    params.set('bleedR', String(Math.round(bleed.right)));
-    params.set('bleedB', String(Math.round(bleed.bottom)));
-    params.set('bleedL', String(Math.round(bleed.left)));
-    params.set('safeT', String(Math.round(safeArea.top)));
-    params.set('safeR', String(Math.round(safeArea.right)));
-    params.set('safeB', String(Math.round(safeArea.bottom)));
-    params.set('safeL', String(Math.round(safeArea.left)));
+    params.set('bleedT', exact(bleed.top));
+    params.set('bleedR', exact(bleed.right));
+    params.set('bleedB', exact(bleed.bottom));
+    params.set('bleedL', exact(bleed.left));
+    params.set('safeT', exact(safeArea.top));
+    params.set('safeR', exact(safeArea.right));
+    params.set('safeB', exact(safeArea.bottom));
+    params.set('safeL', exact(safeArea.left));
     // A brand-new blank design's editor URL otherwise has no unique part
     // (just w/h/dpi/...), which is indistinguishable from a plain reload
     // of an already-open blank tab — this marker tells the editor's tab

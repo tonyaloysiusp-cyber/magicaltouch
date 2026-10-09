@@ -40,8 +40,14 @@ export function PagesBar({
   onHelp: () => void;
   compact: boolean;
 }) {
+  const activeIndex = pages.findIndex((p) => p.id === activeId);
+  const btn = 'h-8 w-8 inline-flex items-center justify-center rounded-lg text-mt-muted hover:text-mt-ink hover:bg-mt-surface2 disabled:opacity-30 disabled:hover:bg-transparent';
+  // The zoom slider works on a log scale, so 25%, 100% and 400% are
+  // evenly spaced and the whole 5%–800% range fits.
+  const toSlider = (z: number) => Math.round(Math.log2(Math.max(5, z) / 100) * 100);
+  const fromSlider = (v: number) => 100 * Math.pow(2, v / 100);
   return (
-    <div className="h-[76px] shrink-0 border-t border-mt-border bg-mt-surface flex items-center gap-3 px-3">
+    <div className={cx('shrink-0 border-t border-mt-border bg-mt-surface flex items-center gap-3 px-3', compact ? 'h-[64px]' : 'h-[76px]')}>
       <div className="flex-1 min-w-0 flex items-center gap-2 overflow-x-auto mt-scroll py-1">
         {pages.map((p, i) => {
           const h = 52;
@@ -61,39 +67,31 @@ export function PagesBar({
                 {p.thumb ? <img src={p.thumb} alt="" className="w-full h-full object-cover" /> : null}
               </button>
               <span className={cx('text-[10px] mt-0.5', active ? 'text-mt-ink font-semibold' : 'text-mt-faint')}>{i + 1}</span>
-              {active && !compact && (
-                <div className="absolute -top-1 left-1/2 -translate-x-1/2 -translate-y-full hidden group-hover:flex items-center gap-0.5 rounded-lg border border-mt-border bg-mt-surface shadow px-0.5 py-0.5">
-                  <button type="button" aria-label="Move page left" disabled={i === 0} onClick={() => onMove(i, -1)} className="h-6 w-6 inline-flex items-center justify-center rounded text-mt-muted hover:text-mt-ink disabled:opacity-30">
-                    <ChevronLeft size={13} />
-                  </button>
-                  <button type="button" aria-label="Duplicate page" onClick={() => onDuplicate(p.id)} className="h-6 w-6 inline-flex items-center justify-center rounded text-mt-muted hover:text-mt-ink">
-                    <Copy size={12} />
-                  </button>
-                  <button type="button" aria-label="Delete page" disabled={pages.length <= 1} onClick={() => onDelete(p.id)} className="h-6 w-6 inline-flex items-center justify-center rounded text-mt-muted hover:text-red-600 disabled:opacity-30">
-                    <Trash2 size={12} />
-                  </button>
-                  <button type="button" aria-label="Move page right" disabled={i === pages.length - 1} onClick={() => onMove(i, 1)} className="h-6 w-6 inline-flex items-center justify-center rounded text-mt-muted hover:text-mt-ink disabled:opacity-30">
-                    <ChevronRight size={13} />
-                  </button>
-                </div>
-              )}
             </div>
           );
         })}
         <button type="button" onClick={onAdd} title="Add a page" aria-label="Add a page" className="shrink-0 h-[52px] w-10 rounded-md border-2 border-dashed border-mt-border text-mt-muted hover:text-mt-ink hover:border-[#8CCBFF] inline-flex items-center justify-center self-start mt-1">
           <Plus size={16} />
         </button>
-        {compact && activeId && (
-          <div className="flex items-center gap-1 ml-1">
-            <button type="button" aria-label="Duplicate page" onClick={() => onDuplicate(activeId)} className="h-8 w-8 inline-flex items-center justify-center rounded-lg text-mt-muted">
-              <Copy size={14} />
-            </button>
-            <button type="button" aria-label="Delete page" disabled={pages.length <= 1} onClick={() => onDelete(activeId)} className="h-8 w-8 inline-flex items-center justify-center rounded-lg text-mt-muted disabled:opacity-30">
-              <Trash2 size={14} />
-            </button>
-          </div>
-        )}
       </div>
+      {activeIndex >= 0 && (
+        // Always visible (not hover-only), so they work with a finger too.
+        <div className="shrink-0 flex items-center gap-0.5 rounded-xl border border-mt-border px-1 py-0.5" role="group" aria-label={`Page ${activeIndex + 1} actions`}>
+          {!compact && <span className="text-[11px] text-mt-faint px-1.5 tabular-nums">Page {activeIndex + 1}</span>}
+          <button type="button" title="Move page left" aria-label="Move page left" disabled={activeIndex === 0} onClick={() => onMove(activeIndex, -1)} className={btn}>
+            <ChevronLeft size={15} />
+          </button>
+          <button type="button" title="Duplicate page" aria-label="Duplicate page" onClick={() => onDuplicate(pages[activeIndex].id)} className={btn}>
+            <Copy size={14} />
+          </button>
+          <button type="button" title="Delete page" aria-label="Delete page" disabled={pages.length <= 1} onClick={() => onDelete(pages[activeIndex].id)} className={cx(btn, 'hover:text-red-600')}>
+            <Trash2 size={14} />
+          </button>
+          <button type="button" title="Move page right" aria-label="Move page right" disabled={activeIndex === pages.length - 1} onClick={() => onMove(activeIndex, 1)} className={btn}>
+            <ChevronRight size={15} />
+          </button>
+        </div>
+      )}
       {!compact && (
         <div className="flex items-center gap-1 shrink-0">
           <button type="button" aria-label="Zoom out" onClick={() => onZoom(zoom / 1.25)} className="h-8 w-8 inline-flex items-center justify-center rounded-lg text-mt-muted hover:text-mt-ink hover:bg-mt-surface2">
@@ -101,17 +99,20 @@ export function PagesBar({
           </button>
           <input
             type="range"
-            min={5}
-            max={400}
-            value={Math.min(400, zoom)}
-            onChange={(e) => onZoom(Number(e.target.value))}
+            min={toSlider(5)}
+            max={toSlider(800)}
+            value={toSlider(zoom)}
+            onChange={(e) => onZoom(fromSlider(Number(e.target.value)))}
             aria-label="Zoom"
+            aria-valuetext={`${Math.round(zoom)}%`}
             className="w-28 accent-[#3B82C4]"
           />
           <button type="button" aria-label="Zoom in" onClick={() => onZoom(zoom * 1.25)} className="h-8 w-8 inline-flex items-center justify-center rounded-lg text-mt-muted hover:text-mt-ink hover:bg-mt-surface2">
             <Plus size={15} />
           </button>
-          <span className="w-11 text-center text-xs tabular-nums text-mt-muted">{Math.round(zoom)}%</span>
+          <button type="button" onClick={() => onZoom(100)} title="Actual size (Ctrl/Cmd+1)" aria-label={`Zoom ${Math.round(zoom)}%, set to 100%`} className="w-12 h-8 text-center text-xs tabular-nums text-mt-muted rounded-lg hover:bg-mt-surface2 hover:text-mt-ink">
+            {Math.round(zoom)}%
+          </button>
           <button type="button" onClick={onFit} title="Fit page to screen (Ctrl/Cmd+0)" aria-label="Fit page to screen" className="h-8 w-8 inline-flex items-center justify-center rounded-lg text-mt-muted hover:text-mt-ink hover:bg-mt-surface2">
             <Maximize size={15} />
           </button>

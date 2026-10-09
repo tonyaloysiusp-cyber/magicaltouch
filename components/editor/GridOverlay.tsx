@@ -7,13 +7,17 @@ interface Props {
   visible: boolean;
   gridSize: number; // world px between grid lines
   ready: boolean;
+  // World position the grid starts from: the active page's top-left, so
+  // grid lines meet the page edges and match the ruler ticks.
+  originX?: number;
+  originY?: number;
 }
 
 // A pure visual aid, drawn on its own overlay canvas kept in sync with
 // the Fabric canvas's pan/zoom -- never a Fabric object itself, so it can
 // never be selected, dragged, saved into canvas_json, or leak into an
 // export (unlike guides, which deliberately ARE real Fabric objects).
-function drawGrid(canvas: any, overlay: HTMLCanvasElement | null, gridSize: number) {
+function drawGrid(canvas: any, overlay: HTMLCanvasElement | null, gridSize: number, ox = 0, oy = 0) {
   if (!canvas || !overlay || gridSize <= 0) return;
   const vt = canvas.viewportTransform || [1, 0, 0, 1, 0, 0];
   const zoom = vt[0] || 1;
@@ -36,9 +40,9 @@ function drawGrid(canvas: any, overlay: HTMLCanvasElement | null, gridSize: numb
   const screenToWorldX = (x: number) => (x - panX) / zoom;
   const screenToWorldY = (y: number) => (y - panY) / zoom;
 
-  const firstWorldX = Math.floor(screenToWorldX(0) / gridSize) * gridSize;
+  const firstWorldX = ox + Math.floor((screenToWorldX(0) - ox) / gridSize) * gridSize;
   const lastWorldX = screenToWorldX(vw);
-  const firstWorldY = Math.floor(screenToWorldY(0) / gridSize) * gridSize;
+  const firstWorldY = oy + Math.floor((screenToWorldY(0) - oy) / gridSize) * gridSize;
   const lastWorldY = screenToWorldY(vh);
 
   ctx.strokeStyle = 'rgba(63,169,232,0.22)';
@@ -57,7 +61,7 @@ function drawGrid(canvas: any, overlay: HTMLCanvasElement | null, gridSize: numb
   ctx.stroke();
 }
 
-export function GridOverlay({ fabricCanvasRef, visible, gridSize, ready }: Props) {
+export function GridOverlay({ fabricCanvasRef, visible, gridSize, ready, originX = 0, originY = 0 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -75,7 +79,7 @@ export function GridOverlay({ fabricCanvasRef, visible, gridSize, ready }: Props
           ctx?.clearRect(0, 0, el.width, el.height);
           return;
         }
-        drawGrid(canvas, el, gridSize);
+        drawGrid(canvas, el, gridSize, originX, originY);
       });
     };
 
@@ -85,7 +89,7 @@ export function GridOverlay({ fabricCanvasRef, visible, gridSize, ready }: Props
       canvas.off('after:render', scheduleDraw);
       cancelAnimationFrame(raf);
     };
-  }, [fabricCanvasRef, ready, visible, gridSize]);
+  }, [fabricCanvasRef, ready, visible, gridSize, originX, originY]);
 
   return (
     <canvas

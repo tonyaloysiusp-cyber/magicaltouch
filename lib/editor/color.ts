@@ -184,3 +184,32 @@ export function documentColors(canvas: any): string[] {
   canvas?.getObjects?.().forEach(visit);
   return [...seen.entries()].sort((a, b) => b[1] - a[1]).map(([c]) => c).slice(0, 16);
 }
+
+// Any CSS colour → its #RRGGBB part and its opacity (0..1).
+export function parseColorAlpha(c: any): { hex: string; alpha: number } {
+  if (typeof c !== 'string' || !c) return { hex: '#000000', alpha: 1 };
+  const s = c.trim();
+  if (s.startsWith('#')) {
+    let h = s.slice(1);
+    if (h.length === 4) h = h.split('').map((x) => x + x).join('');
+    const rgb = hexToRgb('#' + h.slice(0, 6));
+    const a = h.length === 8 ? parseInt(h.slice(6, 8), 16) / 255 : 1;
+    return { hex: rgb ? rgbToHex(rgb) : '#000000', alpha: Number.isFinite(a) ? a : 1 };
+  }
+  const m = s.match(/rgba?\(([^)]+)\)/i);
+  if (m) {
+    const parts = m[1].split(/[,\s/]+/).filter(Boolean).map((x) => parseFloat(x));
+    const [r, g, b] = parts;
+    const a = parts.length > 3 ? parts[3] : 1;
+    return { hex: rgbToHex({ r, g, b }), alpha: clamp(Number.isFinite(a) ? a : 1, 0, 1) };
+  }
+  return { hex: normalizeColor(s) || '#000000', alpha: 1 };
+}
+
+// #RRGGBB plus an opacity → the simplest CSS colour for it.
+export function withAlpha(hex: string, alpha: number): string {
+  const a = clamp(alpha, 0, 1);
+  if (a >= 0.999) return hex.toUpperCase();
+  const rgb = hexToRgb(hex) || { r: 0, g: 0, b: 0 };
+  return `rgba(${Math.round(rgb.r)}, ${Math.round(rgb.g)}, ${Math.round(rgb.b)}, ${Math.round(a * 1000) / 1000})`;
+}

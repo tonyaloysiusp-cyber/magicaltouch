@@ -102,7 +102,7 @@ export function BrandPanel({
           >
             {(close) => (
               <div>
-                <ColorPicker value={draftColor} documentColors={documentColors} onChange={(v) => typeof v === 'string' && setDraftColor(v)} />
+                <ColorPicker value={draftColor} alpha={false} documentColors={documentColors} onChange={(v) => typeof v === 'string' && setDraftColor(v)} />
                 <button
                   type="button"
                   onClick={() => {

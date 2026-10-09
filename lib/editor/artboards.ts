@@ -7,9 +7,8 @@
 // to decide which artboard an object belongs to.
 // ---------------------------------------------------------------------
 
-import { DocUnit } from './types';
-import { unitToPx } from './units';
 import { ArtboardPrintSettings } from './printSetup';
+import { SIZE_GROUPS, presetToPx } from './sizePresets';
 
 export interface ArtboardMeta {
   id: string;
@@ -29,36 +28,15 @@ export interface ArtboardPreset {
   heightPx: number;
 }
 
-function fromUnit(value: number, unit: DocUnit) {
-  return Math.round(unitToPx(value, unit));
-}
-
-// Print-format presets are computed through the same 96px/inch factor the
-// rest of the app already uses for its unit system (rulers, mm/cm/in
-// fields). Real print-resolution output (300dpi etc.) is a separate,
-// export-time concern (see the print-production phase), not baked into
-// artboard pixel dimensions here.
-export const ARTBOARD_PRESETS: ArtboardPreset[] = [
-  { id: 'a0', label: 'A0', category: 'Print', widthPx: fromUnit(841, 'mm'), heightPx: fromUnit(1189, 'mm') },
-  { id: 'a1', label: 'A1', category: 'Print', widthPx: fromUnit(594, 'mm'), heightPx: fromUnit(841, 'mm') },
-  { id: 'a2', label: 'A2', category: 'Print', widthPx: fromUnit(420, 'mm'), heightPx: fromUnit(594, 'mm') },
-  { id: 'a3', label: 'A3', category: 'Print', widthPx: fromUnit(297, 'mm'), heightPx: fromUnit(420, 'mm') },
-  { id: 'a4', label: 'A4', category: 'Print', widthPx: fromUnit(210, 'mm'), heightPx: fromUnit(297, 'mm') },
-  { id: 'a5', label: 'A5', category: 'Print', widthPx: fromUnit(148, 'mm'), heightPx: fromUnit(210, 'mm') },
-  { id: 'letter', label: 'Letter', category: 'Print', widthPx: fromUnit(8.5, 'in'), heightPx: fromUnit(11, 'in') },
-  { id: 'legal', label: 'Legal', category: 'Print', widthPx: fromUnit(8.5, 'in'), heightPx: fromUnit(14, 'in') },
-  { id: 'tabloid', label: 'Tabloid', category: 'Print', widthPx: fromUnit(11, 'in'), heightPx: fromUnit(17, 'in') },
-  { id: 'business-card', label: 'Business Card', category: 'Print', widthPx: fromUnit(89, 'mm'), heightPx: fromUnit(51, 'mm') },
-  { id: 'poster', label: 'Poster (18×24 in)', category: 'Print', widthPx: fromUnit(18, 'in'), heightPx: fromUnit(24, 'in') },
-  { id: 'flyer', label: 'Flyer (A5)', category: 'Print', widthPx: fromUnit(148, 'mm'), heightPx: fromUnit(210, 'mm') },
-  { id: 'banner', label: 'Banner', category: 'Print', widthPx: fromUnit(36, 'in'), heightPx: fromUnit(9, 'in') },
-
-  { id: 'square', label: 'Square Post', category: 'Social', widthPx: 1080, heightPx: 1080 },
-  { id: 'ig-post', label: 'Instagram Post', category: 'Social', widthPx: 1080, heightPx: 1080 },
-  { id: 'ig-story', label: 'Instagram Story', category: 'Social', widthPx: 1080, heightPx: 1920 },
-  { id: 'fb-post', label: 'Facebook Post', category: 'Social', widthPx: 1200, heightPx: 630 },
-  { id: 'yt-thumb', label: 'YouTube Thumbnail', category: 'Social', widthPx: 1280, heightPx: 720 },
-];
+// One preset list for the whole app (lib/editor/sizePresets.ts), so the
+// New Design screen, the Pages panel, Resize and the quick start always
+// agree. Sizes are exact (a 148 mm page is 559.37 px), never rounded.
+export const ARTBOARD_PRESETS: ArtboardPreset[] = SIZE_GROUPS.flatMap((g) =>
+  g.items.map((p) => {
+    const { width, height } = presetToPx(p);
+    return { id: p.id, label: p.label, category: g.label, widthPx: width, heightPx: height };
+  })
+);
 
 let idCounter = 0;
 export function createArtboardId() {

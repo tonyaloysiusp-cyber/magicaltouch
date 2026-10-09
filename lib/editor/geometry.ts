@@ -75,7 +75,8 @@ export function computeDragGeometry(
 }
 
 export function buildDraftShape(F: any, tool: DrawTool, geo: DraftGeometry) {
-  const common = { selectable: false, evented: false, objectCaching: false };
+  // Borders keep their thickness when the shape is resized.
+  const common = { selectable: false, evented: false, objectCaching: false, strokeUniform: true };
   switch (tool) {
     case 'rect':
       return new F.Rect({
@@ -84,7 +85,7 @@ export function buildDraftShape(F: any, tool: DrawTool, geo: DraftGeometry) {
         top: geo.top,
         width: Math.max(geo.w, 1),
         height: Math.max(geo.h, 1),
-        fill: '#3FA9E8',
+        fill: '#8CCBFF',
       });
     case 'ellipse':
       return new F.Ellipse({
@@ -93,7 +94,7 @@ export function buildDraftShape(F: any, tool: DrawTool, geo: DraftGeometry) {
         top: geo.top,
         rx: Math.max(geo.w / 2, 0.5),
         ry: Math.max(geo.h / 2, 0.5),
-        fill: '#7ED33E',
+        fill: '#F3A6B8',
       });
     case 'triangle':
       return new F.Triangle({
@@ -102,7 +103,7 @@ export function buildDraftShape(F: any, tool: DrawTool, geo: DraftGeometry) {
         top: geo.top,
         width: Math.max(geo.w, 1),
         height: Math.max(geo.h, 1),
-        fill: '#E85D75',
+        fill: '#A69BD3',
       });
     case 'polygon': {
       const r = Math.max(Math.min(geo.w, geo.h) / 2, 1);
@@ -110,7 +111,7 @@ export function buildDraftShape(F: any, tool: DrawTool, geo: DraftGeometry) {
         ...common,
         left: geo.left,
         top: geo.top,
-        fill: '#9B6BD6',
+        fill: '#5DCCB8',
       });
     }
     case 'star': {
@@ -119,13 +120,13 @@ export function buildDraftShape(F: any, tool: DrawTool, geo: DraftGeometry) {
         ...common,
         left: geo.left,
         top: geo.top,
-        fill: '#F5A623',
+        fill: '#F7C948',
       });
     }
     case 'line':
       return new F.Line([geo.x1 ?? 0, geo.y1 ?? 0, geo.x2 ?? 0, geo.y2 ?? 0], {
         ...common,
-        stroke: '#1A1A1A',
+        stroke: '#09090B',
         strokeWidth: 4,
       });
   }

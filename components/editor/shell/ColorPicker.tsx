@@ -17,6 +17,8 @@ import {
   cmykToRgb,
   readRecentColors,
   rememberColor,
+  parseColorAlpha,
+  withAlpha,
 } from '@/lib/editor/color';
 import { BRAND_GRADIENTS, GradientSpec, gradientCss } from '@/lib/editor/gradients';
 import { cx, Segmented } from './ui';
@@ -38,6 +40,8 @@ interface Props {
   brandColors?: string[];
   documentColors?: string[];
   onPickFromCanvas?: (cb: (hex: string) => void) => void;
+  // Show an opacity slider for solid colours (on by default).
+  alpha?: boolean;
 }
 
 const isGradient = (v: Value): v is GradientSpec => !!v && typeof v === 'object';
@@ -320,9 +324,8 @@ function GradientEditor({ spec, onChange, onPickFromCanvas }: { spec: GradientSp
           value={Math.round(spec.angle)}
           aria-label="Gradient angle"
           onChange={(e) => update({ angle: Number(e.target.value) }, false)}
-          onPointerUp={() => update({}, true)}
-          onTouchEnd={() => update({}, true)}
-          onKeyUp={() => update({}, true)}
+          onPointerUp={(e) => update({ angle: Number((e.target as HTMLInputElement).value) }, true)}
+          onKeyUp={(e) => update({ angle: Number((e.target as HTMLInputElement).value) }, true)}
           className="w-full mt-2 accent-[#3B82C4]"
         />
       )}
@@ -376,8 +379,8 @@ function GradientEditor({ spec, onChange, onPickFromCanvas }: { spec: GradientSp
               max={100}
               value={Math.round((current.opacity ?? 1) * 100)}
               onChange={(e) => setStop(sel, { opacity: Number(e.target.value) / 100 }, false)}
-              onPointerUp={() => update({}, true)}
-              onTouchEnd={() => update({}, true)}
+              onPointerUp={(e) => setStop(sel, { opacity: Number((e.target as HTMLInputElement).value) / 100 }, true)}
+              onKeyUp={(e) => setStop(sel, { opacity: Number((e.target as HTMLInputElement).value) / 100 }, true)}
               className="w-full accent-[#3B82C4]"
             />
           </label>
@@ -404,11 +407,15 @@ function GradientEditor({ spec, onChange, onPickFromCanvas }: { spec: GradientSp
   );
 }
 
-export function ColorPicker({ value, onChange, allowGradient, allowNone, brandColors = [], documentColors = [], onPickFromCanvas }: Props) {
+export function ColorPicker({ value, onChange, allowGradient, allowNone, brandColors = [], documentColors = [], onPickFromCanvas, alpha = true }: Props) {
   const [tab, setTab] = useState<'solid' | 'gradient'>(isGradient(value) ? 'gradient' : 'solid');
   const [recent, setRecent] = useState<string[]>([]);
   useEffect(() => setRecent(readRecentColors()), []);
-  const hex = typeof value === 'string' && value ? value : isGradient(value) ? value.stops[0]?.color || '#000000' : '#FFFFFF';
+  // Solid colours can carry their own opacity (rgba); the editor works
+  // on the #RRGGBB part and the opacity separately.
+  const solid = typeof value === 'string' && value ? parseColorAlpha(value) : null;
+  const hex = solid ? solid.hex : isGradient(value) ? value.stops[0]?.color || '#000000' : '#FFFFFF';
+  const opacity = solid ? solid.alpha : 1;
   const gradient = useMemo<GradientSpec>(
     () =>
       isGradient(value)
@@ -425,12 +432,12 @@ export function ColorPicker({ value, onChange, allowGradient, allowNone, brandCo
     [value]
   );
 
-  const pickSolid = (c: string, commit = true) => {
+  const pickSolid = (c: string, commit = true, a = opacity) => {
     if (commit) {
       rememberColor(c);
       setRecent(readRecentColors());
     }
-    onChange(c, commit);
+    onChange(alpha ? withAlpha(c, a) : c, commit);
   };
 
   return (
@@ -469,10 +476,30 @@ export function ColorPicker({ value, onChange, allowGradient, allowNone, brandCo
       ) : (
         <>
           <SolidEditor hex={hex} onChange={(h) => pickSolid(h, false)} onCommit={(h) => pickSolid(h, true)} onPickFromCanvas={onPickFromCanvas} />
-          <Swatches title="Recent" colors={recent} onPick={(c) => pickSolid(c)} current={hex} />
-          <Swatches title="In this design" colors={documentColors} onPick={(c) => pickSolid(c)} current={hex} />
-          <Swatches title="Brand" colors={brandColors} onPick={(c) => pickSolid(c)} current={hex} />
-          <Swatches title="Colours" colors={DEFAULT_SWATCHES} onPick={(c) => pickSolid(c)} current={hex} />
+          {alpha && (
+            <label className="block mt-3 text-xs text-mt-muted">
+              <span className="flex justify-between">
+                <span>Opacity</span>
+                <span className="tabular-nums text-mt-ink">{Math.round(opacity * 100)}%</span>
+              </span>
+              <input
+                type="range"
+                min={0}
+                max={100}
+                value={Math.round(opacity * 100)}
+                aria-label="Colour opacity"
+                onChange={(e) => pickSolid(hex, false, Number(e.target.value) / 100)}
+                onPointerUp={(e) => pickSolid(hex, true, Number((e.target as HTMLInputElement).value) / 100)}
+                onKeyUp={(e) => pickSolid(hex, true, Number((e.target as HTMLInputElement).value) / 100)}
+                className="w-full mt-1"
+                style={{ accentColor: hex }}
+              />
+            </label>
+          )}
+          <Swatches title="Recent" colors={recent} onPick={(c) => pickSolid(c, true, 1)} current={hex} />
+          <Swatches title="In this design" colors={documentColors} onPick={(c) => pickSolid(c, true, 1)} current={hex} />
+          <Swatches title="Brand" colors={brandColors} onPick={(c) => pickSolid(c, true, 1)} current={hex} />
+          <Swatches title="Colours" colors={DEFAULT_SWATCHES} onPick={(c) => pickSolid(c, true, 1)} current={hex} />
         </>
       )}
     </div>

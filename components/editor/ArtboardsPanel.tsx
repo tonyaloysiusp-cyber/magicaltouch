@@ -395,13 +395,17 @@ export function ArtboardsPanel({
                   />
                 </label>
                 <label className="block">
-                  <span className="text-[10px] text-mt-muted block mb-0.5">Gutter (px)</span>
+                  <span className="text-[10px] text-mt-muted block mb-0.5">Gutter ({unit})</span>
                   <input
-                    type="number"
-                    min={0}
-                    key={`gut-${active.id}-${active.print.gutter ?? 16}`}
-                    defaultValue={active.print.gutter ?? 16}
-                    onBlur={(e) => onUpdatePrint(active.id, { gutter: Math.max(0, Number(e.target.value) || 0) })}
+                    type="text"
+                    inputMode="decimal"
+                    key={`gut-${active.id}-${active.print.gutter ?? 16}-${unit}`}
+                    defaultValue={formatUnit(active.print.gutter ?? 16, unit)}
+                    onBlur={(e) => {
+                      const n = parseFloat(e.target.value);
+                      if (Number.isFinite(n) && n >= 0) onUpdatePrint(active.id, { gutter: unitToPx(n, unit) });
+                    }}
+                    onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
                     className="w-full text-xs border rounded px-2 py-1"
                   />
                 </label>
@@ -411,6 +415,8 @@ export function ArtboardsPanel({
                 <label className="text-[10px] text-mt-muted block mb-0.5">Target Print DPI</label>
                 <input
                   type="text"
+                  inputMode="numeric"
+                  key={`dpi-${active.id}-${active.print.dpi}`}
                   defaultValue={String(active.print.dpi)}
                   onBlur={(e) => {
                     const val = parseFloat(e.target.value);

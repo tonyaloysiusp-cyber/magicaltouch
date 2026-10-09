@@ -351,7 +351,7 @@ export function PropertiesPanel({
       )}
 
       <div>
-        <p className="text-xs font-semibold text-mt-muted dark:text-mt-muted mb-2">Align to Canvas</p>
+        <p className="text-xs font-semibold text-mt-muted dark:text-mt-muted mb-2">{isMultiple ? 'Align to each other' : 'Align to page'}</p>
         <div className="grid grid-cols-3 gap-1">
           <button onClick={() => alignObject('left')} className="text-xs border rounded py-1 hover:bg-mt-surface2 dark:border-mt-border dark:text-mt-ink dark:hover:bg-mt-surface2">⟸</button>
           <button onClick={() => alignObject('centerH')} className="text-xs border rounded py-1 hover:bg-mt-surface2 dark:border-mt-border dark:text-mt-ink dark:hover:bg-mt-surface2">↔</button>
@@ -577,7 +577,7 @@ export function PropertiesPanel({
               max={40}
               disabled={isLocked}
               value={selected.strokeWidth || 0}
-              onChange={(e) => applyProp({ strokeWidth: Number(e.target.value) }, false)}
+              onChange={(e) => applyProp({ strokeWidth: Number(e.target.value), strokeUniform: true, ...(selected.stroke ? {} : { stroke: '#09090B' }) }, false)}
               {...commitHandlers(pushHistory)}
               className="w-full disabled:opacity-40"
             />

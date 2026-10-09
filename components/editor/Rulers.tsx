@@ -175,6 +175,8 @@ export function Rulers({ fabricCanvasRef, unit, originX, originY, artboardWidth,
     };
   }, [fabricCanvasRef, ready, unit, originX, originY, artboardWidth, artboardHeight, visible]);
 
+  if (!visible) return null;
+
   return (
     <>
       <div

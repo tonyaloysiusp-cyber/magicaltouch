@@ -4,6 +4,12 @@ import { useState } from 'react';
 import { X, Wand2 } from 'lucide-react';
 import { SIZE_GROUPS, SizePreset, presetLabel, presetToPx } from '@/lib/editor/sizePresets';
 import { Segmented, cx } from './ui';
+import { useDisplayUnit, pxToUnit, unitToPx } from '@/lib/editor/units';
+import type { DocUnit } from '@/lib/editor/types';
+
+const UNITS: DocUnit[] = ['px', 'mm', 'cm', 'in', 'pt'];
+const MIN_PX = 16;
+const MAX_PX = 30000;
 
 export function ResizeDialog({
   current,
@@ -16,7 +22,26 @@ export function ResizeDialog({
 }) {
   const [group, setGroup] = useState(SIZE_GROUPS[0].id);
   const [picked, setPicked] = useState<SizePreset | null>(null);
-  const [custom, setCustom] = useState({ w: Math.round(current.width), h: Math.round(current.height) });
+  const [unit, setUnit] = useDisplayUnit();
+  const show = (px: number, u: DocUnit) => String(Math.round(pxToUnit(px, u) * (u === 'px' ? 1 : 100)) / (u === 'px' ? 1 : 100));
+  const [custom, setCustom] = useState({ w: show(current.width, unit), h: show(current.height, unit) });
+  const toPx = (v: string) => {
+    const n = parseFloat(v.replace(',', '.'));
+    return Number.isFinite(n) ? unitToPx(n, unit) : NaN;
+  };
+  const wPx = toPx(custom.w);
+  const hPx = toPx(custom.h);
+  const customError =
+    !Number.isFinite(wPx) || !Number.isFinite(hPx)
+      ? 'Enter a number for both width and height.'
+      : wPx < MIN_PX || hPx < MIN_PX || wPx > MAX_PX || hPx > MAX_PX
+      ? `Sizes must be between ${show(MIN_PX, unit)} and ${show(MAX_PX, unit)} ${unit}.`
+      : null;
+  const changeUnit = (u: DocUnit) => {
+    // Same size, shown in the new unit.
+    setCustom({ w: Number.isFinite(wPx) ? show(wPx, u) : custom.w, h: Number.isFinite(hPx) ? show(hPx, u) : custom.h });
+    setUnit(u);
+  };
   const [mode, setMode] = useState<'copy' | 'this'>('copy');
   const items = SIZE_GROUPS.find((g) => g.id === group)?.items || [];
 
@@ -24,8 +49,8 @@ export function ResizeDialog({
     if (picked) {
       const s = presetToPx(picked);
       onResize({ ...s, dpi: picked.dpi, label: picked.label }, mode);
-    } else {
-      onResize({ width: Math.max(16, custom.w), height: Math.max(16, custom.h), label: 'Custom size' }, mode);
+    } else if (!customError) {
+      onResize({ width: wPx, height: hPx, label: 'Custom size' }, mode);
     }
   };
 
@@ -64,14 +89,25 @@ export function ResizeDialog({
           </div>
           <div className="mt-4 flex items-end gap-2">
             <label className="flex-1">
-              <span className="block text-xs text-mt-muted mb-1">Custom width (px)</span>
-              <input type="number" value={custom.w} onFocus={() => setPicked(null)} onChange={(e) => setCustom({ ...custom, w: Number(e.target.value) })} className="w-full h-10 rounded-lg border border-mt-input-border bg-mt-surface px-3 text-sm" />
+              <span className="block text-xs text-mt-muted mb-1">Custom width</span>
+              <input inputMode="decimal" value={custom.w} onFocus={() => setPicked(null)} onChange={(e) => setCustom({ ...custom, w: e.target.value })} className="w-full h-10 rounded-lg border border-mt-input-border bg-mt-surface px-3 text-sm" />
             </label>
             <label className="flex-1">
-              <span className="block text-xs text-mt-muted mb-1">Height (px)</span>
-              <input type="number" value={custom.h} onFocus={() => setPicked(null)} onChange={(e) => setCustom({ ...custom, h: Number(e.target.value) })} className="w-full h-10 rounded-lg border border-mt-input-border bg-mt-surface px-3 text-sm" />
+              <span className="block text-xs text-mt-muted mb-1">Height</span>
+              <input inputMode="decimal" value={custom.h} onFocus={() => setPicked(null)} onChange={(e) => setCustom({ ...custom, h: e.target.value })} className="w-full h-10 rounded-lg border border-mt-input-border bg-mt-surface px-3 text-sm" />
+            </label>
+            <label>
+              <span className="block text-xs text-mt-muted mb-1">Unit</span>
+              <select value={unit} onChange={(e) => changeUnit(e.target.value as DocUnit)} className="h-10 rounded-lg border border-mt-input-border bg-mt-surface px-2 text-sm">
+                {UNITS.map((u) => (
+                  <option key={u} value={u}>
+                    {u}
+                  </option>
+                ))}
+              </select>
             </label>
           </div>
+          {!picked && customError && <p className="mt-2 text-xs text-red-600">{customError}</p>}
         </div>
         <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4 border-t border-mt-border">
           <Segmented
@@ -83,7 +119,7 @@ export function ResizeDialog({
             ]}
             size="sm"
           />
-          <button type="button" onClick={go} className="h-10 px-5 rounded-full bg-mt-primary text-mt-onprimary text-sm font-semibold">
+          <button type="button" onClick={go} disabled={!picked && !!customError} className="h-10 px-5 rounded-full bg-mt-primary text-mt-onprimary text-sm font-semibold disabled:opacity-40">
             Resize
           </button>
         </div>

@@ -70,11 +70,11 @@ export interface ToolbarActions {
   applyProp: (p: Record<string, any>, record?: boolean) => void;
   applyCharProp: (p: Record<string, any>, record?: boolean) => void;
   getTextPropValue: (o: any, prop: string) => { value: any; mixed: boolean };
-  setFill: (v: string | GradientSpec | null) => void;
+  setFill: (v: string | GradientSpec | null, record?: boolean) => void;
   setStroke: (p: { stroke?: string | null; strokeWidth?: number; dash?: 'solid' | 'dashed' | 'dotted' }) => void;
-  setShadow: (s: { color: string; blur: number; x: number; y: number } | null) => void;
-  setCornerRadius: (r: number) => void;
-  setShapeParams: (p: any) => void;
+  setShadow: (s: { color: string; blur: number; x: number; y: number } | null, record?: boolean) => void;
+  setCornerRadius: (r: number, record?: boolean) => void;
+  setShapeParams: (p: any, record?: boolean) => void;
   setTextFx: (fx: TextFx, record?: boolean) => void;
   setOpacity: (v: number, record?: boolean) => void;
   flip: (axis: 'x' | 'y') => void;
@@ -134,6 +134,10 @@ export function ContextToolbar({
   onCropDone,
   onSmartCrop,
   cropAspect,
+  cropZoom = 1,
+  cropStraighten = 0,
+  onCropZoom,
+  onCropStraighten,
   pro,
 }: {
   sel: any;
@@ -146,13 +150,17 @@ export function ContextToolbar({
   onCropReset: () => void;
   onCropDone: (apply: boolean) => void;
   onSmartCrop?: () => void;
+  cropZoom?: number;
+  cropStraighten?: number;
+  onCropZoom?: (z: number) => void;
+  onCropStraighten?: (deg: number) => void;
   pro: boolean;
 }) {
   const wrap = (children: React.ReactNode) => (
     <div
       role="toolbar"
       aria-label="Tools for the selection"
-      className="pointer-events-auto max-w-[calc(100vw-1.5rem)] flex items-center gap-0.5 overflow-x-auto mt-scroll rounded-2xl border border-mt-border bg-mt-surface/95 backdrop-blur px-1.5 py-1 shadow-[0_12px_32px_-12px_rgba(9,9,11,0.25)]"
+      className="pointer-events-auto max-w-full flex items-center gap-0.5 overflow-x-auto mt-scroll rounded-2xl border border-mt-border bg-mt-surface/95 backdrop-blur px-1.5 py-1 shadow-[0_12px_32px_-12px_rgba(9,9,11,0.25)]"
     >
       {children}
     </div>
@@ -242,6 +250,48 @@ export function ContextToolbar({
     </Popover>
   );
 
+  // Drop shadow for shapes, photos, groups and several objects at once.
+  // Sliders preview live and record one undo step when released.
+  const shadowPopover = (o: any) => {
+    const base = o.type === 'activeSelection' ? o.getObjects().find((x: any) => x.shadow)?.shadow || null : o.shadow;
+    const cur = base ? { color: base.color || 'rgba(9,9,11,0.35)', blur: base.blur || 0, x: base.offsetX || 0, y: base.offsetY || 0 } : null;
+    const set = (patch: Partial<{ color: string; blur: number; x: number; y: number }>, record: boolean) =>
+      cur && a.setShadow({ ...cur, ...patch }, record);
+    return (
+      <Popover
+        width={280}
+        trigger={({ toggle, open }) => (
+          <IconButton label="Shadow" hint="Add a soft drop shadow" onClick={toggle} active={open || !!cur}>
+            <Sun size={16} />
+          </IconButton>
+        )}
+      >
+        <div className="flex flex-col gap-3">
+          <label className="flex items-center justify-between text-sm">
+            Shadow
+            <input
+              type="checkbox"
+              checked={!!cur}
+              onChange={(e) => a.setShadow(e.target.checked ? { color: 'rgba(9,9,11,0.35)', blur: 18, x: 0, y: 10 } : null)}
+              className="accent-[#3B82C4] w-4 h-4"
+            />
+          </label>
+          {cur && (
+            <>
+              <Slider label="Blur" value={Math.round(cur.blur)} min={0} max={80} onChange={(v) => set({ blur: v }, false)} onCommit={(v) => set({ blur: v }, true)} />
+              <Slider label="Distance" value={Math.round(cur.y)} min={-60} max={60} onChange={(v) => set({ y: v }, false)} onCommit={(v) => set({ y: v }, true)} />
+              <Slider label="Sideways" value={Math.round(cur.x)} min={-60} max={60} onChange={(v) => set({ x: v }, false)} onCommit={(v) => set({ x: v }, true)} />
+              <div>
+                <p className="text-xs text-mt-muted mb-1">Colour</p>
+                <ColorPicker value={cur.color} alpha onChange={(v, commit) => typeof v === 'string' && set({ color: v }, commit)} brandColors={brandColors} documentColors={documentColors} onPickFromCanvas={a.pickFromCanvas} />
+              </div>
+            </>
+          )}
+        </div>
+      </Popover>
+    );
+  };
+
   const common = (o: any, multi = false, count = 1) => (
     <>
       <Divider />
@@ -271,6 +321,7 @@ export function ContextToolbar({
       ['3:2', 3 / 2],
       ['2:3', 2 / 3],
     ];
+    const isPreset = ratios.some(([, r]) => r !== null && r !== 0 && cropAspect !== null && Math.abs((cropAspect || 0) - r) < 1e-6);
     return wrap(
       <>
         <span className="px-2 text-[13px] font-semibold whitespace-nowrap">Crop</span>
@@ -278,28 +329,73 @@ export function ContextToolbar({
           <button
             key={l}
             type="button"
-            onClick={() => (r === 0 ? undefined : onCropRatio(r))}
-            disabled={r === 0}
+            onClick={() => onCropRatio(r)}
             className={cx(
               'h-8 px-2.5 rounded-lg text-xs font-medium whitespace-nowrap border',
-              (r === 0 && cropAspect === null) || (r !== null && r !== 0 && cropAspect === r) ? 'mt-active-blue text-mt-ink' : 'border-transparent text-mt-muted hover:text-mt-ink hover:bg-mt-surface2',
-              r === 0 && 'disabled:opacity-100'
+              (r === 0 && (cropAspect === 0 || cropAspect === null)) || (r !== null && r !== 0 && cropAspect !== null && Math.abs(cropAspect - r) < 1e-6) ? 'mt-active-blue text-mt-ink' : 'border-transparent text-mt-muted hover:text-mt-ink hover:bg-mt-surface2'
             )}
-            title={r === 0 ? 'Drag the photo to reposition; drag its corners to zoom' : `Crop to ${l}`}
+            title={r === 0 ? 'Drag the frame’s edges and corners freely' : r === null ? 'The photo’s own shape' : `Crop to ${l}`}
           >
             {l}
           </button>
         ))}
+        <Popover
+          width={230}
+          trigger={({ toggle, open }) => (
+            <button type="button" onClick={toggle} className={cx('h-8 px-2.5 rounded-lg text-xs font-medium whitespace-nowrap border', open || (cropAspect && !isPreset) ? 'mt-active-blue text-mt-ink' : 'border-transparent text-mt-muted hover:text-mt-ink hover:bg-mt-surface2')}>
+              Custom…
+            </button>
+          )}
+        >
+          {(close) => (
+            <form
+              className="flex items-end gap-2"
+              onSubmit={(e) => {
+                e.preventDefault();
+                const f = new FormData(e.currentTarget);
+                const w = parseFloat(String(f.get('w')));
+                const h = parseFloat(String(f.get('h')));
+                if (w > 0 && h > 0) {
+                  onCropRatio(w / h);
+                  close();
+                }
+              }}
+            >
+              <label className="flex-1 text-xs text-mt-muted">
+                Width
+                <input name="w" inputMode="decimal" defaultValue="5" className="mt-1 w-full h-8 rounded-lg border border-mt-input-border bg-mt-surface px-2 text-sm text-mt-ink" />
+              </label>
+              <span className="pb-2 text-mt-muted">:</span>
+              <label className="flex-1 text-xs text-mt-muted">
+                Height
+                <input name="h" inputMode="decimal" defaultValue="7" className="mt-1 w-full h-8 rounded-lg border border-mt-input-border bg-mt-surface px-2 text-sm text-mt-ink" />
+              </label>
+              <button type="submit" className="h-8 px-3 rounded-lg bg-mt-primary text-mt-onprimary text-xs font-semibold">
+                Set
+              </button>
+            </form>
+          )}
+        </Popover>
         <Divider />
+        <Popover
+          width={260}
+          trigger={({ toggle, open }) => <ToolButton label="Zoom & straighten" hint="Zoom the photo in its frame, or level it" icon={<RotateCcw size={15} />} onClick={toggle} active={open} />}
+        >
+          <div className="flex flex-col gap-3">
+            <Slider label="Zoom" value={Math.round(cropZoom * 100)} min={100} max={400} suffix="%" onChange={(v) => onCropZoom?.(v / 100)} />
+            <Slider label="Straighten" value={cropStraighten} min={-45} max={45} suffix="°" onChange={(v) => onCropStraighten?.(v)} />
+            <p className="text-[11px] text-mt-faint">Drag the photo to move it inside the frame. Drag the frame’s corners or edges to change the crop.</p>
+          </div>
+        </Popover>
         {onSmartCrop && (
           <button type="button" onClick={onSmartCrop} title="Find the subject and centre it" className="h-8 px-2.5 rounded-lg text-xs font-semibold mt-spectrum-border inline-flex items-center gap-1 whitespace-nowrap">
             <Sparkles size={13} /> Smart
           </button>
         )}
-        <IconButton label="Reset crop" onClick={onCropReset}>
-          <RotateCcw size={16} />
-        </IconButton>
-        <button type="button" onClick={() => onCropDone(false)} className="h-8 px-3 rounded-lg text-xs font-medium text-mt-muted hover:text-mt-ink inline-flex items-center gap-1">
+        <button type="button" onClick={onCropReset} title="Show the whole photo again" className="h-8 px-2.5 rounded-lg text-xs font-medium text-mt-muted hover:text-mt-ink hover:bg-mt-surface2 whitespace-nowrap">
+          Reset
+        </button>
+        <button type="button" onClick={() => onCropDone(false)} title="Cancel (Esc)" className="h-8 px-3 rounded-lg text-xs font-medium text-mt-muted hover:text-mt-ink inline-flex items-center gap-1">
           <X size={14} /> Cancel
         </button>
         <button type="button" onClick={() => onCropDone(true)} className="h-8 px-3 rounded-lg text-xs font-semibold bg-mt-primary text-mt-onprimary inline-flex items-center gap-1">
@@ -340,7 +436,8 @@ export function ContextToolbar({
         {imgs.length === 1 && shapes.length === 1 && objs.length === 2 && (
           <ToolButton label="Place photo in shape" hint="Clip the photo to the shape" icon={<FrameIcon size={16} />} onClick={a.placeInShape} special />
         )}
-        {colorPopover('Colour', firstChildFill(sel), (v, commit) => commit && a.setFill(v), { gradient: true })}
+        {colorPopover('Colour', firstChildFill(sel), (v, commit) => a.setFill(v, commit), { gradient: true })}
+        {shadowPopover(sel)}
         {common(sel, true, objs.length)}
       </>
     );
@@ -399,9 +496,8 @@ export function ContextToolbar({
           'Text colour',
           FillValue(sel),
           (v, commit) => {
-            if (v && typeof v === 'object') {
-              if (commit) a.setFill(v);
-            } else a.applyCharProp({ fill: v || '#09090B' }, commit);
+            if (v && typeof v === 'object') a.setFill(v, commit);
+            else a.applyCharProp({ fill: v || '#09090B' }, commit);
           },
           { gradient: true }
         )}
@@ -525,6 +621,7 @@ export function ContextToolbar({
             </button>
           </div>
         </Popover>
+        {shadowPopover(sel)}
         {framed && sel.clipPath?.type === 'rect' && (
           <Popover
             width={240}
@@ -539,7 +636,8 @@ export function ContextToolbar({
               value={Math.round((sel.clipPath.rx || 0) * Math.abs(sel.clipPath.scaleX || 1) * Math.abs(sel.scaleX || 1))}
               min={0}
               max={Math.round(Math.min(sel.getScaledWidth(), sel.getScaledHeight()) / 2)}
-              onChange={(v) => a.setCornerRadius(v)}
+              onChange={(v) => a.setCornerRadius(v, false)}
+              onCommit={(v) => a.setCornerRadius(v)}
             />
           </Popover>
         )}
@@ -553,7 +651,8 @@ export function ContextToolbar({
     return wrap(
       <>
         <ToolButton label="Ungroup" hint="Ctrl/Cmd+Shift+G" icon={<Ungroup size={16} />} onClick={a.ungroup} />
-        {colorPopover('Colour', firstChildFill(sel), (v, commit) => commit && a.setFill(v), { gradient: true })}
+        {colorPopover('Colour', firstChildFill(sel), (v, commit) => a.setFill(v, commit), { gradient: true })}
+        {shadowPopover(sel)}
         {common(sel)}
       </>
     );
@@ -568,7 +667,7 @@ export function ContextToolbar({
   const shadow = sel.shadow;
   return wrap(
     <>
-      {!isLine && colorPopover('Fill', FillValue(sel), (v, commit) => (commit ? a.setFill(v) : a.applyProp({ fill: v && typeof v === 'string' ? v : sel.fill }, false)), { gradient: true, none: true })}
+      {!isLine && colorPopover('Fill', FillValue(sel), (v, commit) => a.setFill(v, commit), { gradient: true, none: true })}
       <Popover
         width={280}
         trigger={({ toggle, open }) => (
@@ -586,7 +685,7 @@ export function ContextToolbar({
               </button>
             ))}
           </div>
-          <ColorPicker value={typeof sel.stroke === 'string' && sel.stroke ? sel.stroke : '#09090B'} allowNone onChange={(v, commit) => commit && a.setStroke({ stroke: v as string | null })} brandColors={brandColors} documentColors={documentColors} onPickFromCanvas={a.pickFromCanvas} />
+          <ColorPicker value={typeof sel.stroke === 'string' && sel.stroke ? sel.stroke : '#09090B'} allowNone onChange={(v, commit) => (commit ? a.setStroke({ stroke: v as string | null }) : a.applyProp({ stroke: v || '' }, false))} brandColors={brandColors} documentColors={documentColors} onPickFromCanvas={a.pickFromCanvas} />
         </div>
       </Popover>
       {hasCorner && (
@@ -598,7 +697,7 @@ export function ContextToolbar({
             </IconButton>
           )}
         >
-          <Slider label="Corner radius" value={curRadius} min={0} max={Math.round(Math.min(sel.getScaledWidth(), sel.getScaledHeight()) / 2)} onChange={(v) => a.setCornerRadius(v)} />
+          <Slider label="Corner radius" value={curRadius} min={0} max={Math.round(Math.min(sel.getScaledWidth(), sel.getScaledHeight()) / 2)} onChange={(v) => a.setCornerRadius(v, false)} onCommit={(v) => a.setCornerRadius(v)} />
         </Popover>
       )}
       {meta && ['star', 'burst', 'badge', 'polygon'].includes(kind!) && (
@@ -608,43 +707,17 @@ export function ContextToolbar({
         >
           <div className="flex flex-col gap-3">
             {kind === 'polygon' ? (
-              <Slider label="Sides" value={meta.params.sides ?? 8} min={3} max={16} onChange={(v) => a.setShapeParams({ sides: v })} />
+              <Slider label="Sides" value={meta.params.sides ?? 8} min={3} max={16} onChange={(v) => a.setShapeParams({ sides: v }, false)} onCommit={(v) => a.setShapeParams({ sides: v })} />
             ) : (
-              <Slider label="Points" value={meta.params.points ?? 5} min={kind === 'badge' ? 8 : 3} max={kind === 'badge' ? 48 : 32} onChange={(v) => a.setShapeParams({ points: v })} />
+              <Slider label="Points" value={meta.params.points ?? 5} min={kind === 'badge' ? 8 : 3} max={kind === 'badge' ? 48 : 32} onChange={(v) => a.setShapeParams({ points: v }, false)} onCommit={(v) => a.setShapeParams({ points: v })} />
             )}
             {(kind === 'star' || kind === 'burst') && (
-              <Slider label="Inner size" value={Math.round((meta.params.inner ?? 0.45) * 100)} min={10} max={95} suffix="%" onChange={(v) => a.setShapeParams({ inner: v / 100 })} />
+              <Slider label="Inner size" value={Math.round((meta.params.inner ?? 0.45) * 100)} min={10} max={95} suffix="%" onChange={(v) => a.setShapeParams({ inner: v / 100 }, false)} onCommit={(v) => a.setShapeParams({ inner: v / 100 })} />
             )}
           </div>
         </Popover>
       )}
-      <Popover
-        width={260}
-        trigger={({ toggle, open }) => (
-          <IconButton label="Shadow" onClick={toggle} active={open || !!shadow}>
-            <Sun size={16} />
-          </IconButton>
-        )}
-      >
-        <div className="flex flex-col gap-3">
-          <label className="flex items-center justify-between text-sm">
-            Shadow
-            <input
-              type="checkbox"
-              checked={!!shadow}
-              onChange={(e) => a.setShadow(e.target.checked ? { color: 'rgba(9,9,11,0.35)', blur: 18, x: 0, y: 10 } : null)}
-              className="accent-[#3B82C4] w-4 h-4"
-            />
-          </label>
-          {shadow && (
-            <>
-              <Slider label="Blur" value={Math.round(shadow.blur || 0)} min={0} max={80} onChange={(v) => a.setShadow({ color: shadow.color, blur: v, x: shadow.offsetX, y: shadow.offsetY })} />
-              <Slider label="Distance" value={Math.round(shadow.offsetY || 0)} min={-60} max={60} onChange={(v) => a.setShadow({ color: shadow.color, blur: shadow.blur, x: shadow.offsetX, y: v })} />
-              <Slider label="Sideways" value={Math.round(shadow.offsetX || 0)} min={-60} max={60} onChange={(v) => a.setShadow({ color: shadow.color, blur: shadow.blur, x: v, y: shadow.offsetY })} />
-            </>
-          )}
-        </div>
-      </Popover>
+      {shadowPopover(sel)}
       {common(sel)}
     </>
   );
