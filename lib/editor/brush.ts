@@ -22,7 +22,7 @@ export const BRUSH_KINDS: { id: BrushKind; label: string; hint: string }[] = [
   { id: 'marker', label: 'Marker', hint: 'Even, bold strokes' },
   { id: 'highlighter', label: 'Highlighter', hint: 'See-through strokes that don’t hide what’s under them' },
   { id: 'pencil', label: 'Pencil', hint: 'Thin, crisp lines' },
-  { id: 'eraser', label: 'Eraser', hint: 'Erases drawn strokes (not photos or text)' },
+  { id: 'eraser', label: 'Eraser', hint: 'Erases drawings, paths and shapes (not photos or text)' },
 ];
 
 export type StrokePoint = [number, number, number]; // x, y, pressure
@@ -91,14 +91,25 @@ export function createStrokeObject(F: any, points: StrokePoint[], s: BrushSettin
 
 const rectsOverlap = (a: any, b: any) => a.left < b.left + b.width && a.left + a.width > b.left && a.top < b.top + b.height && a.top + a.height > b.top;
 
-// Cuts the eraser stroke out of every drawn stroke it touches. The cut is
-// a live mask kept inside each stroke (so it moves with it and can be
-// undone); the stroke's own shape is never destroyed.
+const ERASABLE_TYPES = ['path', 'rect', 'ellipse', 'circle', 'triangle', 'polygon', 'polyline', 'line'];
+
+// What the eraser can cut: drawings, pen/pencil paths and shapes — never
+// photos (their mask is their frame), text, pages or guides, and nothing
+// that already has a different kind of mask.
+export function isErasable(o: any): boolean {
+  if (!o || o.locked || o.visible === false || o.__isArtboard || o.__isGuide || o.__isAnchorHandle || o.__isHelper) return false;
+  if (o.__brush?.kind === 'eraser') return false;
+  if (!(o.__brush || o.isVectorPath || o.__shape || ERASABLE_TYPES.includes(o.type))) return false;
+  const clip = o.clipPath;
+  return !clip || (clip.type === 'group' && clip.inverted);
+}
+
+// Cuts the eraser stroke out of everything erasable it touches. The cut
+// is a live mask kept inside each object (so it moves with it and can be
+// undone); the object's own shape is never destroyed.
 export function eraseWithStroke(F: any, canvas: any, eraser: any): number {
   const box = eraser.getBoundingRect(true, true);
-  const targets = canvas
-    .getObjects()
-    .filter((o: any) => o.__brush && o.__brush.kind !== 'eraser' && !o.locked && o.visible !== false && rectsOverlap(box, o.getBoundingRect(true, true)));
+  const targets = canvas.getObjects().filter((o: any) => isErasable(o) && rectsOverlap(box, o.getBoundingRect(true, true)));
   const E = eraser.calcTransformMatrix();
   targets.forEach((o: any) => {
     // The eraser stroke expressed in this stroke's own coordinates.

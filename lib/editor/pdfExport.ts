@@ -76,7 +76,7 @@ function needsRasterFallback(obj: any): boolean {
   // Text with letter-by-letter formatting or letter spacing, and colours
   // with their own transparency, are drawn as a sharp picture so they
   // look exactly as on screen.
-  if (isTextObj(obj) && (hasCharStyles(obj) || (obj.charSpacing && obj.charSpacing !== 0))) return true;
+  if (isTextObj(obj) && (hasCharStyles(obj) || (obj.charSpacing && obj.charSpacing !== 0) || obj.paragraphSpacing)) return true;
   if (isSeeThrough(obj.fill) || isSeeThrough(obj.stroke)) return true;
   // Effects a PDF can't express as plain vectors are drawn as a sharp
   // high-resolution picture of just that object.

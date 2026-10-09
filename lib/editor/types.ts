@@ -7,7 +7,7 @@ import { GOOGLE_FONT_NAMES } from './googleFonts';
 
 export type DrawTool = 'rect' | 'ellipse' | 'triangle' | 'polygon' | 'star' | 'line';
 export type PixelSelectTool = 'marquee-rect' | 'marquee-ellipse' | 'lasso' | 'magic-wand';
-export type ToolMode = 'select' | 'pen' | 'direct' | 'pan' | 'artboard' | DrawTool | PixelSelectTool;
+export type ToolMode = 'select' | 'pen' | 'direct' | 'pan' | 'artboard' | 'text' | DrawTool | PixelSelectTool;
 
 export const DRAW_TOOLS: DrawTool[] = ['rect', 'ellipse', 'triangle', 'polygon', 'star', 'line'];
 export const isDrawTool = (t: string): t is DrawTool => (DRAW_TOOLS as string[]).includes(t);

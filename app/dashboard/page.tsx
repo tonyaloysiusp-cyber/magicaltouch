@@ -23,6 +23,7 @@ import { ProfileMenu } from '@/components/ProfileMenu';
 import { DesignLimitDialog } from '@/components/DesignLimitDialog';
 import { MAX_DESIGNS, getOrCreateProfile } from '@/lib/profile';
 import { allFontFacesCSS, ensureFontsLoadedForCanvasJSON } from '@/lib/editor/googleFonts';
+import { installParagraphSpacing } from '@/lib/editor/paragraphSpacing';
 import { BrandLogo } from '@/components/BrandLogo';
 import { useAppTheme } from '@/hooks/useAppTheme';
 
@@ -130,6 +131,7 @@ export default function DashboardPage() {
     const missing = list.filter((d) => !d.thumbnail);
     if (!missing.length) return;
     const F = (await import('fabric')).fabric;
+    installParagraphSpacing(F);
     for (const design of missing) {
       try {
         const full = await getProject(design.id).catch(() => null);

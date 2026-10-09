@@ -5,14 +5,17 @@
 export type TextEffectKind = 'none' | 'shadow' | 'lift' | 'glow' | 'neon' | 'outline' | 'hollow' | 'highlight' | 'echo';
 
 export interface TextFx {
-  effect: TextEffectKind;
+  effect: TextEffectKind; // the "look": shadow, glow, neon…
   color: string; // effect colour
   amount: number; // 0..100 effect strength (blur / offset / thickness)
   curve: number; // -100..100, 0 = straight
   wave: number; // 0..100 wavy baseline
+  // Layers that combine with any look.
+  outline?: { color: string; width: number } | null; // width 0..100
+  highlight?: { color: string } | null;
 }
 
-export const DEFAULT_TEXT_FX: TextFx = { effect: 'none', color: '#09090B', amount: 50, curve: 0, wave: 0 };
+export const DEFAULT_TEXT_FX: TextFx = { effect: 'none', color: '#09090B', amount: 50, curve: 0, wave: 0, outline: null, highlight: null };
 
 export const TEXT_EFFECTS: { id: TextEffectKind; label: string }[] = [
   { id: 'none', label: 'None' },
@@ -27,8 +30,14 @@ export const TEXT_EFFECTS: { id: TextEffectKind; label: string }[] = [
 ];
 
 export function readTextFx(obj: any): TextFx {
-  return { ...DEFAULT_TEXT_FX, ...(obj?.__textFx || {}) };
+  const fx: TextFx = { ...DEFAULT_TEXT_FX, ...(obj?.__textFx || {}) };
+  // Older designs kept outline and highlight as "looks"; they're layers now.
+  if (fx.effect === 'outline') return { ...fx, effect: 'none', outline: { color: fx.color, width: fx.amount } };
+  if (fx.effect === 'highlight') return { ...fx, effect: 'none', highlight: { color: fx.color === '#09090B' ? '#F3A6B8' : fx.color } };
+  return fx;
 }
+
+const outlineWidth = (size: number, w: number) => Math.max(1, size * 0.08 * (0.2 + w / 100));
 
 const withAlpha = (hex: string, a: number) => {
   const h = (hex || '#000000').replace('#', '').padEnd(6, '0').slice(0, 6);
@@ -43,7 +52,13 @@ export function applyTextEffect(F: any, obj: any, fx: TextFx) {
   const size = obj.fontSize || 40;
   const k = fx.amount / 100;
   // Reset everything the effects own.
-  obj.set({ shadow: null, stroke: obj.__fxStroke ? null : obj.stroke, strokeWidth: obj.__fxStroke ? 0 : obj.strokeWidth, textBackgroundColor: obj.__fxHighlight ? '' : obj.textBackgroundColor });
+  obj.set({
+    shadow: null,
+    stroke: obj.__fxStroke ? null : obj.stroke,
+    strokeWidth: obj.__fxStroke ? 0 : obj.strokeWidth,
+    paintFirst: obj.__fxStroke ? 'fill' : obj.paintFirst,
+    textBackgroundColor: obj.__fxHighlight ? '' : obj.textBackgroundColor,
+  });
   if (obj.__fxHollowFill !== undefined) {
     obj.set({ fill: obj.__fxHollowFill });
     obj.__fxHollowFill = undefined;
@@ -87,6 +102,15 @@ export function applyTextEffect(F: any, obj: any, fx: TextFx) {
       break;
     default:
       break;
+  }
+  // Layers on top of the look.
+  if (fx.outline && fx.effect !== 'neon' && fx.effect !== 'hollow') {
+    obj.set({ stroke: fx.outline.color, strokeWidth: outlineWidth(size, fx.outline.width), paintFirst: 'stroke', strokeLineJoin: 'round' });
+    obj.__fxStroke = true;
+  }
+  if (fx.highlight && fx.effect !== 'highlight') {
+    obj.set({ textBackgroundColor: fx.highlight.color });
+    obj.__fxHighlight = true;
   }
   obj.dirty = true;
 }
@@ -153,7 +177,10 @@ export function applyTextShape(F: any, obj: any, curve: number, wave: number) {
 }
 
 export function applyTextFx(F: any, obj: any, fx: TextFx) {
+  // Curved and wavy text follows one line.
+  if ((fx.curve || fx.wave) && typeof obj.text === 'string' && obj.text.includes('\n')) obj.set({ text: obj.text.replace(/\s*\n\s*/g, ' ') });
   applyTextEffect(F, obj, fx);
   applyTextShape(F, obj, fx.curve, fx.wave);
-  obj.__textFx = fx.effect === 'none' && !fx.curve && !fx.wave ? undefined : { ...fx };
+  const empty = fx.effect === 'none' && !fx.curve && !fx.wave && !fx.outline && !fx.highlight;
+  obj.__textFx = empty ? undefined : { ...fx };
 }

@@ -39,6 +39,8 @@ export const PERSIST_PROPS = [
   '__brush',
   // Page-number placeholder text
   '__pageNumber',
+  // Space between paragraphs (lib/editor/paragraphSpacing.ts)
+  'paragraphSpacing',
   // Text box behaviour (auto-fit)
   '__autoFit',
   // Fabric's own interaction locks are not serialized by default.

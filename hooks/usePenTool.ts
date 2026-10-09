@@ -18,6 +18,7 @@ interface Args {
 // (drawOverlay, called from the canvas's after:render), not as canvas
 // objects — so drawing never touches undo history, saving or layers.
 export function usePenTool({ fabricCanvasRef, onPathFinished }: Args) {
+  const lastClickRef = useRef<{ t: number; x: number; y: number } | null>(null);
   const draftRef = useRef<{
     anchors: PenAnchor[];
     mouseDownPoint: { x: number; y: number } | null;
@@ -80,11 +81,17 @@ export function usePenTool({ fabricCanvasRef, onPathFinished }: Args) {
       const draft = draftRef.current;
       const hit = ANCHOR_HIT_RADIUS / zoom();
 
-      // Double-click on the last point (or a quick second click there)
-      // finishes an open path.
+      // A double-click (two quick clicks on the last point) finishes an
+      // open path. Pointer events don't report click counts, so the time
+      // between clicks is measured here.
+      const now = Date.now();
+      const prev = lastClickRef.current;
+      lastClickRef.current = { t: now, x: pointer.x, y: pointer.y };
       if (draft.anchors.length >= 2) {
         const last = draft.anchors[draft.anchors.length - 1];
-        if (Math.hypot(pointer.x - last.x, pointer.y - last.y) <= hit && (opt.e.detail || 1) >= 2) {
+        const quick = prev && now - prev.t < 400 && Math.hypot(prev.x - pointer.x, prev.y - pointer.y) <= hit;
+        if (Math.hypot(pointer.x - last.x, pointer.y - last.y) <= hit && (quick || (opt.e.detail || 0) >= 2)) {
+          lastClickRef.current = null;
           finishPath(false);
           return;
         }
