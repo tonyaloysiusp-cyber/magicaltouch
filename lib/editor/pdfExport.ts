@@ -76,7 +76,7 @@ function needsRasterFallback(obj: any): boolean {
   // Text with letter-by-letter formatting or letter spacing, and colours
   // with their own transparency, are drawn as a sharp picture so they
   // look exactly as on screen.
-  if (isTextObj(obj) && (hasCharStyles(obj) || (obj.charSpacing && obj.charSpacing !== 0) || obj.paragraphSpacing)) return true;
+  if (isTextObj(obj) && (hasCharStyles(obj) || (obj.charSpacing && obj.charSpacing !== 0))) return true;
   if (isSeeThrough(obj.fill) || isSeeThrough(obj.stroke)) return true;
   // Effects a PDF can't express as plain vectors are drawn as a sharp
   // high-resolution picture of just that object.
@@ -294,7 +294,16 @@ async function drawTextObject(pdf: any, F: any, obj: any, offsetX: number, offse
   // object — i.e. every text object this editor creates — half its own
   // width/height off from where it should render.
   const offX = -w / 2;
-  const offY = -h / 2;
+  // Paragraph spacing (lib/editor/paragraphSpacing.ts): the gap before
+  // each paragraph, added up line by line.
+  const gaps: number[] = [];
+  let gapSum = 0;
+  rawLines.forEach((_l, i) => {
+    gapSum += typeof obj._mtParaGap === 'function' ? obj._mtParaGap(i) : 0;
+    gaps.push(gapSum);
+  });
+  // Text frames keep a fixed height with the text starting at the top.
+  const offY = obj.__frameH > 0 ? -(obj.height || h) / 2 : -(h + gapSum) / 2;
   const align: 'left' | 'center' | 'right' | 'justify' = ['left', 'center', 'right', 'justify'].includes(obj.textAlign)
     ? obj.textAlign
     : 'left';
@@ -314,7 +323,7 @@ async function drawTextObject(pdf: any, F: any, obj: any, offsetX: number, offse
 
   rawLines.forEach((line, i) => {
     if (!line) return;
-    const baselineLocal = i * lineHeightLocal + fontSizeLocal * 0.8;
+    const baselineLocal = i * lineHeightLocal + fontSizeLocal * 0.8 + gaps[i];
 
     // Real justify: stretch this line's word gaps to fill the box width —
     // matching Fabric's own textAlign:'justify' canvas rendering, which

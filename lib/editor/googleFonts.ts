@@ -320,6 +320,8 @@ export function refreshTextMetrics(canvas: any) {
     }
   };
   canvas.getObjects?.().forEach(visit);
+  // Text frames re-flow with the real letter widths (lib/editor/textFrames.ts).
+  canvas.fire?.('text:metrics');
   canvas.requestRenderAll?.();
 }
 

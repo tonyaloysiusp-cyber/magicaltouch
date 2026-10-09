@@ -117,6 +117,7 @@ import { missingFontsIn, fontRequiredMessage } from '@/lib/editor/missingFonts';
 import { PERSIST_PROPS, isHelperObject, isArtwork, applyStoredLocks, lockProps, reviveTextPaths } from '@/lib/editor/persist';
 import { ensureImageFilters, reviveImageAdjust } from '@/lib/editor/imageAdjust';
 import { installParagraphSpacing } from '@/lib/editor/paragraphSpacing';
+import { installTextFrames, isFrame, flowStory, syncStories, flowWhileEditing, resizeFrameFromScale, reflowAllStories, drawFrameOverlays, createStory, makeTextFrame, splitIntoColumns, addLinkedFrame, unlinkFrame, nextFrameBox, storyFrames, SAMPLE_ARTICLE } from '@/lib/editor/textFrames';
 import { drawCropOverlay, isFramed, fillFrame, cropHandleAt, dragCropHandle, keepCovering, CROP_CURSORS, CropHandle } from '@/lib/editor/frames';
 import { BrushSettings, DEFAULT_BRUSH, StrokePoint, strokePathD, createStrokeObject, eraseWithStroke } from '@/lib/editor/brush';
 import { useEditorFeatures, TextPreset, clearCharStyle } from '@/hooks/useEditorFeatures';
@@ -705,6 +706,10 @@ function EditorContent() {
   // sites), so wrapping this one symbol is enough to cover the unsaved
   // indicator without touching each of them individually.
   const pushHistory = useCallback(() => {
+    // Text frames: a style changed on one frame goes to its whole story,
+    // and removed frames hand their words to the rest, before recording.
+    const fc = fabricCanvasRef.current;
+    if (fc && !suppressHistoryRef.current && (window as any).fabric && fc.getObjects().some(isFrame)) syncStories((window as any).fabric, fc);
     pushHistoryRaw();
     // A programmatic canvas rebuild (restoring a tab snapshot, loading a
     // just-saved design after its id-changing router.replace, undo/redo)
@@ -1306,6 +1311,7 @@ function EditorContent() {
       // known before anything is loaded.
       ensureImageFilters(F);
       installParagraphSpacing(F);
+      installTextFrames(F);
       const canvas = new F.Canvas(canvasRef.current, {
         width: initialW,
         height: initialH,
@@ -1491,6 +1497,7 @@ function EditorContent() {
       canvas.on('text:changed', (e: any) => {
         // Curved/wavy text re-fits its baseline as the words change.
         const t = e?.target;
+        if (isFrame(t)) flowWhileEditing(F, canvas, t);
         if (t && t.__textFx && (t.__textFx.curve || t.__textFx.wave)) {
           import('@/lib/editor/textEffects').then(({ applyTextShape }) => {
             applyTextShape(F, t, t.__textFx.curve, t.__textFx.wave);
@@ -1500,6 +1507,27 @@ function EditorContent() {
         bumpSel();
       });
       canvas.on('object:scaling', () => bumpSelSoon());
+      // Text frames: resizing changes the box (never the letters) and the
+      // story re-flows; removed frames give their words to the others;
+      // overflow markers and threads are drawn on screen only.
+      const frameResize = (e: any) => isFrame(e?.target) && resizeFrameFromScale(F, canvas, e.target);
+      canvas.on('object:scaling', frameResize);
+      canvas.on('object:resizing', frameResize);
+      canvas.on('object:removed', (e: any) => {
+        if (!isFrame(e?.target) || suppressHistoryRef.current) return;
+        setTimeout(() => {
+          if (suppressHistoryRef.current) return;
+          syncStories(F, canvas);
+          canvas.requestRenderAll();
+        }, 0);
+      });
+      canvas.on('text:metrics', () => {
+        if (canvas.getObjects().some(isFrame)) reflowAllStories(F, canvas);
+      });
+      canvas.on('after:render', (e: any) => {
+        if (e?.ctx && e.ctx !== canvas.contextContainer) return;
+        drawFrameOverlays(canvas, canvas.contextContainer);
+      });
       canvas.on('object:moving', (e: any) => {
         bumpSelSoon();
         const obj = e.target;
@@ -2896,6 +2924,117 @@ function EditorContent() {
     canvas.setActiveObject(t);
     refreshArtboards();
     canvas.requestRenderAll();
+  };
+
+  // ---------------------------------------------------------------------
+  // Text frames (magazine-style text that flows between frames/columns)
+  const pageContentBox = (page: { id?: string; x: number; y: number; width: number; height: number }) => {
+    const ab = artboardsRef.current.find((a) => a.id === page.id);
+    const m = ab?.print?.margins;
+    const pad = Math.round(Math.min(page.width, page.height) * 0.07);
+    const e = m && (m.top || m.right || m.bottom || m.left) ? m : { top: pad, right: pad, bottom: pad, left: pad };
+    return {
+      left: page.x + e.left,
+      top: page.y + e.top,
+      width: page.width - e.left - e.right,
+      height: page.height - e.top - e.bottom,
+      gutter: ab?.print?.gutter || Math.round(page.width * 0.045),
+    };
+  };
+  const afterFrameEdit = () => {
+    const canvas = fabricCanvasRef.current;
+    canvas?.requestRenderAll();
+    pushHistory();
+    bumpSel();
+  };
+  // A headline plus an article that flows through `columns` columns.
+  const addArticle = (columns: number) => {
+    const F = (window as any).fabric;
+    const canvas = fabricCanvasRef.current;
+    if (!F || !canvas) return;
+    const page = getActiveArtboardRect();
+    const box = pageContentBox(page);
+    const k = page.width / 1080;
+    const head = new F.Textbox('Your headline goes here', { left: box.left, top: box.top, width: box.width, fontFamily: 'Playfair Display', fontWeight: 700, fontSize: 64 * k, lineHeight: 1.1, fill: '#09090B' });
+    head.name = 'Headline';
+    canvas.add(head);
+    const top = box.top + head.height + 32 * k;
+    // Enough sample text to fill the columns about nine-tenths of the way.
+    const fs = 22 * k;
+    const colW = (box.width - box.gutter * (columns - 1)) / columns;
+    const frameH = box.top + box.height - top;
+    const capacity = (colW / (fs * 0.5)) * (frameH / (fs * 1.5 * 1.15)) * columns * 0.88;
+    const paras = SAMPLE_ARTICLE.split('\n');
+    const out: string[] = [];
+    for (let i = 0, len = 0; len < capacity && i < 60; i++) {
+      out.push(paras[i % paras.length]);
+      len += paras[i % paras.length].length + 1;
+    }
+    const frames = createStory(F, canvas, { left: box.left, top, width: box.width, height: frameH }, out.join('\n'), { fontFamily: 'Inter', fontSize: fs, lineHeight: 1.5, fill: '#27272A', paragraphSpacing: 0.6 }, columns, box.gutter);
+    canvas.setActiveObject(frames[0]);
+    Promise.all([ensureFontLoaded('Playfair Display', 700), ensureFontLoaded('Inter', 400)]).then(() => refreshTextMetrics(canvas));
+    afterFrameEdit();
+  };
+  const frameActions = {
+    make: () => {
+      const F = (window as any).fabric;
+      const canvas = fabricCanvasRef.current;
+      const t = canvas?.getActiveObject();
+      if (!F || !t || t.type !== 'textbox' || t.locked) return;
+      makeTextFrame(F, canvas, t);
+      afterFrameEdit();
+    },
+    columns: (n: number) => {
+      const F = (window as any).fabric;
+      const canvas = fabricCanvasRef.current;
+      const t = canvas?.getActiveObject();
+      if (!F || !isFrame(t) || t.locked) return;
+      const page = artboardsRef.current.find((a) => a.id === t.__artboardId) || getActiveArtboardRect();
+      splitIntoColumns(F, canvas, t, n, pageContentBox(page).gutter);
+      afterFrameEdit();
+    },
+    addLinked: () => {
+      const F = (window as any).fabric;
+      const canvas = fabricCanvasRef.current;
+      const t = canvas?.getActiveObject();
+      if (!F || !isFrame(t)) return;
+      const frames = storyFrames(canvas, t.__storyId);
+      const last = frames[frames.length - 1];
+      const page = artboardsRef.current.find((a) => a.id === last.__artboardId) || getActiveArtboardRect();
+      const gutter = pageContentBox(page).gutter;
+      let box = nextFrameBox(last, page, gutter);
+      if (!box) {
+        // No room left on this page: the story continues on a new page.
+        const metas = getArtboardMetas();
+        const pos = nextArtboardPosition(metas);
+        const rect = createArtboardRect(F, pos.x, pos.y, page.width, page.height, nextArtboardName(metas));
+        canvas.add(rect);
+        pinArtboardsBack();
+        const cb = pageContentBox({ id: rect.__artboardId, x: pos.x, y: pos.y, width: page.width, height: page.height });
+        box = { left: cb.left, top: cb.top, width: cb.width, height: cb.height };
+        setActiveArtboardId(rect.__artboardId);
+      }
+      const f = addLinkedFrame(F, canvas, last, box);
+      canvas.setActiveObject(f);
+      afterFrameEdit();
+    },
+    unlink: () => {
+      const F = (window as any).fabric;
+      const canvas = fabricCanvasRef.current;
+      const t = canvas?.getActiveObject();
+      if (!F || !isFrame(t) || t.locked) return;
+      unlinkFrame(F, canvas, t);
+      afterFrameEdit();
+    },
+    setHeight: (h: number) => {
+      const F = (window as any).fabric;
+      const canvas = fabricCanvasRef.current;
+      const t = canvas?.getActiveObject();
+      if (!F || !isFrame(t) || t.locked) return;
+      t.__frameH = Math.max(20, h);
+      resizeFrameFromScale(F, canvas, t);
+      afterFrameEdit();
+    },
   };
 
   const addFontPairing = (heading: string, body: string) => {
@@ -4344,6 +4483,8 @@ function EditorContent() {
         active.initDimensions?.();
       }
     }
+    // Text frames re-flow straight away (live while a slider moves).
+    if (isFrame(active) && (window as any).fabric) flowStory((window as any).fabric, canvas, active.__storyId, { source: active });
     // Rotation pivots on the object's centre, like every design app.
     if (angle !== undefined) active.rotate(angle);
     active.setCoords();
@@ -4396,7 +4537,8 @@ function EditorContent() {
       typeof active.selectionEnd === 'number' &&
       active.selectionStart !== active.selectionEnd;
 
-    if (!hasRealSelection) {
+    // A story in text frames has one style throughout.
+    if (!hasRealSelection || isFrame(active)) {
       applyProp(props, record);
       return;
     }
@@ -6315,6 +6457,7 @@ function EditorContent() {
   const selectedImage = selected && selected.type === 'image' ? selected : null;
 
   const toolbarActions: ToolbarActions = {
+    frame: frameActions,
     applyProp,
     applyCharProp,
     getTextPropValue,
@@ -6480,7 +6623,7 @@ function EditorContent() {
       id: 'text',
       label: 'Text',
       icon: <TypeIcon size={20} />,
-      render: () => <TextPanel onAdd={(p: TextPreset) => features.addTextPreset(p)} onAddPairing={addFontPairing} onAddPageNumber={addPageNumber} />,
+      render: () => <TextPanel onAdd={(p: TextPreset) => features.addTextPreset(p)} onAddPairing={addFontPairing} onAddPageNumber={addPageNumber} onAddArticle={addArticle} />,
     },
     {
       id: 'uploads',

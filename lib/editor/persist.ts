@@ -39,6 +39,14 @@ export const PERSIST_PROPS = [
   '__brush',
   // Page-number placeholder text
   '__pageNumber',
+  // Text frames and threaded stories (lib/editor/textFrames.ts)
+  '__frameH',
+  '__storyId',
+  '__storyIndex',
+  '__storyText',
+  '__storyOverflow',
+  '__flowSep',
+  '__styleSig',
   // Space between paragraphs (lib/editor/paragraphSpacing.ts)
   'paragraphSpacing',
   // Text box behaviour (auto-fit)
