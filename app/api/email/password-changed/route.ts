@@ -26,7 +26,8 @@ export async function POST(request: NextRequest) {
 
     const { data: profile } = await supabase.from('profiles').select('name').eq('id', user.id).maybeSingle();
     const changedAt = new Date().toUTCString().replace('GMT', 'UTC');
-    await sendEmail(user.email, passwordChangedEmail({ firstName: firstNameFor(profile?.name, user.email), changedAt }));
+    const { data: copy } = await supabase.from('email_copy').select('subject, heading, intro, body').eq('key', 'password_changed').maybeSingle();
+    await sendEmail(user.email, passwordChangedEmail({ firstName: firstNameFor(profile?.name, user.email), changedAt }, copy || {}));
     return NextResponse.json({ sent: true });
   } catch (err) {
     if (err instanceof ApiAuthError) return NextResponse.json({ error: err.message }, { status: err.status });

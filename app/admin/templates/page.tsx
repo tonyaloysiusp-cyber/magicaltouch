@@ -12,6 +12,7 @@
 // changes customer designs already made from it.
 // ---------------------------------------------------------------------
 
+import { AdminShell } from '@/components/admin/AdminShell';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -438,22 +439,12 @@ export default function AdminTemplatesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-transparent" onClick={() => setMenuFor(null)}>
+    <AdminShell active="templates" title="Template Manager" accent="Template" subtitle="Templates are provided by Magical Touch Design. Customers only see published ones." actions={<Link href="/templates" target="_blank" className="h-9 px-4 rounded-full text-[13px] font-semibold inline-flex items-center gap-1.5 border border-mt-border text-mt-ink hover:bg-mt-surface2">View the gallery</Link>}>
+    <div onClick={() => setMenuFor(null)}>
       <input ref={thumbInput} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={onThumbnailFile} />
 
-      <header className="bg-mt-surface border-b px-4 sm:px-6 py-4 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-lg font-semibold text-mt-ink">Template Manager</h1>
-          <p className="text-xs text-mt-muted mt-0.5">Templates are provided by Magical Touch Design. Customers only see published ones.</p>
-        </div>
-        <div className="flex items-center gap-4 text-sm">
-          <Link href="/templates" target="_blank" className="text-mt-accent hover:underline">View gallery</Link>
-          <Link href="/admin/email" className="text-mt-accent hover:underline">Email Center</Link>
-          <Link href="/dashboard" className="text-mt-muted hover:underline">Dashboard</Link>
-        </div>
-      </header>
 
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-4">
+      <div className="">
         <div className="flex gap-1 border-b">
           {(['templates', 'categories'] as const).map((t) => (
             <button
@@ -468,13 +459,13 @@ export default function AdminTemplatesPage() {
       </div>
 
       {notice && (
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 mt-3">
+        <div className="mt-3">
           <div className="text-sm bg-mt-accentsoft text-[#4B2FB0] rounded-lg px-4 py-2.5">{notice}</div>
         </div>
       )}
 
       {tab === 'templates' ? (
-        <main className="max-w-6xl mx-auto p-4 sm:p-6">
+        <section className="py-4 sm:py-6">
           <div className="flex flex-wrap items-center gap-2 mb-4">
             <div className="relative flex-1 min-w-[200px]">
               <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-mt-faint" />
@@ -574,9 +565,9 @@ export default function AdminTemplatesPage() {
             })}
           </div>
           {visible.length === 0 && <p className="text-center text-sm text-mt-faint py-16">No templates here yet.</p>}
-        </main>
+        </section>
       ) : (
-        <main className="max-w-3xl mx-auto p-4 sm:p-6">
+        <section className="max-w-3xl py-4 sm:py-6">
           <div className="flex justify-between items-center mb-4">
             <p className="text-sm text-mt-muted">Add categories any time — no code changes needed.</p>
             <button onClick={() => addCategory(null)} className="inline-flex items-center gap-1 text-sm font-semibold text-white bg-brand-gradient rounded-full px-4 py-2">
@@ -596,7 +587,7 @@ export default function AdminTemplatesPage() {
             ))}
             {topLevel.length === 0 && <p className="p-6 text-center text-sm text-mt-faint">No categories yet. Run the database setup (migration 0011) to add the default list.</p>}
           </div>
-        </main>
+        </section>
       )}
 
       {/* ---------- Edit details ---------- */}
@@ -735,6 +726,7 @@ export default function AdminTemplatesPage() {
         </Modal>
       )}
     </div>
+    </AdminShell>
   );
 }
 

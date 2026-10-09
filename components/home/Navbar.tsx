@@ -56,7 +56,7 @@ export function Navbar({ theme, onToggleTheme }: { theme: AppTheme; onToggleThem
           : 'bg-transparent border-b border-transparent'
       }`}
     >
-      <nav className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+      <nav className="mt-container h-16 flex items-center justify-between">
         <Link href="/" className="flex items-center shrink-0">
           <BrandLogo theme={theme} width={140} height={28} priority />
         </Link>

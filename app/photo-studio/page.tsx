@@ -14,6 +14,8 @@ import { buildPhotoDesignJson } from '@/lib/editor/buildPhotoDesignPayload';
 import { exportRasterToPDF } from '@/lib/editor/pdfExport';
 import { PhotoEditorWorkspace, PhotoEditorHandle, PhotoEditResult } from '@/components/photoEditor/PhotoEditorWorkspace';
 import { BrandLogo } from '@/components/BrandLogo';
+import { AppHeader } from '@/components/AppHeader';
+import { PageHero } from '@/components/PageHero';
 import { useAppTheme } from '@/hooks/useAppTheme';
 import { MenuBar, MenuDef } from '@/components/editor/MenuBar';
 import { ShortcutsModal } from '@/components/editor/ShortcutsModal';
@@ -430,43 +432,47 @@ function PhotoStudioContent() {
   if (stage === 'open') {
     return (
       <div className={theme === 'dark' ? 'dark' : ''}>
-        <main className="min-h-screen bg-transparent transition-colors duration-300">
-          <div className="max-w-3xl mx-auto px-6 py-6 flex items-center justify-between">
-            <Link href="/dashboard" className="flex items-center gap-1.5 text-sm text-mt-muted dark:text-mt-muted hover:text-mt-ink dark:hover:text-white">
-              <ArrowLeft size={15} /> Dashboard
-            </Link>
-            <div className="flex items-center gap-3">
-              <ThemeToggle />
-              <BrandLogo theme={theme} width={150} height={30} />
-            </div>
-          </div>
-
-          <div className="max-w-3xl mx-auto px-6 pb-16">
-            <h1 className="text-3xl font-bold text-mt-ink dark:text-mt-ink mb-1">Photo Studio</h1>
-            <p className="text-mt-muted dark:text-mt-muted mb-8">
-              A full, standalone photo-editing workspace — layers, masks, curves, dodge/burn, clone stamp and more, working directly in real pixels and real-world print units.
-            </p>
-
-            <div className="grid md:grid-cols-2 gap-6">
-              <section className="border dark:border-white/10 rounded-xl p-5 bg-mt-surface dark:bg-mt-surface">
-                <h2 className="text-sm font-semibold text-mt-ink dark:text-mt-ink mb-3 flex items-center gap-2">
-                  <Upload size={15} /> Open a photo
-                </h2>
-                <p className="text-xs text-mt-muted dark:text-mt-muted mb-4">
-                  Upload an image to start editing it at its full native resolution.
-                </p>
+        <main className="min-h-screen bg-mt-bg text-mt-ink transition-colors duration-300">
+          <AppHeader theme={theme} onToggleTheme={toggleTheme} active="photo" />
+          <PageHero
+            eyebrow="Photo Studio"
+            title="Edit photos like a pro."
+            accent="like a pro"
+            subtitle="Layers, masks, curves, dodge & burn, clone stamp and background removal — working on real pixels, in real print sizes."
+          />
+          <div className="mt-container py-8 sm:py-10">
+            <div className="grid lg:grid-cols-[1.35fr_1fr] gap-6 2xl:gap-8 items-start">
+              <section
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  const file = e.dataTransfer.files?.[0];
+                  if (file && file.type.startsWith('image/')) handleUpload({ target: { files: [file], value: '' } } as any);
+                }}
+                className="relative rounded-3xl mt-spectrum-border bg-mt-surface p-6 sm:p-10 flex flex-col items-center text-center overflow-hidden"
+              >
+                <div aria-hidden className="absolute inset-0 opacity-[0.07] mt-spectrum" />
+                <span className="relative w-16 h-16 rounded-2xl bg-mt-primary text-mt-onprimary inline-flex items-center justify-center shadow-[0_18px_40px_-18px_rgba(9,9,11,0.6)]">
+                  <Upload size={26} />
+                </span>
+                <h2 className="relative mt-5 text-2xl font-semibold">Open a photo</h2>
+                <p className="relative mt-2 text-sm text-mt-muted max-w-md">Drop an image here or choose one from your device. It opens at its full resolution — nothing is shrunk.</p>
                 <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleUpload} />
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  className="w-full bg-brand-gradient text-white font-semibold py-2.5 rounded-full text-sm"
-                >
-                  Choose Photo
+                <button onClick={() => fileInputRef.current?.click()} className="relative mt-6 h-12 px-8 rounded-full bg-mt-primary text-mt-onprimary font-semibold text-[15px] hover:opacity-90">
+                  Choose a photo
                 </button>
+                <div className="relative mt-8 flex flex-wrap justify-center gap-2">
+                  {['Layers', 'Masks', 'Curves & levels', 'Dodge & burn', 'Clone stamp', 'Background removal', 'Print sizes & DPI'].map((f) => (
+                    <span key={f} className="text-xs px-3 py-1.5 rounded-full border border-mt-border bg-mt-surface text-mt-muted">
+                      {f}
+                    </span>
+                  ))}
+                </div>
               </section>
 
-              <section className="border dark:border-white/10 rounded-xl p-5 bg-mt-surface dark:bg-mt-surface">
-                <h2 className="text-sm font-semibold text-mt-ink dark:text-mt-ink mb-3 flex items-center gap-2">
-                  <FileImage size={15} /> Start from a blank canvas
+              <section className="rounded-3xl border border-mt-border p-6 bg-mt-surface">
+                <h2 className="text-[15px] font-semibold text-mt-ink mb-3 flex items-center gap-2">
+                  <FileImage size={16} /> Start from a blank canvas
                 </h2>
                 <div className="flex flex-wrap gap-1.5 mb-3">
                   {CANVAS_PRESETS.map((p) => (
@@ -536,9 +542,9 @@ function PhotoStudioContent() {
                 <button
                   onClick={handleCreateBlank}
                   disabled={creating}
-                  className="w-full bg-mt-accent dark:bg-mt-surface2 text-white font-semibold py-2.5 rounded-full text-sm disabled:opacity-50"
+                  className="w-full h-11 rounded-full border border-mt-border bg-mt-surface2 text-mt-ink font-semibold text-sm hover:bg-mt-border/50 disabled:opacity-50"
                 >
-                  {creating ? 'Creating…' : 'Create Blank Canvas'}
+                  {creating ? 'Creating…' : 'Create blank canvas'}
                 </button>
               </section>
             </div>

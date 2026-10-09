@@ -12,6 +12,7 @@ import { Template, TemplateCategory, CATEGORIES, TEMPLATES, fetchPublicTemplates
 import { supabase } from '@/lib/supabase';
 import { ProfileMenu } from '@/components/ProfileMenu';
 import { BrandLogo } from '@/components/BrandLogo';
+import { PageHero } from '@/components/PageHero';
 import { useAppTheme } from '@/hooks/useAppTheme';
 
 const display = Fraunces({
@@ -178,7 +179,7 @@ export default function TemplatesPage() {
       className={`${display.variable} ${body.variable} font-[family-name:var(--font-body)] bg-transparent text-mt-ink dark:text-mt-ink min-h-screen transition-colors duration-300`}
     >
       <header className="sticky top-0 z-50 bg-mt-bg/90 dark:bg-mt-bg/90 backdrop-blur border-b border-black/5 dark:border-white/10">
-        <nav className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+        <nav className="mt-container h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center shrink-0">
             <BrandLogo theme={theme} width={140} height={28} priority />
           </Link>
@@ -250,27 +251,27 @@ export default function TemplatesPage() {
         )}
       </header>
 
-      <section className="max-w-4xl mx-auto px-6 pt-20 pb-12 text-center">
-        <p className="text-xs font-semibold text-mt-accent dark:text-mt-accent tracking-wide uppercase">Templates</p>
-        <h1 className="mt-4 font-[family-name:var(--font-display)] text-5xl sm:text-6xl leading-[1.05] tracking-tight">
-          Start somewhere brilliant.
-        </h1>
-        <p className="mt-5 text-lg text-mt-muted dark:text-mt-muted max-w-lg mx-auto leading-relaxed">
-          Choose a starting point. Add your style. Make it yours.
-        </p>
-
-        <div className="mt-8 max-w-md mx-auto relative">
-          <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-mt-muted/60 dark:text-mt-muted/60" />
+      <PageHero
+        align="center"
+        eyebrow="Templates"
+        title="Start somewhere brilliant."
+        accent="brilliant"
+        subtitle="Choose a starting point. Add your style. Make it yours."
+      >
+        <div className="max-w-xl mx-auto relative">
+          <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-mt-faint" />
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search templates..."
-            className="w-full pl-11 pr-4 py-3 rounded-full border border-black/10 dark:border-white/15 bg-mt-surface dark:bg-mt-surface text-sm placeholder:text-mt-muted/60 dark:placeholder:text-mt-muted/60 focus:outline-none focus:border-mt-accent/50 focus:ring-2 focus:ring-[#3B82C4]/15 transition-all"
+            placeholder="Search templates — “resume”, “birthday”, “menu”…"
+            aria-label="Search templates"
+            className="w-full h-12 pl-11 pr-4 rounded-2xl border border-mt-input-border bg-mt-surface text-[15px] shadow-[0_10px_30px_-18px_rgba(9,9,11,0.35)] placeholder:text-mt-faint focus:outline-none focus:border-[#3B82C4] focus:ring-4 focus:ring-[#8CCBFF]/30 transition-all"
           />
         </div>
-      </section>
+      </PageHero>
+      <div className="h-8" />
 
-      <div className="max-w-7xl mx-auto px-6">
+      <div className="mt-container">
         <div className="flex gap-2 overflow-x-auto pb-2 -mx-6 px-6 md:mx-0 md:px-0 md:flex-wrap md:justify-center">
           {[{ id: 'All', label: 'All' }, ...chips].map(({ id: c, label }) => (
             <button
@@ -325,7 +326,7 @@ export default function TemplatesPage() {
       </div>
 
       <section className="max-w-[1400px] mx-auto px-4 sm:px-6 py-10">
-        <div className="columns-2 md:columns-3 lg:columns-4 xl:columns-5 gap-4 [&>*]:mb-4">
+        <div className="columns-2 md:columns-3 lg:columns-4 xl:columns-5 min-[1800px]:columns-6 gap-4 2xl:gap-5 [&>*]:mb-4">
           {filtered.map((t) => (
             <div key={t.id || t.name} className="group break-inside-avoid rounded-xl overflow-hidden border border-black/5 dark:border-white/10 bg-mt-surface dark:bg-mt-surface shadow-sm mt-card-hover">
               <div className="relative overflow-hidden bg-mt-accentsoft dark:bg-mt-bg" style={{ aspectRatio: tileRatio(t) }}>
@@ -450,7 +451,7 @@ export default function TemplatesPage() {
       )}
 
       <footer className="border-t border-black/5 dark:border-white/10">
-        <div className="max-w-7xl mx-auto px-6 py-12 flex flex-col sm:flex-row items-center justify-between gap-6">
+        <div className="mt-container py-12 flex flex-col sm:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-3">
             <BrandLogo theme={theme} width={120} height={24} />
             <span className="text-xs text-mt-muted dark:text-mt-muted">© {new Date().getFullYear()} Magical Touch</span>

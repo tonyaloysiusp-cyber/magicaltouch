@@ -1,6 +1,7 @@
 'use client';
 
 import { AppHeader } from '@/components/AppHeader';
+import { PageHero } from '@/components/PageHero';
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -112,11 +113,8 @@ export default function ProfilePage() {
     <div className={theme === 'dark' ? 'dark' : ''}>
     <main className="min-h-screen bg-transparent transition-colors duration-300">
       <AppHeader theme={theme} onToggleTheme={toggleTheme} active="profile" />
-      <div className="p-6 pt-10 max-w-3xl mx-auto">
-
-      <h1 className="text-2xl font-bold text-mt-ink dark:text-mt-ink mb-6">Profile</h1>
-
-      <div className="flex items-center gap-5 mb-8">
+      <PageHero eyebrow="Your account" title="Your profile" accent="profile" compact>
+      <div className="flex items-center gap-5">
         <div className="relative">
           <Avatar profile={profile} email={email} size={72} />
           <button
@@ -138,7 +136,10 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      <div className="border dark:border-white/10 rounded-xl p-5 mb-8 bg-mt-surface dark:bg-mt-surface">
+      </PageHero>
+      <div className="mt-container py-8 grid xl:grid-cols-2 gap-6 2xl:gap-8 items-start">
+        <div className="flex flex-col gap-6 min-w-0">
+      <div className="rounded-3xl border border-mt-border p-6 bg-mt-surface">
         <h2 className="text-sm font-semibold text-mt-ink dark:text-mt-ink mb-4">Account details</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
@@ -173,10 +174,7 @@ export default function ProfilePage() {
         </button>
       </div>
 
-      <StorageConnections />
-      {userId && <AccountSettings userId={userId} />}
-
-      <div>
+      <div className="rounded-3xl border border-mt-border p-6 bg-mt-surface">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-sm font-semibold text-mt-ink dark:text-mt-ink">Recent work</h2>
           <Link href="/dashboard" className="text-xs text-mt-accent dark:text-[#B79CFF] font-medium hover:underline">
@@ -186,7 +184,7 @@ export default function ProfilePage() {
         {recent.length === 0 ? (
           <p className="text-sm text-mt-faint dark:text-mt-muted">No designs yet.</p>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 2xl:grid-cols-4 gap-3">
             {recent.map((d) => (
               <Link
                 key={d.id}
@@ -207,6 +205,12 @@ export default function ProfilePage() {
           </div>
         )}
       </div>
+        </div>
+        <div className="flex flex-col gap-6 min-w-0 [&>*]:!mb-0">
+      <StorageConnections />
+      {userId && <AccountSettings userId={userId} />}
+
+        </div>
       </div>
     </main>
     </div>

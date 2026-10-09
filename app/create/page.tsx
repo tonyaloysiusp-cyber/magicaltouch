@@ -187,7 +187,7 @@ export default function CreateDesignPage() {
         {/* Hero */}
         <section className="relative overflow-hidden border-b border-mt-border">
           <div aria-hidden className="pointer-events-none absolute -top-40 left-1/2 -translate-x-1/2 w-[900px] h-[420px] rounded-full opacity-[0.16] dark:opacity-[0.22] blur-3xl mt-spectrum" />
-          <div className="relative max-w-6xl mx-auto px-4 sm:px-6 pt-10 sm:pt-14 pb-8">
+          <div className="relative mt-container pt-10 sm:pt-14 pb-8">
             <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-mt-muted">New design</p>
             <h1 className="mt-2 text-[34px] sm:text-5xl font-semibold tracking-tight leading-[1.05]">
               What will you <span className="mt-spectrum-text">create</span> today?
@@ -240,7 +240,7 @@ export default function CreateDesignPage() {
           </div>
         </section>
 
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 grid lg:grid-cols-[1fr_340px] gap-8 items-start">
+        <div className="mt-container py-8 grid lg:grid-cols-[1fr_340px] 2xl:grid-cols-[1fr_400px] gap-8 2xl:gap-10 items-start">
           <div className="min-w-0 flex flex-col gap-6">
             {/* Size tabs */}
             {!q && !goalDef && (
@@ -282,7 +282,7 @@ export default function CreateDesignPage() {
             )}
 
             {/* Size cards */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 min-[1800px]:grid-cols-6 gap-3">
               {shownPresets.map((p) => {
                 const { width, height } = presetToPx(p);
                 const on = selectedPresetId === p.id;

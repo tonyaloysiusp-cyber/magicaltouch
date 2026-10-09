@@ -83,7 +83,7 @@ export function WorkspaceHero() {
 
   return (
     <section className="relative overflow-hidden bg-mt-bg">
-      <div className="relative max-w-6xl mx-auto px-5 sm:px-6 pt-14 sm:pt-20 text-center">
+      <div className="relative mt-container pt-14 sm:pt-20 text-center">
         <h1 className="font-[family-name:var(--font-display)] font-medium text-[2.6rem] leading-[1.04] sm:text-6xl lg:text-[5.25rem] tracking-[-0.035em] text-mt-ink">
           Design anything.
           <br />
@@ -116,7 +116,7 @@ export function WorkspaceHero() {
       <div className="relative mt-16 sm:mt-24 pb-16 sm:pb-24">
         <BrandRibbon className="absolute left-1/2 -translate-x-1/2 -top-8 sm:-top-36 w-[1000px] sm:w-[1700px] max-w-none pointer-events-none" />
 
-        <div className="relative z-10 max-w-6xl mx-auto px-3 sm:px-6">
+        <div className="relative z-10 max-w-6xl 2xl:max-w-7xl min-[1900px]:max-w-[1440px] mx-auto px-3 sm:px-6">
           <div className="rounded-[20px] sm:rounded-[24px] p-px mt-spectrum shadow-[0_50px_100px_-40px_rgba(9,9,11,0.35)] dark:shadow-[0_50px_120px_-40px_rgba(53,194,241,0.25)]">
             <div className="rounded-[19px] sm:rounded-[23px] overflow-hidden bg-mt-surface text-left">
               {/* Top bar */}

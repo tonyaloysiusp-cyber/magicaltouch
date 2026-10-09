@@ -26,6 +26,8 @@ import { allFontFacesCSS, ensureFontsLoadedForCanvasJSON } from '@/lib/editor/go
 import { installParagraphSpacing } from '@/lib/editor/paragraphSpacing';
 import { installTextFrames } from '@/lib/editor/textFrames';
 import { BrandLogo } from '@/components/BrandLogo';
+import { PageHero } from '@/components/PageHero';
+import { QuickStart } from '@/components/QuickStart';
 import { useAppTheme } from '@/hooks/useAppTheme';
 
 const display = Fraunces({
@@ -358,9 +360,9 @@ export default function DashboardPage() {
       <style dangerouslySetInnerHTML={{ __html: allFontFacesCSS() }} />
 
       <header className="sticky top-0 z-40 bg-mt-bg/90 dark:bg-mt-bg/90 backdrop-blur border-b border-black/5 dark:border-white/10">
-        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+        <div className="mt-container h-16 flex items-center justify-between">
           <Link href="/" title="Go to homepage" className="shrink-0">
-            <BrandLogo theme={theme} width={150} height={30} />
+            <BrandLogo theme={theme} width={136} height={27} />
           </Link>
           <div className="hidden md:flex items-center gap-1">
             <Link href="/" className="text-sm font-medium text-mt-muted dark:text-mt-muted hover:text-mt-ink dark:hover:text-white px-3 py-2">
@@ -388,27 +390,24 @@ export default function DashboardPage() {
               title="New Design — quick design and everyday creative projects"
               className="relative overflow-hidden inline-flex items-center gap-1.5 text-white px-4 py-2.5 rounded-full text-sm font-semibold bg-brand-gradient shadow-[0_6px_16px_-6px_rgba(9,9,11,0.16)] hover:shadow-[0_10px_20px_-6px_rgba(9,9,11,0.16)] hover:-translate-y-0.5 transition-all before:content-[''] before:absolute before:inset-x-0 before:top-0 before:h-1/2 before:bg-mt-surface/25 before:rounded-t-full"
             >
-              <Plus size={15} /> New Design
+              <Plus size={15} /> <span className="hidden sm:inline">New Design</span>
             </Link>
             <ProfileMenu />
           </div>
         </div>
       </header>
 
-      <div className="max-w-6xl mx-auto px-6 py-10">
-        {showLimitWarning && <DesignLimitDialog onCancel={() => setShowLimitWarning(false)} />}
-
-        <div className="flex flex-wrap items-end justify-between gap-6 mb-10">
-          <div>
-            <p className="text-xs font-semibold text-mt-accent dark:text-mt-accent tracking-wide uppercase flex items-center gap-1.5">
-              <Sparkles size={12} /> Your creative space
-            </p>
-            <h1 className="mt-2 font-[family-name:var(--font-display)] text-4xl sm:text-5xl leading-[1.05] tracking-tight text-mt-ink dark:text-mt-ink">
-              {displayName ? `Welcome back, ${displayName}.` : 'Welcome back.'}
-            </h1>
-            <p className="mt-3 text-mt-muted dark:text-mt-muted">Ready to make something magical?</p>
-          </div>
-          <div className="flex flex-wrap gap-2 shrink-0">
+      <PageHero
+        eyebrow={
+          <span className="inline-flex items-center gap-1.5">
+            <Sparkles size={12} /> Your creative space
+          </span>
+        }
+        title={displayName ? `Welcome back, ${displayName}.` : 'Welcome back.'}
+        accent={displayName || 'back'}
+        subtitle="Ready to make something magical?"
+        actions={
+          <>
             <button
               onClick={chooseLocalFile}
               disabled={opening}
@@ -432,8 +431,14 @@ export default function DashboardPage() {
             >
               Explore Templates <ArrowRight size={14} />
             </Link>
-          </div>
-        </div>
+          </>
+        }
+      >
+        <QuickStart />
+      </PageHero>
+
+      <div className="mt-container py-10">
+        {showLimitWarning && <DesignLimitDialog onCancel={() => setShowLimitWarning(false)} />}
 
         {showCloudOpen && (
           <CloudOpenDialog
@@ -454,7 +459,7 @@ export default function DashboardPage() {
               <Cloud size={13} /> In your cloud drives
             </h2>
             <p className="text-xs text-mt-muted/70 dark:text-mt-muted/70 mb-4">Stored in your own Google Drive, OneDrive or Dropbox.</p>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-5">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-5">
               {cloudProjects.map((p) => (
                 <div key={p.id} className="group relative rounded-2xl overflow-hidden border border-black/10 dark:border-white/10 bg-mt-surface dark:bg-mt-surface">
                   <button onClick={() => openCloudProject(p)} disabled={!!cloudBusy} className="block w-full text-left">
@@ -498,7 +503,7 @@ export default function DashboardPage() {
             <p className="text-xs text-mt-muted/70 dark:text-mt-muted/70 mb-4">
               Your own .mtd project files. They are stored on your computer, not on our servers.
             </p>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-5">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-5">
               {localFiles.map((f) => (
                 <div key={f.id} className="group relative rounded-2xl overflow-hidden border border-black/10 dark:border-white/10 bg-mt-surface dark:bg-mt-surface">
                   <button onClick={() => reopenRecent(f)} disabled={opening} className="block w-full text-left">
@@ -535,8 +540,8 @@ export default function DashboardPage() {
 
         {!loading && designs.length === 0 && (
           <div className="relative overflow-hidden rounded-3xl border border-black/10 dark:border-white/10 bg-mt-surface dark:bg-mt-surface p-12 sm:p-16 text-center">
-            <div className="pointer-events-none absolute -right-16 -top-16 w-64 h-64 rounded-full bg-brand-gradient opacity-10" />
-            <div className="pointer-events-none absolute -left-16 -bottom-16 w-64 h-64 rounded-full bg-brand-gradient opacity-10" />
+            <div className="pointer-events-none absolute -right-20 -top-24 w-80 h-80 rounded-full mt-spectrum opacity-25 blur-3xl" />
+            <div className="pointer-events-none absolute -left-20 -bottom-24 w-80 h-80 rounded-full mt-spectrum opacity-25 blur-3xl" />
             <div className="relative">
               <div className="mx-auto w-16 h-16 rounded-2xl bg-brand-gradient flex items-center justify-center shadow-[0_16px_28px_-8px_rgba(9,9,11,0.16)]">
                 <Sparkles size={26} className="text-white" />
@@ -563,7 +568,7 @@ export default function DashboardPage() {
             <h2 className="text-xs font-semibold text-mt-muted dark:text-mt-muted tracking-wide uppercase mb-4">
               Recent Designs <span className="normal-case font-normal tracking-normal opacity-70">· saved in your account</span>
             </h2>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-5 mb-12">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-5 mb-12">
               {designs.slice(0, RECENT_COUNT).map((design) => renderDesignCard(design))}
             </div>
           </>
@@ -572,7 +577,7 @@ export default function DashboardPage() {
         {!loading && designs.length > RECENT_COUNT && (
           <>
             <h2 className="text-xs font-semibold text-mt-muted dark:text-mt-muted tracking-wide uppercase mb-4">All Designs</h2>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-5">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-5">
               {designs.slice(RECENT_COUNT).map((design) => renderDesignCard(design))}
             </div>
           </>

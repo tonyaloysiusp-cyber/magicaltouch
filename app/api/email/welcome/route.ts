@@ -55,7 +55,9 @@ export async function POST(request: NextRequest) {
     }
 
     try {
-      const email = welcomeEmail({ firstName: firstNameFor(claimed[0].name, user.email) });
+      // Wording edited in Admin → Email wording, if any.
+      const { data: copy } = await supabase.from('email_copy').select('subject, heading, intro, body').eq('key', 'welcome').maybeSingle();
+      const email = welcomeEmail({ firstName: firstNameFor(claimed[0].name, user.email) }, copy || {});
       await sendEmail(user.email, email);
       return NextResponse.json({ sent: true });
     } catch (err) {
