@@ -3098,11 +3098,15 @@ function EditorContent() {
       if (!json || !Array.isArray(json.objects)) throw new Error('no-content');
       await ensureFontsLoadedForCanvasJSON(json).catch(() => {});
       try { F.util.clearFabricFontCache?.(); } catch { /* ignore */ }
-      const abJson = json.objects.find((o: any) => o.__isArtboard);
+      const allAbs = json.objects.filter((o: any) => o.__isArtboard);
+      const abJson = allAbs[0];
       const src = abJson
         ? { x: abJson.left || 0, y: abJson.top || 0, width: (abJson.width || t.width) * (abJson.scaleX || 1), height: (abJson.height || t.height) * (abJson.scaleY || 1) }
         : { x: 0, y: 0, width: t.width, height: t.height };
-      const items = json.objects.filter((o: any) => !o.__isArtboard && !o.__isGuide);
+      // Multi-page templates (magazines, brochures, decks): the first page
+      // goes where the customer asked, the rest follow as new pages.
+      const onPage = (o: any, ab: any) => allAbs.length < 2 || o.__artboardId === ab.__artboardId;
+      const items = json.objects.filter((o: any) => !o.__isArtboard && !o.__isGuide && onPage(o, abJson));
       const objs: any[] = await new Promise((resolve) => F.util.enlivenObjects(items, (list: any[]) => resolve(list), 'fabric'));
 
       let page = getActiveArtboardRect();
@@ -3139,6 +3143,27 @@ function EditorContent() {
       });
       if (Math.abs(src.width - page.width) > 1 || Math.abs(src.height - page.height) > 1) {
         fitObjectsToPage(objs, { x: page.x, y: page.y, width: src.width, height: src.height }, page);
+      }
+      for (const extra of allAbs.slice(1)) {
+        const metas = getArtboardMetas();
+        const pos = nextArtboardPosition(metas);
+        const ew = (extra.width || 100) * (extra.scaleX || 1), eh = (extra.height || 100) * (extra.scaleY || 1);
+        const rect2 = createArtboardRect(F, pos.x, pos.y, ew, eh, extra.name || nextArtboardName(metas));
+        if (extra.__print) rect2.__print = JSON.parse(JSON.stringify(extra.__print));
+        if (typeof extra.fill === 'string') rect2.set({ fill: extra.fill });
+        suppressHistoryRef.current = true;
+        canvas.add(rect2);
+        suppressHistoryRef.current = false;
+        pinArtboardsBack();
+        const its = json.objects.filter((o: any) => !o.__isArtboard && !o.__isGuide && o.__artboardId === extra.__artboardId);
+        const more: any[] = await new Promise((resolve) => F.util.enlivenObjects(its, (list: any[]) => resolve(list), 'fabric'));
+        more.forEach((o) => {
+          delete o.__uid;
+          o.__artboardId = rect2.__artboardId;
+          o.set({ left: (o.left || 0) - (extra.left || 0) + pos.x, top: (o.top || 0) - (extra.top || 0) + pos.y });
+          o.setCoords();
+          canvas.add(o);
+        });
       }
       applyStoredLocks(canvas);
       reviveTextPaths(F, canvas);

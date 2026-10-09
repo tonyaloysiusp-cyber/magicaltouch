@@ -338,6 +338,12 @@ export default function TemplatesPage() {
                     <MockDesignCard colors={t.colors} label={t.category} />
                   )}
                 </div>
+                {(() => {
+                  const pagesTag = (t.tags || []).find((x) => /^\d+ pages$/.test(x));
+                  return pagesTag ? (
+                    <span className="absolute top-2 right-2 z-10 text-[10px] font-semibold uppercase tracking-wide text-white bg-[#14121F]/75 px-2 py-1 rounded-full">{pagesTag}</span>
+                  ) : null;
+                })()}
                 {t.isFree === false ? (
                   <span className="absolute top-2 left-2 z-10 inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-mt-ink bg-[#F3A6B8] px-2 py-1 rounded-full shadow">
                     <Crown size={11} /> Premium
