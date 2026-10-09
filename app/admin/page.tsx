@@ -66,7 +66,7 @@ export default function AdminHome() {
       supabase.from('admin_messages').select('*').eq('archived', false).order('created_at', { ascending: false }).limit(200),
       supabase.from('occasions').select('*').gte('occasion_date', from).order('occasion_date', { ascending: true }).limit(400),
       supabase.from('admin_services').select('*').order('renews_on', { ascending: true, nullsFirst: false }),
-      supabase.from('templates').select('name, category, tags').eq('status', 'published').limit(1000),
+      supabase.from('templates').select('name, category, tags, occasion').eq('status', 'published').limit(1000),
     ]);
     if (ov.data) setStats(ov.data as any);
     setMessages((msg.data as any) || []);
@@ -171,15 +171,19 @@ function Stat({ icon, label, value, sub, tint }: { icon: React.ReactNode; label:
   );
 }
 
-function matchCount(o: Occasion, templates: { name: string; category: string; tags: string[] | null }[]) {
-  const words = o.name
-    .toLowerCase()
-    .replace(/\(.*?\)/g, '')
+function matchCount(o: Occasion, templates: { name: string; category: string; tags: string[] | null; occasion?: string | null }[]) {
+  const full = o.name.toLowerCase().replace(/\(.*?\)/g, '').trim();
+  const words = full
     .split(/[^a-z]+/)
     .filter((w) => w.length > 3 && !['day', 'begins', 'national', 'international'].includes(w));
-  if (!words.length) return 0;
   return templates.filter((t) => {
-    const hay = `${t.name} ${(t.tags || []).join(' ')}`.toLowerCase();
+    // Templates made for a festival carry its name ("New Year" also covers New Year's Eve and Day).
+    const occ = (t.occasion || '').toLowerCase();
+    if (occ && (full === occ || full.startsWith(occ))) return true;
+    const tags = (t.tags || []).map((x) => x.toLowerCase());
+    if (tags.includes(full)) return true;
+    if (!words.length) return false;
+    const hay = `${t.name} ${tags.join(' ')}`.toLowerCase();
     return words.some((w) => hay.includes(w));
   }).length;
 }
