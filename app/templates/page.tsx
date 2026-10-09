@@ -44,7 +44,7 @@ function tileRatio(t: Template): string {
 }
 
 // High-demand categories first; anything else follows in its own order.
-const CATEGORY_ORDER = ['Birthday', 'Events', 'Wedding', 'Business', 'Social Media', 'Marketing', 'Menus', 'Certificates', 'Resume', 'Cards'];
+const CATEGORY_ORDER = ['Festivals', 'Birthday', 'Events', 'Wedding', 'Business', 'Social Media', 'Marketing', 'Menus', 'Certificates', 'Resume', 'Cards'];
 
 type SortKey = 'popular' | 'newest' | 'trending';
 const SORTS: { id: SortKey; label: string }[] = [
