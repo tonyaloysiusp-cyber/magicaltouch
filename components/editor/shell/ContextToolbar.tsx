@@ -59,6 +59,7 @@ import { TextEffectsEditor } from './TextEffectsEditor';
 import { Divider, IconButton, Popover, Slider, ToolButton, cx } from './ui';
 import { fromFabricGradient, GradientSpec } from '@/lib/editor/gradients';
 import { readTextFx, TextFx } from '@/lib/editor/textEffects';
+import { googleFontByName, WEIGHT_NAMES } from '@/lib/editor/googleFonts';
 import { FRAME_KINDS } from '@/lib/editor/catalog';
 import { shapePathD, ShapeKind } from '@/lib/editor/shapePaths';
 import type { FrameKind } from '@/lib/editor/frames';
@@ -85,6 +86,7 @@ export interface ToolbarActions {
   maskWithShape: (k: FrameKind) => void;
   detachFromFrame: () => void;
   placeInShape: () => void;
+  combineShapes: (op: 'union' | 'subtract' | 'intersect' | 'exclude') => void;
   duplicate: () => void;
   remove: () => void;
   toggleLock: () => void;
@@ -436,6 +438,37 @@ export function ContextToolbar({
         {imgs.length === 1 && shapes.length === 1 && objs.length === 2 && (
           <ToolButton label="Place photo in shape" hint="Clip the photo to the shape" icon={<FrameIcon size={16} />} onClick={a.placeInShape} special />
         )}
+        {shapes.length >= 2 && shapes.length === objs.length && (
+          <Popover
+            width={240}
+            trigger={({ toggle, open }) => <ToolButton label="Combine" hint="Unite, subtract, intersect or exclude shapes" icon={<Shapes size={16} />} onClick={toggle} active={open} />}
+          >
+            {(close) => (
+              <div className="grid grid-cols-2 gap-1.5">
+                {(
+                  [
+                    ['union', 'Unite'],
+                    ['subtract', 'Subtract'],
+                    ['intersect', 'Intersect'],
+                    ['exclude', 'Exclude'],
+                  ] as const
+                ).map(([op, label]) => (
+                  <button
+                    key={op}
+                    type="button"
+                    onClick={() => {
+                      close();
+                      a.combineShapes(op);
+                    }}
+                    className="h-9 rounded-lg border border-mt-border text-sm hover:bg-mt-surface2"
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </Popover>
+        )}
         {colorPopover('Colour', firstChildFill(sel), (v, commit) => a.setFill(v, commit), { gradient: true })}
         {shadowPopover(sel)}
         {common(sel, true, objs.length)}
@@ -452,6 +485,9 @@ export function ContextToolbar({
     const under = a.getTextPropValue(sel, 'underline');
     const strike = a.getTextPropValue(sel, 'linethrough');
     const isBold = !weight.mixed && (weight.value === 'bold' || weight.value >= 600);
+    const weightNum = weight.value === 'bold' ? 700 : weight.value === 'normal' || weight.value == null ? 400 : Number(weight.value) || 400;
+    const fontDef = !font.mixed && font.value ? googleFontByName(font.value) : undefined;
+    const weights: number[] = fontDef?.weights?.length ? fontDef.weights : [];
     const isItalic = !style.mixed && style.value === 'italic';
     const fx = readTextFx(sel);
     const alignIcons: Record<string, React.ReactNode> = {
@@ -471,6 +507,24 @@ export function ContextToolbar({
         <div className="w-40 shrink-0">
           <FontPicker value={font.mixed ? undefined : font.value} mixed={font.mixed} disabled={sel.locked} onChange={(f) => a.applyCharProp({ fontFamily: f })} />
         </div>
+        {weights.length > 1 && (
+          <select
+            aria-label="Font weight"
+            title="Font weight"
+            value={weight.mixed ? '' : String(weightNum)}
+            onChange={(e) => a.applyCharProp({ fontWeight: Number(e.target.value) })}
+            disabled={sel.locked}
+            className="h-8 w-[112px] shrink-0 ml-1 rounded-lg border border-mt-input-border bg-mt-surface px-1.5 text-[13px] text-mt-ink"
+          >
+            {weight.mixed && <option value="">Mixed</option>}
+            {!weights.includes(weightNum) && !weight.mixed && <option value={weightNum}>{WEIGHT_NAMES[weightNum] || weightNum}</option>}
+            {weights.map((w) => (
+              <option key={w} value={w} style={{ fontWeight: w }}>
+                {WEIGHT_NAMES[w] || w}
+              </option>
+            ))}
+          </select>
+        )}
         <div className="flex items-center shrink-0 ml-1">
           <IconButton label="Smaller" size="sm" onClick={() => setSize(curSize - Math.max(1, Math.round(curSize * 0.1)))}>
             <Minus size={14} />
@@ -529,7 +583,7 @@ export function ContextToolbar({
         <Popover
           width={260}
           trigger={({ toggle, open }) => (
-            <IconButton label="Spacing" hint="Letter and line spacing" onClick={toggle} active={open}>
+            <IconButton label="Spacing" hint="Letter, line and paragraph spacing" onClick={toggle} active={open}>
               <Spline size={16} />
             </IconButton>
           )}
@@ -537,6 +591,8 @@ export function ContextToolbar({
           <div className="flex flex-col gap-3">
             <Slider label="Letter spacing" value={Math.round(sel.charSpacing || 0)} min={-200} max={1000} step={5} onChange={(v) => a.applyProp({ charSpacing: v }, false)} onCommit={(v) => a.applyProp({ charSpacing: v })} />
             <Slider label="Line spacing" value={Math.round((sel.lineHeight ?? 1.16) * 100) / 100} min={0.5} max={3} step={0.05} onChange={(v) => a.applyProp({ lineHeight: v }, false)} onCommit={(v) => a.applyProp({ lineHeight: v })} />
+            <Slider label="Paragraph spacing" value={Math.round((sel.paragraphSpacing || 0) * 100) / 100} min={0} max={2} step={0.05} onChange={(v) => a.applyProp({ paragraphSpacing: v }, false)} onCommit={(v) => a.applyProp({ paragraphSpacing: v })} />
+            <p className="text-[11px] text-mt-faint -mt-1">Extra space before each new paragraph (after you press Enter).</p>
           </div>
         </Popover>
         <Popover

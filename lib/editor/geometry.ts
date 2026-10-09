@@ -5,6 +5,17 @@
 
 import type { DraftGeometry, DrawTool } from './types';
 
+import { createShape } from './shapes';
+import type { ShapeKind } from './shapePaths';
+
+const DRAW_TOOL_SHAPES: Partial<Record<DrawTool, { kind: ShapeKind; fill: string; params?: any }>> = {
+  rect: { kind: 'rect', fill: '#8CCBFF' },
+  ellipse: { kind: 'ellipse', fill: '#F3A6B8' },
+  triangle: { kind: 'triangle', fill: '#A69BD3' },
+  polygon: { kind: 'polygon', fill: '#5DCCB8', params: { sides: 6 } },
+  star: { kind: 'star', fill: '#F7C948', params: { points: 5, inner: 0.45 } },
+};
+
 export function regularPolygonPoints(sides: number, radius: number) {
   const pts: { x: number; y: number }[] = [];
   for (let i = 0; i < sides; i++) {
@@ -77,52 +88,18 @@ export function computeDragGeometry(
 export function buildDraftShape(F: any, tool: DrawTool, geo: DraftGeometry) {
   // Borders keep their thickness when the shape is resized.
   const common = { selectable: false, evented: false, objectCaching: false, strokeUniform: true };
+  // Everything but lines is drawn as the same editable library shape the
+  // Elements panel adds (corner radius, sides and points stay adjustable),
+  // so the preview under the pointer is exactly what you get.
+  const lib = DRAW_TOOL_SHAPES[tool];
+  if (lib) {
+    const box = { left: geo.left, top: geo.top, width: Math.max(geo.w, 1), height: Math.max(geo.h, 1) };
+    const obj = createShape(F, lib.kind, box, { fill: lib.fill }, lib.params);
+    obj.set(common);
+    if (tool === 'rect') obj.name = 'Rectangle';
+    return obj;
+  }
   switch (tool) {
-    case 'rect':
-      return new F.Rect({
-        ...common,
-        left: geo.left,
-        top: geo.top,
-        width: Math.max(geo.w, 1),
-        height: Math.max(geo.h, 1),
-        fill: '#8CCBFF',
-      });
-    case 'ellipse':
-      return new F.Ellipse({
-        ...common,
-        left: geo.left,
-        top: geo.top,
-        rx: Math.max(geo.w / 2, 0.5),
-        ry: Math.max(geo.h / 2, 0.5),
-        fill: '#F3A6B8',
-      });
-    case 'triangle':
-      return new F.Triangle({
-        ...common,
-        left: geo.left,
-        top: geo.top,
-        width: Math.max(geo.w, 1),
-        height: Math.max(geo.h, 1),
-        fill: '#A69BD3',
-      });
-    case 'polygon': {
-      const r = Math.max(Math.min(geo.w, geo.h) / 2, 1);
-      return new F.Polygon(regularPolygonPoints(6, r), {
-        ...common,
-        left: geo.left,
-        top: geo.top,
-        fill: '#5DCCB8',
-      });
-    }
-    case 'star': {
-      const r = Math.max(Math.min(geo.w, geo.h) / 2, 1);
-      return new F.Polygon(starPoints(5, r, r * 0.45), {
-        ...common,
-        left: geo.left,
-        top: geo.top,
-        fill: '#F7C948',
-      });
-    }
     case 'line':
       return new F.Line([geo.x1 ?? 0, geo.y1 ?? 0, geo.x2 ?? 0, geo.y2 ?? 0], {
         ...common,

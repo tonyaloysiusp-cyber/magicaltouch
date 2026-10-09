@@ -1,272 +1,189 @@
 'use client';
 
+// Pro tool strip. The tool in use is always clearly marked (blue fill and
+// a bar on its edge), and every tool says what it does and its shortcut.
+
+import { useState } from 'react';
 import {
   MousePointer2,
-  Pointer,
+  Spline,
   Hand,
   Frame,
-  PenTool as PenToolIcon,
+  PenTool,
+  Pencil,
+  Brush,
+  Eraser,
   Type,
   Square,
-  Circle as CircleIcon,
-  Triangle as TriangleIcon,
-  Minus as LineIcon,
-  Hexagon as PolygonIcon,
-  Star as StarIcon,
+  Circle,
+  Triangle,
+  Minus,
+  Hexagon,
+  Star,
   ImagePlus,
-  Copy,
-  ArrowUpToLine,
-  ArrowUp,
-  ArrowDown,
-  ArrowDownToLine,
-  Trash2,
   Combine,
-  Clock,
+  ChevronRight,
 } from 'lucide-react';
-import type { ToolMode } from '@/lib/editor/types';
-import { getFeatureStatus } from '@/lib/editor/tool-registry';
+import type { DrawTool } from '@/lib/editor/types';
+import { cx } from './shell/ui';
 
-interface Props {
-  activeTool: ToolMode;
-  onSelectTool: (tool: ToolMode) => void;
-  onAddText: () => void;
-  onImageUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  onDuplicate: () => void;
-  onBringForward: () => void;
-  onSendBackward: () => void;
-  onBringToFront: () => void;
-  onSendToBack: () => void;
-  onDelete: () => void;
-  onOpenShapeBuilder: () => void;
-  onOpenRoadmap: (featureId: string, label: string) => void;
-}
+// Everything the strip can show as "the tool in use".
+export type StripTool = 'select' | 'direct' | 'pan' | 'artboard' | 'pen' | 'pencil' | 'brush' | 'eraser' | 'text' | DrawTool;
 
-// Illustrator's own bindings — M/L used to be this app's pixel marquee/
-// lasso tools (from when this canvas still had raster selection here);
-// those moved to the Photo Editor workspace, so M/L are repurposed for
-// Illustrator's Rectangle/Ellipse tools rather than left dead.
-const TOOL_SHORTCUTS: Record<string, string> = {
-  select: 'V',
-  direct: 'A',
-  pan: 'H',
-  artboard: 'Shift+O',
-  pen: 'P',
-  rect: 'M',
-  ellipse: 'L',
-  triangle: 'Shift+T',
-  line: '\\',
-  polygon: 'Shift+G',
-  star: 'Shift+S',
+export const TOOL_INFO: Record<StripTool, { label: string; key?: string; hint: string }> = {
+  select: { label: 'Select', key: 'V', hint: 'Select, move, resize and rotate' },
+  direct: { label: 'Edit points', key: 'A', hint: 'Drag points to reshape · click a pink square to add a point · Alt-click a point to switch corner/smooth · Delete removes a point' },
+  pan: { label: 'Hand', key: 'H', hint: 'Drag to move around the page (or hold Space with any tool)' },
+  artboard: { label: 'Pages', key: 'Shift+O', hint: 'Drag on the pasteboard to draw a new page; drag pages to move them' },
+  pen: { label: 'Pen', key: 'P', hint: 'Click for corners, drag for curves · click the first point to close · Enter or double-click to finish' },
+  pencil: { label: 'Pencil', key: 'N', hint: 'Draw a freehand line that stays editable point by point' },
+  brush: { label: 'Brush', key: 'B', hint: 'Paint on the page — press harder with a stylus for thicker lines' },
+  eraser: { label: 'Eraser', key: 'E', hint: 'Rub over drawings, paths and shapes to erase them' },
+  text: { label: 'Text', key: 'T', hint: 'Click where the text should go, then type' },
+  rect: { label: 'Rectangle', key: 'M', hint: 'Drag to draw · Shift keeps it square · Alt draws from the centre' },
+  ellipse: { label: 'Ellipse', key: 'L', hint: 'Drag to draw · Shift keeps it round · Alt draws from the centre' },
+  triangle: { label: 'Triangle', key: 'Shift+T', hint: 'Drag to draw · Shift keeps the proportions' },
+  polygon: { label: 'Polygon', key: 'Shift+G', hint: 'Drag to draw a hexagon · change the sides afterwards' },
+  star: { label: 'Star', key: 'Shift+S', hint: 'Drag to draw · change the points afterwards' },
+  line: { label: 'Line', key: '\\', hint: 'Drag to draw · Shift keeps it straight at 45° steps' },
 };
 
-function ToolButton({
-  id,
-  label,
-  icon,
-  active,
-  onClick,
-  onPlanned,
-}: {
-  id: string;
-  label: string;
-  icon: React.ReactNode;
-  active: boolean;
-  onClick: () => void;
-  onPlanned: (id: string, label: string) => void;
-}) {
-  const status = getFeatureStatus(id);
-  const isLive = status !== 'planned';
-  const shortcut = TOOL_SHORTCUTS[id];
+const ICON: Record<StripTool, React.ReactNode> = {
+  select: <MousePointer2 size={18} />,
+  direct: <Spline size={18} />,
+  pan: <Hand size={18} />,
+  artboard: <Frame size={18} />,
+  pen: <PenTool size={18} />,
+  pencil: <Pencil size={18} />,
+  brush: <Brush size={18} />,
+  eraser: <Eraser size={18} />,
+  text: <Type size={18} />,
+  rect: <Square size={18} />,
+  ellipse: <Circle size={18} />,
+  triangle: <Triangle size={18} />,
+  polygon: <Hexagon size={18} />,
+  star: <Star size={18} />,
+  line: <Minus size={18} />,
+};
 
+export const toolIcon = (t: StripTool) => ICON[t];
+
+const SHAPES: DrawTool[] = ['rect', 'ellipse', 'triangle', 'polygon', 'star', 'line'];
+
+interface Props {
+  active: StripTool;
+  onTool: (t: StripTool) => void;
+  onImageUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onShapeBuilder: () => void;
+  canShapeBuild: boolean;
+}
+
+function Btn({ id, active, onClick }: { id: StripTool; active: boolean; onClick: () => void }) {
+  const info = TOOL_INFO[id];
   return (
     <button
-      onClick={() => (isLive ? onClick() : onPlanned(id, label))}
-      title={isLive ? (shortcut ? `${label} (${shortcut})` : label) : `${label} — planned, not yet available`}
+      type="button"
+      onClick={onClick}
       aria-pressed={active}
-      className={`relative flex flex-col items-center gap-1 w-[60px] py-1.5 rounded-xl border transition-colors ${
-        active
-          ? 'mt-active-blue text-mt-ink font-semibold'
-          : isLive
-          ? 'border-transparent text-mt-muted hover:text-mt-ink hover:bg-mt-surface2'
-          : 'border-transparent text-mt-faint'
-      }`}
-    >
-      {icon}
-      <span className="text-[10px] leading-none">{label}</span>
-      {status === 'beta' && (
-        <span className="absolute -top-1 -right-1 bg-amber-400 text-white text-[8px] font-bold rounded px-1">
-          β
-        </span>
+      aria-label={`${info.label}${info.key ? ` (${info.key})` : ''}`}
+      title={`${info.label}${info.key ? ` — ${info.key}` : ''}\n${info.hint}`}
+      className={cx(
+        'relative w-11 h-11 rounded-xl inline-flex items-center justify-center border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8CCBFF]',
+        active ? 'bg-[#3B82C4] border-[#3B82C4] text-white shadow-[0_6px_16px_-6px_rgba(59,130,196,0.7)]' : 'border-transparent text-mt-muted hover:text-mt-ink hover:bg-mt-surface2'
       )}
+    >
+      {ICON[id]}
+      {active && <span aria-hidden className="absolute -left-[7px] top-2 bottom-2 w-[3px] rounded-full bg-[#3B82C4]" />}
     </button>
   );
 }
 
-export function Toolbar({
-  activeTool,
-  onSelectTool,
-  onAddText,
-  onImageUpload,
-  onDuplicate,
-  onBringForward,
-  onSendBackward,
-  onBringToFront,
-  onSendToBack,
-  onDelete,
-  onOpenShapeBuilder,
-  onOpenRoadmap,
-}: Props) {
+export function Toolbar({ active, onTool, onImageUpload, onShapeBuilder, canShapeBuild }: Props) {
+  const [shape, setShape] = useState<DrawTool>('rect');
+  const [shapesOpen, setShapesOpen] = useState(false);
+  const shapeActive = (SHAPES as string[]).includes(active);
+  const shownShape = shapeActive ? (active as DrawTool) : shape;
+  const group = (ids: StripTool[]) => ids.map((id) => <Btn key={id} id={id} active={active === id} onClick={() => onTool(id)} />);
+  const divider = <span aria-hidden className="w-7 h-px bg-mt-border my-1" />;
+
   return (
-    <div className="w-20 bg-mt-surface dark:bg-mt-surface border-r dark:border-mt-border flex flex-col items-center py-4 gap-4 text-xs overflow-y-auto transition-colors duration-150">
-      <ToolButton
-        id="select"
-        label="Select"
-        icon={<MousePointer2 size={18} />}
-        active={activeTool === 'select'}
-        onClick={() => onSelectTool('select')}
-        onPlanned={onOpenRoadmap}
-      />
-      <ToolButton
-        id="direct"
-        label="Direct"
-        icon={<Pointer size={18} />}
-        active={activeTool === 'direct'}
-        onClick={() => onSelectTool('direct')}
-        onPlanned={onOpenRoadmap}
-      />
-      <div className="w-full h-px bg-mt-surface2 dark:bg-mt-surface2" />
-
-      <ToolButton
-        id="pan"
-        label="Hand"
-        icon={<Hand size={18} />}
-        active={activeTool === 'pan'}
-        onClick={() => onSelectTool('pan')}
-        onPlanned={onOpenRoadmap}
-      />
-      <ToolButton
-        id="artboard"
-        label="Artboard"
-        icon={<Frame size={18} />}
-        active={activeTool === 'artboard'}
-        onClick={() => onSelectTool('artboard')}
-        onPlanned={onOpenRoadmap}
-      />
-
-      <div className="w-full h-px bg-mt-surface2 dark:bg-mt-surface2" />
-
-      <ToolButton
-        id="pen"
-        label="Pen"
-        icon={<PenToolIcon size={18} />}
-        active={activeTool === 'pen'}
-        onClick={() => onSelectTool('pen')}
-        onPlanned={onOpenRoadmap}
-      />
-      <button onClick={onOpenShapeBuilder} title="Shape Builder" className="flex flex-col items-center gap-1 text-mt-ink dark:text-mt-muted w-full">
-        <Combine size={18} />
-        <span className="text-[10px] leading-none">Shape Builder</span>
-      </button>
-
-      <div className="w-full h-px bg-mt-surface2 dark:bg-mt-surface2" />
-
-      <button onClick={onAddText} title="Add Text (T)" className="flex flex-col items-center gap-1 text-mt-ink dark:text-mt-muted w-full">
-        <Type size={18} />
-        <span className="text-[10px] leading-none">Text</span>
-      </button>
-
-      <ToolButton
-        id="rect"
-        label="Square"
-        icon={<Square size={18} />}
-        active={activeTool === 'rect'}
-        onClick={() => onSelectTool('rect')}
-        onPlanned={onOpenRoadmap}
-      />
-      <ToolButton
-        id="ellipse"
-        label="Circle"
-        icon={<CircleIcon size={18} />}
-        active={activeTool === 'ellipse'}
-        onClick={() => onSelectTool('ellipse')}
-        onPlanned={onOpenRoadmap}
-      />
-      <ToolButton
-        id="triangle"
-        label="Triangle"
-        icon={<TriangleIcon size={18} />}
-        active={activeTool === 'triangle'}
-        onClick={() => onSelectTool('triangle')}
-        onPlanned={onOpenRoadmap}
-      />
-      <ToolButton
-        id="line"
-        label="Line"
-        icon={<LineIcon size={18} />}
-        active={activeTool === 'line'}
-        onClick={() => onSelectTool('line')}
-        onPlanned={onOpenRoadmap}
-      />
-      <ToolButton
-        id="polygon"
-        label="Polygon"
-        icon={<PolygonIcon size={18} />}
-        active={activeTool === 'polygon'}
-        onClick={() => onSelectTool('polygon')}
-        onPlanned={onOpenRoadmap}
-      />
-      <ToolButton
-        id="star"
-        label="Star"
-        icon={<StarIcon size={18} />}
-        active={activeTool === 'star'}
-        onClick={() => onSelectTool('star')}
-        onPlanned={onOpenRoadmap}
-      />
-
-      <div className="w-full h-px bg-mt-surface2 dark:bg-mt-surface2" />
-
-      <label className="flex flex-col items-center gap-1 text-mt-ink cursor-pointer w-full">
+    <nav aria-label="Tools" className="w-[60px] shrink-0 bg-mt-surface border-r border-mt-border flex flex-col items-center py-2.5 gap-1 overflow-y-auto mt-scroll">
+      {group(['select', 'direct'])}
+      {divider}
+      {group(['pen', 'pencil', 'brush', 'eraser'])}
+      {divider}
+      {group(['text'])}
+      <div className="relative">
+        <Btn id={shownShape} active={shapeActive} onClick={() => onTool(shownShape)} />
+        <button
+          type="button"
+          onClick={() => setShapesOpen((v) => !v)}
+          aria-label="More shape tools"
+          aria-expanded={shapesOpen}
+          className="absolute -right-1.5 bottom-0 h-4 w-4 rounded-full bg-mt-surface border border-mt-border text-mt-muted inline-flex items-center justify-center"
+        >
+          <ChevronRight size={10} />
+        </button>
+        {shapesOpen && (
+          <div role="menu" className="absolute left-12 top-0 z-50 w-56 rounded-2xl border border-mt-border bg-mt-surface shadow-xl p-1.5">
+            {SHAPES.map((s) => (
+              <button
+                key={s}
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  setShape(s);
+                  setShapesOpen(false);
+                  onTool(s);
+                }}
+                className={cx('w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm', active === s ? 'mt-active-blue' : 'hover:bg-mt-surface2')}
+              >
+                <span className="text-mt-muted">{ICON[s]}</span>
+                <span className="flex-1 text-left text-mt-ink">{TOOL_INFO[s].label}</span>
+                <span className="text-[11px] text-mt-faint">{TOOL_INFO[s].key}</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+      <label title="Add a photo from this device" aria-label="Add a photo" className="w-11 h-11 rounded-xl inline-flex items-center justify-center text-mt-muted hover:text-mt-ink hover:bg-mt-surface2 cursor-pointer">
         <ImagePlus size={18} />
-        <span className="text-[10px] leading-none">Upload</span>
         <input type="file" accept="image/*" multiple onChange={onImageUpload} className="hidden" />
       </label>
-
-      <div className="w-full h-px bg-mt-surface2 dark:bg-mt-surface2" />
-
-      <button onClick={onDuplicate} title="Duplicate (Ctrl/Cmd+D)" className="flex flex-col items-center gap-1 text-mt-ink dark:text-mt-muted w-full">
-        <Copy size={18} />
-        <span className="text-[10px] leading-none">Duplicate</span>
-      </button>
-      <button onClick={onBringForward} title="Bring Forward (Ctrl/Cmd+])" className="flex flex-col items-center gap-1 text-mt-ink dark:text-mt-muted w-full">
-        <ArrowUp size={18} />
-        <span className="text-[10px] leading-none">Fwd</span>
-      </button>
-      <button onClick={onSendBackward} title="Send Backward (Ctrl/Cmd+[)" className="flex flex-col items-center gap-1 text-mt-ink dark:text-mt-muted w-full">
-        <ArrowDown size={18} />
-        <span className="text-[10px] leading-none">Back</span>
-      </button>
-      <button onClick={onBringToFront} title="Bring to Front (Ctrl/Cmd+Shift+])" className="flex flex-col items-center gap-1 text-mt-ink dark:text-mt-muted w-full">
-        <ArrowUpToLine size={18} />
-        <span className="text-[10px] leading-none">Front</span>
-      </button>
-      <button onClick={onSendToBack} title="Send to Back (Ctrl/Cmd+Shift+[)" className="flex flex-col items-center gap-1 text-mt-ink dark:text-mt-muted w-full">
-        <ArrowDownToLine size={18} />
-        <span className="text-[10px] leading-none">Rear</span>
-      </button>
-
-      <button onClick={onDelete} className="flex flex-col items-center gap-1 text-red-400 dark:text-red-500 w-full">
-        <Trash2 size={18} />
-        <span className="text-[10px] leading-none">Delete</span>
-      </button>
-
+      {divider}
+      {group(['pan', 'artboard'])}
+      {divider}
       <button
-        onClick={() => onOpenRoadmap('roadmap', 'Roadmap')}
-        title="See what's planned"
-        className="flex flex-col items-center gap-1 text-mt-faint dark:text-mt-muted mt-auto w-full"
+        type="button"
+        onClick={onShapeBuilder}
+        disabled={!canShapeBuild}
+        title={'Shape builder\nSelect two or more shapes to unite, subtract, intersect or exclude them'}
+        aria-label="Shape builder"
+        className="w-11 h-11 rounded-xl inline-flex items-center justify-center text-mt-muted hover:text-mt-ink hover:bg-mt-surface2 disabled:opacity-35"
       >
-        <Clock size={18} />
-        <span className="text-[10px] leading-none">Roadmap</span>
+        <Combine size={18} />
+      </button>
+    </nav>
+  );
+}
+
+// The floating chip under the page that says which tool is in use, what
+// to do with it, and how to get back to selecting.
+export function ToolChip({ tool, onDone, extra }: { tool: StripTool; onDone: () => void; extra?: React.ReactNode }) {
+  const info = TOOL_INFO[tool];
+  return (
+    <div role="status" aria-live="polite" className="pointer-events-auto max-w-full flex items-center gap-2.5 rounded-2xl border border-mt-border bg-mt-surface/95 backdrop-blur px-2 py-1.5 shadow-[0_12px_32px_-12px_rgba(9,9,11,0.3)]">
+      <span className="shrink-0 w-8 h-8 rounded-lg bg-[#3B82C4] text-white inline-flex items-center justify-center">{ICON[tool]}</span>
+      <span className="min-w-0">
+        <span className="block text-[13px] font-semibold text-mt-ink leading-tight">
+          {info.label}
+          {info.key && <span className="ml-1.5 text-[11px] font-normal text-mt-faint">{info.key}</span>}
+        </span>
+        <span className="block text-[11px] text-mt-muted leading-snug truncate max-w-[52ch]">{info.hint}</span>
+      </span>
+      {extra}
+      <button type="button" onClick={onDone} className="shrink-0 h-8 px-3 rounded-lg bg-mt-primary text-mt-onprimary text-xs font-semibold" title="Back to selecting (Esc)">
+        Done
       </button>
     </div>
   );

@@ -76,7 +76,7 @@ import { useDirectSelection } from '@/hooks/useDirectSelection';
 import { useArtboardTool } from '@/hooks/useArtboardTool';
 import { useGuides } from '@/hooks/useGuides';
 
-import { Toolbar } from '@/components/editor/Toolbar';
+import { Toolbar, ToolChip, StripTool } from '@/components/editor/Toolbar';
 import { PropertiesPanel } from '@/components/editor/PropertiesPanel';
 import { DesignLayersPanel } from '@/components/editor/DesignLayersPanel';
 import { ArtboardsPanel } from '@/components/editor/ArtboardsPanel';
@@ -88,7 +88,6 @@ import { PreflightModal } from '@/components/editor/PreflightModal';
 import { ShortcutsModal } from '@/components/editor/ShortcutsModal';
 import { PreferencesModal } from '@/components/editor/PreferencesModal';
 import { VersionHistoryModal } from '@/components/editor/VersionHistoryModal';
-import { RoadmapModal } from '@/components/editor/RoadmapModal';
 import { MenuBar, MenuDef } from '@/components/editor/MenuBar';
 import { ContextMenu, ContextMenuEntry } from '@/components/editor/ContextMenu';
 import { useWindowPanels } from '@/components/editor/WindowPanels';
@@ -117,6 +116,7 @@ import { rememberRecent } from '@/lib/mtd/recent';
 import { missingFontsIn, fontRequiredMessage } from '@/lib/editor/missingFonts';
 import { PERSIST_PROPS, isHelperObject, isArtwork, applyStoredLocks, lockProps, reviveTextPaths } from '@/lib/editor/persist';
 import { ensureImageFilters, reviveImageAdjust } from '@/lib/editor/imageAdjust';
+import { installParagraphSpacing } from '@/lib/editor/paragraphSpacing';
 import { drawCropOverlay, isFramed, fillFrame, cropHandleAt, dragCropHandle, keepCovering, CROP_CURSORS, CropHandle } from '@/lib/editor/frames';
 import { BrushSettings, DEFAULT_BRUSH, StrokePoint, strokePathD, createStrokeObject, eraseWithStroke } from '@/lib/editor/brush';
 import { useEditorFeatures, TextPreset, clearCharStyle } from '@/hooks/useEditorFeatures';
@@ -205,6 +205,8 @@ function EditorContent() {
   }, [router]);
 
   const [zoom, setZoom] = useState(100);
+  // Set once the user zooms or pans by hand (then the view is theirs).
+  const userMovedViewRef = useRef(false);
   const [layers, setLayers] = useState<any[]>([]);
   const [designName, setDesignName] = useState('Untitled Design');
   const [designId, setDesignId] = useState<string | null>(null);
@@ -316,7 +318,6 @@ function EditorContent() {
   // the flattened image on the Main Design canvas -- see
   // ensurePhotoEditsApplied below.
   const pendingPhotoApplyResolveRef = useRef<(() => void) | null>(null);
-  const [roadmap, setRoadmap] = useState<{ open: boolean; id?: string }>({ open: false });
   const { isOpen: isPanelOpen, toggle: togglePanel } = useWindowPanels(['properties', 'layers', 'artboards']);
 
   const [artboards, setArtboards] = useState<ArtboardMeta[]>([]);
@@ -431,7 +432,6 @@ function EditorContent() {
   const clipboardRef = useRef<any[] | null>(null);
   const clipboardAtRef = useRef(0);
   const pasteCountRef = useRef(0);
-  const gradAngleRef = useRef<number>(90);
 
   // Fractional sizes are kept (a 148mm page is 559.37px); anything that
   // isn't a sensible number falls back to the default square.
@@ -956,52 +956,6 @@ function EditorContent() {
     pushHistory();
   }, [pushHistory]);
 
-  const applyGradientFill = useCallback(
-    (type: 'linear' | 'radial', color1: string, color2: string, angleDeg: number) => {
-      const canvas = fabricCanvasRef.current;
-      const active = canvas?.getActiveObject();
-      if (!active || active.locked) return;
-
-      import('fabric').then((mod) => {
-        const F: any = mod.fabric;
-        const ow: number = active.width || 1;
-        const oh: number = active.height || 1;
-        let coords: any;
-
-        if (type === 'linear') {
-          const rad = (angleDeg * Math.PI) / 180;
-          const cx = ow / 2;
-          const cy = oh / 2;
-          const len = Math.sqrt(ow * ow + oh * oh) / 2;
-          coords = {
-            x1: cx - Math.cos(rad) * len,
-            y1: cy - Math.sin(rad) * len,
-            x2: cx + Math.cos(rad) * len,
-            y2: cy + Math.sin(rad) * len,
-          };
-        } else {
-          coords = { x1: ow / 2, y1: oh / 2, x2: ow / 2, y2: oh / 2, r1: 0, r2: Math.max(ow, oh) / 2 };
-        }
-
-        const gradient = new F.Gradient({
-          type,
-          coords,
-          colorStops: [
-            { offset: 0, color: color1 },
-            { offset: 1, color: color2 },
-          ],
-        });
-
-        active.set({ fill: gradient });
-        active.dirty = true;
-        canvas.requestRenderAll();
-        bumpSel();
-        pushHistory();
-      });
-    },
-    [pushHistory]
-  );
-
   const applyExactSize = useCallback(
     (newWpx: number | null, newHpx: number | null) => {
       const canvas = fabricCanvasRef.current;
@@ -1123,13 +1077,24 @@ function EditorContent() {
           }
 
           const d = multiPolygonToPathD(result);
-          const baseFill = typeof ordered[0].fill === 'string' ? ordered[0].fill : '#3FA9E8';
+          const baseFill = ordered[0].fill && typeof ordered[0].fill === 'object' ? ordered[0].fill : typeof ordered[0].fill === 'string' ? ordered[0].fill : '#8CCBFF';
           // hasControls/hasBorders: false for the same reason usePenTool.ts's
           // own path construction sets them -- Direct Selection's anchor
           // circles render at this path's corners, and Fabric's default
           // resize controls would otherwise sit in the same spots and win
           // the hit-test over them.
-          const pathObj: any = new F.Path(d, { fill: baseFill, stroke: '#1A1A1A', strokeWidth: 2, fillRule: 'evenodd', objectCaching: false, hasControls: false, hasBorders: false });
+          // Keeps the first shape's look (fill and border).
+          const first = ordered[0];
+          const pathObj: any = new F.Path(d, {
+            fill: baseFill,
+            stroke: typeof first.stroke === 'string' ? first.stroke : '',
+            strokeWidth: first.stroke ? first.strokeWidth || 0 : 0,
+            strokeUniform: true,
+            fillRule: 'evenodd',
+            objectCaching: false,
+            opacity: first.opacity ?? 1,
+            shadow: first.shadow || null,
+          });
           pathObj.isVectorPath = true;
           pathObj.name = `Shape Builder (${op})`;
 
@@ -1149,14 +1114,6 @@ function EditorContent() {
     [pushHistory, refreshLayers]
   );
 
-  const openShapeBuilder = () => {
-    const canvas = fabricCanvasRef.current;
-    const active = canvas?.getActiveObject();
-    if (!active || active.type !== 'activeSelection') {
-      setLocalNotice('Select two or more shapes first (drag a selection box, or Shift-click each one), then use Shape Builder in the Properties panel.');
-      return;
-    }
-  };
 
   const setActiveTool = useCallback(
     (tool: ToolMode) => {
@@ -1210,12 +1167,12 @@ function EditorContent() {
         });
         canvas.defaultCursor = 'crosshair';
         canvas.hoverCursor = 'move';
-      } else if (tool === 'pen' || isDrawTool(tool)) {
+      } else if (tool === 'pen' || tool === 'text' || isDrawTool(tool)) {
         canvas.discardActiveObject();
         canvas.selection = false;
         canvas.forEachObject((o: any) => (o.selectable = false));
-        canvas.defaultCursor = 'crosshair';
-        canvas.hoverCursor = 'crosshair';
+        canvas.defaultCursor = tool === 'text' ? 'text' : 'crosshair';
+        canvas.hoverCursor = tool === 'text' ? 'text' : 'crosshair';
       } else {
         canvas.selection = true;
         canvas.forEachObject((o: any) => {
@@ -1348,6 +1305,7 @@ function EditorContent() {
       // Saved designs can contain this app's own photo filters; they must be
       // known before anything is loaded.
       ensureImageFilters(F);
+      installParagraphSpacing(F);
       const canvas = new F.Canvas(canvasRef.current, {
         width: initialW,
         height: initialH,
@@ -1643,7 +1601,9 @@ function EditorContent() {
           snapGuidesRef.current = [];
           snapSpacingRef.current = [];
         }
-        renderAnchorHandles(e.target);
+        // Moving a whole path while its points are shown: the points follow.
+        // (Dragging one of the point circles must not rebuild them.)
+        if (activeToolRef.current === 'direct' && e.target?.isVectorPath) renderAnchorHandles(e.target);
       });
 
       // Resizing snaps the dragged edges to other objects and the page.
@@ -1810,6 +1770,28 @@ function EditorContent() {
         } else {
           altDragRef.current = null;
         }
+        if (activeToolRef.current === 'text') {
+          const p = canvas.getPointer(opt.e);
+          const page = getActiveArtboardRect();
+          const k = Math.max(page.width, page.height) / 1080;
+          const t: any = new F.Textbox('Your text', {
+            left: p.x,
+            top: p.y - 24 * k,
+            width: Math.min(560 * k, Math.max(120, page.x + page.width - p.x)),
+            fontSize: Math.round(48 * k),
+            fill: '#09090B',
+            fontFamily: 'Inter',
+          });
+          t.name = 'Text';
+          setActiveToolRef.current?.('select');
+          canvas.add(t);
+          canvas.setActiveObject(t);
+          t.enterEditing();
+          t.selectAll();
+          canvas.requestRenderAll();
+          ensureFontLoaded('Inter').then(() => refreshTextMetrics(canvas));
+          return;
+        }
         if (activeToolRef.current === 'pan') {
           panRef.current = { active: true, lastX: opt.e.clientX, lastY: opt.e.clientY };
           canvas.setCursor('grabbing');
@@ -1880,6 +1862,7 @@ function EditorContent() {
           return;
         }
         if (panRef.current.active) {
+          userMovedViewRef.current = true;
           const dx = opt.e.clientX - panRef.current.lastX;
           const dy = opt.e.clientY - panRef.current.lastY;
           panRef.current.lastX = opt.e.clientX;
@@ -1975,6 +1958,7 @@ function EditorContent() {
         const e = opt.e as WheelEvent;
         e.preventDefault();
         e.stopPropagation();
+        userMovedViewRef.current = true;
         if (e.ctrlKey || e.metaKey) {
           let z = canvas.getZoom();
           z *= 0.999 ** e.deltaY;
@@ -2408,6 +2392,9 @@ function EditorContent() {
       const { width: w, height: h } = entries[0].contentRect;
       if (w > 0 && h > 0) {
         canvas.setDimensions({ width: Math.floor(w), height: Math.floor(h) });
+        // Until the user zooms or pans themselves, keep the page fitted
+        // when the space around it changes (panels, rulers, rotating an iPad).
+        if (!userMovedViewRef.current) fitToRect(canvas, getActiveArtboardRect());
         canvas.requestRenderAll();
       }
     });
@@ -2438,6 +2425,7 @@ function EditorContent() {
       if (e.pointerType !== 'touch') return;
       pts.set(e.pointerId, local(e));
       if (pts.size === 2) {
+        userMovedViewRef.current = true;
         const canvas = fabricCanvasRef.current;
         const t = canvas?._currentTransform;
         if (t?.target && t.original) {
@@ -2530,6 +2518,7 @@ function EditorContent() {
   }, [theme, canvasReady]);
 
   const applyZoom = useCallback((updater: number | ((z: number) => number)) => {
+    userMovedViewRef.current = true;
     setZoom((prev) => {
       const next = typeof updater === 'function' ? (updater as (z: number) => number)(prev) : updater;
       const clamped = Math.max(5, Math.min(800, Math.round(next)));
@@ -2741,6 +2730,27 @@ function EditorContent() {
     }
     setPencilOn(on);
   };
+
+  // The tool shown as "in use" (tool strip and the tool chip).
+  const stripTool: StripTool = drawing ? (brush.kind === 'eraser' ? 'eraser' : 'brush') : pencilOn ? 'pencil' : (['select', 'direct', 'pan', 'artboard', 'pen', 'text', 'rect', 'ellipse', 'triangle', 'polygon', 'star', 'line'] as string[]).includes(activeTool) ? (activeTool as StripTool) : 'select';
+  const chooseTool = (t: StripTool) => {
+    if (t === 'brush' || t === 'eraser') {
+      if (pencilOn) setVectorPencil(false);
+      const kind = t === 'eraser' ? 'eraser' : brushRef.current.kind === 'eraser' ? 'brush' : brushRef.current.kind;
+      startDrawing(kind);
+      return;
+    }
+    if (drawingRef.current) stopDrawing();
+    if (t === 'pencil') {
+      setVectorPencil(true);
+      return;
+    }
+    if (pencilOn) setVectorPencil(false);
+    setActiveTool(t as ToolMode);
+  };
+  const chooseToolRef = useRef(chooseTool);
+  chooseToolRef.current = chooseTool;
+  const [shapeBuilderOpen, setShapeBuilderOpen] = useState(false);
 
   // Eyedropper fallback for browsers without the EyeDropper API.
   const pickFromCanvas = (cb: (hex: string) => void) => {
@@ -4713,21 +4723,24 @@ function EditorContent() {
       // Editor workspace, so M/L are repurposed here for Illustrator's own
       // Rectangle/Ellipse tools rather than left silently dead.
       if (canUseToolShortcuts && !isMeta && !e.shiftKey) {
-        if (e.key.toLowerCase() === 'v') { e.preventDefault(); setActiveTool('select'); return; }
-        if (e.key.toLowerCase() === 'a') { e.preventDefault(); setActiveTool('direct'); return; }
-        if (e.key.toLowerCase() === 'p') { e.preventDefault(); setActiveTool('pen'); return; }
-        if (e.key.toLowerCase() === 'h') { e.preventDefault(); setActiveTool('pan'); return; }
-        if (e.key.toLowerCase() === 't') { e.preventDefault(); addText(); return; }
-        if (e.key.toLowerCase() === 'm') { e.preventDefault(); setActiveTool('rect'); return; }
-        if (e.key.toLowerCase() === 'l') { e.preventDefault(); setActiveTool('ellipse'); return; }
-        if (e.key === '\\') { e.preventDefault(); setActiveTool('line'); return; }
+        if (e.key.toLowerCase() === 'v') { e.preventDefault(); chooseToolRef.current('select'); return; }
+        if (e.key.toLowerCase() === 'a') { e.preventDefault(); chooseToolRef.current('direct'); return; }
+        if (e.key.toLowerCase() === 'p') { e.preventDefault(); chooseToolRef.current('pen'); return; }
+        if (e.key.toLowerCase() === 'h') { e.preventDefault(); chooseToolRef.current('pan'); return; }
+        if (e.key.toLowerCase() === 't') { e.preventDefault(); chooseToolRef.current('text'); return; }
+        if (e.key.toLowerCase() === 'b') { e.preventDefault(); chooseToolRef.current('brush'); return; }
+        if (e.key.toLowerCase() === 'e') { e.preventDefault(); chooseToolRef.current('eraser'); return; }
+        if (e.key.toLowerCase() === 'n') { e.preventDefault(); chooseToolRef.current('pencil'); return; }
+        if (e.key.toLowerCase() === 'm') { e.preventDefault(); chooseToolRef.current('rect'); return; }
+        if (e.key.toLowerCase() === 'l') { e.preventDefault(); chooseToolRef.current('ellipse'); return; }
+        if (e.key === '\\') { e.preventDefault(); chooseToolRef.current('line'); return; }
       }
 
       if (canUseToolShortcuts && !isMeta && e.shiftKey) {
-        if (e.key.toLowerCase() === 'o') { e.preventDefault(); setActiveTool('artboard'); return; }
-        if (e.key.toLowerCase() === 't') { e.preventDefault(); setActiveTool('triangle'); return; }
-        if (e.key.toLowerCase() === 's') { e.preventDefault(); setActiveTool('star'); return; }
-        if (e.key.toLowerCase() === 'g') { e.preventDefault(); setActiveTool('polygon'); return; }
+        if (e.key.toLowerCase() === 'o') { e.preventDefault(); chooseToolRef.current('artboard'); return; }
+        if (e.key.toLowerCase() === 't') { e.preventDefault(); chooseToolRef.current('triangle'); return; }
+        if (e.key.toLowerCase() === 's') { e.preventDefault(); chooseToolRef.current('star'); return; }
+        if (e.key.toLowerCase() === 'g') { e.preventDefault(); chooseToolRef.current('polygon'); return; }
       }
 
       if (canUseToolShortcuts && activeToolRef.current === 'pen') {
@@ -4759,6 +4772,11 @@ function EditorContent() {
           canvas.setActiveObject(sel);
           canvas.requestRenderAll();
         }
+        return;
+      }
+      if (e.key === 'Escape' && (drawingRef.current || canvas.isDrawingMode || activeToolRef.current === 'text' || activeToolRef.current === 'pan' || activeToolRef.current === 'artboard' || activeToolRef.current === 'direct') && !isTypingInField && !isEditingText) {
+        e.preventDefault();
+        chooseToolRef.current('select');
         return;
       }
       if (e.key === 'Escape') {
@@ -6303,6 +6321,7 @@ function EditorContent() {
     },
     maskWithShape: features.maskWithShape,
     detachFromFrame: features.detachFromFrame,
+    combineShapes: (op: 'union' | 'subtract' | 'intersect' | 'exclude') => runShapeBuilder(op),
     placeInShape: () => {
       const sel = fabricCanvasRef.current?.getActiveObject();
       if (!sel || sel.type !== 'activeSelection') return;
@@ -6334,30 +6353,20 @@ function EditorContent() {
   const propertiesPanelEl = (
     <PropertiesPanel
       activeTool={activeTool}
+      stripTool={stripTool}
       selected={selected}
       unit={unit}
       layers={layers}
+      a={toolbarActions}
+      brandColors={brandKit.colors}
+      documentColors={docColors}
       maskTargetId={maskTargetId}
       setMaskTargetId={setMaskTargetId}
-      applyProp={applyProp}
-      applyCharProp={applyCharProp}
-      getTextPropValue={getTextPropValue}
       applyExactSize={applyExactSize}
       toggleLockRatio={toggleLockRatio}
-      alignObject={alignObject}
-      groupSelected={groupSelected}
-      ungroupSelected={ungroupSelected}
-      runShapeBuilder={runShapeBuilder}
       applyPathAsMask={applyPathAsMask}
       removeMask={removeMask}
-      applyGradientFill={applyGradientFill}
-      gradAngleRef={gradAngleRef}
-      pushHistory={pushHistory}
       layerLabel={layerLabel}
-      onReplaceImage={(file) => {
-        const t = fabricCanvasRef.current?.getActiveObject();
-        if (t) readFile(file).then((url) => features.putImageInto(t, url));
-      }}
       onEditPhoto={openPhotoEditor}
       artboardOrigin={(() => {
         const ab = artboards.find((a) => a.id === selected?.__artboardId) || getActiveArtboardRect();
@@ -6891,21 +6900,14 @@ function EditorContent() {
         {!compact && <LeftRail items={railItems} active={leftPanel} onActivate={setLeftPanel} compact={false} />}
         {pro && !compact && (
           <Toolbar
-            activeTool={activeTool}
-            onSelectTool={(t) => {
-              if (drawingRef.current) stopDrawing();
-              setActiveTool(t);
-            }}
-            onAddText={addText}
+            active={stripTool}
+            onTool={chooseTool}
             onImageUpload={handleImageUpload}
-            onDuplicate={duplicateSelected}
-            onBringForward={bringForward}
-            onSendBackward={sendBackward}
-            onBringToFront={bringToFront}
-            onSendToBack={sendToBack}
-            onDelete={deleteSelected}
-            onOpenShapeBuilder={openShapeBuilder}
-            onOpenRoadmap={(id) => setRoadmap({ open: true, id })}
+            onShapeBuilder={() => {
+              if (selected?.type === 'activeSelection') setShapeBuilderOpen(true);
+              else setLocalNotice('Select two or more shapes first (drag a box around them, or Shift-click each one).');
+            }}
+            canShapeBuild={selected?.type === 'activeSelection'}
           />
         )}
 
@@ -6967,12 +6969,38 @@ function EditorContent() {
               />
             </div>
           )}
-          {drawing && (
-            <div className={cx('absolute left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 rounded-2xl border border-mt-border bg-mt-surface/95 backdrop-blur px-3 py-1.5 shadow-lg', compact ? 'bottom-2' : 'top-3')}>
-              <span className="text-[13px] font-semibold capitalize">{brush.kind}</span>
-              {brush.kind !== 'eraser' && <input type="color" value={brush.color} aria-label="Brush colour" onChange={(e) => setBrush({ ...brush, color: e.target.value })} className="h-7 w-8 rounded border border-mt-border bg-transparent" />}
-              <input type="range" min={1} max={120} value={brush.size} aria-label="Brush size" onChange={(e) => setBrush({ ...brush, size: Number(e.target.value) })} className="w-28 accent-[#3B82C4]" />
-              <button type="button" onClick={stopDrawing} className="h-8 px-3 rounded-lg bg-mt-primary text-mt-onprimary text-xs font-semibold">Done</button>
+          {canvasReady && stripTool !== 'select' && (
+            <div className={cx('absolute inset-x-2 z-20 pointer-events-none flex justify-center', compact ? 'top-2' : 'bottom-3')}>
+              <ToolChip
+                tool={stripTool}
+                onDone={() => chooseTool('select')}
+                extra={
+                  drawing || pencilOn ? (
+                    <span className="flex items-center gap-1.5 shrink-0">
+                      {drawing && brush.kind !== 'eraser' && (
+                        <select
+                          value={brush.kind}
+                          aria-label="Brush type"
+                          onChange={(e) => {
+                            const kind = e.target.value as BrushSettings['kind'];
+                            setBrush({ ...brushRef.current, kind });
+                          }}
+                          className="h-8 rounded-lg border border-mt-input-border bg-mt-surface text-xs px-1.5 text-mt-ink"
+                        >
+                          <option value="brush">Brush</option>
+                          <option value="marker">Marker</option>
+                          <option value="highlighter">Highlighter</option>
+                          <option value="pencil">Pencil brush</option>
+                        </select>
+                      )}
+                      {brush.kind !== 'eraser' || !drawing ? (
+                        <input type="color" value={brush.color} aria-label="Colour" onChange={(e) => setBrush({ ...brushRef.current, color: e.target.value })} className="h-8 w-9 rounded-lg border border-mt-border bg-transparent" />
+                      ) : null}
+                      <input type="range" min={1} max={120} value={brush.size} aria-label="Size" onChange={(e) => setBrush({ ...brushRef.current, size: Number(e.target.value) })} className="w-24 accent-[#3B82C4]" />
+                    </span>
+                  ) : null
+                }
+              />
             </div>
           )}
         </div>
@@ -6981,10 +7009,7 @@ function EditorContent() {
         {pro && !compact && (
           <div className="w-72 shrink-0 bg-mt-surface border-l border-mt-border flex flex-col overflow-y-auto mt-scroll">
             {isPanelOpen('properties') && (
-              <div className="p-3 border-b border-mt-border">
-                <p className="font-semibold text-mt-ink mb-3 text-sm">Properties</p>
-                {propertiesPanelEl}
-              </div>
+              <div className="border-b border-mt-border">{propertiesPanelEl}</div>
             )}
             {isPanelOpen('artboards') && artboardsPanelEl}
             {isPanelOpen('align') && (
@@ -7067,7 +7092,41 @@ function EditorContent() {
         designId={designId}
         onRestore={restoreVersion}
       />
-      <RoadmapModal open={roadmap.open} highlightId={roadmap.id} onClose={() => setRoadmap({ open: false })} />
+      {shapeBuilderOpen && (
+        <div className="fixed inset-0 z-[90]" onClick={() => setShapeBuilderOpen(false)}>
+          <div
+            role="dialog"
+            aria-label="Shape builder"
+            onClick={(e) => e.stopPropagation()}
+            className="absolute left-[150px] top-1/3 w-64 rounded-2xl border border-mt-border bg-mt-surface shadow-xl p-3"
+          >
+            <p className="text-[13px] font-semibold text-mt-ink">Combine shapes</p>
+            <p className="text-[11px] text-mt-muted mb-2">The result is one shape you can still edit point by point.</p>
+            <div className="grid grid-cols-2 gap-1.5">
+              {(
+                [
+                  ['union', 'Unite'],
+                  ['subtract', 'Subtract'],
+                  ['intersect', 'Intersect'],
+                  ['exclude', 'Exclude'],
+                ] as const
+              ).map(([op, label]) => (
+                <button
+                  key={op}
+                  type="button"
+                  onClick={() => {
+                    setShapeBuilderOpen(false);
+                    runShapeBuilder(op);
+                  }}
+                  className="h-9 rounded-lg border border-mt-border text-sm text-mt-ink hover:bg-mt-surface2"
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
       <PreflightModal open={showPreflight} issues={preflightIssues} onClose={() => setShowPreflight(false)} />
       </main>
       </div>

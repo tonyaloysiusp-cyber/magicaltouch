@@ -1,846 +1,659 @@
 'use client';
 
-import { Lock, Unlock, Scissors } from 'lucide-react';
-import { isDrawTool, TOOL_LABELS, DrawTool, DocUnit, ToolMode } from '@/lib/editor/types';
+// Pro inspector: exact numbers for everything about the selection, in the
+// document's units, grouped the way designers expect (position & size,
+// alignment, layer, text, fill, border, corners, shadow, photo, path).
+// Every change goes through the same actions as the floating toolbar, so
+// it records undo steps, saves and exports the same way.
+
+import { ReactNode, useState } from 'react';
+import {
+  Lock,
+  Unlock,
+  Link2,
+  Unlink2,
+  RotateCw,
+  FlipHorizontal2,
+  FlipVertical2,
+  AlignStartVertical,
+  AlignCenterVertical,
+  AlignEndVertical,
+  AlignStartHorizontal,
+  AlignCenterHorizontal,
+  AlignEndHorizontal,
+  AlignHorizontalDistributeCenter,
+  AlignVerticalDistributeCenter,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
+  AlignJustify,
+  Bold,
+  Italic,
+  Underline,
+  Strikethrough,
+  Crop,
+  SlidersHorizontal,
+  WandSparkles,
+  ImagePlus,
+  Scissors,
+  Group,
+  Ungroup,
+  Spline,
+  ChevronDown,
+} from 'lucide-react';
+import type { DocUnit, ToolMode } from '@/lib/editor/types';
 import { formatUnit, unitToPx, getObjectPixelSize } from '@/lib/editor/units';
+import { fromFabricGradient, GradientSpec } from '@/lib/editor/gradients';
+import { googleFontByName, WEIGHT_NAMES } from '@/lib/editor/googleFonts';
 import { FontPicker } from './FontPicker';
-import { ColorSwatchPicker } from './ColorSwatchPicker';
-import { GradientPresetPicker } from './GradientPresetPicker';
+import { ColorPicker, ColorChip } from './shell/ColorPicker';
+import { Popover, Slider, Segmented, cx } from './shell/ui';
+import type { ToolbarActions } from './shell/ContextToolbar';
+import { layerName } from './DesignLayersPanel';
+import { TOOL_INFO, toolIcon, StripTool } from './Toolbar';
 
 interface Props {
   activeTool: ToolMode;
+  stripTool: StripTool;
   selected: any;
   unit: DocUnit;
   layers: any[];
+  a: ToolbarActions;
+  brandColors: string[];
+  documentColors: string[];
   maskTargetId: string;
   setMaskTargetId: (id: string) => void;
-  applyProp: (props: Record<string, any>, record?: boolean) => void;
-  // Character-scoped version of applyProp: targets the exact highlighted
-  // characters when the user is mid-edit with a real (non-collapsed)
-  // text selection, otherwise behaves exactly like applyProp.
-  applyCharProp: (props: Record<string, any>, record?: boolean) => void;
-  // Reads a text property's effective value for whatever's relevant right
-  // now (the selected characters, or the whole object), flagging "mixed"
-  // when a real selection's characters don't all agree.
-  getTextPropValue: (active: any, prop: string) => { value: any; mixed: boolean };
   applyExactSize: (w: number | null, h: number | null) => void;
   toggleLockRatio: () => void;
-  alignObject: (mode: 'left' | 'centerH' | 'right' | 'top' | 'centerV' | 'bottom') => void;
-  groupSelected: () => void;
-  ungroupSelected: () => void;
-  runShapeBuilder: (op: 'union' | 'subtract' | 'intersect' | 'exclude') => void;
   applyPathAsMask: () => void;
   removeMask: () => void;
-  applyGradientFill: (type: 'linear' | 'radial', c1: string, c2: string, angle: number) => void;
-  gradAngleRef: React.MutableRefObject<number>;
-  pushHistory: () => void;
   layerLabel: (obj: any, index: number) => string;
-  onReplaceImage: (file: File) => void;
   onEditPhoto: () => void;
-  // Top-left of the artboard the selection sits on: X/Y are shown
-  // relative to it, like every design app.
+  // Top-left of the page the selection sits on: X/Y are measured from it.
   artboardOrigin?: { x: number; y: number };
 }
 
-// Range sliders commit one undo step when the drag ends — on mouse, touch,
-// pen and keyboard alike (iPad has no mouseup).
-const commitHandlers = (commit: () => void) => ({
-  onPointerUp: commit,
-  onKeyUp: commit,
-  onTouchEnd: commit,
-});
+const BLEND_MODES: [string, string][] = [
+  ['source-over', 'Normal'],
+  ['multiply', 'Multiply'],
+  ['screen', 'Screen'],
+  ['overlay', 'Overlay'],
+  ['darken', 'Darken'],
+  ['lighten', 'Lighten'],
+  ['color-dodge', 'Colour dodge'],
+  ['color-burn', 'Colour burn'],
+  ['hard-light', 'Hard light'],
+  ['soft-light', 'Soft light'],
+  ['difference', 'Difference'],
+  ['exclusion', 'Exclusion'],
+  ['hue', 'Hue'],
+  ['saturation', 'Saturation'],
+  ['color', 'Colour'],
+  ['luminosity', 'Luminosity'],
+];
 
-// A precise numeric input: types/pastes/arrow-keys any decimal (and
-// negative, when allowed) value, commits on blur/Enter, and never
-// silently rounds what the user typed — the properties panel used to
-// only expose sliders for several of these, which round to whole numbers
-// and can't express e.g. tracking of 12.75 or a line height of 17.5.
-function PrecisionNumberInput({
+const isTextObj = (o: any) => o && (o.type === 'textbox' || o.type === 'i-text' || o.type === 'text');
+const fillValue = (o: any): string | GradientSpec | null => {
+  if (!o) return null;
+  if (o.fill && typeof o.fill === 'object' && o.fill.colorStops) return fromFabricGradient(o.fill);
+  return typeof o.fill === 'string' && o.fill ? o.fill : null;
+};
+
+// ---------------------------------------------------------------- pieces
+
+function Section({ title, children, action, defaultOpen = true }: { title: string; children: ReactNode; action?: ReactNode; defaultOpen?: boolean }) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <section className="border-b border-mt-border px-4 py-3.5">
+      <div className="flex items-center justify-between gap-2">
+        <button type="button" onClick={() => setOpen(!open)} aria-expanded={open} className="flex items-center gap-1.5 text-[12px] font-semibold text-mt-ink">
+          <ChevronDown size={13} className={cx('text-mt-faint transition-transform', !open && '-rotate-90')} />
+          {title}
+        </button>
+        {action}
+      </div>
+      {open && <div className="mt-3 flex flex-col gap-3">{children}</div>}
+    </section>
+  );
+}
+
+// A number field with a short label inside it (like "X" or "W"). Typed
+// values commit on Enter or when leaving the field; arrow keys step
+// (Shift = ×10). Nothing is rounded beyond what the unit shows.
+function NumField({
+  label,
   value,
   onCommit,
+  step = 1,
   min,
   max,
-  step = 1,
-  disabled,
   suffix,
-  placeholder,
-  className = '',
+  disabled,
+  title,
+  mixed,
 }: {
+  label: ReactNode;
   value: number | undefined;
   onCommit: (n: number) => void;
+  step?: number;
   min?: number;
   max?: number;
-  step?: number;
-  disabled?: boolean;
   suffix?: string;
-  placeholder?: string;
-  className?: string;
+  disabled?: boolean;
+  title?: string;
+  mixed?: boolean;
 }) {
-  const display = value === undefined ? '' : String(Math.round(value * 100) / 100);
+  const shown = mixed || value === undefined ? '' : String(Math.round(value * 100) / 100);
   const commit = (raw: string, el: HTMLInputElement) => {
-    if (raw.trim() === '') return;
-    let n = parseFloat(raw);
-    if (isNaN(n)) {
-      el.value = display;
+    let n = parseFloat(raw.replace(',', '.'));
+    if (raw.trim() === '' || isNaN(n)) {
+      el.value = shown;
       return;
     }
     if (min !== undefined) n = Math.max(min, n);
     if (max !== undefined) n = Math.min(max, n);
-    onCommit(n);
-    el.value = String(n);
+    el.value = String(Math.round(n * 100) / 100);
+    if (value === undefined || Math.abs(n - value) > 1e-6) onCommit(n);
   };
   return (
-    <div className="relative">
+    <label title={title} className={cx('group flex items-center h-9 rounded-lg border border-mt-input-border bg-mt-surface focus-within:border-[#3B82C4] focus-within:ring-2 focus-within:ring-[#8CCBFF]/40', disabled && 'opacity-45')}>
+      <span className="pl-2.5 pr-1 text-[11px] font-medium text-mt-faint shrink-0 inline-flex items-center">{label}</span>
       <input
+        key={shown}
         type="text"
         inputMode="decimal"
+        defaultValue={shown}
+        placeholder={mixed ? 'Mixed' : undefined}
         disabled={disabled}
-        placeholder={placeholder}
-        defaultValue={display}
-        key={display}
         onBlur={(e) => commit(e.target.value, e.target)}
         onKeyDown={(e) => {
-          if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+          const el = e.target as HTMLInputElement;
+          if (e.key === 'Enter') el.blur();
+          if (e.key === 'Escape') {
+            el.value = shown;
+            el.blur();
+          }
           if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
             e.preventDefault();
-            const current = value ?? 0;
-            const next = current + (e.key === 'ArrowUp' ? step : -step);
-            commit(String(next), e.target as HTMLInputElement);
+            const cur = parseFloat(el.value) || value || 0;
+            commit(String(cur + (e.key === 'ArrowUp' ? 1 : -1) * step * (e.shiftKey ? 10 : 1)), el);
           }
+          e.stopPropagation();
         }}
-        className={`w-full text-xs border rounded px-2 py-1 text-right disabled:opacity-40 dark:bg-mt-surface dark:border-mt-border dark:text-mt-ink ${className}`}
+        className="flex-1 min-w-0 h-full bg-transparent text-[13px] text-mt-ink tabular-nums focus:outline-none disabled:cursor-not-allowed"
       />
-      {suffix && (
-        <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-mt-faint">
-          {suffix}
-        </span>
-      )}
-    </div>
+      {suffix && <span className="pr-2.5 text-[11px] text-mt-faint shrink-0">{suffix}</span>}
+    </label>
   );
 }
 
-export function PropertiesPanel({
-  activeTool,
-  selected,
-  unit,
-  layers,
-  maskTargetId,
-  setMaskTargetId,
-  applyProp,
-  applyCharProp,
-  getTextPropValue,
-  applyExactSize,
-  toggleLockRatio,
-  alignObject,
-  groupSelected,
-  ungroupSelected,
-  runShapeBuilder,
-  applyPathAsMask,
-  removeMask,
-  applyGradientFill,
-  gradAngleRef,
-  pushHistory,
-  layerLabel,
-  onReplaceImage,
-  onEditPhoto,
-  artboardOrigin = { x: 0, y: 0 },
-}: Props) {
-  const kbd = 'bg-mt-surface2 dark:bg-mt-surface2 border dark:border-mt-border rounded px-1';
+function IconBtn({ label, onClick, active, disabled, children }: { label: string; onClick: () => void; active?: boolean; disabled?: boolean; children: ReactNode }) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      title={label}
+      aria-pressed={active === undefined ? undefined : active}
+      onClick={onClick}
+      disabled={disabled}
+      className={cx(
+        'h-9 flex-1 min-w-0 inline-flex items-center justify-center rounded-lg border transition-colors disabled:opacity-35 disabled:pointer-events-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8CCBFF]',
+        active ? 'mt-active-blue text-mt-ink' : 'border-mt-border text-mt-muted hover:text-mt-ink hover:bg-mt-surface2'
+      )}
+    >
+      {children}
+    </button>
+  );
+}
 
-  if (activeTool === 'pen') {
+function WideBtn({ icon, label, onClick, disabled, primary }: { icon: ReactNode; label: string; onClick: () => void; disabled?: boolean; primary?: boolean }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className={cx(
+        'h-9 px-3 rounded-lg text-[13px] font-medium inline-flex items-center justify-center gap-2 disabled:opacity-40 disabled:pointer-events-none',
+        primary ? 'bg-mt-primary text-mt-onprimary hover:opacity-90' : 'border border-mt-border text-mt-ink hover:bg-mt-surface2'
+      )}
+    >
+      {icon}
+      {label}
+    </button>
+  );
+}
+
+function ColorRow({
+  label,
+  value,
+  onChange,
+  gradient,
+  none,
+  brandColors,
+  documentColors,
+  onPick,
+  disabled,
+}: {
+  label: string;
+  value: any;
+  onChange: (v: any, commit: boolean) => void;
+  gradient?: boolean;
+  none?: boolean;
+  brandColors: string[];
+  documentColors: string[];
+  onPick: (cb: (hex: string) => void) => void;
+  disabled?: boolean;
+}) {
+  const text = !value ? 'None' : typeof value === 'string' ? value.toUpperCase() : value.type === 'radial' ? 'Radial gradient' : 'Linear gradient';
+  return (
+    <Popover
+      width={300}
+      trigger={({ toggle, open }) => (
+        <button
+          type="button"
+          onClick={toggle}
+          disabled={disabled}
+          aria-label={label}
+          className={cx('w-full h-9 flex items-center gap-2.5 px-2 rounded-lg border text-left disabled:opacity-45', open ? 'border-[#3B82C4] ring-2 ring-[#8CCBFF]/40' : 'border-mt-input-border hover:bg-mt-surface2')}
+        >
+          <ColorChip value={value} label={label} size={22} />
+          <span className="flex-1 min-w-0 truncate text-[13px] text-mt-ink tabular-nums">{text}</span>
+          <ChevronDown size={14} className="text-mt-faint" />
+        </button>
+      )}
+    >
+      <ColorPicker value={value} onChange={onChange} allowGradient={gradient} allowNone={none} brandColors={brandColors} documentColors={documentColors} onPickFromCanvas={onPick} />
+    </Popover>
+  );
+}
+
+// ---------------------------------------------------------------- panel
+
+export function PropertiesPanel(p: Props) {
+  const { selected, unit, a } = p;
+  const origin = p.artboardOrigin || { x: 0, y: 0 };
+
+  // A drawing/editing tool is in use: say what it does.
+  if (p.stripTool !== 'select' && !(p.stripTool === 'direct' && selected && !selected.__isAnchorHandle)) {
+    const info = TOOL_INFO[p.stripTool];
     return (
-      <p className="text-xs text-mt-muted dark:text-mt-muted">
-        Pen tool active. Click to place anchors, click + drag for curved handles. Hold{' '}
-        <kbd className={kbd}>Alt/Option</kbd> while dragging a handle to
-        break it (curve one side only). Press <kbd className={kbd}>Enter</kbd>{' '}
-        to finish an open path, or click the first anchor to close it.{' '}
-        <kbd className={kbd}>Esc</kbd> cancels the current path.
-      </p>
+      <div className="p-4">
+        <div className="rounded-2xl border border-mt-border bg-mt-surface2/60 p-4">
+          <div className="flex items-center gap-2.5">
+            <span className="w-9 h-9 rounded-xl bg-[#3B82C4] text-white inline-flex items-center justify-center">{toolIcon(p.stripTool)}</span>
+            <div>
+              <p className="text-sm font-semibold text-mt-ink">{info.label}</p>
+              {info.key && <p className="text-[11px] text-mt-faint">Shortcut {info.key}</p>}
+            </div>
+          </div>
+          <ul className="mt-3 flex flex-col gap-1.5 text-[12px] text-mt-muted leading-relaxed">
+            {info.hint.split(' · ').map((h) => (
+              <li key={h} className="flex gap-2">
+                <span aria-hidden className="mt-[7px] w-1 h-1 rounded-full bg-mt-faint shrink-0" />
+                {h.charAt(0).toUpperCase() + h.slice(1)}
+              </li>
+            ))}
+            <li className="flex gap-2">
+              <span aria-hidden className="mt-[7px] w-1 h-1 rounded-full bg-mt-faint shrink-0" />
+              Press Esc or V to go back to selecting
+            </li>
+          </ul>
+        </div>
+      </div>
     );
   }
 
-  if (activeTool === 'direct' && (!selected || selected.__isAnchorHandle)) {
-    if (selected?.__isAnchorHandle && !selected.__isMidpointMarker) {
-      return (
-        <p className="text-xs text-mt-muted dark:text-mt-muted">
-          {selected.__isHandlePoint ? 'Curve handle selected. Drag to reshape the curve.' : (
-            <>
-              Anchor point selected. Drag to move it,{' '}
-              <kbd className={kbd}>Alt/Option</kbd>+click it to toggle
-              corner/smooth, or press <kbd className={kbd}>Delete</kbd> to
-              remove it.
-            </>
-          )}
-        </p>
-      );
-    }
+  if (!selected || selected.__isAnchorHandle) {
     return (
-      <p className="text-xs text-mt-muted dark:text-mt-muted">
-        Direct Selection active. Select a vector path to edit it: drag an anchor (blue outline) or a
-        curve handle (filled blue) to reshape it. <kbd className={kbd}>Alt/Option</kbd>+click
-        an anchor to toggle it between a sharp corner and a smooth curve point. Click a green square on a
-        segment to add a new anchor there. Select an anchor and press{' '}
-        <kbd className={kbd}>Delete</kbd> to remove it.
-      </p>
+      <div className="p-6 text-center">
+        <div className="mx-auto w-12 h-12 rounded-2xl mt-spectrum opacity-90" aria-hidden />
+        <p className="mt-3 text-sm font-semibold text-mt-ink">Nothing selected</p>
+        <p className="mt-1 text-xs text-mt-muted leading-relaxed">Click something on the page to see its exact size, position, colours and more.</p>
+      </div>
     );
-  }
-
-  if (activeTool === 'pan') {
-    return (
-      <p className="text-xs text-mt-muted dark:text-mt-muted">
-        Hand tool active. Click and drag anywhere on the pasteboard to pan around the canvas.
-      </p>
-    );
-  }
-
-  if (activeTool === 'artboard') {
-    return (
-      <p className="text-xs text-mt-muted dark:text-mt-muted">
-        Artboard tool active. Drag on the pasteboard to create a new artboard, or click and drag an
-        existing one to move/resize it. Rename, duplicate, delete, and export artboards from the{' '}
-        <span className="font-medium text-mt-muted dark:text-mt-muted">Artboards</span> panel.
-      </p>
-    );
-  }
-
-  if (isDrawTool(activeTool)) {
-    return (
-      <p className="text-xs text-mt-muted dark:text-mt-muted">
-        {TOOL_LABELS[activeTool as DrawTool]} tool active. Click and drag on the canvas to draw. Hold{' '}
-        <kbd className={kbd}>Shift</kbd> to constrain proportions,{' '}
-        <kbd className={kbd}>Alt/Option</kbd> to draw from the center.{' '}
-        <kbd className={kbd}>Esc</kbd> cancels.
-      </p>
-    );
-  }
-
-  if (!selected) {
-    return <p className="text-xs text-mt-faint dark:text-mt-muted">Select an object to edit its properties.</p>;
   }
 
   const isMultiple = selected.type === 'activeSelection';
-  const isText = selected.type === 'i-text' || selected.type === 'text' || selected.type === 'textbox';
+  const isText = isTextObj(selected);
   const isImage = selected.type === 'image';
   const isGroup = selected.type === 'group';
   const isPath = !!selected.isVectorPath;
-  const hasFillStroke = !isImage;
-  const isLocked = !!selected.locked;
-
-  const currentFill = selected.fill;
-  const isGradientFill = !!(currentFill && typeof currentFill === 'object' && (currentFill as any).type);
-  const isNoneFill = currentFill === '' || currentFill === null || currentFill === undefined;
-  const gradType: 'linear' | 'radial' = isGradientFill ? (currentFill as any).type : 'linear';
-  const gradStops =
-    isGradientFill && (currentFill as any).colorStops
-      ? (currentFill as any).colorStops
-      : [
-          { offset: 0, color: '#3FA9E8' },
-          { offset: 1, color: '#7ED33E' },
-        ];
-
-  const pixelSize = getObjectPixelSize(selected);
-  const imageLayerOptions = layers.filter((o) => o.type === 'image');
+  const locked = !!selected.locked;
+  const meta = selected.__shape;
+  const kind: string | undefined = meta?.kind;
+  const isLine = kind === 'line' || kind === 'arrowLine' || selected.type === 'line' || (isPath && !selected.fill);
+  const hasCorner = selected.type === 'rect' || kind === 'rect' || kind === 'roundRect';
+  const radius = selected.type === 'rect' ? Math.round((selected.rx || 0) * Math.abs(selected.scaleX || 1)) : Math.round(meta?.params?.radius ?? 0);
+  const size = getObjectPixelSize(selected);
+  const toUnit = (px: number) => parseFloat(formatUnit(px, unit));
+  const unitStep = unit === 'px' || unit === 'pt' ? 1 : unit === 'mm' ? 0.5 : 0.01;
+  const shadow = isMultiple ? selected.getObjects().find((x: any) => x.shadow)?.shadow || null : selected.shadow;
+  const sh = shadow ? { color: shadow.color || 'rgba(9,9,11,0.35)', blur: shadow.blur || 0, x: shadow.offsetX || 0, y: shadow.offsetY || 0 } : null;
+  const setSh = (patch: Partial<NonNullable<typeof sh>>, record: boolean) => sh && a.setShadow({ ...sh, ...patch }, record);
+  const blend = selected.globalCompositeOperation || 'source-over';
+  const colorProps = { brandColors: p.brandColors, documentColors: p.documentColors, onPick: a.pickFromCanvas, disabled: locked };
+  const images = p.layers.filter((o) => o.type === 'image');
+  const title = isMultiple ? `${selected.getObjects().length} selected` : layerName(selected);
 
   return (
-    <div className="flex flex-col gap-4">
-      {isLocked && (
-        <div className="flex items-center gap-2 text-xs bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900 text-amber-700 dark:text-amber-400 rounded px-2 py-1.5">
-          <Lock size={12} />
-          Locked — unlock to edit (Ctrl/Cmd+L)
+    <div className="flex flex-col pb-6">
+      {/* Header */}
+      <div className="px-4 pt-3.5 pb-3 border-b border-mt-border flex items-center gap-2">
+        <div className="min-w-0 flex-1">
+          <p className="text-[11px] uppercase tracking-[0.08em] text-mt-faint">{isMultiple ? 'Selection' : isText ? 'Text' : isImage ? 'Photo' : isGroup ? 'Group' : isPath ? 'Path' : 'Shape'}</p>
+          <p className="text-sm font-semibold text-mt-ink truncate">{title}</p>
         </div>
-      )}
-
-      {(
-        <div
-          key={`${selected.__uid || 'obj'}-${unit}-${Math.round((selected.left ?? 0) * 100)}-${Math.round((selected.top ?? 0) * 100)}-${Math.round(pixelSize.w * 100)}-${Math.round(pixelSize.h * 100)}-${Math.round((selected.angle || 0) * 100)}`}
-          className="border rounded-lg p-3 bg-mt-surface2 dark:bg-mt-surface dark:border-mt-border flex flex-col gap-2"
+        <button
+          type="button"
+          onClick={a.toggleLock}
+          aria-label={locked ? 'Unlock' : 'Lock'}
+          title={locked ? 'Unlock (Ctrl/Cmd+L)' : 'Lock so it can’t be moved (Ctrl/Cmd+L)'}
+          className={cx('h-8 w-8 rounded-lg inline-flex items-center justify-center border', locked ? 'border-amber-300 bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:border-amber-800 dark:text-amber-300' : 'border-mt-border text-mt-muted hover:text-mt-ink')}
         >
-          <div className="flex items-center justify-between">
-            <p className="text-xs font-semibold text-mt-muted dark:text-mt-muted">Transform</p>
-            <button
-              type="button"
-              onClick={toggleLockRatio}
-              title={selected.__lockRatio ? 'Unlock aspect ratio' : 'Lock aspect ratio'}
-              className={`hover:text-mt-ink dark:hover:text-mt-ink ${selected.__lockRatio ? 'text-blue-600 dark:text-blue-400' : 'text-mt-faint'}`}
-            >
-              {selected.__lockRatio ? <Lock size={13} /> : <Unlock size={13} />}
-            </button>
-          </div>
-
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <label className="text-[10px] text-mt-muted dark:text-mt-muted block mb-0.5">X ({unit})</label>
-              <input
-                type="text"
-                disabled={isLocked}
-                defaultValue={formatUnit((selected.left ?? 0) - artboardOrigin.x, unit)}
-                onBlur={(e) => {
-                  const val = parseFloat(e.target.value);
-                  if (!isNaN(val)) {
-                    const next = unitToPx(val, unit) + artboardOrigin.x;
-                    if (Math.abs(next - (selected.left ?? 0)) > 0.001) applyProp({ left: next });
-                  }
-                }}
-                onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
-                className="w-full text-xs border rounded px-2 py-1 disabled:opacity-40 dark:bg-mt-surface dark:border-mt-border dark:text-mt-ink"
-              />
-            </div>
-            <div>
-              <label className="text-[10px] text-mt-muted dark:text-mt-muted block mb-0.5">Y ({unit})</label>
-              <input
-                type="text"
-                disabled={isLocked}
-                defaultValue={formatUnit((selected.top ?? 0) - artboardOrigin.y, unit)}
-                onBlur={(e) => {
-                  const val = parseFloat(e.target.value);
-                  if (!isNaN(val)) {
-                    const next = unitToPx(val, unit) + artboardOrigin.y;
-                    if (Math.abs(next - (selected.top ?? 0)) > 0.001) applyProp({ top: next });
-                  }
-                }}
-                onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
-                className="w-full text-xs border rounded px-2 py-1 disabled:opacity-40 dark:bg-mt-surface dark:border-mt-border dark:text-mt-ink"
-              />
-            </div>
-            <div>
-              <label className="text-[10px] text-mt-muted dark:text-mt-muted block mb-0.5">W ({unit})</label>
-              <input
-                type="text"
-                disabled={isLocked}
-                defaultValue={formatUnit(pixelSize.w, unit)}
-                onBlur={(e) => {
-                  const val = parseFloat(e.target.value);
-                  if (!isNaN(val) && val > 0 && e.target.value !== formatUnit(pixelSize.w, unit)) applyExactSize(unitToPx(val, unit), null);
-                }}
-                onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
-                className="w-full text-xs border rounded px-2 py-1 disabled:opacity-40 dark:bg-mt-surface dark:border-mt-border dark:text-mt-ink"
-              />
-            </div>
-            <div>
-              <label className="text-[10px] text-mt-muted dark:text-mt-muted block mb-0.5">H ({unit})</label>
-              <input
-                type="text"
-                disabled={isLocked || selected.type === 'textbox'}
-                title={selected.type === 'textbox' ? 'Height follows the wrapped text automatically' : undefined}
-                defaultValue={formatUnit(pixelSize.h, unit)}
-                onBlur={(e) => {
-                  const val = parseFloat(e.target.value);
-                  if (!isNaN(val) && val > 0 && e.target.value !== formatUnit(pixelSize.h, unit)) applyExactSize(null, unitToPx(val, unit));
-                }}
-                onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
-                className="w-full text-xs border rounded px-2 py-1 disabled:opacity-40 dark:bg-mt-surface dark:border-mt-border dark:text-mt-ink"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="text-[10px] text-mt-muted dark:text-mt-muted block mb-0.5">Rotation (°)</label>
-            <input
-              type="text"
-              disabled={isLocked}
-              defaultValue={(Math.round((selected.angle || 0) * 10) / 10).toString()}
-              onBlur={(e) => {
-                const val = parseFloat(e.target.value);
-                if (!isNaN(val) && Math.abs((((val % 360) + 360) % 360) - (selected.angle || 0)) > 0.01) applyProp({ angle: ((val % 360) + 360) % 360 });
-              }}
-              onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
-              className="w-full text-xs border rounded px-2 py-1 disabled:opacity-40 dark:bg-mt-surface dark:border-mt-border dark:text-mt-ink"
-            />
-          </div>
-        </div>
-      )}
-
-      <div>
-        <p className="text-xs font-semibold text-mt-muted dark:text-mt-muted mb-2">{isMultiple ? 'Align to each other' : 'Align to page'}</p>
-        <div className="grid grid-cols-3 gap-1">
-          <button onClick={() => alignObject('left')} className="text-xs border rounded py-1 hover:bg-mt-surface2 dark:border-mt-border dark:text-mt-ink dark:hover:bg-mt-surface2">⟸</button>
-          <button onClick={() => alignObject('centerH')} className="text-xs border rounded py-1 hover:bg-mt-surface2 dark:border-mt-border dark:text-mt-ink dark:hover:bg-mt-surface2">↔</button>
-          <button onClick={() => alignObject('right')} className="text-xs border rounded py-1 hover:bg-mt-surface2 dark:border-mt-border dark:text-mt-ink dark:hover:bg-mt-surface2">⟹</button>
-          <button onClick={() => alignObject('top')} className="text-xs border rounded py-1 hover:bg-mt-surface2 dark:border-mt-border dark:text-mt-ink dark:hover:bg-mt-surface2">⟰</button>
-          <button onClick={() => alignObject('centerV')} className="text-xs border rounded py-1 hover:bg-mt-surface2 dark:border-mt-border dark:text-mt-ink dark:hover:bg-mt-surface2">↕</button>
-          <button onClick={() => alignObject('bottom')} className="text-xs border rounded py-1 hover:bg-mt-surface2 dark:border-mt-border dark:text-mt-ink dark:hover:bg-mt-surface2">⟱</button>
-        </div>
+          {locked ? <Lock size={14} /> : <Unlock size={14} />}
+        </button>
       </div>
+      {locked && <p className="mx-4 mt-3 text-xs rounded-lg bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 px-3 py-2">Locked. Unlock it to make changes.</p>}
 
-      {isMultiple && (
-        <button onClick={groupSelected} className="text-xs border rounded py-2 hover:bg-mt-surface2 dark:border-mt-border dark:text-mt-ink dark:hover:bg-mt-surface2">
-          Group Selection (Cmd+G)
-        </button>
-      )}
-
-      {isMultiple && (
-        <div className="border rounded-lg p-2.5 bg-purple-50/50 dark:bg-purple-950/20 dark:border-mt-border flex flex-col gap-2">
-          <p className="text-xs font-semibold text-mt-ink dark:text-mt-ink">Shape Builder</p>
-          <p className="text-[10px] text-mt-muted dark:text-mt-muted">
-            Combines the selected shapes into one real, editable vector path.
-          </p>
-          <div className="grid grid-cols-2 gap-1.5">
-            <button onClick={() => runShapeBuilder('union')} className="text-xs border rounded py-1.5 hover:bg-mt-surface dark:border-mt-border dark:text-mt-ink dark:hover:bg-mt-surface2">Unite</button>
-            <button onClick={() => runShapeBuilder('subtract')} className="text-xs border rounded py-1.5 hover:bg-mt-surface dark:border-mt-border dark:text-mt-ink dark:hover:bg-mt-surface2">Subtract</button>
-            <button onClick={() => runShapeBuilder('intersect')} className="text-xs border rounded py-1.5 hover:bg-mt-surface dark:border-mt-border dark:text-mt-ink dark:hover:bg-mt-surface2">Intersect</button>
-            <button onClick={() => runShapeBuilder('exclude')} className="text-xs border rounded py-1.5 hover:bg-mt-surface dark:border-mt-border dark:text-mt-ink dark:hover:bg-mt-surface2">Exclude</button>
-          </div>
+      {/* Position & size */}
+      <Section
+        title="Position & size"
+        action={
+          <span className="text-[11px] text-mt-faint" title="Measured from the top-left of the page">
+            {unit}
+          </span>
+        }
+      >
+        <div className="grid grid-cols-2 gap-2">
+          <NumField label="X" value={toUnit((selected.left ?? 0) - origin.x)} step={unitStep} disabled={locked} onCommit={(n) => a.applyProp({ left: unitToPx(n, unit) + origin.x })} />
+          <NumField label="Y" value={toUnit((selected.top ?? 0) - origin.y)} step={unitStep} disabled={locked} onCommit={(n) => a.applyProp({ top: unitToPx(n, unit) + origin.y })} />
         </div>
-      )}
-      {isGroup && (
-        <button onClick={ungroupSelected} className="text-xs border rounded py-2 hover:bg-mt-surface2 dark:border-mt-border dark:text-mt-ink dark:hover:bg-mt-surface2">
-          Ungroup (Cmd+Shift+G)
-        </button>
-      )}
-
-      {isPath && (
-        <div className="border rounded-lg p-2.5 bg-blue-50/50 dark:bg-blue-950/20 dark:border-mt-border flex flex-col gap-2">
-          <p className="text-xs font-semibold text-mt-ink dark:text-mt-ink flex items-center gap-1.5">
-            <Scissors size={12} /> Path → Mask
-          </p>
-          <p className="text-[10px] text-mt-muted dark:text-mt-muted">
-            Press <kbd className={`${kbd} bg-mt-surface dark:bg-mt-surface2`}>A</kbd> to switch to Direct Selection
-            and drag anchors to reshape this path.
-          </p>
-          {imageLayerOptions.length === 0 ? (
-            <p className="text-[10px] text-mt-faint dark:text-mt-muted">Upload an image to mask it with this path.</p>
-          ) : (
-            <>
-              <select
-                value={maskTargetId}
-                onChange={(e) => setMaskTargetId(e.target.value)}
-                className="w-full text-xs border rounded px-2 py-1 dark:bg-mt-surface dark:border-mt-border dark:text-mt-ink"
-              >
-                <option value="">Choose target image…</option>
-                {imageLayerOptions.map((img, i) => (
-                  <option key={img.__id || i} value={img.__id}>
-                    {layerLabel(img, layers.indexOf(img))}
-                  </option>
-                ))}
-              </select>
-              <button
-                onClick={applyPathAsMask}
-                disabled={!maskTargetId}
-                className="text-xs bg-brand-gradient text-white rounded py-1.5 font-semibold disabled:opacity-40"
-              >
-                Apply as Mask (Shift+Enter)
-              </button>
-            </>
-          )}
-        </div>
-      )}
-
-      <div>
-        <div className="flex items-center justify-between mb-1">
-          <label className="text-xs font-semibold text-mt-muted dark:text-mt-muted">Opacity</label>
-          <input
-            key={`opacity-${selected.__uid || 'obj'}-${Math.round((selected.opacity ?? 1) * 100)}`}
-            type="text"
-            inputMode="numeric"
-            disabled={isLocked}
-            defaultValue={Math.round((selected.opacity ?? 1) * 100)}
-            onBlur={(e) => {
-              const val = Math.max(0, Math.min(100, parseFloat(e.target.value)));
-              if (!isNaN(val)) {
-                applyProp({ opacity: val / 100 });
-                e.target.value = String(val);
-              } else {
-                e.target.value = String(Math.round((selected.opacity ?? 1) * 100));
-              }
-            }}
-            onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
-            className="w-14 text-xs border rounded px-1.5 py-0.5 text-right disabled:opacity-40 dark:bg-mt-surface dark:border-mt-border dark:text-mt-ink"
+        <div className="grid grid-cols-[1fr_auto_1fr] gap-1.5 items-center">
+          <NumField label="W" value={toUnit(size.w)} step={unitStep} min={0.01} disabled={locked} onCommit={(n) => p.applyExactSize(unitToPx(n, unit), null)} />
+          <button
+            type="button"
+            onClick={p.toggleLockRatio}
+            aria-label={selected.__lockRatio ? 'Width and height are linked' : 'Link width and height'}
+            title={selected.__lockRatio ? 'Width and height change together — click to unlink' : 'Link width and height'}
+            className={cx('h-9 w-8 rounded-lg inline-flex items-center justify-center', selected.__lockRatio ? 'text-[#3B82C4] bg-[#3B82C4]/10' : 'text-mt-faint hover:text-mt-ink')}
+          >
+            {selected.__lockRatio ? <Link2 size={15} /> : <Unlink2 size={15} />}
+          </button>
+          <NumField
+            label="H"
+            value={toUnit(size.h)}
+            step={unitStep}
+            min={0.01}
+            disabled={locked || selected.type === 'textbox'}
+            title={selected.type === 'textbox' ? 'A text box grows with its text' : undefined}
+            onCommit={(n) => p.applyExactSize(null, unitToPx(n, unit))}
           />
         </div>
-        <input
-          type="range"
-          min={0}
-          max={100}
-          disabled={isLocked}
-          value={Math.round((selected.opacity ?? 1) * 100)}
-          onChange={(e) => applyProp({ opacity: Number(e.target.value) / 100 }, false)}
-          {...commitHandlers(pushHistory)}
-          className="w-full disabled:opacity-40"
-        />
-      </div>
-
-      {isText && (
-        <TextControls
-          selected={selected}
-          isLocked={isLocked}
-          applyProp={applyProp}
-          applyCharProp={applyCharProp}
-          getTextPropValue={getTextPropValue}
-          pushHistory={pushHistory}
-        />
-      )}
-
-      {!isText && !isImage && hasFillStroke && (
-        <>
-          <div>
-            <label className="text-xs font-semibold text-mt-muted dark:text-mt-muted block mb-1">Fill Type</label>
-            <select
-              value={isGradientFill ? gradType : isNoneFill ? 'none' : 'solid'}
-              disabled={isLocked}
-              onChange={(e) => {
-                const v = e.target.value;
-                if (v === 'none') {
-                  applyProp({ fill: '' });
-                } else if (v === 'solid') {
-                  applyProp({ fill: typeof selected.fill === 'string' && selected.fill ? selected.fill : '#3FA9E8' });
-                } else {
-                  applyGradientFill(
-                    v as 'linear' | 'radial',
-                    gradStops[0]?.color || '#3FA9E8',
-                    gradStops[1]?.color || '#7ED33E',
-                    gradAngleRef.current
-                  );
-                }
-              }}
-              className="w-full text-xs border rounded px-2 py-1 disabled:opacity-40 dark:bg-mt-surface dark:border-mt-border dark:text-mt-ink"
-            >
-              <option value="none">None</option>
-              <option value="solid">Solid</option>
-              <option value="linear">Linear Gradient</option>
-              <option value="radial">Radial Gradient</option>
-            </select>
+        <div className="grid grid-cols-[1fr_auto] gap-2">
+          <NumField label={<RotateCw size={12} />} value={Math.round((selected.angle || 0) * 10) / 10} suffix="°" disabled={locked} onCommit={(n) => a.applyProp({ angle: ((n % 360) + 360) % 360 })} title="Rotation" />
+          <div className="flex gap-1.5 w-[84px]">
+            <IconBtn label="Flip horizontally" onClick={() => a.flip('x')} disabled={locked} active={!!selected.flipX}>
+              <FlipHorizontal2 size={15} />
+            </IconBtn>
+            <IconBtn label="Flip vertically" onClick={() => a.flip('y')} disabled={locked} active={!!selected.flipY}>
+              <FlipVertical2 size={15} />
+            </IconBtn>
           </div>
+        </div>
+      </Section>
 
-          {isGradientFill ? (
-            <div className="border rounded-lg p-2.5 bg-mt-surface2 dark:bg-mt-surface dark:border-mt-border flex flex-col gap-2">
-              <GradientPresetPicker
-                disabled={isLocked}
-                onPick={(p) => applyGradientFill(gradType, p.c1, p.c2, gradAngleRef.current)}
+      {/* Align */}
+      <Section title={isMultiple ? 'Align to each other' : 'Align to page'}>
+        <div className="flex gap-1.5">
+          <IconBtn label="Align left" onClick={() => a.align('left')} disabled={locked}><AlignStartVertical size={15} /></IconBtn>
+          <IconBtn label="Align centre" onClick={() => a.align('centerH')} disabled={locked}><AlignCenterVertical size={15} /></IconBtn>
+          <IconBtn label="Align right" onClick={() => a.align('right')} disabled={locked}><AlignEndVertical size={15} /></IconBtn>
+          <IconBtn label="Align top" onClick={() => a.align('top')} disabled={locked}><AlignStartHorizontal size={15} /></IconBtn>
+          <IconBtn label="Align middle" onClick={() => a.align('centerV')} disabled={locked}><AlignCenterHorizontal size={15} /></IconBtn>
+          <IconBtn label="Align bottom" onClick={() => a.align('bottom')} disabled={locked}><AlignEndHorizontal size={15} /></IconBtn>
+        </div>
+        {isMultiple && selected.getObjects().length > 2 && (
+          <div className="flex gap-1.5">
+            <WideBtn icon={<AlignHorizontalDistributeCenter size={15} />} label="Space across" onClick={() => a.distribute('h')} />
+            <WideBtn icon={<AlignVerticalDistributeCenter size={15} />} label="Space down" onClick={() => a.distribute('v')} />
+          </div>
+        )}
+      </Section>
+
+      {/* Layer */}
+      <Section title="Layer">
+        <Slider label="Opacity" value={Math.round((selected.opacity ?? 1) * 100)} min={0} max={100} suffix="%" disabled={locked} onChange={(v) => a.setOpacity(v / 100, false)} onCommit={(v) => a.setOpacity(v / 100, true)} />
+        {!isMultiple && (
+          <label className="flex items-center justify-between gap-3 text-xs text-mt-muted">
+            Blend
+            <select
+              value={blend}
+              disabled={locked}
+              onChange={(e) => a.applyProp({ globalCompositeOperation: e.target.value })}
+              className="h-9 flex-1 max-w-[170px] rounded-lg border border-mt-input-border bg-mt-surface px-2 text-[13px] text-mt-ink"
+            >
+              {BLEND_MODES.map(([v, l]) => (
+                <option key={v} value={v}>
+                  {l}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+        {(isMultiple || isGroup) && (
+          <div className="flex gap-1.5">
+            {isMultiple && <WideBtn icon={<Group size={15} />} label="Group" onClick={a.group} />}
+            {isGroup && <WideBtn icon={<Ungroup size={15} />} label="Ungroup" onClick={a.ungroup} />}
+          </div>
+        )}
+      </Section>
+
+      {isText && <TextSection p={p} colorProps={colorProps} />}
+
+      {/* Fill & border for shapes and paths */}
+      {!isText && !isImage && (
+        <>
+          {!isLine && (
+            <Section title="Fill">
+              <ColorRow label="Fill" value={isMultiple ? null : fillValue(selected)} onChange={(v, commit) => a.setFill(v, commit)} gradient none {...colorProps} />
+            </Section>
+          )}
+          {!isMultiple && !isGroup && (
+            <Section title={isLine ? 'Line' : 'Border'}>
+              <ColorRow
+                label={isLine ? 'Line colour' : 'Border colour'}
+                value={typeof selected.stroke === 'string' && selected.stroke ? selected.stroke : null}
+                onChange={(v, commit) => (commit ? a.setStroke({ stroke: (v as string) || null }) : a.applyProp({ stroke: v || '' }, false))}
+                none
+                {...colorProps}
               />
-              <div className="grid grid-cols-2 gap-2">
-                <ColorSwatchPicker
-                  label="Color 1"
-                  disabled={isLocked}
-                  value={gradStops[0]?.color || '#3FA9E8'}
-                  onChange={(c) => {
-                    applyGradientFill(gradType, c || '#3FA9E8', gradStops[1]?.color || '#7ED33E', gradAngleRef.current);
-                    pushHistory();
-                  }}
-                />
-                <ColorSwatchPicker
-                  label="Color 2"
-                  disabled={isLocked}
-                  value={gradStops[1]?.color || '#7ED33E'}
-                  onChange={(c) => {
-                    applyGradientFill(gradType, gradStops[0]?.color || '#3FA9E8', c || '#7ED33E', gradAngleRef.current);
-                    pushHistory();
-                  }}
+              <div className="grid grid-cols-[1fr_auto] gap-2 items-center">
+                <NumField label="Width" value={Math.round((selected.strokeWidth || 0) * 100) / 100} min={0} max={500} suffix="px" disabled={locked} onCommit={(n) => a.setStroke({ strokeWidth: n })} />
+                <Segmented
+                  size="sm"
+                  value={!selected.strokeDashArray?.length ? 'solid' : selected.strokeDashArray[0] < 0.1 ? 'dotted' : 'dashed'}
+                  options={[
+                    { value: 'solid', label: '—', hint: 'Solid' },
+                    { value: 'dashed', label: '- -', hint: 'Dashed' },
+                    { value: 'dotted', label: '···', hint: 'Dotted' },
+                  ]}
+                  onChange={(d) => a.setStroke({ dash: d as 'solid' | 'dashed' | 'dotted' })}
                 />
               </div>
-              {gradType === 'linear' && (
-                <div>
-                  <label className="text-[10px] text-mt-muted dark:text-mt-muted block mb-1">Angle</label>
-                  <input
-                    type="range"
-                    min={0}
-                    max={360}
-                    disabled={isLocked}
-                    defaultValue={gradAngleRef.current}
-                    onChange={(e) => {
-                      gradAngleRef.current = Number(e.target.value);
-                      applyGradientFill('linear', gradStops[0]?.color || '#3FA9E8', gradStops[1]?.color || '#7ED33E', gradAngleRef.current);
-                    }}
-                    className="w-full disabled:opacity-40"
-                  />
-                </div>
-              )}
-            </div>
-          ) : !isNoneFill ? (
-            <ColorSwatchPicker
-              label="Fill Color"
-              allowNone
-              disabled={isLocked}
-              value={typeof selected.fill === 'string' && selected.fill ? selected.fill : '#000000'}
-              onChange={(c) => {
-                applyProp({ fill: c === null ? '' : c });
-                pushHistory();
-              }}
-            />
-          ) : null}
-
-          <ColorSwatchPicker
-            label="Stroke Color"
-            allowNone
-            disabled={isLocked}
-            value={selected.stroke || null}
-            onChange={(c) => {
-              applyProp({ stroke: c === null ? '' : c });
-              pushHistory();
-            }}
-          />
-
-          <div>
-            <label className="text-xs font-semibold text-mt-muted dark:text-mt-muted block mb-1">Stroke Width ({selected.strokeWidth || 0})</label>
-            <input
-              type="range"
-              min={0}
-              max={40}
-              disabled={isLocked}
-              value={selected.strokeWidth || 0}
-              onChange={(e) => applyProp({ strokeWidth: Number(e.target.value), strokeUniform: true, ...(selected.stroke ? {} : { stroke: '#09090B' }) }, false)}
-              {...commitHandlers(pushHistory)}
-              className="w-full disabled:opacity-40"
-            />
-          </div>
-
-          {selected.type === 'rect' && (
-            <div>
-              <label className="text-xs font-semibold text-mt-muted dark:text-mt-muted block mb-1">Corner Radius ({selected.rx || 0})</label>
-              <input
-                type="range"
-                min={0}
-                max={100}
-                disabled={isLocked}
-                value={selected.rx || 0}
-                onChange={(e) => applyProp({ rx: Number(e.target.value), ry: Number(e.target.value) }, false)}
-                {...commitHandlers(pushHistory)}
-                className="w-full disabled:opacity-40"
-              />
-            </div>
+            </Section>
+          )}
+          {hasCorner && !isMultiple && (
+            <Section title="Corners">
+              <Slider label="Corner radius" value={radius} min={0} max={Math.max(1, Math.round(Math.min(selected.getScaledWidth(), selected.getScaledHeight()) / 2))} disabled={locked} onChange={(v) => a.setCornerRadius(v, false)} onCommit={(v) => a.setCornerRadius(v)} />
+            </Section>
           )}
         </>
       )}
 
-      {isImage && (
-        <>
+      {/* Shadow */}
+      <Section
+        key={sh ? 'shadow-on' : 'shadow-off'}
+        title="Shadow"
+        defaultOpen={!!sh}
+        action={
           <button
-            disabled={isLocked}
-            onClick={onEditPhoto}
-            className="text-xs font-semibold border rounded py-1.5 hover:bg-mt-surface2 disabled:opacity-40 bg-mt-accent text-white hover:bg-mt-accent/90 dark:bg-gray-700 dark:hover:bg-gray-600 dark:border-mt-border"
+            type="button"
+            role="switch"
+            aria-checked={!!sh}
+            aria-label="Shadow"
+            disabled={locked}
+            onClick={() => a.setShadow(sh ? null : { color: 'rgba(9,9,11,0.35)', blur: 18, x: 0, y: 10 })}
+            className={cx('relative w-9 h-5 rounded-full transition-colors', sh ? 'bg-[#3B82C4]' : 'bg-mt-border')}
           >
-            Edit Photo
+            <span className={cx('absolute left-0 top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform', sh ? 'translate-x-[18px]' : 'translate-x-0.5')} />
           </button>
-          <p className="text-[10px] text-mt-faint dark:text-mt-muted -mt-2">
-            Opens the Photo Editor workspace for crop, adjustments, pixel selection/erase and
-            background removal — Apply syncs the result back into this exact layer.
-          </p>
-          <label
-            className={`flex items-center justify-center gap-1.5 text-xs font-semibold border rounded py-1.5 cursor-pointer hover:bg-mt-surface2 dark:border-mt-border dark:text-mt-ink dark:hover:bg-mt-surface2 ${
-              isLocked ? 'opacity-40 pointer-events-none' : ''
-            }`}
-          >
-            Replace Image
-            <input
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) onReplaceImage(file);
-                e.target.value = '';
-              }}
-            />
-          </label>
-          <p className="text-[10px] text-mt-faint dark:text-mt-muted -mt-2">
-            Swaps this layer's photo in place — same position, size and crop. The new image is scaled
-            proportionally to fill the frame, never stretched.
-          </p>
-          <div className="grid grid-cols-2 gap-1">
-            <button disabled={isLocked} onClick={() => applyProp({ flipX: !selected.flipX })} className="text-xs border rounded py-1 hover:bg-mt-surface2 disabled:opacity-40 dark:border-mt-border dark:text-mt-ink dark:hover:bg-mt-surface2">
-              Flip H
-            </button>
-            <button disabled={isLocked} onClick={() => applyProp({ flipY: !selected.flipY })} className="text-xs border rounded py-1 hover:bg-mt-surface2 disabled:opacity-40 dark:border-mt-border dark:text-mt-ink dark:hover:bg-mt-surface2">
-              Flip V
-            </button>
+        }
+      >
+        {sh ? (
+          <>
+            <div className="grid grid-cols-3 gap-2">
+              <NumField label="X" value={Math.round(sh.x)} onCommit={(n) => setSh({ x: n }, true)} />
+              <NumField label="Y" value={Math.round(sh.y)} onCommit={(n) => setSh({ y: n }, true)} />
+              <NumField label="Blur" value={Math.round(sh.blur)} min={0} onCommit={(n) => setSh({ blur: n }, true)} />
+            </div>
+            <ColorRow label="Shadow colour" value={sh.color} onChange={(v, commit) => v && setSh({ color: v as string }, commit)} {...colorProps} />
+          </>
+        ) : (
+          <p className="text-xs text-mt-faint">Turn on for a soft shadow behind {isMultiple ? 'each object' : 'it'}.</p>
+        )}
+      </Section>
+
+      {/* Photo */}
+      {isImage && (
+        <Section title="Photo">
+          <WideBtn primary icon={<SlidersHorizontal size={15} />} label="Edit photo" onClick={p.onEditPhoto} disabled={locked} />
+          <div className="grid grid-cols-2 gap-1.5">
+            <WideBtn icon={<Crop size={15} />} label="Crop" onClick={a.startCrop} disabled={locked} />
+            <WideBtn icon={<SlidersHorizontal size={15} />} label="Adjust" onClick={a.openAdjust} disabled={locked} />
+            <WideBtn icon={<WandSparkles size={15} />} label="Remove bg" onClick={a.removeBackground} disabled={locked} />
+            <WideBtn icon={<ImagePlus size={15} />} label="Replace" onClick={a.replaceImage} disabled={locked} />
           </div>
-          {selected.clipPath ? (
-            <button onClick={removeMask} className="text-xs border border-red-200 text-red-600 rounded py-1.5 hover:bg-red-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950/30">
-              Remove Mask
-            </button>
-          ) : (
-            <p className="text-[10px] text-mt-faint dark:text-mt-muted">
-              Draw a closed path with the Pen tool, then apply it as a mask from the path's properties.
-            </p>
+          {selected.clipPath && (
+            <WideBtn icon={<Scissors size={15} />} label="Remove mask" onClick={p.removeMask} disabled={locked} />
           )}
-        </>
+        </Section>
+      )}
+
+      {/* Path */}
+      {isPath && !isMultiple && (
+        <Section title="Path">
+          <p className="text-xs text-mt-muted leading-relaxed">
+            Press <kbd className="px-1 rounded border border-mt-border bg-mt-surface2 text-[11px]">A</kbd> (Edit points) to drag its points and curve handles.
+          </p>
+          {images.length ? (
+            <>
+              <label className="text-xs text-mt-muted flex flex-col gap-1">
+                Use this path to cut out a photo
+                <select value={p.maskTargetId} onChange={(e) => p.setMaskTargetId(e.target.value)} className="h-9 rounded-lg border border-mt-input-border bg-mt-surface px-2 text-[13px] text-mt-ink">
+                  <option value="">Choose a photo…</option>
+                  {images.map((img, i) => (
+                    <option key={img.__id || i} value={img.__id}>
+                      {p.layerLabel(img, p.layers.indexOf(img))}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <WideBtn icon={<Spline size={15} />} label="Cut out photo with path" onClick={p.applyPathAsMask} disabled={!p.maskTargetId} />
+            </>
+          ) : (
+            <p className="text-xs text-mt-faint">Add a photo to cut it out with this path.</p>
+          )}
+        </Section>
       )}
     </div>
   );
 }
 
-// ---------------------------------------------------------------------
-// Character / Paragraph typography controls, split the way a real
-// desktop design app splits them:
-//  - Character: Font, Style (weight/italic), Size, Color, Underline,
-//    Baseline Shift — apply to the exact highlighted characters when
-//    there's a real text selection (via applyCharProp/Fabric's
-//    setSelectionStyles), or the whole object otherwise.
-//  - Paragraph: Alignment, Tracking, Line Height — Fabric has no
-//    per-character support for these (charSpacing and lineHeight are
-//    inherently object-wide in this engine), which is exactly how a real
-//    app's paragraph properties behave: the whole paragraph, never a
-//    sub-selection, and this app's one-Textbox-per-paragraph model means
-//    "the object" and "the paragraph" are the same thing.
-// ---------------------------------------------------------------------
-function TextControls({
-  selected,
-  isLocked,
-  applyProp,
-  applyCharProp,
-  getTextPropValue,
-  pushHistory,
-}: {
-  selected: any;
-  isLocked: boolean;
-  applyProp: Props['applyProp'];
-  applyCharProp: Props['applyCharProp'];
-  getTextPropValue: Props['getTextPropValue'];
-  pushHistory: () => void;
-}) {
-  // Re-render whenever the caret/selection inside this text object
-  // changes — the parent already bumps its own "selVersion" state on
-  // every relevant Fabric event, which re-renders this whole panel, so
-  // reading fresh values directly off `selected` on every render (rather
-  // than caching them in local state) is what keeps this in sync.
-  const font = getTextPropValue(selected, 'fontFamily');
-  const size = getTextPropValue(selected, 'fontSize');
-  const weight = getTextPropValue(selected, 'fontWeight');
-  const style = getTextPropValue(selected, 'fontStyle');
-  const underline = getTextPropValue(selected, 'underline');
-  const fill = getTextPropValue(selected, 'fill');
-  const baseline = getTextPropValue(selected, 'deltaY');
+// ---------------------------------------------------------------- text
 
-  const isBold = !weight.mixed && (weight.value === 'bold' || (typeof weight.value === 'number' && weight.value >= 600));
+function TextSection({ p, colorProps }: { p: Props; colorProps: any }) {
+  const { selected: sel, a } = p;
+  const locked = !!sel.locked;
+  const font = a.getTextPropValue(sel, 'fontFamily');
+  const size = a.getTextPropValue(sel, 'fontSize');
+  const weight = a.getTextPropValue(sel, 'fontWeight');
+  const style = a.getTextPropValue(sel, 'fontStyle');
+  const under = a.getTextPropValue(sel, 'underline');
+  const strike = a.getTextPropValue(sel, 'linethrough');
+  const baseline = a.getTextPropValue(sel, 'deltaY');
+  const weightNum = weight.value === 'bold' ? 700 : weight.value === 'normal' || weight.value == null ? 400 : Number(weight.value) || 400;
+  const def = !font.mixed && font.value ? googleFontByName(font.value) : undefined;
+  const weights: number[] = def?.weights?.length ? def.weights : [400, 700];
+  const k = Math.abs(sel.scaleY || 1);
+  const shownSize = size.mixed ? undefined : Math.round((size.value ?? 40) * k * 10) / 10;
   const isItalic = !style.mixed && style.value === 'italic';
-  const isUnderline = !underline.mixed && !!underline.value;
-
+  const hasSelection = sel.isEditing && sel.selectionStart !== sel.selectionEnd;
+  const textColor = (() => {
+    if (sel.fill && typeof sel.fill === 'object' && sel.fill.colorStops) return fromFabricGradient(sel.fill);
+    const f = a.getTextPropValue(sel, 'fill');
+    return typeof f.value === 'string' ? f.value : '#09090B';
+  })();
   return (
     <>
-      <div>
-        <p className="text-[11px] font-bold uppercase tracking-wide text-mt-faint dark:text-mt-muted mb-2">Character</p>
-        <div className="flex flex-col gap-3">
-          <div>
-            <label className="text-xs font-semibold text-mt-muted dark:text-mt-muted block mb-1">Font</label>
-            <FontPicker
-              value={font.mixed ? undefined : font.value || 'Arial'}
-              mixed={font.mixed}
-              disabled={isLocked}
-              onChange={(family) => applyCharProp({ fontFamily: family })}
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <label className="text-xs font-semibold text-mt-muted dark:text-mt-muted block mb-1">Size</label>
-              <PrecisionNumberInput
-                value={size.mixed ? undefined : size.value ?? 40}
-                min={1}
-                max={2000}
-                step={1}
-                disabled={isLocked}
-                placeholder={size.mixed ? 'Mixed' : undefined}
-                onCommit={(n) => applyCharProp({ fontSize: n })}
-              />
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-mt-muted dark:text-mt-muted block mb-1">Baseline</label>
-              <PrecisionNumberInput
-                value={baseline.mixed ? undefined : baseline.value ?? 0}
-                min={-500}
-                max={500}
-                step={1}
-                disabled={isLocked}
-                placeholder={baseline.mixed ? 'Mixed' : undefined}
-                onCommit={(n) => applyCharProp({ deltaY: n })}
-              />
-            </div>
-          </div>
-
-          <ColorSwatchPicker
-            label="Color"
-            disabled={isLocked}
-            value={typeof fill.value === 'string' ? fill.value : '#000000'}
-            onChange={(c) => {
-              applyCharProp({ fill: c || '#000000' });
-              pushHistory();
-            }}
-          />
-
-          <div className="flex gap-1">
-            <button
-              disabled={isLocked}
-              onClick={() => applyCharProp({ fontWeight: isBold ? 'normal' : 'bold' })}
-              title="Bold"
-              className={`flex-1 text-xs font-bold border rounded py-1 disabled:opacity-40 dark:border-mt-border dark:text-mt-ink ${isBold ? 'bg-mt-surface2 dark:bg-mt-surface2' : 'hover:bg-mt-surface2 dark:hover:bg-mt-surface2'}`}
-            >
-              B
-            </button>
-            <button
-              disabled={isLocked}
-              onClick={() => applyCharProp({ fontStyle: isItalic ? 'normal' : 'italic' })}
-              title="Italic"
-              className={`flex-1 text-xs italic border rounded py-1 disabled:opacity-40 dark:border-mt-border dark:text-mt-ink ${isItalic ? 'bg-mt-surface2 dark:bg-mt-surface2' : 'hover:bg-mt-surface2 dark:hover:bg-mt-surface2'}`}
-            >
-              I
-            </button>
-            <button
-              disabled={isLocked}
-              onClick={() => applyCharProp({ underline: !isUnderline })}
-              title="Underline"
-              className={`flex-1 text-xs underline border rounded py-1 disabled:opacity-40 dark:border-mt-border dark:text-mt-ink ${isUnderline ? 'bg-mt-surface2 dark:bg-mt-surface2' : 'hover:bg-mt-surface2 dark:hover:bg-mt-surface2'}`}
-            >
-              U
-            </button>
-          </div>
-          <p className="text-[10px] text-mt-faint dark:text-mt-muted -mt-1">
-            Highlight part of the text (double-click to enter editing) to format only that selection —
-            with nothing selected, changes apply to the whole text box.
-          </p>
-        </div>
-      </div>
-
-      <div>
-        <p className="text-[11px] font-bold uppercase tracking-wide text-mt-faint dark:text-mt-muted mb-2">Paragraph</p>
-        <div className="flex flex-col gap-3">
-          <div>
-            <label className="text-xs font-semibold text-mt-muted dark:text-mt-muted block mb-1">Alignment</label>
-            <div className="grid grid-cols-4 gap-1">
-              {['left', 'center', 'right', 'justify'].map((a) => (
-                <button
-                  key={a}
-                  disabled={isLocked}
-                  onClick={() => applyProp({ textAlign: a })}
-                  className={`text-xs border rounded py-1 disabled:opacity-40 dark:border-mt-border dark:text-mt-ink ${selected.textAlign === a ? 'bg-mt-surface2 dark:bg-mt-surface2' : 'hover:bg-mt-surface2 dark:hover:bg-mt-surface2'}`}
-                >
-                  {a[0].toUpperCase()}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-2 items-end">
-            <div>
-              <label className="text-xs font-semibold text-mt-muted dark:text-mt-muted block mb-1">Tracking</label>
-              <PrecisionNumberInput
-                value={selected.charSpacing || 0}
-                min={-500}
-                max={2000}
-                step={5}
-                disabled={isLocked}
-                onCommit={(n) => applyProp({ charSpacing: n })}
-              />
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-mt-muted dark:text-mt-muted block mb-1">Leading</label>
-              <PrecisionNumberInput
-                value={selected.lineHeight ?? 1.16}
-                min={0.1}
-                max={10}
-                step={0.05}
-                disabled={isLocked}
-                onCommit={(n) => applyProp({ lineHeight: n })}
-              />
-            </div>
-          </div>
-          <button
-            disabled={isLocked}
-            onClick={() => applyProp({ lineHeight: 1.16 })}
-            className="text-[10px] text-mt-muted dark:text-mt-muted hover:text-mt-ink dark:hover:text-mt-ink -mt-2 self-start disabled:opacity-40"
+      <Section title="Text" action={hasSelection ? <span className="text-[11px] text-[#3B82C4]">Selected letters</span> : undefined}>
+        <FontPicker value={font.mixed ? undefined : font.value} mixed={font.mixed} disabled={locked} onChange={(f) => a.applyCharProp({ fontFamily: f })} />
+        <div className="grid grid-cols-[1fr_92px] gap-2">
+          <select
+            aria-label="Font weight"
+            value={weight.mixed ? '' : String(weightNum)}
+            disabled={locked}
+            onChange={(e) => a.applyCharProp({ fontWeight: Number(e.target.value) })}
+            className="h-9 rounded-lg border border-mt-input-border bg-mt-surface px-2 text-[13px] text-mt-ink"
           >
-            Reset leading to Auto (1.16)
-          </button>
+            {weight.mixed && <option value="">Mixed</option>}
+            {!weight.mixed && !weights.includes(weightNum) && <option value={weightNum}>{WEIGHT_NAMES[weightNum] || weightNum}</option>}
+            {weights.map((w) => (
+              <option key={w} value={w}>
+                {WEIGHT_NAMES[w] || w}
+              </option>
+            ))}
+          </select>
+          <NumField label="Size" value={shownSize} mixed={size.mixed} min={1} max={2000} disabled={locked} onCommit={(n) => a.applyCharProp({ fontSize: n / k })} />
         </div>
-      </div>
+        <ColorRow label="Text colour" value={textColor} onChange={(v, commit) => (v && typeof v === 'object' ? a.setFill(v, commit) : a.applyCharProp({ fill: v || '#09090B' }, commit))} gradient {...colorProps} />
+        <div className="flex gap-1.5">
+          <IconBtn label="Bold" active={!weight.mixed && weightNum >= 600} disabled={locked} onClick={() => a.applyCharProp({ fontWeight: weightNum >= 600 ? 400 : 700 })}>
+            <Bold size={15} />
+          </IconBtn>
+          <IconBtn label="Italic" active={isItalic} disabled={locked} onClick={() => a.applyCharProp({ fontStyle: isItalic ? 'normal' : 'italic' })}>
+            <Italic size={15} />
+          </IconBtn>
+          <IconBtn label="Underline" active={!under.mixed && !!under.value} disabled={locked} onClick={() => a.applyCharProp({ underline: !under.value })}>
+            <Underline size={15} />
+          </IconBtn>
+          <IconBtn label="Strikethrough" active={!strike.mixed && !!strike.value} disabled={locked} onClick={() => a.applyCharProp({ linethrough: !strike.value })}>
+            <Strikethrough size={15} />
+          </IconBtn>
+        </div>
+        <p className="text-[11px] text-mt-faint leading-snug">Double-click the text and highlight some letters to change just those.</p>
+      </Section>
+      <Section title="Paragraph">
+        <div className="flex gap-1.5">
+          {(
+            [
+              ['left', <AlignLeft key="l" size={15} />, 'Align left'],
+              ['center', <AlignCenter key="c" size={15} />, 'Centre'],
+              ['right', <AlignRight key="r" size={15} />, 'Align right'],
+              ['justify', <AlignJustify key="j" size={15} />, 'Justify'],
+            ] as [string, ReactNode, string][]
+          ).map(([v, icon, label]) => (
+            <IconBtn key={v} label={label} active={(sel.textAlign || 'left') === v} disabled={locked} onClick={() => a.applyProp({ textAlign: v })}>
+              {icon}
+            </IconBtn>
+          ))}
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <NumField label="Letter" value={Math.round(sel.charSpacing || 0)} step={5} min={-500} max={2000} disabled={locked} title="Letter spacing (thousandths of the size)" onCommit={(n) => a.applyProp({ charSpacing: n })} />
+          <NumField label="Line" value={Math.round((sel.lineHeight ?? 1.16) * 100) / 100} step={0.05} min={0.3} max={10} disabled={locked} title="Line spacing (1 = the font’s own spacing)" onCommit={(n) => a.applyProp({ lineHeight: n })} />
+          <NumField label="Paragraph" value={Math.round((sel.paragraphSpacing || 0) * 100) / 100} step={0.1} min={0} max={10} suffix="em" disabled={locked} title="Extra space before each paragraph (1 em = the text size)" onCommit={(n) => a.applyProp({ paragraphSpacing: n })} />
+          <NumField label="Baseline" value={baseline.mixed ? undefined : baseline.value ?? 0} mixed={baseline.mixed} min={-500} max={500} disabled={locked} title="Raise or lower letters" onCommit={(n) => a.applyCharProp({ deltaY: n })} />
+        </div>
+      </Section>
     </>
   );
 }

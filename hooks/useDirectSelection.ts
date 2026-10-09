@@ -31,6 +31,18 @@ function dist(a: { x: number; y: number }, b: { x: number; y: number }) {
   return Math.hypot(a.x - b.x, a.y - b.y);
 }
 
+// A closed pen path ends with a segment back onto its first point
+// (M p0 … C → p0, Z): that point is stored twice. Returns the index of the
+// closing segment when that's the case, so both copies move as one point.
+export function closingAliasIndex(cmds: any[]): number | null {
+  if (!cmds?.length || cmds[cmds.length - 1][0] !== 'Z' || cmds[0][0] !== 'M') return null;
+  const lastIdx = cmds.length - 2;
+  if (lastIdx < 1) return null;
+  const end = commandEndPoint(cmds[lastIdx]);
+  if (!end) return null;
+  return Math.hypot(end.x - cmds[0][1], end.y - cmds[0][2]) < 0.01 ? lastIdx : null;
+}
+
 export function useDirectSelection({ fabricCanvasRef, onAnchorMoved }: Args) {
   const stateRef = useRef<{
     pathObj: any | null;
@@ -95,7 +107,8 @@ export function useDirectSelection({ fabricCanvasRef, onAnchorMoved }: Args) {
     const anchor = commandEndPoint(cmd);
     if (!cmd || !anchor) return;
 
-    const nextCmd = cmds[idx + 1];
+    const alias = closingAliasIndex(cmds);
+    const nextCmd = alias !== null && idx === alias ? cmds[1] : cmds[idx + 1];
     const prevCmd = idx > 0 ? cmds[idx - 1] : null;
     const hasIncoming = cmd[0] === 'C';
     const hasOutgoing = !!nextCmd && nextCmd[0] === 'C';
@@ -167,6 +180,21 @@ export function useDirectSelection({ fabricCanvasRef, onAnchorMoved }: Args) {
   const deleteAnchorAt = (F: any, pathObj: any, commandIndex: number): boolean => {
     const cmds = pathObj.path;
     if (cmds.length <= 2) return false;
+    const alias = closingAliasIndex(cmds);
+    if (alias !== null && commandIndex === alias) {
+      // The shared first/last point: the path now starts (and closes) at
+      // the point before it.
+      // [M p0, →p1, →p2, …, →p0, Z] becomes [M p1, →p2, …, Z].
+      if (alias < 3) return false;
+      const p1 = commandEndPoint(cmds[1]);
+      if (!p1) return false;
+      cmds.splice(alias, 1);
+      cmds.splice(1, 1);
+      cmds[0] = ['M', p1.x, p1.y];
+      pathObj.dirty = true;
+      recalcPathGeometry(F, pathObj);
+      return true;
+    }
     cmds.splice(commandIndex, 1);
     if (cmds.length && cmds[0][0] !== 'M') {
       const p = commandEndPoint(cmds[0]);
@@ -196,12 +224,15 @@ export function useDirectSelection({ fabricCanvasRef, onAnchorMoved }: Args) {
 
         const cmds: any[] = pathObj.path || [];
         const anchorCircleByIndex = new Map<number, any>();
+        const alias = closingAliasIndex(cmds);
 
         // Anchor points — one per command with a real end point. Drag to
         // move; Alt/Option-click (no drag) toggles corner <-> smooth.
         cmds.forEach((cmd, idx) => {
           const raw = commandEndPoint(cmd);
           if (!raw) return;
+          // A closed path's first point is the same as its closing point.
+          if (alias !== null && idx === 0) return;
           const world = commandPointToWorld(F, pathObj, raw);
 
           const circle: any = new F.Circle({
@@ -248,6 +279,10 @@ export function useDirectSelection({ fabricCanvasRef, onAnchorMoved }: Args) {
               targetCmd[3] = newRaw.x;
               targetCmd[4] = newRaw.y;
             }
+            if (alias !== null && idx === alias) {
+              pathObj.path[0][1] = newRaw.x;
+              pathObj.path[0][2] = newRaw.y;
+            }
             pathObj.dirty = true;
             recalcPathGeometry(F, pathObj);
             canvasNow.requestRenderAll();
@@ -258,6 +293,7 @@ export function useDirectSelection({ fabricCanvasRef, onAnchorMoved }: Args) {
           canvas.add(circle);
           state.circles.push(circle);
           anchorCircleByIndex.set(idx, circle);
+          if (alias !== null && idx === alias) anchorCircleByIndex.set(0, circle);
         });
 
         // Curve handles — only shown once they're a real (non-zero-length)
@@ -389,23 +425,26 @@ export function useDirectSelection({ fabricCanvasRef, onAnchorMoved }: Args) {
     let oppKeyX = 0;
     let oppKeyY = 0;
     let oppMapKey: string | null = null;
+    const aliasIdx = closingAliasIndex(cmds0);
     if (role === 'in') {
       anchorPoint = commandEndPoint(cmds0[cmdIndex]);
-      const nextCmd = cmds0[cmdIndex + 1];
+      const nextIdx = aliasIdx !== null && cmdIndex === aliasIdx ? 1 : cmdIndex + 1;
+      const nextCmd = cmds0[nextIdx];
       if (nextCmd && nextCmd[0] === 'C') {
         oppCmd = nextCmd;
         oppKeyX = 1;
         oppKeyY = 2;
-        oppMapKey = `${cmdIndex + 1}:out`;
+        oppMapKey = `${nextIdx}:out`;
       }
     } else {
-      const prevCmd = cmds0[cmdIndex - 1];
-      anchorPoint = prevCmd ? commandEndPoint(prevCmd) : null;
+      const prevIdx = aliasIdx !== null && cmdIndex === 1 ? aliasIdx : cmdIndex - 1;
+      const prevCmd = cmds0[prevIdx];
+      anchorPoint = prevCmd ? commandEndPoint(prevCmd) : cmdIndex === 1 && cmds0[0] ? { x: cmds0[0][1], y: cmds0[0][2] } : null;
       if (prevCmd && prevCmd[0] === 'C') {
         oppCmd = prevCmd;
         oppKeyX = 3;
         oppKeyY = 4;
-        oppMapKey = `${cmdIndex - 1}:in`;
+        oppMapKey = `${prevIdx}:in`;
       }
     }
     // Decided once, when the drag starts: was this anchor smooth to begin
