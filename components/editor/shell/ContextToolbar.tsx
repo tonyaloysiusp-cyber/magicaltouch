@@ -15,6 +15,7 @@ import {
   Minus,
   Plus,
   Sparkles,
+  Newspaper,
   Copy,
   Trash2,
   Lock,
@@ -102,6 +103,7 @@ export interface ToolbarActions {
   setPageBackground: (v: string | GradientSpec | null, commit: boolean) => void;
   openResize: () => void;
   pickFromCanvas: (cb: (hex: string) => void) => void;
+  frame: { make: () => void; columns: (n: number) => void; addLinked: () => void; unlink: () => void; setHeight: (h: number) => void };
 }
 
 const isTextObj = (o: any) => o && (o.type === 'textbox' || o.type === 'i-text' || o.type === 'text');
@@ -595,6 +597,7 @@ export function ContextToolbar({
             <p className="text-[11px] text-mt-faint -mt-1">Extra space before each new paragraph (after you press Enter).</p>
           </div>
         </Popover>
+        {sel.type === 'textbox' && !fx.curve && !fx.wave && <TextFlowPopover sel={sel} a={a} />}
         <Popover
           width={300}
           trigger={({ toggle, open }) => <ToolButton label="Effects" hint="Shadow, glow, outline, curve" icon={<Sparkles size={16} />} onClick={toggle} active={open} special />}
@@ -776,5 +779,61 @@ export function ContextToolbar({
       {shadowPopover(sel)}
       {common(sel)}
     </>
+  );
+}
+
+// Text frames: fixed-size boxes whose text flows on to linked frames
+// (columns, next frame, next page). See lib/editor/textFrames.ts.
+function TextFlowPopover({ sel, a }: { sel: any; a: ToolbarActions }) {
+  const frame = !!sel.__storyId && sel.__frameH > 0;
+  const canvas = sel.canvas;
+  const frames = frame && canvas ? canvas.getObjects().filter((o: any) => o.__storyId === sel.__storyId && o.__frameH > 0) : [];
+  const overflow = frames.some((f: any) => !!f.__storyOverflow);
+  const idx = (sel.__storyIndex || 0) + 1;
+  return (
+    <Popover
+      width={290}
+      trigger={({ toggle, open }) => (
+        <span className="relative inline-flex">
+          <ToolButton label={frame ? 'Text flow' : 'Text frame'} hint="Columns and text that flows between frames" icon={<Newspaper size={16} />} onClick={toggle} active={open} />
+          {overflow && <span aria-label="Some text doesn’t fit" className="absolute top-1 right-1 w-2 h-2 rounded-full bg-rose-600" />}
+        </span>
+      )}
+    >
+      {(close) =>
+        frame ? (
+          <div className="flex flex-col gap-3">
+            <div>
+              <p className="text-sm font-semibold text-mt-ink">Frame {idx} of {frames.length}</p>
+              <p className={cx('text-xs', overflow ? 'text-rose-600' : 'text-mt-muted')}>{overflow ? 'Some text doesn’t fit yet — add a frame to show it.' : 'All of the story fits.'}</p>
+            </div>
+            <button type="button" onClick={() => { a.frame.addLinked(); close(); }} className={cx('h-9 rounded-lg text-[13px] font-semibold', overflow ? 'bg-mt-primary text-mt-onprimary' : 'border border-mt-border text-mt-ink hover:bg-mt-surface2')}>
+              Add a linked frame
+            </button>
+            <div>
+              <p className="text-xs text-mt-muted mb-1.5">Split this frame into columns</p>
+              <div className="flex gap-1.5">
+                {[2, 3, 4].map((n) => (
+                  <button key={n} type="button" onClick={() => { a.frame.columns(n); close(); }} className="flex-1 h-9 rounded-lg border border-mt-border text-[13px] hover:bg-mt-surface2">
+                    {n}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <button type="button" onClick={() => { a.frame.unlink(); close(); }} className="self-start text-xs text-mt-muted hover:text-mt-ink underline-offset-2 hover:underline">
+              {frames.length > 1 ? 'Unlink this frame from the story' : 'Turn back into a normal text box'}
+            </button>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-3">
+            <p className="text-sm font-semibold text-mt-ink">Make it a text frame</p>
+            <p className="text-xs text-mt-muted leading-relaxed">The box keeps its size. Text that doesn’t fit flows on into linked frames or columns — like a magazine.</p>
+            <button type="button" onClick={() => { a.frame.make(); close(); }} className="h-9 rounded-lg bg-mt-primary text-mt-onprimary text-[13px] font-semibold">
+              Make text frame
+            </button>
+          </div>
+        )
+      }
+    </Popover>
   );
 }

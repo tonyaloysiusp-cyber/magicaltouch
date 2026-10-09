@@ -654,6 +654,35 @@ function TextSection({ p, colorProps }: { p: Props; colorProps: any }) {
           <NumField label="Baseline" value={baseline.mixed ? undefined : baseline.value ?? 0} mixed={baseline.mixed} min={-500} max={500} disabled={locked} title="Raise or lower letters" onCommit={(n) => a.applyCharProp({ deltaY: n })} />
         </div>
       </Section>
+      {sel.type === 'textbox' && !sel.path && (
+        <Section title="Text frame">
+          {sel.__storyId && sel.__frameH > 0 ? (
+            <>
+              <NumField label="Frame height" value={Math.round(sel.__frameH)} min={20} suffix="px" disabled={locked} onCommit={(n) => a.frame.setHeight(n)} />
+              {sel.canvas?.getObjects().some((o: any) => o.__storyId === sel.__storyId && o.__storyOverflow) && (
+                <p className="text-xs text-rose-600">Some text doesn’t fit yet — add a linked frame to show it.</p>
+              )}
+              <div className="grid grid-cols-2 gap-1.5">
+                <WideBtn icon={<Spline size={15} />} label="Add linked frame" onClick={a.frame.addLinked} disabled={locked} />
+                <WideBtn icon={<Scissors size={15} />} label="Unlink" onClick={a.frame.unlink} disabled={locked} />
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs text-mt-muted mr-1">Columns</span>
+                {[2, 3, 4].map((n) => (
+                  <IconBtn key={n} label={`Split into ${n} columns`} onClick={() => a.frame.columns(n)} disabled={locked}>
+                    <span className="text-[13px]">{n}</span>
+                  </IconBtn>
+                ))}
+              </div>
+            </>
+          ) : (
+            <>
+              <p className="text-xs text-mt-muted leading-relaxed">Keep this box a fixed size and let extra text flow on into linked frames and columns.</p>
+              <WideBtn icon={<Spline size={15} />} label="Make text frame" onClick={a.frame.make} disabled={locked} />
+            </>
+          )}
+        </Section>
+      )}
     </>
   );
 }

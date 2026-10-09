@@ -32,7 +32,7 @@ function previewStyle(p: TextPreset): React.CSSProperties {
   return s;
 }
 
-export function TextPanel({ onAdd, onAddPairing, onAddPageNumber }: { onAdd: (p: TextPreset) => void; onAddPairing: (heading: string, body: string) => void; onAddPageNumber: () => void }) {
+export function TextPanel({ onAdd, onAddPairing, onAddPageNumber, onAddArticle }: { onAdd: (p: TextPreset) => void; onAddPairing: (heading: string, body: string) => void; onAddPageNumber: () => void; onAddArticle?: (columns: number) => void }) {
   const drag = (id: string) => (e: React.DragEvent) => e.dataTransfer.setData('application/x-mt-asset', `text:${id}`);
   return (
     <div>
@@ -59,6 +59,36 @@ export function TextPanel({ onAdd, onAddPairing, onAddPageNumber }: { onAdd: (p:
       >
         # Add page number
       </button>
+      {onAddArticle && (
+        <PanelSection title="Articles & columns">
+          <p className="text-xs text-mt-muted -mt-1 mb-2.5 leading-relaxed">A headline and a story that flows from column to column — and on to new pages.</p>
+          <div className="grid grid-cols-3 gap-2 mb-5">
+            {[1, 2, 3].map((n) => (
+              <button
+                key={n}
+                type="button"
+                onClick={() => onAddArticle(n)}
+                title={`Article in ${n} column${n > 1 ? 's' : ''}`}
+                className="group rounded-xl border border-mt-border hover:border-[#8CCBFF] hover:bg-mt-accentsoft p-2 flex flex-col items-center gap-1.5 transition-colors"
+              >
+                <span aria-hidden className="w-full aspect-[3/4] rounded-md bg-mt-surface border border-mt-border p-1.5 flex flex-col gap-1">
+                  <span className="h-1.5 w-3/4 rounded-full bg-mt-ink/70" />
+                  <span className="flex-1 flex gap-1">
+                    {Array.from({ length: n }).map((_, i) => (
+                      <span key={i} className="flex-1 flex flex-col gap-[3px] pt-0.5">
+                        {Array.from({ length: 7 }).map((__, j) => (
+                          <span key={j} className="h-[2px] rounded-full bg-mt-faint/60" style={{ width: j === 6 ? '60%' : '100%' }} />
+                        ))}
+                      </span>
+                    ))}
+                  </span>
+                </span>
+                <span className="text-[11px] text-mt-muted group-hover:text-mt-ink">{n === 1 ? '1 column' : `${n} columns`}</span>
+              </button>
+            ))}
+          </div>
+        </PanelSection>
+      )}
       <PanelSection title="Text styles">
         <div className="grid grid-cols-2 gap-2">
           {TEXT_STYLES.map((p) => (

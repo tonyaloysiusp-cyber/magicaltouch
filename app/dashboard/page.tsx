@@ -24,6 +24,7 @@ import { DesignLimitDialog } from '@/components/DesignLimitDialog';
 import { MAX_DESIGNS, getOrCreateProfile } from '@/lib/profile';
 import { allFontFacesCSS, ensureFontsLoadedForCanvasJSON } from '@/lib/editor/googleFonts';
 import { installParagraphSpacing } from '@/lib/editor/paragraphSpacing';
+import { installTextFrames } from '@/lib/editor/textFrames';
 import { BrandLogo } from '@/components/BrandLogo';
 import { useAppTheme } from '@/hooks/useAppTheme';
 
@@ -132,6 +133,7 @@ export default function DashboardPage() {
     if (!missing.length) return;
     const F = (await import('fabric')).fabric;
     installParagraphSpacing(F);
+    installTextFrames(F);
     for (const design of missing) {
       try {
         const full = await getProject(design.id).catch(() => null);
