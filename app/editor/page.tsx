@@ -541,7 +541,9 @@ function EditorContent() {
     canvas?.getObjects().forEach((o: any) => {
       if (!o.__pageNumber) return;
       const i = metas.findIndex((m) => m.id === o.__artboardId);
-      const label = i >= 0 ? String(i + 1) : '#';
+      // Format: true (just the number) or a pattern like 'Page {n} of {total}'.
+      const fmt = typeof o.__pageNumber === 'string' ? o.__pageNumber : '{n}';
+      const label = i >= 0 ? fmt.replace(/\{n\}/g, String(i + 1)).replace(/\{total\}/g, String(metas.length)) : '#';
       if (o.text !== label) {
         o.set({ text: label });
         o.initDimensions?.();
@@ -2910,20 +2912,34 @@ function EditorContent() {
   };
 
   // A page number that updates itself when pages are added or reordered.
-  const addPageNumber = () => {
+  // `format` uses {n} for the page and {total} for the page count; with
+  // `everyPage` each page gets one (existing ones switch to the format).
+  const addPageNumber = (format = '{n}', everyPage = false) => {
     const F = (window as any).fabric;
     const canvas = fabricCanvasRef.current;
     if (!F || !canvas) return;
-    const page = getActiveArtboardRect();
-    const k = Math.max(page.width, page.height) / 1080;
-    const t = new F.Textbox('1', { width: 80 * k, fontSize: 28 * k, fontFamily: 'Inter', fill: '#52525B', textAlign: 'center' });
-    t.setPositionByOrigin(new F.Point(page.x + page.width / 2, page.y + page.height - 48 * k), 'center', 'center');
-    t.__pageNumber = true;
-    t.name = 'Page number';
-    canvas.add(t);
-    canvas.setActiveObject(t);
+    const pages = everyPage ? artboardsRef.current : [getActiveArtboardRect()];
+    let last: any = null;
+    pages.forEach((page: any) => {
+      const existing = canvas.getObjects().find((o: any) => o.__pageNumber && o.__artboardId === page.id);
+      if (existing && everyPage) {
+        existing.__pageNumber = format;
+        last = existing;
+        return;
+      }
+      const k = Math.max(page.width, page.height) / 1080;
+      const t = new F.Textbox(format.replace(/\{n\}/g, '1').replace(/\{total\}/g, '1'), { width: 320 * k, fontSize: 24 * k, fontFamily: 'Inter', fill: '#52525B', textAlign: 'center' });
+      t.setPositionByOrigin(new F.Point(page.x + page.width / 2, page.y + page.height - 44 * k), 'center', 'center');
+      t.__pageNumber = format;
+      t.__artboardId = page.id;
+      t.name = 'Page number';
+      canvas.add(t);
+      last = t;
+    });
+    if (last && !everyPage) canvas.setActiveObject(last);
     refreshArtboards();
     canvas.requestRenderAll();
+    pushHistory();
   };
 
   // ---------------------------------------------------------------------
