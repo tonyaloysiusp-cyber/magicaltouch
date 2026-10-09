@@ -19,7 +19,7 @@ const TABS: Tab[] = ['overview', 'messages', 'occasions', 'services', 'wording']
 
 interface Message { id: string; kind: string; title: string; body: string | null; link: string | null; priority: string; due_on: string | null; meta: any; read_at: string | null; archived: boolean; created_at: string }
 interface Occasion { id: string; name: string; occasion_date: string; region: string; template_category: string | null; ideas: string | null; lead_days: number; active: boolean; built_in: boolean }
-interface Service { id: string; name: string; kind: string; provider: string | null; plan: string | null; account_url: string | null; cost: number | null; currency: string; billing_cycle: string; renews_on: string | null; auto_renew: boolean; status: string; notes: string | null }
+interface Service { id: string; name: string; kind: string; provider: string | null; plan: string | null; account_url: string | null; renew_url?: string | null; cost: number | null; currency: string; billing_cycle: string; renews_on: string | null; auto_renew: boolean; status: string; notes: string | null }
 
 const today = () => {
   const d = new Date();
@@ -266,11 +266,41 @@ function Overview({ stats, messages, occasions, services, templates, go }: { sta
 }
 
 function RenewPill({ s }: { s: Service }) {
+  if (!s.renews_on && s.billing_cycle === 'free')
+    return <span className="shrink-0 text-[11px] font-semibold rounded-full px-2.5 py-1 bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300">Free plan</span>;
   if (!s.renews_on)
     return <span className="shrink-0 text-[11px] font-semibold rounded-full px-2.5 py-1 bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300">Add date</span>;
   const n = daysUntil(s.renews_on);
   const cls = n < 0 ? 'bg-rose-600 text-white' : n <= 7 ? 'bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300' : n <= 30 ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300' : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300';
   return <span className={`shrink-0 text-[11px] font-semibold rounded-full px-2.5 py-1 tabular-nums ${cls}`}>{n < 0 ? `Expired ${-n}d ago` : n === 0 ? 'Today' : `${n} days`}</span>;
+}
+
+// The big date on each renewal card: when it is due and how long is left.
+function DueDate({ s }: { s: Service }) {
+  if (!s.renews_on) {
+    return s.billing_cycle === 'free' ? (
+      <div className="mt-4 rounded-2xl bg-mt-surface2 px-4 py-3">
+        <p className="text-[11px] uppercase tracking-wide text-mt-faint">Expiry</p>
+        <p className="text-[15px] font-semibold text-mt-ink">Nothing to renew — free plan</p>
+      </div>
+    ) : (
+      <div className="mt-4 rounded-2xl border border-dashed border-amber-400/70 bg-amber-50 dark:bg-amber-950/30 px-4 py-3">
+        <p className="text-[11px] uppercase tracking-wide text-amber-800 dark:text-amber-300">Expiry date missing</p>
+        <p className="text-[13px] text-amber-900 dark:text-amber-200">Tap Edit and add the date from your provider’s account page.</p>
+      </div>
+    );
+  }
+  const n = daysUntil(s.renews_on);
+  const tone = n < 0 ? 'text-rose-600' : n <= 30 ? 'text-amber-600 dark:text-amber-400' : 'text-mt-ink';
+  return (
+    <div className="mt-4 rounded-2xl bg-mt-surface2 px-4 py-3 flex items-end justify-between gap-3">
+      <div>
+        <p className="text-[11px] uppercase tracking-wide text-mt-faint">{n < 0 ? 'Expired on' : s.auto_renew ? 'Renews on' : 'Expires on'}</p>
+        <p className={`text-[20px] font-semibold leading-tight ${tone}`}>{fmtDate(s.renews_on, { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+      </div>
+      <p className={`text-[13px] font-medium tabular-nums ${tone}`}>{n < 0 ? `${-n} days ago` : n === 0 ? 'today' : `in ${n} day${n === 1 ? '' : 's'}`}</p>
+    </div>
+  );
 }
 
 // ------------------------------------------------------------- messages
@@ -452,6 +482,28 @@ function Occasions({ occasions, templates, reload, flash }: { occasions: Occasio
 const KINDS = ['hosting', 'domain', 'email', 'database', 'ssl', 'software', 'storage', 'other'];
 const KIND_NAMES: Record<string, string> = { hosting: 'Hosting', domain: 'Domain', email: 'E-mail', database: 'Database', ssl: 'SSL certificate', software: 'Software', storage: 'Storage', other: 'Other' };
 
+// Where to pay, for the providers people use most — filled in when the
+// renew link is left empty.
+const RENEW_LINKS: [RegExp, string][] = [
+  [/godaddy/i, 'https://account.godaddy.com/products'],
+  [/namecheap/i, 'https://ap.www.namecheap.com/domains/list/'],
+  [/hostinger/i, 'https://hpanel.hostinger.com/domains'],
+  [/squarespace|google domains/i, 'https://account.squarespace.com/domains'],
+  [/cloudflare/i, 'https://dash.cloudflare.com/?to=/:account/domains'],
+  [/porkbun/i, 'https://porkbun.com/account/domainsSpeedy'],
+  [/ionos|1&1/i, 'https://my.ionos.com/domains'],
+  [/name\.com/i, 'https://www.name.com/account/domain'],
+  [/dynadot/i, 'https://www.dynadot.com/account/domain/name/list.html'],
+  [/bigrock/i, 'https://manage.bigrock.in/'],
+  [/wix/i, 'https://manage.wix.com/account/domains'],
+  [/vercel/i, 'https://vercel.com/account/billing'],
+  [/supabase/i, 'https://supabase.com/dashboard/org/_/billing'],
+  [/google workspace/i, 'https://admin.google.com/ac/billing/subscriptions'],
+  [/zoho/i, 'https://store.zoho.com/html/store/mystore.html'],
+  [/microsoft|outlook|office/i, 'https://admin.microsoft.com/#/subscriptions'],
+];
+const renewLinkFor = (provider?: string | null) => (provider ? RENEW_LINKS.find(([re]) => re.test(provider))?.[1] : undefined) || null;
+
 function Services({ services, reload, flash }: { services: Service[]; reload: () => void; flash: (t: string) => void }) {
   const [editing, setEditing] = useState<Partial<Service> | null>(null);
   const save = async () => {
@@ -461,7 +513,7 @@ function Services({ services, reload, flash }: { services: Service[]; reload: ()
       kind: editing.kind || 'other',
       provider: editing.provider || null,
       plan: editing.plan || null,
-      account_url: editing.account_url || null,
+      account_url: editing.account_url || renewLinkFor(editing.provider) || null,
       cost: editing.cost === null || editing.cost === undefined || (editing.cost as any) === '' ? null : Number(editing.cost),
       currency: editing.currency || 'AED',
       billing_cycle: editing.billing_cycle || 'yearly',
@@ -513,9 +565,8 @@ function Services({ services, reload, flash }: { services: Service[]; reload: ()
               </div>
               <RenewPill s={s} />
             </div>
+            <DueDate s={s} />
             <dl className="mt-3 grid grid-cols-2 gap-y-1.5 text-[12px]">
-              <dt className="text-mt-faint">Renews / expires</dt>
-              <dd className="text-mt-ink text-right">{s.renews_on ? fmtDate(s.renews_on) : '—'}</dd>
               <dt className="text-mt-faint">Cost</dt>
               <dd className="text-mt-ink text-right">{s.cost !== null && s.cost !== undefined ? `${s.currency} ${Number(s.cost).toLocaleString('en-GB')} / ${s.billing_cycle === 'monthly' ? 'month' : s.billing_cycle === 'yearly' ? 'year' : s.billing_cycle}` : s.billing_cycle === 'free' ? 'Free' : '—'}</dd>
               <dt className="text-mt-faint">Auto-renew</dt>
@@ -525,15 +576,19 @@ function Services({ services, reload, flash }: { services: Service[]; reload: ()
             </dl>
             {s.notes && <p className="mt-3 text-[12px] text-mt-muted leading-relaxed">{s.notes}</p>}
             <div className="mt-auto pt-4 flex flex-wrap gap-2">
-              <button type="button" onClick={() => renewed(s)} className={btnPrimary} title="Moves the date on by one month or year">
-                <RotateCcw size={13} /> Renewed
-              </button>
-              <button type="button" onClick={() => setEditing(s)} className={btnGhost}>Edit</button>
-              {s.account_url && (
-                <a href={s.account_url} target="_blank" rel="noreferrer" className={btnGhost}>
-                  <ExternalLink size={13} /> Open
+              {(s.renew_url || s.account_url || renewLinkFor(s.provider)) ? (
+                <a href={(s.renew_url || s.account_url || renewLinkFor(s.provider))!} target="_blank" rel="noreferrer" className={btnPrimary}>
+                  <ExternalLink size={13} /> {s.billing_cycle === 'free' ? 'Open account' : 'Renew / pay'}
                 </a>
+              ) : (
+                <button type="button" onClick={() => setEditing(s)} className={btnPrimary}><ExternalLink size={13} /> Add renew link</button>
               )}
+              {s.billing_cycle !== 'free' && (
+                <button type="button" onClick={() => renewed(s)} className={btnGhost} title="After you pay, moves the date on by one month or year">
+                  <RotateCcw size={13} /> I renewed it
+                </button>
+              )}
+              <button type="button" onClick={() => setEditing(s)} className={btnGhost}>Edit</button>
               <button type="button" onClick={() => remove(s)} className="ml-auto text-[12px] text-mt-faint hover:text-rose-600">Remove</button>
             </div>
           </article>
@@ -559,7 +614,7 @@ function Services({ services, reload, flash }: { services: Service[]; reload: ()
                 <label className="text-xs text-mt-muted flex flex-col gap-1">Currency<input className={field} value={editing.currency || 'AED'} onChange={(e) => setEditing({ ...editing, currency: e.target.value.toUpperCase().slice(0, 3) })} /></label>
                 <label className="text-xs text-mt-muted flex flex-col gap-1">Billed<select className={field} value={editing.billing_cycle || 'yearly'} onChange={(e) => setEditing({ ...editing, billing_cycle: e.target.value })}><option value="monthly">Monthly</option><option value="yearly">Yearly</option><option value="one-time">One time</option><option value="free">Free</option></select></label>
               </div>
-              <label className="text-xs text-mt-muted flex flex-col gap-1 sm:col-span-2">Account link<input className={field} value={editing.account_url || ''} onChange={(e) => setEditing({ ...editing, account_url: e.target.value })} placeholder="https://…" /></label>
+              <label className="text-xs text-mt-muted flex flex-col gap-1 sm:col-span-2">Renew / pay link<input className={field} value={editing.account_url || ''} onChange={(e) => setEditing({ ...editing, account_url: e.target.value })} placeholder="The page where you pay, e.g. https://account.godaddy.com/products" /></label>
               <label className="text-xs text-mt-muted flex flex-col gap-1 sm:col-span-2">Notes<textarea className={`${field} h-20 py-2`} value={editing.notes || ''} onChange={(e) => setEditing({ ...editing, notes: e.target.value })} /></label>
               <label className="flex items-center gap-2 text-sm text-mt-ink"><input type="checkbox" className="w-4 h-4 accent-[#3B82C4]" checked={!!editing.auto_renew} onChange={(e) => setEditing({ ...editing, auto_renew: e.target.checked })} /> Renews automatically</label>
               <label className="text-xs text-mt-muted flex flex-col gap-1">Status<select className={field} value={editing.status || 'active'} onChange={(e) => setEditing({ ...editing, status: e.target.value })}><option value="active">Active</option><option value="cancelled">Cancelled</option><option value="expired">Expired</option></select></label>
