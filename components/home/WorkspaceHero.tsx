@@ -94,7 +94,7 @@ export function WorkspaceHero() {
           </span>
         </h1>
         <p className="mt-6 text-base sm:text-lg text-mt-muted max-w-xl mx-auto leading-relaxed">
-          Start from 175+ professional templates or a blank canvas, then change every word, colour and photo. Free, right in your browser.
+          Start from 250+ professional templates or a blank canvas, then change every word, colour and photo. Free, right in your browser.
         </p>
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
           <button

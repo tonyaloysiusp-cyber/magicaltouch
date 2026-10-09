@@ -5,7 +5,7 @@ import { Reveal } from './Reveal';
 // A real sequence, so the numbers carry meaning. Each takes one of the
 // logo's colours.
 const STEPS = [
-  { n: '1', color: '#EC5F84', title: 'Pick a template', body: 'Choose from 175+ designs for birthdays, weddings, business, menus and more, or start blank.' },
+  { n: '1', color: '#EC5F84', title: 'Pick a template', body: 'Choose from 250+ designs for festivals, birthdays, weddings, business, resumes and more, or start blank.' },
   { n: '2', color: '#1FAEE6', title: 'Make it yours', body: 'Change the words, colours, fonts and photos. Everything on the page can be edited.' },
   { n: '3', color: '#6DB33A', title: 'Download or share', body: 'Save it as an image or a print-ready PDF, or keep it in your account for later.' },
 ];
