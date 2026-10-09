@@ -4,21 +4,17 @@ import { ThemeSwitch } from '@/components/ThemeSwitch';
 import { useRef, useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Sun, Moon, Upload, FileImage } from 'lucide-react';
+import { ArrowLeft, Upload, FileImage, Save, ChevronDown, HardDrive, Cloud, Loader2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { MAX_DESIGNS, getDesignCount } from '@/lib/profile';
 import { DocUnit } from '@/lib/editor/types';
 import { physicalUnitToPx, pxToPhysicalUnit, useDisplayUnit } from '@/lib/editor/units';
-import { DEFAULT_ADJUSTMENTS } from '@/lib/editor/photoFilters';
 import { buildPhotoDesignJson } from '@/lib/editor/buildPhotoDesignPayload';
-import { exportRasterToPDF } from '@/lib/editor/pdfExport';
-import { PhotoEditorWorkspace, PhotoEditorHandle, PhotoEditResult } from '@/components/photoEditor/PhotoEditorWorkspace';
+import { PhotoStudio, PhotoStudioHandle } from '@/components/photoStudio/PhotoStudio';
 import { BrandLogo } from '@/components/BrandLogo';
 import { AppHeader } from '@/components/AppHeader';
 import { PageHero } from '@/components/PageHero';
 import { useAppTheme } from '@/hooks/useAppTheme';
-import { MenuBar, MenuDef } from '@/components/editor/MenuBar';
-import { ShortcutsModal } from '@/components/editor/ShortcutsModal';
 import { createDefaultPrintSettings } from '@/lib/editor/printSetup';
 import { buildMtd, readMtd, MtdError, fileNameFor, nameFromFileName } from '@/lib/mtd/format';
 import { saveMtdFile, pickMtdFile } from '@/lib/mtd/fileAccess';
@@ -82,8 +78,9 @@ function PhotoStudioContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { theme, toggleTheme } = useAppTheme();
-  const photoEditorRef = useRef<PhotoEditorHandle>(null);
-  const lastResultRef = useRef<PhotoEditResult | null>(null);
+  const photoEditorRef = useRef<PhotoStudioHandle>(null);
+  const [saveMenu, setSaveMenu] = useState(false);
+  const [dirty, setDirty] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [checkingAuth, setCheckingAuth] = useState(true);
@@ -119,21 +116,9 @@ function PhotoStudioContent() {
   const [docHeight, setDocHeight] = useState(0);
   const [docDpi, setDocDpi] = useState(300);
 
-  const [canUndo, setCanUndo] = useState(false);
-  const [canRedo, setCanRedo] = useState(false);
   const [designId, setDesignId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saved' | 'error'>('idle');
-  const [exporting, setExporting] = useState(false);
-  const [exportFormat, setExportFormat] = useState<'png' | 'pdf'>('png');
-  const [shortcutsOpen, setShortcutsOpen] = useState(false);
-  // Real, opt-in Window-menu panel visibility -- passed straight through
-  // to PhotoEditorWorkspace's own showLayersPanel/showAdjustmentsPanel
-  // props (both default true there too, so omitting them, as Main
-  // Design's embedded usage does, changes nothing for it).
-  const [showLayersPanel, setShowLayersPanel] = useState(true);
-  const [showAdjustmentsPanel, setShowAdjustmentsPanel] = useState(true);
-
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
       if (!data.user) {
@@ -206,7 +191,6 @@ function PhotoStudioContent() {
     setDocName(name);
     setDesignId(null);
     setSaveStatus('idle');
-    lastResultRef.current = null;
     setStage('editing');
   };
 
@@ -232,48 +216,11 @@ function PhotoStudioContent() {
     }
   };
 
-  // Pulls the current flattened composite out of the live Photo Editor
-  // canvas via the same applyNow()/onApply path Main Design uses to make
-  // sure Export/Save never ship a stale pre-edit image -- onApply here
-  // just records the result (in a ref, so it's readable synchronously
-  // right after this call) instead of closing anything, since there's no
-  // separate Main Design to hand off to on this standalone page.
-  const captureCurrentComposite = (): PhotoEditResult | null => {
-    lastResultRef.current = null;
-    const applied = photoEditorRef.current?.applyNow();
-    if (!applied) return null;
-    return lastResultRef.current;
-  };
-
-  // Accepts an explicit format so menu items (Export as PNG / Export as
-  // PDF) don't race the async setExportFormat state update -- the
-  // toolbar's own Export button still just calls handleExport() with no
-  // argument, defaulting to whatever the format <select> currently shows.
-  const handleExport = async (format: 'png' | 'pdf' = exportFormat) => {
-    setExporting(true);
-    try {
-      const result = captureCurrentComposite();
-      if (!result) {
-        alert('Nothing to export yet.');
-        return;
-      }
-      if (format === 'pdf') {
-        // Real current pixel size, not the possibly-stale docWidth/docHeight
-        // state (only updated on Save) -- same pattern handleSave already
-        // uses via loadImageSize on the just-captured composite.
-        const size = await loadImageSize(result.dataUrl);
-        await exportRasterToPDF(result.dataUrl, size.w, size.h, docDpi, `${docName || 'Untitled Photo'}.pdf`);
-        return;
-      }
-      const a = document.createElement('a');
-      a.href = result.dataUrl;
-      a.download = `${docName || 'Untitled Photo'}.png`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-    } finally {
-      setExporting(false);
-    }
+  // The finished picture (adjustments included), at full size.
+  const captureCurrentComposite = (): { dataUrl: string } | null => {
+    const c = photoEditorRef.current?.renderResult();
+    if (!c) return null;
+    return { dataUrl: c.toDataURL('image/png') };
   };
 
   // ---------- .mtd project files on the customer's computer ----------
@@ -409,14 +356,6 @@ function PhotoStudioContent() {
     }
   };
 
-  // File > New Document: real navigation back to the Open screen (same
-  // place "Discard & Start Over" already goes), just gated behind a
-  // confirm since it discards whatever's on the canvas now.
-  const handleNewDocument = () => {
-    if (typeof window !== 'undefined' && !window.confirm('Start a new document? Unsaved changes to the current one will be lost.')) return;
-    setStage('open');
-  };
-
   if (checkingAuth || loadingDesign) {
     return (
       <main className="min-h-screen flex items-center justify-center text-mt-faint dark:bg-mt-bg dark:text-mt-muted">
@@ -438,7 +377,7 @@ function PhotoStudioContent() {
             eyebrow="Photo Studio"
             title="Edit photos like a pro."
             accent="like a pro"
-            subtitle="Layers, masks, curves, dodge & burn, clone stamp and background removal — working on real pixels, in real print sizes."
+            subtitle="Light and colour, one-tap looks, exact-size cropping, AI background removal, spot healing and true CMYK print files — all on your device."
           />
           <div className="mt-container py-8 sm:py-10">
             <div className="grid lg:grid-cols-[1.35fr_1fr] gap-6 2xl:gap-8 items-start">
@@ -462,7 +401,7 @@ function PhotoStudioContent() {
                   Choose a photo
                 </button>
                 <div className="relative mt-8 flex flex-wrap justify-center gap-2">
-                  {['Layers', 'Masks', 'Curves & levels', 'Dodge & burn', 'Clone stamp', 'Background removal', 'Print sizes & DPI'].map((f) => (
+                  {['Adjust & looks', 'Exact-size crop', 'Remove background', 'Spot heal', 'Resize & DPI', 'CMYK & RGB export'].map((f) => (
                     <span key={f} className="text-xs px-3 py-1.5 rounded-full border border-mt-border bg-mt-surface text-mt-muted">
                       {f}
                     </span>
@@ -554,196 +493,68 @@ function PhotoStudioContent() {
     );
   }
 
-  // A real File/Edit/Image/Layer/Select/Filter/View/Window/Help menu
-  // bar, reusing the same MenuBar component Main Design's /editor
-  // already ships (same "real action or a disabled Planned tag, never a
-  // fake button" contract). Every item wraps a real function -- most via
-  // the expanded PhotoEditorHandle imperative ref, the rest (New/Save/
-  // Export/Close) are this page's own existing handlers.
-  const menus: MenuDef[] = [
-    {
-      label: 'File',
-      items: [
-        { label: 'New Document…', onClick: handleNewDocument },
-        { label: 'Open from Device (.mtd)…', onClick: openFromComputer },
-        { label: 'Save', shortcut: 'Ctrl/Cmd+S', onClick: handleSave, disabled: saving },
-        { label: 'Save to Device (.mtd)…', onClick: saveToComputer, disabled: saving || stage !== 'editing' },
-        { divider: true },
-        { label: 'Export as PNG', onClick: () => { setExportFormat('png'); handleExport('png'); } },
-        { label: 'Export as PDF', onClick: () => { setExportFormat('pdf'); handleExport('pdf'); } },
-        { divider: true },
-        { label: 'Close', onClick: () => router.push('/dashboard') },
-      ],
-    },
-    {
-      label: 'Edit',
-      items: [
-        { label: 'Undo', shortcut: 'Ctrl/Cmd+Z', onClick: () => photoEditorRef.current?.undo(), disabled: !canUndo },
-        { label: 'Redo', shortcut: 'Ctrl/Cmd+Shift+Z', onClick: () => photoEditorRef.current?.redo(), disabled: !canRedo },
-      ],
-    },
-    {
-      label: 'Image',
-      items: [
-        { label: 'Image Size…', onClick: () => photoEditorRef.current?.openResizeDialog() },
-        { label: 'Crop', shortcut: 'C', onClick: () => photoEditorRef.current?.activateCropTool() },
-      ],
-    },
-    {
-      label: 'Layer',
-      items: [
-        { label: 'Add Image Layer…', onClick: () => photoEditorRef.current?.addLayerFromFile() },
-        { label: 'Duplicate Layer', onClick: () => photoEditorRef.current?.duplicateActiveLayer() },
-        { label: 'Delete Layer', onClick: () => photoEditorRef.current?.deleteActiveLayer() },
-      ],
-    },
-    {
-      label: 'Select',
-      items: [
-        { label: 'All', shortcut: 'Ctrl/Cmd+A', onClick: () => photoEditorRef.current?.selectAll() },
-        { label: 'Deselect', shortcut: 'Ctrl/Cmd+D', onClick: () => photoEditorRef.current?.deselect() },
-        { label: 'Inverse', shortcut: 'Ctrl/Cmd+Shift+I', onClick: () => photoEditorRef.current?.invertSelection() },
-      ],
-    },
-    {
-      label: 'Filter',
-      items: [
-        // The SAME blurInMask/sharpenInMask math the Blur/Sharpen brush
-        // tools use, run over the whole layer instead of a stroke --
-        // real full-image filters, not a separate/fake implementation.
-        { label: 'Blur (whole layer)', onClick: () => photoEditorRef.current?.applyFilterBlur() },
-        { label: 'Sharpen (whole layer)', onClick: () => photoEditorRef.current?.applyFilterSharpen() },
-        { label: 'Motion Blur (whole layer)', onClick: () => photoEditorRef.current?.applyFilterMotionBlur() },
-        { label: 'Box Blur (whole layer)', onClick: () => photoEditorRef.current?.applyFilterBoxBlur() },
-        { label: 'Vignette (whole layer)', onClick: () => photoEditorRef.current?.applyFilterVignette() },
-        { label: 'Grain (whole layer)', onClick: () => photoEditorRef.current?.applyFilterGrain() },
-        { label: 'Clarity (whole layer)', onClick: () => photoEditorRef.current?.applyFilterClarity() },
-      ],
-    },
-    {
-      label: 'View',
-      items: [
-        { label: 'Zoom In', shortcut: 'Ctrl/Cmd+"+"', onClick: () => photoEditorRef.current?.zoomIn() },
-        { label: 'Zoom Out', shortcut: 'Ctrl/Cmd+"-"', onClick: () => photoEditorRef.current?.zoomOut() },
-        { label: 'Fit to Screen', shortcut: 'Ctrl/Cmd+0', onClick: () => photoEditorRef.current?.fitToView() },
-        { label: '100%', shortcut: 'Ctrl/Cmd+1', onClick: () => photoEditorRef.current?.zoomTo100() },
-      ],
-    },
-    {
-      label: 'Window',
-      items: [
-        { label: 'Layers', checked: showLayersPanel, onClick: () => setShowLayersPanel((v) => !v) },
-        { label: 'Adjustments', checked: showAdjustmentsPanel, onClick: () => setShowAdjustmentsPanel((v) => !v) },
-      ],
-    },
-    {
-      label: 'Help',
-      items: [{ label: 'Keyboard Shortcuts', shortcut: '?', onClick: () => setShortcutsOpen(true) }],
-    },
-  ];
+  const leave = () => {
+    if (dirty && typeof window !== 'undefined' && !window.confirm('Leave this photo? Changes you haven’t saved will be lost.')) return;
+    setStage('open');
+  };
 
-  // The editing workspace follows the same site-wide day/night theme as
-  // every other page (one theme everywhere).
   return (
     <div className={theme === 'dark' ? 'dark' : ''}>
-      <main className="h-[100dvh] flex flex-col bg-mt-studio text-mt-ink transition-colors duration-300">
-        <MenuBar menus={menus} />
-        <ShortcutsModal open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} workspace="photo" />
-        <div className="flex items-center justify-between px-4 py-1.5 border-b bg-mt-surface border-mt-border shrink-0">
-          <div className="flex items-center gap-3">
-            <Link href="/" title="Go to homepage">
-              <BrandLogo theme={theme} width={110} height={22} />
-            </Link>
-            <button
-              onClick={() => setStage('open')}
-              className="flex items-center gap-1.5 text-xs text-mt-muted hover:text-mt-ink"
-            >
-              <ArrowLeft size={13} /> Dashboard
-            </button>
-          </div>
-          <div className="flex flex-col items-center gap-0.5">
-            <input
-              type="text"
-              value={docName}
-              onChange={(e) => setDocName(e.target.value)}
-              className="text-xs bg-mt-surface2 border border-mt-border rounded px-2 py-1 w-56 text-center text-mt-ink"
-            />
-            <span className="text-[10px] text-mt-muted">
-              {docWidth} × {docHeight}px · {docDpi} DPI
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            <ThemeToggle />
-            <button
-              onClick={() => photoEditorRef.current?.undo()}
-              disabled={!canUndo}
-              className="p-1.5 border rounded text-mt-muted border-mt-border hover:bg-mt-surface2 disabled:opacity-30"
-              title="Undo"
-            >
-              ↶
-            </button>
-            <button
-              onClick={() => photoEditorRef.current?.redo()}
-              disabled={!canRedo}
-              className="p-1.5 border rounded text-mt-muted border-mt-border hover:bg-mt-surface2 disabled:opacity-30"
-              title="Redo"
-            >
-              ↷
-            </button>
-            <span className="text-[11px] text-mt-muted w-14 text-center">
-              {saving ? 'Saving…' : saveStatus === 'saved' ? 'Saved' : saveStatus === 'error' ? 'Error' : ''}
-            </span>
-            <select
-              value={exportFormat}
-              onChange={(e) => setExportFormat(e.target.value as 'png' | 'pdf')}
-              title="Export format"
-              className="text-xs bg-mt-surface2 border border-mt-border rounded-full px-2 py-1.5 text-mt-ink"
-            >
-              <option value="png">PNG</option>
-              <option value="pdf">PDF</option>
-            </select>
-            <button
-              onClick={() => handleExport()}
-              disabled={exporting}
-              className="text-xs px-3 py-1.5 border border-mt-border rounded-full text-mt-ink disabled:opacity-50"
-            >
-              {exporting ? 'Exporting…' : 'Export'}
-            </button>
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              className="text-xs px-3 py-1.5 rounded-full bg-brand-gradient text-white font-semibold disabled:opacity-50"
-            >
-              Save
-            </button>
-          </div>
-        </div>
-
-        <div className="flex-1 overflow-hidden flex flex-col min-h-0">
-          {sourceDataUrl && (
-            <PhotoEditorWorkspace
-              ref={photoEditorRef}
-              pro
-              active
-              sourceDataUrl={sourceDataUrl}
-              initialAdjustments={DEFAULT_ADJUSTMENTS}
-              initialCropRect={null}
-              onApply={(result) => {
-                lastResultRef.current = result;
-              }}
-              onCancel={() => setStage('open')}
-              onHistoryChange={(u, r) => {
-                setCanUndo(u);
-                setCanRedo(r);
-              }}
-              onShowShortcuts={() => setShortcutsOpen(true)}
-              showLayersPanel={showLayersPanel}
-              showAdjustmentsPanel={showAdjustmentsPanel}
-              applyLabel="Done"
-              cancelLabel="Discard & Start Over"
-            />
-          )}
-        </div>
+      <main className="h-[100dvh] flex flex-col bg-mt-bg text-mt-ink">
+        {sourceDataUrl && (
+          <PhotoStudio
+            ref={photoEditorRef}
+            source={sourceDataUrl}
+            dpi={docDpi}
+            name={docName}
+            onDpiChange={setDocDpi}
+            onDirtyChange={setDirty}
+            headerLeft={
+              <>
+                <button onClick={leave} className="h-9 w-9 rounded-lg inline-flex items-center justify-center hover:bg-mt-surface2" aria-label="Back" title="Back">
+                  <ArrowLeft size={17} />
+                </button>
+                <Link href="/" title="Go to homepage" className="hidden md:block">
+                  <BrandLogo theme={theme} width={104} height={21} />
+                </Link>
+                <input
+                  type="text"
+                  value={docName}
+                  onChange={(e) => setDocName(e.target.value)}
+                  aria-label="Photo name"
+                  className="hidden sm:block h-9 w-40 xl:w-56 rounded-lg bg-mt-surface2 border border-transparent focus:border-mt-border px-2.5 text-[13px] text-mt-ink"
+                />
+              </>
+            }
+            headerRight={
+              <>
+                <span className="hidden xl:inline text-[11px] text-mt-muted">{saving ? 'Saving…' : saveStatus === 'saved' ? 'Saved' : saveStatus === 'error' ? 'Not saved' : ''}</span>
+                <span className="hidden lg:inline-flex"><ThemeToggle /></span>
+                <div className="relative">
+                  <button
+                    onClick={() => setSaveMenu((v) => !v)}
+                    disabled={saving}
+                    className="h-10 px-4 rounded-xl bg-mt-primary text-mt-onprimary text-[13px] font-semibold inline-flex items-center gap-1.5 disabled:opacity-50"
+                  >
+                    {saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />} Save <ChevronDown size={14} />
+                  </button>
+                  {saveMenu && (
+                    <div className="absolute right-0 top-12 z-50 w-72 rounded-2xl border border-mt-border bg-mt-surface shadow-xl p-1.5" onMouseLeave={() => setSaveMenu(false)}>
+                      <button onClick={() => { setSaveMenu(false); saveToComputer(); }} className="w-full text-left rounded-xl px-3 py-2.5 hover:bg-mt-surface2 flex gap-3">
+                        <HardDrive size={17} className="mt-0.5 shrink-0" />
+                        <span><span className="block text-[13px] font-semibold">This device</span><span className="block text-[11px] text-mt-muted">A .mtd project file you keep. Nothing is uploaded.</span></span>
+                      </button>
+                      <button onClick={() => { setSaveMenu(false); handleSave(); }} className="w-full text-left rounded-xl px-3 py-2.5 hover:bg-mt-surface2 flex gap-3">
+                        <Cloud size={17} className="mt-0.5 shrink-0" />
+                        <span><span className="block text-[13px] font-semibold">My Magical Touch account</span><span className="block text-[11px] text-mt-muted">Open it from any device. The photo is stored with the design.</span></span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </>
+            }
+          />
+        )}
       </main>
     </div>
   );

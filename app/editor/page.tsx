@@ -7,7 +7,7 @@ import { BrandLogo } from '@/components/BrandLogo';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { fetchTemplateById, setTemplateContent, createVersion, Template as TemplateRecord } from '@/lib/templatesData';
-import { dataUrlToBlob, uploadDesignAsset } from '@/lib/storage/assets';
+import { storeImagesForAccountSave } from '@/lib/storage/embedAssets';
 import {
   Keyboard,
   ChevronLeft,
@@ -101,7 +101,8 @@ import { ImportDialog } from '@/components/editor/ImportDialog';
 import { UnsavedChangesDialog } from '@/components/editor/UnsavedChangesDialog';
 import { loadTabSession, saveTabSession, clearTabSession } from '@/lib/editor/tabSession';
 import { WorkspaceSwitcher, EditorWorkspace } from '@/components/editor/WorkspaceSwitcher';
-import { PhotoEditorWorkspace, PhotoEditResult, CropRect, PhotoEditorHandle } from '@/components/photoEditor/PhotoEditorWorkspace';
+import type { PhotoEditResult, CropRect } from '@/components/photoEditor/PhotoEditorWorkspace';
+import { PhotoStudio, PhotoStudioHandle } from '@/components/photoStudio/PhotoStudio';
 import { PhotoAdjustments, DEFAULT_ADJUSTMENTS } from '@/lib/editor/photoFilters';
 import { imageSourceDataURL } from '@/lib/editor/imageQuality';
 import { prepareImageDataUrl } from '@/lib/editor/imagePrep';
@@ -312,7 +313,7 @@ function EditorContent() {
       // Best-effort only.
     }
   };
-  const photoEditorRef = useRef<PhotoEditorHandle>(null);
+  const photoEditorRef = useRef<PhotoStudioHandle>(null);
   const [photoCanUndo, setPhotoCanUndo] = useState(false);
   const [photoCanRedo, setPhotoCanRedo] = useState(false);
   // Resolved once applyPhotoEdits' async setSrc callback actually lands
@@ -2620,35 +2621,12 @@ function EditorContent() {
   // degrades silently: the image just stays embedded for this session,
   // the same graceful-fallback pattern this app already uses for e.g. a
   // missing thumbnail column.
-  const backgroundUploadAsset = (img: any) => {
-    const dataUrl = img.getSrc ? img.getSrc() : img._originalElement?.src;
-    if (!dataUrl || !dataUrl.startsWith('data:')) return;
-    // If the picture is replaced or edited before this upload finishes,
-    // the finished upload must not put the old pixels back.
-    const token = `${Date.now()}_${Math.random()}`;
-    img.__uploadToken = token;
-    supabase.auth.getUser().then(({ data }) => {
-      const user = data.user;
-      if (!user) return;
-      uploadDesignAsset(dataUrlToBlob(dataUrl), user.id)
-        .then((uploaded) => {
-          const canvas = fabricCanvasRef.current;
-          if (!canvas || !canvas.getObjects().includes(img)) return;
-          if (img.__uploadToken !== token) return;
-          img.setSrc(
-            uploaded.url,
-            () => {
-              img.__assetId = uploaded.assetId;
-              canvas.requestRenderAll();
-            },
-            { crossOrigin: 'anonymous' }
-          );
-        })
-        .catch((err) => {
-          console.warn('Background asset upload failed — image stays embedded for this session:', err);
-        });
-    });
-  };
+  // Pictures are no longer sent anywhere when they are placed: they stay
+  // on this device inside the design, and are stored only together with
+  // the design, wherever the customer saves it (see performSaveInner and
+  // lib/storage/embedAssets.ts). Kept as a no-op so the many callers that
+  // place pictures don't change.
+  const backgroundUploadAsset = (_img: any) => {};
 
 
   // ===================================================================
@@ -3323,14 +3301,9 @@ function EditorContent() {
   const uploadBrandLogo = async (file: File) => {
     const url = await readFile(file).catch(() => null);
     if (!url) return;
-    let finalUrl = url;
-    try {
-      const { data } = await supabase.auth.getUser();
-      if (data.user) finalUrl = (await uploadDesignAsset(dataUrlToBlob(url), data.user.id)).url;
-    } catch {
-      // keep the embedded copy
-    }
-    updateBrandKit({ ...brandKit, logoUrl: finalUrl });
+    // The logo stays inside the brand kit itself; it is not uploaded
+    // to file storage.
+    updateBrandKit({ ...brandKit, logoUrl: url });
   };
   const addBrandInfo = () => {
     const i = brandKit.info;
@@ -3701,13 +3674,13 @@ function EditorContent() {
     // imageObjectToDataURL restores the native pixel data regardless of
     // on-canvas scale, so the Photo Editor always starts from the best
     // available source instead of a display-sized preview.
-    if (!active.__originalSrc) {
-      const src = active.getSrc ? active.getSrc() : '';
-      active.__originalSrc = /^https?:/.test(src) && active.__assetId ? src : imageSourceDataURL(active);
-    }
+    // The photo opens exactly as it is on the page now, so every edit
+    // builds on the last one and "Apply" saves into this same picture.
+    const curSrc: string = active.getSrc ? active.getSrc() : '';
+    const startSrc = /^(data:|blob:|https?:)/.test(curSrc) ? curSrc : imageSourceDataURL(active);
     setPhotoEditSession({
       targetUid: active.__uid,
-      sourceDataUrl: active.__originalSrc,
+      sourceDataUrl: startSrc,
       initialAdjustments: active.__photoEdits || DEFAULT_ADJUSTMENTS,
       initialCropRect: active.__cropRect || null,
     });
@@ -3788,9 +3761,12 @@ function EditorContent() {
         });
     place
       .then(() => {
-        target.__photoEdits = keep.photoEdits;
-        target.__cropRect = keep.cropRect;
+        // The edited pixels are now this picture's own pixels.
+        target.__photoEdits = undefined;
+        target.__cropRect = undefined;
+        target.__originalSrc = undefined;
         target.__assetId = undefined;
+        void keep;
         target.dirty = true;
         target.setCoords();
         canvas.requestRenderAll();
@@ -5111,7 +5087,10 @@ function EditorContent() {
       return;
     }
     const revAtSave = editRevRef.current;
-    const canvasJson = fabricCanvasRef.current.toJSON(SAVE_JSON_PROPS);
+    let canvasJson = fabricCanvasRef.current.toJSON(SAVE_JSON_PROPS);
+    // Saving to the account is the one place pictures are stored online —
+    // only now, and only the ones in this design.
+    canvasJson = await storeImagesForAccountSave(canvasJson, user.id);
     // width/height stay as the dashboard/thumbnail-facing summary size —
     // the first artboard's current dimensions, not the URL params a brand
     // new document happened to start from.
@@ -6195,6 +6174,84 @@ function EditorContent() {
       : { crop: false, registration: false, colorBar: false },
   });
 
+  // Real CMYK (PDF or TIFF) and TIFF files: each page is rendered at full
+  // print resolution, converted through the FOGRA39 press profile (pure
+  // black text stays 100% K) and written as a proper 4-ink file with the
+  // profile embedded. PDFs get trim/bleed boxes and crop marks.
+  const exportPrintFiles = async (list: ArtboardMeta[], settings: ExportSettings) => {
+    const cmyk = settings.colour === 'cmyk';
+    const [{ loadCmykTable, loadPressProfile, rgbaToCmyk }, { writePressPdf, writeTiff }] = await Promise.all([
+      import('@/lib/color/cmyk'),
+      import('@/lib/export/printFiles'),
+    ]);
+    const [lut, icc] = cmyk ? await Promise.all([loadCmykTable(), loadPressProfile()]) : [null, null];
+    const scope: ExportScope = settings.includeBleed || settings.includeMarks ? 'bleed' : 'artboard';
+    let reduced = false;
+    const pages: { ab: ArtboardMeta; rect: { x: number; y: number; width: number; height: number }; w: number; h: number; rgba: Uint8ClampedArray }[] = [];
+    for (const ab of list) {
+      const print = { ...ab.print, marks: { crop: false, registration: false, colorBar: false } };
+      const rect = getExportRect(ab, print, scope);
+      const out = capturePicture(rect, { format: 'png', multiplier: settings.multiplier, transparent: settings.format === 'tiff' && !cmyk && settings.transparentBackground, artboardId: ab.id });
+      reduced = reduced || out.reduced;
+      const img = await new Promise<HTMLImageElement>((res, rej) => {
+        const i = new Image();
+        i.onload = () => res(i);
+        i.onerror = rej;
+        i.src = out.dataUrl;
+      });
+      const c = document.createElement('canvas');
+      c.width = img.naturalWidth;
+      c.height = img.naturalHeight;
+      const x = c.getContext('2d', { willReadFrequently: true })!;
+      x.drawImage(img, 0, 0);
+      pages.push({ ab, rect, w: c.width, h: c.height, rgba: x.getImageData(0, 0, c.width, c.height).data });
+    }
+    const base = designName || 'design';
+    const dpiFor = (p: (typeof pages)[number]) => Math.round((p.w / p.rect.width) * 96);
+    if (settings.format === 'pdf') {
+      const pts = (px: number) => px * 0.75;
+      const blob = await writePressPdf(
+        pages.map((p) => ({
+          data: rgbaToCmyk(p.rgba, lut!, { pureBlack: true }),
+          space: 'cmyk' as const,
+          pxWidth: p.w,
+          pxHeight: p.h,
+          trimW: pts(p.ab.width),
+          trimH: pts(p.ab.height),
+          bleed: pts(Math.max(0, (p.rect.width - p.ab.width) / 2)),
+        })),
+        { title: base, cropMarks: settings.includeMarks, icc }
+      );
+      const url = URL.createObjectURL(blob);
+      downloadFile(url, `${base} (${pages.length === 1 ? pages[0].ab.name : `${pages.length} pages`}) CMYK.pdf`);
+      setTimeout(() => URL.revokeObjectURL(url), 8000);
+    } else {
+      const files: { name: string; data: Uint8Array }[] = [];
+      for (const p of pages) {
+        let blob: Blob;
+        if (cmyk) blob = await writeTiff({ width: p.w, height: p.h, data: rgbaToCmyk(p.rgba, lut!, { pureBlack: true }), mode: 'cmyk', dpi: dpiFor(p), icc });
+        else {
+          const rgb = new Uint8Array(p.w * p.h * 3);
+          for (let i = 0, j = 0; i < p.rgba.length; i += 4, j += 3) { rgb[j] = p.rgba[i]; rgb[j + 1] = p.rgba[i + 1]; rgb[j + 2] = p.rgba[i + 2]; }
+          blob = settings.transparentBackground
+            ? await writeTiff({ width: p.w, height: p.h, data: new Uint8Array(p.rgba.buffer, p.rgba.byteOffset, p.rgba.length), mode: 'rgba', dpi: dpiFor(p) })
+            : await writeTiff({ width: p.w, height: p.h, data: rgb, mode: 'rgb', dpi: dpiFor(p) });
+        }
+        files.push({ name: `${p.ab.name}${cmyk ? ' CMYK' : ''}.tif`, data: new Uint8Array(await blob.arrayBuffer()) });
+      }
+      if (files.length === 1) {
+        const url = URL.createObjectURL(new Blob([files[0].data as BlobPart], { type: 'image/tiff' }));
+        downloadFile(url, `${base} - ${files[0].name}`);
+        setTimeout(() => URL.revokeObjectURL(url), 8000);
+      } else {
+        const url = URL.createObjectURL(buildZip(files));
+        downloadFile(url, `${base} (${files.length} pages).zip`);
+        setTimeout(() => URL.revokeObjectURL(url), 8000);
+      }
+    }
+    if (reduced) setLocalNotice('Some pages were very large, so they were made a little smaller so they open on every device.');
+  };
+
   // One export path for every combination the dialog can produce: any
   // page range, any of the three formats, with or without bleed/marks.
   // PDF pages all land in a single multi-page file (matching how a real
@@ -6219,7 +6276,9 @@ function EditorContent() {
     const scope: ExportScope = settings.includeMarks ? 'marks' : settings.includeBleed ? 'bleed' : 'artboard';
 
     try {
-      if (settings.format === 'pdf') {
+      if (settings.colour === 'cmyk' || settings.format === 'tiff') {
+        await exportPrintFiles(list, settings);
+      } else if (settings.format === 'pdf') {
         const [{ jsPDF }, mod] = await Promise.all([import('jspdf'), import('fabric')]);
         const F = mod.fabric;
         const pages = list.map((ab) => {
@@ -6488,6 +6547,7 @@ function EditorContent() {
     replaceImage: () => replaceInputRef.current?.click(),
     startCrop: () => features.startCrop(),
     openAdjust: () => setLeftPanel('adjust'),
+    editPhoto: () => openPhotoEditor(),
     removeBackground: () => {
       const t = fabricCanvasRef.current?.getActiveObject();
       if (t && t.type === 'image') setBgRemoveTarget(t);
@@ -7202,16 +7262,14 @@ function EditorContent() {
 
       {photoEditSession && (
         <div className="flex flex-1 min-h-0 overflow-hidden" style={{ display: workspace === 'photo' ? 'flex' : 'none' }}>
-          <PhotoEditorWorkspace
+          <PhotoStudio
             ref={photoEditorRef}
-            active={workspace === 'photo'}
-            sourceDataUrl={photoEditSession.sourceDataUrl}
-            initialAdjustments={photoEditSession.initialAdjustments}
-            initialCropRect={photoEditSession.initialCropRect}
-            onApply={applyPhotoEdits}
+            embedded
+            source={photoEditSession.sourceDataUrl}
+            dpi={300}
+            onApply={(dataUrl) => applyPhotoEdits({ dataUrl, adjustments: DEFAULT_ADJUSTMENTS, cropRect: null } as unknown as PhotoEditResult)}
             onCancel={closePhotoEditor}
             onHistoryChange={(u, r) => { setPhotoCanUndo(u); setPhotoCanRedo(r); }}
-            onShowShortcuts={() => setShowShortcuts(true)}
           />
         </div>
       )}

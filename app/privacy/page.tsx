@@ -20,7 +20,7 @@ export default function PrivacyPage() {
       <ul>
         <li><strong>Account details:</strong> your e-mail address and password (stored only as a secure hash by our sign-in provider — we can never see it), your name, and, if you add them, a phone number and profile photo.</li>
         <li><strong>Profile photo:</strong> resized on your device before upload to small versions (512, 128 and 64 pixels). Hidden photo information such as GPS location is removed.</li>
-        <li><strong>Designs you choose to keep in your account:</strong> if you pick &quot;My Magical Touch account&quot; when saving, the design and its version history are stored with us.</li>
+        <li><strong>Designs you choose to keep in your account:</strong> if you pick &quot;My Magical Touch account&quot; when saving, the design, the photos inside it and its version history are stored with us. Photos you add to a design are not sent to us at any other time — if you save to your device or your own cloud drive, they never reach our servers.</li>
         <li><strong>Cloud drive links:</strong> if you connect Google Drive, OneDrive or Dropbox, we store which drive you connected, the account e-mail shown by that service, and a short list of your projects there (name, file id, small preview, size and date) so your dashboard can show them.</li>
         <li><strong>E-mail preferences and history:</strong> whether you agreed to receive offers and news, when you agreed or unsubscribed, and a record of marketing e-mails sent to you.</li>
         <li><strong>Basic technical data:</strong> sign-in times and the information browsers normally send, used to keep the service working and secure.</li>
