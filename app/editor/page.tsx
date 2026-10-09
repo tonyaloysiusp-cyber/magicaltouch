@@ -2337,6 +2337,20 @@ function EditorContent() {
               const fontNote = fontRequiredMessage(missingFontsIn(template.canvasJson));
               if (fontNote) setLocalNotice(fontNote);
               suppressHistoryRef.current = false;
+              // "Use my brand" on New Design: the template opens in the
+              // brand's colours and fonts (one undo step brings it back).
+              if (searchParams.get('brand') === '1') {
+                loadBrandKit().then((kit) => {
+                  if (!kit.colors.filter(Boolean).length && !kit.fonts.heading && !kit.fonts.body) return;
+                  const objs = canvas.getObjects().filter((o: any) => isArtwork(o));
+                  if (!objs.length) return;
+                  applyBrandToObjects(objs, kit);
+                  canvas.requestRenderAll();
+                  pushHistory();
+                  Promise.all([kit.fonts.heading, kit.fonts.body].filter(Boolean).flatMap((f) => [ensureFontLoaded(f as string, 400), ensureFontLoaded(f as string, 700)])).then(() => refreshTextMetrics(canvas));
+                  setLocalNotice('Your brand colours and fonts were applied to this template. Undo (Ctrl/Cmd+Z) to see the original.');
+                });
+              }
             });
           } else {
             // No real content for this id (old bookmarked link, deleted
