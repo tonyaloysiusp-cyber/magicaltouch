@@ -53,6 +53,7 @@ import {
   Maximize2,
   Frame as FrameIcon,
   Sun,
+  Wand2,
 } from 'lucide-react';
 import { FontPicker } from '../FontPicker';
 import { ColorPicker, ColorChip } from './ColorPicker';
@@ -84,6 +85,7 @@ export interface ToolbarActions {
   startCrop: () => void;
   openAdjust: () => void;
   removeBackground: () => void;
+  editPhoto?: () => void;
   maskWithShape: (k: FrameKind) => void;
   detachFromFrame: () => void;
   placeInShape: () => void;
@@ -621,6 +623,7 @@ export function ContextToolbar({
             <ToolButton label="Crop" hint="Crop and reposition your image (or double-click it)" icon={<Crop size={16} />} onClick={a.startCrop} />
             <ToolButton label="Adjust" hint="Filters, light and colour" icon={<SlidersHorizontal size={16} />} onClick={a.openAdjust} />
             <ToolButton label="Remove BG" hint="Automatically remove the background from your image" icon={<Scissors size={16} />} onClick={a.removeBackground} special />
+            {a.editPhoto && <ToolButton label="Edit photo" hint="Open Photo Studio: light, colour, looks, exact crop, heal — saved back into this picture" icon={<Wand2 size={16} />} onClick={a.editPhoto} />}
           </>
         )}
         <Popover

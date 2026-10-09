@@ -10,7 +10,8 @@ import { PX_PER_INCH } from '@/lib/editor/units';
 import { cx } from './shell/ui';
 
 export type ExportRangeMode = 'current' | 'range' | 'selected' | 'all';
-export type ExportFormat = 'png' | 'jpg' | 'webp' | 'pdf';
+export type ExportFormat = 'png' | 'jpg' | 'webp' | 'pdf' | 'tiff';
+export type ExportColour = 'rgb' | 'cmyk';
 
 export interface ExportSettings {
   rangeMode: ExportRangeMode;
@@ -26,15 +27,18 @@ export interface ExportSettings {
   includeBleed: boolean;
   includeMarks: boolean;
   transparentBackground: boolean;
+  /** CMYK = a real 4-ink file through the FOGRA39 press profile (PDF and TIFF). */
+  colour: ExportColour;
 }
 
-type Choice = 'png' | 'jpg' | 'webp' | 'pdf' | 'pdf-print';
+type Choice = 'png' | 'jpg' | 'webp' | 'pdf' | 'pdf-print' | 'tiff';
 
 const CHOICES: { id: Choice; label: string; hint: string; icon: React.ReactNode }[] = [
   { id: 'png', label: 'PNG', hint: 'Sharp graphics and text. Can be transparent.', icon: <ImageIcon size={18} /> },
   { id: 'jpg', label: 'JPG', hint: 'Small files, great for photos and sharing.', icon: <FileImage size={18} /> },
   { id: 'pdf', label: 'PDF', hint: 'For sending and printing at home.', icon: <FileText size={18} /> },
   { id: 'pdf-print', label: 'PDF for print shops', hint: 'With bleed and crop marks.', icon: <Printer size={18} /> },
+  { id: 'tiff', label: 'TIFF', hint: 'Lossless, for print shops. RGB or CMYK.', icon: <FileImage size={18} /> },
   { id: 'webp', label: 'WebP', hint: 'Small, high-quality pictures for websites.', icon: <FileImage size={18} /> },
 ];
 
@@ -84,6 +88,7 @@ export function ExportDialog({ artboards, activeArtboardId, exporting, onClose, 
   const [bleed, setBleed] = useState(false);
   const [marks, setMarks] = useState(false);
   const [transparent, setTransparent] = useState(false);
+  const [colour, setColour] = useState<'rgb' | 'cmyk'>('rgb');
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
@@ -93,7 +98,11 @@ export function ExportDialog({ artboards, activeArtboardId, exporting, onClose, 
 
   const format: ExportFormat = choice === 'pdf-print' ? 'pdf' : choice;
   const printPreset = choice === 'pdf-print';
-  const isRaster = format !== 'pdf';
+  const cmykPossible = format === 'pdf' || format === 'tiff';
+  const cmyk = cmykPossible && colour === 'cmyk';
+  // A CMYK PDF is made from a full-resolution picture of each page, so it
+  // needs a resolution like the picture formats do.
+  const isRaster = format !== 'pdf' || cmyk;
   const includeMarks = printPreset || marks;
   const includeBleed = printPreset || bleed || marks;
 
@@ -122,10 +131,11 @@ export function ExportDialog({ artboards, activeArtboardId, exporting, onClose, 
       includeBleed,
       includeMarks,
       transparentBackground: format === 'png' && transparent,
+      colour: cmyk ? 'cmyk' : 'rgb',
     });
   };
 
-  const fileNote = pages.length > 1 && isRaster ? `${pages.length} pictures in one .zip file` : pages.length > 1 ? `One PDF with ${pages.length} pages` : format === 'pdf' ? 'One PDF' : 'One picture';
+  const fileNote = pages.length > 1 && format !== 'pdf' ? `${pages.length} pictures in one .zip file` : pages.length > 1 ? `One PDF with ${pages.length} pages` : format === 'pdf' ? 'One PDF' : 'One picture';
 
   return (
     <div className="fixed inset-0 z-[110] flex items-end sm:items-center justify-center bg-black/40 p-0 sm:p-4" onClick={onClose}>
@@ -153,7 +163,10 @@ export function ExportDialog({ artboards, activeArtboardId, exporting, onClose, 
                 <button
                   key={c.id}
                   type="button"
-                  onClick={() => setChoice(c.id)}
+                  onClick={() => {
+                    setChoice(c.id);
+                    if (c.id === 'pdf-print') setColour('cmyk');
+                  }}
                   aria-pressed={choice === c.id}
                   className={cx(
                     'relative text-left rounded-2xl border p-3 transition-colors',
@@ -171,6 +184,26 @@ export function ExportDialog({ artboards, activeArtboardId, exporting, onClose, 
               ))}
             </div>
           </section>
+
+          {cmykPossible && (
+            <section>
+              <p className="text-[13px] font-semibold mb-2">Colour</p>
+              <div className="flex gap-2">
+                {([['rgb', 'RGB', 'Screens, home printers'], ['cmyk', 'CMYK', 'Print shops, offset & digital press']] as const).map(([v, l, h]) => (
+                  <button key={v} type="button" onClick={() => setColour(v)} aria-pressed={colour === v} className={cx('flex-1 rounded-xl border py-2 px-3 text-left', colour === v ? 'mt-active-blue' : 'border-mt-border hover:bg-mt-surface2')}>
+                    <span className="block text-sm font-semibold">{l}</span>
+                    <span className="block text-[11px] text-mt-faint">{h}</span>
+                  </button>
+                ))}
+              </div>
+              {cmyk && (
+                <p className="text-[11px] text-mt-muted mt-2 leading-snug">
+                  A true 4-ink CMYK file converted with the Coated FOGRA39 press profile (embedded), with pure black text kept as 100% K.
+                  {format === 'pdf' ? ' Each page is printed as one high-resolution picture — the way most print shops prefer CMYK files.' : ''}
+                </p>
+              )}
+            </section>
+          )}
 
           {isRaster && (
             <section>

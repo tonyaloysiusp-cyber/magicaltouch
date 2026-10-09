@@ -7,7 +7,7 @@ import { Slider, Segmented, cx } from './ui';
 
 const WORK = 1024;
 
-export function BgRemoveDialog({ img, onApply, onClose }: { img: any; onApply: (dataUrl: string) => Promise<void> | void; onClose: () => void }) {
+export function BgRemoveDialog({ img, onApply, onClose, maxSize = 4096 }: { img: any; onApply: (dataUrl: string) => Promise<void> | void; onClose: () => void; maxSize?: number }) {
   const [status, setStatus] = useState<string | null>('Getting ready…');
   const [error, setError] = useState<string | null>(null);
   const [mask, setMask] = useState<SubjectMask | null>(null);
@@ -127,7 +127,7 @@ export function BgRemoveDialog({ img, onApply, onClose }: { img: any; onApply: (
     setApplying(true);
     try {
       const el: any = img._originalElement || img.getElement();
-      const out = composeCutout(el, maskCanvasRef.current, { restore: restoreRef.current, erase: eraseRef.current }, 4096);
+      const out = composeCutout(el, maskCanvasRef.current, { restore: restoreRef.current, erase: eraseRef.current }, maxSize);
       await onApply(out.toDataURL('image/png'));
       onClose();
     } catch (e) {

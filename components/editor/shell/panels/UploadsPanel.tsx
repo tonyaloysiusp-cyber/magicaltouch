@@ -92,14 +92,14 @@ export function UploadsPanel({
           }}
         />
       </div>
-      <p className="text-[11px] text-mt-faint mt-2">Tip: paste a screenshot with Ctrl/Cmd+V, or drag a photo straight onto a frame to fill it.</p>
+      <p className="text-[11px] text-mt-faint mt-2">Your photos stay on this device. They are saved only inside your design, wherever you save it. Tip: drag a photo straight onto a photo frame to fill it.</p>
       {sessionUploads.length > 0 && (
         <div className="mt-5">
-          <PanelSection title="Just added">{grid(sessionUploads)}</PanelSection>
+          <PanelSection title="On this device">{grid(sessionUploads)}</PanelSection>
         </div>
       )}
       <div className="mt-5">
-        <PanelSection title="Your uploads">
+        <PanelSection title="From designs saved to your account">
           {saved === null ? (
             <p className="text-xs text-mt-muted inline-flex items-center gap-2">
               <Loader2 size={14} className="animate-spin" /> Loading your photos…
@@ -107,7 +107,7 @@ export function UploadsPanel({
           ) : saved.length ? (
             grid(saved)
           ) : (
-            <p className="text-xs text-mt-muted">Photos you upload appear here so you can use them in any design.</p>
+            <p className="text-xs text-mt-muted">Photos inside designs you save to your Magical Touch account appear here, ready to reuse.</p>
           )}
         </PanelSection>
       </div>
