@@ -15,7 +15,7 @@ export function FinalCTA() {
   };
 
   return (
-    <section className="max-w-6xl mx-auto px-5 sm:px-6 pb-24">
+    <section className="mt-container pb-24">
       <Reveal>
         <div className="relative overflow-hidden rounded-[28px] bg-[#09090B] ring-1 ring-white/10 px-6 pt-16 pb-28 sm:pt-20 sm:pb-36 text-center">
           <BrandRibbon still className="absolute left-1/2 -translate-x-1/2 -bottom-40 sm:-bottom-52 w-[1500px] max-w-none pointer-events-none opacity-90" />

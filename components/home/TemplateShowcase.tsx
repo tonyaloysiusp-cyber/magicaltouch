@@ -49,7 +49,7 @@ export function TemplateShowcase() {
   return (
     <section id="templates" className="relative overflow-hidden bg-transparent border-t border-mt-border">
 
-      <div className="relative max-w-6xl mx-auto px-5 sm:px-6 py-24 sm:py-28">
+      <div className="relative mt-container py-24 sm:py-28">
         <Reveal>
           <div className="flex flex-wrap items-end justify-between gap-6">
             <div>

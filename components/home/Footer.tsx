@@ -36,7 +36,7 @@ export function Footer({ theme }: { theme: AppTheme }) {
 
   return (
     <footer className="border-t border-black/10 dark:border-white/10 bg-mt-surface dark:bg-mt-bg">
-      <div className="max-w-6xl mx-auto px-6 py-16">
+      <div className="mt-container py-16">
         <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-10">
           <div className="col-span-2 md:col-span-1">
             <BrandLogo theme={theme} width={140} height={28} />
@@ -80,7 +80,7 @@ export function Footer({ theme }: { theme: AppTheme }) {
               <li className="text-mt-muted/70 dark:text-mt-faint/70">Magical Touch Design</li>
               <li><Link href="/privacy" className="hover:text-mt-ink dark:hover:text-white">Privacy Policy</Link></li>
               <li><Link href="/terms" className="hover:text-mt-ink dark:hover:text-white">Terms of Service</Link></li>
-              <li><a href="mailto:hellomagicaltouch.design@gmail.com" className="hover:text-mt-ink dark:hover:text-white">Contact us</a></li>
+              <li><Link href="/contact" className="hover:text-mt-ink dark:hover:text-white">Contact us</Link></li>
             </ul>
           </div>
         </div>

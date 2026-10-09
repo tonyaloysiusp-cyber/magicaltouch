@@ -33,7 +33,7 @@ const SIZES = [
 // abstract gradient cards.
 export function StudioTools() {
   return (
-    <section id="features" className="max-w-6xl mx-auto px-5 sm:px-6 py-24 sm:py-32">
+    <section id="features" className="mt-container py-24 sm:py-32">
       <Reveal>
         <h2 className="font-[family-name:var(--font-display)] font-medium text-3xl sm:text-5xl leading-[1.08] tracking-[-0.03em] max-w-2xl">
           One studio for every idea.

@@ -10,7 +10,7 @@ const POINTS = ['Every template', 'Every editing tool', 'Photo Studio', 'Downloa
 export function PricingFree() {
   return (
     <section id="pricing" className="border-t border-mt-border">
-      <div className="max-w-6xl mx-auto px-5 sm:px-6 py-24 sm:py-28 grid gap-10 md:grid-cols-2 md:items-end">
+      <div className="mt-container py-24 sm:py-28 grid gap-10 md:grid-cols-2 md:items-end">
         <Reveal>
           <h2 className="font-[family-name:var(--font-display)] font-medium text-3xl sm:text-5xl leading-[1.08] tracking-[-0.03em]">
             Free to use.

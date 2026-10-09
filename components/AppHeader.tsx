@@ -19,7 +19,7 @@ const LINKS = [
 export function AppHeader({ theme, onToggleTheme, active }: { theme: AppTheme; onToggleTheme: () => void; active?: (typeof LINKS)[number]['id'] | 'create' | 'profile' }) {
   return (
     <header className="sticky top-0 z-40 mt-glass border-b border-mt-border">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-3">
+      <div className="mt-container h-16 flex items-center justify-between gap-3">
         <Link href="/" title="Go to homepage" className="shrink-0">
           <BrandLogo theme={theme} width={150} height={30} />
         </Link>

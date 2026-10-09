@@ -18,3 +18,10 @@ export function createRequestSupabaseClient(accessToken: string): SupabaseClient
     auth: { persistSession: false, autoRefreshToken: false },
   });
 }
+
+// A plain anonymous client for server routes that act for no user (the
+// daily digest). It can only reach what anonymous visitors can, plus
+// the token-checked database functions written for it.
+export function createAnonSupabaseClient(): SupabaseClient {
+  return createClient(supabaseUrl, supabaseAnonKey, { auth: { persistSession: false, autoRefreshToken: false } });
+}

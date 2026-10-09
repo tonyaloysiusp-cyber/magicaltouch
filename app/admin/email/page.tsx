@@ -10,6 +10,7 @@
 // are sent in small batches, and can never reach the same person twice.
 // ---------------------------------------------------------------------
 
+import { AdminShell } from '@/components/admin/AdminShell';
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -406,19 +407,10 @@ export default function EmailCenterPage() {
   const stat = (k: string) => (stats ? stats[k] ?? 0 : '…');
 
   return (
-    <div className="min-h-screen bg-transparent">
-      <header className="bg-mt-surface border-b px-4 sm:px-6 py-4 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-lg font-semibold text-mt-ink">Email Center</h1>
-          <p className="text-xs text-mt-muted mt-0.5">Sent from hellomagicaltouch.design@gmail.com · marketing goes only to people who opted in.</p>
-        </div>
-        <div className="flex items-center gap-4 text-sm">
-          <Link href="/admin/templates" className="text-mt-accent hover:underline">Template Manager</Link>
-          <Link href="/dashboard" className="text-mt-muted hover:underline">Dashboard</Link>
-        </div>
-      </header>
+    <AdminShell active="email" title="Email Center" accent="Email" subtitle="Campaigns, offers and the e-mails the site sends. Sent from hellomagicaltouch.design@gmail.com — marketing goes only to people who opted in.">
+    <div>
 
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-4">
+      <div className="">
         <div className="flex gap-1 border-b overflow-x-auto">
           {TABS.map((t) => (
             <button
@@ -441,7 +433,7 @@ export default function EmailCenterPage() {
         )}
       </div>
 
-      <main className="max-w-6xl mx-auto p-4 sm:p-6">
+      <section className="py-4 sm:py-6">
         {tab === 'dashboard' && (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
             {[
@@ -616,7 +608,7 @@ export default function EmailCenterPage() {
                 </button>
               ))}
               <p className="text-xs text-mt-muted md:mt-2">
-                Preview uses sample data (John). Verify and Reset are sent by Supabase — their wording is pasted in Supabase → Authentication → Email Templates.
+                Preview uses sample data (John). Verify and Reset are sent by Supabase — their wording is pasted in Supabase → Authentication → Email Templates. <Link href="/admin?tab=wording" className="text-mt-accent hover:underline">Edit the welcome and password e-mails →</Link>
               </p>
             </div>
             <iframe title="Email preview" srcDoc={templateHtml} sandbox="" className="w-full h-[75vh] bg-mt-surface border rounded-xl" />
@@ -656,7 +648,7 @@ export default function EmailCenterPage() {
             </p>
           </div>
         )}
-      </main>
+      </section>
 
       {/* ---------- Campaign editor ---------- */}
       {editing && (
@@ -779,5 +771,6 @@ export default function EmailCenterPage() {
         </div>
       )}
     </div>
+    </AdminShell>
   );
 }
