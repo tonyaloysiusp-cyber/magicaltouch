@@ -17,6 +17,7 @@ import { getAbsolutePolygonPoints } from './geometry';
 import { createPdfFontCache, ensurePdfFont } from './pdfFonts';
 import { nativeResMultiplier, clampMultiplierForSafety } from './imageQuality';
 import { PT_PER_PX, toPt } from './units';
+import { renderVector } from './pdfVector';
 
 interface ArtboardLike {
   id: string;
@@ -366,14 +367,21 @@ function drawImageObject(pdf: any, obj: any, offsetX: number, offsetY: number) {
   // scale so the embedded PNG always carries the image's real pixel data.
   const multiplier = clampMultiplierForSafety(obj, nativeResMultiplier(obj));
   const dataUrl = obj.toDataURL({ format: 'png', multiplier });
-  pdf.addImage(dataUrl, 'PNG', toPt(rect.left - offsetX), toPt(rect.top - offsetY), toPt(rect.width), toPt(rect.height));
+  // 'FAST' = Flate-compressed (jsPDF otherwise stores the pixels raw).
+  pdf.addImage(dataUrl, 'PNG', toPt(rect.left - offsetX), toPt(rect.top - offsetY), toPt(rect.width), toPt(rect.height), undefined, 'FAST');
 }
 
 function drawObjectAsRaster(pdf: any, obj: any, offsetX: number, offsetY: number) {
   const rect = obj.getBoundingRect(true, true);
   if (!rect.width || !rect.height) return;
-  const dataUrl = obj.toDataURL({ format: 'png', multiplier: 3 });
-  pdf.addImage(dataUrl, 'PNG', toPt(rect.left - offsetX), toPt(rect.top - offsetY), toPt(rect.width), toPt(rect.height));
+  // Smooth effects (soft glows, see-through gradients) look the same at a
+  // lower resolution; everything else gets ~300 DPI. Never more than ~16 MP.
+  const smooth = (obj.fill && typeof obj.fill === 'object') || !!obj.shadow;
+  let multiplier = smooth ? 1.5 : 3;
+  const px = rect.width * rect.height * multiplier * multiplier;
+  if (px > 16_000_000) multiplier = Math.sqrt(16_000_000 / (rect.width * rect.height));
+  const dataUrl = obj.toDataURL({ format: 'png', multiplier });
+  pdf.addImage(dataUrl, 'PNG', toPt(rect.left - offsetX), toPt(rect.top - offsetY), toPt(rect.width), toPt(rect.height), undefined, 'FAST');
 }
 
 async function renderOneObject(
@@ -419,7 +427,17 @@ async function renderObjectsToPage(
   offsetY: number,
   fontCache: ReturnType<typeof createPdfFontCache>
 ) {
+  const pageHeightPt = pdf.internal.pageSize.getHeight();
   for (const obj of objects) {
+    // Text, shapes, lines, gradients and groups: real vector (see pdfVector.ts).
+    if (obj.type !== 'image') {
+      try {
+        if (await renderVector(pdf, F, obj, { offsetX, offsetY, pageHeightPt, fontCache, opacity: 1 })) continue;
+      } catch (err) {
+        console.error('Vector PDF render failed for object, falling back to raster:', obj.type, err);
+      }
+    }
+    // Photos (always pictures) and the rare effect a PDF can't express.
     await withOpacity(pdf, obj.opacity, async () => {
       try {
         await renderOneObject(pdf, F, obj, offsetX, offsetY, fontCache);

@@ -17,7 +17,7 @@ import { forwardRef, ReactNode, useCallback, useEffect, useImperativeHandle, use
 import {
   SlidersHorizontal, Sparkles, Crop as CropIcon, Scissors, Brush, Maximize2, Download, Undo2, Redo2, Plus, Minus,
   Maximize, RotateCcw, RotateCw, FlipHorizontal2, FlipVertical2, Loader2, Check, X, Eye, Printer, Lock, Unlock, Palette, Wand2,
-  Move, BoxSelect, Blend as BlendIcon,
+  Move, BoxSelect, Blend as BlendIcon, Hand, ZoomIn, Pipette, Type as TypeIcon, Eraser, Droplet, Sun, Circle, ArrowLeftRight,
 } from 'lucide-react';
 import { Adjust, NO_ADJUST, LIGHT_SLIDERS, COLOR_SLIDERS, DETAIL_SLIDERS, LOOKS, SliderDef, applyAdjust, renderAdjusted, isNeutral, autoEnhance, HSL_RANGES, CurvePts, curveLut } from '@/lib/photo/adjust';
 import { BrushKind, createStroke, replayStroke } from '@/lib/photo/brushes';
@@ -29,7 +29,10 @@ import { Layer, Selection, makeLayer, composite, isPlain, translate, placeImage,
 import { FILTERS, FilterId, applyFilter } from '@/lib/photo/filters';
 import { ProMenuBar, LayersPanel, HistoryPanel, Menu } from './ProPanels';
 
-type Tool = 'adjust' | 'color' | 'looks' | 'crop' | 'bg' | 'retouch' | 'resize' | 'export' | 'move' | 'select' | 'filter';
+type Tool = 'adjust' | 'color' | 'looks' | 'crop' | 'bg' | 'retouch' | 'resize' | 'export' | 'move' | 'select' | 'filter' | 'hand' | 'zoom' | 'eyedropper' | 'text' | 'gradient';
+// Tools that work directly on the picture (the rest are panels).
+const CANVAS_TOOLS: Tool[] = ['move', 'select', 'crop', 'retouch', 'hand', 'zoom', 'eyedropper', 'text', 'gradient', 'bg', 'resize', 'export'];
+const TEXT_FONTS = ['Inter', 'Arial', 'Georgia', 'Times New Roman', 'Impact', 'Courier New', 'Trebuchet MS', 'Verdana', 'Brush Script MT'];
 type Mode = 'simple' | 'pro';
 type RetouchKind = 'heal' | BrushKind | 'paint' | 'erase';
 const RETOUCH: { id: RetouchKind; label: string; hint: string; pro?: boolean }[] = [
@@ -128,6 +131,41 @@ const TOOLS: { id: Tool; label: string; simpleLabel?: string; icon: any; standal
   { id: 'select', label: 'Select', icon: BoxSelect, proOnly: true },
   { id: 'filter', label: 'Filters', icon: BlendIcon, proOnly: true },
 ];
+// Pro: the Photoshop-style vertical toolbar (icon + shortcut letter).
+function HealIcon({ size = 17 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <rect x="2.5" y="8" width="19" height="8" rx="4" transform="rotate(-45 12 12)" />
+      <path d="M10.5 10.5h.01M13.5 13.5h.01M10.5 13.5h.01M13.5 10.5h.01" />
+    </svg>
+  );
+}
+type ProTool = { label: string; key: string; icon: any; tool: Tool; retouch?: RetouchKind; subject?: boolean };
+const PRO_TOOLBAR: (ProTool | null)[] = [
+  { label: 'Move', key: 'V', icon: Move, tool: 'move' },
+  { label: 'Marquee', key: 'M', icon: BoxSelect, tool: 'select' },
+  { label: 'Select subject', key: 'W', icon: Sparkles, tool: 'select', subject: true },
+  { label: 'Crop', key: 'C', icon: CropIcon, tool: 'crop' },
+  { label: 'Eyedropper', key: 'I', icon: Pipette, tool: 'eyedropper' },
+  null,
+  { label: 'Healing brush', key: 'J', icon: HealIcon, tool: 'retouch', retouch: 'heal' },
+  { label: 'Brush', key: 'B', icon: Brush, tool: 'retouch', retouch: 'paint' },
+  { label: 'Eraser', key: 'E', icon: Eraser, tool: 'retouch', retouch: 'erase' },
+  { label: 'Gradient', key: 'G', icon: BlendIcon, tool: 'gradient' },
+  { label: 'Blur', key: 'R', icon: Droplet, tool: 'retouch', retouch: 'blur' },
+  { label: 'Dodge', key: 'O', icon: Sun, tool: 'retouch', retouch: 'dodge' },
+  null,
+  { label: 'Type', key: 'T', icon: TypeIcon, tool: 'text' },
+  { label: 'Hand', key: 'H', icon: Hand, tool: 'hand' },
+  { label: 'Zoom', key: 'Z', icon: ZoomIn, tool: 'zoom' },
+];
+const DOCK_TABS: { id: Tool | 'props'; label: string }[] = [
+  { id: 'props', label: 'Properties' },
+  { id: 'adjust', label: 'Adjust' },
+  { id: 'color', label: 'Colour' },
+  { id: 'filter', label: 'Filters' },
+  { id: 'looks', label: 'Looks' },
+];
 // Pro shows the Photoshop-style tools first.
 const PRO_ORDER: Tool[] = ['move', 'select', 'crop', 'retouch', 'adjust', 'color', 'filter', 'looks', 'bg', 'resize', 'export'];
 
@@ -217,7 +255,9 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
   const [mode, setModeState] = useState<Mode>('simple');
   useEffect(() => {
     try {
-      if (localStorage.getItem('mt:photoMode') === 'pro') setModeState('pro');
+      const saved = localStorage.getItem('mt:photoMode');
+      // Desktop screens start in Pro (the full workspace) until the person picks.
+      if (saved === 'pro' || (!saved && window.innerWidth >= 1100)) setModeState('pro');
     } catch {
       // not critical
     }
@@ -592,6 +632,16 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
           else if (k === 'b') { setRetouch('paint'); setTool('retouch'); }
           else if (k === 'e') { setRetouch('erase'); setTool('retouch'); }
           else if (k === 'j') { setRetouch('heal'); setTool('retouch'); }
+          else if (k === 'i') setTool('eyedropper');
+          else if (k === 'w') { setTool('select'); selOps.subject(); }
+          else if (k === 'r') { setRetouch('blur'); setTool('retouch'); }
+          else if (k === 'o') { setRetouch('dodge'); setTool('retouch'); }
+          else if (k === 't') setTool('text');
+          else if (k === 'g') setTool('gradient');
+          else if (k === 'h') setTool('hand');
+          else if (k === 'z') setTool('zoom');
+          else if (k === 'x') { const f = paintColor; setPaintColor(bgColor); setBgColor(f); }
+          else if (k === 'd') { setPaintColor('#000000'); setBgColor('#FFFFFF'); }
           else if (k === '[') setHealSize((v) => Math.max(8, v - 8));
           else if (k === ']') setHealSize((v) => Math.min(240, v + 8));
         }
@@ -680,6 +730,27 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
       gesture.current = { kind: 'move', start: toBase(e.clientX, e.clientY), dx: 0, dy: 0 };
       return;
     }
+    if (tool === 'eyedropper') { pickColorAt(e.clientX, e.clientY); gesture.current = { kind: 'eyedropper' }; return; }
+    if (tool === 'zoom') {
+      const out = e.altKey;
+      setZoom((z) => Math.min(8, Math.max(0.5, out ? z / 1.5 : z * 1.5)));
+      gesture.current = null;
+      return;
+    }
+    if (tool === 'text' && base) {
+      e.preventDefault(); // keep focus in the text box that is about to open
+      if (textDraft) { commitText(); return; }
+      const p = toBase(e.clientX, e.clientY);
+      setTextDraft({ x: p.x, y: p.y, value: '' });
+      gesture.current = null;
+      return;
+    }
+    if (tool === 'gradient' && base) {
+      const p = toBase(e.clientX, e.clientY);
+      gesture.current = { kind: 'gradient' };
+      setGradDrag({ x0: p.x, y0: p.y, x1: p.x, y1: p.y });
+      return;
+    }
     if (tool === 'select' && base) {
       const p = toBase(e.clientX, e.clientY);
       gesture.current = { kind: 'marquee', start: p };
@@ -706,6 +777,10 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
     gesture.current = { kind: 'pan', sx: e.clientX, sy: e.clientY, pan: { ...pan } };
   };
   const onStageMove = (e: React.PointerEvent) => {
+    if (statusRef.current && base) {
+      const p = toBase(e.clientX, e.clientY);
+      statusRef.current.textContent = p.x >= 0 && p.y >= 0 && p.x <= base.width && p.y <= base.height ? `X ${Math.round(p.x)}  Y ${Math.round(p.y)}` : '';
+    }
     if (brushCursor.current) {
       const st = stageRef.current!.getBoundingClientRect();
       brushCursor.current.style.transform = `translate(${e.clientX - st.left - healSize / 2}px, ${e.clientY - st.top - healSize / 2}px)`;
@@ -723,6 +798,11 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
     } else if (g.kind === 'heal') {
       const p = toBase(e.clientX, e.clientY);
       setHealPts((pts) => [...pts, p]);
+    } else if (g.kind === 'eyedropper') {
+      pickColorAt(e.clientX, e.clientY);
+    } else if (g.kind === 'gradient') {
+      const p = toBase(e.clientX, e.clientY);
+      setGradDrag((d) => (d ? { ...d, x1: p.x, y1: p.y } : d));
     } else if (g.kind === 'move' && layers && target) {
       const p = toBase(e.clientX, e.clientY);
       g.dx = p.x - g.start.x;
@@ -787,6 +867,11 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
       if (isPaint) {
         run(retouch === 'erase' ? 'Erase' : 'Paint', () => paintStroke(target!, pts, { size: r * 2, color: paintColor, opacity: brushStrength / 100, hardness: brushHardness / 100, erase: retouch === 'erase', mask: sel?.mask }));
       } else run('Heal', () => spotHeal(target!, pts, r));
+    }
+    if (g?.kind === 'gradient' && gradDrag) {
+      const d = gradDrag;
+      setGradDrag(null);
+      if (Math.hypot(d.x1 - d.x0, d.y1 - d.y0) > 4) applyGradient(d);
     }
     if (g?.kind === 'move') {
       const dx = Math.round(g.dx), dy = Math.round(g.dy);
@@ -941,7 +1026,55 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
     return c.toDataURL();
   }, [sel, preview]);
   const [showLayers, setShowLayers] = useState(true);
-  const [showHistory, setShowHistory] = useState(false);
+  const [showHistory, setShowHistory] = useState(true);
+  // Pro dock: remembers the last on-picture tool so "Properties" can go back to it.
+  const lastCanvasTool = useRef<Tool>('move');
+  if (CANVAS_TOOLS.includes(tool)) lastCanvasTool.current = tool;
+  // Pro: background colour (paint uses the foreground = paintColor), text and gradient tools.
+  const [bgColor, setBgColor] = useState('#FFFFFF');
+  const [textOpts, setTextOpts] = useState({ font: 'Inter', size: 0, bold: true });
+  const [textDraft, setTextDraft] = useState<{ x: number; y: number; value: string } | null>(null);
+  const [gradKind, setGradKind] = useState<'linear' | 'radial'>('linear');
+  const [gradDrag, setGradDrag] = useState<{ x0: number; y0: number; x1: number; y1: number } | null>(null);
+  const statusRef = useRef<HTMLSpanElement>(null);
+  const textPx = textOpts.size || Math.max(12, Math.round((base?.width || 1000) * 0.06));
+  const commitText = () => {
+    const d = textDraft;
+    setTextDraft(null);
+    if (!d || !d.value.trim() || !target) return;
+    const c = blankLike(target);
+    const ctx = c.getContext('2d')!;
+    ctx.fillStyle = paintColor;
+    ctx.textBaseline = 'top';
+    ctx.font = `${textOpts.bold ? 700 : 400} ${textPx}px "${textOpts.font}", sans-serif`;
+    d.value.split('\n').forEach((line, i) => ctx.fillText(line, d.x, d.y + i * textPx * 1.2));
+    insertAbove(makeLayer(c, `Text: ${d.value.slice(0, 24)}`), 'Add text');
+  };
+  const applyGradient = (g: { x0: number; y0: number; x1: number; y1: number }) => {
+    if (!target || !base) return;
+    const c = blankLike(target);
+    const ctx = c.getContext('2d')!;
+    const grad = gradKind === 'linear'
+      ? ctx.createLinearGradient(g.x0, g.y0, g.x1, g.y1)
+      : ctx.createRadialGradient(g.x0, g.y0, 0, g.x0, g.y0, Math.max(1, Math.hypot(g.x1 - g.x0, g.y1 - g.y0)));
+    grad.addColorStop(0, paintColor);
+    grad.addColorStop(1, bgColor);
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, c.width, c.height);
+    if (sel) {
+      // Inside the selection, on the selected layer.
+      push({ base: blendMasked(target, c, sel.mask), label: 'Gradient' });
+    } else insertAbove(makeLayer(c, 'Gradient'), 'Gradient');
+  };
+  const pickColorAt = (clientX: number, clientY: number) => {
+    const d = displayRef.current;
+    if (!d) return;
+    const r = d.getBoundingClientRect();
+    const x = Math.floor(((clientX - r.left) / r.width) * d.width), y = Math.floor(((clientY - r.top) / r.height) * d.height);
+    if (x < 0 || y < 0 || x >= d.width || y >= d.height) return;
+    const px = d.getContext('2d')!.getImageData(x, y, 1, 1).data;
+    setPaintColor(`#${[px[0], px[1], px[2]].map((v) => v.toString(16).padStart(2, '0')).join('')}`);
+  };
 
   // ---------------- background removal
   const [bgOpen, setBgOpen] = useState(false);
@@ -974,9 +1107,49 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
   const dispH = preview ? preview.canvas.height * viewScale : 0;
   const tools = TOOLS.filter((t) => !(embedded && t.standaloneOnly) && (pro || !t.proOnly)).sort((a, b) => (pro ? PRO_ORDER.indexOf(a.id) - PRO_ORDER.indexOf(b.id) : 0));
 
-  const panel = (() => {
+  const renderPanel = (tool: Tool) => {
     if (!base) return null;
     switch (tool) {
+      case 'hand':
+        return <Section title="Hand"><p className="text-[12px] text-mt-muted">Drag to move around the picture. Scroll or use View → Zoom to get closer. Tip: you can pan with any tool by dragging empty space.</p></Section>;
+      case 'zoom':
+        return (
+          <Section title="Zoom">
+            <p className="text-[12px] text-mt-muted">Click to zoom in, Alt-click to zoom out.</p>
+            <div className="flex gap-1.5">
+              <button className={chip(false)} onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }); }}>Fit</button>
+              <button className={chip(false)} onClick={() => preview && setZoom(1 / Math.max(0.0001, (viewScale / zoom) * preview.k))}>100%</button>
+              <button className={chip(false)} onClick={() => setZoom((z) => Math.min(8, z * 2))}>Zoom in</button>
+            </div>
+          </Section>
+        );
+      case 'eyedropper':
+        return (
+          <Section title="Eyedropper">
+            <p className="text-[12px] text-mt-muted">Click anywhere on the picture to pick its colour. It becomes the foreground colour for the brush, text and gradient.</p>
+            <span className="flex items-center gap-2 text-[13px]"><span className="w-8 h-8 rounded-lg border border-mt-border" style={{ background: paintColor }} /> <span className="font-mono">{paintColor.toUpperCase()}</span></span>
+          </Section>
+        );
+      case 'text':
+        return (
+          <Section title="Text">
+            <p className="text-[12px] text-mt-muted">Click on the picture where the text should start, type, then press Enter (Shift+Enter for a new line). Each text goes on its own layer.</p>
+            <label className="text-[11px] text-mt-muted">Font<select className={field} value={textOpts.font} onChange={(e) => setTextOpts({ ...textOpts, font: e.target.value })}>{TEXT_FONTS.map((f) => <option key={f} value={f}>{f}</option>)}</select></label>
+            <Range def={{ key: 'exposure', label: 'Size (px)', min: 8, max: Math.max(200, Math.round(base.width * 0.3)) }} value={textPx} onChange={(v) => setTextOpts({ ...textOpts, size: v })} onCommit={() => {}} />
+            <label className="flex items-center gap-2 text-[12px]"><input type="checkbox" className="w-4 h-4 accent-[#3B82C4]" checked={textOpts.bold} onChange={(e) => setTextOpts({ ...textOpts, bold: e.target.checked })} /> Bold</label>
+          </Section>
+        );
+      case 'gradient':
+        return (
+          <Section title="Gradient">
+            <p className="text-[12px] text-mt-muted">Drag across the picture: the gradient runs from the foreground to the background colour. Inside a selection it fills the selection; otherwise it goes on a new layer you can fade or blend.</p>
+            <div className="flex gap-1.5">
+              <button className={chip(gradKind === 'linear')} onClick={() => setGradKind('linear')}>Linear</button>
+              <button className={chip(gradKind === 'radial')} onClick={() => setGradKind('radial')}>Radial</button>
+            </div>
+            <span className="h-4 rounded-full border border-mt-border" style={{ background: `linear-gradient(90deg, ${paintColor}, ${bgColor})` }} />
+          </Section>
+        );
       case 'adjust': {
         const groups = pro
           ? [{ t: 'Light', s: LIGHT_SLIDERS }, { t: 'Colour', s: COLOR_SLIDERS }, { t: 'Detail & effects', s: DETAIL_SLIDERS }]
@@ -1340,9 +1513,143 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
         );
       }
     }
-  })();
+  };
+  const panel = renderPanel(tool);
 
   const healCursor = tool === 'retouch' || tool === 'select';
+
+  // ---------------- Pro chrome: toolbar + contextual options bar
+  const swapColours = () => { const f = paintColor; setPaintColor(bgColor); setBgColor(f); };
+  const pickProTool = (t: ProTool) => {
+    if (t.retouch) setRetouch(t.retouch);
+    setTool(t.tool);
+    if (t.subject) selOps.subject();
+  };
+  const proToolbar = (
+    <nav className="order-3 lg:order-1 shrink-0 lg:w-[46px] flex lg:flex-col items-center gap-0.5 px-1 lg:px-0 py-1.5 bg-mt-surface border-t lg:border-t-0 lg:border-r border-mt-border overflow-x-auto lg:overflow-y-auto mt-scroll" aria-label="Tools">
+      {PRO_TOOLBAR.map((t, i) => {
+        if (!t) return <span key={i} className="shrink-0 w-px h-6 lg:w-7 lg:h-px bg-mt-input-border my-1 mx-1 lg:mx-0" />;
+        const I = t.icon;
+        const on = !t.subject && tool === t.tool && (!t.retouch || retouch === t.retouch);
+        return (
+          <button key={t.label} onClick={() => pickProTool(t)} aria-pressed={on} aria-label={t.label} title={`${t.label} (${t.key})`}
+            className="mt-ps-tool shrink-0 w-9 h-9 rounded-md inline-flex items-center justify-center text-mt-muted hover:text-mt-ink hover:bg-mt-surface2">
+            <I size={17} />
+          </button>
+        );
+      })}
+      <span className="shrink-0 w-px h-6 lg:w-7 lg:h-px bg-mt-input-border my-1 mx-1 lg:mx-0" />
+      {/* foreground / background colours */}
+      <div className="relative shrink-0 w-10 h-10 lg:mt-1" aria-label="Colours">
+        <label className="absolute right-0 bottom-0 w-6 h-6 rounded-sm border border-white/70 shadow cursor-pointer" style={{ background: bgColor }} title="Background colour">
+          <input type="color" value={bgColor} onChange={(e) => setBgColor(e.target.value)} className="sr-only" aria-label="Background colour" />
+        </label>
+        <label className="absolute left-0 top-0 w-6 h-6 rounded-sm border border-white/70 shadow cursor-pointer" style={{ background: paintColor }} title="Foreground colour">
+          <input type="color" value={paintColor} onChange={(e) => setPaintColor(e.target.value)} className="sr-only" aria-label="Foreground colour" />
+        </label>
+      </div>
+      <div className="shrink-0 flex lg:flex-row gap-0.5">
+        <button className="w-5 h-5 inline-flex items-center justify-center text-mt-muted hover:text-mt-ink" onClick={swapColours} title="Swap colours (X)" aria-label="Swap colours"><ArrowLeftRight size={11} /></button>
+        <button className="w-5 h-5 inline-flex items-center justify-center text-mt-muted hover:text-mt-ink" onClick={() => { setPaintColor('#000000'); setBgColor('#FFFFFF'); }} title="Default colours (D)" aria-label="Default colours"><Circle size={10} /></button>
+      </div>
+    </nav>
+  );
+  const optLabel = 'text-mt-muted';
+  const optField = 'h-7 rounded border border-mt-input-border bg-mt-bg px-1.5 text-[12px] text-mt-ink tabular-nums focus:outline-none focus:border-[#2680EB]';
+  const optBtn = 'h-7 px-2.5 rounded border border-mt-input-border text-[12px] text-mt-ink hover:bg-mt-surface2 disabled:opacity-40';
+  const optOn = (on: boolean) => cx(optBtn, on && 'bg-[#2680EB] border-[#2680EB] text-white hover:bg-[#2680EB]');
+  const activeProTool = PRO_TOOLBAR.find((t) => t && !t.subject && t.tool === tool && (!t.retouch || t.retouch === retouch)) || null;
+  const ToolGlyph = activeProTool?.icon;
+  const optionsBar = (
+    <div className="h-10 shrink-0 flex items-center gap-3 px-3 bg-mt-surface border-b border-mt-border text-[12px] overflow-x-auto mt-scroll whitespace-nowrap" aria-label="Tool options">
+      <span className="inline-flex items-center gap-1.5 pr-3 border-r border-mt-input-border text-mt-ink font-medium">
+        {ToolGlyph ? <ToolGlyph size={15} /> : null}
+        {activeProTool?.label || (TOOLS.find((t) => t.id === tool)?.label ?? '')}
+      </span>
+      {tool === 'retouch' && (
+        <>
+          <label className="inline-flex items-center gap-1.5"><span className={optLabel}>Brush</span>
+            <select className={optField} value={retouch} onChange={(e) => setRetouch(e.target.value as RetouchKind)}>
+              {RETOUCH.map((r) => <option key={r.id} value={r.id}>{r.label}</option>)}
+            </select>
+          </label>
+          <label className="inline-flex items-center gap-1.5"><span className={optLabel}>Size</span>
+            <input type="range" min={8} max={240} value={healSize} onChange={(e) => setHealSize(+e.target.value)} className="w-24 accent-[#2680EB]" />
+            <span className="w-10 tabular-nums">{healSize} px</span>
+          </label>
+          {retouch !== 'heal' && (
+            <label className="inline-flex items-center gap-1.5"><span className={optLabel}>{retouch === 'paint' || retouch === 'erase' ? 'Opacity' : 'Strength'}</span>
+              <input type="range" min={5} max={100} value={brushStrength} onChange={(e) => setBrushStrength(+e.target.value)} className="w-24 accent-[#2680EB]" />
+              <span className="w-9 tabular-nums">{brushStrength}%</span>
+            </label>
+          )}
+          {retouch === 'paint' && (
+            <label className="inline-flex items-center gap-1.5"><span className={optLabel}>Colour</span>
+              <input type="color" value={paintColor} onChange={(e) => setPaintColor(e.target.value)} className="w-7 h-7 rounded border border-mt-input-border bg-transparent" />
+            </label>
+          )}
+          <span className={optLabel}>[ ] change size</span>
+        </>
+      )}
+      {tool === 'select' && (
+        <>
+          <button className={optOn(selKind === 'rect')} onClick={() => setSelKind('rect')}>Rectangle</button>
+          <button className={optOn(selKind === 'ellipse')} onClick={() => setSelKind('ellipse')}>Ellipse</button>
+          <span className="w-px h-5 bg-mt-input-border" />
+          <button className={optBtn} onClick={selOps.subject}>Select subject</button>
+          <button className={optBtn} onClick={selOps.all}>All</button>
+          <button className={optBtn} onClick={selOps.invert} disabled={!sel}>Inverse</button>
+          <button className={optBtn} onClick={selOps.none} disabled={!sel}>Deselect</button>
+          <button className={optBtn} onClick={selOps.toLayer}>Layer via copy</button>
+        </>
+      )}
+      {tool === 'crop' && (
+        <>
+          <span className={optLabel}>Drag the corners, then</span>
+          <button className={optOn(true)} onClick={applyCrop}>Apply crop (Enter)</button>
+        </>
+      )}
+      {tool === 'move' && <span className={optLabel}>Moving layer “{layers?.[activeIdx]?.name}”. Choose another layer on the right.</span>}
+      {tool === 'eyedropper' && (
+        <>
+          <span className={optLabel}>Click the picture to pick a colour</span>
+          <span className="w-6 h-6 rounded border border-white/60" style={{ background: paintColor }} />
+          <span className="tabular-nums uppercase">{paintColor}</span>
+        </>
+      )}
+      {tool === 'text' && (
+        <>
+          <select className={optField} value={textOpts.font} onChange={(e) => setTextOpts((o) => ({ ...o, font: e.target.value }))} aria-label="Font">
+            {TEXT_FONTS.map((f) => <option key={f} value={f}>{f}</option>)}
+          </select>
+          <label className="inline-flex items-center gap-1.5"><span className={optLabel}>Size</span>
+            <input type="number" min={6} max={2000} value={textPx} onChange={(e) => setTextOpts((o) => ({ ...o, size: Math.max(6, +e.target.value || 0) }))} className={cx(optField, 'w-16')} />
+            <span className={optLabel}>px</span>
+          </label>
+          <button className={cx(optOn(textOpts.bold), 'font-bold')} onClick={() => setTextOpts((o) => ({ ...o, bold: !o.bold }))} aria-pressed={textOpts.bold}>B</button>
+          <input type="color" value={paintColor} onChange={(e) => setPaintColor(e.target.value)} className="w-7 h-7 rounded border border-mt-input-border bg-transparent" aria-label="Text colour" />
+          <span className={optLabel}>Click the picture to type · Enter to place</span>
+        </>
+      )}
+      {tool === 'gradient' && (
+        <>
+          <span className="w-24 h-4 rounded-sm border border-white/40" style={{ background: gradKind === 'linear' ? `linear-gradient(90deg, ${paintColor}, ${bgColor})` : `radial-gradient(circle, ${paintColor}, ${bgColor})` }} />
+          <button className={optOn(gradKind === 'linear')} onClick={() => setGradKind('linear')}>Linear</button>
+          <button className={optOn(gradKind === 'radial')} onClick={() => setGradKind('radial')}>Radial</button>
+          <span className={optLabel}>Drag across the picture{sel ? ' (fills the selection)' : ' (adds a new layer)'}</span>
+        </>
+      )}
+      {(tool === 'zoom' || tool === 'hand') && (
+        <>
+          <button className={optBtn} onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }); }}>Fit screen</button>
+          <button className={optBtn} onClick={() => preview && setZoom(1 / Math.max(0.0001, (viewScale / zoom) * preview.k))}>100%</button>
+          <span className={optLabel}>{tool === 'zoom' ? 'Click to zoom in · Alt-click to zoom out' : 'Drag to move around'}</span>
+        </>
+      )}
+      {!CANVAS_TOOLS.includes(tool) && <span className={optLabel}>Changes apply to {sel ? 'the selected area' : `the layer “${layers?.[activeIdx]?.name}”`}. Use the panel on the right.</span>}
+      {(tool === 'bg' || tool === 'resize' || tool === 'export') && <span className={optLabel}>Use the panel on the right.</span>}
+    </div>
+  );
   const downloadPng = async () => {
     const out = renderResult();
     if (!out) return;
@@ -1422,7 +1729,7 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
     ] },
   ];
   return (
-    <div className="h-full w-full flex flex-col bg-mt-bg text-mt-ink min-h-0">
+    <div className={cx('h-full w-full flex flex-col bg-mt-bg text-mt-ink min-h-0', pro && 'mt-ps dark')}>
       {/* top bar */}
       <div className="h-14 shrink-0 flex items-center gap-2 px-3 border-b border-mt-border bg-mt-surface">
         <div className="min-w-0 flex items-center gap-2">
@@ -1470,9 +1777,11 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
       </div>
 
       {pro && <ProMenuBar menus={menus} />}
+      {pro && base && optionsBar}
       <div className="flex-1 min-h-0 flex flex-col lg:flex-row">
+        {pro && proToolbar}
         {/* tool rail */}
-        <nav className="order-3 lg:order-1 shrink-0 lg:w-[84px] border-t lg:border-t-0 lg:border-r border-mt-border bg-mt-surface flex lg:flex-col overflow-x-auto mt-scroll" aria-label="Tools">
+        {!pro && <nav className="order-3 lg:order-1 shrink-0 lg:w-[84px] border-t lg:border-t-0 lg:border-r border-mt-border bg-mt-surface flex lg:flex-col overflow-x-auto mt-scroll" aria-label="Tools">
           {tools.map((t) => {
             const I = t.icon;
             const on = tool === t.id;
@@ -1488,12 +1797,20 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
               </button>
             );
           })}
-        </nav>
+        </nav>}
 
-        {/* stage */}
+        {/* stage (Pro: with a document tab and a status bar, like Photoshop) */}
+        <div className="order-1 lg:order-2 flex-1 min-w-0 min-h-[42vh] flex flex-col">
+        {pro && base && (
+          <div className="h-8 shrink-0 flex items-end bg-mt-bg border-b border-mt-border px-1">
+            <span className="h-7 max-w-full truncate px-3 inline-flex items-center gap-2 rounded-t-md bg-mt-surface text-[12px] text-mt-ink border border-b-0 border-mt-border">
+              {props.name || 'Untitled'} @ {Math.round(basePxToScreen * 100)}% ({layers?.[activeIdx]?.name || 'Background'}, RGB/8)
+            </span>
+          </div>
+        )}
         <div
           ref={stageRef}
-          className={cx('order-1 lg:order-2 relative flex-1 min-h-[42vh] overflow-hidden touch-none select-none', 'bg-[repeating-conic-gradient(rgba(127,127,127,0.10)_0_25%,transparent_0_50%)] bg-[length:22px_22px]', healCursor ? 'cursor-crosshair' : tool === 'crop' ? 'cursor-default' : tool === 'move' ? 'cursor-move' : zoom > 1 ? 'cursor-grab' : '')}
+          className={cx('relative flex-1 min-h-0 overflow-hidden touch-none select-none', pro ? 'bg-mt-studio' : 'bg-[repeating-conic-gradient(rgba(127,127,127,0.10)_0_25%,transparent_0_50%)] bg-[length:22px_22px]', healCursor || tool === 'eyedropper' || tool === 'gradient' ? 'cursor-crosshair' : tool === 'text' ? 'cursor-text' : tool === 'hand' ? 'cursor-grab active:cursor-grabbing' : tool === 'zoom' ? 'cursor-zoom-in' : tool === 'crop' ? 'cursor-default' : tool === 'move' ? 'cursor-move' : zoom > 1 ? 'cursor-grab' : '')}
           onPointerDown={onStageDown}
           onPointerMove={onStageMove}
           onPointerUp={onStageUp}
@@ -1505,7 +1822,7 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
           )}
           {preview && (
             <div className="absolute left-1/2 top-1/2" style={{ width: dispW, height: dispH, transform: `translate(calc(-50% + ${pan.x}px), calc(-50% + ${pan.y}px))` }}>
-              <canvas ref={displayRef} className="block w-full h-full shadow-[0_20px_60px_-30px_rgba(0,0,0,0.6)]" />
+              <canvas ref={displayRef} className={cx('block w-full h-full shadow-[0_20px_60px_-30px_rgba(0,0,0,0.6)]', pro && 'bg-[repeating-conic-gradient(#cfcfcf_0_25%,#ffffff_0_50%)] bg-[length:16px_16px]')} />
               <canvas ref={draftRef} aria-hidden className="absolute inset-0 w-full h-full pointer-events-none" style={{ visibility: 'hidden' }} />
               {tool === 'crop' && box && base && (
                 <CropOverlay box={box} base={base} />
@@ -1521,6 +1838,40 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
                     return <g key={i}>{el('#fff')}{el('#111', '5 5')}</g>;
                   })}
                 </svg>
+              )}
+              {gradDrag && base && (
+                <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox={`0 0 ${base.width} ${base.height}`} preserveAspectRatio="none">
+                  <line x1={gradDrag.x0} y1={gradDrag.y0} x2={gradDrag.x1} y2={gradDrag.y1} stroke="#fff" strokeWidth={3} vectorEffect="non-scaling-stroke" />
+                  <line x1={gradDrag.x0} y1={gradDrag.y0} x2={gradDrag.x1} y2={gradDrag.y1} stroke="#111" strokeWidth={1} strokeDasharray="4 4" vectorEffect="non-scaling-stroke" />
+                </svg>
+              )}
+              {textDraft && base && (
+                <textarea
+                  autoFocus
+                  ref={(el) => { if (el && !el.dataset.f) { el.dataset.f = '1'; requestAnimationFrame(() => el.focus()); } }}
+                  value={textDraft.value}
+                  placeholder="Type here"
+                  aria-label="Text"
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onChange={(e) => setTextDraft({ ...textDraft, value: e.target.value })}
+                  onKeyDown={(e) => {
+                    e.stopPropagation();
+                    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); commitText(); }
+                    else if (e.key === 'Escape') setTextDraft(null);
+                  }}
+                  rows={Math.max(1, textDraft.value.split('\n').length)}
+                  className="absolute bg-transparent outline-none border border-dashed border-[#2680EB] resize-none overflow-hidden p-0 m-0 leading-[1.2] placeholder:text-black/30"
+                  style={{
+                    left: (textDraft.x * dispW) / base.width,
+                    top: (textDraft.y * dispH) / base.height,
+                    fontFamily: `"${textOpts.font}", sans-serif`,
+                    fontWeight: textOpts.bold ? 700 : 400,
+                    fontSize: (textPx * dispW) / base.width,
+                    color: paintColor,
+                    minWidth: 80,
+                    width: Math.max(80, ((Math.max(4, ...textDraft.value.split('\n').map((l) => l.length)) + 1) * textPx * 0.62 * dispW) / base.width),
+                  }}
+                />
               )}
               {tool === 'retouch' && healPts.length > 0 && base && (
                 <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox={`0 0 ${base.width} ${base.height}`} preserveAspectRatio="none">
@@ -1543,11 +1894,35 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
             <button onClick={() => setNotice(null)} className="absolute bottom-3 left-1/2 -translate-x-1/2 text-[12px] bg-mt-surface border border-mt-border rounded-full px-4 py-2 shadow">{notice}</button>
           )}
         </div>
+        {pro && base && (
+          <div className="h-6 shrink-0 flex items-center gap-4 px-3 bg-mt-surface border-t border-mt-border text-[11px] text-mt-muted tabular-nums" aria-label="Status">
+            <span>{Math.round(basePxToScreen * 100)}%</span>
+            <span>{base.width} × {base.height} px</span>
+            <span>{dpi} DPI · {fmtNum(fromPx(base.width, 'cm', dpi), 'cm')} × {fmtNum(fromPx(base.height, 'cm', dpi), 'cm')} cm</span>
+            <span ref={statusRef} className="min-w-[90px]" />
+            <span className="ml-auto truncate">{layers?.length || 1} layer{(layers?.length || 1) > 1 ? 's' : ''}{sel ? ' · selection active' : ''}</span>
+          </div>
+        )}
+        </div>
 
         {/* panel */}
         <aside
           onPointerDownCapture={(e) => { if ((e.target as HTMLElement).closest?.('[data-live]')) setDragging(true); }}
-          className="order-2 lg:order-3 shrink-0 lg:w-[340px] max-h-[42vh] lg:max-h-none overflow-y-auto border-t lg:border-t-0 lg:border-l border-mt-border bg-mt-surface px-4">
+          className={cx('order-2 lg:order-3 shrink-0 max-h-[42vh] lg:max-h-none overflow-y-auto border-t lg:border-t-0 lg:border-l border-mt-border bg-mt-surface', pro ? 'lg:w-[320px] px-3' : 'lg:w-[340px] px-4')}>
+          {pro && (
+            <div className="sticky top-0 z-10 -mx-3 px-1 flex bg-mt-bg border-b border-mt-border text-[12px]" role="tablist" aria-label="Panels">
+              {DOCK_TABS.map((d) => {
+                const on = d.id === 'props' ? CANVAS_TOOLS.includes(tool) : tool === d.id;
+                return (
+                  <button key={d.id} role="tab" aria-selected={on}
+                    onClick={() => setTool(d.id === 'props' ? lastCanvasTool.current : d.id)}
+                    className={cx('h-8 px-2.5 border-b-2 -mb-px', on ? 'border-[#2680EB] text-mt-ink bg-mt-surface' : 'border-transparent text-mt-muted hover:text-mt-ink')}>
+                    {d.label}
+                  </button>
+                );
+              })}
+            </div>
+          )}
           {panel}
           {pro && layers && showLayers && (
             <LayersPanel
