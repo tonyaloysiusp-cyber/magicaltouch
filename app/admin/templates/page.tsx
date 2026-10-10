@@ -156,7 +156,8 @@ export default function AdminTemplatesPage() {
 
   const reload = async () => {
     const [t, c] = await Promise.all([fetchTemplates(), fetchCategories()]);
-    setTemplates(t.filter((x) => !!x.id));
+    // The company's own brand kit lives in /admin/brand, never in the public catalogue.
+    setTemplates(t.filter((x) => !!x.id && !(x.tags || []).includes('mt-internal')));
     setCategories(c);
   };
 
