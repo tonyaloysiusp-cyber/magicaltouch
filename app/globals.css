@@ -312,7 +312,7 @@ textarea::placeholder {
 .mt-howto-cap { animation: mt-howto-cap 0.45s cubic-bezier(.2,.9,.3,1.2); }
 @keyframes mt-howto-cap { from { opacity: 0; transform: translateY(8px) scale(0.97); } }
 .mt-howto-pop { animation: mt-howto-pop 0.35s cubic-bezier(.2,.9,.3,1.3); }
-@keyframes mt-howto-pop { from { opacity: 0; transform: scale(0.85); } }
+@keyframes mt-howto-pop { from { opacity: 0; scale: 0.9; } }
 .mt-howto-ripple { animation: mt-howto-ripple 0.6s ease-out forwards; opacity: 0; }
 @keyframes mt-howto-ripple { 0% { transform: scale(0.3); opacity: 0.9; } 100% { transform: scale(1.6); opacity: 0; } }
 .mt-howto-caret { animation: mt-howto-caret 1s steps(1) infinite; }
@@ -362,3 +362,7 @@ textarea::placeholder {
 @keyframes mt-cap-in { from { opacity: 0; transform: translateY(10px) scale(.96); filter: blur(4px); } to { opacity: 1; transform: none; filter: none; } }
 @keyframes mt-spark { 0% { opacity: 0; transform: scale(.2) rotate(-40deg); } 35% { opacity: 1; transform: scale(1.25) rotate(10deg); } 100% { opacity: .9; transform: scale(1) rotate(0); } }
 @media (prefers-reduced-motion: reduce) { .mt-howto-caption, .mt-howto-spark { animation: none; } }
+
+.mt-howto-shimmer { background: linear-gradient(110deg, transparent 20%, rgba(255,255,255,.75) 45%, rgba(143,227,255,.5) 50%, transparent 75%); background-size: 250% 100%; animation: mt-shimmer 1.2s ease-in-out infinite; }
+@keyframes mt-shimmer { from { background-position: 130% 0; } to { background-position: -30% 0; } }
+@media (prefers-reduced-motion: reduce) { .mt-howto-shimmer { animation: none; } }
