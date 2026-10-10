@@ -13,6 +13,8 @@ export interface RailItem {
   // Not shown in the rail (opened from a toolbar instead).
   hiddenInRail?: boolean;
   special?: boolean;
+  // Runs straight away instead of opening a panel (e.g. Upload).
+  action?: () => void;
 }
 
 // Desktop/tablet: a slim icon rail with a sliding panel next to it.
@@ -54,8 +56,8 @@ export function LeftRail({
             <button
               key={it.id}
               type="button"
-              onClick={() => onActivate(active === it.id ? null : it.id)}
-              aria-pressed={active === it.id}
+              onClick={() => (it.action ? it.action() : onActivate(active === it.id ? null : it.id))}
+              aria-pressed={it.action ? undefined : active === it.id}
               className={cx('flex-1 min-w-[64px] flex flex-col items-center gap-1 py-2 text-[10px] font-medium', active === it.id ? 'text-mt-ink' : 'text-mt-muted')}
             >
               <span className={cx('h-8 w-12 rounded-full flex items-center justify-center', active === it.id && 'mt-active-blue border')}>{it.icon}</span>
@@ -75,8 +77,8 @@ export function LeftRail({
             key={it.id}
             type="button"
             title={it.title || it.label}
-            onClick={() => onActivate(active === it.id ? null : it.id)}
-            aria-pressed={active === it.id}
+            onClick={() => (it.action ? it.action() : onActivate(active === it.id ? null : it.id))}
+            aria-pressed={it.action ? undefined : active === it.id}
             className={cx(
               'w-[64px] flex flex-col items-center gap-1 py-2 rounded-xl text-[10.5px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8CCBFF]',
               active === it.id ? 'mt-active-blue border text-mt-ink' : 'border border-transparent text-mt-muted hover:text-mt-ink hover:bg-mt-surface2'
