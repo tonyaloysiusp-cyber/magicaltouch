@@ -510,3 +510,52 @@ export async function exportRasterToPDF(dataUrl: string, widthPx: number, height
   pdf.addImage(dataUrl, format, 0, 0, widthPt, heightPt, undefined, 'FAST');
   pdf.save(filename);
 }
+
+// ---------------------------------------------------------------------
+// Print-shop CMYK, still vector: every fill, line and text colour the
+// vector writer sets is converted through the FOGRA39 press profile and
+// written as DeviceCMYK ink values, and the profile is embedded as the
+// PDF's output intent (what print shops check for). Photos inside stay
+// as pictures; the press RIP converts them with that same profile.
+// ---------------------------------------------------------------------
+function parseColourArgs(a: any, b: any, c: any): [number, number, number] | null {
+  if (typeof a === 'number' && typeof b === 'number' && typeof c === 'number') return [a, b, c];
+  if (typeof a === 'number' && b === undefined) return [a, a, a];
+  if (typeof a === 'string' && b === undefined) {
+    const m = /^#?([0-9a-f]{6}|[0-9a-f]{3})$/i.exec(a.trim());
+    if (!m) return null;
+    const h = m[1].length === 3 ? m[1].split('').map((x) => x + x).join('') : m[1];
+    const v = parseInt(h, 16);
+    return [(v >> 16) & 255, (v >> 8) & 255, v & 255];
+  }
+  return null;
+}
+
+export function applyCmykInks(pdf: any, toCmyk: (r: number, g: number, b: number) => [number, number, number, number], icc?: Uint8Array | null) {
+  for (const m of ['setFillColor', 'setDrawColor', 'setTextColor']) {
+    const orig = pdf[m].bind(pdf);
+    pdf[m] = (a: any, b?: any, c?: any, d?: any) => {
+      if (d !== undefined) return orig(a, b, c, d);
+      const rgb = parseColourArgs(a, b, c);
+      if (!rgb) return orig(a, b, c, d);
+      const [C, M, Y, K] = toCmyk(rgb[0], rgb[1], rgb[2]);
+      return orig(C, M, Y, K);
+    };
+  }
+  if (!icc) return;
+  let iccId = 0;
+  const ev = pdf.internal.events;
+  ev.subscribe('postPutResources', () => {
+    iccId = pdf.internal.newObject();
+    let bin = '';
+    for (let i = 0; i < icc.length; i += 0x8000) bin += String.fromCharCode.apply(null, Array.from(icc.subarray(i, i + 0x8000)));
+    pdf.internal.putStream({ data: bin, filters: ['FlateEncode'], additionalKeyValues: [{ key: 'N', value: 4 }], objectId: iccId });
+    pdf.internal.write('endobj');
+  });
+  ev.subscribe('putCatalog', () => {
+    if (!iccId) return;
+    pdf.internal.write(
+      `/OutputIntents [<< /Type /OutputIntent /S /GTS_PDFX /OutputConditionIdentifier (FOGRA39) /OutputCondition (Offset printing, coated paper) /RegistryName (http://www.color.org) /Info (Coated FOGRA39) /DestOutputProfile ${iccId} 0 R >>]`
+    );
+  });
+}

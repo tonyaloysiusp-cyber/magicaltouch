@@ -54,6 +54,7 @@ import {
   Frame as FrameIcon,
   Sun,
   Wand2,
+  Languages,
 } from 'lucide-react';
 import { FontPicker } from '../FontPicker';
 import { ColorPicker, ColorChip } from './ColorPicker';
@@ -79,6 +80,7 @@ export interface ToolbarActions {
   setCornerRadius: (r: number, record?: boolean) => void;
   setShapeParams: (p: any, record?: boolean) => void;
   setTextFx: (fx: TextFx, record?: boolean) => void;
+  translate?: () => void;
   setOpacity: (v: number, record?: boolean) => void;
   flip: (axis: 'x' | 'y') => void;
   replaceImage: () => void;
@@ -606,6 +608,7 @@ export function ContextToolbar({
         >
           <TextEffectsEditor value={fx} onChange={(v, commit) => a.setTextFx(v, commit)} />
         </Popover>
+        {a.translate && <ToolButton label="Translate" hint="Change the words to another language" icon={<Languages size={16} />} onClick={a.translate} />}
         {common(sel)}
       </>
     );

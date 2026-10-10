@@ -105,7 +105,8 @@ export function fillBackground(src: HTMLCanvasElement, color: string): HTMLCanva
 }
 
 export function hasTransparency(src: HTMLCanvasElement): boolean {
-  const small = resample(src, Math.min(src.width, 256), Math.min(src.height, 256));
+  const small = makeCanvas(Math.min(src.width, 256), Math.min(src.height, 256));
+  small.getContext('2d')!.drawImage(src, 0, 0, small.width, small.height);
   const d = small.getContext('2d')!.getImageData(0, 0, small.width, small.height).data;
   for (let i = 3; i < d.length; i += 16) if (d[i] < 250) return true;
   return false;

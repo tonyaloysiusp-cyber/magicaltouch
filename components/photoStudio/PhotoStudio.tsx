@@ -13,11 +13,12 @@
 // "Photo Editing" workspace, where "Apply to design" puts the result back
 // into the SAME picture on the page.
 
+import type { CSSProperties } from 'react';
 import { forwardRef, ReactNode, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import {
   SlidersHorizontal, Sparkles, Crop as CropIcon, Scissors, Brush, Maximize2, Download, Undo2, Redo2, Plus, Minus,
   Maximize, RotateCcw, RotateCw, FlipHorizontal2, FlipVertical2, Loader2, Check, X, Eye, Printer, Lock, Unlock, Palette, Wand2,
-  Move, BoxSelect, Blend as BlendIcon, Hand, ZoomIn, Pipette, Type as TypeIcon, Eraser, Droplet, Sun, Circle, ArrowLeftRight,
+  Move, BoxSelect, Blend as BlendIcon, Hand, ZoomIn, Pipette, Type as TypeIcon, Eraser, Droplet, Sun, Circle, ArrowLeftRight, Square, PaintBucket,
 } from 'lucide-react';
 import { Adjust, NO_ADJUST, LIGHT_SLIDERS, COLOR_SLIDERS, DETAIL_SLIDERS, LOOKS, SliderDef, applyAdjust, renderAdjusted, isNeutral, autoEnhance, HSL_RANGES, CurvePts, curveLut } from '@/lib/photo/adjust';
 import { BrushKind, createStroke, replayStroke } from '@/lib/photo/brushes';
@@ -28,11 +29,24 @@ import { BgRemoveDialog } from '@/components/editor/shell/BgRemoveDialog';
 import { Layer, Selection, makeLayer, composite, isPlain, translate, placeImage, mergeDown, maskShape, maskAll, invertMask, maskFromAlpha, blendMasked, clearMasked, copyMasked, fillMasked, paintStroke, blankLike } from '@/lib/photo/layers';
 import { FILTERS, FilterId, applyFilter } from '@/lib/photo/filters';
 import { ProMenuBar, LayersPanel, HistoryPanel, Menu } from './ProPanels';
+import { GOOGLE_FONTS, allFontFacesCSS, ensureFontLoaded } from '@/lib/editor/googleFonts';
 
-type Tool = 'adjust' | 'color' | 'looks' | 'crop' | 'bg' | 'retouch' | 'resize' | 'export' | 'move' | 'select' | 'filter' | 'hand' | 'zoom' | 'eyedropper' | 'text' | 'gradient';
+type Tool = 'adjust' | 'color' | 'looks' | 'crop' | 'bg' | 'retouch' | 'resize' | 'export' | 'move' | 'select' | 'filter' | 'hand' | 'zoom' | 'eyedropper' | 'text' | 'gradient' | 'shape' | 'bucket';
 // Tools that work directly on the picture (the rest are panels).
-const CANVAS_TOOLS: Tool[] = ['move', 'select', 'crop', 'retouch', 'hand', 'zoom', 'eyedropper', 'text', 'gradient', 'bg', 'resize', 'export'];
-const TEXT_FONTS = ['Inter', 'Arial', 'Georgia', 'Times New Roman', 'Impact', 'Courier New', 'Trebuchet MS', 'Verdana', 'Brush Script MT'];
+const CANVAS_TOOLS: Tool[] = ['move', 'select', 'crop', 'retouch', 'hand', 'zoom', 'eyedropper', 'text', 'gradient', 'shape', 'bucket', 'bg', 'resize', 'export'];
+// The same font library as the design editor (loaded on demand).
+const FONT_GROUPS = (['Sans Serif', 'Serif', 'Display', 'Script', 'Classic', 'Monospace', 'World'] as const).map((c) => ({ c, fonts: GOOGLE_FONTS.filter((f) => f.category === c).map((f) => f.family) }));
+type TextEffect = 'none' | 'shadow' | 'glow' | 'outline' | 'neon' | 'retro' | 'highlight' | 'lift';
+const TEXT_EFFECTS: { id: TextEffect; label: string; css: CSSProperties }[] = [
+  { id: 'none', label: 'None', css: {} },
+  { id: 'shadow', label: 'Shadow', css: { textShadow: '2px 2px 4px rgba(0,0,0,0.55)' } },
+  { id: 'lift', label: 'Lift', css: { textShadow: '0 6px 10px rgba(0,0,0,0.35)' } },
+  { id: 'glow', label: 'Glow', css: { textShadow: '0 0 8px #8CCBFF, 0 0 16px #8CCBFF' } },
+  { id: 'neon', label: 'Neon', css: { color: '#fff', textShadow: '0 0 6px #F2708F, 0 0 14px #F2708F' } },
+  { id: 'outline', label: 'Outline', css: { WebkitTextStroke: '1.5px #09090B', color: '#fff' } as any },
+  { id: 'retro', label: 'Retro', css: { color: '#F2708F', WebkitTextStroke: '1px #FFF4E0', textShadow: '3px 3px 0 #1A1A1A' } as any },
+  { id: 'highlight', label: 'Highlight', css: { background: '#F7C948', padding: '0 4px' } },
+];
 type Mode = 'simple' | 'pro';
 type RetouchKind = 'heal' | BrushKind | 'paint' | 'erase';
 const RETOUCH: { id: RetouchKind; label: string; hint: string; pro?: boolean }[] = [
@@ -152,10 +166,12 @@ const PRO_TOOLBAR: (ProTool | null)[] = [
   { label: 'Brush', key: 'B', icon: Brush, tool: 'retouch', retouch: 'paint' },
   { label: 'Eraser', key: 'E', icon: Eraser, tool: 'retouch', retouch: 'erase' },
   { label: 'Gradient', key: 'G', icon: BlendIcon, tool: 'gradient' },
+  { label: 'Paint bucket', key: 'K', icon: PaintBucket, tool: 'bucket' },
   { label: 'Blur', key: 'R', icon: Droplet, tool: 'retouch', retouch: 'blur' },
   { label: 'Dodge', key: 'O', icon: Sun, tool: 'retouch', retouch: 'dodge' },
   null,
   { label: 'Type', key: 'T', icon: TypeIcon, tool: 'text' },
+  { label: 'Shape', key: 'U', icon: Square, tool: 'shape' },
   { label: 'Hand', key: 'H', icon: Hand, tool: 'hand' },
   { label: 'Zoom', key: 'Z', icon: ZoomIn, tool: 'zoom' },
 ];
@@ -169,13 +185,22 @@ const DOCK_TABS: { id: Tool | 'props'; label: string }[] = [
 // Pro shows the Photoshop-style tools first.
 const PRO_ORDER: Tool[] = ['move', 'select', 'crop', 'retouch', 'adjust', 'color', 'filter', 'looks', 'bg', 'resize', 'export'];
 
+// iPad / iPhone Safari can't keep canvases larger than ~16.7 megapixels and
+// has a small total canvas memory, so phones and tablets work on a smaller copy.
+const IS_TOUCH_DEVICE = typeof navigator !== 'undefined' && (/iPad|iPhone|iPod|Android/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && (navigator as any).maxTouchPoints > 1));
+const MAX_PIXELS = IS_TOUCH_DEVICE ? 16_000_000 : 48_000_000;
+const HISTORY_BYTES = IS_TOUCH_DEVICE ? 160_000_000 : 400_000_000;
 function loadSource(src: string): Promise<HTMLCanvasElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
     if (/^https?:/.test(src)) img.crossOrigin = 'anonymous';
     img.onload = () => {
-      const c = makeCanvas(img.naturalWidth, img.naturalHeight);
-      c.getContext('2d')!.drawImage(img, 0, 0);
+      const px = img.naturalWidth * img.naturalHeight;
+      const k = px > MAX_PIXELS ? Math.sqrt(MAX_PIXELS / px) : 1;
+      const c = makeCanvas(img.naturalWidth * k, img.naturalHeight * k);
+      const ctx = c.getContext('2d')!;
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(img, 0, 0, c.width, c.height);
       resolve(c);
     };
     img.onerror = () => reject(new Error('This picture could not be opened.'));
@@ -305,11 +330,22 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
       const next: Snapshot = { layers: ls, active: act, adjust: s.adjust || cur.adjust, dpi: s.dpi ?? cur.dpi, label: s.label };
       // Keep memory in check for big photos.
       const px = ls[0].canvas.width * ls[0].canvas.height * ls.length;
-      const cap = Math.max(6, Math.min(MAX_HISTORY, Math.floor(400_000_000 / Math.max(1, px * 4))));
+      const cap = Math.max(IS_TOUCH_DEVICE ? 3 : 6, Math.min(MAX_HISTORY, Math.floor(HISTORY_BYTES / Math.max(1, px * 4))));
       const list = [...h.list.slice(0, h.index + 1), next].slice(-cap);
+      releaseDropped(h.list, list);
       return { list, index: list.length - 1 };
     });
   }, []);
+  // Give memory back right away for steps that fell out of the history
+  // (Safari otherwise keeps it until much later, and the page slows down).
+  const releaseDropped = (before: Snapshot[], after: Snapshot[]) => {
+    const keep = new Set<HTMLCanvasElement>();
+    after.forEach((sn) => sn.layers.forEach((l) => keep.add(l.canvas)));
+    if (firstPreviewRef.current) keep.add(firstPreviewRef.current);
+    const drop: HTMLCanvasElement[] = [];
+    before.forEach((sn) => sn.layers.forEach((l) => { if (!keep.has(l.canvas)) drop.push(l.canvas); }));
+    if (drop.length) setTimeout(() => drop.forEach((c) => { c.width = 0; c.height = 0; }), 1500);
+  };
   const undo = () => setHistory((h) => (h.index > 0 ? { ...h, index: h.index - 1 } : h));
   const redo = () => setHistory((h) => (h.index < h.list.length - 1 ? { ...h, index: h.index + 1 } : h));
   // Keep the live controls in step with the history position.
@@ -638,6 +674,8 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
           else if (k === 'o') { setRetouch('dodge'); setTool('retouch'); }
           else if (k === 't') setTool('text');
           else if (k === 'g') setTool('gradient');
+          else if (k === 'u') setTool('shape');
+          else if (k === 'k') setTool('bucket');
           else if (k === 'h') setTool('hand');
           else if (k === 'z') setTool('zoom');
           else if (k === 'x') { const f = paintColor; setPaintColor(bgColor); setBgColor(f); }
@@ -745,6 +783,18 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
       gesture.current = null;
       return;
     }
+    if (tool === 'bucket' && base) {
+      const p = toBase(e.clientX, e.clientY);
+      gesture.current = null;
+      bucketFill(p.x, p.y);
+      return;
+    }
+    if (tool === 'shape' && base) {
+      const p = toBase(e.clientX, e.clientY);
+      gesture.current = { kind: 'shape' };
+      setShapeDrag({ x0: p.x, y0: p.y, x1: p.x, y1: p.y });
+      return;
+    }
     if (tool === 'gradient' && base) {
       const p = toBase(e.clientX, e.clientY);
       gesture.current = { kind: 'gradient' };
@@ -803,6 +853,14 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
     } else if (g.kind === 'gradient') {
       const p = toBase(e.clientX, e.clientY);
       setGradDrag((d) => (d ? { ...d, x1: p.x, y1: p.y } : d));
+    } else if (g.kind === 'shape') {
+      const p = toBase(e.clientX, e.clientY);
+      setShapeDrag((d) => {
+        if (!d) return d;
+        let x1 = p.x, y1 = p.y;
+        if (e.shiftKey && shapeOpts.kind !== 'line') { const m = Math.max(Math.abs(x1 - d.x0), Math.abs(y1 - d.y0)); x1 = d.x0 + Math.sign(x1 - d.x0 || 1) * m; y1 = d.y0 + Math.sign(y1 - d.y0 || 1) * m; }
+        return { ...d, x1, y1 };
+      });
     } else if (g.kind === 'move' && layers && target) {
       const p = toBase(e.clientX, e.clientY);
       g.dx = p.x - g.start.x;
@@ -867,6 +925,11 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
       if (isPaint) {
         run(retouch === 'erase' ? 'Erase' : 'Paint', () => paintStroke(target!, pts, { size: r * 2, color: paintColor, opacity: brushStrength / 100, hardness: brushHardness / 100, erase: retouch === 'erase', mask: sel?.mask }));
       } else run('Heal', () => spotHeal(target!, pts, r));
+    }
+    if (g?.kind === 'shape' && shapeDrag) {
+      const d = shapeDrag;
+      setShapeDrag(null);
+      if (Math.hypot(d.x1 - d.x0, d.y1 - d.y0) > 4) commitShape(d);
     }
     if (g?.kind === 'gradient' && gradDrag) {
       const d = gradDrag;
@@ -1032,23 +1095,198 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
   if (CANVAS_TOOLS.includes(tool)) lastCanvasTool.current = tool;
   // Pro: background colour (paint uses the foreground = paintColor), text and gradient tools.
   const [bgColor, setBgColor] = useState('#FFFFFF');
-  const [textOpts, setTextOpts] = useState({ font: 'Inter', size: 0, bold: true });
+  const [textOpts, setTextOpts] = useState<{ font: string; size: number; bold: boolean; italic: boolean; align: 'left' | 'center' | 'right'; spacing: number; effect: TextEffect; fxColor: string }>({ font: 'Montserrat', size: 0, bold: true, italic: false, align: 'left', spacing: 0, effect: 'none', fxColor: '#09090B' });
+  const [shapeOpts, setShapeOpts] = useState<{ kind: 'rect' | 'ellipse' | 'line'; fill: boolean; stroke: number; radius: number }>({ kind: 'rect', fill: true, stroke: 8, radius: 0 });
+  const [shapeDrag, setShapeDrag] = useState<{ x0: number; y0: number; x1: number; y1: number } | null>(null);
+  const [bucketTol, setBucketTol] = useState(32);
+  // Fonts for the Type tool come from the editor's library.
+  const fontsInjected = useRef(false);
+  useEffect(() => {
+    if (!pro || fontsInjected.current || typeof document === 'undefined' || document.getElementById('mt-font-faces')) return;
+    fontsInjected.current = true;
+    const st = document.createElement('style');
+    st.id = 'mt-font-faces';
+    st.textContent = allFontFacesCSS();
+    document.head.appendChild(st);
+  }, [pro]);
+  useEffect(() => {
+    if (tool === 'text') ensureFontLoaded(textOpts.font, textOpts.bold ? 700 : 400, textOpts.italic).catch(() => {});
+  }, [tool, textOpts.font, textOpts.bold, textOpts.italic]);
   const [textDraft, setTextDraft] = useState<{ x: number; y: number; value: string } | null>(null);
   const [gradKind, setGradKind] = useState<'linear' | 'radial'>('linear');
   const [gradDrag, setGradDrag] = useState<{ x0: number; y0: number; x1: number; y1: number } | null>(null);
   const statusRef = useRef<HTMLSpanElement>(null);
   const textPx = textOpts.size || Math.max(12, Math.round((base?.width || 1000) * 0.06));
-  const commitText = () => {
+  const commitText = async () => {
     const d = textDraft;
     setTextDraft(null);
     if (!d || !d.value.trim() || !target) return;
+    const o = textOpts;
+    await ensureFontLoaded(o.font, o.bold ? 700 : 400, o.italic).catch(() => {});
     const c = blankLike(target);
     const ctx = c.getContext('2d')!;
-    ctx.fillStyle = paintColor;
+    const px = textPx;
     ctx.textBaseline = 'top';
-    ctx.font = `${textOpts.bold ? 700 : 400} ${textPx}px "${textOpts.font}", sans-serif`;
-    d.value.split('\n').forEach((line, i) => ctx.fillText(line, d.x, d.y + i * textPx * 1.2));
+    ctx.font = `${o.italic ? 'italic ' : ''}${o.bold ? 700 : 400} ${px}px "${o.font}", sans-serif`;
+    try { (ctx as any).letterSpacing = `${o.spacing}px`; } catch { /* older browsers */ }
+    const lines = d.value.split('\n');
+    const widths = lines.map((l) => ctx.measureText(l).width);
+    const blockW = Math.max(...widths);
+    // The click point is the left edge, centre or right edge of the block.
+    const lineX = (i: number) => (o.align === 'left' ? d.x : o.align === 'center' ? d.x + (blockW - widths[i]) / 2 : d.x + blockW - widths[i]);
+    const lineY = (i: number) => d.y + i * px * 1.2;
+    const fx = o.fxColor;
+    const fillAll = (dx = 0, dy = 0, style: string = paintColor) => {
+      ctx.fillStyle = style;
+      lines.forEach((l, i) => ctx.fillText(l, lineX(i) + dx, lineY(i) + dy));
+    };
+    const strokeAll = (w: number, style: string) => {
+      ctx.lineWidth = w;
+      ctx.lineJoin = 'round';
+      ctx.strokeStyle = style;
+      lines.forEach((l, i) => ctx.strokeText(l, lineX(i), lineY(i)));
+    };
+    ctx.save();
+    switch (o.effect) {
+      case 'highlight':
+        ctx.fillStyle = fx === '#09090B' ? '#F7C948' : fx;
+        lines.forEach((l, i) => l.trim() && ctx.fillRect(lineX(i) - px * 0.15, lineY(i) - px * 0.05, widths[i] + px * 0.3, px * 1.15));
+        fillAll();
+        break;
+      case 'shadow':
+        ctx.shadowColor = 'rgba(0,0,0,0.55)'; ctx.shadowBlur = px * 0.12; ctx.shadowOffsetX = ctx.shadowOffsetY = px * 0.06;
+        fillAll();
+        break;
+      case 'lift':
+        ctx.shadowColor = 'rgba(0,0,0,0.35)'; ctx.shadowBlur = px * 0.3; ctx.shadowOffsetY = px * 0.1;
+        fillAll();
+        break;
+      case 'glow':
+        ctx.shadowColor = fx === '#09090B' ? '#8CCBFF' : fx; ctx.shadowBlur = px * 0.35;
+        fillAll(); fillAll();
+        break;
+      case 'neon':
+        ctx.shadowColor = fx === '#09090B' ? '#F2708F' : fx; ctx.shadowBlur = px * 0.4;
+        fillAll(); fillAll();
+        ctx.shadowBlur = 0;
+        strokeAll(Math.max(1, px * 0.02), 'rgba(255,255,255,0.9)');
+        break;
+      case 'outline':
+        strokeAll(Math.max(2, px * 0.1), fx);
+        fillAll();
+        break;
+      case 'retro':
+        fillAll(px * 0.07, px * 0.07, '#1A1A1A');
+        strokeAll(Math.max(2, px * 0.09), fx === '#09090B' ? '#FFF4E0' : fx);
+        fillAll();
+        break;
+      default:
+        fillAll();
+    }
+    ctx.restore();
     insertAbove(makeLayer(c, `Text: ${d.value.slice(0, 24)}`), 'Add text');
+  };
+  const commitShape = (g: { x0: number; y0: number; x1: number; y1: number }) => {
+    if (!target) return;
+    const c = blankLike(target);
+    const ctx = c.getContext('2d')!;
+    const x = Math.min(g.x0, g.x1), y = Math.min(g.y0, g.y1), w = Math.abs(g.x1 - g.x0), h = Math.abs(g.y1 - g.y0);
+    ctx.fillStyle = paintColor;
+    ctx.strokeStyle = shapeOpts.fill ? bgColor : paintColor;
+    ctx.lineWidth = shapeOpts.stroke;
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    if (shapeOpts.kind === 'line') {
+      ctx.moveTo(g.x0, g.y0); ctx.lineTo(g.x1, g.y1);
+      ctx.strokeStyle = paintColor; ctx.lineWidth = Math.max(1, shapeOpts.stroke);
+      ctx.stroke();
+    } else {
+      if (shapeOpts.kind === 'ellipse') ctx.ellipse(x + w / 2, y + h / 2, w / 2, h / 2, 0, 0, Math.PI * 2);
+      else {
+        const r = Math.min(shapeOpts.radius, w / 2, h / 2);
+        ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+      }
+      if (shapeOpts.fill) ctx.fill();
+      if (!shapeOpts.fill || shapeOpts.stroke > 0) { if (!shapeOpts.fill || shapeOpts.stroke) ctx.stroke(); }
+    }
+    insertAbove(makeLayer(c, shapeOpts.kind === 'line' ? 'Line' : shapeOpts.kind === 'ellipse' ? 'Ellipse' : 'Rectangle'), 'Add shape');
+  };
+  // Paint bucket: fills the touching area of similar colour (inside the
+  // selection, if there is one) on the selected layer.
+  const bucketFill = (px: number, py: number) => {
+    if (!target) return;
+    const t0 = target, s0 = sel, col = paintColor, tol = bucketTol;
+    run('Paint bucket', () => {
+      const W = t0.width, H = t0.height;
+      const x0 = Math.floor(px), y0 = Math.floor(py);
+      const out = makeCanvas(W, H);
+      const octx = out.getContext('2d', { willReadFrequently: true })!;
+      octx.drawImage(t0, 0, 0);
+      if (x0 < 0 || y0 < 0 || x0 >= W || y0 >= H) return out;
+      const img = octx.getImageData(0, 0, W, H);
+      const d = img.data;
+      const mask = s0 ? s0.mask.getContext('2d')!.getImageData(0, 0, W, H).data : null;
+      const i0 = (y0 * W + x0) * 4;
+      const r0 = d[i0], g0 = d[i0 + 1], b0 = d[i0 + 2], a0 = d[i0 + 3];
+      const v = parseInt(col.slice(1), 16), R = (v >> 16) & 255, G = (v >> 8) & 255, B = v & 255;
+      const t = tol * 3;
+      const seen = new Uint8Array(W * H);
+      const match = (p: number) => {
+        const i = p * 4;
+        if (mask && mask[i + 3] < 128) return false;
+        return Math.abs(d[i] - r0) + Math.abs(d[i + 1] - g0) + Math.abs(d[i + 2] - b0) + Math.abs(d[i + 3] - a0) <= t;
+      };
+      const stack = [y0 * W + x0];
+      while (stack.length) {
+        const p = stack.pop()!;
+        if (seen[p]) continue;
+        let x = p % W; const y = (p - x) / W;
+        // scan left and right on this row
+        let l = x; while (l > 0 && !seen[y * W + l - 1] && match(y * W + l - 1)) l--;
+        let r = x; while (r < W - 1 && !seen[y * W + r + 1] && match(y * W + r + 1)) r++;
+        if (!match(p)) { seen[p] = 1; continue; }
+        for (x = l; x <= r; x++) {
+          const q = y * W + x;
+          seen[q] = 1;
+          const i = q * 4;
+          d[i] = R; d[i + 1] = G; d[i + 2] = B; d[i + 3] = 255;
+          if (y > 0 && !seen[q - W] && match(q - W)) stack.push(q - W);
+          if (y < H - 1 && !seen[q + W] && match(q + W)) stack.push(q + W);
+        }
+      }
+      octx.putImageData(img, 0, 0);
+      return out;
+    });
+  };
+  // Layer styles (Photoshop's fx): baked into the selected layer.
+  const layerStyle = (kind: 'shadow' | 'glow' | 'stroke') => {
+    if (!target) return;
+    const t0 = target, col = paintColor;
+    run(kind === 'shadow' ? 'Drop shadow' : kind === 'glow' ? 'Outer glow' : 'Stroke', () => {
+      const W = t0.width, H = t0.height, size = Math.max(4, Math.round(Math.max(W, H) * 0.012));
+      const out = makeCanvas(W, H);
+      const ctx = out.getContext('2d')!;
+      // Silhouette of the layer in one colour.
+      const sil = makeCanvas(W, H);
+      const sctx = sil.getContext('2d')!;
+      sctx.drawImage(t0, 0, 0);
+      sctx.globalCompositeOperation = 'source-in';
+      sctx.fillStyle = kind === 'shadow' ? '#000000' : col;
+      sctx.fillRect(0, 0, W, H);
+      if (kind === 'stroke') {
+        for (let a = 0; a < 24; a++) ctx.drawImage(sil, Math.cos((a / 24) * Math.PI * 2) * size, Math.sin((a / 24) * Math.PI * 2) * size);
+      } else {
+        ctx.save();
+        ctx.filter = `blur(${kind === 'shadow' ? size : size * 1.6}px)`;
+        ctx.globalAlpha = kind === 'shadow' ? 0.55 : 0.9;
+        ctx.drawImage(sil, kind === 'shadow' ? size : 0, kind === 'shadow' ? size : 0);
+        if (kind === 'glow') ctx.drawImage(sil, 0, 0);
+        ctx.restore();
+      }
+      ctx.drawImage(t0, 0, 0);
+      return out;
+    });
   };
   const applyGradient = (g: { x0: number; y0: number; x1: number; y1: number }) => {
     if (!target || !base) return;
@@ -1079,7 +1317,7 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
   // ---------------- background removal
   const [bgOpen, setBgOpen] = useState(false);
   const [bgMode, setBgMode] = useState<'remove' | 'subject'>('remove');
-  const transparent = useMemo(() => (base ? hasTransparency(base) : false), [base]);
+  const transparent = useMemo(() => (base && tool === 'bg' ? hasTransparency(base) : false), [base, tool]);
 
   // ---------------- resize state
   const [rz, setRz] = useState<{ w: string; h: string; unit: PhysUnit; dpi: string; lock: boolean; resample: boolean } | null>(null);
@@ -1134,9 +1372,53 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
         return (
           <Section title="Text">
             <p className="text-[12px] text-mt-muted">Click on the picture where the text should start, type, then press Enter (Shift+Enter for a new line). Each text goes on its own layer.</p>
-            <label className="text-[11px] text-mt-muted">Font<select className={field} value={textOpts.font} onChange={(e) => setTextOpts({ ...textOpts, font: e.target.value })}>{TEXT_FONTS.map((f) => <option key={f} value={f}>{f}</option>)}</select></label>
+            <label className="text-[11px] text-mt-muted">Font<select className={field} value={textOpts.font} onChange={(e) => setTextOpts({ ...textOpts, font: e.target.value })} style={{ fontFamily: `"${textOpts.font}"` }}>{FONT_GROUPS.map((g) => <optgroup key={g.c} label={g.c}>{g.fonts.map((f) => <option key={f} value={f}>{f}</option>)}</optgroup>)}</select></label>
             <Range def={{ key: 'exposure', label: 'Size (px)', min: 8, max: Math.max(200, Math.round(base.width * 0.3)) }} value={textPx} onChange={(v) => setTextOpts({ ...textOpts, size: v })} onCommit={() => {}} />
-            <label className="flex items-center gap-2 text-[12px]"><input type="checkbox" className="w-4 h-4 accent-[#3B82C4]" checked={textOpts.bold} onChange={(e) => setTextOpts({ ...textOpts, bold: e.target.checked })} /> Bold</label>
+            <div className="flex gap-1.5 flex-wrap">
+              <button className={cx(chip(textOpts.bold), 'font-bold')} onClick={() => setTextOpts({ ...textOpts, bold: !textOpts.bold })}>Bold</button>
+              <button className={cx(chip(textOpts.italic), 'italic')} onClick={() => setTextOpts({ ...textOpts, italic: !textOpts.italic })}>Italic</button>
+              {(['left', 'center', 'right'] as const).map((a) => <button key={a} className={chip(textOpts.align === a)} onClick={() => setTextOpts({ ...textOpts, align: a })}>{a[0].toUpperCase() + a.slice(1)}</button>)}
+            </div>
+            <Range def={{ key: 'exposure', label: 'Letter spacing', min: -10, max: 60 }} value={textOpts.spacing} onChange={(v) => setTextOpts({ ...textOpts, spacing: v })} onCommit={() => {}} />
+            <p className="text-[12px] font-semibold text-mt-ink mt-1">Effect</p>
+            <div className="grid grid-cols-4 gap-1.5">
+              {TEXT_EFFECTS.map((fx) => (
+                <button key={fx.id} onClick={() => setTextOpts({ ...textOpts, effect: fx.id })} aria-pressed={textOpts.effect === fx.id} className={cx('h-14 rounded-lg border flex flex-col items-center justify-center gap-0.5', textOpts.effect === fx.id ? 'border-[#2680EB] ring-1 ring-[#2680EB]' : 'border-mt-border hover:bg-mt-surface2')}>
+                  <span className="text-[17px] font-extrabold leading-none text-mt-ink" style={fx.css}>Ag</span>
+                  <span className="text-[10px] text-mt-muted">{fx.label}</span>
+                </button>
+              ))}
+            </div>
+            {textOpts.effect !== 'none' && textOpts.effect !== 'shadow' && textOpts.effect !== 'lift' && (
+              <label className="flex items-center gap-2 text-[12px]">Effect colour <input type="color" value={textOpts.fxColor} onChange={(e) => setTextOpts({ ...textOpts, fxColor: e.target.value })} className="w-8 h-8 rounded border border-mt-border bg-transparent" /></label>
+            )}
+            <label className="flex items-center gap-2 text-[12px]">Text colour <input type="color" value={paintColor} onChange={(e) => setPaintColor(e.target.value)} className="w-8 h-8 rounded border border-mt-border bg-transparent" /></label>
+          </Section>
+        );
+      case 'shape':
+        return (
+          <Section title="Shape">
+            <p className="text-[12px] text-mt-muted">Drag on the picture to draw. Hold Shift for a perfect square or circle. Each shape goes on its own layer.</p>
+            <div className="flex gap-1.5">
+              {(['rect', 'ellipse', 'line'] as const).map((k) => <button key={k} className={chip(shapeOpts.kind === k)} onClick={() => setShapeOpts({ ...shapeOpts, kind: k })}>{k === 'rect' ? 'Rectangle' : k === 'ellipse' ? 'Ellipse' : 'Line'}</button>)}
+            </div>
+            {shapeOpts.kind !== 'line' && (
+              <div className="flex gap-1.5">
+                <button className={chip(shapeOpts.fill)} onClick={() => setShapeOpts({ ...shapeOpts, fill: true })}>Filled</button>
+                <button className={chip(!shapeOpts.fill)} onClick={() => setShapeOpts({ ...shapeOpts, fill: false })}>Outline</button>
+              </div>
+            )}
+            <Range def={{ key: 'exposure', label: shapeOpts.fill && shapeOpts.kind !== 'line' ? 'Border (background colour)' : 'Line width', min: 0, max: 120 }} value={shapeOpts.stroke} onChange={(v) => setShapeOpts({ ...shapeOpts, stroke: v })} onCommit={() => {}} />
+            {shapeOpts.kind === 'rect' && <Range def={{ key: 'exposure', label: 'Corner radius', min: 0, max: 400 }} value={shapeOpts.radius} onChange={(v) => setShapeOpts({ ...shapeOpts, radius: v })} onCommit={() => {}} />}
+            <label className="flex items-center gap-2 text-[12px]">Colour <input type="color" value={paintColor} onChange={(e) => setPaintColor(e.target.value)} className="w-8 h-8 rounded border border-mt-border bg-transparent" /></label>
+          </Section>
+        );
+      case 'bucket':
+        return (
+          <Section title="Paint bucket">
+            <p className="text-[12px] text-mt-muted">Click an area to fill it with the foreground colour. Tolerance decides how different a colour can be and still be filled.{sel ? ' Only the selected area is filled.' : ''}</p>
+            <Range def={{ key: 'exposure', label: 'Tolerance', min: 0, max: 255 }} value={bucketTol} onChange={setBucketTol} onCommit={() => {}} />
+            <label className="flex items-center gap-2 text-[12px]">Colour <input type="color" value={paintColor} onChange={(e) => setPaintColor(e.target.value)} className="w-8 h-8 rounded border border-mt-border bg-transparent" /></label>
           </Section>
         );
       case 'gradient':
@@ -1541,10 +1823,10 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
       <span className="shrink-0 w-px h-6 lg:w-7 lg:h-px bg-mt-input-border my-1 mx-1 lg:mx-0" />
       {/* foreground / background colours */}
       <div className="relative shrink-0 w-10 h-10 lg:mt-1" aria-label="Colours">
-        <label className="absolute right-0 bottom-0 w-6 h-6 rounded-sm border border-white/70 shadow cursor-pointer" style={{ background: bgColor }} title="Background colour">
+        <label className="absolute right-0 bottom-0 w-6 h-6 rounded-sm border border-white/70 ring-1 ring-black/40 shadow cursor-pointer" style={{ background: bgColor }} title="Background colour">
           <input type="color" value={bgColor} onChange={(e) => setBgColor(e.target.value)} className="sr-only" aria-label="Background colour" />
         </label>
-        <label className="absolute left-0 top-0 w-6 h-6 rounded-sm border border-white/70 shadow cursor-pointer" style={{ background: paintColor }} title="Foreground colour">
+        <label className="absolute left-0 top-0 w-6 h-6 rounded-sm border border-white/70 ring-1 ring-black/40 shadow cursor-pointer" style={{ background: paintColor }} title="Foreground colour">
           <input type="color" value={paintColor} onChange={(e) => setPaintColor(e.target.value)} className="sr-only" aria-label="Foreground colour" />
         </label>
       </div>
@@ -1620,15 +1902,34 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
       {tool === 'text' && (
         <>
           <select className={optField} value={textOpts.font} onChange={(e) => setTextOpts((o) => ({ ...o, font: e.target.value }))} aria-label="Font">
-            {TEXT_FONTS.map((f) => <option key={f} value={f}>{f}</option>)}
+            {FONT_GROUPS.map((g) => <optgroup key={g.c} label={g.c}>{g.fonts.map((f) => <option key={f} value={f}>{f}</option>)}</optgroup>)}
           </select>
           <label className="inline-flex items-center gap-1.5"><span className={optLabel}>Size</span>
             <input type="number" min={6} max={2000} value={textPx} onChange={(e) => setTextOpts((o) => ({ ...o, size: Math.max(6, +e.target.value || 0) }))} className={cx(optField, 'w-16')} />
             <span className={optLabel}>px</span>
           </label>
           <button className={cx(optOn(textOpts.bold), 'font-bold')} onClick={() => setTextOpts((o) => ({ ...o, bold: !o.bold }))} aria-pressed={textOpts.bold}>B</button>
+          <button className={cx(optOn(textOpts.italic), 'italic')} onClick={() => setTextOpts((o) => ({ ...o, italic: !o.italic }))} aria-pressed={textOpts.italic}>I</button>
+          <select className={optField} value={textOpts.align} onChange={(e) => setTextOpts((o) => ({ ...o, align: e.target.value as any }))} aria-label="Align"><option value="left">Left</option><option value="center">Centre</option><option value="right">Right</option></select>
+          <select className={optField} value={textOpts.effect} onChange={(e) => setTextOpts((o) => ({ ...o, effect: e.target.value as TextEffect }))} aria-label="Text effect">{TEXT_EFFECTS.map((fx) => <option key={fx.id} value={fx.id}>{fx.label}</option>)}</select>
           <input type="color" value={paintColor} onChange={(e) => setPaintColor(e.target.value)} className="w-7 h-7 rounded border border-mt-input-border bg-transparent" aria-label="Text colour" />
           <span className={optLabel}>Click the picture to type · Enter to place</span>
+        </>
+      )}
+      {tool === 'shape' && (
+        <>
+          {(['rect', 'ellipse', 'line'] as const).map((k) => <button key={k} className={optOn(shapeOpts.kind === k)} onClick={() => setShapeOpts((o) => ({ ...o, kind: k }))}>{k === 'rect' ? 'Rectangle' : k === 'ellipse' ? 'Ellipse' : 'Line'}</button>)}
+          {shapeOpts.kind !== 'line' && <button className={optOn(shapeOpts.fill)} onClick={() => setShapeOpts((o) => ({ ...o, fill: !o.fill }))}>{shapeOpts.fill ? 'Filled' : 'Outline'}</button>}
+          <label className="inline-flex items-center gap-1.5"><span className={optLabel}>{shapeOpts.kind === 'line' || !shapeOpts.fill ? 'Width' : 'Border'}</span><input type="number" min={0} max={400} value={shapeOpts.stroke} onChange={(e) => setShapeOpts((o) => ({ ...o, stroke: Math.max(0, +e.target.value || 0) }))} className={cx(optField, 'w-14')} /></label>
+          {shapeOpts.kind === 'rect' && <label className="inline-flex items-center gap-1.5"><span className={optLabel}>Radius</span><input type="number" min={0} max={2000} value={shapeOpts.radius} onChange={(e) => setShapeOpts((o) => ({ ...o, radius: Math.max(0, +e.target.value || 0) }))} className={cx(optField, 'w-14')} /></label>}
+          <span className={optLabel}>Drag on the picture · Shift keeps it square</span>
+        </>
+      )}
+      {tool === 'bucket' && (
+        <>
+          <label className="inline-flex items-center gap-1.5"><span className={optLabel}>Tolerance</span><input type="range" min={0} max={255} value={bucketTol} onChange={(e) => setBucketTol(+e.target.value)} className="w-28 accent-[#2680EB]" /><span className="w-8 tabular-nums">{bucketTol}</span></label>
+          <span className="w-6 h-6 rounded border border-white/60 ring-1 ring-black/30" style={{ background: paintColor }} />
+          <span className={optLabel}>Click an area to fill it</span>
         </>
       )}
       {tool === 'gradient' && (
@@ -1705,6 +2006,10 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
       { label: 'Send backward', shortcut: 'Ctrl [', onClick: () => layerOps.move(-1), disabled: activeIdx <= 0 },
       { label: 'Merge down', shortcut: 'Ctrl E', onClick: layerOps.mergeDown, disabled: activeIdx <= 0 },
       { label: 'Flatten image', onClick: layerOps.flatten, disabled: !multi },
+      { sep: true },
+      { label: 'Layer style: Drop shadow', onClick: () => layerStyle('shadow') },
+      { label: 'Layer style: Outer glow (foreground colour)', onClick: () => layerStyle('glow') },
+      { label: 'Layer style: Stroke (foreground colour)', onClick: () => layerStyle('stroke') },
     ] },
     { label: 'Select', items: [
       { label: 'All', shortcut: 'Ctrl A', onClick: selOps.all },
@@ -1729,7 +2034,7 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
     ] },
   ];
   return (
-    <div className={cx('h-full w-full flex flex-col bg-mt-bg text-mt-ink min-h-0', pro && 'mt-ps dark')}>
+    <div className={cx('h-full w-full flex flex-col bg-mt-bg text-mt-ink min-h-0', pro && 'mt-ps')}>
       {/* top bar */}
       <div className="h-14 shrink-0 flex items-center gap-2 px-3 border-b border-mt-border bg-mt-surface">
         <div className="min-w-0 flex items-center gap-2">
@@ -1845,6 +2150,15 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
                   <line x1={gradDrag.x0} y1={gradDrag.y0} x2={gradDrag.x1} y2={gradDrag.y1} stroke="#111" strokeWidth={1} strokeDasharray="4 4" vectorEffect="non-scaling-stroke" />
                 </svg>
               )}
+              {shapeDrag && base && (
+                <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox={`0 0 ${base.width} ${base.height}`} preserveAspectRatio="none">
+                  {shapeOpts.kind === 'line'
+                    ? <line x1={shapeDrag.x0} y1={shapeDrag.y0} x2={shapeDrag.x1} y2={shapeDrag.y1} stroke={paintColor} strokeWidth={Math.max(1, shapeOpts.stroke)} strokeLinecap="round" />
+                    : shapeOpts.kind === 'ellipse'
+                      ? <ellipse cx={(shapeDrag.x0 + shapeDrag.x1) / 2} cy={(shapeDrag.y0 + shapeDrag.y1) / 2} rx={Math.abs(shapeDrag.x1 - shapeDrag.x0) / 2} ry={Math.abs(shapeDrag.y1 - shapeDrag.y0) / 2} fill={shapeOpts.fill ? paintColor : 'none'} stroke={shapeOpts.fill ? bgColor : paintColor} strokeWidth={shapeOpts.fill ? shapeOpts.stroke : Math.max(1, shapeOpts.stroke)} />
+                      : <rect x={Math.min(shapeDrag.x0, shapeDrag.x1)} y={Math.min(shapeDrag.y0, shapeDrag.y1)} width={Math.abs(shapeDrag.x1 - shapeDrag.x0)} height={Math.abs(shapeDrag.y1 - shapeDrag.y0)} rx={shapeOpts.radius} fill={shapeOpts.fill ? paintColor : 'none'} stroke={shapeOpts.fill ? bgColor : paintColor} strokeWidth={shapeOpts.fill ? shapeOpts.stroke : Math.max(1, shapeOpts.stroke)} />}
+                </svg>
+              )}
               {textDraft && base && (
                 <textarea
                   autoFocus
@@ -1864,8 +2178,12 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
                   style={{
                     left: (textDraft.x * dispW) / base.width,
                     top: (textDraft.y * dispH) / base.height,
+                    ...(TEXT_EFFECTS.find((x) => x.id === textOpts.effect)?.css || {}),
                     fontFamily: `"${textOpts.font}", sans-serif`,
                     fontWeight: textOpts.bold ? 700 : 400,
+                    fontStyle: textOpts.italic ? 'italic' : 'normal',
+                    letterSpacing: (textOpts.spacing * dispW) / base.width,
+                    textAlign: textOpts.align,
                     fontSize: (textPx * dispW) / base.width,
                     color: paintColor,
                     minWidth: 80,

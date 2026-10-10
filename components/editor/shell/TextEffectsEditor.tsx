@@ -16,6 +16,9 @@ const LOOKS: { id: TextFx['effect']; label: string }[] = [
   { id: 'neon', label: 'Neon' },
   { id: 'echo', label: 'Echo' },
   { id: 'hollow', label: 'Hollow' },
+  { id: 'retro', label: 'Retro' },
+  { id: 'pop', label: 'Pop' },
+  { id: 'dreamy', label: 'Dreamy' },
 ];
 
 function EffectSample({ id }: { id: string }) {
@@ -28,6 +31,9 @@ function EffectSample({ id }: { id: string }) {
     neon: { ...base, color: '#F2708F', textShadow: '0 0 6px #F2708F, 0 0 14px #F2708F', WebkitTextStroke: '0.6px #fff' } as any,
     hollow: { ...base, color: 'transparent', WebkitTextStroke: '1.2px #09090B' } as any,
     echo: { ...base, textShadow: '3px 3px 0 #8CCBFF' },
+    retro: { ...base, color: '#F2708F', WebkitTextStroke: '1px #FFF4E0', textShadow: '3px 3px 0 #1A1A1A' } as any,
+    pop: { ...base, color: '#FFFFFF', textShadow: '4px 4px 0 #F2708F', WebkitTextStroke: '0.6px #09090B' } as any,
+    dreamy: { ...base, color: '#A69BD3', textShadow: '0 1px 10px rgba(166,155,211,0.9)' },
   };
   return <span style={map[id] || base}>Ag</span>;
 }
@@ -55,7 +61,7 @@ function Toggle({ on, onChange, label }: { on: boolean; onChange: (v: boolean) =
 
 export function TextEffectsEditor({ value, onChange }: { value: TextFx; onChange: (fx: TextFx, commit: boolean) => void }) {
   const set = (patch: Partial<TextFx>, commit = true) => onChange({ ...value, ...patch }, commit);
-  const usesColor = value.effect !== 'none' && value.effect !== 'lift';
+  const usesColor = value.effect !== 'none' && value.effect !== 'lift' && value.effect !== 'dreamy';
   const outline = value.outline || null;
   const highlight = value.highlight || null;
   return (

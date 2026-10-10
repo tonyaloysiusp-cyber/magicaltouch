@@ -37,7 +37,7 @@ const CHOICES: { id: Choice; label: string; hint: string; icon: React.ReactNode 
   { id: 'png', label: 'PNG', hint: 'Sharp graphics and text. Can be transparent.', icon: <ImageIcon size={18} /> },
   { id: 'jpg', label: 'JPG', hint: 'Small files, great for photos and sharing.', icon: <FileImage size={18} /> },
   { id: 'pdf', label: 'PDF (vector)', hint: 'Sharp text and shapes at any size. For sending and printing.', icon: <FileText size={18} /> },
-  { id: 'pdf-print', label: 'PDF for print shops', hint: 'Vector, with bleed and crop marks.', icon: <Printer size={18} /> },
+  { id: 'pdf-print', label: 'PDF for print shops', hint: 'Vector CMYK (FOGRA39), with bleed and crop marks.', icon: <Printer size={18} /> },
   { id: 'tiff', label: 'TIFF', hint: 'Lossless, for print shops. RGB or CMYK.', icon: <FileImage size={18} /> },
   { id: 'webp', label: 'WebP', hint: 'Small, high-quality pictures for websites.', icon: <FileImage size={18} /> },
 ];
@@ -102,7 +102,7 @@ export function ExportDialog({ artboards, activeArtboardId, exporting, onClose, 
   const cmyk = cmykPossible && colour === 'cmyk';
   // A CMYK PDF is made from a full-resolution picture of each page, so it
   // needs a resolution like the picture formats do.
-  const isRaster = format !== 'pdf' || cmyk;
+  const isRaster = format !== 'pdf';
   const includeMarks = printPreset || marks;
   const includeBleed = printPreset || bleed || marks;
 
@@ -199,7 +199,7 @@ export function ExportDialog({ artboards, activeArtboardId, exporting, onClose, 
               {cmyk && (
                 <p className="text-[11px] text-mt-muted mt-2 leading-snug">
                   A true 4-ink CMYK file converted with the Coated FOGRA39 press profile (embedded), with pure black text kept as 100% K.
-                  {format === 'pdf' ? ' Each page is printed as one high-resolution picture — the way most print shops prefer CMYK files.' : ''}
+                  {format === 'pdf' ? ' Text, shapes and lines stay vector (sharp at any size); photos stay pictures.' : ''}
                 </p>
               )}
             </section>

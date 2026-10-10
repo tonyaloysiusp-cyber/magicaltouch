@@ -23,7 +23,7 @@ import { markFontUnavailable, isFontUnavailable, subscribeFontAvailability } fro
 
 export interface GoogleFontDef {
   family: string;
-  category: 'Classic' | 'Sans Serif' | 'Serif' | 'Display' | 'Script' | 'Monospace';
+  category: 'Classic' | 'Sans Serif' | 'Serif' | 'Display' | 'Script' | 'Monospace' | 'World';
   // Weights this family is requested at. 400 (regular) always renders;
   // 700 (bold) is only listed for families that actually ship a bold cut
   // — asking Google's API for a weight a family doesn't have returns
@@ -191,6 +191,27 @@ export const GOOGLE_FONTS: GoogleFontDef[] = [
   // Even more monospace
   { family: 'VT323', category: 'Monospace', weights: [400] },
   { family: 'Silkscreen', category: 'Monospace', weights: [400, 700] },
+  // World scripts: used when a design is translated (Arabic, Indian,
+  // East-Asian, Hebrew, Thai…), so the words show and export correctly.
+  { family: 'Cairo', category: 'World', weights: [400, 700] },
+  { family: 'Tajawal', category: 'World', weights: [400, 700] },
+  { family: 'Vazirmatn', category: 'World', weights: [400, 700] },
+  { family: 'Noto Nastaliq Urdu', category: 'World', weights: [400, 700] },
+  { family: 'Heebo', category: 'World', weights: [400, 700] },
+  { family: 'Hind', category: 'World', weights: [400, 700] },
+  { family: 'Hind Siliguri', category: 'World', weights: [400, 700] },
+  { family: 'Noto Sans Malayalam', category: 'World', weights: [400, 700] },
+  { family: 'Noto Sans Tamil', category: 'World', weights: [400, 700] },
+  { family: 'Noto Sans Telugu', category: 'World', weights: [400, 700] },
+  { family: 'Noto Sans Kannada', category: 'World', weights: [400, 700] },
+  { family: 'Noto Sans Gujarati', category: 'World', weights: [400, 700] },
+  { family: 'Noto Sans Gurmukhi', category: 'World', weights: [400, 700] },
+  { family: 'Noto Sans Sinhala', category: 'World', weights: [400, 700] },
+  { family: 'Noto Sans Thai', category: 'World', weights: [400, 700] },
+  { family: 'Noto Sans SC', category: 'World', weights: [400, 700] },
+  { family: 'Noto Sans TC', category: 'World', weights: [400, 700] },
+  { family: 'Noto Sans JP', category: 'World', weights: [400, 700] },
+  { family: 'Noto Sans KR', category: 'World', weights: [400, 700] },
 ];
 
 // Every weight Google Fonts ships for the families that have more than
