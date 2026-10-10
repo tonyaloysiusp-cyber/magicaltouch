@@ -2,7 +2,7 @@
 // their account and cached on the device so it works offline too.
 
 import { supabase } from '@/lib/supabase';
-import { normalizeColor, hexToRgb, rgbToHex, rgbToHsl, hslToRgb } from './color';
+import { normalizeColor, hexToRgb, rgbToHex, rgbToHsl, hslToRgb, contrastRatio } from './color';
 
 export interface BrandKit {
   name: string;
@@ -95,15 +95,14 @@ export interface BrandApplyOptions {
 const hsl = (hex: string) => rgbToHsl(hexToRgb(hex)!);
 const fromHsl = (h: number, s: number, l: number) => rgbToHex(hslToRgb(h, Math.max(0, Math.min(100, s)), Math.max(0, Math.min(100, l))));
 
-// Works out which colour of the design should become which brand colour,
-// by the job the colour does rather than by a blind swap:
-//  - the most prominent coloured accent becomes the first (primary) brand
-//    colour, the next one the second, and so on;
-//  - big background areas take the brand hue but keep their own lightness,
-//    so a pale background stays pale and text on it stays readable;
-//  - text and small accents take the exact brand colour unless that would
-//    flip light to dark (then the brand hue at the original lightness).
-// Greys, black and white are never touched.
+// Works out which colour of the design should become which brand colour.
+// Colours are first grouped into "families" (shades of one hue, e.g. a
+// dark and a light blue), ranked by how much of the design they cover.
+// The most prominent family becomes the first brand colour, the next the
+// second, and so on. Inside a family every shade keeps its offset from the
+// family's main colour, so light stays light, dark stays dark and text
+// keeps its contrast. Large backgrounds take the brand hue but keep their
+// own lightness. Greys, black and white are never touched.
 export function brandColorMap(objects: any[], brand: string[], pageArea: number): Map<string, string> {
   const map = new Map<string, string>();
   const colors = brand.map((c) => normalizeColor(c)).filter(Boolean) as string[];
@@ -128,28 +127,88 @@ export function brandColorMap(objects: any[], brand: string[], pageArea: number)
       if (typeof x.fill === 'string') note(x.fill, area, isText ? 1 : 0);
       else if (x.fill?.colorStops) x.fill.colorStops.forEach((s: any) => note(s.color, area / x.fill.colorStops.length, 0));
       if (typeof x.stroke === 'string' && x.strokeWidth) note(x.stroke, 0, 0.3);
+      if (x.styles) Object.values(x.styles).forEach((line: any) => Object.values(line || {}).forEach((st: any) => st?.fill && note(st.fill, 0, 0.2)));
     })
   );
   const pa = Math.max(1, pageArea);
-  const ranked = [...stats.entries()]
-    .map(([c, st]) => ({ c, st, surface: st.area / pa > 0.25, score: Math.min(st.area / pa, 0.25) + st.text * 0.05 }))
-    .sort((a, b) => b.score - a.score);
-  // Accents get the brand colours first (primary first); backgrounds follow.
-  const accents = ranked.filter((r) => !r.surface);
-  const surfaces = ranked.filter((r) => r.surface);
-  accents.forEach((r, i) => {
-    const b = colors[i % colors.length];
+  const entries = [...stats.entries()].map(([c, st]) => ({ c, st, h: hsl(c), score: Math.min(st.area / pa, 0.3) + st.text * 0.04 }));
+  // Group into hue families.
+  const fams: { rep: (typeof entries)[number]; members: typeof entries; score: number; area: number }[] = [];
+  const hueDist = (a: number, b: number) => Math.min(Math.abs(a - b), 360 - Math.abs(a - b));
+  entries
+    .sort((a, b) => b.score - a.score)
+    .forEach((e) => {
+      const f = fams.find((x) => hueDist(x.rep.h.h, e.h.h) < 24 && Math.abs(x.rep.h.s - e.h.s) < 55);
+      if (f) {
+        f.members.push(e);
+        f.score += e.score;
+        f.area += e.st.area;
+      } else fams.push({ rep: e, members: [e], score: e.score, area: e.st.area });
+    });
+  fams.sort((a, b) => b.score - a.score);
+  // Families that are mostly a big background come after the accents.
+  const accents = fams.filter((f) => f.area / pa <= 0.3);
+  const surfaces = fams.filter((f) => f.area / pa > 0.3);
+  const assign = (f: (typeof fams)[number], b: string, surface: boolean) => {
     const hb = hsl(b);
-    const hc = hsl(r.c);
-    map.set(r.c, Math.abs(hb.l - hc.l) <= 30 ? b : fromHsl(hb.h, hb.s, hc.l));
-  });
-  surfaces.forEach((r, i) => {
-    const b = colors[(i + (accents.length ? 1 : 0)) % colors.length];
-    const hb = hsl(b);
-    const hc = hsl(r.c);
-    map.set(r.c, fromHsl(hb.h, hc.s < 30 ? hc.s : Math.max(hc.s * 0.5, Math.min(hb.s, hc.s + 15)), hc.l));
-  });
+    const rep = f.rep.h;
+    f.members.forEach((m) => {
+      const hc = m.h;
+      if (surface) {
+        map.set(m.c, fromHsl(hb.h, hc.s < 25 ? hc.s : Math.min(hb.s, hc.s), hc.l));
+        return;
+      }
+      const sat = rep.s > 4 ? hb.s * Math.min(1.6, hc.s / rep.s) : hb.s;
+      let l = hc.l + (hb.l - rep.l);
+      // Never flip a shade across the middle (keeps text readable).
+      if ((hc.l > 62 && l < 45) || (hc.l < 38 && l > 55)) l = hc.l;
+      map.set(m.c, fromHsl(hb.h, sat, l));
+    });
+  };
+  accents.forEach((f, i) => assign(f, colors[i % colors.length], false));
+  surfaces.forEach((f, i) => assign(f, colors[(i + (accents.length ? 1 : 0)) % colors.length], true));
   return map;
+}
+
+// ---------------------------------------------------------------- reset
+// Before the first colour change, each object remembers its own colours,
+// so "Reset colours" can bring back the template's colours (only the
+// colours: text, positions, pictures and fonts stay as they are now).
+function colorSnapshot(x: any) {
+  return {
+    fill: typeof x.fill === 'string' ? x.fill : x.fill?.colorStops ? x.fill.colorStops.map((s: any) => s.color) : null,
+    stroke: typeof x.stroke === 'string' ? x.stroke : null,
+    styles: x.styles ? JSON.parse(JSON.stringify(Object.fromEntries(Object.entries(x.styles).map(([ln, line]: any) => [ln, Object.fromEntries(Object.entries(line || {}).filter(([, st]: any) => st?.fill).map(([ci, st]: any) => [ci, st.fill]))])))) : null,
+  };
+}
+const eachLeaf = (o: any, fn: (o: any) => void) => {
+  if (o.type === 'group' && o.getObjects) o.getObjects().forEach((c: any) => eachLeaf(c, fn));
+  else fn(o);
+};
+export function rememberOriginalColors(objects: any[]) {
+  objects.forEach((o) => eachLeaf(o, (x) => { if (!x.__origColors) x.__origColors = colorSnapshot(x); }));
+}
+export function hasOriginalColors(objects: any[]) {
+  let found = false;
+  objects.forEach((o) => eachLeaf(o, (x) => { if (x.__origColors) found = true; }));
+  return found;
+}
+export function resetOriginalColors(objects: any[], keep = false): number {
+  let n = 0;
+  objects.forEach((o) =>
+    eachLeaf(o, (x) => {
+      const oc = x.__origColors;
+      if (!oc) return;
+      if (typeof oc.fill === 'string') x.set({ fill: oc.fill });
+      else if (Array.isArray(oc.fill) && x.fill?.colorStops) x.fill.colorStops.forEach((s: any, i: number) => oc.fill[i] && (s.color = oc.fill[i]));
+      if (typeof oc.stroke === 'string') x.set({ stroke: oc.stroke });
+      if (oc.styles && x.styles) Object.entries(oc.styles).forEach(([ln, line]: any) => Object.entries(line).forEach(([ci, f]: any) => { if (x.styles[ln]?.[ci]) x.styles[ln][ci].fill = f; }));
+      if (!keep) delete x.__origColors;
+      x.dirty = true;
+      n++;
+    })
+  );
+  return n;
 }
 
 // Applies a brand kit to the objects of one page. Only what the customer
@@ -162,7 +221,11 @@ export function applyBrandToObjects(objects: any[], kit: BrandKit, opts: BrandAp
   };
   let area = pageArea;
   if (!area) objects.forEach((o) => (area = Math.max(area, Math.abs((o.width || 0) * (o.scaleX || 1) * (o.height || 0) * (o.scaleY || 1)))));
+  // A second palette is always worked out from the template's own colours,
+  // so trying several palettes never drifts.
+  if (opts.colors) resetOriginalColors(objects, true);
   const map = opts.colors ? brandColorMap(objects, kit.colors.filter(Boolean), area) : new Map<string, string>();
+  if (map.size) rememberOriginalColors(objects);
   const swap = (c: any) => {
     const n = normalizeColor(c);
     return n && map.has(n) ? map.get(n)! : c;
@@ -198,6 +261,40 @@ export function applyBrandToObjects(objects: any[], kit: BrandKit, opts: BrandAp
       x.dirty = true;
     })
   );
+  if (map.size) keepTextReadable(objects, kit.colors.filter(Boolean));
+}
+
+// After a colour change, any text that has become hard to read on whatever
+// sits behind it gets the most readable brand colour (or white / near-black).
+function keepTextReadable(objects: any[], brand: string[]) {
+  const solid = (o: any) => (typeof o.fill === 'string' ? normalizeColor(o.fill) : o.fill?.colorStops ? normalizeColor(o.fill.colorStops[Math.floor(o.fill.colorStops.length / 2)].color) : null);
+  const rect = (o: any) => (o.getBoundingRect ? o.getBoundingRect(true, true) : { left: o.left, top: o.top, width: o.width * (o.scaleX || 1), height: o.height * (o.scaleY || 1) });
+  objects.forEach((x, i) => {
+    if (!x.fontSize || typeof x.fill !== 'string') return;
+    const now = normalizeColor(x.fill);
+    const was = normalizeColor(x.__origColors?.fill);
+    if (!now) return;
+    const r = rect(x);
+    const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+    let bgObj: any = null;
+    for (let j = i - 1; j >= 0; j--) {
+      const o = objects[j];
+      if (o.fontSize || o.type === 'image' || o.opacity === 0) continue;
+      const b = rect(o);
+      if (cx >= b.left && cx <= b.left + b.width && cy >= b.top && cy <= b.top + b.height && b.width * b.height > r.width * r.height * 0.6 && solid(o)) { bgObj = o; break; }
+    }
+    if (!bgObj) return;
+    const bgNow = solid(bgObj)!;
+    const bgWas = normalizeColor(typeof bgObj.__origColors?.fill === 'string' ? bgObj.__origColors.fill : null) || bgNow;
+    const before = was ? contrastRatio(was, bgWas) : 4.5;
+    const after = contrastRatio(now, bgNow);
+    const need = Math.min(3, before * 0.85);
+    if (after >= need) return;
+    const options = [...brand.map((c) => normalizeColor(c)).filter(Boolean) as string[], '#FFFFFF', '#141414'];
+    const brandOk = options.slice(0, -2).filter((c) => contrastRatio(c, bgNow) >= need).sort((a, b) => contrastRatio(b, bgNow) - contrastRatio(a, bgNow));
+    const pick = brandOk[0] || options.sort((a, b) => contrastRatio(b, bgNow) - contrastRatio(a, bgNow))[0];
+    x.set({ fill: pick });
+  });
 }
 
 // Ready-made palettes customers can pick for their brand (or apply to a

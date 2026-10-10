@@ -121,7 +121,7 @@ import { drawCropOverlay, isFramed, fillFrame, cropHandleAt, dragCropHandle, kee
 import { BrushSettings, DEFAULT_BRUSH, StrokePoint, strokePathD, createStrokeObject, eraseWithStroke } from '@/lib/editor/brush';
 import { useEditorFeatures, TextPreset, clearCharStyle } from '@/hooks/useEditorFeatures';
 import { planResize } from '@/lib/editor/smartResize';
-import { BrandKit, EMPTY_KIT, DEFAULT_BRAND_APPLY, loadBrandKit, saveBrandKit, applyBrandToObjects } from '@/lib/editor/brandKit';
+import { BrandKit, EMPTY_KIT, DEFAULT_BRAND_APPLY, loadBrandKit, saveBrandKit, applyBrandToObjects, resetOriginalColors, hasOriginalColors } from '@/lib/editor/brandKit';
 import { fromFabricGradient, toFabricGradient, GradientSpec } from '@/lib/editor/gradients';
 import { documentColors as collectDocumentColors } from '@/lib/editor/color';
 import type { QuickStart } from '@/components/editor/shell/OnboardingDialog';
@@ -3332,16 +3332,36 @@ function EditorContent() {
     }, 700);
   };
   const BRAND_LOGO_NAME = 'Brand logo';
-  const pageObjects = () => {
+  const [brandAllPages, setBrandAllPages] = useState(false);
+  const pageObjects = (all = false) => {
     const canvas = fabricCanvasRef.current;
     const page = getActiveArtboardRect();
-    const objs = canvas ? canvas.getObjects().filter((o: any) => isArtwork(o) && (o.__artboardId === page.id || !page.id)) : [];
+    const objs = canvas ? canvas.getObjects().filter((o: any) => isArtwork(o) && (all || o.__artboardId === page.id || !page.id)) : [];
     return { canvas, page, objs };
+  };
+  // Brings back the template's own colours (colours only: text, layout,
+  // pictures and fonts stay as they are).
+  const resetColors = () => {
+    const { canvas, objs } = pageObjects(brandAllPages);
+    if (!canvas) return;
+    const n = resetOriginalColors(objs);
+    if (!n) {
+      setLocalNotice('These colours are already the original ones.');
+      return;
+    }
+    canvas.requestRenderAll();
+    pushHistory();
+    bumpSel();
+    setLocalNotice(brandAllPages ? 'Original colours restored on every page.' : 'Original colours restored on this page.');
   };
   // Applies only what the customer switched on in the Brand panel.
   const applyBrandToPage = (colorsOverride?: string[]) => {
-    const { canvas, page, objs } = pageObjects();
+    const { canvas, page, objs: allObjs } = pageObjects(brandAllPages);
     if (!canvas) return;
+    // Each page is matched on its own (its own background, its own accents).
+    const groups = new Map<string, any[]>();
+    allObjs.forEach((o: any) => { const k = o.__artboardId || '_'; groups.set(k, [...(groups.get(k) || []), o]); });
+    const objs = allObjs;
     if (!objs.length) {
       setLocalNotice('Add a template or some content first, then apply your brand.');
       return;
@@ -3349,13 +3369,17 @@ function EditorContent() {
     const apply = brandKit.apply || DEFAULT_BRAND_APPLY;
     const kit = colorsOverride ? { ...brandKit, colors: colorsOverride } : brandKit;
     const opts = colorsOverride ? { colors: true, fonts: false } : { colors: apply.colors, fonts: apply.fonts };
-    applyBrandToObjects(objs.filter((o: any) => o.name !== BRAND_LOGO_NAME), kit, opts, page.width * page.height);
+    groups.forEach((list, abId) => {
+      const ab = canvas.getObjects().find((o: any) => o.__isArtboard && o.__artboardId === abId);
+      const area = ab ? ab.width * (ab.scaleX || 1) * ab.height * (ab.scaleY || 1) : page.width * page.height;
+      applyBrandToObjects(list.filter((o: any) => o.name !== BRAND_LOGO_NAME), kit, opts, area);
+    });
     canvas.requestRenderAll();
     // Brand fonts may still be downloading: measure the text again once they arrive.
     if (opts.fonts) Promise.all([kit.fonts.heading, kit.fonts.body].filter(Boolean).flatMap((f) => [ensureFontLoaded(f as string, 400), ensureFontLoaded(f as string, 700)])).then(() => refreshTextMetrics(canvas));
     pushHistory();
     bumpSel();
-    setLocalNotice(colorsOverride ? 'Palette applied to this page. Undo (Ctrl/Cmd+Z) to go back.' : 'Your brand was applied to this page. Undo (Ctrl/Cmd+Z) if you’d like it back.');
+    setLocalNotice((colorsOverride ? 'Palette applied' : 'Your brand was applied') + (brandAllPages ? ' to every page.' : ' to this page.') + ' “Reset colours” brings the original colours back.');
   };
   const brandLogoOnPage = () => pageObjects().objs.some((o: any) => o.name === BRAND_LOGO_NAME);
   const toggleBrandLogo = (on: boolean) => {
@@ -6852,6 +6876,11 @@ function EditorContent() {
           logoOnPage={brandLogoOnPage()}
           onToggleLogo={toggleBrandLogo}
           onApplyPalette={(c) => applyBrandToPage(c)}
+          onResetColors={resetColors}
+          canReset={hasOriginalColors(pageObjects(brandAllPages).objs)}
+          allPages={brandAllPages}
+          onAllPages={setBrandAllPages}
+          pageCount={artboards.length}
           onAddInfo={addBrandInfo}
           onUploadLogo={uploadBrandLogo}
           documentColors={docColors}

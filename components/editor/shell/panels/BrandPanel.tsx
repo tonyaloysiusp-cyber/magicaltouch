@@ -41,6 +41,11 @@ export function BrandPanel({
   logoOnPage,
   onToggleLogo,
   onApplyPalette,
+  onResetColors,
+  canReset,
+  allPages,
+  onAllPages,
+  pageCount,
 }: {
   kit: BrandKit;
   onChange: (k: BrandKit) => void;
@@ -53,6 +58,11 @@ export function BrandPanel({
   logoOnPage: boolean;
   onToggleLogo: (on: boolean) => void;
   onApplyPalette: (colors: string[]) => void;
+  onResetColors: () => void;
+  canReset: boolean;
+  allPages: boolean;
+  onAllPages: (v: boolean) => void;
+  pageCount: number;
 }) {
   const apply = kit.apply || DEFAULT_BRAND_APPLY;
   const setApply = (patch: Partial<typeof apply>) => onChange({ ...kit, apply: { ...apply, ...patch } });
@@ -104,8 +114,18 @@ export function BrandPanel({
           disabled={!(apply.colors && kit.colors.length) && !(apply.fonts && (kit.fonts.heading || kit.fonts.body))}
           className="mt-3 w-full h-10 rounded-xl bg-mt-primary text-mt-onprimary text-sm font-semibold inline-flex items-center justify-center gap-2 disabled:opacity-40"
         >
-          <Wand2 size={16} /> Apply to this page
+          <Wand2 size={16} /> {allPages ? 'Apply to all pages' : 'Apply to this page'}
         </button>
+        <div className="mt-2 flex items-center justify-between gap-2">
+          {pageCount > 1 ? (
+            <label className="inline-flex items-center gap-1.5 text-[12px] text-mt-ink cursor-pointer">
+              <input type="checkbox" checked={allPages} onChange={(e) => onAllPages(e.target.checked)} className="w-3.5 h-3.5 accent-[#3B82C4]" /> All {pageCount} pages
+            </label>
+          ) : <span />}
+          <button type="button" onClick={onResetColors} disabled={!canReset} title="Bring back the template’s own colours (colours only)" className="h-8 px-3 rounded-lg border border-mt-border text-[12px] font-medium text-mt-ink hover:bg-mt-surface2 disabled:opacity-40">
+            Reset colours
+          </button>
+        </div>
         <p className="text-[11px] text-mt-faint mt-2 text-right" aria-live="polite">
           {saving === 'saving' ? (
             <span className="inline-flex items-center gap-1"><Loader2 size={11} className="animate-spin" /> Saving…</span>
@@ -165,7 +185,7 @@ export function BrandPanel({
       </PanelSection>
 
       <PanelSection title="Colour palettes">
-        <p className="text-[11px] text-mt-muted mb-2">Tap a palette to try it on this page. Use “Save” to make it your brand colours.</p>
+        <p className="text-[11px] text-mt-muted mb-2">Tap a palette to try it. “Reset colours” above always brings the original colours back. “Save” makes it your brand colours.</p>
         <div className="grid grid-cols-2 gap-2">
           {BRAND_PALETTES.map((p) => (
             <div key={p.name} className="rounded-xl ring-1 ring-mt-border overflow-hidden bg-mt-surface">
