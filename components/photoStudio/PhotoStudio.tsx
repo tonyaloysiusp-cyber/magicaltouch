@@ -17,7 +17,7 @@ import { forwardRef, ReactNode, useCallback, useEffect, useImperativeHandle, use
 import {
   SlidersHorizontal, Sparkles, Crop as CropIcon, Scissors, Brush, Maximize2, Download, Undo2, Redo2, Plus, Minus,
   Maximize, RotateCcw, RotateCw, FlipHorizontal2, FlipVertical2, Loader2, Check, X, Eye, Printer, Lock, Unlock, Palette, Wand2,
-  Move, SquareDashed, Blend as BlendIcon,
+  Move, BoxSelect, Blend as BlendIcon,
 } from 'lucide-react';
 import { Adjust, NO_ADJUST, LIGHT_SLIDERS, COLOR_SLIDERS, DETAIL_SLIDERS, LOOKS, SliderDef, applyAdjust, renderAdjusted, isNeutral, autoEnhance, HSL_RANGES, CurvePts, curveLut } from '@/lib/photo/adjust';
 import { BrushKind, createStroke, replayStroke } from '@/lib/photo/brushes';
@@ -125,7 +125,7 @@ const TOOLS: { id: Tool; label: string; simpleLabel?: string; icon: any; standal
   { id: 'resize', label: 'Resize', icon: Maximize2 },
   { id: 'export', label: 'Export', icon: Download, standaloneOnly: true },
   { id: 'move', label: 'Move', icon: Move, proOnly: true },
-  { id: 'select', label: 'Select', icon: SquareDashed, proOnly: true },
+  { id: 'select', label: 'Select', icon: BoxSelect, proOnly: true },
   { id: 'filter', label: 'Filters', icon: BlendIcon, proOnly: true },
 ];
 // Pro shows the Photoshop-style tools first.
