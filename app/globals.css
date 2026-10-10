@@ -294,3 +294,8 @@ textarea::placeholder {
 /* Page width: fills laptops and large monitors (up to 1760px of content)
    with comfortable side margins that grow with the screen. */
 .mt-container { width: 100%; max-width: 1760px; margin-inline: auto; padding-inline: clamp(16px, 4vw, 72px); }
+
+/* Photo Studio Pro: "marching ants" around a selection */
+@keyframes mt-ants { to { stroke-dashoffset: -10; } }
+.mt-ants { animation: mt-ants 0.6s linear infinite; }
+@media (prefers-reduced-motion: reduce) { .mt-ants { animation: none; } }
