@@ -185,9 +185,15 @@ export function fillMasked(c: HTMLCanvasElement, mask: HTMLCanvasElement | null,
 
 /** Paint or erase a stroke (points in document pixels). */
 export function paintStroke(c: HTMLCanvasElement, pts: { x: number; y: number }[], o: { size: number; color: string; opacity: number; hardness: number; erase?: boolean; mask?: HTMLCanvasElement | null }) {
-  const stroke = makeCanvas(c.width, c.height);
-  const s = stroke.getContext('2d')!;
+  // Work only on the box around the stroke: big photos stay fast.
   const blur = (o.size / 2) * (1 - o.hardness) * 0.6;
+  const pad = o.size / 2 + blur * 3 + 4;
+  const xs = pts.map((p) => p.x), ys = pts.map((p) => p.y);
+  const bx = Math.max(0, Math.floor(Math.min(...xs) - pad)), by = Math.max(0, Math.floor(Math.min(...ys) - pad));
+  const bw = Math.max(1, Math.min(c.width, Math.ceil(Math.max(...xs) + pad)) - bx), bh = Math.max(1, Math.min(c.height, Math.ceil(Math.max(...ys) + pad)) - by);
+  const stroke = makeCanvas(bw, bh);
+  const s = stroke.getContext('2d')!;
+  s.translate(-bx, -by);
   if (blur > 0.5) s.filter = `blur(${blur}px)`;
   s.strokeStyle = o.color;
   s.fillStyle = o.color;
@@ -200,15 +206,16 @@ export function paintStroke(c: HTMLCanvasElement, pts: { x: number; y: number }[
   pts.length === 1 ? s.fill() : s.stroke();
   if (o.mask) {
     s.filter = 'none';
+    s.setTransform(1, 0, 0, 1, 0, 0);
     s.globalCompositeOperation = 'destination-in';
-    s.drawImage(o.mask, 0, 0);
+    s.drawImage(o.mask, bx, by, bw, bh, 0, 0, bw, bh);
   }
   const out = makeCanvas(c.width, c.height);
   const ctx = out.getContext('2d')!;
   ctx.drawImage(c, 0, 0);
   ctx.globalAlpha = o.opacity;
   ctx.globalCompositeOperation = o.erase ? 'destination-out' : 'source-over';
-  ctx.drawImage(stroke, 0, 0);
+  ctx.drawImage(stroke, bx, by);
   return out;
 }
 

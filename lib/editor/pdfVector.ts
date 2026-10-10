@@ -31,6 +31,10 @@ export interface VectorCtx {
 
 const K = 0.5522847498;
 const EMOJI = new RegExp('\\p{Extended_Pictographic}', 'u');
+// Scripts whose letters join or reorder (Arabic, Hebrew, Indian, Thai…)
+// and East-Asian text (very large fonts): drawn as a sharp picture so
+// every letter comes out right.
+const COMPLEX_SCRIPT = /[\u0590-\u08FF\u0900-\u0DFF\u0E00-\u0FFF\u1000-\u109F\u1780-\u17FF\u3040-\u30FF\u3400-\u9FFF\uAC00-\uD7AF\uFB1D-\uFDFF\uFE70-\uFEFF]/;
 const isText = (o: any) => o.type === 'textbox' || o.type === 'i-text' || o.type === 'text';
 
 // ---------------------------------------------------------------- colours
@@ -270,6 +274,7 @@ async function drawText(pdf: any, F: any, obj: any, ctx: VectorCtx): Promise<boo
   if (!Array.isArray(lines) || !Array.isArray(bounds) || obj.path) return false;
   if (typeof obj.text === 'string' && EMOJI.test(obj.text)) return false;
   if (obj.direction === 'rtl') return false;
+  if (typeof obj.text === 'string' && COMPLEX_SCRIPT.test(obj.text)) return false;
   const m = obj.calcTransformMatrix();
   const sx = Math.hypot(m[0], m[1]), sy = Math.hypot(m[2], m[3]);
   if (Math.abs(sx - sy) / Math.max(sx, sy) > 0.02) return false; // stretched text: picture

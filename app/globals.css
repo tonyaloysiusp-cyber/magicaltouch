@@ -323,9 +323,20 @@ textarea::placeholder {
   .mt-hero-light { display: none; }
 }
 
-/* Photo Studio Pro: a Photoshop-style workspace in neutral greys, so
-   the photo's own colours are judged against a calm, neutral surround. */
+/* Photo Studio Pro: a Photoshop-style workspace in neutral greys, so the
+   photo's own colours are judged against a calm surround. It follows the
+   site's light/dark switch: light grey by day, Photoshop charcoal at night. */
 .mt-ps {
+  --mt-bg: 232 232 232;          /* #E8E8E8 */
+  --mt-surface: 245 245 245;     /* #F5F5F5 panels */
+  --mt-surface2: 228 228 228;    /* hover / raised */
+  --mt-studio: 214 214 214;      /* #D6D6D6 pasteboard */
+  --mt-border: 204 204 204;
+  --mt-input-border: 190 190 190;
+  --mt-primary: 38 128 235;      /* #2680EB */
+  --mt-on-primary: 255 255 255;
+}
+.dark .mt-ps {
   --mt-bg: 30 30 30;             /* #1E1E1E */
   --mt-surface: 43 43 43;        /* #2B2B2B panels */
   --mt-surface2: 56 56 56;       /* #383838 hover / raised */
@@ -337,11 +348,17 @@ textarea::placeholder {
   --mt-input-border: 74 74 74;
   --mt-accent: 85 160 245;
   --mt-accent-soft: 30 48 70;
-  --mt-primary: 38 128 235;      /* #2680EB */
-  --mt-on-primary: 255 255 255;
-  color-scheme: dark;
 }
 .mt-ps ::-webkit-scrollbar { width: 8px; height: 8px; }
-.mt-ps ::-webkit-scrollbar-thumb { background: #4a4a4a; border-radius: 4px; }
-.mt-ps-tool[aria-pressed='true'] { background: #4a4a4a; color: #fff; box-shadow: inset 0 0 0 1px #5a5a5a; }
+.mt-ps ::-webkit-scrollbar-thumb { background: #b4b4b4; border-radius: 4px; }
+.dark .mt-ps ::-webkit-scrollbar-thumb { background: #4a4a4a; }
+.mt-ps-tool[aria-pressed='true'] { background: #d0d0d0; color: #111; box-shadow: inset 0 0 0 1px #bdbdbd; }
+.dark .mt-ps-tool[aria-pressed='true'] { background: #4a4a4a; color: #fff; box-shadow: inset 0 0 0 1px #5a5a5a; }
 .mt-ps-key { font-size: 10px; opacity: .6; }
+
+/* Home tutorial video: each step's caption arrives with a small sparkle. */
+.mt-howto-caption { animation: mt-cap-in 520ms cubic-bezier(.2,.8,.2,1) both; }
+.mt-howto-spark { position: absolute; top: -10px; right: -10px; color: #FFE07A; filter: drop-shadow(0 0 6px rgba(255,224,122,.9)); animation: mt-spark 1100ms ease-out both; }
+@keyframes mt-cap-in { from { opacity: 0; transform: translateY(10px) scale(.96); filter: blur(4px); } to { opacity: 1; transform: none; filter: none; } }
+@keyframes mt-spark { 0% { opacity: 0; transform: scale(.2) rotate(-40deg); } 35% { opacity: 1; transform: scale(1.25) rotate(10deg); } 100% { opacity: .9; transform: scale(1) rotate(0); } }
+@media (prefers-reduced-motion: reduce) { .mt-howto-caption, .mt-howto-spark { animation: none; } }

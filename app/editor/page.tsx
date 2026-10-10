@@ -80,6 +80,7 @@ import { PropertiesPanel } from '@/components/editor/PropertiesPanel';
 import { DesignLayersPanel } from '@/components/editor/DesignLayersPanel';
 import { ArtboardsPanel } from '@/components/editor/ArtboardsPanel';
 import { ExportDialog, ExportSettings } from '@/components/editor/ExportDialog';
+import { TranslateDialog, TranslateScope } from '@/components/editor/TranslateDialog';
 import { DesignLimitDialog } from '@/components/DesignLimitDialog';
 import { ProfileMenu } from '@/components/ProfileMenu';
 import { MAX_DESIGNS, getDesignCount } from '@/lib/profile';
@@ -281,6 +282,7 @@ function EditorContent() {
     };
   }, []);
   const [showExportDialog, setShowExportDialog] = useState(false);
+  const [showTranslate, setShowTranslate] = useState(false);
   const [showDesignLimitDialog, setShowDesignLimitDialog] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
@@ -6181,6 +6183,90 @@ function EditorContent() {
 
   // File > Export as PDF exports every artboard as its own page, matching
   // how Illustrator treats "the document" as all of its artboards.
+  // Rewrites the design's words in another language (one undo step).
+  const translateDesign = async (code: string, scope: TranslateScope, switchFonts: boolean): Promise<number> => {
+    const canvas = fabricCanvasRef.current;
+    if (!canvas) return 0;
+    const [{ translateTexts, langByCode }, { applyTextFx }] = await Promise.all([import('@/lib/i18n/languages'), import('@/lib/editor/textEffects')]);
+    const lang = langByCode(code);
+    const isText = (o: any) => o && (o.type === 'textbox' || o.type === 'i-text' || o.type === 'text') && typeof o.text === 'string';
+    const collect = (objs: any[], acc: any[]): any[] => {
+      objs.forEach((o) => {
+        if (!o || o.__isGuide || o.__isAnchorHandle || o.__isPenPreview || o.__isShapeDraft) return;
+        if ((o.type === 'group' || o.type === 'activeSelection') && o._objects) collect(o._objects, acc);
+        else if (isText(o) && o.text.trim()) acc.push(o);
+      });
+      return acc;
+    };
+    let roots: any[];
+    if (scope === 'selection') {
+      const a = canvas.getActiveObject();
+      roots = a ? (a.type === 'activeSelection' ? a.getObjects() : [a]) : [];
+    } else if (scope === 'page' && artboards.length) roots = canvas.getObjects().filter((o: any) => o.__artboardId === activeArtboardId);
+    else roots = canvas.getObjects();
+    const targets = collect(roots, []);
+    if (!targets.length) throw new Error('There’s no text to translate here.');
+    const out = await translateTexts(targets.map((o) => o.text), code);
+    if (switchFonts && lang?.font) await Promise.all([ensureFontLoaded(lang.font, 400), ensureFontLoaded(lang.font, 700)]);
+    const F = (window as any).fabric;
+    const arabicScript = code === 'ar' || code === 'ur' || code === 'fa';
+    targets.forEach((o, i) => {
+      const patch: any = { text: out[i], styles: {} };
+      // Fonts: switch to one with this script's letters; going back to a
+      // Latin language restores the design's own font.
+      if (switchFonts && lang?.font) {
+        if (o.__fontBeforeTranslate === undefined) o.__fontBeforeTranslate = o.fontFamily;
+        patch.fontFamily = lang.font;
+      } else if (!lang?.font && o.__fontBeforeTranslate !== undefined) {
+        patch.fontFamily = o.__fontBeforeTranslate;
+        o.__fontBeforeTranslate = undefined;
+      }
+      // Right-to-left languages read from the right.
+      if (lang?.rtl) {
+        if (o.__alignBeforeRtl === undefined) o.__alignBeforeRtl = o.textAlign || 'left';
+        if (!o.textAlign || o.textAlign === 'left' || o.textAlign === 'justify-left') patch.textAlign = 'right';
+      } else if (o.__alignBeforeRtl !== undefined) {
+        patch.textAlign = o.__alignBeforeRtl;
+        o.__alignBeforeRtl = undefined;
+      }
+      // Letter spacing pulls joined Arabic letters apart.
+      if (arabicScript && o.charSpacing) {
+        o.__spacingBeforeTranslate = o.charSpacing;
+        patch.charSpacing = 0;
+      } else if (!arabicScript && o.__spacingBeforeTranslate !== undefined) {
+        patch.charSpacing = o.__spacingBeforeTranslate;
+        o.__spacingBeforeTranslate = undefined;
+      }
+      const before = { w: o.getScaledWidth(), boxW: o.width, center: o.getCenterPoint() };
+      o.set(patch);
+      if (o.__textFx && F) applyTextFx(F, o, o.__textFx);
+      o.initDimensions?.();
+      // Longer words in the new language: shrink the type so the text
+      // keeps its place in the layout instead of running off the page.
+      if (o.type === 'textbox') {
+        const longest = Math.max(...(o._textLines || []).map((_: any, li: number) => o.getLineWidth?.(li) || 0), 0);
+        if (longest > before.boxW * 1.01) {
+          o.set({ fontSize: (o.fontSize * before.boxW) / longest, width: before.boxW });
+          o.initDimensions?.();
+        }
+      } else if (o.getScaledWidth() > before.w * 1.01) {
+        o.set({ fontSize: (o.fontSize * before.w) / o.getScaledWidth() });
+        o.initDimensions?.();
+      }
+      o.setPositionByOrigin?.(before.center, 'center', 'center');
+      o.setCoords?.();
+      o.dirty = true;
+      if (o.group) {
+        o.group.dirty = true;
+        o.group.addWithUpdate?.();
+      }
+    });
+    refreshTextMetrics(canvas);
+    canvas.requestRenderAll();
+    pushHistory();
+    return targets.length;
+  };
+
   const exportAsPDF = async () => {
     setExporting(true);
     await ensurePhotoEditsApplied();
@@ -6398,9 +6484,11 @@ function EditorContent() {
     const scope: ExportScope = settings.includeMarks ? 'marks' : settings.includeBleed ? 'bleed' : 'artboard';
 
     try {
-      if (settings.colour === 'cmyk' || settings.format === 'tiff') {
+      if (settings.format === 'tiff') {
         await exportPrintFiles(list, settings);
       } else if (settings.format === 'pdf') {
+        // Always vector, RGB or CMYK: text, shapes and lines stay sharp at
+        // any size; only photos are pictures.
         const [{ jsPDF }, mod] = await Promise.all([import('jspdf'), import('fabric')]);
         const F = mod.fabric;
         const pages = list.map((ab) => {
@@ -6413,6 +6501,12 @@ function EditorContent() {
           unit: 'pt',
           format: [toPt(first.rect.width), toPt(first.rect.height)],
         });
+        if (settings.colour === 'cmyk') {
+          const [{ loadCmykTable, loadPressProfile, makeCmykMapper }, { applyCmykInks }] = await Promise.all([import('@/lib/color/cmyk'), import('@/lib/editor/pdfExport')]);
+          const [lut, icc] = await Promise.all([loadCmykTable(), loadPressProfile()]);
+          applyCmykInks(pdf, makeCmykMapper(lut), icc);
+          pdf.setDocumentProperties({ title: designName || 'Design', creator: 'Magical Touch Design' });
+        }
 
         suppressHistoryRef.current = true;
         try {
@@ -6431,7 +6525,7 @@ function EditorContent() {
         }
 
         const rangeLabel = pages.length === 1 ? pages[0].ab.name : `${pages.length} pages`;
-        pdf.save(`${designName || 'design'} (${rangeLabel}).${settings.format}`);
+        pdf.save(`${designName || 'design'} (${rangeLabel})${settings.colour === 'cmyk' ? ' CMYK' : ''}.pdf`);
       } else {
         const files: { name: string; dataUrl: string }[] = [];
         let reduced = false;
@@ -6545,6 +6639,8 @@ function EditorContent() {
         { label: 'Paste', shortcut: 'Ctrl/Cmd+V', onClick: pasteClipboard },
         { label: 'Duplicate', shortcut: 'Ctrl/Cmd+D', onClick: duplicateSelected, disabled: !hasSelection },
         { label: 'Delete', shortcut: 'Delete', onClick: deleteSelected, disabled: !hasSelection },
+        { divider: true },
+        { label: 'Translate design…', onClick: () => setShowTranslate(true) },
         { divider: true },
         { label: 'Preferences...', onClick: () => setShowPreferences(true) },
       ],
@@ -6664,6 +6760,7 @@ function EditorContent() {
     setCornerRadius: features.setCornerRadius,
     setShapeParams: features.setShapeParams,
     setTextFx: features.setTextFx,
+    translate: () => setShowTranslate(true),
     setOpacity: features.setOpacity,
     flip: features.flip,
     replaceImage: () => replaceInputRef.current?.click(),
@@ -7137,6 +7234,14 @@ function EditorContent() {
 
       {(pro || tabs.length > 1) && <TabBar tabs={tabs} activeTabId={activeTabId} onSwitch={switchTab} onClose={closeTab} onAdd={() => setShowOpenDialog(true)} />}
 
+      {showTranslate && (
+        <TranslateDialog
+          onClose={() => setShowTranslate(false)}
+          hasSelection={!!fabricCanvasRef.current?.getActiveObject()}
+          hasPages={artboards.length > 1}
+          onTranslate={translateDesign}
+        />
+      )}
       {showExportDialog && (
         <ExportDialog
           artboards={artboards}

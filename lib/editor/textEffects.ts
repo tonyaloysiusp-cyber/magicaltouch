@@ -2,7 +2,7 @@
 // highlight, gradient fill and curved/wavy baselines. Nothing here turns
 // text into a picture.
 
-export type TextEffectKind = 'none' | 'shadow' | 'lift' | 'glow' | 'neon' | 'outline' | 'hollow' | 'highlight' | 'echo';
+export type TextEffectKind = 'none' | 'shadow' | 'lift' | 'glow' | 'neon' | 'outline' | 'hollow' | 'highlight' | 'echo' | 'retro' | 'pop' | 'dreamy';
 
 export interface TextFx {
   effect: TextEffectKind; // the "look": shadow, glow, neon…
@@ -27,6 +27,9 @@ export const TEXT_EFFECTS: { id: TextEffectKind; label: string }[] = [
   { id: 'hollow', label: 'Hollow' },
   { id: 'highlight', label: 'Highlight' },
   { id: 'echo', label: 'Echo' },
+  { id: 'retro', label: 'Retro' },
+  { id: 'pop', label: 'Pop' },
+  { id: 'dreamy', label: 'Dreamy' },
 ];
 
 export function readTextFx(obj: any): TextFx {
@@ -100,6 +103,28 @@ export function applyTextEffect(F: any, obj: any, fx: TextFx) {
     case 'echo':
       obj.set({ shadow: new F.Shadow({ color: withAlpha(fx.color === '#09090B' ? '#8CCBFF' : fx.color, 0.9), blur: 0, offsetX: size * 0.06 * (0.3 + k), offsetY: size * 0.06 * (0.3 + k) }) });
       break;
+    case 'retro': {
+      // 70s poster: a thick outline in the effect colour and a hard drop.
+      obj.set({
+        stroke: fx.color === '#09090B' ? '#FFF4E0' : fx.color,
+        strokeWidth: Math.max(1, size * 0.06 * (0.4 + k)),
+        paintFirst: 'stroke',
+        strokeLineJoin: 'round',
+        shadow: new F.Shadow({ color: withAlpha('#1A1A1A', 0.95), blur: 0, offsetX: size * 0.07 * (0.4 + k), offsetY: size * 0.07 * (0.4 + k) }),
+      });
+      obj.__fxStroke = true;
+      break;
+    }
+    case 'pop':
+      // Big, flat, colourful offset copy (sticker / pop-art look).
+      obj.set({ shadow: new F.Shadow({ color: withAlpha(fx.color === '#09090B' ? '#F2708F' : fx.color, 1), blur: 0, offsetX: size * 0.12 * (0.3 + k), offsetY: size * 0.12 * (0.3 + k) }) });
+      break;
+    case 'dreamy': {
+      // Soft, out-of-focus halo in the text's own colour.
+      const own = typeof obj.fill === 'string' && /^#/.test(obj.fill) ? obj.fill : fx.color;
+      obj.set({ shadow: new F.Shadow({ color: withAlpha(own, 0.75), blur: size * 0.6 * (0.3 + k), offsetX: 0, offsetY: size * 0.04 }) });
+      break;
+    }
     default:
       break;
   }

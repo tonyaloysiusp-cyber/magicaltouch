@@ -123,3 +123,24 @@ export function maxInkCoverage(cmyk: Uint8Array): number {
   }
   return Math.round((max / 255) * 100);
 }
+
+/** One sRGB colour → FOGRA39 CMYK as 0..1 ink amounts (for vector PDFs).
+ *  Neutral greys and black become K-only so text prints crisp. */
+export function makeCmykMapper(lut: Uint8Array) {
+  const tmp = new Float32Array(4);
+  const cache = new Map<number, [number, number, number, number]>();
+  return (r: number, g: number, b: number): [number, number, number, number] => {
+    r = Math.round(Math.max(0, Math.min(255, r))); g = Math.round(Math.max(0, Math.min(255, g))); b = Math.round(Math.max(0, Math.min(255, b)));
+    const key = (r << 16) | (g << 8) | b;
+    const hit = cache.get(key);
+    if (hit) return hit;
+    let out: [number, number, number, number];
+    if (r === g && g === b) out = [0, 0, 0, r >= 250 ? 0 : GREY_TO_K[r] / 255];
+    else {
+      interp(lut, 4, r, g, b, tmp);
+      out = [tmp[0] / 255, tmp[1] / 255, tmp[2] / 255, tmp[3] / 255];
+    }
+    cache.set(key, out);
+    return out;
+  };
+}
