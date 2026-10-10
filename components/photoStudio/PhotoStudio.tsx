@@ -1,7 +1,12 @@
 'use client';
 
 // Photo Studio: a focused photo editor with only tools that work well.
-//   Adjust · Looks · Crop & rotate · Remove background · Heal · Resize · Export
+//   Simple mode: Enhance · Looks · Crop · Background · Retouch · Resize · Export
+//   Pro mode adds: full Light/Detail sliders + histogram, a Colour tool
+//   (levels, curves, per-colour HSL, colour grading) and more brushes
+//   (dodge, burn, sharpen) with strength and hardness.
+// While a slider is being dragged the preview is drawn from a small draft
+// copy so it follows the finger instantly; the full preview follows on release.
 // Adjustments stay live (non-destructive) on top of the picture; crop,
 // heal, background removal and resize change the pixels, each step undoable.
 // Used full-screen on /photo-studio and inside the Design editor's
@@ -11,15 +16,41 @@
 import { forwardRef, ReactNode, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import {
   SlidersHorizontal, Sparkles, Crop as CropIcon, Scissors, Brush, Maximize2, Download, Undo2, Redo2, Plus, Minus,
-  Maximize, RotateCcw, RotateCw, FlipHorizontal2, FlipVertical2, Loader2, Check, X, Eye, Printer, Lock, Unlock,
+  Maximize, RotateCcw, RotateCw, FlipHorizontal2, FlipVertical2, Loader2, Check, X, Eye, Printer, Lock, Unlock, Palette, Wand2,
 } from 'lucide-react';
-import { Adjust, NO_ADJUST, LIGHT_SLIDERS, COLOR_SLIDERS, DETAIL_SLIDERS, LOOKS, SliderDef, applyAdjust, renderAdjusted, isNeutral } from '@/lib/photo/adjust';
+import { Adjust, NO_ADJUST, LIGHT_SLIDERS, COLOR_SLIDERS, DETAIL_SLIDERS, LOOKS, SliderDef, applyAdjust, renderAdjusted, isNeutral, autoEnhance, HSL_RANGES, CurvePts, curveLut } from '@/lib/photo/adjust';
+import { BrushKind, createStroke, replayStroke } from '@/lib/photo/brushes';
 import { CropBox, PhysUnit, cropTo, flip, fmtNum, fromPx, inscribedRect, makeCanvas, resample, rotate90, spotHeal, toPx, fillBackground, hasTransparency } from '@/lib/photo/ops';
 import { ColourMode, FORMAT_INFO, PhotoFormat, downloadBlob, exportPhoto, extFor } from '@/lib/photo/exportPhoto';
 import { loadProofTable, proofRgbaInPlace, PRESS_PROFILE_NAME } from '@/lib/color/cmyk';
 import { BgRemoveDialog } from '@/components/editor/shell/BgRemoveDialog';
 
-type Tool = 'adjust' | 'looks' | 'crop' | 'bg' | 'heal' | 'resize' | 'export';
+type Tool = 'adjust' | 'color' | 'looks' | 'crop' | 'bg' | 'retouch' | 'resize' | 'export';
+type Mode = 'simple' | 'pro';
+type RetouchKind = 'heal' | BrushKind;
+const RETOUCH: { id: RetouchKind; label: string; hint: string; pro?: boolean }[] = [
+  { id: 'heal', label: 'Heal', hint: 'Paint over spots, blemishes or small objects to remove them.' },
+  { id: 'smudge', label: 'Smudge', hint: 'Push and blend colours, like a finger in wet paint.' },
+  { id: 'blur', label: 'Soften', hint: 'Soften skin or a busy area by painting over it.' },
+  { id: 'dodge', label: 'Dodge', hint: 'Lighten where you paint (eyes, faces, highlights).', pro: true },
+  { id: 'burn', label: 'Burn', hint: 'Darken where you paint (edges, shadows, depth).', pro: true },
+  { id: 'sharpen', label: 'Sharpen', hint: 'Crisp up details where you paint (eyes, text, textures).', pro: true },
+];
+const SIMPLE_LIGHT: SliderDef[] = [
+  { key: 'exposure', label: 'Brightness', min: -100, max: 100 },
+  { key: 'contrast', label: 'Contrast', min: -100, max: 100 },
+  { key: 'highlights', label: 'Highlights', min: -100, max: 100 },
+  { key: 'shadows', label: 'Shadows', min: -100, max: 100 },
+];
+const SIMPLE_COLOR: SliderDef[] = [
+  { key: 'temperature', label: 'Warmth', min: -100, max: 100 },
+  { key: 'saturation', label: 'Saturation', min: -100, max: 100 },
+  { key: 'vibrance', label: 'Vibrance', min: -100, max: 100 },
+];
+const SIMPLE_DETAIL: SliderDef[] = [
+  { key: 'sharpen', label: 'Sharpen', min: 0, max: 100 },
+  { key: 'vignette', label: 'Vignette', min: -100, max: 100 },
+];
 interface Snapshot { base: HTMLCanvasElement; adjust: Adjust; dpi: number; label: string }
 
 export interface PhotoStudioHandle {
@@ -76,12 +107,13 @@ const SIZE_PRESETS: { label: string; w: number; h: number; unit: PhysUnit; dpi: 
   { label: 'Facebook cover', w: 1640, h: 624, unit: 'px', dpi: 72 },
 ];
 
-const TOOLS: { id: Tool; label: string; icon: any; standaloneOnly?: boolean }[] = [
-  { id: 'adjust', label: 'Adjust', icon: SlidersHorizontal },
+const TOOLS: { id: Tool; label: string; simpleLabel?: string; icon: any; standaloneOnly?: boolean; proOnly?: boolean }[] = [
+  { id: 'adjust', label: 'Adjust', simpleLabel: 'Enhance', icon: SlidersHorizontal },
+  { id: 'color', label: 'Colour', icon: Palette, proOnly: true },
   { id: 'looks', label: 'Looks', icon: Sparkles },
   { id: 'crop', label: 'Crop', icon: CropIcon },
   { id: 'bg', label: 'Background', icon: Scissors },
-  { id: 'heal', label: 'Heal', icon: Brush },
+  { id: 'retouch', label: 'Retouch', icon: Brush },
   { id: 'resize', label: 'Resize', icon: Maximize2 },
   { id: 'export', label: 'Export', icon: Download, standaloneOnly: true },
 ];
@@ -126,6 +158,7 @@ function Range({ def, value, onChange, onCommit }: { def: SliderDef; value: numb
           onTouchEnd={onCommit}
           className="mt-range absolute inset-0 w-full opacity-100 bg-transparent appearance-none cursor-pointer"
           aria-label={def.label}
+          data-live
         />
       </span>
     </label>
@@ -162,6 +195,35 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
   const [adjust, setAdjust] = useState<Adjust>(NO_ADJUST);
   const [dpi, setDpi] = useState(props.dpi || 300);
   const [tool, setTool] = useState<Tool>('adjust');
+  const [mode, setModeState] = useState<Mode>('simple');
+  useEffect(() => {
+    try {
+      if (localStorage.getItem('mt:photoMode') === 'pro') setModeState('pro');
+    } catch {
+      // not critical
+    }
+  }, []);
+  const setMode = (m: Mode) => {
+    setModeState(m);
+    try {
+      localStorage.setItem('mt:photoMode', m);
+    } catch {
+      // not critical
+    }
+    if (m === 'simple' && tool === 'color') setTool('adjust');
+  };
+  const pro = mode === 'pro';
+  // True while a slider or curve point is being dragged: draw from the draft copy.
+  const [dragging, setDragging] = useState(false);
+  useEffect(() => {
+    const up = () => setDragging(false);
+    window.addEventListener('pointerup', up);
+    window.addEventListener('pointercancel', up);
+    return () => {
+      window.removeEventListener('pointerup', up);
+      window.removeEventListener('pointercancel', up);
+    };
+  }, []);
   const [busy, setBusy] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [comparing, setComparing] = useState(false);
@@ -171,6 +233,7 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
   const [stageSize, setStageSize] = useState({ w: 800, h: 600 });
   const stageRef = useRef<HTMLDivElement>(null);
   const displayRef = useRef<HTMLCanvasElement>(null);
+  const draftRef = useRef<HTMLCanvasElement>(null);
   const firstPreviewRef = useRef<HTMLCanvasElement | null>(null);
 
   // ---------------- history
@@ -226,6 +289,16 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
     if (!firstPreviewRef.current) firstPreviewRef.current = c;
     return { canvas: c, data, k, owner: {} };
   }, [base]);
+  // Small draft copy used while dragging, so sliders follow instantly.
+  const draft = useMemo(() => {
+    if (!preview) return null;
+    const long = Math.max(preview.canvas.width, preview.canvas.height);
+    const target = 900;
+    if (long <= target * 1.25) return null;
+    const k = target / long;
+    const c = resample(preview.canvas, preview.canvas.width * k, preview.canvas.height * k);
+    return { canvas: c, data: c.getContext('2d', { willReadFrequently: true })!.getImageData(0, 0, c.width, c.height), owner: {} };
+  }, [preview]);
 
   // ---------------- stage size
   useEffect(() => {
@@ -299,13 +372,29 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
       const d = displayRef.current;
       if (!d) return;
       const src = comparing && firstPreviewRef.current ? firstPreviewRef.current : preview.canvas;
+      const ctx = d.getContext('2d')!;
+      const ov = draftRef.current;
+      if (dragging && draft && !comparing && !(tool === 'crop' && cropAngle) && ov) {
+        // Fast path while dragging: adjust the small draft copy and show it
+        // in a light overlay canvas stretched over the picture.
+        const img = applyAdjust(draft.data, adjust, draft.owner);
+        if (proof && proofTable.current) proofRgbaInPlace(img.data, proofTable.current);
+        if (ov.width !== img.width || ov.height !== img.height) {
+          ov.width = img.width;
+          ov.height = img.height;
+        }
+        ov.getContext('2d')!.putImageData(img, 0, 0);
+        ov.style.visibility = 'visible';
+        return;
+      }
+      if (ov) ov.style.visibility = 'hidden';
       let img: ImageData;
       if (comparing) img = src.getContext('2d')!.getImageData(0, 0, src.width, src.height);
       else img = isNeutral(adjust) ? new ImageData(new Uint8ClampedArray(preview.data.data), preview.data.width, preview.data.height) : applyAdjust(preview.data, adjust, preview.owner);
       if (proof && proofTable.current) proofRgbaInPlace(img.data, proofTable.current);
+      if (!comparing) computeHistogram(img);
       d.width = img.width;
       d.height = img.height;
-      const ctx = d.getContext('2d')!;
       if (tool === 'crop' && cropAngle) {
         const tmp = makeCanvas(img.width, img.height);
         tmp.getContext('2d')!.putImageData(img, 0, 0);
@@ -317,7 +406,47 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
         ctx.restore();
       } else ctx.putImageData(img, 0, 0);
     });
-  }, [preview, adjust, comparing, proof, tool, cropAngle, tick]);
+  }, [preview, draft, dragging, adjust, comparing, proof, tool, cropAngle, tick]);
+
+  // ---------------- histogram (Pro)
+  const histData = useRef<Uint32Array[] | null>(null);
+  const histCanvas = useRef<HTMLCanvasElement | null>(null);
+  const drawHistogram = useCallback(() => {
+    const c = histCanvas.current, h = histData.current;
+    if (!c || !h) return;
+    const W = (c.width = 256), H = (c.height = 80);
+    const ctx = c.getContext('2d')!;
+    ctx.clearRect(0, 0, W, H);
+    let max = 1;
+    h.forEach((ch) => { for (let i = 2; i < 254; i++) max = Math.max(max, ch[i]); });
+    const cols = ['rgba(239,68,68,0.55)', 'rgba(34,197,94,0.55)', 'rgba(59,130,246,0.55)'];
+    ctx.globalCompositeOperation = 'screen';
+    h.forEach((ch, k) => {
+      ctx.fillStyle = cols[k];
+      ctx.beginPath();
+      ctx.moveTo(0, H);
+      for (let i = 0; i < 256; i++) ctx.lineTo(i, H - Math.min(H, (Math.sqrt(ch[i]) / Math.sqrt(max)) * H));
+      ctx.lineTo(255, H);
+      ctx.closePath();
+      ctx.fill();
+    });
+    ctx.globalCompositeOperation = 'source-over';
+  }, []);
+  const computeHistogram = (img: ImageData) => {
+    const h = [new Uint32Array(256), new Uint32Array(256), new Uint32Array(256)];
+    const d = img.data;
+    const step = Math.max(1, Math.floor((img.width * img.height) / 120000)) * 4;
+    for (let p = 0; p < d.length; p += step) {
+      if (d[p + 3] < 16) continue;
+      h[0][d[p]]++; h[1][d[p + 1]]++; h[2][d[p + 2]]++;
+    }
+    histData.current = h;
+    drawHistogram();
+  };
+  const histRef = useCallback((el: HTMLCanvasElement | null) => {
+    histCanvas.current = el;
+    drawHistogram();
+  }, [drawHistogram]);
 
   // ---------------- actions
   const commitAdjust = (a: Adjust = adjust, label = 'Adjust') => {
@@ -326,6 +455,14 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
     push({ adjust: a, label });
   };
   const setOne = (k: keyof Adjust, v: number) => setAdjust((a) => ({ ...a, [k]: v }));
+  const runAuto = () => {
+    if (!preview) return;
+    const a = { ...adjust, ...autoEnhance(preview.data) };
+    setAdjust(a);
+    commitAdjust(a, 'Auto enhance');
+  };
+  const setArr = (k: 'hsl' | 'grade', i: number, v: number) => setAdjust((a) => { const arr = [...a[k]]; arr[i] = v; return { ...a, [k]: arr }; });
+  const commitLive = () => setTimeout(() => setAdjust((a) => { commitAdjust(a); return a; }), 0);
 
   const run = async (label: string, fn: () => HTMLCanvasElement | Promise<HTMLCanvasElement>, extra: Partial<Snapshot> = {}) => {
     setBusy(label);
@@ -404,8 +541,29 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
   // ---------------- stage pointer handling (pan / pinch / crop / heal)
   const pointers = useRef(new Map<number, { x: number; y: number }>());
   const gesture = useRef<any>(null);
-  const [healSize, setHealSize] = useState(40); // screen px
+  const [healSize, setHealSize] = useState(40); // brush size, screen px
   const [healPts, setHealPts] = useState<{ x: number; y: number }[]>([]);
+  const [retouch, setRetouch] = useState<RetouchKind>('heal');
+  const [brushStrength, setBrushStrength] = useState(50);
+  const [brushHardness, setBrushHardness] = useState(30);
+  const strokeRef = useRef<{ work: ImageData; stroke: ReturnType<typeof createStroke>; pts: { x: number; y: number }[]; radius: number } | null>(null);
+  const brushCursor = useRef<HTMLDivElement>(null);
+  const brushOpts = (radius: number) => ({ radius, strength: brushStrength / 100, hardness: brushHardness / 100 });
+  // Shows the painted area live, with the current adjustments on top.
+  const paintRegion = (r: { x0: number; y0: number; x1: number; y1: number }) => {
+    const st = strokeRef.current, d = displayRef.current;
+    if (!st || !d || !preview) return;
+    const m = 4;
+    const x0 = Math.max(0, Math.floor(r.x0 - m)), y0 = Math.max(0, Math.floor(r.y0 - m));
+    const x1 = Math.min(st.work.width, Math.ceil(r.x1 + m)), y1 = Math.min(st.work.height, Math.ceil(r.y1 + m));
+    const w = x1 - x0, h = y1 - y0;
+    if (w <= 0 || h <= 0) return;
+    const reg = new ImageData(w, h);
+    for (let y = 0; y < h; y++) reg.data.set(st.work.data.subarray(((y0 + y) * st.work.width + x0) * 4, ((y0 + y) * st.work.width + x1) * 4), y * w * 4);
+    const out = isNeutral(adjust) ? reg : applyAdjust(reg, { ...adjust, vignette: 0, grain: 0 }, {});
+    if (proof && proofTable.current) proofRgbaInPlace(out.data, proofTable.current);
+    d.getContext('2d')!.putImageData(out, x0, y0);
+  };
   const imgRect = () => displayRef.current?.getBoundingClientRect();
   const toBase = (clientX: number, clientY: number) => {
     const r = imgRect();
@@ -428,14 +586,30 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
       gesture.current = { kind: 'crop', handle, start: toBase(e.clientX, e.clientY), box: { ...box } };
       return;
     }
-    if (tool === 'heal' && base) {
+    if (tool === 'retouch' && base && retouch === 'heal') {
       gesture.current = { kind: 'heal' };
       setHealPts([toBase(e.clientX, e.clientY)]);
+      return;
+    }
+    if (tool === 'retouch' && base && preview) {
+      gesture.current = { kind: 'brush' };
+      const work = new ImageData(new Uint8ClampedArray(preview.data.data), preview.data.width, preview.data.height);
+      const radius = healSize / 2 / viewScale; // preview pixels
+      const stroke = createStroke(work, retouch as BrushKind, brushOpts(radius));
+      const b = toBase(e.clientX, e.clientY);
+      const p = { x: b.x * preview.k, y: b.y * preview.k };
+      strokeRef.current = { work, stroke, pts: [p], radius };
+      const r = stroke.to(p.x, p.y);
+      if (r) paintRegion(r);
       return;
     }
     gesture.current = { kind: 'pan', sx: e.clientX, sy: e.clientY, pan: { ...pan } };
   };
   const onStageMove = (e: React.PointerEvent) => {
+    if (brushCursor.current) {
+      const st = stageRef.current!.getBoundingClientRect();
+      brushCursor.current.style.transform = `translate(${e.clientX - st.left - healSize / 2}px, ${e.clientY - st.top - healSize / 2}px)`;
+    }
     if (!pointers.current.has(e.pointerId)) return;
     pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
     const g = gesture.current;
@@ -449,6 +623,12 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
     } else if (g.kind === 'heal') {
       const p = toBase(e.clientX, e.clientY);
       setHealPts((pts) => [...pts, p]);
+    } else if (g.kind === 'brush' && strokeRef.current && preview) {
+      const b = toBase(e.clientX, e.clientY);
+      const p = { x: b.x * preview.k, y: b.y * preview.k };
+      strokeRef.current.pts.push(p);
+      const r = strokeRef.current.stroke.to(p.x, p.y);
+      if (r) paintRegion(r);
     } else if (g.kind === 'crop' && bounds) {
       const p = toBase(e.clientX, e.clientY);
       const dx = p.x - g.start.x, dy = p.y - g.start.y;
@@ -494,6 +674,18 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
       setHealPts([]);
       run('Heal', () => spotHeal(base, pts, r));
     }
+    if (g?.kind === 'brush' && base && preview && strokeRef.current) {
+      const st = strokeRef.current;
+      strokeRef.current = null;
+      const kind = retouch as BrushKind;
+      const label = RETOUCH.find((x) => x.id === kind)?.label || 'Retouch';
+      if (preview.k === 1) {
+        // The preview is the full picture: keep what was painted.
+        const c = makeCanvas(st.work.width, st.work.height);
+        c.getContext('2d')!.putImageData(st.work, 0, 0);
+        push({ base: c, label });
+      } else run(label, () => replayStroke(base, kind, brushOpts(st.radius), st.pts, 1 / preview.k));
+    }
   };
   const onWheel = (e: React.WheelEvent) => {
     if (!preview) return;
@@ -529,18 +721,30 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
 
   const dispW = preview ? preview.canvas.width * viewScale : 0;
   const dispH = preview ? preview.canvas.height * viewScale : 0;
-  const tools = TOOLS.filter((t) => !(embedded && t.standaloneOnly));
+  const tools = TOOLS.filter((t) => !(embedded && t.standaloneOnly) && (pro || !t.proOnly));
 
   const panel = (() => {
     if (!base) return null;
     switch (tool) {
-      case 'adjust':
+      case 'adjust': {
+        const groups = pro
+          ? [{ t: 'Light', s: LIGHT_SLIDERS }, { t: 'Colour', s: COLOR_SLIDERS }, { t: 'Detail & effects', s: DETAIL_SLIDERS }]
+          : [{ t: 'Light', s: SIMPLE_LIGHT }, { t: 'Colour', s: SIMPLE_COLOR }, { t: 'Detail', s: SIMPLE_DETAIL }];
         return (
           <>
-            {[{ t: 'Light', s: LIGHT_SLIDERS }, { t: 'Colour', s: COLOR_SLIDERS }, { t: 'Detail & effects', s: DETAIL_SLIDERS }].map(({ t, s }) => (
-              <Section key={t} title={t} action={<button className="text-[11px] text-mt-faint hover:text-mt-ink" onClick={() => { const a = { ...adjust }; s.forEach((d) => ((a as any)[d.key] = 0)); setAdjust(a); commitAdjust(a, `Reset ${t}`); }}>Reset</button>}>
-                {s.map((d) => (
-                  <Range key={d.key} def={d} value={adjust[d.key] as number} onChange={(v) => setOne(d.key, v)} onCommit={() => setTimeout(() => setAdjust((a) => { commitAdjust(a); return a; }), 0)} />
+            <div className="pt-4 pb-1 flex gap-2">
+              <button className={cx(btnPrimary, 'flex-1')} onClick={runAuto}><Wand2 size={15} /> Auto enhance</button>
+              <button className={btnGhost} onClick={() => { setAdjust(NO_ADJUST); commitAdjust(NO_ADJUST, 'Reset all'); }}>Reset</button>
+            </div>
+            {pro && (
+              <div className="pt-3">
+                <canvas ref={histRef} className="w-full h-16 rounded-lg bg-mt-surface2" aria-label="Histogram" />
+              </div>
+            )}
+            {groups.map(({ t, s: list }) => (
+              <Section key={t} title={t} action={<button className="text-[11px] text-mt-faint hover:text-mt-ink" onClick={() => { const a = { ...adjust }; list.forEach((d) => ((a as any)[d.key] = 0)); setAdjust(a); commitAdjust(a, `Reset ${t}`); }}>Reset</button>}>
+                {list.map((d) => (
+                  <Range key={d.key} def={d} value={adjust[d.key] as number} onChange={(v) => setOne(d.key, v)} onCommit={commitLive} />
                 ))}
               </Section>
             ))}
@@ -549,6 +753,35 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
                 <button className={chip(!adjust.mono)} onClick={() => { const a = { ...adjust, mono: 0 }; setAdjust(a); commitAdjust(a); }}>Colour</button>
                 <button className={chip(!!adjust.mono)} onClick={() => { const a = { ...adjust, mono: 1 }; setAdjust(a); commitAdjust(a, 'Black & white'); }}>Black & white</button>
               </div>
+            </Section>
+            {!pro && <p className="py-3 text-[12px] text-mt-muted">Need curves, levels or per-colour control? Switch to <button className="text-[#3B82C4] font-medium hover:underline" onClick={() => setMode('pro')}>Pro</button>.</p>}
+          </>
+        );
+      }
+      case 'color':
+        return (
+          <>
+            <Section title="Levels" action={<button className="text-[11px] text-mt-faint hover:text-mt-ink" onClick={() => { const a = { ...adjust, levelBlack: 0, levelWhite: 255, levelGamma: 100 }; setAdjust(a); commitAdjust(a, 'Reset levels'); }}>Reset</button>}>
+              <canvas ref={histRef} className="w-full h-16 rounded-lg bg-mt-surface2" aria-label="Histogram" />
+              <Range def={{ key: 'levelBlack', label: 'Black point', min: 0, max: 200 }} value={adjust.levelBlack} onChange={(v) => setOne('levelBlack', Math.min(v, adjust.levelWhite - 10))} onCommit={commitLive} />
+              <Range def={{ key: 'levelGamma', label: 'Mid-tones', min: 30, max: 250 }} value={adjust.levelGamma} onChange={(v) => setOne('levelGamma', v)} onCommit={commitLive} />
+              <Range def={{ key: 'levelWhite', label: 'White point', min: 55, max: 255 }} value={adjust.levelWhite} onChange={(v) => setOne('levelWhite', Math.max(v, adjust.levelBlack + 10))} onCommit={commitLive} />
+              <button className={btnGhost} onClick={() => { if (!preview) return; const au = autoEnhance(preview.data); const a = { ...adjust, levelBlack: au.levelBlack ?? 0, levelWhite: au.levelWhite ?? 255, levelGamma: au.levelGamma ?? 100 }; setAdjust(a); commitAdjust(a, 'Auto levels'); }}><Wand2 size={14} /> Auto levels</button>
+            </Section>
+            <Section title="Curves" action={<button className="text-[11px] text-mt-faint hover:text-mt-ink" onClick={() => { const a = { ...adjust, curve: NO_ADJUST.curve }; setAdjust(a); commitAdjust(a, 'Reset curves'); }}>Reset</button>}>
+              <CurveEditor curves={adjust.curve} onChange={(c) => setAdjust((a) => ({ ...a, curve: c }))} onCommit={commitLive} />
+            </Section>
+            <Section title="Colour mixer" action={<button className="text-[11px] text-mt-faint hover:text-mt-ink" onClick={() => { const a = { ...adjust, hsl: NO_ADJUST.hsl }; setAdjust(a); commitAdjust(a, 'Reset mixer'); }}>Reset</button>}>
+              <HslMixer values={adjust.hsl} onChange={(i, v) => setArr('hsl', i, v)} onCommit={commitLive} />
+            </Section>
+            <Section title="Colour grading" action={<button className="text-[11px] text-mt-faint hover:text-mt-ink" onClick={() => { const a = { ...adjust, grade: NO_ADJUST.grade }; setAdjust(a); commitAdjust(a, 'Reset grading'); }}>Reset</button>}>
+              {['Shadows', 'Mid-tones', 'Highlights'].map((lab, j) => (
+                <div key={lab} className="flex flex-col gap-1.5">
+                  <span className="text-[12px] font-medium text-mt-ink">{lab}</span>
+                  <HueRange value={adjust.grade[j * 2]} onChange={(v) => setArr('grade', j * 2, v)} onCommit={commitLive} />
+                  <Range def={{ key: 'grade', label: 'Amount', min: 0, max: 100 }} value={adjust.grade[j * 2 + 1]} onChange={(v) => setArr('grade', j * 2 + 1, v)} onCommit={commitLive} />
+                </div>
+              ))}
             </Section>
           </>
         );
@@ -642,14 +875,31 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
             </Section>
           </>
         );
-      case 'heal':
+      case 'retouch': {
+        const kinds = RETOUCH.filter((k) => pro || !k.pro);
+        const cur = RETOUCH.find((k) => k.id === retouch) || RETOUCH[0];
         return (
-          <Section title="Spot heal">
-            <p className="text-[12px] text-mt-muted">Paint over a spot, blemish, dust or a small object. It’s replaced with matching texture from nearby.</p>
-            <Range def={{ key: 'exposure', label: 'Brush size', min: 8, max: 200 }} value={healSize} onChange={setHealSize} onCommit={() => {}} />
-            <p className="text-[12px] text-mt-faint">Tip: zoom in for small details. Undo with Ctrl/⌘ Z.</p>
-          </Section>
+          <>
+            <Section title="Brush">
+              <div className="flex flex-wrap gap-1.5">
+                {kinds.map((k) => (
+                  <button key={k.id} className={chip(retouch === k.id)} onClick={() => setRetouch(k.id)}>{k.label}</button>
+                ))}
+              </div>
+              <p className="text-[12px] text-mt-muted">{cur.hint}</p>
+              <Range def={{ key: 'exposure', label: 'Brush size', min: 8, max: 240 }} value={healSize} onChange={setHealSize} onCommit={() => {}} />
+              {retouch !== 'heal' && (
+                <Range def={{ key: 'exposure', label: 'Strength', min: 5, max: 100 }} value={brushStrength} onChange={setBrushStrength} onCommit={() => {}} />
+              )}
+              {pro && retouch !== 'heal' && (
+                <Range def={{ key: 'exposure', label: 'Hardness', min: 0, max: 95 }} value={brushHardness} onChange={setBrushHardness} onCommit={() => {}} />
+              )}
+              <p className="text-[12px] text-mt-faint">Tip: zoom in for small details. Each stroke can be undone with Ctrl/⌘ Z.</p>
+            </Section>
+            {!pro && <p className="py-3 text-[12px] text-mt-muted">Dodge, burn and sharpen brushes are in <button className="text-[#3B82C4] font-medium hover:underline" onClick={() => setMode('pro')}>Pro</button>.</p>}
+          </>
         );
+      }
       case 'resize': {
         if (!rz) return null;
         const d = Math.max(1, parseFloat(rz.dpi) || 72);
@@ -772,12 +1022,21 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
     }
   })();
 
-  const healCursor = tool === 'heal';
+  const healCursor = tool === 'retouch';
   return (
     <div className="h-full w-full flex flex-col bg-mt-bg text-mt-ink min-h-0">
       {/* top bar */}
       <div className="h-14 shrink-0 flex items-center gap-2 px-3 border-b border-mt-border bg-mt-surface">
-        <div className="min-w-0 flex items-center gap-2">{headerLeft}</div>
+        <div className="min-w-0 flex items-center gap-2">
+          {headerLeft}
+          <div className="inline-flex rounded-full border border-mt-border p-0.5 text-[12px] font-medium" role="group" aria-label="Editing mode">
+            {(['simple', 'pro'] as Mode[]).map((m) => (
+              <button key={m} onClick={() => setMode(m)} aria-pressed={mode === m} className={cx('h-7 px-3 rounded-full transition-colors', mode === m ? 'bg-mt-primary text-mt-onprimary' : 'text-mt-muted hover:text-mt-ink')}>
+                {m === 'simple' ? 'Simple' : 'Pro'}
+              </button>
+            ))}
+          </div>
+        </div>
         <div className="flex-1 flex items-center justify-center gap-0.5">
           <button className={iconBtn} onClick={undo} disabled={history.index <= 0} aria-label="Undo" title="Undo (Ctrl/⌘ Z)"><Undo2 size={17} /></button>
           <button className={iconBtn} onClick={redo} disabled={history.index >= history.list.length - 1} aria-label="Redo" title="Redo"><Redo2 size={17} /></button>
@@ -826,7 +1085,7 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
                 aria-pressed={on}
               >
                 <span className={cx('w-10 h-8 rounded-xl inline-flex items-center justify-center', on ? 'bg-mt-primary text-mt-onprimary' : '')}><I size={17} /></span>
-                {t.label}
+                {!pro && t.simpleLabel ? t.simpleLabel : t.label}
               </button>
             );
           })}
@@ -848,15 +1107,19 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
           {preview && (
             <div className="absolute left-1/2 top-1/2" style={{ width: dispW, height: dispH, transform: `translate(calc(-50% + ${pan.x}px), calc(-50% + ${pan.y}px))` }}>
               <canvas ref={displayRef} className="block w-full h-full shadow-[0_20px_60px_-30px_rgba(0,0,0,0.6)]" />
+              <canvas ref={draftRef} aria-hidden className="absolute inset-0 w-full h-full pointer-events-none" style={{ visibility: 'hidden' }} />
               {tool === 'crop' && box && base && (
                 <CropOverlay box={box} base={base} />
               )}
-              {tool === 'heal' && healPts.length > 0 && base && (
+              {tool === 'retouch' && healPts.length > 0 && base && (
                 <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox={`0 0 ${base.width} ${base.height}`} preserveAspectRatio="none">
                   <polyline points={healPts.map((p) => `${p.x},${p.y}`).join(' ')} fill="none" stroke="rgba(242,112,143,0.55)" strokeWidth={healSize / basePxToScreen} strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               )}
             </div>
+          )}
+          {tool === 'retouch' && preview && (
+            <div ref={brushCursor} className="pointer-events-none absolute left-0 top-0 rounded-full border border-white/90 shadow-[0_0_0_1px_rgba(0,0,0,0.5)]" style={{ width: healSize, height: healSize }} />
           )}
           {comparing && <span className="absolute top-3 left-1/2 -translate-x-1/2 text-[11px] font-semibold uppercase tracking-wide bg-black/70 text-white rounded-full px-3 py-1">Original</span>}
           {proof && !comparing && <span className="absolute top-3 left-3 text-[11px] font-semibold bg-black/70 text-white rounded-full px-3 py-1">Print preview · CMYK FOGRA39</span>}
@@ -871,7 +1134,9 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
         </div>
 
         {/* panel */}
-        <aside className="order-2 lg:order-3 shrink-0 lg:w-[340px] max-h-[42vh] lg:max-h-none overflow-y-auto border-t lg:border-t-0 lg:border-l border-mt-border bg-mt-surface px-4">
+        <aside
+          onPointerDownCapture={(e) => { if ((e.target as HTMLElement).closest?.('[data-live]')) setDragging(true); }}
+          className="order-2 lg:order-3 shrink-0 lg:w-[340px] max-h-[42vh] lg:max-h-none overflow-y-auto border-t lg:border-t-0 lg:border-l border-mt-border bg-mt-surface px-4">
           {panel}
         </aside>
       </div>
@@ -890,6 +1155,116 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
     </div>
   );
 });
+
+function HueRange({ value, onChange, onCommit }: { value: number; onChange: (v: number) => void; onCommit: () => void }) {
+  return (
+    <span className="relative block h-5" title="Hue">
+      <span className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-2 rounded-full" style={{ background: 'linear-gradient(90deg,#f00,#ff0,#0f0,#0ff,#00f,#f0f,#f00)' }} />
+      <input type="range" min={0} max={360} value={value} data-live aria-label="Hue" onChange={(e) => onChange(Number(e.target.value))} onPointerUp={onCommit} onKeyUp={onCommit} className="mt-range absolute inset-0 w-full bg-transparent appearance-none cursor-pointer" />
+    </span>
+  );
+}
+
+function HslMixer({ values, onChange, onCommit }: { values: number[]; onChange: (i: number, v: number) => void; onCommit: () => void }) {
+  const [part, setPart] = useState(0); // 0 hue, 1 saturation, 2 luminance
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex gap-1.5">
+        {['Hue', 'Saturation', 'Luminance'].map((l, i) => (
+          <button key={l} className={chip(part === i)} onClick={() => setPart(i)}>{l}</button>
+        ))}
+      </div>
+      {HSL_RANGES.map((r, k) => (
+        <div key={r.id} className="flex items-center gap-2">
+          <span className="w-3 h-3 rounded-full shrink-0" style={{ background: r.swatch }} />
+          <div className="flex-1">
+            <Range def={{ key: 'hsl', label: r.label, min: -100, max: 100 }} value={values[k * 3 + part]} onChange={(v) => onChange(k * 3 + part, v)} onCommit={onCommit} />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+const CURVE_CH = [
+  { id: 'all', label: 'RGB', color: 'currentColor' },
+  { id: 'r', label: 'Red', color: '#ef4444' },
+  { id: 'g', label: 'Green', color: '#22c55e' },
+  { id: 'b', label: 'Blue', color: '#3b82f6' },
+] as const;
+
+function CurveEditor({ curves, onChange, onCommit }: { curves: Adjust['curve']; onChange: (c: Adjust['curve']) => void; onCommit: () => void }) {
+  const [ch, setCh] = useState<'all' | 'r' | 'g' | 'b'>('all');
+  const svgRef = useRef<SVGSVGElement>(null);
+  const drag = useRef<number | null>(null);
+  const pts = curves[ch];
+  const lut = useMemo(() => curveLut(pts), [pts]);
+  const path = useMemo(() => {
+    let d = '';
+    for (let x = 0; x < 256; x += 3) d += `${x ? 'L' : 'M'}${x},${255 - lut[x]}`;
+    return d + `L255,${255 - lut[255]}`;
+  }, [lut]);
+  const toPt = (e: React.PointerEvent): [number, number] => {
+    const r = svgRef.current!.getBoundingClientRect();
+    return [Math.round(Math.min(255, Math.max(0, ((e.clientX - r.left) / r.width) * 255))), Math.round(Math.min(255, Math.max(0, 255 - ((e.clientY - r.top) / r.height) * 255)))];
+  };
+  const set = (next: CurvePts) => onChange({ ...curves, [ch]: next });
+  const color = CURVE_CH.find((c) => c.id === ch)!.color;
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex gap-1.5">
+        {CURVE_CH.map((c) => (
+          <button key={c.id} className={chip(ch === c.id)} onClick={() => setCh(c.id)}>{c.label}</button>
+        ))}
+      </div>
+      <svg
+        ref={svgRef}
+        viewBox="-4 -4 263 263"
+        data-live
+        className="w-full aspect-square rounded-lg bg-mt-surface2 touch-none text-mt-ink cursor-crosshair"
+        onPointerDown={(e) => {
+          (e.currentTarget as Element).setPointerCapture(e.pointerId);
+          const [x, y] = toPt(e);
+          let i = pts.findIndex((p) => Math.abs(p[0] - x) < 10 && Math.abs(p[1] - y) < 14);
+          if (i < 0) {
+            const next = [...pts, [x, y] as [number, number]].sort((a, b) => a[0] - b[0]);
+            i = next.findIndex((p) => p[0] === x && p[1] === y);
+            set(next);
+          }
+          drag.current = i;
+        }}
+        onPointerMove={(e) => {
+          if (drag.current === null) return;
+          const [x, y] = toPt(e);
+          const i = drag.current;
+          const next = pts.map((p) => [...p] as [number, number]);
+          const lo = i > 0 ? next[i - 1][0] + 1 : 0, hi = i < next.length - 1 ? next[i + 1][0] - 1 : 255;
+          next[i] = [i === 0 ? Math.min(x, hi) : i === next.length - 1 ? Math.max(x, lo) : Math.min(hi, Math.max(lo, x)), y];
+          set(next);
+        }}
+        onPointerUp={() => { drag.current = null; onCommit(); }}
+        onDoubleClick={(e) => {
+          const [x, y] = toPt(e as any);
+          const i = pts.findIndex((p) => Math.abs(p[0] - x) < 10 && Math.abs(p[1] - y) < 14);
+          if (i > 0 && i < pts.length - 1) { set(pts.filter((_, j) => j !== i)); onCommit(); }
+        }}
+      >
+        {[64, 128, 192].map((g) => (
+          <g key={g} stroke="currentColor" strokeOpacity={0.12}>
+            <line x1={g} y1={0} x2={g} y2={255} />
+            <line x1={0} y1={g} x2={255} y2={g} />
+          </g>
+        ))}
+        <line x1={0} y1={255} x2={255} y2={0} stroke="currentColor" strokeOpacity={0.2} strokeDasharray="4 4" />
+        <path d={path} fill="none" stroke={color} strokeWidth={2.2} />
+        {pts.map((p, i) => (
+          <circle key={i} cx={p[0]} cy={255 - p[1]} r={5} fill="white" stroke={color === 'currentColor' ? '#111' : color} strokeWidth={2} />
+        ))}
+      </svg>
+      <p className="text-[11px] text-mt-faint">Tap to add a point, drag to shape, double-tap a point to remove it.</p>
+    </div>
+  );
+}
 
 function CropOverlay({ box, base }: { box: CropBox; base: HTMLCanvasElement }) {
   const L = (box.x / base.width) * 100, T = (box.y / base.height) * 100;
