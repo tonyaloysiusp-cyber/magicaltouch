@@ -121,7 +121,7 @@ import { drawCropOverlay, isFramed, fillFrame, cropHandleAt, dragCropHandle, kee
 import { BrushSettings, DEFAULT_BRUSH, StrokePoint, strokePathD, createStrokeObject, eraseWithStroke } from '@/lib/editor/brush';
 import { useEditorFeatures, TextPreset, clearCharStyle } from '@/hooks/useEditorFeatures';
 import { planResize } from '@/lib/editor/smartResize';
-import { BrandKit, EMPTY_KIT, loadBrandKit, saveBrandKit, applyBrandToObjects } from '@/lib/editor/brandKit';
+import { BrandKit, EMPTY_KIT, DEFAULT_BRAND_APPLY, loadBrandKit, saveBrandKit, applyBrandToObjects } from '@/lib/editor/brandKit';
 import { fromFabricGradient, toFabricGradient, GradientSpec } from '@/lib/editor/gradients';
 import { documentColors as collectDocumentColors } from '@/lib/editor/color';
 import type { QuickStart } from '@/components/editor/shell/OnboardingDialog';
@@ -2370,14 +2370,17 @@ function EditorContent() {
               // brand's colours and fonts (one undo step brings it back).
               if (searchParams.get('brand') === '1') {
                 loadBrandKit().then((kit) => {
-                  if (!kit.colors.filter(Boolean).length && !kit.fonts.heading && !kit.fonts.body) return;
-                  const objs = canvas.getObjects().filter((o: any) => isArtwork(o));
+                  const ap = kit.apply || DEFAULT_BRAND_APPLY;
+                  const wantColors = ap.colors && kit.colors.filter(Boolean).length > 0;
+                  const wantFonts = ap.fonts && !!(kit.fonts.heading || kit.fonts.body);
+                  if (!wantColors && !wantFonts) return;
+                  const objs = canvas.getObjects().filter((o: any) => isArtwork(o) && (!first?.__artboardId || o.__artboardId === first.__artboardId));
                   if (!objs.length) return;
-                  applyBrandToObjects(objs, kit);
+                  applyBrandToObjects(objs, kit, { colors: wantColors, fonts: wantFonts }, (first?.width || width) * (first?.height || height));
                   canvas.requestRenderAll();
                   pushHistory();
-                  Promise.all([kit.fonts.heading, kit.fonts.body].filter(Boolean).flatMap((f) => [ensureFontLoaded(f as string, 400), ensureFontLoaded(f as string, 700)])).then(() => refreshTextMetrics(canvas));
-                  setLocalNotice('Your brand colours and fonts were applied to this template. Undo (Ctrl/Cmd+Z) to see the original.');
+                  if (wantFonts) Promise.all([kit.fonts.heading, kit.fonts.body].filter(Boolean).flatMap((f) => [ensureFontLoaded(f as string, 400), ensureFontLoaded(f as string, 700)])).then(() => refreshTextMetrics(canvas));
+                  setLocalNotice('Your brand was applied to this template because you chose “Use my brand”. Undo (Ctrl/Cmd+Z) to see the original.');
                 });
               }
             });
@@ -3305,22 +3308,62 @@ function EditorContent() {
       saveBrandKit(k).then((ok) => setBrandSaving(ok ? 'saved' : 'error'));
     }, 700);
   };
-  const applyBrandToPage = () => {
+  const BRAND_LOGO_NAME = 'Brand logo';
+  const pageObjects = () => {
     const canvas = fabricCanvasRef.current;
-    if (!canvas) return;
     const page = getActiveArtboardRect();
-    const objs = canvas.getObjects().filter((o: any) => isArtwork(o) && (o.__artboardId === page.id || !page.id));
+    const objs = canvas ? canvas.getObjects().filter((o: any) => isArtwork(o) && (o.__artboardId === page.id || !page.id)) : [];
+    return { canvas, page, objs };
+  };
+  // Applies only what the customer switched on in the Brand panel.
+  const applyBrandToPage = (colorsOverride?: string[]) => {
+    const { canvas, page, objs } = pageObjects();
+    if (!canvas) return;
     if (!objs.length) {
       setLocalNotice('Add a template or some content first, then apply your brand.');
       return;
     }
-    applyBrandToObjects(objs, brandKit);
+    const apply = brandKit.apply || DEFAULT_BRAND_APPLY;
+    const kit = colorsOverride ? { ...brandKit, colors: colorsOverride } : brandKit;
+    const opts = colorsOverride ? { colors: true, fonts: false } : { colors: apply.colors, fonts: apply.fonts };
+    applyBrandToObjects(objs.filter((o: any) => o.name !== BRAND_LOGO_NAME), kit, opts, page.width * page.height);
     canvas.requestRenderAll();
     // Brand fonts may still be downloading: measure the text again once they arrive.
-    Promise.all([brandKit.fonts.heading, brandKit.fonts.body].filter(Boolean).flatMap((f) => [ensureFontLoaded(f as string, 400), ensureFontLoaded(f as string, 700)])).then(() => refreshTextMetrics(canvas));
+    if (opts.fonts) Promise.all([kit.fonts.heading, kit.fonts.body].filter(Boolean).flatMap((f) => [ensureFontLoaded(f as string, 400), ensureFontLoaded(f as string, 700)])).then(() => refreshTextMetrics(canvas));
     pushHistory();
     bumpSel();
-    setLocalNotice('Your brand colours and fonts were applied. Undo (Ctrl/Cmd+Z) if you’d like it back.');
+    setLocalNotice(colorsOverride ? 'Palette applied to this page. Undo (Ctrl/Cmd+Z) to go back.' : 'Your brand was applied to this page. Undo (Ctrl/Cmd+Z) if you’d like it back.');
+  };
+  const brandLogoOnPage = () => pageObjects().objs.some((o: any) => o.name === BRAND_LOGO_NAME);
+  const toggleBrandLogo = (on: boolean) => {
+    const { canvas, page, objs } = pageObjects();
+    if (!canvas) return;
+    const existing = objs.filter((o: any) => o.name === BRAND_LOGO_NAME);
+    if (!on) {
+      existing.forEach((o: any) => canvas.remove(o));
+      canvas.discardActiveObject();
+      canvas.requestRenderAll();
+      pushHistory();
+      bumpSel();
+      return;
+    }
+    if (existing.length || !brandKit.logoUrl) return;
+    import('fabric').then((mod) => {
+      mod.fabric.Image.fromURL(brandKit.logoUrl as string, (img: any) => {
+        if (!img || !img.width) return;
+        const w = Math.min(page.width, page.height) * 0.18;
+        img.scaleToWidth(w);
+        if (img.getScaledHeight() > w) img.scaleToHeight(w);
+        const m = Math.min(page.width, page.height) * 0.05;
+        img.set({ left: page.x + m, top: page.y + m, name: BRAND_LOGO_NAME });
+        img.__id = `img_${Date.now()}_${nextImageIdRef.current++}`;
+        canvas.add(img);
+        canvas.setActiveObject(img);
+        canvas.requestRenderAll();
+        pushHistory();
+        bumpSel();
+      });
+    });
   };
   const uploadBrandLogo = async (file: File) => {
     const url = await readFile(file).catch(() => null);
@@ -6781,8 +6824,11 @@ function EditorContent() {
           kit={brandKit}
           onChange={updateBrandKit}
           saving={brandSaving}
-          onApply={applyBrandToPage}
+          onApply={() => applyBrandToPage()}
           onAddLogo={() => brandKit.logoUrl && placeImageUrl(brandKit.logoUrl)}
+          logoOnPage={brandLogoOnPage()}
+          onToggleLogo={toggleBrandLogo}
+          onApplyPalette={(c) => applyBrandToPage(c)}
           onAddInfo={addBrandInfo}
           onUploadLogo={uploadBrandLogo}
           documentColors={docColors}
