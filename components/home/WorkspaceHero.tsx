@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { ArrowRight } from 'lucide-react';
 import { resolveAuthedPath } from '@/lib/authNav';
 import { HeroCurves } from './HeroCurves';
-import { HowToVideo } from './HowToVideo';
+import { HowToPlayer } from './HowToPlayer';
 
 export function WorkspaceHero() {
   const router = useRouter();
@@ -51,7 +51,7 @@ export function WorkspaceHero() {
         <div className="relative z-10 max-w-6xl 2xl:max-w-7xl min-[1900px]:max-w-[1440px] mx-auto px-3 sm:px-6">
           <div className="rounded-[20px] sm:rounded-[24px] p-px mt-spectrum shadow-[0_50px_100px_-40px_rgba(9,9,11,0.35)] dark:shadow-[0_50px_120px_-40px_rgba(53,194,241,0.25)]">
             <div className="rounded-[19px] sm:rounded-[23px] overflow-hidden bg-mt-surface text-left">
-              <HowToVideo />
+              <HowToPlayer />
             </div>
           </div>
         </div>
