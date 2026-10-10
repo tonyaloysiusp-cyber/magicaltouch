@@ -79,7 +79,8 @@ export default function CreateDesignPage() {
     loadBrandKit().then((k) => {
       const ok = k.colors.filter(Boolean).length > 0 || !!k.fonts.heading || !!k.fonts.body;
       setBrandReady(ok);
-      setUseBrand(ok);
+      // Off by default: templates open in their own design unless the
+      // customer asks for their brand.
     });
     // Links can pre-pick a size (?size=ig-story) or open the wizard (?wizard=1).
     const q = new URLSearchParams(window.location.search);
@@ -482,7 +483,7 @@ export default function CreateDesignPage() {
                     <label className="mb-3 flex items-center justify-between gap-2 rounded-xl bg-mt-surface2 px-3 py-2 text-xs">
                       <span>
                         <span className="font-semibold text-mt-ink">Use my brand</span>
-                        <span className="text-mt-muted"> — your colours &amp; fonts</span>
+                        <span className="text-mt-muted"> — optional, off by default</span>
                       </span>
                       <input type="checkbox" checked={useBrand} onChange={(e) => setUseBrand(e.target.checked)} className="w-4 h-4 accent-[#3B82C4]" />
                     </label>
