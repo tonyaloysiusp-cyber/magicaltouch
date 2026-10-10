@@ -10,6 +10,7 @@ import { STYLES, PALETTES, ASPECTS, stylesOf, styleLabel, palettesOf, mediumOf, 
 import { renderTemplatePages, pageLabel, PageImage } from '@/lib/templates/renderPages';
 import { resolveAuthedPath } from '@/lib/authNav';
 import { MockDesignCard } from '@/components/MockDesignCard';
+import { PrintSpecs } from '@/components/templates/PrintSpecs';
 import { Template, TemplateCategory, CATEGORIES, TEMPLATES, fetchPublicTemplates, fetchCategories, fetchTemplateById } from '@/lib/templatesData';
 import { supabase } from '@/lib/supabase';
 import { ProfileMenu } from '@/components/ProfileMenu';
@@ -670,6 +671,7 @@ export default function TemplatesPage() {
 function TemplatePreview({ t, onClose, onUse, onTag, onStyle }: { t: Template; onClose: () => void; onUse: () => void; onTag: (tag: string) => void; onStyle: (s: string) => void }) {
   const [pages, setPages] = useState<PageImage[] | null>(null);
   const [idx, setIdx] = useState(0);
+  const [design, setDesign] = useState<any>(t.canvasJson ?? null);
   const closeRef = useRef<HTMLButtonElement>(null);
   const expected = pageCountOf(t);
   useEffect(() => {
@@ -680,6 +682,7 @@ function TemplatePreview({ t, onClose, onUse, onTag, onStyle }: { t: Template; o
     (async () => {
       const full = t.canvasJson ? t : t.id ? await fetchTemplateById(t.id) : null;
       if (!full?.canvasJson) return alive && setPages([]);
+      if (alive) setDesign(full.canvasJson);
       const imgs = await renderTemplatePages(full.canvasJson).catch(() => []);
       if (alive) setPages(imgs);
     })();
@@ -746,6 +749,7 @@ function TemplatePreview({ t, onClose, onUse, onTag, onStyle }: { t: Template; o
             <dt className="text-mt-muted">Made for</dt>
             <dd>{mediumOf(t) === 'print' ? 'Print' : 'Screens & social'}</dd>
           </dl>
+          <PrintSpecs width={t.width} height={t.height} print={mediumOf(t) === 'print'} canvasJson={design} colors={t.colors} />
           {st.length > 0 && (
             <div className="mt-4 flex flex-wrap gap-1.5">
               {st.map((s) => (
