@@ -3,8 +3,9 @@
 // The home page tutorial: a crisp, self-playing replica of the real editor
 // layout (top bar, left rail, floating toolbar, pages bar), built with
 // HTML/CSS so it is sharp at any size and weighs almost nothing. A cursor
-// picks a template, edits the name, adds a glow and neon effect, swaps
-// the photo, translates the design to French (and undoes it), resizes it
+// picks a corporate summit template, edits the speaker's name, adds a glow
+// and echo effect, swaps the speaker photo, translates the design to
+// Arabic (and undoes it), resizes it
 // into a story and downloads a vector PDF. About a minute, on a loop.
 
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -23,10 +24,10 @@ interface S {
   step: number;
   cx: number; cy: number; click: number; down: boolean; target: string | null;
   panel: boolean; loaded: boolean;
-  sel: 'name' | 'happy' | 'birthday' | 'photo' | null; editing: boolean;
-  name: string; fx: 'none' | 'glow' | 'neon'; fxOpen: boolean;
+  sel: 'name' | 'headline' | 'photo' | null; editing: boolean;
+  name: string; fx: 'none' | 'glow' | 'echo'; fxOpen: boolean;
   photo: number; swapping: boolean;
-  lang: 'en' | 'fr';
+  lang: 'en' | 'ar';
   dlg: Dlg; search: string; langPick: boolean; scopeAll: boolean; busy: boolean; done: boolean;
   storyPick: boolean; story: boolean;
   pdfPick: boolean; preparing: boolean; toast: string | null;
@@ -34,7 +35,7 @@ interface S {
 }
 const START: S = {
   step: 0, cx: 900, cy: 520, click: 0, down: false, target: null, panel: true, loaded: false, sel: null, editing: false,
-  name: 'A I S H A   R A H M A N', fx: 'none', fxOpen: false, photo: 784, swapping: false, lang: 'en',
+  name: 'DANIEL OKAFOR', fx: 'none', fxOpen: false, photo: 813, swapping: false, lang: 'en',
   dlg: 'none', search: '', langPick: false, scopeAll: false, busy: false, done: false, storyPick: false, story: false,
   pdfPick: false, preparing: false, toast: null, fade: false,
 };
@@ -43,9 +44,9 @@ type Ev = [number, Partial<S> | ((s: S) => Partial<S>)];
 const STEPS = [
   { at: 0, title: 'Pick a template', sub: '700+ designs, ready in a tap' },
   { at: 4000, title: 'Make the words yours', sub: 'Click any text and type' },
-  { at: 10500, title: 'Add a little magic', sub: 'Glow, neon, retro — one click' },
-  { at: 18300, title: 'Drop in your photo', sub: 'It fills the frame perfectly' },
-  { at: 23500, title: 'Translate in one click', sub: '35+ languages, the right fonts too' },
+  { at: 10500, title: 'Add a little magic', sub: 'Glow, echo, neon — one click' },
+  { at: 18300, title: 'Swap in your photo', sub: 'It fits the frame perfectly' },
+  { at: 23500, title: 'Translate in one click', sub: 'Arabic, French, Hindi… right fonts too' },
   { at: 37800, title: 'Resize for anywhere', sub: 'Post to story — nothing stretched' },
   { at: 45000, title: 'Download print-ready', sub: 'Vector PDF, sharp at any size' },
 ];
@@ -62,25 +63,25 @@ function buildTimeline() {
   // words
   at(4000, { step: 1 }); move(4300, 'name'); click(5100); at(5250, { sel: 'name' });
   click(5700); click(5900); at(6100, { editing: true });
-  at(6800, { name: '' }); type(6800, 'M A Y A   L O P E Z', 105, 'name');
+  at(6800, { name: '' }); type(6800, 'LAYLA MANSOUR', 150, 'name');
   move(9100, 'empty'); click(9800); at(9950, { sel: null, editing: false });
   // effects
-  at(10500, { step: 2 }); move(10800, 'happy'); click(11600); at(11750, { sel: 'happy' });
+  at(10500, { step: 2 }); move(10800, 'headline'); click(11600); at(11750, { sel: 'headline' });
   move(12300, 'tb-effects'); click(13000); at(13150, { fxOpen: true });
   move(13700, 'fx-glow'); click(14400); at(14550, { fx: 'glow' });
-  move(15300, 'fx-neon'); click(16000); at(16150, { fx: 'neon' });
+  move(15300, 'fx-echo'); click(16000); at(16150, { fx: 'echo' });
   move(16900, 'empty'); click(17600); at(17750, { fxOpen: false, sel: null });
   // photo
   at(18300, { step: 3 }); move(18600, 'photo'); click(19300); at(19450, { sel: 'photo' });
-  move(20000, 'tb-replace'); click(20700); at(20850, { swapping: true }); at(21500, { photo: 1109 }); at(22300, { swapping: false });
+  move(20000, 'tb-replace'); click(20700); at(20850, { swapping: true }); at(21500, { photo: 589 }); at(22300, { swapping: false });
   move(22500, 'empty'); click(23100); at(23250, { sel: null });
   // translate
-  at(23500, { step: 4 }); move(23800, 'birthday'); click(24500); at(24650, { sel: 'birthday' });
+  at(23500, { step: 4 }); move(23800, 'headline'); click(24500); at(24650, { sel: 'headline' });
   move(25200, 'tb-translate'); click(25900); at(26050, { dlg: 'translate' });
-  move(26700, 'tr-search'); click(27300); type(27400, 'Fren', 160, 'search');
-  move(28400, 'tr-french'); click(29100); at(29250, { langPick: true });
+  move(26700, 'tr-search'); click(27300); type(27400, 'Arab', 160, 'search');
+  move(28400, 'tr-arabic'); click(29100); at(29250, { langPick: true });
   move(29800, 'tr-all'); click(30500); at(30650, { scopeAll: true });
-  move(31100, 'tr-go'); click(31800); at(31950, { busy: true }); at(32900, { busy: false, done: true, lang: 'fr' });
+  move(31100, 'tr-go'); click(31800); at(31950, { busy: true }); at(32900, { busy: false, done: true, lang: 'ar' });
   move(33700, 'tr-close'); click(34500); at(34650, { dlg: 'none', sel: null, search: '', langPick: false, scopeAll: false, done: false });
   move(35500, 'undo'); click(36400); at(36550, { lang: 'en', toast: 'Undo · back to English' }); at(37600, { toast: null });
   // resize
@@ -91,7 +92,7 @@ function buildTimeline() {
   at(45000, { step: 6 }); move(45300, 'top-export'); click(46100); at(46250, { dlg: 'export' });
   move(46900, 'ex-pdf'); click(47600); at(47750, { pdfPick: true });
   move(48300, 'ex-go'); click(49000); at(49150, { preparing: true });
-  at(50600, { preparing: false, dlg: 'none', pdfPick: false, toast: 'Maya’s birthday.pdf saved · vector, print-ready' });
+  at(50600, { preparing: false, dlg: 'none', pdfPick: false, toast: 'Growth Summit 2027.pdf saved · vector, print-ready' });
   move(51200, 'empty'); at(54500, { toast: null }); at(56500, { fade: true });
   const total = 57400;
   evs.sort((a, b) => a[0] - b[0]);
@@ -163,7 +164,7 @@ export function HowToPlayer() {
     setS(st);
     setPlaying(true);
   };
-  const view: S = reduced ? { ...START, panel: false, loaded: true, name: 'M A Y A   L O P E Z', fx: 'neon', photo: 1109, step: 0 } : s;
+  const view: S = reduced ? { ...START, panel: false, loaded: true, name: 'LAYLA MANSOUR', fx: 'glow', photo: 589, step: 0 } : s;
   const step = STEPS[view.step];
 
   return (
@@ -203,7 +204,7 @@ export function HowToPlayer() {
 // The design's fonts, through the site's own font proxy.
 function FontFaces() {
   const f = (fam: string, w: number) => `@font-face{font-family:'${fam}';font-weight:${w};src:url('/api/font-file?family=${encodeURIComponent(fam)}&weight=${w}') format('truetype');font-display:swap}`;
-  return <style dangerouslySetInnerHTML={{ __html: [f('Great Vibes', 400), f('Abril Fatface', 400), f('Raleway', 500), f('Raleway', 700)].join('') }} />;
+  return <style dangerouslySetInnerHTML={{ __html: [f('Sora', 400), f('Sora', 600), f('Sora', 800), f('Inter', 400), f('Inter', 600), f('Cairo', 400), f('Cairo', 700)].join('') }} />;
 }
 
 // ---------------------------------------------------------------- editor replica
@@ -212,7 +213,7 @@ const RAIL = [
   { i: LayoutTemplate, l: 'Templates' }, { i: Shapes, l: 'Elements' }, { i: Type, l: 'Text' }, { i: Upload, l: 'Upload' }, { i: Brush, l: 'Draw' },
   { i: PaintBucket, l: 'Background' }, { i: Palette, l: 'Brand' }, { i: Layers, l: 'Layers' }, { i: Files, l: 'Pages' }, { i: HelpCircle, l: 'Help' },
 ];
-const THUMBS = ['golden-script-birthday-portrait', 'bold-orange-name-birthday-post', 'polaroid-friends-birthday-collage', 'make-a-wish-cake-birthday-post', 'weekend-photo-dump-sticker-post', 'a-day-in-my-life-journal-post'];
+const THUMBS = ['', 'annual-conference-poster', 'business-seminar-speakers-flyer', 'gradient-mesh-tech-meetup-flyer', 'geometric-we-are-hiring-post', 'navy-professional-photo-resume'];
 const LOOKS = ['None', 'Shadow', 'Lift', 'Glow', 'Neon', 'Echo', 'Hollow', 'Retro', 'Pop', 'Dreamy'];
 const LANGS = [['English', 'English'], ['Arabic', 'العربية'], ['Hindi', 'हिन्दी'], ['Malayalam', 'മലയാളം'], ['Tamil', 'தமிழ்'], ['Telugu', 'తెలుగు'], ['French', 'Français'], ['Spanish', 'Español'], ['German', 'Deutsch']];
 
@@ -234,7 +235,7 @@ function Stage({ s }: { s: S }) {
         <img src="/logo.png" alt="" className="h-[20px] w-auto dark:hidden" />
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/logo-white.png" alt="" className="h-[20px] w-auto hidden dark:block" />
-        <span className="ml-2 h-9 w-[208px] rounded-lg border border-mt-input-border px-2.5 flex items-center text-[15px]">{s.loaded ? (s.lang === 'fr' ? 'Joyeux anniversaire Maya' : 'Maya’s birthday') : 'Untitled Design'}</span>
+        <span className="ml-2 h-9 w-[208px] rounded-lg border border-mt-input-border px-2.5 flex items-center text-[15px]">{s.loaded ? (s.lang === 'ar' ? 'قمة النمو ٢٠٢٧' : 'Growth Summit 2027') : 'Untitled Design'}</span>
         <span className="ml-3 text-[13px] text-mt-faint">{s.loaded ? 'Saved' : 'Not saved yet'}</span>
         <span className="ml-auto flex items-center gap-2 text-mt-muted">
           <span data-t="undo" className={cx('w-9 h-9 grid place-items-center rounded-lg', s.loaded ? 'text-mt-ink' : 'opacity-40')}><Undo2 size={18} /></span>
@@ -260,7 +261,7 @@ function Stage({ s }: { s: S }) {
 
       {/* canvas area */}
       <div data-t="empty-zone" className="absolute left-[76px] right-0 top-14 bottom-[74px] bg-mt-studio overflow-hidden">
-        <span data-t="empty" className="absolute right-[120px] top-[420px] w-2 h-2" />
+        <span data-t="empty" className="absolute right-[220px] top-[540px] w-2 h-2" />
       </div>
       <div className="absolute" style={{ left, top, width: pw, height: ph, transition: 'all .9s cubic-bezier(.6,0,.3,1)', opacity: s.loaded ? 1 : 0, transform: s.loaded ? 'scale(1)' : 'scale(.92)' }}>
         <Design s={s} k={k} />
@@ -272,12 +273,16 @@ function Stage({ s }: { s: S }) {
       {/* templates panel */}
       <div className="absolute z-10 top-14 bottom-[74px] w-[330px] bg-mt-surface border-r border-mt-border p-4 shadow-xl" style={{ left: 76, transform: s.panel ? 'translateX(0)' : 'translateX(-125%)', opacity: s.panel ? 1 : 0, transition: 'transform .5s cubic-bezier(.6,0,.3,1), opacity .5s' }}>
         <p className="text-[17px] font-semibold">Templates</p>
-        <div className="mt-3 h-10 rounded-xl border border-mt-input-border flex items-center gap-2 px-3 text-[14px] text-mt-faint"><Search size={16} />Search birthday</div>
+        <div className="mt-3 h-10 rounded-xl border border-mt-input-border flex items-center gap-2 px-3 text-[14px] text-mt-faint"><Search size={16} />Search business</div>
         <div className="mt-3 grid grid-cols-2 gap-2.5">
           {THUMBS.map((t, i) => (
             <span key={t} data-t={`thumb${i}`} className={cx('relative h-[170px] rounded-xl overflow-hidden bg-mt-surface2', i === 0 && s.loaded ? 'ring-2 ring-[#3B82C4]' : 'ring-1 ring-mt-border')}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={`/templates/collection/${t}.jpg`} alt="" className="w-full h-full object-cover object-top" loading="lazy" />
+              {t ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={`/templates/collection/${t}.jpg`} alt="" className="w-full h-full object-cover object-top" loading="lazy" />
+              ) : (
+                <span className="absolute left-0 top-0" style={{ width: 1080 * 0.126, height: 1350 * 0.126 }}><Design s={{ ...START, loaded: true }} k={0.126} /></span>
+              )}
             </span>
           ))}
         </div>
@@ -285,9 +290,8 @@ function Stage({ s }: { s: S }) {
 
       {/* pages bar */}
       <div className="absolute left-0 right-0 bottom-0 h-[74px] border-t border-mt-border bg-mt-surface flex items-center px-3 gap-3">
-        <span className="w-[44px] h-[56px] rounded-md ring-2 ring-[#3B82C4] overflow-hidden bg-[#F3F2EF]">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          {s.loaded && <img src="/templates/collection/golden-script-birthday-portrait.jpg" alt="" className="w-full h-full object-cover" />}
+        <span className="w-[44px] h-[56px] rounded-md ring-2 ring-[#3B82C4] overflow-hidden bg-[#0B1630]">
+          {s.loaded && <span className="relative block w-full h-full"><Design s={{ ...s, sel: null, editing: false }} k={story ? 44 / 1080 : 44 / 1080} /></span>}
         </span>
         <span className="w-[44px] h-[56px] rounded-md border-2 border-dashed border-mt-border grid place-items-center text-mt-faint"><Plus size={18} /></span>
         <span className="ml-auto inline-flex items-center gap-3 h-11 px-3 rounded-xl border border-mt-border text-[13px] text-mt-muted">Page 1 <ChevronLeft size={15} /><Copy size={15} /><Trash2 size={15} /><ChevronRight size={15} /></span>
@@ -317,17 +321,17 @@ function Stage({ s }: { s: S }) {
 }
 
 function Toolbar({ s }: { s: S }) {
-  const text = s.sel === 'name' || s.sel === 'happy' || s.sel === 'birthday';
+  const text = s.sel === 'name' || s.sel === 'headline';
   const bar = 'absolute left-1/2 -translate-x-1/2 top-[70px] h-[52px] rounded-2xl bg-mt-surface border border-mt-border shadow-lg flex items-center gap-1 px-2 text-mt-ink whitespace-nowrap mt-howto-pop';
   if (text) {
-    const font = s.sel === 'name' ? 'Raleway' : s.sel === 'happy' ? 'Great Vibes' : 'Abril Fatface';
-    const size = s.sel === 'name' ? 34 : s.sel === 'happy' ? 170 : 210;
+    const font = s.lang === 'ar' && s.sel === 'headline' ? 'Cairo' : 'Sora';
+    const size = s.sel === 'name' ? 30 : 124;
     return (
       <div key="text" className={bar}>
         <span className="h-9 w-[150px] rounded-lg border border-mt-input-border px-2 flex items-center justify-between text-[13px]" style={{ fontFamily: font }}>{font}<ChevronDown size={13} /></span>
         <span className="h-9 w-[96px] rounded-lg border border-mt-input-border px-2 flex items-center justify-between text-[13px]">Regular<ChevronDown size={13} /></span>
         <Minus size={15} className="mx-1 text-mt-muted" /><span className="h-9 w-12 rounded-lg border border-mt-input-border grid place-items-center text-[14px] tabular-nums">{size}</span><Plus size={15} className="mx-1 text-mt-muted" />
-        <span className="w-6 h-6 rounded-full mx-1" style={{ background: s.sel === 'name' ? '#1D1D1D' : 'linear-gradient(135deg,#F8E3A1,#C9902E)' }} />
+        <span className="w-6 h-6 rounded-full mx-1" style={{ background: '#FFFFFF', boxShadow: 'inset 0 0 0 1px rgba(0,0,0,.2)' }} />
         {[Bold, Italic, Underline, Strikethrough, AlignCenter, CaseSensitive, Spline].map((I, i) => <span key={i} className="w-9 h-9 grid place-items-center"><I size={17} /></span>)}
         <span className="inline-flex items-center gap-1.5 h-9 px-2.5 text-[14px]"><Newspaper size={16} />Text frame</span>
         <span data-t="tb-effects" className={cx('inline-flex items-center gap-1.5 h-9 px-2.5 rounded-lg text-[14px] ring-1', s.fxOpen ? 'ring-[#3B82C4] bg-mt-surface2' : 'ring-[#F2708F]/50')}><Sparkles size={16} />Effects</span>
@@ -373,7 +377,7 @@ function FxPopover({ s }: { s: S }) {
     if (l === 'Dreamy') return { ...b, color: '#A69BD3', textShadow: '0 1px 10px rgba(166,155,211,.9)' };
     return b;
   };
-  const cur = s.fx === 'glow' ? 'Glow' : s.fx === 'neon' ? 'Neon' : 'None';
+  const cur = s.fx === 'glow' ? 'Glow' : s.fx === 'echo' ? 'Echo' : 'None';
   return (
     <div className="absolute left-[560px] top-[60px] w-[320px] rounded-2xl bg-mt-surface border border-mt-border shadow-2xl p-4 mt-howto-pop">
       <p className="text-[15px] font-semibold mb-2">Look</p>
@@ -409,14 +413,14 @@ function TranslateDlg({ s }: { s: S }) {
       icon={<Languages size={19} className="text-[#3B82C4]" />}
       footer={<>
         <span data-t="tr-close" className="h-11 px-5 rounded-xl border border-mt-border text-[15px] font-medium grid place-items-center">Close</span>
-        <span data-t="tr-go" className="h-11 px-5 rounded-xl bg-mt-primary text-mt-onprimary text-[15px] font-semibold inline-flex items-center gap-2">{s.busy ? <Loader2 size={16} className="animate-spin" /> : <Languages size={16} />}{s.busy ? 'Translating…' : `Translate to ${s.langPick ? 'French' : 'Arabic'}`}</span>
+        <span data-t="tr-go" className="h-11 px-5 rounded-xl bg-mt-primary text-mt-onprimary text-[15px] font-semibold inline-flex items-center gap-2">{s.busy ? <Loader2 size={16} className="animate-spin" /> : <Languages size={16} />}{s.busy ? 'Translating…' : `Translate to ${s.langPick ? 'Arabic' : '…'}`}</span>
       </>}
     >
       <p className="text-[15px] font-semibold mb-2">Language</p>
       <span data-t="tr-search" className={cx('h-11 rounded-xl border px-3 flex items-center gap-2 text-[15px]', s.search ? 'border-[#3B82C4]' : 'border-mt-input-border text-mt-faint')}><Search size={17} />{s.search || 'Search languages'}{s.search && <span className="w-[2px] h-5 bg-mt-ink mt-howto-caret" />}</span>
       <div className="mt-2 grid grid-cols-3 gap-2 min-h-[64px]">
         {shown.map(([n, nat]) => (
-          <span key={n} data-t={n === 'French' ? 'tr-french' : undefined} className={cx('rounded-xl border px-3 py-2', (s.langPick && n === 'French') || (!s.langPick && n === 'Arabic') ? 'border-[#3B82C4] bg-[#E8F5FF] dark:bg-[#0E1D2B]' : 'border-mt-border')}>
+          <span key={n} data-t={n === 'Arabic' ? 'tr-arabic' : undefined} className={cx('rounded-xl border px-3 py-2', s.langPick && n === 'Arabic' ? 'border-[#3B82C4] bg-[#E8F5FF] dark:bg-[#0E1D2B]' : 'border-mt-border')}>
             <span className="block text-[14px] font-medium">{n}</span><span className="block text-[13px] text-mt-muted">{nat}</span>
           </span>
         ))}
@@ -426,7 +430,7 @@ function TranslateDlg({ s }: { s: S }) {
         <span className={cx('flex-1 h-11 rounded-xl border grid place-items-center text-[14px] font-medium', !s.scopeAll ? 'border-[#3B82C4] bg-[#E8F5FF] dark:bg-[#0E1D2B]' : 'border-mt-border')}>Selected</span>
         <span data-t="tr-all" className={cx('flex-1 h-11 rounded-xl border grid place-items-center text-[14px] font-medium', s.scopeAll ? 'border-[#3B82C4] bg-[#E8F5FF] dark:bg-[#0E1D2B]' : 'border-mt-border')}>Whole design</span>
       </div>
-      {s.done && <p className="mt-4 text-[14px] rounded-xl px-3 py-2.5 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 mt-howto-pop">Translated 4 texts into French. Press Undo to go back.</p>}
+      {s.done && <p className="mt-4 text-[14px] rounded-xl px-3 py-2.5 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 mt-howto-pop">Translated 9 texts into Arabic, with an Arabic font. Press Undo to go back.</p>}
     </Dialog>
   );
 }
@@ -467,41 +471,78 @@ function ExportDlg({ s }: { s: S }) {
   );
 }
 
-// The "Golden Script Birthday Portrait" template, drawn in its own 1080-wide
-// units and scaled — positions follow the post or the story layout.
+// The "Growth Summit" corporate poster, drawn in its own 1080-wide units
+// and scaled. Positions follow the post (1080×1350) or story (1080×1920)
+// layout, and every word has an English and an Arabic version.
+const SPEC = 'linear-gradient(90deg,#F2708F 0%,#A69BD3 22%,#35C2F1 45%,#5DCCB8 64%,#8CC84B 82%,#DDE23B 100%)';
 function Design({ s, k }: { s: S; k: number }) {
   const story = s.story;
+  const ar = s.lang === 'ar';
   const T = 'all .9s cubic-bezier(.6,0,.3,1)';
   const L = story
-    ? { H: 1920, strip: [100, 900], bars: 140, photo: [170, 1160], fade: 1010, happy: 1300, bday: 1400, name: 1720, date: 1785 }
-    : { H: 1350, strip: [70, 560], bars: 112, photo: [140, 760], fade: 560, happy: 800, bday: 880, name: 1130, date: 1190 };
-  const fr = s.lang === 'fr';
-  const gold: CSSProperties = { background: 'linear-gradient(100deg,#F8E3A1,#D9A93E 30%,#A8741C 55%,#EFC870 75%,#B7832B)', WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' };
-  const fx: CSSProperties = s.fx === 'glow' ? { filter: 'drop-shadow(0 0 12px rgba(143,227,255,.95)) drop-shadow(0 0 24px rgba(143,227,255,.7))' } : s.fx === 'neon' ? { filter: 'drop-shadow(0 0 6px #F2708F) drop-shadow(0 0 18px #F2708F) drop-shadow(0 0 30px rgba(242,112,143,.8))' } : {};
-  const selBox = (on: boolean): CSSProperties => (on ? { outline: `${3 / k}px solid #3B82C4`, outlineOffset: 6 / k } : {});
+    ? { H: 1920, head: 330, sub: 660, photo: [80, 820, 920, 640], name: 1490, info: 1620, cta: 1790 }
+    : { H: 1350, head: 270, sub: 590, photo: [620, 560, 380, 430], name: 1004, info: 1090, cta: 1225 };
+  const sans = ar ? 'Cairo, sans-serif' : 'Sora, sans-serif';
+  const body = ar ? 'Cairo, sans-serif' : 'Inter, sans-serif';
+  const align: CSSProperties = ar ? { direction: 'rtl', textAlign: 'right' } : { textAlign: 'left' };
+  const grad: CSSProperties = { background: SPEC, WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' };
+  const fx: CSSProperties = s.fx === 'glow' ? { filter: 'drop-shadow(0 0 14px rgba(143,227,255,.9)) drop-shadow(0 0 28px rgba(53,194,241,.6))' } : s.fx === 'echo' ? { textShadow: '9px 9px 0 rgba(53,194,241,.55), 18px 18px 0 rgba(242,112,143,.35)' } : {};
+  const selBox = (on: boolean): CSSProperties => (on ? { outline: `${3 / k}px solid #3B82C4`, outlineOffset: 8 / k } : {});
+  const info = ar
+    ? [['التاريخ', '١٤ مارس ٢٠٢٧'], ['المكان', 'مركز دبي التجاري العالمي'], ['الوقت', '٩:٠٠ صباحًا']]
+    : [['DATE', '14 MAR 2027'], ['VENUE', 'Dubai World Trade Centre'], ['TIME', '9:00 AM']];
+  const [px, py, pw, ph] = L.photo;
   return (
-    <div className="absolute left-0 top-0 origin-top-left overflow-hidden shadow-[0_24px_50px_-20px_rgba(9,9,11,0.45)]" style={{ width: 1080, height: L.H, transform: `scale(${k})`, background: '#F3F2EF', transition: T }}>
-      <Img src={PH(641)} style={{ left: 60, top: L.strip[0], width: 170, height: L.strip[1], transition: T, objectPosition: '55% 50%' }} />
-      <Img src={PH(1491)} style={{ left: 850, top: L.strip[0], width: 170, height: L.strip[1], transition: T }} />
-      <span className="absolute" style={{ left: 250, top: L.bars, width: 140, height: 4, background: '#D59A3A', transition: T }} />
-      <span className="absolute" style={{ left: 690, top: L.bars, width: 140, height: 4, background: '#D59A3A', transition: T }} />
-      <span data-t="photo" className="absolute overflow-hidden" style={{ left: 250, top: L.photo[0], width: 580, height: L.photo[1], transition: T, ...selBox(s.sel === 'photo') }}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img key={s.photo} src={PH(s.photo)} alt="" className={cx('absolute inset-0 w-full h-full object-cover', s.photo !== 784 && 'mt-howto-pop')} style={{ objectPosition: '50% 30%' }} />
-        {s.swapping && <span className="absolute inset-0 mt-howto-shimmer" />}
+    <div className="absolute left-0 top-0 origin-top-left overflow-hidden shadow-[0_24px_50px_-20px_rgba(9,9,11,0.55)]" style={{ width: 1080, height: L.H, transform: `scale(${k})`, background: 'radial-gradient(120% 80% at 100% 0%, #1B2F63 0%, #0B1630 55%, #070E20 100%)', transition: T }}>
+      {/* dot grid + brand ribbon */}
+      <span className="absolute" style={{ left: 60, top: 70, width: 260, height: 120, backgroundImage: 'radial-gradient(rgba(255,255,255,.18) 2px, transparent 2.5px)', backgroundSize: '26px 26px' }} />
+      <svg className="absolute" style={{ left: 0, top: 0, width: 1080, height: 400 }} viewBox="0 0 1080 400" fill="none" aria-hidden>
+        <defs><linearGradient id="ht-r" x1="560" y1="0" x2="1140" y2="0" gradientUnits="userSpaceOnUse"><stop offset="0" stopColor="#F2708F" /><stop offset=".3" stopColor="#A69BD3" /><stop offset=".55" stopColor="#35C2F1" /><stop offset=".78" stopColor="#5DCCB8" /><stop offset="1" stopColor="#DDE23B" /></linearGradient></defs>
+        <path d="M560 -60 C 640 120, 820 210, 1140 190" stroke="url(#ht-r)" strokeWidth="54" strokeLinecap="round" opacity=".95" />
+        <path d="M610 -60 C 700 160, 880 260, 1140 250" stroke="url(#ht-r)" strokeWidth="5" strokeLinecap="round" opacity=".55" />
+      </svg>
+      {/* header */}
+      <span className="absolute flex items-center gap-4" style={{ left: 80, top: 80, transition: T }}>
+        <span className="w-12 h-12 rounded-full" style={{ background: SPEC }} />
+        <span style={{ fontFamily: 'Sora, sans-serif', fontWeight: 800, fontSize: 30, color: '#fff', letterSpacing: '0.12em' }}>NORTHWIND</span>
       </span>
-      <span className="absolute left-0 right-0" style={{ top: L.fade, height: 420, background: 'linear-gradient(rgba(243,242,239,0), rgba(243,242,239,.92) 55%, #F3F2EF)', transition: T }} />
-      <span data-t="happy" className="absolute whitespace-nowrap" style={{ left: 300, top: L.happy, fontFamily: '"Great Vibes", cursive', fontSize: fr ? 150 : 170, lineHeight: 1.2, transform: 'rotate(-6deg)', transition: T, ...gold, ...fx, ...selBox(s.sel === 'happy') }}>{fr ? 'Joyeux' : 'Happy'}</span>
-      <span data-t="birthday" className="absolute left-0 right-0 text-center whitespace-nowrap" style={{ top: L.bday, fontFamily: '"Abril Fatface", serif', fontSize: fr ? 150 : 210, lineHeight: 1.2, transition: T, ...selBox(s.sel === 'birthday') }}>
-        <span style={gold}>{fr ? 'Anniversaire' : 'Birthday'}</span>
+      <span className="absolute" style={{ left: 80, right: 80, top: L.head - 56, ...align, fontFamily: body, fontWeight: 600, fontSize: 22, letterSpacing: ar ? 0 : '0.22em', color: '#35C2F1', transition: T }}>{ar ? 'قمة الأعمال · ٢٠٢٧' : 'BUSINESS SUMMIT · 2027'}</span>
+      {/* headline */}
+      <span data-t="headline" className="absolute" style={{ left: 80, right: 80, top: L.head, fontFamily: sans, fontWeight: 800, fontSize: ar ? 118 : 124, lineHeight: ar ? 1.25 : 1.02, color: '#fff', whiteSpace: 'pre-line', transition: T, ...align, ...fx, ...selBox(s.sel === 'headline') }}>
+        {ar ? 'قُد العقد\n' : 'Lead the\nnext '}<span style={grad}>{ar ? 'القادم' : 'decade'}</span>
       </span>
-      <span className="absolute left-0 right-0 flex justify-center" style={{ top: L.name, transition: T }}>
-        <span data-t="name" className="relative px-2" style={{ fontFamily: 'Raleway, sans-serif', fontWeight: 500, fontSize: 34, color: '#1D1D1D', whiteSpace: 'pre', ...selBox(s.sel === 'name') }}>
-          <span className={s.editing && s.name === 'A I S H A   R A H M A N' ? 'bg-[#BFDBFE]' : ''}>{s.name}</span>
-          {s.editing && <span className="inline-block w-[3px] h-[34px] align-middle bg-[#1D1D1D] mt-howto-caret" />}
+      <span className="absolute" style={{ left: 80, top: L.sub, width: story ? 920 : 500, fontFamily: body, fontSize: 30, lineHeight: 1.45, color: '#B9C4DA', transition: T, ...align }}>
+        {ar ? 'يومان من الاستراتيجية والذكاء الاصطناعي والقيادة مع ٤٠ متحدثًا.' : 'Two days of strategy, AI and leadership with 40 speakers.'}
+      </span>
+      {/* speaker */}
+      <span data-t="photo" className="absolute overflow-hidden" style={{ left: px, top: py, width: pw, height: ph, borderRadius: 36, padding: 5, background: SPEC, transition: T, ...selBox(s.sel === 'photo') }}>
+        <span className="relative block w-full h-full overflow-hidden" style={{ borderRadius: 32 }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img key={s.photo} src={PH(s.photo)} alt="" className={cx('absolute inset-0 w-full h-full object-cover', s.photo !== 813 && 'mt-howto-pop')} style={{ objectPosition: s.photo === 813 ? '42% 25%' : '50% 22%' }} />
+          {s.swapping && <span className="absolute inset-0 mt-howto-shimmer" />}
         </span>
       </span>
-      <span className="absolute left-0 right-0 text-center" style={{ top: L.date, fontFamily: 'Raleway, sans-serif', fontWeight: 700, fontSize: 26, letterSpacing: '0.22em', color: '#1D1D1D', transition: T }}>{fr ? '7 janvier 2027' : '7 January 2027'}</span>
+      <span className="absolute" style={{ left: story ? 80 : px, top: L.name, transition: T }}>
+        <span data-t="name" className="relative block" style={{ fontFamily: 'Sora, sans-serif', fontWeight: 600, fontSize: 30, color: '#fff', letterSpacing: '0.06em', whiteSpace: 'pre', ...selBox(s.sel === 'name') }}>
+          <span className={s.editing && s.name === 'DANIEL OKAFOR' ? 'bg-[#2563EB]' : ''}>{s.name}</span>
+          {s.editing && <span className="inline-block w-[3px] h-[30px] align-middle bg-white mt-howto-caret" />}
+        </span>
+        <span className="block mt-1" style={{ fontFamily: body, fontSize: 22, color: '#9FB0D0', ...align }}>{ar ? 'الرئيسة التنفيذية، نورث غيت' : 'CEO, Northgate Retail'}</span>
+      </span>
+      {/* info row */}
+      <span className="absolute flex" style={{ left: 80, right: 80, top: L.info, borderTop: '2px solid rgba(255,255,255,.14)', paddingTop: 26, transition: T, direction: ar ? 'rtl' : 'ltr' }}>
+        {info.map(([lab, val], i) => (
+          <span key={lab} className="flex-1" style={{ paddingInline: 6, borderInlineStart: i ? '2px solid rgba(255,255,255,.14)' : 'none', paddingInlineStart: i ? 26 : 0 }}>
+            <span className="block" style={{ fontFamily: body, fontWeight: 600, fontSize: 18, letterSpacing: ar ? 0 : '0.2em', color: '#35C2F1' }}>{lab}</span>
+            <span className="block mt-1" style={{ fontFamily: sans, fontWeight: 600, fontSize: 28, color: '#fff', lineHeight: 1.2 }}>{val}</span>
+          </span>
+        ))}
+      </span>
+      {/* call to action */}
+      <span className="absolute flex items-center justify-between" style={{ left: 80, right: 80, top: L.cta, transition: T, direction: ar ? 'rtl' : 'ltr' }}>
+        <span style={{ background: SPEC, borderRadius: 999, padding: '20px 40px', fontFamily: sans, fontWeight: 700, fontSize: 28, color: '#0B1630' }}>{ar ? 'سجّل الآن ←' : 'Register now →'}</span>
+        <span style={{ fontFamily: body, fontSize: 24, color: '#9FB0D0', direction: 'ltr' }}>northwind.events/summit</span>
+      </span>
     </div>
   );
 }
