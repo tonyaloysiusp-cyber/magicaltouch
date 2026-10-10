@@ -48,6 +48,9 @@ async function fetchFontBase64(family: string, weight: 400 | 700): Promise<strin
 // family so each is only fetched and registered with jsPDF once.
 type FontCache = Map<string, RegisteredPdfFont | null>;
 
+// Which families already have their bold cut registered, per document.
+const boldLoaded = new WeakMap<object, Set<string>>();
+
 export function createPdfFontCache(): FontCache {
   return new Map();
 }
@@ -64,7 +67,25 @@ export async function ensurePdfFont(
   needsBold: boolean
 ): Promise<RegisteredPdfFont | null> {
   const key = family || '';
-  if (cache.has(key)) return cache.get(key)!;
+  // A family first used without bold only had its regular cut loaded:
+  // load the bold cut the first time bold text needs it.
+  const hit = cache.get(key);
+  if (hit !== undefined && (!needsBold || !hit || boldLoaded.has(pdf) && boldLoaded.get(pdf)!.has(key))) return hit;
+  if (hit && needsBold) {
+    const def0 = googleFontByName(key);
+    if (def0 && def0.weights.includes(700)) {
+      const b64 = await fetchFontBase64(def0.googleFamily || def0.family, 700);
+      if (b64) {
+        const vfs = `${def0.family.replace(/\s+/g, '-')}-Bold.ttf`;
+        pdf.addFileToVFS(vfs, b64);
+        pdf.addFont(vfs, hit.name, 'bold');
+        pdf.addFont(vfs, hit.name, 'bolditalic');
+      }
+    }
+    if (!boldLoaded.has(pdf)) boldLoaded.set(pdf, new Set());
+    boldLoaded.get(pdf)!.add(key);
+    return hit;
+  }
 
   const def = googleFontByName(key);
   if (!def) {
@@ -106,6 +127,10 @@ export async function ensurePdfFont(
     pdf.addFont(vfsName, pdfName, 'bolditalic');
   }
 
+  if (canBold) {
+    if (!boldLoaded.has(pdf)) boldLoaded.set(pdf, new Set());
+    boldLoaded.get(pdf)!.add(key);
+  }
   const result: RegisteredPdfFont = { name: pdfName };
   cache.set(key, result);
   return result;

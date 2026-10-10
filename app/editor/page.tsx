@@ -29,6 +29,7 @@ import {
   Files,
   HelpCircle,
   ChevronDown,
+  FileText,
 } from 'lucide-react';
 import { LeftRail, RailItem } from '@/components/editor/shell/LeftRail';
 import { ContextToolbar, ToolbarActions } from '@/components/editor/shell/ContextToolbar';
@@ -447,6 +448,11 @@ function EditorContent() {
   // content is edited and saved back to the template (with a version
   // snapshot) instead of becoming a customer copy.
   const wantsTemplateEdit = searchParams.get('editTemplate') === '1';
+  // Where "Back" goes: the admin Brand workspace, the Template Manager,
+  // the public templates, or the dashboard.
+  const cameFrom = searchParams.get('from');
+  const backHref = cameFrom === 'brand' ? '/admin/brand' : wantsTemplateEdit ? '/admin/templates' : cameFromTemplate ? '/templates' : '/dashboard';
+  const backLabel = cameFrom === 'brand' ? 'Back to Brand workspace' : wantsTemplateEdit ? 'Back to Template Manager' : cameFromTemplate ? 'Back to templates' : 'Back to dashboard';
   const [templateEdit, setTemplateEdit] = useState<TemplateRecord | null>(null);
   const [templateSave, setTemplateSave] = useState<{ busy: boolean; msg: string | null }>({ busy: false, msg: null });
   // A .mtd project opened from the customer's computer (see lib/mtd/).
@@ -5384,9 +5390,12 @@ function EditorContent() {
         if (next) setTemplateEdit((t) => (t ? { ...t, currentVersion: next } : t));
       }
       const canvasJson = canvas.toJSON(SAVE_JSON_PROPS);
-      const image: string | null = capturePicture(firstAb, { format: 'jpeg', quality: 0.88, multiplier: 1200 / Math.max(firstAb.width, firstAb.height, 1) }).dataUrl;
+      // Private brand designs keep no uploaded picture (the Brand workspace
+      // draws its own previews), so nothing about them is ever public.
+      const isBrand = cameFrom === 'brand' || (templateEdit.tags || []).includes('mt-internal');
+      const image: string | null = isBrand ? null : capturePicture(firstAb, { format: 'jpeg', quality: 0.88, multiplier: 1200 / Math.max(firstAb.width, firstAb.height, 1) }).dataUrl;
       const ok = await setTemplateContent(templateEdit.id, templateEdit.currentVersion || '1.0', canvasJson, image);
-      setTemplateSave({ busy: false, msg: ok ? 'Template saved. Customers now get the updated design.' : 'Could not save the template. Please try again.' });
+      setTemplateSave({ busy: false, msg: ok ? (isBrand ? 'Brand design saved.' : 'Template saved. Customers now get the updated design.') : 'Could not save. Please try again.' });
     } catch (err) {
       console.error('Template save failed:', err);
       setTemplateSave({ busy: false, msg: 'Could not save the template. Please try again.' });
@@ -6971,9 +6980,9 @@ function EditorContent() {
       {/* ------------------------------------------------ top bar */}
       <header className="h-14 shrink-0 flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 border-b border-mt-border bg-mt-surface">
         <Link
-          href={cameFromTemplate ? '/templates' : '/dashboard'}
-          title={cameFromTemplate ? 'Back to templates' : 'Back to dashboard'}
-          aria-label={cameFromTemplate ? 'Back to templates' : 'Back to dashboard'}
+          href={backHref}
+          title={backLabel}
+          aria-label={backLabel}
           className="h-9 w-9 shrink-0 inline-flex items-center justify-center rounded-lg text-mt-muted hover:text-mt-ink hover:bg-mt-surface2"
         >
           <ChevronLeft size={20} />
@@ -7069,6 +7078,15 @@ function EditorContent() {
         {!compact && <ThemeSwitch theme={theme} onToggle={toggleTheme} size="sm" />}
         <button
           type="button"
+          onClick={exportAsPDF}
+          disabled={exporting}
+          title="One click: a vector PDF of every page — sharp text and shapes at any size"
+          className="hidden sm:inline-flex h-9 items-center gap-1.5 px-3 rounded-full border border-mt-border text-sm font-semibold text-mt-ink hover:bg-mt-surface2 disabled:opacity-50"
+        >
+          <FileText size={15} /> PDF
+        </button>
+        <button
+          type="button"
           onClick={() => setShowExportDialog(true)}
           disabled={exporting}
           className="h-9 inline-flex items-center gap-1.5 px-3 sm:px-4 rounded-full border border-mt-border text-sm font-semibold text-mt-ink hover:bg-mt-surface2 disabled:opacity-50"
@@ -7141,10 +7159,11 @@ function EditorContent() {
       )}
       {showCloudOpen && <CloudOpenDialog onOpened={openCloudResult} onClose={() => setShowCloudOpen(false)} />}
 
+      {/* Sits below the top bar so Undo, Redo and every other control stay reachable. */}
       {templateEdit && (
-        <div className="fixed top-3 left-1/2 -translate-x-1/2 z-[75] max-w-xl w-[calc(100%-2rem)] bg-[#14121F] text-white text-sm rounded-xl shadow-xl px-4 py-2.5 flex items-center gap-3">
+        <div className="fixed top-[64px] right-3 z-[75] max-w-md w-[calc(100%-1.5rem)] sm:w-auto bg-[#14121F] text-white text-sm rounded-xl shadow-xl px-4 py-2.5 flex items-center gap-3">
           <span className="flex-1 min-w-0 truncate">
-            Editing template: <strong>{templateEdit.name}</strong>
+            {cameFrom === 'brand' ? 'Editing brand design' : 'Editing template'}: <strong>{templateEdit.name.replace(/^MT Brand · /, '')}</strong>
             {templateSave.msg && <span className="block text-xs text-white/70 truncate">{templateSave.msg}</span>}
           </span>
           <button
@@ -7152,9 +7171,9 @@ function EditorContent() {
             disabled={templateSave.busy}
             className="shrink-0 text-xs font-semibold bg-white text-[#09090B] rounded-full px-4 py-2 disabled:opacity-60"
           >
-            {templateSave.busy ? 'Saving…' : 'Save to template'}
+            {templateSave.busy ? 'Saving…' : cameFrom === 'brand' ? 'Save brand design' : 'Save to template'}
           </button>
-          <a href="/admin/templates" className="shrink-0 text-xs text-white/70 hover:text-white underline">
+          <a href={backHref} className="shrink-0 text-xs text-white/70 hover:text-white underline">
             Back
           </a>
         </div>

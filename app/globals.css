@@ -299,3 +299,49 @@ textarea::placeholder {
 @keyframes mt-ants { to { stroke-dashoffset: -10; } }
 .mt-ants { animation: mt-ants 0.6s linear infinite; }
 @media (prefers-reduced-motion: reduce) { .mt-ants { animation: none; } }
+
+/* Home hero: moving brand curves, floating pen, light from the pen tip */
+.mt-ribbon-draw { stroke-dasharray: 1; stroke-dashoffset: 1; animation: mt-ribbon-draw 2.2s cubic-bezier(.6,0,.2,1) 0.3s forwards; }
+@keyframes mt-ribbon-draw { to { stroke-dashoffset: 0; } }
+.dark .mt-hero-curves { filter: drop-shadow(0 0 22px rgba(53, 194, 241, 0.35)) drop-shadow(0 0 40px rgba(242, 112, 143, 0.2)); }
+.mt-pen-float { animation: mt-pen-float 5s ease-in-out infinite; transform-box: view-box; }
+@keyframes mt-pen-float { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(-6px, -10px); } }
+.mt-pen-pulse { transform-box: fill-box; transform-origin: center; animation: mt-pen-pulse 2.4s ease-out infinite; }
+@keyframes mt-pen-pulse { 0% { transform: scale(0.6); opacity: 0.95; } 70% { transform: scale(2.6); opacity: 0; } 100% { opacity: 0; } }
+/* Home "how it works" player */
+.mt-howto-cap { animation: mt-howto-cap 0.45s cubic-bezier(.2,.9,.3,1.2); }
+@keyframes mt-howto-cap { from { opacity: 0; transform: translateY(8px) scale(0.97); } }
+.mt-howto-pop { animation: mt-howto-pop 0.35s cubic-bezier(.2,.9,.3,1.3); }
+@keyframes mt-howto-pop { from { opacity: 0; transform: scale(0.85); } }
+.mt-howto-ripple { animation: mt-howto-ripple 0.6s ease-out forwards; opacity: 0; }
+@keyframes mt-howto-ripple { 0% { transform: scale(0.3); opacity: 0.9; } 100% { transform: scale(1.6); opacity: 0; } }
+.mt-howto-caret { animation: mt-howto-caret 1s steps(1) infinite; }
+@keyframes mt-howto-caret { 50% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .mt-ribbon-draw { animation: none; stroke-dashoffset: 0; }
+  .mt-pen-float, .mt-pen-pulse, .mt-howto-cap, .mt-howto-pop, .mt-howto-ripple, .mt-howto-caret { animation: none; }
+  .mt-hero-light { display: none; }
+}
+
+/* Photo Studio Pro: a Photoshop-style workspace in neutral greys, so
+   the photo's own colours are judged against a calm, neutral surround. */
+.mt-ps {
+  --mt-bg: 30 30 30;             /* #1E1E1E */
+  --mt-surface: 43 43 43;        /* #2B2B2B panels */
+  --mt-surface2: 56 56 56;       /* #383838 hover / raised */
+  --mt-studio: 35 35 35;         /* #232323 pasteboard */
+  --mt-ink: 230 230 230;
+  --mt-muted: 168 168 168;
+  --mt-faint: 128 128 128;
+  --mt-border: 22 22 22;
+  --mt-input-border: 74 74 74;
+  --mt-accent: 85 160 245;
+  --mt-accent-soft: 30 48 70;
+  --mt-primary: 38 128 235;      /* #2680EB */
+  --mt-on-primary: 255 255 255;
+  color-scheme: dark;
+}
+.mt-ps ::-webkit-scrollbar { width: 8px; height: 8px; }
+.mt-ps ::-webkit-scrollbar-thumb { background: #4a4a4a; border-radius: 4px; }
+.mt-ps-tool[aria-pressed='true'] { background: #4a4a4a; color: #fff; box-shadow: inset 0 0 0 1px #5a5a5a; }
+.mt-ps-key { font-size: 10px; opacity: .6; }

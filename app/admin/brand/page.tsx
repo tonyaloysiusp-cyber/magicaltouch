@@ -113,7 +113,9 @@ function BrandTile({ row }: { row: BrandRow }) {
       .catch(() => {});
     return () => { alive = false; };
   }, [row]);
-  const href = `/editor?w=${row.width}&h=${row.height}&templateId=${row.id}`;
+  // Edit the master design itself (saved back here), or start a copy.
+  const href = `/editor?w=${row.width}&h=${row.height}&templateId=${row.id}&editTemplate=1&from=brand`;
+  const copyHref = `/editor?w=${row.width}&h=${row.height}&templateId=${row.id}&from=brand`;
   const mm = (px: number) => Math.round((px / 96) * 25.4);
   const isPrint = row.width < 1200 && !/signature|\bpost\b|story/i.test(row.name);
   return (
@@ -131,9 +133,12 @@ function BrandTile({ row }: { row: BrandRow }) {
         {isPrint ? `${mm(row.width)} × ${mm(row.height)} mm` : `${row.width} × ${row.height} px`}
         {pages > 1 ? ` · ${pages} pages` : ''}
       </p>
-      <Link href={href} className="mt-1.5 inline-flex items-center gap-1 text-[12.5px] font-semibold text-[#3B82C4] hover:underline">
-        Open in editor <ExternalLink size={12} />
-      </Link>
+      <span className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1">
+        <Link href={href} className="inline-flex items-center gap-1 text-[12.5px] font-semibold text-[#3B82C4] hover:underline">
+          Edit design <ExternalLink size={12} />
+        </Link>
+        <Link href={copyHref} className="text-[12.5px] font-medium text-mt-muted hover:text-mt-ink hover:underline">Use a copy</Link>
+      </span>
     </div>
   );
 }
