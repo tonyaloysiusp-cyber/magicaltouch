@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { ChevronDown, Search } from 'lucide-react';
 import { useAvailableGoogleFonts } from '@/lib/editor/googleFonts';
 
@@ -26,11 +27,32 @@ export function FontPicker({ value, mixed, disabled, onChange }: Props) {
   const [query, setQuery] = useState('');
   const rootRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  // The list floats above everything (toolbars scroll sideways and would
+  // otherwise cut it off), placed under the button — or above it when
+  // there isn't room below.
+  const [pos, setPos] = useState<{ left: number; top?: number; bottom?: number; maxH: number } | null>(null);
+  useLayoutEffect(() => {
+    if (!open) return;
+    const place = () => {
+      const b = rootRef.current?.getBoundingClientRect();
+      if (!b) return;
+      const vw = window.innerWidth, vh = window.innerHeight, w = 272;
+      const left = Math.max(8, Math.min(b.left, vw - w - 8));
+      const below = vh - b.bottom - 12, above = b.top - 12;
+      if (below >= 260 || below >= above) setPos({ left, top: b.bottom + 4, maxH: Math.min(420, below) });
+      else setPos({ left, bottom: vh - b.top + 4, maxH: Math.min(420, above) });
+    };
+    place();
+    window.addEventListener('resize', place);
+    window.addEventListener('scroll', place, true);
+    return () => { window.removeEventListener('resize', place); window.removeEventListener('scroll', place, true); };
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
     const onDown = (e: MouseEvent) => {
-      if (rootRef.current && !rootRef.current.contains(e.target as Node)) setOpen(false);
+      if (rootRef.current && !rootRef.current.contains(e.target as Node) && !menuRef.current?.contains(e.target as Node)) setOpen(false);
     };
     const onEsc = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setOpen(false);
@@ -66,8 +88,12 @@ export function FontPicker({ value, mixed, disabled, onChange }: Props) {
         </span>
         <ChevronDown size={12} className="shrink-0 ml-1 text-mt-faint" />
       </button>
-      {open && (
-        <div className="absolute z-30 mt-1 w-64 max-h-72 overflow-hidden flex flex-col bg-mt-surface border rounded shadow-lg dark:bg-mt-surface dark:border-mt-border">
+      {open && pos && typeof document !== 'undefined' && createPortal(
+        <div
+          ref={menuRef}
+          className="fixed z-[200] w-[272px] overflow-hidden flex flex-col bg-mt-surface text-mt-ink border border-mt-border rounded-xl shadow-2xl"
+          style={{ left: pos.left, top: pos.top, bottom: pos.bottom, maxHeight: pos.maxH }}
+        >
           <div className="flex items-center gap-1.5 px-2 py-1.5 border-b dark:border-mt-border">
             <Search size={12} className="text-mt-faint shrink-0" />
             <input
@@ -99,7 +125,8 @@ export function FontPicker({ value, mixed, disabled, onChange }: Props) {
               </button>
             ))}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

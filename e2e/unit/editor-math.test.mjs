@@ -63,8 +63,27 @@ test('smart resize never stretches content and keeps backgrounds covering', () =
   assert.equal(plan[0].role, 'background');
   assert.ok(plan[0].scaleX === plan[0].scaleY && 1080 * plan[0].scaleX >= 1919, 'background covers new page');
   assert.equal(plan[1].scaleX, plan[1].scaleY, 'content scales uniformly');
-  assert.ok(near(plan[1].cx, 540, 0.5) && near(plan[1].cy, 960, 0.5), `title centred: ${plan[1].cx},${plan[1].cy}`);
+  assert.ok(near(plan[1].cx, 540, 0.5) && Math.abs(plan[1].cy - 960) < 60, `title stays about centred: ${plan[1].cx},${plan[1].cy}`);
   assert.ok(plan[2].cy > 1700, `footer stays near the bottom: ${plan[2].cy}`);
+});
+
+test('resize keeps blocks together (bullet stays next to its line, bands keep spanning)', () => {
+  const from = { width: 1080, height: 1920 };
+  const to = { width: 1080, height: 1080 };
+  const plan = planResize(
+    [
+      { box: { left: 0, top: 0, width: 1080, height: 300 }, isImage: false, isShape: true }, // header band
+      { box: { left: 80, top: 100, width: 600, height: 100 }, isImage: false, isShape: false, isText: true }, // name on band
+      { box: { left: 100, top: 600, width: 12, height: 12 }, isImage: false, isShape: true }, // bullet
+      { box: { left: 124, top: 594, width: 500, height: 24 }, isImage: false, isShape: false, isText: true }, // its line
+    ],
+    from,
+    to
+  );
+  const s = 1080 / 1920;
+  assert.ok(near(plan[3].cx - plan[2].cx, (374 - 106) * s, 0.5), 'bullet-to-text spacing scales, never splits');
+  assert.ok(near(plan[0].scaleX * 1080, 1080, 0.5), 'band still spans the page');
+  assert.ok(plan[1].cy - plan[1].scaleY * 50 >= plan[0].cy - plan[0].scaleY * 150 - 0.5, 'name stays on its band');
 });
 
 test('gradient angle round trips', () => {

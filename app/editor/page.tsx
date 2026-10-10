@@ -115,7 +115,7 @@ import { SaveLocationDialog, SaveLocation } from '@/components/storage/SaveLocat
 import { CloudOpenDialog } from '@/components/storage/CloudOpenDialog';
 import { rememberRecent } from '@/lib/mtd/recent';
 import { missingFontsIn, fontRequiredMessage } from '@/lib/editor/missingFonts';
-import { PERSIST_PROPS, isHelperObject, isArtwork, applyStoredLocks, lockProps, reviveTextPaths } from '@/lib/editor/persist';
+import { PERSIST_PROPS, cloneWithProps, isHelperObject, isArtwork, applyStoredLocks, lockProps, reviveTextPaths } from '@/lib/editor/persist';
 import { ensureImageFilters, reviveImageAdjust } from '@/lib/editor/imageAdjust';
 import { installParagraphSpacing } from '@/lib/editor/paragraphSpacing';
 import { installTextFrames, isFrame, flowStory, syncStories, flowWhileEditing, resizeFrameFromScale, reflowAllStories, drawFrameOverlays, createStory, makeTextFrame, splitIntoColumns, addLinkedFrame, unlinkFrame, nextFrameBox, storyFrames, SAMPLE_ARTICLE } from '@/lib/editor/textFrames';
@@ -729,6 +729,38 @@ function EditorContent() {
     if (suppressHistoryRef.current) return;
     markDirty();
   }, [pushHistoryRaw]);
+
+  // Undo/redo while typing in a text box: finish the typing first (it
+  // becomes one undo step), then undo — so Undo always works, even for
+  // the very first edit in a design.
+  const [textEditing, setTextEditing] = useState(false);
+  const finishTextEditingThen = (fn: () => void) => {
+    const c = fabricCanvasRef.current;
+    const a = c?.getActiveObject?.();
+    if (a && a.isEditing) {
+      a.exitEditing();
+      c.requestRenderAll();
+      setTimeout(() => { flushHistory(); fn(); }, 40);
+    } else fn();
+  };
+  const undoAny = () => finishTextEditingThen(undo);
+  const redoAny = () => finishTextEditingThen(redo);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const mod = e.metaKey || e.ctrlKey;
+      if (!mod) return;
+      const k = e.key.toLowerCase();
+      if (k !== 'z' && k !== 'y') return;
+      const a = fabricCanvasRef.current?.getActiveObject?.();
+      if (!a || !a.isEditing) return;
+      e.preventDefault();
+      e.stopPropagation();
+      if (k === 'y' || e.shiftKey) redoAny();
+      else undoAny();
+    };
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
+  });
 
   // Marks the document as changed: unsaved indicator, autosave, and a
   // revision counter so a save that finishes after a newer edit never
@@ -1503,6 +1535,8 @@ function EditorContent() {
       // values were true at the START of editing instead of the current
       // real cursor/selection position.
       canvas.on('text:selection:changed', () => bumpSel());
+      canvas.on('text:editing:entered', () => setTextEditing(true));
+      canvas.on('text:editing:exited', () => setTextEditing(false));
       canvas.on('text:changed', (e: any) => {
         // Curved/wavy text re-fits its baseline as the words change.
         const t = e?.target;
@@ -1950,7 +1984,7 @@ function EditorContent() {
           const members = isMulti ? obj.getObjects() : [obj];
           if (isMulti) canvas.discardActiveObject();
           Promise.all(
-            members.map((o: any) => new Promise<any>((resolve) => o.clone((c: any) => resolve(c), PERSIST_PROPS)))
+            members.map((o: any) => cloneWithProps(o))
           ).then((clones) => {
             suppressHistoryRef.current = true;
             clones.forEach((c: any) => {
@@ -2020,28 +2054,10 @@ function EditorContent() {
         if (!ctx || !vt) return;
         const abs = canvas.getObjects().filter((o: any) => o.__isArtboard);
 
-        // Anything sticking out past a page is shaded by the pasteboard, as
-        // in other design tools: it is still there (and can be dragged back
-        // in) but the page reads cleanly. Exports are cropped to the page.
-        if (abs.length && typeof canvas.backgroundColor === 'string' && canvas.backgroundColor) {
-          ctx.save();
-          ctx.setTransform(1, 0, 0, 1, 0, 0);
-          const el = ctx.canvas;
-          const ret = (canvas as any).getRetinaScaling ? (canvas as any).getRetinaScaling() : 1;
-          ctx.beginPath();
-          ctx.rect(0, 0, el.width, el.height);
-          abs.forEach((ab: any) => {
-            const x = ((ab.left || 0) * vt[0] + vt[4]) * ret;
-            const y = ((ab.top || 0) * vt[3] + vt[5]) * ret;
-            const w = (ab.width || 0) * (ab.scaleX || 1) * vt[0] * ret;
-            const h = (ab.height || 0) * (ab.scaleY || 1) * vt[3] * ret;
-            ctx.rect(x, y, w, h);
-          });
-          ctx.globalAlpha = 0.86;
-          ctx.fillStyle = canvas.backgroundColor;
-          ctx.fill('evenodd');
-          ctx.restore();
-        }
+        // Objects that reach past the page (into the bleed or beyond) stay
+        // fully visible, so bleed artwork can be placed and checked by eye.
+        // The page outline and bleed guides below show where the trim is;
+        // exports are always cropped to the page (plus bleed when chosen).
 
         ctx.save();
         ctx.shadowColor = 'rgba(0,0,0,0.35)';
@@ -2613,7 +2629,11 @@ function EditorContent() {
   // (id is undefined only in that startup-edge-case fallback).
   // Reads refs, not state, so it's correct inside long-lived handlers too.
   const getActiveArtboardRect = (): { id?: string; x: number; y: number; width: number; height: number } => {
-    const list = artboardsRef.current.length ? artboardsRef.current : artboards;
+    // The canvas itself is the source of truth: React's copy of the page
+    // list can lag behind right after a template or file is opened, and a
+    // stale or missing id made Resize and other page tools act on nothing.
+    const live = getArtboardMetas();
+    const list = live.length ? live : artboardsRef.current.length ? artboardsRef.current : artboards;
     const ab = list.find((a) => a.id === activeArtboardIdRef.current) || list[0];
     return ab || { x: 0, y: 0, width, height };
   };
@@ -3086,6 +3106,7 @@ function EditorContent() {
           box: { left: r.left - from.x, top: r.top - from.y, width: r.width, height: r.height },
           isImage: o.type === 'image',
           isShape: o.type !== 'image' && !(o.type === 'textbox' || o.type === 'i-text' || o.type === 'text') && o.type !== 'group',
+          isText: o.type === 'textbox' || o.type === 'i-text' || o.type === 'text',
         };
       }),
       from,
@@ -3258,9 +3279,11 @@ function EditorContent() {
       nr.__print = JSON.parse(JSON.stringify(rect.__print || createDefaultPrintSettings()));
       suppressHistoryRef.current = true;
       canvas.add(nr);
-      Promise.all(members.map((m: any) => new Promise<any>((res) => m.clone((c: any) => res(c), PERSIST_PROPS)))).then((clones) => {
+      Promise.all(members.map((m: any) => cloneWithProps(m))).then((clones) => {
+        clones = clones.filter(Boolean);
         clones.forEach((c: any) => {
           delete c.__uid;
+          c.__artboardId = nr.__artboardId;
           c.set({ left: (c.left || 0) - page.x + pos.x, top: (c.top || 0) - page.y + pos.y });
           c.setCoords();
           canvas.add(c);
@@ -3268,6 +3291,8 @@ function EditorContent() {
         suppressHistoryRef.current = false;
         pinArtboardsBack();
         applyStoredLocks(canvas);
+        reviveTextPaths(F, canvas);
+        reviveImageAdjust(F, canvas);
         doResize(nr, clones, { x: pos.x, y: pos.y, width: page.width, height: page.height });
       });
     });
@@ -4024,7 +4049,7 @@ function EditorContent() {
 
   // Clones keep this app's own properties (frames, effects, names…).
   const cloneObjectsAsync = (objects: any[]): Promise<any[]> =>
-    Promise.all(objects.map((obj) => new Promise<any>((resolve) => obj.clone((c: any) => resolve(c), PERSIST_PROPS))));
+    Promise.all(objects.map((obj) => cloneWithProps(obj)));
 
   // Adds a set of already-cloned objects back to the canvas as one atomic
   // undo step, shifted by (dx,dy) from their source position, and leaves
@@ -4840,23 +4865,22 @@ function EditorContent() {
         finish();
         return;
       }
-      let pending = members.length;
       canvas.discardActiveObject();
-      members.forEach((obj: any) => {
-        obj.clone((clonedObj: any) => {
+      // Cloned together and added in the original order, so stacking matches.
+      Promise.all(members.map((obj: any) => cloneWithProps(obj))).then((clones) => {
+        clones.forEach((clonedObj: any) => {
+          if (!clonedObj) return;
           clonedObj.set({ left: (clonedObj.left || 0) + dx, top: (clonedObj.top || 0) + dy });
           delete clonedObj.__uid;
           clonedObj.__artboardId = newId;
+          clonedObj.setCoords();
           canvas.add(clonedObj);
-          pending -= 1;
-          if (pending === 0) {
-            suppressHistoryRef.current = false;
-            applyStoredLocks(canvas);
-            reviveTextPaths(F, canvas);
-    reviveImageAdjust(F, canvas);
-            finish();
-          }
-        }, PERSIST_PROPS);
+        });
+        suppressHistoryRef.current = false;
+        applyStoredLocks(canvas);
+        reviveTextPaths(F, canvas);
+        reviveImageAdjust(F, canvas);
+        finish();
       });
     });
   };
@@ -6187,7 +6211,11 @@ function EditorContent() {
   const translateDesign = async (code: string, scope: TranslateScope, switchFonts: boolean): Promise<number> => {
     const canvas = fabricCanvasRef.current;
     if (!canvas) return 0;
-    const [{ translateTexts, langByCode }, { applyTextFx }] = await Promise.all([import('@/lib/i18n/languages'), import('@/lib/editor/textEffects')]);
+    const [{ translateTexts, langByCode, pickFontFor, fontStyleKind, CHECK_COVERAGE }, { applyTextFx }, { googleFontByName }] = await Promise.all([
+      import('@/lib/i18n/languages'),
+      import('@/lib/editor/textEffects'),
+      import('@/lib/editor/googleFonts'),
+    ]);
     const lang = langByCode(code);
     const isText = (o: any) => o && (o.type === 'textbox' || o.type === 'i-text' || o.type === 'text') && typeof o.text === 'string';
     const collect = (objs: any[], acc: any[]): any[] => {
@@ -6207,17 +6235,46 @@ function EditorContent() {
     const targets = collect(roots, []);
     if (!targets.length) throw new Error('There’s no text to translate here.');
     const out = await translateTexts(targets.map((o) => o.text), code);
-    if (switchFonts && lang?.font) await Promise.all([ensureFontLoaded(lang.font, 400), ensureFontLoaded(lang.font, 700)]);
+    // Each text keeps its own style: the font it had before any
+    // translation decides the style (sans / serif / display / script) of
+    // the font it gets for the new script; its weight and italic stay.
+    const weightOf = (o: any) => (o.fontWeight === 'bold' ? 700 : parseInt(String(o.fontWeight || 400), 10) || 400);
+    // Does this font already have every letter of `text`? (Alphabets
+    // only: measured against two different fallbacks.)
+    const measureCtx = typeof document !== 'undefined' ? document.createElement('canvas').getContext('2d') : null;
+    const covers = (family: string, text: string) => {
+      if (!measureCtx) return true;
+      const sample = Array.from(new Set(Array.from(text.replace(/[\s\d.,:;!?'"()\-–—]/g, '')))).join('').slice(0, 80);
+      if (!sample) return true;
+      measureCtx.font = `40px "${family}", monospace`;
+      const a = measureCtx.measureText(sample).width;
+      measureCtx.font = `40px "${family}", serif`;
+      return Math.abs(a - measureCtx.measureText(sample).width) < 0.5;
+    };
+    const newFonts: (string | null)[] = targets.map((o, i) => {
+      if (!switchFonts) return null;
+      const original = o.__fontBeforeTranslate ?? o.fontFamily;
+      const def = googleFontByName(original);
+      const kind = fontStyleKind(def?.category, original, def?.googleFamily);
+      const pick = pickFontFor(code, original, kind, weightOf(o));
+      if (!pick) return null;
+      if (CHECK_COVERAGE.has(code) && covers(original, out[i] || '')) return null;
+      return pick;
+    });
+    await Promise.all(
+      targets.flatMap((o, i) => (newFonts[i] ? [ensureFontLoaded(newFonts[i]!, weightOf(o), o.fontStyle === 'italic')] : []))
+    );
     const F = (window as any).fabric;
     const arabicScript = code === 'ar' || code === 'ur' || code === 'fa';
     targets.forEach((o, i) => {
       const patch: any = { text: out[i], styles: {} };
-      // Fonts: switch to one with this script's letters; going back to a
-      // Latin language restores the design's own font.
-      if (switchFonts && lang?.font) {
+      // Fonts: a matching font with this script's letters; going back to
+      // a language the original font covers restores the design's own.
+      const nf = newFonts[i];
+      if (nf) {
         if (o.__fontBeforeTranslate === undefined) o.__fontBeforeTranslate = o.fontFamily;
-        patch.fontFamily = lang.font;
-      } else if (!lang?.font && o.__fontBeforeTranslate !== undefined) {
+        patch.fontFamily = nf;
+      } else if (o.__fontBeforeTranslate !== undefined) {
         patch.fontFamily = o.__fontBeforeTranslate;
         o.__fontBeforeTranslate = undefined;
       }
@@ -6632,8 +6689,8 @@ function EditorContent() {
     {
       label: 'Edit',
       items: [
-        { label: 'Undo', shortcut: 'Ctrl/Cmd+Z', onClick: undo, disabled: !canUndo },
-        { label: 'Redo', shortcut: 'Ctrl/Cmd+Shift+Z', onClick: redo, disabled: !canRedo },
+        { label: 'Undo', shortcut: 'Ctrl/Cmd+Z', onClick: undoAny, disabled: !(canUndo || textEditing) },
+        { label: 'Redo', shortcut: 'Ctrl/Cmd+Shift+Z', onClick: redoAny, disabled: !canRedo },
         { divider: true },
         { label: 'Copy', shortcut: 'Ctrl/Cmd+C', onClick: copySelected, disabled: !hasSelection },
         { label: 'Paste', shortcut: 'Ctrl/Cmd+V', onClick: pasteClipboard },
@@ -7138,10 +7195,10 @@ function EditorContent() {
           </span>
         )}
         <div className="flex-1" />
-        <IconButton label="Undo" hint="Ctrl/Cmd+Z" onClick={workspace === 'photo' ? () => photoEditorRef.current?.undo() : undo} disabled={workspace === 'photo' ? !photoCanUndo : !canUndo}>
+        <IconButton label="Undo" hint="Ctrl/Cmd+Z" onClick={workspace === 'photo' ? () => photoEditorRef.current?.undo() : undoAny} disabled={workspace === 'photo' ? !photoCanUndo : !(canUndo || textEditing)}>
           <Undo2 size={18} />
         </IconButton>
-        <IconButton label="Redo" hint="Ctrl/Cmd+Shift+Z" onClick={workspace === 'photo' ? () => photoEditorRef.current?.redo() : redo} disabled={workspace === 'photo' ? !photoCanRedo : !canRedo}>
+        <IconButton label="Redo" hint="Ctrl/Cmd+Shift+Z" onClick={workspace === 'photo' ? () => photoEditorRef.current?.redo() : redoAny} disabled={workspace === 'photo' ? !photoCanRedo : !canRedo}>
           <Redo2 size={18} />
         </IconButton>
         {!compact && (
@@ -7266,7 +7323,7 @@ function EditorContent() {
 
       {/* Sits below the top bar so Undo, Redo and every other control stay reachable. */}
       {templateEdit && (
-        <div className="fixed top-[64px] right-3 z-[75] max-w-md w-[calc(100%-1.5rem)] sm:w-auto bg-[#14121F] text-white text-sm rounded-xl shadow-xl px-4 py-2.5 flex items-center gap-3">
+        <div className="fixed bottom-[88px] right-3 z-[75] max-w-md w-[calc(100%-1.5rem)] sm:w-auto bg-[#14121F] text-white text-sm rounded-xl shadow-xl px-4 py-2.5 flex items-center gap-3">
           <span className="flex-1 min-w-0 truncate">
             {cameFrom === 'brand' ? 'Editing brand design' : 'Editing template'}: <strong>{templateEdit.name.replace(/^MT Brand · /, '')}</strong>
             {templateSave.msg && <span className="block text-xs text-white/70 truncate">{templateSave.msg}</span>}

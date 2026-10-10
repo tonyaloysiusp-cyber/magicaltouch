@@ -89,6 +89,7 @@ function PhotoStudioContent() {
   // reopen, so the "Open" screen never flashes before it loads (see the
   // load effect below, right after the searchParams/designId, name state).
   const [loadingDesign, setLoadingDesign] = useState(() => !!searchParams.get('designId'));
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   // "Open" screen state -- a blank-canvas document's real-world size.
   // Global display-unit preference, shared live with Main Design's
@@ -140,6 +141,7 @@ function PhotoStudioContent() {
       const handoff = takeHandoff(localKey);
       const source = handoff ? extractPhotoSource(handoff.opened.canvas) : null;
       if (handoff && source) startWithSource(source.src, handoff.opened.document.width, handoff.opened.document.height, source.dpi, handoff.opened.document.name);
+      else setLoadError('That file could not be opened here. Please open it again from your dashboard.');
       setLoadingDesign(false);
       return;
     }
@@ -155,12 +157,14 @@ function PhotoStudioContent() {
       if (cancelled) return;
       if (error || !row) {
         console.error('Failed to load design for Photo Studio:', error);
+        setLoadError('That photo design could not be opened. Check your internet connection and try again, or open a new photo below.');
         setLoadingDesign(false);
         return;
       }
       const source = extractPhotoSource(row.canvas_json);
       if (!source) {
         console.warn('This design has no image content Photo Studio can reopen.');
+        setLoadError('This design has no photo for Photo Studio to open. Open it in the design editor instead, or pick a photo below.');
         setLoadingDesign(false);
         return;
       }
@@ -373,6 +377,11 @@ function PhotoStudioContent() {
       <div className={theme === 'dark' ? 'dark' : ''}>
         <main className="min-h-screen bg-mt-bg text-mt-ink transition-colors duration-300">
           <AppHeader theme={theme} onToggleTheme={toggleTheme} active="photo" />
+          {loadError && (
+            <div role="alert" className="max-w-3xl mx-auto mt-4 px-4">
+              <p className="rounded-2xl border border-rose-300/60 bg-rose-50 dark:bg-rose-950/30 text-rose-800 dark:text-rose-200 px-4 py-3 text-[14px]">{loadError}</p>
+            </div>
+          )}
           <PageHero
             eyebrow="Photo Studio"
             title="Edit photos like a pro."

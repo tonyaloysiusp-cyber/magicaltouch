@@ -89,8 +89,8 @@ export function ArtworkPanel({ variant }: { variant: 'day' | 'night' }) {
           <span className="text-white text-xs font-semibold tracking-wide">Make it magical</span>
         </div>
         <div className="p-3 flex items-center gap-1.5">
-          {swatches.map((c) => (
-            <span key={c} className="w-4 h-4 rounded-full" style={{ background: c }} />
+          {swatches.map((c, i) => (
+            <span key={i} className="w-4 h-4 rounded-full" style={{ background: c }} />
           ))}
         </div>
       </div>

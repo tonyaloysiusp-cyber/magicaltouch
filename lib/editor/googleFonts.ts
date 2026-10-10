@@ -193,25 +193,70 @@ export const GOOGLE_FONTS: GoogleFontDef[] = [
   { family: 'Silkscreen', category: 'Monospace', weights: [400, 700] },
   // World scripts: used when a design is translated (Arabic, Indian,
   // East-Asian, Hebrew, Thai…), so the words show and export correctly.
-  { family: 'Cairo', category: 'World', weights: [400, 700] },
-  { family: 'Tajawal', category: 'World', weights: [400, 700] },
-  { family: 'Vazirmatn', category: 'World', weights: [400, 700] },
-  { family: 'Noto Nastaliq Urdu', category: 'World', weights: [400, 700] },
-  { family: 'Heebo', category: 'World', weights: [400, 700] },
-  { family: 'Hind', category: 'World', weights: [400, 700] },
-  { family: 'Hind Siliguri', category: 'World', weights: [400, 700] },
-  { family: 'Noto Sans Malayalam', category: 'World', weights: [400, 700] },
-  { family: 'Noto Sans Tamil', category: 'World', weights: [400, 700] },
-  { family: 'Noto Sans Telugu', category: 'World', weights: [400, 700] },
-  { family: 'Noto Sans Kannada', category: 'World', weights: [400, 700] },
-  { family: 'Noto Sans Gujarati', category: 'World', weights: [400, 700] },
-  { family: 'Noto Sans Gurmukhi', category: 'World', weights: [400, 700] },
-  { family: 'Noto Sans Sinhala', category: 'World', weights: [400, 700] },
-  { family: 'Noto Sans Thai', category: 'World', weights: [400, 700] },
-  { family: 'Noto Sans SC', category: 'World', weights: [400, 700] },
-  { family: 'Noto Sans TC', category: 'World', weights: [400, 700] },
-  { family: 'Noto Sans JP', category: 'World', weights: [400, 700] },
-  { family: 'Noto Sans KR', category: 'World', weights: [400, 700] },
+  { family: 'Cairo', category: 'World', weights: [200, 300, 400, 500, 600, 700, 800, 900] },
+  { family: 'Tajawal', category: 'World', weights: [200, 300, 400, 500, 700, 800, 900] },
+  { family: 'Vazirmatn', category: 'World', weights: [100, 200, 300, 400, 500, 600, 700, 800, 900] },
+  { family: 'Noto Naskh Arabic', category: 'World', weights: [400, 500, 600, 700] },
+  { family: 'Amiri', category: 'World', weights: [400, 700] },
+  { family: 'Lalezar', category: 'World', weights: [400] },
+  { family: 'Reem Kufi', category: 'World', weights: [400, 500, 600, 700] },
+  { family: 'Aref Ruqaa', category: 'World', weights: [400, 700] },
+  { family: 'Noto Nastaliq Urdu', category: 'World', weights: [400, 500, 600, 700] },
+  { family: 'Frank Ruhl Libre', category: 'World', weights: [300, 400, 500, 600, 700, 800, 900] },
+  { family: 'Secular One', category: 'World', weights: [400] },
+  { family: 'Mukta', category: 'World', weights: [200, 300, 400, 500, 600, 700, 800] },
+  { family: 'Noto Serif Devanagari', category: 'World', weights: [100, 200, 300, 400, 500, 600, 700, 800, 900] },
+  { family: 'Rozha One', category: 'World', weights: [400] },
+  { family: 'Hind Siliguri', category: 'World', weights: [300, 400, 500, 600, 700] },
+  { family: 'Noto Serif Bengali', category: 'World', weights: [100, 200, 300, 400, 500, 600, 700, 800, 900] },
+  { family: 'Galada', category: 'World', weights: [400] },
+  { family: 'Atma', category: 'World', weights: [300, 400, 500, 600, 700] },
+  { family: 'Noto Sans Tamil', category: 'World', weights: [100, 200, 300, 400, 500, 600, 700, 800, 900] },
+  { family: 'Noto Serif Tamil', category: 'World', weights: [100, 200, 300, 400, 500, 600, 700, 800, 900] },
+  { family: 'Catamaran', category: 'World', weights: [100, 200, 300, 400, 500, 600, 700, 800, 900] },
+  { family: 'Kavivanar', category: 'World', weights: [400] },
+  { family: 'Noto Sans Malayalam', category: 'World', weights: [100, 200, 300, 400, 500, 600, 700, 800, 900] },
+  { family: 'Noto Serif Malayalam', category: 'World', weights: [100, 200, 300, 400, 500, 600, 700, 800, 900] },
+  { family: 'Gayathri', category: 'World', weights: [100, 400, 700] },
+  { family: 'Chilanka', category: 'World', weights: [400] },
+  { family: 'Noto Sans Telugu', category: 'World', weights: [100, 200, 300, 400, 500, 600, 700, 800, 900] },
+  { family: 'Noto Serif Telugu', category: 'World', weights: [100, 200, 300, 400, 500, 600, 700, 800, 900] },
+  { family: 'Ramaraja', category: 'World', weights: [400] },
+  { family: 'Ponnala', category: 'World', weights: [400] },
+  { family: 'Noto Sans Kannada', category: 'World', weights: [100, 200, 300, 400, 500, 600, 700, 800, 900] },
+  { family: 'Noto Serif Kannada', category: 'World', weights: [100, 200, 300, 400, 500, 600, 700, 800, 900] },
+  { family: 'Baloo Tamma 2', category: 'World', weights: [400, 500, 600, 700, 800] },
+  { family: 'Akaya Kanadaka', category: 'World', weights: [400] },
+  { family: 'Noto Sans Gujarati', category: 'World', weights: [100, 200, 300, 400, 500, 600, 700, 800, 900] },
+  { family: 'Noto Serif Gujarati', category: 'World', weights: [100, 200, 300, 400, 500, 600, 700, 800, 900] },
+  { family: 'Baloo Bhai 2', category: 'World', weights: [400, 500, 600, 700, 800] },
+  { family: 'Farsan', category: 'World', weights: [400] },
+  { family: 'Noto Sans Gurmukhi', category: 'World', weights: [100, 200, 300, 400, 500, 600, 700, 800, 900] },
+  { family: 'Noto Serif Gurmukhi', category: 'World', weights: [100, 200, 300, 400, 500, 600, 700, 800, 900] },
+  { family: 'Baloo Paaji 2', category: 'World', weights: [400, 500, 600, 700, 800] },
+  { family: 'Noto Sans Sinhala', category: 'World', weights: [100, 200, 300, 400, 500, 600, 700, 800, 900] },
+  { family: 'Noto Serif Sinhala', category: 'World', weights: [100, 200, 300, 400, 500, 600, 700, 800, 900] },
+  { family: 'Yaldevi', category: 'World', weights: [200, 300, 400, 500, 600, 700] },
+  { family: 'Noto Sans Thai', category: 'World', weights: [100, 200, 300, 400, 500, 600, 700, 800, 900] },
+  { family: 'Noto Serif Thai', category: 'World', weights: [100, 200, 300, 400, 500, 600, 700, 800, 900] },
+  { family: 'Kanit', category: 'World', weights: [100, 200, 300, 400, 500, 600, 700, 800, 900] },
+  { family: 'Charm', category: 'World', weights: [400, 700] },
+  { family: 'Noto Sans SC', category: 'World', weights: [100, 200, 300, 400, 500, 600, 700, 800, 900] },
+  { family: 'Noto Serif SC', category: 'World', weights: [200, 300, 400, 500, 600, 700, 800, 900] },
+  { family: 'ZCOOL QingKe HuangYou', category: 'World', weights: [400] },
+  { family: 'Ma Shan Zheng', category: 'World', weights: [400] },
+  { family: 'Noto Sans TC', category: 'World', weights: [100, 200, 300, 400, 500, 600, 700, 800, 900] },
+  { family: 'Noto Serif TC', category: 'World', weights: [200, 300, 400, 500, 600, 700, 800, 900] },
+  { family: 'LXGW WenKai TC', category: 'World', weights: [300, 400, 700] },
+  { family: 'Noto Sans JP', category: 'World', weights: [100, 200, 300, 400, 500, 600, 700, 800, 900] },
+  { family: 'Noto Serif JP', category: 'World', weights: [200, 300, 400, 500, 600, 700, 800, 900] },
+  { family: 'Dela Gothic One', category: 'World', weights: [400] },
+  { family: 'Yuji Syuku', category: 'World', weights: [400] },
+  { family: 'Noto Sans KR', category: 'World', weights: [100, 200, 300, 400, 500, 600, 700, 800, 900] },
+  { family: 'Noto Serif KR', category: 'World', weights: [200, 300, 400, 500, 600, 700, 800, 900] },
+  { family: 'Black Han Sans', category: 'World', weights: [400] },
+  { family: 'Nanum Pen Script', category: 'World', weights: [400] },
+  { family: 'Noto Sans', category: 'World', weights: [100, 200, 300, 400, 500, 600, 700, 800, 900] },
 ];
 
 // Every weight Google Fonts ships for the families that have more than
@@ -270,6 +315,18 @@ export function useAvailableGoogleFonts(): GoogleFontDef[] {
 export function allFontFacesCSS(): string {
   return GOOGLE_FONTS.flatMap((f) => {
     const sourceFamily = f.googleFamily || f.family;
+    // World-script fonts have no italic cut: no italic face is declared,
+    // so the browser slants the regular one when text is set in italic.
+    if (f.category === 'World')
+      return f.weights.map(
+        (w) => `@font-face {
+  font-family: '${f.family}';
+  font-weight: ${w};
+  font-style: normal;
+  src: url('/api/font-file?family=${encodeURIComponent(sourceFamily)}&weight=${w}') format('truetype');
+  font-display: swap;
+}`
+      );
     return f.weights.flatMap((w) => [
       `@font-face {
   font-family: '${f.family}';
@@ -372,8 +429,10 @@ export function ensureFontLoaded(fontFamily: string, weight: number | string = 4
 // third-party fetch each time.
 export function validateAllFonts(): void {
   if (typeof document === 'undefined') return;
+  // World-script fonts (Chinese, Japanese… files are many megabytes) are
+  // only loaded when a design actually uses them, never all up front.
   GOOGLE_FONTS.forEach((f) => {
-    ensureFontLoaded(f.family, 400, false);
+    if (f.category !== 'World') ensureFontLoaded(f.family, 400, false);
   });
 }
 
