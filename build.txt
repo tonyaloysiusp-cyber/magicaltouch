@@ -1,0 +1,64 @@
+
+> magicaltouch@0.1.0 build
+> next build
+
+⚠ No build cache found. Please configure build caching for faster rebuilds. Read more: https://nextjs.org/docs/messages/no-cache
+  ▲ Next.js 14.2.5
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully
+   Linting and checking validity of types ...
+   Collecting page data ...
+   Generating static pages (0/32) ...
+   Generating static pages (8/32) 
+   Generating static pages (16/32) 
+   Generating static pages (24/32) 
+ ⚠ metadataBase property in metadata export is not set for resolving social open graph or twitter images, using "http://localhost:3000". See https://nextjs.org/docs/app/api-reference/functions/generate-metadata#metadatabase
+ ✓ Generating static pages (32/32)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                              Size     First Load JS
+┌ ○ /                                    21.6 kB         198 kB
+├ ○ /_not-found                          879 B          88.5 kB
+├ ○ /admin                               13.9 kB         190 kB
+├ ○ /admin/brand                         8.04 kB         184 kB
+├ ○ /admin/email                         11 kB           187 kB
+├ ○ /admin/templates                     15.9 kB         192 kB
+├ ƒ /api/admin/campaigns/[id]/send       0 B                0 B
+├ ƒ /api/admin/campaigns/[id]/test       0 B                0 B
+├ ƒ /api/admin/sheets-sync               0 B                0 B
+├ ƒ /api/cron/daily-digest               0 B                0 B
+├ ƒ /api/email/password-changed          0 B                0 B
+├ ƒ /api/email/welcome                   0 B                0 B
+├ ƒ /api/font-file                       0 B                0 B
+├ ƒ /api/projects                        0 B                0 B
+├ ƒ /api/projects/[id]                   0 B                0 B
+├ ƒ /api/projects/[id]/duplicate         0 B                0 B
+├ ƒ /api/translate                       0 B                0 B
+├ ƒ /api/unsubscribe                     0 B                0 B
+├ ○ /auth/storage-callback               1.71 kB        89.3 kB
+├ ○ /contact                             5.29 kB         174 kB
+├ ○ /create                              11.7 kB         193 kB
+├ ○ /dashboard                           10.8 kB         203 kB
+├ ○ /editor                              150 kB          403 kB
+├ ○ /icon.png                            0 B                0 B
+├ ○ /login                               1.82 kB         163 kB
+├ ○ /photo-studio                        9.98 kB         241 kB
+├ ○ /privacy                             1.82 kB         101 kB
+├ ○ /profile                             8.47 kB         182 kB
+├ ○ /reset-password                      4.91 kB         163 kB
+├ ○ /signup                              4.35 kB         166 kB
+├ ○ /studio                              9.56 kB         162 kB
+├ ○ /templates                           15.3 kB         196 kB
+├ ○ /terms                               1.82 kB         101 kB
+└ ○ /unsubscribe                         1.77 kB         166 kB
++ First Load JS shared by all            87.6 kB
+  ├ chunks/7023-56c055589031ebc7.js      31.7 kB
+  ├ chunks/fd9d1056-2d2a2ec9d17131b6.js  53.6 kB
+  └ other shared chunks (total)          2.31 kB
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+

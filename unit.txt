@@ -1,0 +1,50 @@
+TAP version 13
+# (node:2477) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///home/runner/work/magicaltouch/magicaltouch/lib/editor/color.ts is not specified and it doesn't parse as CommonJS.
+# Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+# To eliminate this warning, add "type": "module" to /home/runner/work/magicaltouch/magicaltouch/package.json.
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: unit conversions are exact (1in = 25.4mm = 72pt = 96px)
+ok 1 - unit conversions are exact (1in = 25.4mm = 72pt = 96px)
+  ---
+  duration_ms: 1.489753
+  type: 'test'
+  ...
+# Subtest: colour round trips
+ok 2 - colour round trips
+  ---
+  duration_ms: 2.430372
+  type: 'test'
+  ...
+# Subtest: every library shape produces a valid path in its box
+ok 3 - every library shape produces a valid path in its box
+  ---
+  duration_ms: 2.685398
+  type: 'test'
+  ...
+# Subtest: smart resize never stretches content and keeps backgrounds covering
+ok 4 - smart resize never stretches content and keeps backgrounds covering
+  ---
+  duration_ms: 0.916863
+  type: 'test'
+  ...
+# Subtest: resize keeps blocks together (bullet stays next to its line, bands keep spanning)
+ok 5 - resize keeps blocks together (bullet stays next to its line, bands keep spanning)
+  ---
+  duration_ms: 0.563833
+  type: 'test'
+  ...
+# Subtest: gradient angle round trips
+ok 6 - gradient angle round trips
+  ---
+  duration_ms: 0.783314
+  type: 'test'
+  ...
+1..6
+# tests 6
+# suites 0
+# pass 6
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 144.503248

@@ -1,0 +1,379 @@
+[
+  {
+    "name": "smoke",
+    "ms": 3007,
+    "error": null,
+    "checks": [
+      {
+        "name": "canvas has the artboard",
+        "ok": true,
+        "detail": "1"
+      }
+    ],
+    "logs": []
+  },
+  {
+    "name": "shapes-undo-redo",
+    "ms": 6467,
+    "error": null,
+    "checks": [
+      {
+        "name": "rectangle drawn",
+        "ok": false,
+        "detail": "[{\"type\":\"path\",\"left\":100,\"top\":100,\"w\":300,\"h\":200,\"locked\":false,\"lockMovementX\":false,\"angle\":0}]"
+      },
+      {
+        "name": "second rectangle drawn",
+        "ok": true,
+        "detail": "[{\"type\":\"path\",\"left\":100,\"top\":100,\"w\":300,\"h\":200,\"locked\":false,\"lockMovementX\":false,\"angle\":0},{\"type\":\"path\",\"left\":500,\"top\":500,\"w\":200,\"h\":300,\"locked\":false,\"lockMovementX\":false,\"angle\":0}]"
+      },
+      {
+        "name": "undo removes exactly the last shape",
+        "ok": true,
+        "detail": "[{\"type\":\"path\",\"left\":100,\"top\":100,\"w\":300,\"h\":200,\"locked\":false,\"lockMovementX\":false,\"angle\":0}]"
+      },
+      {
+        "name": "redo brings it back",
+        "ok": true,
+        "detail": "[{\"type\":\"path\",\"left\":100,\"top\":100,\"w\":300,\"h\":200,\"locked\":false,\"lockMovementX\":false,\"angle\":0},{\"type\":\"path\",\"left\":500,\"top\":500,\"w\":200,\"h\":300,\"locked\":false,\"lockMovementX\":false,\"angle\":0}]"
+      },
+      {
+        "name": "grouped into one object",
+        "ok": true,
+        "detail": "[{\"type\":\"group\",\"left\":100,\"top\":100,\"w\":600,\"h\":700,\"locked\":false,\"lockMovementX\":false,\"angle\":0}]"
+      },
+      {
+        "name": "one undo ungroups back to two shapes",
+        "ok": false,
+        "detail": "[{\"type\":\"path\",\"left\":100,\"top\":100,\"w\":300,\"h\":200,\"locked\":false,\"lockMovementX\":false,\"angle\":0},{\"type\":\"path\",\"left\":500,\"top\":500,\"w\":200,\"h\":300,\"locked\":false,\"lockMovementX\":false,\"angle\":0}]"
+      },
+      {
+        "name": "delete removes both",
+        "ok": true,
+        "detail": "[]"
+      },
+      {
+        "name": "one undo restores both",
+        "ok": true,
+        "detail": "[{\"type\":\"path\",\"left\":100,\"top\":100,\"w\":300,\"h\":200,\"locked\":false,\"lockMovementX\":false,\"angle\":0},{\"type\":\"path\",\"left\":500,\"top\":500,\"w\":200,\"h\":300,\"locked\":false,\"lockMovementX\":false,\"angle\":0}]"
+      }
+    ],
+    "logs": []
+  },
+  {
+    "name": "nudge-lock",
+    "ms": 4648,
+    "error": null,
+    "checks": [
+      {
+        "name": "arrow keys move by 5",
+        "ok": true,
+        "detail": "100 -> 105"
+      },
+      {
+        "name": "undo reverts the nudge",
+        "ok": true,
+        "detail": "100"
+      },
+      {
+        "name": "locked",
+        "ok": true,
+        "detail": "[{\"type\":\"path\",\"left\":100,\"top\":100,\"w\":200,\"h\":200,\"locked\":true,\"lockMovementX\":true,\"angle\":0}]"
+      },
+      {
+        "name": "lock survives undo/redo",
+        "ok": true,
+        "detail": "[{\"type\":\"path\",\"left\":100,\"top\":100,\"w\":200,\"h\":200,\"locked\":true,\"lockMovementX\":true,\"angle\":0}]"
+      },
+      {
+        "name": "locked object does not move",
+        "ok": true,
+        "detail": "100 vs 100"
+      }
+    ],
+    "logs": []
+  },
+  {
+    "name": "pen-tool",
+    "ms": 3122,
+    "error": null,
+    "checks": [
+      {
+        "name": "no helper objects while drawing",
+        "ok": true,
+        "detail": "0"
+      },
+      {
+        "name": "closed path created",
+        "ok": true,
+        "detail": "[{\"type\":\"path\",\"left\":155,\"top\":199,\"w\":346,\"h\":318,\"locked\":false,\"lockMovementX\":false,\"angle\":0}]"
+      },
+      {
+        "name": "path is closed (Z)",
+        "ok": true,
+        "detail": "Z"
+      },
+      {
+        "name": "undo removes the path in one step",
+        "ok": true,
+        "detail": "[]"
+      }
+    ],
+    "logs": []
+  },
+  {
+    "name": "export-jpg",
+    "ms": 32462,
+    "error": "locator.click: Timeout 30000ms exceeded.\nCall log:\n  - waiting for getByRole('button', { name: 'jpg', exact: true })\n\n    at Object.run (/home/runner/work/magicaltouch/magicaltouch/e2e/scenarios.mjs:182:70)\n    at /home/runner/work/magicaltouch/magicaltouch/async file:/home/runner/work/magicaltouch/magicaltouch/e2e/run.mjs:39:9",
+    "checks": [],
+    "logs": []
+  },
+  {
+    "name": "ipad",
+    "ms": 1984,
+    "error": null,
+    "checks": [],
+    "logs": []
+  },
+  {
+    "name": "ui-panels",
+    "ms": 38033,
+    "error": "locator.click: Timeout 30000ms exceeded.\nCall log:\n  - waiting for locator('nav[aria-label=\"Editor panels\"] button').filter({ hasText: 'Uploads' }).first()\n\n    at rail (/home/runner/work/magicaltouch/magicaltouch/e2e/scenarios.mjs:211:93)\n    at Object.run (/home/runner/work/magicaltouch/magicaltouch/e2e/scenarios.mjs:227:15)\n    at /home/runner/work/magicaltouch/magicaltouch/async file:/home/runner/work/magicaltouch/magicaltouch/e2e/run.mjs:39:9",
+    "checks": [],
+    "logs": []
+  },
+  {
+    "name": "onboarding",
+    "ms": 4854,
+    "error": null,
+    "checks": [
+      {
+        "name": "quick start shows for a new user",
+        "ok": true
+      },
+      {
+        "name": "page resized to Instagram post",
+        "ok": true,
+        "detail": "1080x1350"
+      }
+    ],
+    "logs": []
+  },
+  {
+    "name": "template-apply",
+    "ms": 9919,
+    "error": null,
+    "checks": [
+      {
+        "name": "template objects placed on the page",
+        "ok": true,
+        "detail": "11"
+      },
+      {
+        "name": "undo removes the template in one step",
+        "ok": true,
+        "detail": "0"
+      }
+    ],
+    "logs": []
+  },
+  {
+    "name": "frames-crop-replace",
+    "ms": 7087,
+    "error": null,
+    "checks": [
+      {
+        "name": "empty circle frame added and selected",
+        "ok": true,
+        "detail": "{\"type\":\"image\",\"frame\":{\"kind\":\"circle\",\"empty\":true},\"framed\":true,\"filters\":0,\"shadow\":false,\"path\":false,\"w\":454,\"h\":454}"
+      },
+      {
+        "name": "photo fills the frame",
+        "ok": true,
+        "detail": "{\"type\":\"image\",\"frame\":{\"kind\":\"circle\",\"empty\":false},\"framed\":true,\"filters\":0,\"shadow\":false,\"path\":false,\"w\":454,\"h\":680}"
+      },
+      {
+        "name": "replace keeps the frame position and size",
+        "ok": true,
+        "detail": "540,540,454 vs 540,540,454"
+      },
+      {
+        "name": "crop done keeps the frame",
+        "ok": true,
+        "detail": "{\"type\":\"image\",\"frame\":{\"kind\":\"circle\",\"empty\":false},\"framed\":true,\"filters\":0,\"shadow\":false,\"path\":false,\"w\":454,\"h\":647}"
+      }
+    ],
+    "logs": []
+  },
+  {
+    "name": "image-adjust",
+    "ms": 6101,
+    "error": null,
+    "checks": [
+      {
+        "name": "filter applied as live filters",
+        "ok": true,
+        "detail": "{\"type\":\"image\",\"frame\":null,\"framed\":false,\"filters\":2,\"shadow\":false,\"path\":false,\"w\":360,\"h\":540}"
+      },
+      {
+        "name": "undo removes the filter",
+        "ok": true,
+        "detail": "0"
+      }
+    ],
+    "logs": [
+      "warning: Canvas2D: Multiple readback operations using getImageData are faster with the willReadFrequently attribute set to true. See: https://html.spec.whatwg.org/multipage/canvas.html#concept-canvas-will-read-frequently",
+      "warning: Canvas2D: Multiple readback operations using getImageData are faster with the willReadFrequently attribute set to true. See: https://html.spec.whatwg.org/multipage/canvas.html#concept-canvas-will-read-frequently",
+      "warning: Canvas2D: Multiple readback operations using getImageData are faster with the willReadFrequently attribute set to true. See: https://html.spec.whatwg.org/multipage/canvas.html#concept-canvas-will-read-frequently",
+      "warning: Canvas2D: Multiple readback operations using getImageData are faster with the willReadFrequently attribute set to true. See: https://html.spec.whatwg.org/multipage/canvas.html#concept-canvas-will-read-frequently",
+      "warning: Canvas2D: Multiple readback operations using getImageData are faster with the willReadFrequently attribute set to true. See: https://html.spec.whatwg.org/multipage/canvas.html#concept-canvas-will-read-frequently",
+      "warning: Canvas2D: Multiple readback operations using getImageData are faster with the willReadFrequently attribute set to true. See: https://html.spec.whatwg.org/multipage/canvas.html#concept-canvas-will-read-frequently",
+      "warning: Canvas2D: Multiple readback operations using getImageData are faster with the willReadFrequently attribute set to true. See: https://html.spec.whatwg.org/multipage/canvas.html#concept-canvas-will-read-frequently",
+      "warning: Canvas2D: Multiple readback operations using getImageData are faster with the willReadFrequently attribute set to true. See: https://html.spec.whatwg.org/multipage/canvas.html#concept-canvas-will-read-frequently",
+      "warning: Canvas2D: Multiple readback operations using getImageData are faster with the willReadFrequently attribute set to true. See: https://html.spec.whatwg.org/multipage/canvas.html#concept-canvas-will-read-frequently",
+      "warning: Canvas2D: Multiple readback operations using getImageData are faster with the willReadFrequently attribute set to true. See: https://html.spec.whatwg.org/multipage/canvas.html#concept-canvas-will-read-frequently",
+      "warning: Canvas2D: Multiple readback operations using getImageData are faster with the willReadFrequently attribute set to true. See: https://html.spec.whatwg.org/multipage/canvas.html#concept-canvas-will-read-frequently",
+      "warning: Canvas2D: Multiple readback operations using getImageData are faster with the willReadFrequently attribute set to true. See: https://html.spec.whatwg.org/multipage/canvas.html#concept-canvas-will-read-frequently"
+    ]
+  },
+  {
+    "name": "text-effects",
+    "ms": 4862,
+    "error": null,
+    "checks": [
+      {
+        "name": "glow adds a shadow",
+        "ok": true,
+        "detail": "{\"type\":\"textbox\",\"frame\":null,\"framed\":false,\"filters\":0,\"shadow\":true,\"path\":false,\"text\":\"Add a heading\",\"w\":649,\"h\":235}"
+      },
+      {
+        "name": "curve puts the text on a path",
+        "ok": true,
+        "detail": "{\"type\":\"textbox\",\"frame\":null,\"framed\":false,\"filters\":0,\"shadow\":true,\"path\":true,\"text\":\"Add a heading\",\"w\":737,\"h\":109}"
+      }
+    ],
+    "logs": []
+  },
+  {
+    "name": "shapes-library",
+    "ms": 3327,
+    "error": null,
+    "checks": [
+      {
+        "name": "six shapes added",
+        "ok": true,
+        "detail": "6"
+      }
+    ],
+    "logs": []
+  },
+  {
+    "name": "draw-erase",
+    "ms": 3238,
+    "error": null,
+    "checks": [
+      {
+        "name": "brush stroke created",
+        "ok": true,
+        "detail": "1"
+      },
+      {
+        "name": "eraser cuts the stroke (live mask)",
+        "ok": true
+      }
+    ],
+    "logs": []
+  },
+  {
+    "name": "resize-copy",
+    "ms": 3718,
+    "error": null,
+    "checks": [
+      {
+        "name": "a 1080×1920 copy was added",
+        "ok": true,
+        "detail": "[[1080,1080],[1080,1920]]"
+      }
+    ],
+    "logs": []
+  },
+  {
+    "name": "bg-remove",
+    "ms": 7977,
+    "error": null,
+    "checks": [
+      {
+        "name": "image replaced by transparent PNG",
+        "ok": true,
+        "detail": "data:image/png;base64,"
+      }
+    ],
+    "logs": []
+  },
+  {
+    "name": "dark-pro",
+    "ms": 2594,
+    "error": null,
+    "checks": [],
+    "logs": []
+  },
+  {
+    "name": "phone",
+    "ms": 2379,
+    "error": null,
+    "checks": [],
+    "logs": []
+  },
+  {
+    "name": "workflow-instagram",
+    "ms": 34090,
+    "error": "locator.click: Timeout 30000ms exceeded.\nCall log:\n  - waiting for getByRole('button', { name: 'png', exact: true })\n\n    at exportAs (/home/runner/work/magicaltouch/magicaltouch/e2e/scenarios.mjs:434:67)\n    at async Object.run (/home/runner/work/magicaltouch/magicaltouch/e2e/scenarios.mjs:457:19)\n    at /home/runner/work/magicaltouch/magicaltouch/async file:/home/runner/work/magicaltouch/magicaltouch/e2e/run.mjs:39:9",
+    "checks": [],
+    "logs": []
+  },
+  {
+    "name": "workflow-business-pdf",
+    "ms": 35384,
+    "error": "locator.click: Timeout 30000ms exceeded.\nCall log:\n  - waiting for getByRole('button', { name: 'pdf', exact: true })\n\n    at exportAs (/home/runner/work/magicaltouch/magicaltouch/e2e/scenarios.mjs:434:67)\n    at async Object.run (/home/runner/work/magicaltouch/magicaltouch/e2e/scenarios.mjs:478:19)\n    at /home/runner/work/magicaltouch/magicaltouch/async file:/home/runner/work/magicaltouch/magicaltouch/e2e/run.mjs:39:9",
+    "checks": [],
+    "logs": []
+  },
+  {
+    "name": "workflow-magazine",
+    "ms": 32878,
+    "error": "locator.click: Timeout 30000ms exceeded.\nCall log:\n  - waiting for locator('aside button').filter({ hasText: '# Add page number' })\n\n    at Object.run (/home/runner/work/magicaltouch/magicaltouch/e2e/scenarios.mjs:492:78)\n    at /home/runner/work/magicaltouch/magicaltouch/async file:/home/runner/work/magicaltouch/magicaltouch/e2e/run.mjs:39:9",
+    "checks": [
+      {
+        "name": "three pages",
+        "ok": true,
+        "detail": "3"
+      }
+    ],
+    "logs": []
+  },
+  {
+    "name": "align-distribute",
+    "ms": 4615,
+    "error": null,
+    "checks": [
+      {
+        "name": "aligned to the same top",
+        "ok": true,
+        "detail": "100,100,100"
+      },
+      {
+        "name": "evenly spaced",
+        "ok": true,
+        "detail": "100,460,800 100,80,100"
+      }
+    ],
+    "logs": []
+  },
+  {
+    "name": "webp-export",
+    "ms": 32409,
+    "error": "locator.click: Timeout 30000ms exceeded.\nCall log:\n  - waiting for getByRole('button', { name: 'webp', exact: true })\n\n    at exportAs (/home/runner/work/magicaltouch/magicaltouch/e2e/scenarios.mjs:434:67)\n    at async Object.run (/home/runner/work/magicaltouch/magicaltouch/e2e/scenarios.mjs:528:19)\n    at /home/runner/work/magicaltouch/magicaltouch/async file:/home/runner/work/magicaltouch/magicaltouch/e2e/run.mjs:39:9",
+    "checks": [],
+    "logs": []
+  }
+]
