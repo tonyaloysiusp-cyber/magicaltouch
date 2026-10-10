@@ -2012,6 +2012,29 @@ function EditorContent() {
         if (!ctx || !vt) return;
         const abs = canvas.getObjects().filter((o: any) => o.__isArtboard);
 
+        // Anything sticking out past a page is shaded by the pasteboard, as
+        // in other design tools: it is still there (and can be dragged back
+        // in) but the page reads cleanly. Exports are cropped to the page.
+        if (abs.length && typeof canvas.backgroundColor === 'string' && canvas.backgroundColor) {
+          ctx.save();
+          ctx.setTransform(1, 0, 0, 1, 0, 0);
+          const el = ctx.canvas;
+          const ret = (canvas as any).getRetinaScaling ? (canvas as any).getRetinaScaling() : 1;
+          ctx.beginPath();
+          ctx.rect(0, 0, el.width, el.height);
+          abs.forEach((ab: any) => {
+            const x = ((ab.left || 0) * vt[0] + vt[4]) * ret;
+            const y = ((ab.top || 0) * vt[3] + vt[5]) * ret;
+            const w = (ab.width || 0) * (ab.scaleX || 1) * vt[0] * ret;
+            const h = (ab.height || 0) * (ab.scaleY || 1) * vt[3] * ret;
+            ctx.rect(x, y, w, h);
+          });
+          ctx.globalAlpha = 0.86;
+          ctx.fillStyle = canvas.backgroundColor;
+          ctx.fill('evenodd');
+          ctx.restore();
+        }
+
         ctx.save();
         ctx.shadowColor = 'rgba(0,0,0,0.35)';
         ctx.shadowBlur = 16;
