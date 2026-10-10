@@ -8,17 +8,12 @@
 // save produces -- the design reopens in /editor, and the dashboard's
 // thumbnail/reopen pipeline needs no special-casing for it.
 //
-// The composite's pixels are uploaded to real object storage
-// (lib/storage/assets.ts) rather than embedded as base64 inside
-// canvas_json -- the #1 fix identified in docs/ENGINEERING_AUDIT.md.
-// This is the first live cutover of that pattern, deliberately scoped
-// to this one new, low-risk page rather than Main Design's mature
-// upload path (see the audit for why).
+// The picture is embedded inside canvas_json itself: customers' photos
+// are never stored as separate files on the server.
 // ---------------------------------------------------------------------
 
 import { createArtboardId, nextArtboardName } from './artboards';
 import { createDefaultPrintSettings } from './printSetup';
-import { dataUrlToBlob, uploadDesignAsset } from '@/lib/storage/assets';
 
 // Kept in sync by hand with the identical arrays in app/editor/page.tsx's
 // own save function and hooks/useEditorHistory.ts -- all three must list
@@ -52,7 +47,7 @@ export async function buildPhotoDesignJson(
   widthPx: number,
   heightPx: number,
   dpi: number,
-  userId: string
+  _userId?: string
 ): Promise<PhotoDesignPayload> {
   const mod: any = await import('fabric');
   const F = mod.fabric;
@@ -78,16 +73,12 @@ export async function buildPhotoDesignJson(
   artboard.name = nextArtboardName([]);
   canvas.add(artboard);
 
-  // Real object storage instead of embedding these pixels as base64
-  // inside canvas_json -- see the module comment above.
-  const uploaded = await uploadDesignAsset(dataUrlToBlob(dataUrl), userId);
-
   await new Promise<void>((resolve, reject) => {
     F.Image.fromURL(
-      uploaded.url,
+      dataUrl,
       (img: any, isError: boolean) => {
         if (isError || !img) {
-          reject(new Error('Failed to load the uploaded asset back into the canvas'));
+          reject(new Error('Failed to load the picture into the canvas'));
           return;
         }
         img.set({
@@ -99,11 +90,10 @@ export async function buildPhotoDesignJson(
         });
         img.__uid = `obj_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
         img.__artboardId = artboard.__artboardId;
-        img.__assetId = uploaded.assetId;
         canvas.add(img);
         resolve();
       },
-      { crossOrigin: 'anonymous' }
+      {}
     );
   });
 

@@ -546,7 +546,7 @@ function PhotoStudioContent() {
                       </button>
                       <button onClick={() => { setSaveMenu(false); handleSave(); }} className="w-full text-left rounded-xl px-3 py-2.5 hover:bg-mt-surface2 flex gap-3">
                         <Cloud size={17} className="mt-0.5 shrink-0" />
-                        <span><span className="block text-[13px] font-semibold">My Magical Touch account</span><span className="block text-[11px] text-mt-muted">Open it from any device. The photo is stored with the design.</span></span>
+                        <span><span className="block text-[13px] font-semibold">My Magical Touch account</span><span className="block text-[11px] text-mt-muted">Open it from any device. The photo lives only inside this design file.</span></span>
                       </button>
                     </div>
                   )}

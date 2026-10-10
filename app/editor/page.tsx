@@ -7,7 +7,6 @@ import { BrandLogo } from '@/components/BrandLogo';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { fetchTemplateById, setTemplateContent, createVersion, Template as TemplateRecord } from '@/lib/templatesData';
-import { storeImagesForAccountSave } from '@/lib/storage/embedAssets';
 import {
   Keyboard,
   ChevronLeft,
@@ -41,7 +40,6 @@ import { OnboardingDialog } from '@/components/editor/shell/OnboardingDialog';
 import { TemplatesPanel } from '@/components/editor/shell/panels/TemplatesPanel';
 import { ElementsPanel } from '@/components/editor/shell/panels/ElementsPanel';
 import { TextPanel } from '@/components/editor/shell/panels/TextPanel';
-import { UploadsPanel } from '@/components/editor/shell/panels/UploadsPanel';
 import { DrawPanel } from '@/components/editor/shell/panels/DrawPanel';
 import { BackgroundPanel } from '@/components/editor/shell/panels/BackgroundPanel';
 import { BrandPanel } from '@/components/editor/shell/panels/BrandPanel';
@@ -2623,8 +2621,8 @@ function EditorContent() {
   // missing thumbnail column.
   // Pictures are no longer sent anywhere when they are placed: they stay
   // on this device inside the design, and are stored only together with
-  // the design, wherever the customer saves it (see performSaveInner and
-  // lib/storage/embedAssets.ts). Kept as a no-op so the many callers that
+  // the design, embedded in the design file itself, wherever the customer
+  // saves it. Kept as a no-op so the many callers that
   // place pictures don't change.
   const backgroundUploadAsset = (_img: any) => {};
 
@@ -2685,7 +2683,9 @@ function EditorContent() {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [bgRemoveTarget, setBgRemoveTarget] = useState<any>(null);
   const [templateBusy, setTemplateBusy] = useState<string | null>(null);
-  const [sessionUploads, setSessionUploads] = useState<{ id: string; url: string }[]>([]);
+  // Upload sits in the main rail and places pictures straight into the
+  // design. Nothing is kept in a separate uploads list or on the server.
+  const railUploadInputRef = useRef<HTMLInputElement>(null);
   const replaceInputRef = useRef<HTMLInputElement>(null);
   const pickColorRef = useRef<((hex: string) => void) | null>(null);
 
@@ -2801,7 +2801,6 @@ function EditorContent() {
         setLocalNotice("That file couldn't be read. Try another image.");
         continue;
       }
-      setSessionUploads((u) => [{ id: `u${Date.now()}_${i}`, url }, ...u].slice(0, 40));
       // An empty frame is selected: fill it instead of adding a new picture.
       const active = fabricCanvasRef.current?.getActiveObject();
       if (i === 0 && files.length === 1 && active?.__frame?.empty && !at) {
@@ -5112,10 +5111,9 @@ function EditorContent() {
       return;
     }
     const revAtSave = editRevRef.current;
-    let canvasJson = fabricCanvasRef.current.toJSON(SAVE_JSON_PROPS);
-    // Saving to the account is the one place pictures are stored online —
-    // only now, and only the ones in this design.
-    canvasJson = await storeImagesForAccountSave(canvasJson, user.id);
+    // Pictures stay embedded inside the design itself: they are never
+    // stored as separate files, wherever the design is saved.
+    const canvasJson = fabricCanvasRef.current.toJSON(SAVE_JSON_PROPS);
     // width/height stay as the dashboard/thumbnail-facing summary size —
     // the first artboard's current dimensions, not the URL params a brand
     // new document happened to start from.
@@ -6727,10 +6725,12 @@ function EditorContent() {
       render: () => <TextPanel onAdd={(p: TextPreset) => features.addTextPreset(p)} onAddPairing={addFontPairing} onAddPageNumber={addPageNumber} onAddArticle={addArticle} />,
     },
     {
-      id: 'uploads',
-      label: 'Uploads',
+      id: 'upload',
+      label: 'Upload',
+      title: 'Upload photos into this design (they stay inside the design file only)',
       icon: <UploadIcon size={20} />,
-      render: () => <UploadsPanel sessionUploads={sessionUploads} onFiles={(f) => addImageFiles(f)} onUse={(url) => placeImageUrl(url)} />,
+      action: () => railUploadInputRef.current?.click(),
+      render: () => null,
     },
     {
       id: 'draw',
@@ -7155,6 +7155,20 @@ function EditorContent() {
       )}
 
       <div className="flex flex-1 min-h-0 overflow-hidden" style={{ display: workspace === 'design' ? 'flex' : 'none' }}>
+        <input
+          ref={railUploadInputRef}
+          type="file"
+          accept="image/*"
+          multiple
+          className="hidden"
+          aria-hidden
+          tabIndex={-1}
+          onChange={(e) => {
+            const files = Array.from(e.target.files || []) as File[];
+            e.target.value = '';
+            if (files.length) addImageFiles(files);
+          }}
+        />
         {!compact && <LeftRail items={railItems} active={leftPanel} onActivate={setLeftPanel} compact={false} />}
         {pro && !compact && (
           <Toolbar
