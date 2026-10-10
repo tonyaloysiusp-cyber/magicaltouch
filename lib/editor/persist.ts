@@ -49,6 +49,8 @@ export const PERSIST_PROPS = [
   '__styleSig',
   // Space between paragraphs (lib/editor/paragraphSpacing.ts)
   'paragraphSpacing',
+  // Colours before a brand/palette change (lib/editor/brandKit.ts)
+  '__origColors',
   // Text box behaviour (auto-fit)
   '__autoFit',
   // Fabric's own interaction locks are not serialized by default.
