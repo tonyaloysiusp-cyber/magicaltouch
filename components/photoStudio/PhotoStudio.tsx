@@ -17,6 +17,7 @@ import { forwardRef, ReactNode, useCallback, useEffect, useImperativeHandle, use
 import {
   SlidersHorizontal, Sparkles, Crop as CropIcon, Scissors, Brush, Maximize2, Download, Undo2, Redo2, Plus, Minus,
   Maximize, RotateCcw, RotateCw, FlipHorizontal2, FlipVertical2, Loader2, Check, X, Eye, Printer, Lock, Unlock, Palette, Wand2,
+  Move, SquareDashed, Blend as BlendIcon,
 } from 'lucide-react';
 import { Adjust, NO_ADJUST, LIGHT_SLIDERS, COLOR_SLIDERS, DETAIL_SLIDERS, LOOKS, SliderDef, applyAdjust, renderAdjusted, isNeutral, autoEnhance, HSL_RANGES, CurvePts, curveLut } from '@/lib/photo/adjust';
 import { BrushKind, createStroke, replayStroke } from '@/lib/photo/brushes';
@@ -24,11 +25,16 @@ import { CropBox, PhysUnit, cropTo, flip, fmtNum, fromPx, inscribedRect, makeCan
 import { ColourMode, FORMAT_INFO, PhotoFormat, downloadBlob, exportPhoto, extFor } from '@/lib/photo/exportPhoto';
 import { loadProofTable, proofRgbaInPlace, PRESS_PROFILE_NAME } from '@/lib/color/cmyk';
 import { BgRemoveDialog } from '@/components/editor/shell/BgRemoveDialog';
+import { Layer, Selection, makeLayer, composite, isPlain, translate, placeImage, mergeDown, maskShape, maskAll, invertMask, maskFromAlpha, blendMasked, clearMasked, copyMasked, fillMasked, paintStroke, blankLike } from '@/lib/photo/layers';
+import { FILTERS, FilterId, applyFilter } from '@/lib/photo/filters';
+import { ProMenuBar, LayersPanel, HistoryPanel, Menu } from './ProPanels';
 
-type Tool = 'adjust' | 'color' | 'looks' | 'crop' | 'bg' | 'retouch' | 'resize' | 'export';
+type Tool = 'adjust' | 'color' | 'looks' | 'crop' | 'bg' | 'retouch' | 'resize' | 'export' | 'move' | 'select' | 'filter';
 type Mode = 'simple' | 'pro';
-type RetouchKind = 'heal' | BrushKind;
+type RetouchKind = 'heal' | BrushKind | 'paint' | 'erase';
 const RETOUCH: { id: RetouchKind; label: string; hint: string; pro?: boolean }[] = [
+  { id: 'paint', label: 'Paint', hint: 'Paint with a colour on the selected layer.', pro: true },
+  { id: 'erase', label: 'Eraser', hint: 'Erase the selected layer to see-through.', pro: true },
   { id: 'heal', label: 'Heal', hint: 'Paint over spots, blemishes or small objects to remove them.' },
   { id: 'smudge', label: 'Smudge', hint: 'Push and blend colours, like a finger in wet paint.' },
   { id: 'blur', label: 'Soften', hint: 'Soften skin or a busy area by painting over it.' },
@@ -51,7 +57,9 @@ const SIMPLE_DETAIL: SliderDef[] = [
   { key: 'sharpen', label: 'Sharpen', min: 0, max: 100 },
   { key: 'vignette', label: 'Vignette', min: -100, max: 100 },
 ];
-interface Snapshot { base: HTMLCanvasElement; adjust: Adjust; dpi: number; label: string }
+interface Snapshot { layers: Layer[]; active: number; adjust: Adjust; dpi: number; label: string }
+// What an edit can change. `base` replaces the selected layer's pixels.
+type SnapPatch = { label: string; base?: HTMLCanvasElement; layers?: Layer[]; active?: number; adjust?: Adjust; dpi?: number };
 
 export interface PhotoStudioHandle {
   /** The finished picture at full size, adjustments included. */
@@ -116,7 +124,12 @@ const TOOLS: { id: Tool; label: string; simpleLabel?: string; icon: any; standal
   { id: 'retouch', label: 'Retouch', icon: Brush },
   { id: 'resize', label: 'Resize', icon: Maximize2 },
   { id: 'export', label: 'Export', icon: Download, standaloneOnly: true },
+  { id: 'move', label: 'Move', icon: Move, proOnly: true },
+  { id: 'select', label: 'Select', icon: SquareDashed, proOnly: true },
+  { id: 'filter', label: 'Filters', icon: BlendIcon, proOnly: true },
 ];
+// Pro shows the Photoshop-style tools first.
+const PRO_ORDER: Tool[] = ['move', 'select', 'crop', 'retouch', 'adjust', 'color', 'filter', 'looks', 'bg', 'resize', 'export'];
 
 function loadSource(src: string): Promise<HTMLCanvasElement> {
   return new Promise((resolve, reject) => {
@@ -191,7 +204,13 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
   const [error, setError] = useState<string | null>(null);
   const [history, setHistory] = useState<{ list: Snapshot[]; index: number }>({ list: [], index: -1 });
   const snap = history.list[history.index] as Snapshot | undefined;
-  const base = snap?.base || null;
+  const layers = snap?.layers || null;
+  const activeIdx = snap ? Math.min(snap.active, snap.layers.length - 1) : 0;
+  // The selected layer's pixels: every pixel tool works on these.
+  const target = layers ? layers[activeIdx].canvas : null;
+  // The flattened picture: what is shown, exported and applied.
+  const base = useMemo(() => (layers ? (isPlain(layers) ? layers[0].canvas : composite(layers)) : null), [layers]);
+  const [sel, setSel] = useState<Selection | null>(null);
   const [adjust, setAdjust] = useState<Adjust>(NO_ADJUST);
   const [dpi, setDpi] = useState(props.dpi || 300);
   const [tool, setTool] = useState<Tool>('adjust');
@@ -237,12 +256,15 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
   const firstPreviewRef = useRef<HTMLCanvasElement | null>(null);
 
   // ---------------- history
-  const push = useCallback((s: Partial<Snapshot> & { label: string }) => {
+  const push = useCallback((s: SnapPatch) => {
     setHistory((h) => {
       const cur = h.list[h.index];
-      const next: Snapshot = { base: s.base || cur.base, adjust: s.adjust || cur.adjust, dpi: s.dpi ?? cur.dpi, label: s.label };
+      let ls = s.layers || cur.layers;
+      const act = Math.min(s.active ?? cur.active, ls.length - 1);
+      if (s.base) ls = ls.map((l, i) => (i === act ? { ...l, canvas: s.base! } : l));
+      const next: Snapshot = { layers: ls, active: act, adjust: s.adjust || cur.adjust, dpi: s.dpi ?? cur.dpi, label: s.label };
       // Keep memory in check for big photos.
-      const px = next.base.width * next.base.height;
+      const px = ls[0].canvas.width * ls[0].canvas.height * ls.length;
       const cap = Math.max(6, Math.min(MAX_HISTORY, Math.floor(400_000_000 / Math.max(1, px * 4))));
       const list = [...h.list.slice(0, h.index + 1), next].slice(-cap);
       return { list, index: list.length - 1 };
@@ -269,7 +291,8 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
       .then((c) => {
         if (cancelled) return;
         firstPreviewRef.current = null;
-        setHistory({ list: [{ base: c, adjust: NO_ADJUST, dpi: props.dpi || 300, label: 'Open' }], index: 0 });
+        setHistory({ list: [{ layers: [makeLayer(c, 'Background')], active: 0, adjust: NO_ADJUST, dpi: props.dpi || 300, label: 'Open' }], index: 0 });
+        setSel(null);
         setZoom(1);
         setPan({ x: 0, y: 0 });
       })
@@ -387,7 +410,7 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
         ov.style.visibility = 'visible';
         return;
       }
-      if (ov) ov.style.visibility = 'hidden';
+      if (ov && !overlayHold.current) ov.style.visibility = 'hidden';
       let img: ImageData;
       if (comparing) img = src.getContext('2d')!.getImageData(0, 0, src.width, src.height);
       else img = isNeutral(adjust) ? new ImageData(new Uint8ClampedArray(preview.data.data), preview.data.width, preview.data.height) : applyAdjust(preview.data, adjust, preview.owner);
@@ -464,7 +487,7 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
   const setArr = (k: 'hsl' | 'grade', i: number, v: number) => setAdjust((a) => { const arr = [...a[k]]; arr[i] = v; return { ...a, [k]: arr }; });
   const commitLive = () => setTimeout(() => setAdjust((a) => { commitAdjust(a); return a; }), 0);
 
-  const run = async (label: string, fn: () => HTMLCanvasElement | Promise<HTMLCanvasElement>, extra: Partial<Snapshot> = {}) => {
+  const run = async (label: string, fn: () => HTMLCanvasElement | Promise<HTMLCanvasElement>, extra: Partial<SnapPatch> = {}) => {
     setBusy(label);
     await new Promise((r) => setTimeout(r, 30));
     try {
@@ -478,11 +501,27 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
     }
   };
 
+  // Geometry edits (crop, rotate, flip, resize) change every layer together.
+  const runAll = async (label: string, fn: (c: HTMLCanvasElement) => HTMLCanvasElement, extra: Partial<SnapPatch> = {}) => {
+    if (!layers) return;
+    setBusy(label);
+    await new Promise((r) => setTimeout(r, 30));
+    try {
+      push({ label, ...extra, layers: layers.map((l) => ({ ...l, canvas: fn(l.canvas) })) });
+      setSel(null);
+    } catch (e) {
+      console.error(e);
+      setNotice(`${label} didn’t work on this picture. Please try again.`);
+    } finally {
+      setBusy(null);
+    }
+  };
+
   const applyCrop = () => {
     if (!base || !box) return;
     const outW = exactPx ? exactPx.w : Math.round(box.w);
     const outH = exactPx ? exactPx.h : Math.round(box.h);
-    run('Crop', () => cropTo(base, box, (cropAngle * Math.PI) / 180, outW, outH), exactPx ? { dpi: exactPx.dpi } : {}).then(() => {
+    runAll('Crop', (c) => cropTo(c, box, (cropAngle * Math.PI) / 180, outW, outH), exactPx ? { dpi: exactPx.dpi } : {}).then(() => {
       setCropAngle(0);
     });
   };
@@ -528,6 +567,35 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
       else if (mod && e.key.toLowerCase() === 'y') { e.preventDefault(); redo(); }
       else if (e.key === '\\') setComparing(true);
       else if (tool === 'crop' && e.key === 'Enter') applyCrop();
+      else if (tool === 'filter' && e.key === 'Enter') applyFilterNow();
+      else if (pro) {
+        const k = e.key.toLowerCase();
+        if (mod && k === 'j') { e.preventDefault(); selOps.toLayer(); }
+        else if (mod && e.shiftKey && k === 'i') { e.preventDefault(); selOps.invert(); }
+        else if (mod && k === 'a') { e.preventDefault(); selOps.all(); }
+        else if (mod && k === 'd') { e.preventDefault(); selOps.none(); }
+        else if (mod && k === 'e' && !e.shiftKey) { e.preventDefault(); layerOps.mergeDown(); }
+        else if (mod && e.shiftKey && k === 'n') { e.preventDefault(); layerOps.add(); }
+        else if (mod && k === 'l') { e.preventDefault(); setTool('color'); }
+        else if (mod && k === 'o' && !embedded) { e.preventDefault(); fileRef.current?.click(); }
+        else if (mod && k === ']') { e.preventDefault(); layerOps.move(1); }
+        else if (mod && k === '[') { e.preventDefault(); layerOps.move(-1); }
+        else if (mod && (k === '=' || k === '+')) { e.preventDefault(); setZoom((z) => Math.min(8, z * 1.25)); }
+        else if (mod && k === '-') { e.preventDefault(); setZoom((z) => Math.max(0.5, z / 1.25)); }
+        else if (mod && k === '0') { e.preventDefault(); setZoom(1); setPan({ x: 0, y: 0 }); }
+        else if ((k === 'delete' || k === 'backspace') && sel) { e.preventDefault(); selOps.clear(); }
+        else if (k === 'escape' && sel) setSel(null);
+        else if (!mod && !e.altKey) {
+          if (k === 'v') setTool('move');
+          else if (k === 'm') setTool('select');
+          else if (k === 'c') setTool('crop');
+          else if (k === 'b') { setRetouch('paint'); setTool('retouch'); }
+          else if (k === 'e') { setRetouch('erase'); setTool('retouch'); }
+          else if (k === 'j') { setRetouch('heal'); setTool('retouch'); }
+          else if (k === '[') setHealSize((v) => Math.max(8, v - 8));
+          else if (k === ']') setHealSize((v) => Math.min(240, v + 8));
+        }
+      }
     };
     const onUp = (e: KeyboardEvent) => e.key === '\\' && setComparing(false);
     window.addEventListener('keydown', onKey);
@@ -549,6 +617,28 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
   const strokeRef = useRef<{ work: ImageData; stroke: ReturnType<typeof createStroke>; pts: { x: number; y: number }[]; radius: number } | null>(null);
   const brushCursor = useRef<HTMLDivElement>(null);
   const brushOpts = (radius: number) => ({ radius, strength: brushStrength / 100, hardness: brushHardness / 100 });
+  const [paintColor, setPaintColor] = useState('#E11D48');
+  const isPaint = retouch === 'paint' || retouch === 'erase';
+  const strokeLike = retouch === 'heal' || isPaint;
+  // Pro: selection shape tool, live marquee, filter and overlay state.
+  const [selKind, setSelKind] = useState<'rect' | 'ellipse'>('rect');
+  const [marquee, setMarquee] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
+  const overlayHold = useRef(false);
+  const overlayScale = (w: number, h: number) => Math.min(1, 1000 / Math.max(w, h));
+  const showOverlay = (c: HTMLCanvasElement) => {
+    const ov = draftRef.current;
+    if (!ov) return;
+    if (ov.width !== c.width || ov.height !== c.height) { ov.width = c.width; ov.height = c.height; }
+    const ctx = ov.getContext('2d')!;
+    ctx.clearRect(0, 0, ov.width, ov.height);
+    ctx.drawImage(c, 0, 0);
+    ov.style.visibility = 'visible';
+    overlayHold.current = true;
+  };
+  const hideOverlay = () => {
+    overlayHold.current = false;
+    if (draftRef.current) draftRef.current.style.visibility = 'hidden';
+  };
   // Shows the painted area live, with the current adjustments on top.
   const paintRegion = (r: { x0: number; y0: number; x1: number; y1: number }) => {
     const st = strokeRef.current, d = displayRef.current;
@@ -586,7 +676,17 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
       gesture.current = { kind: 'crop', handle, start: toBase(e.clientX, e.clientY), box: { ...box } };
       return;
     }
-    if (tool === 'retouch' && base && retouch === 'heal') {
+    if (tool === 'move' && layers && target) {
+      gesture.current = { kind: 'move', start: toBase(e.clientX, e.clientY), dx: 0, dy: 0 };
+      return;
+    }
+    if (tool === 'select' && base) {
+      const p = toBase(e.clientX, e.clientY);
+      gesture.current = { kind: 'marquee', start: p };
+      setMarquee({ x: p.x, y: p.y, w: 0, h: 0 });
+      return;
+    }
+    if (tool === 'retouch' && base && strokeLike) {
       gesture.current = { kind: 'heal' };
       setHealPts([toBase(e.clientX, e.clientY)]);
       return;
@@ -623,6 +723,18 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
     } else if (g.kind === 'heal') {
       const p = toBase(e.clientX, e.clientY);
       setHealPts((pts) => [...pts, p]);
+    } else if (g.kind === 'move' && layers && target) {
+      const p = toBase(e.clientX, e.clientY);
+      g.dx = p.x - g.start.x;
+      g.dy = p.y - g.start.y;
+      const k = overlayScale(target.width, target.height);
+      showOverlay(composite(layers, k, { index: activeIdx, canvas: target, dx: g.dx, dy: g.dy }));
+    } else if (g.kind === 'marquee' && base) {
+      const p = toBase(e.clientX, e.clientY);
+      let w = p.x - g.start.x, h = p.y - g.start.y;
+      if (e.shiftKey) { const m = Math.max(Math.abs(w), Math.abs(h)); w = Math.sign(w || 1) * m; h = Math.sign(h || 1) * m; }
+      const x = Math.max(0, Math.min(g.start.x, g.start.x + w)), y = Math.max(0, Math.min(g.start.y, g.start.y + h));
+      setMarquee({ x, y, w: Math.min(base.width, Math.max(g.start.x, g.start.x + w)) - x, h: Math.min(base.height, Math.max(g.start.y, g.start.y + h)) - y });
     } else if (g.kind === 'brush' && strokeRef.current && preview) {
       const b = toBase(e.clientX, e.clientY);
       const p = { x: b.x * preview.k, y: b.y * preview.k };
@@ -672,19 +784,35 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
       const r = healSize / 2 / basePxToScreen;
       const pts = healPts;
       setHealPts([]);
-      run('Heal', () => spotHeal(base, pts, r));
+      if (isPaint) {
+        run(retouch === 'erase' ? 'Erase' : 'Paint', () => paintStroke(target!, pts, { size: r * 2, color: paintColor, opacity: brushStrength / 100, hardness: brushHardness / 100, erase: retouch === 'erase', mask: sel?.mask }));
+      } else run('Heal', () => spotHeal(target!, pts, r));
+    }
+    if (g?.kind === 'move') {
+      const dx = Math.round(g.dx), dy = Math.round(g.dy);
+      if ((dx || dy) && target) {
+        const moved = translate(target, dx, dy);
+        push({ base: moved, label: 'Move' });
+      }
+      setTimeout(hideOverlay, 60);
+    }
+    if (g?.kind === 'marquee' && base) {
+      const m = marquee;
+      setMarquee(null);
+      if (m && m.w > 3 && m.h > 3) setSel({ mask: maskShape(base.width, base.height, selKind, m.x, m.y, m.w, m.h), shape: { kind: selKind, ...m } });
+      else setSel(null);
     }
     if (g?.kind === 'brush' && base && preview && strokeRef.current) {
       const st = strokeRef.current;
       strokeRef.current = null;
       const kind = retouch as BrushKind;
       const label = RETOUCH.find((x) => x.id === kind)?.label || 'Retouch';
-      if (preview.k === 1) {
+      if (preview.k === 1 && layers?.length === 1) {
         // The preview is the full picture: keep what was painted.
         const c = makeCanvas(st.work.width, st.work.height);
         c.getContext('2d')!.putImageData(st.work, 0, 0);
         push({ base: c, label });
-      } else run(label, () => replayStroke(base, kind, brushOpts(st.radius), st.pts, 1 / preview.k));
+      } else run(label, () => replayStroke(target!, kind, brushOpts(st.radius), st.pts, 1 / preview.k));
     }
   };
   const onWheel = (e: React.WheelEvent) => {
@@ -693,8 +821,131 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
     setZoom((z) => Math.min(8, Math.max(0.5, z * f)));
   };
 
+  // ---------------- Pro: layers, selection, filters
+  const setLayers = (ls: Layer[], active: number, label: string) => push({ layers: ls, active, label });
+  const insertAbove = (layer: Layer, label: string) => {
+    if (!layers) return;
+    const ls = [...layers];
+    ls.splice(activeIdx + 1, 0, layer);
+    setLayers(ls, activeIdx + 1, label);
+  };
+  const layerOps = {
+    select: (i: number) => layers && i !== activeIdx && setHistory((h) => {
+      // Picking a layer isn't an edit: update the current snapshot in place.
+      const list = [...h.list];
+      list[h.index] = { ...list[h.index], active: i };
+      return { ...h, list };
+    }),
+    add: () => target && insertAbove(makeLayer(blankLike(target), `Layer ${(layers?.length || 0) + 1}`), 'New layer'),
+    duplicate: () => layers && insertAbove({ ...layers[activeIdx], id: makeLayer(target!, '').id, name: `${layers[activeIdx].name} copy` }, 'Duplicate layer'),
+    remove: () => {
+      if (!layers || layers.length < 2) return;
+      setLayers(layers.filter((_, i) => i !== activeIdx), Math.max(0, activeIdx - 1), 'Delete layer');
+    },
+    move: (dir: 1 | -1) => {
+      if (!layers) return;
+      const j = activeIdx + dir;
+      if (j < 0 || j >= layers.length) return;
+      const ls = [...layers];
+      [ls[activeIdx], ls[j]] = [ls[j], ls[activeIdx]];
+      setLayers(ls, j, dir > 0 ? 'Move layer up' : 'Move layer down');
+    },
+    mergeDown: () => {
+      if (!layers || activeIdx < 1) return;
+      const ls = [...layers];
+      ls.splice(activeIdx - 1, 2, mergeDown(layers[activeIdx - 1], layers[activeIdx]));
+      setLayers(ls, activeIdx - 1, 'Merge down');
+    },
+    flatten: () => {
+      if (!layers || layers.length < 2) return;
+      setLayers([makeLayer(composite(layers), 'Background')], 0, 'Flatten');
+    },
+    patch: (i: number, p: Partial<Layer>, label: string) => {
+      if (!layers) return;
+      setLayers(layers.map((l, k) => (k === i ? { ...l, ...p } : l)), activeIdx, label);
+    },
+  };
+  const selOps = {
+    all: () => base && setSel({ mask: maskAll(base.width, base.height), shape: { kind: 'rect', x: 0, y: 0, w: base.width, h: base.height } }),
+    none: () => setSel(null),
+    invert: () => sel && setSel({ mask: invertMask(sel.mask), shape: sel.shape, inverted: !sel.inverted }),
+    subject: () => { setBgMode('subject'); setBgOpen(true); },
+    clear: () => sel && target && push({ base: clearMasked(target, sel.mask), label: 'Delete selection' }),
+    fill: (color: string) => target && push({ base: fillMasked(target, sel?.mask || null, color), label: sel ? 'Fill selection' : 'Fill layer' }),
+    toLayer: () => target && insertAbove(makeLayer(sel ? copyMasked(target, sel.mask) : target, sel ? 'Selection copy' : `${layers![activeIdx].name} copy`), 'Layer via copy'),
+  };
+  const fileRef = useRef<HTMLInputElement>(null);
+  const placeRef = useRef<HTMLInputElement>(null);
+  const readFile = (file: File) => new Promise<string>((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result as string); r.onerror = rej; r.readAsDataURL(file); });
+  const openFile = async (file: File) => {
+    try {
+      const c = await loadSource(await readFile(file));
+      firstPreviewRef.current = null;
+      setHistory({ list: [{ layers: [makeLayer(c, 'Background')], active: 0, adjust: NO_ADJUST, dpi, label: 'Open' }], index: 0 });
+      setSel(null);
+      setZoom(1);
+      setPan({ x: 0, y: 0 });
+    } catch {
+      setNotice('That file couldn’t be opened. Try a JPG, PNG or WebP.');
+    }
+  };
+  const placeFile = async (file: File) => {
+    if (!base) return;
+    try {
+      const c = await loadSource(await readFile(file));
+      insertAbove(makeLayer(placeImage(c, base.width, base.height), file.name.replace(/\.[^.]+$/, '').slice(0, 40) || 'Image'), 'Place image');
+      setTool('move');
+    } catch {
+      setNotice('That picture couldn’t be added.');
+    }
+  };
+  // Filters: live preview on a small copy, applied at full size.
+  const [filterId, setFilterId] = useState<FilterId>('blur');
+  const fdef = FILTERS.find((x) => x.id === filterId)!;
+  const [filterAmt, setFilterAmt] = useState(fdef.amount?.def ?? 0);
+  const [filterAngle, setFilterAngle] = useState(0);
+  const pickFilter = (id: FilterId) => {
+    setFilterId(id);
+    setFilterAmt(FILTERS.find((x) => x.id === id)!.amount?.def ?? 0);
+    setTool('filter');
+  };
+  useEffect(() => {
+    if (tool !== 'filter' || !layers || !target) { if (overlayHold.current && tool !== 'move') hideOverlay(); return; }
+    const t = setTimeout(() => {
+      const k = overlayScale(target.width, target.height);
+      const small = k < 1 ? resample(target, target.width * k, target.height * k) : target;
+      let out = applyFilter(small, filterId, filterAmt, filterAngle, k);
+      if (sel) out = blendMasked(small, out, k < 1 ? resample(sel.mask, small.width, small.height) : sel.mask);
+      showOverlay(composite(layers, k, { index: activeIdx, canvas: out }));
+    }, 90);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tool, filterId, filterAmt, filterAngle, layers, activeIdx, sel]);
+  const applyFilterNow = () => {
+    if (!target) return;
+    const t0 = target, s0 = sel;
+    run(fdef.label, () => {
+      const out = applyFilter(t0, filterId, filterAmt, filterAngle, 1);
+      return s0 ? blendMasked(t0, out, s0.mask) : out;
+    }).then(() => setTool('adjust'));
+  };
+  // Dimmed view of what is NOT selected, so the selection is easy to see.
+  const selOverlay = useMemo(() => {
+    if (!sel || !preview) return null;
+    const c = makeCanvas(preview.canvas.width, preview.canvas.height);
+    const ctx = c.getContext('2d')!;
+    ctx.fillStyle = 'rgba(15,23,42,0.45)';
+    ctx.fillRect(0, 0, c.width, c.height);
+    ctx.globalCompositeOperation = 'destination-out';
+    ctx.drawImage(sel.mask, 0, 0, c.width, c.height);
+    return c.toDataURL();
+  }, [sel, preview]);
+  const [showLayers, setShowLayers] = useState(true);
+  const [showHistory, setShowHistory] = useState(false);
+
   // ---------------- background removal
   const [bgOpen, setBgOpen] = useState(false);
+  const [bgMode, setBgMode] = useState<'remove' | 'subject'>('remove');
   const transparent = useMemo(() => (base ? hasTransparency(base) : false), [base]);
 
   // ---------------- resize state
@@ -721,7 +972,7 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
 
   const dispW = preview ? preview.canvas.width * viewScale : 0;
   const dispH = preview ? preview.canvas.height * viewScale : 0;
-  const tools = TOOLS.filter((t) => !(embedded && t.standaloneOnly) && (pro || !t.proOnly));
+  const tools = TOOLS.filter((t) => !(embedded && t.standaloneOnly) && (pro || !t.proOnly)).sort((a, b) => (pro ? PRO_ORDER.indexOf(a.id) - PRO_ORDER.indexOf(b.id) : 0));
 
   const panel = (() => {
     if (!base) return null;
@@ -841,10 +1092,10 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
             <Section title="Straighten & rotate">
               <Range def={{ key: 'exposure', label: 'Straighten', min: -45, max: 45 }} value={cropAngle} onChange={setCropAngle} onCommit={() => {}} />
               <div className="flex flex-wrap gap-1.5">
-                <button className={btnGhost} onClick={() => run('Rotate left', () => rotate90(base, -1))}><RotateCcw size={15} /> Left</button>
-                <button className={btnGhost} onClick={() => run('Rotate right', () => rotate90(base, 1))}><RotateCw size={15} /> Right</button>
-                <button className={btnGhost} onClick={() => run('Flip', () => flip(base, 'h'))} aria-label="Flip horizontally"><FlipHorizontal2 size={15} /></button>
-                <button className={btnGhost} onClick={() => run('Flip', () => flip(base, 'v'))} aria-label="Flip vertically"><FlipVertical2 size={15} /></button>
+                <button className={btnGhost} onClick={() => runAll('Rotate left', (c) => rotate90(c, -1))}><RotateCcw size={15} /> Left</button>
+                <button className={btnGhost} onClick={() => runAll('Rotate right', (c) => rotate90(c, 1))}><RotateCw size={15} /> Right</button>
+                <button className={btnGhost} onClick={() => runAll('Flip', (c) => flip(c, 'h'))} aria-label="Flip horizontally"><FlipHorizontal2 size={15} /></button>
+                <button className={btnGhost} onClick={() => runAll('Flip', (c) => flip(c, 'v'))} aria-label="Flip vertically"><FlipVertical2 size={15} /></button>
               </div>
             </Section>
             <div className="py-4 flex gap-2">
@@ -865,10 +1116,10 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
               {!transparent && <p className="text-[12px] text-mt-faint">Remove the background first, then pick a colour to put behind it.</p>}
               <div className={cx('flex flex-wrap gap-2', !transparent && 'opacity-40 pointer-events-none')}>
                 {['#FFFFFF', '#F4F4F5', '#111111', '#DCEBFF', '#FCE7EF', '#E7F6EC', '#FFF3D6', '#2B3A67'].map((c) => (
-                  <button key={c} aria-label={`Fill ${c}`} onClick={() => run('Background colour', () => fillBackground(base, c))} className="w-9 h-9 rounded-full border border-mt-border shadow-sm" style={{ background: c }} />
+                  <button key={c} aria-label={`Fill ${c}`} onClick={() => run('Background colour', () => fillBackground(target!, c))} className="w-9 h-9 rounded-full border border-mt-border shadow-sm" style={{ background: c }} />
                 ))}
                 <label className="w-9 h-9 rounded-full border border-dashed border-mt-border inline-flex items-center justify-center cursor-pointer text-[10px] text-mt-muted" title="Any colour">
-                  +<input type="color" className="sr-only" onChange={(e) => run('Background colour', () => fillBackground(base, e.target.value))} />
+                  +<input type="color" className="sr-only" onChange={(e) => run('Background colour', () => fillBackground(target!, e.target.value))} />
                 </label>
               </div>
               <p className="text-[12px] text-mt-muted">Leave it see-through to use the cut-out in a design. Export as PNG or TIFF to keep the transparency.</p>
@@ -887,9 +1138,20 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
                 ))}
               </div>
               <p className="text-[12px] text-mt-muted">{cur.hint}</p>
+              {retouch === 'paint' && (
+                <div className="flex flex-wrap items-center gap-2">
+                  {['#111111', '#FFFFFF', '#E11D48', '#F59E0B', '#16A34A', '#2563EB', '#7C3AED'].map((c) => (
+                    <button key={c} aria-label={`Colour ${c}`} onClick={() => setPaintColor(c)} className={cx('w-7 h-7 rounded-full border shadow-sm', paintColor === c ? 'ring-2 ring-offset-2 ring-[#3B82C4] border-transparent' : 'border-mt-border')} style={{ background: c }} />
+                  ))}
+                  <label className="w-7 h-7 rounded-full border border-dashed border-mt-border inline-flex items-center justify-center cursor-pointer text-[10px] text-mt-muted" title="Any colour" style={{ background: paintColor }}>
+                    <input type="color" className="sr-only" value={paintColor} onChange={(e) => setPaintColor(e.target.value)} />
+                  </label>
+                </div>
+              )}
+              {isPaint && layers && <p className="text-[12px] text-mt-faint">Painting on “{layers[activeIdx].name}”{sel ? ', inside the selection' : ''}. Tip: add a new empty layer first so you can change it later.</p>}
               <Range def={{ key: 'exposure', label: 'Brush size', min: 8, max: 240 }} value={healSize} onChange={setHealSize} onCommit={() => {}} />
               {retouch !== 'heal' && (
-                <Range def={{ key: 'exposure', label: 'Strength', min: 5, max: 100 }} value={brushStrength} onChange={setBrushStrength} onCommit={() => {}} />
+                <Range def={{ key: 'exposure', label: isPaint ? 'Opacity' : 'Strength', min: 5, max: 100 }} value={brushStrength} onChange={setBrushStrength} onCommit={() => {}} />
               )}
               {pro && retouch !== 'heal' && (
                 <Range def={{ key: 'exposure', label: 'Hardness', min: 0, max: 95 }} value={brushHardness} onChange={setBrushHardness} onCommit={() => {}} />
@@ -952,7 +1214,7 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
                   // Only the print resolution changes.
                   const nd = Math.round(base.width / (fromPx(toPx(parseFloat(rz.w) || 0, rz.unit, d), 'in', d) || 1));
                   push({ dpi: rz.unit === 'px' ? Math.round(d) : Math.max(1, nd), label: 'Print size' });
-                } else run('Resize', () => resample(base, wpx, hpx), { dpi: Math.round(d) });
+                } else runAll('Resize', (c) => resample(c, wpx, hpx), { dpi: Math.round(d) });
               }}
             >
               <Maximize2 size={15} /> Apply size
@@ -960,6 +1222,64 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
           </Section>
         );
       }
+      case 'move':
+        return (
+          <Section title="Move">
+            <p className="text-[12px] text-mt-muted">Drag on the picture to move the selected layer <b className="text-mt-ink">({layers?.[activeIdx]?.name})</b>. Pick another layer in the Layers panel below.</p>
+            <div className="flex flex-wrap gap-1.5">
+              <button className={btnGhost} onClick={() => placeRef.current?.click()}>Add image layer</button>
+              <button className={btnGhost} onClick={() => layerOps.duplicate()}>Duplicate layer</button>
+            </div>
+            <p className="text-[12px] text-mt-faint">Tip: add a logo or second photo as a layer, move it into place, then change its opacity or blend mode.</p>
+          </Section>
+        );
+      case 'select':
+        return (
+          <>
+            <Section title="Selection">
+              <div className="flex flex-wrap gap-1.5">
+                <button className={chip(selKind === 'rect')} onClick={() => setSelKind('rect')}>Rectangle</button>
+                <button className={chip(selKind === 'ellipse')} onClick={() => setSelKind('ellipse')}>Ellipse</button>
+                <button className={chip(false)} onClick={selOps.subject}><Wand2 size={13} className="inline -mt-0.5 mr-1" />Subject</button>
+              </div>
+              <p className="text-[12px] text-mt-muted">Drag on the picture to select an area (hold Shift for a perfect square or circle). <b className="text-mt-ink">Subject</b> finds the person or product for you.</p>
+              <div className="flex flex-wrap gap-1.5">
+                <button className={chip(false)} onClick={selOps.all}>Select all</button>
+                <button className={chip(false)} onClick={selOps.invert} disabled={!sel}>Invert</button>
+                <button className={chip(false)} onClick={selOps.none} disabled={!sel}>Deselect</button>
+              </div>
+            </Section>
+            <Section title="With the selection">
+              {!sel && <p className="text-[12px] text-mt-faint">Make a selection first.</p>}
+              <div className={cx('flex flex-col gap-2', !sel && 'opacity-40 pointer-events-none')}>
+                <button className={btnGhost} onClick={selOps.toLayer}>Copy to new layer</button>
+                <button className={btnGhost} onClick={selOps.clear}>Delete (make see-through)</button>
+                <label className={cx(btnGhost, 'cursor-pointer')}>Fill with colour…<input type="color" className="sr-only" onChange={(e) => selOps.fill(e.target.value)} /></label>
+                <button className={btnGhost} onClick={() => setTool('adjust')}>Adjust only this area → Filters / Retouch</button>
+              </div>
+              <p className="text-[12px] text-mt-faint">Filters, paint and eraser only change the selected area.</p>
+            </Section>
+          </>
+        );
+      case 'filter':
+        return (
+          <>
+            <Section title="Filters">
+              <div className="grid grid-cols-2 gap-1.5">
+                {FILTERS.map((x) => (
+                  <button key={x.id} onClick={() => pickFilter(x.id)} className={cx('h-9 rounded-lg text-[12px] font-medium border text-left px-2.5', filterId === x.id ? 'bg-mt-primary text-mt-onprimary border-transparent' : 'border-mt-border hover:bg-mt-surface2')}>{x.label}</button>
+                ))}
+              </div>
+              <p className="text-[12px] text-mt-muted">{fdef.hint} {sel ? 'Only the selected area changes.' : `Applies to the layer “${layers?.[activeIdx]?.name}”.`}</p>
+              {fdef.amount && <Range def={{ key: 'exposure', label: fdef.amount.label, min: fdef.amount.min, max: fdef.amount.max }} value={filterAmt} onChange={setFilterAmt} onCommit={() => {}} />}
+              {fdef.angle && <Range def={{ key: 'exposure', label: 'Angle', min: -90, max: 90 }} value={filterAngle} onChange={setFilterAngle} onCommit={() => {}} />}
+            </Section>
+            <div className="py-4 flex gap-2">
+              <button className={btnGhost} onClick={() => setTool('adjust')}>Cancel</button>
+              <button className={cx(btnPrimary, 'flex-1')} onClick={applyFilterNow}><Check size={15} /> Apply {fdef.label}</button>
+            </div>
+          </>
+        );
       case 'export': {
         const info = FORMAT_INFO[fmt];
         const cmykOk = info.cmyk;
@@ -1022,7 +1342,85 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
     }
   })();
 
-  const healCursor = tool === 'retouch';
+  const healCursor = tool === 'retouch' || tool === 'select';
+  const downloadPng = async () => {
+    const out = renderResult();
+    if (!out) return;
+    const blob = await new Promise<Blob | null>((r) => out.toBlob(r, 'image/png'));
+    if (blob) downloadBlob(blob, `${(props.name || 'photo').replace(/[\\/:*?"<>|]+/g, '-')}.png`);
+  };
+  const retouchWith = (k: RetouchKind) => { setRetouch(k); setTool('retouch'); };
+  const hasSel = !!sel, multi = (layers?.length || 0) > 1;
+  const menus: Menu[] = !pro ? [] : [
+    { label: 'File', items: [
+      ...(!embedded ? [{ label: 'Open picture…', shortcut: 'Ctrl O', onClick: () => fileRef.current?.click() }] : []),
+      { label: 'Place picture as layer…', onClick: () => placeRef.current?.click() },
+      { sep: true },
+      ...(embedded
+        ? [{ label: 'Apply to design', shortcut: '', onClick: doApply }, { label: 'Cancel', onClick: () => onCancel?.() }]
+        : [{ label: 'Export…', shortcut: 'Ctrl Shift E', onClick: () => setTool('export') }, { label: 'Quick download (PNG)', onClick: downloadPng }]),
+    ] },
+    { label: 'Edit', items: [
+      { label: `Undo ${snap?.label && history.index > 0 ? snap.label : ''}`.trim(), shortcut: 'Ctrl Z', onClick: undo, disabled: history.index <= 0 },
+      { label: 'Redo', shortcut: 'Ctrl Shift Z', onClick: redo, disabled: history.index >= history.list.length - 1 },
+      { sep: true },
+      { label: 'Copy to new layer', shortcut: 'Ctrl J', onClick: selOps.toLayer },
+      { label: 'Delete selection', shortcut: 'Del', onClick: selOps.clear, disabled: !hasSel },
+      { label: 'Fill with white', onClick: () => selOps.fill('#FFFFFF') },
+      { label: 'Fill with black', onClick: () => selOps.fill('#111111') },
+      { sep: true },
+      { label: 'Paint brush', shortcut: 'B', onClick: () => retouchWith('paint') },
+      { label: 'Eraser', shortcut: 'E', onClick: () => retouchWith('erase') },
+      { label: 'Heal brush', shortcut: 'J', onClick: () => retouchWith('heal') },
+    ] },
+    { label: 'Image', items: [
+      { label: 'Auto enhance', onClick: () => { setTool('adjust'); runAuto(); } },
+      { label: 'Adjustments…', onClick: () => setTool('adjust') },
+      { label: 'Levels, curves & colour…', shortcut: 'Ctrl L', onClick: () => setTool('color') },
+      { label: 'Looks…', onClick: () => setTool('looks') },
+      { sep: true },
+      { label: 'Crop & straighten…', shortcut: 'C', onClick: () => setTool('crop') },
+      { label: 'Image size…', shortcut: 'Ctrl Alt I', onClick: () => setTool('resize') },
+      { label: 'Rotate 90° left', onClick: () => runAll('Rotate left', (c) => rotate90(c, -1)) },
+      { label: 'Rotate 90° right', onClick: () => runAll('Rotate right', (c) => rotate90(c, 1)) },
+      { label: 'Flip horizontal', onClick: () => runAll('Flip', (c) => flip(c, 'h')) },
+      { label: 'Flip vertical', onClick: () => runAll('Flip', (c) => flip(c, 'v')) },
+      { sep: true },
+      { label: 'Remove background…', onClick: () => { setBgMode('remove'); setBgOpen(true); } },
+    ] },
+    { label: 'Layer', items: [
+      { label: 'New layer', shortcut: 'Ctrl Shift N', onClick: layerOps.add },
+      { label: 'Place picture as layer…', onClick: () => placeRef.current?.click() },
+      { label: 'Duplicate layer', onClick: layerOps.duplicate },
+      { label: 'Delete layer', onClick: layerOps.remove, disabled: !multi },
+      { sep: true },
+      { label: 'Bring forward', shortcut: 'Ctrl ]', onClick: () => layerOps.move(1), disabled: !layers || activeIdx >= layers.length - 1 },
+      { label: 'Send backward', shortcut: 'Ctrl [', onClick: () => layerOps.move(-1), disabled: activeIdx <= 0 },
+      { label: 'Merge down', shortcut: 'Ctrl E', onClick: layerOps.mergeDown, disabled: activeIdx <= 0 },
+      { label: 'Flatten image', onClick: layerOps.flatten, disabled: !multi },
+    ] },
+    { label: 'Select', items: [
+      { label: 'All', shortcut: 'Ctrl A', onClick: selOps.all },
+      { label: 'Deselect', shortcut: 'Ctrl D', onClick: selOps.none, disabled: !hasSel },
+      { label: 'Inverse', shortcut: 'Ctrl Shift I', onClick: selOps.invert, disabled: !hasSel },
+      { sep: true },
+      { label: 'Rectangle', shortcut: 'M', onClick: () => { setSelKind('rect'); setTool('select'); } },
+      { label: 'Ellipse', onClick: () => { setSelKind('ellipse'); setTool('select'); } },
+      { label: 'Subject (person / product)', onClick: selOps.subject },
+    ] },
+    { label: 'Filter', items: FILTERS.map((x) => ({ label: `${x.label}${x.amount ? '…' : ''}`, onClick: () => pickFilter(x.id) })) },
+    { label: 'View', items: [
+      { label: 'Zoom in', shortcut: 'Ctrl +', onClick: () => setZoom((z) => Math.min(8, z * 1.25)) },
+      { label: 'Zoom out', shortcut: 'Ctrl −', onClick: () => setZoom((z) => Math.max(0.5, z / 1.25)) },
+      { label: 'Fit on screen', shortcut: 'Ctrl 0', onClick: () => { setZoom(1); setPan({ x: 0, y: 0 }); } },
+      { sep: true },
+      { label: 'Print preview (CMYK)', checked: proof, onClick: () => setProof((p) => !p) },
+    ] },
+    { label: 'Window', items: [
+      { label: 'Layers', checked: showLayers, onClick: () => setShowLayers((v) => !v) },
+      { label: 'History', checked: showHistory, onClick: () => setShowHistory((v) => !v) },
+    ] },
+  ];
   return (
     <div className="h-full w-full flex flex-col bg-mt-bg text-mt-ink min-h-0">
       {/* top bar */}
@@ -1071,6 +1469,7 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
         </div>
       </div>
 
+      {pro && <ProMenuBar menus={menus} />}
       <div className="flex-1 min-h-0 flex flex-col lg:flex-row">
         {/* tool rail */}
         <nav className="order-3 lg:order-1 shrink-0 lg:w-[84px] border-t lg:border-t-0 lg:border-r border-mt-border bg-mt-surface flex lg:flex-col overflow-x-auto mt-scroll" aria-label="Tools">
@@ -1081,7 +1480,7 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
               <button
                 key={t.id}
                 onClick={() => setTool(t.id)}
-                className={cx('shrink-0 min-w-[74px] lg:min-w-0 h-16 lg:h-[72px] flex flex-col items-center justify-center gap-1 text-[11px] font-medium transition-colors', on ? 'text-mt-ink' : 'text-mt-muted hover:text-mt-ink')}
+                className={cx('shrink-0 min-w-[74px] lg:min-w-0 h-16 flex', pro ? 'lg:h-[58px]' : 'lg:h-[72px]', 'flex flex-col items-center justify-center gap-1 text-[11px] font-medium transition-colors', on ? 'text-mt-ink' : 'text-mt-muted hover:text-mt-ink')}
                 aria-pressed={on}
               >
                 <span className={cx('w-10 h-8 rounded-xl inline-flex items-center justify-center', on ? 'bg-mt-primary text-mt-onprimary' : '')}><I size={17} /></span>
@@ -1094,7 +1493,7 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
         {/* stage */}
         <div
           ref={stageRef}
-          className={cx('order-1 lg:order-2 relative flex-1 min-h-[42vh] overflow-hidden touch-none select-none', 'bg-[repeating-conic-gradient(rgba(127,127,127,0.10)_0_25%,transparent_0_50%)] bg-[length:22px_22px]', healCursor ? 'cursor-crosshair' : tool === 'crop' ? 'cursor-default' : zoom > 1 ? 'cursor-grab' : '')}
+          className={cx('order-1 lg:order-2 relative flex-1 min-h-[42vh] overflow-hidden touch-none select-none', 'bg-[repeating-conic-gradient(rgba(127,127,127,0.10)_0_25%,transparent_0_50%)] bg-[length:22px_22px]', healCursor ? 'cursor-crosshair' : tool === 'crop' ? 'cursor-default' : tool === 'move' ? 'cursor-move' : zoom > 1 ? 'cursor-grab' : '')}
           onPointerDown={onStageDown}
           onPointerMove={onStageMove}
           onPointerUp={onStageUp}
@@ -1111,9 +1510,21 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
               {tool === 'crop' && box && base && (
                 <CropOverlay box={box} base={base} />
               )}
+              {selOverlay && <img src={selOverlay} alt="" aria-hidden className="absolute inset-0 w-full h-full pointer-events-none" />}
+              {base && (sel?.shape || marquee) && (
+                <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox={`0 0 ${base.width} ${base.height}`} preserveAspectRatio="none">
+                  {[sel?.shape && !sel.inverted ? sel.shape : null, marquee ? { kind: selKind, ...marquee } : null].filter(Boolean).map((sh: any, i) => {
+                    const common = { fill: 'none', vectorEffect: 'non-scaling-stroke' as const, strokeWidth: 1.5 };
+                    const el = (stroke: string, dash?: string) => sh.kind === 'ellipse'
+                      ? <ellipse cx={sh.x + sh.w / 2} cy={sh.y + sh.h / 2} rx={sh.w / 2} ry={sh.h / 2} stroke={stroke} strokeDasharray={dash} {...common} className={dash ? 'mt-ants' : ''} />
+                      : <rect x={sh.x} y={sh.y} width={sh.w} height={sh.h} stroke={stroke} strokeDasharray={dash} {...common} className={dash ? 'mt-ants' : ''} />;
+                    return <g key={i}>{el('#fff')}{el('#111', '5 5')}</g>;
+                  })}
+                </svg>
+              )}
               {tool === 'retouch' && healPts.length > 0 && base && (
                 <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox={`0 0 ${base.width} ${base.height}`} preserveAspectRatio="none">
-                  <polyline points={healPts.map((p) => `${p.x},${p.y}`).join(' ')} fill="none" stroke="rgba(242,112,143,0.55)" strokeWidth={healSize / basePxToScreen} strokeLinecap="round" strokeLinejoin="round" />
+                  <polyline points={healPts.map((p) => `${p.x},${p.y}`).join(' ')} fill="none" stroke={retouch === 'paint' ? paintColor : retouch === 'erase' ? 'rgba(255,255,255,0.7)' : 'rgba(242,112,143,0.55)'} strokeOpacity={retouch === 'paint' ? brushStrength / 100 : 1} strokeWidth={healSize / basePxToScreen} strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               )}
             </div>
@@ -1138,20 +1549,46 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
           onPointerDownCapture={(e) => { if ((e.target as HTMLElement).closest?.('[data-live]')) setDragging(true); }}
           className="order-2 lg:order-3 shrink-0 lg:w-[340px] max-h-[42vh] lg:max-h-none overflow-y-auto border-t lg:border-t-0 lg:border-l border-mt-border bg-mt-surface px-4">
           {panel}
+          {pro && layers && showLayers && (
+            <LayersPanel
+              layers={layers}
+              active={activeIdx}
+              onSelect={(i) => layerOps.select(i)}
+              onToggle={(i) => layerOps.patch(i, { visible: !layers[i].visible }, layers[i].visible ? 'Hide layer' : 'Show layer')}
+              onRename={(i, name) => layerOps.patch(i, { name }, 'Rename layer')}
+              onOpacity={(i, v) => layerOps.patch(i, { opacity: v }, 'Layer opacity')}
+              onBlend={(i, b) => layerOps.patch(i, { blend: b }, 'Blend mode')}
+              onAdd={layerOps.add}
+              onPlace={() => placeRef.current?.click()}
+              onDuplicate={layerOps.duplicate}
+              onDelete={layerOps.remove}
+              onUp={() => layerOps.move(1)}
+              onDown={() => layerOps.move(-1)}
+              onMerge={layerOps.mergeDown}
+              onFlatten={layerOps.flatten}
+            />
+          )}
+          {pro && showHistory && <HistoryPanel labels={history.list.map((h) => h.label)} index={history.index} onJump={(i) => setHistory((h) => ({ ...h, index: i }))} />}
         </aside>
       </div>
 
-      {bgOpen && base && (
+      {bgOpen && target && (
         <BgRemoveDialog
-          img={{ getElement: () => base, _originalElement: base }}
-          maxSize={Math.max(base.width, base.height)}
-          onClose={() => setBgOpen(false)}
+          img={{ getElement: () => target, _originalElement: target }}
+          maxSize={Math.max(target.width, target.height)}
+          onClose={() => { setBgOpen(false); setBgMode('remove'); }}
           onApply={async (dataUrl) => {
             const c = await loadSource(dataUrl);
-            push({ base: c, label: 'Remove background' });
+            if (bgMode === 'subject') {
+              setSel({ mask: maskFromAlpha(c, target.width, target.height), shape: null });
+              setTool('select');
+            } else push({ base: c, label: 'Remove background' });
+            setBgMode('remove');
           }}
         />
       )}
+      <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) openFile(f); e.target.value = ''; }} />
+      <input ref={placeRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) placeFile(f); e.target.value = ''; }} />
     </div>
   );
 });
