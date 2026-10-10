@@ -3,11 +3,13 @@
 // Translate a design: pick a language, and every piece of text (in the
 // selection, this page, or the whole design) is rewritten in it. Fonts
 // that don't have the language's letters are swapped for one that does,
-// and right-to-left languages are right-aligned. One undo puts it back.
+// in the same style (script stays script, serif stays serif, bold stays
+// bold), and right-to-left languages are right-aligned. One undo puts it
+// back.
 
 import { useMemo, useState } from 'react';
 import { Languages, Loader2, Search, X } from 'lucide-react';
-import { LANGUAGES } from '@/lib/i18n/languages';
+import { LANGUAGES, SCRIPT_FONTS, CHECK_COVERAGE } from '@/lib/i18n/languages';
 
 export type TranslateScope = 'selection' | 'page' | 'all';
 
@@ -106,11 +108,14 @@ export function TranslateDialog({
               ))}
             </div>
           </section>
-          {lang?.font && (
+          {lang && SCRIPT_FONTS[lang.code] && (
             <label className="flex items-start gap-3 cursor-pointer">
               <input type="checkbox" checked={switchFonts} onChange={(e) => setSwitchFonts(e.target.checked)} className="mt-1 accent-[#3B82C4]" />
               <span className="text-[13px] leading-snug">
-                Use a font made for {lang.name} <span className="text-mt-muted">({lang.font}), so every letter shows and prints correctly.</span>
+                {CHECK_COVERAGE.has(lang.code) ? `Swap fonts that don’t have ${lang.name} letters` : `Use fonts made for ${lang.name}`}
+                <span className="text-mt-muted">
+                  {' '}— each text keeps its style: script, display, serif or sans ({Array.from(new Set(Object.values(SCRIPT_FONTS[lang.code]))).slice(0, 4).join(', ')}), with its bold and italic.
+                </span>
               </span>
             </label>
           )}

@@ -1,5 +1,6 @@
 import { Poppins } from 'next/font/google';
 import './globals.css';
+import { ChunkRecovery } from '@/components/ChunkRecovery';
 
 const poppins = Poppins({
   subsets: ['latin'],
@@ -27,7 +28,10 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className={poppins.className}>{children}</body>
+      <body className={poppins.className}>
+        <ChunkRecovery />
+        {children}
+      </body>
     </html>
   );
 }

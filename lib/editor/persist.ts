@@ -61,6 +61,25 @@ export const PERSIST_PROPS = [
   'lockRotation',
 ];
 
+// A full copy of an object with every app property. Fabric's own clone()
+// can't be used with PERSIST_PROPS: because 'clipPath' is in the list, it
+// hands the LIVE clip object to the copy, whose cache canvas then gets
+// deep-copied into a plain object and every later render throws
+// ("_cacheContext.setTransform is not a function"). Going through JSON
+// serializes the clip properly, so the copy is independent and draws.
+export function cloneWithProps(obj: any): Promise<any> {
+  const F = (globalThis as any).fabric;
+  return new Promise((resolve) => {
+    const data = JSON.parse(JSON.stringify(obj.toObject(PERSIST_PROPS)));
+    F.util.enlivenObjects([data], (list: any[]) => {
+      const c = list[0];
+      // enlivenObjects drops non-fabric props on some types; put them back.
+      if (c) PERSIST_PROPS.forEach((k) => { if (k !== 'clipPath' && data[k] !== undefined && c[k] === undefined) c[k] = data[k]; });
+      resolve(c);
+    }, 'fabric');
+  });
+}
+
 // Temporary on-canvas helpers (tool previews, anchor handles, drafts).
 // They must never reach history, saves, layers, snapping or exports.
 export function isHelperObject(o: any): boolean {
