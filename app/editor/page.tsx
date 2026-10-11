@@ -130,6 +130,7 @@ import type { QuickStart } from '@/components/editor/shell/OnboardingDialog';
 import { TEXT_BASICS, TEXT_STYLES } from '@/lib/editor/catalog';
 import { putDraft, getDraft, deleteDraft, Draft, UNSAVED_KEY } from '@/lib/editor/draftStore';
 import { buildZip, dataUrlToBytes } from '@/lib/editor/zip';
+import { pngEncoder, jpegEncoder, canStreamPng } from '@/lib/export/rasterEncode';
 
 const isOpenVectorPath = (o: any): boolean =>
   !!o && o.isVectorPath && o.type === 'path' && Array.isArray(o.path) && o.path.length > 0 && o.path[o.path.length - 1][0] !== 'Z';
@@ -6065,6 +6066,103 @@ function EditorContent() {
       suppressHistoryRef.current = false;
     }
   };
+  // Same preparation as capturePicture, for exports drawn in strips.
+  const withExportScene = async <T,>(opts: { transparent?: boolean; artboardId?: string; marks?: () => any[] }, fn: () => Promise<T>): Promise<T> => {
+    const canvas = fabricCanvasRef.current;
+    const savedBg = canvas.backgroundColor;
+    const page = opts.transparent && opts.artboardId ? canvas.getObjects().find((o: any) => o.__isArtboard && o.__artboardId === opts.artboardId) : null;
+    const savedFill = page ? page.fill : undefined;
+    let marks: any[] = [];
+    let hidden: any[] = [];
+    suppressHistoryRef.current = true;
+    try {
+      canvas.backgroundColor = opts.transparent ? '' : '#FFFFFF';
+      if (page) page.set('fill', '');
+      marks = opts.marks ? opts.marks() : [];
+      hidden = hideGuidesForExport();
+      return await fn();
+    } finally {
+      restoreGuidesAfterExport(hidden);
+      removeTemporaryMarks(marks);
+      canvas.backgroundColor = savedBg;
+      if (page) page.set('fill', savedFill);
+      canvas.requestRenderAll();
+      suppressHistoryRef.current = false;
+    }
+  };
+  // Pictures bigger than one canvas can hold (phones and iPads stop at
+  // about 16 million pixels) are drawn in strips and written straight
+  // into the file, so they come out at the full size that was asked for.
+  const STRIP_PIXELS = 4_000_000;
+  const MAX_STREAM_PIXELS = 150_000_000; // PNG / JPEG are written strip by strip
+  const MAX_BUFFER_PIXELS = 60_000_000; // TIFF and CMYK need the whole picture in memory
+  const exportSize = (rect: { width: number; height: number }, multiplier: number, cap: number) => {
+    const m = Math.min(multiplier, Math.sqrt(cap / Math.max(1, rect.width * rect.height)));
+    return { m, reduced: m < multiplier - 1e-6, w: Math.max(1, Math.round(rect.width * m)), h: Math.max(1, Math.round(rect.height * m)) };
+  };
+  const drawBand = (rect: { x: number; y: number; width: number; height: number }, m: number, w: number, y0: number, rows: number) => {
+    const canvas = fabricCanvasRef.current;
+    const vt = canvas.viewportTransform;
+    const z = vt[0] || 1;
+    const el: HTMLCanvasElement = canvas.toCanvasElement(m / z, {
+      left: rect.x * z + vt[4],
+      top: (rect.y + y0 / m) * z + vt[5],
+      width: (w / m) * z + 1e-6,
+      height: (rows / m) * z + 1e-6,
+    });
+    const data = el.getContext('2d', { willReadFrequently: true })!.getImageData(0, 0, w, rows).data;
+    el.width = 0;
+    el.height = 0;
+    return data;
+  };
+  const dataUrlToBlob = (u: string) => new Blob([dataUrlToBytes(u) as BlobPart], { type: u.slice(5, u.indexOf(';')) || 'application/octet-stream' });
+  const capturePictureBlob = async (
+    rect: { x: number; y: number; width: number; height: number },
+    opts: { format: 'png' | 'jpeg' | 'webp'; quality?: number; multiplier: number; transparent?: boolean; artboardId?: string; marks?: () => any[] }
+  ): Promise<{ blob: Blob; reduced: boolean; dpi: number }> => {
+    const single = exportSize(rect, opts.multiplier, MAX_EXPORT_PIXELS);
+    const canStream = opts.format === 'jpeg' || (opts.format === 'png' && canStreamPng());
+    if (!single.reduced || !canStream) {
+      const out = capturePicture(rect, opts);
+      return { blob: dataUrlToBlob(out.dataUrl), reduced: out.reduced, dpi: Math.round(single.m * 96) };
+    }
+    const big = exportSize(rect, opts.multiplier, MAX_STREAM_PIXELS);
+    const dpi = Math.round(big.m * 96);
+    return withExportScene(opts, async () => {
+      const enc = opts.format === 'jpeg' ? jpegEncoder(big.w, big.h, { quality: opts.quality ?? 0.92, dpi }) : pngEncoder(big.w, big.h, { alpha: !!opts.transparent, dpi });
+      const band = Math.max(8, Math.floor(STRIP_PIXELS / big.w / 8) * 8);
+      for (let y = 0; y < big.h; y += band) {
+        const rows = Math.min(band, big.h - y);
+        await enc.add(drawBand(rect, big.m, big.w, y, rows), rows);
+      }
+      return { blob: await enc.finish(), reduced: big.reduced, dpi };
+    });
+  };
+  // Raw pixels of a whole page (for TIFF and CMYK files), drawn in strips.
+  const capturePixels = async (
+    rect: { x: number; y: number; width: number; height: number },
+    opts: { multiplier: number; transparent?: boolean; artboardId?: string }
+  ): Promise<{ w: number; h: number; rgba: Uint8ClampedArray; reduced: boolean }> => {
+    const s = exportSize(rect, opts.multiplier, MAX_BUFFER_PIXELS);
+    return withExportScene(opts, async () => {
+      const rgba = new Uint8ClampedArray(s.w * s.h * 4);
+      const band = Math.max(1, Math.floor(STRIP_PIXELS / s.w));
+      for (let y = 0; y < s.h; y += band) {
+        const rows = Math.min(band, s.h - y);
+        rgba.set(drawBand(rect, s.m, s.w, y, rows), y * s.w * 4);
+        await new Promise((r) => setTimeout(r, 0));
+      }
+      return { w: s.w, h: s.h, rgba, reduced: s.reduced };
+    });
+  };
+  const blobDownload = (blob: Blob, name: string) => {
+    const url = URL.createObjectURL(blob);
+    downloadFile(url, name);
+    setTimeout(() => URL.revokeObjectURL(url), 8000);
+  };
+  const reducedNotice = (dpi: number) =>
+    setLocalNotice(`This page is too big for this device at the resolution you picked, so it was saved at ${dpi} DPI — the largest it can make.`);
+
   const exportErrorMessage = (err: any) =>
     err && (err.name === 'SecurityError' || /tainted/i.test(String(err.message)))
       ? 'One of the pictures in this design comes from another website that doesn’t allow downloading it. Replace that picture and try again.'
@@ -6074,18 +6172,18 @@ function EditorContent() {
   // 300 DPI flyer exports at 300 DPI), at least 2x for screen designs.
   const exportMultiplierFor = (ab: ArtboardMeta) => Math.max(2, (ab.print?.dpi || 0) / 96);
 
-  const exportArtboardPNG = (id: string, opts?: { silent?: boolean; scope?: ExportScope }) => {
+  const exportArtboardPNG = async (id: string, opts?: { silent?: boolean; scope?: ExportScope }) => {
     const canvas = fabricCanvasRef.current;
     const ab = artboards.find((a) => a.id === id);
     if (!canvas || !ab) return null;
     const scope = opts?.scope || 'artboard';
     const exportRect = getExportRect(ab, ab.print, scope);
-    let out: { dataUrl: string; reduced: boolean } | null = null;
+    let out: { blob: Blob; reduced: boolean; dpi: number } | null = null;
     try {
-      out = capturePicture(exportRect, { format: 'png', multiplier: exportMultiplierFor(ab), artboardId: ab.id, marks: () => buildAndInsertMarks(ab, scope) });
+      out = await capturePictureBlob(exportRect, { format: 'png', multiplier: exportMultiplierFor(ab), artboardId: ab.id, marks: () => buildAndInsertMarks(ab, scope) });
       const name = `${designName || 'design'} - ${ab.name}${scope !== 'artboard' ? ` (${scope})` : ''}.png`;
-      if (!opts?.silent) downloadFile(out.dataUrl, name);
-      if (out.reduced) setLocalNotice('This page was very large, so the download was made a little smaller so it opens on every device.');
+      if (!opts?.silent) blobDownload(out.blob, name);
+      if (out.reduced) reducedNotice(out.dpi);
     } catch (err) {
       console.error('PNG export failed:', err);
       setLocalNotice(exportErrorMessage(err));
@@ -6095,7 +6193,7 @@ function EditorContent() {
         setShowExportDialog(false);
       }
     }
-    return out ? { name: `${ab.name}.png`, dataUrl: out.dataUrl } : null;
+    return out ? { name: `${ab.name}.png`, blob: out.blob } : null;
   };
 
   const exportArtboardPDF = async (id: string, scope: ExportScope) => {
@@ -6146,13 +6244,18 @@ function EditorContent() {
   };
 
   // Every page in one .zip (browsers block several downloads at once).
-  const exportAllArtboardsPNG = () => {
+  const exportAllArtboardsPNG = async () => {
     setExporting(true);
     try {
-      const files = artboards.map((ab) => exportArtboardPNG(ab.id, { silent: true })).filter(Boolean) as { name: string; dataUrl: string }[];
-      if (files.length === 1) downloadFile(files[0].dataUrl, `${designName || 'design'} - ${files[0].name}`);
+      const files: { name: string; blob: Blob }[] = [];
+      for (const ab of artboards) {
+        const f = await exportArtboardPNG(ab.id, { silent: true });
+        if (f) files.push(f);
+      }
+      if (files.length === 1) blobDownload(files[0].blob, `${designName || 'design'} - ${files[0].name}`);
       else if (files.length > 1) {
-        const url = URL.createObjectURL(buildZip(files.map((f) => ({ name: f.name, data: dataUrlToBytes(f.dataUrl) }))));
+        const parts = await Promise.all(files.map(async (f) => ({ name: f.name, data: new Uint8Array(await f.blob.arrayBuffer()) })));
+        const url = URL.createObjectURL(buildZip(parts));
         downloadFile(url, `${designName || 'design'} (${files.length} pages).zip`);
         setTimeout(() => URL.revokeObjectURL(url), 4000);
       }
@@ -6167,9 +6270,9 @@ function EditorContent() {
       await ensurePhotoEditsApplied();
       const ab = getActiveArtboardRect();
       const meta = artboards.find((a) => a.id === ab.id);
-      const out = capturePicture(ab, { format, quality: format === 'jpeg' ? 0.92 : 1, multiplier: meta ? exportMultiplierFor(meta) : 2, artboardId: ab.id });
-      downloadFile(out.dataUrl, `${designName || 'design'}${meta ? ` - ${meta.name}` : ''}.${format === 'jpeg' ? 'jpg' : 'png'}`);
-      if (out.reduced) setLocalNotice('This page was very large, so the download was made a little smaller so it opens on every device.');
+      const out = await capturePictureBlob(ab, { format, quality: format === 'jpeg' ? 0.92 : 1, multiplier: meta ? exportMultiplierFor(meta) : 2, artboardId: ab.id });
+      blobDownload(out.blob, `${designName || 'design'}${meta ? ` - ${meta.name}` : ''}.${format === 'jpeg' ? 'jpg' : 'png'}`);
+      if (out.reduced) reducedNotice(out.dpi);
     } catch (err) {
       console.error('Export failed:', err);
       setLocalNotice(exportErrorMessage(err));
@@ -6456,20 +6559,9 @@ function EditorContent() {
     for (const ab of list) {
       const print = { ...ab.print, marks: { crop: false, registration: false, colorBar: false } };
       const rect = getExportRect(ab, print, scope);
-      const out = capturePicture(rect, { format: 'png', multiplier: settings.multiplier, transparent: settings.format === 'tiff' && !cmyk && settings.transparentBackground, artboardId: ab.id });
+      const out = await capturePixels(rect, { multiplier: settings.multiplier, transparent: settings.format === 'tiff' && !cmyk && settings.transparentBackground, artboardId: ab.id });
       reduced = reduced || out.reduced;
-      const img = await new Promise<HTMLImageElement>((res, rej) => {
-        const i = new Image();
-        i.onload = () => res(i);
-        i.onerror = rej;
-        i.src = out.dataUrl;
-      });
-      const c = document.createElement('canvas');
-      c.width = img.naturalWidth;
-      c.height = img.naturalHeight;
-      const x = c.getContext('2d', { willReadFrequently: true })!;
-      x.drawImage(img, 0, 0);
-      pages.push({ ab, rect, w: c.width, h: c.height, rgba: x.getImageData(0, 0, c.width, c.height).data });
+      pages.push({ ab, rect, w: out.w, h: out.h, rgba: out.rgba });
     }
     const base = designName || 'design';
     const dpiFor = (p: (typeof pages)[number]) => Math.round((p.w / p.rect.width) * 96);
@@ -6514,7 +6606,7 @@ function EditorContent() {
         setTimeout(() => URL.revokeObjectURL(url), 8000);
       }
     }
-    if (reduced) setLocalNotice('Some pages were very large, so they were made a little smaller so they open on every device.');
+    if (reduced) reducedNotice(Math.min(...pages.map(dpiFor)));
   };
 
   // One export path for every combination the dialog can produce: any
@@ -6584,14 +6676,14 @@ function EditorContent() {
         const rangeLabel = pages.length === 1 ? pages[0].ab.name : `${pages.length} pages`;
         pdf.save(`${designName || 'design'} (${rangeLabel})${settings.colour === 'cmyk' ? ' CMYK' : ''}.pdf`);
       } else {
-        const files: { name: string; dataUrl: string }[] = [];
-        let reduced = false;
+        const files: { name: string; blob: Blob }[] = [];
+        let reducedDpi = 0;
         // Fabric expects a real MIME subtype ('jpeg', not 'jpg').
         const mime = settings.format === 'jpg' ? 'jpeg' : (settings.format as 'png' | 'webp');
         for (const ab of list) {
           const print = exportPrintFor(ab, settings);
           const rect = getExportRect(ab, print, scope);
-          const out = capturePicture(rect, {
+          const out = await capturePictureBlob(rect, {
             format: mime,
             quality: settings.format === 'png' ? 1 : settings.quality,
             multiplier: settings.multiplier,
@@ -6599,18 +6691,19 @@ function EditorContent() {
             artboardId: ab.id,
             marks: () => buildAndInsertMarks(ab, scope, print),
           });
-          reduced = reduced || out.reduced;
+          if (out.reduced) reducedDpi = reducedDpi ? Math.min(reducedDpi, out.dpi) : out.dpi;
           // Browsers without WebP encoding hand back PNG instead.
-          const realExt = out.dataUrl.startsWith('data:image/webp') ? 'webp' : out.dataUrl.startsWith('data:image/jpeg') ? 'jpg' : 'png';
-          files.push({ name: `${ab.name}.${realExt}`, dataUrl: out.dataUrl });
+          const realExt = out.blob.type === 'image/webp' ? 'webp' : out.blob.type === 'image/jpeg' ? 'jpg' : 'png';
+          files.push({ name: `${ab.name}.${realExt}`, blob: out.blob });
         }
-        if (files.length === 1) downloadFile(files[0].dataUrl, `${designName || 'design'} - ${files[0].name}`);
+        if (files.length === 1) blobDownload(files[0].blob, `${designName || 'design'} - ${files[0].name}`);
         else {
-          const url = URL.createObjectURL(buildZip(files.map((f) => ({ name: f.name, data: dataUrlToBytes(f.dataUrl) }))));
+          const parts = await Promise.all(files.map(async (f) => ({ name: f.name, data: new Uint8Array(await f.blob.arrayBuffer()) })));
+          const url = URL.createObjectURL(buildZip(parts));
           downloadFile(url, `${designName || 'design'} (${files.length} pages).zip`);
           setTimeout(() => URL.revokeObjectURL(url), 4000);
         }
-        if (reduced) setLocalNotice('Some pages were very large, so they were made a little smaller so they open on every device.');
+        if (reducedDpi) reducedNotice(reducedDpi);
       }
     } catch (err) {
       console.error('Export failed:', err);

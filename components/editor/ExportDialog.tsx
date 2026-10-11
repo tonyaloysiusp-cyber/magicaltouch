@@ -116,7 +116,11 @@ export function ExportDialog({ artboards, activeArtboardId, exporting, onClose, 
   const k = Math.max(0.01, dpi) / PX_PER_INCH;
   const outW = preview ? Math.round(preview.width * k) : 0;
   const outH = preview ? Math.round(preview.height * k) : 0;
-  const tooBig = outW * outH > 16_000_000;
+  // PNG and JPEG are written in strips, so they can be huge; TIFF and CMYK
+  // files need the whole picture in memory; WebP needs one canvas.
+  const pixelCap = format === 'webp' ? 16_000_000 : format === 'tiff' || cmyk ? 60_000_000 : 150_000_000;
+  const tooBig = outW * outH > pixelCap;
+  const maxDpi = tooBig ? Math.floor(dpi * Math.sqrt(pixelCap / (outW * outH))) : dpi;
 
   const submit = () => {
     onExport({
@@ -242,7 +246,7 @@ export function ExportDialog({ artboards, activeArtboardId, exporting, onClose, 
               {preview && (
                 <p className={cx('text-xs mt-2', tooBig ? 'text-amber-700 dark:text-amber-400' : 'text-mt-faint')}>
                   {outW.toLocaleString()} × {outH.toLocaleString()} px at {dpi} DPI
-                  {tooBig ? ' — very large; it will be made a little smaller so it opens on phones and iPads.' : ''}
+                  {tooBig ? ` — too big for one file; it will be saved at ${maxDpi} DPI.` : ''}
                 </p>
               )}
               {(format === 'jpg' || format === 'webp') && (
