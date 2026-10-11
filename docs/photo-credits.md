@@ -4,7 +4,8 @@ The sample photos in `public/templates/photos/` are used inside the
 October 2026 trend templates (`public/templates/collection/trend-2026-10.json`)
 and the graphic-design and birthday templates
 (`public/templates/collection/designers-birthday-2026-10.json`,
-`public/templates/collection/posters-birthday-2026-10b.json`).
+`public/templates/collection/posters-birthday-2026-10b.json`,
+`public/templates/collection/birthday-themes-2026-10c.json`).
 Customers replace them with their own pictures in the editor.
 
 Source: the "Sample Images Collection" (github.com/yavuzceliker/sample-images),
