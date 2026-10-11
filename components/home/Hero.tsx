@@ -1,5 +1,6 @@
 'use client';
 
+import { useTemplateCountLabel } from '@/lib/templateCount';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowRight, Sparkles } from 'lucide-react';
@@ -8,6 +9,7 @@ import { CreativeHeroArt } from './CreativeHeroArt';
 import { Reveal } from './Reveal';
 
 export function Hero() {
+  const count = useTemplateCountLabel();
   const router = useRouter();
 
   const goToCreate = async () => {
@@ -33,7 +35,7 @@ export function Hero() {
           </h1>
 
           <p className="mt-7 text-lg text-mt-muted dark:text-mt-muted max-w-md leading-relaxed">
-            Your creative space for turning ideas into designs people remember — start from 200+ templates or a blank canvas.
+            Your creative space for turning ideas into designs people remember — start from {count} templates or a blank canvas.
           </p>
 
           <div className="mt-8 flex flex-wrap gap-3">

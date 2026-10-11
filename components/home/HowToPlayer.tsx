@@ -1,5 +1,6 @@
 'use client';
 
+import { useTemplateCountLabel } from '@/lib/templateCount';
 // The home page tutorial: a crisp, self-playing replica of the real editor
 // layout (top bar, left rail, floating toolbar, pages bar), built with
 // HTML/CSS so it is sharp at any size and weighs almost nothing. A cursor
@@ -42,7 +43,7 @@ const START: S = {
 type Ev = [number, Partial<S> | ((s: S) => Partial<S>)];
 
 const STEPS = [
-  { at: 0, title: 'Pick a template', sub: '700+ designs, ready in a tap' },
+  { at: 0, title: 'Pick a template', sub: '{count} designs, ready in a tap' },
   { at: 4000, title: 'Make the words yours', sub: 'Click any text and type' },
   { at: 10500, title: 'Add a little magic', sub: 'Glow, echo, neon — one click' },
   { at: 18300, title: 'Swap in your photo', sub: 'It fits the frame perfectly' },
@@ -102,6 +103,7 @@ function buildTimeline() {
 const cx = (...a: (string | false | null | undefined)[]) => a.filter(Boolean).join(' ');
 
 export function HowToPlayer() {
+  const count = useTemplateCountLabel();
   const { evs, total } = useMemo(buildTimeline, []);
   const [s, setS] = useState<S>(START);
   const [playing, setPlaying] = useState(true);
@@ -179,7 +181,7 @@ export function HowToPlayer() {
               <span className="mt-howto-spark" aria-hidden><Sparkles size={26} /></span>
               <p className="text-[13px] font-semibold uppercase tracking-[0.2em] text-[#8FE3FF]">Step {view.step + 1} of {STEPS.length}</p>
               <p className="text-[27px] font-semibold leading-tight mt-0.5">{step.title}</p>
-              <p className="text-[17px] text-white/75">{step.sub}</p>
+              <p className="text-[17px] text-white/75">{step.sub.replace('{count}', count)}</p>
             </div>
           </div>
         </div>

@@ -1,5 +1,6 @@
 'use client';
 
+import { useTemplateCountLabel } from '@/lib/templateCount';
 import { useEffect, useRef } from 'react';
 import { Sparkles, Wand2, Layers, Palette } from 'lucide-react';
 
@@ -18,6 +19,7 @@ const CARDS = [
 // that gently follows the pointer, with glowing brand-gradient orbs and
 // glass "tool" chips. Transform-only animation, so it stays smooth.
 export function CreativeHeroArt() {
+  const count = useTemplateCountLabel();
   const stage = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -83,7 +85,7 @@ export function CreativeHeroArt() {
         <div className="absolute right-[6%] top-[46%] [transform:translateZ(140px)]">
           <div className="mt-glass border border-mt-border rounded-2xl px-3 py-2 flex items-center gap-2 shadow-xl animate-mt-float" style={{ animationDelay: '-2s' }}>
             <Layers size={15} className="text-mt-accent" />
-            <span className="text-xs font-semibold text-mt-ink">200+ templates</span>
+            <span className="text-xs font-semibold text-mt-ink">{count} templates</span>
           </div>
         </div>
         <div className="absolute left-[30%] bottom-[6%] mt-glass border border-mt-border rounded-full px-3 py-2 flex items-center gap-1.5 shadow-xl [transform:translateZ(100px)]">
