@@ -6,6 +6,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { BrandLogo } from '@/components/BrandLogo';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
+import { certificateTokens, buildVerificationBlock } from '@/lib/certificates';
 import { fetchTemplateById, setTemplateContent, createVersion, Template as TemplateRecord } from '@/lib/templatesData';
 import {
   Keyboard,
@@ -2431,6 +2432,11 @@ function EditorContent() {
                   setLocalNotice('Your brand was applied to this template because you chose “Use my brand”. Undo (Ctrl/Cmd+Z) to see the original.');
                 });
               }
+              // Issued certificate (admin → Verified certificates): fill in
+              // the recipient, title, date and code, and add the locked QR
+              // verification block where the master has its slot.
+              const certCode = searchParams.get('cert');
+              if (certCode) applyIssuedCertificate(canvas, F, first, certCode);
             });
           } else {
             // No real content for this id (old bookmarked link, deleted
@@ -3239,6 +3245,43 @@ function EditorContent() {
     } finally {
       setTemplateBusy(null);
     }
+  };
+
+  // Fills an issued certificate into the open design (see lib/certificates.ts).
+  const applyIssuedCertificate = async (canvas: any, F: any, page: any, code: string) => {
+    const { data } = await supabase.from('certificate_issues').select('code, recipient, title, description, issued_on, issuer, status').eq('code', code).maybeSingle();
+    if (!data) {
+      setLocalNotice('That certificate code wasn’t found. Issue it again from Admin → Verified certificates.');
+      return;
+    }
+    const tokens = certificateTokens(data as any);
+    const visit = (o: any) => {
+      if (o.type === 'group' && o._objects) o._objects.forEach(visit);
+      if (typeof o.text === 'string' && o.text.includes('{{')) {
+        let t = o.text;
+        Object.entries(tokens).forEach(([k, v]) => (t = t.split(k).join(v)));
+        o.set({ text: t, styles: {} });
+        o.initDimensions?.();
+        o.setCoords?.();
+      }
+    };
+    canvas.getObjects().forEach(visit);
+    const pageBox = { x: page?.left || 0, y: page?.top || 0, w: (page?.width || width) * (page?.scaleX || 1), h: (page?.height || height) * (page?.scaleY || 1) };
+    const slot = canvas.getObjects().find((o: any) => o.name === 'Verification slot');
+    const size = slot ? Math.min(slot.getScaledWidth(), slot.getScaledHeight()) : Math.min(pageBox.w, pageBox.h) * 0.13;
+    const at = slot ? { x: slot.left, y: slot.top, size } : { x: pageBox.x + pageBox.w - size * 1.6, y: pageBox.y + pageBox.h - size * 1.9, size };
+    if (slot) canvas.remove(slot);
+    canvas.getObjects().filter((o: any) => o.__certCode).forEach((o: any) => canvas.remove(o));
+    buildVerificationBlock(F, data as any, at).forEach((o: any) => {
+      o.__artboardId = page?.__artboardId;
+      canvas.add(o);
+    });
+    setDesignName(`Certificate — ${data.recipient}`);
+    canvas.requestRenderAll();
+    refreshLayers();
+    pushHistory();
+    ensureFontLoaded('Space Mono', 700).then(() => refreshTextMetrics(canvas));
+    setLocalNotice(`Certificate ${data.code} for ${data.recipient} is filled in. Its QR code links to the public check page.`);
   };
 
   // Resize: the current page (or a resized copy of it) to a new size.

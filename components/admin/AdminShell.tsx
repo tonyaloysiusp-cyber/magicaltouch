@@ -5,12 +5,12 @@
 
 import Link from 'next/link';
 import { ReactNode } from 'react';
-import { LayoutDashboard, Inbox, Server, CalendarHeart, PenLine, Mail, LayoutTemplate, Sparkles } from 'lucide-react';
+import { LayoutDashboard, Inbox, Server, CalendarHeart, PenLine, Mail, LayoutTemplate, Sparkles, Award } from 'lucide-react';
 import { AppHeader } from '@/components/AppHeader';
 import { PageHero } from '@/components/PageHero';
 import { useAppTheme } from '@/hooks/useAppTheme';
 
-export type AdminSection = 'overview' | 'messages' | 'services' | 'occasions' | 'wording' | 'email' | 'templates' | 'brand';
+export type AdminSection = 'overview' | 'messages' | 'services' | 'occasions' | 'wording' | 'email' | 'templates' | 'brand' | 'certificates';
 
 const NAV: { id: AdminSection; label: string; href: string; icon: ReactNode }[] = [
   { id: 'overview', label: 'Overview', href: '/admin', icon: <LayoutDashboard size={17} /> },
@@ -19,6 +19,7 @@ const NAV: { id: AdminSection; label: string; href: string; icon: ReactNode }[] 
   { id: 'services', label: 'Hosting & renewals', href: '/admin?tab=services', icon: <Server size={17} /> },
   { id: 'templates', label: 'Templates', href: '/admin/templates', icon: <LayoutTemplate size={17} /> },
   { id: 'brand', label: 'Brand workspace', href: '/admin/brand', icon: <Sparkles size={17} /> },
+  { id: 'certificates', label: 'Verified certificates', href: '/admin/certificates', icon: <Award size={17} /> },
   { id: 'email', label: 'Email Center', href: '/admin/email', icon: <Mail size={17} /> },
   { id: 'wording', label: 'Email wording', href: '/admin?tab=wording', icon: <PenLine size={17} /> },
 ];

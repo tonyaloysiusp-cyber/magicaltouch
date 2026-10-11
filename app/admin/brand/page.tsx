@@ -75,7 +75,15 @@ export default function BrandWorkspacePage() {
         <BrandBasics />
         {groups.map(([title, list]) => (
           <section key={title} className={card}>
-            <h2 className="text-lg font-semibold text-mt-ink">{title}</h2>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h2 className="text-lg font-semibold text-mt-ink">{title}</h2>
+              {title === 'Certificates' && (
+                <Link href="/admin/certificates" className={`${btn} bg-mt-primary text-mt-onprimary`}>
+                  <ShieldCheck size={14} /> Issue a verified certificate
+                </Link>
+              )}
+            </div>
+            {title === 'Certificates' && <p className="mt-1 text-[13px] text-mt-muted">The “Secure” designs have guilloche patterns, microtext and a QR code slot. Issue them from Verified certificates so each one gets a code anyone can check.</p>}
             <div className="mt-4 grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
               {list.map((r) => <BrandTile key={r.id} row={r} />)}
             </div>
@@ -95,9 +103,10 @@ function groupRows(rows: BrandRow[]): [string, BrandRow[]][] {
     if (/letterhead|invoice/.test(n)) return 'Letterheads & invoice';
     if (/signature/.test(n)) return 'E-mail signatures';
     if (/certificate/.test(n)) return 'Certificates';
+    if (/event|ticket|agenda|speaker|stage|challenge|table tent|launch/.test(n)) return 'Events';
     return 'Posters & social media';
   };
-  const order = ['Cards & stationery', 'Letterheads & invoice', 'Certificates', 'Posters & social media', 'E-mail signatures'];
+  const order = ['Certificates', 'Events', 'Cards & stationery', 'Letterheads & invoice', 'Posters & social media', 'E-mail signatures'];
   const m = new Map<string, BrandRow[]>();
   rows.forEach((r) => m.set(kind(r), [...(m.get(kind(r)) || []), r]));
   return order.filter((k) => m.has(k)).map((k) => [k, m.get(k)!]);
