@@ -105,5 +105,5 @@ export function formatLabel(w: number, h: number) {
 
 export function templateDescription(t: SeoTemplate) {
   const kw = (t.search_keywords || '').split(',').map((s) => s.trim()).filter(Boolean).slice(0, 4).join(', ');
-  return `Free ${t.name.toLowerCase()} template — ${formatLabel(t.width, t.height).toLowerCase()}, ${sizeLabel(t.width, t.height)}. Edit the text, colours and photos online and download as PDF, PNG or JPG.${kw ? ` Great for ${kw}.` : ''}`.slice(0, 300);
+  return `Free ${t.name} template — ${formatLabel(t.width, t.height)}, ${sizeLabel(t.width, t.height)}. Edit the text, colours and photos online and download as PDF, PNG or JPG.${kw ? ` Great for ${kw}.` : ''}`.slice(0, 300);
 }

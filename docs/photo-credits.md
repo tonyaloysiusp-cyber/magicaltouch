@@ -9,7 +9,8 @@ and the graphic-design and birthday templates
 `public/templates/collection/creative-sectors-2026-10d.json`) and the
 "1000+" collection (`design-palettes-2026-10e.json`,
 `sector-carousels-2026-10e.json`, `promo-ads-2026-10e.json`,
-`community-sports-2026-10e.json`, `menus-brand-2026-10e.json`).
+`community-sports-2026-10e.json`, `menus-brand-2026-10e.json`,
+`invitations-decks-2026-10f.json`).
 Customers replace them with their own pictures in the editor.
 
 Source: the "Sample Images Collection" (github.com/yavuzceliker/sample-images),
