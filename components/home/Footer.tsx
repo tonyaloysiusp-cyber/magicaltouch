@@ -85,6 +85,19 @@ export function Footer({ theme }: { theme: AppTheme }) {
           </div>
         </div>
 
+        <nav aria-label="Popular template categories" className="mt-12">
+          <p className="text-xs font-semibold text-mt-ink tracking-wide uppercase">Popular templates</p>
+          <ul className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-sm text-mt-muted">
+            {['Social Media', 'Marketing', 'Birthday', 'Business', 'Events', 'Menus', 'Certificates', 'Wedding', 'Festivals', 'Resume', 'Cards'].map((c) => (
+              <li key={c}>
+                <Link href={`/templates/category/${c.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`} className="hover:text-mt-ink dark:hover:text-white">
+                  {c} templates
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
+
         <div className="mt-14 pt-8 border-t border-black/10 dark:border-white/10 text-xs text-mt-muted dark:text-mt-faint">
           © {new Date().getFullYear()} Magical Touch. All rights reserved.
         </div>
