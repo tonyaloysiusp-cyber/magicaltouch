@@ -644,7 +644,11 @@ function EditorContent() {
     const restored = loadTabSession();
     const newTabMarker = searchParams.get('newTab');
     const localHandoff = peekHandoff(urlLocalDoc);
-    const freshId = (localHandoff && urlLocalDoc) || urlDesignId || `new-${newTabMarker || Date.now()}`;
+    // Opening a template always gets its own tab (keyed to the template, so a
+    // plain reload returns to it instead of stacking up duplicates) — it
+    // must never fall back to whatever design was open before.
+    const urlTemplateId = !urlDesignId && !urlLocalDoc ? searchParams.get('templateId') : null;
+    const freshId = (localHandoff && urlLocalDoc) || urlDesignId || (urlTemplateId ? `tpl-${urlTemplateId}` : `new-${newTabMarker || Date.now()}`);
     const freshName = localHandoff ? localHandoff.opened.document.name : urlDesignId ? 'Loading…' : 'Untitled Design';
 
     if (restored && restored.tabs.length) {
@@ -660,6 +664,8 @@ function EditorContent() {
         ? restored.tabs.find((t) => t.id === urlLocalDoc)
         : urlDesignId
         ? restored.tabs.find((t) => t.designId === urlDesignId)
+        : urlTemplateId
+        ? restored.tabs.find((t) => t.id === freshId)
         : newTabMarker
           ? undefined
           : restored.tabs.find((t) => t.id === restored.activeTabId);
@@ -2390,6 +2396,9 @@ function EditorContent() {
         setOpening('Opening the template…');
         fetchTemplateById(cameFromTemplate).then(async (template) => {
           setOpening(null);
+          // The new design starts with the template's name instead of
+          // "Untitled Design" (easy to find later; rename any time).
+          if (template?.name) setDesignName(template.name.replace(/^MT Brand · /, ''));
           if (template && wantsTemplateEdit) {
             const { data: auth } = await supabase.auth.getUser();
             if (auth.user) {
