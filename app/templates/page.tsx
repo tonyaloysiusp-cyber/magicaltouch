@@ -115,6 +115,15 @@ export default function TemplatesPage() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [f, setF] = useState<Filters>(NO_FILTERS);
   const set = (patch: Partial<Filters>) => setF((cur) => ({ ...cur, ...patch }));
+  // ?q=… (Google's site-search box, shared links) pre-fills the search.
+  useEffect(() => {
+    try {
+      const q = new URLSearchParams(window.location.search).get('q');
+      if (q) setF((cur) => ({ ...cur, q }));
+    } catch {
+      /* ignore */
+    }
+  }, []);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [categories, setCategories] = useState<TemplateCategory[]>([]);
   const [previewing, setPreviewing] = useState<Template | null>(null);
