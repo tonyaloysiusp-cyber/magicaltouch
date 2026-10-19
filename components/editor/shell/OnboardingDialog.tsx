@@ -1,5 +1,6 @@
 'use client';
 
+import { useEscapeKey } from '@/hooks/useEscapeKey';
 import { useState } from 'react';
 import { X, Cake, CreditCard, Instagram, Mail, FileText, Image as ImageIcon, BookOpen, Ruler, Sparkles, ArrowLeft, Upload } from 'lucide-react';
 import { ALL_PRESETS, presetLabel, SizePreset } from '@/lib/editor/sizePresets';
@@ -28,6 +29,7 @@ const STYLES = ['Modern', 'Elegant', 'Fun', 'Kids', 'Luxury'];
 // sets the page size and opens matching templates; Birthday and Invitation
 // also offer a short wizard that fills a template in with your details.
 export function OnboardingDialog({ onPick, onCustom, onClose }: { onPick: (q: QuickStart) => void; onCustom: () => void; onClose: () => void }) {
+  useEscapeKey(() => onClose());
   const [wizardFor, setWizardFor] = useState<(typeof CHOICES)[number] | null>(null);
   const [style, setStyle] = useState('Modern');
   const [title, setTitle] = useState('');

@@ -4,6 +4,7 @@
 // Shown the first time a new design is saved. The parent's onChoose runs
 // synchronously in the tap so a cloud sign-in popup is never blocked.
 
+import { useEscapeKey } from '@/hooks/useEscapeKey';
 import { HardDrive, Cloud, UserRound, X } from 'lucide-react';
 import { AVAILABLE_CLOUD_PROVIDERS, CloudProviderId } from '@/lib/storage/providers';
 import { supportsSaveInPlace } from '@/lib/mtd/fileAccess';
@@ -21,6 +22,7 @@ const row =
   'w-full flex items-center gap-3 text-left px-4 py-3 rounded-xl border border-mt-border dark:border-mt-border hover:border-mt-accent hover:bg-purple-50/50 dark:hover:bg-mt-surface2 disabled:opacity-50 disabled:hover:border-mt-border disabled:hover:bg-transparent transition-colors';
 
 export function SaveLocationDialog({ busy, error, onChoose, onCancel }: Props) {
+  useEscapeKey(() => !busy && onCancel());
   return (
     <div className="fixed inset-0 z-[80] bg-black/40 flex items-center justify-center p-4" onClick={() => !busy && onCancel()}>
       <div

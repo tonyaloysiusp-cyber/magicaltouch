@@ -1,5 +1,6 @@
 'use client';
 
+import { useEscapeKey } from '@/hooks/useEscapeKey';
 import { useState } from 'react';
 import { X, Wand2 } from 'lucide-react';
 import { SIZE_GROUPS, SizePreset, presetLabel, presetToPx } from '@/lib/editor/sizePresets';
@@ -20,6 +21,7 @@ export function ResizeDialog({
   onResize: (size: { width: number; height: number; dpi?: number; label: string }, mode: 'this' | 'copy') => void;
   onClose: () => void;
 }) {
+  useEscapeKey(() => onClose());
   const [group, setGroup] = useState(SIZE_GROUPS[0].id);
   const [picked, setPicked] = useState<SizePreset | null>(null);
   const [unit, setUnit] = useDisplayUnit();

@@ -83,9 +83,28 @@ export function useEditorHistory(
 
       h.suspend = true;
       const json = h.stack[index];
+      // Remember what was selected, so the same object(s) stay selected
+      // after the undo/redo (otherwise the toolbar vanishes and every
+      // further undo of a style change needs a fresh click first).
+      const prev = canvas.getActiveObject?.();
+      const keepIds: string[] = (prev ? (prev.type === 'activeSelection' ? prev.getObjects() : [prev]) : [])
+        .map((o: any) => o.__uid)
+        .filter(Boolean);
       canvas.discardActiveObject();
       canvas.loadFromJSON(json, () => {
         h.index = index;
+        try {
+          if (keepIds.length) {
+            const objs = canvas
+              .getObjects()
+              .filter((o: any) => keepIds.includes(o.__uid) && o.selectable !== false && o.visible !== false && !o.__isArtboard);
+            const F = (window as any).fabric;
+            if (objs.length === 1) canvas.setActiveObject(objs[0]);
+            else if (objs.length > 1 && F?.ActiveSelection) canvas.setActiveObject(new F.ActiveSelection(objs, { canvas }));
+          }
+        } catch {
+          /* selection is a convenience; never block the restore */
+        }
         try {
           onRestoreRef.current?.();
         } finally {

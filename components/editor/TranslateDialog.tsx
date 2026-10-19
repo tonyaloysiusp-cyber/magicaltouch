@@ -7,6 +7,7 @@
 // bold), and right-to-left languages are right-aligned. One undo puts it
 // back.
 
+import { useEscapeKey } from '@/hooks/useEscapeKey';
 import { useMemo, useState } from 'react';
 import { Languages, Loader2, Search, X } from 'lucide-react';
 import { LANGUAGES, SCRIPT_FONTS, CHECK_COVERAGE } from '@/lib/i18n/languages';
@@ -26,6 +27,7 @@ export function TranslateDialog({
   hasSelection: boolean;
   hasPages: boolean;
 }) {
+  useEscapeKey(() => onClose());
   const [q, setQ] = useState('');
   const [code, setCode] = useState('ar');
   const [scope, setScope] = useState<TranslateScope>(hasSelection ? 'selection' : hasPages ? 'page' : 'all');

@@ -4,6 +4,7 @@
 // Magical Touch Design project folder is visible to the app (see
 // lib/storage/providers.ts for the permission each drive grants).
 
+import { useEscapeKey } from '@/hooks/useEscapeKey';
 import { useRef, useState } from 'react';
 import { Cloud, X, ArrowLeft } from 'lucide-react';
 import { AVAILABLE_CLOUD_PROVIDERS, CloudFile, CloudProviderId, providerById, popupIfNeeded } from '@/lib/storage/providers';
@@ -16,6 +17,7 @@ interface Props {
 }
 
 export function CloudOpenDialog({ onOpened, onClose }: Props) {
+  useEscapeKey(() => !busy && onClose());
   const [provider, setProvider] = useState<CloudProviderId | null>(null);
   const [files, setFiles] = useState<CloudFile[] | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
