@@ -2791,9 +2791,26 @@ function EditorContent() {
     setActiveTool('select');
   };
 
+  // Opening Draw picks up the brush straight away (no extra click before
+  // the first stroke); leaving Draw puts the brush down again so the next
+  // click selects things instead of drawing on them.
+  const prevPanelRef = useRef<string | null>(null);
+  const pencilOnRef = useRef(false);
+  useEffect(() => {
+    const prev = prevPanelRef.current;
+    prevPanelRef.current = leftPanel;
+    if (leftPanel === 'draw' && prev !== 'draw' && !drawingRef.current && !pencilOnRef.current) {
+      startDrawing(brushRef.current.kind === 'eraser' ? 'brush' : brushRef.current.kind);
+    } else if (prev === 'draw' && leftPanel !== 'draw' && drawingRef.current) {
+      stopDrawing();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [leftPanel]);
+
   // Vector pencil: a freehand line that becomes an editable path.
   const [pencilOn, setPencilOn] = useState(false);
   setPencilOnRef.current = setPencilOn;
+  pencilOnRef.current = pencilOn;
   const setVectorPencil = (on: boolean) => {
     const canvas = fabricCanvasRef.current;
     const F = (window as any).fabric;

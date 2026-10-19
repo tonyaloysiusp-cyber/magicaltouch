@@ -1,5 +1,6 @@
 'use client';
 
+import { useEscapeKey } from '@/hooks/useEscapeKey';
 import { useEffect, useRef, useState } from 'react';
 import { Loader2, X, Brush, Eraser, MousePointer2 } from 'lucide-react';
 import { detectSubject, refinedMaskCanvas, composeCutout, DEFAULT_REFINE, RefineOptions, SubjectMask } from '@/lib/editor/bgRemove';
@@ -8,6 +9,7 @@ import { Slider, Segmented, cx } from './ui';
 const WORK = 1024;
 
 export function BgRemoveDialog({ img, onApply, onClose, maxSize = 4096 }: { img: any; onApply: (dataUrl: string) => Promise<void> | void; onClose: () => void; maxSize?: number }) {
+  useEscapeKey(() => onClose());
   const [status, setStatus] = useState<string | null>('Getting ready…');
   const [error, setError] = useState<string | null>(null);
   const [mask, setMask] = useState<SubjectMask | null>(null);
