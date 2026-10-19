@@ -100,6 +100,7 @@ function groupRows(rows: BrandRow[]): [string, BrandRow[]][] {
   const kind = (r: BrandRow) => {
     const n = r.name.toLowerCase();
     if (/roll-up|pull-up|banner|signage/.test(n)) return 'Roll-up banners';
+    if (/presentation|price list|voucher|newsletter|highlight/.test(n)) return 'Marketing kit';
     if (/card|badge|envelope/.test(n)) return 'Cards & stationery';
     if (/letterhead|invoice/.test(n)) return 'Letterheads & invoice';
     if (/signature/.test(n)) return 'E-mail signatures';
@@ -107,7 +108,7 @@ function groupRows(rows: BrandRow[]): [string, BrandRow[]][] {
     if (/event|ticket|agenda|speaker|stage|challenge|table tent|launch/.test(n)) return 'Events';
     return 'Posters & social media';
   };
-  const order = ['Certificates', 'Events', 'Roll-up banners', 'Cards & stationery', 'Letterheads & invoice', 'Posters & social media', 'E-mail signatures'];
+  const order = ['Certificates', 'Events', 'Roll-up banners', 'Marketing kit', 'Cards & stationery', 'Letterheads & invoice', 'Posters & social media', 'E-mail signatures'];
   const m = new Map<string, BrandRow[]>();
   rows.forEach((r) => m.set(kind(r), [...(m.get(kind(r)) || []), r]));
   return order.filter((k) => m.has(k)).map((k) => [k, m.get(k)!]);
