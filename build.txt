@@ -1,0 +1,79 @@
+
+> magicaltouch@0.1.0 build
+> next build
+
+⚠ No build cache found. Please configure build caching for faster rebuilds. Read more: https://nextjs.org/docs/messages/no-cache
+  ▲ Next.js 14.2.5
+
+   Creating an optimized production build ...
+request to https://fonts.googleapis.com/css2?family=Unbounded:wght@400;500;600&display=swap failed, reason: 
+
+Retrying 1/3...
+request to https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap failed, reason: 
+
+Retrying 1/3...
+request to https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap failed, reason: 
+
+Retrying 2/3...
+ ✓ Compiled successfully
+   Linting and checking validity of types ...
+   Collecting page data ...
+   Generating static pages (0/36) ...
+   Generating static pages (9/36) 
+   Generating static pages (18/36) 
+   Generating static pages (27/36) 
+ ✓ Generating static pages (36/36)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                              Size     First Load JS
+┌ ○ /                                    25.3 kB         202 kB
+├ ○ /_not-found                          879 B          88.5 kB
+├ ○ /admin                               11.1 kB         191 kB
+├ ○ /admin/brand                         8.42 kB         185 kB
+├ ○ /admin/certificates                  8.05 kB         182 kB
+├ ○ /admin/email                         7.94 kB         188 kB
+├ ○ /admin/templates                     16 kB           192 kB
+├ ƒ /api/admin/campaigns/[id]/send       0 B                0 B
+├ ƒ /api/admin/campaigns/[id]/test       0 B                0 B
+├ ƒ /api/admin/sheets-sync               0 B                0 B
+├ ƒ /api/cron/daily-digest               0 B                0 B
+├ ƒ /api/email/password-changed          0 B                0 B
+├ ƒ /api/email/welcome                   0 B                0 B
+├ ƒ /api/font-file                       0 B                0 B
+├ ƒ /api/projects                        0 B                0 B
+├ ƒ /api/projects/[id]                   0 B                0 B
+├ ƒ /api/projects/[id]/duplicate         0 B                0 B
+├ ƒ /api/translate                       0 B                0 B
+├ ƒ /api/unsubscribe                     0 B                0 B
+├ ○ /auth/storage-callback               1.71 kB        89.3 kB
+├ ○ /contact                             5.29 kB         174 kB
+├ ○ /create                              11.7 kB         193 kB
+├ ○ /dashboard                           10.8 kB         203 kB
+├ ○ /editor                              157 kB          410 kB
+├ ○ /icon.png                            0 B                0 B
+├ ○ /login                               1.82 kB         163 kB
+├ ○ /photo-studio                        9.98 kB         242 kB
+├ ○ /privacy                             1.82 kB         101 kB
+├ ○ /profile                             8.47 kB         182 kB
+├ ○ /reset-password                      4.91 kB         163 kB
+├ ○ /robots.txt                          0 B                0 B
+├ ○ /signup                              4.35 kB         166 kB
+├ ○ /sitemap.xml                         0 B                0 B
+├ ○ /studio                              9.56 kB         162 kB
+├ ○ /templates                           15.3 kB         196 kB
+├ ƒ /templates/[slug]                    204 B           173 kB
+├ ƒ /templates/category/[category]       204 B           173 kB
+├ ○ /terms                               1.82 kB         101 kB
+├ ○ /unsubscribe                         1.77 kB         166 kB
+├ ○ /verify                              160 B           178 kB
+└ ƒ /verify/[code]                       161 B           178 kB
++ First Load JS shared by all            87.6 kB
+  ├ chunks/7023-56c055589031ebc7.js      31.7 kB
+  ├ chunks/fd9d1056-2d2a2ec9d17131b6.js  53.6 kB
+  └ other shared chunks (total)          2.31 kB
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
