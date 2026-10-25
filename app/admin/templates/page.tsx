@@ -13,7 +13,7 @@
 // ---------------------------------------------------------------------
 
 import { AdminShell } from '@/components/admin/AdminShell';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { loadPhotoLibrary, filterPhotos, LibraryPhoto } from '@/components/editor/shell/panels/PhotosPanel';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -52,6 +52,8 @@ import {
   generateStarterTemplates,
   parseTags,
 } from '@/lib/templatesData';
+
+interface TemplateRef { template_id: string; manifest_id: string; collection: string; category: string; subcategory: string; design_brief: string; inspiration_reference_url: string; inspiration_pin_url: string | null; reference_type: string; reference_verified: boolean; design_notes: Record<string, unknown> | null }
 
 const STATUS_STYLE: Record<TemplateStatus, string> = {
   draft: 'bg-mt-surface2 text-mt-muted',
@@ -138,6 +140,9 @@ export default function AdminTemplatesPage() {
   const [versions, setVersions] = useState<TemplateVersion[]>([]);
   const [versionNotes, setVersionNotes] = useState('');
   const [busy, setBusy] = useState(false);
+  const [refs, setRefs] = useState<Record<string, TemplateRef>>({});
+  const [refFor, setRefFor] = useState<Template | null>(null);
+  const [refDraft, setRefDraft] = useState({ url: '', pin: '', verified: false, brief: '' });
   const [generating, setGenerating] = useState(false);
 
   // Upload a native .mtd project as a template's content (spec §14, §21-22).
@@ -164,7 +169,10 @@ export default function AdminTemplatesPage() {
   }, [router]);
 
   const reload = async () => {
-    const [t, c] = await Promise.all([fetchTemplates(), fetchCategories()]);
+    const [t, c, rf] = await Promise.all([fetchTemplates(), fetchCategories(), supabase.from('template_references').select('*')]);
+    const map: Record<string, TemplateRef> = {};
+    ((rf.data as TemplateRef[]) || []).forEach((r) => (map[r.template_id] = r));
+    setRefs(map);
     // The company's own brand kit lives in /admin/brand, never in the public catalogue.
     setTemplates(t.filter((x) => !!x.id && !(x.tags || []).includes('mt-internal')));
     setCategories(c);
@@ -358,6 +366,32 @@ export default function AdminTemplatesPage() {
     setBusy(false);
     await reload();
     flash(ok ? `Restored v${v.version}.` : 'Could not restore that version.');
+  };
+
+  const openRef = (t: Template) => {
+    setMenuFor(null);
+    const r = t.id ? refs[t.id] : undefined;
+    setRefFor(t);
+    setRefDraft({ url: r?.inspiration_reference_url || '', pin: r?.inspiration_pin_url || '', verified: !!r?.reference_verified, brief: r?.design_brief || t.description || '' });
+  };
+  const saveRef = async () => {
+    if (!refFor?.id) return;
+    const url = refDraft.url.trim(), pinUrl = refDraft.pin.trim();
+    if (!/^https:\/\/\S+$/.test(url)) return flash('Enter the inspiration link (https://…).');
+    if (pinUrl && !/^https:\/\/(www\.|[a-z]{2}\.)?pinterest\.[a-z.]+\/pin\/\d+\/?$/.test(pinUrl)) return flash('A pin link looks like https://www.pinterest.com/pin/123456789/');
+    if (refDraft.verified && !pinUrl) return flash('Add the pin link you checked before marking it verified.');
+    if (refDraft.brief.trim().length < 20) return flash('Write a short design brief (20+ characters).');
+    const existing = refs[refFor.id];
+    const row = { inspiration_reference_url: url, inspiration_pin_url: pinUrl || null, reference_type: pinUrl ? 'pinterest_pin' : /pinterest\.[a-z.]+\/search/.test(url) ? 'pinterest_search' : 'other', reference_verified: refDraft.verified && !!pinUrl, design_brief: refDraft.brief.trim(), updated_at: new Date().toISOString() };
+    setBusy(true);
+    const { error } = existing
+      ? await supabase.from('template_references').update(row).eq('template_id', refFor.id)
+      : await supabase.from('template_references').insert({ ...row, template_id: refFor.id, manifest_id: `custom-${String(Object.keys(refs).filter((k) => refs[k].manifest_id.startsWith('custom-')).length + 1).padStart(3, '0')}`, collection: 'admin', category: refFor.category || 'Other', subcategory: '' });
+    setBusy(false);
+    if (error) return flash(`Could not save: ${error.message}`);
+    setRefFor(null);
+    await reload();
+    flash('Inspiration and brief saved.');
   };
 
   const bulkDelete = async () => {
@@ -653,6 +687,13 @@ export default function AdminTemplatesPage() {
                         <p className="text-xs text-mt-muted mt-0.5">
                           {categoryName(t.categoryId) || t.category} · {t.width}×{t.height} · v{t.currentVersion || '1.0'}
                         </p>
+                        {t.id && refs[t.id] && (
+                          <p className="text-[11px] mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                            <span className="font-mono text-mt-faint">{refs[t.id].manifest_id}</span>
+                            <a href={refs[t.id].reference_verified && refs[t.id].inspiration_pin_url ? refs[t.id].inspiration_pin_url! : refs[t.id].inspiration_reference_url} target="_blank" rel="noopener noreferrer" className="font-semibold text-[#3B82C4] hover:underline" onClick={(e) => e.stopPropagation()}>View inspiration ↗</a>
+                            <span className={refs[t.id].reference_verified ? 'text-emerald-600' : 'text-mt-faint'}>{refs[t.id].reference_verified ? 'verified pin' : 'search link · unverified'}</span>
+                          </p>
+                        )}
                       </div>
                       <div className="relative" onClick={(e) => e.stopPropagation()}>
                         <button onClick={() => setMenuFor(menuFor === t.id ? null : t.id!)} className="p-1.5 rounded hover:bg-mt-surface2 text-mt-muted" aria-label="Actions">
@@ -668,6 +709,7 @@ export default function AdminTemplatesPage() {
                             <MenuItem onClick={() => { setMenuFor(null); window.open(`/templates?template=${t.id}`, '_blank'); }}>Preview</MenuItem>
                             <MenuItem onClick={() => duplicate(t)}>Duplicate</MenuItem>
                             <MenuItem onClick={() => openVersions(t)}>Versions…</MenuItem>
+                            <MenuItem onClick={() => openRef(t)}>Inspiration & brief…</MenuItem>
                             <div className="border-t my-1" />
                             {status !== 'review' && status !== 'published' && <MenuItem onClick={() => changeStatus(t, 'review')}>Send to review</MenuItem>}
                             {status !== 'published' && <MenuItem onClick={() => changeStatus(t, 'published')}>Publish</MenuItem>}
@@ -838,6 +880,33 @@ export default function AdminTemplatesPage() {
       )}
 
       {/* ---------- Versions ---------- */}
+      {refFor && (
+        <Modal title={`Inspiration & brief: ${refFor.name}`} onClose={() => !busy && setRefFor(null)}>
+          <div className="flex flex-col gap-3 text-sm">
+            <label className="text-[13px] font-medium text-mt-ink">Inspiration link (search or page)
+              <input value={refDraft.url} onChange={(e) => setRefDraft({ ...refDraft, url: e.target.value })} placeholder="https://www.pinterest.com/search/pins/?q=…" className="mt-1 w-full h-10 rounded-xl border border-mt-input-border bg-mt-surface px-3 text-sm" />
+            </label>
+            <label className="text-[13px] font-medium text-mt-ink">Specific pin you checked (optional)
+              <input value={refDraft.pin} onChange={(e) => setRefDraft({ ...refDraft, pin: e.target.value })} placeholder="https://www.pinterest.com/pin/…" className="mt-1 w-full h-10 rounded-xl border border-mt-input-border bg-mt-surface px-3 text-sm" />
+            </label>
+            <label className="inline-flex items-center gap-2 text-[13px] text-mt-ink">
+              <input type="checkbox" checked={refDraft.verified} onChange={(e) => setRefDraft({ ...refDraft, verified: e.target.checked })} className="w-4 h-4" /> I opened this pin myself and it matches the design
+            </label>
+            <label className="text-[13px] font-medium text-mt-ink">Design brief
+              <textarea value={refDraft.brief} onChange={(e) => setRefDraft({ ...refDraft, brief: e.target.value })} rows={4} className="mt-1 w-full rounded-xl border border-mt-input-border bg-mt-surface px-3 py-2 text-sm" />
+            </label>
+            {refFor.id && refs[refFor.id]?.design_notes && Object.keys(refs[refFor.id].design_notes || {}).length > 0 && (
+              <dl className="rounded-xl bg-mt-surface2 p-3 grid grid-cols-[90px_1fr] gap-x-3 gap-y-1 text-[12px]">
+                {Object.entries(refs[refFor.id].design_notes as Record<string, string>).map(([k, v]) => (<Fragment key={k}><dt className="text-mt-muted capitalize">{k}</dt><dd className="text-mt-ink">{String(v)}</dd></Fragment>))}
+              </dl>
+            )}
+            <div className="flex gap-2 justify-end">
+              {refDraft.url && <a href={refDraft.url} target="_blank" rel="noopener noreferrer" className="text-sm px-4 py-2 rounded-full border border-mt-border">Open link ↗</a>}
+              <button onClick={saveRef} disabled={busy} className="text-sm px-4 py-2 rounded-full bg-brand-gradient text-white disabled:opacity-50">Save</button>
+            </div>
+          </div>
+        </Modal>
+      )}
       {versionsFor && (
         <Modal title={`Versions: ${versionsFor.name}`} onClose={() => !busy && setVersionsFor(null)}>
           <p className="text-xs text-mt-muted mb-3">
