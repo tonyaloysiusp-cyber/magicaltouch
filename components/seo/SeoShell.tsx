@@ -8,11 +8,12 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Wand2 } from 'lucide-react';
 import { AppHeader } from '@/components/AppHeader';
+import type { SiteTab } from '@/components/SiteHeader';
 import { Footer } from '@/components/home/Footer';
 import { useAppTheme } from '@/hooks/useAppTheme';
 import { resolveAuthedPath } from '@/lib/authNav';
 
-export function SeoShell({ children, active = 'templates' }: { children: ReactNode; active?: 'templates' | 'tutorials' }) {
+export function SeoShell({ children, active }: { children: ReactNode; active?: SiteTab }) {
   const { theme, toggleTheme } = useAppTheme();
   return (
     <div className={theme === 'dark' ? 'dark' : ''}>

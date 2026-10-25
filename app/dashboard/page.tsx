@@ -1,4 +1,6 @@
 'use client';
+import { Footer } from '@/components/home/Footer';
+import { SiteHeader } from '@/components/SiteHeader';
 
 import { ThemeSwitch } from '@/components/ThemeSwitch';
 import { useEffect, useRef, useState } from 'react';
@@ -359,43 +361,7 @@ export default function DashboardPage() {
           hydration's server/client text comparison on a plain child. */}
       <style dangerouslySetInnerHTML={{ __html: allFontFacesCSS() }} />
 
-      <header className="sticky top-0 z-40 bg-mt-bg/90 dark:bg-mt-bg/90 backdrop-blur border-b border-black/5 dark:border-white/10">
-        <div className="mt-container h-16 flex items-center justify-between">
-          <Link href="/" title="Go to homepage" className="shrink-0">
-            <BrandLogo theme={theme} width={136} height={27} />
-          </Link>
-          <div className="hidden md:flex items-center gap-1">
-            <Link href="/" className="text-sm font-medium text-mt-muted dark:text-mt-muted hover:text-mt-ink dark:hover:text-white px-3 py-2">
-              Home
-            </Link>
-            <Link href="/templates" className="text-sm font-medium text-mt-muted dark:text-mt-muted hover:text-mt-ink dark:hover:text-white px-3 py-2">
-              Templates
-            </Link>
-            <Link href="/#pricing" className="text-sm font-medium text-mt-muted dark:text-mt-muted hover:text-mt-ink dark:hover:text-white px-3 py-2">
-              Pricing
-            </Link>
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <ThemeSwitch theme={theme} onToggle={toggleTheme} />
-            <Link
-              href="/photo-studio"
-              title="Photo Studio — professional photo editing and advanced image work: layers, masks, curves, dodge/burn, clone stamp and real-world print units"
-              className="hidden md:inline-flex items-center gap-1.5 border border-black/15 dark:border-white/15 text-mt-ink dark:text-white px-4 py-2.5 rounded-full text-sm font-semibold hover:border-black/30 dark:hover:border-white/30 transition-colors"
-            >
-              Photo Studio
-            </Link>
-            <Link
-              href="/create"
-              onClick={handleNewDesignClick}
-              title="New Design — quick design and everyday creative projects"
-              className="relative overflow-hidden inline-flex items-center gap-1.5 text-white px-4 py-2.5 rounded-full text-sm font-semibold bg-brand-gradient shadow-[0_6px_16px_-6px_rgba(9,9,11,0.16)] hover:shadow-[0_10px_20px_-6px_rgba(9,9,11,0.16)] hover:-translate-y-0.5 transition-all before:content-[''] before:absolute before:inset-x-0 before:top-0 before:h-1/2 before:bg-mt-surface/25 before:rounded-t-full"
-            >
-              <Plus size={15} /> <span className="hidden sm:inline">New Design</span>
-            </Link>
-            <ProfileMenu />
-          </div>
-        </div>
-      </header>
+      <SiteHeader theme={theme} onToggleTheme={toggleTheme} active="dashboard" onCreate={() => { if (designs.length >= MAX_DESIGNS) { setShowLimitWarning(true); return false; } }} />
 
       <PageHero
         eyebrow={
@@ -583,7 +549,8 @@ export default function DashboardPage() {
           </>
         )}
       </div>
-    </main>
+    <Footer theme={theme} />
+      </main>
     </div>
   );
 

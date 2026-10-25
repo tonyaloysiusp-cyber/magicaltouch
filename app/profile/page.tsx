@@ -1,5 +1,6 @@
 'use client';
 
+import { Footer } from '@/components/home/Footer';
 import { AppHeader } from '@/components/AppHeader';
 import { PageHero } from '@/components/PageHero';
 import { useEffect, useRef, useState } from 'react';
@@ -212,7 +213,8 @@ export default function ProfilePage() {
 
         </div>
       </div>
-    </main>
+    <Footer theme={theme} />
+      </main>
     </div>
   );
 }

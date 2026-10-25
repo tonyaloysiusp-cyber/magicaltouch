@@ -27,7 +27,7 @@ export default function FreeToolsPage() {
     </li>
   );
   return (
-    <SeoShell>
+    <SeoShell active="tools">
       <div className="mt-container py-6 sm:py-10">
         <Crumbs items={[{ href: '/', label: 'Home' }, { label: 'Free design tools' }]} />
         <h1 className="mt-4 text-3xl sm:text-5xl font-semibold tracking-tight">Free design tools</h1>

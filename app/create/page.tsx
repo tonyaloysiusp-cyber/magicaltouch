@@ -5,6 +5,7 @@
 // blank or from a template. Custom sizes and print settings live in one
 // place below the sizes.
 
+import { Footer } from '@/components/home/Footer';
 import { AppHeader } from '@/components/AppHeader';
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -531,6 +532,7 @@ export default function CreateDesignPage() {
             }}
           />
         )}
+      <Footer theme={theme} />
       </main>
     </div>
   );

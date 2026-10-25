@@ -37,7 +37,7 @@ export default async function CategoryPage({ params }: { params: { category: str
     mainEntity: { '@type': 'ItemList', numberOfItems: items.length, itemListElement: items.slice(0, 50).map((t, i) => ({ '@type': 'ListItem', position: i + 1, url: `${SITE_URL}/templates/${t.slug}`, name: t.name })) },
   };
   return (
-    <SeoShell>
+    <SeoShell active="templates">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <div className="mt-container py-6 sm:py-10">
         <Crumbs items={[{ href: '/', label: 'Home' }, { href: '/templates', label: 'Templates' }, { label: cat.name }]} />

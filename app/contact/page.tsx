@@ -3,6 +3,7 @@
 // Contact: messages go straight to the admin inbox (and the admins'
 // morning e-mail). Anyone can write; the database limits repeats.
 
+import { Footer } from '@/components/home/Footer';
 import { useState } from 'react';
 import Link from 'next/link';
 import { Mail, MessageCircle, Clock, Check } from 'lucide-react';
@@ -79,6 +80,7 @@ export default function ContactPage() {
             ))}
           </aside>
         </div>
+      <Footer theme={theme} />
       </main>
     </div>
   );
