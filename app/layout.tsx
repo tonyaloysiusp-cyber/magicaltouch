@@ -15,8 +15,8 @@ export const metadata: Metadata = {
   title: { default: 'Magical Touch Design — Free Online Design Templates & Editor', template: '%s | Magical Touch Design' },
   description: SITE_DESCRIPTION,
   applicationName: SITE_NAME,
-  keywords: ['free design templates', 'online graphic design', 'flyer maker', 'poster maker', 'instagram post templates', 'menu templates', 'invitation maker', 'certificate maker', 'business card design', 'Dubai design', 'UAE'],
-  openGraph: { type: 'website', siteName: SITE_NAME, url: SITE_URL, title: 'Magical Touch Design — Free Online Design Templates & Editor', description: SITE_DESCRIPTION, images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'Magical Touch Design' }], locale: 'en_AE' },
+  keywords: ['free design templates', 'online graphic design', 'flyer maker', 'poster maker', 'instagram post templates', 'menu templates', 'invitation maker', 'certificate maker', 'business card design', 'free online design tool', 'free canva alternative', 'resume maker', 'photo editor online'],
+  openGraph: { type: 'website', siteName: SITE_NAME, url: SITE_URL, title: 'Magical Touch Design — Free Online Design Templates & Editor', description: SITE_DESCRIPTION, images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'Magical Touch Design' }], locale: 'en_US', alternateLocale: ['en_GB', 'en_IN', 'en_CA', 'en_AU', 'en_AE', 'ar_AE'] },
   twitter: { card: 'summary_large_image', title: 'Magical Touch Design — Free Online Design Templates', description: SITE_DESCRIPTION, images: ['/og-image.png'] },
   robots: { index: true, follow: true, googleBot: { index: true, follow: true, 'max-image-preview': 'large', 'max-snippet': -1 } },
   formatDetection: { telephone: false },
@@ -34,6 +34,7 @@ const ORG_JSON_LD = [
     logo: `${SITE_URL}/logo.png`,
     email: 'hello@magicaltouchdesign.com',
     address: { '@type': 'PostalAddress', addressLocality: 'Dubai', addressCountry: 'AE' },
+    areaServed: 'Worldwide',
   },
   {
     '@context': 'https://schema.org',
@@ -50,6 +51,8 @@ const ORG_JSON_LD = [
     operatingSystem: 'Web browser',
     url: SITE_URL,
     offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+    featureList: ['1,000+ free templates', 'Online design editor', 'Photo editor', 'Background removal', 'Print-ready PDF with bleed', 'CMYK PDF and TIFF export', 'No watermark'],
+    availableLanguage: ['English', 'Arabic'],
   },
 ];
 

@@ -14,7 +14,8 @@ export const metadata: Metadata = {
 export default function FreeToolsPage() {
   const all = ALL_LANDINGS();
   const features = all.filter((l) => l.ctaHref && !l.lang);
-  const tools = all.filter((l) => !l.seasonal && !l.ctaHref && !l.lang);
+  const tools = all.filter((l) => !l.seasonal && !l.ctaHref && !l.lang && !l.country);
+  const countries = all.filter((l) => l.country);
   const seasonal = all.filter((l) => l.seasonal);
   const arabic = all.filter((l) => l.lang === 'ar');
   const Card = ({ slug, h1, description }: { slug: string; h1: string; description: string }) => (
@@ -37,6 +38,8 @@ export default function FreeToolsPage() {
         <ul className="mt-4 grid sm:grid-cols-2 lg:grid-cols-3 gap-4">{tools.map((l) => <Card key={l.slug} {...l} />)}</ul>
         <h2 className="mt-12 text-xl font-semibold">Seasonal & festivals</h2>
         <ul className="mt-4 grid sm:grid-cols-2 lg:grid-cols-3 gap-4">{seasonal.map((l) => <Card key={l.slug} {...l} />)}</ul>
+        <h2 className="mt-12 text-xl font-semibold">By country</h2>
+        <ul className="mt-4 flex flex-wrap gap-2">{countries.map((l) => <li key={l.slug}><Link href={`/${l.slug}`} className="inline-flex px-4 py-2 rounded-full border border-mt-border text-[14px] hover:bg-mt-surface2">{l.country}</Link></li>)}</ul>
         <h2 className="mt-12 text-xl font-semibold" lang="ar" dir="rtl">بالعربي</h2>
         <ul className="mt-4 grid sm:grid-cols-2 lg:grid-cols-3 gap-4" lang="ar" dir="rtl">{arabic.map((l) => <Card key={l.slug} {...l} />)}</ul>
       </div>
