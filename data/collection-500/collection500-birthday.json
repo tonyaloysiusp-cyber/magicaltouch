@@ -1,0 +1,4102 @@
+[
+ {
+  "id": "birthday-001",
+  "slug": "cream-lowercase-birthday-card",
+  "title": "Cream Lowercase Birthday Card",
+  "category": "Birthday",
+  "subcategory": "Minimalist",
+  "site_category": "Birthday",
+  "description": "Oversized lowercase serif “happy / birthday” stacked left on warm cream, a short hairline rule and a quiet two-line wish.",
+  "design_brief": "Oversized lowercase serif “happy / birthday” stacked left on warm cream, a short hairline rule and a quiet two-line wish.",
+  "design_style": "minimalist typography",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=minimalist%20cream%20typography%20birthday%20card",
+  "inspiration_query": "minimalist cream typography birthday card",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "left-aligned stack, generous right margin",
+   "typography": "Cormorant Garamond roman + italic, Montserrat caps signature",
+   "palette": "cream, espresso ink",
+   "decor": "single hairline"
+  },
+  "palette": [
+   "#F4EEE6",
+   "#2B2724"
+  ],
+  "content": {
+   "headline": "happy birthday",
+   "message": "Wishing you a beautiful year ahead — full of slow mornings and good people.",
+   "signature": "With love, Sara"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/cream-lowercase-birthday-card.jpg",
+  "preview_url": "/templates/collection/cream-lowercase-birthday-card-preview.jpg",
+  "status": "published",
+  "is_editable": true
+ },
+ {
+  "id": "birthday-002",
+  "slug": "thirty-outline-numeral-card",
+  "title": "Thirty Outline Numeral Card",
+  "category": "Birthday",
+  "subcategory": "Minimalist",
+  "site_category": "Birthday",
+  "description": "A giant outlined “30” in Playfair as the only graphic, centred, with a spaced-caps greeting and one italic line.",
+  "design_brief": "A giant outlined “30” in Playfair as the only graphic, centred, with a spaced-caps greeting and one italic line.",
+  "design_style": "minimalist typography",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=minimal%20outline%20number%2030th%20birthday%20card",
+  "inspiration_query": "minimal outline number 30th birthday card",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "centred, number fills top 50%",
+   "typography": "Playfair Display outline + italic, Montserrat 800 caps",
+   "palette": "white, black",
+   "decor": "none — the number is the art"
+  },
+  "palette": [
+   "#FFFFFF",
+   "#111111"
+  ],
+  "content": {
+   "headline": "Happy Birthday",
+   "message": "Thirty looks wonderful on you.",
+   "signature": "Ahmed"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/thirty-outline-numeral-card.jpg",
+  "preview_url": "/templates/collection/thirty-outline-numeral-card-preview.jpg",
+  "status": "published",
+  "is_editable": true
+ },
+ {
+  "id": "birthday-003",
+  "slug": "vertical-letters-green-birthday-card",
+  "title": "Vertical Letters Green Birthday Card",
+  "category": "Birthday",
+  "subcategory": "Minimalist",
+  "site_category": "Birthday",
+  "description": "A deep green sidebar spelling H-A-P-P-Y vertically in Bebas, with a script “Birthday” and a warm paragraph on pale sage.",
+  "design_brief": "A deep green sidebar spelling H-A-P-P-Y vertically in Bebas, with a script “Birthday” and a warm paragraph on pale sage.",
+  "design_style": "minimalist typography",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=vertical%20typography%20sage%20green%20birthday%20card",
+  "inspiration_query": "vertical typography sage green birthday card",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "22% sidebar + text column",
+   "typography": "Bebas Neue, Sacramento, DM Sans",
+   "palette": "forest green, pale sage",
+   "decor": "colour block"
+  },
+  "palette": [
+   "#E9EFE9",
+   "#1F3A34"
+  ],
+  "content": {
+   "headline": "Happy Birthday",
+   "message": "To the calmest person in every room — may this year be as kind to you as you are to everyone.",
+   "signature": "Lina & Omar"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/vertical-letters-green-birthday-card.jpg",
+  "preview_url": "/templates/collection/vertical-letters-green-birthday-card-preview.jpg",
+  "status": "published",
+  "is_editable": true
+ },
+ {
+  "id": "birthday-004",
+  "slug": "circle-badge-birthday-post",
+  "title": "Circle Badge Birthday Post",
+  "category": "Birthday",
+  "subcategory": "Minimalist",
+  "site_category": "Birthday",
+  "description": "Repeating “HAPPY BIRTHDAY” set on a circle like a stamp, a large age numeral in the middle, beige square post.",
+  "design_brief": "Repeating “HAPPY BIRTHDAY” set on a circle like a stamp, a large age numeral in the middle, beige square post.",
+  "design_style": "minimalist typography",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=circular%20text%20badge%20minimalist%20birthday%20post",
+  "inspiration_query": "circular text badge minimalist birthday post",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "centred badge",
+   "typography": "Montserrat 700 on a circle, Cormorant numeral",
+   "palette": "oat, cocoa",
+   "decor": "double ring"
+  },
+  "palette": [
+   "#EFE6DA",
+   "#3B2F2A"
+  ],
+  "content": {
+   "headline": "Happy Birthday",
+   "message": "celebrating you today",
+   "signature": ""
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/circle-badge-birthday-post.jpg",
+  "preview_url": "/templates/collection/circle-badge-birthday-post-preview.jpg",
+  "status": "published",
+  "is_editable": true
+ },
+ {
+  "id": "birthday-005",
+  "slug": "black-block-name-birthday-card",
+  "title": "Black Block Name Birthday Card",
+  "category": "Birthday",
+  "subcategory": "Minimalist",
+  "site_category": "Birthday",
+  "description": "Top half solid black with a chunky three-line greeting including the name; white lower half with a dry, warm line and a coral dot.",
+  "design_brief": "Top half solid black with a chunky three-line greeting including the name; white lower half with a dry, warm line and a coral dot.",
+  "design_style": "minimalist typography",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=bold%20black%20block%20typography%20birthday%20card",
+  "inspiration_query": "bold black block typography birthday card",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "50/50 horizontal split",
+   "typography": "Archivo Black, Work Sans",
+   "palette": "black, off-white, coral accent",
+   "decor": "one coral dot"
+  },
+  "palette": [
+   "#141414",
+   "#FAFAF7"
+  ],
+  "content": {
+   "headline": "Happy Birthday, Noor.",
+   "message": "Another lap around the sun, and you still make it look easy.",
+   "signature": "xo — Maya"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/black-block-name-birthday-card.jpg",
+  "preview_url": "/templates/collection/black-block-name-birthday-card-preview.jpg",
+  "status": "published",
+  "is_editable": true
+ },
+ {
+  "id": "birthday-006",
+  "slug": "single-candle-make-a-wish-story",
+  "title": "Single Candle Make a Wish Story",
+  "category": "Birthday",
+  "subcategory": "Minimalist",
+  "site_category": "Birthday",
+  "description": "One small blush candle with a soft glow floating in the middle of a tall blank story, with “make a wish” in italic serif.",
+  "design_brief": "One small blush candle with a soft glow floating in the middle of a tall blank story, with “make a wish” in italic serif.",
+  "design_style": "minimalist typography",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=single%20candle%20minimalist%20birthday%20story",
+  "inspiration_query": "single candle minimalist birthday story",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "centred, 80% white space",
+   "typography": "Cormorant italic, Montserrat spaced caps",
+   "palette": "warm white, blush, amber flame",
+   "decor": "candle with glow"
+  },
+  "palette": [
+   "#F7F3EF",
+   "#E7B9A6"
+  ],
+  "content": {
+   "headline": "make a wish",
+   "message": "HAPPY BIRTHDAY",
+   "signature": ""
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1920,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/single-candle-make-a-wish-story.jpg",
+  "preview_url": "/templates/collection/single-candle-make-a-wish-story-preview.jpg",
+  "status": "published",
+  "is_editable": true
+ },
+ {
+  "id": "birthday-007",
+  "slug": "hbd-grid-mono-poster",
+  "title": "HBD Grid Mono Poster",
+  "category": "Birthday",
+  "subcategory": "Minimalist",
+  "site_category": "Birthday",
+  "description": "A 3×3 outlined grid spelling HBD 2026 in Space Mono with one red-orange heart cell, Swiss-style.",
+  "design_brief": "A 3×3 outlined grid spelling HBD 2026 in Space Mono with one red-orange heart cell, Swiss-style.",
+  "design_style": "minimalist typography",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=swiss%20grid%20monospace%20birthday%20poster",
+  "inspiration_query": "swiss grid monospace birthday poster",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "3×3 grid + caption",
+   "typography": "Space Mono bold",
+   "palette": "paper grey, black, red-orange",
+   "decor": "grid lines, one filled cell"
+  },
+  "palette": [
+   "#F2F2EF",
+   "#FF5A36"
+  ],
+  "content": {
+   "headline": "HBD",
+   "message": "happy birthday to you, you absolute legend.",
+   "signature": ""
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1350,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/hbd-grid-mono-poster.jpg",
+  "preview_url": "/templates/collection/hbd-grid-mono-poster-preview.jpg",
+  "status": "published",
+  "is_editable": true
+ },
+ {
+  "id": "birthday-008",
+  "slug": "classic-quote-dad-birthday-print",
+  "title": "Classic Quote Dad Birthday Print",
+  "category": "Birthday",
+  "subcategory": "Minimalist",
+  "site_category": "Birthday",
+  "description": "A framed A5 print: italic “On your birthday”, a centred serif quote, and spaced caps “Happy Birthday, Dad” — bookish and calm.",
+  "design_brief": "A framed A5 print: italic “On your birthday”, a centred serif quote, and spaced caps “Happy Birthday, Dad” — bookish and calm.",
+  "design_style": "minimalist typography",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=elegant%20serif%20quote%20birthday%20card%20for%20dad",
+  "inspiration_query": "elegant serif quote birthday card for dad",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "centred, inner frame",
+   "typography": "EB Garamond, Montserrat caps",
+   "palette": "ivory, charcoal, stone frame",
+   "decor": "hairline frame and rule"
+  },
+  "palette": [
+   "#FFFCF7",
+   "#2D2A26"
+  ],
+  "content": {
+   "headline": "On your birthday",
+   "message": "Here’s to everything still ahead of you.",
+   "signature": "Happy Birthday, Dad"
+  },
+  "dimensions": {
+   "width": 559,
+   "height": 794,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/classic-quote-dad-birthday-print.jpg",
+  "preview_url": "/templates/collection/classic-quote-dad-birthday-print-preview.jpg",
+  "status": "published",
+  "is_editable": true
+ },
+ {
+  "id": "birthday-009",
+  "slug": "three-wishes-circles-post",
+  "title": "Three Wishes Circles Post",
+  "category": "Birthday",
+  "subcategory": "Minimalist",
+  "site_category": "Birthday",
+  "description": "Three translucent pastel circles overlapping like a Venn diagram (three wishes) with tiny lowercase Josefin type below.",
+  "design_brief": "Three translucent pastel circles overlapping like a Venn diagram (three wishes) with tiny lowercase Josefin type below.",
+  "design_style": "minimalist typography",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=overlapping%20pastel%20circles%20minimal%20birthday",
+  "inspiration_query": "overlapping pastel circles minimal birthday",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "centred cluster + caption",
+   "typography": "Josefin Sans 600",
+   "palette": "peach, sky, butter on white",
+   "decor": "overlapping circles"
+  },
+  "palette": [
+   "#FBFAF8",
+   "#F4B6A6"
+  ],
+  "content": {
+   "headline": "happy birthday",
+   "message": "three wishes, all yours",
+   "signature": ""
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/three-wishes-circles-post.jpg",
+  "preview_url": "/templates/collection/three-wishes-circles-post-preview.jpg",
+  "status": "published",
+  "is_editable": true
+ },
+ {
+  "id": "birthday-010",
+  "slug": "kraft-handwritten-grandma-card",
+  "title": "Kraft Handwritten Grandma Card",
+  "category": "Birthday",
+  "subcategory": "Minimalist",
+  "site_category": "Birthday",
+  "description": "Kraft-paper card with printed spaced caps “HAPPY BIRTHDAY TO” and a large handwritten “Grandma” in rust Caveat, plus a heartfelt line.",
+  "design_brief": "Kraft-paper card with printed spaced caps “HAPPY BIRTHDAY TO” and a large handwritten “Grandma” in rust Caveat, plus a heartfelt line.",
+  "design_style": "minimalist typography",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=kraft%20paper%20handwritten%20birthday%20card%20grandma",
+  "inspiration_query": "kraft paper handwritten birthday card grandma",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "inset panel, left-aligned",
+   "typography": "Josefin Sans caps, Caveat script",
+   "palette": "kraft, sand, rust",
+   "decor": "inset panel, rule"
+  },
+  "palette": [
+   "#D9C2A3",
+   "#8C3B2A"
+  ],
+  "content": {
+   "headline": "Happy Birthday to Grandma",
+   "message": "Thank you for the stories, the soup and the hugs. We love you more than cake.",
+   "signature": "— all of us"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/kraft-handwritten-grandma-card.jpg",
+  "preview_url": "/templates/collection/kraft-handwritten-grandma-card-preview.jpg",
+  "status": "published",
+  "is_editable": true
+ },
+ {
+  "id": "birthday-011",
+  "slug": "gold-script-black-frame-card",
+  "title": "Gold Script Black Frame Card",
+  "category": "Birthday",
+  "subcategory": "Luxury Black & Gold",
+  "site_category": "Birthday",
+  "description": "Gold-foil style script “Happy Birthday” centred on black, inside a thick-and-thin gold double frame, Cinzel caps message.",
+  "design_brief": "Gold-foil style script “Happy Birthday” centred on black, inside a thick-and-thin gold double frame, Cinzel caps message.",
+  "design_style": "luxury black and gold",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=black%20gold%20foil%20script%20birthday%20card",
+  "inspiration_query": "black gold foil script birthday card",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "centred, framed",
+   "typography": "Great Vibes gradient gold, Cinzel",
+   "palette": "black, champagne gold",
+   "decor": "double gold frame"
+  },
+  "palette": [
+   "#0B0B0B",
+   "#C9A55C"
+  ],
+  "content": {
+   "headline": "Happy Birthday",
+   "message": "May your day sparkle as brightly as you do",
+   "signature": "Layla"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/gold-script-black-frame-card.jpg",
+  "preview_url": "/templates/collection/gold-script-black-frame-card-preview.jpg",
+  "status": "published",
+  "is_editable": true
+ },
+ {
+  "id": "birthday-012",
+  "slug": "art-deco-golden-50-invitation",
+  "title": "Art Deco Golden 50 Invitation",
+  "category": "Birthday",
+  "subcategory": "Luxury Black & Gold",
+  "site_category": "Birthday",
+  "description": "Art-deco sunrise fan of gold rays and arcs above a big gold “50”, with event details in Cinzel and Marcellus.",
+  "design_brief": "Art-deco sunrise fan of gold rays and arcs above a big gold “50”, with event details in Cinzel and Marcellus.",
+  "design_style": "luxury black and gold",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=art%20deco%20black%20gold%2050th%20birthday%20invitation",
+  "inspiration_query": "art deco black gold 50th birthday invitation",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "fan top half, details below",
+   "typography": "Cinzel 700, Marcellus",
+   "palette": "ink black, gold",
+   "decor": "deco rays, arcs, horizon line"
+  },
+  "palette": [
+   "#0E0E10",
+   "#C9A55C"
+  ],
+  "content": {
+   "headline": "A Golden Birthday Celebration",
+   "message": "Saturday 14 November · 8 PM · The Atrium, Jumeirah",
+   "signature": "Black tie · RSVP to Rania"
+  },
+  "dimensions": {
+   "width": 559,
+   "height": 794,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/art-deco-golden-50-invitation.jpg",
+  "preview_url": "/templates/collection/art-deco-golden-50-invitation-preview.jpg",
+  "status": "published",
+  "is_editable": true
+ },
+ {
+  "id": "birthday-013",
+  "slug": "gold-balloons-cheers-to-40-post",
+  "title": "Gold Balloons Cheers to 40 Post",
+  "category": "Birthday",
+  "subcategory": "Luxury Black & Gold",
+  "site_category": "Birthday",
+  "description": "Glossy gold and black balloons on a dark marble texture with gold italic “Cheers to 40”.",
+  "design_brief": "Glossy gold and black balloons on a dark marble texture with gold italic “Cheers to 40”.",
+  "design_style": "luxury black and gold",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=black%20and%20gold%20balloons%2040th%20birthday%20post",
+  "inspiration_query": "black and gold balloons 40th birthday post",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "balloons top, text bottom",
+   "typography": "Playfair italic gold, Montserrat caps",
+   "palette": "black marble, gold",
+   "decor": "gradient balloons, marble veins"
+  },
+  "palette": [
+   "#1A1A1A",
+   "#C9A55C"
+  ],
+  "content": {
+   "headline": "Cheers to 40",
+   "message": "HAPPY BIRTHDAY, KARIM",
+   "signature": ""
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/gold-balloons-cheers-to-40-post.jpg",
+  "preview_url": "/templates/collection/gold-balloons-cheers-to-40-post-preview.jpg",
+  "status": "published",
+  "is_editable": true
+ },
+ {
+  "id": "birthday-014",
+  "slug": "gold-diamond-monogram-card",
+  "title": "Gold Diamond Monogram Card",
+  "category": "Birthday",
+  "subcategory": "Luxury Black & Gold",
+  "site_category": "Birthday",
+  "description": "A gold double diamond outline holding a single serif monogram, with “Happy Birthday” in Cinzel and a script signature.",
+  "design_brief": "A gold double diamond outline holding a single serif monogram, with “Happy Birthday” in Cinzel and a script signature.",
+  "design_style": "luxury black and gold",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=gold%20geometric%20monogram%20black%20birthday%20card",
+  "inspiration_query": "gold geometric monogram black birthday card",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "centred emblem",
+   "typography": "Playfair monogram, Cinzel, Cormorant italic, Great Vibes",
+   "palette": "black, gold, parchment text",
+   "decor": "nested diamonds"
+  },
+  "palette": [
+   "#111111",
+   "#E2BC5C"
+  ],
+  "content": {
+   "headline": "Happy Birthday",
+   "message": "To a year of quiet luxury, loud laughter and everything you have been waiting for.",
+   "signature": "Sofia"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/gold-diamond-monogram-card.jpg",
+  "preview_url": "/templates/collection/gold-diamond-monogram-card-preview.jpg",
+  "status": "published",
+  "is_editable": true
+ },
+ {
+  "id": "birthday-015",
+  "slug": "champagne-tower-birthday-story",
+  "title": "Champagne Tower Birthday Story",
+  "category": "Birthday",
+  "subcategory": "Luxury Black & Gold",
+  "site_category": "Birthday",
+  "description": "A gold line-art champagne coupe pyramid with floating gold bubbles and a script “Pop the bubbly” party call.",
+  "design_brief": "A gold line-art champagne coupe pyramid with floating gold bubbles and a script “Pop the bubbly” party call.",
+  "design_style": "luxury black and gold",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=champagne%20tower%20gold%20line%20art%20birthday%20party%20story",
+  "inspiration_query": "champagne tower gold line art birthday party story",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "pyramid centre, text lower third",
+   "typography": "Great Vibes gold, Montserrat caps",
+   "palette": "black, gold",
+   "decor": "line glasses, bubble dots"
+  },
+  "palette": [
+   "#0A0A0A",
+   "#E2BC5C"
+  ],
+  "content": {
+   "headline": "Pop the bubbly",
+   "message": "It’s Yasmin’s birthday · Friday · 9 PM · Rooftop 51",
+   "signature": ""
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1920,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/champagne-tower-birthday-story.jpg",
+  "preview_url": "/templates/collection/champagne-tower-birthday-story-preview.jpg",
+  "status": "published",
+  "is_editable": true
+ },
+ {
+  "id": "birthday-016",
+  "slug": "laurel-60th-birthday-invitation",
+  "title": "Laurel 60th Birthday Invitation",
+  "category": "Birthday",
+  "subcategory": "Luxury Black & Gold",
+  "site_category": "Birthday",
+  "description": "Formal 60th invitation: gold “60” cradled by two laurel sprigs, formal wording, date, venue and RSVP in an outlined frame.",
+  "design_brief": "Formal 60th invitation: gold “60” cradled by two laurel sprigs, formal wording, date, venue and RSVP in an outlined frame.",
+  "design_style": "luxury black and gold",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=gold%20laurel%20wreath%2060th%20birthday%20invitation%20black",
+  "inspiration_query": "gold laurel wreath 60th birthday invitation black",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "centred formal stack",
+   "typography": "Cinzel, Playfair italic, Marcellus",
+   "palette": "charcoal, gold",
+   "decor": "laurel sprigs, frame, rule"
+  },
+  "palette": [
+   "#121212",
+   "#C9A55C"
+  ],
+  "content": {
+   "headline": "Mohammed’s 60th Birthday",
+   "message": "Thursday, 3 December 2026 · 7:30 in the evening · The Ritz-Carlton Ballroom",
+   "signature": "RSVP by 20 November"
+  },
+  "dimensions": {
+   "width": 559,
+   "height": 794,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/laurel-60th-birthday-invitation.jpg",
+  "preview_url": "/templates/collection/laurel-60th-birthday-invitation-preview.jpg",
+  "status": "published",
+  "is_editable": true
+ },
+ {
+  "id": "birthday-017",
+  "slug": "gold-confetti-bold-birthday-post",
+  "title": "Gold Confetti Bold Birthday Post",
+  "category": "Birthday",
+  "subcategory": "Luxury Black & Gold",
+  "site_category": "Birthday",
+  "description": "Heavy condensed “HAPPY BIRTHDAY” in gold gradient between bands of falling gold confetti on pure black.",
+  "design_brief": "Heavy condensed “HAPPY BIRTHDAY” in gold gradient between bands of falling gold confetti on pure black.",
+  "design_style": "luxury black and gold",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=gold%20confetti%20black%20bold%20birthday%20post",
+  "inspiration_query": "gold confetti black bold birthday post",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "type centre, confetti top and bottom",
+   "typography": "Anton gold, Playfair italic",
+   "palette": "black, three golds, white",
+   "decor": "confetti field"
+  },
+  "palette": [
+   "#000000",
+   "#E2BC5C"
+  ],
+  "content": {
+   "headline": "HAPPY BIRTHDAY",
+   "message": "make it a gold-star year",
+   "signature": ""
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/gold-confetti-bold-birthday-post.jpg",
+  "preview_url": "/templates/collection/gold-confetti-bold-birthday-post-preview.jpg",
+  "status": "published",
+  "is_editable": true
+ },
+ {
+  "id": "birthday-018",
+  "slug": "gold-crown-queen-mum-card",
+  "title": "Gold Crown Queen Mum Card",
+  "category": "Birthday",
+  "subcategory": "Luxury Black & Gold",
+  "site_category": "Birthday",
+  "description": "A gold line crown with jewels, “Queen of the Day” in italic gold, for Mum, with a warm two-line tribute.",
+  "design_brief": "A gold line crown with jewels, “Queen of the Day” in italic gold, for Mum, with a warm two-line tribute.",
+  "design_style": "luxury black and gold",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=gold%20crown%20line%20art%20birthday%20card%20for%20mom",
+  "inspiration_query": "gold crown line art birthday card for mom",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "icon top, text centred",
+   "typography": "Playfair italic, Montserrat caps, Cormorant italic",
+   "palette": "black, metallic gold",
+   "decor": "crown line drawing"
+  },
+  "palette": [
+   "#0D0D0D",
+   "#D4AF37"
+  ],
+  "content": {
+   "headline": "Queen of the Day",
+   "message": "You built our whole world with grace. Today, it all bows to you.",
+   "signature": "Love, your three troublemakers"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/gold-crown-queen-mum-card.jpg",
+  "preview_url": "/templates/collection/gold-crown-queen-mum-card-preview.jpg",
+  "status": "published",
+  "is_editable": true
+ },
+ {
+  "id": "birthday-019",
+  "slug": "gold-band-21st-birthday-story",
+  "title": "Gold Band 21st Birthday Story",
+  "category": "Birthday",
+  "subcategory": "Luxury Black & Gold",
+  "site_category": "Birthday",
+  "description": "Right-hand gold gradient band with “BIRTHDAY” running vertically, big gold “21st” and a short line on black, for social.",
+  "design_brief": "Right-hand gold gradient band with “BIRTHDAY” running vertically, big gold “21st” and a short line on black, for social.",
+  "design_style": "luxury black and gold",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=black%20gold%20vertical%20band%2021st%20birthday%20story",
+  "inspiration_query": "black gold vertical band 21st birthday story",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "asymmetric split 62/38",
+   "typography": "Anton vertical, Playfair 700, Montserrat",
+   "palette": "black, gold gradient",
+   "decor": "vertical text band"
+  },
+  "palette": [
+   "#0B0B0B",
+   "#E2BC5C"
+  ],
+  "content": {
+   "headline": "Happy 21st",
+   "message": "The best is just getting started.",
+   "signature": "@adam.21"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1920,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/gold-band-21st-birthday-story.jpg",
+  "preview_url": "/templates/collection/gold-band-21st-birthday-story-preview.jpg",
+  "status": "published",
+  "is_editable": true
+ },
+ {
+  "id": "birthday-020",
+  "slug": "velvet-gold-gift-birthday-card",
+  "title": "Velvet Gold Gift Birthday Card",
+  "category": "Birthday",
+  "subcategory": "Luxury Black & Gold",
+  "site_category": "Birthday",
+  "description": "A black gift box tied with gold ribbon under a spotlight glow, sparkles above, “A little something golden” in italic gold.",
+  "design_brief": "A black gift box tied with gold ribbon under a spotlight glow, sparkles above, “A little something golden” in italic gold.",
+  "design_style": "luxury black and gold",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=black%20velvet%20gold%20gift%20box%20birthday%20card",
+  "inspiration_query": "black velvet gold gift box birthday card",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "illustration top, text below",
+   "typography": "Cormorant italic gold, Cinzel, Great Vibes",
+   "palette": "black velvet radial, gold",
+   "decor": "gift box, sparkles"
+  },
+  "palette": [
+   "#2A2A2A",
+   "#D4AF37"
+  ],
+  "content": {
+   "headline": "A little something golden",
+   "message": "For the friend who makes ordinary days feel like occasions.",
+   "signature": "With love, Hana"
+  },
+  "dimensions": {
+   "width": 559,
+   "height": 794,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/velvet-gold-gift-birthday-card.jpg",
+  "preview_url": "/templates/collection/velvet-gold-gift-birthday-card-preview.jpg",
+  "status": "published",
+  "is_editable": true
+ },
+ {
+  "id": "birthday-021",
+  "slug": "pink-arch-cake-birthday-card",
+  "title": "Pink Arch Cake Birthday Card",
+  "category": "Birthday",
+  "subcategory": "Pastel",
+  "site_category": "Birthday",
+  "description": "A blush arch window framing a white two-tier cake with pink drip icing and three candles; italic serif greeting below.",
+  "design_brief": "A blush arch window framing a white two-tier cake with pink drip icing and three candles; italic serif greeting below.",
+  "design_style": "pastel pink cream beige",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=pink%20arch%20tiered%20cake%20pastel%20birthday%20card",
+  "inspiration_query": "pink arch tiered cake pastel birthday card",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "arch window top, text below",
+   "typography": "Playfair italic, Montserrat",
+   "palette": "blush, cream, rose",
+   "decor": "arch, drip cake, candles"
+  },
+  "palette": [
+   "#FBEFEA",
+   "#F4B6C2"
+  ],
+  "content": {
+   "headline": "Happy Birthday",
+   "message": "sweetest wishes for a sweet year",
+   "signature": "Love, Aunt Dina"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/pink-arch-cake-birthday-card.jpg",
+  "preview_url": "/templates/collection/pink-arch-cake-birthday-card-preview.jpg",
+  "status": "published",
+  "is_editable": true
+ },
+ {
+  "id": "birthday-022",
+  "slug": "pastel-hearts-ribbon-banner-post",
+  "title": "Pastel Hearts Ribbon Banner Post",
+  "category": "Birthday",
+  "subcategory": "Pastel",
+  "site_category": "Birthday",
+  "description": "Scattered pastel hearts around a folded ribbon banner reading HAPPY BIRTHDAY, a script name above and age line below.",
+  "design_brief": "Scattered pastel hearts around a folded ribbon banner reading HAPPY BIRTHDAY, a script name above and age line below.",
+  "design_style": "pastel pink cream beige",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=pastel%20hearts%20ribbon%20banner%20girl%20birthday%20post",
+  "inspiration_query": "pastel hearts ribbon banner girl birthday post",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "centred banner",
+   "typography": "Dancing Script, Montserrat 800",
+   "palette": "shell pink, peach, rose",
+   "decor": "hearts, ribbon banner"
+  },
+  "palette": [
+   "#FFF6F2",
+   "#E9A0B2"
+  ],
+  "content": {
+   "headline": "Happy Birthday",
+   "message": "turning 7 and twice as lovely",
+   "signature": "Bella"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/pastel-hearts-ribbon-banner-post.jpg",
+  "preview_url": "/templates/collection/pastel-hearts-ribbon-banner-post-preview.jpg",
+  "status": "published",
+  "is_editable": true
+ },
+ {
+  "id": "birthday-023",
+  "slug": "pressed-wildflower-beige-card",
+  "title": "Pressed Wildflower Beige Card",
+  "category": "Birthday",
+  "subcategory": "Pastel",
+  "site_category": "Birthday",
+  "description": "Pressed-flower sprigs and tiny daisies rising from the bottom-left of linen beige, right-aligned serif greeting and quote.",
+  "design_brief": "Pressed-flower sprigs and tiny daisies rising from the bottom-left of linen beige, right-aligned serif greeting and quote.",
+  "design_style": "pastel pink cream beige",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=pressed%20flowers%20beige%20linen%20birthday%20card",
+  "inspiration_query": "pressed flowers beige linen birthday card",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "illustration bottom-left, text right",
+   "typography": "Libre Baskerville, Alex Brush",
+   "palette": "linen beige, taupe, cream daisies",
+   "decor": "sprigs, daisies"
+  },
+  "palette": [
+   "#EFE5D8",
+   "#5A4636"
+  ],
+  "content": {
+   "headline": "Happy Birthday",
+   "message": "Like wildflowers, you make everywhere more beautiful.",
+   "signature": "Fatima"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/pressed-wildflower-beige-card.jpg",
+  "preview_url": "/templates/collection/pressed-wildflower-beige-card-preview.jpg",
+  "status": "published",
+  "is_editable": true
+ },
+ {
+  "id": "birthday-024",
+  "slug": "pastel-balloon-cluster-party-story",
+  "title": "Pastel Balloon Cluster Party Story",
+  "category": "Birthday",
+  "subcategory": "Pastel",
+  "site_category": "Birthday",
+  "description": "A cluster of pastel balloons in the top-right corner, rounded Fredoka “it’s your birthday!” and a friendly invite with a pill RSVP button.",
+  "design_brief": "A cluster of pastel balloons in the top-right corner, rounded Fredoka “it’s your birthday!” and a friendly invite with a pill RSVP button.",
+  "design_style": "pastel pink cream beige",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=pastel%20balloon%20cluster%20birthday%20party%20story",
+  "inspiration_query": "pastel balloon cluster birthday party story",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "corner cluster, left text",
+   "typography": "Fredoka 600, Nunito",
+   "palette": "cream, blush, butter, lilac",
+   "decor": "balloons, pill button"
+  },
+  "palette": [
+   "#FDF3EE",
+   "#C46E83"
+  ],
+  "content": {
+   "headline": "it’s your birthday!",
+   "message": "Pink drinks, good friends, and cake for breakfast. See you Saturday at 4!",
+   "signature": "RSVP to Mia"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1920,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/pastel-balloon-cluster-party-story.jpg",
+  "preview_url": "/templates/collection/pastel-balloon-cluster-party-story-preview.jpg",
+  "status": "published",
+  "is_editable": true
+ },
+ {
+  "id": "birthday-025",
+  "slug": "vintage-cameo-peony-mum-card",
+  "title": "Vintage Cameo Peony Mum Card",
+  "category": "Birthday",
+  "subcategory": "Pastel",
+  "site_category": "Birthday",
+  "description": "An oval cameo frame holding a blush peony with leaf sprigs, Parisienne “Happy Birthday, Mum” and a tender italic note.",
+  "design_brief": "An oval cameo frame holding a blush peony with leaf sprigs, Parisienne “Happy Birthday, Mum” and a tender italic note.",
+  "design_style": "pastel pink cream beige",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=vintage%20cameo%20peony%20blush%20birthday%20card%20mom",
+  "inspiration_query": "vintage cameo peony blush birthday card mom",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "cameo top, text below",
+   "typography": "Parisienne, Cormorant italic, Montserrat caps",
+   "palette": "dusty blush, rose, sage",
+   "decor": "cameo oval, peony, sprigs"
+  },
+  "palette": [
+   "#F7E8E4",
+   "#8E4F5C"
+  ],
+  "content": {
+   "headline": "Happy Birthday, Mum",
+   "message": "For every kindness, every bedtime story and every ‘I told you so’ — thank you.",
+   "signature": "All my love · Zara"
+  },
+  "dimensions": {
+   "width": 559,
+   "height": 794,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/vintage-cameo-peony-mum-card.jpg",
+  "preview_url": "/templates/collection/vintage-cameo-peony-mum-card-preview.jpg",
+  "status": "published",
+  "is_editable": true
+ },
+ {
+  "id": "birthday-026",
+  "slug": "boho-arches-sister-birthday-card",
+  "title": "Boho Arches Sister Birthday Card",
+  "category": "Birthday",
+  "subcategory": "Pastel",
+  "site_category": "Birthday",
+  "description": "Stacked boho half-arches in terracotta and blush with a little sun, for a sister, with Satisfy script and a golden-hour wish.",
+  "design_brief": "Stacked boho half-arches in terracotta and blush with a little sun, for a sister, with Satisfy script and a golden-hour wish.",
+  "design_style": "pastel pink cream beige",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=boho%20rainbow%20arches%20terracotta%20birthday%20card",
+  "inspiration_query": "boho rainbow arches terracotta birthday card",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "arches top half",
+   "typography": "Josefin Sans, Satisfy",
+   "palette": "sand, terracotta, blush",
+   "decor": "boho rainbow, sun dot"
+  },
+  "palette": [
+   "#F3E9DD",
+   "#D9967B"
+  ],
+  "content": {
+   "headline": "happy birthday",
+   "message": "Here’s to slow coffees, long calls and a year that feels like golden hour.",
+   "signature": "— Reem"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/boho-arches-sister-birthday-card.jpg",
+  "preview_url": "/templates/collection/boho-arches-sister-birthday-card-preview.jpg",
+  "status": "published",
+  "is_editable": true
+ },
+ {
+  "id": "birthday-027",
+  "slug": "gingham-cake-slice-birthday-post",
+  "title": "Gingham Cake Slice Birthday Post",
+  "category": "Birthday",
+  "subcategory": "Pastel",
+  "site_category": "Birthday",
+  "description": "A cake slice with cherry on a plate atop a pink gingham tablecloth, italic “a slice of happiness” headline.",
+  "design_brief": "A cake slice with cherry on a plate atop a pink gingham tablecloth, italic “a slice of happiness” headline.",
+  "design_style": "pastel pink cream beige",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=pink%20gingham%20cake%20slice%20birthday%20illustration",
+  "inspiration_query": "pink gingham cake slice birthday illustration",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "headline top, illustration bottom",
+   "typography": "Playfair italic, Montserrat caps",
+   "palette": "cream, gingham pink, cherry",
+   "decor": "gingham, plate, cake slice"
+  },
+  "palette": [
+   "#FFF8F1",
+   "#F4B6C2"
+  ],
+  "content": {
+   "headline": "a slice of happiness",
+   "message": "HAPPY BIRTHDAY, ELIF",
+   "signature": ""
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/gingham-cake-slice-birthday-post.jpg",
+  "preview_url": "/templates/collection/gingham-cake-slice-birthday-post-preview.jpg",
+  "status": "published",
+  "is_editable": true
+ },
+ {
+  "id": "birthday-028",
+  "slug": "blush-bow-bestie-card",
+  "title": "Blush Bow Bestie Card",
+  "category": "Birthday",
+  "subcategory": "Pastel",
+  "site_category": "Birthday",
+  "description": "Landscape coquette-style card: dashed stitched border, pink satin bow on top, flowing script for a best friend.",
+  "design_brief": "Landscape coquette-style card: dashed stitched border, pink satin bow on top, flowing script for a best friend.",
+  "design_style": "pastel pink cream beige",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=pink%20bow%20coquette%20birthday%20card%20best%20friend",
+  "inspiration_query": "pink bow coquette birthday card best friend",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "landscape, centred",
+   "typography": "Great Vibes, Montserrat",
+   "palette": "blush, rose",
+   "decor": "bow, stitched border"
+  },
+  "palette": [
+   "#F9E4E4",
+   "#B4566F"
+  ],
+  "content": {
+   "headline": "Happy Birthday, Bestie",
+   "message": "ribbons, gossip and cake — the holy trinity",
+   "signature": "Love you, J"
+  },
+  "dimensions": {
+   "width": 673,
+   "height": 480,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/blush-bow-bestie-card.jpg",
+  "preview_url": "/templates/collection/blush-bow-bestie-card-preview.jpg",
+  "status": "published",
+  "is_editable": true
+ },
+ {
+  "id": "birthday-029",
+  "slug": "birthday-wish-list-story",
+  "title": "Birthday Wish List Story",
+  "category": "Birthday",
+  "subcategory": "Pastel",
+  "site_category": "Birthday",
+  "description": "A handwritten “birthday wish list” with five pastel tick-boxes on a paper card, playful and personal.",
+  "design_brief": "A handwritten “birthday wish list” with five pastel tick-boxes on a paper card, playful and personal.",
+  "design_style": "pastel pink cream beige",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=handwritten%20checklist%20pastel%20birthday%20story",
+  "inspiration_query": "handwritten checklist pastel birthday story",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "paper card with list",
+   "typography": "Caveat, Montserrat caps",
+   "palette": "oat, paper, pastel ticks",
+   "decor": "checkboxes, ticks"
+  },
+  "palette": [
+   "#F2E8DC",
+   "#9A6B5A"
+  ],
+  "content": {
+   "headline": "birthday wish list",
+   "message": "more adventures · less worrying · endless cake · the comfiest sweater · a year of yes",
+   "signature": "Happy Birthday, Laila"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1920,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/birthday-wish-list-story.jpg",
+  "preview_url": "/templates/collection/birthday-wish-list-story-preview.jpg",
+  "status": "published",
+  "is_editable": true
+ },
+ {
+  "id": "birthday-030",
+  "slug": "soft-blobs-cream-circle-post",
+  "title": "Soft Blobs Cream Circle Post",
+  "category": "Birthday",
+  "subcategory": "Pastel",
+  "site_category": "Birthday",
+  "description": "Organic pastel blobs in the corners behind a cream circle with chunky Yeseva “happy birthday”.",
+  "design_brief": "Organic pastel blobs in the corners behind a cream circle with chunky Yeseva “happy birthday”.",
+  "design_style": "pastel pink cream beige",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=soft%20pastel%20blob%20shapes%20birthday%20post",
+  "inspiration_query": "soft pastel blob shapes birthday post",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "centred circle",
+   "typography": "Yeseva One, Raleway",
+   "palette": "blush, apricot, lilac",
+   "decor": "organic blobs"
+  },
+  "palette": [
+   "#FBE9E7",
+   "#B4566F"
+  ],
+  "content": {
+   "headline": "happy birthday",
+   "message": "sending softness your way",
+   "signature": ""
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/soft-blobs-cream-circle-post.jpg",
+  "preview_url": "/templates/collection/soft-blobs-cream-circle-post-preview.jpg",
+  "status": "published",
+  "is_editable": true
+ },
+ {
+  "id": "birthday-031",
+  "slug": "dino-party-5th-birthday-card",
+  "title": "Dino Party 5th Birthday Card",
+  "category": "Birthday",
+  "subcategory": "Kids",
+  "site_category": "Birthday",
+  "description": "A friendly green dinosaur wearing a party hat on a green checker floor, “ROAR!” and the child’s name and age.",
+  "design_brief": "A friendly green dinosaur wearing a party hat on a green checker floor, “ROAR!” and the child’s name and age.",
+  "design_style": "playful illustrated kids",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=cute%20dinosaur%20party%20hat%20kids%20birthday%20card",
+  "inspiration_query": "cute dinosaur party hat kids birthday card",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "landscape: illustration left, text right",
+   "typography": "Luckiest Guy, Fredoka, Nunito",
+   "palette": "mint, leaf green, pink",
+   "decor": "dino, hat, checker floor"
+  },
+  "palette": [
+   "#E8F6EC",
+   "#6BBF59"
+  ],
+  "content": {
+   "headline": "Happy 5th Birthday, Leo!",
+   "message": "Have a dino-mite day!",
+   "signature": ""
+  },
+  "dimensions": {
+   "width": 673,
+   "height": 480,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/dino-party-5th-birthday-card.jpg",
+  "preview_url": "/templates/collection/dino-party-5th-birthday-card-preview.jpg",
+  "status": "published",
+  "is_editable": true
+ },
+ {
+  "id": "birthday-032",
+  "slug": "rocket-blast-off-space-invitation",
+  "title": "Rocket Blast Off Space Invitation",
+  "category": "Birthday",
+  "subcategory": "Kids",
+  "site_category": "Birthday",
+  "description": "Starry navy space scene with a rocket and ringed planets; “BLAST OFF!” in Bungee and full party details.",
+  "design_brief": "Starry navy space scene with a rocket and ringed planets; “BLAST OFF!” in Bungee and full party details.",
+  "design_style": "playful illustrated kids",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=space%20rocket%20planets%20kids%20birthday%20invitation",
+  "inspiration_query": "space rocket planets kids birthday invitation",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "illustration top, details below",
+   "typography": "Bungee, Fredoka, Nunito",
+   "palette": "navy, amber, red, sky",
+   "decor": "stars, rocket, planets, button"
+  },
+  "palette": [
+   "#0F1B4C",
+   "#FFB703"
+  ],
+  "content": {
+   "headline": "BLAST OFF!",
+   "message": "Join us for Zayd’s 6th Birthday · Saturday 21 November · 3–6 PM · Planet Play, Dubai Hills Mall",
+   "signature": "RSVP: 050 000 0000"
+  },
+  "dimensions": {
+   "width": 559,
+   "height": 794,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/rocket-blast-off-space-invitation.jpg",
+  "preview_url": "/templates/collection/rocket-blast-off-space-invitation-preview.jpg",
+  "status": "published",
+  "is_editable": true
+ },
+ {
+  "id": "birthday-033",
+  "slug": "beary-happy-teddy-balloons-card",
+  "title": "Beary Happy Teddy Balloons Card",
+  "category": "Birthday",
+  "subcategory": "Kids",
+  "site_category": "Birthday",
+  "description": "A round teddy bear under three pastel balloons on baby blue, pun headline “Beary Happy Birthday!”.",
+  "design_brief": "A round teddy bear under three pastel balloons on baby blue, pun headline “Beary Happy Birthday!”.",
+  "design_style": "playful illustrated kids",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=teddy%20bear%20balloons%20baby%20blue%20kids%20birthday%20card",
+  "inspiration_query": "teddy bear balloons baby blue kids birthday card",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "centred character",
+   "typography": "Fredoka 700, Nunito",
+   "palette": "baby blue, caramel, pastels",
+   "decor": "bear, balloons"
+  },
+  "palette": [
+   "#E3F0FB",
+   "#C99A6E"
+  ],
+  "content": {
+   "headline": "Beary Happy Birthday!",
+   "message": "Hugs and honey for our little Adam",
+   "signature": ""
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/beary-happy-teddy-balloons-card.jpg",
+  "preview_url": "/templates/collection/beary-happy-teddy-balloons-card-preview.jpg",
+  "status": "published",
+  "is_editable": true
+ },
+ {
+  "id": "birthday-034",
+  "slug": "whale-hello-under-the-sea-post",
+  "title": "Whale Hello Under the Sea Post",
+  "category": "Birthday",
+  "subcategory": "Kids",
+  "site_category": "Birthday",
+  "description": "A smiling blue whale in a gradient ocean with bubbles and a sandy floor, pun “Whale, hello there, birthday boy!”.",
+  "design_brief": "A smiling blue whale in a gradient ocean with bubbles and a sandy floor, pun “Whale, hello there, birthday boy!”.",
+  "design_style": "playful illustrated kids",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=cute%20whale%20under%20the%20sea%20kids%20birthday",
+  "inspiration_query": "cute whale under the sea kids birthday",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "character centre",
+   "typography": "Fredoka, Nunito",
+   "palette": "sea blues, sand",
+   "decor": "whale, bubbles, sand"
+  },
+  "palette": [
+   "#BDE7F5",
+   "#2F7FC1"
+  ],
+  "content": {
+   "headline": "Whale, hello there, birthday boy!",
+   "message": "Ocean-sized wishes for Ali — 3 today!",
+   "signature": ""
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/whale-hello-under-the-sea-post.jpg",
+  "preview_url": "/templates/collection/whale-hello-under-the-sea-post-preview.jpg",
+  "status": "published",
+  "is_editable": true
+ },
+ {
+  "id": "birthday-035",
+  "slug": "rainbow-bunny-4th-birthday-story",
+  "title": "Rainbow Bunny 4th Birthday Story",
+  "category": "Birthday",
+  "subcategory": "Kids",
+  "site_category": "Birthday",
+  "description": "Pastel rainbow with puffy clouds and a white bunny, pun “Some-bunny is turning 4!” plus party details.",
+  "design_brief": "Pastel rainbow with puffy clouds and a white bunny, pun “Some-bunny is turning 4!” plus party details.",
+  "design_style": "playful illustrated kids",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=pastel%20rainbow%20clouds%20bunny%20kids%20birthday%20invite",
+  "inspiration_query": "pastel rainbow clouds bunny kids birthday invite",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "rainbow top, details below",
+   "typography": "Fredoka, Nunito, Pacifico",
+   "palette": "pastel rainbow on blush white",
+   "decor": "rainbow, clouds, bunny"
+  },
+  "palette": [
+   "#FFF7FB",
+   "#E07A9B"
+  ],
+  "content": {
+   "headline": "Some-bunny is turning 4!",
+   "message": "Party · Sunday · 10 AM · Rainbow Café, Al Wasl",
+   "signature": "Love, Sophie"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1920,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/rainbow-bunny-4th-birthday-story.jpg",
+  "preview_url": "/templates/collection/rainbow-bunny-4th-birthday-story-preview.jpg",
+  "status": "published",
+  "is_editable": true
+ },
+ {
+  "id": "birthday-036",
+  "slug": "royal-castle-princess-card",
+  "title": "Royal Castle Princess Card",
+  "category": "Birthday",
+  "subcategory": "Kids",
+  "site_category": "Birthday",
+  "description": "A white fairy-tale castle with violet roofs on a pink-to-lilac sky with sparkles, “A Royal Birthday” in Pacifico.",
+  "design_brief": "A white fairy-tale castle with violet roofs on a pink-to-lilac sky with sparkles, “A Royal Birthday” in Pacifico.",
+  "design_style": "playful illustrated kids",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=princess%20castle%20sparkle%20lilac%20kids%20birthday%20card",
+  "inspiration_query": "princess castle sparkle lilac kids birthday card",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "castle top, text below",
+   "typography": "Pacifico, Nunito 800",
+   "palette": "pink, lilac, violet",
+   "decor": "castle, sparkles"
+  },
+  "palette": [
+   "#F9D5E5",
+   "#9D4EDD"
+  ],
+  "content": {
+   "headline": "A Royal Birthday",
+   "message": "for Princess Amira, turning 6 — may all your wishes come true!",
+   "signature": ""
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/royal-castle-princess-card.jpg",
+  "preview_url": "/templates/collection/royal-castle-princess-card-preview.jpg",
+  "status": "published",
+  "is_editable": true
+ },
+ {
+  "id": "birthday-037",
+  "slug": "jungle-lion-roar-thday-post",
+  "title": "Jungle Lion Roar-thday Post",
+  "category": "Birthday",
+  "subcategory": "Kids",
+  "site_category": "Birthday",
+  "description": "A friendly lion face framed by jungle leaves in every corner, “Happy Roar-thday!” in Luckiest Guy.",
+  "design_brief": "A friendly lion face framed by jungle leaves in every corner, “Happy Roar-thday!” in Luckiest Guy.",
+  "design_style": "playful illustrated kids",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=jungle%20lion%20leaves%20kids%20birthday%20post",
+  "inspiration_query": "jungle lion leaves kids birthday post",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "centre face, leaf corners",
+   "typography": "Luckiest Guy, Nunito",
+   "palette": "butter, leaf greens, amber",
+   "decor": "lion, leaves"
+  },
+  "palette": [
+   "#FFF2D6",
+   "#D9822B"
+  ],
+  "content": {
+   "headline": "Happy Roar-thday!",
+   "message": "Wild wishes for Yusuf, 4",
+   "signature": ""
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/jungle-lion-roar-thday-post.jpg",
+  "preview_url": "/templates/collection/jungle-lion-roar-thday-post-preview.jpg",
+  "status": "published",
+  "is_editable": true
+ },
+ {
+  "id": "birthday-038",
+  "slug": "cupcake-parade-8th-birthday-card",
+  "title": "Cupcake Parade 8th Birthday Card",
+  "category": "Birthday",
+  "subcategory": "Kids",
+  "site_category": "Birthday",
+  "description": "A row of five rainbow cupcakes on a pink shelf under a wavy streamer, chunky Baloo greeting.",
+  "design_brief": "A row of five rainbow cupcakes on a pink shelf under a wavy streamer, chunky Baloo greeting.",
+  "design_style": "playful illustrated kids",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=row%20of%20colorful%20cupcakes%20kids%20birthday%20card",
+  "inspiration_query": "row of colorful cupcakes kids birthday card",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "landscape, text top, row bottom",
+   "typography": "Baloo 2 800, Nunito",
+   "palette": "cream, five pastels",
+   "decor": "cupcakes, streamer"
+  },
+  "palette": [
+   "#FFF9E9",
+   "#E85D75"
+  ],
+  "content": {
+   "headline": "Happy 8th Birthday, Maryam!",
+   "message": "Sprinkles on everything today.",
+   "signature": ""
+  },
+  "dimensions": {
+   "width": 673,
+   "height": 480,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/cupcake-parade-8th-birthday-card.jpg",
+  "preview_url": "/templates/collection/cupcake-parade-8th-birthday-card-preview.jpg",
+  "status": "published",
+  "is_editable": true
+ },
+ {
+  "id": "birthday-039",
+  "slug": "race-car-party-invitation",
+  "title": "Race Car Party Invitation",
+  "category": "Birthday",
+  "subcategory": "Kids",
+  "site_category": "Birthday",
+  "description": "A red race car on a curving dashed track with a chequered top border, “READY, SET, PARTY!” and full details.",
+  "design_brief": "A red race car on a curving dashed track with a chequered top border, “READY, SET, PARTY!” and full details.",
+  "design_style": "playful illustrated kids",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=race%20car%20track%20checkered%20flag%20kids%20birthday%20invitation",
+  "inspiration_query": "race car track checkered flag kids birthday invitation",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "headline top, track middle, details bottom",
+   "typography": "Bungee, Fredoka, Nunito",
+   "palette": "mint, asphalt, racing red",
+   "decor": "track, car, chequer"
+  },
+  "palette": [
+   "#E6F4EA",
+   "#E63946"
+  ],
+  "content": {
+   "headline": "READY, SET, PARTY!",
+   "message": "Racing into Omar’s 7th Birthday · Sunday 6 December · 4 PM · Kartzone Al Quoz",
+   "signature": "RSVP to Huda"
+  },
+  "dimensions": {
+   "width": 559,
+   "height": 794,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/race-car-party-invitation.jpg",
+  "preview_url": "/templates/collection/race-car-party-invitation-preview.jpg",
+  "status": "published",
+  "is_editable": true
+ },
+ {
+  "id": "birthday-040",
+  "slug": "one-derful-first-birthday-story",
+  "title": "ONE-derful First Birthday Story",
+  "category": "Birthday",
+  "subcategory": "Kids",
+  "site_category": "Birthday",
+  "description": "A big pink “1” foil-balloon shape over pastel confetti, playful “ONE-derful year” wording for a first birthday.",
+  "design_brief": "A big pink “1” foil-balloon shape over pastel confetti, playful “ONE-derful year” wording for a first birthday.",
+  "design_style": "playful illustrated kids",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=number%20one%20balloon%20first%20birthday%20confetti",
+  "inspiration_query": "number one balloon first birthday confetti",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "number top, words below",
+   "typography": "Fredoka 700, Nunito",
+   "palette": "cream, pink, pastel confetti",
+   "decor": "number balloon, confetti"
+  },
+  "palette": [
+   "#FFF8F0",
+   "#FF8FAB"
+  ],
+  "content": {
+   "headline": "ONE-derful!",
+   "message": "Our little Noah is turning one",
+   "signature": "First Birthday · Friday 4 PM · Grandma’s house"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1920,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/one-derful-first-birthday-story.jpg",
+  "preview_url": "/templates/collection/one-derful-first-birthday-story-preview.jpg",
+  "status": "published",
+  "is_editable": true
+ },
+ {
+  "id": "birthday-041",
+  "slug": "watercolour-peony-corners-card",
+  "title": "Watercolour Peony Corners Card",
+  "category": "Birthday",
+  "subcategory": "Floral",
+  "site_category": "Birthday",
+  "description": "Two loose watercolour peony bouquets in opposite corners with translucent washes, Parisienne greeting in the clear centre.",
+  "design_brief": "Two loose watercolour peony bouquets in opposite corners with translucent washes, Parisienne greeting in the clear centre.",
+  "design_style": "floral watercolor",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=watercolor%20peony%20corner%20bouquet%20birthday%20card",
+  "inspiration_query": "watercolor peony corner bouquet birthday card",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "diagonal corners, centred text",
+   "typography": "Parisienne, Cormorant italic",
+   "palette": "rose, coral, sage on white",
+   "decor": "washes, peonies, sprigs"
+  },
+  "palette": [
+   "#FFFDFB",
+   "#B04A62"
+  ],
+  "content": {
+   "headline": "Happy Birthday",
+   "message": "May your year bloom with joy, laughter and lovely surprises.",
+   "signature": "Warmly, Nadia"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/watercolour-peony-corners-card.jpg",
+  "preview_url": "/templates/collection/watercolour-peony-corners-card-preview.jpg",
+  "status": "published",
+  "is_editable": true
+ },
+ {
+  "id": "birthday-042",
+  "slug": "leaf-wreath-daisy-birthday-post",
+  "title": "Leaf Wreath Daisy Birthday Post",
+  "category": "Birthday",
+  "subcategory": "Floral",
+  "site_category": "Birthday",
+  "description": "A ring of leaves dotted with six daisies framing an italic “happy” and spaced caps “BIRTHDAY” for a garden lover.",
+  "design_brief": "A ring of leaves dotted with six daisies framing an italic “happy” and spaced caps “BIRTHDAY” for a garden lover.",
+  "design_style": "floral watercolor",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=leaf%20wreath%20daisies%20birthday%20instagram%20post",
+  "inspiration_query": "leaf wreath daisies birthday instagram post",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "centred wreath",
+   "typography": "Cormorant italic, Montserrat 700",
+   "palette": "sage greens, white daisies, cream",
+   "decor": "leaf wreath, daisies"
+  },
+  "palette": [
+   "#F4F1EA",
+   "#3E5641"
+  ],
+  "content": {
+   "headline": "happy BIRTHDAY",
+   "message": "to our favourite gardener",
+   "signature": ""
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/leaf-wreath-daisy-birthday-post.jpg",
+  "preview_url": "/templates/collection/leaf-wreath-daisy-birthday-post-preview.jpg",
+  "status": "published",
+  "is_editable": true
+ },
+ {
+  "id": "birthday-043",
+  "slug": "tulip-border-landscape-card",
+  "title": "Tulip Border Landscape Card",
+  "category": "Birthday",
+  "subcategory": "Floral",
+  "site_category": "Birthday",
+  "description": "A row of seven stylised tulips in warm pinks and apricots growing along the bottom edge, serif headline above.",
+  "design_brief": "A row of seven stylised tulips in warm pinks and apricots growing along the bottom edge, serif headline above.",
+  "design_style": "floral watercolor",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=row%20of%20tulips%20border%20birthday%20card",
+  "inspiration_query": "row of tulips border birthday card",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "landscape, border bottom",
+   "typography": "Playfair 600, Raleway, Satisfy",
+   "palette": "cream, coral, apricot, blush",
+   "decor": "tulip row"
+  },
+  "palette": [
+   "#FDF6EC",
+   "#E5707E"
+  ],
+  "content": {
+   "headline": "Happy Birthday!",
+   "message": "Tulips for the tulip of the family — have a beautiful day.",
+   "signature": "Love, Auntie Sana"
+  },
+  "dimensions": {
+   "width": 673,
+   "height": 480,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/tulip-border-landscape-card.jpg",
+  "preview_url": "/templates/collection/tulip-border-landscape-card-preview.jpg",
+  "status": "published",
+  "is_editable": true
+ },
+ {
+  "id": "birthday-044",
+  "slug": "botanical-line-sage-card",
+  "title": "Botanical Line Sage Card",
+  "category": "Birthday",
+  "subcategory": "Floral",
+  "site_category": "Birthday",
+  "description": "Four single-line botanical stems drawn in deep green on sage, big Marcellus greeting top-left and a team signature.",
+  "design_brief": "Four single-line botanical stems drawn in deep green on sage, big Marcellus greeting top-left and a team signature.",
+  "design_style": "floral watercolor",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=minimal%20botanical%20line%20drawing%20sage%20birthday%20card",
+  "inspiration_query": "minimal botanical line drawing sage birthday card",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "text top-left, stems bottom",
+   "typography": "Marcellus, Cormorant italic, Montserrat",
+   "palette": "sage, forest",
+   "decor": "outline stems and buds"
+  },
+  "palette": [
+   "#E3EBDF",
+   "#3F5B47"
+  ],
+  "content": {
+   "headline": "Happy Birthday",
+   "message": "Grow, bloom, repeat.",
+   "signature": "From all of us at Studio Fern"
+  },
+  "dimensions": {
+   "width": 559,
+   "height": 794,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/botanical-line-sage-card.jpg",
+  "preview_url": "/templates/collection/botanical-line-sage-card-preview.jpg",
+  "status": "published",
+  "is_editable": true
+ },
+ {
+  "id": "birthday-045",
+  "slug": "watercolour-moon-sister-story",
+  "title": "Watercolour Moon Sister Story",
+  "category": "Birthday",
+  "subcategory": "Floral",
+  "site_category": "Birthday",
+  "description": "A big blush-and-peach watercolour moon with two bloom clusters, Great Vibes greeting and a swipe-up line for stories.",
+  "design_brief": "A big blush-and-peach watercolour moon with two bloom clusters, Great Vibes greeting and a swipe-up line for stories.",
+  "design_style": "floral watercolor",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=pastel%20watercolor%20circle%20florals%20birthday%20story",
+  "inspiration_query": "pastel watercolor circle florals birthday story",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "centred moon, florals diagonal",
+   "typography": "Great Vibes, Montserrat",
+   "palette": "blush, peach, lilac",
+   "decor": "washes, blooms"
+  },
+  "palette": [
+   "#FFFAF6",
+   "#8C3B5E"
+  ],
+  "content": {
+   "headline": "Happy Birthday",
+   "message": "Love you to the moon, sis",
+   "signature": "Swipe up to see your surprise"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1920,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/watercolour-moon-sister-story.jpg",
+  "preview_url": "/templates/collection/watercolour-moon-sister-story-preview.jpg",
+  "status": "published",
+  "is_editable": true
+ },
+ {
+  "id": "birthday-046",
+  "slug": "midnight-garden-dark-floral-card",
+  "title": "Midnight Garden Dark Floral Card",
+  "category": "Birthday",
+  "subcategory": "Floral",
+  "site_category": "Birthday",
+  "description": "Moody deep-red and plum blooms in all four corners on near-black, cream italic serif greeting — Dutch-painting mood.",
+  "design_brief": "Moody deep-red and plum blooms in all four corners on near-black, cream italic serif greeting — Dutch-painting mood.",
+  "design_style": "floral watercolor",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=dark%20moody%20florals%20black%20birthday%20card",
+  "inspiration_query": "dark moody florals black birthday card",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "four corners, centre text",
+   "typography": "Playfair italic, Cormorant, Montserrat",
+   "palette": "black, wine, coral, plum",
+   "decor": "four bloom clusters"
+  },
+  "palette": [
+   "#14110F",
+   "#B5374F"
+  ],
+  "content": {
+   "headline": "Happy Birthday",
+   "message": "to a soul as rich as a midnight garden",
+   "signature": "— Idris"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/midnight-garden-dark-floral-card.jpg",
+  "preview_url": "/templates/collection/midnight-garden-dark-floral-card-preview.jpg",
+  "status": "published",
+  "is_editable": true
+ },
+ {
+  "id": "birthday-047",
+  "slug": "cherry-blossom-petals-name-post",
+  "title": "Cherry Blossom Petals Name Post",
+  "category": "Birthday",
+  "subcategory": "Floral",
+  "site_category": "Birthday",
+  "description": "Pink petals drifting across a blush gradient, a soft white circle holding a big Alex Brush name.",
+  "design_brief": "Pink petals drifting across a blush gradient, a soft white circle holding a big Alex Brush name.",
+  "design_style": "floral watercolor",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=falling%20cherry%20blossom%20petals%20birthday%20post",
+  "inspiration_query": "falling cherry blossom petals birthday post",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "centred circle",
+   "typography": "Alex Brush, Montserrat caps, Cormorant",
+   "palette": "blush gradient, rose",
+   "decor": "petals, circle"
+  },
+  "palette": [
+   "#FFF1F3",
+   "#C04A6B"
+  ],
+  "content": {
+   "headline": "Happy Birthday",
+   "message": "cherry blossom season is you",
+   "signature": "Hiba"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/cherry-blossom-petals-name-post.jpg",
+  "preview_url": "/templates/collection/cherry-blossom-petals-name-post-preview.jpg",
+  "status": "published",
+  "is_editable": true
+ },
+ {
+  "id": "birthday-048",
+  "slug": "eucalyptus-arch-garden-brunch-invite",
+  "title": "Eucalyptus Arch Garden Brunch Invite",
+  "category": "Birthday",
+  "subcategory": "Floral",
+  "site_category": "Birthday",
+  "description": "Pale sage arch framed by eucalyptus sprigs and a blush bloom, for a 30th garden brunch, with dress code and RSVP.",
+  "design_brief": "Pale sage arch framed by eucalyptus sprigs and a blush bloom, for a 30th garden brunch, with dress code and RSVP.",
+  "design_style": "floral watercolor",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=eucalyptus%20arch%20garden%20brunch%2030th%20birthday%20invitation",
+  "inspiration_query": "eucalyptus arch garden brunch 30th birthday invitation",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "arch panel, centred details",
+   "typography": "Parisienne, Cormorant, Montserrat caps",
+   "palette": "eucalyptus green, blush, ivory",
+   "decor": "arch, sprigs, peony"
+  },
+  "palette": [
+   "#FBFAF6",
+   "#4D6B5D"
+  ],
+  "content": {
+   "headline": "Amal turns 30",
+   "message": "Garden brunch · Saturday 28 November · 11 AM · The Greenhouse, Al Barari",
+   "signature": "Dress code: florals · RSVP by 20 Nov"
+  },
+  "dimensions": {
+   "width": 559,
+   "height": 794,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/eucalyptus-arch-garden-brunch-invite.jpg",
+  "preview_url": "/templates/collection/eucalyptus-arch-garden-brunch-invite-preview.jpg",
+  "status": "published",
+  "is_editable": true
+ },
+ {
+  "id": "birthday-049",
+  "slug": "sunflowers-you-are-my-sunshine-card",
+  "title": "Sunflowers You Are My Sunshine Card",
+  "category": "Birthday",
+  "subcategory": "Floral",
+  "site_category": "Birthday",
+  "description": "Three tall sunflowers rising from the bottom on butter yellow, Pacifico “You are my sunshine” for Dad.",
+  "design_brief": "Three tall sunflowers rising from the bottom on butter yellow, Pacifico “You are my sunshine” for Dad.",
+  "design_style": "floral watercolor",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=sunflowers%20you%20are%20my%20sunshine%20birthday%20card%20dad",
+  "inspiration_query": "sunflowers you are my sunshine birthday card dad",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "text top, flowers bottom",
+   "typography": "Pacifico, Montserrat 800",
+   "palette": "butter, sunflower gold, brown, leaf",
+   "decor": "sunflowers"
+  },
+  "palette": [
+   "#FFF4D6",
+   "#F4B400"
+  ],
+  "content": {
+   "headline": "You are my sunshine",
+   "message": "Thank you for every sunny day you gave us.",
+   "signature": "Happy Birthday, Baba"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/sunflowers-you-are-my-sunshine-card.jpg",
+  "preview_url": "/templates/collection/sunflowers-you-are-my-sunshine-card-preview.jpg",
+  "status": "published",
+  "is_editable": true
+ },
+ {
+  "id": "birthday-050",
+  "slug": "lavender-fields-birthday-story",
+  "title": "Lavender Fields Birthday Story",
+  "category": "Birthday",
+  "subcategory": "Floral",
+  "site_category": "Birthday",
+  "description": "Horizontal lavender watercolour bands with lavender stems at both bottom corners, Yeseva greeting and a calm wish.",
+  "design_brief": "Horizontal lavender watercolour bands with lavender stems at both bottom corners, Yeseva greeting and a calm wish.",
+  "design_style": "floral watercolor",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=lavender%20watercolor%20stripes%20birthday%20story",
+  "inspiration_query": "lavender watercolor stripes birthday story",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "banded background, stems corners",
+   "typography": "Yeseva One, Cormorant italic",
+   "palette": "lilac, violet, sage",
+   "decor": "washes, lavender sprigs"
+  },
+  "palette": [
+   "#F6F2FA",
+   "#5B3F8C"
+  ],
+  "content": {
+   "headline": "Happy Birthday",
+   "message": "calm, lavender-scented wishes for you, Rana",
+   "signature": ""
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1920,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/lavender-fields-birthday-story.jpg",
+  "preview_url": "/templates/collection/lavender-fields-birthday-story-preview.jpg",
+  "status": "published",
+  "is_editable": true
+ },
+ {
+  "id": "birthday-051",
+  "slug": "glass-card-gradient-blobs-post",
+  "title": "Glass Card Gradient Blobs Post",
+  "category": "Birthday",
+  "subcategory": "Modern Geometric",
+  "site_category": "Birthday",
+  "description": "Glowing pink, blue and orange gradient blobs on deep indigo behind a frosted glass card with “Level 26 unlocked”.",
+  "design_brief": "Glowing pink, blue and orange gradient blobs on deep indigo behind a frosted glass card with “Level 26 unlocked”.",
+  "design_style": "modern gradients geometric",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=glassmorphism%20gradient%20blobs%20birthday%20post",
+  "inspiration_query": "glassmorphism gradient blobs birthday post",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "centred glass card",
+   "typography": "Sora 700",
+   "palette": "indigo, neon pink, blue, orange",
+   "decor": "radial blobs, glass panel"
+  },
+  "palette": [
+   "#120F2B",
+   "#FF6EC7"
+  ],
+  "content": {
+   "headline": "HAPPY BIRTHDAY",
+   "message": "Level 26 unlocked ✦",
+   "signature": "@karim.codes"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/glass-card-gradient-blobs-post.jpg",
+  "preview_url": "/templates/collection/glass-card-gradient-blobs-post-preview.jpg",
+  "status": "published",
+  "is_editable": true
+ },
+ {
+  "id": "birthday-052",
+  "slug": "bauhaus-shapes-birthday-poster",
+  "title": "Bauhaus Shapes Birthday Poster",
+  "category": "Birthday",
+  "subcategory": "Modern Geometric",
+  "site_category": "Birthday",
+  "description": "Bauhaus composition of red circle, navy square, mustard triangle and half-ring, heavy two-colour type at the bottom.",
+  "design_brief": "Bauhaus composition of red circle, navy square, mustard triangle and half-ring, heavy two-colour type at the bottom.",
+  "design_style": "modern gradients geometric",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=bauhaus%20geometric%20shapes%20birthday%20poster",
+  "inspiration_query": "bauhaus geometric shapes birthday poster",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "shapes top 70%, type bottom",
+   "typography": "Archivo Black, Space Mono",
+   "palette": "parchment, red, navy, mustard",
+   "decor": "primary shapes"
+  },
+  "palette": [
+   "#F1E9DA",
+   "#E4572E"
+  ],
+  "content": {
+   "headline": "HAPPY BIRTHDAY",
+   "message": "form follows fun · 33",
+   "signature": ""
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1350,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/bauhaus-shapes-birthday-poster.jpg",
+  "preview_url": "/templates/collection/bauhaus-shapes-birthday-poster-preview.jpg",
+  "status": "published",
+  "is_editable": true
+ },
+ {
+  "id": "birthday-053",
+  "slug": "holographic-18th-birthday-story",
+  "title": "Holographic 18th Birthday Story",
+  "category": "Birthday",
+  "subcategory": "Modern Geometric",
+  "site_category": "Birthday",
+  "description": "Pastel holographic gradient with thin rings and a chunky chrome-style “18”, Outfit lowercase greeting and a joke.",
+  "design_brief": "Pastel holographic gradient with thin rings and a chunky chrome-style “18”, Outfit lowercase greeting and a joke.",
+  "design_style": "modern gradients geometric",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=holographic%20iridescent%20gradient%2018th%20birthday",
+  "inspiration_query": "holographic iridescent gradient 18th birthday",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "number centre, text below",
+   "typography": "Rubik Mono One gradient, Outfit",
+   "palette": "aqua, lilac, pink, butter",
+   "decor": "rings, sparkles"
+  },
+  "palette": [
+   "#C2F0FF",
+   "#4A3F7A"
+  ],
+  "content": {
+   "headline": "happy eighteenth",
+   "message": "adulting begins… tomorrow",
+   "signature": ""
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1920,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/holographic-18th-birthday-story.jpg",
+  "preview_url": "/templates/collection/holographic-18th-birthday-story-preview.jpg",
+  "status": "published",
+  "is_editable": true
+ },
+ {
+  "id": "birthday-054",
+  "slug": "diagonal-duotone-bold-birthday-post",
+  "title": "Diagonal Duotone Bold Birthday Post",
+  "category": "Birthday",
+  "subcategory": "Modern Geometric",
+  "site_category": "Birthday",
+  "description": "Yellow and black split on the diagonal, “HAPPY” and “BIRTHDAY” in giant Bebas on opposite halves, pink name dot.",
+  "design_brief": "Yellow and black split on the diagonal, “HAPPY” and “BIRTHDAY” in giant Bebas on opposite halves, pink name dot.",
+  "design_style": "modern gradients geometric",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=diagonal%20split%20yellow%20black%20bold%20typography%20birthday",
+  "inspiration_query": "diagonal split yellow black bold typography birthday",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "diagonal split",
+   "typography": "Bebas Neue",
+   "palette": "lemon, black, hot pink",
+   "decor": "diagonal, circle"
+  },
+  "palette": [
+   "#FFE14D",
+   "#1D1D1F"
+  ],
+  "content": {
+   "headline": "HAPPY BIRTHDAY",
+   "message": "",
+   "signature": "Jad"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/diagonal-duotone-bold-birthday-post.jpg",
+  "preview_url": "/templates/collection/diagonal-duotone-bold-birthday-post-preview.jpg",
+  "status": "published",
+  "is_editable": true
+ },
+ {
+  "id": "birthday-055",
+  "slug": "sunset-rings-golden-hour-card",
+  "title": "Sunset Rings Golden Hour Card",
+  "category": "Birthday",
+  "subcategory": "Modern Geometric",
+  "site_category": "Birthday",
+  "description": "Five concentric sunset rings setting into a plum horizon with retro cut-lines, “golden hour” in Outfit.",
+  "design_brief": "Five concentric sunset rings setting into a plum horizon with retro cut-lines, “golden hour” in Outfit.",
+  "design_style": "modern gradients geometric",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=retro%20sunset%20concentric%20circles%20birthday%20card",
+  "inspiration_query": "retro sunset concentric circles birthday card",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "sun upper half, text lower",
+   "typography": "Outfit 600/700",
+   "palette": "plum, coral to butter",
+   "decor": "concentric rings, cut lines"
+  },
+  "palette": [
+   "#2B1B3F",
+   "#FFB37B"
+  ],
+  "content": {
+   "headline": "golden hour",
+   "message": "Here’s to a year that glows.",
+   "signature": "Happy Birthday, Sami"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/sunset-rings-golden-hour-card.jpg",
+  "preview_url": "/templates/collection/sunset-rings-golden-hour-card-preview.jpg",
+  "status": "published",
+  "is_editable": true
+ },
+ {
+  "id": "birthday-056",
+  "slug": "memphis-teal-b-day-post",
+  "title": "Memphis Teal B-Day Post",
+  "category": "Birthday",
+  "subcategory": "Modern Geometric",
+  "site_category": "Birthday",
+  "description": "90s Memphis squiggles, triangles, rings and dots on teal around an offset-shadow sticker panel with “HAPPY B-DAY!”.",
+  "design_brief": "90s Memphis squiggles, triangles, rings and dots on teal around an offset-shadow sticker panel with “HAPPY B-DAY!”.",
+  "design_style": "modern gradients geometric",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=memphis%20pattern%2090s%20birthday%20post%20teal",
+  "inspiration_query": "memphis pattern 90s birthday post teal",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "scattered shapes, centred panel",
+   "typography": "Bungee, Space Mono",
+   "palette": "teal, lemon, pink, navy",
+   "decor": "memphis shapes, hard shadow"
+  },
+  "palette": [
+   "#14B8A6",
+   "#FDE047"
+  ],
+  "content": {
+   "headline": "HAPPY B-DAY!",
+   "message": "totally rad wishes for Zain",
+   "signature": ""
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/memphis-teal-b-day-post.jpg",
+  "preview_url": "/templates/collection/memphis-teal-b-day-post-preview.jpg",
+  "status": "published",
+  "is_editable": true
+ },
+ {
+  "id": "birthday-057",
+  "slug": "gradient-pills-group-chat-story",
+  "title": "Gradient Pills Group Chat Story",
+  "category": "Birthday",
+  "subcategory": "Modern Geometric",
+  "site_category": "Birthday",
+  "description": "Four stacked gradient pills spelling Happy / Birthday / name / age like app buttons on near-black, with a cheeky line.",
+  "design_brief": "Four stacked gradient pills spelling Happy / Birthday / name / age like app buttons on near-black, with a cheeky line.",
+  "design_style": "modern gradients geometric",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=gradient%20pill%20buttons%20ui%20style%20birthday%20story",
+  "inspiration_query": "gradient pill buttons ui style birthday story",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "stacked pills top, copy bottom",
+   "typography": "Sora",
+   "palette": "black, violet, green, orange, pink",
+   "decor": "gradient pills"
+  },
+  "palette": [
+   "#0F0F14",
+   "#7F5AF0"
+  ],
+  "content": {
+   "headline": "Happy Birthday Maryam",
+   "message": "may your year load faster than your favourite app.",
+   "signature": "— the group chat"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1920,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/gradient-pills-group-chat-story.jpg",
+  "preview_url": "/templates/collection/gradient-pills-group-chat-story-preview.jpg",
+  "status": "published",
+  "is_editable": true
+ },
+ {
+  "id": "birthday-058",
+  "slug": "isometric-cube-cake-poster",
+  "title": "Isometric Cube Cake Poster",
+  "category": "Birthday",
+  "subcategory": "Modern Geometric",
+  "site_category": "Birthday",
+  "description": "An isometric cube cake in indigo tones with three candles, bold Outfit caps and a nerdy tagline.",
+  "design_brief": "An isometric cube cake in indigo tones with three candles, bold Outfit caps and a nerdy tagline.",
+  "design_style": "modern gradients geometric",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=isometric%203d%20cake%20illustration%20birthday",
+  "inspiration_query": "isometric 3d cake illustration birthday",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "object centre, type bottom",
+   "typography": "Outfit 800",
+   "palette": "periwinkle, indigo, candy candles",
+   "decor": "isometric cake, candles"
+  },
+  "palette": [
+   "#EEF2FF",
+   "#6366F1"
+  ],
+  "content": {
+   "headline": "HAPPY BIRTHDAY",
+   "message": "built different since 1996",
+   "signature": ""
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1350,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/isometric-cube-cake-poster.jpg",
+  "preview_url": "/templates/collection/isometric-cube-cake-poster-preview.jpg",
+  "status": "published",
+  "is_editable": true
+ },
+ {
+  "id": "birthday-059",
+  "slug": "halftone-pink-lowercase-card",
+  "title": "Halftone Pink Lowercase Card",
+  "category": "Birthday",
+  "subcategory": "Modern Geometric",
+  "site_category": "Birthday",
+  "description": "Hot pink card with a yellow halftone dot gradient growing downward and huge lowercase white “happy birthday”.",
+  "design_brief": "Hot pink card with a yellow halftone dot gradient growing downward and huge lowercase white “happy birthday”.",
+  "design_style": "modern gradients geometric",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=halftone%20dot%20gradient%20pink%20birthday%20card",
+  "inspiration_query": "halftone dot gradient pink birthday card",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "type top, halftone bottom",
+   "typography": "Outfit 800",
+   "palette": "hot pink, sunflower",
+   "decor": "halftone dots"
+  },
+  "palette": [
+   "#FF5D8F",
+   "#FFD23F"
+  ],
+  "content": {
+   "headline": "happy birthday",
+   "message": "you deserve all the confetti",
+   "signature": ""
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/halftone-pink-lowercase-card.jpg",
+  "preview_url": "/templates/collection/halftone-pink-lowercase-card-preview.jpg",
+  "status": "published",
+  "is_editable": true
+ },
+ {
+  "id": "birthday-060",
+  "slug": "geometric-tiles-40th-post",
+  "title": "Geometric Tiles 40th Post",
+  "category": "Birthday",
+  "subcategory": "Modern Geometric",
+  "site_category": "Birthday",
+  "description": "A 5×5 grid of quarter-circles, triangles, dots and squares in mustard, coral, teal and berry on navy, cream centre badge.",
+  "design_brief": "A 5×5 grid of quarter-circles, triangles, dots and squares in mustard, coral, teal and berry on navy, cream centre badge.",
+  "design_style": "modern gradients geometric",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=geometric%20tile%20pattern%20birthday%2040th",
+  "inspiration_query": "geometric tile pattern birthday 40th",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "tile grid, centre medallion",
+   "typography": "Archivo Black, Space Mono",
+   "palette": "navy, mustard, coral, teal, berry",
+   "decor": "geometric tiles"
+  },
+  "palette": [
+   "#1F2A44",
+   "#F78154"
+  ],
+  "content": {
+   "headline": "HAPPY BIRTHDAY",
+   "message": "Omar ✶ 40",
+   "signature": ""
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/geometric-tiles-40th-post.jpg",
+  "preview_url": "/templates/collection/geometric-tiles-40th-post-preview.jpg",
+  "status": "published",
+  "is_editable": true
+ },
+ {
+  "id": "birthday-061",
+  "slug": "groovy-70s-waves-birthday-post",
+  "title": "Groovy 70s Waves Birthday Post",
+  "category": "Birthday",
+  "subcategory": "Retro & Scrapbook",
+  "site_category": "Birthday",
+  "description": "Seventies wave bands in burnt orange, mustard and teal rising from the bottom, bubbly Righteous “groovy” and two flower dots.",
+  "design_brief": "Seventies wave bands in burnt orange, mustard and teal rising from the bottom, bubbly Righteous “groovy” and two flower dots.",
+  "design_style": "retro scrapbook",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=70s%20groovy%20wavy%20stripes%20retro%20birthday%20post",
+  "inspiration_query": "70s groovy wavy stripes retro birthday post",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "type top, waves bottom",
+   "typography": "Righteous, Josefin Sans",
+   "palette": "cream, burnt orange, mustard, teal",
+   "decor": "wavy stripes, retro flowers"
+  },
+  "palette": [
+   "#FFF1D6",
+   "#E76F51"
+  ],
+  "content": {
+   "headline": "groovy BIRTHDAY, BABY",
+   "message": "peace, love & cake — Hamad turns 35",
+   "signature": ""
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/groovy-70s-waves-birthday-post.jpg",
+  "preview_url": "/templates/collection/groovy-70s-waves-birthday-post-preview.jpg",
+  "status": "published",
+  "is_editable": true
+ },
+ {
+  "id": "birthday-062",
+  "slug": "scrapbook-best-friend-collage-card",
+  "title": "Scrapbook Best Friend Collage Card",
+  "category": "Birthday",
+  "subcategory": "Retro & Scrapbook",
+  "site_category": "Birthday",
+  "description": "Graph-paper background with layered paper scraps, washi tape, a blank snapshot frame, a daisy and a red postmark stamp; marker-pen greeting.",
+  "design_brief": "Graph-paper background with layered paper scraps, washi tape, a blank snapshot frame, a daisy and a red postmark stamp; marker-pen greeting.",
+  "design_style": "retro scrapbook",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=scrapbook%20collage%20washi%20tape%20best%20friend%20birthday%20card",
+  "inspiration_query": "scrapbook collage washi tape best friend birthday card",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "collage top, text bottom",
+   "typography": "Permanent Marker, Caveat",
+   "palette": "oatmeal, blush, sky, mustard, red",
+   "decor": "paper scraps, tape, stamp"
+  },
+  "palette": [
+   "#EFE7DA",
+   "#C0392B"
+  ],
+  "content": {
+   "headline": "Happy Birthday, best friend!",
+   "message": "Ten years of inside jokes and zero regrets. Here’s to the next ten.",
+   "signature": "— Dana"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/scrapbook-best-friend-collage-card.jpg",
+  "preview_url": "/templates/collection/scrapbook-best-friend-collage-card-preview.jpg",
+  "status": "published",
+  "is_editable": true
+ },
+ {
+  "id": "birthday-063",
+  "slug": "synthwave-80s-40th-story",
+  "title": "Synthwave 80s 40th Story",
+  "category": "Birthday",
+  "subcategory": "Retro & Scrapbook",
+  "site_category": "Birthday",
+  "description": "Purple-to-pink synthwave sky with a striped retro sun silhouette and neon grid floor, Monoton chrome greeting.",
+  "design_brief": "Purple-to-pink synthwave sky with a striped retro sun silhouette and neon grid floor, Monoton chrome greeting.",
+  "design_style": "retro scrapbook",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=80s%20synthwave%20neon%20grid%20birthday",
+  "inspiration_query": "80s synthwave neon grid birthday",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "type top, horizon middle, grid bottom",
+   "typography": "Monoton gradient, Space Mono",
+   "palette": "indigo, violet, hot pink, cyan",
+   "decor": "sun stripes, perspective grid"
+  },
+  "palette": [
+   "#120458",
+   "#FF2E97"
+  ],
+  "content": {
+   "headline": "HAPPY BIRTHDAY",
+   "message": "rewind to 1986 · Faisal turns 40",
+   "signature": ""
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1920,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/synthwave-80s-40th-story.jpg",
+  "preview_url": "/templates/collection/synthwave-80s-40th-story-preview.jpg",
+  "status": "published",
+  "is_editable": true
+ },
+ {
+  "id": "birthday-064",
+  "slug": "vintage-label-aged-to-perfection-card",
+  "title": "Vintage Label Aged to Perfection Card",
+  "category": "Birthday",
+  "subcategory": "Retro & Scrapbook",
+  "site_category": "Birthday",
+  "description": "Kraft card with a faint sunburst and a stitched vintage label badge: EST. 1976, “Vintage” script, big “FIFTY”.",
+  "design_brief": "Kraft card with a faint sunburst and a stitched vintage label badge: EST. 1976, “Vintage” script, big “FIFTY”.",
+  "design_style": "retro scrapbook",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=vintage%20label%20badge%20aged%20to%20perfection%2050th%20birthday",
+  "inspiration_query": "vintage label badge aged to perfection 50th birthday",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "centred badge",
+   "typography": "Lobster, Abril Fatface, Josefin Sans",
+   "palette": "kraft, cream, rust, red",
+   "decor": "sunburst, dashed ring"
+  },
+  "palette": [
+   "#E8D3B0",
+   "#7A3E1D"
+  ],
+  "content": {
+   "headline": "Vintage FIFTY",
+   "message": "Happy 50th, Uncle Tariq — still the coolest in the family.",
+   "signature": "Aged to perfection"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/vintage-label-aged-to-perfection-card.jpg",
+  "preview_url": "/templates/collection/vintage-label-aged-to-perfection-card-preview.jpg",
+  "status": "published",
+  "is_editable": true
+ },
+ {
+  "id": "birthday-065",
+  "slug": "birthday-times-newspaper-print",
+  "title": "Birthday Times Newspaper Print",
+  "category": "Birthday",
+  "subcategory": "Retro & Scrapbook",
+  "site_category": "Birthday",
+  "description": "A spoof broadsheet front page, “THE BIRTHDAY TIMES”, headline LOCAL LEGEND TURNS 30, a greyscale cake photo block and a funny column.",
+  "design_brief": "A spoof broadsheet front page, “THE BIRTHDAY TIMES”, headline LOCAL LEGEND TURNS 30, a greyscale cake photo block and a funny column.",
+  "design_style": "retro scrapbook",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=newspaper%20front%20page%20funny%20birthday%20card",
+  "inspiration_query": "newspaper front page funny birthday card",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "newspaper grid",
+   "typography": "Abril Fatface masthead, Anton headline, Libre Baskerville body",
+   "palette": "newsprint, black, grey",
+   "decor": "rules, mono illustration"
+  },
+  "palette": [
+   "#F3EFE6",
+   "#1A1A1A"
+  ],
+  "content": {
+   "headline": "LOCAL LEGEND TURNS 30",
+   "message": "Sources confirm Yousef, 30, remains “extremely fun” and “owes no one money”.",
+   "signature": "Friends react: “We knew this day would come.”"
+  },
+  "dimensions": {
+   "width": 559,
+   "height": 794,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/birthday-times-newspaper-print.jpg",
+  "preview_url": "/templates/collection/birthday-times-newspaper-print-preview.jpg",
+  "status": "published",
+  "is_editable": true
+ },
+ {
+  "id": "birthday-066",
+  "slug": "retro-diner-milkshake-sweet-16-post",
+  "title": "Retro Diner Milkshake Sweet 16 Post",
+  "category": "Birthday",
+  "subcategory": "Retro & Scrapbook",
+  "site_category": "Birthday",
+  "description": "50s diner vibe: a pink milkshake with cherry and straw, black-and-white checker floor, Lobster “Shake it, it’s your birthday!”.",
+  "design_brief": "50s diner vibe: a pink milkshake with cherry and straw, black-and-white checker floor, Lobster “Shake it, it’s your birthday!”.",
+  "design_style": "retro scrapbook",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=retro%20diner%20milkshake%20checkerboard%20birthday",
+  "inspiration_query": "retro diner milkshake checkerboard birthday",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "object centre, script corners",
+   "typography": "Lobster, Bungee",
+   "palette": "pink, red, black and white",
+   "decor": "milkshake, checker"
+  },
+  "palette": [
+   "#FFE5E5",
+   "#D62839"
+  ],
+  "content": {
+   "headline": "Shake it, it’s your birthday!",
+   "message": "Sienna’s sweet 16",
+   "signature": ""
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/retro-diner-milkshake-sweet-16-post.jpg",
+  "preview_url": "/templates/collection/retro-diner-milkshake-sweet-16-post-preview.jpg",
+  "status": "published",
+  "is_editable": true
+ },
+ {
+  "id": "birthday-067",
+  "slug": "birthday-mixtape-cassette-card",
+  "title": "Birthday Mixtape Cassette Card",
+  "category": "Birthday",
+  "subcategory": "Retro & Scrapbook",
+  "site_category": "Birthday",
+  "description": "An orange cassette with a handwritten label “BIRTHDAY MIX VOL. 29” on charcoal, marker greeting and a sweet Side A line.",
+  "design_brief": "An orange cassette with a handwritten label “BIRTHDAY MIX VOL. 29” on charcoal, marker greeting and a sweet Side A line.",
+  "design_style": "retro scrapbook",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=retro%20cassette%20tape%20mixtape%20birthday%20card",
+  "inspiration_query": "retro cassette tape mixtape birthday card",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "landscape, object centred",
+   "typography": "Permanent Marker, Space Mono",
+   "palette": "charcoal, orange, cream",
+   "decor": "cassette"
+  },
+  "palette": [
+   "#2B2D42",
+   "#EF8354"
+  ],
+  "content": {
+   "headline": "Happy Birthday, Rami",
+   "message": "Side A: all the songs that remind me of you",
+   "signature": ""
+  },
+  "dimensions": {
+   "width": 673,
+   "height": 480,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/birthday-mixtape-cassette-card.jpg",
+  "preview_url": "/templates/collection/birthday-mixtape-cassette-card-preview.jpg",
+  "status": "published",
+  "is_editable": true
+ },
+ {
+  "id": "birthday-068",
+  "slug": "postage-stamps-special-delivery-story",
+  "title": "Postage Stamps Special Delivery Story",
+  "category": "Birthday",
+  "subcategory": "Retro & Scrapbook",
+  "site_category": "Birthday",
+  "description": "Three perforated vintage stamps (cake, gift, balloons) overlapping on cream, Lobster “Special delivery!” and a postmark.",
+  "design_brief": "Three perforated vintage stamps (cake, gift, balloons) overlapping on cream, Lobster “Special delivery!” and a postmark.",
+  "design_style": "retro scrapbook",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=vintage%20postage%20stamps%20illustrated%20birthday",
+  "inspiration_query": "vintage postage stamps illustrated birthday",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "stamp cluster top, text bottom",
+   "typography": "Lobster, Josefin Sans",
+   "palette": "terracotta, navy, sage, sand",
+   "decor": "perforated stamps, postmark"
+  },
+  "palette": [
+   "#F4EDE1",
+   "#3D405B"
+  ],
+  "content": {
+   "headline": "Special delivery!",
+   "message": "Birthday wishes, first class, to Dalia",
+   "signature": ""
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1920,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/postage-stamps-special-delivery-story.jpg",
+  "preview_url": "/templates/collection/postage-stamps-special-delivery-story-preview.jpg",
+  "status": "published",
+  "is_editable": true
+ },
+ {
+  "id": "birthday-069",
+  "slug": "pop-art-pow-birthday-post",
+  "title": "Pop Art POW Birthday Post",
+  "category": "Birthday",
+  "subcategory": "Retro & Scrapbook",
+  "site_category": "Birthday",
+  "description": "Comic pop-art: Ben-Day dots on yellow, a magenta burst with “POW!” outlined, superhero wishes.",
+  "design_brief": "Comic pop-art: Ben-Day dots on yellow, a magenta burst with “POW!” outlined, superhero wishes.",
+  "design_style": "retro scrapbook",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=pop%20art%20comic%20burst%20birthday",
+  "inspiration_query": "pop art comic burst birthday",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "centred burst",
+   "typography": "Luckiest Guy outlined, Bungee",
+   "palette": "yellow, magenta, black",
+   "decor": "dots, star burst"
+  },
+  "palette": [
+   "#FFD60A",
+   "#FF006E"
+  ],
+  "content": {
+   "headline": "POW! IT’S YOUR BIRTHDAY!",
+   "message": "Superhero-level wishes for Ahmad",
+   "signature": ""
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/pop-art-pow-birthday-post.jpg",
+  "preview_url": "/templates/collection/pop-art-pow-birthday-post-preview.jpg",
+  "status": "published",
+  "is_editable": true
+ },
+ {
+  "id": "birthday-070",
+  "slug": "washi-notebook-letter-card",
+  "title": "Washi Notebook Letter Card",
+  "category": "Birthday",
+  "subcategory": "Retro & Scrapbook",
+  "site_category": "Birthday",
+  "description": "A lined notebook page with margin line and punch holes, three washi tapes and a handwritten birthday letter.",
+  "design_brief": "A lined notebook page with margin line and punch holes, three washi tapes and a handwritten birthday letter.",
+  "design_style": "retro scrapbook",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=notebook%20page%20washi%20tape%20handwritten%20birthday%20letter",
+  "inspiration_query": "notebook page washi tape handwritten birthday letter",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "letter on notebook",
+   "typography": "Caveat",
+   "palette": "paper white, blue lines, pastel tapes",
+   "decor": "washi tape, hearts"
+  },
+  "palette": [
+   "#FFFDF7",
+   "#E57373"
+  ],
+  "content": {
+   "headline": "happy birthday!!",
+   "message": "You’re the friend who remembers everyone’s coffee order and every bad joke.",
+   "signature": "Love, Tala"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/washi-notebook-letter-card.jpg",
+  "preview_url": "/templates/collection/washi-notebook-letter-card-preview.jpg",
+  "status": "published",
+  "is_editable": true
+ },
+ {
+  "id": "birthday-071",
+  "slug": "pool-party-10th-birthday-invitation",
+  "title": "Pool Party 10th Birthday Invitation",
+  "category": "Birthday",
+  "subcategory": "Invitation",
+  "site_category": "Birthday",
+  "description": "Aqua pool water with ripple lines and a striped float ring; WHEN / WHERE / BRING fields for a 10th birthday pool party.",
+  "design_brief": "Aqua pool water with ripple lines and a striped float ring; WHEN / WHERE / BRING fields for a 10th birthday pool party.",
+  "design_style": "birthday invitation",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=pool%20party%20kids%20birthday%20invitation%20float",
+  "inspiration_query": "pool party kids birthday invitation float",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "title top, field list, pool bottom",
+   "typography": "Bungee, Pacifico, Montserrat",
+   "palette": "aqua, teal, coral",
+   "decor": "water ripples, float ring"
+  },
+  "palette": [
+   "#E0F7FA",
+   "#FF7043"
+  ],
+  "content": {
+   "headline": "POOL PARTY",
+   "message": "Lina is turning 10! Sat 30 May · 2–5 PM · Villa 12, Arabian Ranches · Bring swimsuit, towel, sunscreen",
+   "signature": "RSVP to Huda · 050 123 4567"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/pool-party-10th-birthday-invitation.jpg",
+  "preview_url": "/templates/collection/pool-party-10th-birthday-invitation-preview.jpg",
+  "status": "published",
+  "is_editable": true
+ },
+ {
+  "id": "birthday-072",
+  "slug": "navy-blush-birthday-dinner-invitation",
+  "title": "Navy Blush Birthday Dinner Invitation",
+  "category": "Birthday",
+  "subcategory": "Invitation",
+  "site_category": "Birthday",
+  "description": "Formal navy invitation with a blush bloom and fine border: “a birthday dinner honouring …”, name in Parisienne, details in Playfair.",
+  "design_brief": "Formal navy invitation with a blush bloom and fine border: “a birthday dinner honouring …”, name in Parisienne, details in Playfair.",
+  "design_style": "birthday invitation",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=navy%20blush%20elegant%20birthday%20dinner%20invitation",
+  "inspiration_query": "navy blush elegant birthday dinner invitation",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "centred formal",
+   "typography": "Playfair italic, Parisienne, Montserrat caps",
+   "palette": "navy, blush",
+   "decor": "peony, border, rule"
+  },
+  "palette": [
+   "#1B2A41",
+   "#E8C1C5"
+  ],
+  "content": {
+   "headline": "a birthday dinner honouring Hessa Al Mansoori",
+   "message": "Friday, the fourth of December · seven o’clock · Zuma, DIFC",
+   "signature": "Cocktail attire · Kindly reply by 25 November"
+  },
+  "dimensions": {
+   "width": 559,
+   "height": 794,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/navy-blush-birthday-dinner-invitation.jpg",
+  "preview_url": "/templates/collection/navy-blush-birthday-dinner-invitation-preview.jpg",
+  "status": "published",
+  "is_editable": true
+ },
+ {
+  "id": "birthday-073",
+  "slug": "slumber-party-tents-invitation",
+  "title": "Slumber Party Tents Invitation",
+  "category": "Birthday",
+  "subcategory": "Invitation",
+  "site_category": "Birthday",
+  "description": "Night sky with stars and crescent moon over two pastel teepee tents strung with fairy lights; slumber-party details.",
+  "design_brief": "Night sky with stars and crescent moon over two pastel teepee tents strung with fairy lights; slumber-party details.",
+  "design_style": "birthday invitation",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=slumber%20party%20tents%20moon%20kids%20invitation",
+  "inspiration_query": "slumber party tents moon kids invitation",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "scene top, details bottom",
+   "typography": "Fredoka, Nunito",
+   "palette": "aubergine, violet, pink, aqua, butter",
+   "decor": "stars, moon, tents, lights"
+  },
+  "palette": [
+   "#2E1A47",
+   "#FFF3B0"
+  ],
+  "content": {
+   "headline": "SLUMBER PARTY",
+   "message": "Pyjamas, popcorn & midnight movies for Jana’s 11th · Friday 20 Nov · 7 PM → Saturday 10 AM",
+   "signature": "RSVP to Rasha · 055 987 6543"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/slumber-party-tents-invitation.jpg",
+  "preview_url": "/templates/collection/slumber-party-tents-invitation-preview.jpg",
+  "status": "published",
+  "is_editable": true
+ },
+ {
+  "id": "birthday-074",
+  "slug": "brunch-and-bubbles-invitation",
+  "title": "Brunch and Bubbles Invitation",
+  "category": "Birthday",
+  "subcategory": "Invitation",
+  "site_category": "Birthday",
+  "description": "Rounded arch panel on sand with a line-art champagne coupe and bubbles, Satisfy “brunch & bubbles” for a 28th.",
+  "design_brief": "Rounded arch panel on sand with a line-art champagne coupe and bubbles, Satisfy “brunch & bubbles” for a 28th.",
+  "design_style": "birthday invitation",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=brunch%20and%20bubbles%20terracotta%20birthday%20invitation",
+  "inspiration_query": "brunch and bubbles terracotta birthday invitation",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "arch panel, centred",
+   "typography": "Satisfy, Josefin Sans",
+   "palette": "sand, terracotta",
+   "decor": "coupe glass, bubbles"
+  },
+  "palette": [
+   "#F5E6D8",
+   "#C46A3E"
+  ],
+  "content": {
+   "headline": "brunch & bubbles",
+   "message": "In honour of Nour’s 28th · Sunday 22 November · 11:30 AM · Tom & Serg, Al Quoz",
+   "signature": "mimosas on us · RSVP by text"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/brunch-and-bubbles-invitation.jpg",
+  "preview_url": "/templates/collection/brunch-and-bubbles-invitation-preview.jpg",
+  "status": "published",
+  "is_editable": true
+ },
+ {
+  "id": "birthday-075",
+  "slug": "superhero-mission-invitation",
+  "title": "Superhero Mission Invitation",
+  "category": "Birthday",
+  "subcategory": "Invitation",
+  "site_category": "Birthday",
+  "description": "Navy comic burst behind a red shield with the age, “CALLING ALL HEROES!” and a white details panel, capes encouraged.",
+  "design_brief": "Navy comic burst behind a red shield with the age, “CALLING ALL HEROES!” and a white details panel, capes encouraged.",
+  "design_style": "birthday invitation",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=superhero%20shield%20comic%20kids%20birthday%20invitation",
+  "inspiration_query": "superhero shield comic kids birthday invitation",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "emblem top, panel bottom",
+   "typography": "Luckiest Guy, Bungee, Nunito",
+   "palette": "navy, red, yellow, white",
+   "decor": "rays, shield"
+  },
+  "palette": [
+   "#1D3557",
+   "#E63946"
+  ],
+  "content": {
+   "headline": "CALLING ALL HEROES!",
+   "message": "Join Captain Rayyan’s 7th birthday mission · Saturday 12 December · 3 PM · HQ: Fun City, Mirdif",
+   "signature": "RSVP: 052 444 1100"
+  },
+  "dimensions": {
+   "width": 559,
+   "height": 794,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/superhero-mission-invitation.jpg",
+  "preview_url": "/templates/collection/superhero-mission-invitation-preview.jpg",
+  "status": "published",
+  "is_editable": true
+ },
+ {
+  "id": "birthday-076",
+  "slug": "garden-tea-party-80th-invitation",
+  "title": "Garden Tea Party 80th Invitation",
+  "category": "Birthday",
+  "subcategory": "Invitation",
+  "site_category": "Birthday",
+  "description": "A sage teapot with daisies under a pink striped awning, “Birthday Tea Party” for Grandma’s 80th in a rose garden.",
+  "design_brief": "A sage teapot with daisies under a pink striped awning, “Birthday Tea Party” for Grandma’s 80th in a rose garden.",
+  "design_style": "birthday invitation",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=garden%20tea%20party%20teapot%20birthday%20invitation",
+  "inspiration_query": "garden tea party teapot birthday invitation",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "illustration top, centred text",
+   "typography": "Playfair, Cormorant italic, Montserrat caps",
+   "palette": "ivory, sage, rose",
+   "decor": "awning stripes, teapot, daisies"
+  },
+  "palette": [
+   "#FDF8F3",
+   "#C9707D"
+  ],
+  "content": {
+   "headline": "Birthday Tea Party",
+   "message": "for Grandma Aisha’s 80th · Saturday 5 December · 4 PM · The Rose Garden, Safa Park",
+   "signature": "Hats & florals welcome · RSVP to Mona"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/garden-tea-party-80th-invitation.jpg",
+  "preview_url": "/templates/collection/garden-tea-party-80th-invitation-preview.jpg",
+  "status": "published",
+  "is_editable": true
+ },
+ {
+  "id": "birthday-077",
+  "slug": "disco-roller-night-25th-story",
+  "title": "Disco Roller Night 25th Story",
+  "category": "Birthday",
+  "subcategory": "Invitation",
+  "site_category": "Birthday",
+  "description": "Violet-to-magenta gradient, hanging disco ball and confetti, Monoton “DISCO & ROLLER NIGHT” with Space Mono details.",
+  "design_brief": "Violet-to-magenta gradient, hanging disco ball and confetti, Monoton “DISCO & ROLLER NIGHT” with Space Mono details.",
+  "design_style": "birthday invitation",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=disco%20ball%20roller%20skate%20party%20invitation",
+  "inspiration_query": "disco ball roller skate party invitation",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "ball top, stacked type",
+   "typography": "Monoton, Bungee, Pacifico, Space Mono",
+   "palette": "violet, magenta, yellow, cyan",
+   "decor": "disco ball, confetti"
+  },
+  "palette": [
+   "#3A0CA3",
+   "#FFD60A"
+  ],
+  "content": {
+   "headline": "DISCO & ROLLER NIGHT",
+   "message": "Celebrate Dana’s 25th · Fri 27 Nov · 9 PM till late · Groove Rink, Al Serkal",
+   "signature": "DM to RSVP @dana.rolls"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1920,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/disco-roller-night-25th-story.jpg",
+  "preview_url": "/templates/collection/disco-roller-night-25th-story-preview.jpg",
+  "status": "published",
+  "is_editable": true
+ },
+ {
+  "id": "birthday-078",
+  "slug": "big-date-modern-35th-invitation",
+  "title": "Big Date Modern 35th Invitation",
+  "category": "Birthday",
+  "subcategory": "Invitation",
+  "site_category": "Birthday",
+  "description": "Tall DL card dominated by a huge light-weight date “12.12” with the second half in red-orange, then concise details.",
+  "design_brief": "Tall DL card dominated by a huge light-weight date “12.12” with the second half in red-orange, then concise details.",
+  "design_style": "birthday invitation",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=minimal%20big%20date%20typography%20invitation",
+  "inspiration_query": "minimal big date typography invitation",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "date top half, details below",
+   "typography": "Outfit 300/600/700",
+   "palette": "paper grey, ink, red-orange",
+   "decor": "one rule"
+  },
+  "palette": [
+   "#F4F4F0",
+   "#E85D3F"
+  ],
+  "content": {
+   "headline": "YOU’RE INVITED",
+   "message": "to celebrate Kareem turning 35 · 8 PM · The Loft, Dubai Design District",
+   "signature": "RSVP → kareem35.party"
+  },
+  "dimensions": {
+   "width": 374,
+   "height": 794,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/big-date-modern-35th-invitation.jpg",
+  "preview_url": "/templates/collection/big-date-modern-35th-invitation-preview.jpg",
+  "status": "published",
+  "is_editable": true
+ },
+ {
+  "id": "birthday-079",
+  "slug": "into-the-wild-campout-invitation",
+  "title": "Into the Wild Campout Invitation",
+  "category": "Birthday",
+  "subcategory": "Invitation",
+  "site_category": "Birthday",
+  "description": "Layered green mountains, a cream tent and a setting sun over a red ground band, “Into the Wild” campout for a 9th birthday.",
+  "design_brief": "Layered green mountains, a cream tent and a setting sun over a red ground band, “Into the Wild” campout for a 9th birthday.",
+  "design_style": "birthday invitation",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=camping%20mountains%20tent%20kids%20birthday%20invitation",
+  "inspiration_query": "camping mountains tent kids birthday invitation",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "landscape, text top-left, scene",
+   "typography": "Lobster, Josefin Sans",
+   "palette": "parchment, greens, brick red",
+   "decor": "mountains, tent, sun"
+  },
+  "palette": [
+   "#F2E8CF",
+   "#BC4749"
+  ],
+  "content": {
+   "headline": "Into the Wild",
+   "message": "Ibrahim’s 9th Birthday Campout · Sat 9 Jan · 4 PM · Hatta Dome Park",
+   "signature": "RSVP to Sara · 056 222 3344"
+  },
+  "dimensions": {
+   "width": 673,
+   "height": 480,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/into-the-wild-campout-invitation.jpg",
+  "preview_url": "/templates/collection/into-the-wild-campout-invitation-preview.jpg",
+  "status": "published",
+  "is_editable": true
+ },
+ {
+  "id": "birthday-080",
+  "slug": "paint-splat-art-party-invitation",
+  "title": "Paint Splat Art Party Invitation",
+  "category": "Birthday",
+  "subcategory": "Invitation",
+  "site_category": "Birthday",
+  "description": "Five bright paint splats with droplets in the corners of a white square, “ART PARTY!” and messy-clothes reminder.",
+  "design_brief": "Five bright paint splats with droplets in the corners of a white square, “ART PARTY!” and messy-clothes reminder.",
+  "design_style": "birthday invitation",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=paint%20splatter%20art%20party%20kids%20invitation",
+  "inspiration_query": "paint splatter art party kids invitation",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "splats corners, text centre",
+   "typography": "Luckiest Guy, Nunito",
+   "palette": "white, rainbow primaries",
+   "decor": "paint splats"
+  },
+  "palette": [
+   "#FFFFFF",
+   "#FF595E"
+  ],
+  "content": {
+   "headline": "ART PARTY!",
+   "message": "Paint, glitter & cake for Amna’s 6th · Sun 13 Dec · 10 AM · Little Picasso Studio, JLT",
+   "signature": "Wear clothes that can get messy!"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/paint-splat-art-party-invitation.jpg",
+  "preview_url": "/templates/collection/paint-splat-art-party-invitation-preview.jpg",
+  "status": "published",
+  "is_editable": true
+ },
+ {
+  "id": "birthday-081",
+  "slug": "sweet-sixteen-sparkle-post",
+  "title": "Sweet Sixteen Sparkle Post",
+  "category": "Birthday",
+  "subcategory": "Milestone",
+  "site_category": "Birthday",
+  "description": "Lilac-to-pink gradient with scattered sparkles, Pacifico “Sweet” over a giant Abril “16”.",
+  "design_brief": "Lilac-to-pink gradient with scattered sparkles, Pacifico “Sweet” over a giant Abril “16”.",
+  "design_style": "milestone birthday",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=sweet%20sixteen%20lilac%20sparkle%20birthday",
+  "inspiration_query": "sweet sixteen lilac sparkle birthday",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "stacked centre",
+   "typography": "Pacifico, Abril Fatface, Raleway",
+   "palette": "lilac, pink, violet",
+   "decor": "sparkles"
+  },
+  "palette": [
+   "#F3E8FF",
+   "#FF5DA2"
+  ],
+  "content": {
+   "headline": "Sweet 16",
+   "message": "the year everything begins",
+   "signature": "Happy Birthday, Salma"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/sweet-sixteen-sparkle-post.jpg",
+  "preview_url": "/templates/collection/sweet-sixteen-sparkle-post-preview.jpg",
+  "status": "published",
+  "is_editable": true
+ },
+ {
+  "id": "birthday-082",
+  "slug": "admit-one-18th-ticket-card",
+  "title": "Admit One 18th Ticket Card",
+  "category": "Birthday",
+  "subcategory": "Milestone",
+  "site_category": "Birthday",
+  "description": "An 18th as a yellow concert ticket with tear-off stub, “EIGHTEEN · THE WORLD TOUR · STARRING YOUSEF”.",
+  "design_brief": "An 18th as a yellow concert ticket with tear-off stub, “EIGHTEEN · THE WORLD TOUR · STARRING YOUSEF”.",
+  "design_style": "milestone birthday",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=concert%20ticket%20design%2018th%20birthday",
+  "inspiration_query": "concert ticket design 18th birthday",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "ticket with stub",
+   "typography": "Anton, Space Mono",
+   "palette": "charcoal, lemon",
+   "decor": "perforation, notches"
+  },
+  "palette": [
+   "#14141C",
+   "#F7E733"
+  ],
+  "content": {
+   "headline": "EIGHTEEN",
+   "message": "HAPPY 18TH BIRTHDAY — the main character era starts now.",
+   "signature": "Starring Yousef"
+  },
+  "dimensions": {
+   "width": 673,
+   "height": 480,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/admit-one-18th-ticket-card.jpg",
+  "preview_url": "/templates/collection/admit-one-18th-ticket-card-preview.jpg",
+  "status": "published",
+  "is_editable": true
+ },
+ {
+  "id": "birthday-083",
+  "slug": "key-to-the-door-21st-card",
+  "title": "Key to the Door 21st Card",
+  "category": "Birthday",
+  "subcategory": "Milestone",
+  "site_category": "Birthday",
+  "description": "Deep teal-navy card with a gold key illustration and gold “21”, italic “the key to the door” from parents.",
+  "design_brief": "Deep teal-navy card with a gold key illustration and gold “21”, italic “the key to the door” from parents.",
+  "design_style": "milestone birthday",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=gold%20key%2021st%20birthday%20card%20navy",
+  "inspiration_query": "gold key 21st birthday card navy",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "icon, number, text stack",
+   "typography": "Playfair gold, Montserrat, Great Vibes",
+   "palette": "deep teal, gold",
+   "decor": "key"
+  },
+  "palette": [
+   "#0F2A3A",
+   "#C9A55C"
+  ],
+  "content": {
+   "headline": "21 · the key to the door",
+   "message": "Happy 21st birthday, Laith — may every door you open lead somewhere wonderful.",
+   "signature": "Mum & Dad"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/key-to-the-door-21st-card.jpg",
+  "preview_url": "/templates/collection/key-to-the-door-21st-card-preview.jpg",
+  "status": "published",
+  "is_editable": true
+ },
+ {
+  "id": "birthday-084",
+  "slug": "thirty-and-thriving-poster",
+  "title": "Thirty and Thriving Poster",
+  "category": "Birthday",
+  "subcategory": "Milestone",
+  "site_category": "Birthday",
+  "description": "Tomato-red poster with “THIRTY” repeated three times in giant Anton (cream, black, faded), “& thriving.” in italic.",
+  "design_brief": "Tomato-red poster with “THIRTY” repeated three times in giant Anton (cream, black, faded), “& thriving.” in italic.",
+  "design_style": "milestone birthday",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=repeated%20bold%20typography%2030th%20birthday%20poster",
+  "inspiration_query": "repeated bold typography 30th birthday poster",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "repeated type bands",
+   "typography": "Anton, Playfair italic, Montserrat",
+   "palette": "tomato, cream, black",
+   "decor": "stars"
+  },
+  "palette": [
+   "#FF4F4F",
+   "#1C1C1C"
+  ],
+  "content": {
+   "headline": "THIRTY & thriving.",
+   "message": "Happy birthday, Nadine",
+   "signature": ""
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1350,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/thirty-and-thriving-poster.jpg",
+  "preview_url": "/templates/collection/thirty-and-thriving-poster-preview.jpg",
+  "status": "published",
+  "is_editable": true
+ },
+ {
+  "id": "birthday-085",
+  "slug": "fabulous-forty-emerald-invitation",
+  "title": "Fabulous Forty Emerald Invitation",
+  "category": "Birthday",
+  "subcategory": "Milestone",
+  "site_category": "Birthday",
+  "description": "Emerald art-deco fan above a gold “40 & FABULOUS”, dinner-and-dancing details.",
+  "design_brief": "Emerald art-deco fan above a gold “40 & FABULOUS”, dinner-and-dancing details.",
+  "design_style": "milestone birthday",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=emerald%20gold%20art%20deco%2040th%20birthday%20invitation",
+  "inspiration_query": "emerald gold art deco 40th birthday invitation",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "fan top, number centre",
+   "typography": "Cinzel, Marcellus",
+   "palette": "emerald, gold",
+   "decor": "deco fan, rule"
+  },
+  "palette": [
+   "#0F3D33",
+   "#D8B45B"
+  ],
+  "content": {
+   "headline": "40 & FABULOUS",
+   "message": "Celebrating Huda with dinner & dancing · Saturday 21 November · 8 PM · Bab Al Shams",
+   "signature": "Emerald & gold encouraged"
+  },
+  "dimensions": {
+   "width": 559,
+   "height": 794,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/fabulous-forty-emerald-invitation.jpg",
+  "preview_url": "/templates/collection/fabulous-forty-emerald-invitation-preview.jpg",
+  "status": "published",
+  "is_editable": true
+ },
+ {
+  "id": "birthday-086",
+  "slug": "golden-years-50th-laurel-card",
+  "title": "Golden Years 50th Laurel Card",
+  "category": "Birthday",
+  "subcategory": "Milestone",
+  "site_category": "Birthday",
+  "description": "Cream card with an open gold laurel circle around a gold “50”, GOLDEN YEARS caps and a warm, funny tribute.",
+  "design_brief": "Cream card with an open gold laurel circle around a gold “50”, GOLDEN YEARS caps and a warm, funny tribute.",
+  "design_style": "milestone birthday",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=gold%20laurel%20circle%2050th%20birthday%20card%20cream",
+  "inspiration_query": "gold laurel circle 50th birthday card cream",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "laurel emblem, text below",
+   "typography": "Playfair gold + italic, Montserrat",
+   "palette": "cream, antique gold",
+   "decor": "laurel ring"
+  },
+  "palette": [
+   "#FBF6EC",
+   "#B8902E"
+  ],
+  "content": {
+   "headline": "Happy 50th, Ammar",
+   "message": "Half a century of good humour, hard work and the best barbecue in town.",
+   "signature": "— your brothers"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/golden-years-50th-laurel-card.jpg",
+  "preview_url": "/templates/collection/golden-years-50th-laurel-card-preview.jpg",
+  "status": "published",
+  "is_editable": true
+ },
+ {
+  "id": "birthday-087",
+  "slug": "diamond-60th-family-lunch-story",
+  "title": "Diamond 60th Family Lunch Story",
+  "category": "Birthday",
+  "subcategory": "Milestone",
+  "site_category": "Birthday",
+  "description": "Navy gradient with a faceted silver diamond and silver “60”, “A DIAMOND BIRTHDAY” for Grandpa, family-lunch details.",
+  "design_brief": "Navy gradient with a faceted silver diamond and silver “60”, “A DIAMOND BIRTHDAY” for Grandpa, family-lunch details.",
+  "design_style": "milestone birthday",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=diamond%20jubilee%20silver%20navy%2060th%20birthday",
+  "inspiration_query": "diamond jubilee silver navy 60th birthday",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "gem top, number, details",
+   "typography": "Cinzel silver, Great Vibes, Marcellus",
+   "palette": "navy, silver",
+   "decor": "diamond, sparkles"
+  },
+  "palette": [
+   "#0B1F3A",
+   "#C9CED6"
+  ],
+  "content": {
+   "headline": "A DIAMOND BIRTHDAY",
+   "message": "Family lunch · Friday 11 December · 1 PM · The family home, Al Ain",
+   "signature": "No gifts — just bring your stories"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1920,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/diamond-60th-family-lunch-story.jpg",
+  "preview_url": "/templates/collection/diamond-60th-family-lunch-story-preview.jpg",
+  "status": "published",
+  "is_editable": true
+ },
+ {
+  "id": "birthday-088",
+  "slug": "rose-wreath-70th-teta-card",
+  "title": "Rose Wreath 70th Teta Card",
+  "category": "Birthday",
+  "subcategory": "Milestone",
+  "site_category": "Birthday",
+  "description": "A ring of nine dusty-rose blooms with leaves framing a serif “70”, heartfelt line to Teta from the grandchildren.",
+  "design_brief": "A ring of nine dusty-rose blooms with leaves framing a serif “70”, heartfelt line to Teta from the grandchildren.",
+  "design_style": "milestone birthday",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=rose%20wreath%2070th%20birthday%20card%20grandmother",
+  "inspiration_query": "rose wreath 70th birthday card grandmother",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "wreath top, text below",
+   "typography": "Cormorant, Parisienne, Montserrat",
+   "palette": "ivory, dusty rose, sage",
+   "decor": "rose wreath"
+  },
+  "palette": [
+   "#FFFBF4",
+   "#8C4A42"
+  ],
+  "content": {
+   "headline": "Seventy years of love",
+   "message": "Happy birthday, Teta. Every one of us exists because you said yes to life.",
+   "signature": "your grandchildren"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/rose-wreath-70th-teta-card.jpg",
+  "preview_url": "/templates/collection/rose-wreath-70th-teta-card-preview.jpg",
+  "status": "published",
+  "is_editable": true
+ },
+ {
+  "id": "birthday-089",
+  "slug": "quarter-century-silver-25-post",
+  "title": "Quarter Century Silver 25 Post",
+  "category": "Birthday",
+  "subcategory": "Milestone",
+  "site_category": "Birthday",
+  "description": "Graphite background with silver confetti and a chrome-silver “25”, “A QUARTER CENTURY OF YOU”.",
+  "design_brief": "Graphite background with silver confetti and a chrome-silver “25”, “A QUARTER CENTURY OF YOU”.",
+  "design_style": "milestone birthday",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=silver%20glitter%2025th%20birthday%20quarter%20century",
+  "inspiration_query": "silver glitter 25th birthday quarter century",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "number centred",
+   "typography": "Outfit 800 silver gradient",
+   "palette": "graphite, silver",
+   "decor": "confetti, ring"
+  },
+  "palette": [
+   "#18181B",
+   "#A1A1AA"
+  ],
+  "content": {
+   "headline": "25 · A QUARTER CENTURY OF YOU",
+   "message": "happy birthday, Rawan ✦",
+   "signature": ""
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/quarter-century-silver-25-post.jpg",
+  "preview_url": "/templates/collection/quarter-century-silver-25-post-preview.jpg",
+  "status": "published",
+  "is_editable": true
+ },
+ {
+  "id": "birthday-090",
+  "slug": "centenarian-100th-burgundy-card",
+  "title": "Centenarian 100th Burgundy Card",
+  "category": "Birthday",
+  "subcategory": "Milestone",
+  "site_category": "Birthday",
+  "description": "Regal burgundy with double gold frame and soft sunburst behind a gold “100”, honouring five generations.",
+  "design_brief": "Regal burgundy with double gold frame and soft sunburst behind a gold “100”, honouring five generations.",
+  "design_style": "milestone birthday",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=regal%20100th%20birthday%20card%20burgundy%20gold",
+  "inspiration_query": "regal 100th birthday card burgundy gold",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "framed centred stack",
+   "typography": "Playfair gold, Cinzel, Cormorant italic",
+   "palette": "burgundy, gold, blush",
+   "decor": "sunburst, double frame"
+  },
+  "palette": [
+   "#4A0F1E",
+   "#D9A94F"
+  ],
+  "content": {
+   "headline": "ONE HUNDRED YEARS",
+   "message": "A century of courage, faith and kindness. Five generations celebrate you today.",
+   "signature": "With all our love"
+  },
+  "dimensions": {
+   "width": 559,
+   "height": 794,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/centenarian-100th-burgundy-card.jpg",
+  "preview_url": "/templates/collection/centenarian-100th-burgundy-card-preview.jpg",
+  "status": "published",
+  "is_editable": true
+ },
+ {
+  "id": "birthday-091",
+  "slug": "heart-garland-mom-card",
+  "title": "Heart Garland Mom Card",
+  "category": "Birthday",
+  "subcategory": "For Someone Special",
+  "site_category": "Birthday",
+  "description": "A string of little hearts hung across the top, italic “Happy Birthday,” over a giant coral “Mom”, sincere one-liner.",
+  "design_brief": "A string of little hearts hung across the top, italic “Happy Birthday,” over a giant coral “Mom”, sincere one-liner.",
+  "design_style": "relationship birthday",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=heart%20garland%20bunting%20birthday%20card%20for%20mom",
+  "inspiration_query": "heart garland bunting birthday card for mom",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "garland top, big word",
+   "typography": "Playfair italic, Abril Fatface, Great Vibes",
+   "palette": "blush, coral, sage",
+   "decor": "heart garland"
+  },
+  "palette": [
+   "#FFF0EE",
+   "#F28482"
+  ],
+  "content": {
+   "headline": "Happy Birthday, Mom",
+   "message": "You are my first home, my favourite person and my forever cheerleader.",
+   "signature": "Love always, Yara"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/heart-garland-mom-card.jpg",
+  "preview_url": "/templates/collection/heart-garland-mom-card-preview.jpg",
+  "status": "published",
+  "is_editable": true
+ },
+ {
+  "id": "birthday-092",
+  "slug": "plaid-shirt-pocket-dad-card",
+  "title": "Plaid Shirt Pocket Dad Card",
+  "category": "Birthday",
+  "subcategory": "For Someone Special",
+  "site_category": "Birthday",
+  "description": "Navy-and-red plaid like Dad’s shirt, a stitched pocket with a pencil, and a cream panel with Bebas “HAPPY BIRTHDAY, DAD”.",
+  "design_brief": "Navy-and-red plaid like Dad’s shirt, a stitched pocket with a pencil, and a cream panel with Bebas “HAPPY BIRTHDAY, DAD”.",
+  "design_style": "relationship birthday",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=plaid%20shirt%20pocket%20pen%20birthday%20card%20for%20dad",
+  "inspiration_query": "plaid shirt pocket pen birthday card for dad",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "pattern top, panel bottom",
+   "typography": "Bebas Neue, Montserrat",
+   "palette": "navy, brick red, cream",
+   "decor": "plaid, pocket, pencil"
+  },
+  "palette": [
+   "#25456B",
+   "#B23A48"
+  ],
+  "content": {
+   "headline": "HAPPY BIRTHDAY, DAD",
+   "message": "Chief problem-solver, bad-joke champion and the best man I know.",
+   "signature": "— Omar & Zaid"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/plaid-shirt-pocket-dad-card.jpg",
+  "preview_url": "/templates/collection/plaid-shirt-pocket-dad-card-preview.jpg",
+  "status": "published",
+  "is_editable": true
+ },
+ {
+  "id": "birthday-093",
+  "slug": "two-mugs-my-person-husband-post",
+  "title": "Two Mugs My Person Husband Post",
+  "category": "Birthday",
+  "subcategory": "For Someone Special",
+  "site_category": "Birthday",
+  "description": "Two steaming mugs side by side on a shelf with a tiny heart between them, “Happy birthday to my person”.",
+  "design_brief": "Two steaming mugs side by side on a shelf with a tiny heart between them, “Happy birthday to my person”.",
+  "design_style": "relationship birthday",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=two%20coffee%20mugs%20couple%20birthday%20husband",
+  "inspiration_query": "two coffee mugs couple birthday husband",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "headline top, still life",
+   "typography": "Playfair italic, Montserrat",
+   "palette": "oat, terracotta, forest",
+   "decor": "mugs, steam, heart"
+  },
+  "palette": [
+   "#F3E9DC",
+   "#C8553D"
+  ],
+  "content": {
+   "headline": "Happy birthday to my person",
+   "message": "every morning is better with you",
+   "signature": "love, your wife"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/two-mugs-my-person-husband-post.jpg",
+  "preview_url": "/templates/collection/two-mugs-my-person-husband-post-preview.jpg",
+  "status": "published",
+  "is_editable": true
+ },
+ {
+  "id": "birthday-094",
+  "slug": "red-rose-bouquet-wife-card",
+  "title": "Red Rose Bouquet Wife Card",
+  "category": "Birthday",
+  "subcategory": "For Someone Special",
+  "site_category": "Birthday",
+  "description": "A hand-tied bouquet of five red roses in blush paper, Great Vibes “To my wife,” and a romantic message.",
+  "design_brief": "A hand-tied bouquet of five red roses in blush paper, Great Vibes “To my wife,” and a romantic message.",
+  "design_style": "relationship birthday",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=red%20rose%20bouquet%20romantic%20birthday%20card%20wife",
+  "inspiration_query": "red rose bouquet romantic birthday card wife",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "bouquet top, letter below",
+   "typography": "Great Vibes, Cormorant italic",
+   "palette": "blush, crimson, leaf",
+   "decor": "roses, wrap, heart"
+  },
+  "palette": [
+   "#FBEFF1",
+   "#9E2A2B"
+  ],
+  "content": {
+   "headline": "To my wife,",
+   "message": "Happy birthday to the woman who makes every ordinary day feel like a love story. I would choose you in every lifetime.",
+   "signature": "Forever yours, Hamza"
+  },
+  "dimensions": {
+   "width": 559,
+   "height": 794,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/red-rose-bouquet-wife-card.jpg",
+  "preview_url": "/templates/collection/red-rose-bouquet-wife-card-preview.jpg",
+  "status": "published",
+  "is_editable": true
+ },
+ {
+  "id": "birthday-095",
+  "slug": "sisters-by-chance-post",
+  "title": "Sisters by Chance Post",
+  "category": "Birthday",
+  "subcategory": "For Someone Special",
+  "site_category": "Birthday",
+  "description": "Two soft overlapping blob shapes joined by a curved line like linked hands, handwritten “sisters by chance, friends by choice”.",
+  "design_brief": "Two soft overlapping blob shapes joined by a curved line like linked hands, handwritten “sisters by chance, friends by choice”.",
+  "design_style": "relationship birthday",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=sisters%20by%20chance%20friends%20by%20choice%20birthday",
+  "inspiration_query": "sisters by chance friends by choice birthday",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "abstract top, script lines",
+   "typography": "Caveat, Montserrat 800",
+   "palette": "peach, mauve, plum",
+   "decor": "blobs, linking curve, heart"
+  },
+  "palette": [
+   "#FFE8D6",
+   "#B5838D"
+  ],
+  "content": {
+   "headline": "sisters by chance, friends by choice",
+   "message": "HAPPY BIRTHDAY, HANA",
+   "signature": ""
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/sisters-by-chance-post.jpg",
+  "preview_url": "/templates/collection/sisters-by-chance-post-preview.jpg",
+  "status": "published",
+  "is_editable": true
+ },
+ {
+  "id": "birthday-096",
+  "slug": "level-up-gamer-brother-story",
+  "title": "Level Up Gamer Brother Story",
+  "category": "Birthday",
+  "subcategory": "For Someone Special",
+  "site_category": "Birthday",
+  "description": "Dark gamer screen with a controller, pixel confetti, “LEVEL 30 UNLOCKED” and an XP bar, sibling banter line.",
+  "design_brief": "Dark gamer screen with a controller, pixel confetti, “LEVEL 30 UNLOCKED” and an XP bar, sibling banter line.",
+  "design_style": "relationship birthday",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=gamer%20controller%20level%20up%20birthday%20story",
+  "inspiration_query": "gamer controller level up birthday story",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "controller top, HUD text",
+   "typography": "Rubik Mono One, Space Mono",
+   "palette": "near-black, yellow, mint, pink",
+   "decor": "controller, XP bar, pixels"
+  },
+  "palette": [
+   "#101820",
+   "#FEE715"
+  ],
+  "content": {
+   "headline": "LEVEL 30 UNLOCKED",
+   "message": "+1 wisdom · +10 charm · +100 snacks",
+   "signature": "Happy birthday, bro. Still can’t beat me though."
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1920,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/level-up-gamer-brother-story.jpg",
+  "preview_url": "/templates/collection/level-up-gamer-brother-story-preview.jpg",
+  "status": "published",
+  "is_editable": true
+ },
+ {
+  "id": "birthday-097",
+  "slug": "armchair-grandpa-card",
+  "title": "Armchair Grandpa Card",
+  "category": "Birthday",
+  "subcategory": "For Someone Special",
+  "site_category": "Birthday",
+  "description": "A sage armchair with a folded newspaper and a little lamp-glow, serif greeting for Grandpa and a playful handwritten note.",
+  "design_brief": "A sage armchair with a folded newspaper and a little lamp-glow, serif greeting for Grandpa and a playful handwritten note.",
+  "design_style": "relationship birthday",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=cozy%20armchair%20illustration%20birthday%20card%20grandpa",
+  "inspiration_query": "cozy armchair illustration birthday card grandpa",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "illustration top, text below",
+   "typography": "Libre Baskerville, Caveat",
+   "palette": "mint, sage, cream, amber",
+   "decor": "armchair, newspaper"
+  },
+  "palette": [
+   "#EAF2EF",
+   "#5C8374"
+  ],
+  "content": {
+   "headline": "Happy Birthday, Grandpa",
+   "message": "Here’s to your favourite chair, your strongest tea and the best stories in the world.",
+   "signature": "from your favourite grandchild (we all say that)"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/armchair-grandpa-card.jpg",
+  "preview_url": "/templates/collection/armchair-grandpa-card-preview.jpg",
+  "status": "published",
+  "is_editable": true
+ },
+ {
+  "id": "birthday-098",
+  "slug": "neon-heart-sign-partner-post",
+  "title": "Neon Heart Sign Partner Post",
+  "category": "Birthday",
+  "subcategory": "For Someone Special",
+  "site_category": "Birthday",
+  "description": "A glowing pink neon heart outline and Pacifico “happy birthday” on a dark purple wall, for a partner.",
+  "design_brief": "A glowing pink neon heart outline and Pacifico “happy birthday” on a dark purple wall, for a partner.",
+  "design_style": "relationship birthday",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=neon%20heart%20sign%20happy%20birthday%20dark",
+  "inspiration_query": "neon heart sign happy birthday dark",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "icon centre, neon text",
+   "typography": "Pacifico glow, Space Mono",
+   "palette": "aubergine, neon pink, cyan",
+   "decor": "neon glow"
+  },
+  "palette": [
+   "#1A0E1F",
+   "#FF7BC2"
+  ],
+  "content": {
+   "headline": "happy birthday",
+   "message": "to my favourite human ♥",
+   "signature": ""
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/neon-heart-sign-partner-post.jpg",
+  "preview_url": "/templates/collection/neon-heart-sign-partner-post-preview.jpg",
+  "status": "published",
+  "is_editable": true
+ },
+ {
+  "id": "birthday-099",
+  "slug": "chalkboard-teacher-card",
+  "title": "Chalkboard Teacher Card",
+  "category": "Birthday",
+  "subcategory": "For Someone Special",
+  "site_category": "Birthday",
+  "description": "A green chalkboard in a wooden frame with chalk handwriting from the class, coloured chalk sticks and a red A+.",
+  "design_brief": "A green chalkboard in a wooden frame with chalk handwriting from the class, coloured chalk sticks and a red A+.",
+  "design_style": "relationship birthday",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=chalkboard%20happy%20birthday%20teacher%20card",
+  "inspiration_query": "chalkboard happy birthday teacher card",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "landscape board",
+   "typography": "Caveat, Permanent Marker",
+   "palette": "board green, wood, chalk colours",
+   "decor": "chalk, eraser, A+"
+  },
+  "palette": [
+   "#2F4538",
+   "#FFD166"
+  ],
+  "content": {
+   "headline": "Happy Birthday, Ms. Reem!",
+   "message": "Thank you for making every lesson an adventure. We learned more than maths this year.",
+   "signature": "— Grade 4B ★"
+  },
+  "dimensions": {
+   "width": 673,
+   "height": 480,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/chalkboard-teacher-card.jpg",
+  "preview_url": "/templates/collection/chalkboard-teacher-card-preview.jpg",
+  "status": "published",
+  "is_editable": true
+ },
+ {
+  "id": "birthday-100",
+  "slug": "desk-flat-lay-teammate-post",
+  "title": "Desk Flat-lay Teammate Post",
+  "category": "Birthday",
+  "subcategory": "For Someone Special",
+  "site_category": "Birthday",
+  "description": "A clean desk flat-lay: laptop, cupcake with candle and a sticky note “TODO: ☑ cake”, for a teammate.",
+  "design_brief": "A clean desk flat-lay: laptop, cupcake with candle and a sticky note “TODO: ☑ cake”, for a teammate.",
+  "design_style": "relationship birthday",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=office%20desk%20flat%20lay%20colleague%20birthday",
+  "inspiration_query": "office desk flat lay colleague birthday",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "headline top, desk bottom",
+   "typography": "Outfit, Caveat",
+   "palette": "cool grey, navy, apricot, teal",
+   "decor": "laptop, cupcake, note"
+  },
+  "palette": [
+   "#E9EEF2",
+   "#1D3557"
+  ],
+  "content": {
+   "headline": "Happy birthday to the best teammate",
+   "message": "Meetings cancelled (we wish). Cake in the kitchen at 3.",
+   "signature": "— The Marketing Team"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/desk-flat-lay-teammate-post.jpg",
+  "preview_url": "/templates/collection/desk-flat-lay-teammate-post-preview.jpg",
+  "status": "published",
+  "is_editable": true
+ }
+]
