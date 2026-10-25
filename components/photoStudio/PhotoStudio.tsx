@@ -14,7 +14,7 @@
 // into the SAME picture on the page.
 
 import type { CSSProperties } from 'react';
-import { forwardRef, ReactNode, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
+import { Fragment, forwardRef, ReactNode, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import {
   SlidersHorizontal, Sparkles, Crop as CropIcon, Scissors, Brush, Maximize2, Download, Undo2, Redo2, Plus, Minus,
   Maximize, RotateCcw, RotateCw, FlipHorizontal2, FlipVertical2, Loader2, Check, X, Eye, Printer, Lock, Unlock, Palette, Wand2,
@@ -105,6 +105,16 @@ export interface PhotoStudioProps {
 const PREVIEW_MAX = 2200;
 const MAX_HISTORY = 24;
 const cx = (...a: (string | false | null | undefined)[]) => a.filter(Boolean).join(' ');
+// Photoshop-style copy names: "Background copy", "Background copy 2", ...
+// instead of piling up "copy copy copy".
+function copyName(name: string, layers: { name: string }[]) {
+  const root = name.replace(/ copy(?: \d+)?$/, '');
+  const taken = new Set(layers.map((l) => l.name));
+  if (!taken.has(`${root} copy`)) return `${root} copy`;
+  let n = 2;
+  while (taken.has(`${root} copy ${n}`)) n++;
+  return `${root} copy ${n}`;
+}
 
 const RATIOS: { id: string; label: string; r: number | null | 'orig' }[] = [
   { id: 'free', label: 'Free', r: null },
@@ -455,6 +465,15 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
     return Math.max(0.02, fit * zoom);
   }, [preview, stageSize, zoom]);
   // Base pixels → CSS pixels on screen
+  // Keep at least part of the photo on screen while panning, so it can
+  // never be dragged out of sight (the photo is centred at pan 0,0).
+  const clampPan = (p: { x: number; y: number }) => {
+    if (!preview) return p;
+    const iw = preview.canvas.width * viewScale, ih = preview.canvas.height * viewScale;
+    const keep = 80; // px of photo that must stay visible
+    const mx = Math.max(0, (stageSize.w + iw) / 2 - keep), my = Math.max(0, (stageSize.h + ih) / 2 - keep);
+    return { x: Math.min(mx, Math.max(-mx, p.x)), y: Math.min(my, Math.max(-my, p.y)) };
+  };
   const basePxToScreen = preview ? viewScale * preview.k : 1;
 
   // ---------------- render the preview
@@ -844,7 +863,7 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
       const d = Math.hypot(a.x - b.x, a.y - b.y);
       setZoom(Math.min(8, Math.max(0.5, (g.zoom * d) / g.dist)));
     } else if (g.kind === 'pan') {
-      setPan({ x: g.pan.x + e.clientX - g.sx, y: g.pan.y + e.clientY - g.sy });
+      setPan(clampPan({ x: g.pan.x + e.clientX - g.sx, y: g.pan.y + e.clientY - g.sy }));
     } else if (g.kind === 'heal') {
       const p = toBase(e.clientX, e.clientY);
       setHealPts((pts) => [...pts, p]);
@@ -985,7 +1004,7 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
       return { ...h, list };
     }),
     add: () => target && insertAbove(makeLayer(blankLike(target), `Layer ${(layers?.length || 0) + 1}`), 'New layer'),
-    duplicate: () => layers && insertAbove({ ...layers[activeIdx], id: makeLayer(target!, '').id, name: `${layers[activeIdx].name} copy` }, 'Duplicate layer'),
+    duplicate: () => layers && insertAbove({ ...layers[activeIdx], id: makeLayer(target!, '').id, name: copyName(layers[activeIdx].name, layers) }, 'Duplicate layer'),
     remove: () => {
       if (!layers || layers.length < 2) return;
       setLayers(layers.filter((_, i) => i !== activeIdx), Math.max(0, activeIdx - 1), 'Delete layer');
@@ -1020,7 +1039,7 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
     subject: () => { setBgMode('subject'); setBgOpen(true); },
     clear: () => sel && target && push({ base: clearMasked(target, sel.mask), label: 'Delete selection' }),
     fill: (color: string) => target && push({ base: fillMasked(target, sel?.mask || null, color), label: sel ? 'Fill selection' : 'Fill layer' }),
-    toLayer: () => target && insertAbove(makeLayer(sel ? copyMasked(target, sel.mask) : target, sel ? 'Selection copy' : `${layers![activeIdx].name} copy`), 'Layer via copy'),
+    toLayer: () => target && insertAbove(makeLayer(sel ? copyMasked(target, sel.mask) : target, sel ? copyName('Selection', layers || []) : copyName(layers![activeIdx].name, layers || [])), 'Layer via copy'),
   };
   const fileRef = useRef<HTMLInputElement>(null);
   const placeRef = useRef<HTMLInputElement>(null);
@@ -2039,15 +2058,15 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
       <div className="h-14 shrink-0 flex items-center gap-2 px-3 border-b border-mt-border bg-mt-surface">
         <div className="min-w-0 flex items-center gap-2">
           {headerLeft}
-          <div className="inline-flex rounded-full border border-mt-border p-0.5 text-[12px] font-medium" role="group" aria-label="Editing mode">
+          <div className="shrink-0 inline-flex rounded-full border border-mt-border p-0.5 text-[12px] font-medium" role="group" aria-label="Editing mode">
             {(['simple', 'pro'] as Mode[]).map((m) => (
-              <button key={m} onClick={() => setMode(m)} aria-pressed={mode === m} className={cx('h-7 px-3 rounded-full transition-colors', mode === m ? 'bg-mt-primary text-mt-onprimary' : 'text-mt-muted hover:text-mt-ink')}>
+              <button key={m} onClick={() => setMode(m)} aria-pressed={mode === m} className={cx('h-7 px-2.5 sm:px-3 rounded-full transition-colors', mode === m ? 'bg-mt-primary text-mt-onprimary' : 'text-mt-muted hover:text-mt-ink')}>
                 {m === 'simple' ? 'Simple' : 'Pro'}
               </button>
             ))}
           </div>
         </div>
-        <div className="flex-1 flex items-center justify-center gap-0.5">
+        <div className="flex-1 min-w-0 flex items-center justify-end sm:justify-center gap-0.5">
           <button className={iconBtn} onClick={undo} disabled={history.index <= 0} aria-label="Undo" title="Undo (Ctrl/⌘ Z)"><Undo2 size={17} /></button>
           <button className={iconBtn} onClick={redo} disabled={history.index >= history.list.length - 1} aria-label="Redo" title="Redo"><Redo2 size={17} /></button>
           <span className="w-px h-5 bg-mt-border mx-1.5 hidden sm:block" />
@@ -2060,14 +2079,14 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
           >
             <Eye size={15} /> Before
           </button>
-          <button className={cx(iconBtn, 'w-auto px-2.5 gap-1.5 text-[12px] font-medium', proof && 'bg-mt-surface2 text-[#3B82C4]')} onClick={() => setProof((p) => !p)} title="See how the colours will print in CMYK">
+          <button className={cx(iconBtn, 'hidden sm:inline-flex w-auto px-2.5 gap-1.5 text-[12px] font-medium', proof && 'bg-mt-surface2 text-[#3B82C4]')} onClick={() => setProof((p) => !p)} title="See how the colours will print in CMYK">
             <Printer size={15} /> <span className="hidden md:inline">Print preview</span>
           </button>
           <span className="w-px h-5 bg-mt-border mx-1.5 hidden sm:block" />
           <button className={cx(iconBtn, 'hidden sm:inline-flex')} onClick={() => setZoom((z) => Math.max(0.5, z / 1.25))} aria-label="Zoom out"><Minus size={16} /></button>
           <button className="hidden sm:inline-flex text-[12px] tabular-nums w-12 justify-center text-mt-muted" onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }); }} title="Fit">{Math.round(basePxToScreen * 100)}%</button>
           <button className={cx(iconBtn, 'hidden sm:inline-flex')} onClick={() => setZoom((z) => Math.min(8, z * 1.25))} aria-label="Zoom in"><Plus size={16} /></button>
-          <button className={iconBtn} onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }); }} aria-label="Fit to screen"><Maximize size={15} /></button>
+          <button className={cx(iconBtn, 'hidden sm:inline-flex')} onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }); }} aria-label="Fit to screen"><Maximize size={15} /></button>
         </div>
         <div className="flex items-center gap-2">
           {embedded ? (
@@ -2241,7 +2260,7 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
               })}
             </div>
           )}
-          {panel}
+          <Fragment key={tool}>{panel}</Fragment>
           {pro && layers && showLayers && (
             <LayersPanel
               layers={layers}
