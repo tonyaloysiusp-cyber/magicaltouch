@@ -89,7 +89,7 @@ export function mergeDown(lower: Layer, upper: Layer): Layer {
 export interface Selection {
   mask: HTMLCanvasElement;
   /** For the outline drawn on screen. */
-  shape: { kind: 'rect' | 'ellipse'; x: number; y: number; w: number; h: number } | null;
+  shape: { kind: 'rect' | 'ellipse'; x: number; y: number; w: number; h: number } | { kind: 'poly'; pts: { x: number; y: number }[] } | null;
   inverted?: boolean;
 }
 
@@ -103,6 +103,41 @@ export function maskShape(w: number, h: number, kind: 'rect' | 'ellipse', x: num
   else ctx.ellipse(x + sw / 2, y + sh / 2, Math.abs(sw / 2), Math.abs(sh / 2), 0, 0, Math.PI * 2);
   ctx.fill();
   return m;
+}
+
+/** A closed lasso / polygon selection. */
+export function maskPolygon(w: number, h: number, pts: { x: number; y: number }[]) {
+  const m = makeCanvas(w, h);
+  const ctx = m.getContext('2d')!;
+  ctx.fillStyle = '#000';
+  ctx.beginPath();
+  pts.forEach((p, i) => (i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y)));
+  ctx.closePath();
+  ctx.fill();
+  return m;
+}
+
+export type SelectionMode = 'new' | 'add' | 'subtract' | 'intersect';
+
+/** Photoshop-style combine: Shift adds, Alt subtracts, Shift+Alt intersects. */
+export function combineMasks(prev: HTMLCanvasElement | null, next: HTMLCanvasElement, mode: SelectionMode) {
+  if (!prev || mode === 'new') return next;
+  const m = makeCanvas(next.width, next.height);
+  const ctx = m.getContext('2d')!;
+  ctx.drawImage(prev, 0, 0);
+  ctx.globalCompositeOperation = mode === 'add' ? 'source-over' : mode === 'subtract' ? 'destination-out' : 'destination-in';
+  ctx.drawImage(next, 0, 0);
+  return m;
+}
+
+/** Is anything selected at all? (an empty mask after subtracting) */
+export function maskIsEmpty(mask: HTMLCanvasElement) {
+  const small = makeCanvas(64, 64);
+  const ctx = small.getContext('2d', { willReadFrequently: true })!;
+  ctx.drawImage(mask, 0, 0, 64, 64);
+  const d = ctx.getImageData(0, 0, 64, 64).data;
+  for (let i = 3; i < d.length; i += 4) if (d[i] > 8) return false;
+  return true;
 }
 
 export function maskAll(w: number, h: number) {

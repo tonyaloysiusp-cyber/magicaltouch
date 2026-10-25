@@ -1,5 +1,6 @@
 'use client';
 
+import { blockBrowserShortcut } from '@/lib/editor/browserKeys';
 import { ThemeSwitch } from '@/components/ThemeSwitch';
 import { useEffect, useRef, useState, useCallback, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
@@ -41,6 +42,8 @@ import { ResizeDialog } from '@/components/editor/shell/ResizeDialog';
 import { OnboardingDialog } from '@/components/editor/shell/OnboardingDialog';
 import { TemplatesPanel } from '@/components/editor/shell/panels/TemplatesPanel';
 import { ElementsPanel } from '@/components/editor/shell/panels/ElementsPanel';
+import { PhotosPanel } from '@/components/editor/shell/panels/PhotosPanel';
+import { Images as ImagesIcon } from 'lucide-react';
 import { TextPanel } from '@/components/editor/shell/panels/TextPanel';
 import { DrawPanel } from '@/components/editor/shell/panels/DrawPanel';
 import { BackgroundPanel } from '@/components/editor/shell/panels/BackgroundPanel';
@@ -102,7 +105,7 @@ import { ImportDialog } from '@/components/editor/ImportDialog';
 import { UnsavedChangesDialog } from '@/components/editor/UnsavedChangesDialog';
 import { loadTabSession, saveTabSession, clearTabSession } from '@/lib/editor/tabSession';
 import { WorkspaceSwitcher, EditorWorkspace } from '@/components/editor/WorkspaceSwitcher';
-import type { PhotoEditResult, CropRect } from '@/components/photoEditor/PhotoEditorWorkspace';
+import type { PhotoEditResult, CropRect } from '@/lib/photo/editTypes';
 import { PhotoStudio, PhotoStudioHandle } from '@/components/photoStudio/PhotoStudio';
 import { PhotoAdjustments, DEFAULT_ADJUSTMENTS } from '@/lib/editor/photoFilters';
 import { imageSourceDataURL } from '@/lib/editor/imageQuality';
@@ -5070,6 +5073,8 @@ function EditorContent() {
       if (!canvas) return;
 
       const isMeta = e.ctrlKey || e.metaKey;
+      // Never let Ctrl/Cmd+D, +H, +J, +L, +R, +P … do the browser's action here.
+      blockBrowserShortcut(e);
       const active = canvas.getActiveObject();
       const isEditingText = active && active.isEditing;
       const isTypingInField = document.activeElement && ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName);
@@ -7146,6 +7151,13 @@ function EditorContent() {
       icon: <UploadIcon size={20} />,
       action: () => railUploadInputRef.current?.click(),
       render: () => null,
+    },
+    {
+      id: 'photos',
+      label: 'Photos',
+      title: 'Photos from our templates — free to reuse',
+      icon: <ImagesIcon size={20} />,
+      render: () => <PhotosPanel onPick={(src) => placeImageUrl(src)} />,
     },
     {
       id: 'draw',
