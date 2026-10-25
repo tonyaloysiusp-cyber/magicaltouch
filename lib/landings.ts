@@ -16,6 +16,12 @@ export interface Landing {
   faqs: [string, string][];
   related: string[];
   seasonal?: boolean;
+  /** feature pages: main button goes to a tool instead of the template grid */
+  ctaHref?: string;
+  ctaLabel?: string;
+  features?: [string, string][];
+  /** 'ar' renders the page right-to-left with Arabic interface text */
+  lang?: 'ar';
 }
 
 const L = (l: Landing) => l;
@@ -392,4 +398,259 @@ export const LANDINGS: Landing[] = [
   }),
 ];
 
-export const landingBySlug = (s: string) => LANDINGS.find((l) => l.slug === s);
+export const ALL_LANDINGS = () => [...LANDINGS, ...MORE_LANDINGS];
+export const landingBySlug = (s: string) => ALL_LANDINGS().find((l) => l.slug === s);
+
+const FREE_FEATURES: [string, string][] = [
+  ['1,000+ templates', 'Flyers, posters, invitations, menus, resumes, certificates, social posts and more.'],
+  ['Full editor', 'Text, fonts, colours, shapes, photos, layers, pages, undo / redo and brand kits.'],
+  ['Photo Studio', 'Enhance, crop, retouch, filters, layers and background removal in your browser.'],
+  ['Print-ready export', 'PDF with bleed and crop marks, true CMYK PDF and TIFF, plus PNG, JPG and WebP.'],
+  ['No watermark', 'Your downloads are clean — no logo stamped on your work.'],
+  ['Arabic & English', 'Arabic fonts such as Amiri, Cairo and Tajawal alongside hundreds of Latin fonts.'],
+];
+
+export const MORE_LANDINGS: Landing[] = [
+  L({
+    slug: 'free-online-design-tool',
+    thing: 'design',
+    h1: 'Free online design tool — every feature free',
+    title: 'Free Online Design Tool — All Features Free, No Watermark',
+    description: 'Magical Touch is a free online graphic design tool: 1,000+ templates, a full editor, photo studio and print-ready PDF / CMYK export. No watermark, no paid tier.',
+    intro: [
+      'Design anything for your business, events or social media without paying for software. Every template, every tool and every export format is free — there is no premium plan holding features back.',
+      'It runs in your browser on computer, tablet and phone. Create a free account to save up to 15 designs in the cloud, or save files to your computer.',
+    ],
+    terms: [],
+    features: FREE_FEATURES,
+    ctaHref: '/templates',
+    ctaLabel: 'Start designing — free',
+    uses: ['Small businesses and shops', 'Restaurants and cafés', 'Schools and teachers', 'Event planners', 'Social media managers', 'Students and job seekers'],
+    faqs: [
+      ['Is it really free?', 'Yes. All templates, editing tools, the photo studio and every download format are free. There is no paid plan.'],
+      ['Is there a watermark on downloads?', 'No. Your PNG, JPG and PDF downloads have no watermark.'],
+      ['Do I need to install anything?', 'No. It works in Chrome, Safari, Edge and Firefox on any device.'],
+      ['Can I use my designs commercially?', 'Yes — use your finished designs for your business, clients, print and social media.'],
+    ],
+    related: ['free-photo-editor-online', 'free-canva-alternative', 'free-flyer-maker', 'free-design-tools'],
+  }),
+  L({
+    slug: 'free-canva-alternative',
+    thing: 'design',
+    h1: 'A free alternative to paid design apps',
+    title: 'Free Canva Alternative — Every Feature Free, No Watermark',
+    description: 'Looking for a free Canva alternative? Magical Touch gives you 1,000+ templates, background removal, CMYK print PDFs and brand kits — all free, with no premium tier.',
+    intro: [
+      'Many design apps keep their best templates and tools behind a subscription. Magical Touch takes a different approach: everything is included for free.',
+      'You get a familiar drag-and-drop editor, professional templates, a photo studio with background removal, and print-ready exports that print shops accept — CMYK PDF and TIFF included.',
+    ],
+    terms: [],
+    features: FREE_FEATURES,
+    ctaHref: '/templates',
+    ctaLabel: 'Try it free',
+    uses: ['Switching from a paid plan', 'Teams on a budget', 'Print shops and printing customers', 'Arabic and English designs'],
+    faqs: [
+      ['Can I print professionally from it?', 'Yes. Export a print PDF with 3 mm bleed and crop marks, or convert to true CMYK (FOGRA39) PDF or TIFF.'],
+      ['Does it have background removal?', 'Yes — it runs on your own device, so your photo is not uploaded anywhere for it.'],
+      ['Can I keep my brand colours and fonts?', 'Yes. Set up a brand kit with your logo, colours and fonts and apply them to any template.'],
+    ],
+    related: ['free-online-design-tool', 'free-photo-editor-online', 'remove-background-free'],
+  }),
+  L({
+    slug: 'free-photo-editor-online',
+    thing: 'photo',
+    h1: 'Free online photo editor',
+    title: 'Free Online Photo Editor — Enhance, Crop, Retouch & Layers',
+    description: 'Edit photos online for free: auto enhance, one-tap looks, crop to passport and print sizes, retouch blemishes, layers, filters, text and background removal.',
+    intro: [
+      'Photo Studio gives you simple one-tap fixes and pro tools in one place. Brighten a dark photo, crop it to a passport or Instagram size, remove spots and blemishes, or go further with layers, selections and filters.',
+      'Everything happens in your browser. Export JPG, PNG, WebP, print PDF or CMYK TIFF.',
+    ],
+    terms: [],
+    features: [
+      ['Auto enhance', 'Fix brightness, contrast and colour in one click, then fine-tune with sliders.'],
+      ['Crop & straighten', 'Free crop, aspect ratios, passport 35 × 45 mm, 4 × 6 print, A4 and social sizes.'],
+      ['Retouch', 'Healing brush, smudge, soften, dodge, burn and sharpen.'],
+      ['Looks & filters', 'Vivid, film, matte, black-and-white and more — plus blur, noise and artistic filters.'],
+      ['Layers & selections', 'Layers with blend modes and opacity, marquee and subject selection, text and shapes.'],
+      ['Background removal', 'Cut out the subject and put it on a new colour or a transparent background.'],
+    ],
+    ctaHref: '/photo-studio',
+    ctaLabel: 'Open the photo editor',
+    uses: ['Passport and visa photos', 'Product photos for online shops', 'Profile pictures', 'Real estate photos', 'Print-ready photos'],
+    faqs: [
+      ['Is the photo editor free?', 'Yes, every tool in Photo Studio is free.'],
+      ['Are my photos uploaded?', 'Editing happens on your device. Photos are only stored if you choose to save a design to your account.'],
+      ['Can I make a passport photo?', 'Yes — use Crop → Passport 35 × 45 mm, then export at 300 DPI.'],
+    ],
+    related: ['remove-background-free', 'free-image-resizer', 'free-online-design-tool'],
+  }),
+  L({
+    slug: 'remove-background-free',
+    thing: 'photo',
+    h1: 'Remove image background — free',
+    title: 'Remove Background from Image Free — Online, No Upload',
+    description: 'Remove the background from any photo for free. Runs on your own device, refine edges with brushes, then add a new colour or keep it transparent (PNG).',
+    intro: [
+      'Cut out people and products in seconds. The background remover runs inside your browser, so your photo never leaves your device.',
+      'Fine-tune the edge softness, restore or erase areas with a brush, then place the subject on a colour or download a transparent PNG.',
+    ],
+    terms: [],
+    features: [
+      ['Automatic cut-out', 'Finds the person or product and removes everything behind it.'],
+      ['Refine edges', 'Cut-off, edge softness and feather sliders, plus restore and erase brushes.'],
+      ['New background', 'Put the cut-out on white, a brand colour, or keep it transparent.'],
+      ['Private', 'Runs on your device — the photo is not uploaded for removal.'],
+    ],
+    ctaHref: '/photo-studio',
+    ctaLabel: 'Remove a background',
+    uses: ['Product photos', 'Profile and ID photos', 'Stickers and cut-outs', 'Design elements for flyers'],
+    faqs: [
+      ['Is background removal free?', 'Yes, with no limits and no watermark.'],
+      ['How do I keep it transparent?', 'Export as PNG or TIFF — those formats keep the transparency.'],
+    ],
+    related: ['free-photo-editor-online', 'free-online-design-tool', 'free-instagram-post-maker'],
+  }),
+  L({
+    slug: 'free-image-resizer',
+    thing: 'photo',
+    h1: 'Free image resizer & print size calculator',
+    title: 'Free Image Resizer — Resize Photos to Pixels, cm, mm or Inches',
+    description: 'Resize images online for free. Set the exact size in pixels, cm, mm or inches with DPI, check the print size, and export JPG, PNG, PDF or TIFF.',
+    intro: [
+      'Need a photo at an exact size for a form, a print shop or social media? Enter the width and height in the unit you need, set the resolution, and download.',
+    ],
+    terms: [],
+    features: [
+      ['Any unit', 'Pixels, centimetres, millimetres or inches.'],
+      ['DPI control', 'See exactly how big the photo will print at 72, 150 or 300 DPI.'],
+      ['Keep proportions', 'Lock the aspect ratio, or change only the print size without resampling.'],
+      ['Many formats', 'JPG, PNG, WebP, print PDF and CMYK TIFF.'],
+    ],
+    ctaHref: '/photo-studio',
+    ctaLabel: 'Resize an image',
+    uses: ['Online application forms', 'Print shops', 'Website images', 'Social media'],
+    faqs: [['What DPI should I use for printing?', '300 DPI is the standard for sharp prints. 72 DPI is fine for screens.']],
+    related: ['free-photo-editor-online', 'free-print-ready-pdf', 'remove-background-free'],
+  }),
+  L({
+    slug: 'free-print-ready-pdf',
+    thing: 'print design',
+    h1: 'Print-ready PDF & CMYK export — free',
+    title: 'Free Print-Ready PDF Maker — Bleed, Crop Marks & CMYK',
+    description: 'Export designs as print-ready PDFs for free: 3 mm bleed, crop marks, true CMYK (FOGRA39) PDF and TIFF. What print shops in the UAE and worldwide ask for.',
+    intro: [
+      'Print shops reject files without bleed or in the wrong colour mode. Magical Touch exports exactly what they need: a PDF with bleed and crop marks, converted to CMYK with an embedded press profile.',
+      'Turn on Print preview to see how colours will look on paper before you send the file.',
+    ],
+    terms: ['print', 'a4', 'a3', 'a5'],
+    features: [
+      ['Bleed & crop marks', '3 mm bleed and trim marks on every print export.'],
+      ['True CMYK', 'Converted with the Coated FOGRA39 profile, embedded in the PDF / TIFF.'],
+      ['Vector PDF', 'Sharp text and shapes at any size.'],
+      ['Print preview', 'Soft-proof colours on screen before you print.'],
+    ],
+    ctaHref: '/templates',
+    ctaLabel: 'Choose a print template',
+    uses: ['Flyers and brochures', 'Business cards', 'Posters and roll-ups', 'Certificates and invitations'],
+    faqs: [
+      ['What is bleed?', 'Extra artwork (3 mm) beyond the trim line, so no white edge shows after cutting.'],
+      ['Why CMYK?', 'Printers use cyan, magenta, yellow and black ink. Converting first avoids colour surprises.'],
+    ],
+    related: ['free-flyer-maker', 'free-business-card-maker', 'free-poster-maker'],
+  }),
+  L({
+    slug: 'free-youtube-thumbnail-maker',
+    thing: 'YouTube thumbnail',
+    h1: 'Free YouTube thumbnail maker',
+    title: 'Free YouTube Thumbnail Maker — 1280 × 720 Templates',
+    description: 'Make click-worthy YouTube thumbnails for free. 1280 × 720 templates with bold text and photo frames, plus YouTube banners.',
+    intro: ['Your thumbnail decides whether people click. Use bold, readable text and a strong photo — our templates are already sized at 1280 × 720 px.'],
+    terms: ['youtube', 'thumbnail'],
+    uses: ['Vlogs', 'Tutorials', 'Gaming', 'Podcasts', 'Channel banners'],
+    faqs: [['What size is a YouTube thumbnail?', '1280 × 720 px (16:9), under 2 MB. Download as JPG.']],
+    related: ['free-instagram-post-maker', 'free-online-design-tool', 'free-poster-maker'],
+  }),
+  L({
+    slug: 'free-design-templates-uae',
+    thing: 'design',
+    h1: 'Free design templates for UAE businesses',
+    title: 'Free Design Templates UAE — Dubai, Abu Dhabi & Sharjah Businesses',
+    description: 'Free design templates made for the UAE: Arabic and English designs, National Day, Ramadan and Eid posts, White Friday sales, menus and A4 print files.',
+    intro: [
+      'Magical Touch is made for businesses across the Emirates. Designs support Arabic and English, follow local occasions — UAE National Day, Ramadan, Eid and White Friday — and export print files for local print shops.',
+    ],
+    terms: ['dubai', 'uae', 'national day', 'eid', 'ramadan', 'white friday', 'arabic'],
+    uses: ['Shops and restaurants', 'Real estate agencies', 'Clinics and salons', 'Schools and training centres', 'Events and weddings'],
+    faqs: [['Can I add Arabic text?', 'Yes — choose an Arabic font like Amiri, Cairo or Tajawal.']],
+    related: ['uae-national-day-templates', 'eid-templates', 'black-friday-templates'],
+  }),
+  // ---------------- Arabic
+  L({
+    slug: 'ar-free-design-tool',
+    lang: 'ar',
+    thing: 'تصميم',
+    h1: 'أداة تصميم مجانية أونلاين',
+    title: 'أداة تصميم مجانية أونلاين — قوالب جاهزة بدون علامة مائية',
+    description: 'صمّم مجاناً بالعربي والإنجليزي: أكثر من ١٠٠٠ قالب جاهز، محرر صور، إزالة الخلفية، وتصدير PDF جاهز للطباعة. كل المزايا مجانية بدون علامة مائية.',
+    intro: [
+      'صمّم فلايرات، بوسترات، بطاقات دعوة، منيو مطاعم، سيرة ذاتية ومنشورات انستغرام خلال دقائق — بدون برامج وبدون اشتراك.',
+      'كل القوالب وكل الأدوات وكل صيغ التحميل مجانية بالكامل، وتدعم الخطوط العربية مثل أميري والقاهرة وتجوال.',
+    ],
+    terms: ['arabic', 'eid', 'ramadan', 'national day'],
+    features: [
+      ['أكثر من ١٠٠٠ قالب', 'فلايرات، بوسترات، دعوات، منيو، شهادات وسير ذاتية.'],
+      ['خطوط عربية', 'أميري، القاهرة، تجوال وغيرها مع دعم الكتابة من اليمين لليسار.'],
+      ['محرر صور', 'تحسين تلقائي، قص، تنقيح وإزالة الخلفية.'],
+      ['جاهز للطباعة', 'PDF مع هوامش القص و CMYK للمطابع.'],
+    ],
+    ctaHref: '/templates',
+    ctaLabel: 'ابدأ التصميم مجاناً',
+    uses: ['المحلات والمطاعم', 'المناسبات والأعراس', 'المدارس والمعاهد', 'العقارات', 'منشورات السوشيال ميديا'],
+    faqs: [
+      ['هل الموقع مجاني فعلاً؟', 'نعم، كل القوالب والأدوات والتحميلات مجانية ولا توجد خطة مدفوعة.'],
+      ['هل توجد علامة مائية؟', 'لا، التصاميم تُحمّل بدون أي علامة مائية.'],
+      ['هل يمكنني الكتابة بالعربي؟', 'نعم، اختر خطاً عربياً واكتب مباشرة على التصميم.'],
+    ],
+    related: ['ar-flyer-maker', 'ar-invitation-maker', 'ar-cv-maker'],
+  }),
+  L({
+    slug: 'ar-flyer-maker',
+    lang: 'ar',
+    thing: 'فلاير',
+    h1: 'تصميم فلاير مجاناً',
+    title: 'تصميم فلاير مجاناً أونلاين — قوالب فلايرات جاهزة للطباعة',
+    description: 'اصنع فلاير احترافي مجاناً: اختر قالباً جاهزاً، غيّر النص والألوان والصور، وحمّل PDF جاهز للطباعة أو صورة للواتساب والانستغرام.',
+    intro: ['قوالب فلايرات مصممة باحتراف للمطاعم والمحلات والعقارات والعيادات والفعاليات. عدّل كل شيء بسهولة واطبع بجودة عالية.'],
+    terms: ['flyer'],
+    uses: ['افتتاح محل أو عروض', 'مطاعم ومقاهي', 'عقارات', 'عيادات وصالونات', 'دورات وفعاليات'],
+    faqs: [['ما مقاس الفلاير المناسب؟', 'المقاس الأشهر هو A4 أو A5، ويمكنك تغيير المقاس بضغطة واحدة.']],
+    related: ['ar-free-design-tool', 'ar-invitation-maker', 'ar-cv-maker'],
+  }),
+  L({
+    slug: 'ar-invitation-maker',
+    lang: 'ar',
+    thing: 'بطاقة دعوة',
+    h1: 'تصميم بطاقة دعوة مجاناً',
+    title: 'تصميم بطاقة دعوة مجاناً — دعوات زفاف وأعياد ميلاد وعزائم',
+    description: 'صمم بطاقة دعوة زفاف أو عيد ميلاد أو عزيمة مجاناً بالعربي، وأرسلها على الواتساب أو اطبعها بجودة عالية.',
+    intro: ['من دعوات الزفاف الفاخرة بالذهبي والكحلي إلى بطاقات أعياد الميلاد المرحة — أضف الأسماء والتاريخ والمكان وشارك الدعوة فوراً.'],
+    terms: ['invitation', 'wedding'],
+    uses: ['دعوات الزفاف والملكة', 'أعياد الميلاد', 'حفلات المواليد', 'العزائم والإفطار', 'المناسبات الرسمية'],
+    faqs: [['هل يمكنني إرسال الدعوة على الواتساب؟', 'نعم، حمّلها كصورة JPG أو PNG وأرسلها مباشرة.']],
+    related: ['ar-free-design-tool', 'ar-flyer-maker', 'ar-cv-maker'],
+  }),
+  L({
+    slug: 'ar-cv-maker',
+    lang: 'ar',
+    thing: 'سيرة ذاتية',
+    h1: 'عمل سيرة ذاتية مجاناً',
+    title: 'عمل سيرة ذاتية مجاناً — قوالب CV احترافية مع صورة',
+    description: 'اصنع سيرتك الذاتية (CV) مجاناً بقوالب احترافية مع صورة أو بدون، وحمّلها PDF جاهزة للتقديم على الوظائف في الإمارات والخليج.',
+    intro: ['قوالب سيرة ذاتية مرتبة وسهلة القراءة تناسب الوظائف في الإمارات والخليج — كلاسيكية، عصرية، إبداعية وللمبرمجين.'],
+    terms: ['resume', 'cv'],
+    uses: ['الوظائف الإدارية والمالية', 'التسويق والتصميم', 'المبرمجين', 'الخريجين الجدد'],
+    faqs: [['هل أضع صورة في السيرة الذاتية؟', 'في الإمارات والخليج يُفضّل غالباً إضافة صورة شخصية رسمية، ولدينا قوالب بصورة وبدون.']],
+    related: ['ar-free-design-tool', 'ar-flyer-maker', 'ar-invitation-maker'],
+  }),
+];
