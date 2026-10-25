@@ -115,6 +115,10 @@ export default function AdminTemplatesPage() {
   const [categories, setCategories] = useState<TemplateCategory[]>([]);
   const [statusFilter, setStatusFilter] = useState<TemplateStatus | 'all'>('all');
   const [query, setQuery] = useState('');
+  const [catFilter, setCatFilter] = useState('all');
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [shown, setShown] = useState(60);
+  const [bulkBusy, setBulkBusy] = useState<string | null>(null);
   const [menuFor, setMenuFor] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -185,10 +189,14 @@ export default function AdminTemplatesPage() {
     const q = query.trim().toLowerCase();
     return templates.filter((t) => {
       if (statusFilter !== 'all' && (t.status || 'published') !== statusFilter) return false;
+      if (catFilter !== 'all' && (categoryName(t.categoryId) || t.category) !== catFilter && t.category !== catFilter) return false;
       if (!q) return true;
       return [t.name, t.category, t.description, ...(t.tags || [])].some((v) => v?.toLowerCase().includes(q));
     });
-  }, [templates, statusFilter, query]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [templates, statusFilter, query, catFilter, categories]);
+  useEffect(() => setShown(60), [statusFilter, query, catFilter]);
+  const allCats = useMemo(() => [...new Set(templates.map((t) => t.category).filter(Boolean))].sort(), [templates]);
 
   // ---------- edit ----------
   const startNew = () => {
@@ -278,6 +286,44 @@ export default function AdminTemplatesPage() {
     if (status === 'published' && window.confirm(`Would you like to announce "${t.name}" by e-mail?`)) {
       router.push(`/admin/email?announce=${t.id}`);
     }
+  };
+
+  // ---------- bulk (multi-select) ----------
+  const toggle = (id: string) => setSelected((prev) => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const selectedList = templates.filter((t) => t.id && selected.has(t.id));
+  const runPool = async <T,>(items: T[], fn: (x: T) => Promise<void>, size = 6) => {
+    let i = 0;
+    await Promise.all(Array.from({ length: Math.min(size, items.length) }, async () => { while (i < items.length) await fn(items[i++]); }));
+  };
+  const bulkStatus = async (status: TemplateStatus) => {
+    if (!userId || !selectedList.length) return;
+    const n = selectedList.length;
+    if (!window.confirm(`Change ${n} template${n > 1 ? "s" : ""} to “${STATUS_LABEL[status]}”?`)) return;
+    setBulkBusy(`${STATUS_LABEL[status]}…`);
+    let ok = 0;
+    const failed: string[] = [];
+    await runPool<Template>(selectedList, async (t) => {
+      const problem = await setTemplateStatus(t, status, userId);
+      if (problem) failed.push(`${t.name}: ${problem}`);
+      else ok++;
+    });
+    await reload();
+    setSelected(new Set());
+    setBulkBusy(null);
+    flash(`${ok} template${ok === 1 ? '' : 's'} now ${STATUS_LABEL[status].toLowerCase()}.${failed.length ? ` ${failed.length} skipped — ${failed.slice(0, 2).join('; ')}` : ''}`);
+  };
+  const bulkDelete = async () => {
+    const ids = selectedList.map((t) => t.id!).filter(Boolean);
+    if (!ids.length) return;
+    if (!window.confirm(`Delete ${ids.length} template${ids.length > 1 ? 's' : ''} permanently? Customer designs made from them are not affected. Tip: Archive keeps them instead.`)) return;
+    setBulkBusy('Deleting…');
+    let ok = 0;
+    await runPool<string>(ids, async (id) => { if (await deleteTemplate(id)) ok++; });
+    setTemplates((prev) => prev.filter((x) => !x.id || !ids.includes(x.id) || false));
+    await reload();
+    setSelected(new Set());
+    setBulkBusy(null);
+    flash(`Deleted ${ok} of ${ids.length}.`);
   };
 
   const duplicate = async (t: Template) => {
@@ -472,6 +518,10 @@ export default function AdminTemplatesPage() {
               <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-mt-faint" />
               <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search name, tag, category…" className="w-full pl-9 pr-3 py-2 border rounded-full text-sm bg-mt-surface" />
             </div>
+            <select value={catFilter} onChange={(e) => setCatFilter(e.target.value)} aria-label="Category" className="py-2 px-3 border rounded-full text-sm bg-mt-surface text-mt-ink">
+              <option value="all">All categories</option>
+              {allCats.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
             <button onClick={runGenerate} disabled={generating} className="text-sm font-medium text-mt-ink bg-mt-surface border rounded-full px-4 py-2 disabled:opacity-50">
               {generating ? 'Generating…' : 'Generate starter templates'}
             </button>
@@ -492,12 +542,43 @@ export default function AdminTemplatesPage() {
             ))}
           </div>
 
+          <div className="sticky top-2 z-20 mb-4 flex flex-wrap items-center gap-2 rounded-2xl border border-mt-border bg-mt-surface/95 backdrop-blur px-3 py-2 shadow-sm" onClick={(e) => e.stopPropagation()}>
+            <label className="inline-flex items-center gap-2 text-sm text-mt-ink cursor-pointer">
+              <input
+                type="checkbox"
+                className="w-4 h-4 accent-[#3B82C4]"
+                checked={visible.length > 0 && visible.every((t) => t.id && selected.has(t.id))}
+                onChange={(e) => setSelected(e.target.checked ? new Set(visible.map((t) => t.id!).filter(Boolean)) : new Set())}
+                aria-label="Select all shown"
+              />
+              {selected.size ? <b>{selected.size} selected</b> : <span className="text-mt-muted">Select all {visible.length}</span>}
+            </label>
+            {selected.size > 0 && (
+              <>
+                <span className="w-px h-5 bg-mt-border mx-1" />
+                {bulkBusy ? (
+                  <span className="text-sm text-mt-muted">{bulkBusy}</span>
+                ) : (
+                  <>
+                    <button onClick={() => bulkStatus('published')} className="h-8 px-3 rounded-full text-[13px] font-semibold bg-emerald-600 text-white">Publish</button>
+                    <button onClick={() => bulkStatus('unpublished')} className="h-8 px-3 rounded-full text-[13px] font-medium border border-mt-border text-mt-ink hover:bg-mt-surface2">Unpublish</button>
+                    <button onClick={() => bulkStatus('draft')} className="h-8 px-3 rounded-full text-[13px] font-medium border border-mt-border text-mt-ink hover:bg-mt-surface2">Move to draft</button>
+                    <button onClick={() => bulkStatus('archived')} className="h-8 px-3 rounded-full text-[13px] font-medium border border-mt-border text-mt-ink hover:bg-mt-surface2">Archive</button>
+                    <button onClick={bulkDelete} className="h-8 px-3 rounded-full text-[13px] font-semibold bg-rose-600 text-white">Delete</button>
+                    <button onClick={() => setSelected(new Set())} className="h-8 px-3 rounded-full text-[13px] text-mt-muted hover:text-mt-ink">Clear</button>
+                  </>
+                )}
+              </>
+            )}
+            <span className="ml-auto text-[12px] text-mt-faint">Tip: tick the box on any card to select it</span>
+          </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {visible.map((t) => {
+            {visible.slice(0, shown).map((t) => {
               const status = (t.status || 'published') as TemplateStatus;
               return (
-                <div key={t.id} className="bg-mt-surface border rounded-xl flex flex-col">
-                  <div className="relative h-40 bg-mt-surface2 rounded-t-xl overflow-hidden">
+                <div key={t.id} className={`bg-mt-surface border rounded-xl flex flex-col ${t.id && selected.has(t.id) ? 'ring-2 ring-[#3B82C4] border-transparent' : ''}`}>
+                  <div className="relative h-40 bg-mt-surface2 rounded-t-xl overflow-hidden cursor-pointer" onClick={(e) => { e.stopPropagation(); if (t.id && (selected.size || e.shiftKey || e.metaKey || e.ctrlKey)) toggle(t.id); }}>
                     {t.thumbnail ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={t.thumbnail} alt="" loading="lazy" className="w-full h-full object-contain" />
@@ -506,7 +587,10 @@ export default function AdminTemplatesPage() {
                         No thumbnail yet
                       </div>
                     )}
-                    <span className={`absolute top-2 left-2 text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full ${STATUS_STYLE[status]}`}>
+                    <label className="absolute top-2 left-2 w-7 h-7 rounded-lg bg-white/90 shadow flex items-center justify-center cursor-pointer" onClick={(e) => e.stopPropagation()}>
+                      <input type="checkbox" className="w-4 h-4 accent-[#3B82C4]" checked={!!t.id && selected.has(t.id)} onChange={() => t.id && toggle(t.id)} aria-label={`Select ${t.name}`} />
+                    </label>
+                    <span className={`absolute top-2 left-11 text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full ${STATUS_STYLE[status]}`}>
                       {STATUS_LABEL[status]}
                     </span>
                     {t.isFeatured && <span className="absolute top-2 right-2 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-mt-creative text-[#09090B]">Featured</span>}
@@ -565,6 +649,11 @@ export default function AdminTemplatesPage() {
               );
             })}
           </div>
+          {visible.length > shown && (
+            <div className="mt-6 flex justify-center">
+              <button onClick={() => setShown((n) => n + 120)} className="h-10 px-5 rounded-full border border-mt-border text-sm font-medium text-mt-ink hover:bg-mt-surface2">Show more ({visible.length - shown} left)</button>
+            </div>
+          )}
           {visible.length === 0 && <p className="text-center text-sm text-mt-faint py-16">No templates here yet.</p>}
         </section>
       ) : (

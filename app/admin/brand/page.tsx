@@ -10,12 +10,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Copy, Check, ExternalLink, Loader2, ShieldCheck } from 'lucide-react';
+import { Copy, Check, ExternalLink, Loader2, ShieldCheck, Pencil } from 'lucide-react';
 import { AdminShell } from '@/components/admin/AdminShell';
 import { supabase } from '@/lib/supabase';
 import { getOrCreateProfile } from '@/lib/profile';
 import { renderTemplatePages } from '@/lib/templates/renderPages';
 import { hexToCmykPercent } from '@/lib/color/cmyk';
+import { fillCertificateJson, SAMPLE_CERTIFICATE } from '@/lib/certificates';
 
 const SPECTRUM = [
   { name: 'Rose', hex: '#F2708F' },
@@ -72,9 +73,16 @@ export default function BrandWorkspacePage() {
         <p className="inline-flex items-center gap-2 text-[13px] text-mt-muted">
           <ShieldCheck size={16} className="text-emerald-600" /> These designs are private: they are never listed for customers and only admins can open them.
         </p>
-        <BrandBasics />
+        <nav aria-label="Brand sections" className="sticky top-2 z-10 -mx-1 px-1 py-2 flex gap-2 overflow-x-auto mt-scroll bg-mt-bg/90 backdrop-blur rounded-2xl">
+          {[['basics', 'Logo & colours', 0] as const, ...groups.map(([t, l]) => [t.toLowerCase().replace(/[^a-z]+/g, '-'), t, l.length] as const), ['signature', 'Signature maker', 0] as const].map(([id, label, n]) => (
+            <a key={id} href={`#${id}`} className="shrink-0 h-9 px-3.5 rounded-full border border-mt-border bg-mt-surface text-[13px] font-medium text-mt-ink inline-flex items-center gap-1.5 hover:bg-mt-surface2">
+              {label}{n ? <span className="text-mt-faint">{n}</span> : null}
+            </a>
+          ))}
+        </nav>
+        <div id="basics" className="scroll-mt-20"><BrandBasics /></div>
         {groups.map(([title, list]) => (
-          <section key={title} className={card}>
+          <section key={title} id={title.toLowerCase().replace(/[^a-z]+/g, '-')} className={`${card} scroll-mt-20`}>
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h2 className="text-lg font-semibold text-mt-ink">{title}</h2>
               {title === 'Certificates' && (
@@ -90,7 +98,7 @@ export default function BrandWorkspacePage() {
           </section>
         ))}
         {!rows.length && <p className={card}>No brand designs yet.</p>}
-        <SignatureMaker />
+        <div id="signature" className="scroll-mt-20"><SignatureMaker /></div>
       </div>
     </AdminShell>
   );
@@ -116,10 +124,25 @@ function groupRows(rows: BrandRow[]): [string, BrandRow[]][] {
 
 function BrandTile({ row }: { row: BrandRow }) {
   const [img, setImg] = useState<string | null>(null);
+  const [name, setName] = useState(row.name.replace(/^MT Brand · /, ''));
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const saveName = async () => {
+    const clean = name.trim();
+    setEditing(false);
+    if (!clean || `MT Brand · ${clean}` === row.name) return setName(row.name.replace(/^MT Brand · /, ''));
+    setSaving(true);
+    const { error } = await supabase.from('templates').update({ name: `MT Brand · ${clean}` }).eq('id', row.id);
+    setSaving(false);
+    if (error) setName(row.name.replace(/^MT Brand · /, ''));
+    else row.name = `MT Brand · ${clean}`;
+  };
   const [pages, setPages] = useState(1);
   useEffect(() => {
     let alive = true;
-    renderTemplatePages(row.canvas_json, 520)
+    // Certificate masters hold {{tokens}}; preview them with sample values.
+    const json = JSON.stringify(row.canvas_json || {}).includes('{{') ? fillCertificateJson(row.canvas_json, SAMPLE_CERTIFICATE) : row.canvas_json;
+    renderTemplatePages(json, 520)
       .then((p) => { if (alive && p.length) { setImg(p[0].url); setPages(p.length); } })
       .catch(() => {});
     return () => { alive = false; };
@@ -139,7 +162,22 @@ function BrandTile({ row }: { row: BrandRow }) {
           <Loader2 size={18} className="animate-spin text-mt-faint" />
         )}
       </Link>
-      <p className="mt-2 text-[13px] font-semibold text-mt-ink leading-snug">{row.name.replace(/^MT Brand · /, '')}</p>
+      {editing ? (
+        <input
+          autoFocus
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          onBlur={saveName}
+          onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); if (e.key === 'Escape') { setName(row.name.replace(/^MT Brand · /, '')); setEditing(false); } }}
+          aria-label="Design name"
+          className="mt-2 h-8 rounded-lg border border-mt-input-border bg-mt-surface px-2 text-[13px] font-semibold text-mt-ink"
+        />
+      ) : (
+        <button type="button" onClick={() => setEditing(true)} title="Rename" className="mt-2 group inline-flex items-start gap-1.5 text-left text-[13px] font-semibold text-mt-ink leading-snug">
+          <span>{name}</span>
+          {saving ? <Loader2 size={12} className="mt-0.5 animate-spin text-mt-faint" /> : <Pencil size={12} className="mt-0.5 shrink-0 text-mt-faint opacity-0 group-hover:opacity-100" />}
+        </button>
+      )}
       <p className="text-[12px] text-mt-muted">
         {isPrint ? `${mm(row.width)} × ${mm(row.height)} mm` : `${row.width} × ${row.height} px`}
         {pages > 1 ? ` · ${pages} pages` : ''}

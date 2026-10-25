@@ -400,7 +400,7 @@ export const LANDINGS: Landing[] = [
   }),
 ];
 
-export const ALL_LANDINGS = () => [...LANDINGS, ...MORE_LANDINGS, ...COUNTRY_LANDINGS];
+export const ALL_LANDINGS = () => [...LANDINGS, ...MORE_LANDINGS, ...ALT_LANDINGS, ...COUNTRY_LANDINGS];
 export const landingBySlug = (s: string) => ALL_LANDINGS().find((l) => l.slug === s);
 
 const FREE_FEATURES: [string, string][] = [
@@ -704,4 +704,97 @@ export const COUNTRY_LANDINGS: Landing[] = [
     ['christmas', 'new year', 'black friday', 'flyer', 'poster', 'resume'],
     'Make café menus, real estate flyers, event posters, resumes and social posts — print-ready in A4 and A5.',
     [['Can I design real estate flyers?', 'Yes — there are just listed, open house, sold and luxury property templates.']]),
+];
+
+export const ALT_LANDINGS: Landing[] = [
+  L({
+    slug: 'free-photoshop-alternative',
+    thing: 'photo',
+    h1: 'Free Photoshop alternative — online',
+    title: 'Free Photoshop Alternative Online — Layers, Healing Brush, No Install',
+    description: 'A free online photo editor with Photoshop-style tools: layers, blend modes, selections, healing brush, dodge & burn, filters, text and CMYK TIFF export. Runs in your browser.',
+    intro: [
+      'Need to edit a photo but don’t want to pay for Photoshop or install anything? Photo Studio’s Pro mode gives you the tools you know — layers, blend modes, marquee and subject selection, healing brush, dodge and burn, curves and levels — free in your browser.',
+      'Simple mode does one-tap fixes for everyone else. Export JPG, PNG, WebP, print PDF or CMYK TIFF for print shops.',
+    ],
+    terms: [],
+    features: [
+      ['Layers & blend modes', 'Stack images, text and shapes; multiply, screen, overlay and more, with opacity.'],
+      ['Selections', 'Rectangle and ellipse marquee, select subject, invert, layer via copy.'],
+      ['Retouching', 'Healing brush, smudge, soften, dodge, burn and sharpen.'],
+      ['Colour', 'Curves, levels, HSL per colour, white balance and one-tap looks.'],
+      ['Familiar shortcuts', 'V, M, C, B, E, J, T, Ctrl+J, Ctrl+Z — the keys you already use.'],
+      ['Print-ready', 'CMYK TIFF and PDF with the FOGRA39 profile, plus soft-proof preview.'],
+    ],
+    ctaHref: '/photo-studio',
+    ctaLabel: 'Open the free photo editor',
+    uses: ['Retouching portraits', 'Product photos', 'Social media graphics', 'Photo collages', 'Print preparation'],
+    faqs: [
+      ['Is this the same as Photoshop?', 'No — it is a separate, free browser editor with many Photoshop-style tools for everyday photo editing. It is not made by or connected with Adobe.'],
+      ['Can I open PSD files?', 'Not yet. Open JPG, PNG or WebP images; save your work as a design or export it.'],
+      ['Is it free?', 'Yes, every tool is free with no watermark.'],
+    ],
+    related: ['free-photo-editor-online', 'remove-background-free', 'free-illustrator-alternative'],
+  }),
+  L({
+    slug: 'free-illustrator-alternative',
+    thing: 'vector design',
+    h1: 'Free Illustrator alternative — online',
+    title: 'Free Illustrator Alternative Online — Vector Design & Print PDF',
+    description: 'Design vector graphics online for free: shapes, pen tool, text, layers and pages, with vector PDF and CMYK print export. A free browser alternative to Adobe Illustrator for everyday design.',
+    intro: [
+      'For flyers, posters, business cards, certificates and social graphics you don’t need an expensive vector app. Magical Touch’s editor works with real vector shapes and text, so your exports stay sharp at any size.',
+      'Use the pen tool and shapes, align and distribute, work across multiple pages, then export a vector PDF or a CMYK PDF with bleed for print.',
+    ],
+    terms: [],
+    features: [
+      ['Vector shapes & pen', 'Rectangles, circles, lines, arrows and freeform paths you can edit.'],
+      ['Typography', 'Hundreds of fonts, letter spacing, line height, effects and curved text.'],
+      ['Pages & artboards', 'Multi-page documents like brochures, decks and card fronts/backs.'],
+      ['Vector PDF', 'Sharp text and shapes at any size; CMYK with bleed and crop marks.'],
+      ['Brand kits', 'Save your logo, colours and fonts and apply them anywhere.'],
+      ['1,000+ templates', 'Start from a professional layout instead of a blank page.'],
+    ],
+    ctaHref: '/create',
+    ctaLabel: 'Start a vector design',
+    uses: ['Logos and brand assets', 'Business cards', 'Posters and flyers', 'Certificates', 'Print-ready artwork'],
+    faqs: [
+      ['Can I open AI or EPS files?', 'Not yet. You can import SVG images and export vector PDF.'],
+      ['Is it made by Adobe?', 'No — Magical Touch is an independent, free design tool.'],
+    ],
+    related: ['free-online-design-tool', 'free-print-ready-pdf', 'free-photoshop-alternative'],
+  }),
+  L({
+    slug: 'easy-graphic-design-software',
+    thing: 'design',
+    h1: 'Easy graphic design software — free & online',
+    title: 'Easy Graphic Design Software — Free Online Design Platform for Beginners',
+    description: 'The easiest way to design online: pick a template, click to change text and photos, download. A free online design platform for beginners and businesses — no install, no watermark.',
+    intro: [
+      'You don’t need design training. Pick a professional template, click any word to change it, drop in your photos, and download. Simple mode keeps the screen clean; switch to Pro when you want more control.',
+      'It runs in any browser on Windows, Mac, iPad, Android and iPhone.',
+    ],
+    terms: [],
+    features: FREE_FEATURES,
+    ctaHref: '/templates',
+    ctaLabel: 'Browse free templates',
+    uses: ['Beginners', 'Small businesses', 'Teachers and students', 'Social media managers', 'Event organisers'],
+    faqs: [
+      ['Which is the easiest design software for beginners?', 'Template-based online editors are the easiest: you change words and photos instead of designing from scratch. Magical Touch works this way and is completely free.'],
+      ['Does it work on a phone?', 'Yes — the editor and photo studio work on phones and tablets.'],
+    ],
+    related: ['free-online-design-tool', 'free-canva-alternative', 'free-design-tools'],
+  }),
+  L({
+    slug: 'free-design-templates',
+    thing: 'design',
+    h1: 'Free design templates',
+    title: '1,000+ Free Design Templates — Editable Online, No Watermark',
+    description: 'Over 1,000 free design templates: flyers, posters, invitations, resumes, menus, certificates, business cards and social media posts. Edit online and download for free.',
+    intro: ['Every template on Magical Touch is free to edit and download — no premium badges, no watermark. Browse by category or search for what you need.'],
+    terms: ['poster', 'flyer', 'invitation', 'card', 'post'],
+    uses: ['Business marketing', 'Events and parties', 'Job applications', 'Restaurants', 'Festivals and holidays'],
+    faqs: [['Are all the templates really free?', 'Yes. Every template, tool and download is free.']],
+    related: ['free-online-design-tool', 'free-flyer-maker', 'free-poster-maker'],
+  }),
 ];

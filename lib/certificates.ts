@@ -68,3 +68,14 @@ export function buildVerificationBlock(F: any, c: IssuedCertificate, at: { x: nu
   [tile, qr, code, hint, micro].forEach((o: any) => (o.__certCode = c.code));
   return [micro, tile, qr, code, hint];
 }
+
+/** Replace {{tokens}} in a whole canvas JSON (for previews). */
+export function fillCertificateJson(json: any, values: Partial<IssuedCertificate>) {
+  const tokens = certificateTokens({ code: 'MTD-XXXXX-XXXXX', recipient: 'Recipient Name', title: 'Certificate title', issued_on: new Date().toISOString().slice(0, 10), ...values } as IssuedCertificate);
+  let s = JSON.stringify(json);
+  Object.entries(tokens).forEach(([k, v]) => { s = s.split(k).join(JSON.stringify(v).slice(1, -1)); });
+  return JSON.parse(s);
+}
+
+/** Sample values used to preview a certificate master. */
+export const SAMPLE_CERTIFICATE: Partial<IssuedCertificate> = { recipient: 'Aisha Rahman', title: 'Brand Design Workshop', description: '12-hour course · Dubai · November 2026', code: 'MTD-7K3QD-X9P2A' };
