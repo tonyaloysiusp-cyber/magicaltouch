@@ -98,6 +98,32 @@ export function Footer({ theme }: { theme: AppTheme }) {
           </ul>
         </nav>
 
+        <nav aria-label="Free design tools" className="mt-8">
+          <p className="text-xs font-semibold text-mt-ink tracking-wide uppercase">Free design tools</p>
+          <ul className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-sm text-mt-muted">
+            {[
+              ['free-flyer-maker', 'Flyer maker'],
+              ['free-poster-maker', 'Poster maker'],
+              ['free-invitation-maker', 'Invitation maker'],
+              ['free-resume-maker', 'Resume maker'],
+              ['free-business-card-maker', 'Business card maker'],
+              ['free-menu-maker', 'Menu maker'],
+              ['free-certificate-maker', 'Certificate maker'],
+              ['free-instagram-post-maker', 'Instagram post maker'],
+              ['uae-national-day-templates', 'UAE National Day'],
+              ['christmas-templates', 'Christmas'],
+              ['new-year-templates', 'New Year'],
+              ['free-design-tools', 'All free tools →'],
+            ].map(([slug, label]) => (
+              <li key={slug}>
+                <Link href={`/${slug}`} className="hover:text-mt-ink dark:hover:text-white">
+                  {label}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
+
         <div className="mt-14 pt-8 border-t border-black/10 dark:border-white/10 text-xs text-mt-muted dark:text-mt-faint">
           © {new Date().getFullYear()} Magical Touch. All rights reserved.
         </div>

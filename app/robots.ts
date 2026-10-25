@@ -10,7 +10,7 @@ export default function robots(): MetadataRoute.Robots {
         disallow: ['/admin', '/api/', '/editor', '/dashboard', '/profile', '/studio', '/reset-password', '/unsubscribe', '/auth/', '/verify/'],
       },
     ],
-    sitemap: `${SITE_URL}/sitemap.xml`,
+    sitemap: [`${SITE_URL}/sitemap.xml`, `${SITE_URL}/image-sitemap.xml`],
     host: SITE_URL,
   };
 }

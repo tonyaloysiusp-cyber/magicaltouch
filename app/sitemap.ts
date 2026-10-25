@@ -1,5 +1,6 @@
 import type { MetadataRoute } from 'next';
 import { SITE_URL, getAllPublishedTemplates, categorySlug } from '@/lib/seo';
+import { LANDINGS } from '@/lib/landings';
 
 // Rebuilt at most once an hour, so new templates appear without a deploy.
 export const revalidate = 3600;
@@ -16,6 +17,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/signup`, lastModified: now, changeFrequency: 'yearly', priority: 0.5 },
     { url: `${SITE_URL}/privacy`, lastModified: now, changeFrequency: 'yearly', priority: 0.2 },
     { url: `${SITE_URL}/terms`, lastModified: now, changeFrequency: 'yearly', priority: 0.2 },
+    { url: `${SITE_URL}/free-design-tools`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
+    ...LANDINGS.map((l) => ({ url: `${SITE_URL}/${l.slug}`, lastModified: now, changeFrequency: 'weekly' as const, priority: l.seasonal ? 0.8 : 0.9 })),
   ];
   const templates = await getAllPublishedTemplates();
   const cats = new Set<string>();
