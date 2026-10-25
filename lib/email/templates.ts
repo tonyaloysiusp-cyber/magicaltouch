@@ -40,6 +40,12 @@ export interface RenderedEmail {
 // The logo's colours, shown as a thin band under the e-mail header.
 const SPECTRUM = ['#F2708F', '#A69BD3', '#35C2F1', '#5DCCB8', '#8CC84B', '#DDE23B'];
 
+// The official logo (white version for the dark header), served from the
+// website so every email client can load it. 480 px wide, shown at 280 px
+// for sharp retina rendering. If images are blocked, the alt text shows
+// the company name in white on the same dark band.
+export const EMAIL_LOGO_URL = `${C.website}/email/logo-white-480.png`;
+
 const esc = (s: string) =>
   s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
 
@@ -90,7 +96,7 @@ export const layout = (preheader: string, body: string, unsubscribeUrl?: string)
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f3f4f6;padding:24px 0;"><tr><td align="center">
 <table role="presentation" class="card" width="600" cellpadding="0" cellspacing="0" style="width:600px;max-width:600px;background:#ffffff;border-radius:16px;overflow:hidden;">
   <tr><td style="background:#0B0B0D;padding:28px 32px;text-align:center;">
-    <span style="font:700 22px/1 Georgia,'Times New Roman',serif;color:#ffffff;letter-spacing:.5px;">&#10022; ${C.companyName}</span>
+    <a href="${C.website}" style="text-decoration:none;color:#ffffff;"><img src="${EMAIL_LOGO_URL}" width="280" height="33" alt="${C.companyName}" style="display:block;margin:0 auto;width:280px;max-width:100%;height:auto;border:0;outline:none;text-decoration:none;font:700 20px/33px Georgia,'Times New Roman',serif;color:#ffffff;"></a>
   </td></tr>
   <tr><td style="padding:0;line-height:0;font-size:0;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>${SPECTRUM.map((c) => `<td height="5" style="height:5px;background:${c};"></td>`).join('')}</tr></table></td></tr>
   ${body}
@@ -333,4 +339,90 @@ ${contacts.length ? `\nNew messages from customers:\n${contacts.map((c) => `• 
 Open admin: ${C.website}/admin`;
   const n = items.length + contacts.length;
   return finish(`${n} update${n === 1 ? '' : 's'} for ${C.companyName} today`, items[0]?.title || contacts[0]?.title || 'Your daily admin summary', body, text);
+}
+
+// ---------------------------------------------------------------------
+// Tutorials & courses: certificate request, approval/release, rejection.
+// Only the learner's own name and course title are included — never codes
+// that grant access. The certificate itself is downloaded from the site
+// after signing in.
+// ---------------------------------------------------------------------
+export interface CourseEmailData extends EmailData {
+  courseTitle: string;
+  courseUrl: string;
+  certificateName?: string | null;
+  certificateCode?: string | null;
+  verifyUrl?: string | null;
+  reason?: string | null;
+}
+
+const courseBox = (rows: [string, string][]) =>
+  `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 20px;background:#faf9fe;border:1px solid #ece9f5;border-radius:12px;"><tr><td style="padding:16px 18px;font:14px/1.7 Arial,Helvetica,sans-serif;color:#374151;">${rows
+    .map(([k, v]) => `<span style="color:#6b6580;">${esc(k)}:</span> <strong style="color:#0B0B0D;">${esc(v)}</strong>`)
+    .join('<br>')}</td></tr></table>`;
+
+export function certificateRequestedEmail(d: CourseEmailData): RenderedEmail {
+  const rows: [string, string][] = [['Course', d.courseTitle], ['Name on certificate', d.certificateName || '—'], ['Status', 'Pending approval']];
+  const body =
+    section(`
+      ${p(greet(d))}
+      ${p(`Well done — you finished every lesson in <strong>${esc(d.courseTitle)}</strong> and asked for your certificate.`)}
+      ${courseBox(rows)}
+      ${p('Our team checks every request before a certificate is issued. You will get another email when it has been reviewed. Until then, nothing else is needed from you.')}
+      ${p('If the name above is not exactly how you want it printed, reply to this email before it is approved.', 'font-size:14px;color:#6b6580;')}
+      ${button('VIEW YOUR COURSE', d.courseUrl)}
+    `) + officialNotice();
+  const text = `${greetText(d)}
+
+Well done — you finished every lesson in "${d.courseTitle}" and asked for your certificate.
+
+${rows.map(([k, v]) => `${k}: ${v}`).join('\n')}
+
+Our team checks every request before a certificate is issued. You will get another email when it has been reviewed.
+If the name above is not exactly how you want it printed, reply to this email before it is approved.
+
+View your course: ${d.courseUrl}`;
+  return finish(`Certificate requested: ${d.courseTitle}`, 'Your certificate request is waiting for review.', body, text);
+}
+
+export function certificateReleasedEmail(d: CourseEmailData): RenderedEmail {
+  const rows: [string, string][] = [['Course', d.courseTitle], ['Awarded to', d.certificateName || '—']];
+  if (d.certificateCode) rows.push(['Certificate ID', d.certificateCode]);
+  const body =
+    section(`
+      ${p(greet(d))}
+      ${p(`Congratulations! Your certificate for <strong>${esc(d.courseTitle)}</strong> has been approved and is ready.`)}
+      ${courseBox(rows)}
+      ${p('Sign in and open the course page to download it as a PDF. Anyone can check that it is genuine with the certificate ID.')}
+      ${button('DOWNLOAD YOUR CERTIFICATE', d.courseUrl)}
+      ${d.verifyUrl ? button('CHECK IT ONLINE', d.verifyUrl, false) : ''}
+    `) + officialNotice();
+  const text = `${greetText(d)}
+
+Congratulations! Your certificate for "${d.courseTitle}" has been approved and is ready.
+
+${rows.map(([k, v]) => `${k}: ${v}`).join('\n')}
+
+Sign in and open the course page to download it as a PDF: ${d.courseUrl}${d.verifyUrl ? `\nCheck it online: ${d.verifyUrl}` : ''}`;
+  return finish(`Your certificate is ready: ${d.courseTitle}`, 'Your certificate has been approved and released.', body, text);
+}
+
+export function certificateRejectedEmail(d: CourseEmailData): RenderedEmail {
+  const reason = (d.reason || '').trim() || 'No reason was given.';
+  const body =
+    section(`
+      ${p(greet(d))}
+      ${p(`We reviewed your certificate request for <strong>${esc(d.courseTitle)}</strong> and could not approve it yet.`)}
+      <div style="margin:0 0 20px;border-left:4px solid #F59E0B;background:#FFFBEB;border-radius:8px;padding:14px 16px;font:14px/1.6 Arial,Helvetica,sans-serif;color:#78350F;"><strong>Reason:</strong> ${esc(reason).replace(/\n/g, '<br>')}</div>
+      ${p('You can fix this and send a new request from the course page at any time.')}
+      ${button('OPEN THE COURSE', d.courseUrl)}
+    `) + officialNotice();
+  const text = `${greetText(d)}
+
+We reviewed your certificate request for "${d.courseTitle}" and could not approve it yet.
+
+Reason: ${reason}
+
+You can fix this and send a new request from the course page: ${d.courseUrl}`;
+  return finish(`About your certificate request: ${d.courseTitle}`, 'Your certificate request needs a change.', body, text);
 }

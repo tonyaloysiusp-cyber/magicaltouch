@@ -18,6 +18,8 @@ import { loadPhotoLibrary, filterPhotos, LibraryPhoto } from '@/components/edito
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { MoreVertical, Plus, Search, X } from 'lucide-react';
+import { countPhotosInJson, stripTemplatePhotos } from '@/lib/templates/stripPhotos';
+import { renderTemplatePages } from '@/lib/templates/renderPages';
 import { supabase } from '@/lib/supabase';
 import { getOrCreateProfile } from '@/lib/profile';
 import { listProjects, getProject, ProjectSummary } from '@/lib/api/projects';
@@ -45,6 +47,8 @@ import {
   setTemplateStatus,
   createVersion,
   listVersions,
+  restoreVersion,
+  fetchTemplateById,
   generateStarterTemplates,
   parseTags,
 } from '@/lib/templatesData';
@@ -313,6 +317,49 @@ export default function AdminTemplatesPage() {
     setBulkBusy(null);
     flash(`${ok} template${ok === 1 ? '' : 's'} now ${STATUS_LABEL[status].toLowerCase()}.${failed.length ? ` ${failed.length} skipped — ${failed.slice(0, 2).join('; ')}` : ''}`);
   };
+  // Photos → empty photo frames. Reversible: the current design is saved as
+  // a version first (Versions → Restore brings it back).
+  const bulkRemovePhotos = async () => {
+    if (!userId || !selectedList.length) return;
+    const n = selectedList.length;
+    if (!window.confirm(`Replace the photos in ${n} template${n > 1 ? 's' : ''} with empty photo frames?\n\nLayout, text, colours, logos and graphics stay the same. Each template's current design is saved as a version first, so you can restore it from Versions.`)) return;
+    setBulkBusy('Removing photos…');
+    let changed = 0, photos = 0, none = 0;
+    const failed: string[] = [];
+    await runPool<Template>(selectedList, async (t) => {
+      try {
+        const full = await fetchTemplateById(t.id!);
+        if (!full?.canvasJson) return void failed.push(`${t.name}: no design`);
+        if (!countPhotosInJson(full.canvasJson)) return void none++;
+        const next = await createVersion(full, userId, 'Before removing photos');
+        if (!next) return void failed.push(`${t.name}: could not save a backup version`);
+        const { json, replaced } = await stripTemplatePhotos(full.canvasJson);
+        if (!replaced) return void none++;
+        const pages = await renderTemplatePages(json, 1100);
+        const ok = await setTemplateContent(t.id!, next, json, pages[0]?.url || null);
+        if (!ok) return void failed.push(`${t.name}: could not save`);
+        changed++;
+        photos += replaced;
+      } catch (e: any) {
+        failed.push(`${t.name}: ${e?.message || e}`);
+      }
+    }, 2);
+    await reload();
+    setSelected(new Set());
+    setBulkBusy(null);
+    flash(`Replaced ${photos} photo${photos === 1 ? '' : 's'} in ${changed} template${changed === 1 ? '' : 's'}.${none ? ` ${none} had no photos.` : ''}${failed.length ? ` ${failed.length} failed — ${failed.slice(0, 2).join('; ')}` : ''}`);
+  };
+
+  const restore = async (v: TemplateVersion) => {
+    if (!versionsFor?.id) return;
+    if (!window.confirm(`Restore v${v.version}${v.notes ? ` (${v.notes})` : ''} as the current design of “${versionsFor.name}”?`)) return;
+    setBusy(true);
+    const ok = await restoreVersion(versionsFor.id, v.id);
+    setBusy(false);
+    await reload();
+    flash(ok ? `Restored v${v.version}.` : 'Could not restore that version.');
+  };
+
   const bulkDelete = async () => {
     const ids = selectedList.map((t) => t.id!).filter(Boolean);
     if (!ids.length) return;
@@ -567,6 +614,7 @@ export default function AdminTemplatesPage() {
                     <button onClick={() => bulkStatus('unpublished')} className="h-8 px-3 rounded-full text-[13px] font-medium border border-mt-border text-mt-ink hover:bg-mt-surface2">Unpublish</button>
                     <button onClick={() => bulkStatus('draft')} className="h-8 px-3 rounded-full text-[13px] font-medium border border-mt-border text-mt-ink hover:bg-mt-surface2">Move to draft</button>
                     <button onClick={() => bulkStatus('archived')} className="h-8 px-3 rounded-full text-[13px] font-medium border border-mt-border text-mt-ink hover:bg-mt-surface2">Archive</button>
+                    <button onClick={bulkRemovePhotos} className="h-8 px-3 rounded-full text-[13px] font-medium border border-mt-border text-mt-ink hover:bg-mt-surface2" title="Replace photos with empty photo frames (reversible)">Remove photos</button>
                     <button onClick={bulkDelete} className="h-8 px-3 rounded-full text-[13px] font-semibold bg-rose-600 text-white">Delete</button>
                     <button onClick={() => setSelected(new Set())} className="h-8 px-3 rounded-full text-[13px] text-mt-muted hover:text-mt-ink">Clear</button>
                   </>
@@ -812,6 +860,7 @@ export default function AdminTemplatesPage() {
                   <p className="text-sm font-medium text-mt-ink">v{v.version}</p>
                   <p className="text-xs text-mt-muted truncate">{new Date(v.createdAt).toLocaleString()} {v.notes ? `· ${v.notes}` : ''}</p>
                 </div>
+                <button onClick={() => restore(v)} disabled={busy} className="ml-auto text-xs px-3 py-1.5 rounded-full border border-mt-border text-mt-ink hover:bg-mt-surface2 disabled:opacity-50 shrink-0">Restore</button>
               </div>
             ))}
             {versions.length === 0 && <p className="p-4 text-center text-xs text-mt-faint">No saved versions yet. Publishing saves one automatically.</p>}

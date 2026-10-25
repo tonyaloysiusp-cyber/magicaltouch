@@ -3,10 +3,14 @@
 import { HardDrive, Cloud, UserRound, Check } from 'lucide-react';
 import { Reveal } from './Reveal';
 
+// The swatches are the invitation's own colours (neon pink, neon cyan, the
+// night background) passed through the same filter as each picture, so
+// the dots always match the colourway shown above them.
+const PALETTE = ['#FF2FC8', '#2CE6F2', '#120A1F'];
 const RECOLOURS = [
-  { filter: 'none', dots: ['#F2708F', '#35C2F1', '#09090B'] },
-  { filter: 'hue-rotate(150deg) saturate(1.1)', dots: ['#5DCCB8', '#A69BD3', '#09090B'] },
-  { filter: 'hue-rotate(260deg)', dots: ['#8CC84B', '#F2708F', '#09090B'] },
+  { filter: 'none', name: 'Original' },
+  { filter: 'hue-rotate(150deg) saturate(1.1)', name: 'Green' },
+  { filter: 'hue-rotate(260deg)', name: 'Blue' },
 ];
 
 const ADJUST = [
@@ -22,7 +26,7 @@ const SAVE = [
   { icon: UserRound, title: 'Your account', body: 'Open it anywhere, saved automatically' },
 ];
 
-const FORMATS = ['PNG', 'JPG', 'PDF', 'Print-ready PDF'];
+const FORMATS = ['PNG', 'JPG', 'WebP', 'PDF', 'Print-ready PDF', 'TIFF'];
 const SIZES = [
   { label: 'Instagram post', size: '1080 × 1080' },
   { label: 'Story', size: '1080 × 1920' },
@@ -62,9 +66,10 @@ export function StudioTools() {
                     className="w-full aspect-square object-cover rounded-xl ring-1 ring-mt-border"
                     style={{ filter: r.filter }}
                   />
-                  <figcaption className="mt-3 flex gap-1.5">
-                    {r.dots.map((c) => (
-                      <span key={c} className="w-4 h-4 rounded-full ring-1 ring-black/10 dark:ring-white/20" style={{ background: c }} />
+                  <figcaption className="mt-3 flex items-center gap-1.5">
+                    <span className="sr-only">{r.name} colourway</span>
+                    {PALETTE.map((c) => (
+                      <span key={c} aria-hidden className="w-4 h-4 rounded-full ring-1 ring-black/10 dark:ring-white/20" style={{ background: c, filter: r.filter }} />
                     ))}
                   </figcaption>
                 </figure>

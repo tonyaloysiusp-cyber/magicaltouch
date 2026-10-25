@@ -1,6 +1,8 @@
 import type { MetadataRoute } from 'next';
 import { SITE_URL, getAllPublishedTemplates, categorySlug, getPublishedSeoPages } from '@/lib/seo';
 import { ALL_LANDINGS } from '@/lib/landings';
+import { createAnonSupabaseClient } from '@/lib/supabase/server';
+import { loadCourses } from '@/lib/courses';
 
 // Rebuilt at most once an hour, so new templates appear without a deploy.
 export const revalidate = 3600;
@@ -23,6 +25,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...ALL_LANDINGS().map((l) => ({ url: `${SITE_URL}/${l.slug}`, lastModified: now, changeFrequency: 'weekly' as const, priority: l.seasonal ? 0.8 : 0.9 })),
   ];
   (await getPublishedSeoPages()).forEach((p) => pages.push({ url: `${SITE_URL}/${p.slug}`, lastModified: new Date(p.updated_at), changeFrequency: 'weekly', priority: 0.85 }));
+  (await loadCourses(createAnonSupabaseClient()).catch(() => [])).forEach((c) => {
+    pages.push({ url: `${SITE_URL}/tutorials/${c.slug}`, lastModified: now, changeFrequency: 'monthly', priority: 0.7 });
+    c.lessons.forEach((l) => pages.push({ url: `${SITE_URL}/tutorials/${c.slug}/${l.slug}`, lastModified: now, changeFrequency: 'monthly', priority: 0.6 }));
+  });
   const templates = await getAllPublishedTemplates();
   const cats = new Set<string>();
   templates.forEach((t) => {

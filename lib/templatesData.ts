@@ -430,6 +430,18 @@ async function snapshot(templateId: string, version: string, userId: string, not
   return true;
 }
 
+// Puts a saved version's design and images back as the template's current
+// content (e.g. to undo "Remove photos"). The version itself is unchanged.
+export async function restoreVersion(templateId: string, versionId: string): Promise<boolean> {
+  const { data: v, error } = await supabase.from('template_versions').select('canvas_json, thumbnail, preview, width, height').eq('id', versionId).eq('template_id', templateId).maybeSingle();
+  if (error || !v || !v.canvas_json) return false;
+  const { error: e2 } = await supabase
+    .from('templates')
+    .update({ canvas_json: v.canvas_json, thumbnail: v.thumbnail, preview: v.preview, updated_at: new Date().toISOString() })
+    .eq('id', templateId);
+  return !e2;
+}
+
 // "Create Version": freezes the current state as the current version
 // number, then moves the template on to the next number for new edits.
 export async function createVersion(t: Template, userId: string, notes: string | null): Promise<string | null> {

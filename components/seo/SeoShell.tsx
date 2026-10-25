@@ -12,12 +12,12 @@ import { Footer } from '@/components/home/Footer';
 import { useAppTheme } from '@/hooks/useAppTheme';
 import { resolveAuthedPath } from '@/lib/authNav';
 
-export function SeoShell({ children }: { children: ReactNode }) {
+export function SeoShell({ children, active = 'templates' }: { children: ReactNode; active?: 'templates' | 'tutorials' }) {
   const { theme, toggleTheme } = useAppTheme();
   return (
     <div className={theme === 'dark' ? 'dark' : ''}>
       <main className="min-h-screen bg-mt-bg text-mt-ink transition-colors duration-300">
-        <AppHeader theme={theme} onToggleTheme={toggleTheme} active="templates" />
+        <AppHeader theme={theme} onToggleTheme={toggleTheme} active={active} />
         {children}
         <Footer theme={theme} />
       </main>
