@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { HomePage } from '@/components/home/HomePage';
 
 export const metadata: Metadata = {
-  title: { absolute: 'Magical Touch Design — Free Online Design Templates & Editor' },
+  title: { absolute: 'Free Online Design Tool & 1,000+ Templates — No Watermark | Magical Touch Design' },
   description:
     'Design anything with 1,000+ free templates: Instagram posts, flyers, posters, menus, invitations, certificates and business cards. Edit online and download print-ready PDF, PNG or JPG.',
   alternates: { canonical: '/' },
