@@ -14,6 +14,7 @@
 
 import { AdminShell } from '@/components/admin/AdminShell';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { loadPhotoLibrary, filterPhotos, LibraryPhoto } from '@/components/editor/shell/panels/PhotosPanel';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { MoreVertical, Plus, Search, X } from 'lucide-react';
@@ -110,7 +111,7 @@ export default function AdminTemplatesPage() {
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
-  const [tab, setTab] = useState<'templates' | 'categories'>('templates');
+  const [tab, setTab] = useState<'templates' | 'categories' | 'images'>('templates');
   const [templates, setTemplates] = useState<Template[]>([]);
   const [categories, setCategories] = useState<TemplateCategory[]>([]);
   const [statusFilter, setStatusFilter] = useState<TemplateStatus | 'all'>('all');
@@ -493,13 +494,13 @@ export default function AdminTemplatesPage() {
 
       <div className="">
         <div className="flex gap-1 border-b">
-          {(['templates', 'categories'] as const).map((t) => (
+          {(['templates', 'images', 'categories'] as const).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
               className={`px-4 py-2 text-sm font-medium -mb-px border-b-2 ${tab === t ? 'border-mt-accent text-mt-accent' : 'border-transparent text-mt-muted'}`}
             >
-              {t === 'templates' ? 'Templates' : 'Categories'}
+              {t === 'templates' ? 'Templates' : t === 'images' ? 'Image library' : 'Categories'}
             </button>
           ))}
         </div>
@@ -511,7 +512,9 @@ export default function AdminTemplatesPage() {
         </div>
       )}
 
-      {tab === 'templates' ? (
+      {tab === 'images' ? (
+        <ImageLibrary />
+      ) : tab === 'templates' ? (
         <section className="py-4 sm:py-6">
           <div className="flex flex-wrap items-center gap-2 mb-4">
             <div className="relative flex-1 min-w-[200px]">
@@ -854,5 +857,44 @@ function CategoryRow({ c, count, onAdd, onRename, onDelete }: { c: TemplateCateg
         <button onClick={onDelete} className="text-red-500">Delete</button>
       </span>
     </div>
+  );
+}
+
+
+// Every photo already used in our templates, with the templates that use it
+// and search words — reuse them when building new templates (open a design
+// and use the Photos panel in the editor, or copy the address).
+function ImageLibrary() {
+  const [all, setAll] = useState<LibraryPhoto[] | null>(null);
+  const [q, setQ] = useState('');
+  const [copied, setCopied] = useState<string | null>(null);
+  useEffect(() => { loadPhotoLibrary().then(setAll); }, []);
+  const list = useMemo(() => filterPhotos(all || [], q), [all, q]);
+  const copy = (src: string) => navigator.clipboard?.writeText(src).then(() => { setCopied(src); setTimeout(() => setCopied(null), 1200); });
+  return (
+    <section className="py-4 sm:py-6">
+      <div className="flex flex-wrap items-center gap-3 mb-4">
+        <div className="relative flex-1 min-w-[220px]">
+          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-mt-faint" />
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search photos by subject or template…" className="w-full pl-9 pr-3 py-2 border rounded-full text-sm bg-mt-surface" />
+        </div>
+        <p className="text-[13px] text-mt-muted">{all ? `${list.length} of ${all.length} photos` : 'Loading…'} · In the editor, open <b>Photos</b> on the left to add any of these to a design.</p>
+      </div>
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+        {list.map((p) => (
+          <div key={p.file} className="bg-mt-surface border rounded-xl overflow-hidden flex flex-col">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={p.thumb} alt={p.tags.slice(0, 3).join(', ')} loading="lazy" className="w-full aspect-[4/3] object-cover bg-mt-surface2" />
+            <div className="p-2.5 flex-1 flex flex-col gap-1.5">
+              <p className="text-[12px] font-mono text-mt-muted">{p.file} · {p.w}×{p.h}</p>
+              <div className="flex flex-wrap gap-1">{p.tags.slice(0, 5).map((t) => <span key={t} className="text-[10px] bg-mt-surface2 text-mt-muted rounded px-1.5 py-0.5">{t}</span>)}</div>
+              <p className="text-[12px] text-mt-muted">Used in {p.uses} template{p.uses === 1 ? '' : 's'}</p>
+              {p.templates.slice(0, 3).map((t) => t.slug ? <a key={t.slug} href={`/templates/${t.slug}`} target="_blank" className="text-[12px] text-[#3B82C4] truncate hover:underline">{t.name}</a> : <span key={t.name} className="text-[12px] truncate">{t.name}</span>)}
+              <button onClick={() => copy(p.src)} className="mt-auto text-[12px] font-medium border rounded-full px-3 py-1.5 hover:bg-mt-surface2">{copied === p.src ? 'Copied' : 'Copy image address'}</button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
   );
 }

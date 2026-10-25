@@ -14,11 +14,13 @@
 // into the SAME picture on the page.
 
 import type { CSSProperties } from 'react';
+import { blockBrowserShortcut } from '@/lib/editor/browserKeys';
 import { Fragment, forwardRef, ReactNode, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import {
   SlidersHorizontal, Sparkles, Crop as CropIcon, Scissors, Brush, Maximize2, Download, Undo2, Redo2, Plus, Minus,
   Maximize, RotateCcw, RotateCw, FlipHorizontal2, FlipVertical2, Loader2, Check, X, Eye, Printer, Lock, Unlock, Palette, Wand2,
   Move, BoxSelect, Blend as BlendIcon, Hand, ZoomIn, Pipette, Type as TypeIcon, Eraser, Droplet, Sun, Circle, ArrowLeftRight, Square, PaintBucket,
+  Lasso as LassoIcon,
 } from 'lucide-react';
 import { Adjust, NO_ADJUST, LIGHT_SLIDERS, COLOR_SLIDERS, DETAIL_SLIDERS, LOOKS, SliderDef, applyAdjust, renderAdjusted, isNeutral, autoEnhance, HSL_RANGES, CurvePts, curveLut } from '@/lib/photo/adjust';
 import { BrushKind, createStroke, replayStroke } from '@/lib/photo/brushes';
@@ -26,7 +28,7 @@ import { CropBox, PhysUnit, cropTo, flip, fmtNum, fromPx, inscribedRect, makeCan
 import { ColourMode, FORMAT_INFO, PhotoFormat, downloadBlob, exportPhoto, extFor } from '@/lib/photo/exportPhoto';
 import { loadProofTable, proofRgbaInPlace, PRESS_PROFILE_NAME } from '@/lib/color/cmyk';
 import { BgRemoveDialog } from '@/components/editor/shell/BgRemoveDialog';
-import { Layer, Selection, makeLayer, composite, isPlain, translate, placeImage, mergeDown, maskShape, maskAll, invertMask, maskFromAlpha, blendMasked, clearMasked, copyMasked, fillMasked, paintStroke, blankLike } from '@/lib/photo/layers';
+import { Layer, Selection, makeLayer, composite, isPlain, translate, placeImage, mergeDown, maskShape, maskAll, invertMask, maskFromAlpha, blendMasked, clearMasked, copyMasked, fillMasked, paintStroke, blankLike, maskPolygon, combineMasks, maskIsEmpty, SelectionMode } from '@/lib/photo/layers';
 import { FILTERS, FilterId, applyFilter } from '@/lib/photo/filters';
 import { ProMenuBar, LayersPanel, HistoryPanel, Menu } from './ProPanels';
 import { GOOGLE_FONTS, allFontFacesCSS, ensureFontLoaded } from '@/lib/editor/googleFonts';
@@ -164,10 +166,11 @@ function HealIcon({ size = 17 }: { size?: number }) {
     </svg>
   );
 }
-type ProTool = { label: string; key: string; icon: any; tool: Tool; retouch?: RetouchKind; subject?: boolean };
+type ProTool = { label: string; key: string; icon: any; tool: Tool; retouch?: RetouchKind; subject?: boolean; sel?: 'rect' | 'lasso' };
 const PRO_TOOLBAR: (ProTool | null)[] = [
   { label: 'Move', key: 'V', icon: Move, tool: 'move' },
-  { label: 'Marquee', key: 'M', icon: BoxSelect, tool: 'select' },
+  { label: 'Marquee', key: 'M', icon: BoxSelect, tool: 'select', sel: 'rect' },
+  { label: 'Lasso', key: 'L', icon: LassoIcon, tool: 'select', sel: 'lasso' },
   { label: 'Select subject', key: 'W', icon: Sparkles, tool: 'select', subject: true },
   { label: 'Crop', key: 'C', icon: CropIcon, tool: 'crop' },
   { label: 'Eyedropper', key: 'I', icon: Pipette, tool: 'eyedropper' },
@@ -655,6 +658,8 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
   // keyboard
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      // Browser shortcuts (Ctrl/Cmd+D bookmark, +H history, +R reload …) never fire in the studio.
+      blockBrowserShortcut(e);
       const t = e.target as HTMLElement;
       if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
       const mod = e.metaKey || e.ctrlKey;
@@ -678,11 +683,15 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
         else if (mod && (k === '=' || k === '+')) { e.preventDefault(); setZoom((z) => Math.min(8, z * 1.25)); }
         else if (mod && k === '-') { e.preventDefault(); setZoom((z) => Math.max(0.5, z / 1.25)); }
         else if (mod && k === '0') { e.preventDefault(); setZoom(1); setPan({ x: 0, y: 0 }); }
+        else if (lasso && k === 'enter') { e.preventDefault(); closeLasso(); }
+        else if (lasso && k === 'escape') { e.preventDefault(); setLasso(null); setLassoHover(null); }
+        else if (lasso && k === 'backspace') { e.preventDefault(); setLasso(lasso.pts.length > 1 ? { ...lasso, pts: lasso.pts.slice(0, -1) } : null); }
         else if ((k === 'delete' || k === 'backspace') && sel) { e.preventDefault(); selOps.clear(); }
         else if (k === 'escape' && sel) setSel(null);
         else if (!mod && !e.altKey) {
           if (k === 'v') setTool('move');
-          else if (k === 'm') setTool('select');
+          else if (k === 'm') { setSelKind((x) => (x === 'lasso' ? 'rect' : x)); setTool('select'); }
+          else if (k === 'l') { setSelKind('lasso'); setTool('select'); }
           else if (k === 'c') setTool('crop');
           else if (k === 'b') { setRetouch('paint'); setTool('retouch'); }
           else if (k === 'e') { setRetouch('erase'); setTool('retouch'); }
@@ -728,7 +737,30 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
   const isPaint = retouch === 'paint' || retouch === 'erase';
   const strokeLike = retouch === 'heal' || isPaint;
   // Pro: selection shape tool, live marquee, filter and overlay state.
-  const [selKind, setSelKind] = useState<'rect' | 'ellipse'>('rect');
+  const [selKind, setSelKind] = useState<'rect' | 'ellipse' | 'lasso'>('rect');
+  // How a new selection combines with the current one. The toolbar picks a
+  // default; holding Shift (add), Alt (subtract) or Shift+Alt (intersect)
+  // when you start a selection overrides it, like Photoshop.
+  const [selMode, setSelMode] = useState<SelectionMode>('new');
+  const [lasso, setLasso] = useState<{ pts: { x: number; y: number }[]; mode: SelectionMode; drawing: boolean } | null>(null);
+  const [lassoHover, setLassoHover] = useState<{ x: number; y: number } | null>(null);
+  const lastLassoClick = useRef(0);
+  const modeFrom = (e: { shiftKey: boolean; altKey: boolean }): SelectionMode => (e.shiftKey && e.altKey ? 'intersect' : e.shiftKey ? 'add' : e.altKey ? 'subtract' : selMode);
+  // Apply a finished shape to the selection using the chosen mode.
+  const commitSelection = (next: HTMLCanvasElement, shape: Selection['shape'], mode: SelectionMode) => {
+    if (!base) return;
+    const combined = combineMasks(sel && !sel.inverted ? sel.mask : sel ? sel.mask : null, next, sel ? mode : 'new');
+    if (mode !== 'new' && sel && maskIsEmpty(combined)) return setSel(null);
+    setSel({ mask: combined, shape: mode === 'new' || !sel ? shape : null });
+  };
+  const closeLasso = () => {
+    if (!base || !lasso) return;
+    const pts = lasso.pts;
+    setLasso(null);
+    setLassoHover(null);
+    if (pts.length < 3) return;
+    commitSelection(maskPolygon(base.width, base.height, pts), { kind: 'poly', pts }, lasso.mode);
+  };
   const [marquee, setMarquee] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
   const overlayHold = useRef(false);
   const overlayScale = (w: number, h: number) => Math.min(1, 1000 / Math.max(w, h));
@@ -820,9 +852,32 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
       setGradDrag({ x0: p.x, y0: p.y, x1: p.x, y1: p.y });
       return;
     }
+    if (tool === 'select' && base && selKind === 'lasso') {
+      // Lasso: click to place points (polygon), or drag to draw freehand.
+      // Close it by clicking the first point, double-clicking, or Enter.
+      const p = toBase(e.clientX, e.clientY);
+      if (!lasso) {
+        setLasso({ pts: [p], mode: modeFrom(e), drawing: true });
+        lastLassoClick.current = Date.now();
+      } else {
+        const first = lasso.pts[0];
+        const near = Math.hypot(p.x - first.x, p.y - first.y) * basePxToScreen < 10;
+        const last = lasso.pts[lasso.pts.length - 1];
+        const dbl = Date.now() - lastLassoClick.current < 350 && Math.hypot(p.x - last.x, p.y - last.y) * basePxToScreen < 8;
+        lastLassoClick.current = Date.now();
+        if (lasso.pts.length >= 3 && (near || dbl)) {
+          gesture.current = null;
+          closeLasso();
+          return;
+        }
+        setLasso({ ...lasso, pts: [...lasso.pts, p], drawing: true });
+      }
+      gesture.current = { kind: 'lasso' };
+      return;
+    }
     if (tool === 'select' && base) {
       const p = toBase(e.clientX, e.clientY);
-      gesture.current = { kind: 'marquee', start: p };
+      gesture.current = { kind: 'marquee', start: p, mode: modeFrom(e) };
       setMarquee({ x: p.x, y: p.y, w: 0, h: 0 });
       return;
     }
@@ -853,6 +908,13 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
     if (brushCursor.current) {
       const st = stageRef.current!.getBoundingClientRect();
       brushCursor.current.style.transform = `translate(${e.clientX - st.left - healSize / 2}px, ${e.clientY - st.top - healSize / 2}px)`;
+    }
+    if (lasso && base && tool === 'select') {
+      const p = toBase(e.clientX, e.clientY);
+      if (gesture.current?.kind === 'lasso' && pointers.current.has(e.pointerId)) {
+        const last = lasso.pts[lasso.pts.length - 1];
+        if (Math.hypot(p.x - last.x, p.y - last.y) * basePxToScreen > 4) setLasso({ ...lasso, pts: [...lasso.pts, p] });
+      } else setLassoHover(p);
     }
     if (!pointers.current.has(e.pointerId)) return;
     pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
@@ -963,11 +1025,18 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
       }
       setTimeout(hideOverlay, 60);
     }
+    if (g?.kind === 'lasso' && lasso) {
+      // A long freehand drag closes itself when you let go; clicks keep adding points.
+      const freehand = lasso.pts.length > 12 && lasso.drawing;
+      if (freehand) closeLasso();
+      else setLasso({ ...lasso, drawing: false });
+    }
     if (g?.kind === 'marquee' && base) {
       const m = marquee;
       setMarquee(null);
-      if (m && m.w > 3 && m.h > 3) setSel({ mask: maskShape(base.width, base.height, selKind, m.x, m.y, m.w, m.h), shape: { kind: selKind, ...m } });
-      else setSel(null);
+      const kind = selKind === 'ellipse' ? 'ellipse' : 'rect';
+      if (m && m.w > 3 && m.h > 3) commitSelection(maskShape(base.width, base.height, kind, m.x, m.y, m.w, m.h), { kind, ...m }, g.mode || 'new');
+      else if (!g.mode || g.mode === 'new') setSel(null);
     }
     if (g?.kind === 'brush' && base && preview && strokeRef.current) {
       const st = strokeRef.current;
@@ -1825,13 +1894,14 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
     if (t.retouch) setRetouch(t.retouch);
     setTool(t.tool);
     if (t.subject) selOps.subject();
+    if (t.sel) setSelKind((k) => (t.sel === 'lasso' ? 'lasso' : k === 'lasso' ? 'rect' : k));
   };
   const proToolbar = (
     <nav className="order-3 lg:order-1 shrink-0 lg:w-[46px] flex lg:flex-col items-center gap-0.5 px-1 lg:px-0 py-1.5 bg-mt-surface border-t lg:border-t-0 lg:border-r border-mt-border overflow-x-auto lg:overflow-y-auto mt-scroll" aria-label="Tools">
       {PRO_TOOLBAR.map((t, i) => {
         if (!t) return <span key={i} className="shrink-0 w-px h-6 lg:w-7 lg:h-px bg-mt-input-border my-1 mx-1 lg:mx-0" />;
         const I = t.icon;
-        const on = !t.subject && tool === t.tool && (!t.retouch || retouch === t.retouch);
+        const on = !t.subject && tool === t.tool && (!t.retouch || retouch === t.retouch) && (!t.sel || (t.sel === 'lasso') === (selKind === 'lasso'));
         return (
           <button key={t.label} onClick={() => pickProTool(t)} aria-pressed={on} aria-label={t.label} title={`${t.label} (${t.key})`}
             className="mt-ps-tool shrink-0 w-9 h-9 rounded-md inline-flex items-center justify-center text-mt-muted hover:text-mt-ink hover:bg-mt-surface2">
@@ -1859,7 +1929,7 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
   const optField = 'h-7 rounded border border-mt-input-border bg-mt-bg px-1.5 text-[12px] text-mt-ink tabular-nums focus:outline-none focus:border-[#2680EB]';
   const optBtn = 'h-7 px-2.5 rounded border border-mt-input-border text-[12px] text-mt-ink hover:bg-mt-surface2 disabled:opacity-40';
   const optOn = (on: boolean) => cx(optBtn, on && 'bg-[#2680EB] border-[#2680EB] text-white hover:bg-[#2680EB]');
-  const activeProTool = PRO_TOOLBAR.find((t) => t && !t.subject && t.tool === tool && (!t.retouch || t.retouch === retouch)) || null;
+  const activeProTool = PRO_TOOLBAR.find((t) => t && !t.subject && t.tool === tool && (!t.retouch || t.retouch === retouch) && (!t.sel || (t.sel === 'lasso') === (selKind === 'lasso'))) || null;
   const ToolGlyph = activeProTool?.icon;
   const optionsBar = (
     <div className="h-10 shrink-0 flex items-center gap-3 px-3 bg-mt-surface border-b border-mt-border text-[12px] overflow-x-auto mt-scroll whitespace-nowrap" aria-label="Tool options">
@@ -1896,6 +1966,13 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
         <>
           <button className={optOn(selKind === 'rect')} onClick={() => setSelKind('rect')}>Rectangle</button>
           <button className={optOn(selKind === 'ellipse')} onClick={() => setSelKind('ellipse')}>Ellipse</button>
+          <button className={optOn(selKind === 'lasso')} onClick={() => setSelKind('lasso')} title="Lasso (L): click points or drag; click the first point, double-click or press Enter to close">Lasso</button>
+          <span className="w-px h-5 bg-mt-input-border" />
+          <span className={optLabel}>Mode</span>
+          {([['new', 'New'], ['add', 'Add (Shift)'], ['subtract', 'Subtract (Alt)'], ['intersect', 'Intersect (Shift+Alt)']] as const).map(([m, l]) => (
+            <button key={m} className={optOn(selMode === m)} onClick={() => setSelMode(m)}>{l}</button>
+          ))}
+          {lasso && <span className={optLabel}>{lasso.pts.length} points · Enter to close · Esc to cancel · Backspace removes the last point</span>}
           <span className="w-px h-5 bg-mt-input-border" />
           <button className={optBtn} onClick={selOps.subject}>Select subject</button>
           <button className={optBtn} onClick={selOps.all}>All</button>
@@ -2152,9 +2229,27 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
                 <CropOverlay box={box} base={base} />
               )}
               {selOverlay && <img src={selOverlay} alt="" aria-hidden className="absolute inset-0 w-full h-full pointer-events-none" />}
-              {base && (sel?.shape || marquee) && (
+              {base && (lasso || (sel?.shape && sel.shape.kind === 'poly' && !sel.inverted)) && (
                 <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox={`0 0 ${base.width} ${base.height}`} preserveAspectRatio="none">
-                  {[sel?.shape && !sel.inverted ? sel.shape : null, marquee ? { kind: selKind, ...marquee } : null].filter(Boolean).map((sh: any, i) => {
+                  {sel?.shape && sel.shape.kind === 'poly' && !sel.inverted && (() => { const d = sel.shape.pts.map((p) => `${p.x},${p.y}`).join(' '); return <g><polygon points={d} fill="none" stroke="#fff" strokeWidth={1.5} vectorEffect="non-scaling-stroke" /><polygon points={d} fill="none" stroke="#111" strokeWidth={1.5} strokeDasharray="5 5" className="mt-ants" vectorEffect="non-scaling-stroke" /></g>; })()}
+                  {lasso && (() => {
+                    const pts = [...lasso.pts, ...(lassoHover && !lasso.drawing ? [lassoHover] : [])];
+                    const d = pts.map((p) => `${p.x},${p.y}`).join(' ');
+                    const f = lasso.pts[0];
+                    const r = 6 / Math.max(0.0001, basePxToScreen);
+                    return (
+                      <g>
+                        <polyline points={d} fill={lasso.mode === 'subtract' ? 'rgba(239,68,68,0.12)' : 'rgba(38,128,235,0.12)'} stroke="#fff" strokeWidth={2.5} vectorEffect="non-scaling-stroke" />
+                        <polyline points={d} fill="none" stroke={lasso.mode === 'subtract' ? '#DC2626' : '#2680EB'} strokeWidth={1.5} strokeDasharray="4 3" vectorEffect="non-scaling-stroke" />
+                        <circle cx={f.x} cy={f.y} r={r} fill="#fff" stroke="#2680EB" strokeWidth={2} vectorEffect="non-scaling-stroke" />
+                      </g>
+                    );
+                  })()}
+                </svg>
+              )}
+              {base && ((sel?.shape && sel.shape.kind !== 'poly') || marquee) && (
+                <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox={`0 0 ${base.width} ${base.height}`} preserveAspectRatio="none">
+                  {[sel?.shape && sel.shape.kind !== 'poly' && !sel.inverted ? sel.shape : null, marquee ? { kind: selKind === 'ellipse' ? 'ellipse' : 'rect', ...marquee } : null].filter(Boolean).map((sh: any, i) => {
                     const common = { fill: 'none', vectorEffect: 'non-scaling-stroke' as const, strokeWidth: 1.5 };
                     const el = (stroke: string, dash?: string) => sh.kind === 'ellipse'
                       ? <ellipse cx={sh.x + sh.w / 2} cy={sh.y + sh.h / 2} rx={sh.w / 2} ry={sh.h / 2} stroke={stroke} strokeDasharray={dash} {...common} className={dash ? 'mt-ants' : ''} />
