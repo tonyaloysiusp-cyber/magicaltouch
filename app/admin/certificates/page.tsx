@@ -13,12 +13,13 @@ import { Award, Copy, Check, ExternalLink, ShieldX, Search, Loader2, QrCode, Ban
 import { AdminShell } from '@/components/admin/AdminShell';
 import { supabase } from '@/lib/supabase';
 import { getOrCreateProfile } from '@/lib/profile';
-import { newCertificateCode, verifyUrl } from '@/lib/certificates';
+import { newCertificateCode, verifyUrl, fillCertificateJson } from '@/lib/certificates';
+import { renderTemplatePages } from '@/lib/templates/renderPages';
 import { qrMatrix } from '@/lib/qr';
 
 interface Issue { id: string; code: string; recipient: string; title: string; description: string | null; issued_on: string; status: 'valid' | 'revoked'; revoked_reason: string | null; verify_count: number; last_verified_at: string | null; template_id: string | null; created_at: string }
 interface Check { code_tried: string; found: boolean; checked_at: string }
-interface Master { id: string; name: string; width: number; height: number }
+interface Master { id: string; name: string; width: number; height: number; tags?: string[]; canvas_json?: any }
 
 const card = 'rounded-3xl border border-mt-border bg-mt-surface p-5 sm:p-6';
 const field = 'w-full h-10 rounded-xl border border-mt-input-border bg-mt-surface px-3 text-sm text-mt-ink focus:outline-none focus:border-[#3B82C4] focus:ring-2 focus:ring-[#8CCBFF]/40';
@@ -34,6 +35,41 @@ function QrSvg({ text, size = 140 }: { text: string; size?: number }) {
     <svg width={size} height={size} viewBox={`0 0 ${n} ${n}`} shapeRendering="crispEdges" className="rounded-lg bg-white">
       <path d={d} fill="#111" />
     </svg>
+  );
+}
+
+// Renders the chosen certificate design with the form's values filled in,
+// so the name, title, details and date can be checked before issuing.
+function CertificatePreview({ master, values }: { master: Master | null; values: { recipient: string; title: string; description: string; issued_on: string } }) {
+  const [img, setImg] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    if (!master?.canvas_json) return;
+    let alive = true;
+    setBusy(true);
+    const t = setTimeout(() => {
+      const json = fillCertificateJson(master.canvas_json, {
+        recipient: values.recipient.trim() || 'Recipient Name',
+        title: values.title.trim() || 'Certificate title',
+        description: values.description.trim(),
+        issued_on: values.issued_on || new Date().toISOString().slice(0, 10),
+        code: 'MTD-XXXXX-XXXXX',
+      });
+      renderTemplatePages(json, 1100)
+        .then((p) => { if (alive && p[0]) setImg(p[0].url); })
+        .catch(() => {})
+        .finally(() => alive && setBusy(false));
+    }, 250);
+    return () => { alive = false; clearTimeout(t); };
+  }, [master, values.recipient, values.title, values.description, values.issued_on]);
+  if (!master) return <p className="text-[13px] text-mt-muted">No certificate designs found.</p>;
+  return (
+    <div className="relative rounded-2xl border border-mt-border bg-mt-surface2 p-3 flex items-center justify-center min-h-[220px]">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      {img ? <img src={img} alt="Certificate preview" className="max-h-[460px] w-auto max-w-full rounded shadow-lg" /> : <Loader2 size={20} className="animate-spin text-mt-faint" />}
+      {busy && img && <Loader2 size={16} className="absolute top-3 right-3 animate-spin text-mt-faint" />}
+      <span className="absolute bottom-3 left-3 rounded-full bg-black/60 text-white text-[11px] px-2.5 py-1">The QR code and certificate number are added when you issue it</span>
+    </div>
   );
 }
 
@@ -54,13 +90,16 @@ export default function CertificatesAdminPage() {
     const [{ data: i }, { data: c }, { data: m }] = await Promise.all([
       supabase.from('certificate_issues').select('*').order('created_at', { ascending: false }).limit(500),
       supabase.from('certificate_checks').select('code_tried, found, checked_at').eq('found', false).order('checked_at', { ascending: false }).limit(200),
-      supabase.from('templates').select('id, name, width, height, category, tags').contains('tags', ['mt-internal']).order('name'),
+      supabase.from('templates').select('id, name, width, height, category, tags, canvas_json').contains('tags', ['mt-internal']).order('name'),
     ]);
     setIssues((i as Issue[]) || []);
     setChecks((c as Check[]) || []);
-    const ms = ((m as any[]) || []).filter((t) => /certificate/i.test(t.name) || (t.tags || []).includes('certificate-master'));
+    // Secure masters (guilloche, microtext, QR slot) first.
+    const ms = ((m as any[]) || [])
+      .filter((t) => /certificate/i.test(t.name) || (t.tags || []).includes('certificate-master'))
+      .sort((a, b) => Number((b.tags || []).includes('secure')) - Number((a.tags || []).includes('secure')) || a.name.localeCompare(b.name));
     setMasters(ms);
-    setForm((f) => (f.template_id || !ms.length ? f : { ...f, template_id: (ms.find((t) => (t.tags || []).includes('certificate-master')) || ms[0]).id }));
+    setForm((f) => (f.template_id || !ms.length ? f : { ...f, template_id: ms[0].id }));
   }, []);
 
   useEffect(() => {
@@ -130,8 +169,13 @@ export default function CertificatesAdminPage() {
             <label className="text-[12px] text-mt-muted md:col-span-2">Details (optional)<input className={field} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="e.g. 12-hour course, Dubai, November 2026" /></label>
             <label className="text-[12px] text-mt-muted">Date<input type="date" className={field} value={form.issued_on} onChange={(e) => setForm({ ...form, issued_on: e.target.value })} /></label>
             <label className="text-[12px] text-mt-muted">Design<select className={field} value={form.template_id} onChange={(e) => setForm({ ...form, template_id: e.target.value })}>{masters.map((m) => <option key={m.id} value={m.id}>{m.name.replace(/^MT Brand · /, '')}</option>)}</select></label>
+            <div className="md:col-span-2">
+              <p className="text-[12px] text-mt-muted mb-2">Live preview — updates as you type</p>
+              <CertificatePreview master={masters.find((m) => m.id === form.template_id) || null} values={form} />
+            </div>
             <div className="md:col-span-2 flex items-center gap-3">
               <button type="submit" disabled={busy} className={`${btn} bg-mt-primary text-mt-onprimary`}>{busy ? <Loader2 size={14} className="animate-spin" /> : <Award size={14} />} Issue certificate</button>
+              <span className="text-[12px] text-mt-muted">Then open it in the editor to change any wording, download or print.</span>
               {err && <p className="text-[13px] text-rose-600">{err}</p>}
             </div>
           </form>

@@ -7490,6 +7490,16 @@ function EditorContent() {
             {cameFrom === 'brand' ? 'Editing brand design' : 'Editing template'}: <strong>{templateEdit.name.replace(/^MT Brand · /, '')}</strong>
             {templateSave.msg && <span className="block text-xs text-white/70 truncate">{templateSave.msg}</span>}
           </span>
+          {/* Quick controls for brand / template editing: undo, redo, download. */}
+          <button onClick={undoAny} disabled={!(canUndo || textEditing)} aria-label="Undo change" title="Undo (Ctrl/Cmd+Z)" className="shrink-0 h-8 w-8 rounded-full inline-flex items-center justify-center hover:bg-white/10 disabled:opacity-30">
+            <Undo2 size={16} />
+          </button>
+          <button onClick={redoAny} disabled={!canRedo} aria-label="Redo change" title="Redo (Ctrl/Cmd+Shift+Z)" className="shrink-0 h-8 w-8 rounded-full inline-flex items-center justify-center hover:bg-white/10 disabled:opacity-30">
+            <Redo2 size={16} />
+          </button>
+          <button onClick={() => setShowExportDialog(true)} className="shrink-0 text-xs font-semibold border border-white/30 rounded-full px-3 py-2 hover:bg-white/10">
+            Download
+          </button>
           <button
             onClick={saveToTemplate}
             disabled={templateSave.busy}
