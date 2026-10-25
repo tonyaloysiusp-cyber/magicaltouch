@@ -1,4 +1,6 @@
 'use client';
+import { SiteHeader } from '@/components/SiteHeader';
+import { Footer } from '@/components/home/Footer';
 
 import { ThemeSwitch } from '@/components/ThemeSwitch';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -31,12 +33,6 @@ const body = Inter({
   variable: '--font-body',
 });
 
-const NAV_LINKS = [
-  { label: 'Home', href: '/' },
-  { label: 'Templates', href: '/templates' },
-  { label: 'Features', href: '/#features' },
-  { label: 'Pricing', href: '/#pricing' },
-];
 
 // Each tile keeps its template's real proportions (clamped for very
 // tall or wide sizes), so the gallery reads as a masonry wall and no
@@ -112,7 +108,6 @@ function readFiltersFromUrl(): Partial<Filters> & { catName?: string; subName?: 
 
 export default function TemplatesPage() {
   const { theme, toggleTheme } = useAppTheme();
-  const [menuOpen, setMenuOpen] = useState(false);
   const [f, setF] = useState<Filters>(NO_FILTERS);
   const set = (patch: Partial<Filters>) => setF((cur) => ({ ...cur, ...patch }));
   // ?q=… (Google's site-search box, shared links) pre-fills the search.
@@ -294,10 +289,6 @@ export default function TemplatesPage() {
     [templates, matches, categories]
   );
 
-  const goToWorkspace = async () => {
-    setMenuOpen(false);
-    router.push(await resolveAuthedPath('/dashboard'));
-  };
 
   const useTemplate = async (t: Template) => {
     // A real id means this row has actual editable canvas_json the
@@ -315,78 +306,7 @@ export default function TemplatesPage() {
     <main
       className={`${display.variable} ${body.variable} font-[family-name:var(--font-body)] bg-transparent text-mt-ink dark:text-mt-ink min-h-screen transition-colors duration-300`}
     >
-      <header className="sticky top-0 z-50 bg-mt-bg/90 dark:bg-mt-bg/90 backdrop-blur border-b border-black/5 dark:border-white/10">
-        <nav className="mt-container h-16 flex items-center justify-between">
-          <Link href="/" className="flex items-center shrink-0">
-            <BrandLogo theme={theme} width={140} height={28} priority />
-          </Link>
-
-          <div className="hidden md:flex items-center gap-8">
-            {NAV_LINKS.map((l) => (
-              <Link
-                key={l.label}
-                href={l.href}
-                className={`text-sm transition-colors ${
-                  l.label === 'Templates'
-                    ? 'text-mt-ink dark:text-white font-semibold'
-                    : 'text-mt-muted dark:text-mt-muted hover:text-mt-ink dark:hover:text-white'
-                }`}
-              >
-                {l.label}
-              </Link>
-            ))}
-          </div>
-
-          <div className="hidden md:flex items-center gap-3">
-            <ThemeSwitch theme={theme} onToggle={toggleTheme} />
-            {!loggedIn && (
-              <Link href="/login" className="text-sm font-medium text-mt-muted dark:text-mt-muted hover:text-mt-ink dark:hover:text-white px-3 py-2">
-                Log In
-              </Link>
-            )}
-            <button
-              onClick={goToWorkspace}
-              className="relative overflow-hidden text-sm font-semibold text-white px-5 py-2.5 rounded-full bg-brand-gradient shadow-[0_6px_16px_-6px_rgba(9,9,11,0.16)] hover:shadow-[0_10px_20px_-6px_rgba(9,9,11,0.16)] hover:-translate-y-0.5 transition-all before:content-[''] before:absolute before:inset-x-0 before:top-0 before:h-1/2 before:bg-mt-surface/25 before:rounded-t-full"
-            >
-              Start Designing
-            </button>
-            {loggedIn && <ProfileMenu />}
-          </div>
-
-          <div className="flex md:hidden items-center gap-1">
-            <ThemeSwitch theme={theme} onToggle={toggleTheme} />
-            <button
-              className="p-2 -mr-2 text-mt-ink dark:text-white"
-              onClick={() => setMenuOpen((v) => !v)}
-              aria-label={menuOpen ? 'Close menu' : 'Open menu'}
-            >
-              {menuOpen ? <X size={22} /> : <Menu size={22} />}
-            </button>
-          </div>
-        </nav>
-
-        {menuOpen && (
-          <div className="md:hidden border-t border-black/5 dark:border-white/10 bg-mt-surface2 dark:bg-mt-bg px-6 py-4 flex flex-col gap-1">
-            {NAV_LINKS.map((l) => (
-              <Link key={l.label} href={l.href} className="py-2.5 text-sm text-mt-muted dark:text-mt-muted" onClick={() => setMenuOpen(false)}>
-                {l.label}
-              </Link>
-            ))}
-            <div className="flex flex-col gap-2 mt-3">
-              <Link
-                href={loggedIn ? '/dashboard' : '/login'}
-                className="text-center text-sm font-medium border border-black/10 dark:border-white/15 text-mt-ink dark:text-white rounded-full py-2.5"
-                onClick={() => setMenuOpen(false)}
-              >
-                {loggedIn ? 'Dashboard' : 'Log In'}
-              </Link>
-              <button onClick={goToWorkspace} className="text-center text-sm font-semibold text-white rounded-full py-2.5 bg-brand-gradient">
-                Start Designing
-              </button>
-            </div>
-          </div>
-        )}
-      </header>
+      <SiteHeader theme={theme} onToggleTheme={toggleTheme} active="templates" />
 
       <PageHero
         align="center"
@@ -658,20 +578,7 @@ export default function TemplatesPage() {
 
       {previewing && <TemplatePreview t={previewing} onClose={() => setPreviewing(null)} onUse={() => useTemplate(previewing)} onTag={(tag) => { set({ q: tag }); setPreviewing(null); }} onStyle={(st) => { set({ styles: [st] }); setPreviewing(null); }} />}
 
-      <footer className="border-t border-black/5 dark:border-white/10">
-        <div className="mt-container py-12 flex flex-col sm:flex-row items-center justify-between gap-6">
-          <div className="flex items-center gap-3">
-            <BrandLogo theme={theme} width={120} height={24} />
-            <span className="text-xs text-mt-muted dark:text-mt-muted">© {new Date().getFullYear()} Magical Touch</span>
-          </div>
-          <div className="flex gap-3 text-mt-muted dark:text-mt-muted">
-            <Instagram size={16} />
-            <Twitter size={16} />
-            <Facebook size={16} />
-            <Youtube size={16} />
-          </div>
-        </div>
-      </footer>
+      <Footer theme={theme} />
     </main>
     </div>
   );

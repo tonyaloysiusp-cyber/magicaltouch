@@ -3,6 +3,7 @@
 // Public certificate check. Shows exactly what our records say — the name,
 // title, date and status — so a copied or edited certificate is obvious.
 
+import { Footer } from '@/components/home/Footer';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -87,6 +88,7 @@ export function VerifyView({ initialCode = '' }: { initialCode?: string }) {
             </section>
           )}
         </div>
+      <Footer theme={theme} />
       </main>
     </div>
   );

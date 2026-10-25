@@ -58,7 +58,7 @@ export default async function AboutPage() {
     },
   ];
   return (
-    <SeoShell>
+    <SeoShell active="about">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <div className="mt-container py-6 sm:py-10">
         <Crumbs items={[{ href: '/', label: 'Home' }, { label: 'About' }]} />

@@ -61,7 +61,7 @@ export default async function TemplatePage({ params }: { params: { slug: string 
     },
   ];
   return (
-    <SeoShell>
+    <SeoShell active="templates">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <div className="mt-container py-6 sm:py-10">
         <Crumbs items={[{ href: '/', label: 'Home' }, { href: '/templates', label: 'Templates' }, { href: catUrl, label: t.category }, { label: t.name }]} />
