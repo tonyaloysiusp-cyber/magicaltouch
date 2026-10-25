@@ -1,33 +1,46 @@
 import type { Metadata } from 'next';
 import { SeoShell } from '@/components/seo/SeoShell';
 import { SITE_URL, SITE_NAME } from '@/lib/seo';
-import { LEVELS } from '@/lib/tutorials';
-import { TutorialsClient } from '@/components/tutorials/TutorialsClient';
+import { createAnonSupabaseClient } from '@/lib/supabase/server';
+import { loadCourses, totalMinutes } from '@/lib/courses';
+import { CoursesCatalog } from '@/components/courses/CoursesCatalog';
+
+// Course content is managed in Admin → Courses; refreshed every minute.
+export const revalidate = 60;
 
 export const metadata: Metadata = {
-  title: { absolute: 'Free Graphic Design Tutorials — Beginner to Pro, With Certificates | Magical Touch Design' },
+  title: { absolute: 'Free Graphic Design Tutorials & Courses — Beginner to Pro | Magical Touch Design' },
   description:
-    'Learn graphic design step by step, free: 18 hands-on lessons in three levels — Beginner, Intermediate and Pro — covering templates, text, photos, brand kits, Photo Studio, print PDFs and more. Earn a verified certificate for each level.',
+    'Learn graphic design step by step, free: short hands-on lessons in Beginner, Intermediate and Pro courses — templates, text, photos, brand kits, Photo Studio and print-ready PDFs. Request a reviewed certificate when you finish.',
   alternates: { canonical: `${SITE_URL}/tutorials` },
-  openGraph: { type: 'website', url: `${SITE_URL}/tutorials`, title: 'Free design tutorials — Beginner to Pro', description: 'Hands-on lessons with tasks and a verified certificate for every level.', siteName: SITE_NAME, images: [`${SITE_URL}/og-image.png`] },
+  openGraph: { type: 'website', url: `${SITE_URL}/tutorials`, title: 'Free design tutorials & courses — Beginner to Pro', description: 'Hands-on lessons with a reviewed certificate for every course.', siteName: SITE_NAME, images: [`${SITE_URL}/og-image.png`] },
 };
 
-export default function TutorialsPage() {
-  const jsonLd = LEVELS.map((l) => ({
+export default async function TutorialsPage() {
+  const courses = await loadCourses(createAnonSupabaseClient()).catch(() => []);
+  const jsonLd = {
     '@context': 'https://schema.org',
-    '@type': 'Course',
-    name: `${l.name} — Graphic design with Magical Touch`,
-    description: l.summary,
-    provider: { '@type': 'Organization', name: SITE_NAME, sameAs: SITE_URL },
-    isAccessibleForFree: true,
-    educationalLevel: l.badge,
-    hasCourseInstance: { '@type': 'CourseInstance', courseMode: 'online', courseWorkload: `PT${l.lessons.reduce((a, x) => a + x.minutes, 0)}M` },
-    offers: { '@type': 'Offer', price: 0, priceCurrency: 'USD', category: 'Free' },
-  }));
+    '@type': 'ItemList',
+    itemListElement: courses.map((c, i) => ({
+      '@type': 'ListItem',
+      position: i + 1,
+      item: {
+        '@type': 'Course',
+        name: c.title,
+        description: c.summary,
+        url: `${SITE_URL}/tutorials/${c.slug}`,
+        provider: { '@type': 'Organization', name: SITE_NAME, sameAs: SITE_URL },
+        isAccessibleForFree: true,
+        educationalLevel: c.level,
+        hasCourseInstance: { '@type': 'CourseInstance', courseMode: 'online', courseWorkload: `PT${totalMinutes(c.lessons)}M` },
+        offers: { '@type': 'Offer', price: 0, priceCurrency: 'USD', category: 'Free' },
+      },
+    })),
+  };
   return (
-    <SeoShell>
+    <SeoShell active="tutorials">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
-      <TutorialsClient />
+      <CoursesCatalog courses={courses} />
     </SeoShell>
   );
 }

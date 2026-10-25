@@ -11,6 +11,7 @@ const LINKS = [
   { id: 'dashboard', label: 'Dashboard', href: '/dashboard' },
   { id: 'templates', label: 'Templates', href: '/templates' },
   { id: 'photo', label: 'Photo Studio', href: '/photo-studio' },
+  { id: 'tutorials', label: 'Tutorials', href: '/tutorials' },
 ] as const;
 
 // The signed-in app's top bar (create, profile, ...): logo, main links,

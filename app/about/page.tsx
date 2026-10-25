@@ -1,15 +1,21 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { SeoShell, Crumbs } from '@/components/seo/SeoShell';
-import { SITE_URL, SITE_NAME } from '@/lib/seo';
+import { SITE_URL, SITE_NAME, getSiteSetting } from '@/lib/seo';
+import { companyProfile } from '@/lib/email/config';
 
 // About Magical Touch Design — the online design platform (not an interior
 // design company), its mission, what it offers and its founder & CEO.
+// Only facts that are on the site already are written here. Story, vision
+// and the founder's biography appear only once an admin writes them in
+// Admin → About page (site_settings), so nothing is invented.
+
+export const revalidate = 600;
 
 export const metadata: Metadata = {
   title: { absolute: `About Magical Touch Design — Free Online Graphic Design Platform` },
   description:
-    'Magical Touch Design is a free online graphic design platform from Dubai: 1,000+ templates, a full design editor and a photo studio. Founded and led by Tony Aloysius, CEO.',
+    'Magical Touch Design is a free online graphic design platform: 1,000+ templates, a full design editor, a photo studio and free tutorials. Founded by Tony Aloysius, Founder & CEO.',
   alternates: { canonical: `${SITE_URL}/about` },
   openGraph: { type: 'website', url: `${SITE_URL}/about`, title: 'About Magical Touch Design', description: 'A free online graphic design platform — templates, editor and photo studio. Founder & CEO: Tony Aloysius.', siteName: SITE_NAME, images: [`${SITE_URL}/og-image.png`] },
 };
@@ -20,8 +26,12 @@ const OFFER = [
   ['Photo Studio', 'One-tap enhance and looks, crop, retouch, layers, selections, filters and background removal.'],
   ['Print-ready output', 'PDF with bleed and crop marks, true CMYK PDF and TIFF, plus PNG, JPG and WebP.'],
   ['Verified certificates', 'Certificates with a unique code and QR check, so anyone can confirm they are genuine.'],
+  ['Free tutorials & courses', 'Step-by-step lessons from beginner to pro, with a certificate reviewed by our team when you finish.'],
   ['English and Arabic', 'Arabic fonts and right-to-left text alongside hundreds of Latin typefaces.'],
 ];
+const DEFAULT_MISSION = 'To give every small business, school and creator the tools to look their best — with professional templates, an editor that is easy on day one, and print-ready results they can trust.';
+const paras = (t: string) => t.split(/\n{2,}/).map((x) => x.trim()).filter(Boolean);
+
 const VALUES = [
   ['Free for everyone', 'Every template, tool and download is free. No watermark and no premium tier holding features back.'],
   ['Simple first', 'Anyone can make something beautiful in minutes; professionals can go further in Pro mode.'],
@@ -29,7 +39,8 @@ const VALUES = [
   ['Privacy', 'Photo tools such as background removal run on your own device.'],
 ];
 
-export default function AboutPage() {
+export default async function AboutPage() {
+  const [story, vision, mission, founderBio] = await Promise.all(['about_story', 'about_vision', 'about_mission', 'about_founder_bio'].map((k) => getSiteSetting(k).catch(() => null)));
   const jsonLd = [
     {
       '@context': 'https://schema.org',
@@ -67,8 +78,8 @@ export default function AboutPage() {
           </p>
         </header>
 
-        <section className="mt-14 grid gap-4 sm:grid-cols-3">
-          {[['1,000+', 'free templates'], ['35+', 'design makers & guides'], ['100%', 'free — no watermark']].map(([n, l]) => (
+        <section aria-label="At a glance" className="mt-12 grid gap-4 sm:grid-cols-2 max-w-3xl">
+          {[['1,000+', 'free, editable templates'], ['100%', 'free — no watermark']].map(([n, l]) => (
             <div key={l} className="rounded-3xl border border-mt-border p-6">
               <p className="text-4xl font-semibold tracking-tight">{n}</p>
               <p className="mt-1 text-mt-muted">{l}</p>
@@ -76,8 +87,28 @@ export default function AboutPage() {
           ))}
         </section>
 
-        <section className="mt-16">
-          <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight">What we offer</h2>
+        {story && (
+          <section aria-labelledby="story" className="mt-16 max-w-3xl">
+            <h2 id="story" className="text-2xl sm:text-3xl font-semibold tracking-tight">Our story</h2>
+            {paras(story).map((t, i) => <p key={i} className="mt-4 text-[16px] text-mt-muted leading-relaxed">{t}</p>)}
+          </section>
+        )}
+
+        <section aria-labelledby="mission" className={`mt-16 grid gap-6 ${vision ? 'md:grid-cols-2' : ''}`}>
+          <div className="rounded-3xl border border-mt-border p-7 bg-mt-surface">
+            <h2 id="mission" className="text-2xl font-semibold tracking-tight">Our mission</h2>
+            {paras(mission || DEFAULT_MISSION).map((t, i) => <p key={i} className="mt-4 text-[16px] text-mt-muted leading-relaxed">{t}</p>)}
+          </div>
+          {vision && (
+            <div className="rounded-3xl border border-mt-border p-7 bg-mt-surface">
+              <h2 className="text-2xl font-semibold tracking-tight">Our vision</h2>
+              {paras(vision).map((t, i) => <p key={i} className="mt-4 text-[16px] text-mt-muted leading-relaxed">{t}</p>)}
+            </div>
+          )}
+        </section>
+
+        <section aria-labelledby="offer" className="mt-16">
+          <h2 id="offer" className="text-2xl sm:text-3xl font-semibold tracking-tight">What we offer</h2>
           <ul className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {OFFER.map(([t, d]) => (
               <li key={t} className="rounded-2xl border border-mt-border p-5">
@@ -88,24 +119,19 @@ export default function AboutPage() {
           </ul>
         </section>
 
-        <section className="mt-16 grid gap-10 lg:grid-cols-[1fr_1.2fr] items-start">
+        <section aria-labelledby="founder" className="mt-16 grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] items-start">
           <div className="rounded-3xl border border-mt-border p-8 bg-mt-surface">
-            <div className="h-20 w-20 rounded-2xl flex items-center justify-center text-2xl font-semibold text-white" style={{ background: 'linear-gradient(135deg,#F2708F,#A69BD3 35%,#35C2F1 65%,#8CC84B)' }} aria-hidden>
+            <p className="text-[13px] font-semibold tracking-[0.2em] uppercase text-mt-muted">Founder</p>
+            <div className="mt-4 h-20 w-20 rounded-2xl flex items-center justify-center text-2xl font-semibold text-white" style={{ background: 'linear-gradient(135deg,#F2708F,#A69BD3 35%,#35C2F1 65%,#8CC84B)' }} aria-hidden>
               TA
             </div>
-            <p className="mt-5 text-2xl font-semibold">Tony Aloysius</p>
-            <p className="text-mt-muted">Founder &amp; CEO</p>
-            <p className="mt-5 text-[15px] leading-relaxed text-mt-muted">
-              Tony founded Magical Touch Design with one idea: great design should be available to everyone, not only to people who can afford professional software. He leads the company’s product, design and growth from Dubai.
-            </p>
+            <h2 id="founder" className="mt-5 text-2xl font-semibold">Tony Aloysius</h2>
+            <p className="text-mt-muted">Founder &amp; CEO, {SITE_NAME}</p>
+            {founderBio && paras(founderBio).map((t, i) => <p key={i} className="mt-4 text-[15px] leading-relaxed text-mt-muted">{t}</p>)}
           </div>
           <div>
-            <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight">Our mission</h2>
-            <p className="mt-4 text-[15px] text-mt-muted leading-relaxed">
-              To give every small business, school and creator the tools to look their best — with professional templates, an editor that is easy on day one, and print-ready results they can trust.
-            </p>
-            <h3 className="mt-8 text-lg font-semibold">What we believe</h3>
-            <ul className="mt-4 grid gap-3 sm:grid-cols-2">
+            <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight">Why choose us</h2>
+            <ul className="mt-6 grid gap-3 sm:grid-cols-2">
               {VALUES.map(([t, d]) => (
                 <li key={t} className="rounded-2xl border border-mt-border p-4">
                   <p className="font-semibold text-[15px]">{t}</p>
@@ -114,6 +140,15 @@ export default function AboutPage() {
               ))}
             </ul>
           </div>
+        </section>
+
+        <section aria-labelledby="contact" className="mt-16 rounded-3xl border border-mt-border p-8">
+          <h2 id="contact" className="text-2xl font-semibold">Get in touch</h2>
+          <p className="mt-2 text-mt-muted">
+            Questions, feedback or partnership ideas? Write to our official address,{' '}
+            <a href={`mailto:${companyProfile.officialEmail}`} className="font-semibold text-mt-ink underline underline-offset-2 break-all">{companyProfile.officialEmail}</a>, or use the{' '}
+            <Link href="/contact" className="font-semibold text-mt-ink underline underline-offset-2">contact form</Link>.
+          </p>
         </section>
 
         <section className="mt-16 rounded-3xl border border-mt-border p-8 sm:p-10 flex flex-wrap items-center justify-between gap-6">

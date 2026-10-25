@@ -11,10 +11,13 @@ import { ProfileMenu } from '@/components/ProfileMenu';
 import { BrandLogo } from '@/components/BrandLogo';
 import { AppTheme } from '@/hooks/useAppTheme';
 
-const NAV_LINKS = [
+// "wide" links hide on tablet-width screens so the bar never overflows.
+const NAV_LINKS: { label: string; href: string; wide?: boolean }[] = [
   { label: 'Templates', href: '/templates' },
-  { label: 'Features', href: '#features' },
-  { label: 'Pricing', href: '#pricing' },
+  { label: 'Features', href: '#features', wide: true },
+  { label: 'Tutorials', href: '/tutorials' },
+  { label: 'Pricing', href: '#pricing', wide: true },
+  { label: 'About', href: '/about' },
 ];
 
 export function Navbar({ theme, onToggleTheme }: { theme: AppTheme; onToggleTheme: () => void }) {
@@ -61,12 +64,12 @@ export function Navbar({ theme, onToggleTheme }: { theme: AppTheme; onToggleThem
           <BrandLogo theme={theme} width={140} height={28} priority />
         </Link>
 
-        <div className="hidden md:flex items-center gap-8">
+        <div className="hidden md:flex items-center gap-5 lg:gap-8">
           <button onClick={goToCreate} className="text-sm text-mt-muted dark:text-mt-muted hover:text-mt-ink dark:hover:text-white transition-colors">
             Create
           </button>
           {NAV_LINKS.map((l) => (
-            <Link key={l.label} href={l.href} className="text-sm text-mt-muted dark:text-mt-muted hover:text-mt-ink dark:hover:text-white transition-colors">
+            <Link key={l.label} href={l.href} className={`${l.wide ? 'hidden lg:inline' : ''} text-sm text-mt-muted dark:text-mt-muted hover:text-mt-ink dark:hover:text-white transition-colors`}>
               {l.label}
             </Link>
           ))}

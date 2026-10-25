@@ -15,7 +15,7 @@ export function HowItWorks() {
   const count = useTemplateCountLabel();
   return (
     <section className="border-t border-mt-border">
-      <div className="mt-container py-24 sm:py-28">
+      <div className="mt-container py-16 sm:py-20">
         <Reveal>
           <h2 className="font-[family-name:var(--font-display)] font-medium text-3xl sm:text-5xl leading-[1.08] tracking-[-0.03em]">
             From idea to finished design.
