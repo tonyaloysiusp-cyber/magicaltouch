@@ -1,0 +1,395 @@
+// Search landing pages ("free flyer maker", "Christmas templates", ...).
+// Each one targets a phrase people type into Google, has its own copy and
+// FAQ, and lists the real templates that match. Served at /<slug>.
+
+export interface Landing {
+  slug: string;
+  /** what the page makes, lower case: "flyer", "wedding invitation" */
+  thing: string;
+  h1: string;
+  title: string;
+  description: string;
+  intro: string[];
+  /** words matched against template names and keywords */
+  terms: string[];
+  uses: string[];
+  faqs: [string, string][];
+  related: string[];
+  seasonal?: boolean;
+}
+
+const L = (l: Landing) => l;
+
+export const LANDINGS: Landing[] = [
+  L({
+    slug: 'free-flyer-maker',
+    thing: 'flyer',
+    h1: 'Free flyer maker',
+    title: 'Free Flyer Maker — Design Flyers Online in Minutes',
+    description: 'Make a flyer online for free. Start from a professional flyer template, change the words, colours and photos, and download a print-ready PDF, PNG or JPG.',
+    intro: [
+      'A good flyer gets one message across in three seconds. Our flyer templates are laid out by designers so the headline, the offer and the contact details are easy to find — you just swap in your own.',
+      'Edit everything in your browser: text, fonts, colours, photos and logos. When you are done, download a print-ready A4 or A5 PDF with bleed, or a PNG for WhatsApp and Instagram.',
+    ],
+    terms: ['flyer'],
+    uses: ['Shop openings and sales', 'Restaurant and café promotions', 'Real estate listings', 'Gyms, clinics and salons', 'Events, classes and workshops'],
+    faqs: [
+      ['Is the flyer maker really free?', 'Yes. You can browse, edit and download flyer templates without paying. Create a free account to save your designs and come back to them later.'],
+      ['Can I print my flyer at a print shop?', 'Yes. Download it as “PDF (print)”: it has 3 mm bleed and crop marks and can be exported in CMYK, which is what print shops ask for.'],
+      ['What size is a standard flyer?', 'A4 (210 × 297 mm) and A5 (148 × 210 mm) are the most common in the UAE, UK and Europe; US Letter is common in North America. You can resize any template in one click.'],
+      ['Can I add my own logo and photos?', 'Yes — upload them from your computer or phone and drop them into any photo frame on the template.'],
+    ],
+    related: ['free-poster-maker', 'free-brochure-maker', 'real-estate-flyer-maker', 'free-business-card-maker'],
+  }),
+  L({
+    slug: 'free-poster-maker',
+    thing: 'poster',
+    h1: 'Free poster maker',
+    title: 'Free Poster Maker — Event, Sale & Wall Art Posters',
+    description: 'Design eye-catching posters online for free. Music festivals, exhibitions, film nights, sales and wall art — edit a template and download a print-ready A3 or A4 PDF.',
+    intro: [
+      'Posters have to work from across the room. Our poster templates use bold type, strong colour and clear hierarchy so the big message lands first and the details follow.',
+      'Pick a design, replace the text and photos, and export at full print quality — A3, A4, A5 mini posters or a custom size.',
+    ],
+    terms: ['poster'],
+    uses: ['Concerts and music festivals', 'Art and photography exhibitions', 'Film screenings', 'Store sales and promotions', 'Motivational and wall-art prints'],
+    faqs: [
+      ['What resolution are the posters?', 'Print templates are built at 300 DPI, so they stay sharp at A3 and A4. You can also export PNG or JPG for social media.'],
+      ['Can I make a mini poster?', 'Yes — many templates come in A5, and you can resize any poster to A5, A4, A3 or a custom size.'],
+      ['Do I need design software?', 'No. Everything runs in your browser on a computer, tablet or phone.'],
+    ],
+    related: ['free-flyer-maker', 'christmas-templates', 'new-year-templates', 'halloween-templates'],
+  }),
+  L({
+    slug: 'free-invitation-maker',
+    thing: 'invitation',
+    h1: 'Free invitation maker',
+    title: 'Free Invitation Maker — Birthday, Wedding & Party Invites',
+    description: 'Create beautiful invitations online for free. Birthday, wedding, baby shower and party invitation templates you can edit, print or share on WhatsApp.',
+    intro: [
+      'From a kids’ superhero party to a black-tie wedding, the right invitation sets the mood before anyone arrives. Choose a template, add the names, date and place, and it is ready.',
+      'Send it as an image on WhatsApp or Instagram, or download a print-ready PDF for cards.',
+    ],
+    terms: ['invitation', 'invite'],
+    uses: ['Birthday parties', 'Weddings and engagements', 'Baby showers', 'Corporate events and dinners', 'Eid and festive gatherings'],
+    faqs: [
+      ['Can I send the invitation on WhatsApp?', 'Yes. Download it as a JPG or PNG and share it straight from your phone.'],
+      ['Can I print invitations at home?', 'Yes — download the PDF and print on card. Use “PDF (print)” for a print shop.'],
+      ['Can I add Arabic text?', 'Yes. The editor supports Arabic fonts such as Amiri, Cairo and Tajawal.'],
+    ],
+    related: ['free-wedding-invitation-maker', 'free-birthday-invitation-maker', 'free-greeting-card-maker'],
+  }),
+  L({
+    slug: 'free-wedding-invitation-maker',
+    thing: 'wedding invitation',
+    h1: 'Free wedding invitation maker',
+    title: 'Free Wedding Invitation Maker — Elegant Editable Templates',
+    description: 'Design your wedding invitations online for free. Botanical, modern, classic and Arabic wedding invitation templates — edit and download print-ready PDFs.',
+    intro: [
+      'Your invitation is the first glimpse guests get of your wedding. Our wedding templates range from soft botanical arches to bold modern type and navy-and-gold Arabic designs.',
+      'Add your names, date and venue, match the colours to your theme, then print or send digitally. Matching save-the-dates and reception cards are in the Wedding collection.',
+    ],
+    terms: ['wedding', 'save the date', 'engagement'],
+    uses: ['Wedding invitations', 'Save the dates', 'Engagement parties', 'Reception and walima cards', 'Thank-you cards'],
+    faqs: [
+      ['Which size is best for wedding invitations?', '5 × 7 inches (127 × 178 mm) is the classic size. All our wedding invitation templates use it, and you can resize them.'],
+      ['Can I include both Arabic and English?', 'Yes — add a text box with an Arabic font for the bismillah or names alongside the English text.'],
+      ['Is it free to download?', 'Yes, every wedding template can be edited and downloaded for free.'],
+    ],
+    related: ['free-invitation-maker', 'free-greeting-card-maker', 'free-certificate-maker'],
+  }),
+  L({
+    slug: 'free-birthday-invitation-maker',
+    thing: 'birthday invitation',
+    h1: 'Free birthday invitation & card maker',
+    title: 'Free Birthday Invitation Maker — Kids, 30th, 50th & More',
+    description: 'Make birthday invitations, magazine-cover posters and cards online for free. Kids’ parties, sweet 16, 30th, 50th and milestone birthday templates.',
+    intro: [
+      'Birthdays deserve something more fun than a plain text message. Turn the birthday person into a magazine cover star, a comic-book hero or a golden 50th celebration.',
+      'Swap in their photo and party details and share it in seconds.',
+    ],
+    terms: ['birthday'],
+    uses: ['Kids’ birthday parties', 'Sweet 16 and teen parties', '30th, 40th and 50th birthdays', 'Birthday magazine covers', 'Birthday wishes for social media'],
+    faqs: [
+      ['Can I put a photo of the birthday person on it?', 'Yes — click the photo frame and upload any picture; it fills the frame automatically.'],
+      ['Are there birthday magazine cover templates?', 'Yes. We have editorial, retro 70s, comic, golden 50th, teen zine and minimal magazine covers.'],
+    ],
+    related: ['free-invitation-maker', 'free-greeting-card-maker', 'free-poster-maker'],
+  }),
+  L({
+    slug: 'free-resume-maker',
+    thing: 'resume',
+    h1: 'Free resume & CV maker',
+    title: 'Free Resume Maker — Professional CV Templates (A4)',
+    description: 'Build a professional resume online for free. Classic, modern, creative and developer CV templates with or without a photo — download as PDF.',
+    intro: [
+      'Recruiters spend seconds on the first look. Our resume templates keep your experience easy to scan, with clear headings, consistent spacing and fonts that print well.',
+      'Choose a classic serif CV for corporate roles, a sidebar layout with photo for the Gulf job market, or a bold creative design for design and marketing jobs.',
+    ],
+    terms: ['resume', 'cv'],
+    uses: ['Corporate and finance jobs', 'Marketing and design roles', 'Software developers', 'Graduates and first jobs', 'Gulf-style CVs with photo'],
+    faqs: [
+      ['Should my CV include a photo?', 'In the UAE and much of the Gulf a professional photo is common; in the US and UK it is usually left out. We have templates for both.'],
+      ['What format should I send?', 'Send a PDF — it keeps your layout and fonts exactly as designed.'],
+      ['Is the resume maker free?', 'Yes, all resume templates are free to edit and download.'],
+    ],
+    related: ['free-business-card-maker', 'free-letterhead-maker', 'free-hiring-poster-maker'],
+  }),
+  L({
+    slug: 'free-business-card-maker',
+    thing: 'business card',
+    h1: 'Free business card maker',
+    title: 'Free Business Card Maker — Print-Ready Card Templates',
+    description: 'Design business cards online for free. Minimal, bold and elegant business card templates at 90 × 55 mm with bleed, ready for any print shop.',
+    intro: [
+      'A business card is often the only thing people keep after meeting you. Our templates balance your name, role and contact details with a confident look for your brand.',
+      'Every card is set up at the standard 90 × 55 mm with 3 mm bleed, so it prints perfectly.',
+    ],
+    terms: ['business card'],
+    uses: ['Architects and designers', 'Cafés and bakeries', 'Consultants and lawyers', 'Real estate agents', 'Freelancers'],
+    faqs: [
+      ['What size are the cards?', '90 × 55 mm, the standard in the UAE and Europe. You can resize to 3.5 × 2 inches for the US.'],
+      ['Can I export in CMYK?', 'Yes — choose “PDF (print)” and CMYK when you download.'],
+    ],
+    related: ['free-letterhead-maker', 'free-resume-maker', 'brand-guidelines-template'],
+  }),
+  L({
+    slug: 'free-menu-maker',
+    thing: 'menu',
+    h1: 'Free menu maker',
+    title: 'Free Menu Maker — Restaurant, Café & Dinner Menu Templates',
+    description: 'Create restaurant and café menus online for free. Sushi, burger, coffee, dinner and festive menu templates you can print or share as a QR menu image.',
+    intro: [
+      'A well-designed menu helps guests decide faster and makes your best dishes stand out. Our menu templates cover everything from minimal Japanese menus to bold burger joints and cosy coffee shops.',
+      'Update prices any time and download a fresh PDF — no designer needed.',
+    ],
+    terms: ['menu'],
+    uses: ['Restaurants and cafés', 'Food trucks', 'Christmas and Iftar dinners', 'Catering and events', 'Instagram menu posts'],
+    faqs: [
+      ['Can I change prices later?', 'Yes. Save your menu to your account and edit it whenever your prices change.'],
+      ['What size should a menu be?', 'A4 and A3 are the most common printed sizes. Use a story or post size to share it online.'],
+    ],
+    related: ['free-flyer-maker', 'free-poster-maker', 'free-instagram-post-maker'],
+  }),
+  L({
+    slug: 'free-certificate-maker',
+    thing: 'certificate',
+    h1: 'Free certificate maker',
+    title: 'Free Certificate Maker — Awards, Courses & Kids Certificates',
+    description: 'Make certificates online for free. Employee of the month, course completion, appreciation and kids’ award certificate templates — print-ready A4.',
+    intro: [
+      'Recognition matters. Our certificate templates give your awards a polished, official look — gold seals, elegant borders and signature lines included.',
+      'Type the recipient’s name and reason, and print on card or send as a PDF.',
+    ],
+    terms: ['certificate', 'award'],
+    uses: ['Employee of the month or year', 'Training and course completion', 'School and kids’ awards', 'Appreciation and thank-you', 'Competitions and sports'],
+    faqs: [
+      ['Can I make many certificates with different names?', 'Yes — duplicate the page for each person and change the name, then download one PDF with all pages.'],
+      ['Can certificates be verified?', 'Yes. Magical Touch can add a verification code so anyone can check a certificate is genuine.'],
+    ],
+    related: ['free-letterhead-maker', 'free-greeting-card-maker', 'free-poster-maker'],
+  }),
+  L({
+    slug: 'free-instagram-post-maker',
+    thing: 'Instagram post',
+    h1: 'Free Instagram post maker',
+    title: 'Free Instagram Post & Story Maker — Social Media Templates',
+    description: 'Design Instagram posts, stories and carousels for free. Sale posts, quotes, hiring posts, listings and festive greetings sized perfectly for social media.',
+    intro: [
+      'Scroll-stopping posts need strong composition and a clear message. Our social templates are sized for Instagram posts (1080 × 1350), stories (1080 × 1920) and square posts.',
+      'Edit the text and photos, then download a PNG or JPG ready to upload.',
+    ],
+    terms: ['post', 'story', 'instagram', 'carousel'],
+    uses: ['Sales and discounts', 'Hiring announcements', 'Property listings', 'Festive greetings', 'Quotes and tips'],
+    faqs: [
+      ['What is the best Instagram post size?', '1080 × 1350 px (4:5) takes up the most space in the feed. Stories are 1080 × 1920 px.'],
+      ['Can I make a carousel?', 'Yes — carousel templates have several pages; download them all at once as a ZIP of images.'],
+    ],
+    related: ['free-hiring-poster-maker', 'black-friday-templates', 'real-estate-flyer-maker'],
+  }),
+  L({
+    slug: 'free-greeting-card-maker',
+    thing: 'greeting card',
+    h1: 'Free greeting card maker',
+    title: 'Free Greeting Card Maker — Thank You, Birthday, Eid & More',
+    description: 'Create greeting cards online for free. Thank you, birthday, wedding, sympathy, new baby, Eid, Diwali and Christmas card templates.',
+    intro: [
+      'A personal card says more than a message ever can. Pick a design for the occasion, write your own words and print it at home or send it digitally.',
+    ],
+    terms: ['card'],
+    uses: ['Thank-you cards', 'Birthday cards', 'Wedding congratulations', 'Sympathy cards', 'Eid, Diwali and Christmas cards'],
+    faqs: [
+      ['What size are the cards?', 'Most are 5 × 7 inches, a standard card size that fits common envelopes.'],
+      ['Can I share a card on WhatsApp?', 'Yes — download it as a JPG or PNG.'],
+    ],
+    related: ['free-invitation-maker', 'christmas-templates', 'eid-templates'],
+  }),
+  L({
+    slug: 'free-brochure-maker',
+    thing: 'brochure',
+    h1: 'Free brochure & company profile maker',
+    title: 'Free Brochure Maker — Company Profile & Presentation Templates',
+    description: 'Design brochures, company profiles and presentation decks online for free. Multi-page templates you can edit and export as PDF.',
+    intro: [
+      'Tell your company’s story with a professional multi-page brochure or deck. Edit each page, keep your brand colours consistent and export one tidy PDF.',
+    ],
+    terms: ['brochure', 'profile', 'presentation', 'deck', 'portfolio'],
+    uses: ['Company profiles', 'Sales presentations', 'Design portfolios', 'Product catalogues', 'Pitch decks'],
+    faqs: [
+      ['Can I add or remove pages?', 'Yes — use the Pages panel to duplicate, add, reorder or delete pages.'],
+      ['Can I present it?', 'Yes. Download a PDF and present it full-screen, or export the pages as images.'],
+    ],
+    related: ['brand-guidelines-template', 'free-letterhead-maker', 'free-flyer-maker'],
+  }),
+  L({
+    slug: 'free-letterhead-maker',
+    thing: 'letterhead',
+    h1: 'Free letterhead maker',
+    title: 'Free Letterhead Maker — Company Letterhead Templates (A4)',
+    description: 'Create a professional company letterhead online for free. A4 letterhead templates with your logo, address and brand colours — download as PDF.',
+    intro: [
+      'A consistent letterhead makes every quote, offer letter and invoice look official. Add your logo and details once, then reuse the template for every document.',
+    ],
+    terms: ['letterhead', 'stationery'],
+    uses: ['Business letters', 'Quotations and proposals', 'Offer letters', 'Invoices'],
+    faqs: [['Can I type my letter directly on it?', 'Yes — edit the body text in the editor and download a PDF, or download it blank to use in Word.']],
+    related: ['free-business-card-maker', 'brand-guidelines-template', 'free-resume-maker'],
+  }),
+  L({
+    slug: 'free-hiring-poster-maker',
+    thing: 'hiring poster',
+    h1: 'Free “We’re hiring” poster maker',
+    title: 'Free Hiring Poster Maker — We’re Hiring Job Post Templates',
+    description: 'Announce job vacancies with free “We’re hiring” poster and social post templates. For cafés, restaurants, retail, tech and corporate roles.',
+    intro: [
+      'Good people scroll past plain text job posts. A bold hiring post gets your vacancy noticed and shared. List the roles, how to apply and you are done.',
+    ],
+    terms: ['hiring', 'vacancy', 'job'],
+    uses: ['Café and restaurant staff', 'Retail and fashion', 'Software engineers', 'Corporate roles', 'Walk-in interviews'],
+    faqs: [['Where should I post it?', 'LinkedIn, Instagram and WhatsApp status work well — download as PNG. Print an A4 copy for your shop window.']],
+    related: ['free-instagram-post-maker', 'free-resume-maker', 'free-flyer-maker'],
+  }),
+  L({
+    slug: 'real-estate-flyer-maker',
+    thing: 'real estate design',
+    h1: 'Real estate flyer & listing post maker',
+    title: 'Free Real Estate Flyer & Listing Templates — Just Listed, Open House',
+    description: 'Free real estate templates for agents: just listed, open house, sold, for rent and luxury property flyers and Instagram posts.',
+    intro: [
+      'Listings sell faster with great presentation. Our real estate templates put the photos first, with price, bedrooms and contact details clear at a glance.',
+    ],
+    terms: ['real estate', 'listing', 'property', 'villa', 'apartment', 'for rent', 'open house'],
+    uses: ['Just listed and just sold', 'Open house invitations', 'Rentals', 'Luxury villa flyers', 'Agent branding'],
+    faqs: [['Can I use my own property photos?', 'Yes — upload them and they fill the photo frames automatically.']],
+    related: ['free-flyer-maker', 'free-instagram-post-maker', 'free-business-card-maker'],
+  }),
+  L({
+    slug: 'brand-guidelines-template',
+    thing: 'brand kit',
+    h1: 'Free brand guidelines & mockup templates',
+    title: 'Free Brand Guidelines Template & Brand Mockups',
+    description: 'Free brand guidelines (brand book) templates and brand mockups: logo usage, colour palette, typography, business cards, packaging, signage and app screens.',
+    intro: [
+      'A brand book keeps your logo, colours and fonts consistent everywhere. Our templates cover the essentials — story, logo rules, colour codes, typography, photography and real-world examples.',
+      'Pair them with our mockup scenes to show clients how their new brand looks on business cards, packaging, tote bags, shop signs and phone screens.',
+    ],
+    terms: ['brand', 'mockup', 'guidelines'],
+    uses: ['Brand books for clients', 'Logo presentations', 'Packaging and merchandise previews', 'Style guides for teams'],
+    faqs: [['Can I use the mockups with my own logo?', 'Yes — replace the sample logo and colours with your own in the editor.']],
+    related: ['free-brochure-maker', 'free-business-card-maker', 'free-letterhead-maker'],
+  }),
+  // ---------------- seasonal
+  L({
+    slug: 'uae-national-day-templates',
+    thing: 'UAE National Day design',
+    seasonal: true,
+    h1: 'UAE National Day templates',
+    title: 'Free UAE National Day Templates — Eid Al Etihad Posters & Posts',
+    description: 'Celebrate UAE National Day (Eid Al Etihad, 2 December) with free poster, social post and story templates in the flag colours.',
+    intro: ['Mark Eid Al Etihad with designs in the UAE flag colours — posters for the office, greeting posts for your brand and fireworks stories. Add your logo and share.'],
+    terms: ['national day', 'uae'],
+    uses: ['Company greetings', 'Office and school posters', 'Instagram posts and stories', 'Events and fireworks nights'],
+    faqs: [['When is UAE National Day?', 'UAE National Day, also called Eid Al Etihad, is celebrated on 2 December each year.']],
+    related: ['christmas-templates', 'new-year-templates', 'black-friday-templates'],
+  }),
+  L({
+    slug: 'christmas-templates',
+    thing: 'Christmas design',
+    seasonal: true,
+    h1: 'Christmas templates',
+    title: 'Free Christmas Templates — Cards, Posters, Menus & Posts',
+    description: 'Free Christmas templates: greeting cards, party posters, Christmas dinner menus, sale posts and festive mini posters. Edit online and print.',
+    intro: ['From a minimal ornament card to an ugly-sweater party poster and a Christmas dinner menu, find festive designs for family, friends and business.'],
+    terms: ['christmas', 'xmas', 'festive', 'santa'],
+    uses: ['Christmas cards', 'Party invitations and posters', 'Dinner menus', 'Holiday sales', 'Season’s greetings from your company'],
+    faqs: [['Can I print Christmas cards at home?', 'Yes — download the PDF and print on card stock.']],
+    related: ['new-year-templates', 'free-greeting-card-maker', 'free-menu-maker'],
+  }),
+  L({
+    slug: 'new-year-templates',
+    thing: 'New Year design',
+    seasonal: true,
+    h1: 'New Year 2027 templates',
+    title: 'Free New Year 2027 Templates — NYE Party Posters, Cards & Posts',
+    description: 'Free New Year’s Eve and 2027 templates: party posters, countdown posts, fireworks stories, greeting cards and corporate New Year wishes.',
+    intro: ['Ring in 2027 with gold, glitter and fireworks — or a calm, corporate greeting for your clients. Edit the date and venue and share.'],
+    terms: ['new year', '2027', 'nye'],
+    uses: ['NYE party posters', 'Countdown posts', 'Corporate New Year greetings', 'Goals planners'],
+    faqs: [['Can I change the year?', 'Yes — every number and word on the templates can be edited.']],
+    related: ['christmas-templates', 'uae-national-day-templates', 'free-poster-maker'],
+  }),
+  L({
+    slug: 'halloween-templates',
+    thing: 'Halloween design',
+    seasonal: true,
+    h1: 'Halloween templates',
+    title: 'Free Halloween Templates — Party Posters, Flyers & Posts',
+    description: 'Free Halloween templates: monster bash party posters, kids’ trick-or-treat flyers, vintage horror posters and spooky social posts.',
+    intro: ['Spooky, playful or vintage horror — pick a Halloween design for your party, school event or shop promotion.'],
+    terms: ['halloween', 'spooky', 'pumpkin'],
+    uses: ['Halloween parties', 'Kids’ trick or treat', 'Costume contests', 'Halloween sales'],
+    faqs: [['When is Halloween?', 'Halloween is on 31 October each year.']],
+    related: ['free-poster-maker', 'free-invitation-maker', 'christmas-templates'],
+  }),
+  L({
+    slug: 'diwali-templates',
+    thing: 'Diwali design',
+    seasonal: true,
+    h1: 'Diwali templates',
+    title: 'Free Diwali Templates — Deepavali Cards, Posters & Posts',
+    description: 'Free Diwali (Deepavali) templates: rangoli posters, festival of lights posts, Diwali sale stories and greeting cards.',
+    intro: ['Celebrate the festival of lights with rangoli patterns, glowing diyas and rich gold. Perfect for greetings, shops and community events.'],
+    terms: ['diwali', 'deepavali'],
+    uses: ['Diwali greetings', 'Festive sales', 'Community events', 'Greeting cards'],
+    faqs: [['Can I add my shop logo?', 'Yes — upload your logo and place it anywhere on the design.']],
+    related: ['free-greeting-card-maker', 'christmas-templates', 'free-instagram-post-maker'],
+  }),
+  L({
+    slug: 'eid-templates',
+    thing: 'Eid & Ramadan design',
+    seasonal: true,
+    h1: 'Eid & Ramadan templates',
+    title: 'Free Eid Mubarak & Ramadan Kareem Templates',
+    description: 'Free Eid Mubarak and Ramadan Kareem templates: greeting cards, social posts, iftar invitations and festive posters with Arabic calligraphy.',
+    intro: ['Share Eid and Ramadan greetings with crescent moons, lanterns and elegant Arabic type. Add your name or company logo and send.'],
+    terms: ['eid', 'ramadan', 'iftar'],
+    uses: ['Eid Mubarak cards', 'Ramadan Kareem posts', 'Iftar invitations', 'Company greetings'],
+    faqs: [['Can I write in Arabic?', 'Yes — the editor includes Arabic fonts such as Amiri, Cairo and Tajawal.']],
+    related: ['free-greeting-card-maker', 'uae-national-day-templates', 'free-invitation-maker'],
+  }),
+  L({
+    slug: 'black-friday-templates',
+    thing: 'sale design',
+    seasonal: true,
+    h1: 'Black Friday & White Friday templates',
+    title: 'Free Black Friday, White Friday & Cyber Monday Sale Templates',
+    description: 'Free sale templates for Black Friday, White Friday and Cyber Monday: bold discount posts, luxury sale posts and neon stories.',
+    intro: ['Make your biggest sale of the year impossible to miss. Bold discount posts, quiet luxury sale designs and neon Cyber Monday stories — just add your discount and code.'],
+    terms: ['black friday', 'white friday', 'cyber monday', 'sale'],
+    uses: ['Instagram sale posts', 'Discount stories', 'In-store sale posters', 'Email banners'],
+    faqs: [['When is White Friday?', 'White Friday is the Middle East name for Black Friday, held on the same late-November weekend.']],
+    related: ['free-instagram-post-maker', 'free-flyer-maker', 'uae-national-day-templates'],
+  }),
+];
+
+export const landingBySlug = (s: string) => LANDINGS.find((l) => l.slug === s);

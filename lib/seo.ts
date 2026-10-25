@@ -72,6 +72,18 @@ export async function getAllPublishedTemplates(): Promise<SeoTemplate[]> {
   return out;
 }
 
+/** Published templates whose name or keywords contain any of the terms. */
+export async function searchTemplates(terms: string[], limit = 40): Promise<SeoTemplate[]> {
+  const ors = terms
+    .map((t) => t.replace(/[^\p{L}\p{N} ]/gu, '').trim())
+    .filter(Boolean)
+    .flatMap((t) => [`name.ilike.*${t}*`, `search_keywords.ilike.*${t}*`])
+    .join(',');
+  if (!ors) return [];
+  const rows = await rest<SeoTemplate[]>(`templates?select=${COLS}&${PUBLISHED}&or=(${encodeURIComponent(ors)})&order=is_featured.desc,sort_order.asc&limit=${limit}`);
+  return rows || [];
+}
+
 // Category ↔ URL segment ("Social Media" ↔ "social-media").
 export const categorySlug = (c: string) => c.toLowerCase().replace(/&/g, 'and').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 export async function getCategories(): Promise<{ name: string; slug: string; count: number }[]> {
