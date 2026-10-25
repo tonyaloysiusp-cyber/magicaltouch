@@ -22,6 +22,8 @@ export interface Landing {
   features?: [string, string][];
   /** 'ar' renders the page right-to-left with Arabic interface text */
   lang?: 'ar';
+  /** country pages, grouped on the hub */
+  country?: string;
 }
 
 const L = (l: Landing) => l;
@@ -398,7 +400,7 @@ export const LANDINGS: Landing[] = [
   }),
 ];
 
-export const ALL_LANDINGS = () => [...LANDINGS, ...MORE_LANDINGS];
+export const ALL_LANDINGS = () => [...LANDINGS, ...MORE_LANDINGS, ...COUNTRY_LANDINGS];
 export const landingBySlug = (s: string) => ALL_LANDINGS().find((l) => l.slug === s);
 
 const FREE_FEATURES: [string, string][] = [
@@ -573,6 +575,7 @@ export const MORE_LANDINGS: Landing[] = [
   }),
   L({
     slug: 'free-design-templates-uae',
+    country: 'UAE',
     thing: 'design',
     h1: 'Free design templates for UAE businesses',
     title: 'Free Design Templates UAE — Dubai, Abu Dhabi & Sharjah Businesses',
@@ -653,4 +656,52 @@ export const MORE_LANDINGS: Landing[] = [
     faqs: [['هل أضع صورة في السيرة الذاتية؟', 'في الإمارات والخليج يُفضّل غالباً إضافة صورة شخصية رسمية، ولدينا قوالب بصورة وبدون.']],
     related: ['ar-free-design-tool', 'ar-flyer-maker', 'ar-invitation-maker'],
   }),
+];
+
+const C = (country: string, slug: string, size: string, occasions: string, terms: string[], extra: string, faqs: [string, string][]) =>
+  L({
+    slug,
+    country,
+    thing: 'design',
+    h1: `Free design templates — ${country}`,
+    title: `Free Online Design Tool ${country} — 1,000+ Free Templates, No Watermark`,
+    description: `Free online design tool for ${country}: flyers, posters, invitations, resumes and social posts in ${size}. ${occasions} templates. Every feature free, no watermark.`,
+    intro: [
+      `Magical Touch is a free online design tool used by small businesses, students and creators in ${country}. Every template, the full editor, the photo studio and every download format are free — no subscription and no watermark.`,
+      `Templates come in ${size}, and you can resize any design in one click. ${extra}`,
+    ],
+    terms,
+    uses: ['Small businesses and shops', 'Restaurants and cafés', 'Schools, colleges and teachers', 'Real estate', 'Weddings and parties', 'Social media marketing'],
+    faqs: [
+      [`Is Magical Touch free to use in ${country}?`, 'Yes. It is free everywhere — all templates, tools and downloads, with no watermark and no paid plan.'],
+      ...faqs,
+    ],
+    related: ['free-online-design-tool', 'free-flyer-maker', 'free-resume-maker', 'free-instagram-post-maker'],
+  });
+
+export const COUNTRY_LANDINGS: Landing[] = [
+  C('India', 'free-design-templates-india', 'A4, A5 and social media sizes', 'Diwali, Holi, wedding, birthday and festive sale',
+    ['diwali', 'deepavali', 'wedding', 'birthday', 'invitation', 'sale'],
+    'Design Diwali greetings, wedding invitations, shop offers, coaching-class flyers and Instagram posts — then print locally or share on WhatsApp.',
+    [['Can I design Diwali and wedding invitations?', 'Yes — there are Diwali posters, posts and cards, and many wedding and birthday invitation templates.'], ['Can I share designs on WhatsApp?', 'Yes. Download a JPG or PNG and share it straight from your phone.']]),
+  C('USA', 'free-design-templates-usa', 'US Letter (8.5 × 11 in) and social media sizes', 'Halloween, Thanksgiving, Christmas, New Year, Black Friday and graduation',
+    ['halloween', 'christmas', 'new year', 'black friday', 'cyber monday', 'flyer'],
+    'Make flyers for your small business, yard-sale and event posters, resumes, and holiday sale posts for Black Friday and Cyber Monday.',
+    [['Do you support US Letter size?', 'Yes. Pick US Letter (8.5 × 11 in) when you start, or resize any A4 template to Letter in one click.'], ['Can I print at a local print shop?', 'Yes — export a print PDF with bleed and crop marks, which print shops accept.']]),
+  C('Canada', 'free-design-templates-canada', 'US Letter and A-series sizes', 'Christmas, New Year, Halloween and Black Friday',
+    ['christmas', 'new year', 'halloween', 'black friday', 'flyer', 'poster'],
+    'Design flyers and posters for your café, shop or community event, holiday cards and resumes for job applications.',
+    [['Which paper size is used in Canada?', 'Canada mostly uses US Letter (8.5 × 11 in). Choose it when starting or resize any template.']]),
+  C('UK', 'free-design-templates-uk', 'A4, A5 and A3', 'Christmas, New Year, Halloween and Black Friday',
+    ['christmas', 'new year', 'halloween', 'flyer', 'poster', 'menu'],
+    'Create pub and café menus, event posters, Christmas cards, CVs and flyers — exported as print-ready A4 or A5 PDFs.',
+    [['Do you have CV templates for UK jobs?', 'Yes — clean CV templates without a photo, which is the norm in the UK.']]),
+  C('Saudi Arabia', 'free-design-templates-saudi-arabia', 'A4, A5 and social media sizes', 'Saudi National Day, Ramadan, Eid and White Friday',
+    ['eid', 'ramadan', 'arabic', 'white friday', 'invitation', 'menu'],
+    'Write in Arabic with fonts like Amiri, Cairo and Tajawal, and design Ramadan and Eid greetings, restaurant menus, invitations and sale posts.',
+    [['Does it support Arabic?', 'Yes — Arabic fonts and right-to-left text are supported.']]),
+  C('Australia', 'free-design-templates-australia', 'A4, A5 and A3', 'Christmas, New Year and Black Friday',
+    ['christmas', 'new year', 'black friday', 'flyer', 'poster', 'resume'],
+    'Make café menus, real estate flyers, event posters, resumes and social posts — print-ready in A4 and A5.',
+    [['Can I design real estate flyers?', 'Yes — there are just listed, open house, sold and luxury property templates.']]),
 ];
