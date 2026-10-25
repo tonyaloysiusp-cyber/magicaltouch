@@ -6,7 +6,16 @@ import { ensureFontsLoadedForCanvasJSON } from '@/lib/editor/googleFonts';
 
 export interface PageImage { name: string; url: string; width: number; height: number }
 
-export async function renderTemplatePages(canvasJson: any, maxSide = 1100): Promise<PageImage[]> {
+export interface RenderOptions {
+  /** Change the loaded canvas before it is drawn (e.g. add a QR block). */
+  prepare?: (canvas: any, F: any, boards: any[]) => void | Promise<void>;
+  format?: 'jpeg' | 'png';
+  quality?: number;
+  /** Allow scaling up past 2× (for print-size exports). */
+  maxMultiplier?: number;
+}
+
+export async function renderTemplatePages(canvasJson: any, maxSide = 1100, opts: RenderOptions = {}): Promise<PageImage[]> {
   if (!canvasJson) return [];
   const json = typeof canvasJson === 'string' ? JSON.parse(canvasJson) : canvasJson;
   await ensureFontsLoadedForCanvasJSON(json).catch(() => undefined);
@@ -21,6 +30,7 @@ export async function renderTemplatePages(canvasJson: any, maxSide = 1100): Prom
     .sort((a: any, b: any) => (a.top - b.top) * 10 + (a.left - b.left));
   // Guides and similar helpers never belong in a preview.
   canvas.getObjects().filter((o: any) => o.__isGuide).forEach((o: any) => canvas.remove(o));
+  if (opts.prepare) await opts.prepare(canvas, F, boards);
   let maxX = 0, maxY = 0;
   canvas.getObjects().forEach((o: any) => {
     const r = o.getBoundingRect(true, true);
@@ -35,9 +45,9 @@ export async function renderTemplatePages(canvasJson: any, maxSide = 1100): Prom
     const left = ab ? ab.left : 0, top = ab ? ab.top : 0;
     const w = ab ? ab.width * (ab.scaleX || 1) : canvas.getWidth();
     const h = ab ? ab.height * (ab.scaleY || 1) : canvas.getHeight();
-    const mult = Math.min(2, maxSide / Math.max(w, h));
+    const mult = Math.min(opts.maxMultiplier ?? 2, maxSide / Math.max(w, h));
     try {
-      const url = canvas.toDataURL({ format: 'jpeg', quality: 0.88, left, top, width: w, height: h, multiplier: mult });
+      const url = canvas.toDataURL({ format: opts.format || 'jpeg', quality: opts.quality ?? 0.88, left, top, width: w, height: h, multiplier: mult });
       pages.push({ name: (ab && ab.name) || `Page ${i + 1}`, url, width: w, height: h });
     } catch {
       // A picture from another site can block reading the canvas; skip.

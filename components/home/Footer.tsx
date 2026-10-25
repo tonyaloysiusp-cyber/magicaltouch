@@ -78,6 +78,8 @@ export function Footer({ theme }: { theme: AppTheme }) {
             <p className="text-xs font-semibold text-mt-ink dark:text-mt-ink tracking-wide uppercase">Company</p>
             <ul className="mt-4 space-y-2.5 text-sm text-mt-muted dark:text-mt-muted">
               <li className="text-mt-muted/70 dark:text-mt-faint/70">Magical Touch Design</li>
+              <li><Link href="/about" className="hover:text-mt-ink dark:hover:text-white">About us</Link></li>
+              <li><Link href="/tutorials" className="hover:text-mt-ink dark:hover:text-white">Tutorials</Link></li>
               <li><Link href="/privacy" className="hover:text-mt-ink dark:hover:text-white">Privacy Policy</Link></li>
               <li><Link href="/terms" className="hover:text-mt-ink dark:hover:text-white">Terms of Service</Link></li>
               <li><Link href="/contact" className="hover:text-mt-ink dark:hover:text-white">Contact us</Link></li>

@@ -2,19 +2,30 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { SeoShell, Crumbs } from '@/components/seo/SeoShell';
-import { SITE_URL, SITE_NAME, searchTemplates } from '@/lib/seo';
+import { SITE_URL, SITE_NAME, searchTemplates, getSeoPage } from '@/lib/seo';
 import { ALL_LANDINGS, landingBySlug, Landing } from '@/lib/landings';
 
 // Keyword landing pages: /free-flyer-maker, /christmas-templates, ...
 // Only the slugs in lib/landings.ts exist; anything else is a 404.
 export const revalidate = 3600;
-export const dynamicParams = false;
+// Built-in pages are pre-rendered; pages made in Admin → SEO & promotion
+// are looked up on demand (anything else is a 404).
+export const dynamicParams = true;
+
+async function resolveLanding(slug: string): Promise<Landing | null> {
+  const built = landingBySlug(slug);
+  if (built) return built;
+  if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(slug)) return null;
+  const p = await getSeoPage(slug);
+  if (!p) return null;
+  return { slug: p.slug, thing: p.thing || 'design', h1: p.h1, title: p.title, description: p.description, intro: (p.intro || '').split(/\n{2,}/).filter(Boolean), terms: p.terms || [], uses: [], faqs: (p.faqs || []).filter((x) => Array.isArray(x) && x[0] && x[1]) as [string, string][], related: ['free-online-design-tool', 'free-design-templates', 'free-flyer-maker'] };
+}
 export function generateStaticParams() {
   return ALL_LANDINGS().map((l) => ({ landing: l.slug }));
 }
 
-export function generateMetadata({ params }: { params: { landing: string } }): Metadata {
-  const l = landingBySlug(params.landing);
+export async function generateMetadata({ params }: { params: { landing: string } }): Promise<Metadata> {
+  const l = await resolveLanding(params.landing);
   if (!l) return {};
   const url = `${SITE_URL}/${l.slug}`;
   return {
@@ -42,7 +53,7 @@ const UI = {
 };
 
 export default async function LandingPage({ params }: { params: { landing: string } }) {
-  const found = landingBySlug(params.landing);
+  const found = await resolveLanding(params.landing);
   if (!found) notFound();
   const l = found as Landing;
   const u = UI[l.lang || 'en'];
@@ -59,7 +70,7 @@ export default async function LandingPage({ params }: { params: { landing: strin
       isPartOf: { '@type': 'WebSite', name: SITE_NAME, url: SITE_URL },
       mainEntity: { '@type': 'ItemList', numberOfItems: items.length, itemListElement: items.slice(0, 30).map((t, i) => ({ '@type': 'ListItem', position: i + 1, url: `${SITE_URL}/templates/${t.slug}`, name: t.name })) },
     },
-    { '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: l.faqs.map(([q, a]) => ({ '@type': 'Question', name: q, acceptedAnswer: { '@type': 'Answer', text: a } })) },
+    ...(l.faqs.length ? [{ '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: l.faqs.map(([q, a]) => ({ '@type': 'Question', name: q, acceptedAnswer: { '@type': 'Answer', text: a } })) }] : []),
     {
       '@context': 'https://schema.org',
       '@type': 'HowTo',
@@ -148,17 +159,17 @@ export default async function LandingPage({ params }: { params: { landing: strin
               ))}
             </ol>
           </div>
-          <div>
+          {l.uses.length > 0 && <div>
             <h2 className="text-xl sm:text-2xl font-semibold">{u.uses}</h2>
             <ul className="mt-5 grid sm:grid-cols-2 gap-2">
               {l.uses.map((u) => (
                 <li key={u} className="rounded-xl border border-mt-border px-4 py-3 text-[14px]">{u}</li>
               ))}
             </ul>
-          </div>
+          </div>}
         </section>
 
-        <section className="mt-14 max-w-3xl">
+        {l.faqs.length > 0 && <section className="mt-14 max-w-3xl">
           <h2 className="text-xl sm:text-2xl font-semibold">{u.faq}</h2>
           <div className="mt-5 divide-y divide-mt-border border-y border-mt-border">
             {l.faqs.map(([q, a]) => (
@@ -168,7 +179,7 @@ export default async function LandingPage({ params }: { params: { landing: strin
               </details>
             ))}
           </div>
-        </section>
+        </section>}
 
         {related.length > 0 && (
           <nav aria-label="Related" className="mt-14">

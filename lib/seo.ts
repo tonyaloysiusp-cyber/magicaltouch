@@ -119,3 +119,20 @@ export function templateDescription(t: SeoTemplate) {
   const kw = (t.search_keywords || '').split(',').map((s) => s.trim()).filter(Boolean).slice(0, 4).join(', ');
   return `Free ${t.name} template — ${formatLabel(t.width, t.height)}, ${sizeLabel(t.width, t.height)}. Edit the text, colours and photos online and download as PDF, PNG or JPG.${kw ? ` Great for ${kw}.` : ''}`.slice(0, 300);
 }
+
+/** A public site setting (e.g. the Google verification code). */
+export async function getSiteSetting(key: string): Promise<string | null> {
+  const rows = await rest<{ value: string }[]>(`site_settings?select=value&key=eq.${encodeURIComponent(key)}&limit=1`, 600);
+  return rows?.[0]?.value?.trim() || null;
+}
+
+export interface SeoPageRow { slug: string; title: string; h1: string; description: string; intro: string; thing: string; terms: string[]; faqs: [string, string][]; updated_at: string }
+
+/** Landing pages created in Admin → SEO & promotion. */
+export async function getPublishedSeoPages(): Promise<SeoPageRow[]> {
+  return (await rest<SeoPageRow[]>(`seo_pages?select=slug,title,h1,description,intro,thing,terms,faqs,updated_at&status=eq.published&limit=1000`, 600)) || [];
+}
+export async function getSeoPage(slug: string): Promise<SeoPageRow | null> {
+  const rows = await rest<SeoPageRow[]>(`seo_pages?select=slug,title,h1,description,intro,thing,terms,faqs,updated_at&status=eq.published&slug=eq.${encodeURIComponent(slug)}&limit=1`, 600);
+  return rows?.[0] || null;
+}

@@ -9,7 +9,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Award, Copy, Check, ExternalLink, ShieldX, Search, Loader2, QrCode, Ban } from 'lucide-react';
+import { Award, Copy, Check, ExternalLink, ShieldX, Search, Loader2, QrCode, Ban, Users, Download, Pencil, X, Plus, Trash2 } from 'lucide-react';
+import { parseBulkNames, packageCertificates, BulkRow } from '@/lib/certificatesBulk';
 import { AdminShell } from '@/components/admin/AdminShell';
 import { supabase } from '@/lib/supabase';
 import { getOrCreateProfile } from '@/lib/profile';
@@ -73,6 +74,148 @@ function CertificatePreview({ master, values }: { master: Master | null; values:
   );
 }
 
+// ---------------------------------------------------------------- bulk issue
+function downloadBlob(blob: Blob, name: string) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+}
+
+function BulkIssue({ masters, onIssued }: { masters: Master[]; onIssued: () => void }) {
+  const [shared, setShared] = useState({ title: '', description: '', issued_on: new Date().toISOString().slice(0, 10), template_id: '' });
+  const [pasted, setPasted] = useState('');
+  const [rows, setRows] = useState<BulkRow[]>([]);
+  const [previewIdx, setPreviewIdx] = useState(0);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  const [issued, setIssued] = useState<Issue[]>([]);
+  const masterId = shared.template_id || masters[0]?.id || '';
+  const master = masters.find((m) => m.id === masterId) || null;
+
+  const addFromText = () => {
+    const add = parseBulkNames(pasted, { title: shared.title, description: shared.description });
+    if (!add.length) return setErr('Paste at least one name — one per line.');
+    setErr(null);
+    setRows((r) => [...r, ...add]);
+    setPasted('');
+  };
+  const setRow = (i: number, patch: Partial<BulkRow>) => setRows((r) => r.map((x, j) => (j === i ? { ...x, ...patch } : x)));
+  const applyShared = () => setRows((r) => r.map((x) => ({ ...x, title: shared.title || x.title, description: shared.description || x.description })));
+
+  const issueAll = async () => {
+    setErr(null);
+    const clean = rows.map((r) => ({ ...r, recipient: r.recipient.trim(), title: (r.title || shared.title).trim(), description: (r.description || '').trim() }));
+    const missing = clean.findIndex((r) => !r.recipient || !r.title);
+    if (missing >= 0) return setErr(`Row ${missing + 1} needs a name and a certificate title.`);
+    if (!window.confirm(`Issue ${clean.length} certificates? Each gets its own code and QR check.`)) return;
+    const { data: { user } } = await supabase.auth.getUser();
+    const out: Issue[] = [];
+    for (let i = 0; i < clean.length; i += 50) {
+      setBusy(`Issuing ${Math.min(i + 50, clean.length)} of ${clean.length}…`);
+      const chunk = clean.slice(i, i + 50).map((r) => ({ code: newCertificateCode(), recipient: r.recipient, title: r.title, description: r.description || null, issued_on: shared.issued_on, template_id: masterId || null, created_by: user?.id }));
+      const { data, error } = await supabase.from('certificate_issues').insert(chunk).select('*');
+      if (error) {
+        // A code clash is astronomically rare; retry those one by one.
+        for (const one of chunk) {
+          const { data: d } = await supabase.from('certificate_issues').insert({ ...one, code: newCertificateCode() }).select('*').single();
+          if (d) out.push(d as Issue);
+        }
+      } else out.push(...((data as Issue[]) || []));
+    }
+    setIssued(out);
+    setRows([]);
+    setBusy(null);
+    onIssued();
+  };
+
+  const download = async (mode: 'pdf' | 'zip') => {
+    if (!master?.canvas_json || !issued.length) return;
+    setBusy(`Preparing 0 of ${issued.length}…`);
+    try {
+      const { blob, fileName } = await packageCertificates(master.canvas_json, issued as any, mode, (d, t) => setBusy(`Preparing ${d} of ${t}…`));
+      downloadBlob(blob, fileName);
+    } catch (e: any) {
+      setErr(`Download failed: ${e?.message || e}`);
+    }
+    setBusy(null);
+  };
+
+  const preview = rows[previewIdx] || rows[0];
+  return (
+    <div className="mt-4 flex flex-col gap-5">
+      <div className="grid md:grid-cols-2 gap-3">
+        <label className="text-[12px] text-mt-muted">Certificate title (for everyone)<input className={field} value={shared.title} onChange={(e) => setShared({ ...shared, title: e.target.value })} placeholder="e.g. Brand Design Workshop" /></label>
+        <label className="text-[12px] text-mt-muted">Details (for everyone, optional)<input className={field} value={shared.description} onChange={(e) => setShared({ ...shared, description: e.target.value })} placeholder="e.g. 12-hour course · Dubai · November 2026" /></label>
+        <label className="text-[12px] text-mt-muted">Date<input type="date" className={field} value={shared.issued_on} onChange={(e) => setShared({ ...shared, issued_on: e.target.value })} /></label>
+        <label className="text-[12px] text-mt-muted">Design<select className={field} value={masterId} onChange={(e) => setShared({ ...shared, template_id: e.target.value })}>{masters.map((m) => <option key={m.id} value={m.id}>{m.name.replace(/^MT Brand · /, '')}</option>)}</select></label>
+      </div>
+
+      <div>
+        <label className="text-[12px] text-mt-muted block">
+          Names — one per line. You can also paste from Excel or Google Sheets (Name, Title, Details).
+          <textarea value={pasted} onChange={(e) => setPasted(e.target.value)} rows={5} placeholder={'Aisha Rahman\nOmar Haddad\nPriya Sharma, Advanced Photo Editing\n…'} className="mt-1 w-full rounded-xl border border-mt-input-border bg-mt-surface px-3 py-2 text-sm text-mt-ink font-mono" />
+        </label>
+        <div className="mt-2 flex flex-wrap gap-2">
+          <button type="button" onClick={addFromText} className={`${btn} bg-mt-primary text-mt-onprimary`}><Users size={14} /> Add names to the list</button>
+          <button type="button" onClick={() => setRows((r) => [...r, { recipient: '', title: shared.title, description: shared.description }])} className={`${btn} border border-mt-border text-mt-ink`}><Plus size={14} /> Add one row</button>
+          {rows.length > 0 && <button type="button" onClick={applyShared} className={`${btn} border border-mt-border text-mt-ink`}>Use the title & details above for every row</button>}
+        </div>
+      </div>
+
+      {rows.length > 0 && (
+        <div className="grid xl:grid-cols-[1.2fr_1fr] gap-5">
+          <div>
+            <p className="text-[13px] font-semibold text-mt-ink">{rows.length} certificate{rows.length > 1 ? 's' : ''} ready — check and correct anything before issuing</p>
+            <div className="mt-2 max-h-[420px] overflow-auto rounded-xl border border-mt-border">
+              <table className="w-full text-[13px]">
+                <thead className="sticky top-0 bg-mt-surface2 text-left text-mt-muted"><tr><th className="px-2 py-2 w-8">#</th><th className="px-2">Name</th><th className="px-2">Title</th><th className="px-2">Details</th><th className="w-8" /></tr></thead>
+                <tbody>
+                  {rows.map((r, i) => (
+                    <tr key={i} onClick={() => setPreviewIdx(i)} className={`border-t border-mt-border ${i === previewIdx ? 'bg-[#3B82C4]/10' : ''}`}>
+                      <td className="px-2 text-mt-faint">{i + 1}</td>
+                      <td className="px-1 py-1"><input aria-label={`Name ${i + 1}`} className="w-full h-8 rounded-lg border border-transparent hover:border-mt-border focus:border-[#3B82C4] bg-transparent px-2" value={r.recipient} onChange={(e) => setRow(i, { recipient: e.target.value })} /></td>
+                      <td className="px-1"><input aria-label={`Title ${i + 1}`} className="w-full h-8 rounded-lg border border-transparent hover:border-mt-border focus:border-[#3B82C4] bg-transparent px-2" value={r.title} onChange={(e) => setRow(i, { title: e.target.value })} /></td>
+                      <td className="px-1"><input aria-label={`Details ${i + 1}`} className="w-full h-8 rounded-lg border border-transparent hover:border-mt-border focus:border-[#3B82C4] bg-transparent px-2" value={r.description} onChange={(e) => setRow(i, { description: e.target.value })} /></td>
+                      <td className="px-1"><button type="button" aria-label={`Remove row ${i + 1}`} onClick={(e) => { e.stopPropagation(); setRows((x) => x.filter((_, j) => j !== i)); }} className="p-1.5 rounded-lg text-mt-faint hover:text-rose-600"><Trash2 size={14} /></button></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="mt-3 flex flex-wrap items-center gap-3">
+              <button type="button" disabled={!!busy} onClick={issueAll} className={`${btn} bg-emerald-600 text-white`}>{busy ? <Loader2 size={14} className="animate-spin" /> : <Award size={14} />} Issue {rows.length} certificate{rows.length > 1 ? 's' : ''}</button>
+              <button type="button" onClick={() => setRows([])} className="text-[13px] text-mt-muted hover:text-mt-ink">Clear list</button>
+              {busy && <span className="text-[13px] text-mt-muted">{busy}</span>}
+            </div>
+          </div>
+          <div>
+            <p className="text-[12px] text-mt-muted mb-2">Preview of row {Math.min(previewIdx, rows.length - 1) + 1} — click a row to preview it</p>
+            {preview && <CertificatePreview master={master} values={{ recipient: preview.recipient, title: preview.title || shared.title, description: preview.description, issued_on: shared.issued_on }} />}
+          </div>
+        </div>
+      )}
+      {err && <p className="text-[13px] text-rose-600">{err}</p>}
+
+      {issued.length > 0 && (
+        <div className="rounded-2xl border border-emerald-500/40 bg-emerald-500/5 p-4">
+          <p className="text-[14px] font-semibold text-mt-ink">{issued.length} certificates issued — each has its own code and QR check.</p>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <button type="button" disabled={!!busy} onClick={() => download('pdf')} className={`${btn} bg-mt-primary text-mt-onprimary`}><Download size={14} /> Download all — one PDF</button>
+            <button type="button" disabled={!!busy} onClick={() => download('zip')} className={`${btn} border border-mt-border text-mt-ink`}><Download size={14} /> Download ZIP — one PDF per person</button>
+            {busy && <span className="text-[13px] text-mt-muted inline-flex items-center gap-1.5"><Loader2 size={14} className="animate-spin" /> {busy}</span>}
+          </div>
+          <p className="mt-2 text-[12px] text-mt-muted">Need to change one? Use <b>Edit</b> or <b>Open</b> in the list below — every certificate can still be corrected by hand.</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function CertificatesAdminPage() {
   const router = useRouter();
   const [state, setState] = useState<'loading' | 'denied' | 'ok'>('loading');
@@ -84,6 +227,10 @@ export default function CertificatesAdminPage() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [made, setMade] = useState<Issue | null>(null);
+  const [mode, setMode] = useState<'one' | 'bulk'>('one');
+  const [editId, setEditId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({ recipient: '', title: '', description: '' });
+  const [rowBusy, setRowBusy] = useState<string | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -144,6 +291,25 @@ export default function CertificatesAdminPage() {
     load();
   };
   const copy = (t: string) => navigator.clipboard?.writeText(t).then(() => { setCopied(t); setTimeout(() => setCopied(null), 1200); });
+  // Correct a certificate by hand (name, title, details). The code stays the
+  // same, so the QR check shows the corrected details.
+  const saveEdit = async (r: Issue) => {
+    if (!editForm.recipient.trim() || !editForm.title.trim()) return;
+    await supabase.from('certificate_issues').update({ recipient: editForm.recipient.trim(), title: editForm.title.trim(), description: editForm.description.trim() || null }).eq('id', r.id);
+    setEditId(null);
+    load();
+  };
+  const downloadOne = async (r: Issue) => {
+    const m = masters.find((x) => x.id === r.template_id) || masters[0];
+    if (!m?.canvas_json) return;
+    setRowBusy(r.id);
+    try {
+      const { blob } = await packageCertificates(m.canvas_json, [r as any], 'pdf');
+      downloadBlob(blob, `${r.recipient} — ${r.code}.pdf`);
+    } finally {
+      setRowBusy(null);
+    }
+  };
   const editorHref = (r: Issue) => {
     const m = masters.find((x) => x.id === r.template_id) || masters[0];
     return m ? `/editor?w=${m.width}&h=${m.height}&templateId=${m.id}&from=brand&cert=${encodeURIComponent(r.code)}` : null;
@@ -162,7 +328,15 @@ export default function CertificatesAdminPage() {
     <AdminShell active="certificates" title="Verified certificates" accent="certificates" subtitle="Issue certificates that can be checked by anyone — a unique code and QR code on every one, so copies and fakes are easy to spot.">
       <div className="flex flex-col gap-6">
         <section className={card}>
-          <h2 className="text-lg font-semibold text-mt-ink inline-flex items-center gap-2"><Award size={19} /> Issue a certificate</h2>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 className="text-lg font-semibold text-mt-ink inline-flex items-center gap-2"><Award size={19} /> Issue certificates</h2>
+            <div role="tablist" className="inline-flex rounded-full border border-mt-border p-0.5 text-[13px] font-medium">
+              {(['one', 'bulk'] as const).map((m) => (
+                <button key={m} role="tab" aria-selected={mode === m} onClick={() => setMode(m)} className={`h-8 px-4 rounded-full ${mode === m ? 'bg-mt-primary text-mt-onprimary' : 'text-mt-muted hover:text-mt-ink'}`}>{m === 'one' ? 'One certificate' : 'Many at once (bulk)'}</button>
+              ))}
+            </div>
+          </div>
+          {mode === 'bulk' ? <BulkIssue masters={masters} onIssued={load} /> : (<>
           <form onSubmit={issue} className="mt-4 grid md:grid-cols-2 gap-3">
             <label className="text-[12px] text-mt-muted">Awarded to<input className={field} value={form.recipient} onChange={(e) => setForm({ ...form, recipient: e.target.value })} placeholder="Full name, as it should appear" /></label>
             <label className="text-[12px] text-mt-muted">Certificate title<input className={field} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="e.g. Certificate of Completion — Brand Design Workshop" /></label>
@@ -192,6 +366,7 @@ export default function CertificatesAdminPage() {
               </div>
             </div>
           )}
+          </>)}
         </section>
 
         <section className={card}>
@@ -206,12 +381,30 @@ export default function CertificatesAdminPage() {
                 {list.map((r) => (
                   <tr key={r.id} className="border-t border-mt-border align-top">
                     <td className="py-2.5 pr-3 font-mono whitespace-nowrap">{r.code}</td>
-                    <td className="pr-3 font-semibold text-mt-ink">{r.recipient}</td>
-                    <td className="pr-3">{r.title}</td>
+                    {editId === r.id ? (
+                      <>
+                        <td className="pr-2 py-1"><input aria-label="Edit name" className={`${field} h-8`} value={editForm.recipient} onChange={(e) => setEditForm({ ...editForm, recipient: e.target.value })} /></td>
+                        <td className="pr-2 py-1"><input aria-label="Edit title" className={`${field} h-8`} value={editForm.title} onChange={(e) => setEditForm({ ...editForm, title: e.target.value })} /><input aria-label="Edit details" placeholder="Details" className={`${field} h-8 mt-1`} value={editForm.description} onChange={(e) => setEditForm({ ...editForm, description: e.target.value })} /></td>
+                      </>
+                    ) : (
+                      <>
+                        <td className="pr-3 font-semibold text-mt-ink">{r.recipient}</td>
+                        <td className="pr-3">{r.title}{r.description ? <span className="block text-[12px] text-mt-muted">{r.description}</span> : null}</td>
+                      </>
+                    )}
                     <td className="pr-3 whitespace-nowrap">{fmt(r.issued_on)}</td>
                     <td className="pr-3 whitespace-nowrap">{r.verify_count}×{r.last_verified_at ? ` · ${fmt(r.last_verified_at)}` : ''}</td>
                     <td className="pr-3">{r.status === 'valid' ? <span className="text-emerald-600 font-semibold">Valid</span> : <span className="text-amber-600 font-semibold" title={r.revoked_reason || ''}>Withdrawn</span>}</td>
                     <td className="py-2 whitespace-nowrap text-right">
+                      {editId === r.id ? (
+                        <>
+                          <button onClick={() => saveEdit(r)} className="inline-flex items-center gap-1 text-emerald-600 font-semibold mr-3"><Check size={13} /> Save</button>
+                          <button onClick={() => setEditId(null)} className="inline-flex items-center gap-1 text-mt-muted mr-3"><X size={13} /> Cancel</button>
+                        </>
+                      ) : (
+                        <button onClick={() => { setEditId(r.id); setEditForm({ recipient: r.recipient, title: r.title, description: r.description || '' }); }} className="inline-flex items-center gap-1 text-mt-muted hover:text-mt-ink mr-3"><Pencil size={13} /> Edit</button>
+                      )}
+                      <button onClick={() => downloadOne(r)} disabled={rowBusy === r.id} className="inline-flex items-center gap-1 text-mt-muted hover:text-mt-ink mr-3">{rowBusy === r.id ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />} PDF</button>
                       {editorHref(r) && <Link href={editorHref(r)!} className="inline-flex items-center gap-1 text-[#3B82C4] font-semibold mr-3"><ExternalLink size={13} /> Open</Link>}
                       <button onClick={() => copy(verifyUrl(r.code))} className="inline-flex items-center gap-1 text-mt-muted hover:text-mt-ink mr-3"><QrCode size={13} /> {copied === verifyUrl(r.code) ? 'Copied' : 'Link'}</button>
                       {r.status === 'valid' && <button onClick={() => revoke(r)} className="inline-flex items-center gap-1 text-rose-600"><Ban size={13} /> Withdraw</button>}

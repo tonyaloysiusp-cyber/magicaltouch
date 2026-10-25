@@ -8,9 +8,9 @@ const poppins = Poppins({
 });
 
 import type { Metadata, Viewport } from 'next';
-import { SITE_URL, SITE_NAME, SITE_DESCRIPTION } from '@/lib/seo';
+import { SITE_URL, SITE_NAME, SITE_DESCRIPTION, getSiteSetting } from '@/lib/seo';
 
-export const metadata: Metadata = {
+const baseMetadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: { default: 'Magical Touch Design — Free Online Design Templates & Editor', template: '%s | Magical Touch Design' },
   description: SITE_DESCRIPTION,
@@ -22,6 +22,12 @@ export const metadata: Metadata = {
   formatDetection: { telephone: false },
 };
 
+// The Google Search Console code is set from Admin → SEO & promotion.
+export async function generateMetadata(): Promise<Metadata> {
+  const google = await getSiteSetting('google_verification');
+  return google ? { ...baseMetadata, verification: { google } } : baseMetadata;
+}
+
 export const viewport: Viewport = { themeColor: [{ media: '(prefers-color-scheme: light)', color: '#ffffff' }, { media: '(prefers-color-scheme: dark)', color: '#000000' }] };
 
 // Who we are, for Google's knowledge panel and the site-search box.
@@ -29,7 +35,13 @@ const ORG_JSON_LD = [
   {
     '@context': 'https://schema.org',
     '@type': 'Organization',
+    '@id': `${SITE_URL}/#organization`,
     name: SITE_NAME,
+    alternateName: ['Magical Touch', 'MagicalTouchDesign', 'magicaltouchdesign.com'],
+    description: 'Free online graphic design platform: 1,000+ templates, a design editor and a photo studio. Not an interior design company.',
+    slogan: 'Design anything. Make it magical.',
+    knowsAbout: ['Graphic design', 'Design templates', 'Online photo editing', 'Print design', 'Social media design'],
+    founder: { '@type': 'Person', name: 'Tony Aloysius', jobTitle: 'Founder & CEO' },
     url: SITE_URL,
     logo: `${SITE_URL}/logo.png`,
     email: 'hello@magicaltouchdesign.com',
