@@ -38,3 +38,15 @@ drawn as editable vectors by `scripts/templates_kit/`.
 
 Fonts used by the designs are Google Fonts (SIL Open Font License or Apache
 2.0) and are already served by the editor.
+
+# Photos in the Pro collection and the refreshed photo frames
+
+`public/templates/photos/pro/*.jpg` are used by the Pro collection
+(`public/templates/collection/pro-2026-10.json`) and by the 197 existing
+templates whose photo frames held a grey placeholder or a flat cartoon
+(October 2026 refresh). Almost all are **CC0 1.0 (public domain)** photographs
+from StockSnap.io and rawpixel (public-domain set), found through the
+Openverse catalogue: free for commercial use, no attribution required. A few
+are the Pixabay-licensed sample photos already described above.
+`public/templates/photos/pro/credits.json` lists every file with its title,
+photographer, source and original page. Resized to 1600 px on the long side.

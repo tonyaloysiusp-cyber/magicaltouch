@@ -74,12 +74,15 @@ class T:
         sz = self.s(size)
         if fit:
             t = text.upper() if upper else text
-            longest = max(t.split("\n"), key=lambda l: text_width(l, fam, 100, wt, False, spacing))
+            # The longest single word must fit; the text may wrap onto up to
+            # `max_lines` lines (3 by default) at that size.
+            words = [x for x in t.replace("\n", " ").split(" ") if x]
+            longest = max(words, key=lambda l: text_width(l, fam, 100, wt, False, spacing))
             while sz > 8 and text_width(longest, fam, sz, wt, False, spacing) > w * 0.97:
                 sz *= 0.96
-            if max_lines:
-                while sz > 8 and len(wrap(t, w * 0.995, fam, sz, wt, False, spacing)) > max_lines:
-                    sz *= 0.96
+            ml = max_lines or 3
+            while sz > 8 and len(wrap(t, w * 0.995, fam, sz, wt, False, spacing)) > ml:
+                sz *= 0.96
         return self.d.text(x, y, w, text, fam, sz, color, weight=wt, align=align, lh=lh, upper=upper, spacing=spacing, name="Headline")
 
     def accent(self, x, y, w, text, color, size, align="center"):
@@ -189,7 +192,7 @@ def hero_bottom(doc, c, p, pair, focus=(0.5, 0.4), shade=0.86, align="left", tit
         cta(doc, t, m if align == "left" else W / 2, y, c["cta"], p.get("cta_fg", "#111111"), p.get("cta_bg", "#FFFFFF"), align=align)
 
 
-def hero_center(doc, c, p, pair, focus=(0.5, 0.5), tint=0.5, frame=True, title_size=170, upper=False):
+def hero_center(doc, c, p, pair, focus=(0.5, 0.5), tint=0.5, frame=True, title_size=170, upper=False, max_lines=4):
     W, H = doc.W, doc.H
     t = T(doc, pair)
     full_photo(doc, c["photo"], focus)
@@ -206,7 +209,7 @@ def hero_center(doc, c, p, pair, focus=(0.5, 0.5), tint=0.5, frame=True, title_s
         items.append((lambda y: t.kicker(x, y, cw, c["kicker"], p.get("kick_on_photo", "#FFFFFF"), size=24, align="center"), t.s(30)))
     if c.get("accent"):
         items.append((lambda y: t.accent(x, y, cw, c["accent"], p.get("kick_on_photo", "#FFFFFF"), 110), t.s(6)))
-    items.append((lambda y: t.head(x, y, cw, c["title"], ink, title_size, align="center", upper=upper), t.s(34)))
+    items.append((lambda y: t.head(x, y, cw, c["title"], ink, title_size, align="center", upper=upper, max_lines=max_lines), t.s(34)))
     if c.get("sub"):
         items.append((lambda y: t.body(x + cw * 0.08, y, cw * 0.84, c["sub"], rgba("#FFFFFF", 0.9), size=31, align="center"), t.s(40)))
     if c.get("details"):
@@ -396,26 +399,28 @@ def sale(doc, c, p, pair, focus=(0.5, 0.5), photo_side="top"):
     doc.bg(p["bg"])
     b = doc.bleed
     m = W * 0.07
-    ph = H * 0.46
+    ph = H * 0.42
     photo(doc, c["photo"], -b, -b, W + 2 * b, ph + b, focus=focus)
     # big number band overlapping the photo edge
     big = c["big"]
-    bs = t.head(m, 0, W - 2 * m, big, p["ink"], 330, align="left", lh=0.86, upper=True)
+    bs = t.head(m, 0, W - 2 * m, big, p["ink"], 290, align="left", lh=0.86, upper=True)
     bh = bs["_h"]
     doc.objs.remove(bs)
     y = ph + t.s(46)
-    t.head(m, y, W - 2 * m, big, p["accent"], 330, align="left", lh=0.86, upper=True)
+    t.head(m, y, W - 2 * m, big, p["accent"], 290, align="left", lh=0.86, upper=True)
     y += bh + t.s(10)
     o = t.head(m, y, W - 2 * m, c["title"], p["ink"], 80, align="left", upper=True, lh=1.0, max_lines=2)
     y += o["_h"] + t.s(20)
     if c.get("sub"):
         o = t.body(m, y, W * 0.7, c["sub"], rgba(p["ink"], 0.75), size=28)
         y += o["_h"] + t.s(34)
+    room = True
     if c.get("cta"):
-        cta(doc, t, m, y, c["cta"], p.get("cta_fg", "#FFFFFF"), p.get("cta_bg", p["ink"]))
-    if c.get("brand"):
+        _, bh_ = cta(doc, t, m, y, c["cta"], p.get("cta_fg", "#FFFFFF"), p.get("cta_bg", p["ink"]))
+        room = y + bh_ + t.s(30) < H - m - t.s(20)
+    if c.get("brand") and room:
         t.kicker(m, H - m - t.s(20), W - 2 * m, c["brand"], rgba(p["ink"], 0.65), size=20, spacing=380)
-    if c.get("code"):
+    if c.get("code") and room:
         t.kicker(m, H - m - t.s(20), W - 2 * m, c["code"], p["ink"], size=20, align="right", spacing=200)
 
 

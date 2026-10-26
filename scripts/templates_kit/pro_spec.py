@@ -89,7 +89,7 @@ add("Family Reunion Photo Collage Invitation", "Love & Family", POST, "collage",
 add("Graduation Party Photo Invitation", "Events", POST, "hero_bottom", "editorial", "navy",
     dict(photo="graduation", brand="Class of 2027", kicker="Graduation party", title="Celebrate Zayd's big day", sub="Dinner, speeches and a lot of proud parents.", details=["Saturday 26 June · 7 PM", "The Terrace, Dubai Marina"], cta="RSVP to Huda"), kw="graduation party invitation")
 add("Graduate Congratulations Card", "Cards", CARD, "framed", "classic", "navy",
-    dict(photo="graduation2", kicker="Congratulations", title="Well done, graduate", sub="All the late nights paid off. The future is yours.", brand="So proud of you · Aunt Lina"), opts=dict(photo_h=0.47), kw="graduation card")
+    dict(photo="graduation", kicker="Congratulations", title="Well done, graduate", sub="All the late nights paid off. The future is yours.", brand="So proud of you · Aunt Lina"), opts=dict(photo_h=0.47), kw="graduation card")
 
 # ---------------------------------------------------------------- Cards
 add("Thank You Floral Card", "Cards", CARD, "framed", "script", "sage",
@@ -113,7 +113,7 @@ add("Ramadan Kareem Glowing Lantern Post", "Festivals", POST, "hero_bottom", "cl
 add("Lantern Arch Eid Mubarak Card", "Festivals", CARD, "framed", "script", "emerald",
     dict(photo="lantern2", accent="Eid Mubarak", title="Peace, joy & blessings", sub="May this Eid bring happiness to your home.", brand="With love, the Haddad family"), opts=dict(photo_h=0.47, shape="arch"), kw="eid mubarak card")
 add("Iftar Gathering Invitation", "Festivals", POST, "hero_center", "classic", "emerald",
-    dict(photo="dates", kicker="Join us for iftar", title="Community Iftar", sub="Break your fast with friends and neighbours.", details=["Friday 12 March · 6:35 PM", "Park Pavilion, Mirdif"], cta="Everyone is welcome"), kw="iftar invitation, dates")
+    dict(photo="lantern3", kicker="Join us for iftar", title="Community Iftar", sub="Break your fast with friends and neighbours.", details=["Friday 12 March · 6:35 PM", "Park Pavilion, Mirdif"], cta="Everyone is welcome"), kw="iftar invitation, dates")
 add("Diwali Festival of Lights Post", "Festivals", POST, "hero_bottom", "editorial", "plum",
     dict(photo="diya", brand="Happy Diwali", kicker="Festival of lights", title="May your home glow with joy", sub="Wishing you light, love and laughter this festive season.", details=["From all of us at Kavya Jewellers"]), kw="diwali post, diya, lights")
 add("Christmas Greetings Card", "Festivals", CARD, "framed", "script", "emerald",
@@ -135,7 +135,7 @@ add("Summer Beach Party Poster", "Events", A4, "hero_bottom", "poster", "sunny",
 
 # ---------------------------------------------------------------- Events
 add("Stage Lights Live Concert Poster", "Events", A4, "hero_bottom", "poster", "noir",
-    dict(photo="concert", brand="Live in concert", kicker="Friday 15 October · 8 PM", title="THE MIDNIGHT ECHO", sub="One night only. Doors open at 7.", details=["Dubai Opera"], cta="Tickets from AED 150"), opts=dict(upper=True, title_size=220), kw="concert poster")
+    dict(photo="x_friends3", brand="Live in concert", kicker="Friday 15 October · 8 PM", title="THE MIDNIGHT ECHO", sub="One night only. Doors open at 7.", details=["Dubai Opera"], cta="Tickets from AED 150"), opts=dict(upper=True, title_size=220), kw="concert poster")
 add("DJ Night Club Story", "Events", STORY, "hero_center", "bold", "plum",
     dict(photo="dj", kicker="Saturday night", title="DJ NOVA LIVE", sub="House, disco and everything in between.", details=["11 PM till late", "The Warehouse, Al Quoz"], cta="Guest list"), opts=dict(upper=True, title_size=210), kw="dj night story, club")
 add("Future Tech Summit Photo Poster", "Events", A4, "split", "modern", "cobalt",
@@ -281,4 +281,4 @@ add("Bakery Behind the Scenes Story", "Social Media", STORY, "hero_bottom", "edi
 add("Fitness Tips Carousel Cover", "Social Media", POST, "hero_bottom", "bold", "mint",
     dict(photo="fitness2", brand="Coach Arya", kicker="Swipe for 5 tips", title="BUILD A HABIT THAT STICKS", details=["Save this for later"]), opts=dict(upper=True, title_size=150), kw="fitness tips post")
 add("Wellness Quote Story", "Social Media", STORY, "hero_center", "classic", "sage",
-    dict(photo="plants", kicker="Note to self", title="Rest is productive.", sub="You are doing enough.", details=["@calm.daily"]), opts=dict(title_size=170), kw="wellness quote story")
+    dict(photo="x_plant2", kicker="Note to self", title="Rest is productive.", sub="You are doing enough.", details=["@calm.daily"]), opts=dict(title_size=170), kw="wellness quote story")
