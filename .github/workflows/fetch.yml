@@ -1,7 +1,7 @@
 name: Fetch free photos
 on:
   push:
-    branches: [assets-fetch]
+    branches: [assets-fetch2]
 permissions:
   contents: write
 jobs:
@@ -14,10 +14,13 @@ jobs:
         with: { python-version: '3.12' }
       - run: pip install pillow requests
       - run: python fetch.py
+        timeout-minutes: 22
+        continue-on-error: true
       - name: Publish
+        if: always()
         run: |
           cd out
-          git init -q -b assets-previews
+          git init -q -b assets-previews2
           git config user.name "mt-assets"; git config user.email "assets@users.noreply.github.com"
           git add -A; git commit -qm "photo previews"
-          git push -fq "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" assets-previews
+          git push -fq "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" assets-previews2

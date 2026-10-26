@@ -12,7 +12,7 @@ log = []
 def get(url, **kw):
     for i in range(4):
         try:
-            r = requests.get(url, headers=H, timeout=40, **kw)
+            r = requests.get(url, headers=H, timeout=20, **kw)
             if r.status_code == 429: time.sleep(20); continue
             return r
         except Exception as e:
@@ -40,7 +40,7 @@ if cfg.get('mode') == 'full':
         else: log.append(f"dl fail {item['id']} {d.get('url')}")
         time.sleep(1.2)
 else:
-    for q in cfg['queries']:
+    def do_query(q):
         slug = re.sub(r'[^a-z0-9]+', '-', q.lower()).strip('-')
         os.makedirs(f'out/prev/{slug}', exist_ok=True)
         params = {'q': q, 'license': 'cc0', 'category': 'photograph', 'page_size': cfg.get('per', 16), 'mature': 'false', 'aspect_ratio': '', 'size': 'large'}
@@ -48,13 +48,14 @@ else:
         params = {k: v for k, v in params.items() if v != ''}
         r = get(API, params=params)
         if not r or r.status_code != 200:
-            log.append(f'search fail {q} {r.status_code if r else None} {r.text[:200] if r else ""}'); time.sleep(5); continue
+            log.append(f'search fail {q} {r.status_code if r else None} {r.text[:200] if r else ""}'); return
         res = r.json().get('results', [])
         log.append(f'{q}: {len(res)}')
         def one(d):
             wh = save(d['url'], f"out/prev/{slug}/{d['id']}.jpg", 360, 70) or save(d.get('thumbnail') or '', f"out/prev/{slug}/{d['id']}.jpg", 360, 70)
             if wh: meta[d['id']] = {'q': q, 'title': d.get('title'), 'source': d.get('source'), 'w': d.get('width'), 'h': d.get('height'), 'license': d.get('license'), 'url': d.get('url')}
-        with ThreadPoolExecutor(8) as ex: list(ex.map(one, res))
-        time.sleep(2.5)
+        with ThreadPoolExecutor(6) as ex: list(ex.map(one, res))
+        json.dump(meta, open('out/meta.json', 'w'), indent=1)
+    with ThreadPoolExecutor(3) as qx: list(qx.map(do_query, cfg['queries']))
 json.dump(meta, open('out/meta.json', 'w'), indent=1)
 open('out/log.txt', 'w').write('\n'.join(log))
