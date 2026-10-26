@@ -14,7 +14,7 @@ import { parseBulkNames, packageCertificates, BulkRow } from '@/lib/certificates
 import { AdminShell } from '@/components/admin/AdminShell';
 import { supabase } from '@/lib/supabase';
 import { getOrCreateProfile } from '@/lib/profile';
-import { newCertificateCode, verifyUrl, fillCertificateJson } from '@/lib/certificates';
+import { newCertificateCode, verifyUrl, fillCertificateJson, certificateTokens } from '@/lib/certificates';
 import { renderTemplatePages } from '@/lib/templates/renderPages';
 import { qrMatrix } from '@/lib/qr';
 
@@ -295,7 +295,24 @@ export default function CertificatesAdminPage() {
   // same, so the QR check shows the corrected details.
   const saveEdit = async (r: Issue) => {
     if (!editForm.recipient.trim() || !editForm.title.trim()) return;
-    await supabase.from('certificate_issues').update({ recipient: editForm.recipient.trim(), title: editForm.title.trim(), description: editForm.description.trim() || null }).eq('id', r.id);
+    const next: any = { recipient: editForm.recipient.trim(), title: editForm.title.trim(), description: editForm.description.trim() || null };
+    // A certificate finished in the editor: refill its own design too.
+    const own = (r as any).canvas_json;
+    if (own) {
+      const tokens = certificateTokens({ ...(r as any), ...next });
+      const json = JSON.parse(JSON.stringify(own));
+      const visit = (o: any) => {
+        (o.objects || []).forEach(visit);
+        if (typeof o.__certTpl === 'string') {
+          let t = o.__certTpl;
+          Object.entries(tokens).forEach(([k, v]) => (t = t.split(k).join(v as string)));
+          o.text = t; o.styles = {};
+        }
+      };
+      (json.objects || []).forEach(visit);
+      next.canvas_json = json;
+    }
+    await supabase.from('certificate_issues').update(next).eq('id', r.id);
     setEditId(null);
     load();
   };
@@ -405,7 +422,7 @@ export default function CertificatesAdminPage() {
                         <button onClick={() => { setEditId(r.id); setEditForm({ recipient: r.recipient, title: r.title, description: r.description || '' }); }} className="inline-flex items-center gap-1 text-mt-muted hover:text-mt-ink mr-3"><Pencil size={13} /> Edit</button>
                       )}
                       <button onClick={() => downloadOne(r)} disabled={rowBusy === r.id} className="inline-flex items-center gap-1 text-mt-muted hover:text-mt-ink mr-3">{rowBusy === r.id ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />} PDF</button>
-                      {editorHref(r) && <Link href={editorHref(r)!} className="inline-flex items-center gap-1 text-[#3B82C4] font-semibold mr-3"><ExternalLink size={13} /> Open</Link>}
+                      {editorHref(r) && <Link href={editorHref(r)!} title={(r as any).canvas_json ? 'Has its own saved design (e.g. signature)' : undefined} className="inline-flex items-center gap-1 text-[#3B82C4] font-semibold mr-3"><ExternalLink size={13} /> {(r as any).canvas_json ? 'Open (saved design)' : 'Open'}</Link>}
                       <button onClick={() => copy(verifyUrl(r.code))} className="inline-flex items-center gap-1 text-mt-muted hover:text-mt-ink mr-3"><QrCode size={13} /> {copied === verifyUrl(r.code) ? 'Copied' : 'Link'}</button>
                       {r.status === 'valid' && <button onClick={() => revoke(r)} className="inline-flex items-center gap-1 text-rose-600"><Ban size={13} /> Withdraw</button>}
                     </td>
