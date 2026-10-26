@@ -1,0 +1,2348 @@
+[
+ {
+  "id": "wedding-001",
+  "slug": "blush-peony-watercolour-wedding-invitation",
+  "title": "Blush Peony Watercolour Wedding Invitation",
+  "category": "Wedding and engagement",
+  "subcategory": "Invitation",
+  "site_category": "Wedding",
+  "description": "Peony clusters in opposite corners framing a centred invitation. Paper grain, flower and leaf corners, diamond divider.",
+  "design_brief": "Peony clusters in opposite corners framing a centred invitation. Paper grain, flower and leaf corners, diamond divider.",
+  "design_style": "invitation",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=blush%20peony%20watercolor%20wedding%20invitation",
+  "inspiration_query": "blush peony watercolor wedding invitation",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "peony clusters in opposite corners framing a centred invitation",
+   "typography": "Great Vibes names, Lora italic, Cinzel details",
+   "palette": "blush, rose, sage leaves, gold",
+   "decor": "paper grain, flower and leaf corners, diamond divider"
+  },
+  "palette": [
+   "#FDF7F4",
+   "#8DA68A",
+   "#B5C4A7",
+   "#8A6B6B",
+   "#9C4F5E",
+   "#6B5050"
+  ],
+  "content": {
+   "headline": "Layla & Omar",
+   "message": "request the pleasure of your company · Saturday 17 April 2027 · four o’clock · The Rose Garden, Al Barari",
+   "signature": "Reception to follow"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/blush-peony-watercolour-wedding-invitation.jpg",
+  "preview_url": "/templates/collection/blush-peony-watercolour-wedding-invitation-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "blossom",
+   "cherry-blossom",
+   "rose",
+   "white-flower"
+  ]
+ },
+ {
+  "id": "wedding-002",
+  "slug": "classic-ivory-calligraphy-invitation",
+  "title": "Classic Ivory Calligraphy Invitation",
+  "category": "Wedding and engagement",
+  "subcategory": "Invitation",
+  "site_category": "Wedding",
+  "description": "Classic centred stack with calligraphy names and ampersand inside a double frame. Paper grain, double hairline frame, diamond divider.",
+  "design_brief": "Classic centred stack with calligraphy names and ampersand inside a double frame. Paper grain, double hairline frame, diamond divider.",
+  "design_style": "invitation",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=ivory%20calligraphy%20classic%20wedding%20invitation",
+  "inspiration_query": "ivory calligraphy classic wedding invitation",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "classic centred stack with calligraphy names and ampersand inside a double frame",
+   "typography": "Mrs Saint Delafield calligraphy, Cormorant Garamond, Cinzel caps",
+   "palette": "ivory, charcoal ink, taupe gold",
+   "decor": "paper grain, double hairline frame, diamond divider"
+  },
+  "palette": [
+   "#FBF8F1",
+   "#B9A27A",
+   "#5E5243",
+   "#2F2A24",
+   "#3E362D",
+   "#8A7556"
+  ],
+  "content": {
+   "headline": "Sara & Adam",
+   "message": "together with their families invite you to celebrate their marriage · Friday 7 May 2027 · 6 PM · One&Only Royal Mirage",
+   "signature": "Kindly reply by 1 April"
+  },
+  "dimensions": {
+   "width": 559,
+   "height": 794,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/classic-ivory-calligraphy-invitation.jpg",
+  "preview_url": "/templates/collection/classic-ivory-calligraphy-invitation-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "wedding-003",
+  "slug": "emerald-and-gold-arch-invitation",
+  "title": "Emerald and Gold Arch Invitation",
+  "category": "Wedding and engagement",
+  "subcategory": "Invitation",
+  "site_category": "Wedding",
+  "description": "Double gold arch on deep emerald holding a centred invitation. Gold arch outlines, flower at the apex, diamond divider.",
+  "design_brief": "Double gold arch on deep emerald holding a centred invitation. Gold arch outlines, flower at the apex, diamond divider.",
+  "design_style": "invitation",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=emerald%20green%20gold%20arch%20wedding%20invitation",
+  "inspiration_query": "emerald green gold arch wedding invitation",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "double gold arch on deep emerald holding a centred invitation",
+   "typography": "Great Vibes gold, Cormorant Garamond italic, Cinzel, Montserrat caps",
+   "palette": "emerald, gold, ivory",
+   "decor": "gold arch outlines, flower at the apex, diamond divider"
+  },
+  "palette": [
+   "#0F5A43",
+   "#05271D",
+   "#8A6A2E",
+   "#E9C877",
+   "#B68A3A",
+   "#F7E3A3"
+  ],
+  "content": {
+   "headline": "Noor & Faisal",
+   "message": "invite you to their wedding celebration · Thursday 20 May 2027 · 7:30 PM · Emirates Palace, Abu Dhabi",
+   "signature": "Black tie"
+  },
+  "dimensions": {
+   "width": 559,
+   "height": 794,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/emerald-and-gold-arch-invitation.jpg",
+  "preview_url": "/templates/collection/emerald-and-gold-arch-invitation-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "white-flower"
+  ]
+ },
+ {
+  "id": "wedding-004",
+  "slug": "modern-monogram-minimal-invitation",
+  "title": "Modern Monogram Minimal Invitation",
+  "category": "Wedding and engagement",
+  "subcategory": "Invitation",
+  "site_category": "Wedding",
+  "description": "Ringed monogram above spaced caps names and a single date line. Thin circle and hairline only.",
+  "design_brief": "Ringed monogram above spaced caps names and a single date line. Thin circle and hairline only.",
+  "design_style": "invitation",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=modern%20minimalist%20monogram%20wedding%20invitation",
+  "inspiration_query": "modern minimalist monogram wedding invitation",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "ringed monogram above spaced caps names and a single date line",
+   "typography": "Cormorant Garamond, Cinzel spaced caps, Montserrat Light",
+   "palette": "warm white, ink black, grey",
+   "decor": "thin circle and hairline only"
+  },
+  "palette": [
+   "#F5F3EF",
+   "#1E1E1E",
+   "#4A4A4A"
+  ],
+  "content": {
+   "headline": "Hana & James",
+   "message": "are getting married · 12.06.2027 · Alserkal Avenue, Dubai",
+   "signature": "Dinner & dancing after"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/modern-monogram-minimal-invitation.jpg",
+  "preview_url": "/templates/collection/modern-monogram-minimal-invitation-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "wedding-005",
+  "slug": "desert-sunset-boho-invitation",
+  "title": "Desert Sunset Boho Invitation",
+  "category": "Wedding and engagement",
+  "subcategory": "Invitation",
+  "site_category": "Wedding",
+  "description": "Layered dunes under a low sun, names in the sky, details on the sand. Three dune waves, sun disc, cactus and palm illustrations.",
+  "design_brief": "Layered dunes under a low sun, names in the sky, details on the sand. Three dune waves, sun disc, cactus and palm illustrations.",
+  "design_style": "invitation",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=boho%20desert%20sunset%20wedding%20invitation",
+  "inspiration_query": "boho desert sunset wedding invitation",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "layered dunes under a low sun, names in the sky, details on the sand",
+   "typography": "Great Vibes, Lora italic, Cinzel, Caveat",
+   "palette": "sand, apricot, terracotta, rust",
+   "decor": "three dune waves, sun disc, cactus and palm illustrations"
+  },
+  "palette": [
+   "#F7E3CF",
+   "#F2C7A5",
+   "#E9A27A",
+   "#F8D9A0",
+   "#D9895E",
+   "#C46F48"
+  ],
+  "content": {
+   "headline": "Mariam & Yousef",
+   "message": "invite you to a desert wedding at golden hour · Saturday 13 November 2027 · 4 PM · Al Maha Desert Resort",
+   "signature": "Boho chic attire"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/desert-sunset-boho-invitation.jpg",
+  "preview_url": "/templates/collection/desert-sunset-boho-invitation-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "cactus",
+   "palm-tree"
+  ]
+ },
+ {
+  "id": "wedding-006",
+  "slug": "navy-and-gold-foil-invitation",
+  "title": "Navy and Gold Foil Invitation",
+  "category": "Wedding and engagement",
+  "subcategory": "Invitation",
+  "site_category": "Wedding",
+  "description": "Foil-style corner brackets on navy; names in gold calligraphy centred. Corner brackets, gold confetti, grain, divider.",
+  "design_brief": "Foil-style corner brackets on navy; names in gold calligraphy centred. Corner brackets, gold confetti, grain, divider.",
+  "design_style": "invitation",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=navy%20gold%20foil%20elegant%20wedding%20invitation",
+  "inspiration_query": "navy gold foil elegant wedding invitation",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "foil-style corner brackets on navy; names in gold calligraphy centred",
+   "typography": "Great Vibes gold gradient, Cormorant Garamond italic, Cinzel",
+   "palette": "midnight navy, gold foil, ivory",
+   "decor": "corner brackets, gold confetti, grain, divider"
+  },
+  "palette": [
+   "#1D2B4F",
+   "#0B1226",
+   "#C9A45A",
+   "#E9C877",
+   "#F7E3A3",
+   "#E1D9C5"
+  ],
+  "content": {
+   "headline": "Aisha & Karim",
+   "message": "request the honour of your presence at their wedding · Friday 3 December 2027 · 7 PM · The Ritz-Carlton, DIFC",
+   "signature": "Formal attire"
+  },
+  "dimensions": {
+   "width": 559,
+   "height": 794,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/navy-and-gold-foil-invitation.jpg",
+  "preview_url": "/templates/collection/navy-and-gold-foil-invitation-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "wedding-007",
+  "slug": "garden-greenery-invitation",
+  "title": "Garden Greenery Invitation",
+  "category": "Wedding and engagement",
+  "subcategory": "Invitation",
+  "site_category": "Wedding",
+  "description": "Eucalyptus garlands running down both edges, centred garden invitation. Round-leaf garlands, herb sprig illustration.",
+  "design_brief": "Eucalyptus garlands running down both edges, centred garden invitation. Round-leaf garlands, herb sprig illustration.",
+  "design_style": "invitation",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=greenery%20eucalyptus%20garden%20wedding%20invitation",
+  "inspiration_query": "greenery eucalyptus garden wedding invitation",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "eucalyptus garlands running down both edges, centred garden invitation",
+   "typography": "Great Vibes, Lora italic, Cinzel",
+   "palette": "sage, eucalyptus, forest, white",
+   "decor": "round-leaf garlands, herb sprig illustration"
+  },
+  "palette": [
+   "#F7F8F3",
+   "#8FA79A",
+   "#A8BDB1",
+   "#93AB8A",
+   "#7A9486",
+   "#3D5A47"
+  ],
+  "content": {
+   "headline": "Reem & Tariq",
+   "message": "are tying the knot in the garden · Saturday 6 March 2027 · 5 PM · Safa Park Lawn",
+   "signature": "Garden party to follow"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/garden-greenery-invitation.jpg",
+  "preview_url": "/templates/collection/garden-greenery-invitation-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "herb"
+  ]
+ },
+ {
+  "id": "wedding-008",
+  "slug": "mediterranean-tile-invitation",
+  "title": "Mediterranean Tile Invitation",
+  "category": "Wedding and engagement",
+  "subcategory": "Invitation",
+  "site_category": "Wedding",
+  "description": "White card over blue-and-white Mediterranean tiles. Vector tile pattern with quarter circles and stars, sailboat illustration.",
+  "design_brief": "White card over blue-and-white Mediterranean tiles. Vector tile pattern with quarter circles and stars, sailboat illustration.",
+  "design_style": "invitation",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=mediterranean%20blue%20tile%20wedding%20invitation",
+  "inspiration_query": "mediterranean blue tile wedding invitation",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "white card over blue-and-white Mediterranean tiles",
+   "typography": "Great Vibes, Lora italic, Cinzel, Montserrat caps",
+   "palette": "Aegean blue, white",
+   "decor": "vector tile pattern with quarter circles and stars, sailboat illustration"
+  },
+  "palette": [
+   "#F4F7FB",
+   "#1F4E8C",
+   "#FFFFFF",
+   "#38557F"
+  ],
+  "content": {
+   "headline": "Lina & Sami",
+   "message": "say ‘I do’ by the sea · 25 September 2027 · Santorini, Greece",
+   "signature": "Celebration until sunset"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/mediterranean-tile-invitation.jpg",
+  "preview_url": "/templates/collection/mediterranean-tile-invitation-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "sailboat"
+  ]
+ },
+ {
+  "id": "wedding-009",
+  "slug": "black-tie-art-deco-invitation",
+  "title": "Black Tie Art Deco Invitation",
+  "category": "Wedding and engagement",
+  "subcategory": "Invitation",
+  "site_category": "Wedding",
+  "description": "Gatsby-style deco fan above gold caps names inside a double frame. Fan rays, concentric arcs, double frame.",
+  "design_brief": "Gatsby-style deco fan above gold caps names inside a double frame. Fan rays, concentric arcs, double frame.",
+  "design_style": "invitation",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=art%20deco%20black%20gold%20gatsby%20wedding%20invitation",
+  "inspiration_query": "art deco black gold gatsby wedding invitation",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "Gatsby-style deco fan above gold caps names inside a double frame",
+   "typography": "Cinzel gold caps, Cormorant Garamond, Montserrat caps",
+   "palette": "black, antique gold, ivory",
+   "decor": "fan rays, concentric arcs, double frame"
+  },
+  "palette": [
+   "#0B0B0C",
+   "#C9A45A",
+   "#E9C877",
+   "#E1D9C5",
+   "#8A6A2E",
+   "#B68A3A"
+  ],
+  "content": {
+   "headline": "Dana & Rami",
+   "message": "invite you to an evening of celebration · Saturday 31 December 2027 · 8 PM · The Grand Ballroom",
+   "signature": "Black tie · Dancing till midnight"
+  },
+  "dimensions": {
+   "width": 559,
+   "height": 794,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/black-tie-art-deco-invitation.jpg",
+  "preview_url": "/templates/collection/black-tie-art-deco-invitation-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "wedding-010",
+  "slug": "photo-overlay-wedding-invitation",
+  "title": "Photo Overlay Wedding Invitation",
+  "category": "Wedding and engagement",
+  "subcategory": "Invitation",
+  "site_category": "Wedding",
+  "description": "Full-bleed couple photo fading to dark, invitation set over the shade. Gradient shade, RSVP label.",
+  "design_brief": "Full-bleed couple photo fading to dark, invitation set over the shade. Gradient shade, RSVP label.",
+  "design_style": "invitation",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=photo%20wedding%20invitation%20modern%20overlay",
+  "inspiration_query": "photo wedding invitation modern overlay",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "full-bleed couple photo fading to dark, invitation set over the shade",
+   "typography": "Great Vibes white, Montserrat caps, Cormorant Garamond",
+   "palette": "photo tones, warm white, charcoal",
+   "decor": "gradient shade, RSVP label"
+  },
+  "palette": [
+   "#1A1714",
+   "#FFFFFF",
+   "#F3EDE4"
+  ],
+  "content": {
+   "headline": "Zara & Ali",
+   "message": "are getting married · Friday 9 April 2027 · 6 PM · Bvlgari Resort, Dubai",
+   "signature": "RSVP by 1 March"
+  },
+  "dimensions": {
+   "width": 559,
+   "height": 794,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/photo-overlay-wedding-invitation.jpg",
+  "preview_url": "/templates/collection/photo-overlay-wedding-invitation-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "wedding-011",
+  "slug": "arabesque-arch-nikah-invitation",
+  "title": "Arabesque Arch Nikah Invitation",
+  "category": "Wedding and engagement",
+  "subcategory": "Invitation",
+  "site_category": "Wedding",
+  "description": "Pointed arch panel between two gold mandala medallions. Line mandalas, ogee arch, paper grain.",
+  "design_brief": "Pointed arch panel between two gold mandala medallions. Line mandalas, ogee arch, paper grain.",
+  "design_style": "invitation",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=arabesque%20pattern%20nikah%20invitation%20gold",
+  "inspiration_query": "arabesque pattern nikah invitation gold",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "pointed arch panel between two gold mandala medallions",
+   "typography": "Great Vibes gold, Cormorant Garamond italic, Cinzel",
+   "palette": "parchment, antique gold, walnut ink",
+   "decor": "line mandalas, ogee arch, paper grain"
+  },
+  "palette": [
+   "#F7F1E6",
+   "#C9A45A",
+   "#FFFDF8",
+   "#5E4B2E",
+   "#8A6A2E",
+   "#E9C877"
+  ],
+  "content": {
+   "headline": "Fatima & Hamdan",
+   "message": "With the blessings of Allah, we invite you to the Nikah of · Friday 14 May 2027 · after Maghrib · Al Habtoor Palace",
+   "signature": "Walima to follow"
+  },
+  "dimensions": {
+   "width": 559,
+   "height": 794,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/arabesque-arch-nikah-invitation.jpg",
+  "preview_url": "/templates/collection/arabesque-arch-nikah-invitation-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "wedding-012",
+  "slug": "terracotta-arches-invitation",
+  "title": "Terracotta Arches Invitation",
+  "category": "Wedding and engagement",
+  "subcategory": "Invitation",
+  "site_category": "Wedding",
+  "description": "Three terracotta arches of different heights on a horizon line, text below. Arch shapes, sun disc, horizon rule.",
+  "design_brief": "Three terracotta arches of different heights on a horizon line, text below. Arch shapes, sun disc, horizon rule.",
+  "design_style": "invitation",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=terracotta%20arches%20modern%20wedding%20invitation",
+  "inspiration_query": "terracotta arches modern wedding invitation",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "three terracotta arches of different heights on a horizon line, text below",
+   "typography": "Great Vibes, Lora italic, Cinzel, Caveat",
+   "palette": "clay, apricot, sand, rust",
+   "decor": "arch shapes, sun disc, horizon rule"
+  },
+  "palette": [
+   "#F4E4D6",
+   "#C8694A",
+   "#E2A27F",
+   "#D9B99B",
+   "#F7D9A0",
+   "#8E4A33"
+  ],
+  "content": {
+   "headline": "Yara & Nabil",
+   "message": "invite you to celebrate love · Saturday 2 October 2027 · 5 PM · The Courtyard, Al Quoz",
+   "signature": "Dinner under the stars"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/terracotta-arches-invitation.jpg",
+  "preview_url": "/templates/collection/terracotta-arches-invitation-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "wedding-013",
+  "slug": "lavender-fields-invitation",
+  "title": "Lavender Fields Invitation",
+  "category": "Wedding and engagement",
+  "subcategory": "Invitation",
+  "site_category": "Wedding",
+  "description": "Lavender stems rising from both bottom corners, invitation centred. Vector lavender sprays, butterfly.",
+  "design_brief": "Lavender stems rising from both bottom corners, invitation centred. Vector lavender sprays, butterfly.",
+  "design_style": "invitation",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=lavender%20provence%20wedding%20invitation",
+  "inspiration_query": "lavender provence wedding invitation",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "lavender stems rising from both bottom corners, invitation centred",
+   "typography": "Great Vibes, Lora italic, Cinzel",
+   "palette": "lavender mist, violet, sage",
+   "decor": "vector lavender sprays, butterfly"
+  },
+  "palette": [
+   "#F6F2FA",
+   "#6F8C5E",
+   "#8E74C4",
+   "#5B4391",
+   "#6D5B92",
+   "#4A3A78"
+  ],
+  "content": {
+   "headline": "Salma & Ahmed",
+   "message": "are getting married among the lavender · 19 June 2027 · Provence, France",
+   "signature": "Lunch & celebration to follow"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/lavender-fields-invitation.jpg",
+  "preview_url": "/templates/collection/lavender-fields-invitation-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "butterfly"
+  ]
+ },
+ {
+  "id": "wedding-014",
+  "slug": "midnight-starry-night-invitation",
+  "title": "Midnight Starry Night Invitation",
+  "category": "Wedding and engagement",
+  "subcategory": "Invitation",
+  "site_category": "Wedding",
+  "description": "Crescent moon over gold names in a star-scattered night sky. Stars, sparkles, moon illustration.",
+  "design_brief": "Crescent moon over gold names in a star-scattered night sky. Stars, sparkles, moon illustration.",
+  "design_style": "invitation",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=celestial%20starry%20night%20wedding%20invitation%20navy",
+  "inspiration_query": "celestial starry night wedding invitation navy",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "crescent moon over gold names in a star-scattered night sky",
+   "typography": "Great Vibes gold, Cormorant Garamond italic, Cinzel",
+   "palette": "midnight navy, starlight gold, ice white",
+   "decor": "stars, sparkles, moon illustration"
+  },
+  "palette": [
+   "#0B1430",
+   "#1E2A55",
+   "#FFFFFF",
+   "#F3DFA2",
+   "#E3E6F2",
+   "#8A6A2E"
+  ],
+  "content": {
+   "headline": "Maya & Hadi",
+   "message": "under the stars, we say forever · Saturday 23 October 2027 · 8 PM · Hatta Dome Park",
+   "signature": "Celestial attire welcome"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/midnight-starry-night-invitation.jpg",
+  "preview_url": "/templates/collection/midnight-starry-night-invitation-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "crescent-moon"
+  ]
+ },
+ {
+  "id": "wedding-015",
+  "slug": "polaroid-save-the-date-card",
+  "title": "Polaroid Save the Date Card",
+  "category": "Wedding and engagement",
+  "subcategory": "Save the Date",
+  "site_category": "Wedding",
+  "description": "Tilted taped polaroid on the left, save-the-date text on the right. Paper grain, polaroid, washi tape.",
+  "design_brief": "Tilted taped polaroid on the left, save-the-date text on the right. Paper grain, polaroid, washi tape.",
+  "design_style": "save the date",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=polaroid%20photo%20save%20the%20date%20card",
+  "inspiration_query": "polaroid photo save the date card",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "tilted taped polaroid on the left, save-the-date text on the right",
+   "typography": "Playfair Display italic, Great Vibes, Cinzel, Montserrat Light",
+   "palette": "linen, cocoa, rose",
+   "decor": "paper grain, polaroid, washi tape"
+  },
+  "palette": [
+   "#F3EDE4",
+   "#FFFFFF",
+   "#E9C6C0",
+   "#3A2E28",
+   "#B05A5A",
+   "#6E5A50"
+  ],
+  "content": {
+   "headline": "Save the Date",
+   "message": "Sara & Adam · 07.05.2027 · Dubai",
+   "signature": "Formal invitation to follow"
+  },
+  "dimensions": {
+   "width": 673,
+   "height": 480,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/polaroid-save-the-date-card.jpg",
+  "preview_url": "/templates/collection/polaroid-save-the-date-card-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "wedding-016",
+  "slug": "calendar-heart-save-the-date",
+  "title": "Calendar Heart Save the Date",
+  "category": "Wedding and engagement",
+  "subcategory": "Save the Date",
+  "site_category": "Wedding",
+  "description": "Month calendar with the wedding day circled by a heart. Calendar grid, heart marker.",
+  "design_brief": "Month calendar with the wedding day circled by a heart. Calendar grid, heart marker.",
+  "design_style": "save the date",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=calendar%20heart%20save%20the%20date",
+  "inspiration_query": "calendar heart save the date",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "month calendar with the wedding day circled by a heart",
+   "typography": "Great Vibes, Cinzel, Montserrat, Playfair Display italic",
+   "palette": "blush white, raspberry, plum grey",
+   "decor": "calendar grid, heart marker"
+  },
+  "palette": [
+   "#FFF8F5",
+   "#B23A55",
+   "#3A2A30",
+   "#9A7A84",
+   "#E85D7A",
+   "#FFFFFF"
+  ],
+  "content": {
+   "headline": "Save the Date",
+   "message": "Noor & Faisal are getting married · May 2027",
+   "signature": "Abu Dhabi · invitation to follow"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/calendar-heart-save-the-date.jpg",
+  "preview_url": "/templates/collection/calendar-heart-save-the-date-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "wedding-017",
+  "slug": "big-date-typography-save-the-date-poster",
+  "title": "Big Date Typography Save the Date Poster",
+  "category": "Wedding and engagement",
+  "subcategory": "Save the Date",
+  "site_category": "Wedding",
+  "description": "The date set huge in two lines, one solid and one outlined, script names over it. Type only.",
+  "design_brief": "The date set huge in two lines, one solid and one outlined, script names over it. Type only.",
+  "design_style": "save the date",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=big%20bold%20typography%20save%20the%20date",
+  "inspiration_query": "big bold typography save the date",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "the date set huge in two lines, one solid and one outlined, script names over it",
+   "typography": "Anton solid and outline, Great Vibes, Montserrat caps",
+   "palette": "bone, ink, terracotta",
+   "decor": "type only"
+  },
+  "palette": [
+   "#EFE8DC",
+   "#1E1E1E",
+   "#B5523B"
+  ],
+  "content": {
+   "headline": "06.12.27",
+   "message": "Hana & James are getting married",
+   "signature": "Dubai · save the date"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1350,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/big-date-typography-save-the-date-poster.jpg",
+  "preview_url": "/templates/collection/big-date-typography-save-the-date-poster-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "wedding-018",
+  "slug": "film-strip-save-the-date-story",
+  "title": "Film Strip Save the Date Story",
+  "category": "Wedding and engagement",
+  "subcategory": "Save the Date",
+  "site_category": "Wedding",
+  "description": "Vertical film strip with three couple photos, a pale band holding the date. Film sprocket holes, three photo frames.",
+  "design_brief": "Vertical film strip with three couple photos, a pale band holding the date. Film sprocket holes, three photo frames.",
+  "design_style": "save the date",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=film%20strip%20photo%20save%20the%20date",
+  "inspiration_query": "film strip photo save the date",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "vertical film strip with three couple photos, a pale band holding the date",
+   "typography": "Great Vibes, Cinzel, Montserrat caps",
+   "palette": "film black, cream, photo tones",
+   "decor": "film sprocket holes, three photo frames"
+  },
+  "palette": [
+   "#F4EFE8",
+   "#1B1B1B",
+   "#2A2A2A",
+   "#6A6A6A"
+  ],
+  "content": {
+   "headline": "Save our Date",
+   "message": "Reem & Tariq · 06.03.2027",
+   "signature": "Safa Park · Dubai"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1920,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/film-strip-save-the-date-story.jpg",
+  "preview_url": "/templates/collection/film-strip-save-the-date-story-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "wedding-019",
+  "slug": "airmail-destination-save-the-date",
+  "title": "Airmail Destination Save the Date",
+  "category": "Wedding and engagement",
+  "subcategory": "Save the Date",
+  "site_category": "Wedding",
+  "description": "Airmail envelope with a stamp, dashed flight path and plane. Airmail stripes, stamp, dashed route, plane and palm illustrations.",
+  "design_brief": "Airmail envelope with a stamp, dashed flight path and plane. Airmail stripes, stamp, dashed route, plane and palm illustrations.",
+  "design_style": "save the date",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=airmail%20destination%20wedding%20save%20the%20date",
+  "inspiration_query": "airmail destination wedding save the date",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "airmail envelope with a stamp, dashed flight path and plane",
+   "typography": "Great Vibes, Cinzel, Montserrat caps, Caveat",
+   "palette": "envelope cream, airmail red and blue",
+   "decor": "airmail stripes, stamp, dashed route, plane and palm illustrations"
+  },
+  "palette": [
+   "#FBF7EE",
+   "#D64545",
+   "#2F5DA8",
+   "#FFFFFF",
+   "#2A2A2A"
+  ],
+  "content": {
+   "headline": "Save the Date",
+   "message": "Lina & Sami · Santorini · 25.09.2027",
+   "signature": "Pack your bags — details to follow"
+  },
+  "dimensions": {
+   "width": 673,
+   "height": 480,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/airmail-destination-save-the-date.jpg",
+  "preview_url": "/templates/collection/airmail-destination-save-the-date-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "airplane",
+   "palm-tree"
+  ]
+ },
+ {
+  "id": "wedding-020",
+  "slug": "gold-rings-save-the-date-post",
+  "title": "Gold Rings Save the Date Post",
+  "category": "Wedding and engagement",
+  "subcategory": "Save the Date",
+  "site_category": "Wedding",
+  "description": "Two interlocking gold rings above a gold script save-the-date. Gradient ring strokes, gem illustration.",
+  "design_brief": "Two interlocking gold rings above a gold script save-the-date. Gradient ring strokes, gem illustration.",
+  "design_style": "save the date",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=gold%20rings%20save%20the%20date%20instagram",
+  "inspiration_query": "gold rings save the date instagram",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "two interlocking gold rings above a gold script save-the-date",
+   "typography": "Great Vibes gold, Cinzel, Cormorant Garamond italic",
+   "palette": "black, gold, champagne",
+   "decor": "gradient ring strokes, gem illustration"
+  },
+  "palette": [
+   "#1E1B18",
+   "#0A0908",
+   "#8A6A2E",
+   "#E9C877",
+   "#B68A3A",
+   "#F7E3A3"
+  ],
+  "content": {
+   "headline": "Save the Date",
+   "message": "Dana & Rami · 31 December 2027",
+   "signature": "New Year’s Eve wedding"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/gold-rings-save-the-date-post.jpg",
+  "preview_url": "/templates/collection/gold-rings-save-the-date-post-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "gem-stone"
+  ]
+ },
+ {
+  "id": "wedding-021",
+  "slug": "botanical-line-save-the-date",
+  "title": "Botanical Line Save the Date",
+  "category": "Wedding and engagement",
+  "subcategory": "Save the Date",
+  "site_category": "Wedding",
+  "description": "Single-line botanical stem rising above centred type. Symmetrical line-art stem.",
+  "design_brief": "Single-line botanical stem rising above centred type. Symmetrical line-art stem.",
+  "design_style": "save the date",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=line%20art%20botanical%20save%20the%20date",
+  "inspiration_query": "line art botanical save the date",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "single-line botanical stem rising above centred type",
+   "typography": "Playfair Display italic, Great Vibes, Montserrat Light",
+   "palette": "warm white, olive, charcoal green",
+   "decor": "symmetrical line-art stem"
+  },
+  "palette": [
+   "#FAF8F4",
+   "#5E6B57",
+   "#2E352B"
+  ],
+  "content": {
+   "headline": "Save the Date",
+   "message": "Salma & Ahmed · 19.06.2027",
+   "signature": "Provence, France"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/botanical-line-save-the-date.jpg",
+  "preview_url": "/templates/collection/botanical-line-save-the-date-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "wedding-022",
+  "slug": "sunset-beach-save-the-date-story",
+  "title": "Sunset Beach Save the Date Story",
+  "category": "Wedding and engagement",
+  "subcategory": "Save the Date",
+  "site_category": "Wedding",
+  "description": "Full-bleed sunset beach photo with script at the top and the date at the foot. Warm top and bottom shades.",
+  "design_brief": "Full-bleed sunset beach photo with script at the top and the date at the foot. Warm top and bottom shades.",
+  "design_style": "save the date",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=sunset%20beach%20save%20the%20date%20photo",
+  "inspiration_query": "sunset beach save the date photo",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "full-bleed sunset beach photo with script at the top and the date at the foot",
+   "typography": "Great Vibes, Cinzel, Montserrat Light",
+   "palette": "sunset coral, sand, white",
+   "decor": "warm top and bottom shades"
+  },
+  "palette": [
+   "#F2C7A5",
+   "#FFFFFF",
+   "#FFE9D6"
+  ],
+  "content": {
+   "headline": "Save the Date",
+   "message": "Maya & Hadi · 23.10.2027",
+   "signature": "Ras Al Khaimah · beach wedding"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1920,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/sunset-beach-save-the-date-story.jpg",
+  "preview_url": "/templates/collection/sunset-beach-save-the-date-story-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "wedding-023",
+  "slug": "were-engaged-ring-post",
+  "title": "We’re Engaged Ring Post",
+  "category": "Wedding and engagement",
+  "subcategory": "Engagement",
+  "site_category": "Wedding",
+  "description": "Ring illustration in a white glowing disc, announcement below. Sparkles, glow disc, ring illustration.",
+  "design_brief": "Ring illustration in a white glowing disc, announcement below. Sparkles, glow disc, ring illustration.",
+  "design_style": "engagement",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=we%27re%20engaged%20announcement%20ring%20instagram",
+  "inspiration_query": "we're engaged announcement ring instagram",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "ring illustration in a white glowing disc, announcement below",
+   "typography": "Playfair Display bold italic, Great Vibes, Montserrat",
+   "palette": "blush to rose, berry",
+   "decor": "sparkles, glow disc, ring illustration"
+  },
+  "palette": [
+   "#FCE7EC",
+   "#F6D3DC",
+   "#FFFFFF",
+   "#E8A0B4",
+   "#8E2F4C",
+   "#C25B78"
+  ],
+  "content": {
+   "headline": "We’re Engaged!",
+   "message": "Layla & Omar",
+   "signature": "14.02.2027"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/were-engaged-ring-post.jpg",
+  "preview_url": "/templates/collection/were-engaged-ring-post-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "ring"
+  ]
+ },
+ {
+  "id": "wedding-024",
+  "slug": "she-said-yes-champagne-post",
+  "title": "She Said Yes Champagne Post",
+  "category": "Wedding and engagement",
+  "subcategory": "Engagement",
+  "site_category": "Wedding",
+  "description": "Clinking glasses bursting with confetti above a gold script. Confetti, glow, glasses illustration.",
+  "design_brief": "Clinking glasses bursting with confetti above a gold script. Confetti, glow, glasses illustration.",
+  "design_style": "engagement",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=she%20said%20yes%20champagne%20engagement%20post",
+  "inspiration_query": "she said yes champagne engagement post",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "clinking glasses bursting with confetti above a gold script",
+   "typography": "Great Vibes gold, Cinzel caps",
+   "palette": "black, gold, blush, white",
+   "decor": "confetti, glow, glasses illustration"
+  },
+  "palette": [
+   "#121212",
+   "#FFFFFF",
+   "#E9C877",
+   "#F7E3A3",
+   "#F2A6B8",
+   "#8A6A2E"
+  ],
+  "content": {
+   "headline": "She said yes!",
+   "message": "Cheers to Mariam & Yousef",
+   "signature": ""
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/she-said-yes-champagne-post.jpg",
+  "preview_url": "/templates/collection/she-said-yes-champagne-post-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "clinking-glasses"
+  ]
+ },
+ {
+  "id": "wedding-025",
+  "slug": "engagement-party-invitation",
+  "title": "Engagement Party Invitation",
+  "category": "Wedding and engagement",
+  "subcategory": "Engagement",
+  "site_category": "Wedding",
+  "description": "Deep indigo scalloped header with ring and rose-gold title, details below. Scallop edge, ring illustration, divider, RSVP pill.",
+  "design_brief": "Deep indigo scalloped header with ring and rose-gold title, details below. Scallop edge, ring illustration, divider, RSVP pill.",
+  "design_style": "engagement",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=engagement%20party%20invitation%20elegant",
+  "inspiration_query": "engagement party invitation elegant",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "deep indigo scalloped header with ring and rose-gold title, details below",
+   "typography": "Great Vibes rose gold, Lora italic, Cinzel",
+   "palette": "indigo, rose gold, cream",
+   "decor": "scallop edge, ring illustration, divider, RSVP pill"
+  },
+  "palette": [
+   "#FBF3EE",
+   "#2E2A44",
+   "#9E5F55",
+   "#F0C2B0",
+   "#C28370",
+   "#F5D6C8"
+  ],
+  "content": {
+   "headline": "Engagement Party",
+   "message": "Join us to celebrate Aisha & Karim · Saturday 6 February 2027 · 8 PM · La Petite Maison",
+   "signature": "RSVP to Huda · 050 123 4567"
+  },
+  "dimensions": {
+   "width": 559,
+   "height": 794,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/engagement-party-invitation.jpg",
+  "preview_url": "/templates/collection/engagement-party-invitation-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "ring"
+  ]
+ },
+ {
+  "id": "wedding-026",
+  "slug": "engagement-photo-announcement-story",
+  "title": "Engagement Photo Announcement Story",
+  "category": "Wedding and engagement",
+  "subcategory": "Engagement",
+  "site_category": "Wedding",
+  "description": "Couple photo in a tall arch with a gold outline, italic headline below. Arch frame with offset gold line.",
+  "design_brief": "Couple photo in a tall arch with a gold outline, italic headline below. Arch frame with offset gold line.",
+  "design_style": "engagement",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=engagement%20announcement%20photo%20story",
+  "inspiration_query": "engagement announcement photo story",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "couple photo in a tall arch with a gold outline, italic headline below",
+   "typography": "Playfair Display italic, Great Vibes, Montserrat caps",
+   "palette": "linen, charcoal, gold",
+   "decor": "arch frame with offset gold line"
+  },
+  "palette": [
+   "#F5EFE7",
+   "#B48A4A",
+   "#2E2A26",
+   "#6A6058"
+  ],
+  "content": {
+   "headline": "Engaged",
+   "message": "Zara & Ali",
+   "signature": "The beginning of forever · 2027"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1920,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/engagement-photo-announcement-story.jpg",
+  "preview_url": "/templates/collection/engagement-photo-announcement-story-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "wedding-027",
+  "slug": "rose-gold-engagement-card",
+  "title": "Rose Gold Engagement Card",
+  "category": "Wedding and engagement",
+  "subcategory": "Engagement",
+  "site_category": "Wedding",
+  "description": "Ring at the top, rose-gold script congratulations, wish centred. Soft glows, paper grain, ring illustration.",
+  "design_brief": "Ring at the top, rose-gold script congratulations, wish centred. Soft glows, paper grain, ring illustration.",
+  "design_style": "engagement",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=rose%20gold%20engagement%20congratulations%20card",
+  "inspiration_query": "rose gold engagement congratulations card",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "ring at the top, rose-gold script congratulations, wish centred",
+   "typography": "Great Vibes rose gold, Cinzel, Lora italic",
+   "palette": "blush, rose gold, cocoa",
+   "decor": "soft glows, paper grain, ring illustration"
+  },
+  "palette": [
+   "#FBEFEA",
+   "#9E5F55",
+   "#F0C2B0",
+   "#C28370",
+   "#F5D6C8",
+   "#7A4A3E"
+  ],
+  "content": {
+   "headline": "Congratulations on your engagement",
+   "message": "Wishing you a lifetime of love, laughter and happily ever after.",
+   "signature": "With love, the Haddad family"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/rose-gold-engagement-card.jpg",
+  "preview_url": "/templates/collection/rose-gold-engagement-card-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "ring"
+  ]
+ },
+ {
+  "id": "wedding-028",
+  "slug": "henna-night-invitation",
+  "title": "Henna Night Invitation",
+  "category": "Wedding and engagement",
+  "subcategory": "Engagement",
+  "site_category": "Wedding",
+  "description": "Gold line mandala above a script title, corner mandalas. Vector mandalas.",
+  "design_brief": "Gold line mandala above a script title, corner mandalas. Vector mandalas.",
+  "design_style": "engagement",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=henna%20night%20mehndi%20invitation%20mandala",
+  "inspiration_query": "henna night mehndi invitation mandala",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "gold line mandala above a script title, corner mandalas",
+   "typography": "Great Vibes gold, Cormorant Garamond italic, Cinzel",
+   "palette": "henna maroon, gold, blush ivory",
+   "decor": "vector mandalas"
+  },
+  "palette": [
+   "#6B1E2E",
+   "#2E0A14",
+   "#E9C877",
+   "#C9A45A",
+   "#8A6A2E",
+   "#B68A3A"
+  ],
+  "content": {
+   "headline": "Henna Night",
+   "message": "Celebrating Fatima before her wedding · Wednesday 12 May 2027 · 7 PM · Al Habtoor Palace, Majlis",
+   "signature": "Ladies only · traditional attire"
+  },
+  "dimensions": {
+   "width": 559,
+   "height": 794,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/henna-night-invitation.jpg",
+  "preview_url": "/templates/collection/henna-night-invitation-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "wedding-029",
+  "slug": "classic-rsvp-card",
+  "title": "Classic RSVP Card",
+  "category": "Wedding and engagement",
+  "subcategory": "Details",
+  "site_category": "Wedding",
+  "description": "Reply card with tick circles and write-in lines. Double hairline frame, write-in rules.",
+  "design_brief": "Reply card with tick circles and write-in lines. Double hairline frame, write-in rules.",
+  "design_style": "details",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=classic%20wedding%20rsvp%20card",
+  "inspiration_query": "classic wedding rsvp card",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "reply card with tick circles and write-in lines",
+   "typography": "Cinzel, Cormorant Garamond, Great Vibes",
+   "palette": "ivory, ink, taupe gold",
+   "decor": "double hairline frame, write-in rules"
+  },
+  "palette": [
+   "#FBF8F1",
+   "#B9A27A",
+   "#2F2A24",
+   "#5E5243",
+   "#8A7556"
+  ],
+  "content": {
+   "headline": "R.S.V.P.",
+   "message": "Kindly respond by 1 April 2027 · ___ joyfully accepts · ___ regretfully declines · Number of guests ___",
+   "signature": "Sara & Adam"
+  },
+  "dimensions": {
+   "width": 673,
+   "height": 480,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/classic-rsvp-card.jpg",
+  "preview_url": "/templates/collection/classic-rsvp-card-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "wedding-030",
+  "slug": "wedding-details-card",
+  "title": "Wedding Details Card",
+  "category": "Wedding and engagement",
+  "subcategory": "Details",
+  "site_category": "Wedding",
+  "description": "Vertical timeline of the day with icons on a gold line. Timeline rule, icon circles with illustrations.",
+  "design_brief": "Vertical timeline of the day with icons on a gold line. Timeline rule, icon circles with illustrations.",
+  "design_style": "details",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=wedding%20details%20card%20timeline",
+  "inspiration_query": "wedding details card timeline",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "vertical timeline of the day with icons on a gold line",
+   "typography": "Great Vibes, Cinzel, Lora italic, Montserrat caps",
+   "palette": "cream, rose, gold, cocoa",
+   "decor": "timeline rule, icon circles with illustrations"
+  },
+  "palette": [
+   "#F7F3EC",
+   "#9C4F5E",
+   "#C9A45A",
+   "#FFFFFF",
+   "#4E3A3A",
+   "#6B5050"
+  ],
+  "content": {
+   "headline": "The Details",
+   "message": "Ceremony 4 PM · Reception 6 PM · Dinner 7 PM · Dancing 9 PM",
+   "signature": "The Rose Garden, Al Barari · parking on site"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/wedding-details-card.jpg",
+  "preview_url": "/templates/collection/wedding-details-card-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "clinking-glasses",
+   "fork-and-knife-with-plate",
+   "musical-notes",
+   "wedding"
+  ]
+ },
+ {
+  "id": "wedding-031",
+  "slug": "wedding-weekend-itinerary",
+  "title": "Wedding Weekend Itinerary",
+  "category": "Wedding and engagement",
+  "subcategory": "Details",
+  "site_category": "Wedding",
+  "description": "Slim card: blue header, three days of events in stacked sections. Header band, sun illustration, section rules.",
+  "design_brief": "Slim card: blue header, three days of events in stacked sections. Header band, sun illustration, section rules.",
+  "design_style": "details",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=wedding%20weekend%20itinerary%20card",
+  "inspiration_query": "wedding weekend itinerary card",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "slim card: blue header, three days of events in stacked sections",
+   "typography": "Playfair Display italic, Cinzel, Lora italic, Montserrat caps",
+   "palette": "Aegean blue, mist, navy",
+   "decor": "header band, sun illustration, section rules"
+  },
+  "palette": [
+   "#EEF3F8",
+   "#1F4E8C",
+   "#FFFFFF",
+   "#2C3E57",
+   "#B5C7DE"
+  ],
+  "content": {
+   "headline": "Wedding Weekend",
+   "message": "Friday · welcome drinks 7 PM · Saturday · ceremony 4 PM · reception 6 PM · Sunday · farewell brunch 11 AM",
+   "signature": "Lina & Sami · Santorini"
+  },
+  "dimensions": {
+   "width": 374,
+   "height": 794,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/wedding-weekend-itinerary.jpg",
+  "preview_url": "/templates/collection/wedding-weekend-itinerary-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "sun"
+  ]
+ },
+ {
+  "id": "wedding-032",
+  "slug": "travel-and-stay-card",
+  "title": "Travel and Stay Card",
+  "category": "Wedding and engagement",
+  "subcategory": "Details",
+  "site_category": "Wedding",
+  "description": "Split card: travel illustrations on the left, labelled travel notes on the right. Map, suitcase and plane illustrations.",
+  "design_brief": "Split card: travel illustrations on the left, labelled travel notes on the right. Map, suitcase and plane illustrations.",
+  "design_style": "details",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=wedding%20travel%20accommodation%20card",
+  "inspiration_query": "wedding travel accommodation card",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "split card: travel illustrations on the left, labelled travel notes on the right",
+   "typography": "Playfair Display italic, Montserrat caps labels, Lora, Caveat",
+   "palette": "cream, mist blue, navy, terracotta",
+   "decor": "map, suitcase and plane illustrations"
+  },
+  "palette": [
+   "#FBF7EE",
+   "#E6EEF5",
+   "#1F3B5C",
+   "#B5523B",
+   "#2A3A4E"
+  ],
+  "content": {
+   "headline": "Travel & Stay",
+   "message": "Fly into Santorini (JTR) · Rooms held at Canaves Oia until 1 August · Code: LINASAMI27",
+   "signature": "Questions? Message Sami"
+  },
+  "dimensions": {
+   "width": 673,
+   "height": 480,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/travel-and-stay-card.jpg",
+  "preview_url": "/templates/collection/travel-and-stay-card-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "airplane",
+   "luggage",
+   "world-map"
+  ]
+ },
+ {
+  "id": "wedding-033",
+  "slug": "dress-code-card",
+  "title": "Dress Code Card",
+  "category": "Wedding and engagement",
+  "subcategory": "Details",
+  "site_category": "Wedding",
+  "description": "Top hat and gown side by side above a gold script title. Double frame, hat and dress illustrations.",
+  "design_brief": "Top hat and gown side by side above a gold script title. Double frame, hat and dress illustrations.",
+  "design_style": "details",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=wedding%20dress%20code%20card%20black%20tie",
+  "inspiration_query": "wedding dress code card black tie",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "top hat and gown side by side above a gold script title",
+   "typography": "Great Vibes gold, Cinzel, Cormorant Garamond italic",
+   "palette": "black, gold, ivory",
+   "decor": "double frame, hat and dress illustrations"
+  },
+  "palette": [
+   "#121212",
+   "#C9A45A",
+   "#8A6A2E",
+   "#E9C877",
+   "#B68A3A",
+   "#F7E3A3"
+  ],
+  "content": {
+   "headline": "Dress Code",
+   "message": "Black tie · Gowns & tuxedos · Jewel tones encouraged",
+   "signature": "Dana & Rami · 31.12.2027"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/dress-code-card.jpg",
+  "preview_url": "/templates/collection/dress-code-card-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "dress",
+   "top-hat"
+  ]
+ },
+ {
+  "id": "wedding-034",
+  "slug": "wedding-hashtag-card",
+  "title": "Wedding Hashtag Card",
+  "category": "Wedding and engagement",
+  "subcategory": "Details",
+  "site_category": "Wedding",
+  "description": "Camera tile above a script line and a bold hashtag. White tile with shadow, camera and heart.",
+  "design_brief": "Camera tile above a script line and a bold hashtag. White tile with shadow, camera and heart.",
+  "design_style": "details",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=wedding%20hashtag%20sign%20card",
+  "inspiration_query": "wedding hashtag sign card",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "camera tile above a script line and a bold hashtag",
+   "typography": "Great Vibes, Montserrat ExtraBold, Lora italic",
+   "palette": "blush, raspberry, charcoal",
+   "decor": "white tile with shadow, camera and heart"
+  },
+  "palette": [
+   "#FDF1EE",
+   "#FFFFFF",
+   "#E85D7A",
+   "#B23A55",
+   "#2A2025",
+   "#6B5050"
+  ],
+  "content": {
+   "headline": "Share the love",
+   "message": "#ZaraAndAliForever",
+   "signature": "Tag your photos so we can see the day through your eyes"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/wedding-hashtag-card.jpg",
+  "preview_url": "/templates/collection/wedding-hashtag-card-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "camera-with-flash"
+  ]
+ },
+ {
+  "id": "wedding-035",
+  "slug": "elegant-wedding-dinner-menu",
+  "title": "Elegant Wedding Dinner Menu",
+  "category": "Wedding and engagement",
+  "subcategory": "Menu & Program",
+  "site_category": "Wedding",
+  "description": "Tall menu: flower, script title, three courses with dividers. Double frame, white flower, small dividers.",
+  "design_brief": "Tall menu: flower, script title, three courses with dividers. Double frame, white flower, small dividers.",
+  "design_style": "menu & program",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=elegant%20wedding%20dinner%20menu%20card",
+  "inspiration_query": "elegant wedding dinner menu card",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "tall menu: flower, script title, three courses with dividers",
+   "typography": "Great Vibes, Cinzel labels, Cormorant Garamond italic",
+   "palette": "ivory, ink, taupe gold",
+   "decor": "double frame, white flower, small dividers"
+  },
+  "palette": [
+   "#FBF8F1",
+   "#B9A27A",
+   "#2F2A24",
+   "#8A7556"
+  ],
+  "content": {
+   "headline": "Dinner Menu",
+   "message": "Burrata, heirloom tomato, basil · Slow-roasted lamb, saffron rice · Pistachio rose cake",
+   "signature": "Aisha & Karim · 03.12.2027"
+  },
+  "dimensions": {
+   "width": 374,
+   "height": 794,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/elegant-wedding-dinner-menu.jpg",
+  "preview_url": "/templates/collection/elegant-wedding-dinner-menu-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "white-flower"
+  ]
+ },
+ {
+  "id": "wedding-036",
+  "slug": "garden-wedding-menu",
+  "title": "Garden Wedding Menu",
+  "category": "Wedding and engagement",
+  "subcategory": "Menu & Program",
+  "site_category": "Wedding",
+  "description": "Leaf fringe top and bottom, three dishes separated by herb sprigs. Vector leaf fringe, herb illustrations.",
+  "design_brief": "Leaf fringe top and bottom, three dishes separated by herb sprigs. Vector leaf fringe, herb illustrations.",
+  "design_style": "menu & program",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=garden%20greenery%20wedding%20menu",
+  "inspiration_query": "garden greenery wedding menu",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "leaf fringe top and bottom, three dishes separated by herb sprigs",
+   "typography": "Great Vibes, Lora italic, Cinzel",
+   "palette": "sage mist, leaf greens, forest",
+   "decor": "vector leaf fringe, herb illustrations"
+  },
+  "palette": [
+   "#F3F6EF",
+   "#7E9A73",
+   "#A6BC98",
+   "#3D5A47",
+   "#2E3B32"
+  ],
+  "content": {
+   "headline": "Menu",
+   "message": "Mezze to share · Grilled sea bass, lemon & herbs · Orange blossom panna cotta",
+   "signature": "Reem & Tariq"
+  },
+  "dimensions": {
+   "width": 374,
+   "height": 794,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/garden-wedding-menu.jpg",
+  "preview_url": "/templates/collection/garden-wedding-menu-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "herb"
+  ]
+ },
+ {
+  "id": "wedding-037",
+  "slug": "wedding-ceremony-program",
+  "title": "Wedding Ceremony Program",
+  "category": "Wedding and engagement",
+  "subcategory": "Menu & Program",
+  "site_category": "Wedding",
+  "description": "Numbered order of service with hairlines under each part. Double frame, chapel illustration.",
+  "design_brief": "Numbered order of service with hairlines under each part. Double frame, chapel illustration.",
+  "design_style": "menu & program",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=wedding%20ceremony%20program%20classic",
+  "inspiration_query": "wedding ceremony program classic",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "numbered order of service with hairlines under each part",
+   "typography": "Great Vibes, Cinzel, Cormorant Garamond",
+   "palette": "ivory, ink, taupe gold",
+   "decor": "double frame, chapel illustration"
+  },
+  "palette": [
+   "#FBF8F1",
+   "#B9A27A",
+   "#2F2A24",
+   "#8A7556",
+   "#E3D8C4"
+  ],
+  "content": {
+   "headline": "Ceremony Program",
+   "message": "Processional · Welcome · Readings · Exchange of vows & rings · Pronouncement · Recessional",
+   "signature": "Sara & Adam · 07.05.2027"
+  },
+  "dimensions": {
+   "width": 559,
+   "height": 794,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/wedding-ceremony-program.jpg",
+  "preview_url": "/templates/collection/wedding-ceremony-program-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "wedding"
+  ]
+ },
+ {
+  "id": "wedding-038",
+  "slug": "order-of-the-day-timeline",
+  "title": "Order of the Day Timeline",
+  "category": "Wedding and engagement",
+  "subcategory": "Menu & Program",
+  "site_category": "Wedding",
+  "description": "Timeline sign: time in gold caps, event in italic, icon in a ring. Icon rings with illustrations.",
+  "design_brief": "Timeline sign: time in gold caps, event in italic, icon in a ring. Icon rings with illustrations.",
+  "design_style": "menu & program",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=wedding%20order%20of%20the%20day%20timeline%20sign",
+  "inspiration_query": "wedding order of the day timeline sign",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "timeline sign: time in gold caps, event in italic, icon in a ring",
+   "typography": "Great Vibes gold, Cinzel, Cormorant Garamond italic",
+   "palette": "slate navy, gold, ivory",
+   "decor": "icon rings with illustrations"
+  },
+  "palette": [
+   "#1E2A3A",
+   "#8A6A2E",
+   "#E9C877",
+   "#B68A3A",
+   "#F7E3A3",
+   "#9C7431"
+  ],
+  "content": {
+   "headline": "Order of the Day",
+   "message": "4:00 Ceremony · 5:00 Drinks & canapés · 6:30 Dinner · 8:00 Speeches · 9:00 First dance · 12:00 Carriages",
+   "signature": "Hana & James"
+  },
+  "dimensions": {
+   "width": 559,
+   "height": 794,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/order-of-the-day-timeline.jpg",
+  "preview_url": "/templates/collection/order-of-the-day-timeline-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "clinking-glasses",
+   "fork-and-knife-with-plate",
+   "microphone",
+   "musical-notes",
+   "sparkles",
+   "wedding"
+  ]
+ },
+ {
+  "id": "wedding-039",
+  "slug": "wedding-table-number-card",
+  "title": "Wedding Table Number Card",
+  "category": "Wedding and engagement",
+  "subcategory": "Menu & Program",
+  "site_category": "Wedding",
+  "description": "Big table numeral under a script label with floral corners. Flower corners.",
+  "design_brief": "Big table numeral under a script label with floral corners. Flower corners.",
+  "design_style": "menu & program",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=elegant%20wedding%20table%20number%20card",
+  "inspiration_query": "elegant wedding table number card",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "big table numeral under a script label with floral corners",
+   "typography": "Great Vibes, Playfair Display numeral, Cinzel",
+   "palette": "blush, rose, sage",
+   "decor": "flower corners"
+  },
+  "palette": [
+   "#FDF7F4",
+   "#8DA68A",
+   "#B5C4A7",
+   "#9C4F5E",
+   "#4E3A3A"
+  ],
+  "content": {
+   "headline": "Table",
+   "message": "7",
+   "signature": "Layla & Omar · 17.04.2027"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/wedding-table-number-card.jpg",
+  "preview_url": "/templates/collection/wedding-table-number-card-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "blossom",
+   "rose",
+   "white-flower"
+  ]
+ },
+ {
+  "id": "wedding-040",
+  "slug": "escort-place-card",
+  "title": "Escort Place Card",
+  "category": "Wedding and engagement",
+  "subcategory": "Menu & Program",
+  "site_category": "Wedding",
+  "description": "Fold-over place card: couple on the back, guest name and table on the front. Dashed fold line, flower accents.",
+  "design_brief": "Fold-over place card: couple on the back, guest name and table on the front. Dashed fold line, flower accents.",
+  "design_style": "menu & program",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=wedding%20place%20card%20escort%20card",
+  "inspiration_query": "wedding place card escort card",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "fold-over place card: couple on the back, guest name and table on the front",
+   "typography": "Great Vibes, Cinzel",
+   "palette": "ivory, ink, taupe",
+   "decor": "dashed fold line, flower accents"
+  },
+  "palette": [
+   "#FBF8F1",
+   "#E3D8C4",
+   "#C8BCA8",
+   "#2F2A24",
+   "#8A7556",
+   "#B9A27A"
+  ],
+  "content": {
+   "headline": "Welcome",
+   "message": "Ms. Huda Al Mansoori · Table 4",
+   "signature": "Noor & Faisal"
+  },
+  "dimensions": {
+   "width": 673,
+   "height": 480,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/escort-place-card.jpg",
+  "preview_url": "/templates/collection/escort-place-card-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "rose",
+   "white-flower"
+  ]
+ },
+ {
+  "id": "wedding-041",
+  "slug": "photo-thank-you-card",
+  "title": "Photo Thank You Card",
+  "category": "Wedding and engagement",
+  "subcategory": "Thank You",
+  "site_category": "Wedding",
+  "description": "Half-page photo on the left, thank-you note on the right. Photo panel, gold rule.",
+  "design_brief": "Half-page photo on the left, thank-you note on the right. Photo panel, gold rule.",
+  "design_style": "thank you",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=photo%20wedding%20thank%20you%20card",
+  "inspiration_query": "photo wedding thank you card",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "half-page photo on the left, thank-you note on the right",
+   "typography": "Great Vibes, Lora italic, Cinzel",
+   "palette": "linen, charcoal, gold",
+   "decor": "photo panel, gold rule"
+  },
+  "palette": [
+   "#F5EFE7",
+   "#2E2A26",
+   "#5E5248",
+   "#B48A4A"
+  ],
+  "content": {
+   "headline": "Thank you",
+   "message": "for celebrating with us. Your love made our day unforgettable.",
+   "signature": "Love, Zara & Ali"
+  },
+  "dimensions": {
+   "width": 673,
+   "height": 480,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/photo-thank-you-card.jpg",
+  "preview_url": "/templates/collection/photo-thank-you-card-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "wedding-042",
+  "slug": "botanical-thank-you-card",
+  "title": "Botanical Thank You Card",
+  "category": "Wedding and engagement",
+  "subcategory": "Thank You",
+  "site_category": "Wedding",
+  "description": "Half-wreath of leaves crowning a script thank you. Leaf arc, flower accents.",
+  "design_brief": "Half-wreath of leaves crowning a script thank you. Leaf arc, flower accents.",
+  "design_style": "thank you",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=botanical%20wedding%20thank%20you%20card",
+  "inspiration_query": "botanical wedding thank you card",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "half-wreath of leaves crowning a script thank you",
+   "typography": "Great Vibes, Lora italic, Cinzel",
+   "palette": "sage mist, leaf greens, forest",
+   "decor": "leaf arc, flower accents"
+  },
+  "palette": [
+   "#F4F6F0",
+   "#6E8B5B",
+   "#8FA97A",
+   "#3D5A47",
+   "#4E5F55"
+  ],
+  "content": {
+   "headline": "Thank You",
+   "message": "Thank you for your love, your laughter and the beautiful gift. We feel so lucky.",
+   "signature": "Reem & Tariq"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/botanical-thank-you-card.jpg",
+  "preview_url": "/templates/collection/botanical-thank-you-card-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "blossom",
+   "white-flower"
+  ]
+ },
+ {
+  "id": "wedding-043",
+  "slug": "gold-script-thank-you-post",
+  "title": "Gold Script Thank You Post",
+  "category": "Wedding and engagement",
+  "subcategory": "Thank You",
+  "site_category": "Wedding",
+  "description": "Huge gold script thank you with a ring of gold confetti. Paper grain, gold confetti.",
+  "design_brief": "Huge gold script thank you with a ring of gold confetti. Paper grain, gold confetti.",
+  "design_style": "thank you",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=gold%20script%20thank%20you%20instagram%20wedding",
+  "inspiration_query": "gold script thank you instagram wedding",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "huge gold script thank you with a ring of gold confetti",
+   "typography": "Great Vibes gold, Cormorant Garamond italic, Cinzel",
+   "palette": "parchment, gold, walnut",
+   "decor": "paper grain, gold confetti"
+  },
+  "palette": [
+   "#F7F1E6",
+   "#B68A3A",
+   "#C9A45A",
+   "#E9C877",
+   "#8A6A2E",
+   "#F7E3A3"
+  ],
+  "content": {
+   "headline": "Thank you",
+   "message": "To everyone who celebrated with us — we love you.",
+   "signature": "Mr & Mrs Haddad"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/gold-script-thank-you-post.jpg",
+  "preview_url": "/templates/collection/gold-script-thank-you-post-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "wedding-044",
+  "slug": "newlyweds-thank-you-story",
+  "title": "Newlyweds Thank You Story",
+  "category": "Wedding and engagement",
+  "subcategory": "Thank You",
+  "site_category": "Wedding",
+  "description": "Full-bleed couple photo with script and thanks over a dark fade. Gradient shade.",
+  "design_brief": "Full-bleed couple photo with script and thanks over a dark fade. Gradient shade.",
+  "design_style": "thank you",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=newlyweds%20thank%20you%20story%20photo",
+  "inspiration_query": "newlyweds thank you story photo",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "full-bleed couple photo with script and thanks over a dark fade",
+   "typography": "Great Vibes, Cormorant Garamond italic, Montserrat caps",
+   "palette": "photo tones, warm white",
+   "decor": "gradient shade"
+  },
+  "palette": [
+   "#1A1714",
+   "#FFFFFF",
+   "#F3EDE4"
+  ],
+  "content": {
+   "headline": "Just married",
+   "message": "Thank you for being part of our story",
+   "signature": "Mariam & Yousef"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1920,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/newlyweds-thank-you-story.jpg",
+  "preview_url": "/templates/collection/newlyweds-thank-you-story-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "wedding-045",
+  "slug": "minimal-thank-you-card",
+  "title": "Minimal Thank You Card",
+  "category": "Wedding and engagement",
+  "subcategory": "Thank You",
+  "site_category": "Wedding",
+  "description": "Editorial left stack: big italic thank you, a terracotta dot, note below. Single circle and rule.",
+  "design_brief": "Editorial left stack: big italic thank you, a terracotta dot, note below. Single circle and rule.",
+  "design_style": "thank you",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=minimal%20modern%20thank%20you%20card%20wedding",
+  "inspiration_query": "minimal modern thank you card wedding",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "editorial left stack: big italic thank you, a terracotta dot, note below",
+   "typography": "Playfair Display italic, Montserrat",
+   "palette": "oat, ink, terracotta",
+   "decor": "single circle and rule"
+  },
+  "palette": [
+   "#EDE7DE",
+   "#2B2724",
+   "#C9886E",
+   "#4A443E"
+  ],
+  "content": {
+   "headline": "thank you",
+   "message": "We are so grateful you were there. Here’s to many more celebrations together.",
+   "signature": "Hana & James"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/minimal-thank-you-card.jpg",
+  "preview_url": "/templates/collection/minimal-thank-you-card-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "wedding-046",
+  "slug": "welcome-to-our-wedding-sign",
+  "title": "Welcome to Our Wedding Sign",
+  "category": "Wedding and engagement",
+  "subcategory": "Welcome & Signs",
+  "site_category": "Wedding",
+  "description": "Large script Welcome between two floral corners, names and date below. Paper grain, flower and leaf corners.",
+  "design_brief": "Large script Welcome between two floral corners, names and date below. Paper grain, flower and leaf corners.",
+  "design_style": "welcome & signs",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=welcome%20wedding%20sign%20floral",
+  "inspiration_query": "welcome wedding sign floral",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "large script Welcome between two floral corners, names and date below",
+   "typography": "Great Vibes, Cinzel caps, Lora italic",
+   "palette": "blush white, rose, sage",
+   "decor": "paper grain, flower and leaf corners"
+  },
+  "palette": [
+   "#FDF9F5",
+   "#8DA68A",
+   "#B5C4A7",
+   "#9C4F5E",
+   "#4E3A3A",
+   "#8A6B6B"
+  ],
+  "content": {
+   "headline": "Welcome",
+   "message": "to the wedding of Layla & Omar",
+   "signature": "17 April 2027"
+  },
+  "dimensions": {
+   "width": 559,
+   "height": 794,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/welcome-to-our-wedding-sign.jpg",
+  "preview_url": "/templates/collection/welcome-to-our-wedding-sign-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "blossom",
+   "cherry-blossom",
+   "rose",
+   "white-flower"
+  ]
+ },
+ {
+  "id": "wedding-047",
+  "slug": "signature-drinks-bar-sign",
+  "title": "Signature Drinks Bar Sign",
+  "category": "Wedding and engagement",
+  "subcategory": "Welcome & Signs",
+  "site_category": "Wedding",
+  "description": "Bar sign: His / Hers / Ours drinks with glass illustrations. Glass illustrations, divider.",
+  "design_brief": "Bar sign: His / Hers / Ours drinks with glass illustrations. Glass illustrations, divider.",
+  "design_style": "welcome & signs",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=wedding%20signature%20drinks%20bar%20sign",
+  "inspiration_query": "wedding signature drinks bar sign",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "bar sign: His / Hers / Ours drinks with glass illustrations",
+   "typography": "Great Vibes gold, Cinzel, Cormorant Garamond italic",
+   "palette": "ink, gold, ivory",
+   "decor": "glass illustrations, divider"
+  },
+  "palette": [
+   "#14141A",
+   "#8A6A2E",
+   "#E9C877",
+   "#B68A3A",
+   "#F7E3A3",
+   "#9C7431"
+  ],
+  "content": {
+   "headline": "Signature Drinks",
+   "message": "His · Sparkling rose lemonade · Hers · Passion fruit mojito · Ours · Pomegranate spritz",
+   "signature": "Cheers to Dana & Rami"
+  },
+  "dimensions": {
+   "width": 559,
+   "height": 794,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/signature-drinks-bar-sign.jpg",
+  "preview_url": "/templates/collection/signature-drinks-bar-sign-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "cocktail-glass",
+   "tropical-drink",
+   "wine-glass"
+  ]
+ },
+ {
+  "id": "wedding-048",
+  "slug": "unplugged-ceremony-sign",
+  "title": "Unplugged Ceremony Sign",
+  "category": "Wedding and engagement",
+  "subcategory": "Welcome & Signs",
+  "site_category": "Wedding",
+  "description": "Crossed-out phone above an italic two-line title and a gentle note. Phone illustration with strike line, paper grain.",
+  "design_brief": "Crossed-out phone above an italic two-line title and a gentle note. Phone illustration with strike line, paper grain.",
+  "design_style": "welcome & signs",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=unplugged%20ceremony%20sign%20wedding",
+  "inspiration_query": "unplugged ceremony sign wedding",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "crossed-out phone above an italic two-line title and a gentle note",
+   "typography": "Playfair Display italic, Lora, Great Vibes",
+   "palette": "linen, charcoal, brick red",
+   "decor": "phone illustration with strike line, paper grain"
+  },
+  "palette": [
+   "#F3EEE6",
+   "#C0504A",
+   "#2F2A24",
+   "#4E443A",
+   "#8A7556"
+  ],
+  "content": {
+   "headline": "Unplugged ceremony",
+   "message": "Welcome to our unplugged ceremony. Please turn off your phones and cameras — be present with us in this moment.",
+   "signature": "Sara & Adam"
+  },
+  "dimensions": {
+   "width": 559,
+   "height": 794,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/unplugged-ceremony-sign.jpg",
+  "preview_url": "/templates/collection/unplugged-ceremony-sign-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "mobile-phone"
+  ]
+ },
+ {
+  "id": "wedding-049",
+  "slug": "just-married-post",
+  "title": "Just Married Post",
+  "category": "Wedding and engagement",
+  "subcategory": "Welcome & Signs",
+  "site_category": "Wedding",
+  "description": "Bunting across the top, hearts and script announcement centred. Bunting, confetti, hearts illustration.",
+  "design_brief": "Bunting across the top, hearts and script announcement centred. Bunting, confetti, hearts illustration.",
+  "design_style": "welcome & signs",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=just%20married%20instagram%20post",
+  "inspiration_query": "just married instagram post",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "bunting across the top, hearts and script announcement centred",
+   "typography": "Great Vibes, Cinzel caps, Montserrat Light",
+   "palette": "blush, raspberry, gold",
+   "decor": "bunting, confetti, hearts illustration"
+  },
+  "palette": [
+   "#FBEFF1",
+   "#7A6F66",
+   "#F2B8C6",
+   "#FFFFFF",
+   "#E9C877",
+   "#F28BA6"
+  ],
+  "content": {
+   "headline": "Just Married",
+   "message": "Mr & Mrs Al Mansoori",
+   "signature": "17.04.2027"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/just-married-post.jpg",
+  "preview_url": "/templates/collection/just-married-post-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "two-hearts"
+  ]
+ },
+ {
+  "id": "wedding-050",
+  "slug": "wedding-countdown-story",
+  "title": "Wedding Countdown Story",
+  "category": "Wedding and engagement",
+  "subcategory": "Welcome & Signs",
+  "site_category": "Wedding",
+  "description": "Rose-gold countdown number in a white dial, script line below. White dial with dashed ring, chapel illustration.",
+  "design_brief": "Rose-gold countdown number in a white dial, script line below. White dial with dashed ring, chapel illustration.",
+  "design_style": "welcome & signs",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=wedding%20countdown%20instagram%20story",
+  "inspiration_query": "wedding countdown instagram story",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "rose-gold countdown number in a white dial, script line below",
+   "typography": "Playfair Display rose gold, Cinzel caps, Great Vibes",
+   "palette": "blush, rose gold, cocoa",
+   "decor": "white dial with dashed ring, chapel illustration"
+  },
+  "palette": [
+   "#F9E9E4",
+   "#EBD2CF",
+   "#FFFFFF",
+   "#C28370",
+   "#9E5F55",
+   "#F0C2B0"
+  ],
+  "content": {
+   "headline": "30 days to go",
+   "message": "until Maya & Hadi say ‘I do’",
+   "signature": "23.10.2027 · Ras Al Khaimah"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1920,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/wedding-countdown-story.jpg",
+  "preview_url": "/templates/collection/wedding-countdown-story-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "wedding"
+  ]
+ }
+]

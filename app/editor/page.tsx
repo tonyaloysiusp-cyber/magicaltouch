@@ -7165,7 +7165,7 @@ function EditorContent() {
     {
       id: 'qr',
       label: 'QR code',
-      title: 'QR code generator — links, usernames, Wi-Fi and more, with an optional logo',
+      title: 'QR code generator',
       icon: <QrCodeIcon size={20} />,
       render: () => <QrPanel brandLogoUrl={brandKit.logoUrl} onAdd={(url) => insertImageDataUrl(url)} />,
     },

@@ -573,7 +573,7 @@ scenarios.push({
         await new Promise((res) => c.loadFromJSON(tpl.canvasJson, res));
         c.requestRenderAll();
         const imgs = c.getObjects().filter((o) => o.type === 'image');
-        return { objects: c.getObjects().length, images: imgs.length, broken: imgs.filter((o) => !o._element || !o._element.naturalWidth).map((o) => o.src || o.getSrc()) };
+        return { objects: c.getObjects().length, images: imgs.length, broken: imgs.filter((o) => { const el = o._originalElement || o._element; return !el || !(el.naturalWidth || el.width); }).map((o) => o.src || o.getSrc()) };
       }, slug);
       await t.page.waitForTimeout(1500);
       await t.shot(slug);
