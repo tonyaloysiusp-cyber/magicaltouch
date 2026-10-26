@@ -21,7 +21,7 @@ ROOT = os.path.abspath(os.path.join(HERE, "..", ".."))
 
 from kit import Doc  # noqa: E402
 
-MODULES = {"birthday": ["birthday_a", "birthday_b", "birthday_c", "birthday_d", "birthday_e"], "wedding": ["wedding"], "greeting": ["greetings"], "seasonal": ["seasonal"], "baby": ["baby"], "grad": ["graduation"], "event": ["events"], "social": ["social"]}
+MODULES = {"birthday": ["birthday_a", "birthday_b", "birthday_c", "birthday_d", "birthday_e"], "wedding": ["wedding"], "greeting": ["greetings"], "seasonal": ["seasonal"], "baby": ["baby"], "grad": ["graduation"], "event": ["events"], "social": ["social"], "business": ["business"]}
 
 
 def load_designs(cat):
@@ -66,33 +66,43 @@ def new_records(cat):
     import urllib.parse
     mod = importlib.import_module(MODULES[cat][0])
     boards = {}
-    for t in json.load(open(ARTBOARD_SRC)):
-        boards.setdefault((t["width"], t["height"]), t["canvasJson"]["objects"][0])
+    import glob
+    for f in [ARTBOARD_SRC] + sorted(glob.glob(os.path.join(ROOT, "public/templates/collection/collection500-*.json"))):
+        for t in json.load(open(f)):
+            boards.setdefault((t["width"], t["height"]), t["canvasJson"]["objects"][0])
+    print_board = boards[(480, 673)]
     taken = set()
     coll = os.path.join(ROOT, "public/templates/collection")
     for f in os.listdir(coll):
         if f.endswith(".jpg"):
             taken.add(f[:-4].replace("-preview", ""))
     pub, man = [], []
-    for i, (sub, title, w, h, head, msg, sig, query, kw) in enumerate(mod.SPEC, 1):
+    for i, row in enumerate(mod.SPEC, 1):
+        sub, title, w, h, head, msg, sig, query, kw = row[:9]
+        site = row[9] if len(row) > 9 else mod.SITE_CATEGORY
         slug = _slug(title)
         if slug in taken:
             raise SystemExit(f"slug already used by another template: {slug} — rename '{title}'")
         rid = f"{cat}-{i:03d}"
-        ab = json.loads(json.dumps(boards[(w, h)]))
+        ab = json.loads(json.dumps(boards.get((w, h)) or dict(print_board, width=w, height=h)))
+        if (w, h) in getattr(mod, "DPI300", ()) and (w, h) not in boards:
+            pr = ab.get("__print") or {}
+            for key in ("bleed", "safeArea"):
+                if isinstance(pr.get(key), dict):
+                    pr[key] = {k: round(v * 300 / 96, 3) for k, v in pr[key].items()}
         ab["__artboardId"] = f"artboard_{cat}_{i:03d}"
         ab["name"] = "Page 1"
         url = "https://www.pinterest.com/search/pins/?q=" + urllib.parse.quote(query)
         orient = "square" if w == h else ("portrait" if h > w else "landscape")
         man.append({
-            "id": rid, "slug": slug, "title": title, "category": mod.CATEGORY, "subcategory": sub, "site_category": mod.SITE_CATEGORY,
+            "id": rid, "slug": slug, "title": title, "category": mod.CATEGORY, "subcategory": sub, "site_category": site,
             "description": "", "design_brief": "", "design_style": sub.lower(), "inspiration_reference_url": url, "inspiration_query": query,
             "inspiration_pin_url": None, "reference_type": "pinterest_search", "reference_verified": False, "design_notes": {}, "palette": [],
             "content": {"headline": head, "message": msg, "signature": sig}, "dimensions": {"width": w, "height": h, "unit": "px"}, "pages": 1,
             "thumbnail_url": f"/templates/collection/{slug}.jpg", "preview_url": f"/templates/collection/{slug}-preview.jpg", "status": "published", "is_editable": True,
         })
         pub.append({
-            "name": title, "category": mod.SITE_CATEGORY, "sub": sub, "slug": slug, "width": w, "height": h, "pages": 1, "color1": "#FFFFFF", "color2": "#000000",
+            "name": title, "category": site, "sub": sub, "slug": slug, "width": w, "height": h, "pages": 1, "color1": "#FFFFFF", "color2": "#000000",
             "sort": -3000 + i, "premium": False, "featured": i <= 10, "keywords": kw, "tags": [mod.TAG, "collection-500"], "occasion": None, "orientation": orient,
             "description": "", "canvasJson": {"version": "5.1.0", "objects": [ab]},
         })

@@ -1,0 +1,1367 @@
+[
+ {
+  "id": "business-001",
+  "slug": "minimal-monogram-business-card",
+  "title": "Minimal Monogram Business Card",
+  "category": "Business and professional stationery",
+  "subcategory": "Business card",
+  "site_category": "Business Card",
+  "description": "Monogram ring left of a hairline divider, name and four contact rows right. Monogram ring, line icons.",
+  "design_brief": "Monogram ring left of a hairline divider, name and four contact rows right. Monogram ring, line icons.",
+  "design_style": "business card",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=minimal%20monogram%20business%20card%20cream",
+  "inspiration_query": "minimal monogram business card cream",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "monogram ring left of a hairline divider, name and four contact rows right",
+   "typography": "Playfair Display, Montserrat",
+   "palette": "cream, walnut, charcoal",
+   "decor": "monogram ring, line icons"
+  },
+  "palette": [
+   "#F4EFE6",
+   "#C9B79C",
+   "#8A6A4A",
+   "#2A2420",
+   "#3A332C"
+  ],
+  "content": {
+   "headline": "Layla Haddad",
+   "message": "Principal Architect · Haddad Studio",
+   "signature": "+971 50 123 4567 · layla@haddadstudio.ae · haddadstudio.ae · Dubai Design District"
+  },
+  "dimensions": {
+   "width": 1050,
+   "height": 600,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/minimal-monogram-business-card.jpg",
+  "preview_url": "/templates/collection/minimal-monogram-business-card-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "business-002",
+  "slug": "bold-split-colour-business-card",
+  "title": "Bold Split Colour Business Card",
+  "category": "Business and professional stationery",
+  "subcategory": "Business card",
+  "site_category": "Business Card",
+  "description": "Angled colour block with stacked wordmark, name and contacts on white. Diagonal split, line icons.",
+  "design_brief": "Angled colour block with stacked wordmark, name and contacts on white. Diagonal split, line icons.",
+  "design_style": "business card",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=bold%20split%20color%20business%20card%20modern",
+  "inspiration_query": "bold split color business card modern",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "angled colour block with stacked wordmark, name and contacts on white",
+   "typography": "Anton, Outfit, DM Sans",
+   "palette": "vermilion, ink navy, white",
+   "decor": "diagonal split, line icons"
+  },
+  "palette": [
+   "#FFFFFF",
+   "#FF5A36",
+   "#1A1A2E",
+   "#2A2A3E"
+  ],
+  "content": {
+   "headline": "Omar Saeed",
+   "message": "Marketing Director · Brightline Agency",
+   "signature": "+971 55 987 6543 · omar@brightline.ae · brightline.ae · Business Bay, Dubai"
+  },
+  "dimensions": {
+   "width": 1050,
+   "height": 600,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/bold-split-colour-business-card.jpg",
+  "preview_url": "/templates/collection/bold-split-colour-business-card-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "business-003",
+  "slug": "gold-luxury-real-estate-card",
+  "title": "Gold Luxury Real Estate Card",
+  "category": "Business and professional stationery",
+  "subcategory": "Business card",
+  "site_category": "Business Card",
+  "description": "Black card with gold double line, foil name left, diamond logo right. Grain, inset frame, diamond mark.",
+  "design_brief": "Black card with gold double line, foil name left, diamond logo right. Grain, inset frame, diamond mark.",
+  "design_style": "business card",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=black%20gold%20luxury%20business%20card%20real%20estate",
+  "inspiration_query": "black gold luxury business card real estate",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "black card with gold double line, foil name left, diamond logo right",
+   "typography": "Cormorant Garamond gold, Montserrat",
+   "palette": "black, gold, champagne",
+   "decor": "grain, inset frame, diamond mark"
+  },
+  "palette": [
+   "#0E0E0E",
+   "#B68A3A",
+   "#8A6A2E",
+   "#E9C877",
+   "#F7E3A3",
+   "#9C7431"
+  ],
+  "content": {
+   "headline": "Noor Al Mansouri",
+   "message": "Senior Property Consultant · Noor Estates",
+   "signature": "+971 50 222 3344 · noor@noorestates.ae · noorestates.ae · Palm Jumeirah"
+  },
+  "dimensions": {
+   "width": 1050,
+   "height": 600,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/gold-luxury-real-estate-card.jpg",
+  "preview_url": "/templates/collection/gold-luxury-real-estate-card-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "business-004",
+  "slug": "photographer-split-business-card",
+  "title": "Photographer Split Business Card",
+  "category": "Business and professional stationery",
+  "subcategory": "Business card",
+  "site_category": "Business Card",
+  "description": "Name and contacts left, full-height photo right. Half-bleed photo, rule.",
+  "design_brief": "Name and contacts left, full-height photo right. Half-bleed photo, rule.",
+  "design_style": "business card",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=photographer%20business%20card%20with%20photo",
+  "inspiration_query": "photographer business card with photo",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "name and contacts left, full-height photo right",
+   "typography": "Montserrat caps, Lora italic",
+   "palette": "off-white, black, photo",
+   "decor": "half-bleed photo, rule"
+  },
+  "palette": [
+   "#FAFAF7",
+   "#111111",
+   "#6A6A6A",
+   "#222222"
+  ],
+  "content": {
+   "headline": "Sam Rivera",
+   "message": "Photography · Weddings & Portraits",
+   "signature": "+971 52 456 7890 · hello@samrivera.photo · samrivera.photo · @samrivera.photo"
+  },
+  "dimensions": {
+   "width": 1050,
+   "height": 600,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/photographer-split-business-card.jpg",
+  "preview_url": "/templates/collection/photographer-split-business-card-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "business-005",
+  "slug": "creative-gradient-business-card",
+  "title": "Creative Gradient Business Card",
+  "category": "Business and professional stationery",
+  "subcategory": "Business card",
+  "site_category": "Business Card",
+  "description": "Glass card over a violet-pink-peach gradient, contacts and a working QR code. Glassmorphism panel, blobs, QR code.",
+  "design_brief": "Glass card over a violet-pink-peach gradient, contacts and a working QR code. Glassmorphism panel, blobs, QR code.",
+  "design_style": "business card",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=gradient%20creative%20business%20card%20designer",
+  "inspiration_query": "gradient creative business card designer",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "glass card over a violet-pink-peach gradient, contacts and a working QR code",
+   "typography": "Outfit ExtraBold, DM Sans",
+   "palette": "violet, pink, peach, white",
+   "decor": "glassmorphism panel, blobs, QR code"
+  },
+  "palette": [
+   "#7B5CFF",
+   "#E45AA8",
+   "#FFB36B",
+   "#FFFFFF",
+   "#FFF2F8",
+   "#2A1050"
+  ],
+  "content": {
+   "headline": "Mira Joseph",
+   "message": "UX & Brand Designer",
+   "signature": "+971 56 321 0099 · mira@mirajoseph.design · mirajoseph.design · Dubai"
+  },
+  "dimensions": {
+   "width": 1050,
+   "height": 600,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/creative-gradient-business-card.jpg",
+  "preview_url": "/templates/collection/creative-gradient-business-card-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "business-006",
+  "slug": "law-firm-classic-business-card",
+  "title": "Law Firm Classic Business Card",
+  "category": "Business and professional stationery",
+  "subcategory": "Business card",
+  "site_category": "Business Card",
+  "description": "Centred crest, firm name, gem divider and two contact lines. Monogram crest, gold base band.",
+  "design_brief": "Centred crest, firm name, gem divider and two contact lines. Monogram crest, gold base band.",
+  "design_style": "business card",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=classic%20navy%20law%20firm%20business%20card%20serif",
+  "inspiration_query": "classic navy law firm business card serif",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "centred crest, firm name, gem divider and two contact lines",
+   "typography": "Cormorant Garamond, Montserrat",
+   "palette": "navy, champagne gold, white",
+   "decor": "monogram crest, gold base band"
+  },
+  "palette": [
+   "#14213D",
+   "#8A6A2E",
+   "#E9C877",
+   "#B68A3A",
+   "#F7E3A3",
+   "#9C7431"
+  ],
+  "content": {
+   "headline": "Ahmed Rahman",
+   "message": "Partner · Rahman & Co. Advocates",
+   "signature": "+971 4 555 1200 · a.rahman@rahmanlaw.ae · rahmanlaw.ae · DIFC, Dubai"
+  },
+  "dimensions": {
+   "width": 1050,
+   "height": 600,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/law-firm-classic-business-card.jpg",
+  "preview_url": "/templates/collection/law-firm-classic-business-card-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "business-007",
+  "slug": "beauty-salon-business-card",
+  "title": "Beauty Salon Business Card",
+  "category": "Business and professional stationery",
+  "subcategory": "Business card",
+  "site_category": "Business Card",
+  "description": "Script salon name centred, services line and four icon columns. Soft circle, leaf sprig, icon row.",
+  "design_brief": "Script salon name centred, services line and four icon columns. Soft circle, leaf sprig, icon row.",
+  "design_style": "business card",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=blush%20beauty%20salon%20business%20card%20script",
+  "inspiration_query": "blush beauty salon business card script",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "script salon name centred, services line and four icon columns",
+   "typography": "Great Vibes, Montserrat, Lora italic",
+   "palette": "blush, terracotta rose, cocoa",
+   "decor": "soft circle, leaf sprig, icon row"
+  },
+  "palette": [
+   "#F8E6E1",
+   "#F1D0C6",
+   "#C98E7E",
+   "#A65A4C",
+   "#5A3A35",
+   "#D8AFA4"
+  ],
+  "content": {
+   "headline": "Bloom Beauty Lounge",
+   "message": "Hair · Nails · Skin",
+   "signature": "+971 4 333 7788 · bloombeauty.ae · @bloombeauty · Jumeirah 1"
+  },
+  "dimensions": {
+   "width": 1050,
+   "height": 600,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/beauty-salon-business-card.jpg",
+  "preview_url": "/templates/collection/beauty-salon-business-card-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "business-008",
+  "slug": "tech-startup-business-card",
+  "title": "Tech Startup Business Card",
+  "category": "Business and professional stationery",
+  "subcategory": "Business card",
+  "site_category": "Business Card",
+  "description": "Dark dotted grid, logo tile, name in white, cyan role and a working QR code. Dot grid, glow, QR code.",
+  "design_brief": "Dark dotted grid, logo tile, name in white, cyan role and a working QR code. Dot grid, glow, QR code.",
+  "design_style": "business card",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=dark%20tech%20startup%20business%20card%20qr%20code",
+  "inspiration_query": "dark tech startup business card qr code",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "dark dotted grid, logo tile, name in white, cyan role and a working QR code",
+   "typography": "Outfit, DM Sans",
+   "palette": "midnight, cyan, violet",
+   "decor": "dot grid, glow, QR code"
+  },
+  "palette": [
+   "#0B1020",
+   "#00E5FF",
+   "#7B5CFF",
+   "#FFFFFF",
+   "#C9D3F0"
+  ],
+  "content": {
+   "headline": "Ravi Menon",
+   "message": "Co-founder & CTO · Nimbus Labs",
+   "signature": "+971 58 765 4321 · ravi@nimbuslabs.io · nimbuslabs.io · Dubai Internet City"
+  },
+  "dimensions": {
+   "width": 1050,
+   "height": 600,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/tech-startup-business-card.jpg",
+  "preview_url": "/templates/collection/tech-startup-business-card-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "business-009",
+  "slug": "coffee-shop-business-card",
+  "title": "Coffee Shop Business Card",
+  "category": "Business and professional stationery",
+  "subcategory": "Business card",
+  "site_category": "Business Card",
+  "description": "Espresso half with cup and name, cream half with script and contacts. Cup illustration, split.",
+  "design_brief": "Espresso half with cup and name, cream half with script and contacts. Cup illustration, split.",
+  "design_style": "business card",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=coffee%20shop%20business%20card%20illustration",
+  "inspiration_query": "coffee shop business card illustration",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "espresso half with cup and name, cream half with script and contacts",
+   "typography": "Pacifico, Montserrat, Lora italic",
+   "palette": "coffee, cream, terracotta",
+   "decor": "cup illustration, split"
+  },
+  "palette": [
+   "#6B3A1E",
+   "#FBF3E8",
+   "#7D4A2C",
+   "#E3C8A8",
+   "#B5523B",
+   "#3A2418"
+  ],
+  "content": {
+   "headline": "The Daily Grind",
+   "message": "Specialty Coffee & Bakery",
+   "signature": "+971 4 222 1100 · thedailygrind.ae · @thedailygrind · Al Wasl Road"
+  },
+  "dimensions": {
+   "width": 1050,
+   "height": 600,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/coffee-shop-business-card.jpg",
+  "preview_url": "/templates/collection/coffee-shop-business-card-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "hot-beverage"
+  ]
+ },
+ {
+  "id": "business-010",
+  "slug": "vertical-clinic-business-card",
+  "title": "Vertical Clinic Business Card",
+  "category": "Business and professional stationery",
+  "subcategory": "Business card",
+  "site_category": "Business Card",
+  "description": "Vertical card: teal header with cross mark, centred name, contacts below. Wave edge, medical cross.",
+  "design_brief": "Vertical card: teal header with cross mark, centred name, contacts below. Wave edge, medical cross.",
+  "design_style": "business card",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=vertical%20medical%20business%20card%20clean",
+  "inspiration_query": "vertical medical business card clean",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "vertical card: teal header with cross mark, centred name, contacts below",
+   "typography": "Playfair Display, Montserrat",
+   "palette": "teal, white, mint grey",
+   "decor": "wave edge, medical cross"
+  },
+  "palette": [
+   "#FFFFFF",
+   "#0F766E",
+   "#123B38",
+   "#BFD9D6",
+   "#2A3A38"
+  ],
+  "content": {
+   "headline": "Dr. Sara Khalil",
+   "message": "Consultant Dermatologist · Clear Skin Clinic",
+   "signature": "+971 4 444 9090 · clearskin.ae · Al Safa, Dubai"
+  },
+  "dimensions": {
+   "width": 600,
+   "height": 1050,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/vertical-clinic-business-card.jpg",
+  "preview_url": "/templates/collection/vertical-clinic-business-card-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "business-011",
+  "slug": "corporate-navy-letterhead",
+  "title": "Corporate Navy Letterhead",
+  "category": "Business and professional stationery",
+  "subcategory": "Letterhead",
+  "site_category": "Letterhead",
+  "description": "Navy header band with gold rule, letter body, grey footer band with contacts. Header band, diamond mark.",
+  "design_brief": "Navy header band with gold rule, letter body, grey footer band with contacts. Header band, diamond mark.",
+  "design_style": "letterhead",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=corporate%20navy%20letterhead%20design",
+  "inspiration_query": "corporate navy letterhead design",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "navy header band with gold rule, letter body, grey footer band with contacts",
+   "typography": "Montserrat caps, Lora",
+   "palette": "navy, gold, cool grey",
+   "decor": "header band, diamond mark"
+  },
+  "palette": [
+   "#14213D",
+   "#C9A45A",
+   "#FFFFFF",
+   "#C9D3E6",
+   "#2A2F3A",
+   "#F1F3F7"
+  ],
+  "content": {
+   "headline": "Meridian Holdings",
+   "message": "Dear Ms. Haddad,",
+   "signature": "Office 1204, Bay Square · Business Bay, Dubai · +971 4 123 4567 · meridianholdings.ae"
+  },
+  "dimensions": {
+   "width": 794,
+   "height": 1123,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/corporate-navy-letterhead.jpg",
+  "preview_url": "/templates/collection/corporate-navy-letterhead-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "business-012",
+  "slug": "minimal-line-letterhead",
+  "title": "Minimal Line Letterhead",
+  "category": "Business and professional stationery",
+  "subcategory": "Letterhead",
+  "site_category": "Letterhead",
+  "description": "Name and contacts aligned to a single hairline, monogram footer. Hairlines, small monogram.",
+  "design_brief": "Name and contacts aligned to a single hairline, monogram footer. Hairlines, small monogram.",
+  "design_style": "letterhead",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=minimal%20line%20letterhead",
+  "inspiration_query": "minimal line letterhead",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "name and contacts aligned to a single hairline, monogram footer",
+   "typography": "Playfair Display, Montserrat",
+   "palette": "white, walnut, sand line",
+   "decor": "hairlines, small monogram"
+  },
+  "palette": [
+   "#FFFFFF",
+   "#2A2420",
+   "#8A6A4A",
+   "#6A6058",
+   "#C9B79C"
+  ],
+  "content": {
+   "headline": "Haddad Studio",
+   "message": "Dear Client,",
+   "signature": "Dubai Design District · +971 50 123 4567 · haddadstudio.ae"
+  },
+  "dimensions": {
+   "width": 794,
+   "height": 1123,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/minimal-line-letterhead.jpg",
+  "preview_url": "/templates/collection/minimal-line-letterhead-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "business-013",
+  "slug": "creative-studio-letterhead",
+  "title": "Creative Studio Letterhead",
+  "category": "Business and professional stationery",
+  "subcategory": "Letterhead",
+  "site_category": "Letterhead",
+  "description": "Playful corner shapes, stacked wordmark, letter body and bright footer strip. Circles and tilted square.",
+  "design_brief": "Playful corner shapes, stacked wordmark, letter body and bright footer strip. Circles and tilted square.",
+  "design_style": "letterhead",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=creative%20agency%20letterhead%20colour%20shapes",
+  "inspiration_query": "creative agency letterhead colour shapes",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "playful corner shapes, stacked wordmark, letter body and bright footer strip",
+   "typography": "Anton, DM Sans",
+   "palette": "vermilion, sunflower, ink",
+   "decor": "circles and tilted square"
+  },
+  "palette": [
+   "#FFFFFF",
+   "#FF5A36",
+   "#FFC93C",
+   "#1A1A2E",
+   "#2A2A3E"
+  ],
+  "content": {
+   "headline": "Brightline Agency",
+   "message": "Hello Dana,",
+   "signature": "Business Bay, Dubai · hello@brightline.ae · brightline.ae"
+  },
+  "dimensions": {
+   "width": 794,
+   "height": 1123,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/creative-studio-letterhead.jpg",
+  "preview_url": "/templates/collection/creative-studio-letterhead-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "business-014",
+  "slug": "law-firm-letterhead",
+  "title": "Law Firm Letterhead",
+  "category": "Business and professional stationery",
+  "subcategory": "Letterhead",
+  "site_category": "Letterhead",
+  "description": "Centred crest and firm name with gem divider, classic serif body. Monogram crest, divider.",
+  "design_brief": "Centred crest and firm name with gem divider, classic serif body. Monogram crest, divider.",
+  "design_style": "letterhead",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=classic%20law%20firm%20letterhead",
+  "inspiration_query": "classic law firm letterhead",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "centred crest and firm name with gem divider, classic serif body",
+   "typography": "Cormorant Garamond, Montserrat",
+   "palette": "white, navy, gold",
+   "decor": "monogram crest, divider"
+  },
+  "palette": [
+   "#FFFFFF",
+   "#14213D",
+   "#7A8494",
+   "#B68A3A",
+   "#222222"
+  ],
+  "content": {
+   "headline": "Rahman & Co.",
+   "message": "Dear Sir or Madam,",
+   "signature": "Gate Village 4, DIFC · Dubai · +971 4 555 1200 · rahmanlaw.ae"
+  },
+  "dimensions": {
+   "width": 794,
+   "height": 1123,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/law-firm-letterhead.jpg",
+  "preview_url": "/templates/collection/law-firm-letterhead-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "business-015",
+  "slug": "teal-clinic-letterhead",
+  "title": "Teal Clinic Letterhead",
+  "category": "Business and professional stationery",
+  "subcategory": "Letterhead",
+  "site_category": "Letterhead",
+  "description": "Teal edge stripe, cross logo with stacked contacts, soft wave footer. Medical cross, wave.",
+  "design_brief": "Teal edge stripe, cross logo with stacked contacts, soft wave footer. Medical cross, wave.",
+  "design_style": "letterhead",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=medical%20clinic%20letterhead%20clean%20teal",
+  "inspiration_query": "medical clinic letterhead clean teal",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "teal edge stripe, cross logo with stacked contacts, soft wave footer",
+   "typography": "Playfair Display, Montserrat, DM Sans",
+   "palette": "teal, white, mint",
+   "decor": "medical cross, wave"
+  },
+  "palette": [
+   "#FFFFFF",
+   "#0F766E",
+   "#123B38",
+   "#2A3A38",
+   "#BFD9D6",
+   "#E6F2F0"
+  ],
+  "content": {
+   "headline": "Clear Skin Clinic",
+   "message": "To whom it may concern,",
+   "signature": "Al Safa, Dubai · +971 4 444 9090 · clearskin.ae"
+  },
+  "dimensions": {
+   "width": 794,
+   "height": 1123,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/teal-clinic-letterhead.jpg",
+  "preview_url": "/templates/collection/teal-clinic-letterhead-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "business-016",
+  "slug": "gold-luxury-letterhead",
+  "title": "Gold Luxury Letterhead",
+  "category": "Business and professional stationery",
+  "subcategory": "Letterhead",
+  "site_category": "Letterhead",
+  "description": "Double gold frame, diamond mark and foil wordmark, centred footer. Double frame, diamond.",
+  "design_brief": "Double gold frame, diamond mark and foil wordmark, centred footer. Double frame, diamond.",
+  "design_style": "letterhead",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=luxury%20gold%20letterhead",
+  "inspiration_query": "luxury gold letterhead",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "double gold frame, diamond mark and foil wordmark, centred footer",
+   "typography": "Cormorant Garamond gold, Montserrat",
+   "palette": "ivory, gold",
+   "decor": "double frame, diamond"
+  },
+  "palette": [
+   "#FFFDF8",
+   "#B68A3A",
+   "#8A6A2E",
+   "#E9C877",
+   "#F7E3A3",
+   "#9C7431"
+  ],
+  "content": {
+   "headline": "Noor Estates",
+   "message": "Dear Mr. Al Falasi,",
+   "signature": "Palm Jumeirah · Dubai · +971 50 222 3344 · noorestates.ae"
+  },
+  "dimensions": {
+   "width": 794,
+   "height": 1123,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/gold-luxury-letterhead.jpg",
+  "preview_url": "/templates/collection/gold-luxury-letterhead-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "business-017",
+  "slug": "professional-invoice",
+  "title": "Professional Invoice",
+  "category": "Business and professional stationery",
+  "subcategory": "Document",
+  "site_category": "Business",
+  "description": "Dark header with logo and INVOICE, bill-to and dates, zebra line-item table, totals bar. Header band, table, total bar.",
+  "design_brief": "Dark header with logo and INVOICE, bill-to and dates, zebra line-item table, totals bar. Header band, table, total bar.",
+  "design_style": "document",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=professional%20invoice%20template%20modern",
+  "inspiration_query": "professional invoice template modern",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "dark header with logo and INVOICE, bill-to and dates, zebra line-item table, totals bar",
+   "typography": "Anton, DM Sans, Playfair Display italic",
+   "palette": "ink navy, vermilion, cool grey",
+   "decor": "header band, table, total bar"
+  },
+  "palette": [
+   "#FFFFFF",
+   "#1A1A2E",
+   "#FF5A36",
+   "#C9CCE0",
+   "#2A2A3E",
+   "#6A6A80"
+  ],
+  "content": {
+   "headline": "Invoice",
+   "message": "Brightline Agency",
+   "signature": "Business Bay, Dubai · hello@brightline.ae"
+  },
+  "dimensions": {
+   "width": 794,
+   "height": 1123,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/professional-invoice.jpg",
+  "preview_url": "/templates/collection/professional-invoice-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "business-018",
+  "slug": "quotation-estimate-template",
+  "title": "Quotation Estimate Template",
+  "category": "Business and professional stationery",
+  "subcategory": "Document",
+  "site_category": "Business",
+  "description": "Studio header with italic QUOTATION, client and project blocks, service table, notes and signature lines. Hairlines, notes panel.",
+  "design_brief": "Studio header with italic QUOTATION, client and project blocks, service table, notes and signature lines. Hairlines, notes panel.",
+  "design_style": "document",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=quotation%20estimate%20template%20minimal",
+  "inspiration_query": "quotation estimate template minimal",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "studio header with italic QUOTATION, client and project blocks, service table, notes and signature lines",
+   "typography": "Playfair Display, Lora, Montserrat",
+   "palette": "warm paper, walnut, charcoal",
+   "decor": "hairlines, notes panel"
+  },
+  "palette": [
+   "#FBF8F3",
+   "#2A2420",
+   "#8A6A4A",
+   "#6A6058",
+   "#C9B79C",
+   "#F4EFE6"
+  ],
+  "content": {
+   "headline": "Quotation",
+   "message": "Haddad Studio",
+   "signature": "Valid for 30 days"
+  },
+  "dimensions": {
+   "width": 794,
+   "height": 1123,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/quotation-estimate-template.jpg",
+  "preview_url": "/templates/collection/quotation-estimate-template-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "business-019",
+  "slug": "business-proposal-cover",
+  "title": "Business Proposal Cover",
+  "category": "Business and professional stationery",
+  "subcategory": "Document",
+  "site_category": "Business",
+  "description": "Photo top with angled cut, big two-line title, prepared-by block. Angled photo cut, accent bar.",
+  "design_brief": "Photo top with angled cut, big two-line title, prepared-by block. Angled photo cut, accent bar.",
+  "design_style": "document",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=business%20proposal%20cover%20page%20photo",
+  "inspiration_query": "business proposal cover page photo",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "photo top with angled cut, big two-line title, prepared-by block",
+   "typography": "Outfit ExtraBold, DM Sans, Anton",
+   "palette": "ink navy, vermilion, white",
+   "decor": "angled photo cut, accent bar"
+  },
+  "palette": [
+   "#1A1A2E",
+   "#FF5A36",
+   "#FFFFFF",
+   "#C9CCE0"
+  ],
+  "content": {
+   "headline": "Business Proposal",
+   "message": "Website redesign for Meridian Holdings",
+   "signature": "Prepared by Brightline Agency · March 2027"
+  },
+  "dimensions": {
+   "width": 794,
+   "height": 1123,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/business-proposal-cover.jpg",
+  "preview_url": "/templates/collection/business-proposal-cover-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "business-020",
+  "slug": "architecture-company-profile-cover",
+  "title": "Architecture Company Profile Cover",
+  "category": "Business and professional stationery",
+  "subcategory": "Document",
+  "site_category": "Business",
+  "description": "Architecture photo top-right, navy title block overlapping, wordmark below. Overlapping block, gold rule.",
+  "design_brief": "Architecture photo top-right, navy title block overlapping, wordmark below. Overlapping block, gold rule.",
+  "design_style": "document",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=company%20profile%20cover%20modern%20architecture",
+  "inspiration_query": "company profile cover modern architecture",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "architecture photo top-right, navy title block overlapping, wordmark below",
+   "typography": "Playfair Display, Lora italic, Montserrat caps",
+   "palette": "navy, gold, cool grey",
+   "decor": "overlapping block, gold rule"
+  },
+  "palette": [
+   "#F1F3F7",
+   "#14213D",
+   "#FFFFFF",
+   "#C9A45A",
+   "#C9D3E6"
+  ],
+  "content": {
+   "headline": "Company Profile",
+   "message": "Building better spaces since 2009",
+   "signature": "Meridian Holdings · 2027"
+  },
+  "dimensions": {
+   "width": 794,
+   "height": 1123,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/architecture-company-profile-cover.jpg",
+  "preview_url": "/templates/collection/architecture-company-profile-cover-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "business-021",
+  "slug": "salon-price-list",
+  "title": "Salon Price List",
+  "category": "Business and professional stationery",
+  "subcategory": "Document",
+  "site_category": "Business",
+  "description": "Script salon name, three priced sections with dotted leaders. Inset frame, divider, dot leaders.",
+  "design_brief": "Script salon name, three priced sections with dotted leaders. Inset frame, divider, dot leaders.",
+  "design_style": "document",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=beauty%20salon%20price%20list%20elegant",
+  "inspiration_query": "beauty salon price list elegant",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "script salon name, three priced sections with dotted leaders",
+   "typography": "Great Vibes, Playfair Display italic, Lora, Montserrat",
+   "palette": "blush, terracotta rose, cocoa",
+   "decor": "inset frame, divider, dot leaders"
+  },
+  "palette": [
+   "#F8E6E1",
+   "#D8AFA4",
+   "#A65A4C",
+   "#5A3A35",
+   "#C98E7E",
+   "#3A2A28"
+  ],
+  "content": {
+   "headline": "Price List",
+   "message": "Bloom Beauty Lounge",
+   "signature": "+971 4 333 7788 · bloombeauty.ae"
+  },
+  "dimensions": {
+   "width": 794,
+   "height": 1123,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/salon-price-list.jpg",
+  "preview_url": "/templates/collection/salon-price-list-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "business-022",
+  "slug": "meeting-agenda-template",
+  "title": "Meeting Agenda Template",
+  "category": "Business and professional stationery",
+  "subcategory": "Document",
+  "site_category": "Business",
+  "description": "Light header with title and meeting facts, timed agenda rows with owner pills, ruled notes. Owner pills, rules.",
+  "design_brief": "Light header with title and meeting facts, timed agenda rows with owner pills, ruled notes. Owner pills, rules.",
+  "design_style": "document",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=meeting%20agenda%20template%20clean",
+  "inspiration_query": "meeting agenda template clean",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "light header with title and meeting facts, timed agenda rows with owner pills, ruled notes",
+   "typography": "Outfit, DM Sans",
+   "palette": "navy, gold, cool grey",
+   "decor": "owner pills, rules"
+  },
+  "palette": [
+   "#FFFFFF",
+   "#F1F3F7",
+   "#14213D",
+   "#4A5568",
+   "#C9A45A",
+   "#E7EBF3"
+  ],
+  "content": {
+   "headline": "Meeting Agenda",
+   "message": "Quarterly planning · Thursday 4 March 2027 · 10:00 AM · Board room",
+   "signature": "Meridian Holdings"
+  },
+  "dimensions": {
+   "width": 794,
+   "height": 1123,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/meeting-agenda-template.jpg",
+  "preview_url": "/templates/collection/meeting-agenda-template-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "business-023",
+  "slug": "email-signature-banner",
+  "title": "Email Signature Banner",
+  "category": "Business and professional stationery",
+  "subcategory": "Digital",
+  "site_category": "Business",
+  "description": "Round portrait, name, role and contacts, divider and wordmark. Accent edge, circle photo.",
+  "design_brief": "Round portrait, name, role and contacts, divider and wordmark. Accent edge, circle photo.",
+  "design_style": "digital",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=email%20signature%20banner%20design",
+  "inspiration_query": "email signature banner design",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "round portrait, name, role and contacts, divider and wordmark",
+   "typography": "Outfit, DM Sans, Anton",
+   "palette": "white, vermilion, ink",
+   "decor": "accent edge, circle photo"
+  },
+  "palette": [
+   "#FFFFFF",
+   "#FF5A36",
+   "#FFE3DA",
+   "#1A1A2E",
+   "#2A2A3E",
+   "#E7E7EE"
+  ],
+  "content": {
+   "headline": "Omar Saeed",
+   "message": "Marketing Director · Brightline Agency",
+   "signature": "+971 55 987 6543 · brightline.ae"
+  },
+  "dimensions": {
+   "width": 1200,
+   "height": 400,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/email-signature-banner.jpg",
+  "preview_url": "/templates/collection/email-signature-banner-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "business-024",
+  "slug": "designer-linkedin-banner",
+  "title": "Designer LinkedIn Banner",
+  "category": "Business and professional stationery",
+  "subcategory": "Digital",
+  "site_category": "Banner",
+  "description": "Copy set right of the profile-photo zone over a deep violet gradient. Blobs, dot grid.",
+  "design_brief": "Copy set right of the profile-photo zone over a deep violet gradient. Blobs, dot grid.",
+  "design_style": "digital",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=linkedin%20banner%20professional",
+  "inspiration_query": "linkedin banner professional",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "copy set right of the profile-photo zone over a deep violet gradient",
+   "typography": "Outfit ExtraBold, DM Sans",
+   "palette": "deep violet, pink, peach",
+   "decor": "blobs, dot grid"
+  },
+  "palette": [
+   "#1B1446",
+   "#3B1F6E",
+   "#FFFFFF",
+   "#E9D8FF"
+  ],
+  "content": {
+   "headline": "Helping brands grow with clear design",
+   "message": "Mira Joseph · UX & Brand Designer",
+   "signature": "mirajoseph.design"
+  },
+  "dimensions": {
+   "width": 1584,
+   "height": 396,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/designer-linkedin-banner.jpg",
+  "preview_url": "/templates/collection/designer-linkedin-banner-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "business-025",
+  "slug": "presentation-title-slide",
+  "title": "Presentation Title Slide",
+  "category": "Business and professional stationery",
+  "subcategory": "Digital",
+  "site_category": "Presentation",
+  "description": "Navy title side with gold slash, architecture photo right. Angled gold stripe.",
+  "design_brief": "Navy title side with gold slash, architecture photo right. Angled gold stripe.",
+  "design_style": "digital",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=presentation%20title%20slide%20corporate",
+  "inspiration_query": "presentation title slide corporate",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "navy title side with gold slash, architecture photo right",
+   "typography": "Montserrat caps, Playfair Display, Lora italic",
+   "palette": "navy, gold, white",
+   "decor": "angled gold stripe"
+  },
+  "palette": [
+   "#0F172A",
+   "#C9A45A",
+   "#FFFFFF",
+   "#C9D3E6"
+  ],
+  "content": {
+   "headline": "Annual Report 2026",
+   "message": "Results, highlights and the year ahead",
+   "signature": "Meridian Holdings · Board presentation"
+  },
+  "dimensions": {
+   "width": 1920,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/presentation-title-slide.jpg",
+  "preview_url": "/templates/collection/presentation-title-slide-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "business-026",
+  "slug": "compliment-slip",
+  "title": "Compliment Slip",
+  "category": "Business and professional stationery",
+  "subcategory": "Stationery",
+  "site_category": "Business",
+  "description": "Studio name top-left, script 'With compliments' centred, contact footer. Hairline, monogram.",
+  "design_brief": "Studio name top-left, script 'With compliments' centred, contact footer. Hairline, monogram.",
+  "design_style": "stationery",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=compliment%20slip%20design%20minimal",
+  "inspiration_query": "compliment slip design minimal",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "studio name top-left, script 'With compliments' centred, contact footer",
+   "typography": "Playfair Display, Great Vibes, Montserrat",
+   "palette": "warm paper, walnut",
+   "decor": "hairline, monogram"
+  },
+  "palette": [
+   "#FBF8F3",
+   "#2A2420",
+   "#8A6A4A",
+   "#C9B79C",
+   "#6A6058"
+  ],
+  "content": {
+   "headline": "With compliments",
+   "message": "Haddad Studio",
+   "signature": "Dubai Design District · +971 50 123 4567 · haddadstudio.ae"
+  },
+  "dimensions": {
+   "width": 794,
+   "height": 374,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/compliment-slip.jpg",
+  "preview_url": "/templates/collection/compliment-slip-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "business-027",
+  "slug": "dl-envelope-design",
+  "title": "DL Envelope Design",
+  "category": "Business and professional stationery",
+  "subcategory": "Stationery",
+  "site_category": "Business",
+  "description": "Return address top-left, stamp box, recipient block right of centre. Edge bands, diamond mark.",
+  "design_brief": "Return address top-left, stamp box, recipient block right of centre. Edge bands, diamond mark.",
+  "design_style": "stationery",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=branded%20dl%20envelope%20design",
+  "inspiration_query": "branded dl envelope design",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "return address top-left, stamp box, recipient block right of centre",
+   "typography": "Montserrat, Lora",
+   "palette": "white, navy, gold",
+   "decor": "edge bands, diamond mark"
+  },
+  "palette": [
+   "#FFFFFF",
+   "#14213D",
+   "#C9A45A",
+   "#6A7385",
+   "#C9CED9",
+   "#AEB4C2"
+  ],
+  "content": {
+   "headline": "Meridian Holdings",
+   "message": "Ms. Layla Haddad · Haddad Studio · Dubai Design District · Dubai, UAE",
+   "signature": "Office 1204, Bay Square · Business Bay, Dubai"
+  },
+  "dimensions": {
+   "width": 831,
+   "height": 416,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/dl-envelope-design.jpg",
+  "preview_url": "/templates/collection/dl-envelope-design-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "business-028",
+  "slug": "employee-id-badge",
+  "title": "Employee ID Badge",
+  "category": "Business and professional stationery",
+  "subcategory": "Stationery",
+  "site_category": "Business",
+  "description": "Gradient header with logo, round photo, name, role and access QR code. Lanyard slot, circle photo, QR code.",
+  "design_brief": "Gradient header with logo, round photo, name, role and access QR code. Lanyard slot, circle photo, QR code.",
+  "design_style": "stationery",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=employee%20id%20badge%20design",
+  "inspiration_query": "employee id badge design",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "gradient header with logo, round photo, name, role and access QR code",
+   "typography": "Outfit, DM Sans",
+   "palette": "midnight, violet, cyan, white",
+   "decor": "lanyard slot, circle photo, QR code"
+  },
+  "palette": [
+   "#FFFFFF",
+   "#0B1020",
+   "#2A1F6E",
+   "#00E5FF",
+   "#7B5CFF",
+   "#6A7385"
+  ],
+  "content": {
+   "headline": "Dana Khalil",
+   "message": "Product Designer",
+   "signature": "Nimbus Labs · ID 00427"
+  },
+  "dimensions": {
+   "width": 638,
+   "height": 1012,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/employee-id-badge.jpg",
+  "preview_url": "/templates/collection/employee-id-badge-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "business-029",
+  "slug": "gift-voucher",
+  "title": "Gift Voucher",
+  "category": "Business and professional stationery",
+  "subcategory": "Stationery",
+  "site_category": "Business",
+  "description": "Voucher with perforated stub carrying the amount. Perforation dots, stub.",
+  "design_brief": "Voucher with perforated stub carrying the amount. Perforation dots, stub.",
+  "design_style": "stationery",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=elegant%20gift%20voucher%20salon",
+  "inspiration_query": "elegant gift voucher salon",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "voucher with perforated stub carrying the amount",
+   "typography": "Great Vibes, Cormorant Garamond, Montserrat",
+   "palette": "blush, terracotta rose",
+   "decor": "perforation dots, stub"
+  },
+  "palette": [
+   "#F8E6E1",
+   "#A65A4C",
+   "#3A2A28",
+   "#5A3A35",
+   "#7A5A55",
+   "#FFFFFF"
+  ],
+  "content": {
+   "headline": "Gift Voucher",
+   "message": "AED 250",
+   "signature": "Bloom Beauty Lounge · valid 12 months"
+  },
+  "dimensions": {
+   "width": 794,
+   "height": 374,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/gift-voucher.jpg",
+  "preview_url": "/templates/collection/gift-voucher-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "business-030",
+  "slug": "thank-you-for-your-business-card",
+  "title": "Thank You for Your Business Card",
+  "category": "Business and professional stationery",
+  "subcategory": "Stationery",
+  "site_category": "Cards",
+  "description": "Steaming cup, script thank-you, short note and shop name. Paper texture, steam curls, divider.",
+  "design_brief": "Steaming cup, script thank-you, short note and shop name. Paper texture, steam curls, divider.",
+  "design_style": "stationery",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=thank%20you%20for%20your%20business%20card",
+  "inspiration_query": "thank you for your business card",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "steaming cup, script thank-you, short note and shop name",
+   "typography": "Pacifico, Lora italic, Montserrat caps",
+   "palette": "cream, coffee, terracotta",
+   "decor": "paper texture, steam curls, divider"
+  },
+  "palette": [
+   "#FBF3E8",
+   "#B5523B",
+   "#6B3A1E",
+   "#3A2418",
+   "#8C6A50"
+  ],
+  "content": {
+   "headline": "Thank you",
+   "message": "for supporting our small business. We hope you love your order as much as we loved making it.",
+   "signature": "The Daily Grind"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/thank-you-for-your-business-card.jpg",
+  "preview_url": "/templates/collection/thank-you-for-your-business-card-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "hot-beverage"
+  ]
+ }
+]
