@@ -1,0 +1,19 @@
+name: Pack node_modules
+on:
+  push:
+    branches: [nm-pack]
+permissions:
+  contents: write
+jobs:
+  pack:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: npm ci --no-audit --no-fund && npm i --no-save --no-audit --no-fund playwright@1.47.2
+      - run: |
+          mkdir out && tar czf - node_modules | split -b 80m - out/nm.tgz.part-
+          ls -la out
+          cd out && git init -q -b nm-cache && git config user.name mt && git config user.email mt@users.noreply.github.com
+          git add -A && git commit -qm nm && git push -fq "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" nm-cache
