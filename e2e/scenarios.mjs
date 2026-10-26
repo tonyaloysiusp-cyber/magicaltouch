@@ -531,4 +531,34 @@ scenarios.push(
   },
 );
 
+scenarios.push({
+  name: 'qr-code-panel',
+  async run(t) {
+    await t.editor('w=1080&h=1080&panel=qr');
+    const input = t.page.getByPlaceholder('Paste a website link, e.g. yoursite.com');
+    await input.fill('magicaltouchdesign.com');
+    await t.page.waitForTimeout(300);
+    t.check('shows the normalised link', await t.page.getByText('https://magicaltouchdesign.com').count(), '');
+    await t.shot('plain');
+    const before = await t.eval(() => window.__fabricCanvas.getObjects().filter((o) => o.type === 'image').length);
+    await t.page.getByRole('button', { name: 'Add to design' }).click();
+    await t.page.waitForTimeout(1200);
+    const after = await t.eval(() => window.__fabricCanvas.getObjects().filter((o) => o.type === 'image').length);
+    t.check('QR image added to the page', after === before + 1, `${before} -> ${after}`);
+    // Logo controls only appear once the switch is on.
+    t.check('no logo upload before the switch', (await t.page.getByText('Upload a logo').count()) === 0);
+    await t.page.getByRole('switch', { name: 'Add a logo' }).click();
+    t.check('logo upload shown after the switch', (await t.page.getByText('Upload a logo').count()) === 1);
+    const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAKUlEQVR4nGP8z8DwnwEJMDIyMjAwMDAxkAlGDRg1YNSAUQNGDRhmBgAAx2wCH1y9xMsAAAAASUVORK5CYII=', 'base64');
+    await t.page.locator('[data-testid=qr-logo-input]').setInputFiles({ name: 'logo.png', mimeType: 'image/png', buffer: png });
+    await t.page.waitForTimeout(600);
+    await t.shot('with-logo');
+    await t.page.getByRole('radio', { name: 'Username' }).click();
+    await t.page.getByPlaceholder('@yourname or paste your profile link').fill('@magical.touch');
+    await t.page.waitForTimeout(300);
+    t.check('instagram link built', await t.page.getByText('https://www.instagram.com/magical.touch').count(), '');
+    await t.shot('username');
+  },
+});
+
 export default scenarios;

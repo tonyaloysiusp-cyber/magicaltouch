@@ -333,7 +333,7 @@ export function QrPanel({ onAdd, brandLogoUrl }: { onAdd: (pngDataUrl: string) =
                 Use my brand logo
               </button>
             )}
-            <input ref={fileRef} type="file" accept="image/*" hidden onChange={(e) => { pickLogo(e.target.files?.[0]); e.target.value = ''; }} />
+            <input ref={fileRef} data-testid="qr-logo-input" type="file" accept="image/*" hidden onChange={(e) => { pickLogo(e.target.files?.[0]); e.target.value = ''; }} />
           </div>
         )}
       </PanelSection>
