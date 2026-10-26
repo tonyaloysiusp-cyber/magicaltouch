@@ -1,0 +1,1402 @@
+[
+ {
+  "id": "grad-001",
+  "slug": "class-of-2027-gold-announcement",
+  "title": "Class of 2027 Gold Announcement",
+  "category": "Graduation and achievements",
+  "subcategory": "Graduation Announcement",
+  "site_category": "Certificates",
+  "description": "Mortarboard above CLASS OF and a gold 2027, graduate name in script. Vector mortarboard with tassel, confetti.",
+  "design_brief": "Mortarboard above CLASS OF and a gold 2027, graduate name in script. Vector mortarboard with tassel, confetti.",
+  "design_style": "graduation announcement",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=class%20of%202027%20graduation%20announcement%20gold",
+  "inspiration_query": "class of 2027 graduation announcement gold",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "mortarboard above CLASS OF and a gold 2027, graduate name in script",
+   "typography": "Playfair Display gold, Great Vibes, Montserrat caps",
+   "palette": "midnight, gold, champagne",
+   "decor": "vector mortarboard with tassel, confetti"
+  },
+  "palette": [
+   "#1F2233",
+   "#0A0B12",
+   "#F7E3A3",
+   "#FFFFFF",
+   "#E9C877",
+   "#111111"
+  ],
+  "content": {
+   "headline": "Class of 2027",
+   "message": "Mariam Al Hashimi · Bachelor of Architecture · American University of Sharjah",
+   "signature": ""
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/class-of-2027-gold-announcement.jpg",
+  "preview_url": "/templates/collection/class-of-2027-gold-announcement-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "grad-002",
+  "slug": "graduate-photo-announcement-card",
+  "title": "Graduate Photo Announcement Card",
+  "category": "Graduation and achievements",
+  "subcategory": "Graduation Announcement",
+  "site_category": "Certificates",
+  "description": "Graduate photo in an arch with a cap sticker, name and degree below. Arch frame, vector cap.",
+  "design_brief": "Graduate photo in an arch with a cap sticker, name and degree below. Arch frame, vector cap.",
+  "design_style": "graduation announcement",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=graduate%20photo%20announcement%20card",
+  "inspiration_query": "graduate photo announcement card",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "graduate photo in an arch with a cap sticker, name and degree below",
+   "typography": "Great Vibes, Cinzel, Lora italic, Montserrat caps",
+   "palette": "linen, navy, gold",
+   "decor": "arch frame, vector cap"
+  },
+  "palette": [
+   "#F4EFE6",
+   "#1B1B1B",
+   "#161616",
+   "#E9C877",
+   "#1F3349",
+   "#4A5568"
+  ],
+  "content": {
+   "headline": "The graduate",
+   "message": "Yousef Karim · BSc Computer Science · Khalifa University",
+   "signature": "Class of 2027"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/graduate-photo-announcement-card.jpg",
+  "preview_url": "/templates/collection/graduate-photo-announcement-card-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "grad-003",
+  "slug": "navy-cap-graduation-announcement",
+  "title": "Navy Cap Graduation Announcement",
+  "category": "Graduation and achievements",
+  "subcategory": "Graduation Announcement",
+  "site_category": "Certificates",
+  "description": "Navy card with a cap, gold script name and degree. Double frame, vector cap.",
+  "design_brief": "Navy card with a cap, gold script name and degree. Double frame, vector cap.",
+  "design_style": "graduation announcement",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=navy%20graduation%20announcement%20cap",
+  "inspiration_query": "navy graduation announcement cap",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "navy card with a cap, gold script name and degree",
+   "typography": "Great Vibes gold, Montserrat caps, Lora italic, Cinzel",
+   "palette": "navy, gold, white",
+   "decor": "double frame, vector cap"
+  },
+  "palette": [
+   "#1F3349",
+   "#E9C877",
+   "#0F1B2A",
+   "#0C1622",
+   "#D6DEE8",
+   "#8A6A2E"
+  ],
+  "content": {
+   "headline": "Proudly announcing",
+   "message": "the graduation of Layla Haddad · Master of Public Health · June 2027",
+   "signature": "University of Dubai"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/navy-cap-graduation-announcement.jpg",
+  "preview_url": "/templates/collection/navy-cap-graduation-announcement-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "grad-004",
+  "slug": "graduation-story-announcement",
+  "title": "Graduation Story Announcement",
+  "category": "Graduation and achievements",
+  "subcategory": "Graduation Announcement",
+  "site_category": "Certificates",
+  "description": "Tossed cap in confetti over a huge shout of joy. Confetti, cap illustration, handle pill.",
+  "design_brief": "Tossed cap in confetti over a huge shout of joy. Confetti, cap illustration, handle pill.",
+  "design_style": "graduation announcement",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=graduation%20instagram%20story%20i%20did%20it",
+  "inspiration_query": "graduation instagram story i did it",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "tossed cap in confetti over a huge shout of joy",
+   "typography": "Luckiest Guy, Fredoka",
+   "palette": "violet to pink, white, yellow",
+   "decor": "confetti, cap illustration, handle pill"
+  },
+  "palette": [
+   "#7B5CFF",
+   "#FF6FB5",
+   "#FFE14D",
+   "#FFFFFF",
+   "#59F0FF",
+   "#FFE6F3"
+  ],
+  "content": {
+   "headline": "I did it!",
+   "message": "Officially a graduate · Bachelor of Business · 2027",
+   "signature": "@sara.grad27"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1920,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/graduation-story-announcement.jpg",
+  "preview_url": "/templates/collection/graduation-story-announcement-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "graduation-cap"
+  ]
+ },
+ {
+  "id": "grad-005",
+  "slug": "minimal-graduate-announcement",
+  "title": "Minimal Graduate Announcement",
+  "category": "Graduation and achievements",
+  "subcategory": "Graduation Announcement",
+  "site_category": "Certificates",
+  "description": "Editorial italic word with a labelled info table. Rule, small cap.",
+  "design_brief": "Editorial italic word with a labelled info table. Rule, small cap.",
+  "design_style": "graduation announcement",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=minimal%20modern%20graduation%20announcement",
+  "inspiration_query": "minimal modern graduation announcement",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "editorial italic word with a labelled info table",
+   "typography": "Playfair Display italic, Montserrat",
+   "palette": "stone, ink, terracotta",
+   "decor": "rule, small cap"
+  },
+  "palette": [
+   "#EDEAE4",
+   "#1E1E1E",
+   "#8A847C",
+   "#181818",
+   "#C9886E"
+  ],
+  "content": {
+   "headline": "Graduated",
+   "message": "Omar Saeed · Mechanical Engineering · 2027",
+   "signature": ""
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/minimal-graduate-announcement.jpg",
+  "preview_url": "/templates/collection/minimal-graduate-announcement-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "grad-006",
+  "slug": "high-school-graduation-announcement",
+  "title": "High School Graduation Announcement",
+  "category": "Graduation and achievements",
+  "subcategory": "Graduation Announcement",
+  "site_category": "Certificates",
+  "description": "Varsity block letters with an outlined year, stripe band. Stripes, cap illustration.",
+  "design_brief": "Varsity block letters with an outlined year, stripe band. Stripes, cap illustration.",
+  "design_style": "graduation announcement",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=high%20school%20senior%20graduation%20announcement",
+  "inspiration_query": "high school senior graduation announcement",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "varsity block letters with an outlined year, stripe band",
+   "typography": "Anton solid and outline, Montserrat, Caveat",
+   "palette": "varsity red, white, gold",
+   "decor": "stripes, cap illustration"
+  },
+  "palette": [
+   "#C62828",
+   "#FFFFFF",
+   "#FFE14D"
+  ],
+  "content": {
+   "headline": "Senior 2027",
+   "message": "Dana Khalil has graduated from Dubai College",
+   "signature": "Next stop: university!"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/high-school-graduation-announcement.jpg",
+  "preview_url": "/templates/collection/high-school-graduation-announcement-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "graduation-cap"
+  ]
+ },
+ {
+  "id": "grad-007",
+  "slug": "kindergarten-graduation-card",
+  "title": "Kindergarten Graduation Card",
+  "category": "Graduation and achievements",
+  "subcategory": "Graduation Announcement",
+  "site_category": "Certificates",
+  "description": "Big cap with crayon and star, two-line playful title. Colour dots, cap / star / crayon.",
+  "design_brief": "Big cap with crayon and star, two-line playful title. Colour dots, cap / star / crayon.",
+  "design_style": "graduation announcement",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=kindergarten%20graduation%20card%20cute",
+  "inspiration_query": "kindergarten graduation card cute",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "big cap with crayon and star, two-line playful title",
+   "typography": "Luckiest Guy, Fredoka, Caveat",
+   "palette": "butter, primary brights",
+   "decor": "colour dots, cap / star / crayon"
+  },
+  "palette": [
+   "#FFF6D6",
+   "#FF6B6B",
+   "#FFD45C",
+   "#4FC3F7",
+   "#8BC34A",
+   "#B388FF"
+  ],
+  "content": {
+   "headline": "Kindergarten Graduate!",
+   "message": "Well done, Adam — off to Grade 1!",
+   "signature": "Love, Mum & Dad"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/kindergarten-graduation-card.jpg",
+  "preview_url": "/templates/collection/kindergarten-graduation-card-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "crayon",
+   "graduation-cap",
+   "star"
+  ]
+ },
+ {
+  "id": "grad-008",
+  "slug": "phd-graduation-announcement",
+  "title": "PhD Graduation Announcement",
+  "category": "Graduation and achievements",
+  "subcategory": "Graduation Announcement",
+  "site_category": "Certificates",
+  "description": "Laurel-wrapped cap above the doctor's name and degree. Double frame, laurel, cap.",
+  "design_brief": "Laurel-wrapped cap above the doctor's name and degree. Double frame, laurel, cap.",
+  "design_style": "graduation announcement",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=phd%20graduation%20announcement%20elegant",
+  "inspiration_query": "phd graduation announcement elegant",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "laurel-wrapped cap above the doctor's name and degree",
+   "typography": "Playfair Display bold italic, Lora, Cinzel",
+   "palette": "parchment, oxblood, gold",
+   "decor": "double frame, laurel, cap"
+  },
+  "palette": [
+   "#F8F4EA",
+   "#5A1A2A",
+   "#B48A3A",
+   "#481522",
+   "#E9C877",
+   "#4A3A30"
+  ],
+  "content": {
+   "headline": "Dr. Hana Rahman",
+   "message": "has been awarded the degree of Doctor of Philosophy in Molecular Biology · University of Edinburgh · 2027",
+   "signature": ""
+  },
+  "dimensions": {
+   "width": 559,
+   "height": 794,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/phd-graduation-announcement.jpg",
+  "preview_url": "/templates/collection/phd-graduation-announcement-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "grad-009",
+  "slug": "confetti-cap-grad-party-invitation",
+  "title": "Confetti Cap Grad Party Invitation",
+  "category": "Graduation and achievements",
+  "subcategory": "Grad Party",
+  "site_category": "Certificates",
+  "description": "Confetti and cap above a bold party title, details panel. Confetti, cap, outlined panel, RSVP pill.",
+  "design_brief": "Confetti and cap above a bold party title, details panel. Confetti, cap, outlined panel, RSVP pill.",
+  "design_style": "grad party",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=graduation%20party%20invitation%20colorful",
+  "inspiration_query": "graduation party invitation colorful",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "confetti and cap above a bold party title, details panel",
+   "typography": "Luckiest Guy, Fredoka",
+   "palette": "navy, gold, coral, sky",
+   "decor": "confetti, cap, outlined panel, RSVP pill"
+  },
+  "palette": [
+   "#1E2A5A",
+   "#FF8A65",
+   "#FFFFFF",
+   "#FFD54F",
+   "#4FC3F7",
+   "#0F1630"
+  ],
+  "content": {
+   "headline": "Grad Party!",
+   "message": "Celebrate Zayd’s graduation · Saturday 26 June · 7 PM · The Terrace, Dubai Marina",
+   "signature": "RSVP to Huda · 050 777 1234"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/confetti-cap-grad-party-invitation.jpg",
+  "preview_url": "/templates/collection/confetti-cap-grad-party-invitation-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "grad-010",
+  "slug": "black-and-gold-grad-party-invitation",
+  "title": "Black and Gold Grad Party Invitation",
+  "category": "Graduation and achievements",
+  "subcategory": "Grad Party",
+  "site_category": "Certificates",
+  "description": "Black-tie card with cap, two-line gold script and centred details. Double frame, cap, divider.",
+  "design_brief": "Black-tie card with cap, two-line gold script and centred details. Double frame, cap, divider.",
+  "design_style": "grad party",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=black%20gold%20graduation%20party%20invitation",
+  "inspiration_query": "black gold graduation party invitation",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "black-tie card with cap, two-line gold script and centred details",
+   "typography": "Great Vibes gold, Cormorant Garamond italic, Cinzel",
+   "palette": "black, gold, champagne",
+   "decor": "double frame, cap, divider"
+  },
+  "palette": [
+   "#0B0B0C",
+   "#C9A45A",
+   "#1A1A1A",
+   "#151515",
+   "#E9C877",
+   "#8A6A2E"
+  ],
+  "content": {
+   "headline": "Graduation Celebration",
+   "message": "Join us in honouring Faisal · Friday 2 July · 8 PM · Al Habtoor Grand",
+   "signature": "Dinner & dancing"
+  },
+  "dimensions": {
+   "width": 559,
+   "height": 794,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/black-and-gold-grad-party-invitation.jpg",
+  "preview_url": "/templates/collection/black-and-gold-grad-party-invitation-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "grad-011",
+  "slug": "graduation-open-house-invitation",
+  "title": "Graduation Open House Invitation",
+  "category": "Graduation and achievements",
+  "subcategory": "Grad Party",
+  "site_category": "Certificates",
+  "description": "Green side panel with house and cap, invitation on the right. Panel, house illustration, cap.",
+  "design_brief": "Green side panel with house and cap, invitation on the right. Panel, house illustration, cap.",
+  "design_style": "grad party",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=graduation%20open%20house%20invitation",
+  "inspiration_query": "graduation open house invitation",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "green side panel with house and cap, invitation on the right",
+   "typography": "Playfair Display bold italic, Lora italic, Montserrat caps, Caveat",
+   "palette": "linen, school green, amber",
+   "decor": "panel, house illustration, cap"
+  },
+  "palette": [
+   "#F4F1EA",
+   "#2E6B5A",
+   "#173A31",
+   "#122E27",
+   "#F2C14E",
+   "#3E4A42"
+  ],
+  "content": {
+   "headline": "Open House",
+   "message": "Come celebrate Noor, class of 2027 · Saturday 19 June · 3–7 PM · our home",
+   "signature": "Drop by anytime"
+  },
+  "dimensions": {
+   "width": 673,
+   "height": 480,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/graduation-open-house-invitation.jpg",
+  "preview_url": "/templates/collection/graduation-open-house-invitation-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "house-with-garden"
+  ]
+ },
+ {
+  "id": "grad-012",
+  "slug": "grad-party-story",
+  "title": "Grad Party Story",
+  "category": "Graduation and achievements",
+  "subcategory": "Grad Party",
+  "site_category": "Certificates",
+  "description": "Graduate photo fading into black with a gold invitation below. Photo fade, RSVP pill.",
+  "design_brief": "Graduate photo fading into black with a gold invitation below. Photo fade, RSVP pill.",
+  "design_style": "grad party",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=graduation%20party%20invitation%20story",
+  "inspiration_query": "graduation party invitation story",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "graduate photo fading into black with a gold invitation below",
+   "typography": "Great Vibes gold, Cormorant Garamond italic, Montserrat caps",
+   "palette": "black, gold, photo tones",
+   "decor": "photo fade, RSVP pill"
+  },
+  "palette": [
+   "#111111",
+   "#8A6A2E",
+   "#E9C877",
+   "#B68A3A",
+   "#F7E3A3",
+   "#9C7431"
+  ],
+  "content": {
+   "headline": "You’re invited",
+   "message": "to my graduation party · Sat 26 June · 7 PM",
+   "signature": "DM me to RSVP"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1920,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/grad-party-story.jpg",
+  "preview_url": "/templates/collection/grad-party-story-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "grad-013",
+  "slug": "graduation-dinner-menu",
+  "title": "Graduation Dinner Menu",
+  "category": "Graduation and achievements",
+  "subcategory": "Grad Party",
+  "site_category": "Certificates",
+  "description": "Slim navy menu with a cap crest and three courses. Double frame, cap.",
+  "design_brief": "Slim navy menu with a cap crest and three courses. Double frame, cap.",
+  "design_style": "grad party",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=graduation%20dinner%20menu",
+  "inspiration_query": "graduation dinner menu",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "slim navy menu with a cap crest and three courses",
+   "typography": "Great Vibes gold, Cinzel, Cormorant Garamond italic",
+   "palette": "navy, gold, ivory",
+   "decor": "double frame, cap"
+  },
+  "palette": [
+   "#1F3349",
+   "#E9C877",
+   "#0F1B2A",
+   "#0C1622",
+   "#8A6A2E",
+   "#B68A3A"
+  ],
+  "content": {
+   "headline": "Graduation Dinner",
+   "message": "Burrata & figs · Saffron chicken, jewelled rice · Pistachio cake with the class colours",
+   "signature": "In honour of Mariam · 2027"
+  },
+  "dimensions": {
+   "width": 374,
+   "height": 794,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/graduation-dinner-menu.jpg",
+  "preview_url": "/templates/collection/graduation-dinner-menu-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "grad-014",
+  "slug": "grad-photo-booth-sign",
+  "title": "Grad Photo Booth Sign",
+  "category": "Graduation and achievements",
+  "subcategory": "Grad Party",
+  "site_category": "Certificates",
+  "description": "Big empty frame with a cap prop, bold sign text below. Frame with dashed border, cap, camera.",
+  "design_brief": "Big empty frame with a cap prop, bold sign text below. Frame with dashed border, cap, camera.",
+  "design_style": "grad party",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=graduation%20photo%20booth%20sign",
+  "inspiration_query": "graduation photo booth sign",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "big empty frame with a cap prop, bold sign text below",
+   "typography": "Luckiest Guy, Fredoka",
+   "palette": "lemon, black, pink",
+   "decor": "frame with dashed border, cap, camera"
+  },
+  "palette": [
+   "#FFE14D",
+   "#FFFFFF",
+   "#111111",
+   "#0E0E0E",
+   "#FF4F79"
+  ],
+  "content": {
+   "headline": "Strike a pose, grad!",
+   "message": "Share your photos with #MariamGrad27",
+   "signature": ""
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1350,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/grad-photo-booth-sign.jpg",
+  "preview_url": "/templates/collection/grad-photo-booth-sign-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "camera-with-flash"
+  ]
+ },
+ {
+  "id": "grad-015",
+  "slug": "congrats-grad-confetti-card",
+  "title": "Congrats Grad Confetti Card",
+  "category": "Graduation and achievements",
+  "subcategory": "Congratulations",
+  "site_category": "Certificates",
+  "description": "Cap and script congratulations inside a confetti frame. Confetti, vector cap.",
+  "design_brief": "Cap and script congratulations inside a confetti frame. Confetti, vector cap.",
+  "design_style": "congratulations",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=congrats%20grad%20card%20confetti",
+  "inspiration_query": "congrats grad card confetti",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "cap and script congratulations inside a confetti frame",
+   "typography": "Pacifico, Fredoka, Caveat",
+   "palette": "white, navy, gold, coral, sky",
+   "decor": "confetti, vector cap"
+  },
+  "palette": [
+   "#FFFFFF",
+   "#1F3349",
+   "#FF6B6B",
+   "#E9C877",
+   "#4FC3F7",
+   "#19293A"
+  ],
+  "content": {
+   "headline": "Congrats, grad!",
+   "message": "The tassel was worth the hassle.",
+   "signature": "So proud of you — Aunt Lina"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/congrats-grad-confetti-card.jpg",
+  "preview_url": "/templates/collection/congrats-grad-confetti-card-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "grad-016",
+  "slug": "oh-the-places-card",
+  "title": "Oh the Places Card",
+  "category": "Graduation and achievements",
+  "subcategory": "Congratulations",
+  "site_category": "Certificates",
+  "description": "World map with a dashed flight path and plane, italic headline. Map, plane, dashed route.",
+  "design_brief": "World map with a dashed flight path and plane, italic headline. Map, plane, dashed route.",
+  "design_style": "congratulations",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=graduation%20card%20world%20map",
+  "inspiration_query": "graduation card world map",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "world map with a dashed flight path and plane, italic headline",
+   "typography": "Playfair Display italic, Lora italic, Caveat",
+   "palette": "sky mist, navy, coral",
+   "decor": "map, plane, dashed route"
+  },
+  "palette": [
+   "#EAF2FB",
+   "#5B7DB1",
+   "#1F3B5C",
+   "#3E5672",
+   "#E2572A"
+  ],
+  "content": {
+   "headline": "The world is waiting",
+   "message": "Congratulations on your graduation — go and make it yours.",
+   "signature": "Love, Grandpa"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/oh-the-places-card.jpg",
+  "preview_url": "/templates/collection/oh-the-places-card-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "airplane",
+   "world-map"
+  ]
+ },
+ {
+  "id": "grad-017",
+  "slug": "proud-parents-graduation-post",
+  "title": "Proud Parents Graduation Post",
+  "category": "Graduation and achievements",
+  "subcategory": "Congratulations",
+  "site_category": "Certificates",
+  "description": "Full-bleed graduate photo with a proud script message. Shade, cap sticker.",
+  "design_brief": "Full-bleed graduate photo with a proud script message. Shade, cap sticker.",
+  "design_style": "congratulations",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=proud%20parents%20graduation%20post",
+  "inspiration_query": "proud parents graduation post",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "full-bleed graduate photo with a proud script message",
+   "typography": "Great Vibes, Montserrat, Caveat",
+   "palette": "photo tones, white, gold",
+   "decor": "shade, cap sticker"
+  },
+  "palette": [
+   "#14110F",
+   "#FFFFFF",
+   "#F3E6CB",
+   "#E9C877",
+   "#111111",
+   "#0E0E0E"
+  ],
+  "content": {
+   "headline": "So proud of you!",
+   "message": "Congratulations, Yousef — class of 2027",
+   "signature": "Mum & Dad"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/proud-parents-graduation-post.jpg",
+  "preview_url": "/templates/collection/proud-parents-graduation-post-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "grad-018",
+  "slug": "diploma-scroll-congratulations-card",
+  "title": "Diploma Scroll Congratulations Card",
+  "category": "Graduation and achievements",
+  "subcategory": "Congratulations",
+  "site_category": "Certificates",
+  "description": "Diploma scroll and cap on the left, italic congratulations on the right. Paper grain, scroll, cap.",
+  "design_brief": "Diploma scroll and cap on the left, italic congratulations on the right. Paper grain, scroll, cap.",
+  "design_style": "congratulations",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=diploma%20congratulations%20card",
+  "inspiration_query": "diploma congratulations card",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "diploma scroll and cap on the left, italic congratulations on the right",
+   "typography": "Playfair Display bold italic, Lora, Caveat",
+   "palette": "parchment, oxblood, gold",
+   "decor": "paper grain, scroll, cap"
+  },
+  "palette": [
+   "#F6F0E3",
+   "#1B1B1B",
+   "#161616",
+   "#E9C877",
+   "#5A1A2A",
+   "#4A3A30"
+  ],
+  "content": {
+   "headline": "Congratulations, graduate!",
+   "message": "Hard work, late nights and endless coffee — it all paid off.",
+   "signature": "From the whole office"
+  },
+  "dimensions": {
+   "width": 673,
+   "height": 480,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/diploma-scroll-congratulations-card.jpg",
+  "preview_url": "/templates/collection/diploma-scroll-congratulations-card-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "scroll"
+  ]
+ },
+ {
+  "id": "grad-019",
+  "slug": "teacher-congratulations-students-post",
+  "title": "Teacher Congratulations Students Post",
+  "category": "Graduation and achievements",
+  "subcategory": "Congratulations",
+  "site_category": "Certificates",
+  "description": "Flying caps across the top, two-line italic congratulations. Eight vector caps, school pill.",
+  "design_brief": "Flying caps across the top, two-line italic congratulations. Eight vector caps, school pill.",
+  "design_style": "congratulations",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=school%20congratulations%20graduates%20post",
+  "inspiration_query": "school congratulations graduates post",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "flying caps across the top, two-line italic congratulations",
+   "typography": "Playfair Display italic, Lora italic, Montserrat caps",
+   "palette": "school navy, gold, white",
+   "decor": "eight vector caps, school pill"
+  },
+  "palette": [
+   "#123C69",
+   "#0B2747",
+   "#091F39",
+   "#F2C14E",
+   "#FFFFFF",
+   "#D6E2F0"
+  ],
+  "content": {
+   "headline": "Congratulations, class of 2027!",
+   "message": "We are so proud of every one of you.",
+   "signature": "Al Noor Academy"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/teacher-congratulations-students-post.jpg",
+  "preview_url": "/templates/collection/teacher-congratulations-students-post-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "grad-020",
+  "slug": "certificate-of-achievement-gold",
+  "title": "Certificate of Achievement Gold",
+  "category": "Graduation and achievements",
+  "subcategory": "Certificate",
+  "site_category": "Certificates",
+  "description": "Classic certificate: spaced title, script name over a rule, two signature lines, gold seal. Double frame, paper grain, rosette seal with ribbons.",
+  "design_brief": "Classic certificate: spaced title, script name over a rule, two signature lines, gold seal. Double frame, paper grain, rosette seal with ribbons.",
+  "design_style": "certificate",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=certificate%20of%20achievement%20gold%20elegant",
+  "inspiration_query": "certificate of achievement gold elegant",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "classic certificate: spaced title, script name over a rule, two signature lines, gold seal",
+   "typography": "Cinzel, Great Vibes, Lora italic, Montserrat",
+   "palette": "ivory, ink, gold",
+   "decor": "double frame, paper grain, rosette seal with ribbons"
+  },
+  "palette": [
+   "#FBF8F1",
+   "#B48A3A",
+   "#2B2724",
+   "#7A7068",
+   "#4A443E",
+   "#FFFFFF"
+  ],
+  "content": {
+   "headline": "Certificate of Achievement",
+   "message": "This certificate is proudly presented to Sara Ahmed for outstanding performance in the 2027 Science Fair",
+   "signature": "Ms. Rana Khalil, Principal · 15 June 2027"
+  },
+  "dimensions": {
+   "width": 673,
+   "height": 480,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/certificate-of-achievement-gold.jpg",
+  "preview_url": "/templates/collection/certificate-of-achievement-gold-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "grad-021",
+  "slug": "certificate-of-completion-modern",
+  "title": "Certificate of Completion Modern",
+  "category": "Graduation and achievements",
+  "subcategory": "Certificate",
+  "site_category": "Certificates",
+  "description": "Modern certificate with a blue side band, script name, seal. Side band, rosette seal.",
+  "design_brief": "Modern certificate with a blue side band, script name, seal. Side band, rosette seal.",
+  "design_style": "certificate",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=modern%20certificate%20of%20completion",
+  "inspiration_query": "modern certificate of completion",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "modern certificate with a blue side band, script name, seal",
+   "typography": "Montserrat, Great Vibes, Lora italic",
+   "palette": "white, blue, slate",
+   "decor": "side band, rosette seal"
+  },
+  "palette": [
+   "#FFFFFF",
+   "#2E86DE",
+   "#96C2EE",
+   "#1E2A3A",
+   "#7A7068",
+   "#4A443E"
+  ],
+  "content": {
+   "headline": "Certificate of Completion",
+   "message": "awarded to Omar Haddad for completing the Digital Marketing Essentials course · 24 hours",
+   "signature": "Magical Academy · 2027"
+  },
+  "dimensions": {
+   "width": 673,
+   "height": 480,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/certificate-of-completion-modern.jpg",
+  "preview_url": "/templates/collection/certificate-of-completion-modern-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "grad-022",
+  "slug": "bright-stars-student-award-certificate",
+  "title": "Bright Stars Student Award Certificate",
+  "category": "Graduation and achievements",
+  "subcategory": "Certificate",
+  "site_category": "Certificates",
+  "description": "Playful certificate with corner brackets, bright stars and a glowing star. Corner brackets, stars.",
+  "design_brief": "Playful certificate with corner brackets, bright stars and a glowing star. Corner brackets, stars.",
+  "design_style": "certificate",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=kids%20star%20student%20certificate",
+  "inspiration_query": "kids star student certificate",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "playful certificate with corner brackets, bright stars and a glowing star",
+   "typography": "Luckiest Guy, Great Vibes, Lora italic",
+   "palette": "cream, orange, purple, brights",
+   "decor": "corner brackets, stars"
+  },
+  "palette": [
+   "#FFF8E8",
+   "#FF8A00",
+   "#3A2A60",
+   "#7A7068",
+   "#4A443E",
+   "#FF6B6B"
+  ],
+  "content": {
+   "headline": "Star Student",
+   "message": "This award goes to Lina for always trying her best and being kind to everyone",
+   "signature": "Mrs. Dana · Grade 2B"
+  },
+  "dimensions": {
+   "width": 673,
+   "height": 480,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/bright-stars-student-award-certificate.jpg",
+  "preview_url": "/templates/collection/bright-stars-student-award-certificate-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "glowing-star"
+  ]
+ },
+ {
+  "id": "grad-023",
+  "slug": "navy-frame-employee-award-certificate",
+  "title": "Navy Frame Employee Award Certificate",
+  "category": "Graduation and achievements",
+  "subcategory": "Certificate",
+  "site_category": "Certificates",
+  "description": "Corporate certificate with navy double frame and a trophy. Double frame, trophy.",
+  "design_brief": "Corporate certificate with navy double frame and a trophy. Double frame, trophy.",
+  "design_style": "certificate",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=employee%20of%20the%20month%20certificate",
+  "inspiration_query": "employee of the month certificate",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "corporate certificate with navy double frame and a trophy",
+   "typography": "Cinzel, Great Vibes, Lora italic, Montserrat",
+   "palette": "warm white, navy",
+   "decor": "double frame, trophy"
+  },
+  "palette": [
+   "#F7F5F0",
+   "#1F3349",
+   "#7A7068",
+   "#4A443E"
+  ],
+  "content": {
+   "headline": "Employee of the Month",
+   "message": "Presented to Karim Saeed in recognition of exceptional dedication · March 2027",
+   "signature": "Hana Rahman, CEO · Bright Logistics"
+  },
+  "dimensions": {
+   "width": 673,
+   "height": 480,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/navy-frame-employee-award-certificate.jpg",
+  "preview_url": "/templates/collection/navy-frame-employee-award-certificate-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "trophy"
+  ]
+ },
+ {
+  "id": "grad-024",
+  "slug": "sports-award-certificate",
+  "title": "Sports Award Certificate",
+  "category": "Graduation and achievements",
+  "subcategory": "Certificate",
+  "site_category": "Certificates",
+  "description": "Sports certificate with green band, condensed title and a medal. Side band, medal.",
+  "design_brief": "Sports certificate with green band, condensed title and a medal. Side band, medal.",
+  "design_style": "certificate",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=sports%20award%20certificate%20mvp",
+  "inspiration_query": "sports award certificate mvp",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "sports certificate with green band, condensed title and a medal",
+   "typography": "Anton, Great Vibes, Lora italic",
+   "palette": "pitch green, white, gold",
+   "decor": "side band, medal"
+  },
+  "palette": [
+   "#F4F8F2",
+   "#2E7D32",
+   "#96BE98",
+   "#1B3A20",
+   "#7A7068",
+   "#4A443E"
+  ],
+  "content": {
+   "headline": "Most Valuable Player",
+   "message": "Awarded to Ali Rashid · Dubai Youth Football League · Season 2026/27",
+   "signature": "Coach Tariq"
+  },
+  "dimensions": {
+   "width": 673,
+   "height": 480,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/sports-award-certificate.jpg",
+  "preview_url": "/templates/collection/sports-award-certificate-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "1st-place-medal"
+  ]
+ },
+ {
+  "id": "grad-025",
+  "slug": "plum-corner-appreciation-certificate",
+  "title": "Plum Corner Appreciation Certificate",
+  "category": "Graduation and achievements",
+  "subcategory": "Certificate",
+  "site_category": "Certificates",
+  "description": "Appreciation certificate with corner brackets and a plum seal. Corner brackets, rosette seal.",
+  "design_brief": "Appreciation certificate with corner brackets and a plum seal. Corner brackets, rosette seal.",
+  "design_style": "certificate",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=certificate%20of%20appreciation%20elegant",
+  "inspiration_query": "certificate of appreciation elegant",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "appreciation certificate with corner brackets and a plum seal",
+   "typography": "Cinzel, Great Vibes, Lora italic",
+   "palette": "blush white, plum",
+   "decor": "corner brackets, rosette seal"
+  },
+  "palette": [
+   "#FCF7F4",
+   "#8E3B5A",
+   "#3A2030",
+   "#7A7068",
+   "#4A443E",
+   "#FFFFFF"
+  ],
+  "content": {
+   "headline": "Certificate of Appreciation",
+   "message": "presented to Amal Nasser with sincere thanks for her volunteer service at the Community Food Drive",
+   "signature": "Food for All · 2027"
+  },
+  "dimensions": {
+   "width": 673,
+   "height": 480,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/plum-corner-appreciation-certificate.jpg",
+  "preview_url": "/templates/collection/plum-corner-appreciation-certificate-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "grad-026",
+  "slug": "employee-of-the-month-post",
+  "title": "Employee of the Month Post",
+  "category": "Graduation and achievements",
+  "subcategory": "Achievement",
+  "site_category": "Certificates",
+  "description": "Trophy on a ray burst above a condensed gold title. Rays, trophy glow.",
+  "design_brief": "Trophy on a ray burst above a condensed gold title. Rays, trophy glow.",
+  "design_style": "achievement",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=employee%20of%20the%20month%20instagram%20post",
+  "inspiration_query": "employee of the month instagram post",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "trophy on a ray burst above a condensed gold title",
+   "typography": "Anton gold, Montserrat",
+   "palette": "midnight navy, gold, white",
+   "decor": "rays, trophy glow"
+  },
+  "palette": [
+   "#0F1B2A",
+   "#1C2E45",
+   "#8A6A2E",
+   "#E9C877",
+   "#B68A3A",
+   "#F7E3A3"
+  ],
+  "content": {
+   "headline": "Employee of the Month",
+   "message": "Congratulations, Karim! Thank you for going above and beyond.",
+   "signature": "Bright Logistics"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/employee-of-the-month-post.jpg",
+  "preview_url": "/templates/collection/employee-of-the-month-post-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "trophy"
+  ]
+ },
+ {
+  "id": "grad-027",
+  "slug": "honor-roll-post",
+  "title": "Honor Roll Post",
+  "category": "Graduation and achievements",
+  "subcategory": "Achievement",
+  "site_category": "Certificates",
+  "description": "Laurel around books above a classic caps title. Double frame, laurel, books.",
+  "design_brief": "Laurel around books above a classic caps title. Double frame, laurel, books.",
+  "design_style": "achievement",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=honor%20roll%20school%20post",
+  "inspiration_query": "honor roll school post",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "laurel around books above a classic caps title",
+   "typography": "Cinzel, Lora italic, Montserrat caps",
+   "palette": "parchment, school navy, gold",
+   "decor": "double frame, laurel, books"
+  },
+  "palette": [
+   "#F6F1E7",
+   "#123C69",
+   "#B48A3A",
+   "#3E4A5A"
+  ],
+  "content": {
+   "headline": "Honor Roll",
+   "message": "Congratulations to our top students this term",
+   "signature": "Al Noor Academy"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/honor-roll-post.jpg",
+  "preview_url": "/templates/collection/honor-roll-post-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "books"
+  ]
+ },
+ {
+  "id": "grad-028",
+  "slug": "top-scorer-achievement-post",
+  "title": "Top Scorer Achievement Post",
+  "category": "Graduation and achievements",
+  "subcategory": "Achievement",
+  "site_category": "Certificates",
+  "description": "Score in a white disc with a medal, bright title and line. Dot pattern, disc, medal.",
+  "design_brief": "Score in a white disc with a medal, bright title and line. Dot pattern, disc, medal.",
+  "design_style": "achievement",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=top%20scorer%20achievement%20post",
+  "inspiration_query": "top scorer achievement post",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "score in a white disc with a medal, bright title and line",
+   "typography": "Anton, Luckiest Guy, Fredoka",
+   "palette": "violet, lemon, white",
+   "decor": "dot pattern, disc, medal"
+  },
+  "palette": [
+   "#7B5CFF",
+   "#FFFFFF",
+   "#FFE14D"
+  ],
+  "content": {
+   "headline": "Top scorer!",
+   "message": "Yusuf scored 98% in the national maths olympiad",
+   "signature": ""
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/top-scorer-achievement-post.jpg",
+  "preview_url": "/templates/collection/top-scorer-achievement-post-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "1st-place-medal"
+  ]
+ },
+ {
+  "id": "grad-029",
+  "slug": "milestone-achievement-story",
+  "title": "Milestone Achievement Story",
+  "category": "Graduation and achievements",
+  "subcategory": "Achievement",
+  "site_category": "Certificates",
+  "description": "Glowing trophy, arcade-style title, milestone and a full progress bar. Trophy glow, gradient progress bar.",
+  "design_brief": "Glowing trophy, arcade-style title, milestone and a full progress bar. Trophy glow, gradient progress bar.",
+  "design_style": "achievement",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=milestone%20achievement%20story%20business",
+  "inspiration_query": "milestone achievement story business",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "glowing trophy, arcade-style title, milestone and a full progress bar",
+   "typography": "Bungee neon, Outfit ExtraBold, DM Sans",
+   "palette": "arcade night, cyan, magenta",
+   "decor": "trophy glow, gradient progress bar"
+  },
+  "palette": [
+   "#0D0A1F",
+   "#24124A",
+   "#59F0FF",
+   "#FFFFFF",
+   "#FF4FD8"
+  ],
+  "content": {
+   "headline": "Goal unlocked",
+   "message": "10,000 happy customers — thank you!",
+   "signature": "@brightbakes"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1920,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/milestone-achievement-story.jpg",
+  "preview_url": "/templates/collection/milestone-achievement-story-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "trophy"
+  ]
+ },
+ {
+  "id": "grad-030",
+  "slug": "sports-champions-post",
+  "title": "Sports Champions Post",
+  "category": "Graduation and achievements",
+  "subcategory": "Achievement",
+  "site_category": "Certificates",
+  "description": "Trophy and ball in confetti over pitch stripes, gold condensed title. Mowing stripes, confetti, trophy and ball.",
+  "design_brief": "Trophy and ball in confetti over pitch stripes, gold condensed title. Mowing stripes, confetti, trophy and ball.",
+  "design_style": "achievement",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=sports%20champions%20team%20post",
+  "inspiration_query": "sports champions team post",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "trophy and ball in confetti over pitch stripes, gold condensed title",
+   "typography": "Anton gold, Montserrat",
+   "palette": "pitch green, gold, white",
+   "decor": "mowing stripes, confetti, trophy and ball"
+  },
+  "palette": [
+   "#0E3B1F",
+   "#4CAF50",
+   "#FFFFFF",
+   "#FFD54F",
+   "#8A6A2E",
+   "#E9C877"
+  ],
+  "content": {
+   "headline": "Champions!",
+   "message": "Dubai Youth League winners 2027",
+   "signature": "Falcons FC"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/sports-champions-post.jpg",
+  "preview_url": "/templates/collection/sports-champions-post-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "soccer-ball",
+   "trophy"
+  ]
+ }
+]

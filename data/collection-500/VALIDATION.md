@@ -1,6 +1,6 @@
 # Collection 500 — validation report
 
-Templates: **290** of 500
+Templates: **320** of 500
 
 | Category | Made | Target |
 |---|---:|---:|
@@ -9,14 +9,14 @@ Templates: **290** of 500
 | General greeting cards | 50 | 50 |
 | Seasonal and holiday designs | 50 | 50 |
 | Baby and family occasions | 40 | 40 |
-| Graduation and achievements | 0 | 30 |
+| Graduation and achievements | 30 | 30 |
 | Invitations and events | 0 | 40 |
 | Social media and promotional designs | 0 | 40 |
 | Business and professional stationery | 0 | 30 |
 | Miscellaneous special occasions | 0 | 30 |
 | Creative quote and typography designs | 0 | 40 |
 
-Reference links: 290 — all are Pinterest **search** links, not verified individual pins (0 verified).
+Reference links: 320 — all are Pinterest **search** links, not verified individual pins (0 verified).
 
 ## Errors
 
