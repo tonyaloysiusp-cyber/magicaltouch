@@ -6,7 +6,8 @@ import type { AppTheme } from '@/hooks/useAppTheme';
 // First-load brand intro, shown once per browser session (sessionStorage)
 // and skipped entirely under prefers-reduced-motion.
 //
-//  0.0s  soft aurora in the brand spectrum (nothing crosses the logo)
+//  0.0s  two soft colour glows, kept in the far corners. Nothing is
+//        drawn behind, over or across the logo (no grid, no drifting shapes)
 //  0.6s  the real logo icon pops in
 //  1.1s  the wordmark is wiped in (nothing is drawn over the logo)
 //  1.8s  tagline + spectrum underline
@@ -94,8 +95,6 @@ export function IntroAnimation({ theme }: { theme: AppTheme }) {
       <div className="mti-stage">
         <span className="mti-orb mti-orb-a" />
         <span className="mti-orb mti-orb-b" />
-        <span className="mti-orb mti-orb-c" />
-        <span className="mti-grid" />
 
         <span className="mti-skip">Tap to skip</span>
       </div>
@@ -121,11 +120,9 @@ export function IntroAnimation({ theme }: { theme: AppTheme }) {
 .mti-leaving{pointer-events:none}
 .mti-leaving .mti-stage{opacity:0}
 .mti-leaving .mti-stage>*{transition:transform .7s cubic-bezier(.6,0,.4,1),opacity .5s ease;opacity:0}
-.mti-orb{position:absolute;border-radius:50%;filter:blur(60px);opacity:0;animation:mti-fade 1.2s ease forwards, mti-drift 6s ease-in-out infinite alternate}
-.mti-orb-a{width:46vmax;height:46vmax;left:-12vmax;top:-14vmax;background:radial-gradient(circle,#F2708F66,transparent 65%)}
-.mti-orb-b{width:50vmax;height:50vmax;right:-16vmax;top:10vh;background:radial-gradient(circle,#35C2F155,transparent 65%);animation-delay:.15s,0s}
-.mti-orb-c{width:40vmax;height:40vmax;left:20vw;bottom:-22vmax;background:radial-gradient(circle,#8CC84B4d,transparent 65%);animation-delay:.3s,0s}
-.mti-grid{position:absolute;inset:-2px;opacity:0;background-image:linear-gradient(var(--soft) 1px,transparent 1px),linear-gradient(90deg,var(--soft) 1px,transparent 1px);background-size:44px 44px;-webkit-mask-image:radial-gradient(ellipse at center,#000 10%,transparent 70%);mask-image:radial-gradient(ellipse at center,#000 10%,transparent 70%);animation:mti-fade .9s ease .1s forwards}
+.mti-orb{position:absolute;border-radius:50%;filter:blur(60px);opacity:0;animation:mti-fade 1.2s ease forwards}
+.mti-orb-a{width:40vmax;height:40vmax;left:-20vmax;top:-20vmax;background:radial-gradient(circle,#F2708F66,transparent 65%)}
+.mti-orb-b{width:40vmax;height:40vmax;right:-20vmax;bottom:-20vmax;background:radial-gradient(circle,#35C2F155,transparent 65%);animation-delay:.15s}
 .mti-center{position:absolute;z-index:1;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none}
 .mti-logo{position:relative;flex:none;width:min(680px,84vw);aspect-ratio:${1 / LOGO_RATIO};transform-origin:0 0;transition:transform .72s cubic-bezier(.7,0,.2,1)}
 .mti-logo img{position:absolute;inset:0;width:100%;height:100%;user-select:none}
@@ -139,7 +136,6 @@ export function IntroAnimation({ theme }: { theme: AppTheme }) {
 .mti-leaving .mti-tag,.mti-leaving .mti-underline{transition:opacity .3s ease;opacity:0!important}
 .mti-skip{position:absolute;left:50%;bottom:calc(22px + env(safe-area-inset-bottom));transform:translateX(-50%);color:var(--ink);opacity:0;font:500 11px/1 system-ui,sans-serif;letter-spacing:.12em;text-transform:uppercase;animation:mti-skip .5s ease 1s forwards}
 @keyframes mti-fade{to{opacity:1}}
-@keyframes mti-drift{to{transform:translate(3vw,2vh) scale(1.08)}}
 @keyframes mti-pop{0%{opacity:0;transform:scale(.3) rotate(-18deg);filter:blur(8px)}60%{opacity:1;filter:blur(0)}100%{opacity:1;transform:scale(1) rotate(0)}}
 @keyframes mti-wipe{to{clip-path:inset(0 0 0 ${ICON_SHARE * 100}%)}}
 @keyframes mti-up{to{opacity:1;transform:translateY(0)}}
