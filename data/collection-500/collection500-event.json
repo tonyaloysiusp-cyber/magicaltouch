@@ -1,0 +1,1859 @@
+[
+ {
+  "id": "event-001",
+  "slug": "annual-gala-dinner-invitation",
+  "title": "Annual Gala Dinner Invitation",
+  "category": "Invitations and events",
+  "subcategory": "Corporate",
+  "site_category": "Events",
+  "description": "Formal gala invitation in a gold double frame with glasses crest. Double frame, glasses illustration, divider.",
+  "design_brief": "Formal gala invitation in a gold double frame with glasses crest. Double frame, glasses illustration, divider.",
+  "design_style": "corporate",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=corporate%20gala%20dinner%20invitation%20black%20gold",
+  "inspiration_query": "corporate gala dinner invitation black gold",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "formal gala invitation in a gold double frame with glasses crest",
+   "typography": "Great Vibes gold, Cormorant Garamond italic, Cinzel, Montserrat caps",
+   "palette": "black, gold, champagne",
+   "decor": "double frame, glasses illustration, divider"
+  },
+  "palette": [
+   "#1E1A16",
+   "#070605",
+   "#C9A45A",
+   "#8A6A2E",
+   "#E9C877",
+   "#B68A3A"
+  ],
+  "content": {
+   "headline": "Annual Gala Dinner",
+   "message": "An evening of recognition and celebration · Thursday 9 December 2027 · 7 PM · Atlantis The Royal, Dubai",
+   "signature": "Black tie · RSVP by 25 November"
+  },
+  "dimensions": {
+   "width": 559,
+   "height": 794,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/annual-gala-dinner-invitation.jpg",
+  "preview_url": "/templates/collection/annual-gala-dinner-invitation-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "clinking-glasses"
+  ]
+ },
+ {
+  "id": "event-002",
+  "slug": "tech-conference-poster",
+  "title": "Tech Conference Poster",
+  "category": "Invitations and events",
+  "subcategory": "Corporate",
+  "site_category": "Events",
+  "description": "Dark gradient tech poster: condensed headline, date tile, topics, registration pill. Glow orbs, grid lines, laptop.",
+  "design_brief": "Dark gradient tech poster: condensed headline, date tile, topics, registration pill. Glow orbs, grid lines, laptop.",
+  "design_style": "corporate",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=tech%20conference%20poster%20gradient%20modern",
+  "inspiration_query": "tech conference poster gradient modern",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "dark gradient tech poster: condensed headline, date tile, topics, registration pill",
+   "typography": "Anton, Montserrat",
+   "palette": "ink navy, electric violet, teal glow",
+   "decor": "glow orbs, grid lines, laptop"
+  },
+  "palette": [
+   "#0B0D21",
+   "#FFFFFF",
+   "#6A5CFF"
+  ],
+  "content": {
+   "headline": "FUTURE TECH SUMMIT",
+   "message": "AI · Cloud · Security · 14–15 March 2027 · Dubai World Trade Centre",
+   "signature": "Register at futuretech.ae"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1350,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/tech-conference-poster.jpg",
+  "preview_url": "/templates/collection/tech-conference-poster-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "laptop"
+  ]
+ },
+ {
+  "id": "event-003",
+  "slug": "product-launch-invitation",
+  "title": "Product Launch Invitation",
+  "category": "Invitations and events",
+  "subcategory": "Corporate",
+  "site_category": "Events",
+  "description": "Teaser: glowing outlined diamond with a question mark, italic line. Glow, outlined diamonds.",
+  "design_brief": "Teaser: glowing outlined diamond with a question mark, italic line. Glow, outlined diamonds.",
+  "design_style": "corporate",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=product%20launch%20invitation%20dark%20minimal",
+  "inspiration_query": "product launch invitation dark minimal",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "teaser: glowing outlined diamond with a question mark, italic line",
+   "typography": "Playfair Display italic, Montserrat spaced caps",
+   "palette": "black, white, grey",
+   "decor": "glow, outlined diamonds"
+  },
+  "palette": [
+   "#0A0A0A",
+   "#FFFFFF",
+   "#BDBDBD"
+  ],
+  "content": {
+   "headline": "Something new is coming",
+   "message": "Product launch · 22 April 2027 · 6 PM · Alserkal Avenue",
+   "signature": "Be the first to see it"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/product-launch-invitation.jpg",
+  "preview_url": "/templates/collection/product-launch-invitation-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "event-004",
+  "slug": "webinar-announcement-post",
+  "title": "Webinar Announcement Post",
+  "category": "Invitations and events",
+  "subcategory": "Corporate",
+  "site_category": "Events",
+  "description": "Live badge, big topic, time line, host block and laptop. Live badge, circle, laptop illustration.",
+  "design_brief": "Live badge, big topic, time line, host block and laptop. Live badge, circle, laptop illustration.",
+  "design_style": "corporate",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=webinar%20announcement%20instagram%20post",
+  "inspiration_query": "webinar announcement instagram post",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "live badge, big topic, time line, host block and laptop",
+   "typography": "Outfit ExtraBold, Montserrat",
+   "palette": "ice blue, royal blue, navy, coral dot",
+   "decor": "live badge, circle, laptop illustration"
+  },
+  "palette": [
+   "#F2F5FF",
+   "#3B5BDB",
+   "#FF6B6B",
+   "#FFFFFF",
+   "#1B2559",
+   "#DCE4FF"
+  ],
+  "content": {
+   "headline": "Free Webinar",
+   "message": "Mastering Social Media in 2027 · Tuesday 9 Feb · 5 PM GST · with Sara Ahmed",
+   "signature": "Register — link in bio"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/webinar-announcement-post.jpg",
+  "preview_url": "/templates/collection/webinar-announcement-post-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "laptop"
+  ]
+ },
+ {
+  "id": "event-005",
+  "slug": "workshop-flyer",
+  "title": "Workshop Flyer",
+  "category": "Invitations and events",
+  "subcategory": "Corporate",
+  "site_category": "Events",
+  "description": "Bold type poster with a bulb, date tile and details. Sun circle, footer band, light bulb.",
+  "design_brief": "Bold type poster with a bulb, date tile and details. Sun circle, footer band, light bulb.",
+  "design_style": "corporate",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=workshop%20flyer%20modern",
+  "inspiration_query": "workshop flyer modern",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "bold type poster with a bulb, date tile and details",
+   "typography": "Archivo Black, Montserrat",
+   "palette": "cream, black, orange, yellow",
+   "decor": "sun circle, footer band, light bulb"
+  },
+  "palette": [
+   "#F7F3EA",
+   "#FFD23F",
+   "#1B1B1B",
+   "#FF5A36"
+  ],
+  "content": {
+   "headline": "Design Thinking Workshop",
+   "message": "Hands-on, 3 hours · Saturday 6 March · 10 AM · Impact Hub Dubai · AED 250",
+   "signature": "Book at impacthub.ae"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1350,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/workshop-flyer.jpg",
+  "preview_url": "/templates/collection/workshop-flyer-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "light-bulb"
+  ]
+ },
+ {
+  "id": "event-006",
+  "slug": "networking-evening-invitation",
+  "title": "Networking Evening Invitation",
+  "category": "Invitations and events",
+  "subcategory": "Corporate",
+  "site_category": "Events",
+  "description": "Connected-dots network on the left, invitation on the right. Node-and-line network.",
+  "design_brief": "Connected-dots network on the left, invitation on the right. Node-and-line network.",
+  "design_style": "corporate",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=networking%20event%20invitation",
+  "inspiration_query": "networking event invitation",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "connected-dots network on the left, invitation on the right",
+   "typography": "Playfair Display, Lora italic, Montserrat caps",
+   "palette": "charcoal, amber",
+   "decor": "node-and-line network"
+  },
+  "palette": [
+   "#101820",
+   "#F2AA4C",
+   "#FFFFFF",
+   "#C9D3DE"
+  ],
+  "content": {
+   "headline": "Networking Evening",
+   "message": "Meet founders, investors & creatives · Wednesday 17 March · 7 PM · The Rooftop, DIFC",
+   "signature": "Free entry · register to attend"
+  },
+  "dimensions": {
+   "width": 673,
+   "height": 480,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/networking-evening-invitation.jpg",
+  "preview_url": "/templates/collection/networking-evening-invitation-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "event-007",
+  "slug": "gold-ribbon-grand-opening-poster",
+  "title": "Gold Ribbon Grand Opening Poster",
+  "category": "Invitations and events",
+  "subcategory": "Corporate",
+  "site_category": "Events",
+  "description": "Gold ribbon with bow across a red poster, business name in script. Confetti, gold ribbon band, bow illustration, offer pill.",
+  "design_brief": "Gold ribbon with bow across a red poster, business name in script. Confetti, gold ribbon band, bow illustration, offer pill.",
+  "design_style": "corporate",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=grand%20opening%20poster%20ribbon",
+  "inspiration_query": "grand opening poster ribbon",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "gold ribbon with bow across a red poster, business name in script",
+   "typography": "Anton, Great Vibes, Montserrat",
+   "palette": "ribbon red, gold, white",
+   "decor": "confetti, gold ribbon band, bow illustration, offer pill"
+  },
+  "palette": [
+   "#C62828",
+   "#FFFFFF",
+   "#FFD54F",
+   "#8A6A2E",
+   "#E9C877",
+   "#B68A3A"
+  ],
+  "content": {
+   "headline": "GRAND OPENING",
+   "message": "The Daily Grind Café · Friday 1 October · 9 AM · Free coffee for the first 100 guests",
+   "signature": "Al Wasl Road, Dubai"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1350,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/gold-ribbon-grand-opening-poster.jpg",
+  "preview_url": "/templates/collection/gold-ribbon-grand-opening-poster-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "ribbon"
+  ]
+ },
+ {
+  "id": "event-008",
+  "slug": "career-fair-poster",
+  "title": "Career Fair Poster",
+  "category": "Invitations and events",
+  "subcategory": "Corporate",
+  "site_category": "Events",
+  "description": "Teal poster, briefcase, condensed headline and details list. Briefcase illustration, pill.",
+  "design_brief": "Teal poster, briefcase, condensed headline and details list. Briefcase illustration, pill.",
+  "design_style": "corporate",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=career%20fair%20poster",
+  "inspiration_query": "career fair poster",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "teal poster, briefcase, condensed headline and details list",
+   "typography": "Archivo Black, Montserrat",
+   "palette": "deep teal, sunflower, white",
+   "decor": "briefcase illustration, pill"
+  },
+  "palette": [
+   "#0E4D64",
+   "#FFFFFF",
+   "#F2C14E"
+  ],
+  "content": {
+   "headline": "Career Fair 2027",
+   "message": "100+ employers · CV clinics · Interviews on the spot · 20 April · 10 AM–4 PM",
+   "signature": "Zayed University, Dubai"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1350,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/career-fair-poster.jpg",
+  "preview_url": "/templates/collection/career-fair-poster-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "briefcase"
+  ]
+ },
+ {
+  "id": "event-009",
+  "slug": "hackathon-poster",
+  "title": "Hackathon Poster",
+  "category": "Invitations and events",
+  "subcategory": "Corporate",
+  "site_category": "Events",
+  "description": "Terminal-style poster with neon title and command-line details. Floating code glyphs, laptop.",
+  "design_brief": "Terminal-style poster with neon title and command-line details. Floating code glyphs, laptop.",
+  "design_style": "corporate",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=hackathon%20poster%20neon%20code",
+  "inspiration_query": "hackathon poster neon code",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "terminal-style poster with neon title and command-line details",
+   "typography": "Bungee neon, DM Sans",
+   "palette": "terminal black, neon green",
+   "decor": "floating code glyphs, laptop"
+  },
+  "palette": [
+   "#05080F",
+   "#00FF9C",
+   "#E6FFF5"
+  ],
+  "content": {
+   "headline": "HACK 48",
+   "message": "48 hours · build anything · prizes worth AED 50,000 · 12–14 May 2027",
+   "signature": "Sign up at hack48.ae"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1350,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/hackathon-poster.jpg",
+  "preview_url": "/templates/collection/hackathon-poster-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "laptop"
+  ]
+ },
+ {
+  "id": "event-010",
+  "slug": "conference-speaker-card",
+  "title": "Conference Speaker Card",
+  "category": "Invitations and events",
+  "subcategory": "Corporate",
+  "site_category": "Events",
+  "description": "Split: circular speaker photo on navy, name, role and talk title on cream. Circle photo with ring, rule.",
+  "design_brief": "Split: circular speaker photo on navy, name, role and talk title on cream. Circle photo with ring, rule.",
+  "design_style": "corporate",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=conference%20speaker%20announcement%20post",
+  "inspiration_query": "conference speaker announcement post",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "split: circular speaker photo on navy, name, role and talk title on cream",
+   "typography": "Playfair Display, Montserrat",
+   "palette": "navy, cream, sunflower",
+   "decor": "circle photo with ring, rule"
+  },
+  "palette": [
+   "#F4F1EC",
+   "#1F2A44",
+   "#F2C14E",
+   "#6A7488"
+  ],
+  "content": {
+   "headline": "Meet our speaker",
+   "message": "Dr. Layla Haddad · Head of AI Research · Keynote: The Human Side of AI",
+   "signature": "Future Tech Summit · 14 March"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/conference-speaker-card.jpg",
+  "preview_url": "/templates/collection/conference-speaker-card-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "event-011",
+  "slug": "paint-blobs-art-exhibition-poster",
+  "title": "Paint Blobs Art Exhibition Poster",
+  "category": "Invitations and events",
+  "subcategory": "Arts & Culture",
+  "site_category": "Events",
+  "description": "Abstract colour blobs top-right, serif title, date tile and details. Organic paint blobs.",
+  "design_brief": "Abstract colour blobs top-right, serif title, date tile and details. Organic paint blobs.",
+  "design_style": "arts & culture",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=art%20exhibition%20poster%20modern%20abstract",
+  "inspiration_query": "art exhibition poster modern abstract",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "abstract colour blobs top-right, serif title, date tile and details",
+   "typography": "Playfair Display, Montserrat",
+   "palette": "canvas cream, teal ink, terracotta, saffron, sea green",
+   "decor": "organic paint blobs"
+  },
+  "palette": [
+   "#F4EFE6",
+   "#E76F51",
+   "#2A9D8F",
+   "#E9C46A",
+   "#264653"
+  ],
+  "content": {
+   "headline": "Colours of the Gulf",
+   "message": "A group exhibition · 5–30 November · Opening night 5 Nov · 7 PM · Gallery 21, Alserkal",
+   "signature": "Free entry"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1350,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/paint-blobs-art-exhibition-poster.jpg",
+  "preview_url": "/templates/collection/paint-blobs-art-exhibition-poster-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "event-012",
+  "slug": "stage-lights-concert-poster",
+  "title": "Stage Lights Concert Poster",
+  "category": "Invitations and events",
+  "subcategory": "Arts & Culture",
+  "site_category": "Events",
+  "description": "Stage light beams, guitar and notes above a condensed title and band name. Spotlight beams, guitar and music notes.",
+  "design_brief": "Stage light beams, guitar and notes above a condensed title and band name. Spotlight beams, guitar and music notes.",
+  "design_style": "arts & culture",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=live%20concert%20poster%20music",
+  "inspiration_query": "live concert poster music",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "stage light beams, guitar and notes above a condensed title and band name",
+   "typography": "Anton, Great Vibes, Montserrat caps",
+   "palette": "night violet, neon pink, cyan, yellow",
+   "decor": "spotlight beams, guitar and music notes"
+  },
+  "palette": [
+   "#140B24",
+   "#FFFFFF",
+   "#FFE45C"
+  ],
+  "content": {
+   "headline": "LIVE IN CONCERT",
+   "message": "The Oud Collective · Friday 15 October · 8 PM · Dubai Opera",
+   "signature": "Tickets from AED 150"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1350,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/stage-lights-concert-poster.jpg",
+  "preview_url": "/templates/collection/stage-lights-concert-poster-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "guitar",
+   "musical-notes"
+  ]
+ },
+ {
+  "id": "event-013",
+  "slug": "poetry-night-flyer",
+  "title": "Poetry Night Flyer",
+  "category": "Invitations and events",
+  "subcategory": "Arts & Culture",
+  "site_category": "Events",
+  "description": "Spot-lit microphone above an italic title. Grain, spotlight glow, microphone.",
+  "design_brief": "Spot-lit microphone above an italic title. Grain, spotlight glow, microphone.",
+  "design_style": "arts & culture",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=poetry%20night%20open%20mic%20flyer",
+  "inspiration_query": "poetry night open mic flyer",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "spot-lit microphone above an italic title",
+   "typography": "Playfair Display italic, Lora italic, Montserrat caps, Caveat",
+   "palette": "espresso, cream, amber",
+   "decor": "grain, spotlight glow, microphone"
+  },
+  "palette": [
+   "#1E1B18",
+   "#F3E6CB",
+   "#C9B99A",
+   "#F2C14E"
+  ],
+  "content": {
+   "headline": "Poetry Night",
+   "message": "Open mic for words & verses · Thursday 4 March · 7:30 PM · The Book Corner Café",
+   "signature": "Sign up at the door"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/poetry-night-flyer.jpg",
+  "preview_url": "/templates/collection/poetry-night-flyer-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "microphone"
+  ]
+ },
+ {
+  "id": "event-014",
+  "slug": "comedy-night-poster",
+  "title": "Comedy Night Poster",
+  "category": "Invitations and events",
+  "subcategory": "Arts & Culture",
+  "site_category": "Events",
+  "description": "Mic in a black spotlight on a yellow ray burst, outlined title. Rays, spotlight disc, microphone.",
+  "design_brief": "Mic in a black spotlight on a yellow ray burst, outlined title. Rays, spotlight disc, microphone.",
+  "design_style": "arts & culture",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=comedy%20night%20poster",
+  "inspiration_query": "comedy night poster",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "mic in a black spotlight on a yellow ray burst, outlined title",
+   "typography": "Luckiest Guy, Fredoka",
+   "palette": "comic yellow, black, red",
+   "decor": "rays, spotlight disc, microphone"
+  },
+  "palette": [
+   "#FFD23F",
+   "#FFC300",
+   "#111111",
+   "#E63946"
+  ],
+  "content": {
+   "headline": "Comedy Night",
+   "message": "Stand-up with 5 local comedians · Saturday 13 March · 9 PM · The Laugh Factory",
+   "signature": "Tickets AED 95"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1350,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/comedy-night-poster.jpg",
+  "preview_url": "/templates/collection/comedy-night-poster-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "microphone"
+  ]
+ },
+ {
+  "id": "event-015",
+  "slug": "book-club-invitation",
+  "title": "Book Club Invitation",
+  "category": "Invitations and events",
+  "subcategory": "Arts & Culture",
+  "site_category": "Events",
+  "description": "Stack of books and a cup above a cosy italic title. Paper grain, books and coffee.",
+  "design_brief": "Stack of books and a cup above a cosy italic title. Paper grain, books and coffee.",
+  "design_style": "arts & culture",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=book%20club%20invitation%20cozy",
+  "inspiration_query": "book club invitation cozy",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "stack of books and a cup above a cosy italic title",
+   "typography": "Playfair Display italic, Lora italic, Montserrat caps, Caveat",
+   "palette": "parchment, walnut, terracotta",
+   "decor": "paper grain, books and coffee"
+  },
+  "palette": [
+   "#EFE4D2",
+   "#4A2E1E",
+   "#6E4A38",
+   "#B5523B"
+  ],
+  "content": {
+   "headline": "Book Club",
+   "message": "This month: ‘The Alchemist’ · Sunday 7 March · 6 PM · Lina’s place",
+   "signature": "Bring a snack to share"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/book-club-invitation.jpg",
+  "preview_url": "/templates/collection/book-club-invitation-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "books",
+   "hot-beverage"
+  ]
+ },
+ {
+  "id": "event-016",
+  "slug": "fashion-show-poster",
+  "title": "Fashion Show Poster",
+  "category": "Invitations and events",
+  "subcategory": "Arts & Culture",
+  "site_category": "Events",
+  "description": "Editorial split: stacked condensed title left, fashion photo right. Full-height photo.",
+  "design_brief": "Editorial split: stacked condensed title left, fashion photo right. Full-height photo.",
+  "design_style": "arts & culture",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=fashion%20show%20poster%20minimal",
+  "inspiration_query": "fashion show poster minimal",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "editorial split: stacked condensed title left, fashion photo right",
+   "typography": "Anton, Playfair Display italic, Montserrat caps",
+   "palette": "stone, black, photo tones",
+   "decor": "full-height photo"
+  },
+  "palette": [
+   "#EDE8E1",
+   "#111111",
+   "#7A7068"
+  ],
+  "content": {
+   "headline": "FASHION SHOW",
+   "message": "Spring / Summer 2027 · Thursday 18 March · 8 PM · Dubai Design District",
+   "signature": "Invitation only"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1350,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/fashion-show-poster.jpg",
+  "preview_url": "/templates/collection/fashion-show-poster-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "event-017",
+  "slug": "movie-night-invitation",
+  "title": "Movie Night Invitation",
+  "category": "Invitations and events",
+  "subcategory": "Arts & Culture",
+  "site_category": "Events",
+  "description": "Glowing outdoor screen and popcorn on the left, invitation right. Stars, screen glow, film / popcorn / camera.",
+  "design_brief": "Glowing outdoor screen and popcorn on the left, invitation right. Stars, screen glow, film / popcorn / camera.",
+  "design_style": "arts & culture",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=outdoor%20movie%20night%20invitation",
+  "inspiration_query": "outdoor movie night invitation",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "glowing outdoor screen and popcorn on the left, invitation right",
+   "typography": "Pacifico, Lora italic, Montserrat caps, Caveat",
+   "palette": "night violet, screen cream, butter",
+   "decor": "stars, screen glow, film / popcorn / camera"
+  },
+  "palette": [
+   "#1B1035",
+   "#FFFFFF",
+   "#F3E6CB",
+   "#FFD36E",
+   "#E3DDF5"
+  ],
+  "content": {
+   "headline": "Movie Night",
+   "message": "Popcorn, blankets & a classic under the stars · Friday 26 February · 8 PM · our garden",
+   "signature": "Bring a cushion!"
+  },
+  "dimensions": {
+   "width": 673,
+   "height": 480,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/movie-night-invitation.jpg",
+  "preview_url": "/templates/collection/movie-night-invitation-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "film-frames",
+   "movie-camera",
+   "popcorn"
+  ]
+ },
+ {
+  "id": "event-018",
+  "slug": "charity-fundraiser-poster",
+  "title": "Charity Fundraiser Poster",
+  "category": "Invitations and events",
+  "subcategory": "Community",
+  "site_category": "Events",
+  "description": "Energetic orange poster with a medal, date tile and cause line. Medal illustration, pill.",
+  "design_brief": "Energetic orange poster with a medal, date tile and cause line. Medal illustration, pill.",
+  "design_style": "community",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=charity%20fun%20run%20poster",
+  "inspiration_query": "charity fun run poster",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "energetic orange poster with a medal, date tile and cause line",
+   "typography": "Anton, Montserrat",
+   "palette": "running orange, white, navy",
+   "decor": "medal illustration, pill"
+  },
+  "palette": [
+   "#FF6B35",
+   "#FFFFFF",
+   "#1B1B3A"
+  ],
+  "content": {
+   "headline": "Run for Hope",
+   "message": "5K charity fun run · Saturday 20 February · 7 AM · Kite Beach · all proceeds to children’s education",
+   "signature": "Register at runforhope.ae"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1350,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/charity-fundraiser-poster.jpg",
+  "preview_url": "/templates/collection/charity-fundraiser-poster-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "sports-medal"
+  ]
+ },
+ {
+  "id": "event-019",
+  "slug": "community-clean-up-flyer",
+  "title": "Community Clean Up Flyer",
+  "category": "Invitations and events",
+  "subcategory": "Community",
+  "site_category": "Events",
+  "description": "Sea, wave and sand layers with volunteer details on the beach. Wave, sand band, sun, fish, seedling.",
+  "design_brief": "Sea, wave and sand layers with volunteer details on the beach. Wave, sand band, sun, fish, seedling.",
+  "design_style": "community",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=beach%20clean%20up%20volunteer%20flyer",
+  "inspiration_query": "beach clean up volunteer flyer",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "sea, wave and sand layers with volunteer details on the beach",
+   "typography": "Luckiest Guy, Fredoka",
+   "palette": "sky, sea blue, sand, ocean navy",
+   "decor": "wave, sand band, sun, fish, seedling"
+  },
+  "palette": [
+   "#BDE7F5",
+   "#F6E7C8",
+   "#4FB3D9",
+   "#F2D9A8",
+   "#0E5A7A",
+   "#0E3A4E"
+  ],
+  "content": {
+   "headline": "Beach Clean-Up",
+   "message": "Join your neighbours to keep our beach beautiful · Saturday 6 March · 7 AM · Jumeirah Beach",
+   "signature": "Gloves & bags provided"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/community-clean-up-flyer.jpg",
+  "preview_url": "/templates/collection/community-clean-up-flyer-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "seedling",
+   "sun",
+   "tropical-fish"
+  ]
+ },
+ {
+  "id": "event-020",
+  "slug": "farmers-market-poster",
+  "title": "Farmers Market Poster",
+  "category": "Invitations and events",
+  "subcategory": "Community",
+  "site_category": "Events",
+  "description": "Striped market awning, a row of produce, script title and details. Scalloped awning, produce illustrations.",
+  "design_brief": "Striped market awning, a row of produce, script title and details. Scalloped awning, produce illustrations.",
+  "design_style": "community",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=farmers%20market%20poster%20illustrated",
+  "inspiration_query": "farmers market poster illustrated",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "striped market awning, a row of produce, script title and details",
+   "typography": "Pacifico, Fredoka",
+   "palette": "awning red, cream, leaf green",
+   "decor": "scalloped awning, produce illustrations"
+  },
+  "palette": [
+   "#FFF4E0",
+   "#E63946",
+   "#FFFFFF",
+   "#2E7D32",
+   "#3A2A20",
+   "#5A4A3A"
+  ],
+  "content": {
+   "headline": "Weekend Market",
+   "message": "Fresh produce · local makers · live music · every Saturday · 8 AM–1 PM · Ripe Market, Al Barsha",
+   "signature": "Free entry"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1350,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/farmers-market-poster.jpg",
+  "preview_url": "/templates/collection/farmers-market-poster-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "carrot",
+   "croissant",
+   "honey-pot",
+   "sunflower",
+   "watermelon"
+  ]
+ },
+ {
+  "id": "event-021",
+  "slug": "charity-bake-sale-flyer",
+  "title": "Charity Bake Sale Flyer",
+  "category": "Invitations and events",
+  "subcategory": "Community",
+  "site_category": "Events",
+  "description": "Cakes and treats across the top, playful title and details. Polka dots, baked-goods illustrations.",
+  "design_brief": "Cakes and treats across the top, playful title and details. Polka dots, baked-goods illustrations.",
+  "design_style": "community",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=charity%20bake%20sale%20flyer%20cute",
+  "inspiration_query": "charity bake sale flyer cute",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "cakes and treats across the top, playful title and details",
+   "typography": "Luckiest Guy, Fredoka",
+   "palette": "strawberry milk, raspberry",
+   "decor": "polka dots, baked-goods illustrations"
+  },
+  "palette": [
+   "#FDE7EF",
+   "#C2185B",
+   "#5A2A3A",
+   "#FFFFFF"
+  ],
+  "content": {
+   "headline": "Bake Sale!",
+   "message": "All proceeds go to the animal shelter · Friday 12 March · 3 PM · school courtyard",
+   "signature": "Cakes from AED 5"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/charity-bake-sale-flyer.jpg",
+  "preview_url": "/templates/collection/charity-bake-sale-flyer-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "birthday-cake",
+   "cookie",
+   "cupcake",
+   "doughnut"
+  ]
+ },
+ {
+  "id": "event-022",
+  "slug": "open-day-school-poster",
+  "title": "Open Day School Poster",
+  "category": "Invitations and events",
+  "subcategory": "Community",
+  "site_category": "Events",
+  "description": "School-navy poster with building illustration, date tile and details. School illustration, pill.",
+  "design_brief": "School-navy poster with building illustration, date tile and details. School illustration, pill.",
+  "design_style": "community",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=school%20open%20day%20poster",
+  "inspiration_query": "school open day poster",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "school-navy poster with building illustration, date tile and details",
+   "typography": "Anton, Montserrat",
+   "palette": "navy, gold, white",
+   "decor": "school illustration, pill"
+  },
+  "palette": [
+   "#123C69",
+   "#FFFFFF",
+   "#F2C14E"
+  ],
+  "content": {
+   "headline": "Open Day",
+   "message": "Tour our campus, meet our teachers · Saturday 27 February · 9 AM–1 PM",
+   "signature": "Al Noor Academy · register online"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1350,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/open-day-school-poster.jpg",
+  "preview_url": "/templates/collection/open-day-school-poster-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "school"
+  ]
+ },
+ {
+  "id": "event-023",
+  "slug": "blood-donation-drive-poster",
+  "title": "Blood Donation Drive Poster",
+  "category": "Invitations and events",
+  "subcategory": "Community",
+  "site_category": "Events",
+  "description": "Big gradient blood drop with a white heart, clear call to action. Vector drop and heart.",
+  "design_brief": "Big gradient blood drop with a white heart, clear call to action. Vector drop and heart.",
+  "design_style": "community",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=blood%20donation%20drive%20poster",
+  "inspiration_query": "blood donation drive poster",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "big gradient blood drop with a white heart, clear call to action",
+   "typography": "Playfair Display ExtraBold, Montserrat",
+   "palette": "white, blood red",
+   "decor": "vector drop and heart"
+  },
+  "palette": [
+   "#FFFFFF",
+   "#FF5A6E",
+   "#C1121F",
+   "#3A2A2A"
+  ],
+  "content": {
+   "headline": "Give blood, save lives",
+   "message": "Blood donation drive · Monday 15 March · 9 AM–3 PM · Community Hall",
+   "signature": "Every drop counts"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1350,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/blood-donation-drive-poster.jpg",
+  "preview_url": "/templates/collection/blood-donation-drive-poster-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "event-024",
+  "slug": "neighbourhood-iftar-invitation",
+  "title": "Neighbourhood Iftar Invitation",
+  "category": "Invitations and events",
+  "subcategory": "Community",
+  "site_category": "Events",
+  "description": "Lanterns on a teal geometric pattern, invitation on the right. Star pattern, lanterns.",
+  "design_brief": "Lanterns on a teal geometric pattern, invitation on the right. Star pattern, lanterns.",
+  "design_style": "community",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=community%20iftar%20invitation",
+  "inspiration_query": "community iftar invitation",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "lanterns on a teal geometric pattern, invitation on the right",
+   "typography": "Great Vibes gold, Lora italic, Montserrat caps, Caveat",
+   "palette": "teal, gold, cream",
+   "decor": "star pattern, lanterns"
+  },
+  "palette": [
+   "#123C3A",
+   "#E9C877",
+   "#FFE7A8",
+   "#8A6A2E",
+   "#B68A3A",
+   "#F7E3A3"
+  ],
+  "content": {
+   "headline": "Community Iftar",
+   "message": "Break your fast with your neighbours · Friday 12 March · Maghrib · Park pavilion",
+   "signature": "Everyone is welcome"
+  },
+  "dimensions": {
+   "width": 673,
+   "height": 480,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/neighbourhood-iftar-invitation.jpg",
+  "preview_url": "/templates/collection/neighbourhood-iftar-invitation-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "event-025",
+  "slug": "yoga-class-flyer",
+  "title": "Yoga Class Flyer",
+  "category": "Invitations and events",
+  "subcategory": "Sports & Wellness",
+  "site_category": "Events",
+  "description": "Sun rising over a calm sea with a lotus, schedule on the water. Sun, horizon, ripple, lotus.",
+  "design_brief": "Sun rising over a calm sea with a lotus, schedule on the water. Sun, horizon, ripple, lotus.",
+  "design_style": "sports & wellness",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=sunrise%20yoga%20class%20flyer",
+  "inspiration_query": "sunrise yoga class flyer",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "sun rising over a calm sea with a lotus, schedule on the water",
+   "typography": "Great Vibes, Montserrat caps, Caveat",
+   "palette": "peach dawn, coral, plum sea",
+   "decor": "sun, horizon, ripple, lotus"
+  },
+  "palette": [
+   "#FFD6A5",
+   "#FFB4A2",
+   "#E5989B",
+   "#FFF1C1",
+   "#6D597A",
+   "#B5838D"
+  ],
+  "content": {
+   "headline": "Sunrise Yoga",
+   "message": "Every Saturday · 6:30 AM · Kite Beach · all levels · AED 60",
+   "signature": "Bring your own mat"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/yoga-class-flyer.jpg",
+  "preview_url": "/templates/collection/yoga-class-flyer-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "lotus"
+  ]
+ },
+ {
+  "id": "event-026",
+  "slug": "marathon-poster",
+  "title": "Marathon Poster",
+  "category": "Invitations and events",
+  "subcategory": "Sports & Wellness",
+  "site_category": "Events",
+  "description": "Speed-stripe poster, stacked title, four distance tiles and date. Diagonal speed stripes, distance tiles.",
+  "design_brief": "Speed-stripe poster, stacked title, four distance tiles and date. Diagonal speed stripes, distance tiles.",
+  "design_style": "sports & wellness",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=marathon%20poster%20bold",
+  "inspiration_query": "marathon poster bold",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "speed-stripe poster, stacked title, four distance tiles and date",
+   "typography": "Anton, Montserrat",
+   "palette": "black, race orange, yellow, white, teal",
+   "decor": "diagonal speed stripes, distance tiles"
+  },
+  "palette": [
+   "#111111",
+   "#FFFFFF",
+   "#FF3D00",
+   "#FFC400",
+   "#00C2A8"
+  ],
+  "content": {
+   "headline": "CITY MARATHON",
+   "message": "42K · 21K · 10K · 5K · Friday 21 January 2028",
+   "signature": "Register at citymarathon.ae"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1350,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/marathon-poster.jpg",
+  "preview_url": "/templates/collection/marathon-poster-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "event-027",
+  "slug": "sports-day-invitation",
+  "title": "Sports Day Invitation",
+  "category": "Invitations and events",
+  "subcategory": "Sports & Wellness",
+  "site_category": "Events",
+  "description": "Running-track lines on grass with bunting, medal and trophy. Track lines, bunting, medal, trophy.",
+  "design_brief": "Running-track lines on grass with bunting, medal and trophy. Track lines, bunting, medal, trophy.",
+  "design_style": "sports & wellness",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=school%20sports%20day%20invitation",
+  "inspiration_query": "school sports day invitation",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "running-track lines on grass with bunting, medal and trophy",
+   "typography": "Luckiest Guy outlined, Fredoka",
+   "palette": "field green, white, house colours",
+   "decor": "track lines, bunting, medal, trophy"
+  },
+  "palette": [
+   "#7CC36B",
+   "#FFFFFF",
+   "#7A6F66",
+   "#E63946",
+   "#F1C40F",
+   "#3498DB"
+  ],
+  "content": {
+   "headline": "Sports Day!",
+   "message": "Races, games & medals · Thursday 18 March · 8 AM · school field",
+   "signature": "Wear your house colours"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/sports-day-invitation.jpg",
+  "preview_url": "/templates/collection/sports-day-invitation-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "1st-place-medal",
+   "trophy"
+  ]
+ },
+ {
+  "id": "event-028",
+  "slug": "centre-spot-5-a-side-cup-poster",
+  "title": "Centre Spot 5-a-side Cup Poster",
+  "category": "Invitations and events",
+  "subcategory": "Sports & Wellness",
+  "site_category": "Events",
+  "description": "Pitch markings with the ball on the centre spot, trophy and title. Centre circle, halfway line, ball, trophy.",
+  "design_brief": "Pitch markings with the ball on the centre spot, trophy and title. Centre circle, halfway line, ball, trophy.",
+  "design_style": "sports & wellness",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=football%20tournament%20poster",
+  "inspiration_query": "football tournament poster",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "pitch markings with the ball on the centre spot, trophy and title",
+   "typography": "Anton, Montserrat",
+   "palette": "pitch green, white, yellow",
+   "decor": "centre circle, halfway line, ball, trophy"
+  },
+  "palette": [
+   "#0B6E4F",
+   "#FFFFFF",
+   "#FFE14D"
+  ],
+  "content": {
+   "headline": "5-a-side Cup",
+   "message": "16 teams · 1 trophy · Saturday 10 April · 4 PM · Dubai Sports City",
+   "signature": "Register your team"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1350,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/centre-spot-5-a-side-cup-poster.jpg",
+  "preview_url": "/templates/collection/centre-spot-5-a-side-cup-poster-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "soccer-ball",
+   "trophy"
+  ]
+ },
+ {
+  "id": "event-029",
+  "slug": "fitness-bootcamp-story",
+  "title": "Fitness Bootcamp Story",
+  "category": "Invitations and events",
+  "subcategory": "Sports & Wellness",
+  "site_category": "Events",
+  "description": "Huge stacked title on black, programme lines on a lime slash. Diagonal colour block.",
+  "design_brief": "Huge stacked title on black, programme lines on a lime slash. Diagonal colour block.",
+  "design_style": "sports & wellness",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=fitness%20bootcamp%20instagram%20story",
+  "inspiration_query": "fitness bootcamp instagram story",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "huge stacked title on black, programme lines on a lime slash",
+   "typography": "Anton, Montserrat",
+   "palette": "black, white, lime",
+   "decor": "diagonal colour block"
+  },
+  "palette": [
+   "#111111",
+   "#D4FF3A",
+   "#FFFFFF"
+  ],
+  "content": {
+   "headline": "Bootcamp",
+   "message": "4 weeks · 3 sessions a week · start 1 March",
+   "signature": "Book your spot — link in bio"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1920,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/fitness-bootcamp-story.jpg",
+  "preview_url": "/templates/collection/fitness-bootcamp-story-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "event-030",
+  "slug": "dinner-party-invitation",
+  "title": "Dinner Party Invitation",
+  "category": "Invitations and events",
+  "subcategory": "Social",
+  "site_category": "Events",
+  "description": "Plate crest above a script title and details. Double frame, plate illustration, divider.",
+  "design_brief": "Plate crest above a script title and details. Double frame, plate illustration, divider.",
+  "design_style": "social",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=dinner%20party%20invitation%20elegant",
+  "inspiration_query": "dinner party invitation elegant",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "plate crest above a script title and details",
+   "typography": "Great Vibes, Cormorant Garamond italic, Cinzel, Montserrat caps",
+   "palette": "linen, cocoa, terracotta",
+   "decor": "double frame, plate illustration, divider"
+  },
+  "palette": [
+   "#F7F1E8",
+   "#B5523B",
+   "#3A2A20"
+  ],
+  "content": {
+   "headline": "Dinner Party",
+   "message": "Good food, good friends · Saturday 13 March · 8 PM · our place",
+   "signature": "RSVP to Sami"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/dinner-party-invitation.jpg",
+  "preview_url": "/templates/collection/dinner-party-invitation-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "fork-and-knife-with-plate"
+  ]
+ },
+ {
+  "id": "event-031",
+  "slug": "sunset-glasses-cocktail-invitation",
+  "title": "Sunset Glasses Cocktail Invitation",
+  "category": "Invitations and events",
+  "subcategory": "Social",
+  "site_category": "Events",
+  "description": "Two glasses clinking on a sunset gradient, script title. Sparkles, glass illustrations.",
+  "design_brief": "Two glasses clinking on a sunset gradient, script title. Sparkles, glass illustrations.",
+  "design_style": "social",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=cocktail%20party%20invitation",
+  "inspiration_query": "cocktail party invitation",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "two glasses clinking on a sunset gradient, script title",
+   "typography": "Great Vibes, Cormorant Garamond italic, Montserrat caps",
+   "palette": "violet to magenta, gold",
+   "decor": "sparkles, glass illustrations"
+  },
+  "palette": [
+   "#2B1055",
+   "#D53A9D",
+   "#FFFFFF",
+   "#FFD36E",
+   "#FFE6F3"
+  ],
+  "content": {
+   "headline": "Cocktail Hour",
+   "message": "Mocktails & canapés · Friday 19 March · 7 PM · Skyview Terrace",
+   "signature": "Dress: cocktail chic"
+  },
+  "dimensions": {
+   "width": 559,
+   "height": 794,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/sunset-glasses-cocktail-invitation.jpg",
+  "preview_url": "/templates/collection/sunset-glasses-cocktail-invitation-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "cocktail-glass",
+   "tropical-drink"
+  ]
+ },
+ {
+  "id": "event-032",
+  "slug": "dice-and-controller-game-night-post",
+  "title": "Dice and Controller Game Night Post",
+  "category": "Invitations and events",
+  "subcategory": "Social",
+  "site_category": "Events",
+  "description": "Dice and controller on a chessboard panel, arcade title. Checker board, dice and controller.",
+  "design_brief": "Dice and controller on a chessboard panel, arcade title. Checker board, dice and controller.",
+  "design_style": "social",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=game%20night%20invitation",
+  "inspiration_query": "game night invitation",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "dice and controller on a chessboard panel, arcade title",
+   "typography": "Bungee, Fredoka",
+   "palette": "midnight, board purples, yellow",
+   "decor": "checker board, dice and controller"
+  },
+  "palette": [
+   "#1F1F3A",
+   "#26264A",
+   "#2E2E55",
+   "#FFD23F",
+   "#FFFFFF",
+   "#BFBFE0"
+  ],
+  "content": {
+   "headline": "Game Night",
+   "message": "Board games, snacks & trash talk · Thursday · 8 PM · Omar’s flat",
+   "signature": "Bring your A-game"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/dice-and-controller-game-night-post.jpg",
+  "preview_url": "/templates/collection/dice-and-controller-game-night-post-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "game-die",
+   "video-game"
+  ]
+ },
+ {
+  "id": "event-033",
+  "slug": "bbq-party-invitation",
+  "title": "BBQ Party Invitation",
+  "category": "Invitations and events",
+  "subcategory": "Social",
+  "site_category": "Events",
+  "description": "Flame above the title, picnic gingham along the bottom. Gingham, fire, watermelon, drink.",
+  "design_brief": "Flame above the title, picnic gingham along the bottom. Gingham, fire, watermelon, drink.",
+  "design_style": "social",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=bbq%20party%20invitation",
+  "inspiration_query": "bbq party invitation",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "flame above the title, picnic gingham along the bottom",
+   "typography": "Luckiest Guy, Fredoka",
+   "palette": "cream, grill red, watermelon",
+   "decor": "gingham, fire, watermelon, drink"
+  },
+  "palette": [
+   "#FFF3E0",
+   "#C62828",
+   "#5A2A20",
+   "#FFFFFF"
+  ],
+  "content": {
+   "headline": "BBQ Party",
+   "message": "Burgers, grills & good vibes · Friday 9 April · 5 PM · Villa 12, The Springs",
+   "signature": "Bring your swimsuit"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/bbq-party-invitation.jpg",
+  "preview_url": "/templates/collection/bbq-party-invitation-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "fire",
+   "tropical-drink",
+   "watermelon"
+  ]
+ },
+ {
+  "id": "event-034",
+  "slug": "potluck-invitation",
+  "title": "Potluck Invitation",
+  "category": "Invitations and events",
+  "subcategory": "Social",
+  "site_category": "Events",
+  "description": "Plate surrounded by dishes on the left, invitation on the right. Food illustrations around a plate.",
+  "design_brief": "Plate surrounded by dishes on the left, invitation on the right. Food illustrations around a plate.",
+  "design_style": "social",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=potluck%20invitation",
+  "inspiration_query": "potluck invitation",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "plate surrounded by dishes on the left, invitation on the right",
+   "typography": "Pacifico, Lora italic, Montserrat caps, Caveat",
+   "palette": "linen, terracotta, cocoa",
+   "decor": "food illustrations around a plate"
+  },
+  "palette": [
+   "#F6EFE3",
+   "#FFFFFF",
+   "#E3C9A8",
+   "#B5523B",
+   "#5A3A20"
+  ],
+  "content": {
+   "headline": "Potluck Lunch",
+   "message": "Bring a dish to share · Sunday 14 March · 1 PM · the office kitchen",
+   "signature": "Sign up for your dish"
+  },
+  "dimensions": {
+   "width": 673,
+   "height": 480,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/potluck-invitation.jpg",
+  "preview_url": "/templates/collection/potluck-invitation-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "cookie",
+   "croissant",
+   "custard",
+   "doughnut",
+   "fork-and-knife-with-plate",
+   "pie",
+   "pizza"
+  ]
+ },
+ {
+  "id": "event-035",
+  "slug": "quiz-night-poster",
+  "title": "Quiz Night Poster",
+  "category": "Invitations and events",
+  "subcategory": "Social",
+  "site_category": "Events",
+  "description": "Bulb above a bold title, floating question marks behind. Question marks, light bulb.",
+  "design_brief": "Bulb above a bold title, floating question marks behind. Question marks, light bulb.",
+  "design_style": "social",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=pub%20quiz%20night%20poster",
+  "inspiration_query": "pub quiz night poster",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "bulb above a bold title, floating question marks behind",
+   "typography": "Luckiest Guy, Montserrat",
+   "palette": "navy, orange, white",
+   "decor": "question marks, light bulb"
+  },
+  "palette": [
+   "#14213D",
+   "#FCA311",
+   "#FFFFFF"
+  ],
+  "content": {
+   "headline": "Quiz Night",
+   "message": "Teams of 4 · prizes · every Wednesday · 8 PM · The Irish Village",
+   "signature": "Free to enter"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1350,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/quiz-night-poster.jpg",
+  "preview_url": "/templates/collection/quiz-night-poster-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "light-bulb"
+  ]
+ },
+ {
+  "id": "event-036",
+  "slug": "class-reunion-invitation",
+  "title": "Class Reunion Invitation",
+  "category": "Invitations and events",
+  "subcategory": "Social",
+  "site_category": "Events",
+  "description": "Two taped polaroids, italic reunion title and details. Polaroids with tape.",
+  "design_brief": "Two taped polaroids, italic reunion title and details. Polaroids with tape.",
+  "design_style": "social",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=class%20reunion%20invitation",
+  "inspiration_query": "class reunion invitation",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "two taped polaroids, italic reunion title and details",
+   "typography": "Playfair Display italic, Caveat, Montserrat caps, Lora italic",
+   "palette": "linen, navy, orange",
+   "decor": "polaroids with tape"
+  },
+  "palette": [
+   "#F3EFE6",
+   "#FFFFFF",
+   "#F3C6CF",
+   "#B9DCC9",
+   "#1F3349",
+   "#E2572A"
+  ],
+  "content": {
+   "headline": "Class of 2017 Reunion",
+   "message": "Ten years later! · Saturday 18 December · 7 PM · The Hall, Dubai College",
+   "signature": "Bring your yearbook"
+  },
+  "dimensions": {
+   "width": 559,
+   "height": 794,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/class-reunion-invitation.jpg",
+  "preview_url": "/templates/collection/class-reunion-invitation-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "event-037",
+  "slug": "prom-night-poster",
+  "title": "Prom Night Poster",
+  "category": "Invitations and events",
+  "subcategory": "Social",
+  "site_category": "Events",
+  "description": "Mirror ball over gold caps and a starry script line. Stars, mirror ball glow.",
+  "design_brief": "Mirror ball over gold caps and a starry script line. Stars, mirror ball glow.",
+  "design_style": "social",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=prom%20night%20poster",
+  "inspiration_query": "prom night poster",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "mirror ball over gold caps and a starry script line",
+   "typography": "Cinzel gold, Great Vibes, Montserrat caps",
+   "palette": "deep violet, gold, starlight",
+   "decor": "stars, mirror ball glow"
+  },
+  "palette": [
+   "#3A1C71",
+   "#0C0620",
+   "#FFFFFF",
+   "#8A6A2E",
+   "#E9C877",
+   "#B68A3A"
+  ],
+  "content": {
+   "headline": "PROM NIGHT",
+   "message": "A night under the stars · Friday 4 June · 7 PM · Grand Ballroom",
+   "signature": "Tickets at the school office"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1350,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/prom-night-poster.jpg",
+  "preview_url": "/templates/collection/prom-night-poster-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "mirror-ball"
+  ]
+ },
+ {
+  "id": "event-038",
+  "slug": "retirement-party-invitation",
+  "title": "Retirement Party Invitation",
+  "category": "Invitations and events",
+  "subcategory": "Social",
+  "site_category": "Events",
+  "description": "Popper crest above a script title and formal details. Double frame, party popper, divider.",
+  "design_brief": "Popper crest above a script title and formal details. Double frame, party popper, divider.",
+  "design_style": "social",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=retirement%20party%20invitation",
+  "inspiration_query": "retirement party invitation",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "popper crest above a script title and formal details",
+   "typography": "Great Vibes, Cormorant Garamond italic, Cinzel, Montserrat caps",
+   "palette": "mint white, forest, jade",
+   "decor": "double frame, party popper, divider"
+  },
+  "palette": [
+   "#EEF3F1",
+   "#3E8E7E",
+   "#1F3B32"
+  ],
+  "content": {
+   "headline": "Retirement Party",
+   "message": "Celebrating 35 years of Mr. Khalil · Thursday 24 June · 6 PM · The Boardroom",
+   "signature": "Speeches & cake"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/retirement-party-invitation.jpg",
+  "preview_url": "/templates/collection/retirement-party-invitation-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "party-popper"
+  ]
+ },
+ {
+  "id": "event-039",
+  "slug": "event-ticket",
+  "title": "Event Ticket",
+  "category": "Invitations and events",
+  "subcategory": "Social",
+  "site_category": "Events",
+  "description": "Tall navy ticket with notches, perforation and barcode stub. Notches, dashed perforation, stars, barcode.",
+  "design_brief": "Tall navy ticket with notches, perforation and barcode stub. Notches, dashed perforation, stars, barcode.",
+  "design_style": "social",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=event%20ticket%20design",
+  "inspiration_query": "event ticket design",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "tall navy ticket with notches, perforation and barcode stub",
+   "typography": "Anton, Montserrat",
+   "palette": "navy, gold, cream",
+   "decor": "notches, dashed perforation, stars, barcode"
+  },
+  "palette": [
+   "#F2E8D5",
+   "#1B2A4A",
+   "#F2C14E",
+   "#FFFFFF"
+  ],
+  "content": {
+   "headline": "ADMIT ONE",
+   "message": "Summer Social · Saturday 3 July · 7 PM · Beach Club",
+   "signature": "No. 00241"
+  },
+  "dimensions": {
+   "width": 374,
+   "height": 794,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/event-ticket.jpg",
+  "preview_url": "/templates/collection/event-ticket-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "event-040",
+  "slug": "save-our-event-story",
+  "title": "Save Our Event Story",
+  "category": "Invitations and events",
+  "subcategory": "Social",
+  "site_category": "Events",
+  "description": "Framed black story: caps label, gold script event, giant day number. Double frame.",
+  "design_brief": "Framed black story: caps label, gold script event, giant day number. Double frame.",
+  "design_style": "social",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=event%20save%20the%20date%20story",
+  "inspiration_query": "event save the date story",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "framed black story: caps label, gold script event, giant day number",
+   "typography": "Montserrat spaced caps, Great Vibes gold, Playfair Display",
+   "palette": "black, gold, ivory",
+   "decor": "double frame"
+  },
+  "palette": [
+   "#0B0B0C",
+   "#C9A45A",
+   "#8A6A2E",
+   "#E9C877",
+   "#B68A3A",
+   "#F7E3A3"
+  ],
+  "content": {
+   "headline": "Save the date",
+   "message": "Annual Charity Gala · 9 December 2027",
+   "signature": "More details soon"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1920,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/save-our-event-story.jpg",
+  "preview_url": "/templates/collection/save-our-event-story-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ }
+]

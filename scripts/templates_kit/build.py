@@ -21,7 +21,7 @@ ROOT = os.path.abspath(os.path.join(HERE, "..", ".."))
 
 from kit import Doc  # noqa: E402
 
-MODULES = {"birthday": ["birthday_a", "birthday_b", "birthday_c", "birthday_d", "birthday_e"], "wedding": ["wedding"], "greeting": ["greetings"], "seasonal": ["seasonal"], "baby": ["baby"], "grad": ["graduation"]}
+MODULES = {"birthday": ["birthday_a", "birthday_b", "birthday_c", "birthday_d", "birthday_e"], "wedding": ["wedding"], "greeting": ["greetings"], "seasonal": ["seasonal"], "baby": ["baby"], "grad": ["graduation"], "event": ["events"]}
 
 
 def load_designs(cat):
