@@ -21,3 +21,20 @@ part of designs, never sold or offered for download on their own.
 
 If a rights holder asks for a photo to be removed, delete the file and swap
 the frame in the affected template for another photo or an empty frame.
+
+# Illustrations in Collection 500
+
+The colour illustrations in `public/templates/collection/art/*.png` (cake,
+balloons, flowers, animals, gifts and so on) are from **Microsoft Fluent
+Emoji** (github.com/microsoft/fluentui-emoji), released under the **MIT
+License**, which allows commercial use, modification and redistribution as
+long as the licence notice is kept. The notice is in
+`public/templates/collection/art/LICENSE-fluent-emoji.txt`. They were
+rasterised to 640 px PNGs. Face emoji and people are not used.
+
+`texture-paper.jpg` and `texture-grain.jpg` are generated noise (no
+third-party source). All other shapes, confetti, frames and patterns are
+drawn as editable vectors by `scripts/templates_kit/`.
+
+Fonts used by the designs are Google Fonts (SIL Open Font License or Apache
+2.0) and are already served by the editor.
