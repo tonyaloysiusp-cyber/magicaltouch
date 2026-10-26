@@ -68,9 +68,16 @@ def new_records(cat):
     boards = {}
     for t in json.load(open(ARTBOARD_SRC)):
         boards.setdefault((t["width"], t["height"]), t["canvasJson"]["objects"][0])
+    taken = set()
+    coll = os.path.join(ROOT, "public/templates/collection")
+    for f in os.listdir(coll):
+        if f.endswith(".jpg"):
+            taken.add(f[:-4].replace("-preview", ""))
     pub, man = [], []
     for i, (sub, title, w, h, head, msg, sig, query, kw) in enumerate(mod.SPEC, 1):
         slug = _slug(title)
+        if slug in taken:
+            raise SystemExit(f"slug already used by another template: {slug} — rename '{title}'")
         rid = f"{cat}-{i:03d}"
         ab = json.loads(json.dumps(boards[(w, h)]))
         ab["__artboardId"] = f"artboard_{cat}_{i:03d}"

@@ -46,12 +46,12 @@ SPEC = [
     ("Details", "Wedding Hashtag Card", 480, 673, "Share the love", "#ZaraAndAliForever", "Tag your photos so we can see the day through your eyes", "wedding hashtag sign card", "wedding hashtag card, social"),
     ("Menu & Program", "Elegant Wedding Dinner Menu", 374, 794, "Dinner Menu", "Burrata, heirloom tomato, basil · Slow-roasted lamb, saffron rice · Pistachio rose cake", "Aisha & Karim · 03.12.2027", "elegant wedding dinner menu card", "wedding menu, dinner menu, elegant"),
     ("Menu & Program", "Garden Wedding Menu", 374, 794, "Menu", "Mezze to share · Grilled sea bass, lemon & herbs · Orange blossom panna cotta", "Reem & Tariq", "garden greenery wedding menu", "wedding menu, garden, greenery"),
-    ("Menu & Program", "Wedding Ceremony Program", 559, 794, "Ceremony Program", "Processional · Welcome · Readings · Exchange of vows & rings · Pronouncement · Recessional", "Sara & Adam · 07.05.2027", "wedding ceremony program classic", "wedding program, ceremony, order of service"),
+    ("Menu & Program", "Order of Service Ceremony Card", 559, 794, "Ceremony Program", "Processional · Welcome · Readings · Exchange of vows & rings · Pronouncement · Recessional", "Sara & Adam · 07.05.2027", "wedding ceremony program classic", "wedding program, ceremony, order of service"),
     ("Menu & Program", "Order of the Day Timeline", 559, 794, "Order of the Day", "4:00 Ceremony · 5:00 Drinks & canapés · 6:30 Dinner · 8:00 Speeches · 9:00 First dance · 12:00 Carriages", "Hana & James", "wedding order of the day timeline sign", "order of the day, wedding timeline, sign"),
     ("Menu & Program", "Wedding Table Number Card", 480, 673, "Table", "7", "Layla & Omar · 17.04.2027", "elegant wedding table number card", "table number, wedding, elegant"),
     ("Menu & Program", "Escort Place Card", 673, 480, "Welcome", "Ms. Huda Al Mansoori · Table 4", "Noor & Faisal", "wedding place card escort card", "place card, escort card, wedding"),
     ("Thank You", "Photo Thank You Card", 673, 480, "Thank you", "for celebrating with us. Your love made our day unforgettable.", "Love, Zara & Ali", "photo wedding thank you card", "wedding thank you card, photo"),
-    ("Thank You", "Botanical Thank You Card", 480, 673, "Thank You", "Thank you for your love, your laughter and the beautiful gift. We feel so lucky.", "Reem & Tariq", "botanical wedding thank you card", "thank you card, botanical, wedding"),
+    ("Thank You", "Leafy Arc Thank You Card", 480, 673, "Thank You", "Thank you for your love, your laughter and the beautiful gift. We feel so lucky.", "Reem & Tariq", "botanical wedding thank you card", "thank you card, botanical, wedding"),
     ("Thank You", "Gold Script Thank You Post", 1080, 1080, "Thank you", "To everyone who celebrated with us — we love you.", "Mr & Mrs Haddad", "gold script thank you instagram wedding", "thank you post, gold script, wedding"),
     ("Thank You", "Newlyweds Thank You Story", 1080, 1920, "Just married", "Thank you for being part of our story", "Mariam & Yousef", "newlyweds thank you story photo", "just married story, thank you, photo"),
     ("Thank You", "Minimal Thank You Card", 480, 673, "thank you", "We are so grateful you were there. Here’s to many more celebrations together.", "Hana & James", "minimal modern thank you card wedding", "thank you card, minimal, modern"),
@@ -59,7 +59,7 @@ SPEC = [
     ("Welcome & Signs", "Signature Drinks Bar Sign", 559, 794, "Signature Drinks", "His · Sparkling rose lemonade · Hers · Passion fruit mojito · Ours · Pomegranate spritz", "Cheers to Dana & Rami", "wedding signature drinks bar sign", "bar sign, signature drinks, wedding"),
     ("Welcome & Signs", "Unplugged Ceremony Sign", 559, 794, "Unplugged ceremony", "Welcome to our unplugged ceremony. Please turn off your phones and cameras — be present with us in this moment.", "Sara & Adam", "unplugged ceremony sign wedding", "unplugged ceremony sign, wedding"),
     ("Welcome & Signs", "Just Married Post", 1080, 1080, "Just Married", "Mr & Mrs Al Mansoori", "17.04.2027", "just married instagram post", "just married post, wedding announcement"),
-    ("Welcome & Signs", "Wedding Countdown Story", 1080, 1920, "30 days to go", "until Maya & Hadi say ‘I do’", "23.10.2027 · Ras Al Khaimah", "wedding countdown instagram story", "wedding countdown, story, days to go"),
+    ("Welcome & Signs", "Days To Go Wedding Countdown Story", 1080, 1920, "30 days to go", "until Maya & Hadi say ‘I do’", "23.10.2027 · Ras Al Khaimah", "wedding countdown instagram story", "wedding countdown, story, days to go"),
 ]
 
 D = {}

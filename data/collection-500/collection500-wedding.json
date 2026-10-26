@@ -1680,8 +1680,8 @@
  },
  {
   "id": "wedding-037",
-  "slug": "wedding-ceremony-program",
-  "title": "Wedding Ceremony Program",
+  "slug": "order-of-service-ceremony-card",
+  "title": "Order of Service Ceremony Card",
   "category": "Wedding and engagement",
   "subcategory": "Menu & Program",
   "site_category": "Wedding",
@@ -1717,8 +1717,8 @@
    "unit": "px"
   },
   "pages": 1,
-  "thumbnail_url": "/templates/collection/wedding-ceremony-program.jpg",
-  "preview_url": "/templates/collection/wedding-ceremony-program-preview.jpg",
+  "thumbnail_url": "/templates/collection/order-of-service-ceremony-card.jpg",
+  "preview_url": "/templates/collection/order-of-service-ceremony-card-preview.jpg",
   "status": "published",
   "is_editable": true,
   "assets": [
@@ -1922,8 +1922,8 @@
  },
  {
   "id": "wedding-042",
-  "slug": "botanical-thank-you-card",
-  "title": "Botanical Thank You Card",
+  "slug": "leafy-arc-thank-you-card",
+  "title": "Leafy Arc Thank You Card",
   "category": "Wedding and engagement",
   "subcategory": "Thank You",
   "site_category": "Wedding",
@@ -1959,8 +1959,8 @@
    "unit": "px"
   },
   "pages": 1,
-  "thumbnail_url": "/templates/collection/botanical-thank-you-card.jpg",
-  "preview_url": "/templates/collection/botanical-thank-you-card-preview.jpg",
+  "thumbnail_url": "/templates/collection/leafy-arc-thank-you-card.jpg",
+  "preview_url": "/templates/collection/leafy-arc-thank-you-card-preview.jpg",
   "status": "published",
   "is_editable": true,
   "assets": [
@@ -2299,8 +2299,8 @@
  },
  {
   "id": "wedding-050",
-  "slug": "wedding-countdown-story",
-  "title": "Wedding Countdown Story",
+  "slug": "days-to-go-wedding-countdown-story",
+  "title": "Days To Go Wedding Countdown Story",
   "category": "Wedding and engagement",
   "subcategory": "Welcome & Signs",
   "site_category": "Wedding",
@@ -2337,8 +2337,8 @@
    "unit": "px"
   },
   "pages": 1,
-  "thumbnail_url": "/templates/collection/wedding-countdown-story.jpg",
-  "preview_url": "/templates/collection/wedding-countdown-story-preview.jpg",
+  "thumbnail_url": "/templates/collection/days-to-go-wedding-countdown-story.jpg",
+  "preview_url": "/templates/collection/days-to-go-wedding-countdown-story-preview.jpg",
   "status": "published",
   "is_editable": true,
   "assets": [
