@@ -20,7 +20,7 @@ import {
   SlidersHorizontal, Sparkles, Crop as CropIcon, Scissors, Brush, Maximize2, Download, Undo2, Redo2, Plus, Minus,
   Maximize, RotateCcw, RotateCw, FlipHorizontal2, FlipVertical2, Loader2, Check, X, Eye, Printer, Lock, Unlock, Palette, Wand2,
   Move, BoxSelect, Blend as BlendIcon, Hand, ZoomIn, Pipette, Type as TypeIcon, Eraser, Droplet, Sun, Circle, ArrowLeftRight, Square, PaintBucket,
-  Lasso as LassoIcon,
+  Lasso as LassoIcon, PenTool, CircleDashed, Layers as LayersIcon, Trash2, FlipHorizontal, Copy as CopyIcon,
 } from 'lucide-react';
 import { Adjust, NO_ADJUST, LIGHT_SLIDERS, COLOR_SLIDERS, DETAIL_SLIDERS, LOOKS, SliderDef, applyAdjust, renderAdjusted, isNeutral, autoEnhance, HSL_RANGES, CurvePts, curveLut } from '@/lib/photo/adjust';
 import { BrushKind, createStroke, replayStroke } from '@/lib/photo/brushes';
@@ -30,12 +30,13 @@ import { loadProofTable, proofRgbaInPlace, PRESS_PROFILE_NAME } from '@/lib/colo
 import { BgRemoveDialog } from '@/components/editor/shell/BgRemoveDialog';
 import { Layer, Selection, makeLayer, composite, isPlain, translate, placeImage, mergeDown, maskShape, maskAll, invertMask, maskFromAlpha, blendMasked, clearMasked, copyMasked, fillMasked, paintStroke, blankLike, maskPolygon, combineMasks, maskIsEmpty, SelectionMode } from '@/lib/photo/layers';
 import { FILTERS, FilterId, applyFilter } from '@/lib/photo/filters';
+import { PenPoint, contentAwareFill, maskEdges, pathToMask, penPathD } from '@/lib/photo/fillMask';
 import { ProMenuBar, LayersPanel, HistoryPanel, Menu } from './ProPanels';
 import { GOOGLE_FONTS, allFontFacesCSS, ensureFontLoaded } from '@/lib/editor/googleFonts';
 
-type Tool = 'adjust' | 'color' | 'looks' | 'crop' | 'bg' | 'retouch' | 'resize' | 'export' | 'move' | 'select' | 'filter' | 'hand' | 'zoom' | 'eyedropper' | 'text' | 'gradient' | 'shape' | 'bucket';
+type Tool = 'adjust' | 'color' | 'looks' | 'crop' | 'bg' | 'retouch' | 'resize' | 'export' | 'move' | 'select' | 'filter' | 'hand' | 'zoom' | 'eyedropper' | 'text' | 'gradient' | 'shape' | 'bucket' | 'pen';
 // Tools that work directly on the picture (the rest are panels).
-const CANVAS_TOOLS: Tool[] = ['move', 'select', 'crop', 'retouch', 'hand', 'zoom', 'eyedropper', 'text', 'gradient', 'shape', 'bucket', 'bg', 'resize', 'export'];
+const CANVAS_TOOLS: Tool[] = ['move', 'select', 'pen', 'crop', 'retouch', 'hand', 'zoom', 'eyedropper', 'text', 'gradient', 'shape', 'bucket', 'bg', 'resize', 'export'];
 // The same font library as the design editor (loaded on demand).
 const FONT_GROUPS = (['Sans Serif', 'Serif', 'Display', 'Script', 'Classic', 'Monospace', 'World'] as const).map((c) => ({ c, fonts: GOOGLE_FONTS.filter((f) => f.category === c).map((f) => f.family) }));
 type TextEffect = 'none' | 'shadow' | 'glow' | 'outline' | 'neon' | 'retro' | 'highlight' | 'lift';
@@ -88,6 +89,8 @@ export interface PhotoStudioHandle {
   applyNow: () => boolean;
   undo: () => void;
   redo: () => void;
+  /** The current state was saved: no longer counts as unsaved changes. */
+  markSaved: () => void;
 }
 
 export interface PhotoStudioProps {
@@ -166,11 +169,13 @@ function HealIcon({ size = 17 }: { size?: number }) {
     </svg>
   );
 }
-type ProTool = { label: string; key: string; icon: any; tool: Tool; retouch?: RetouchKind; subject?: boolean; sel?: 'rect' | 'lasso' };
+type ProTool = { label: string; key: string; icon: any; tool: Tool; retouch?: RetouchKind; subject?: boolean; sel?: 'rect' | 'ellipse' | 'lasso' };
 const PRO_TOOLBAR: (ProTool | null)[] = [
   { label: 'Move', key: 'V', icon: Move, tool: 'move' },
   { label: 'Marquee', key: 'M', icon: BoxSelect, tool: 'select', sel: 'rect' },
+  { label: 'Elliptical marquee', key: 'Shift M', icon: CircleDashed, tool: 'select', sel: 'ellipse' },
   { label: 'Lasso', key: 'L', icon: LassoIcon, tool: 'select', sel: 'lasso' },
+  { label: 'Pen', key: 'P', icon: PenTool, tool: 'pen' },
   { label: 'Select subject', key: 'W', icon: Sparkles, tool: 'select', subject: true },
   { label: 'Crop', key: 'C', icon: CropIcon, tool: 'crop' },
   { label: 'Eyedropper', key: 'I', icon: Pipette, tool: 'eyedropper' },
@@ -368,9 +373,14 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
     setDpi(snap.dpi);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [history.index, history.list]);
-  useEffect(() => onDpiChange?.(dpi), [dpi, onDpiChange]);
-  useEffect(() => onDirtyChange?.(history.index > 0), [history.index, onDirtyChange]);
-  useEffect(() => onHistoryChange?.(history.index > 0, history.index < history.list.length - 1), [history.index, history.list.length, onHistoryChange]);
+  useEffect(() => { onDpiChange?.(dpi); }, [dpi, onDpiChange]);
+  // Unsaved = the picture differs from the last save (or from opening).
+  const [savedSnap, setSavedSnap] = useState<Snapshot | null>(null);
+  useEffect(() => {
+    const cur = history.list[history.index];
+    onDirtyChange?.(!!cur && (savedSnap ? cur.layers !== savedSnap.layers || cur.adjust !== savedSnap.adjust || cur.dpi !== savedSnap.dpi : history.index > 0));
+  }, [history, savedSnap, onDirtyChange]);
+  useEffect(() => { onHistoryChange?.(history.index > 0, history.index < history.list.length - 1); }, [history.index, history.list.length, onHistoryChange]);
 
   // ---------------- load
   useEffect(() => {
@@ -653,6 +663,7 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
     },
     undo,
     redo,
+    markSaved: () => setSavedSnap(history.list[history.index] || null),
   }));
 
   // keyboard
@@ -683,6 +694,9 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
         else if (mod && (k === '=' || k === '+')) { e.preventDefault(); setZoom((z) => Math.min(8, z * 1.25)); }
         else if (mod && k === '-') { e.preventDefault(); setZoom((z) => Math.max(0.5, z / 1.25)); }
         else if (mod && k === '0') { e.preventDefault(); setZoom(1); setPan({ x: 0, y: 0 }); }
+        else if (tool === 'pen' && pen.length && k === 'enter') { e.preventDefault(); penToSelection(e.shiftKey && e.altKey ? 'intersect' : e.shiftKey ? 'add' : e.altKey ? 'subtract' : 'new'); }
+        else if (tool === 'pen' && pen.length && k === 'escape') { e.preventDefault(); setPen([]); setPenClosed(false); }
+        else if (tool === 'pen' && pen.length && k === 'backspace') { e.preventDefault(); setPenClosed(false); setPen(pen.slice(0, -1)); }
         else if (lasso && k === 'enter') { e.preventDefault(); closeLasso(); }
         else if (lasso && k === 'escape') { e.preventDefault(); setLasso(null); setLassoHover(null); }
         else if (lasso && k === 'backspace') { e.preventDefault(); setLasso(lasso.pts.length > 1 ? { ...lasso, pts: lasso.pts.slice(0, -1) } : null); }
@@ -690,7 +704,8 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
         else if (k === 'escape' && sel) setSel(null);
         else if (!mod && !e.altKey) {
           if (k === 'v') setTool('move');
-          else if (k === 'm') { setSelKind((x) => (x === 'lasso' ? 'rect' : x)); setTool('select'); }
+          else if (k === 'm') { setSelKind(e.shiftKey ? 'ellipse' : 'rect'); setTool('select'); }
+          else if (k === 'p') setTool('pen');
           else if (k === 'l') { setSelKind('lasso'); setTool('select'); }
           else if (k === 'c') setTool('crop');
           else if (k === 'b') { setRetouch('paint'); setTool('retouch'); }
@@ -760,6 +775,18 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
     setLassoHover(null);
     if (pts.length < 3) return;
     commitSelection(maskPolygon(base.width, base.height, pts), { kind: 'poly', pts }, lasso.mode);
+  };
+  // Pen: click to add corner points, drag to pull out curve handles. Click the
+  // first point to close. Ctrl/⌘+Enter = selection, +Shift adds, +Alt subtracts.
+  const [pen, setPen] = useState<PenPoint[]>([]);
+  const [penClosed, setPenClosed] = useState(false);
+  const [penHover, setPenHover] = useState<{ x: number; y: number } | null>(null);
+  const penToSelection = (mode: SelectionMode) => {
+    if (!base || pen.length < 3) { if (pen.length) setNotice('Add at least three points to make a selection.'); return; }
+    commitSelection(pathToMask(base.width, base.height, pen), null, sel ? mode : 'new');
+    setPen([]);
+    setPenClosed(false);
+    setPenHover(null);
   };
   const [marquee, setMarquee] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
   const overlayHold = useRef(false);
@@ -852,6 +879,19 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
       setGradDrag({ x0: p.x, y0: p.y, x1: p.x, y1: p.y });
       return;
     }
+    if (tool === 'pen' && base) {
+      const p = toBase(e.clientX, e.clientY);
+      if (penClosed) { setPen([{ x: p.x, y: p.y }]); setPenClosed(false); gesture.current = { kind: 'pen', i: 0, start: p }; return; }
+      const first = pen[0];
+      if (first && pen.length >= 2 && Math.hypot(p.x - first.x, p.y - first.y) * basePxToScreen < 10) {
+        setPenClosed(true);
+        gesture.current = null;
+        return;
+      }
+      setPen((pts) => [...pts, { x: p.x, y: p.y }]);
+      gesture.current = { kind: 'pen', i: pen.length, start: p };
+      return;
+    }
     if (tool === 'select' && base && selKind === 'lasso') {
       // Lasso: click to place points (polygon), or drag to draw freehand.
       // Close it by clicking the first point, double-clicking, or Enter.
@@ -908,6 +948,17 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
     if (brushCursor.current) {
       const st = stageRef.current!.getBoundingClientRect();
       brushCursor.current.style.transform = `translate(${e.clientX - st.left - healSize / 2}px, ${e.clientY - st.top - healSize / 2}px)`;
+    }
+    if (tool === 'pen' && base) {
+      const p = toBase(e.clientX, e.clientY);
+      const g0 = gesture.current;
+      if (g0?.kind === 'pen' && pointers.current.has(e.pointerId)) {
+        const dx = p.x - g0.start.x, dy = p.y - g0.start.y;
+        if (Math.hypot(dx, dy) * basePxToScreen > 3) {
+          // Drag pulls out a smooth curve: handles mirror each other (Alt breaks the mirror).
+          setPen((pts) => pts.map((q, i) => (i === g0.i ? { ...q, hout: { x: q.x + dx, y: q.y + dy }, hin: e.altKey && q.hin ? q.hin : { x: q.x - dx, y: q.y - dy } } : q)));
+        }
+      } else setPenHover(p);
     }
     if (lasso && base && tool === 'select') {
       const p = toBase(e.clientX, e.clientY);
@@ -1108,6 +1159,13 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
     subject: () => { setBgMode('subject'); setBgOpen(true); },
     clear: () => sel && target && push({ base: clearMasked(target, sel.mask), label: 'Delete selection' }),
     fill: (color: string) => target && push({ base: fillMasked(target, sel?.mask || null, color), label: sel ? 'Fill selection' : 'Fill layer' }),
+    contentFill: () => {
+      if (!sel || !target) return;
+      const t0 = target, m0 = sel.mask;
+      run('Content-aware fill', () => contentAwareFill(t0, m0));
+    },
+    // Keeps only the selected part of the layer (the rest becomes see-through).
+    mask: () => sel && target && push({ base: copyMasked(target, sel.mask), label: 'Layer mask' }),
     toLayer: () => target && insertAbove(makeLayer(sel ? copyMasked(target, sel.mask) : target, sel ? copyName('Selection', layers || []) : copyName(layers![activeIdx].name, layers || [])), 'Layer via copy'),
   };
   const fileRef = useRef<HTMLInputElement>(null);
@@ -1170,12 +1228,45 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
     if (!sel || !preview) return null;
     const c = makeCanvas(preview.canvas.width, preview.canvas.height);
     const ctx = c.getContext('2d')!;
-    ctx.fillStyle = 'rgba(15,23,42,0.45)';
+    ctx.fillStyle = 'rgba(15,23,42,0.32)';
     ctx.fillRect(0, 0, c.width, c.height);
     ctx.globalCompositeOperation = 'destination-out';
     ctx.drawImage(sel.mask, 0, 0, c.width, c.height);
     return c.toDataURL();
   }, [sel, preview]);
+  // Marching ants around ANY selection (rectangles, ellipses, lasso, pen,
+  // subject and combinations), traced from the selection mask itself.
+  const antsRef = useRef<HTMLCanvasElement>(null);
+  const antsGrid = useMemo(() => {
+    if (!sel || !preview) return null;
+    const k = Math.min(1, 1400 / Math.max(preview.canvas.width, preview.canvas.height));
+    const w = Math.max(1, Math.round(preview.canvas.width * k)), h = Math.max(1, Math.round(preview.canvas.height * k));
+    return { w, h, edges: maskEdges(sel.mask, w, h) };
+  }, [sel, preview]);
+  useEffect(() => {
+    const c = antsRef.current;
+    if (!c || !antsGrid) return;
+    const { w, h, edges } = antsGrid;
+    c.width = w; c.height = h;
+    const ctx = c.getContext('2d')!;
+    const img = ctx.createImageData(w, h);
+    let phase = 0;
+    const draw = () => {
+      const d = img.data;
+      for (let n = 0; n < edges.length; n++) {
+        const p = edges[n], x = p % w, y = (p - x) / w;
+        const on = ((x + y + phase) >> 2) & 1;
+        const i = p * 4;
+        const v = on ? 0 : 255;
+        d[i] = v; d[i + 1] = v; d[i + 2] = v; d[i + 3] = 255;
+      }
+      ctx.putImageData(img, 0, 0);
+      phase = (phase + 1) & 7;
+    };
+    draw();
+    const t = setInterval(draw, 120);
+    return () => clearInterval(t);
+  }, [antsGrid]);
   const [showLayers, setShowLayers] = useState(true);
   const [showHistory, setShowHistory] = useState(true);
   // Pro dock: remembers the last on-picture tool so "Properties" can go back to it.
@@ -1765,6 +1856,25 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
           </Section>
         );
       }
+      case 'pen':
+        return (
+          <Section title="Pen">
+            <p className="text-[12px] text-mt-muted">Click to add corner points. <b className="text-mt-ink">Click and drag</b> for a smooth curve (hold Alt while dragging to bend only one side). Click the first point to close the path.</p>
+            <ul className="text-[12px] text-mt-muted list-disc pl-4 space-y-0.5">
+              <li><b className="text-mt-ink">Ctrl/⌘ + Enter</b> — make a selection</li>
+              <li><b className="text-mt-ink">Shift + Ctrl/⌘ + Enter</b> — add to the selection</li>
+              <li><b className="text-mt-ink">Alt + Ctrl/⌘ + Enter</b> — subtract from the selection</li>
+              <li><b className="text-mt-ink">Backspace</b> removes the last point · <b className="text-mt-ink">Esc</b> clears the path</li>
+            </ul>
+            <div className="grid grid-cols-2 gap-1.5">
+              <button className={btnGhost} disabled={pen.length < 3} onClick={() => penToSelection('new')}>Make selection</button>
+              <button className={btnGhost} disabled={pen.length < 3 || !sel} onClick={() => penToSelection('add')}>Add to selection</button>
+              <button className={btnGhost} disabled={pen.length < 3 || !sel} onClick={() => penToSelection('subtract')}>Subtract</button>
+              <button className={btnGhost} disabled={!pen.length} onClick={() => { setPen([]); setPenClosed(false); }}>Clear path</button>
+            </div>
+            <p className="text-[12px] text-mt-faint">{pen.length ? `${pen.length} point${pen.length > 1 ? 's' : ''}${penClosed ? ' · closed' : ''}` : 'No path yet.'}</p>
+          </Section>
+        );
       case 'move':
         return (
           <Section title="Move">
@@ -1795,6 +1905,8 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
             <Section title="With the selection">
               {!sel && <p className="text-[12px] text-mt-faint">Make a selection first.</p>}
               <div className={cx('flex flex-col gap-2', !sel && 'opacity-40 pointer-events-none')}>
+                <button className={btnGhost} onClick={selOps.contentFill}>Content-aware fill (remove what’s selected)</button>
+                <button className={btnGhost} onClick={selOps.mask}>Mask layer (keep only the selection)</button>
                 <button className={btnGhost} onClick={selOps.toLayer}>Copy to new layer</button>
                 <button className={btnGhost} onClick={selOps.clear}>Delete (make see-through)</button>
                 <label className={cx(btnGhost, 'cursor-pointer')}>Fill with colour…<input type="color" className="sr-only" onChange={(e) => selOps.fill(e.target.value)} /></label>
@@ -1894,14 +2006,14 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
     if (t.retouch) setRetouch(t.retouch);
     setTool(t.tool);
     if (t.subject) selOps.subject();
-    if (t.sel) setSelKind((k) => (t.sel === 'lasso' ? 'lasso' : k === 'lasso' ? 'rect' : k));
+    if (t.sel) setSelKind(t.sel);
   };
   const proToolbar = (
     <nav className="order-3 lg:order-1 shrink-0 lg:w-[46px] flex lg:flex-col items-center gap-0.5 px-1 lg:px-0 py-1.5 bg-mt-surface border-t lg:border-t-0 lg:border-r border-mt-border overflow-x-auto lg:overflow-y-auto mt-scroll" aria-label="Tools">
       {PRO_TOOLBAR.map((t, i) => {
         if (!t) return <span key={i} className="shrink-0 w-px h-6 lg:w-7 lg:h-px bg-mt-input-border my-1 mx-1 lg:mx-0" />;
         const I = t.icon;
-        const on = !t.subject && tool === t.tool && (!t.retouch || retouch === t.retouch) && (!t.sel || (t.sel === 'lasso') === (selKind === 'lasso'));
+        const on = !t.subject && tool === t.tool && (!t.retouch || retouch === t.retouch) && (!t.sel || t.sel === selKind);
         return (
           <button key={t.label} onClick={() => pickProTool(t)} aria-pressed={on} aria-label={t.label} title={`${t.label} (${t.key})`}
             className="mt-ps-tool shrink-0 w-9 h-9 rounded-md inline-flex items-center justify-center text-mt-muted hover:text-mt-ink hover:bg-mt-surface2">
@@ -1929,7 +2041,7 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
   const optField = 'h-7 rounded border border-mt-input-border bg-mt-bg px-1.5 text-[12px] text-mt-ink tabular-nums focus:outline-none focus:border-[#2680EB]';
   const optBtn = 'h-7 px-2.5 rounded border border-mt-input-border text-[12px] text-mt-ink hover:bg-mt-surface2 disabled:opacity-40';
   const optOn = (on: boolean) => cx(optBtn, on && 'bg-[#2680EB] border-[#2680EB] text-white hover:bg-[#2680EB]');
-  const activeProTool = PRO_TOOLBAR.find((t) => t && !t.subject && t.tool === tool && (!t.retouch || t.retouch === retouch) && (!t.sel || (t.sel === 'lasso') === (selKind === 'lasso'))) || null;
+  const activeProTool = PRO_TOOLBAR.find((t) => t && !t.subject && t.tool === tool && (!t.retouch || t.retouch === retouch) && (!t.sel || t.sel === selKind)) || null;
   const ToolGlyph = activeProTool?.icon;
   const optionsBar = (
     <div className="h-10 shrink-0 flex items-center gap-3 px-3 bg-mt-surface border-b border-mt-border text-[12px] overflow-x-auto mt-scroll whitespace-nowrap" aria-label="Tool options">
@@ -1979,6 +2091,16 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
           <button className={optBtn} onClick={selOps.invert} disabled={!sel}>Inverse</button>
           <button className={optBtn} onClick={selOps.none} disabled={!sel}>Deselect</button>
           <button className={optBtn} onClick={selOps.toLayer}>Layer via copy</button>
+        </>
+      )}
+      {tool === 'pen' && (
+        <>
+          <span className={optLabel}>Click = corner · drag = curve · click the first point to close</span>
+          <span className="w-px h-5 bg-mt-input-border" />
+          <button className={optBtn} disabled={pen.length < 3} onClick={() => penToSelection('new')} title="Ctrl/⌘ + Enter">Selection</button>
+          <button className={optBtn} disabled={pen.length < 3 || !sel} onClick={() => penToSelection('add')} title="Shift + Ctrl/⌘ + Enter">Add</button>
+          <button className={optBtn} disabled={pen.length < 3 || !sel} onClick={() => penToSelection('subtract')} title="Alt + Ctrl/⌘ + Enter">Subtract</button>
+          <button className={optBtn} disabled={!pen.length} onClick={() => { setPen([]); setPenClosed(false); }}>Clear</button>
         </>
       )}
       {tool === 'crop' && (
@@ -2113,7 +2235,12 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
       { label: 'Inverse', shortcut: 'Ctrl Shift I', onClick: selOps.invert, disabled: !hasSel },
       { sep: true },
       { label: 'Rectangle', shortcut: 'M', onClick: () => { setSelKind('rect'); setTool('select'); } },
-      { label: 'Ellipse', onClick: () => { setSelKind('ellipse'); setTool('select'); } },
+      { label: 'Ellipse', shortcut: 'Shift M', onClick: () => { setSelKind('ellipse'); setTool('select'); } },
+      { label: 'Lasso', shortcut: 'L', onClick: () => { setSelKind('lasso'); setTool('select'); } },
+      { label: 'Pen path', shortcut: 'P', onClick: () => setTool('pen') },
+      { sep: true },
+      { label: 'Content-aware fill', onClick: selOps.contentFill, disabled: !hasSel },
+      { label: 'Mask layer to selection', onClick: selOps.mask, disabled: !hasSel },
       { label: 'Subject (person / product)', onClick: selOps.subject },
     ] },
     { label: 'Filter', items: FILTERS.map((x) => ({ label: `${x.label}${x.amount ? '…' : ''}`, onClick: () => pickFilter(x.id) })) },
@@ -2211,7 +2338,7 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
         )}
         <div
           ref={stageRef}
-          className={cx('relative flex-1 min-h-0 overflow-hidden touch-none select-none', pro ? 'bg-mt-studio' : 'bg-[repeating-conic-gradient(rgba(127,127,127,0.10)_0_25%,transparent_0_50%)] bg-[length:22px_22px]', healCursor || tool === 'eyedropper' || tool === 'gradient' ? 'cursor-crosshair' : tool === 'text' ? 'cursor-text' : tool === 'hand' ? 'cursor-grab active:cursor-grabbing' : tool === 'zoom' ? 'cursor-zoom-in' : tool === 'crop' ? 'cursor-default' : tool === 'move' ? 'cursor-move' : zoom > 1 ? 'cursor-grab' : '')}
+          className={cx('relative flex-1 min-h-0 overflow-hidden touch-none select-none', pro ? 'bg-mt-studio' : 'bg-[repeating-conic-gradient(rgba(127,127,127,0.10)_0_25%,transparent_0_50%)] bg-[length:22px_22px]', healCursor || tool === 'eyedropper' || tool === 'gradient' || tool === 'pen' ? 'cursor-crosshair' : tool === 'text' ? 'cursor-text' : tool === 'hand' ? 'cursor-grab active:cursor-grabbing' : tool === 'zoom' ? 'cursor-zoom-in' : tool === 'crop' ? 'cursor-default' : tool === 'move' ? 'cursor-move' : zoom > 1 ? 'cursor-grab' : '')}
           onPointerDown={onStageDown}
           onPointerMove={onStageMove}
           onPointerUp={onStageUp}
@@ -2229,9 +2356,32 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
                 <CropOverlay box={box} base={base} />
               )}
               {selOverlay && <img src={selOverlay} alt="" aria-hidden className="absolute inset-0 w-full h-full pointer-events-none" />}
-              {base && (lasso || (sel?.shape && sel.shape.kind === 'poly' && !sel.inverted)) && (
+              {sel && <canvas ref={antsRef} aria-hidden className="absolute inset-0 w-full h-full pointer-events-none" style={{ imageRendering: 'pixelated' }} />}
+              {base && tool === 'pen' && pen.length > 0 && (() => {
+                const r = 4.5 / Math.max(0.0001, basePxToScreen);
+                const d = penPathD(pen, penClosed);
+                const last = pen[pen.length - 1];
+                const lc = last.hout || last;
+                return (
+                  <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox={`0 0 ${base.width} ${base.height}`} preserveAspectRatio="none" data-testid="pen-path">
+                    {penClosed && <path d={d} fill="rgba(38,128,235,0.12)" stroke="none" />}
+                    <path d={d} fill="none" stroke="#fff" strokeWidth={3} vectorEffect="non-scaling-stroke" />
+                    <path d={d} fill="none" stroke="#2680EB" strokeWidth={1.5} vectorEffect="non-scaling-stroke" />
+                    {!penClosed && penHover && <path d={`M${last.x},${last.y} Q${lc.x},${lc.y} ${penHover.x},${penHover.y}`} fill="none" stroke="#2680EB" strokeWidth={1} strokeDasharray="4 3" vectorEffect="non-scaling-stroke" />}
+                    {pen.map((q, i) => (
+                      <g key={i}>
+                        {q.hin && <line x1={q.x} y1={q.y} x2={q.hin.x} y2={q.hin.y} stroke="#2680EB" strokeWidth={1} vectorEffect="non-scaling-stroke" />}
+                        {q.hout && <line x1={q.x} y1={q.y} x2={q.hout.x} y2={q.hout.y} stroke="#2680EB" strokeWidth={1} vectorEffect="non-scaling-stroke" />}
+                        {q.hin && <circle cx={q.hin.x} cy={q.hin.y} r={r * 0.7} fill="#2680EB" />}
+                        {q.hout && <circle cx={q.hout.x} cy={q.hout.y} r={r * 0.7} fill="#2680EB" />}
+                        <rect x={q.x - r} y={q.y - r} width={r * 2} height={r * 2} fill={i === 0 && !penClosed ? '#2680EB' : '#fff'} stroke="#2680EB" strokeWidth={1.5} vectorEffect="non-scaling-stroke" />
+                      </g>
+                    ))}
+                  </svg>
+                );
+              })()}
+              {base && lasso && (
                 <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox={`0 0 ${base.width} ${base.height}`} preserveAspectRatio="none">
-                  {sel?.shape && sel.shape.kind === 'poly' && !sel.inverted && (() => { const d = sel.shape.pts.map((p) => `${p.x},${p.y}`).join(' '); return <g><polygon points={d} fill="none" stroke="#fff" strokeWidth={1.5} vectorEffect="non-scaling-stroke" /><polygon points={d} fill="none" stroke="#111" strokeWidth={1.5} strokeDasharray="5 5" className="mt-ants" vectorEffect="non-scaling-stroke" /></g>; })()}
                   {lasso && (() => {
                     const pts = [...lasso.pts, ...(lassoHover && !lasso.drawing ? [lassoHover] : [])];
                     const d = pts.map((p) => `${p.x},${p.y}`).join(' ');
@@ -2247,9 +2397,9 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
                   })()}
                 </svg>
               )}
-              {base && ((sel?.shape && sel.shape.kind !== 'poly') || marquee) && (
+              {base && marquee && (
                 <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox={`0 0 ${base.width} ${base.height}`} preserveAspectRatio="none">
-                  {[sel?.shape && sel.shape.kind !== 'poly' && !sel.inverted ? sel.shape : null, marquee ? { kind: selKind === 'ellipse' ? 'ellipse' : 'rect', ...marquee } : null].filter(Boolean).map((sh: any, i) => {
+                  {[{ kind: selKind === 'ellipse' ? 'ellipse' : 'rect', ...marquee }].map((sh: any, i) => {
                     const common = { fill: 'none', vectorEffect: 'non-scaling-stroke' as const, strokeWidth: 1.5 };
                     const el = (stroke: string, dash?: string) => sh.kind === 'ellipse'
                       ? <ellipse cx={sh.x + sh.w / 2} cy={sh.y + sh.h / 2} rx={sh.w / 2} ry={sh.h / 2} stroke={stroke} strokeDasharray={dash} {...common} className={dash ? 'mt-ants' : ''} />
@@ -2315,6 +2465,20 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
           {tool === 'retouch' && preview && (
             <div ref={brushCursor} className="pointer-events-none absolute left-0 top-0 rounded-full border border-white/90 shadow-[0_0_0_1px_rgba(0,0,0,0.5)]" style={{ width: healSize, height: healSize }} />
           )}
+          {pro && sel && !busy && !textDraft && tool !== 'crop' && (
+            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1 rounded-xl border border-mt-border bg-mt-surface/95 backdrop-blur px-1.5 py-1 shadow-lg text-[12px] max-w-[calc(100%-24px)] overflow-x-auto mt-scroll" role="toolbar" aria-label="Selection actions" onPointerDown={(e) => e.stopPropagation()}>
+              <button className="h-8 px-2.5 rounded-lg inline-flex items-center gap-1.5 font-medium hover:bg-mt-surface2 whitespace-nowrap" onClick={selOps.contentFill} title="Fill the selection from its surroundings"><Wand2 size={14} /> Content-aware fill</button>
+              <button className="h-8 px-2.5 rounded-lg inline-flex items-center gap-1.5 hover:bg-mt-surface2 whitespace-nowrap" onClick={() => selOps.fill(paintColor)} title="Fill with the foreground colour">
+                <span className="w-3.5 h-3.5 rounded-sm border border-black/30" style={{ background: paintColor }} /> Fill
+              </button>
+              <button className="h-8 px-2.5 rounded-lg inline-flex items-center gap-1.5 hover:bg-mt-surface2 whitespace-nowrap" onClick={selOps.mask} title="Keep only the selection on this layer"><LayersIcon size={14} /> Mask</button>
+              <button className="h-8 px-2.5 rounded-lg inline-flex items-center gap-1.5 hover:bg-mt-surface2 whitespace-nowrap" onClick={selOps.toLayer} title="Copy to a new layer (Ctrl/⌘ J)"><CopyIcon size={14} /> New layer</button>
+              <button className="h-8 px-2.5 rounded-lg inline-flex items-center gap-1.5 hover:bg-mt-surface2 whitespace-nowrap" onClick={selOps.clear} title="Delete (make see-through)"><Trash2 size={14} /> Delete</button>
+              <span className="w-px h-5 bg-mt-border" />
+              <button className="h-8 px-2.5 rounded-lg hover:bg-mt-surface2 whitespace-nowrap" onClick={selOps.invert} title="Ctrl/⌘ Shift I">Invert</button>
+              <button className="h-8 px-2.5 rounded-lg hover:bg-mt-surface2 whitespace-nowrap" onClick={selOps.none} title="Ctrl/⌘ D">Deselect</button>
+            </div>
+          )}
           {comparing && <span className="absolute top-3 left-1/2 -translate-x-1/2 text-[11px] font-semibold uppercase tracking-wide bg-black/70 text-white rounded-full px-3 py-1">Original</span>}
           {proof && !comparing && <span className="absolute top-3 left-3 text-[11px] font-semibold bg-black/70 text-white rounded-full px-3 py-1">Print preview · CMYK FOGRA39</span>}
           {busy && (
@@ -2373,6 +2537,7 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
               onDown={() => layerOps.move(-1)}
               onMerge={layerOps.mergeDown}
               onFlatten={layerOps.flatten}
+              onLoadSelection={(i) => base && setSel({ mask: maskFromAlpha(layers[i].canvas, base.width, base.height), shape: null })}
             />
           )}
           {pro && showHistory && <HistoryPanel labels={history.list.map((h) => h.label)} index={history.index} onJump={(i) => setHistory((h) => ({ ...h, index: i }))} />}

@@ -105,6 +105,7 @@ import { TabBar, EditorTabInfo } from '@/components/editor/TabBar';
 import { OpenDesignDialog, OpenableDesign } from '@/components/editor/OpenDesignDialog';
 import { ImportDialog } from '@/components/editor/ImportDialog';
 import { UnsavedChangesDialog } from '@/components/editor/UnsavedChangesDialog';
+import { useLeaveGuard } from '@/hooks/useLeaveGuard';
 import { loadTabSession, saveTabSession, clearTabSession } from '@/lib/editor/tabSession';
 import { WorkspaceSwitcher, EditorWorkspace } from '@/components/editor/WorkspaceSwitcher';
 import type { PhotoEditResult, CropRect } from '@/lib/photo/editTypes';
@@ -5479,6 +5480,21 @@ function EditorContent() {
 
   const saveDesign = () => performSave(designIdRef.current ?? designId, designNameRef.current || designName);
 
+  // Unsaved work: ask before the Back arrow, the logo, any link, the
+  // browser's Back button or closing the tab.
+  const { dialog: leaveDialog } = useLeaveGuard({
+    dirty: saveStatus === 'unsaved' || saveStatus === 'error' || tabs.some((t) => t.dirty),
+    what: `“${designName || 'this design'}”`,
+    onSave: async () => {
+      if (!designIdRef.current && !isLocalTabId(activeTabIdRef.current)) {
+        setSaveChooser({ mode: 'first', busy: null, error: null });
+        return false;
+      }
+      await saveDesign();
+      return !dirtyRef.current;
+    },
+  });
+
   // Saves the canvas back into the template being edited (admins only;
   // RLS enforces it server-side too). The previous content is kept as a
   // version first, so nothing is ever lost.
@@ -7584,6 +7600,7 @@ function EditorContent() {
       <input ref={replaceInputRef} data-testid="replace-input" type="file" accept="image/*" onChange={onReplacePicked} className="hidden" />
       <input id="mainImageUploadInput" type="file" accept="image/*" multiple onChange={handleImageUpload} className="hidden" />
 
+      {leaveDialog}
       {closeConfirm && (
         <UnsavedChangesDialog
           designName={closeConfirm.name}

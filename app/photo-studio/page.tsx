@@ -21,6 +21,7 @@ import { saveMtdFile, pickMtdFile } from '@/lib/mtd/fileAccess';
 import { rememberRecent } from '@/lib/mtd/recent';
 import { takeHandoff } from '@/lib/mtd/handoff';
 import { encodeImage } from '@/lib/templates/media';
+import { useLeaveGuard } from '@/hooks/useLeaveGuard';
 
 const CANVAS_PRESETS: { label: string; w: number; h: number; unit: DocUnit; dpi: number }[] = [
   { label: 'Square (1080 × 1080px)', w: 1080, h: 1080, unit: 'px', dpi: 72 },
@@ -121,6 +122,11 @@ function PhotoStudioContent() {
   const [saving, setSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saved' | 'error'>('idle');
   useEffect(() => {
+    // Automated browser tests (CI only, flag set at build time) run without an account.
+    if (process.env.NEXT_PUBLIC_E2E === '1') {
+      setCheckingAuth(false);
+      return;
+    }
     supabase.auth.getUser().then(({ data }) => {
       if (!data.user) {
         router.push('/login?next=/photo-studio');
@@ -179,6 +185,9 @@ function PhotoStudioContent() {
   }, [checkingAuth]);
 
   const dpiNum = Math.max(1, parseInt(dpiInput) || 300);
+  // Unsaved photo: ask before Back, the logo, any link, browser Back or closing the tab.
+  const handleSaveRef = useRef<() => Promise<boolean>>(async () => false);
+  const { confirmLeave, dialog: leaveDialog } = useLeaveGuard({ dirty: stage === 'editing' && dirty, onSave: () => handleSaveRef.current(), what: 'this photo' });
 
   const applyPreset = (p: (typeof CANVAS_PRESETS)[number]) => {
     setUnit(p.unit);
@@ -267,6 +276,7 @@ function PhotoStudioContent() {
       });
       const target = await saveMtdFile(blob, fileNameFor(docName || 'Untitled Photo'));
       if (target) {
+        photoEditorRef.current?.markSaved();
         setDocName(nameFromFileName(target.fileName));
         rememberRecent({ name: nameFromFileName(target.fileName), fileName: target.fileName, width: size.w, height: size.h, thumbnail, handle: target.handle });
         alert(target.handle ? `Saved to your computer as "${target.fileName}".` : `"${target.fileName}" was downloaded. Keep it somewhere safe.`);
@@ -295,27 +305,27 @@ function PhotoStudioContent() {
     }
   };
 
-  const handleSave = async () => {
+  const handleSave = async (): Promise<boolean> => {
     setSaving(true);
     setSaveStatus('idle');
     try {
       const result = captureCurrentComposite();
       if (!result) {
         alert('Nothing to save yet.');
-        return;
+        return false;
       }
       const {
         data: { user },
       } = await supabase.auth.getUser();
       if (!user) {
         alert('You must be logged in to save.');
-        return;
+        return false;
       }
       if (!designId) {
         const count = await getDesignCount(user.id);
         if (count >= MAX_DESIGNS) {
           alert(`You've reached the ${MAX_DESIGNS}-design limit. Delete an existing design to save a new one.`);
-          return;
+          return false;
         }
       }
       const size = await loadImageSize(result.dataUrl);
@@ -347,7 +357,7 @@ function PhotoStudioContent() {
         console.error('Photo Studio save failed:', error);
         setSaveStatus('error');
         alert('Failed to save. Please try again.');
-        return;
+        return false;
       }
       if (data) {
         setDesignId(data.id);
@@ -355,10 +365,14 @@ function PhotoStudioContent() {
         setDocHeight(size.h);
       }
       setSaveStatus('saved');
+      photoEditorRef.current?.markSaved();
+      return true;
     } finally {
       setSaving(false);
     }
   };
+
+  handleSaveRef.current = handleSave;
 
   if (checkingAuth || loadingDesign) {
     return (
@@ -502,10 +516,7 @@ function PhotoStudioContent() {
     );
   }
 
-  const leave = () => {
-    if (dirty && typeof window !== 'undefined' && !window.confirm('Leave this photo? Changes you haven’t saved will be lost.')) return;
-    setStage('open');
-  };
+  const leave = () => confirmLeave(() => setStage('open'));
 
   return (
     <div className={theme === 'dark' ? 'dark' : ''}>
@@ -565,6 +576,7 @@ function PhotoStudioContent() {
           />
         )}
       </main>
+      {leaveDialog}
     </div>
   );
 }

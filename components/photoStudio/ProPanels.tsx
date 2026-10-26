@@ -75,7 +75,7 @@ function Thumb({ canvas }: { canvas: HTMLCanvasElement }) {
   return <img src={url} alt="" className="w-11 h-11 object-contain rounded border border-mt-border bg-mt-surface2 shrink-0" />;
 }
 
-export function LayersPanel({ layers, active, onSelect, onToggle, onRename, onOpacity, onBlend, onAdd, onPlace, onDuplicate, onDelete, onUp, onDown, onMerge, onFlatten }: {
+export function LayersPanel({ layers, active, onSelect, onToggle, onRename, onOpacity, onBlend, onAdd, onPlace, onDuplicate, onDelete, onUp, onDown, onMerge, onFlatten, onLoadSelection }: {
   layers: Layer[];
   active: number;
   onSelect: (i: number) => void;
@@ -91,6 +91,8 @@ export function LayersPanel({ layers, active, onSelect, onToggle, onRename, onOp
   onDown: () => void;
   onMerge: () => void;
   onFlatten: () => void;
+  /** Ctrl/⌘-click a layer: select its pixels (Photoshop's “load selection”). */
+  onLoadSelection?: (i: number) => void;
 }) {
   const cur = layers[active];
   const [op, setOp] = useState(Math.round(cur.opacity * 100));
@@ -122,7 +124,8 @@ export function LayersPanel({ layers, active, onSelect, onToggle, onRename, onOp
       <ul className="flex flex-col gap-1 max-h-[260px] overflow-y-auto mt-scroll" role="listbox" aria-label="Layer list">
         {layers.map((l, i) => ({ l, i })).reverse().map(({ l, i }) => (
           <li key={l.id} role="option" aria-selected={i === active}
-            onClick={() => onSelect(i)}
+            onClick={(e) => (e.ctrlKey || e.metaKey) && onLoadSelection ? onLoadSelection(i) : onSelect(i)}
+            title="Click to select · Ctrl/⌘-click to select its pixels · double-click the name to rename"
             className={cx('flex items-center gap-2 rounded-lg px-1.5 py-1 cursor-pointer border', i === active ? 'border-[#3B82C4] bg-[#3B82C4]/10' : 'border-transparent hover:bg-mt-surface2')}
           >
             <button className={ib} aria-label={l.visible ? 'Hide layer' : 'Show layer'} onClick={(e) => { e.stopPropagation(); onToggle(i); }}>
@@ -163,7 +166,10 @@ export function LayersPanel({ layers, active, onSelect, onToggle, onRename, onOp
 
 export function HistoryPanel({ labels, index, onJump }: { labels: string[]; index: number; onJump: (i: number) => void }) {
   const endRef = useRef<HTMLLIElement>(null);
-  useEffect(() => endRef.current?.scrollIntoView({ block: 'nearest' }), [index]);
+  useEffect(() => {
+    // (scrollIntoView returns a Promise in new Chrome: never return it from an effect)
+    endRef.current?.scrollIntoView({ block: 'nearest' });
+  }, [index]);
   return (
     <section className="py-3 border-t border-mt-border" aria-label="History">
       <h3 className="mb-2 inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-mt-faint"><HistoryIcon size={13} /> History</h3>

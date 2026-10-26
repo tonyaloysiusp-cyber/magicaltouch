@@ -42,7 +42,8 @@ export function DrawPanel({
               type="button"
               title={b.hint}
               aria-pressed={drawing && settings.kind === b.id}
-              onClick={() => (drawing && settings.kind === b.id ? onStop() : onStart(b.id))}
+              // Picking a tool always leaves it ready to draw ("Done drawing" puts it down).
+              onClick={() => onStart(b.id)}
               className={cx(
                 'flex flex-col items-center gap-1 rounded-xl border py-2 text-[11px] font-medium transition-colors',
                 drawing && settings.kind === b.id ? 'mt-active-blue text-mt-ink' : 'border-mt-border text-mt-muted hover:text-mt-ink hover:bg-mt-surface2'

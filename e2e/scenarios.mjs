@@ -584,3 +584,31 @@ scenarios.push({
 });
 
 export default scenarios;
+
+// Photo Studio (Pro): every edit used to crash the page in new Chrome (the
+// History panel returned scrollIntoView's Promise from an effect).
+scenarios.push({
+  name: 'photo-studio-pen-fill',
+  async run(t) {
+    await t.page.addInitScript(() => { try { localStorage.setItem('mt:photoMode', 'pro'); } catch {} });
+    await t.page.goto(`${t.BASE}/photo-studio`);
+    await t.page.locator('input[type=file]').first().setInputFiles('public/templates/photos/mt-38.jpg');
+    await t.page.waitForSelector('[aria-label="Tools"]', { timeout: 60000 });
+    await t.page.waitForTimeout(1500);
+    const r = await t.eval(() => { const c = [...document.querySelectorAll('canvas')].sort((a, b) => b.clientWidth * b.clientHeight - a.clientWidth * a.clientHeight)[0]; const x = c.getBoundingClientRect(); return { x: x.left, y: x.top, w: x.width, h: x.height }; });
+    const P = (fx, fy) => [r.x + r.w * fx, r.y + r.h * fy];
+    await t.page.getByRole('button', { name: 'Eraser', exact: true }).first().click();
+    await t.page.mouse.move(...P(0.2, 0.2)); await t.page.mouse.down(); await t.page.mouse.move(...P(0.4, 0.3), { steps: 6 }); await t.page.mouse.up();
+    await t.page.waitForTimeout(500);
+    t.check('eraser stroke does not crash', (await t.page.getByText('History').count()) > 0);
+    await t.page.getByRole('button', { name: 'Pen', exact: true }).first().click();
+    for (const p of [P(0.7, 0.06), P(0.84, 0.06), P(0.84, 0.4), P(0.72, 0.4)]) { await t.page.mouse.click(...p); await t.page.waitForTimeout(80); }
+    await t.page.keyboard.press('Control+Enter');
+    await t.page.waitForTimeout(500);
+    t.check('pen makes a selection (actions bar)', (await t.page.getByRole('toolbar', { name: 'Selection actions' }).count()) === 1);
+    await t.page.getByRole('button', { name: /Content-aware fill/ }).first().click();
+    await t.page.waitForTimeout(4000);
+    t.check('content-aware fill in history', (await t.page.getByRole('button', { name: 'Content-aware fill', exact: true }).count()) >= 1);
+    await t.shot('filled');
+  },
+});
