@@ -224,14 +224,7 @@ def stamps_story(d, c):
 def pop_art(d, c):
     W, H = d.W, d.H
     d.bg("#FFE234")
-    step = 22
-    path = []
-    for j in range(int(H / step) + 1):
-        for i in range(int(W / step) + 1):
-            x, y = i * step + (step / 2 if j % 2 else 0), j * step
-            r = 4.5
-            path += [["M", x - r, y], ["C", x - r, y - r * .55, x - r * .55, y - r, x, y - r], ["C", x + r * .55, y - r, x + r, y - r * .55, x + r, y], ["C", x + r, y + r * .55, x + r * .55, y + r, x, y + r], ["C", x - r * .55, y + r, x - r, y + r * .55, x - r, y], ["Z"]]
-    d.path(path, fill="#F7B500", name="Halftone")
+    d.dots(-d.bleed, -d.bleed, W + d.bleed, H + d.bleed, 22, 4.5, "#F7B500")
     d.star(W / 2, H * 0.4, W * 0.48, "#111111", points=14, inner=0.72, angle=-80)
     d.star(W / 2 - 10, H * 0.4 - 10, W * 0.46, "#E52521", points=14, inner=0.72, angle=-80)
     d.star(W / 2 - 10, H * 0.4 - 10, W * 0.3, "#FFFFFF", points=12, inner=0.8, angle=-70)

@@ -214,12 +214,19 @@ def lavender_story(d, c):
     d.circle(W * 0.5, H * 0.52, W * 0.22, "#FFE2B8", opacity=0.9, name="Sun")
     for row, (y0, h0, col) in enumerate([(H * 0.62, H * 0.12, "#8A6FBF"), (H * 0.7, H * 0.16, "#6E54A8"), (H * 0.8, H * 0.2, "#5A4196")]):
         d.wave(-d.bleed, W + d.bleed, y0 + h0 * 0.35, 10, 160, fill=mix(mix(col, "#2F5A3A", 0.3), "#FFFFFF", 0.15), bottom=H + d.bleed)
+        stems, buds = [], []
         for k in range(16):
             x = W * (k + 0.5) / 16 + d.rng.uniform(-14, 14)
             top = y0 - d.rng.uniform(0, h0 * 0.4)
-            d.line(x, top + 90, x, y0 + h0 * 0.7, "#4E7A4E", 3)
+            stems += [["M", x, top + 90], ["L", x, y0 + h0 * 0.7]]
             for j in range(8):
-                d.ellipse(x + (7 if j % 2 else -7), top + j * 13, 8, 13, mix(col, "#FFFFFF", 0.12 * (j % 3)), angle=(20 if j % 2 else -20))
+                bx, by = x + (7 if j % 2 else -7), top + j * 13
+                ang = math.radians(-70 if j % 2 else -110)
+                ux, uy = math.cos(ang) * 13, math.sin(ang) * 13
+                px, py = -uy * 0.6, ux * 0.6
+                buds += [["M", bx - ux, by - uy], ["Q", bx + px, by + py, bx + ux, by + uy], ["Q", bx - px, by - py, bx - ux, by - uy], ["Z"]]
+        d.path(stems, fill="", stroke="#4E7A4E", sw=3, name="Lavender stems")
+        d.path(buds, fill=col, name="Lavender")
     s = d.fit("Happy Birthday", W * 0.8, "Playfair Display", 140, 500, True)
     d.text(0, H * 0.14, W, "Happy Birthday", "Playfair Display", s, "#5A3F8C", weight=500, italic=True, align="center")
     d.text(W * 0.14, H * 0.14 + s * 1.4, W * 0.72, c["message"], "Lora", 50, "#6E5596", align="center", lh=1.4)
@@ -410,13 +417,13 @@ def halftone_pink(d, c):
     W, H = d.W, d.H
     d.bg("#FF8FB8")
     # halftone fade from the bottom-right corner
-    step = 14
+    step = 18
     path = []
     for j in range(int(H / step) + 2):
         for i in range(int(W / step) + 2):
             x, y = i * step, j * step
             dist = math.hypot(W - x, H - y) / math.hypot(W, H)
-            r = max(0, (0.62 - dist)) * 13
+            r = max(0, (0.62 - dist)) * 16
             if r > 0.6:
                 path += [["M", x - r, y], ["C", x - r, y - r * 0.55, x - r * 0.55, y - r, x, y - r], ["C", x + r * 0.55, y - r, x + r, y - r * 0.55, x + r, y], ["C", x + r, y + r * 0.55, x + r * 0.55, y + r, x, y + r], ["C", x - r * 0.55, y + r, x - r, y + r * 0.55, x - r, y], ["Z"]]
     d.path(path, fill="#E8457F", name="Halftone")

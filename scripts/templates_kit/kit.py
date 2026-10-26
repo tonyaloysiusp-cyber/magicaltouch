@@ -300,6 +300,7 @@ class Doc:
     def path(self, cmds, fill="#000", stroke=None, sw=0, opacity=1, angle=0, name=None, shadow_=None, cap="round", join="round", fill_rule="nonzero", dash=None):
         if isinstance(cmds, str):
             cmds = parse_d(cmds)
+        cmds = [[c[0]] + [round(v, 1) for v in c[1:]] for c in cmds]
         x0, y0, x1, y1 = _path_bbox(cmds)
         o = {"type": "path", "path": cmds, "left": x0 - sw / 2, "top": y0 - sw / 2, "width": x1 - x0, "height": y1 - y0, "fill": fill, "stroke": stroke, "strokeWidth": sw, "opacity": opacity, "strokeLineCap": cap, "strokeLineJoin": join, "fillRule": fill_rule}
         if angle:
@@ -590,19 +591,18 @@ class Doc:
         return self.path(d, fill=fill, name="Scallop")
 
     def dots(self, x0, y0, x1, y1, step, r, fill, opacity=1, offset_rows=True):
-        rows = int((y1 - y0) / step) + 1
-        cols = int((x1 - x0) / step) + 1
-        # one path with many small circles keeps the object count low
-        d = []
-        for j in range(rows):
-            for i in range(cols):
-                x = x0 + i * step + (step / 2 if offset_rows and j % 2 else 0)
-                y = y0 + j * step
-                if x > x1 or y > y1:
-                    continue
-                d += [["M", x - r, y], ["C", x - r, y - r * 0.552, x - r * 0.552, y - r, x, y - r], ["C", x + r * 0.552, y - r, x + r, y - r * 0.552, x + r, y], ["C", x + r, y + r * 0.552, x + r * 0.552, y + r, x, y + r], ["C", x - r * 0.552, y + r, x - r, y + r * 0.552, x - r, y], ["Z"]]
-        if d:
-            self.path(d, fill=fill, opacity=opacity, name="Dot pattern")
+        """Dot grid as a rect with a repeating SVG pattern (tiny JSON, crisp at any zoom)."""
+        import base64
+        if offset_rows:
+            tw, th = step, step * 2
+            circles = f'<circle cx="{step/2:.2f}" cy="{step/2:.2f}" r="{r}"/><circle cx="0" cy="{step*1.5:.2f}" r="{r}"/><circle cx="{step:.2f}" cy="{step*1.5:.2f}" r="{r}"/>'
+        else:
+            tw, th = step, step
+            circles = f'<circle cx="{step/2:.2f}" cy="{step/2:.2f}" r="{r}"/>'
+        svg = f'<svg xmlns="http://www.w3.org/2000/svg" width="{tw:.2f}" height="{th:.2f}"><g fill="{fill}">{circles}</g></svg>'
+        src = "data:image/svg+xml;base64," + base64.b64encode(svg.encode()).decode()
+        pat = {"type": "pattern", "source": src, "repeat": "repeat", "offsetX": 0, "offsetY": 0, "crossOrigin": "", "patternTransform": None}
+        return self.add({"type": "rect", "left": x0, "top": y0, "width": x1 - x0, "height": y1 - y0, "fill": pat, "opacity": opacity, "strokeWidth": 0}, "Dot pattern")
 
     def stripes(self, x0, y0, x1, y1, w, gap, fill, angle_deg=0, opacity=1):
         d = []
