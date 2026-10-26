@@ -1,0 +1,87 @@
+{
+ "ornaments": {
+  "id": "bb686aed-91e6-4021-822a-b20b841c5191",
+  "title": "Christmas Tree",
+  "creator": "Aaron Burden",
+  "creator_url": "https://instagram.com/aaronburden",
+  "license": "cc0",
+  "license_version": "1.0",
+  "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "foreign_landing_url": "https://stocksnap.io/photo/christmas-tree-FJJVRK164H",
+  "source": "stocksnap",
+  "provider": "stocksnap",
+  "url": "https://cdn.stocksnap.io/img-thumbs/960w/FJJVRK164H.jpg",
+  "orig": [
+   960,
+   641
+  ]
+ },
+ "graduation": {
+  "id": "c3cd8fad-dc42-4fd8-8b4b-272b63cdade4",
+  "title": "Education Graduation",
+  "creator": "Candace McDaniel",
+  "creator_url": "https://stocksnap.io/author/133875",
+  "license": "cc0",
+  "license_version": "1.0",
+  "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "foreign_landing_url": "https://stocksnap.io/photo/education-graduation-XAL3MIM3OC",
+  "source": "stocksnap",
+  "provider": "stocksnap",
+  "url": "https://cdn.stocksnap.io/img-thumbs/960w/XAL3MIM3OC.jpg",
+  "orig": [
+   960,
+   640
+  ]
+ },
+ "camera": {
+  "id": "98c11927-a4e7-4a32-92a9-ab71b992b4df",
+  "title": "Camera Lens",
+  "creator": "Andrew E Weber",
+  "creator_url": "https://stocksnap.io/author/5098",
+  "license": "cc0",
+  "license_version": "1.0",
+  "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "foreign_landing_url": "https://stocksnap.io/photo/camera-lens-W7RWLHPKX4",
+  "source": "stocksnap",
+  "provider": "stocksnap",
+  "url": "https://cdn.stocksnap.io/img-thumbs/960w/W7RWLHPKX4.jpg",
+  "orig": [
+   960,
+   640
+  ]
+ },
+ "x_student": {
+  "id": "2171ba48-6ca0-48da-8e06-0938e1e0c64b",
+  "title": "Architecture Building",
+  "creator": "John Towner",
+  "creator_url": "https://stocksnap.io/author/34616",
+  "license": "cc0",
+  "license_version": "1.0",
+  "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "foreign_landing_url": "https://stocksnap.io/photo/architecture-building-4B1IQUY1C3",
+  "source": "stocksnap",
+  "provider": "stocksnap",
+  "url": "https://cdn.stocksnap.io/img-thumbs/960w/4B1IQUY1C3.jpg",
+  "orig": [
+   960,
+   640
+  ]
+ },
+ "x_sneak2": {
+  "id": "f37e0bd2-fcfa-4000-a8d8-2f9fa91101fa",
+  "title": "Shoes Sneakers",
+  "creator": "Patrycja Tomaszczyk",
+  "creator_url": "https://stocksnap.io/author/5051",
+  "license": "cc0",
+  "license_version": "1.0",
+  "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "foreign_landing_url": "https://stocksnap.io/photo/shoes-sneakers-3K5S13RPLL",
+  "source": "stocksnap",
+  "provider": "stocksnap",
+  "url": "https://cdn.stocksnap.io/img-thumbs/960w/3K5S13RPLL.jpg",
+  "orig": [
+   960,
+   641
+  ]
+ }
+}
