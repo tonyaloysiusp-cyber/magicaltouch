@@ -46,8 +46,7 @@
   "assets": [
    "blossom",
    "cherry-blossom",
-   "rose",
-   "white-flower"
+   "rose"
   ]
  },
  {
@@ -141,7 +140,7 @@
   "status": "published",
   "is_editable": true,
   "assets": [
-   "white-flower"
+   "blossom"
   ]
  },
  {
@@ -1628,7 +1627,7 @@
   "status": "published",
   "is_editable": true,
   "assets": [
-   "white-flower"
+   "blossom"
   ]
  },
  {
@@ -1823,8 +1822,7 @@
   "is_editable": true,
   "assets": [
    "blossom",
-   "rose",
-   "white-flower"
+   "rose"
   ]
  },
  {
@@ -1872,8 +1870,8 @@
   "status": "published",
   "is_editable": true,
   "assets": [
-   "rose",
-   "white-flower"
+   "blossom",
+   "rose"
   ]
  },
  {
@@ -1964,8 +1962,7 @@
   "status": "published",
   "is_editable": true,
   "assets": [
-   "blossom",
-   "white-flower"
+   "blossom"
   ]
  },
  {
@@ -2148,8 +2145,7 @@
   "assets": [
    "blossom",
    "cherry-blossom",
-   "rose",
-   "white-flower"
+   "rose"
   ]
  },
  {

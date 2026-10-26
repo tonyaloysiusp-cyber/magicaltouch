@@ -1,0 +1,2343 @@
+[
+ {
+  "id": "greeting-001",
+  "slug": "big-type-thank-you-card",
+  "title": "Big Type Thank You Card",
+  "category": "General greeting cards",
+  "subcategory": "Thank You",
+  "site_category": "Cards",
+  "description": "Two-word headline filling the top, rule and note below. Heart, rule.",
+  "design_brief": "Two-word headline filling the top, rule and note below. Heart, rule.",
+  "design_style": "thank you",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=bold%20typography%20thank%20you%20card",
+  "inspiration_query": "bold typography thank you card",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "two-word headline filling the top, rule and note below",
+   "typography": "Anton, DM Sans",
+   "palette": "lemon, black, pink heart",
+   "decor": "heart, rule"
+  },
+  "palette": [
+   "#FFE14D",
+   "#111111",
+   "#FF4F79"
+  ],
+  "content": {
+   "headline": "THANK YOU",
+   "message": "Your kindness made a real difference this week. I’m so grateful.",
+   "signature": "— Nadia"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/big-type-thank-you-card.jpg",
+  "preview_url": "/templates/collection/big-type-thank-you-card-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "greeting-002",
+  "slug": "thank-you-so-much-floral-card",
+  "title": "Thank You So Much Floral Card",
+  "category": "General greeting cards",
+  "subcategory": "Thank You",
+  "site_category": "Cards",
+  "description": "A row of flowers along the top, script thank you and note centred. Five flower illustrations.",
+  "design_brief": "A row of flowers along the top, script thank you and note centred. Five flower illustrations.",
+  "design_style": "thank you",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=floral%20thank%20you%20card%20pink",
+  "inspiration_query": "floral thank you card pink",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "a row of flowers along the top, script thank you and note centred",
+   "typography": "Great Vibes, Montserrat spaced caps, Lora italic, Caveat",
+   "palette": "blush, raspberry, garden colours",
+   "decor": "five flower illustrations"
+  },
+  "palette": [
+   "#FFF4F4",
+   "#B23A55",
+   "#5A3D46"
+  ],
+  "content": {
+   "headline": "Thank you so much",
+   "message": "for the flowers, the help and the endless cups of tea.",
+   "signature": "Love, Reem"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/thank-you-so-much-floral-card.jpg",
+  "preview_url": "/templates/collection/thank-you-so-much-floral-card-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "blossom",
+   "cherry-blossom",
+   "hibiscus",
+   "rose",
+   "tulip"
+  ]
+ },
+ {
+  "id": "greeting-003",
+  "slug": "teacher-thank-you-apple-card",
+  "title": "Teacher Thank You Apple Card",
+  "category": "General greeting cards",
+  "subcategory": "Thank You",
+  "site_category": "Cards",
+  "description": "Chalkboard with chalk lettering and school illustrations. Wood frame, grain, books, pencil, cap.",
+  "design_brief": "Chalkboard with chalk lettering and school illustrations. Wood frame, grain, books, pencil, cap.",
+  "design_style": "thank you",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=teacher%20appreciation%20thank%20you%20card",
+  "inspiration_query": "teacher appreciation thank you card",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "chalkboard with chalk lettering and school illustrations",
+   "typography": "Caveat",
+   "palette": "chalkboard green, oak frame, chalk white, yellow",
+   "decor": "wood frame, grain, books, pencil, cap"
+  },
+  "palette": [
+   "#2F4A3D",
+   "#8B5A2B",
+   "#FFFFFF",
+   "#F7E27A",
+   "#E8F0EA"
+  ],
+  "content": {
+   "headline": "Thank you, teacher!",
+   "message": "You helped me grow more than you know.",
+   "signature": "From Omar, Grade 3"
+  },
+  "dimensions": {
+   "width": 673,
+   "height": 480,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/teacher-thank-you-apple-card.jpg",
+  "preview_url": "/templates/collection/teacher-thank-you-apple-card-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "books",
+   "graduation-cap",
+   "pencil"
+  ]
+ },
+ {
+  "id": "greeting-004",
+  "slug": "thank-you-gold-confetti-post",
+  "title": "Thank You Gold Confetti Post",
+  "category": "General greeting cards",
+  "subcategory": "Thank You",
+  "site_category": "Cards",
+  "description": "Gold script thank you inside a ring of gold confetti. Gold confetti, label.",
+  "design_brief": "Gold script thank you inside a ring of gold confetti. Gold confetti, label.",
+  "design_style": "thank you",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=thank%20you%20customers%20instagram%20gold",
+  "inspiration_query": "thank you customers instagram gold",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "gold script thank you inside a ring of gold confetti",
+   "typography": "Great Vibes gold, Cormorant Garamond italic, Montserrat caps",
+   "palette": "black, gold, champagne",
+   "decor": "gold confetti, label"
+  },
+  "palette": [
+   "#101010",
+   "#B68A3A",
+   "#E9C877",
+   "#F7E3A3",
+   "#8A6A2E",
+   "#9C7431"
+  ],
+  "content": {
+   "headline": "Thank you",
+   "message": "To every customer who supported us this year — we couldn’t have done it without you.",
+   "signature": "The Little Bakery team"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/thank-you-gold-confetti-post.jpg",
+  "preview_url": "/templates/collection/thank-you-gold-confetti-post-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "greeting-005",
+  "slug": "retro-thanks-a-latte-card",
+  "title": "Retro Thanks a Latte Card",
+  "category": "General greeting cards",
+  "subcategory": "Thank You",
+  "site_category": "Cards",
+  "description": "Coffee cup in a latte-coloured circle with steam curls, pun headline below. Steam curls, circle, coffee illustration.",
+  "design_brief": "Coffee cup in a latte-coloured circle with steam curls, pun headline below. Steam curls, circle, coffee illustration.",
+  "design_style": "thank you",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=thanks%20a%20latte%20coffee%20pun%20card",
+  "inspiration_query": "thanks a latte coffee pun card",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "coffee cup in a latte-coloured circle with steam curls, pun headline below",
+   "typography": "Pacifico, DM Sans, Caveat",
+   "palette": "foam cream, latte, espresso, terracotta",
+   "decor": "steam curls, circle, coffee illustration"
+  },
+  "palette": [
+   "#F2E3CF",
+   "#E2C3A0",
+   "#FFFFFF",
+   "#6B3A1E",
+   "#B5523B"
+  ],
+  "content": {
+   "headline": "Thanks a latte!",
+   "message": "You’re the best colleague a person could ask for.",
+   "signature": "— Sami"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/retro-thanks-a-latte-card.jpg",
+  "preview_url": "/templates/collection/retro-thanks-a-latte-card-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "hot-beverage"
+  ]
+ },
+ {
+  "id": "greeting-006",
+  "slug": "nurse-and-doctor-thank-you-card",
+  "title": "Nurse and Doctor Thank You Card",
+  "category": "General greeting cards",
+  "subcategory": "Thank You",
+  "site_category": "Cards",
+  "description": "Glowing heart in a white ring above a two-line italic thank you. Ring, heart illustration.",
+  "design_brief": "Glowing heart in a white ring above a two-line italic thank you. Ring, heart illustration.",
+  "design_style": "thank you",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=thank%20you%20healthcare%20heroes%20card",
+  "inspiration_query": "thank you healthcare heroes card",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "glowing heart in a white ring above a two-line italic thank you",
+   "typography": "Playfair Display italic, Lora, Montserrat caps",
+   "palette": "clinic mint to blush, deep teal, rose",
+   "decor": "ring, heart illustration"
+  },
+  "palette": [
+   "#E7F4F6",
+   "#FDEFF1",
+   "#FFFFFF",
+   "#1F4E5F",
+   "#355A66",
+   "#C2405E"
+  ],
+  "content": {
+   "headline": "Thank you for caring",
+   "message": "Your patience and kindness carried our family through.",
+   "signature": "With gratitude, the Rahman family"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/nurse-and-doctor-thank-you-card.jpg",
+  "preview_url": "/templates/collection/nurse-and-doctor-thank-you-card-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "growing-heart"
+  ]
+ },
+ {
+  "id": "greeting-007",
+  "slug": "minimal-grateful-card",
+  "title": "Minimal Grateful Card",
+  "category": "General greeting cards",
+  "subcategory": "Thank You",
+  "site_category": "Cards",
+  "description": "One italic word across a terracotta sun, short line beneath. Single circle.",
+  "design_brief": "One italic word across a terracotta sun, short line beneath. Single circle.",
+  "design_style": "thank you",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=minimal%20grateful%20card%20lowercase",
+  "inspiration_query": "minimal grateful card lowercase",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "one italic word across a terracotta sun, short line beneath",
+   "typography": "Playfair Display italic, Montserrat",
+   "palette": "oat, clay, ink",
+   "decor": "single circle"
+  },
+  "palette": [
+   "#ECE6DD",
+   "#D8A48F",
+   "#2B2724",
+   "#4A443E"
+  ],
+  "content": {
+   "headline": "grateful",
+   "message": "for you, for this, for all of it.",
+   "signature": "Hana"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/minimal-grateful-card.jpg",
+  "preview_url": "/templates/collection/minimal-grateful-card-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "greeting-008",
+  "slug": "thank-you-story-stickers",
+  "title": "Thank You Story Stickers",
+  "category": "General greeting cards",
+  "subcategory": "Thank You",
+  "site_category": "Cards",
+  "description": "Sticker-style story: tilted white card with milestone thanks, emoji stickers around. Five sticker illustrations with shadows.",
+  "design_brief": "Sticker-style story: tilted white card with milestone thanks, emoji stickers around. Five sticker illustrations with shadows.",
+  "design_style": "thank you",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=thank%20you%20followers%20story%20sticker%20style",
+  "inspiration_query": "thank you followers story sticker style",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "sticker-style story: tilted white card with milestone thanks, emoji stickers around",
+   "typography": "Luckiest Guy, Fredoka",
+   "palette": "pink to apricot gradient, white, charcoal",
+   "decor": "five sticker illustrations with shadows"
+  },
+  "palette": [
+   "#FF7AA2",
+   "#FFB86B",
+   "#FFFFFF",
+   "#FF4F79",
+   "#2A2A2A"
+  ],
+  "content": {
+   "headline": "THANK YOU",
+   "message": "for 10,000 followers!",
+   "signature": "@studio.lumi"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1920,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/thank-you-story-stickers.jpg",
+  "preview_url": "/templates/collection/thank-you-story-stickers-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "confetti-ball",
+   "hundred-points",
+   "party-popper",
+   "red-heart",
+   "sparkles"
+  ]
+ },
+ {
+  "id": "greeting-009",
+  "slug": "congrats-confetti-pop-card",
+  "title": "Congrats Confetti Pop Card",
+  "category": "General greeting cards",
+  "subcategory": "Congratulations",
+  "site_category": "Cards",
+  "description": "Rainbow-gradient headline in a frame of falling confetti. 110 confetti pieces.",
+  "design_brief": "Rainbow-gradient headline in a frame of falling confetti. 110 confetti pieces.",
+  "design_style": "congratulations",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=congratulations%20confetti%20card%20colorful",
+  "inspiration_query": "congratulations confetti card colorful",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "rainbow-gradient headline in a frame of falling confetti",
+   "typography": "Luckiest Guy gradient, Fredoka, Caveat",
+   "palette": "white with party brights",
+   "decor": "110 confetti pieces"
+  },
+  "palette": [
+   "#FFFFFF",
+   "#2BD67B",
+   "#FF5A5F",
+   "#8E6CEF",
+   "#FFC93C",
+   "#3EC1D3"
+  ],
+  "content": {
+   "headline": "Congrats!",
+   "message": "You did it — and you made it look easy.",
+   "signature": "So proud of you, Dana"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/congrats-confetti-pop-card.jpg",
+  "preview_url": "/templates/collection/congrats-confetti-pop-card-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "greeting-010",
+  "slug": "new-job-rocket-card",
+  "title": "New Job Rocket Card",
+  "category": "General greeting cards",
+  "subcategory": "Congratulations",
+  "site_category": "Cards",
+  "description": "Rocket launching into a starry sky above a bold two-line message. Stars, rocket and planet illustrations.",
+  "design_brief": "Rocket launching into a starry sky above a bold two-line message. Stars, rocket and planet illustrations.",
+  "design_style": "congratulations",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=new%20job%20congratulations%20card%20rocket",
+  "inspiration_query": "new job congratulations card rocket",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "rocket launching into a starry sky above a bold two-line message",
+   "typography": "Outfit ExtraBold, DM Sans",
+   "palette": "space navy to violet, star yellow",
+   "decor": "stars, rocket and planet illustrations"
+  },
+  "palette": [
+   "#1B1F4B",
+   "#3B2A7A",
+   "#FFFFFF",
+   "#D9D4FF",
+   "#FFD54F"
+  ],
+  "content": {
+   "headline": "Congrats on the new job!",
+   "message": "Onwards and upwards — they’re lucky to have you.",
+   "signature": "— the old team"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/new-job-rocket-card.jpg",
+  "preview_url": "/templates/collection/new-job-rocket-card-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "ringed-planet",
+   "rocket"
+  ]
+ },
+ {
+  "id": "greeting-011",
+  "slug": "promotion-gold-star-card",
+  "title": "Promotion Gold Star Card",
+  "category": "General greeting cards",
+  "subcategory": "Congratulations",
+  "site_category": "Cards",
+  "description": "Gold star on a burst of pale rays, italic headline below. Ray burst, gold gradient star.",
+  "design_brief": "Gold star on a burst of pale rays, italic headline below. Ray burst, gold gradient star.",
+  "design_style": "congratulations",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=promotion%20congratulations%20card%20gold%20star",
+  "inspiration_query": "promotion congratulations card gold star",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "gold star on a burst of pale rays, italic headline below",
+   "typography": "Playfair Display bold italic, Lora, Montserrat caps",
+   "palette": "ivory, gold, walnut",
+   "decor": "ray burst, gold gradient star"
+  },
+  "palette": [
+   "#FBF6EA",
+   "#F3E3B5",
+   "#8A6A2E",
+   "#E9C877",
+   "#B68A3A",
+   "#F7E3A3"
+  ],
+  "content": {
+   "headline": "Well deserved!",
+   "message": "Congratulations on your promotion — all that hard work paid off.",
+   "signature": "Karim"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/promotion-gold-star-card.jpg",
+  "preview_url": "/templates/collection/promotion-gold-star-card-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "greeting-012",
+  "slug": "you-passed-driving-card",
+  "title": "You Passed Driving Card",
+  "category": "General greeting cards",
+  "subcategory": "Congratulations",
+  "site_category": "Cards",
+  "description": "Road scene with a car, L-plate and headline in the sky. Dashed road line, clouds, L-plate, car illustration.",
+  "design_brief": "Road scene with a car, L-plate and headline in the sky. Dashed road line, clouds, L-plate, car illustration.",
+  "design_style": "congratulations",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=passed%20driving%20test%20congratulations%20card",
+  "inspiration_query": "passed driving test congratulations card",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "road scene with a car, L-plate and headline in the sky",
+   "typography": "Luckiest Guy, Fredoka, Caveat",
+   "palette": "sky blue, asphalt, road white, red",
+   "decor": "dashed road line, clouds, L-plate, car illustration"
+  },
+  "palette": [
+   "#9FD8F0",
+   "#4A4A4A",
+   "#FFFFFF",
+   "#E53935",
+   "#1F4E8C",
+   "#1F3B5C"
+  ],
+  "content": {
+   "headline": "You passed!",
+   "message": "Congratulations on your driving test — the open road is yours.",
+   "signature": "Love, Mum"
+  },
+  "dimensions": {
+   "width": 673,
+   "height": 480,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/you-passed-driving-card.jpg",
+  "preview_url": "/templates/collection/you-passed-driving-card-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "racing-car"
+  ]
+ },
+ {
+  "id": "greeting-013",
+  "slug": "congratulations-elegant-script-card",
+  "title": "Congratulations Elegant Script Card",
+  "category": "General greeting cards",
+  "subcategory": "Congratulations",
+  "site_category": "Cards",
+  "description": "Laurel-wrapped trophy above gold script congratulations. Double frame, laurel, trophy.",
+  "design_brief": "Laurel-wrapped trophy above gold script congratulations. Double frame, laurel, trophy.",
+  "design_style": "congratulations",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=elegant%20congratulations%20card%20script%20gold",
+  "inspiration_query": "elegant congratulations card script gold",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "laurel-wrapped trophy above gold script congratulations",
+   "typography": "Great Vibes gold, Cormorant Garamond italic, Montserrat caps",
+   "palette": "forest green, gold, ivory",
+   "decor": "double frame, laurel, trophy"
+  },
+  "palette": [
+   "#123328",
+   "#C9A45A",
+   "#8A6A2E",
+   "#E9C877",
+   "#B68A3A",
+   "#F7E3A3"
+  ],
+  "content": {
+   "headline": "Congratulations",
+   "message": "on this wonderful achievement. Wishing you every success in what comes next.",
+   "signature": "Warmly, the Al Habtoor family"
+  },
+  "dimensions": {
+   "width": 559,
+   "height": 794,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/congratulations-elegant-script-card.jpg",
+  "preview_url": "/templates/collection/congratulations-elegant-script-card-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "trophy"
+  ]
+ },
+ {
+  "id": "greeting-014",
+  "slug": "woohoo-bold-post",
+  "title": "Woohoo Bold Post",
+  "category": "General greeting cards",
+  "subcategory": "Congratulations",
+  "site_category": "Cards",
+  "description": "Comic burst with a shouting headline, line of text below. Diagonal stripes, starburst, party popper.",
+  "design_brief": "Comic burst with a shouting headline, line of text below. Diagonal stripes, starburst, party popper.",
+  "design_style": "congratulations",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=woohoo%20congratulations%20bold%20colorful%20post",
+  "inspiration_query": "woohoo congratulations bold colorful post",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "comic burst with a shouting headline, line of text below",
+   "typography": "Luckiest Guy outlined with drop shadow, Fredoka",
+   "palette": "violet, lemon, hot pink",
+   "decor": "diagonal stripes, starburst, party popper"
+  },
+  "palette": [
+   "#7B5CFF",
+   "#FFE14D",
+   "#FF4F79",
+   "#111111",
+   "#FFFFFF"
+  ],
+  "content": {
+   "headline": "WOOHOO!",
+   "message": "Big news deserves a big celebration.",
+   "signature": ""
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/woohoo-bold-post.jpg",
+  "preview_url": "/templates/collection/woohoo-bold-post-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "party-popper"
+  ]
+ },
+ {
+  "id": "greeting-015",
+  "slug": "get-well-soon-sunflower-card",
+  "title": "Get Well Soon Sunflower Card",
+  "category": "General greeting cards",
+  "subcategory": "Get Well",
+  "site_category": "Cards",
+  "description": "Sunflower in a soft halo above a handwritten wish. Halo circle, sunflower illustration.",
+  "design_brief": "Sunflower in a soft halo above a handwritten wish. Halo circle, sunflower illustration.",
+  "design_style": "get well",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=get%20well%20soon%20sunflower%20card",
+  "inspiration_query": "get well soon sunflower card",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "sunflower in a soft halo above a handwritten wish",
+   "typography": "Pacifico, Lora italic, Caveat",
+   "palette": "buttercream, sunflower yellow, chocolate",
+   "decor": "halo circle, sunflower illustration"
+  },
+  "palette": [
+   "#FFF8DC",
+   "#FFE9A8",
+   "#FFFFFF",
+   "#7A4A00",
+   "#6B4E1A",
+   "#C77700"
+  ],
+  "content": {
+   "headline": "Get well soon",
+   "message": "Sending sunshine and warm wishes your way.",
+   "signature": "Love, Lina"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/get-well-soon-sunflower-card.jpg",
+  "preview_url": "/templates/collection/get-well-soon-sunflower-card-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "sunflower"
+  ]
+ },
+ {
+  "id": "greeting-016",
+  "slug": "soup-and-blanket-get-well-card",
+  "title": "Soup and Blanket Get Well Card",
+  "category": "General greeting cards",
+  "subcategory": "Get Well",
+  "site_category": "Cards",
+  "description": "Cosy scene — tea and teddy on a striped blanket, message above. Blanket stripes, tea and teddy illustrations.",
+  "design_brief": "Cosy scene — tea and teddy on a striped blanket, message above. Blanket stripes, tea and teddy illustrations.",
+  "design_style": "get well",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=cozy%20get%20well%20soon%20card%20tea",
+  "inspiration_query": "cozy get well soon card tea",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "cosy scene — tea and teddy on a striped blanket, message above",
+   "typography": "Playfair Display italic, Lora, Caveat",
+   "palette": "lilac, plum, cream",
+   "decor": "blanket stripes, tea and teddy illustrations"
+  },
+  "palette": [
+   "#EFE6F6",
+   "#4B2E6E",
+   "#5E4A78"
+  ],
+  "content": {
+   "headline": "Feel better soon",
+   "message": "Rest up, drink your tea and let us take care of the rest.",
+   "signature": "— Maya"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/soup-and-blanket-get-well-card.jpg",
+  "preview_url": "/templates/collection/soup-and-blanket-get-well-card-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "teacup-without-handle",
+   "teddy-bear"
+  ]
+ },
+ {
+  "id": "greeting-017",
+  "slug": "bandage-heart-get-well-card",
+  "title": "Bandage Heart Get Well Card",
+  "category": "General greeting cards",
+  "subcategory": "Get Well",
+  "site_category": "Cards",
+  "description": "Big mending-heart illustration over polka dots, rounded headline. Polka dots, heart illustration.",
+  "design_brief": "Big mending-heart illustration over polka dots, rounded headline. Polka dots, heart illustration.",
+  "design_style": "get well",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=get%20well%20soon%20heart%20bandage%20card",
+  "inspiration_query": "get well soon heart bandage card",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "big mending-heart illustration over polka dots, rounded headline",
+   "typography": "Fredoka, Caveat",
+   "palette": "peach blush, raspberry",
+   "decor": "polka dots, heart illustration"
+  },
+  "palette": [
+   "#FFF1EE",
+   "#C2405E",
+   "#7A4A52"
+  ],
+  "content": {
+   "headline": "Sending hugs",
+   "message": "Wishing you a speedy recovery and lots of rest.",
+   "signature": "With love, Amna"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/bandage-heart-get-well-card.jpg",
+  "preview_url": "/templates/collection/bandage-heart-get-well-card-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "mending-heart"
+  ]
+ },
+ {
+  "id": "greeting-018",
+  "slug": "rainbow-recovery-card",
+  "title": "Rainbow Recovery Card",
+  "category": "General greeting cards",
+  "subcategory": "Get Well",
+  "site_category": "Cards",
+  "description": "Rainbow on the left, italic headline and note on the right. Rainbow and sun illustrations.",
+  "design_brief": "Rainbow on the left, italic headline and note on the right. Rainbow and sun illustrations.",
+  "design_style": "get well",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=rainbow%20get%20well%20card",
+  "inspiration_query": "rainbow get well card",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "rainbow on the left, italic headline and note on the right",
+   "typography": "Playfair Display bold italic, Lora, Caveat",
+   "palette": "cloud white, navy, rainbow",
+   "decor": "rainbow and sun illustrations"
+  },
+  "palette": [
+   "#F4F8FF",
+   "#2E4A7A",
+   "#3E5672",
+   "#E06C8A"
+  ],
+  "content": {
+   "headline": "Better days are coming",
+   "message": "Thinking of you and wishing you a quick recovery.",
+   "signature": "— your friends at work"
+  },
+  "dimensions": {
+   "width": 673,
+   "height": 480,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/rainbow-recovery-card.jpg",
+  "preview_url": "/templates/collection/rainbow-recovery-card-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "rainbow",
+   "sun"
+  ]
+ },
+ {
+  "id": "greeting-019",
+  "slug": "get-well-floral-watercolour-card",
+  "title": "Get Well Floral Watercolour Card",
+  "category": "General greeting cards",
+  "subcategory": "Get Well",
+  "site_category": "Cards",
+  "description": "Flower arc crowning a script greeting. Leaf arc with five flowers, paper grain.",
+  "design_brief": "Flower arc crowning a script greeting. Leaf arc with five flowers, paper grain.",
+  "design_style": "get well",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=watercolor%20floral%20get%20well%20soon%20card",
+  "inspiration_query": "watercolor floral get well soon card",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "flower arc crowning a script greeting",
+   "typography": "Great Vibes, Lora italic, Montserrat caps",
+   "palette": "warm paper, sage, plum, flower pinks",
+   "decor": "leaf arc with five flowers, paper grain"
+  },
+  "palette": [
+   "#F7F4EE",
+   "#8DA68A",
+   "#B5C4A7",
+   "#6F3B4A",
+   "#4F5A48"
+  ],
+  "content": {
+   "headline": "Get well soon",
+   "message": "May each day bring you a little more strength.",
+   "signature": "Fondly, Aunt Sara"
+  },
+  "dimensions": {
+   "width": 559,
+   "height": 794,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/get-well-floral-watercolour-card.jpg",
+  "preview_url": "/templates/collection/get-well-floral-watercolour-card-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "blossom",
+   "cherry-blossom",
+   "rose",
+   "tulip"
+  ]
+ },
+ {
+  "id": "greeting-020",
+  "slug": "white-lily-sympathy-card",
+  "title": "White Lily Sympathy Card",
+  "category": "General greeting cards",
+  "subcategory": "Sympathy",
+  "site_category": "Cards",
+  "description": "Single white flower and two leaves above a quiet italic line. White flower, leaves, fine divider.",
+  "design_brief": "Single white flower and two leaves above a quiet italic line. White flower, leaves, fine divider.",
+  "design_style": "sympathy",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=white%20lily%20sympathy%20card%20elegant",
+  "inspiration_query": "white lily sympathy card elegant",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "single white flower and two leaves above a quiet italic line",
+   "typography": "Cormorant Garamond italic, Lora, Montserrat caps",
+   "palette": "stone white, slate, sage",
+   "decor": "white flower, leaves, fine divider"
+  },
+  "palette": [
+   "#F4F2EE",
+   "#9AAE96",
+   "#3E4A52",
+   "#9AA6AE",
+   "#5A646C",
+   "#6A747C"
+  ],
+  "content": {
+   "headline": "With deepest sympathy",
+   "message": "Thinking of you and your family at this difficult time.",
+   "signature": "With love, the Khalil family"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/white-lily-sympathy-card.jpg",
+  "preview_url": "/templates/collection/white-lily-sympathy-card-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "blossom"
+  ]
+ },
+ {
+  "id": "greeting-021",
+  "slug": "in-loving-memory-card",
+  "title": "In Loving Memory Card",
+  "category": "General greeting cards",
+  "subcategory": "Sympathy",
+  "site_category": "Cards",
+  "description": "Candle in a fine gold ring with a soft glow, memorial line below. Ring, glow, candle illustration.",
+  "design_brief": "Candle in a fine gold ring with a soft glow, memorial line below. Ring, glow, candle illustration.",
+  "design_style": "sympathy",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=in%20loving%20memory%20card%20elegant",
+  "inspiration_query": "in loving memory card elegant",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "candle in a fine gold ring with a soft glow, memorial line below",
+   "typography": "Cormorant Garamond italic, Cinzel",
+   "palette": "charcoal, ivory, muted gold",
+   "decor": "ring, glow, candle illustration"
+  },
+  "palette": [
+   "#1E2328",
+   "#B9A27A",
+   "#E8E2D4"
+  ],
+  "content": {
+   "headline": "In loving memory",
+   "message": "Forever in our hearts.",
+   "signature": ""
+  },
+  "dimensions": {
+   "width": 559,
+   "height": 794,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/in-loving-memory-card.jpg",
+  "preview_url": "/templates/collection/in-loving-memory-card-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "candle"
+  ]
+ },
+ {
+  "id": "greeting-022",
+  "slug": "thinking-of-you-moon-card",
+  "title": "Thinking of You Moon Card",
+  "category": "General greeting cards",
+  "subcategory": "Thinking of You",
+  "site_category": "Cards",
+  "description": "Moon resting on a cloud in a starry sky, script message below. Stars, clouds, moon illustration.",
+  "design_brief": "Moon resting on a cloud in a starry sky, script message below. Stars, clouds, moon illustration.",
+  "design_style": "thinking of you",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=thinking%20of%20you%20card%20moon%20stars",
+  "inspiration_query": "thinking of you card moon stars",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "moon resting on a cloud in a starry sky, script message below",
+   "typography": "Great Vibes, Lora italic, Caveat",
+   "palette": "night indigo, moon gold, lavender",
+   "decor": "stars, clouds, moon illustration"
+  },
+  "palette": [
+   "#1D2350",
+   "#5A4A8A",
+   "#FFFFFF",
+   "#FFF1D0",
+   "#E1DCF5",
+   "#FFD98A"
+  ],
+  "content": {
+   "headline": "Thinking of you",
+   "message": "Near or far, you’re always on my mind.",
+   "signature": "— Yara"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/thinking-of-you-moon-card.jpg",
+  "preview_url": "/templates/collection/thinking-of-you-moon-card-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "crescent-moon"
+  ]
+ },
+ {
+  "id": "greeting-023",
+  "slug": "here-for-you-hands-card",
+  "title": "Here For You Hands Card",
+  "category": "General greeting cards",
+  "subcategory": "Thinking of You",
+  "site_category": "Cards",
+  "description": "Two hearts in a peach circle, italic promise below. Circle, hearts illustration.",
+  "design_brief": "Two hearts in a peach circle, italic promise below. Circle, hearts illustration.",
+  "design_style": "thinking of you",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=here%20for%20you%20support%20card",
+  "inspiration_query": "here for you support card",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "two hearts in a peach circle, italic promise below",
+   "typography": "Playfair Display italic, Lora, Caveat",
+   "palette": "cream, peach, wine, terracotta",
+   "decor": "circle, hearts illustration"
+  },
+  "palette": [
+   "#F8EDE3",
+   "#F2C9B4",
+   "#6B2E3A",
+   "#6E4A50",
+   "#B5523B"
+  ],
+  "content": {
+   "headline": "I’m here for you",
+   "message": "Whatever you need, whenever you need it.",
+   "signature": "Always, Dana"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/here-for-you-hands-card.jpg",
+  "preview_url": "/templates/collection/here-for-you-hands-card-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "two-hearts"
+  ]
+ },
+ {
+  "id": "greeting-024",
+  "slug": "miss-you-postcard",
+  "title": "Miss You Postcard",
+  "category": "General greeting cards",
+  "subcategory": "Thinking of You",
+  "site_category": "Cards",
+  "description": "Postcard back: message on the left, stamp, postmark and address lines on the right. Paper grain, divider, stamp, postmark, address rules.",
+  "design_brief": "Postcard back: message on the left, stamp, postmark and address lines on the right. Paper grain, divider, stamp, postmark, address rules.",
+  "design_style": "thinking of you",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=miss%20you%20postcard%20travel",
+  "inspiration_query": "miss you postcard travel",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "postcard back: message on the left, stamp, postmark and address lines on the right",
+   "typography": "Pacifico, Caveat",
+   "palette": "postcard cream, red, ink blue",
+   "decor": "paper grain, divider, stamp, postmark, address rules"
+  },
+  "palette": [
+   "#FBF7EE",
+   "#C9B89A",
+   "#FFFFFF",
+   "#D64545",
+   "#6E5A50",
+   "#2F2A24"
+  ],
+  "content": {
+   "headline": "Miss you!",
+   "message": "This city isn’t the same without you. Come back soon.",
+   "signature": "xo, Rami"
+  },
+  "dimensions": {
+   "width": 673,
+   "height": 480,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/miss-you-postcard.jpg",
+  "preview_url": "/templates/collection/miss-you-postcard-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "cityscape"
+  ]
+ },
+ {
+  "id": "greeting-025",
+  "slug": "happy-anniversary-gold-card",
+  "title": "Happy Anniversary Gold Card",
+  "category": "General greeting cards",
+  "subcategory": "Love",
+  "site_category": "Cards",
+  "description": "Gold anniversary year numeral over a script greeting. Gold confetti.",
+  "design_brief": "Gold anniversary year numeral over a script greeting. Gold confetti.",
+  "design_style": "love",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=happy%20anniversary%20gold%20card%20elegant",
+  "inspiration_query": "happy anniversary gold card elegant",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "gold anniversary year numeral over a script greeting",
+   "typography": "Playfair Display gold, Great Vibes, Cormorant Garamond italic",
+   "palette": "plum black, gold, champagne",
+   "decor": "gold confetti"
+  },
+  "palette": [
+   "#2A1E2E",
+   "#0E0A10",
+   "#F7E3A3",
+   "#E9C877",
+   "#8A6A2E",
+   "#B68A3A"
+  ],
+  "content": {
+   "headline": "Happy Anniversary",
+   "message": "Ten years, one home, endless love.",
+   "signature": "Forever yours, Omar"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/happy-anniversary-gold-card.jpg",
+  "preview_url": "/templates/collection/happy-anniversary-gold-card-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "greeting-026",
+  "slug": "love-you-more-hearts-card",
+  "title": "Love You More Hearts Card",
+  "category": "General greeting cards",
+  "subcategory": "Love",
+  "site_category": "Cards",
+  "description": "White card floating on a field of hearts. Scattered hearts, card shadow.",
+  "design_brief": "White card floating on a field of hearts. Scattered hearts, card shadow.",
+  "design_style": "love",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=love%20you%20more%20cute%20card%20hearts",
+  "inspiration_query": "love you more cute card hearts",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "white card floating on a field of hearts",
+   "typography": "Pacifico, Fredoka, Caveat",
+   "palette": "candy pink, cherry red, white",
+   "decor": "scattered hearts, card shadow"
+  },
+  "palette": [
+   "#FFE3E8",
+   "#FF8FA3",
+   "#FF6B81",
+   "#FFB3C1",
+   "#FFFFFF",
+   "#E0345A"
+  ],
+  "content": {
+   "headline": "Love you more",
+   "message": "than coffee, sunsets and the last slice of cake.",
+   "signature": "— me"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/love-you-more-hearts-card.jpg",
+  "preview_url": "/templates/collection/love-you-more-hearts-card-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "greeting-027",
+  "slug": "valentine-red-envelope-card",
+  "title": "Valentine Red Envelope Card",
+  "category": "General greeting cards",
+  "subcategory": "Love",
+  "site_category": "Cards",
+  "description": "Envelope with a heart seal on red dots, script line below. Dot pattern, envelope with flap and heart seal.",
+  "design_brief": "Envelope with a heart seal on red dots, script line below. Dot pattern, envelope with flap and heart seal.",
+  "design_style": "love",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=valentine%20card%20red%20envelope",
+  "inspiration_query": "valentine card red envelope",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "envelope with a heart seal on red dots, script line below",
+   "typography": "Great Vibes, Lora italic, Montserrat caps",
+   "palette": "valentine red, blush paper, white",
+   "decor": "dot pattern, envelope with flap and heart seal"
+  },
+  "palette": [
+   "#B71C3C",
+   "#FBEDE5",
+   "#F3D9CC",
+   "#D32F4F",
+   "#FFFFFF",
+   "#FFE6EA"
+  ],
+  "content": {
+   "headline": "Be mine",
+   "message": "Every day with you is my favourite day.",
+   "signature": "Love, Hamza"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/valentine-red-envelope-card.jpg",
+  "preview_url": "/templates/collection/valentine-red-envelope-card-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "greeting-028",
+  "slug": "anniversary-photo-post",
+  "title": "Anniversary Photo Post",
+  "category": "General greeting cards",
+  "subcategory": "Love",
+  "site_category": "Cards",
+  "description": "Rounded couple photo with an italic year line and a heart sticker. Rounded frame, heart.",
+  "design_brief": "Rounded couple photo with an italic year line and a heart sticker. Rounded frame, heart.",
+  "design_style": "love",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=anniversary%20photo%20instagram%20post%20couple",
+  "inspiration_query": "anniversary photo instagram post couple",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "rounded couple photo with an italic year line and a heart sticker",
+   "typography": "Playfair Display italic, Lora italic",
+   "palette": "linen, charcoal, red heart",
+   "decor": "rounded frame, heart"
+  },
+  "palette": [
+   "#F3EDE4",
+   "#2E2A26",
+   "#5E5248",
+   "#E0345A"
+  ],
+  "content": {
+   "headline": "5 years",
+   "message": "of us. Happy anniversary, my love.",
+   "signature": ""
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/anniversary-photo-post.jpg",
+  "preview_url": "/templates/collection/anniversary-photo-post-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "greeting-029",
+  "slug": "you-and-me-minimal-card",
+  "title": "You and Me Minimal Card",
+  "category": "General greeting cards",
+  "subcategory": "Love",
+  "site_category": "Cards",
+  "description": "Two overlapping rings with a heart where they meet. Two line circles, heart.",
+  "design_brief": "Two overlapping rings with a heart where they meet. Two line circles, heart.",
+  "design_style": "love",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=minimal%20you%20and%20me%20love%20card",
+  "inspiration_query": "minimal you and me love card",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "two overlapping rings with a heart where they meet",
+   "typography": "Playfair Display italic, Montserrat",
+   "palette": "oat, ink, terracotta",
+   "decor": "two line circles, heart"
+  },
+  "palette": [
+   "#F5F0EA",
+   "#2B2724",
+   "#C9886E",
+   "#5A534C"
+  ],
+  "content": {
+   "headline": "you & me",
+   "message": "my favourite place in the world.",
+   "signature": ""
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/you-and-me-minimal-card.jpg",
+  "preview_url": "/templates/collection/you-and-me-minimal-card-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "greeting-030",
+  "slug": "paper-plane-long-distance-card",
+  "title": "Paper Plane Long Distance Card",
+  "category": "General greeting cards",
+  "subcategory": "Love",
+  "site_category": "Cards",
+  "description": "Paper plane flying a dashed route between two hearts. Dashed flight path, vector paper plane, hearts.",
+  "design_brief": "Paper plane flying a dashed route between two hearts. Dashed flight path, vector paper plane, hearts.",
+  "design_style": "love",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=long%20distance%20love%20card%20paper%20plane",
+  "inspiration_query": "long distance love card paper plane",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "paper plane flying a dashed route between two hearts",
+   "typography": "Playfair Display italic, Lora italic, Caveat",
+   "palette": "sky mist, navy, red hearts",
+   "decor": "dashed flight path, vector paper plane, hearts"
+  },
+  "palette": [
+   "#EAF2FB",
+   "#5B7DB1",
+   "#FFFFFF",
+   "#D6E4F5",
+   "#E0345A",
+   "#1F3B5C"
+  ],
+  "content": {
+   "headline": "Distance means so little",
+   "message": "when someone means so much.",
+   "signature": "Counting the days — Layla"
+  },
+  "dimensions": {
+   "width": 673,
+   "height": 480,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/paper-plane-long-distance-card.jpg",
+  "preview_url": "/templates/collection/paper-plane-long-distance-card-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "greeting-031",
+  "slug": "couple-anniversary-story",
+  "title": "Couple Anniversary Story",
+  "category": "General greeting cards",
+  "subcategory": "Love",
+  "site_category": "Cards",
+  "description": "Full-bleed couple photo with script greeting over a dark fade. Shade, heart.",
+  "design_brief": "Full-bleed couple photo with script greeting over a dark fade. Shade, heart.",
+  "design_style": "love",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=anniversary%20instagram%20story%20photo",
+  "inspiration_query": "anniversary instagram story photo",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "full-bleed couple photo with script greeting over a dark fade",
+   "typography": "Great Vibes, Cormorant Garamond italic",
+   "palette": "photo tones, white, heart red",
+   "decor": "shade, heart"
+  },
+  "palette": [
+   "#14110F",
+   "#FFFFFF",
+   "#F3EDE4",
+   "#E0345A"
+  ],
+  "content": {
+   "headline": "Happy anniversary",
+   "message": "to my best friend and favourite adventure.",
+   "signature": ""
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1920,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/couple-anniversary-story.jpg",
+  "preview_url": "/templates/collection/couple-anniversary-story-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "greeting-032",
+  "slug": "galentine-friendship-card",
+  "title": "Galentine Friendship Card",
+  "category": "General greeting cards",
+  "subcategory": "Love",
+  "site_category": "Cards",
+  "description": "Round white badge on candy stripes with glam illustrations in the corners. Stripes, badge, lipstick / cocktail / heel / sparkles.",
+  "design_brief": "Round white badge on candy stripes with glam illustrations in the corners. Stripes, badge, lipstick / cocktail / heel / sparkles.",
+  "design_style": "love",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=galentines%20day%20card%20pink%20cute",
+  "inspiration_query": "galentines day card pink cute",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "round white badge on candy stripes with glam illustrations in the corners",
+   "typography": "Pacifico, Fredoka, Caveat",
+   "palette": "candy pink, white, magenta",
+   "decor": "stripes, badge, lipstick / cocktail / heel / sparkles"
+  },
+  "palette": [
+   "#FFD6E5",
+   "#FFFFFF",
+   "#E2337A",
+   "#8A2E5A"
+  ],
+  "content": {
+   "headline": "Happy Galentine’s!",
+   "message": "Cheers to the women who make life sparkle.",
+   "signature": "— your girls"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/galentine-friendship-card.jpg",
+  "preview_url": "/templates/collection/galentine-friendship-card-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "cocktail-glass",
+   "high-heeled-shoe",
+   "lipstick",
+   "sparkles"
+  ]
+ },
+ {
+  "id": "greeting-033",
+  "slug": "best-friends-forever-card",
+  "title": "Best Friends Forever Card",
+  "category": "General greeting cards",
+  "subcategory": "Friendship",
+  "site_category": "Cards",
+  "description": "Retro offset-shadow headline under a pair of hearts. Hearts illustration, dot border.",
+  "design_brief": "Retro offset-shadow headline under a pair of hearts. Hearts illustration, dot border.",
+  "design_style": "friendship",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=best%20friends%20forever%20card%20cute",
+  "inspiration_query": "best friends forever card cute",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "retro offset-shadow headline under a pair of hearts",
+   "typography": "Righteous with offset shadow, Fredoka, Caveat",
+   "palette": "cream, tangerine, ocean blue",
+   "decor": "hearts illustration, dot border"
+  },
+  "palette": [
+   "#FFF3D6",
+   "#E2572A",
+   "#2A3A4E",
+   "#2A6F97"
+  ],
+  "content": {
+   "headline": "Friends forever",
+   "message": "Through every chapter, you’re my favourite character.",
+   "signature": "— Sara"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/best-friends-forever-card.jpg",
+  "preview_url": "/templates/collection/best-friends-forever-card-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "two-hearts"
+  ]
+ },
+ {
+  "id": "greeting-034",
+  "slug": "just-saying-hi-card",
+  "title": "Just Saying Hi Card",
+  "category": "General greeting cards",
+  "subcategory": "Friendship",
+  "site_category": "Cards",
+  "description": "Big speech bubble with playful shapes around it. Speech bubble, circles, triangle.",
+  "design_brief": "Big speech bubble with playful shapes around it. Speech bubble, circles, triangle.",
+  "design_style": "friendship",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=just%20saying%20hi%20card%20colorful",
+  "inspiration_query": "just saying hi card colorful",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "big speech bubble with playful shapes around it",
+   "typography": "Luckiest Guy, Fredoka, Caveat",
+   "palette": "sky cyan, lemon, pink, white",
+   "decor": "speech bubble, circles, triangle"
+  },
+  "palette": [
+   "#5CC8E8",
+   "#FFE14D",
+   "#FF8FA3",
+   "#FFFFFF",
+   "#2A2A2A"
+  ],
+  "content": {
+   "headline": "Hi there!",
+   "message": "No reason, just thinking of you and smiling.",
+   "signature": "— Lina"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/just-saying-hi-card.jpg",
+  "preview_url": "/templates/collection/just-saying-hi-card-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "greeting-035",
+  "slug": "you-are-awesome-retro-card",
+  "title": "You Are Awesome Retro Card",
+  "category": "General greeting cards",
+  "subcategory": "Friendship",
+  "site_category": "Cards",
+  "description": "Retro rainbow rising from the bottom, chunky caps headline above. Four-band rainbow, sparkles.",
+  "design_brief": "Retro rainbow rising from the bottom, chunky caps headline above. Four-band rainbow, sparkles.",
+  "design_style": "friendship",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=you%20are%20awesome%20retro%20card",
+  "inspiration_query": "you are awesome retro card",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "retro rainbow rising from the bottom, chunky caps headline above",
+   "typography": "Righteous, Fredoka",
+   "palette": "aubergine, sunset bands",
+   "decor": "four-band rainbow, sparkles"
+  },
+  "palette": [
+   "#2B1B3D",
+   "#FBD35E",
+   "#F59E4C",
+   "#E0694F",
+   "#B4485C",
+   "#F3D8C2"
+  ],
+  "content": {
+   "headline": "You are awesome",
+   "message": "Just a little reminder in case you forgot.",
+   "signature": ""
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/you-are-awesome-retro-card.jpg",
+  "preview_url": "/templates/collection/you-are-awesome-retro-card-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "greeting-036",
+  "slug": "coffee-date-invite-card",
+  "title": "Coffee Date Invite Card",
+  "category": "General greeting cards",
+  "subcategory": "Friendship",
+  "site_category": "Cards",
+  "description": "Café table with coffee and croissant on the left, invitation on the right. Table band, coffee and croissant illustrations.",
+  "design_brief": "Café table with coffee and croissant on the left, invitation on the right. Table band, coffee and croissant illustrations.",
+  "design_style": "friendship",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=coffee%20date%20card%20friends",
+  "inspiration_query": "coffee date card friends",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "café table with coffee and croissant on the left, invitation on the right",
+   "typography": "Pacifico, Lora italic, Caveat",
+   "palette": "latte, walnut table, espresso",
+   "decor": "table band, coffee and croissant illustrations"
+  },
+  "palette": [
+   "#F3E7DA",
+   "#C99D7A",
+   "#6B3A1E",
+   "#5A3424",
+   "#FFF6EE"
+  ],
+  "content": {
+   "headline": "Coffee soon?",
+   "message": "It’s been too long. My treat this time!",
+   "signature": "— Huda"
+  },
+  "dimensions": {
+   "width": 673,
+   "height": 480,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/coffee-date-invite-card.jpg",
+  "preview_url": "/templates/collection/coffee-date-invite-card-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "croissant",
+   "hot-beverage"
+  ]
+ },
+ {
+  "id": "greeting-037",
+  "slug": "friendship-quote-post",
+  "title": "Friendship Quote Post",
+  "category": "General greeting cards",
+  "subcategory": "Friendship",
+  "site_category": "Cards",
+  "description": "Editorial quote with an oversized quotation mark. Quote mark, rule.",
+  "design_brief": "Editorial quote with an oversized quotation mark. Quote mark, rule.",
+  "design_style": "friendship",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=friendship%20quote%20instagram%20post",
+  "inspiration_query": "friendship quote instagram post",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "editorial quote with an oversized quotation mark",
+   "typography": "Playfair Display semibold italic, Lora",
+   "palette": "linen, cocoa, apricot",
+   "decor": "quote mark, rule"
+  },
+  "palette": [
+   "#F6EFE7",
+   "#E3A07A",
+   "#3A2A20",
+   "#6E4A38"
+  ],
+  "content": {
+   "headline": "A friend is someone who knows the song in your heart",
+   "message": "and sings it back when you forget the words.",
+   "signature": ""
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/friendship-quote-post.jpg",
+  "preview_url": "/templates/collection/friendship-quote-post-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "greeting-038",
+  "slug": "good-luck-four-leaf-card",
+  "title": "Good Luck Four Leaf Card",
+  "category": "General greeting cards",
+  "subcategory": "Good Luck",
+  "site_category": "Cards",
+  "description": "Big lucky clover above a handwritten wish, faint clovers scattered. Clover illustrations.",
+  "design_brief": "Big lucky clover above a handwritten wish, faint clovers scattered. Clover illustrations.",
+  "design_style": "good luck",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=good%20luck%20card%20clover",
+  "inspiration_query": "good luck card clover",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "big lucky clover above a handwritten wish, faint clovers scattered",
+   "typography": "Pacifico, Fredoka, Caveat",
+   "palette": "mint, clover green",
+   "decor": "clover illustrations"
+  },
+  "palette": [
+   "#E6F6E6",
+   "#C8EBC8",
+   "#2E7D32",
+   "#2E5A33"
+  ],
+  "content": {
+   "headline": "Good luck!",
+   "message": "You’ve got this — we’re cheering for you.",
+   "signature": "— everyone at Studio 9"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/good-luck-four-leaf-card.jpg",
+  "preview_url": "/templates/collection/good-luck-four-leaf-card-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "four-leaf-clover"
+  ]
+ },
+ {
+  "id": "greeting-039",
+  "slug": "exam-good-luck-card",
+  "title": "Exam Good Luck Card",
+  "category": "General greeting cards",
+  "subcategory": "Good Luck",
+  "site_category": "Cards",
+  "description": "Lined notebook page with a highlighted handwritten pep talk. Ruled lines, margin line, books and pencil.",
+  "design_brief": "Lined notebook page with a highlighted handwritten pep talk. Ruled lines, margin line, books and pencil.",
+  "design_style": "good luck",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=exam%20good%20luck%20card%20student",
+  "inspiration_query": "exam good luck card student",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "lined notebook page with a highlighted handwritten pep talk",
+   "typography": "Caveat",
+   "palette": "white paper, blue rules, ink navy, highlighter yellow",
+   "decor": "ruled lines, margin line, books and pencil"
+  },
+  "palette": [
+   "#FFFFFF",
+   "#D6E6F7",
+   "#F3A5B5",
+   "#2E3A59",
+   "#FFE14D",
+   "#E0457B"
+  ],
+  "content": {
+   "headline": "You’ve got this!",
+   "message": "Good luck with your exams. Believe in yourself.",
+   "signature": "Love, Dad"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/exam-good-luck-card.jpg",
+  "preview_url": "/templates/collection/exam-good-luck-card-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "books",
+   "pencil"
+  ]
+ },
+ {
+  "id": "greeting-040",
+  "slug": "farewell-well-miss-you-card",
+  "title": "Farewell We’ll Miss You Card",
+  "category": "General greeting cards",
+  "subcategory": "Farewell",
+  "site_category": "Cards",
+  "description": "Suitcase and confetti above the farewell, with a dashed space for signatures. Confetti, luggage, signature box.",
+  "design_brief": "Suitcase and confetti above the farewell, with a dashed space for signatures. Confetti, luggage, signature box.",
+  "design_style": "farewell",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=farewell%20card%20colleague%20we%20will%20miss%20you",
+  "inspiration_query": "farewell card colleague we will miss you",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "suitcase and confetti above the farewell, with a dashed space for signatures",
+   "typography": "Playfair Display italic, Lora, Caveat, Montserrat caps",
+   "palette": "navy, white, confetti brights",
+   "decor": "confetti, luggage, signature box"
+  },
+  "palette": [
+   "#1F2A44",
+   "#FFD54F",
+   "#FFFFFF",
+   "#4FC3F7",
+   "#FF8A65",
+   "#C9D3E0"
+  ],
+  "content": {
+   "headline": "We’ll miss you",
+   "message": "Thank you for five brilliant years. The office won’t be the same.",
+   "signature": "Good luck from all of us"
+  },
+  "dimensions": {
+   "width": 559,
+   "height": 794,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/farewell-well-miss-you-card.jpg",
+  "preview_url": "/templates/collection/farewell-well-miss-you-card-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "luggage"
+  ]
+ },
+ {
+  "id": "greeting-041",
+  "slug": "bon-voyage-travel-card",
+  "title": "Bon Voyage Travel Card",
+  "category": "General greeting cards",
+  "subcategory": "Farewell",
+  "site_category": "Cards",
+  "description": "Seaside scene with a sailboat and plane, travel wish in the sky. Two waves, sailboat, plane, map.",
+  "design_brief": "Seaside scene with a sailboat and plane, travel wish in the sky. Two waves, sailboat, plane, map.",
+  "design_style": "farewell",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=bon%20voyage%20travel%20card",
+  "inspiration_query": "bon voyage travel card",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "seaside scene with a sailboat and plane, travel wish in the sky",
+   "typography": "Pacifico, Lora italic, Caveat",
+   "palette": "sky blue, ocean blues, navy",
+   "decor": "two waves, sailboat, plane, map"
+  },
+  "palette": [
+   "#8ED1F5",
+   "#D6F0FB",
+   "#2F80C0",
+   "#1F5E99",
+   "#0E3A66",
+   "#1F4E79"
+  ],
+  "content": {
+   "headline": "Bon voyage!",
+   "message": "Safe travels and endless adventures.",
+   "signature": "— the gang"
+  },
+  "dimensions": {
+   "width": 673,
+   "height": 480,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/bon-voyage-travel-card.jpg",
+  "preview_url": "/templates/collection/bon-voyage-travel-card-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "airplane",
+   "sailboat",
+   "world-map"
+  ]
+ },
+ {
+  "id": "greeting-042",
+  "slug": "sun-and-sand-retirement-card",
+  "title": "Sun and Sand Retirement Card",
+  "category": "General greeting cards",
+  "subcategory": "Farewell",
+  "site_category": "Cards",
+  "description": "Beach illustration on sand with a two-line script headline above. Beach umbrella and sunglasses illustrations.",
+  "design_brief": "Beach illustration on sand with a two-line script headline above. Beach umbrella and sunglasses illustrations.",
+  "design_style": "farewell",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=happy%20retirement%20card",
+  "inspiration_query": "happy retirement card",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "beach illustration on sand with a two-line script headline above",
+   "typography": "Pacifico, Fredoka, Montserrat caps",
+   "palette": "sand, sunset orange, cocoa",
+   "decor": "beach umbrella and sunglasses illustrations"
+  },
+  "palette": [
+   "#FFF4E0",
+   "#F2C66D",
+   "#C04A1E",
+   "#6B3A1E"
+  ],
+  "content": {
+   "headline": "Happy retirement!",
+   "message": "Here’s to sleeping in, long lunches and new adventures.",
+   "signature": "Your friends at Al Noor Bank"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/sun-and-sand-retirement-card.jpg",
+  "preview_url": "/templates/collection/sun-and-sand-retirement-card-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "beach-with-umbrella",
+   "sunglasses"
+  ]
+ },
+ {
+  "id": "greeting-043",
+  "slug": "new-home-keys-card",
+  "title": "New Home Keys Card",
+  "category": "General greeting cards",
+  "subcategory": "New Home",
+  "site_category": "Cards",
+  "description": "House and key illustrations above an italic welcome. House and key illustrations.",
+  "design_brief": "House and key illustrations above an italic welcome. House and key illustrations.",
+  "design_style": "new home",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=new%20home%20congratulations%20card%20keys",
+  "inspiration_query": "new home congratulations card keys",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "house and key illustrations above an italic welcome",
+   "typography": "Playfair Display bold italic, Lora, Montserrat caps",
+   "palette": "mint, forest, cream",
+   "decor": "house and key illustrations"
+  },
+  "palette": [
+   "#E8F1EC",
+   "#244A3A",
+   "#3E5A4E"
+  ],
+  "content": {
+   "headline": "Welcome home!",
+   "message": "Congratulations on your new home — may it be full of love and laughter.",
+   "signature": "— the Sayed family"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/new-home-keys-card.jpg",
+  "preview_url": "/templates/collection/new-home-keys-card-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "house-with-garden",
+   "key"
+  ]
+ },
+ {
+  "id": "greeting-044",
+  "slug": "housewarming-house-card",
+  "title": "Housewarming House Card",
+  "category": "General greeting cards",
+  "subcategory": "New Home",
+  "site_category": "Cards",
+  "description": "Flat vector house on a lawn with the greeting beside it. Vector house with heart, windows and door.",
+  "design_brief": "Flat vector house on a lawn with the greeting beside it. Vector house with heart, windows and door.",
+  "design_style": "new home",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=housewarming%20card%20illustrated%20house",
+  "inspiration_query": "housewarming card illustrated house",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "flat vector house on a lawn with the greeting beside it",
+   "typography": "Pacifico, Lora italic, Caveat",
+   "palette": "peach house, brick roof, grass green",
+   "decor": "vector house with heart, windows and door"
+  },
+  "palette": [
+   "#FBEFE3",
+   "#F2A65A",
+   "#C0392B",
+   "#6B3A1E",
+   "#FFF4C2",
+   "#FFFFFF"
+  ],
+  "content": {
+   "headline": "Home sweet home",
+   "message": "Wishing you happy memories in your new place.",
+   "signature": "Love, Amal & Faris"
+  },
+  "dimensions": {
+   "width": 673,
+   "height": 480,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/housewarming-house-card.jpg",
+  "preview_url": "/templates/collection/housewarming-house-card-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "greeting-045",
+  "slug": "weve-moved-announcement-post",
+  "title": "We’ve Moved Announcement Post",
+  "category": "General greeting cards",
+  "subcategory": "New Home",
+  "site_category": "Cards",
+  "description": "Old house to new house along a dashed path, bold announcement and address pill. Dashed route, two house illustrations, address pill.",
+  "design_brief": "Old house to new house along a dashed path, bold announcement and address pill. Dashed route, two house illustrations, address pill.",
+  "design_style": "new home",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=we%27ve%20moved%20announcement%20post",
+  "inspiration_query": "we've moved announcement post",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "old house to new house along a dashed path, bold announcement and address pill",
+   "typography": "Luckiest Guy, Fredoka, Caveat",
+   "palette": "sunflower yellow, black, white",
+   "decor": "dashed route, two house illustrations, address pill"
+  },
+  "palette": [
+   "#FFDE59",
+   "#111111",
+   "#FFFFFF"
+  ],
+  "content": {
+   "headline": "We’ve moved!",
+   "message": "New address: Villa 14, Al Barsha 2, Dubai",
+   "signature": "Come say hi — the kettle’s on"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/weve-moved-announcement-post.jpg",
+  "preview_url": "/templates/collection/weve-moved-announcement-post-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "house",
+   "house-with-garden"
+  ]
+ },
+ {
+  "id": "greeting-046",
+  "slug": "sending-sunshine-card",
+  "title": "Sending Sunshine Card",
+  "category": "General greeting cards",
+  "subcategory": "Just Because",
+  "site_category": "Cards",
+  "description": "Sun with a crown of rays, cheerful script line below. Rays, sun illustration.",
+  "design_brief": "Sun with a crown of rays, cheerful script line below. Rays, sun illustration.",
+  "design_style": "just because",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=sending%20sunshine%20card%20cute",
+  "inspiration_query": "sending sunshine card cute",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "sun with a crown of rays, cheerful script line below",
+   "typography": "Pacifico, Fredoka, Caveat",
+   "palette": "buttercream, sunshine yellow, honey brown",
+   "decor": "rays, sun illustration"
+  },
+  "palette": [
+   "#FFF6E0",
+   "#FFD45C",
+   "#FFC21A",
+   "#C77700",
+   "#8A5A00"
+  ],
+  "content": {
+   "headline": "Sending sunshine",
+   "message": "A little ray of light for your day.",
+   "signature": "— Mira"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/sending-sunshine-card.jpg",
+  "preview_url": "/templates/collection/sending-sunshine-card-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "sun"
+  ]
+ },
+ {
+  "id": "greeting-047",
+  "slug": "self-care-reminder-card",
+  "title": "Self Care Reminder Card",
+  "category": "General greeting cards",
+  "subcategory": "Just Because",
+  "site_category": "Cards",
+  "description": "Potted plant and soft blobs above a gentle two-line reminder. Organic blobs, plant illustration.",
+  "design_brief": "Potted plant and soft blobs above a gentle two-line reminder. Organic blobs, plant illustration.",
+  "design_style": "just because",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=self%20care%20reminder%20card",
+  "inspiration_query": "self care reminder card",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "potted plant and soft blobs above a gentle two-line reminder",
+   "typography": "Playfair Display italic, Montserrat",
+   "palette": "lavender, blush, mint, indigo",
+   "decor": "organic blobs, plant illustration"
+  },
+  "palette": [
+   "#E9E4F5",
+   "#D7CCF2",
+   "#F6D3E0",
+   "#CDE7DC",
+   "#3E2E66",
+   "#5A4A80"
+  ],
+  "content": {
+   "headline": "Be kind to yourself",
+   "message": "Rest is productive. You are doing enough.",
+   "signature": ""
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/self-care-reminder-card.jpg",
+  "preview_url": "/templates/collection/self-care-reminder-card-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "potted-plant"
+  ]
+ },
+ {
+  "id": "greeting-048",
+  "slug": "proud-of-you-card",
+  "title": "Proud of You Card",
+  "category": "General greeting cards",
+  "subcategory": "Just Because",
+  "site_category": "Cards",
+  "description": "Glowing star with sparkles above a gold italic headline. Sparkles, star illustration.",
+  "design_brief": "Glowing star with sparkles above a gold italic headline. Sparkles, star illustration.",
+  "design_style": "just because",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=proud%20of%20you%20card",
+  "inspiration_query": "proud of you card",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "glowing star with sparkles above a gold italic headline",
+   "typography": "Playfair Display bold italic, Lora italic, Caveat",
+   "palette": "midnight blue, star gold",
+   "decor": "sparkles, star illustration"
+  },
+  "palette": [
+   "#1E3A5F",
+   "#FFE27A",
+   "#D6E2F0",
+   "#FFFFFF"
+  ],
+  "content": {
+   "headline": "So proud of you",
+   "message": "Look how far you’ve come.",
+   "signature": "Love, Mum"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/proud-of-you-card.jpg",
+  "preview_url": "/templates/collection/proud-of-you-card-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "glowing-star"
+  ]
+ },
+ {
+  "id": "greeting-049",
+  "slug": "happy-weekend-post",
+  "title": "Happy Weekend Post",
+  "category": "General greeting cards",
+  "subcategory": "Just Because",
+  "site_category": "Cards",
+  "description": "Split: text on latte paper left, coffee-bean photo right. Photo half, rule, coffee illustration.",
+  "design_brief": "Split: text on latte paper left, coffee-bean photo right. Photo half, rule, coffee illustration.",
+  "design_style": "just because",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=happy%20weekend%20instagram%20post",
+  "inspiration_query": "happy weekend instagram post",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "split: text on latte paper left, coffee-bean photo right",
+   "typography": "Playfair Display italic, Lora",
+   "palette": "latte, espresso, terracotta",
+   "decor": "photo half, rule, coffee illustration"
+  },
+  "palette": [
+   "#F4E6D8",
+   "#3A2418",
+   "#B5523B",
+   "#5A3424"
+  ],
+  "content": {
+   "headline": "Happy weekend",
+   "message": "Slow mornings, good coffee, no alarms.",
+   "signature": ""
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/happy-weekend-post.jpg",
+  "preview_url": "/templates/collection/happy-weekend-post-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "hot-beverage"
+  ]
+ },
+ {
+  "id": "greeting-050",
+  "slug": "hello-spring-card",
+  "title": "Hello Spring Card",
+  "category": "General greeting cards",
+  "subcategory": "Just Because",
+  "site_category": "Cards",
+  "description": "Row of spring flowers along the foot, butterfly and bee in the sky. Nine flower illustrations, butterfly, bee.",
+  "design_brief": "Row of spring flowers along the foot, butterfly and bee in the sky. Nine flower illustrations, butterfly, bee.",
+  "design_style": "just because",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=hello%20spring%20card%20flowers",
+  "inspiration_query": "hello spring card flowers",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "row of spring flowers along the foot, butterfly and bee in the sky",
+   "typography": "Pacifico, Lora italic, Caveat",
+   "palette": "spring green, petal pinks, white",
+   "decor": "nine flower illustrations, butterfly, bee"
+  },
+  "palette": [
+   "#F1F8EC",
+   "#3E7A3A",
+   "#4E6B4A",
+   "#E06C8A"
+  ],
+  "content": {
+   "headline": "Hello, spring!",
+   "message": "Fresh starts and blooming hearts.",
+   "signature": "— Noor"
+  },
+  "dimensions": {
+   "width": 673,
+   "height": 480,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/hello-spring-card.jpg",
+  "preview_url": "/templates/collection/hello-spring-card-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "blossom",
+   "butterfly",
+   "cherry-blossom",
+   "honeybee",
+   "tulip"
+  ]
+ }
+]

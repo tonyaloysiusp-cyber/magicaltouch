@@ -87,7 +87,7 @@ def details_block(d, x, y, w, parts, family, size, color, lh=1.55, upper=False, 
     return d.text(x, y, w, "\n".join(parts), family, size, color, align="center", lh=lh, upper=upper, spacing=spacing, weight=weight)
 
 
-def floral_corner(d, x, y, s, flip=1, flipy=1, flowers=("rose", "white-flower", "blossom"), leaves=("#8DA68A", "#B5C4A7")):
+def floral_corner(d, x, y, s, flip=1, flipy=1, flowers=("rose", "blossom", "blossom"), leaves=("#8DA68A", "#B5C4A7")):
     for k in range(7):
         ang = (-15 + k * 17) if flip > 0 else (195 - k * 17)
         if flipy < 0:
@@ -148,7 +148,7 @@ def blush_peony(d, c):
     W, H = d.W, d.H
     d.bg("#FDF7F4")
     d.texture("paper", 0.4)
-    floral_corner(d, 0, 0, W * 0.32, flowers=("rose", "cherry-blossom", "white-flower"))
+    floral_corner(d, 0, 0, W * 0.32, flowers=("rose", "cherry-blossom", "blossom"))
     floral_corner(d, W, H, W * 0.24, flip=-1, flipy=-1, flowers=("cherry-blossom", "rose", "blossom"))
     p = lines(c["message"])
     d.text(0, H * 0.25, W, "together with their families", "Lora", W * 0.03, "#8A6B6B", italic=True, align="center")
@@ -190,7 +190,7 @@ def emerald_arch(d, c):
     arch = [["M", ax, ay + ah], ["L", ax, ay + aw / 2], ["C", ax, ay + aw * 0.22, ax + aw * 0.22, ay, W / 2, ay], ["C", ax + aw * 0.78, ay, ax + aw, ay + aw * 0.22, ax + aw, ay + aw / 2], ["L", ax + aw, ay + ah], ["Z"]]
     d.path(arch, fill="", stroke=metal(aw, ah), sw=2.4, name="Gold arch")
     d.path(transform_path(arch, 0.94, W * 0.03, H * 0.035), fill="", stroke="#C9A45A", sw=0.8)
-    d.art("white-flower", W / 2, ay + 4, W * 0.12)
+    d.art("blossom", W / 2, ay + 4, W * 0.12)
     d.text(0, ay + aw * 0.3, W, "you are invited to the wedding of", "Cormorant Garamond", W * 0.034, "#E8E2CF", italic=True, align="center")
     t = couple(d, ay + aw * 0.38, "Noor & Faisal", 80, "#E9C877")
     text_metal(d, t)
@@ -821,7 +821,7 @@ def elegant_menu(d, c):
     d.bg("#FBF8F1")
     d.texture("paper", 0.45)
     d.frame_border(W * 0.06, "#B9A27A", 0.8, double=6)
-    d.art("white-flower", W / 2, H * 0.08, W * 0.18)
+    d.art("blossom", W / 2, H * 0.08, W * 0.18)
     s = d.fit("Dinner Menu", W * 0.8, "Great Vibes", 70)
     d.text(0, H * 0.13, W, "Dinner Menu", "Great Vibes", s, "#2F2A24", align="center")
     labels = ["TO START", "MAIN", "DESSERT"]
@@ -909,7 +909,7 @@ def place_card(d, c):
     d.bg("#FBF8F1")
     d.line(-d.bleed, H * 0.5, W + d.bleed, H * 0.5, "#E3D8C4", 0.8, dash=[4, 6])
     d.text(0, H * 0.06, W, "fold here", "Montserrat", W * 0.014, "#C8BCA8", weight=500, align="center", spacing=200, upper=True)
-    d.art("white-flower", W * 0.12, H * 0.66, W * 0.1)
+    d.art("blossom", W * 0.12, H * 0.66, W * 0.1)
     d.art("rose", W * 0.88, H * 0.66, W * 0.1)
     p = lines(c["message"])
     s = d.fit(p[0], W * 0.66, "Great Vibes", 60)
@@ -942,7 +942,7 @@ def thank_you_botanical(d, c):
     for i in range(30):
         a = math.pi * (0.15 + 0.7 * i / 29) + math.pi
         d.leaf(cx + R * math.cos(a), cy + R * math.sin(a) + R * 0.2, 34, 10, math.degrees(a) + 90 + (35 if i % 2 else -35), ["#6E8B5B", "#8FA97A"][i % 2])
-    d.art("white-flower", cx - R * 0.95, cy + R * 0.25, W * 0.12)
+    d.art("blossom", cx - R * 0.95, cy + R * 0.25, W * 0.12)
     d.art("blossom", cx + R * 0.95, cy + R * 0.25, W * 0.1)
     s = d.fit("Thank You", W * 0.6, "Great Vibes", 120)
     d.text(0, cy - s * 0.4, W, "Thank You", "Great Vibes", s, "#3D5A47", align="center")
@@ -997,8 +997,8 @@ def welcome_sign(d, c):
     W, H = d.W, d.H
     d.bg("#FDF9F5")
     d.texture("paper", 0.4)
-    floral_corner(d, 0, 0, W * 0.42, flowers=("rose", "white-flower", "cherry-blossom"))
-    floral_corner(d, W, H, W * 0.42, flip=-1, flipy=-1, flowers=("white-flower", "rose", "blossom"))
+    floral_corner(d, 0, 0, W * 0.42, flowers=("rose", "blossom", "cherry-blossom"))
+    floral_corner(d, W, H, W * 0.42, flip=-1, flipy=-1, flowers=("blossom", "rose", "blossom"))
     s = d.fit("Welcome", W * 0.74, "Great Vibes", 160)
     d.text(0, H * 0.3, W, "Welcome", "Great Vibes", s, "#9C4F5E", align="center")
     d.text(W * 0.12, H * 0.3 + s * 1.2, W * 0.76, c["message"].replace("Layla & Omar", "").strip(), "Cinzel", W * 0.032, "#4E3A3A", weight=600, align="center", spacing=200, upper=True)
