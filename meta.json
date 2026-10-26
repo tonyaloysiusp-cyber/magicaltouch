@@ -1,0 +1,104 @@
+{
+ "engagement": {
+  "id": "a42fff96-958e-441f-8bef-03b7fff6f832",
+  "title": "Engagement Ring",
+  "creator": "Matt Bango",
+  "creator_url": "https://mattbango.photo",
+  "license": "cc0",
+  "license_version": "1.0",
+  "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "foreign_landing_url": "https://stocksnap.io/photo/engagement-ring-6OBGTOXRDW",
+  "source": "stocksnap",
+  "provider": "stocksnap",
+  "url": "https://cdn.stocksnap.io/img-thumbs/960w/6OBGTOXRDW.jpg",
+  "orig": [
+   960,
+   1441
+  ]
+ },
+ "champagne2": {
+  "id": "18454a65-e038-4629-b921-e4264d4f3fc4",
+  "title": "Waiter Drink",
+  "creator": "Matt Bango",
+  "creator_url": "https://mattbango.photo",
+  "license": "cc0",
+  "license_version": "1.0",
+  "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "foreign_landing_url": "https://stocksnap.io/photo/waiter-drink-EWJPCRAR3S",
+  "source": "stocksnap",
+  "provider": "stocksnap",
+  "url": "https://cdn.stocksnap.io/img-thumbs/960w/EWJPCRAR3S.jpg",
+  "orig": [
+   960,
+   1344
+  ]
+ },
+ "burger": {
+  "id": "5dfb0a69-9f0e-4a56-90ba-c52f6b49fded",
+  "title": "Ham Burger",
+  "creator": "Toronto Eaters",
+  "creator_url": "https://stocksnap.io/author/38635",
+  "license": "cc0",
+  "license_version": "1.0",
+  "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "foreign_landing_url": "https://stocksnap.io/photo/ham-burger-JSFGN9B9CV",
+  "source": "stocksnap",
+  "provider": "stocksnap",
+  "url": "https://cdn.stocksnap.io/img-thumbs/960w/JSFGN9B9CV.jpg",
+  "orig": [
+   960,
+   721
+  ]
+ },
+ "x_sparkler2": {
+  "id": "82c3610c-aeaa-4942-a2e5-c7aaedd55b72",
+  "title": "Fireworks Sparkler",
+  "creator": "Karina Carvalho",
+  "creator_url": "https://stocksnap.io/author/29538",
+  "license": "cc0",
+  "license_version": "1.0",
+  "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "foreign_landing_url": "https://stocksnap.io/photo/fireworks-sparkler-3ENBLCI75E",
+  "source": "stocksnap",
+  "provider": "stocksnap",
+  "url": "https://cdn.stocksnap.io/img-thumbs/960w/3ENBLCI75E.jpg",
+  "orig": [
+   960,
+   640
+  ]
+ },
+ "x_xmas2": {
+  "id": "38ee23b6-0e82-4ef9-9a65-e52ebd4ed575",
+  "title": "Christmas Gifts",
+  "creator": "Tofros.com",
+  "creator_url": "https://stocksnap.io/author/40206",
+  "license": "cc0",
+  "license_version": "1.0",
+  "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "foreign_landing_url": "https://stocksnap.io/photo/christmas-gifts-CC3WLB6N9V",
+  "source": "stocksnap",
+  "provider": "stocksnap",
+  "url": "https://cdn.stocksnap.io/img-thumbs/960w/CC3WLB6N9V.jpg",
+  "orig": [
+   960,
+   640
+  ]
+ },
+ "x_icecream": {
+  "id": "c86b99f4-ec01-493b-bb83-1a66aec7e972",
+  "title": "Ice-Cream Pile",
+  "creator": "Pablo Merch\u00e1n Montes",
+  "creator_url": "https://stocksnap.io/author/46175",
+  "license": "cc0",
+  "license_version": "1.0",
+  "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "foreign_landing_url": "https://stocksnap.io/photo/ice-cream-pile-36X9PWFKR4",
+  "source": "stocksnap",
+  "provider": "stocksnap",
+  "url": "https://cdn.stocksnap.io/img-thumbs/960w/36X9PWFKR4.jpg",
+  "orig": [
+   960,
+   1440
+  ]
+ }
+}
