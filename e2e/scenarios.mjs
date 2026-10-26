@@ -561,4 +561,26 @@ scenarios.push({
   },
 });
 
+scenarios.push({
+  name: 'collection500-birthday-load',
+  async run(t) {
+    await t.editor('w=1080&h=1080');
+    for (const slug of ['pink-arch-cake-birthday-card', 'gold-script-black-frame-card', 'synthwave-80s-40th-story', 'birthday-times-newspaper-print']) {
+      const r = await t.eval(async (slug) => {
+        const list = await (await fetch('/templates/collection/collection500-birthday.json')).json();
+        const tpl = list.find((x) => x.slug === slug);
+        const c = window.__fabricCanvas;
+        await new Promise((res) => c.loadFromJSON(tpl.canvasJson, res));
+        c.requestRenderAll();
+        const imgs = c.getObjects().filter((o) => o.type === 'image');
+        return { objects: c.getObjects().length, images: imgs.length, broken: imgs.filter((o) => !o._element || !o._element.naturalWidth).map((o) => o.src || o.getSrc()) };
+      }, slug);
+      await t.page.waitForTimeout(1500);
+      await t.shot(slug);
+      t.check(`${slug}: loads`, r.objects > 3, JSON.stringify(r));
+      t.check(`${slug}: every image loads`, r.broken.length === 0, JSON.stringify(r.broken));
+    }
+  },
+});
+
 export default scenarios;
