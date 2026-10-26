@@ -1,0 +1,2371 @@
+[
+ {
+  "id": "seasonal-001",
+  "slug": "ramadan-kareem-lantern-post",
+  "title": "Ramadan Kareem Lantern Post",
+  "category": "Seasonal and holiday designs",
+  "subcategory": "Ramadan",
+  "site_category": "Festivals",
+  "description": "Three glowing lanterns hanging over a gold script greeting. Vector fanous lanterns with glow, crescent, faint eight-point star pattern.",
+  "design_brief": "Three glowing lanterns hanging over a gold script greeting. Vector fanous lanterns with glow, crescent, faint eight-point star pattern.",
+  "design_style": "ramadan",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=ramadan%20kareem%20lantern%20gold%20navy%20post",
+  "inspiration_query": "ramadan kareem lantern gold navy post",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "three glowing lanterns hanging over a gold script greeting",
+   "typography": "Great Vibes gold, Cormorant Garamond italic, Cinzel",
+   "palette": "midnight navy, lantern gold, warm glass",
+   "decor": "vector fanous lanterns with glow, crescent, faint eight-point star pattern"
+  },
+  "palette": [
+   "#1B2A55",
+   "#0A1129",
+   "#C9A45A",
+   "#E9C877",
+   "#FFE7A8",
+   "#F3D58A"
+  ],
+  "content": {
+   "headline": "Ramadan Kareem",
+   "message": "Wishing you a blessed month of peace and reflection.",
+   "signature": "From the Al Noor family"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/ramadan-kareem-lantern-post.jpg",
+  "preview_url": "/templates/collection/ramadan-kareem-lantern-post-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "seasonal-002",
+  "slug": "ramadan-mubarak-arch-story",
+  "title": "Ramadan Mubarak Arch Story",
+  "category": "Seasonal and holiday designs",
+  "subcategory": "Ramadan",
+  "site_category": "Festivals",
+  "description": "Deep teal pointed arch with crescent and lanterns, greeting inside, wish below. Arch, star pattern, crescent, lanterns.",
+  "design_brief": "Deep teal pointed arch with crescent and lanterns, greeting inside, wish below. Arch, star pattern, crescent, lanterns.",
+  "design_style": "ramadan",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=ramadan%20mubarak%20arch%20story%20elegant",
+  "inspiration_query": "ramadan mubarak arch story elegant",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "deep teal pointed arch with crescent and lanterns, greeting inside, wish below",
+   "typography": "Great Vibes gold, Cormorant Garamond italic",
+   "palette": "cream, deep teal, gold",
+   "decor": "arch, star pattern, crescent, lanterns"
+  },
+  "palette": [
+   "#F6EFE3",
+   "#123C3A",
+   "#C9A45A",
+   "#E9C877",
+   "#FFE7A8",
+   "#8A6A2E"
+  ],
+  "content": {
+   "headline": "Ramadan Mubarak",
+   "message": "May this holy month bring light to your home.",
+   "signature": ""
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1920,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/ramadan-mubarak-arch-story.jpg",
+  "preview_url": "/templates/collection/ramadan-mubarak-arch-story-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "seasonal-003",
+  "slug": "iftar-invitation-card",
+  "title": "Iftar Invitation Card",
+  "category": "Seasonal and holiday designs",
+  "subcategory": "Ramadan",
+  "site_category": "Festivals",
+  "description": "Cream invitation card framed on a teal geometric pattern, lantern at the top. Star pattern, inner gold frame, lantern, crescent.",
+  "design_brief": "Cream invitation card framed on a teal geometric pattern, lantern at the top. Star pattern, inner gold frame, lantern, crescent.",
+  "design_style": "ramadan",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=iftar%20invitation%20card%20elegant",
+  "inspiration_query": "iftar invitation card elegant",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "cream invitation card framed on a teal geometric pattern, lantern at the top",
+   "typography": "Great Vibes, Lora italic, Cinzel, Montserrat caps",
+   "palette": "deep teal, cream, gold",
+   "decor": "star pattern, inner gold frame, lantern, crescent"
+  },
+  "palette": [
+   "#0F2E2C",
+   "#C9A45A",
+   "#FBF6EC",
+   "#FFE7A8",
+   "#8A6A2E",
+   "#3E3020"
+  ],
+  "content": {
+   "headline": "Iftar Gathering",
+   "message": "Join us to break our fast together · Friday 26 February 2027 · at Maghrib · Villa 22, Jumeirah 3",
+   "signature": "RSVP to Mariam"
+  },
+  "dimensions": {
+   "width": 559,
+   "height": 794,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/iftar-invitation-card.jpg",
+  "preview_url": "/templates/collection/iftar-invitation-card-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "crescent-moon"
+  ]
+ },
+ {
+  "id": "seasonal-004",
+  "slug": "ramadan-timetable-poster",
+  "title": "Ramadan Timetable Poster",
+  "category": "Seasonal and holiday designs",
+  "subcategory": "Ramadan",
+  "site_category": "Festivals",
+  "description": "Mosque and crescent header, three time rows in outlined panels. Mosque, crescent, icon rows.",
+  "design_brief": "Mosque and crescent header, three time rows in outlined panels. Mosque, crescent, icon rows.",
+  "design_style": "ramadan",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=ramadan%20timetable%20poster%20mosque",
+  "inspiration_query": "ramadan timetable poster mosque",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "mosque and crescent header, three time rows in outlined panels",
+   "typography": "Cinzel gold, Montserrat",
+   "palette": "royal purple, gold, ivory",
+   "decor": "mosque, crescent, icon rows"
+  },
+  "palette": [
+   "#2B1B4A",
+   "#0E0A20",
+   "#F3D58A",
+   "#291A47",
+   "#8A6A2E",
+   "#E9C877"
+  ],
+  "content": {
+   "headline": "Ramadan 1448",
+   "message": "Suhoor 4:45 AM · Iftar 6:32 PM · Taraweeh 8:15 PM",
+   "signature": "Times for Dubai · week 1"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1350,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/ramadan-timetable-poster.jpg",
+  "preview_url": "/templates/collection/ramadan-timetable-poster-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "fork-and-knife-with-plate",
+   "mosque",
+   "sunrise"
+  ]
+ },
+ {
+  "id": "seasonal-005",
+  "slug": "ramadan-sale-promo-post",
+  "title": "Ramadan Sale Promo Post",
+  "category": "Seasonal and holiday designs",
+  "subcategory": "Ramadan",
+  "site_category": "Festivals",
+  "description": "Lanterns either side of a gold script title, big offer line and button. Star pattern, lanterns, CTA pill.",
+  "design_brief": "Lanterns either side of a gold script title, big offer line and button. Star pattern, lanterns, CTA pill.",
+  "design_style": "ramadan",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=ramadan%20sale%20offer%20instagram%20post",
+  "inspiration_query": "ramadan sale offer instagram post",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "lanterns either side of a gold script title, big offer line and button",
+   "typography": "Great Vibes gold, Anton, Montserrat caps",
+   "palette": "deep teal, gold, white",
+   "decor": "star pattern, lanterns, CTA pill"
+  },
+  "palette": [
+   "#123C3A",
+   "#E9C877",
+   "#FFE7A8",
+   "#8A6A2E",
+   "#B68A3A",
+   "#F7E3A3"
+  ],
+  "content": {
+   "headline": "Ramadan Offers",
+   "message": "Up to 30% off · Open until 2 AM",
+   "signature": "Shop the collection"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/ramadan-sale-promo-post.jpg",
+  "preview_url": "/templates/collection/ramadan-sale-promo-post-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "seasonal-006",
+  "slug": "eid-mubarak-gold-crescent-post",
+  "title": "Eid Mubarak Gold Crescent Post",
+  "category": "Seasonal and holiday designs",
+  "subcategory": "Eid",
+  "site_category": "Festivals",
+  "description": "Gold crescent and eight-point star above a gold script greeting. Geometric pattern, gold crescent, star.",
+  "design_brief": "Gold crescent and eight-point star above a gold script greeting. Geometric pattern, gold crescent, star.",
+  "design_style": "eid",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=eid%20mubarak%20gold%20crescent%20instagram",
+  "inspiration_query": "eid mubarak gold crescent instagram",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "gold crescent and eight-point star above a gold script greeting",
+   "typography": "Great Vibes gold, Cormorant Garamond italic",
+   "palette": "parchment, gold, walnut",
+   "decor": "geometric pattern, gold crescent, star"
+  },
+  "palette": [
+   "#FBF4E4",
+   "#EADBB9",
+   "#C9A45A",
+   "#8A6A2E",
+   "#E9C877",
+   "#B68A3A"
+  ],
+  "content": {
+   "headline": "Eid Mubarak",
+   "message": "Wishing you and your loved ones joy, peace and prosperity.",
+   "signature": ""
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/eid-mubarak-gold-crescent-post.jpg",
+  "preview_url": "/templates/collection/eid-mubarak-gold-crescent-post-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "seasonal-007",
+  "slug": "eid-al-fitr-greeting-card",
+  "title": "Eid al-Fitr Greeting Card",
+  "category": "Seasonal and holiday designs",
+  "subcategory": "Eid",
+  "site_category": "Festivals",
+  "description": "Three pastel lanterns hanging over a script greeting. Pastel lanterns.",
+  "design_brief": "Three pastel lanterns hanging over a script greeting. Pastel lanterns.",
+  "design_style": "eid",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=eid%20al%20fitr%20greeting%20card%20pastel",
+  "inspiration_query": "eid al fitr greeting card pastel",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "three pastel lanterns hanging over a script greeting",
+   "typography": "Great Vibes, Lora italic, Montserrat caps",
+   "palette": "blush to lilac, gold, plum",
+   "decor": "pastel lanterns"
+  },
+  "palette": [
+   "#FDF1F3",
+   "#EEE6F8",
+   "#E9A6B8",
+   "#FFF3D6",
+   "#C9A45A",
+   "#B9A6E2"
+  ],
+  "content": {
+   "headline": "Eid Mubarak",
+   "message": "May Allah accept your fasts and prayers. Eid Mubarak to you and your family.",
+   "signature": "With love, the Haddad family"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/eid-al-fitr-greeting-card.jpg",
+  "preview_url": "/templates/collection/eid-al-fitr-greeting-card-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "seasonal-008",
+  "slug": "eid-lanterns-story",
+  "title": "Eid Lanterns Story",
+  "category": "Seasonal and holiday designs",
+  "subcategory": "Eid",
+  "site_category": "Festivals",
+  "description": "Row of glowing lanterns under a crescent, gold script in the night sky. Stars, four lanterns, crescent, handle pill.",
+  "design_brief": "Row of glowing lanterns under a crescent, gold script in the night sky. Stars, four lanterns, crescent, handle pill.",
+  "design_style": "eid",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=eid%20mubarak%20lanterns%20story",
+  "inspiration_query": "eid mubarak lanterns story",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "row of glowing lanterns under a crescent, gold script in the night sky",
+   "typography": "Great Vibes gold, Cormorant Garamond italic",
+   "palette": "night navy, gold glow",
+   "decor": "stars, four lanterns, crescent, handle pill"
+  },
+  "palette": [
+   "#0B1838",
+   "#26205A",
+   "#FFFFFF",
+   "#E9C877",
+   "#FFE7A8",
+   "#F3D58A"
+  ],
+  "content": {
+   "headline": "Eid Mubarak",
+   "message": "Happy Eid from all of us",
+   "signature": "@noor.boutique"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1920,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/eid-lanterns-story.jpg",
+  "preview_url": "/templates/collection/eid-lanterns-story-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "seasonal-009",
+  "slug": "eid-kids-party-invitation",
+  "title": "Eid Kids Party Invitation",
+  "category": "Seasonal and holiday designs",
+  "subcategory": "Eid",
+  "site_category": "Festivals",
+  "description": "Bunting and colourful lanterns around a bold party title, details card. Bunting, lanterns, candy.",
+  "design_brief": "Bunting and colourful lanterns around a bold party title, details card. Bunting, lanterns, candy.",
+  "design_style": "eid",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=eid%20party%20invitation%20kids",
+  "inspiration_query": "eid party invitation kids",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "bunting and colourful lanterns around a bold party title, details card",
+   "typography": "Luckiest Guy, Fredoka, Caveat",
+   "palette": "cream, tomato, sky, sunshine",
+   "decor": "bunting, lanterns, candy"
+  },
+  "palette": [
+   "#FFF1D6",
+   "#7A6F66",
+   "#FF6B6B",
+   "#FFD45C",
+   "#4FC3F7",
+   "#8BC34A"
+  ],
+  "content": {
+   "headline": "Eid Party!",
+   "message": "Games, sweets & henna for the little ones · Day 2 of Eid · 4 PM · Grandma’s house",
+   "signature": "Bring your Eidiya!"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/eid-kids-party-invitation.jpg",
+  "preview_url": "/templates/collection/eid-kids-party-invitation-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "candy"
+  ]
+ },
+ {
+  "id": "seasonal-010",
+  "slug": "eid-al-adha-mubarak-card",
+  "title": "Eid al-Adha Mubarak Card",
+  "category": "Seasonal and holiday designs",
+  "subcategory": "Eid",
+  "site_category": "Festivals",
+  "description": "Framed card with mosque and crescent above a two-line script greeting. Double frame, mosque, crescent, paper grain.",
+  "design_brief": "Framed card with mosque and crescent above a two-line script greeting. Double frame, mosque, crescent, paper grain.",
+  "design_style": "eid",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=eid%20al%20adha%20mubarak%20card",
+  "inspiration_query": "eid al adha mubarak card",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "framed card with mosque and crescent above a two-line script greeting",
+   "typography": "Great Vibes, Lora italic, Cinzel",
+   "palette": "ivory, emerald, gold",
+   "decor": "double frame, mosque, crescent, paper grain"
+  },
+  "palette": [
+   "#F7F2E8",
+   "#2F6B5A",
+   "#C9A45A",
+   "#3E4A42",
+   "#8A6A2E"
+  ],
+  "content": {
+   "headline": "Eid al-Adha Mubarak",
+   "message": "May this blessed Eid bring happiness, peace and togetherness.",
+   "signature": "Taqabbal Allahu minna wa minkum"
+  },
+  "dimensions": {
+   "width": 559,
+   "height": 794,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/eid-al-adha-mubarak-card.jpg",
+  "preview_url": "/templates/collection/eid-al-adha-mubarak-card-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "mosque"
+  ]
+ },
+ {
+  "id": "seasonal-011",
+  "slug": "eid-al-adha-geometric-post",
+  "title": "Eid al-Adha Geometric Post",
+  "category": "Seasonal and holiday designs",
+  "subcategory": "Eid",
+  "site_category": "Festivals",
+  "description": "Teal medallion ringed in gold over a full eight-point star pattern. Geometric pattern, double ring medallion.",
+  "design_brief": "Teal medallion ringed in gold over a full eight-point star pattern. Geometric pattern, double ring medallion.",
+  "design_style": "eid",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=eid%20al%20adha%20geometric%20islamic%20pattern%20post",
+  "inspiration_query": "eid al adha geometric islamic pattern post",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "teal medallion ringed in gold over a full eight-point star pattern",
+   "typography": "Great Vibes gold, Cormorant Garamond italic",
+   "palette": "teal, gold, cream",
+   "decor": "geometric pattern, double ring medallion"
+  },
+  "palette": [
+   "#0F4C5C",
+   "#E9C877",
+   "#8A6A2E",
+   "#B68A3A",
+   "#F7E3A3",
+   "#9C7431"
+  ],
+  "content": {
+   "headline": "Eid al-Adha",
+   "message": "Blessings and peace to you and your family",
+   "signature": ""
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/eid-al-adha-geometric-post.jpg",
+  "preview_url": "/templates/collection/eid-al-adha-geometric-post-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "seasonal-012",
+  "slug": "eid-holiday-hours-post",
+  "title": "Eid Holiday Hours Post",
+  "category": "Seasonal and holiday designs",
+  "subcategory": "Eid",
+  "site_category": "Festivals",
+  "description": "Teal header with lanterns, big closed dates and reopening line. Header band, lanterns, gold rule.",
+  "design_brief": "Teal header with lanterns, big closed dates and reopening line. Header band, lanterns, gold rule.",
+  "design_style": "eid",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=eid%20holiday%20closing%20hours%20post",
+  "inspiration_query": "eid holiday closing hours post",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "teal header with lanterns, big closed dates and reopening line",
+   "typography": "Playfair Display italic, Anton, Montserrat, Lora, Great Vibes",
+   "palette": "teal, cream, gold",
+   "decor": "header band, lanterns, gold rule"
+  },
+  "palette": [
+   "#FBF6EC",
+   "#123C3A",
+   "#E9C877",
+   "#FFE7A8",
+   "#2E2416",
+   "#C9A45A"
+  ],
+  "content": {
+   "headline": "Eid Holiday Hours",
+   "message": "We will be closed · 16–19 March · Back on Saturday 20 March",
+   "signature": "Eid Mubarak from our team"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/eid-holiday-hours-post.jpg",
+  "preview_url": "/templates/collection/eid-holiday-hours-post-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "seasonal-013",
+  "slug": "flag-band-national-day-post",
+  "title": "Flag Band National Day Post",
+  "category": "Seasonal and holiday designs",
+  "subcategory": "UAE National Day",
+  "site_category": "Festivals",
+  "description": "Flag colours across the bottom, fireworks above a bold two-line greeting. Flag band, vector fireworks.",
+  "design_brief": "Flag colours across the bottom, fireworks above a bold two-line greeting. Flag band, vector fireworks.",
+  "design_style": "uae national day",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=uae%20national%20day%20flag%20post",
+  "inspiration_query": "uae national day flag post",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "flag colours across the bottom, fireworks above a bold two-line greeting",
+   "typography": "Playfair Display ExtraBold, Montserrat caps",
+   "palette": "UAE red, green, white, black, gold",
+   "decor": "flag band, vector fireworks"
+  },
+  "palette": [
+   "#FFFFFF",
+   "#E0001B",
+   "#00843D",
+   "#000000",
+   "#C9A45A",
+   "#111111"
+  ],
+  "content": {
+   "headline": "Happy National Day",
+   "message": "Proud of our nation · 2 December",
+   "signature": ""
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/flag-band-national-day-post.jpg",
+  "preview_url": "/templates/collection/flag-band-national-day-post-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "seasonal-014",
+  "slug": "union-day-story",
+  "title": "Union Day Story",
+  "category": "Seasonal and holiday designs",
+  "subcategory": "UAE National Day",
+  "site_category": "Festivals",
+  "description": "Fireworks over a city skyline, flag and greeting below. Five vector fireworks, skyline, flag.",
+  "design_brief": "Fireworks over a city skyline, flag and greeting below. Five vector fireworks, skyline, flag.",
+  "design_style": "uae national day",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=uae%20eid%20al%20etihad%20story",
+  "inspiration_query": "uae eid al etihad story",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "fireworks over a city skyline, flag and greeting below",
+   "typography": "Playfair Display italic, Montserrat",
+   "palette": "night blue, flag colours, gold",
+   "decor": "five vector fireworks, skyline, flag"
+  },
+  "palette": [
+   "#0B1A2E",
+   "#16334F",
+   "#E0001B",
+   "#00A651",
+   "#FFFFFF",
+   "#C9A45A"
+  ],
+  "content": {
+   "headline": "Eid Al Etihad",
+   "message": "Celebrating 56 years of union",
+   "signature": "2 December 2027"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1920,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/union-day-story.jpg",
+  "preview_url": "/templates/collection/union-day-story-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "cityscape"
+  ]
+ },
+ {
+  "id": "seasonal-015",
+  "slug": "national-day-event-poster",
+  "title": "National Day Event Poster",
+  "category": "Seasonal and holiday designs",
+  "subcategory": "UAE National Day",
+  "site_category": "Festivals",
+  "description": "Flag strip header, big headline, icon list and green date bar. Flag strip, icon list, date bar.",
+  "design_brief": "Flag strip header, big headline, icon list and green date bar. Flag strip, icon list, date bar.",
+  "design_style": "uae national day",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=national%20day%20celebration%20event%20poster%20uae",
+  "inspiration_query": "national day celebration event poster uae",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "flag strip header, big headline, icon list and green date bar",
+   "typography": "Playfair Display ExtraBold, Montserrat",
+   "palette": "sand, black, flag colours",
+   "decor": "flag strip, icon list, date bar"
+  },
+  "palette": [
+   "#F6EFE2",
+   "#E0001B",
+   "#00843D",
+   "#FFFFFF",
+   "#000000",
+   "#111111"
+  ],
+  "content": {
+   "headline": "National Day Celebration",
+   "message": "Heritage village · folk dance · fireworks · Friday 2 December · 5 PM",
+   "signature": "Free entry · all welcome"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1350,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/national-day-event-poster.jpg",
+  "preview_url": "/templates/collection/national-day-event-poster-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "fireworks",
+   "house-with-garden",
+   "performing-arts"
+  ]
+ },
+ {
+  "id": "seasonal-016",
+  "slug": "happy-diwali-diya-post",
+  "title": "Happy Diwali Diya Post",
+  "category": "Seasonal and holiday designs",
+  "subcategory": "Diwali",
+  "site_category": "Festivals",
+  "description": "Vector rangoli flower above a row of glowing diyas and a gold greeting. Petal rangoli, diya glows.",
+  "design_brief": "Vector rangoli flower above a row of glowing diyas and a gold greeting. Petal rangoli, diya glows.",
+  "design_style": "diwali",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=happy%20diwali%20diya%20rangoli%20post",
+  "inspiration_query": "happy diwali diya rangoli post",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "vector rangoli flower above a row of glowing diyas and a gold greeting",
+   "typography": "Great Vibes gold, Cormorant Garamond italic",
+   "palette": "plum night, saffron, marigold, magenta",
+   "decor": "petal rangoli, diya glows"
+  },
+  "palette": [
+   "#5A1A3A",
+   "#1E0718",
+   "#E85D04",
+   "#F48C06",
+   "#FAA307",
+   "#D00070"
+  ],
+  "content": {
+   "headline": "Happy Diwali",
+   "message": "May the light of the diyas fill your life with joy and prosperity.",
+   "signature": ""
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/happy-diwali-diya-post.jpg",
+  "preview_url": "/templates/collection/happy-diwali-diya-post-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "diya-lamp"
+  ]
+ },
+ {
+  "id": "seasonal-017",
+  "slug": "diwali-party-invitation",
+  "title": "Diwali Party Invitation",
+  "category": "Seasonal and holiday designs",
+  "subcategory": "Diwali",
+  "site_category": "Festivals",
+  "description": "Rangoli crest, gold script title, details and a row of diyas. Rangoli, double frame, diyas.",
+  "design_brief": "Rangoli crest, gold script title, details and a row of diyas. Rangoli, double frame, diyas.",
+  "design_style": "diwali",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=diwali%20party%20invitation%20gold",
+  "inspiration_query": "diwali party invitation gold",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "rangoli crest, gold script title, details and a row of diyas",
+   "typography": "Great Vibes gold, Lora italic, Cinzel, Montserrat caps",
+   "palette": "aubergine, gold, saffron",
+   "decor": "rangoli, double frame, diyas"
+  },
+  "palette": [
+   "#2A0B2E",
+   "#E9C877",
+   "#E85D04",
+   "#FAA307",
+   "#D00070",
+   "#7209B7"
+  ],
+  "content": {
+   "headline": "Diwali Night",
+   "message": "Join us for sweets, sparklers & dinner · Saturday 30 October 2027 · 7 PM · The Patel home",
+   "signature": "Ethnic wear encouraged"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/diwali-party-invitation.jpg",
+  "preview_url": "/templates/collection/diwali-party-invitation-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "diya-lamp"
+  ]
+ },
+ {
+  "id": "seasonal-018",
+  "slug": "diwali-rangoli-story",
+  "title": "Diwali Rangoli Story",
+  "category": "Seasonal and holiday designs",
+  "subcategory": "Diwali",
+  "site_category": "Festivals",
+  "description": "Big rangoli on a saffron-to-violet sky, two-line script greeting. Rangoli, diyas.",
+  "design_brief": "Big rangoli on a saffron-to-violet sky, two-line script greeting. Rangoli, diyas.",
+  "design_style": "diwali",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=diwali%20rangoli%20instagram%20story",
+  "inspiration_query": "diwali rangoli instagram story",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "big rangoli on a saffron-to-violet sky, two-line script greeting",
+   "typography": "Great Vibes, Cormorant Garamond italic",
+   "palette": "saffron, magenta, violet, gold",
+   "decor": "rangoli, diyas"
+  },
+  "palette": [
+   "#FF7B00",
+   "#D00070",
+   "#3C096C",
+   "#FFD60A",
+   "#FFFFFF",
+   "#FFC300"
+  ],
+  "content": {
+   "headline": "Shubh Deepavali",
+   "message": "Wishing you light, love and laughter",
+   "signature": ""
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1920,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/diwali-rangoli-story.jpg",
+  "preview_url": "/templates/collection/diwali-rangoli-story-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "diya-lamp"
+  ]
+ },
+ {
+  "id": "seasonal-019",
+  "slug": "merry-christmas-tree-card",
+  "title": "Merry Christmas Tree Card",
+  "category": "Seasonal and holiday designs",
+  "subcategory": "Christmas",
+  "site_category": "Festivals",
+  "description": "Layered vector tree with baubles and snow, script greeting below. Vector tree, star, baubles, snow dots.",
+  "design_brief": "Layered vector tree with baubles and snow, script greeting below. Vector tree, star, baubles, snow dots.",
+  "design_style": "christmas",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=merry%20christmas%20tree%20card%20modern",
+  "inspiration_query": "merry christmas tree card modern",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "layered vector tree with baubles and snow, script greeting below",
+   "typography": "Great Vibes, Lora italic, Montserrat caps",
+   "palette": "paper white, pine green, berry red, gold",
+   "decor": "vector tree, star, baubles, snow dots"
+  },
+  "palette": [
+   "#F6F1E8",
+   "#1A5C38",
+   "#1D653E",
+   "#1F6E43",
+   "#7B4A2A",
+   "#FFD54F"
+  ],
+  "content": {
+   "headline": "Merry Christmas",
+   "message": "Wishing you a season full of light and laughter.",
+   "signature": "Love, the Thomas family"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/merry-christmas-tree-card.jpg",
+  "preview_url": "/templates/collection/merry-christmas-tree-card-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "seasonal-020",
+  "slug": "mulled-drinks-christmas-party-invitation",
+  "title": "Mulled Drinks Christmas Party Invitation",
+  "category": "Seasonal and holiday designs",
+  "subcategory": "Christmas",
+  "site_category": "Festivals",
+  "description": "Snowy green invite with tree, gift and bell, details panel. Snow dots, festive illustrations, outlined panel.",
+  "design_brief": "Snowy green invite with tree, gift and bell, details panel. Snow dots, festive illustrations, outlined panel.",
+  "design_style": "christmas",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=christmas%20party%20invitation%20festive",
+  "inspiration_query": "christmas party invitation festive",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "snowy green invite with tree, gift and bell, details panel",
+   "typography": "Great Vibes gold, Lora italic, Cinzel",
+   "palette": "pine green, gold, snow white",
+   "decor": "snow dots, festive illustrations, outlined panel"
+  },
+  "palette": [
+   "#14402F",
+   "#FFFFFF",
+   "#8A6A2E",
+   "#E9C877",
+   "#B68A3A",
+   "#F7E3A3"
+  ],
+  "content": {
+   "headline": "Christmas Party",
+   "message": "Mulled drinks, carols & a secret Santa · Friday 17 December · 7 PM · The Office Rooftop",
+   "signature": "Ugly sweaters welcome"
+  },
+  "dimensions": {
+   "width": 559,
+   "height": 794,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/mulled-drinks-christmas-party-invitation.jpg",
+  "preview_url": "/templates/collection/mulled-drinks-christmas-party-invitation-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "bell",
+   "christmas-tree",
+   "wrapped-gift"
+  ]
+ },
+ {
+  "id": "seasonal-021",
+  "slug": "seasons-greetings-corporate-card",
+  "title": "Season’s Greetings Corporate Card",
+  "category": "Seasonal and holiday designs",
+  "subcategory": "Christmas",
+  "site_category": "Festivals",
+  "description": "Corporate split card: burgundy snowy panel left, greeting right. Snow dots, snowflake, gold rule.",
+  "design_brief": "Corporate split card: burgundy snowy panel left, greeting right. Snow dots, snowflake, gold rule.",
+  "design_style": "christmas",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=seasons%20greetings%20corporate%20card%20elegant",
+  "inspiration_query": "seasons greetings corporate card elegant",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "corporate split card: burgundy snowy panel left, greeting right",
+   "typography": "Playfair Display italic, Lora, Montserrat caps",
+   "palette": "warm white, burgundy, gold",
+   "decor": "snow dots, snowflake, gold rule"
+  },
+  "palette": [
+   "#FBF8F2",
+   "#7A1C2B",
+   "#FFFFFF",
+   "#C9A45A",
+   "#3E3A36"
+  ],
+  "content": {
+   "headline": "Season’s Greetings",
+   "message": "Thank you for a wonderful year. Wishing you joy this holiday season.",
+   "signature": "From all of us at Crescent Consulting"
+  },
+  "dimensions": {
+   "width": 673,
+   "height": 480,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/seasons-greetings-corporate-card.jpg",
+  "preview_url": "/templates/collection/seasons-greetings-corporate-card-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "snowflake"
+  ]
+ },
+ {
+  "id": "seasonal-022",
+  "slug": "red-holiday-sale-post",
+  "title": "Red Holiday Sale Post",
+  "category": "Seasonal and holiday designs",
+  "subcategory": "Christmas",
+  "site_category": "Festivals",
+  "description": "Huge condensed sale title on red with gift and tree in the corners. Snow, gift and tree illustrations, offer pill.",
+  "design_brief": "Huge condensed sale title on red with gift and tree in the corners. Snow, gift and tree illustrations, offer pill.",
+  "design_style": "christmas",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=christmas%20sale%20instagram%20post%20red",
+  "inspiration_query": "christmas sale instagram post red",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "huge condensed sale title on red with gift and tree in the corners",
+   "typography": "Anton, Montserrat",
+   "palette": "Christmas red, white",
+   "decor": "snow, gift and tree illustrations, offer pill"
+  },
+  "palette": [
+   "#C62828",
+   "#FFFFFF",
+   "#FFE7E7"
+  ],
+  "content": {
+   "headline": "Holiday Sale",
+   "message": "Up to 50% off gifts · This weekend only",
+   "signature": ""
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/red-holiday-sale-post.jpg",
+  "preview_url": "/templates/collection/red-holiday-sale-post-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "christmas-tree",
+   "wrapped-gift"
+  ]
+ },
+ {
+  "id": "seasonal-023",
+  "slug": "snowy-christmas-story",
+  "title": "Snowy Christmas Story",
+  "category": "Seasonal and holiday designs",
+  "subcategory": "Christmas",
+  "site_category": "Festivals",
+  "description": "Snowy hill scene with snowman and trees, script headline in the sky. 140 snowflakes, snow drift, snowman and tree illustrations.",
+  "design_brief": "Snowy hill scene with snowman and trees, script headline in the sky. 140 snowflakes, snow drift, snowman and tree illustrations.",
+  "design_style": "christmas",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=snowy%20christmas%20instagram%20story",
+  "inspiration_query": "snowy christmas instagram story",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "snowy hill scene with snowman and trees, script headline in the sky",
+   "typography": "Great Vibes, Montserrat",
+   "palette": "winter blue, snow white, navy",
+   "decor": "140 snowflakes, snow drift, snowman and tree illustrations"
+  },
+  "palette": [
+   "#9CC3E6",
+   "#E8F2FB",
+   "#FFFFFF",
+   "#1F3B5C"
+  ],
+  "content": {
+   "headline": "Let it snow",
+   "message": "Merry Christmas & happy holidays",
+   "signature": ""
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1920,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/snowy-christmas-story.jpg",
+  "preview_url": "/templates/collection/snowy-christmas-story-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "evergreen-tree",
+   "snowman"
+  ]
+ },
+ {
+  "id": "seasonal-024",
+  "slug": "gingerbread-cookie-card",
+  "title": "Gingerbread Cookie Card",
+  "category": "Seasonal and holiday designs",
+  "subcategory": "Christmas",
+  "site_category": "Festivals",
+  "description": "Vector gingerbread figure with icing details, cookie and cocoa around. Vector gingerbread, cookie and cocoa illustrations.",
+  "design_brief": "Vector gingerbread figure with icing details, cookie and cocoa around. Vector gingerbread, cookie and cocoa illustrations.",
+  "design_style": "christmas",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=gingerbread%20christmas%20card%20cute",
+  "inspiration_query": "gingerbread christmas card cute",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "vector gingerbread figure with icing details, cookie and cocoa around",
+   "typography": "Pacifico, Fredoka, Caveat",
+   "palette": "biscuit, ginger brown, icing white, berry red",
+   "decor": "vector gingerbread, cookie and cocoa illustrations"
+  },
+  "palette": [
+   "#F3E3CF",
+   "#B5713C",
+   "#E53935",
+   "#3A2A20",
+   "#FFFFFF",
+   "#8C4A1E"
+  ],
+  "content": {
+   "headline": "Sweet holidays",
+   "message": "Baked with love — happy holidays!",
+   "signature": "— Maya"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/gingerbread-cookie-card.jpg",
+  "preview_url": "/templates/collection/gingerbread-cookie-card-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "cookie",
+   "hot-beverage"
+  ]
+ },
+ {
+  "id": "seasonal-025",
+  "slug": "happy-new-year-2027-post",
+  "title": "Happy New Year 2027 Post",
+  "category": "Seasonal and holiday designs",
+  "subcategory": "New Year",
+  "site_category": "Festivals",
+  "description": "Gold 2027 surrounded by fireworks, script greeting below. Vector fireworks, confetti.",
+  "design_brief": "Gold 2027 surrounded by fireworks, script greeting below. Vector fireworks, confetti.",
+  "design_style": "new year",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=happy%20new%20year%202027%20gold%20fireworks%20post",
+  "inspiration_query": "happy new year 2027 gold fireworks post",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "gold 2027 surrounded by fireworks, script greeting below",
+   "typography": "Playfair Display ExtraBold gold, Great Vibes",
+   "palette": "black, gold, white",
+   "decor": "vector fireworks, confetti"
+  },
+  "palette": [
+   "#1E1A2E",
+   "#07060C",
+   "#E9C877",
+   "#FFFFFF",
+   "#F7E3A3",
+   "#8A6A2E"
+  ],
+  "content": {
+   "headline": "Happy New Year",
+   "message": "2027",
+   "signature": ""
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/happy-new-year-2027-post.jpg",
+  "preview_url": "/templates/collection/happy-new-year-2027-post-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "seasonal-026",
+  "slug": "mirror-ball-new-years-eve-invitation",
+  "title": "Mirror Ball New Year’s Eve Invitation",
+  "category": "Seasonal and holiday designs",
+  "subcategory": "New Year",
+  "site_category": "Festivals",
+  "description": "Mirror ball above a gold script title, framed details, champagne at the foot. Double frame, mirror ball, glasses and bottle.",
+  "design_brief": "Mirror ball above a gold script title, framed details, champagne at the foot. Double frame, mirror ball, glasses and bottle.",
+  "design_style": "new year",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=new%20years%20eve%20party%20invitation%20black%20gold",
+  "inspiration_query": "new years eve party invitation black gold",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "mirror ball above a gold script title, framed details, champagne at the foot",
+   "typography": "Great Vibes gold, Cinzel, Cormorant Garamond",
+   "palette": "black, gold, champagne",
+   "decor": "double frame, mirror ball, glasses and bottle"
+  },
+  "palette": [
+   "#0B0B0C",
+   "#C9A45A",
+   "#8A6A2E",
+   "#E9C877",
+   "#B68A3A",
+   "#F7E3A3"
+  ],
+  "content": {
+   "headline": "New Year’s Eve",
+   "message": "Countdown party · 31 December · 9 PM till late · Skyview Rooftop, Downtown",
+   "signature": "Dress to sparkle"
+  },
+  "dimensions": {
+   "width": 559,
+   "height": 794,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/mirror-ball-new-years-eve-invitation.jpg",
+  "preview_url": "/templates/collection/mirror-ball-new-years-eve-invitation-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "bottle-with-popping-cork",
+   "clinking-glasses",
+   "mirror-ball"
+  ]
+ },
+ {
+  "id": "seasonal-027",
+  "slug": "new-year-resolutions-story",
+  "title": "New Year Resolutions Story",
+  "category": "Seasonal and holiday designs",
+  "subcategory": "New Year",
+  "site_category": "Festivals",
+  "description": "Checklist card of resolutions with round tick boxes. Card shadow, calendar and sparkles illustrations.",
+  "design_brief": "Checklist card of resolutions with round tick boxes. Card shadow, calendar and sparkles illustrations.",
+  "design_style": "new year",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=new%20year%20resolutions%20story%20list",
+  "inspiration_query": "new year resolutions story list",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "checklist card of resolutions with round tick boxes",
+   "typography": "Playfair Display italic, Caveat",
+   "palette": "oat, white card, navy",
+   "decor": "card shadow, calendar and sparkles illustrations"
+  },
+  "palette": [
+   "#F4EFE6",
+   "#FFFFFF",
+   "#1F2A44",
+   "#E5DED3"
+  ],
+  "content": {
+   "headline": "2027 goals",
+   "message": "read more · travel somewhere new · drink more water · call home often · say yes",
+   "signature": ""
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1920,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/new-year-resolutions-story.jpg",
+  "preview_url": "/templates/collection/new-year-resolutions-story-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "sparkles",
+   "spiral-calendar"
+  ]
+ },
+ {
+  "id": "seasonal-028",
+  "slug": "new-year-countdown-post",
+  "title": "New Year Countdown Post",
+  "category": "Seasonal and holiday designs",
+  "subcategory": "New Year",
+  "site_category": "Festivals",
+  "description": "Giant countdown digit on a twilight gradient. Stars, hourglass.",
+  "design_brief": "Giant countdown digit on a twilight gradient. Stars, hourglass.",
+  "design_style": "new year",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=new%20year%20countdown%20post",
+  "inspiration_query": "new year countdown post",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "giant countdown digit on a twilight gradient",
+   "typography": "Playfair Display, Montserrat spaced caps, Great Vibes",
+   "palette": "violet to periwinkle, white, pale gold",
+   "decor": "stars, hourglass"
+  },
+  "palette": [
+   "#2B1055",
+   "#7597DE",
+   "#FFFFFF",
+   "#C9D6FF",
+   "#FFE9A8"
+  ],
+  "content": {
+   "headline": "3 days to go",
+   "message": "until we say hello to 2027",
+   "signature": ""
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/new-year-countdown-post.jpg",
+  "preview_url": "/templates/collection/new-year-countdown-post-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "hourglass-not-done"
+  ]
+ },
+ {
+  "id": "seasonal-029",
+  "slug": "lunar-new-year-card",
+  "title": "Lunar New Year Card",
+  "category": "Seasonal and holiday designs",
+  "subcategory": "New Year",
+  "site_category": "Festivals",
+  "description": "Lanterns hanging either side of a gold medallion with a dragon. Dot pattern, lanterns, medallion, dragon illustration.",
+  "design_brief": "Lanterns hanging either side of a gold medallion with a dragon. Dot pattern, lanterns, medallion, dragon illustration.",
+  "design_style": "new year",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=lunar%20new%20year%20card%20red%20gold",
+  "inspiration_query": "lunar new year card red gold",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "lanterns hanging either side of a gold medallion with a dragon",
+   "typography": "Playfair Display gold, Lora italic, Montserrat caps",
+   "palette": "lucky red, gold",
+   "decor": "dot pattern, lanterns, medallion, dragon illustration"
+  },
+  "palette": [
+   "#B3121F",
+   "#E9C877",
+   "#8A6A2E",
+   "#B68A3A",
+   "#F7E3A3",
+   "#9C7431"
+  ],
+  "content": {
+   "headline": "Happy Lunar New Year",
+   "message": "Wishing you prosperity, health and good fortune.",
+   "signature": "— the Chen family"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/lunar-new-year-card.jpg",
+  "preview_url": "/templates/collection/lunar-new-year-card-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "dragon",
+   "red-paper-lantern"
+  ]
+ },
+ {
+  "id": "seasonal-030",
+  "slug": "valentines-day-sale-post",
+  "title": "Valentine’s Day Sale Post",
+  "category": "Seasonal and holiday designs",
+  "subcategory": "Valentine’s Day",
+  "site_category": "Festivals",
+  "description": "Big sale title with a discount badge, gifts and hearts around. Discount circle, heart / letter / gift / rose illustrations, CTA pill.",
+  "design_brief": "Big sale title with a discount badge, gifts and hearts around. Discount circle, heart / letter / gift / rose illustrations, CTA pill.",
+  "design_style": "valentine’s day",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=valentines%20day%20sale%20post%20pink",
+  "inspiration_query": "valentines day sale post pink",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "big sale title with a discount badge, gifts and hearts around",
+   "typography": "Anton, Montserrat",
+   "palette": "blush, cherry, wine",
+   "decor": "discount circle, heart / letter / gift / rose illustrations, CTA pill"
+  },
+  "palette": [
+   "#FFD6E0",
+   "#7A1030",
+   "#E0345A",
+   "#FFFFFF"
+  ],
+  "content": {
+   "headline": "Valentine’s Sale",
+   "message": "Gifts for your someone special · 20% off",
+   "signature": "Ends 14 February"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/valentines-day-sale-post.jpg",
+  "preview_url": "/templates/collection/valentines-day-sale-post-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "love-letter",
+   "red-heart",
+   "rose",
+   "wrapped-gift"
+  ]
+ },
+ {
+  "id": "seasonal-031",
+  "slug": "valentines-dinner-menu",
+  "title": "Valentine’s Dinner Menu",
+  "category": "Seasonal and holiday designs",
+  "subcategory": "Valentine’s Day",
+  "site_category": "Festivals",
+  "description": "Dark romantic menu with a rose crest and three courses. Double frame, rose, small hearts.",
+  "design_brief": "Dark romantic menu with a rose crest and three courses. Double frame, rose, small hearts.",
+  "design_style": "valentine’s day",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=valentines%20dinner%20menu",
+  "inspiration_query": "valentines dinner menu",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "dark romantic menu with a rose crest and three courses",
+   "typography": "Great Vibes, Cinzel labels, Cormorant Garamond italic",
+   "palette": "wine black, blush, copper",
+   "decor": "double frame, rose, small hearts"
+  },
+  "palette": [
+   "#2A0A12",
+   "#D4A373",
+   "#F2C6B8",
+   "#F7E8E3",
+   "#E0345A"
+  ],
+  "content": {
+   "headline": "Valentine’s Dinner",
+   "message": "Rose & beetroot salad · Lobster tagliatelle · Chocolate fondant for two",
+   "signature": "14 February · La Rosa"
+  },
+  "dimensions": {
+   "width": 374,
+   "height": 794,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/valentines-dinner-menu.jpg",
+  "preview_url": "/templates/collection/valentines-dinner-menu-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "rose"
+  ]
+ },
+ {
+  "id": "seasonal-032",
+  "slug": "valentine-love-story",
+  "title": "Valentine Love Story",
+  "category": "Seasonal and holiday designs",
+  "subcategory": "Valentine’s Day",
+  "site_category": "Festivals",
+  "description": "Big white heart holding the greeting, floating hearts on pink. 30 floating hearts, heart panel with shadow.",
+  "design_brief": "Big white heart holding the greeting, floating hearts on pink. 30 floating hearts, heart panel with shadow.",
+  "design_style": "valentine’s day",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=valentines%20day%20instagram%20story%20hearts",
+  "inspiration_query": "valentines day instagram story hearts",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "big white heart holding the greeting, floating hearts on pink",
+   "typography": "Great Vibes, Playfair Display italic",
+   "palette": "pink to cherry, white",
+   "decor": "30 floating hearts, heart panel with shadow"
+  },
+  "palette": [
+   "#FF9EB5",
+   "#E0345A",
+   "#FFD6E0",
+   "#FFFFFF",
+   "#FF6B8B",
+   "#C2185B"
+  ],
+  "content": {
+   "headline": "Happy Valentine’s Day",
+   "message": "to the one who has my heart",
+   "signature": ""
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1920,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/valentine-love-story.jpg",
+  "preview_url": "/templates/collection/valentine-love-story-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "seasonal-033",
+  "slug": "mothers-day-floral-card",
+  "title": "Mother’s Day Floral Card",
+  "category": "Seasonal and holiday designs",
+  "subcategory": "Mother’s Day",
+  "site_category": "Festivals",
+  "description": "Flower wreath around a script ‘Mum’, italic greeting below. Leaf wreath with six flowers.",
+  "design_brief": "Flower wreath around a script ‘Mum’, italic greeting below. Leaf wreath with six flowers.",
+  "design_style": "mother’s day",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=mothers%20day%20floral%20card",
+  "inspiration_query": "mothers day floral card",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "flower wreath around a script ‘Mum’, italic greeting below",
+   "typography": "Great Vibes, Playfair Display italic, Lora italic, Caveat",
+   "palette": "blush, rose, sage",
+   "decor": "leaf wreath with six flowers"
+  },
+  "palette": [
+   "#FFF4F1",
+   "#B5C4A7",
+   "#8DA68A",
+   "#B23A55",
+   "#5A2E3A",
+   "#6B4A50"
+  ],
+  "content": {
+   "headline": "Happy Mother’s Day",
+   "message": "Thank you for your endless love and the warmest hugs.",
+   "signature": "Love always, Lina"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/mothers-day-floral-card.jpg",
+  "preview_url": "/templates/collection/mothers-day-floral-card-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "blossom",
+   "rose",
+   "tulip"
+  ]
+ },
+ {
+  "id": "seasonal-034",
+  "slug": "mothers-day-brunch-post",
+  "title": "Mother’s Day Brunch Post",
+  "category": "Seasonal and holiday designs",
+  "subcategory": "Mother’s Day",
+  "site_category": "Festivals",
+  "description": "Flower photo top-right, stacked italic title and details left, call-to-action band. Photo, bouquet illustration, CTA band.",
+  "design_brief": "Flower photo top-right, stacked italic title and details left, call-to-action band. Photo, bouquet illustration, CTA band.",
+  "design_style": "mother’s day",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=mothers%20day%20brunch%20restaurant%20post",
+  "inspiration_query": "mothers day brunch restaurant post",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "flower photo top-right, stacked italic title and details left, call-to-action band",
+   "typography": "Playfair Display bold italic, Montserrat",
+   "palette": "blush, wine, flower tones",
+   "decor": "photo, bouquet illustration, CTA band"
+  },
+  "palette": [
+   "#FBE7DF",
+   "#7A2E3E",
+   "#4A2A30"
+  ],
+  "content": {
+   "headline": "Mother’s Day Brunch",
+   "message": "Sunday 21 March · 12–4 PM · Free flowers for every mum",
+   "signature": "Book a table"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/mothers-day-brunch-post.jpg",
+  "preview_url": "/templates/collection/mothers-day-brunch-post-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "bouquet"
+  ]
+ },
+ {
+  "id": "seasonal-035",
+  "slug": "best-mum-ever-card",
+  "title": "Best Mum Ever Card",
+  "category": "Seasonal and holiday designs",
+  "subcategory": "Mother’s Day",
+  "site_category": "Festivals",
+  "description": "Award rosette with ribbon tails, playful title below. Vector rosette and ribbons.",
+  "design_brief": "Award rosette with ribbon tails, playful title below. Vector rosette and ribbons.",
+  "design_style": "mother’s day",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=best%20mum%20ever%20card%20funny",
+  "inspiration_query": "best mum ever card funny",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "award rosette with ribbon tails, playful title below",
+   "typography": "Anton, Montserrat, Pacifico, Fredoka, Caveat",
+   "palette": "apricot, marigold, tomato, charcoal",
+   "decor": "vector rosette and ribbons"
+  },
+  "palette": [
+   "#FFE9D6",
+   "#F2B84B",
+   "#FFFFFF",
+   "#E2572A",
+   "#2A2A2A",
+   "#5A3A2A"
+  ],
+  "content": {
+   "headline": "Best mum ever",
+   "message": "Officially certified by your favourite child.",
+   "signature": "— Omar"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/best-mum-ever-card.jpg",
+  "preview_url": "/templates/collection/best-mum-ever-card-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "seasonal-036",
+  "slug": "fathers-day-card",
+  "title": "Father’s Day Card",
+  "category": "Seasonal and holiday designs",
+  "subcategory": "Father’s Day",
+  "site_category": "Festivals",
+  "description": "Pinstripe navy card: tie, slab-serif greeting, small trophy. Pinstripes, tie and trophy illustrations.",
+  "design_brief": "Pinstripe navy card: tie, slab-serif greeting, small trophy. Pinstripes, tie and trophy illustrations.",
+  "design_style": "father’s day",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=fathers%20day%20card%20modern",
+  "inspiration_query": "fathers day card modern",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "pinstripe navy card: tie, slab-serif greeting, small trophy",
+   "typography": "Alfa Slab One, Lora italic, Caveat",
+   "palette": "navy, mustard, white",
+   "decor": "pinstripes, tie and trophy illustrations"
+  },
+  "palette": [
+   "#1F3349",
+   "#F2C14E",
+   "#E5ECF3"
+  ],
+  "content": {
+   "headline": "Happy Father’s Day",
+   "message": "To my hero, my coach and my biggest fan.",
+   "signature": "Love, Sara"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/fathers-day-card.jpg",
+  "preview_url": "/templates/collection/fathers-day-card-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "necktie",
+   "trophy"
+  ]
+ },
+ {
+  "id": "seasonal-037",
+  "slug": "fathers-day-sale-post",
+  "title": "Father’s Day Sale Post",
+  "category": "Seasonal and holiday designs",
+  "subcategory": "Father’s Day",
+  "site_category": "Festivals",
+  "description": "Navy promo with a discount badge and gift illustrations. Discount circle, tie / briefcase / sunglasses.",
+  "design_brief": "Navy promo with a discount badge and gift illustrations. Discount circle, tie / briefcase / sunglasses.",
+  "design_style": "father’s day",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=fathers%20day%20sale%20post",
+  "inspiration_query": "fathers day sale post",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "navy promo with a discount badge and gift illustrations",
+   "typography": "Anton, Montserrat",
+   "palette": "navy, mustard, white",
+   "decor": "discount circle, tie / briefcase / sunglasses"
+  },
+  "palette": [
+   "#1F3349",
+   "#FFFFFF",
+   "#F2C14E"
+  ],
+  "content": {
+   "headline": "Father’s Day Gifts",
+   "message": "Watches, wallets & more · 15% off",
+   "signature": ""
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/fathers-day-sale-post.jpg",
+  "preview_url": "/templates/collection/fathers-day-sale-post-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "briefcase",
+   "necktie",
+   "sunglasses"
+  ]
+ },
+ {
+  "id": "seasonal-038",
+  "slug": "happy-easter-card",
+  "title": "Happy Easter Card",
+  "category": "Seasonal and holiday designs",
+  "subcategory": "Easter",
+  "site_category": "Festivals",
+  "description": "Bunny over a row of decorated vector eggs on a green hill. Decorated eggs, hill, bunny.",
+  "design_brief": "Bunny over a row of decorated vector eggs on a green hill. Decorated eggs, hill, bunny.",
+  "design_style": "easter",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=happy%20easter%20card%20pastel%20eggs",
+  "inspiration_query": "happy easter card pastel eggs",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "bunny over a row of decorated vector eggs on a green hill",
+   "typography": "Pacifico, Lora italic, Caveat",
+   "palette": "spring green, pastel eggs",
+   "decor": "decorated eggs, hill, bunny"
+  },
+  "palette": [
+   "#F1F8EC",
+   "#BFE3A8",
+   "#F7B6C8",
+   "#FFFFFF",
+   "#B9D7F7",
+   "#FFE08A"
+  ],
+  "content": {
+   "headline": "Happy Easter",
+   "message": "Wishing you a season of new beginnings.",
+   "signature": "— the Morgan family"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/happy-easter-card.jpg",
+  "preview_url": "/templates/collection/happy-easter-card-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "rabbit"
+  ]
+ },
+ {
+  "id": "seasonal-039",
+  "slug": "easter-egg-hunt-poster",
+  "title": "Easter Egg Hunt Poster",
+  "category": "Seasonal and holiday designs",
+  "subcategory": "Easter",
+  "site_category": "Festivals",
+  "description": "Big title, details, bunny and chick on a lawn scattered with eggs. Eggs, lawn, bunny and chick illustrations.",
+  "design_brief": "Big title, details, bunny and chick on a lawn scattered with eggs. Eggs, lawn, bunny and chick illustrations.",
+  "design_style": "easter",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=easter%20egg%20hunt%20poster%20kids",
+  "inspiration_query": "easter egg hunt poster kids",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "big title, details, bunny and chick on a lawn scattered with eggs",
+   "typography": "Luckiest Guy, Fredoka",
+   "palette": "butter, grass green, egg pastels, tangerine",
+   "decor": "eggs, lawn, bunny and chick illustrations"
+  },
+  "palette": [
+   "#FFF6E0",
+   "#9BD07A",
+   "#C9B6F2",
+   "#B9D7F7",
+   "#F7B6C8",
+   "#FFE08A"
+  ],
+  "content": {
+   "headline": "Easter Egg Hunt",
+   "message": "Saturday 27 March · 10 AM · Community Park · ages 3–10",
+   "signature": "Bring a basket!"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1350,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/easter-egg-hunt-poster.jpg",
+  "preview_url": "/templates/collection/easter-egg-hunt-poster-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "hatching-chick",
+   "rabbit"
+  ]
+ },
+ {
+  "id": "seasonal-040",
+  "slug": "haunted-villa-halloween-party-invitation",
+  "title": "Haunted Villa Halloween Party Invitation",
+  "category": "Seasonal and holiday designs",
+  "subcategory": "Halloween",
+  "site_category": "Festivals",
+  "description": "Moonlit purple sky with a ghost, title and a row of pumpkins. Moon, ghost, three pumpkins.",
+  "design_brief": "Moonlit purple sky with a ghost, title and a row of pumpkins. Moon, ghost, three pumpkins.",
+  "design_style": "halloween",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=halloween%20party%20invitation",
+  "inspiration_query": "halloween party invitation",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "moonlit purple sky with a ghost, title and a row of pumpkins",
+   "typography": "Luckiest Guy, Fredoka, Caveat",
+   "palette": "midnight purple, pumpkin orange, moon",
+   "decor": "moon, ghost, three pumpkins"
+  },
+  "palette": [
+   "#1B1035",
+   "#3E1E5E",
+   "#FFE6A8",
+   "#120A20",
+   "#FF8A1F",
+   "#E9DDF7"
+  ],
+  "content": {
+   "headline": "Halloween Party",
+   "message": "Costumes, candy & spooky games · Saturday 30 October · 6 PM · The Haunted Villa, Arabian Ranches",
+   "signature": "Come in costume!"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/haunted-villa-halloween-party-invitation.jpg",
+  "preview_url": "/templates/collection/haunted-villa-halloween-party-invitation-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "ghost",
+   "jack-o-lantern"
+  ]
+ },
+ {
+  "id": "seasonal-041",
+  "slug": "happy-halloween-post",
+  "title": "Happy Halloween Post",
+  "category": "Seasonal and holiday designs",
+  "subcategory": "Halloween",
+  "site_category": "Festivals",
+  "description": "Giant pumpkin centred on orange stripes, headline above, script below. Diagonal stripes, pumpkin and ghost.",
+  "design_brief": "Giant pumpkin centred on orange stripes, headline above, script below. Diagonal stripes, pumpkin and ghost.",
+  "design_style": "halloween",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=happy%20halloween%20instagram%20post%20pumpkins",
+  "inspiration_query": "happy halloween instagram post pumpkins",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "giant pumpkin centred on orange stripes, headline above, script below",
+   "typography": "Luckiest Guy, Pacifico",
+   "palette": "pumpkin orange, midnight",
+   "decor": "diagonal stripes, pumpkin and ghost"
+  },
+  "palette": [
+   "#FF8A1F",
+   "#1B1035"
+  ],
+  "content": {
+   "headline": "Happy Halloween",
+   "message": "Trick or treat!",
+   "signature": ""
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/happy-halloween-post.jpg",
+  "preview_url": "/templates/collection/happy-halloween-post-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "ghost",
+   "jack-o-lantern"
+  ]
+ },
+ {
+  "id": "seasonal-042",
+  "slug": "halloween-kids-story",
+  "title": "Halloween Kids Story",
+  "category": "Seasonal and holiday designs",
+  "subcategory": "Halloween",
+  "site_category": "Festivals",
+  "description": "Friendly ghost against a big moon, huge BOO and a kids' line. Stars, moon, ghost, candy.",
+  "design_brief": "Friendly ghost against a big moon, huge BOO and a kids' line. Stars, moon, ghost, candy.",
+  "design_style": "halloween",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=halloween%20kids%20cute%20story",
+  "inspiration_query": "halloween kids cute story",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "friendly ghost against a big moon, huge BOO and a kids' line",
+   "typography": "Luckiest Guy, Fredoka",
+   "palette": "night purple, moon yellow, candy orange",
+   "decor": "stars, moon, ghost, candy"
+  },
+  "palette": [
+   "#2D1B4E",
+   "#FFFFFF",
+   "#FFE6A8",
+   "#FFC37A"
+  ],
+  "content": {
+   "headline": "Boo!",
+   "message": "Happy Halloween from our little monsters",
+   "signature": ""
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1920,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/halloween-kids-story.jpg",
+  "preview_url": "/templates/collection/halloween-kids-story-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "candy",
+   "ghost"
+  ]
+ },
+ {
+  "id": "seasonal-043",
+  "slug": "thanksgiving-dinner-invitation",
+  "title": "Thanksgiving Dinner Invitation",
+  "category": "Seasonal and holiday designs",
+  "subcategory": "Autumn",
+  "site_category": "Festivals",
+  "description": "Falling leaves framing a turkey and italic invitation. Maple and fallen leaves, turkey.",
+  "design_brief": "Falling leaves framing a turkey and italic invitation. Maple and fallen leaves, turkey.",
+  "design_style": "autumn",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=thanksgiving%20dinner%20invitation%20autumn",
+  "inspiration_query": "thanksgiving dinner invitation autumn",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "falling leaves framing a turkey and italic invitation",
+   "typography": "Playfair Display bold italic, Lora italic, Montserrat caps, Caveat",
+   "palette": "cream, rust, pumpkin, cocoa",
+   "decor": "maple and fallen leaves, turkey"
+  },
+  "palette": [
+   "#FBF1E3",
+   "#8C3B12",
+   "#5A3A20",
+   "#C0631B"
+  ],
+  "content": {
+   "headline": "Thanksgiving Dinner",
+   "message": "Join us for food, family & gratitude · Thursday 25 November · 6 PM",
+   "signature": "Bring your appetite"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/thanksgiving-dinner-invitation.jpg",
+  "preview_url": "/templates/collection/thanksgiving-dinner-invitation-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "fallen-leaf",
+   "maple-leaf",
+   "turkey"
+  ]
+ },
+ {
+  "id": "seasonal-044",
+  "slug": "hello-autumn-post",
+  "title": "Hello Autumn Post",
+  "category": "Seasonal and holiday designs",
+  "subcategory": "Autumn",
+  "site_category": "Festivals",
+  "description": "Cream medallion with an italic greeting on a bed of autumn leaves. 26 leaf illustrations, medallion.",
+  "design_brief": "Cream medallion with an italic greeting on a bed of autumn leaves. 26 leaf illustrations, medallion.",
+  "design_style": "autumn",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=hello%20autumn%20instagram%20post%20leaves",
+  "inspiration_query": "hello autumn instagram post leaves",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "cream medallion with an italic greeting on a bed of autumn leaves",
+   "typography": "Playfair Display bold italic, Lora italic",
+   "palette": "rust, cream, cocoa, leaf golds",
+   "decor": "26 leaf illustrations, medallion"
+  },
+  "palette": [
+   "#C9652A",
+   "#FBF1E3",
+   "#8C3B12",
+   "#5A3A20"
+  ],
+  "content": {
+   "headline": "Hello autumn",
+   "message": "Cosy days, warm drinks and golden leaves.",
+   "signature": ""
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/hello-autumn-post.jpg",
+  "preview_url": "/templates/collection/hello-autumn-post-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "fallen-leaf",
+   "leaf-fluttering-in-wind",
+   "maple-leaf"
+  ]
+ },
+ {
+  "id": "seasonal-045",
+  "slug": "back-to-school-sale-post",
+  "title": "Back to School Sale Post",
+  "category": "Seasonal and holiday designs",
+  "subcategory": "Back to School",
+  "site_category": "Festivals",
+  "description": "Bright blue promo with school illustrations and a discount badge. Books, pencil, cap, school illustrations.",
+  "design_brief": "Bright blue promo with school illustrations and a discount badge. Books, pencil, cap, school illustrations.",
+  "design_style": "back to school",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=back%20to%20school%20sale%20post",
+  "inspiration_query": "back to school sale post",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "bright blue promo with school illustrations and a discount badge",
+   "typography": "Luckiest Guy, Montserrat",
+   "palette": "school blue, pencil yellow, white",
+   "decor": "books, pencil, cap, school illustrations"
+  },
+  "palette": [
+   "#2E86DE",
+   "#FFFFFF",
+   "#FFD32A"
+  ],
+  "content": {
+   "headline": "Back to School",
+   "message": "Stationery, bags & more · 25% off",
+   "signature": "Shop now"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/back-to-school-sale-post.jpg",
+  "preview_url": "/templates/collection/back-to-school-sale-post-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "books",
+   "graduation-cap",
+   "pencil",
+   "school"
+  ]
+ },
+ {
+  "id": "seasonal-046",
+  "slug": "first-day-of-school-sign",
+  "title": "First Day of School Sign",
+  "category": "Seasonal and holiday designs",
+  "subcategory": "Back to School",
+  "site_category": "Festivals",
+  "description": "Printable sign: bunting, handwritten line, big grade name, fill-in lines. Ruled lines, bunting, school and pencil illustrations.",
+  "design_brief": "Printable sign: bunting, handwritten line, big grade name, fill-in lines. Ruled lines, bunting, school and pencil illustrations.",
+  "design_style": "back to school",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=first%20day%20of%20school%20sign%20printable",
+  "inspiration_query": "first day of school sign printable",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "printable sign: bunting, handwritten line, big grade name, fill-in lines",
+   "typography": "Caveat, Luckiest Guy, Fredoka",
+   "palette": "paper white, tomato, navy, primary brights",
+   "decor": "ruled lines, bunting, school and pencil illustrations"
+  },
+  "palette": [
+   "#FFFDF5",
+   "#E3EEF9",
+   "#7A6F66",
+   "#FF6B6B",
+   "#FFD45C",
+   "#4FC3F7"
+  ],
+  "content": {
+   "headline": "My first day of",
+   "message": "Kindergarten",
+   "signature": "Name: Adam · Age: 4 · I want to be: an astronaut"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1350,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/first-day-of-school-sign.jpg",
+  "preview_url": "/templates/collection/first-day-of-school-sign-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "pencil",
+   "school"
+  ]
+ },
+ {
+  "id": "seasonal-047",
+  "slug": "summer-sale-post",
+  "title": "Summer Sale Post",
+  "category": "Seasonal and holiday designs",
+  "subcategory": "Summer",
+  "site_category": "Festivals",
+  "description": "Sunny promo with a discount badge and summer illustrations. Palm, watermelon, sunglasses, drink.",
+  "design_brief": "Sunny promo with a discount badge and summer illustrations. Palm, watermelon, sunglasses, drink.",
+  "design_style": "summer",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=summer%20sale%20post%20tropical",
+  "inspiration_query": "summer sale post tropical",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "sunny promo with a discount badge and summer illustrations",
+   "typography": "Luckiest Guy, Montserrat",
+   "palette": "lemon, watermelon pink, ocean blue",
+   "decor": "palm, watermelon, sunglasses, drink"
+  },
+  "palette": [
+   "#FFE14D",
+   "#0E6C9C",
+   "#FF4F79",
+   "#FFFFFF"
+  ],
+  "content": {
+   "headline": "Summer Sale",
+   "message": "Up to 40% off · Beachwear & more",
+   "signature": ""
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/summer-sale-post.jpg",
+  "preview_url": "/templates/collection/summer-sale-post-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "palm-tree",
+   "sunglasses",
+   "tropical-drink",
+   "watermelon"
+  ]
+ },
+ {
+  "id": "seasonal-048",
+  "slug": "hello-summer-story",
+  "title": "Hello Summer Story",
+  "category": "Seasonal and holiday designs",
+  "subcategory": "Summer",
+  "site_category": "Festivals",
+  "description": "Full-bleed beach photo with a big script hello at the top. Shade, sun illustration.",
+  "design_brief": "Full-bleed beach photo with a big script hello at the top. Shade, sun illustration.",
+  "design_style": "summer",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=hello%20summer%20story%20beach",
+  "inspiration_query": "hello summer story beach",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "full-bleed beach photo with a big script hello at the top",
+   "typography": "Pacifico, Montserrat caps",
+   "palette": "sunset sand, coral, white",
+   "decor": "shade, sun illustration"
+  },
+  "palette": [
+   "#F2C7A5",
+   "#FFFFFF"
+  ],
+  "content": {
+   "headline": "Hello, summer!",
+   "message": "Sun, sea and slow days",
+   "signature": ""
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1920,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/hello-summer-story.jpg",
+  "preview_url": "/templates/collection/hello-summer-story-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "sun"
+  ]
+ },
+ {
+  "id": "seasonal-049",
+  "slug": "summer-camp-poster",
+  "title": "Summer Camp Poster",
+  "category": "Seasonal and holiday designs",
+  "subcategory": "Summer",
+  "site_category": "Festivals",
+  "description": "Mountains, tent and kite with an outlined title and details card. Sun, mountains, tent and kite illustrations.",
+  "design_brief": "Mountains, tent and kite with an outlined title and details card. Sun, mountains, tent and kite illustrations.",
+  "design_style": "summer",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=summer%20camp%20poster%20kids",
+  "inspiration_query": "summer camp poster kids",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "mountains, tent and kite with an outlined title and details card",
+   "typography": "Luckiest Guy outlined, Fredoka",
+   "palette": "sky, mountain greens, grass, tangerine",
+   "decor": "sun, mountains, tent and kite illustrations"
+  },
+  "palette": [
+   "#7FD3F5",
+   "#D6F0FB",
+   "#FFD45C",
+   "#5B8E7D",
+   "#4A7A6A",
+   "#8BC34A"
+  ],
+  "content": {
+   "headline": "Summer Camp",
+   "message": "Ages 6–12 · July & August · Sports, art, science & swimming",
+   "signature": "Register at camp@funzone.ae"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1350,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/summer-camp-poster.jpg",
+  "preview_url": "/templates/collection/summer-camp-poster-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "kite",
+   "tent"
+  ]
+ },
+ {
+  "id": "seasonal-050",
+  "slug": "winter-wonderland-card",
+  "title": "Winter Wonderland Card",
+  "category": "Seasonal and holiday designs",
+  "subcategory": "Winter",
+  "site_category": "Festivals",
+  "description": "Snowflakes of different sizes over a deep winter sky, script greeting. Snow, snowflake illustrations.",
+  "design_brief": "Snowflakes of different sizes over a deep winter sky, script greeting. Snow, snowflake illustrations.",
+  "design_style": "winter",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=winter%20wonderland%20card%20snowflakes",
+  "inspiration_query": "winter wonderland card snowflakes",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "snowflakes of different sizes over a deep winter sky, script greeting",
+   "typography": "Great Vibes, Lora italic, Caveat",
+   "palette": "winter navy to steel blue, white",
+   "decor": "snow, snowflake illustrations"
+  },
+  "palette": [
+   "#1F3B5C",
+   "#4E7AA6",
+   "#FFFFFF",
+   "#DCE8F4",
+   "#BFD8F0"
+  ],
+  "content": {
+   "headline": "Winter wonderland",
+   "message": "Warm wishes for a cosy season.",
+   "signature": "— Noor"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/winter-wonderland-card.jpg",
+  "preview_url": "/templates/collection/winter-wonderland-card-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "snowflake"
+  ]
+ }
+]

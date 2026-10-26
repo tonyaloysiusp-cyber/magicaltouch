@@ -478,9 +478,9 @@ class Doc:
             pts.append((cx + rr * math.cos(a), cy + rr * math.sin(a)))
         return self.polygon(pts, fill, opacity=opacity, stroke=stroke, sw=sw, name="Star")
 
-    def heart(self, cx, cy, s, fill, opacity=1, angle=0, stroke=None, sw=0):
+    def heart(self, cx, cy, s, fill, opacity=1, angle=0, stroke=None, sw=0, shadow_=None):
         d = parse_d("M0 -0.3C0 -0.62 -0.5 -0.72 -0.5 -0.3C-0.5 0 -0.2 0.22 0 0.42C0.2 0.22 0.5 0 0.5 -0.3C0.5 -0.72 0 -0.62 0 -0.3Z")
-        return self.path(transform_path(d, s, cx, cy + s * 0.05), fill=fill, opacity=opacity, angle=angle, stroke=stroke, sw=sw, name="Heart")
+        return self.path(transform_path(d, s, cx, cy + s * 0.05), fill=fill, opacity=opacity, angle=angle, stroke=stroke, sw=sw, name="Heart", shadow_=shadow_)
 
     def balloon(self, cx, cy, r, color, string="#9a8f86", tail=None, hl=0.55, name="Balloon"):
         """Glossy vector balloon, centre (cx, cy) of the round part."""
