@@ -10,7 +10,7 @@ os.makedirs('out', exist_ok=True)
 cfg = json.load(open('queries.json'))
 log = []
 def get(url, **kw):
-    for i in range(4):
+    for i in range(7):
         try:
             r = requests.get(url, headers=H, timeout=20, **kw)
             if r.status_code == 429: time.sleep(20); continue
