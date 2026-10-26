@@ -1,6 +1,6 @@
 # Collection 500 — validation report
 
-Templates: **430** of 500
+Templates: **460** of 500
 
 | Category | Made | Target |
 |---|---:|---:|
@@ -13,10 +13,10 @@ Templates: **430** of 500
 | Invitations and events | 40 | 40 |
 | Social media and promotional designs | 40 | 40 |
 | Business and professional stationery | 30 | 30 |
-| Miscellaneous special occasions | 0 | 30 |
+| Miscellaneous special occasions | 30 | 30 |
 | Creative quote and typography designs | 0 | 40 |
 
-Reference links: 430 — all are Pinterest **search** links, not verified individual pins (0 verified).
+Reference links: 460 — all are Pinterest **search** links, not verified individual pins (0 verified).
 
 ## Errors
 

@@ -1,0 +1,1419 @@
+[
+ {
+  "id": "misc-001",
+  "slug": "hajj-mubarak-card",
+  "title": "Hajj Mubarak Card",
+  "category": "Miscellaneous special occasions",
+  "subcategory": "Religious",
+  "site_category": "Festivals",
+  "description": "Glowing Kaaba centred on a geometric-pattern ground, gold script and blessing. Star pattern, crescent, glow.",
+  "design_brief": "Glowing Kaaba centred on a geometric-pattern ground, gold script and blessing. Star pattern, crescent, glow.",
+  "design_style": "religious",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=hajj%20mubarak%20card%20kaaba%20gold",
+  "inspiration_query": "hajj mubarak card kaaba gold",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "glowing Kaaba centred on a geometric-pattern ground, gold script and blessing",
+   "typography": "Great Vibes gold, Cormorant Garamond italic, Montserrat",
+   "palette": "deep emerald, gold, mint white",
+   "decor": "star pattern, crescent, glow"
+  },
+  "palette": [
+   "#0B2E2B",
+   "#06302A",
+   "#E9C877",
+   "#8A6A2E",
+   "#B68A3A",
+   "#F7E3A3"
+  ],
+  "content": {
+   "headline": "Hajj Mubarak",
+   "message": "May Allah accept your Hajj and bring you home safely.",
+   "signature": "With love, the Rahman family"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/hajj-mubarak-card.jpg",
+  "preview_url": "/templates/collection/hajj-mubarak-card-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "kaaba"
+  ]
+ },
+ {
+  "id": "misc-002",
+  "slug": "umrah-mubarak-post",
+  "title": "Umrah Mubarak Post",
+  "category": "Miscellaneous special occasions",
+  "subcategory": "Religious",
+  "site_category": "Festivals",
+  "description": "Tall arch window framing the Kaaba, italic headline and blessing below. Arch with gold outline, star pattern.",
+  "design_brief": "Tall arch window framing the Kaaba, italic headline and blessing below. Arch with gold outline, star pattern.",
+  "design_style": "religious",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=umrah%20mubarak%20post%20elegant",
+  "inspiration_query": "umrah mubarak post elegant",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "tall arch window framing the Kaaba, italic headline and blessing below",
+   "typography": "Playfair Display italic, Lora italic",
+   "palette": "parchment, deep teal, gold",
+   "decor": "arch with gold outline, star pattern"
+  },
+  "palette": [
+   "#F6F0E4",
+   "#0F3D3A",
+   "#1D5C55",
+   "#E9C877",
+   "#B68A3A",
+   "#5A5040"
+  ],
+  "content": {
+   "headline": "Umrah Mubarak",
+   "message": "May your journey be blessed and your prayers answered",
+   "signature": ""
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/umrah-mubarak-post.jpg",
+  "preview_url": "/templates/collection/umrah-mubarak-post-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "kaaba"
+  ]
+ },
+ {
+  "id": "misc-003",
+  "slug": "happy-onam-pookalam-post",
+  "title": "Happy Onam Pookalam Post",
+  "category": "Miscellaneous special occasions",
+  "subcategory": "Festival",
+  "site_category": "Festivals",
+  "description": "Concentric flower-carpet pookalam above an italic greeting, palm fronds at the base. Vector pookalam, fronds.",
+  "design_brief": "Concentric flower-carpet pookalam above an italic greeting, palm fronds at the base. Vector pookalam, fronds.",
+  "design_style": "festival",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=happy%20onam%20pookalam%20post",
+  "inspiration_query": "happy onam pookalam post",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "concentric flower-carpet pookalam above an italic greeting, palm fronds at the base",
+   "typography": "Playfair Display italic, Lora italic, Montserrat caps",
+   "palette": "marigold, saffron, crimson, leaf green",
+   "decor": "vector pookalam, fronds"
+  },
+  "palette": [
+   "#FFF6E0",
+   "#F4A300",
+   "#FFFFFF",
+   "#E85D04",
+   "#FFD23F",
+   "#9D0208"
+  ],
+  "content": {
+   "headline": "Happy Onam",
+   "message": "Wishing you a harvest of happiness and prosperity",
+   "signature": "From all of us at Kerala Kitchen"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/happy-onam-pookalam-post.jpg",
+  "preview_url": "/templates/collection/happy-onam-pookalam-post-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "misc-004",
+  "slug": "happy-holi-colour-splash-post",
+  "title": "Happy Holi Colour Splash Post",
+  "category": "Miscellaneous special occasions",
+  "subcategory": "Festival",
+  "site_category": "Festivals",
+  "description": "Ring of colour-powder bursts around a white disc with script greeting. Powder blobs, scattered dots.",
+  "design_brief": "Ring of colour-powder bursts around a white disc with script greeting. Powder blobs, scattered dots.",
+  "design_style": "festival",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=happy%20holi%20colour%20splash%20post",
+  "inspiration_query": "happy holi colour splash post",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "ring of colour-powder bursts around a white disc with script greeting",
+   "typography": "Pacifico, Fredoka",
+   "palette": "magenta, orange, yellow, blue, violet, teal",
+   "decor": "powder blobs, scattered dots"
+  },
+  "palette": [
+   "#FFFFFF",
+   "#FF006E",
+   "#FB5607",
+   "#FFBE0B",
+   "#3A86FF",
+   "#8338EC"
+  ],
+  "content": {
+   "headline": "Happy Holi",
+   "message": "May your life be as colourful as today",
+   "signature": ""
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/happy-holi-colour-splash-post.jpg",
+  "preview_url": "/templates/collection/happy-holi-colour-splash-post-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "misc-005",
+  "slug": "makar-sankranti-kite-card",
+  "title": "Makar Sankranti Kite Card",
+  "category": "Miscellaneous special occasions",
+  "subcategory": "Festival",
+  "site_category": "Festivals",
+  "description": "Sky of colourful vector kites with strings, italic greeting below. Kites, sun, wave.",
+  "design_brief": "Sky of colourful vector kites with strings, italic greeting below. Kites, sun, wave.",
+  "design_style": "festival",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=makar%20sankranti%20kite%20card",
+  "inspiration_query": "makar sankranti kite card",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "sky of colourful vector kites with strings, italic greeting below",
+   "typography": "Playfair Display italic, Lora italic",
+   "palette": "sky blue to sand, kite brights",
+   "decor": "kites, sun, wave"
+  },
+  "palette": [
+   "#7FD1F5",
+   "#FFE6B0",
+   "#FFD23F",
+   "#E63946",
+   "#FFB703",
+   "#3A86FF"
+  ],
+  "content": {
+   "headline": "Happy Makar Sankranti",
+   "message": "Let your dreams fly as high as the kites",
+   "signature": ""
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/makar-sankranti-kite-card.jpg",
+  "preview_url": "/templates/collection/makar-sankranti-kite-card-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "misc-006",
+  "slug": "raksha-bandhan-card",
+  "title": "Raksha Bandhan Card",
+  "category": "Miscellaneous special occasions",
+  "subcategory": "Festival",
+  "site_category": "Festivals",
+  "description": "Vector rakhi thread across the top with a petal medallion, script greeting and note. Rakhi medallion, thread, frame.",
+  "design_brief": "Vector rakhi thread across the top with a petal medallion, script greeting and note. Rakhi medallion, thread, frame.",
+  "design_style": "festival",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=raksha%20bandhan%20rakhi%20card",
+  "inspiration_query": "raksha bandhan rakhi card",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "vector rakhi thread across the top with a petal medallion, script greeting and note",
+   "typography": "Great Vibes, Lora italic",
+   "palette": "peach cream, magenta, saffron",
+   "decor": "rakhi medallion, thread, frame"
+  },
+  "palette": [
+   "#FFF3E6",
+   "#E85D04",
+   "#D00070",
+   "#FFB703",
+   "#FFFFFF",
+   "#B5179E"
+  ],
+  "content": {
+   "headline": "Happy Raksha Bandhan",
+   "message": "To my brother — my protector, my partner in crime and my best friend.",
+   "signature": "Love, Priya"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/raksha-bandhan-card.jpg",
+  "preview_url": "/templates/collection/raksha-bandhan-card-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "misc-007",
+  "slug": "mid-autumn-festival-card",
+  "title": "Mid-Autumn Festival Card",
+  "category": "Miscellaneous special occasions",
+  "subcategory": "Festival",
+  "site_category": "Festivals",
+  "description": "Glowing full moon, red lanterns either side, mooncake and gold italic greeting. Moon glow, lanterns, sparkles.",
+  "design_brief": "Glowing full moon, red lanterns either side, mooncake and gold italic greeting. Moon glow, lanterns, sparkles.",
+  "design_style": "festival",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=mid%20autumn%20festival%20mooncake%20card",
+  "inspiration_query": "mid autumn festival mooncake card",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "glowing full moon, red lanterns either side, mooncake and gold italic greeting",
+   "typography": "Playfair Display italic, Lora italic",
+   "palette": "midnight blue, moon gold, lantern red",
+   "decor": "moon glow, lanterns, sparkles"
+  },
+  "palette": [
+   "#0D1B3E",
+   "#26315F",
+   "#FFF4C8",
+   "#FFE08A",
+   "#F5C04A",
+   "#C9A45A"
+  ],
+  "content": {
+   "headline": "Happy Mid-Autumn Festival",
+   "message": "Under the full moon, may your family be together and your hearts full.",
+   "signature": ""
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/mid-autumn-festival-card.jpg",
+  "preview_url": "/templates/collection/mid-autumn-festival-card-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "moon-cake"
+  ]
+ },
+ {
+  "id": "misc-008",
+  "slug": "happy-hanukkah-card",
+  "title": "Happy Hanukkah Card",
+  "category": "Miscellaneous special occasions",
+  "subcategory": "Festival",
+  "site_category": "Festivals",
+  "description": "Silver vector menorah with nine flames under a soft glow, italic greeting. Menorah, sparkles, glow.",
+  "design_brief": "Silver vector menorah with nine flames under a soft glow, italic greeting. Menorah, sparkles, glow.",
+  "design_style": "festival",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=happy%20hanukkah%20menorah%20card%20blue",
+  "inspiration_query": "happy hanukkah menorah card blue",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "silver vector menorah with nine flames under a soft glow, italic greeting",
+   "typography": "Playfair Display italic, Lora italic, Montserrat caps",
+   "palette": "royal blue, silver, candle gold",
+   "decor": "menorah, sparkles, glow"
+  },
+  "palette": [
+   "#0B2A5B",
+   "#123B7A",
+   "#BFD4FF",
+   "#C9D6EA",
+   "#FFFFFF",
+   "#FFC300"
+  ],
+  "content": {
+   "headline": "Happy Hanukkah",
+   "message": "Wishing you eight nights of light, love and latkes.",
+   "signature": "The Cohen family"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/happy-hanukkah-card.jpg",
+  "preview_url": "/templates/collection/happy-hanukkah-card-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "misc-009",
+  "slug": "nowruz-mubarak-card",
+  "title": "Nowruz Mubarak Card",
+  "category": "Miscellaneous special occasions",
+  "subcategory": "Festival",
+  "site_category": "Festivals",
+  "description": "Haft-sin table vignette: sprouts, tulip, painted egg and goldfish bowl, green italic greeting. Goldfish bowl, dotted base.",
+  "design_brief": "Haft-sin table vignette: sprouts, tulip, painted egg and goldfish bowl, green italic greeting. Goldfish bowl, dotted base.",
+  "design_style": "festival",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=nowruz%20card%20goldfish%20sabzeh",
+  "inspiration_query": "nowruz card goldfish sabzeh",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "haft-sin table vignette: sprouts, tulip, painted egg and goldfish bowl, green italic greeting",
+   "typography": "Playfair Display italic, Lora italic",
+   "palette": "spring green, sage, coral",
+   "decor": "goldfish bowl, dotted base"
+  },
+  "palette": [
+   "#F3F7EE",
+   "#E3EDD6",
+   "#C9D9B6",
+   "#8FB7D6",
+   "#2D6A4F",
+   "#3A4A3A"
+  ],
+  "content": {
+   "headline": "Nowruz Mubarak",
+   "message": "A new day, a new year, a new beginning. Happy Persian New Year!",
+   "signature": ""
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/nowruz-mubarak-card.jpg",
+  "preview_url": "/templates/collection/nowruz-mubarak-card-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "egg",
+   "seedling",
+   "tropical-fish",
+   "tulip"
+  ]
+ },
+ {
+  "id": "misc-010",
+  "slug": "first-holy-communion-invitation",
+  "title": "First Holy Communion Invitation",
+  "category": "Miscellaneous special occasions",
+  "subcategory": "Religious",
+  "site_category": "Invitation",
+  "description": "Church and dove above gold script, invitation details centred in a double frame. Double frame, divider.",
+  "design_brief": "Church and dove above gold script, invitation details centred in a double frame. Double frame, divider.",
+  "design_style": "religious",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=first%20holy%20communion%20invitation%20elegant",
+  "inspiration_query": "first holy communion invitation elegant",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "church and dove above gold script, invitation details centred in a double frame",
+   "typography": "Great Vibes gold, Cormorant Garamond, Montserrat caps",
+   "palette": "white, gold, charcoal",
+   "decor": "double frame, divider"
+  },
+  "palette": [
+   "#FFFFFF",
+   "#C9A45A",
+   "#8A6A2E",
+   "#E9C877",
+   "#B68A3A",
+   "#F7E3A3"
+  ],
+  "content": {
+   "headline": "First Holy Communion",
+   "message": "Please join us as Maria receives her First Holy Communion · Sunday 2 May 2027 · 10:00 AM · St. Mary’s Church, Dubai",
+   "signature": "Lunch to follow"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/first-holy-communion-invitation.jpg",
+  "preview_url": "/templates/collection/first-holy-communion-invitation-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "church",
+   "dove"
+  ]
+ },
+ {
+  "id": "misc-011",
+  "slug": "sunday-service-welcome-post",
+  "title": "Sunday Service Welcome Post",
+  "category": "Miscellaneous special occasions",
+  "subcategory": "Religious",
+  "site_category": "Social Media",
+  "description": "Church on a sunrise burst, warm welcome headline and service times. Light rays.",
+  "design_brief": "Church on a sunrise burst, warm welcome headline and service times. Light rays.",
+  "design_style": "religious",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=church%20sunday%20service%20welcome%20post",
+  "inspiration_query": "church sunday service welcome post",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "church on a sunrise burst, warm welcome headline and service times",
+   "typography": "Playfair Display italic, Lora italic, Montserrat",
+   "palette": "sunrise peach, cocoa, terracotta",
+   "decor": "light rays"
+  },
+  "palette": [
+   "#FFE8C9",
+   "#FFC2A1",
+   "#5A2A1A",
+   "#B5523B"
+  ],
+  "content": {
+   "headline": "Welcome home",
+   "message": "Join us this Sunday · 9:00 AM & 11:30 AM",
+   "signature": "Grace Community Church"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/sunday-service-welcome-post.jpg",
+  "preview_url": "/templates/collection/sunday-service-welcome-post-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "church"
+  ]
+ },
+ {
+  "id": "misc-012",
+  "slug": "griha-pravesh-invitation",
+  "title": "Griha Pravesh Invitation",
+  "category": "Miscellaneous special occasions",
+  "subcategory": "Religious",
+  "site_category": "Invitation",
+  "description": "Marigold-and-mango-leaf toran, house with diyas, invitation details. Toran garland, diyas.",
+  "design_brief": "Marigold-and-mango-leaf toran, house with diyas, invitation details. Toran garland, diyas.",
+  "design_style": "religious",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=griha%20pravesh%20invitation%20marigold",
+  "inspiration_query": "griha pravesh invitation marigold",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "marigold-and-mango-leaf toran, house with diyas, invitation details",
+   "typography": "Playfair Display italic, Lora italic, Montserrat caps, Great Vibes",
+   "palette": "cream, marigold, crimson, leaf green",
+   "decor": "toran garland, diyas"
+  },
+  "palette": [
+   "#FFF8E7",
+   "#FFB703",
+   "#E85D04",
+   "#F48C06",
+   "#2D6A4F",
+   "#9D0208"
+  ],
+  "content": {
+   "headline": "Griha Pravesh",
+   "message": "With the blessings of the Almighty, we invite you to our housewarming ceremony · Friday 12 March 2027 · 9:00 AM · Villa 22, Mirdif, Dubai",
+   "signature": "The Nair family"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/griha-pravesh-invitation.jpg",
+  "preview_url": "/templates/collection/griha-pravesh-invitation-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "diya-lamp",
+   "house-with-garden"
+  ]
+ },
+ {
+  "id": "misc-013",
+  "slug": "silver-anniversary-party-invitation",
+  "title": "Silver Anniversary Party Invitation",
+  "category": "Miscellaneous special occasions",
+  "subcategory": "Celebration",
+  "site_category": "Invitation",
+  "description": "Silver 25 inside a laurel, invitation details, RSVP line. Laurel, frame.",
+  "design_brief": "Silver 25 inside a laurel, invitation details, RSVP line. Laurel, frame.",
+  "design_style": "celebration",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=25th%20silver%20anniversary%20invitation",
+  "inspiration_query": "25th silver anniversary invitation",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "silver 25 inside a laurel, invitation details, RSVP line",
+   "typography": "Playfair Display silver, Cormorant Garamond italic, Montserrat caps",
+   "palette": "slate, silver, white",
+   "decor": "laurel, frame"
+  },
+  "palette": [
+   "#1E2430",
+   "#AEB6C2",
+   "#7E8590",
+   "#F2F4F7",
+   "#A9B0BA",
+   "#E8EBEF"
+  ],
+  "content": {
+   "headline": "25 Years",
+   "message": "Join us to celebrate the silver wedding anniversary of Joseph & Anne · Saturday 6 March 2027 · 7:00 PM · Al Bustan Ballroom",
+   "signature": "RSVP to Tony · 050 123 4567"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/silver-anniversary-party-invitation.jpg",
+  "preview_url": "/templates/collection/silver-anniversary-party-invitation-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "misc-014",
+  "slug": "golden-fifty-anniversary-card",
+  "title": "Golden Fifty Anniversary Card",
+  "category": "Miscellaneous special occasions",
+  "subcategory": "Celebration",
+  "site_category": "Love & Family",
+  "description": "Gold 50 in a ring with interlinked bands, script title, warm note. Ring, linked bands, gold confetti.",
+  "design_brief": "Gold 50 in a ring with interlinked bands, script title, warm note. Ring, linked bands, gold confetti.",
+  "design_style": "celebration",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=50th%20golden%20anniversary%20card",
+  "inspiration_query": "50th golden anniversary card",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "gold 50 in a ring with interlinked bands, script title, warm note",
+   "typography": "Playfair Display gold, Great Vibes, Cormorant Garamond italic",
+   "palette": "ivory, antique gold",
+   "decor": "ring, linked bands, gold confetti"
+  },
+  "palette": [
+   "#FFFBF2",
+   "#8A6A2E",
+   "#E9C877",
+   "#B68A3A",
+   "#F7E3A3",
+   "#9C7431"
+  ],
+  "content": {
+   "headline": "50 Golden Years",
+   "message": "Happy anniversary to the couple who showed us what forever looks like.",
+   "signature": "With love, all your grandchildren"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/golden-fifty-anniversary-card.jpg",
+  "preview_url": "/templates/collection/golden-fifty-anniversary-card-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "misc-015",
+  "slug": "vow-renewal-invitation",
+  "title": "Vow Renewal Invitation",
+  "category": "Miscellaneous special occasions",
+  "subcategory": "Celebration",
+  "site_category": "Invitation",
+  "description": "Script title and details above a minimal sunset-over-sea vignette. Sun, wave, sand band.",
+  "design_brief": "Script title and details above a minimal sunset-over-sea vignette. Sun, wave, sand band.",
+  "design_style": "celebration",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=vow%20renewal%20invitation%20beach",
+  "inspiration_query": "vow renewal invitation beach",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "script title and details above a minimal sunset-over-sea vignette",
+   "typography": "Great Vibes, Cormorant Garamond italic, Montserrat caps",
+   "palette": "sand, sea blue, sunset peach, cocoa",
+   "decor": "sun, wave, sand band"
+  },
+  "palette": [
+   "#F5EDE3",
+   "#E9DCCB",
+   "#BFD7DF",
+   "#F7C59F",
+   "#7A4E3A",
+   "#3A2A20"
+  ],
+  "content": {
+   "headline": "Still I Do",
+   "message": "Ten years later, we’re saying it again · Friday 14 May 2027 · 5:30 PM · Jumeirah Beach",
+   "signature": "Sam & Leena"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/vow-renewal-invitation.jpg",
+  "preview_url": "/templates/collection/vow-renewal-invitation-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "misc-016",
+  "slug": "celebration-of-life-invitation",
+  "title": "Celebration of Life Invitation",
+  "category": "Miscellaneous special occasions",
+  "subcategory": "Celebration",
+  "site_category": "Invitation",
+  "description": "Olive sprig crown, name and dates, gentle wording and gathering details. Leaf sprig, dove, divider.",
+  "design_brief": "Olive sprig crown, name and dates, gentle wording and gathering details. Leaf sprig, dove, divider.",
+  "design_style": "celebration",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=celebration%20of%20life%20invitation%20calm",
+  "inspiration_query": "celebration of life invitation calm",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "olive sprig crown, name and dates, gentle wording and gathering details",
+   "typography": "Cormorant Garamond, Montserrat caps",
+   "palette": "pale sage, olive, charcoal green",
+   "decor": "leaf sprig, dove, divider"
+  },
+  "palette": [
+   "#F2F4F1",
+   "#7C9A82",
+   "#6A7A6E",
+   "#2F3A33"
+  ],
+  "content": {
+   "headline": "Celebrating the life of",
+   "message": "Mary Thomas · 1948 – 2027 · Join us to share stories and memories · Saturday 20 March · 4:00 PM · Community Hall",
+   "signature": ""
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/celebration-of-life-invitation.jpg",
+  "preview_url": "/templates/collection/celebration-of-life-invitation-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "dove"
+  ]
+ },
+ {
+  "id": "misc-017",
+  "slug": "pet-birthday-party-invitation",
+  "title": "Pet Birthday Party Invitation",
+  "category": "Miscellaneous special occasions",
+  "subcategory": "Pets",
+  "site_category": "Invitation",
+  "description": "Dog face in a white circle with party props, bold title, details and a teal pill. Dot pattern, paw prints.",
+  "design_brief": "Dog face in a white circle with party props, bold title, details and a teal pill. Dot pattern, paw prints.",
+  "design_style": "pets",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=dog%20birthday%20party%20invitation",
+  "inspiration_query": "dog birthday party invitation",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "dog face in a white circle with party props, bold title, details and a teal pill",
+   "typography": "Luckiest Guy, Fredoka",
+   "palette": "peach, coral, teal",
+   "decor": "dot pattern, paw prints"
+  },
+  "palette": [
+   "#FFE8D6",
+   "#FFFFFF",
+   "#E76F51",
+   "#3A2A20",
+   "#2A9D8F"
+  ],
+  "content": {
+   "headline": "Max is turning 3!",
+   "message": "Join us for cake, toys and zoomies · Sunday 4 April · 4:00 PM · Safa Park",
+   "signature": "Dogs welcome!"
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/pet-birthday-party-invitation.jpg",
+  "preview_url": "/templates/collection/pet-birthday-party-invitation-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "birthday-cake",
+   "dog-face",
+   "party-popper",
+   "paw-prints"
+  ]
+ },
+ {
+  "id": "misc-018",
+  "slug": "adopt-me-pet-poster",
+  "title": "Adopt Me Pet Poster",
+  "category": "Miscellaneous special occasions",
+  "subcategory": "Pets",
+  "site_category": "Poster",
+  "description": "Teal header strip, cat in a sunny circle, name, age, personality and contact button. Paw prints.",
+  "design_brief": "Teal header strip, cat in a sunny circle, name, age, personality and contact button. Paw prints.",
+  "design_style": "pets",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=pet%20adoption%20poster%20cute",
+  "inspiration_query": "pet adoption poster cute",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "teal header strip, cat in a sunny circle, name, age, personality and contact button",
+   "typography": "Luckiest Guy, Fredoka, Montserrat caps",
+   "palette": "butter, coral, teal",
+   "decor": "paw prints"
+  },
+  "palette": [
+   "#FFF4D6",
+   "#2A9D8F",
+   "#FFFFFF",
+   "#FFD166",
+   "#E76F51",
+   "#2A2A2A"
+  ],
+  "content": {
+   "headline": "Adopt me!",
+   "message": "Luna · 2 years · friendly, house-trained and great with kids",
+   "signature": "Paws Rescue UAE · 050 765 4321"
+  },
+  "dimensions": {
+   "width": 559,
+   "height": 794,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/adopt-me-pet-poster.jpg",
+  "preview_url": "/templates/collection/adopt-me-pet-poster-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "cat-face",
+   "paw-prints"
+  ]
+ },
+ {
+  "id": "misc-019",
+  "slug": "lost-cat-poster",
+  "title": "Lost Cat Poster",
+  "category": "Miscellaneous special occasions",
+  "subcategory": "Pets",
+  "site_category": "Poster",
+  "description": "Red alert header, photo slot, name and description, yellow call bar. Photo placeholder.",
+  "design_brief": "Red alert header, photo slot, name and description, yellow call bar. Photo placeholder.",
+  "design_style": "pets",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=lost%20cat%20poster",
+  "inspiration_query": "lost cat poster",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "red alert header, photo slot, name and description, yellow call bar",
+   "typography": "Anton, Montserrat",
+   "palette": "alert red, white, yellow, black",
+   "decor": "photo placeholder"
+  },
+  "palette": [
+   "#FFFFFF",
+   "#D62828",
+   "#F1F1F1",
+   "#D0D0D0",
+   "#9A9A9A",
+   "#1E1E1E"
+  ],
+  "content": {
+   "headline": "LOST CAT",
+   "message": "Mishka · grey tabby · green collar · last seen near Al Barsha Park",
+   "signature": "Please call 055 123 9876"
+  },
+  "dimensions": {
+   "width": 559,
+   "height": 794,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/lost-cat-poster.jpg",
+  "preview_url": "/templates/collection/lost-cat-poster-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "cat-face"
+  ]
+ },
+ {
+  "id": "misc-020",
+  "slug": "international-womens-day-post",
+  "title": "International Women’s Day Post",
+  "category": "Miscellaneous special occasions",
+  "subcategory": "Awareness",
+  "site_category": "Social Media",
+  "description": "Big italic greeting, the toast quote, colour circles rising at the bottom. Overlapping circles, tulip.",
+  "design_brief": "Big italic greeting, the toast quote, colour circles rising at the bottom. Overlapping circles, tulip.",
+  "design_style": "awareness",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=international%20womens%20day%20post",
+  "inspiration_query": "international womens day post",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "big italic greeting, the toast quote, colour circles rising at the bottom",
+   "typography": "Playfair Display italic, Lora italic, Montserrat caps",
+   "palette": "violet, pink, lemon",
+   "decor": "overlapping circles, tulip"
+  },
+  "palette": [
+   "#5B2A86",
+   "#9B5DE5",
+   "#F15BB5",
+   "#FEE440",
+   "#FFFFFF",
+   "#F3E8FF"
+  ],
+  "content": {
+   "headline": "Happy Women’s Day",
+   "message": "Here’s to strong women: may we know them, may we be them, may we raise them.",
+   "signature": "8 March"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/international-womens-day-post.jpg",
+  "preview_url": "/templates/collection/international-womens-day-post-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "tulip"
+  ]
+ },
+ {
+  "id": "misc-021",
+  "slug": "earth-day-post",
+  "title": "Earth Day Post",
+  "category": "Miscellaneous special occasions",
+  "subcategory": "Awareness",
+  "site_category": "Social Media",
+  "description": "Flat globe cradled by leaves, rounded headline and slogan. Globe with blob continents, leaves.",
+  "design_brief": "Flat globe cradled by leaves, rounded headline and slogan. Globe with blob continents, leaves.",
+  "design_style": "awareness",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=earth%20day%20post%20illustration",
+  "inspiration_query": "earth day post illustration",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "flat globe cradled by leaves, rounded headline and slogan",
+   "typography": "Fredoka",
+   "palette": "mint, ocean blue, leaf green",
+   "decor": "globe with blob continents, leaves"
+  },
+  "palette": [
+   "#E8F4EA",
+   "#3A86FF",
+   "#06A77D",
+   "#FFFFFF",
+   "#2D6A4F",
+   "#1B4332"
+  ],
+  "content": {
+   "headline": "Earth Day",
+   "message": "There is no planet B · 22 April",
+   "signature": ""
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/earth-day-post.jpg",
+  "preview_url": "/templates/collection/earth-day-post-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "misc-022",
+  "slug": "pink-ribbon-awareness-post",
+  "title": "Pink Ribbon Awareness Post",
+  "category": "Miscellaneous special occasions",
+  "subcategory": "Awareness",
+  "site_category": "Social Media",
+  "description": "Vector pink ribbon in a white disc, italic call to action and screening pill. Awareness ribbon.",
+  "design_brief": "Vector pink ribbon in a white disc, italic call to action and screening pill. Awareness ribbon.",
+  "design_style": "awareness",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=breast%20cancer%20awareness%20pink%20ribbon%20post",
+  "inspiration_query": "breast cancer awareness pink ribbon post",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "vector pink ribbon in a white disc, italic call to action and screening pill",
+   "typography": "Playfair Display italic, Lora italic, Montserrat caps",
+   "palette": "blush, rose, berry",
+   "decor": "awareness ribbon"
+  },
+  "palette": [
+   "#FFE4EC",
+   "#FFFFFF",
+   "#C2185B",
+   "#F06292",
+   "#4A2030"
+  ],
+  "content": {
+   "headline": "Think Pink",
+   "message": "October is Breast Cancer Awareness Month · Early detection saves lives",
+   "signature": "Book your screening today"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/pink-ribbon-awareness-post.jpg",
+  "preview_url": "/templates/collection/pink-ribbon-awareness-post-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "misc-023",
+  "slug": "world-mental-health-day-post",
+  "title": "World Mental Health Day Post",
+  "category": "Miscellaneous special occasions",
+  "subcategory": "Awareness",
+  "site_category": "Social Media",
+  "description": "Calm pastel gradient with soft blobs, gentle italic message and a kind prompt. Blobs, brain and seedling illustrations.",
+  "design_brief": "Calm pastel gradient with soft blobs, gentle italic message and a kind prompt. Blobs, brain and seedling illustrations.",
+  "design_style": "awareness",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=mental%20health%20day%20post%20soft",
+  "inspiration_query": "mental health day post soft",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "calm pastel gradient with soft blobs, gentle italic message and a kind prompt",
+   "typography": "Playfair Display italic, Montserrat, DM Sans",
+   "palette": "mint, lavender, slate",
+   "decor": "blobs, brain and seedling illustrations"
+  },
+  "palette": [
+   "#D7F0E9",
+   "#E6E3FA",
+   "#2F3E46",
+   "#52796F",
+   "#FFFFFF"
+  ],
+  "content": {
+   "headline": "It’s okay not to be okay",
+   "message": "World Mental Health Day · 10 October",
+   "signature": "Talk to someone you trust"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/world-mental-health-day-post.jpg",
+  "preview_url": "/templates/collection/world-mental-health-day-post-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "brain",
+   "seedling"
+  ]
+ },
+ {
+  "id": "misc-024",
+  "slug": "world-book-day-post",
+  "title": "World Book Day Post",
+  "category": "Miscellaneous special occasions",
+  "subcategory": "Awareness",
+  "site_category": "Social Media",
+  "description": "Shelf of colourful vector book spines, open book and italic title. Book spines, shelf.",
+  "design_brief": "Shelf of colourful vector book spines, open book and italic title. Book spines, shelf.",
+  "design_style": "awareness",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=world%20book%20day%20post",
+  "inspiration_query": "world book day post",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "shelf of colourful vector book spines, open book and italic title",
+   "typography": "Playfair Display italic, Lora italic, Montserrat caps",
+   "palette": "navy, cream, coral, mustard",
+   "decor": "book spines, shelf"
+  },
+  "palette": [
+   "#1D3557",
+   "#E63946",
+   "#F1FAEE",
+   "#A8DADC",
+   "#FFB703",
+   "#457B9D"
+  ],
+  "content": {
+   "headline": "World Book Day",
+   "message": "Get lost in a good book · 23 April",
+   "signature": ""
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/world-book-day-post.jpg",
+  "preview_url": "/templates/collection/world-book-day-post-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "open-book"
+  ]
+ },
+ {
+  "id": "misc-025",
+  "slug": "labour-day-thank-you-post",
+  "title": "Labour Day Thank You Post",
+  "category": "Miscellaneous special occasions",
+  "subcategory": "Awareness",
+  "site_category": "Social Media",
+  "description": "Safety-yellow ground, stacked condensed title, thank-you line, hazard-stripe base. Hazard stripes, tools.",
+  "design_brief": "Safety-yellow ground, stacked condensed title, thank-you line, hazard-stripe base. Hazard stripes, tools.",
+  "design_style": "awareness",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=labour%20day%20thank%20you%20post",
+  "inspiration_query": "labour day thank you post",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "safety-yellow ground, stacked condensed title, thank-you line, hazard-stripe base",
+   "typography": "Anton, Montserrat",
+   "palette": "safety yellow, black",
+   "decor": "hazard stripes, tools"
+  },
+  "palette": [
+   "#FFC300",
+   "#1E1E1E"
+  ],
+  "content": {
+   "headline": "Happy Labour Day",
+   "message": "Thank you to every hand that builds, fixes and keeps our city running",
+   "signature": "1 May"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/labour-day-thank-you-post.jpg",
+  "preview_url": "/templates/collection/labour-day-thank-you-post-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "hammer-and-wrench"
+  ]
+ },
+ {
+  "id": "misc-026",
+  "slug": "world-smile-day-post",
+  "title": "World Smile Day Post",
+  "category": "Miscellaneous special occasions",
+  "subcategory": "Awareness",
+  "site_category": "Social Media",
+  "description": "Big smiley on a sunburst, bouncy title and a pass-it-on line. Sunburst rays.",
+  "design_brief": "Big smiley on a sunburst, bouncy title and a pass-it-on line. Sunburst rays.",
+  "design_style": "awareness",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=world%20smile%20day%20post",
+  "inspiration_query": "world smile day post",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "big smiley on a sunburst, bouncy title and a pass-it-on line",
+   "typography": "Luckiest Guy, Fredoka",
+   "palette": "sunshine yellow, pink, cocoa",
+   "decor": "sunburst rays"
+  },
+  "palette": [
+   "#FFE15D",
+   "#FFD23F",
+   "#FF5D8F",
+   "#3A2A10"
+  ],
+  "content": {
+   "headline": "Smile!",
+   "message": "It’s World Smile Day · pass it on",
+   "signature": ""
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/world-smile-day-post.jpg",
+  "preview_url": "/templates/collection/world-smile-day-post-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "smiling-face-with-smiling-eyes"
+  ]
+ },
+ {
+  "id": "misc-027",
+  "slug": "im-sorry-card",
+  "title": "I’m Sorry Card",
+  "category": "Miscellaneous special occasions",
+  "subcategory": "Everyday",
+  "site_category": "Cards",
+  "description": "Coffee cup in a white circle with a little heart, script apology and note. Circle, heart.",
+  "design_brief": "Coffee cup in a white circle with a little heart, script apology and note. Circle, heart.",
+  "design_style": "everyday",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=i%27m%20sorry%20card%20cute",
+  "inspiration_query": "i'm sorry card cute",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "coffee cup in a white circle with a little heart, script apology and note",
+   "typography": "Pacifico, Lora italic, Caveat",
+   "palette": "powder blue, navy, coral",
+   "decor": "circle, heart"
+  },
+  "palette": [
+   "#EAF2F8",
+   "#FFFFFF",
+   "#F28482",
+   "#3D5A80",
+   "#2A3A4A"
+  ],
+  "content": {
+   "headline": "I’m sorry",
+   "message": "I messed up, and I’m truly sorry. Can we talk over coffee — my treat?",
+   "signature": ""
+  },
+  "dimensions": {
+   "width": 480,
+   "height": 673,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/im-sorry-card.jpg",
+  "preview_url": "/templates/collection/im-sorry-card-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "hot-beverage"
+  ]
+ },
+ {
+  "id": "misc-028",
+  "slug": "welcome-home-banner",
+  "title": "Welcome Home Banner",
+  "category": "Miscellaneous special occasions",
+  "subcategory": "Everyday",
+  "site_category": "Banner",
+  "description": "Wide banner with bunting, balloons either side and a script welcome. Bunting, balloons.",
+  "design_brief": "Wide banner with bunting, balloons either side and a script welcome. Bunting, balloons.",
+  "design_style": "everyday",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=welcome%20home%20banner%20colourful",
+  "inspiration_query": "welcome home banner colourful",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "wide banner with bunting, balloons either side and a script welcome",
+   "typography": "Pacifico, Montserrat caps",
+   "palette": "cream, red, mustard, teal, blue",
+   "decor": "bunting, balloons"
+  },
+  "palette": [
+   "#FFF7EC",
+   "#7A6F66",
+   "#E63946",
+   "#FFB703",
+   "#2A9D8F",
+   "#3A86FF"
+  ],
+  "content": {
+   "headline": "Welcome home!",
+   "message": "We missed you so much",
+   "signature": ""
+  },
+  "dimensions": {
+   "width": 1584,
+   "height": 396,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/welcome-home-banner.jpg",
+  "preview_url": "/templates/collection/welcome-home-banner-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "misc-029",
+  "slug": "garage-sale-poster",
+  "title": "Garage Sale Poster",
+  "category": "Miscellaneous special occasions",
+  "subcategory": "Everyday",
+  "site_category": "Poster",
+  "description": "Yellow top with condensed title and time pill, four item icons, address line. Item icons in circles.",
+  "design_brief": "Yellow top with condensed title and time pill, four item icons, address line. Item icons in circles.",
+  "design_style": "everyday",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=garage%20sale%20poster%20bold",
+  "inspiration_query": "garage sale poster bold",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "yellow top with condensed title and time pill, four item icons, address line",
+   "typography": "Anton, Montserrat, Caveat",
+   "palette": "yellow, black, red",
+   "decor": "item icons in circles"
+  },
+  "palette": [
+   "#FFFFFF",
+   "#FFD60A",
+   "#1E1E1E",
+   "#F4F4F4",
+   "#E63946"
+  ],
+  "content": {
+   "headline": "GARAGE SALE",
+   "message": "Furniture · toys · books · clothes · Saturday 8 AM – 1 PM",
+   "signature": "Villa 9, Street 14, Al Barsha 2"
+  },
+  "dimensions": {
+   "width": 559,
+   "height": 794,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/garage-sale-poster.jpg",
+  "preview_url": "/templates/collection/garage-sale-poster-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "books",
+   "couch-and-lamp",
+   "dress",
+   "round-pushpin",
+   "teddy-bear"
+  ]
+ },
+ {
+  "id": "misc-030",
+  "slug": "teachers-day-apple-post",
+  "title": "Teacher’s Day Apple Post",
+  "category": "Miscellaneous special occasions",
+  "subcategory": "Everyday",
+  "site_category": "Social Media",
+  "description": "Chalkboard in a wooden frame with hand-lettered greeting, apple and pencil. Grain, apple, pencil.",
+  "design_brief": "Chalkboard in a wooden frame with hand-lettered greeting, apple and pencil. Grain, apple, pencil.",
+  "design_style": "everyday",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=teachers%20day%20post%20apple%20chalkboard",
+  "inspiration_query": "teachers day post apple chalkboard",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "chalkboard in a wooden frame with hand-lettered greeting, apple and pencil",
+   "typography": "Caveat chalk lettering",
+   "palette": "chalkboard green, wood, chalk white, apple red",
+   "decor": "grain, apple, pencil"
+  },
+  "palette": [
+   "#8D5A3B",
+   "#2F4F3E",
+   "#FFFFFF",
+   "#F1F1E6",
+   "#FFD166"
+  ],
+  "content": {
+   "headline": "Happy Teacher’s Day",
+   "message": "Thank you for teaching us to think, dream and never stop asking why",
+   "signature": "Class 5B"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/teachers-day-apple-post.jpg",
+  "preview_url": "/templates/collection/teachers-day-apple-post-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "pencil",
+   "red-apple"
+  ]
+ }
+]
