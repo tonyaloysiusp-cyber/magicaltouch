@@ -50,6 +50,8 @@ import { BackgroundPanel } from '@/components/editor/shell/panels/BackgroundPane
 import { BrandPanel } from '@/components/editor/shell/panels/BrandPanel';
 import { HelpPanel } from '@/components/editor/shell/panels/HelpPanel';
 import { AdjustPanel } from '@/components/editor/shell/panels/AdjustPanel';
+import { QrPanel } from '@/components/editor/shell/panels/QrPanel';
+import { QrCode as QrCodeIcon } from 'lucide-react';
 import { useAppTheme } from '@/hooks/useAppTheme';
 
 import { ToolMode, DocUnit, isDrawTool, PASTEBOARD_BG, RULER_SIZE } from '@/lib/editor/types';
@@ -2750,7 +2752,8 @@ function EditorContent() {
     return () => mq.removeEventListener?.('change', on);
   }, []);
 
-  const [leftPanel, setLeftPanel] = useState<string | null>(null);
+  // ?panel=qr (from the QR code generator page) opens that panel straight away.
+  const [leftPanel, setLeftPanel] = useState<string | null>(() => (searchParams.get('panel') === 'qr' ? 'qr' : null));
   const [templateCategory, setTemplateCategory] = useState<string | null>(null);
   const [showResize, setShowResize] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
@@ -7158,6 +7161,13 @@ function EditorContent() {
       title: 'Photos from our templates — free to reuse',
       icon: <ImagesIcon size={20} />,
       render: () => <PhotosPanel onPick={(src) => placeImageUrl(src)} />,
+    },
+    {
+      id: 'qr',
+      label: 'QR code',
+      title: 'QR code generator — links, usernames, Wi-Fi and more, with an optional logo',
+      icon: <QrCodeIcon size={20} />,
+      render: () => <QrPanel brandLogoUrl={brandKit.logoUrl} onAdd={(url) => insertImageDataUrl(url)} />,
     },
     {
       id: 'draw',

@@ -414,6 +414,35 @@ const FREE_FEATURES: [string, string][] = [
 
 export const MORE_LANDINGS: Landing[] = [
   L({
+    slug: 'free-qr-code-generator',
+    thing: 'QR code',
+    h1: 'Free QR code generator — with your logo',
+    title: 'Free QR Code Generator with Logo — Links, Instagram, WhatsApp & Wi‑Fi',
+    description: 'Make real, scannable QR codes for free: website links, Instagram and TikTok usernames, WhatsApp, email, phone and Wi‑Fi. Add your logo in the centre if you want one, then place it on your design or download PNG / SVG.',
+    intro: [
+      'Paste a link or a username and your QR code appears instantly. It is a standard code that every phone camera can read — no sign-up page in between, and it never expires.',
+      'Want your logo in the middle? Turn on the logo option and upload it; the code automatically uses extra error correction so it still scans. Leave it off for a plain code.',
+    ],
+    terms: [],
+    features: [
+      ['Links & usernames', 'Websites, Instagram, TikTok, X, Facebook, YouTube, LinkedIn and more.'],
+      ['WhatsApp, email, phone & Wi‑Fi', 'Open a chat, a pre-written email, a call or join a Wi‑Fi network with one scan.'],
+      ['Optional logo', 'Only when you switch it on — with error correction that keeps it scannable.'],
+      ['Your colours & style', 'Square, rounded or dot styles, with a warning if colours are too light to scan.'],
+      ['Straight into your design', 'Add it to a flyer, menu, business card or poster in the editor.'],
+      ['PNG & SVG', 'Download a 1600 px PNG or a sharp vector SVG for print.'],
+    ],
+    ctaHref: '/editor?panel=qr',
+    ctaLabel: 'Open the QR code generator',
+    uses: ['Restaurant menus', 'Business cards', 'Event posters and invitations', 'Shop windows and packaging', 'Social media profiles', 'Guest Wi‑Fi cards'],
+    faqs: [
+      ['Do the QR codes expire?', 'No. The link or text is stored inside the code itself, so it works for as long as the link does.'],
+      ['Will a logo stop it scanning?', 'The logo covers a small centre area and the code switches to the highest error correction, so phones still read it. Always test with your own phone before printing.'],
+      ['Is it free?', 'Yes — free, with no watermark and no limit on how many codes you make.'],
+    ],
+    related: ['free-online-design-tool', 'free-business-card-maker', 'free-menu-maker'],
+  }),
+  L({
     slug: 'free-online-design-tool',
     thing: 'design',
     h1: 'Free online design tool — every feature free',

@@ -12,9 +12,9 @@ export const companyProfile = {
   officialEmail: process.env.EMAIL_FROM_ADDRESS || 'hellomagicaltouch.design@gmail.com',
   fromName: process.env.EMAIL_FROM_NAME || 'Magical Touch Design',
   website: site,
-  // Founder name confirmed by the owner (CEO_NAME can override it).
-  ceoName: process.env.CEO_NAME || 'Tony Aloysius',
-  ceoTitle: process.env.CEO_TITLE || 'Founder & CEO',
+  // Emails to users are signed by the team, never by a person's name.
+  signOff: 'Thanks and regards,',
+  teamName: 'The Magical Touch Design Team',
   tagline: 'Create without limits. Turn your ideas into reality.',
 };
 

@@ -594,7 +594,7 @@ export default function EmailCenterPage() {
           <div className="grid md:grid-cols-[220px_1fr] gap-4">
             <div className="flex md:flex-col gap-2 flex-wrap">
               {[
-                ['welcome', 'CEO welcome'],
+                ['welcome', 'Welcome email'],
                 ['verify', 'Verify e-mail'],
                 ['reset', 'Reset password'],
                 ['changed', 'Password changed'],

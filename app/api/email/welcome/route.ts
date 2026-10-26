@@ -12,7 +12,7 @@ export const runtime = 'nodejs';
 const WELCOME_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 
 // POST /api/email/welcome -- called by the dashboard after sign-in.
-// Sends the CEO welcome email at most once per user: the profiles row is
+// Sends the welcome email at most once per user: the profiles row is
 // atomically "claimed" (welcome_email_sent_at set only where it is still
 // null) BEFORE sending, so two tabs or a double request can never both
 // send. If sending fails, the claim is released so a later visit retries.

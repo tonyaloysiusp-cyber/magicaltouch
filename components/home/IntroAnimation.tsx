@@ -7,8 +7,8 @@ import type { AppTheme } from '@/hooks/useAppTheme';
 // and skipped entirely under prefers-reduced-motion.
 //
 //  0.0s  soft aurora in the brand spectrum (nothing crosses the logo)
-//  0.6s  the real logo icon pops out of the ribbon with a spark burst
-//  1.1s  the wordmark is wiped in behind a light bar; the star twinkles
+//  0.6s  the real logo icon pops in
+//  1.1s  the wordmark is wiped in (nothing is drawn over the logo)
 //  1.8s  tagline + spectrum underline
 //  2.7s  hand-off: the logo flies to exactly where the navbar logo sits
 //        while the stage dissolves, so the intro turns into the page
@@ -23,11 +23,6 @@ const ICON_SHARE = 0.22; // the icon is the left ~22% of the logo file
 type Phase = 'pending' | 'visible' | 'leaving' | 'done';
 
 const SPEC = ['#F2708F', '#A69BD3', '#35C2F1', '#5DCCB8', '#8CC84B', '#DDE23B'];
-const SPARKS = Array.from({ length: 16 }, (_, i) => {
-  const a = (i / 16) * Math.PI * 2 + (i % 2 ? 0.2 : 0);
-  const d = 70 + (i % 4) * 22;
-  return { dx: Math.cos(a) * d, dy: Math.sin(a) * d, c: SPEC[i % SPEC.length], s: 4 + (i % 3) * 2, delay: (i % 5) * 18 };
-});
 
 export function IntroAnimation({ theme }: { theme: AppTheme }) {
   const [phase, setPhase] = useState<Phase>('pending');
@@ -111,24 +106,6 @@ export function IntroAnimation({ theme }: { theme: AppTheme }) {
           <img className="mti-icon" src={src} alt="" draggable={false} />
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img className="mti-word" src={src} alt="" draggable={false} />
-          <span className="mti-bar" />
-          <span className="mti-twinkle">
-            <svg viewBox="0 0 40 40">
-              <defs>
-                <linearGradient id="mti-spec" x1="0" x2="1" y1="0" y2="0">
-                  {SPEC.map((c, i) => (
-                    <stop key={c} offset={i / (SPEC.length - 1)} stopColor={c} />
-                  ))}
-                </linearGradient>
-              </defs>
-              <path d="M20 0 C21 14 26 19 40 20 C26 21 21 26 20 40 C19 26 14 21 0 20 C14 19 19 14 20 0z" fill="url(#mti-spec)" />
-            </svg>
-          </span>
-          <span className="mti-sparks">
-            {SPARKS.map((p, i) => (
-              <i key={i} style={{ '--dx': `${p.dx}px`, '--dy': `${p.dy}px`, background: p.c, width: p.s, height: p.s, animationDelay: `${620 + p.delay}ms` } as React.CSSProperties} />
-            ))}
-          </span>
         </div>
         <p className="mti-tag">
           Design anything. <em>Magically.</em>
@@ -154,26 +131,17 @@ export function IntroAnimation({ theme }: { theme: AppTheme }) {
 .mti-logo img{position:absolute;inset:0;width:100%;height:100%;user-select:none}
 .mti-icon{clip-path:inset(0 ${(1 - ICON_SHARE) * 100}% 0 0);transform-origin:${ICON_SHARE * 50}% 55%;opacity:0;animation:mti-pop .75s cubic-bezier(.2,1.4,.35,1) .55s forwards}
 .mti-word{clip-path:inset(0 100% 0 ${ICON_SHARE * 100}%);animation:mti-wipe .75s cubic-bezier(.65,0,.3,1) 1.05s forwards}
-.mti-bar{position:absolute;top:-12%;bottom:-12%;width:3px;left:${ICON_SHARE * 100}%;border-radius:3px;background:linear-gradient(#F2708F,#35C2F1,#8CC84B);box-shadow:0 0 18px 4px rgba(53,194,241,.55);opacity:0;animation:mti-bar .75s cubic-bezier(.65,0,.3,1) 1.05s forwards}
-.mti-twinkle{position:absolute;left:46%;top:-14%;width:9%;aspect-ratio:1;opacity:0;animation:mti-twinkle .9s ease 1.55s forwards}
-.mti-twinkle svg{width:100%;height:100%}
-.mti-sparks{position:absolute;left:${ICON_SHARE * 50}%;top:50%}
-.mti-sparks i{position:absolute;border-radius:50%;opacity:0;animation:mti-spark .8s cubic-bezier(.1,.7,.3,1) forwards}
 .mti-tag{margin-top:clamp(18px,3vw,28px);color:var(--ink);font:500 clamp(14px,1.6vw,18px)/1.3 var(--font-display,system-ui),system-ui,sans-serif;letter-spacing:.01em;opacity:0;transform:translateY(10px);animation:mti-up .6s ease 1.75s forwards}
 .mti-tag em{font-style:normal;background:linear-gradient(90deg,#F2708F,#A69BD3,#35C2F1,#5DCCB8);-webkit-background-clip:text;background-clip:text;color:transparent}
 .mti-underline{margin-top:10px;height:3px;width:min(220px,50vw);border-radius:3px;background:linear-gradient(90deg,${SPEC.join(',')});transform:scaleX(0);animation:mti-grow .7s cubic-bezier(.65,0,.3,1) 1.95s forwards}
 .mti-leaving .mti-icon{animation:none;opacity:1;transform:none;filter:none}
 .mti-leaving .mti-word{animation:none;clip-path:inset(0 0 0 ${ICON_SHARE * 100}%)}
-.mti-leaving .mti-bar,.mti-leaving .mti-twinkle,.mti-leaving .mti-sparks{display:none}
 .mti-leaving .mti-tag,.mti-leaving .mti-underline{transition:opacity .3s ease;opacity:0!important}
 .mti-skip{position:absolute;left:50%;bottom:calc(22px + env(safe-area-inset-bottom));transform:translateX(-50%);color:var(--ink);opacity:0;font:500 11px/1 system-ui,sans-serif;letter-spacing:.12em;text-transform:uppercase;animation:mti-skip .5s ease 1s forwards}
 @keyframes mti-fade{to{opacity:1}}
 @keyframes mti-drift{to{transform:translate(3vw,2vh) scale(1.08)}}
 @keyframes mti-pop{0%{opacity:0;transform:scale(.3) rotate(-18deg);filter:blur(8px)}60%{opacity:1;filter:blur(0)}100%{opacity:1;transform:scale(1) rotate(0)}}
 @keyframes mti-wipe{to{clip-path:inset(0 0 0 ${ICON_SHARE * 100}%)}}
-@keyframes mti-bar{0%{opacity:0;left:${ICON_SHARE * 100}%}12%{opacity:1}85%{opacity:1}100%{opacity:0;left:100%}}
-@keyframes mti-twinkle{0%{opacity:0;transform:scale(0) rotate(-90deg)}50%{opacity:1;transform:scale(1.25) rotate(10deg)}100%{opacity:0;transform:scale(.6) rotate(45deg)}}
-@keyframes mti-spark{0%{opacity:1;transform:translate(0,0) scale(1)}100%{opacity:0;transform:translate(var(--dx),var(--dy)) scale(.2)}}
 @keyframes mti-up{to{opacity:1;transform:translateY(0)}}
 @keyframes mti-grow{to{transform:scaleX(1)}}
 @keyframes mti-skip{to{opacity:.4}}

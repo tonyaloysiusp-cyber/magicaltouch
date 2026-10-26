@@ -71,6 +71,11 @@ export const officialNotice = () => `
     </div>
   </td></tr>`;
 
+// Every email to a user ends with the team's sign-off — no personal names.
+export const signature = () =>
+  `<p style="margin:24px 0 4px;">${C.signOff}</p><p style="margin:0 0 16px;font:700 17px/1.4 Georgia,serif;color:#0B0B0D;">${C.teamName}</p>`;
+const signatureText = () => `${C.signOff}\n${C.teamName}`;
+
 const footer = (unsubscribeUrl?: string) => `
   <tr><td style="padding:24px 32px 32px;border-top:1px solid #ece9f5;text-align:center;font:13px/1.6 Arial,Helvetica,sans-serif;color:#6b6580;">
     <p style="margin:0;font-weight:700;color:#0B0B0D;">${C.companyName}</p>
@@ -141,7 +146,7 @@ export function welcomeEmail(d: EmailData, copy: EmailCopy = {}): RenderedEmail 
         : `
       ${p(greet(d))}
       ${p(`<strong>Welcome to ${C.companyName}.</strong>`)}
-      ${p('I am delighted to welcome you to our creative platform.')}
+      ${p('We are delighted to welcome you to our creative platform.')}
       ${p(`We started ${C.companyName} with a simple vision: to create a place where people can turn their ideas into professional designs using powerful and accessible creative tools.`)}
       ${p('As an early-stage company, every person who joins our platform is an important part of our journey.')}
       ${p('Whether you are creating a business card, poster, social media design, marketing material, presentation, event artwork, or something completely unique, our goal is to give you the creative freedom and tools you need to bring your ideas to life.')}
@@ -162,10 +167,7 @@ export function welcomeEmail(d: EmailData, copy: EmailCopy = {}): RenderedEmail 
     section(`
       ${p('<strong>Thank you for choosing to join us at this early stage.</strong>')}
       ${p('We are genuinely excited to have you here, and we look forward to seeing what you create.')}
-      <p style="margin:24px 0 4px;">Warm regards,</p>
-      ${C.ceoName ? `<p style="margin:0;font:700 18px/1.4 Georgia,serif;color:#0B0B0D;">${esc(C.ceoName)}</p>` : ''}
-      <p style="margin:0;font-weight:700;">${esc(C.ceoTitle)}</p>
-      <p style="margin:0 0 16px;font-weight:700;">${C.companyName}</p>
+      ${signature()}
     `) +
     officialNotice();
 
@@ -173,7 +175,7 @@ export function welcomeEmail(d: EmailData, copy: EmailCopy = {}): RenderedEmail 
 
 Welcome to ${C.companyName}.
 
-I am delighted to welcome you to our creative platform.
+We are delighted to welcome you to our creative platform.
 
 We started ${C.companyName} with a simple vision: to create a place where people can turn their ideas into professional designs using powerful and accessible creative tools.
 
@@ -190,9 +192,7 @@ EXPLORE TEMPLATES: ${links.templates}
 Thank you for choosing to join us at this early stage.
 We are genuinely excited to have you here, and we look forward to seeing what you create.
 
-Warm regards,
-${C.ceoName ? `${C.ceoName}\n` : ''}${C.ceoTitle}
-${C.companyName}`;
+${signatureText()}`;
 
   return finish(
     copy.subject?.trim() ? fillName(copy.subject, n) : n ? `Welcome to Magical Touch Design, ${n}` : 'Welcome to Magical Touch Design',
@@ -212,13 +212,16 @@ export function passwordChangedEmail(d: EmailData, copy: EmailCopy = {}): Render
       ${p(`Your ${C.companyName} password was successfully changed${esc(when)}.`)}
       ${custom ? custom.map((t) => p(esc(t).replace(/\n/g, '<br>'))).join('') : p(`If you did not make this change, contact us right away at <a href="mailto:${C.officialEmail}" style="color:#0B0B0D;font-weight:700;">${C.officialEmail}</a>.`)}
       ${button('LOG IN', links.login)}
+      ${signature()}
     `) + officialNotice();
   const text = `${greetText(d)}
 
 Your ${C.companyName} password was successfully changed${when}.
 ${custom ? custom.join('\n\n') : `If you did not make this change, contact us right away at ${C.officialEmail}.`}
 
-Log in: ${links.login}`;
+Log in: ${links.login}
+
+${signatureText()}`;
   return finish(copy.subject?.trim() ? fillName(copy.subject, n) : 'Your Magical Touch Design password was changed', 'A security notice about your account.', body, text);
 }
 
@@ -233,6 +236,7 @@ export function supabaseConfirmTemplate(link = '{{ .ConfirmationURL }}'): string
       ${p(`Thanks for creating your ${C.companyName} account. Please confirm your email address to activate it.`)}
       ${button('VERIFY EMAIL', link)}
       ${p("If you didn't create an account, you can safely ignore this email.", 'font-size:14px;color:#6b6580;margin-top:16px;')}
+      ${signature()}
     `) + officialNotice(),
   );
 }
@@ -246,6 +250,7 @@ export function supabaseResetTemplate(link = '{{ .ConfirmationURL }}'): string {
       ${button('RESET PASSWORD', link)}
       ${p('For your security, this link expires after a short time and can only be used once.', 'font-size:14px;color:#6b6580;margin-top:16px;')}
       ${p('If you did not request a password reset, you can safely ignore this email. Your password will not change unless you complete the reset process.')}
+      ${signature()}
     `) + officialNotice(),
   );
 }
@@ -276,10 +281,13 @@ export function campaignEmail(c: CampaignContent, d: EmailData & { unsubscribeUr
       ${img ? `<img src="${esc(img)}" alt="" width="536" style="display:block;width:100%;max-width:536px;height:auto;border-radius:12px;margin:0 0 20px;">` : ''}
       ${paragraphs.map((t) => p(esc(t).replace(/\n/g, '<br>'))).join('')}
       ${cta && c.ctaLabel ? button(c.ctaLabel.toUpperCase(), esc(cta)) : ''}
+      ${signature()}
     `) + officialNotice();
   const text = `${greetText(d)}
 
 ${paragraphs.join('\n\n')}${cta ? `\n\n${c.ctaLabel || 'Learn more'}: ${cta}` : ''}
+
+${signatureText()}
 
 Unsubscribe: ${d.unsubscribeUrl}`;
   const subject = c.subject.trim() || C.companyName;
@@ -371,6 +379,7 @@ export function certificateRequestedEmail(d: CourseEmailData): RenderedEmail {
       ${p('Our team checks every request before a certificate is issued. You will get another email when it has been reviewed. Until then, nothing else is needed from you.')}
       ${p('If the name above is not exactly how you want it printed, reply to this email before it is approved.', 'font-size:14px;color:#6b6580;')}
       ${button('VIEW YOUR COURSE', d.courseUrl)}
+      ${signature()}
     `) + officialNotice();
   const text = `${greetText(d)}
 
@@ -381,7 +390,9 @@ ${rows.map(([k, v]) => `${k}: ${v}`).join('\n')}
 Our team checks every request before a certificate is issued. You will get another email when it has been reviewed.
 If the name above is not exactly how you want it printed, reply to this email before it is approved.
 
-View your course: ${d.courseUrl}`;
+View your course: ${d.courseUrl}
+
+${signatureText()}`;
   return finish(`Certificate requested: ${d.courseTitle}`, 'Your certificate request is waiting for review.', body, text);
 }
 
@@ -396,6 +407,7 @@ export function certificateReleasedEmail(d: CourseEmailData): RenderedEmail {
       ${p('Sign in and open the course page to download it as a PDF. Anyone can check that it is genuine with the certificate ID.')}
       ${button('DOWNLOAD YOUR CERTIFICATE', d.courseUrl)}
       ${d.verifyUrl ? button('CHECK IT ONLINE', d.verifyUrl, false) : ''}
+      ${signature()}
     `) + officialNotice();
   const text = `${greetText(d)}
 
@@ -403,7 +415,9 @@ Congratulations! Your certificate for "${d.courseTitle}" has been approved and i
 
 ${rows.map(([k, v]) => `${k}: ${v}`).join('\n')}
 
-Sign in and open the course page to download it as a PDF: ${d.courseUrl}${d.verifyUrl ? `\nCheck it online: ${d.verifyUrl}` : ''}`;
+Sign in and open the course page to download it as a PDF: ${d.courseUrl}${d.verifyUrl ? `\nCheck it online: ${d.verifyUrl}` : ''}
+
+${signatureText()}`;
   return finish(`Your certificate is ready: ${d.courseTitle}`, 'Your certificate has been approved and released.', body, text);
 }
 
@@ -416,6 +430,7 @@ export function certificateRejectedEmail(d: CourseEmailData): RenderedEmail {
       <div style="margin:0 0 20px;border-left:4px solid #F59E0B;background:#FFFBEB;border-radius:8px;padding:14px 16px;font:14px/1.6 Arial,Helvetica,sans-serif;color:#78350F;"><strong>Reason:</strong> ${esc(reason).replace(/\n/g, '<br>')}</div>
       ${p('You can fix this and send a new request from the course page at any time.')}
       ${button('OPEN THE COURSE', d.courseUrl)}
+      ${signature()}
     `) + officialNotice();
   const text = `${greetText(d)}
 
@@ -423,6 +438,8 @@ We reviewed your certificate request for "${d.courseTitle}" and could not approv
 
 Reason: ${reason}
 
-You can fix this and send a new request from the course page: ${d.courseUrl}`;
+You can fix this and send a new request from the course page: ${d.courseUrl}
+
+${signatureText()}`;
   return finish(`About your certificate request: ${d.courseTitle}`, 'Your certificate request needs a change.', body, text);
 }
