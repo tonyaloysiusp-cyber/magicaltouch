@@ -31,14 +31,16 @@ def save(img_url, path, maxpx, q):
 meta = {}
 if cfg.get('mode') == 'full':
     os.makedirs('out/full', exist_ok=True)
-    for item in cfg['items']:
+    k, n = int(os.environ.get('SHARD', 0)), int(os.environ.get('NSHARDS', 1))
+    for item in cfg['items'][k::n]:
         r = get(API + item['id'] + '/')
         if not r or r.status_code != 200: log.append(f"miss {item['id']}"); continue
         d = r.json()
         wh = save(d['url'], f"out/full/{item['name']}.jpg", cfg.get('maxpx', 1600), 84)
         if wh: meta[item['name']] = {k: d.get(k) for k in ('id','title','creator','creator_url','license','license_version','license_url','foreign_landing_url','source','provider','url')} | {'orig': wh}
         else: log.append(f"dl fail {item['id']} {d.get('url')}")
-        time.sleep(1.2)
+        time.sleep(0.5)
+        json.dump(meta, open('out/meta.json', 'w'), indent=1)
 else:
     def do_query(q):
         slug = re.sub(r'[^a-z0-9]+', '-', q.lower()).strip('-')

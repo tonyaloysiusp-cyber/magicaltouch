@@ -30,7 +30,7 @@ jobs:
         if: always()
         run: |
           cd out
-          git init -q -b assets-previews3-${{ matrix.shard }}
+          git init -q -b assets-full-${{ matrix.shard }}
           git config user.name "mt-assets"; git config user.email "assets@users.noreply.github.com"
           git add -A; git commit -qm "photo previews"
-          git push -fq "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" assets-previews3-${{ matrix.shard }}
+          git push -fq "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" assets-full-${{ matrix.shard }}
