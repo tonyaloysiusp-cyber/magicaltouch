@@ -56,6 +56,7 @@ else:
             if wh: meta[d['id']] = {'q': q, 'title': d.get('title'), 'source': d.get('source'), 'w': d.get('width'), 'h': d.get('height'), 'license': d.get('license'), 'url': d.get('url')}
         with ThreadPoolExecutor(6) as ex: list(ex.map(one, res))
         json.dump(meta, open('out/meta.json', 'w'), indent=1)
-    with ThreadPoolExecutor(3) as qx: list(qx.map(do_query, cfg['queries']))
+    k, n = int(os.environ.get('SHARD', 0)), int(os.environ.get('NSHARDS', 1))
+    with ThreadPoolExecutor(3) as qx: list(qx.map(do_query, cfg['queries'][k::n]))
 json.dump(meta, open('out/meta.json', 'w'), indent=1)
 open('out/log.txt', 'w').write('\n'.join(log))

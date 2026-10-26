@@ -4,23 +4,33 @@ on:
     branches: [assets-fetch3]
 permissions:
   contents: write
+concurrency:
+  group: fetch3
+  cancel-in-progress: true
 jobs:
   fetch:
     runs-on: ubuntu-latest
-    timeout-minutes: 170
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3, 4, 5, 6, 7]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: { python-version: '3.12' }
       - run: pip install pillow requests
       - run: python fetch.py
-        timeout-minutes: 150
+        timeout-minutes: 40
         continue-on-error: true
+        env:
+          SHARD: ${{ matrix.shard }}
+          NSHARDS: 8
       - name: Publish
         if: always()
         run: |
           cd out
-          git init -q -b assets-previews3
+          git init -q -b assets-previews3-${{ matrix.shard }}
           git config user.name "mt-assets"; git config user.email "assets@users.noreply.github.com"
           git add -A; git commit -qm "photo previews"
-          git push -fq "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" assets-previews3
+          git push -fq "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" assets-previews3-${{ matrix.shard }}
