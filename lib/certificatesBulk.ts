@@ -27,6 +27,13 @@ export function parseBulkNames(text: string, defaults: { title: string; descript
 
 /** The issued certificate as a high-resolution image (first page of the design). */
 export async function renderIssuedCertificate(masterJson: any, c: IssuedCertificate, maxSide = 2400) {
+  // A certificate finished by hand in the editor (signature, extra logos…)
+  // keeps its own design, already filled in and with its QR block.
+  const own = (c as any).canvas_json;
+  if (own) {
+    const pages = await renderTemplatePages(own, maxSide, { format: 'jpeg', quality: 0.92, maxMultiplier: 4 });
+    return pages[0] || null;
+  }
   const json = fillCertificateJson(masterJson, c);
   const pages = await renderTemplatePages(json, maxSide, {
     format: 'jpeg',

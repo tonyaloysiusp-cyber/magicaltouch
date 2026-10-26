@@ -3282,9 +3282,25 @@ function EditorContent() {
 
   // Fills an issued certificate into the open design (see lib/certificates.ts).
   const applyIssuedCertificate = async (canvas: any, F: any, page: any, code: string) => {
-    const { data } = await supabase.from('certificate_issues').select('code, recipient, title, description, issued_on, issuer, status').eq('code', code).maybeSingle();
+    const { data } = await supabase.from('certificate_issues').select('id, code, recipient, title, description, issued_on, issuer, status, canvas_json').eq('code', code).maybeSingle();
     if (!data) {
       setLocalNotice('That certificate code wasn’t found. Issue it again from Admin → Verified certificates.');
+      return;
+    }
+    setCertEdit({ id: (data as any).id, code: data.code, recipient: data.recipient, masterId: cameFromTemplate });
+    // Finished by hand before (signature, extra logo…): open that design.
+    if ((data as any).canvas_json) {
+      suppressHistoryRef.current = true;
+      canvas.loadFromJSON((data as any).canvas_json, () => {
+        ensureArtboards(canvas, F);
+        canvas.renderAll();
+        refreshLayers();
+        suppressHistoryRef.current = false;
+        pushHistory();
+        ensureFontsLoadedForCanvasJSON((data as any).canvas_json).then(() => refreshTextMetrics(canvas));
+      });
+      setDesignName(`Certificate — ${data.recipient}`);
+      setLocalNotice(`Certificate ${data.code} for ${data.recipient}: your saved version is open.`);
       return;
     }
     const tokens = certificateTokens(data as any);
@@ -3292,6 +3308,9 @@ function EditorContent() {
       if (o.type === 'group' && o._objects) o._objects.forEach(visit);
       if (typeof o.text === 'string' && o.text.includes('{{')) {
         let t = o.text;
+        // Remember the master's wording so "Save to master" can put the
+        // {{fields}} back instead of baking this person's details in.
+        o.__certTpl = o.text;
         Object.entries(tokens).forEach(([k, v]) => (t = t.split(k).join(v)));
         o.set({ text: t, styles: {} });
         o.initDimensions?.();
@@ -3303,10 +3322,13 @@ function EditorContent() {
     const slot = canvas.getObjects().find((o: any) => o.name === 'Verification slot');
     const size = slot ? Math.min(slot.getScaledWidth(), slot.getScaledHeight()) : Math.min(pageBox.w, pageBox.h) * 0.13;
     const at = slot ? { x: slot.left, y: slot.top, size } : { x: pageBox.x + pageBox.w - size * 1.6, y: pageBox.y + pageBox.h - size * 1.9, size };
+    const slotJson = slot ? slot.toObject(SAVE_JSON_PROPS) : null;
     if (slot) canvas.remove(slot);
     canvas.getObjects().filter((o: any) => o.__certCode).forEach((o: any) => canvas.remove(o));
     buildVerificationBlock(F, data as any, at).forEach((o: any) => {
       o.__artboardId = page?.__artboardId;
+      // Keep the master's empty slot so "Save to master" can put it back as it was.
+      if (o.name === 'Verification QR background' && slotJson) o.__certSlot = slotJson;
       canvas.add(o);
     });
     setDesignName(`Certificate — ${data.recipient}`);
@@ -5498,6 +5520,58 @@ function EditorContent() {
   // Saves the canvas back into the template being edited (admins only;
   // RLS enforces it server-side too). The previous content is kept as a
   // version first, so nothing is ever lost.
+  // ---- issued certificate opened from Admin → Verified certificates ----
+  const [certEdit, setCertEdit] = useState<{ id: string; code: string; recipient: string; masterId: string | null } | null>(null);
+  const [certSave, setCertSave] = useState<{ busy: boolean; msg: string | null }>({ busy: false, msg: null });
+  // This certificate only: its finished design (with the signature etc.)
+  // is kept with the certificate and used for its downloads.
+  const saveCertificateDesign = async () => {
+    const canvas = fabricCanvasRef.current;
+    if (!certEdit || !canvas) return;
+    setCertSave({ busy: true, msg: null });
+    const json = canvas.toJSON(SAVE_JSON_PROPS);
+    const { error } = await supabase.from('certificate_issues').update({ canvas_json: json }).eq('id', certEdit.id);
+    if (!error) { dirtyRef.current = false; setSaveStatus('saved'); setTabs((ts) => ts.map((t) => ({ ...t, dirty: false }))); }
+    setCertSave({ busy: false, msg: error ? 'Could not save the certificate. Please try again.' : `Saved. Downloads of ${certEdit.code} now use this design.` });
+  };
+  // The master template: every certificate issued from it gets the change
+  // (e.g. the signature). This person's details go back to {{fields}} and
+  // the QR block back to its empty slot first.
+  const saveCertificateMaster = async () => {
+    const canvas = fabricCanvasRef.current;
+    if (!certEdit?.masterId || !canvas) return;
+    if (!window.confirm('Save this design as the master template? All certificates made from it will use it (names, dates and QR codes stay automatic).')) return;
+    setCertSave({ busy: true, msg: null });
+    try {
+      const json: any = JSON.parse(JSON.stringify(canvas.toJSON(SAVE_JSON_PROPS)));
+      let slot: any = null;
+      const objs: any[] = [];
+      (json.objects || []).forEach((o: any) => {
+        if (o.__certCode) {
+          if (o.name === 'Verification QR background') slot = o;
+          return;
+        }
+        if (typeof o.__certTpl === 'string') { o.text = o.__certTpl; o.styles = {}; delete o.__certTpl; }
+        objs.push(o);
+      });
+      if (slot?.__certSlot) objs.push(slot.__certSlot);
+      else if (slot) objs.push({ type: 'rect', version: slot.version, left: slot.left, top: slot.top, width: slot.width, height: slot.height, fill: 'rgba(0,0,0,0.04)', stroke: 'rgba(0,0,0,0.25)', strokeDashArray: [6, 4], strokeWidth: 1, name: 'Verification slot', __artboardId: slot.__artboardId });
+      json.objects = objs;
+      const tpl = await fetchTemplateById(certEdit.masterId);
+      const { data: auth } = await supabase.auth.getUser();
+      let version = tpl?.currentVersion || '1.0';
+      if (tpl && auth.user) {
+        const next = await createVersion({ ...tpl, canvasJson: undefined } as any, auth.user.id, 'Before certificate edit');
+        if (next) version = next;
+      }
+      const ok = await setTemplateContent(certEdit.masterId, version, json, null);
+      setCertSave({ busy: false, msg: ok ? 'Master template saved: new and downloaded certificates use it.' : 'Could not save the master. Please try again.' });
+    } catch (err) {
+      console.error('Certificate master save failed:', err);
+      setCertSave({ busy: false, msg: 'Could not save the master. Please try again.' });
+    }
+  };
+
   const saveToTemplate = async () => {
     const canvas = fabricCanvasRef.current;
     const firstAb = artboardsRef.current[0];
@@ -7521,6 +7595,22 @@ function EditorContent() {
       )}
       {showCloudOpen && <CloudOpenDialog onOpened={openCloudResult} onClose={() => setShowCloudOpen(false)} />}
 
+      {certEdit && !templateEdit && (
+        <div className="fixed bottom-[88px] right-3 z-[75] max-w-xl w-[calc(100%-1.5rem)] sm:w-auto bg-[#14121F] text-white text-sm rounded-xl shadow-xl px-4 py-2.5 flex flex-wrap items-center gap-2.5" role="region" aria-label="Certificate">
+          <span className="flex-1 min-w-[160px] truncate">
+            Certificate <strong>{certEdit.code}</strong> · {certEdit.recipient}
+            {certSave.msg && <span className="block text-xs text-white/70 truncate">{certSave.msg}</span>}
+          </span>
+          <button onClick={() => setShowExportDialog(true)} className="shrink-0 text-xs font-semibold border border-white/30 rounded-full px-3 py-2 hover:bg-white/10">Download</button>
+          {certEdit.masterId && (
+            <button onClick={saveCertificateMaster} disabled={certSave.busy} title="Signature, logos and layout for every certificate from this master" className="shrink-0 text-xs font-semibold border border-white/40 rounded-full px-3 py-2 hover:bg-white/10 disabled:opacity-60">Save to master template</button>
+          )}
+          <button onClick={saveCertificateDesign} disabled={certSave.busy} className="shrink-0 text-xs font-semibold bg-white text-[#09090B] rounded-full px-4 py-2 disabled:opacity-60">
+            {certSave.busy ? 'Saving…' : 'Save certificate'}
+          </button>
+          <a href="/admin/certificates" className="shrink-0 text-xs text-white/70 hover:text-white underline">Back</a>
+        </div>
+      )}
       {/* Sits below the top bar so Undo, Redo and every other control stay reachable. */}
       {templateEdit && (
         <div className="fixed bottom-[88px] right-3 z-[75] max-w-md w-[calc(100%-1.5rem)] sm:w-auto bg-[#14121F] text-white text-sm rounded-xl shadow-xl px-4 py-2.5 flex items-center gap-3">

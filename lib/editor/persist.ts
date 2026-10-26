@@ -53,6 +53,11 @@ export const PERSIST_PROPS = [
   '__origColors',
   // Text box behaviour (auto-fit)
   '__autoFit',
+  // Certificates: the {{token}} text a filled-in field came from, and the
+  // verification block's code (lib/certificates.ts).
+  '__certTpl',
+  '__certCode',
+  '__certSlot',
   // Fabric's own interaction locks are not serialized by default.
   'lockMovementX',
   'lockMovementY',
