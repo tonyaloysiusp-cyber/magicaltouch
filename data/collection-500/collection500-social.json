@@ -1,0 +1,1824 @@
+[
+ {
+  "id": "social-001",
+  "slug": "flash-sale-bold-post",
+  "title": "Flash Sale Bold Post",
+  "category": "Social media and promotional designs",
+  "subcategory": "Sale",
+  "site_category": "Social Media",
+  "description": "Giant stacked FLASH SALE with a lightning bolt, offer line below. Diagonal stripes, vector lightning bolt.",
+  "design_brief": "Giant stacked FLASH SALE with a lightning bolt, offer line below. Diagonal stripes, vector lightning bolt.",
+  "design_style": "sale",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=flash%20sale%20instagram%20post%20bold",
+  "inspiration_query": "flash sale instagram post bold",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "giant stacked FLASH SALE with a lightning bolt, offer line below",
+   "typography": "Anton, Montserrat caps",
+   "palette": "hot pink, lemon, white",
+   "decor": "diagonal stripes, vector lightning bolt"
+  },
+  "palette": [
+   "#FF2E63",
+   "#FFE14D",
+   "#FFFFFF"
+  ],
+  "content": {
+   "headline": "FLASH SALE",
+   "message": "50% off everything · 24 hours only",
+   "signature": "Shop now"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/flash-sale-bold-post.jpg",
+  "preview_url": "/templates/collection/flash-sale-bold-post-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "social-002",
+  "slug": "shoe-store-discount-post",
+  "title": "Shoe Store Discount Post",
+  "category": "Social media and promotional designs",
+  "subcategory": "Sale",
+  "site_category": "Social Media",
+  "description": "Rounded product photo with a discount starburst, italic headline and CTA. Starburst badge, rounded photo.",
+  "design_brief": "Rounded product photo with a discount starburst, italic headline and CTA. Starburst badge, rounded photo.",
+  "design_style": "sale",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=shoe%20sale%20instagram%20post%20photo",
+  "inspiration_query": "shoe sale instagram post photo",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "rounded product photo with a discount starburst, italic headline and CTA",
+   "typography": "Playfair Display italic, Montserrat, Anton",
+   "palette": "sand, leather brown, cocoa",
+   "decor": "starburst badge, rounded photo"
+  },
+  "palette": [
+   "#F4EDE4",
+   "#3A2418",
+   "#8C4A1E",
+   "#FFFFFF"
+  ],
+  "content": {
+   "headline": "Step into savings",
+   "message": "30% off leather shoes this week",
+   "signature": "Shop in store & online"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/shoe-store-discount-post.jpg",
+  "preview_url": "/templates/collection/shoe-store-discount-post-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "social-003",
+  "slug": "black-friday-sale-post",
+  "title": "Black Friday Sale Post",
+  "category": "Social media and promotional designs",
+  "subcategory": "Sale",
+  "site_category": "Social Media",
+  "description": "Massive white type on black with a yellow offer bar. Thin rules, offer bar.",
+  "design_brief": "Massive white type on black with a yellow offer bar. Thin rules, offer bar.",
+  "design_style": "sale",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=black%20friday%20sale%20post",
+  "inspiration_query": "black friday sale post",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "massive white type on black with a yellow offer bar",
+   "typography": "Anton, Montserrat caps",
+   "palette": "black, white, yellow",
+   "decor": "thin rules, offer bar"
+  },
+  "palette": [
+   "#0A0A0A",
+   "#1F1F1F",
+   "#FFFFFF",
+   "#FFD400"
+  ],
+  "content": {
+   "headline": "BLACK FRIDAY",
+   "message": "Up to 70% off · Friday 26 November",
+   "signature": "Starts at midnight"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/black-friday-sale-post.jpg",
+  "preview_url": "/templates/collection/black-friday-sale-post-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "social-004",
+  "slug": "cyber-monday-story",
+  "title": "Cyber Monday Story",
+  "category": "Social media and promotional designs",
+  "subcategory": "Sale",
+  "site_category": "Social Media",
+  "description": "Neon wordmark over a perspective grid, code panel and CTA. Perspective grid, glow.",
+  "design_brief": "Neon wordmark over a perspective grid, code panel and CTA. Perspective grid, glow.",
+  "design_style": "sale",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=cyber%20monday%20sale%20story%20neon",
+  "inspiration_query": "cyber monday sale story neon",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "neon wordmark over a perspective grid, code panel and CTA",
+   "typography": "Monoton neon, Righteous, DM Sans",
+   "palette": "deep violet, cyan, magenta",
+   "decor": "perspective grid, glow"
+  },
+  "palette": [
+   "#0B0033",
+   "#24006B",
+   "#00F0FF",
+   "#FF3CF0",
+   "#FFFFFF"
+  ],
+  "content": {
+   "headline": "CYBER MONDAY",
+   "message": "Online only · extra 20% off with code CYBER20",
+   "signature": "Swipe up to shop"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1920,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/cyber-monday-story.jpg",
+  "preview_url": "/templates/collection/cyber-monday-story-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "social-005",
+  "slug": "buy-one-get-one-post",
+  "title": "Buy One Get One Post",
+  "category": "Social media and promotional designs",
+  "subcategory": "Sale",
+  "site_category": "Social Media",
+  "description": "Two drinks side by side with a plus sign, offer headline. Circles, drink illustrations.",
+  "design_brief": "Two drinks side by side with a plus sign, offer headline. Circles, drink illustrations.",
+  "design_style": "sale",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=buy%20one%20get%20one%20free%20coffee%20post",
+  "inspiration_query": "buy one get one free coffee post",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "two drinks side by side with a plus sign, offer headline",
+   "typography": "Anton, Pacifico, Montserrat caps",
+   "palette": "latte, caramel, espresso",
+   "decor": "circles, drink illustrations"
+  },
+  "palette": [
+   "#F3E3CF",
+   "#E2C3A0",
+   "#D9B48F",
+   "#6B3A1E",
+   "#B5523B",
+   "#8C6A50"
+  ],
+  "content": {
+   "headline": "Buy 1 Get 1 Free",
+   "message": "On all iced coffees · weekdays 2–5 PM",
+   "signature": "The Daily Grind"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/buy-one-get-one-post.jpg",
+  "preview_url": "/templates/collection/buy-one-get-one-post-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "bubble-tea"
+  ]
+ },
+ {
+  "id": "social-006",
+  "slug": "free-shipping-banner-post",
+  "title": "Free Shipping Banner Post",
+  "category": "Social media and promotional designs",
+  "subcategory": "Sale",
+  "site_category": "Social Media",
+  "description": "Parcel flying off on a dashed path to a plane, bold headline. Wave, gift and plane, dashed route.",
+  "design_brief": "Parcel flying off on a dashed path to a plane, bold headline. Wave, gift and plane, dashed route.",
+  "design_style": "sale",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=free%20shipping%20promo%20post",
+  "inspiration_query": "free shipping promo post",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "parcel flying off on a dashed path to a plane, bold headline",
+   "typography": "Anton, Montserrat",
+   "palette": "blue, white",
+   "decor": "wave, gift and plane, dashed route"
+  },
+  "palette": [
+   "#2E86DE",
+   "#1B6FC2",
+   "#FFFFFF",
+   "#DCEBFF"
+  ],
+  "content": {
+   "headline": "Free shipping",
+   "message": "On all orders over AED 150 · this weekend",
+   "signature": "Use code FREESHIP"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/free-shipping-banner-post.jpg",
+  "preview_url": "/templates/collection/free-shipping-banner-post-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "airplane",
+   "wrapped-gift"
+  ]
+ },
+ {
+  "id": "social-007",
+  "slug": "end-of-season-sale-poster",
+  "title": "End of Season Sale Poster",
+  "category": "Social media and promotional designs",
+  "subcategory": "Sale",
+  "site_category": "Social Media",
+  "description": "Fashion photo right, stacked condensed title and red percentage block left. Full-height photo, offer block.",
+  "design_brief": "Fashion photo right, stacked condensed title and red percentage block left. Full-height photo, offer block.",
+  "design_style": "sale",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=end%20of%20season%20sale%20poster%20fashion",
+  "inspiration_query": "end of season sale poster fashion",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "fashion photo right, stacked condensed title and red percentage block left",
+   "typography": "Anton, Montserrat",
+   "palette": "stone, black, red",
+   "decor": "full-height photo, offer block"
+  },
+  "palette": [
+   "#EDE6DC",
+   "#1E1E1E",
+   "#C0392B",
+   "#FFFFFF",
+   "#7A7068"
+  ],
+  "content": {
+   "headline": "End of Season Sale",
+   "message": "Up to 60% off fashion · final week",
+   "signature": "In stores & online"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1350,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/end-of-season-sale-poster.jpg",
+  "preview_url": "/templates/collection/end-of-season-sale-poster-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "social-008",
+  "slug": "bundle-offer-post",
+  "title": "Bundle Offer Post",
+  "category": "Social media and promotional designs",
+  "subcategory": "Sale",
+  "site_category": "Social Media",
+  "description": "Beauty flat-lay photo, italic headline, new price beside a struck-out old price. Rounded photo, lipstick sticker, strike line.",
+  "design_brief": "Beauty flat-lay photo, italic headline, new price beside a struck-out old price. Rounded photo, lipstick sticker, strike line.",
+  "design_style": "sale",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=beauty%20bundle%20offer%20post",
+  "inspiration_query": "beauty bundle offer post",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "beauty flat-lay photo, italic headline, new price beside a struck-out old price",
+   "typography": "Playfair Display italic, Anton, Montserrat",
+   "palette": "blush, berry, mauve",
+   "decor": "rounded photo, lipstick sticker, strike line"
+  },
+  "palette": [
+   "#FBEDEE",
+   "#7A1F3D",
+   "#3A2030",
+   "#C2185B",
+   "#9A7A84",
+   "#FFFFFF"
+  ],
+  "content": {
+   "headline": "Bundle & Save",
+   "message": "Lipstick + palette + brush · now AED 199 (was AED 285)",
+   "signature": "Limited stock"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/bundle-offer-post.jpg",
+  "preview_url": "/templates/collection/bundle-offer-post-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "lipstick"
+  ]
+ },
+ {
+  "id": "social-009",
+  "slug": "new-arrival-product-post",
+  "title": "New Arrival Product Post",
+  "category": "Social media and promotional designs",
+  "subcategory": "Product",
+  "site_category": "Social Media",
+  "description": "Product photo left, minimal NEW / Arrival stack with price right. Half-bleed photo, gold rule.",
+  "design_brief": "Product photo left, minimal NEW / Arrival stack with price right. Half-bleed photo, gold rule.",
+  "design_style": "product",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=new%20arrival%20product%20post%20minimal",
+  "inspiration_query": "new arrival product post minimal",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "product photo left, minimal NEW / Arrival stack with price right",
+   "typography": "Montserrat caps, Playfair Display italic, Lora italic, Anton",
+   "palette": "slate, gold, white",
+   "decor": "half-bleed photo, gold rule"
+  },
+  "palette": [
+   "#1F2A33",
+   "#C9A45A",
+   "#FFFFFF",
+   "#D6DEE8"
+  ],
+  "content": {
+   "headline": "New Arrival",
+   "message": "The Tan Oxford · hand-stitched Italian leather",
+   "signature": "AED 650"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/new-arrival-product-post.jpg",
+  "preview_url": "/templates/collection/new-arrival-product-post-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "social-010",
+  "slug": "product-feature-story",
+  "title": "Product Feature Story",
+  "category": "Social media and promotional designs",
+  "subcategory": "Product",
+  "site_category": "Social Media",
+  "description": "Coffee-bean photo fading into a dark roast panel, cup and tasting notes. Photo fade, cup illustration.",
+  "design_brief": "Coffee-bean photo fading into a dark roast panel, cup and tasting notes. Photo fade, cup illustration.",
+  "design_style": "product",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=coffee%20product%20feature%20story",
+  "inspiration_query": "coffee product feature story",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "coffee-bean photo fading into a dark roast panel, cup and tasting notes",
+   "typography": "Playfair Display italic, Lora italic, Montserrat",
+   "palette": "espresso, crema, beans",
+   "decor": "photo fade, cup illustration"
+  },
+  "palette": [
+   "#2B1A12",
+   "#F3E3CF",
+   "#D9C2A8"
+  ],
+  "content": {
+   "headline": "Meet our new blend",
+   "message": "Single-origin Ethiopian · notes of jasmine & citrus",
+   "signature": "Available in store"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1920,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/product-feature-story.jpg",
+  "preview_url": "/templates/collection/product-feature-story-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "hot-beverage"
+  ]
+ },
+ {
+  "id": "social-011",
+  "slug": "fresh-juice-menu-post",
+  "title": "Fresh Juice Menu Post",
+  "category": "Social media and promotional designs",
+  "subcategory": "Product",
+  "site_category": "Social Media",
+  "description": "Juice photo in a tall arch, handwritten title and colour-coded flavour list. Arch photo, colour dots.",
+  "design_brief": "Juice photo in a tall arch, handwritten title and colour-coded flavour list. Arch photo, colour dots.",
+  "design_style": "product",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=fresh%20juice%20promo%20post",
+  "inspiration_query": "fresh juice promo post",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "juice photo in a tall arch, handwritten title and colour-coded flavour list",
+   "typography": "Pacifico, Fredoka",
+   "palette": "mango yellow, orange, green, berry",
+   "decor": "arch photo, colour dots"
+  },
+  "palette": [
+   "#FFE29A",
+   "#E85D04",
+   "#F48C06",
+   "#3A2A10",
+   "#55A630",
+   "#C9184A"
+  ],
+  "content": {
+   "headline": "Freshly squeezed",
+   "message": "Orange · Green detox · Berry boost · from AED 18",
+   "signature": "Order on our app"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/fresh-juice-menu-post.jpg",
+  "preview_url": "/templates/collection/fresh-juice-menu-post-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "social-012",
+  "slug": "beauty-launch-post",
+  "title": "Beauty Launch Post",
+  "category": "Social media and promotional designs",
+  "subcategory": "Product",
+  "site_category": "Social Media",
+  "description": "Full-bleed lipstick photo with a wine fade and italic product name. Gradient shade.",
+  "design_brief": "Full-bleed lipstick photo with a wine fade and italic product name. Gradient shade.",
+  "design_style": "product",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=lipstick%20launch%20post%20luxury",
+  "inspiration_query": "lipstick launch post luxury",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "full-bleed lipstick photo with a wine fade and italic product name",
+   "typography": "Playfair Display italic, Lora italic, Montserrat caps",
+   "palette": "wine, blush, gold",
+   "decor": "gradient shade"
+  },
+  "palette": [
+   "#2A0A12",
+   "#F7D9C4",
+   "#F3E3E3",
+   "#E9C877"
+  ],
+  "content": {
+   "headline": "Velvet Matte",
+   "message": "Our new lipstick collection · 8 shades",
+   "signature": "Launching Friday"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/beauty-launch-post.jpg",
+  "preview_url": "/templates/collection/beauty-launch-post-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "social-013",
+  "slug": "real-estate-listing-post",
+  "title": "Real Estate Listing Post",
+  "category": "Social media and promotional designs",
+  "subcategory": "Product",
+  "site_category": "Social Media",
+  "description": "Interior photo with a JUST LISTED tag, property name, size and price row. Tag, icon row.",
+  "design_brief": "Interior photo with a JUST LISTED tag, property name, size and price row. Tag, icon row.",
+  "design_style": "product",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=real%20estate%20just%20listed%20post",
+  "inspiration_query": "real estate just listed post",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "interior photo with a JUST LISTED tag, property name, size and price row",
+   "typography": "Playfair Display, Montserrat",
+   "palette": "warm white, navy, red",
+   "decor": "tag, icon row"
+  },
+  "palette": [
+   "#F5F3EF",
+   "#C0392B",
+   "#FFFFFF",
+   "#1E2A3A",
+   "#4A5568"
+  ],
+  "content": {
+   "headline": "Just Listed",
+   "message": "3-bed villa · Arabian Ranches · 2,800 sq ft · AED 3.2M",
+   "signature": "Call 050 123 4567"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/real-estate-listing-post.jpg",
+  "preview_url": "/templates/collection/real-estate-listing-post-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "house",
+   "money-bag"
+  ]
+ },
+ {
+  "id": "social-014",
+  "slug": "car-dealer-promo-post",
+  "title": "Car Dealer Promo Post",
+  "category": "Social media and promotional designs",
+  "subcategory": "Product",
+  "site_category": "Social Media",
+  "description": "Car photo band between dark fades, condensed title and finance line. Photo band with fades.",
+  "design_brief": "Car photo band between dark fades, condensed title and finance line. Photo band with fades.",
+  "design_style": "product",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=car%20dealership%20promo%20post",
+  "inspiration_query": "car dealership promo post",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "car photo band between dark fades, condensed title and finance line",
+   "typography": "Anton, Montserrat",
+   "palette": "carbon black, amber",
+   "decor": "photo band with fades"
+  },
+  "palette": [
+   "#0E1116",
+   "#FFFFFF",
+   "#FFC300"
+  ],
+  "content": {
+   "headline": "Drive it home",
+   "message": "0% finance on selected SUVs this month",
+   "signature": "Book a test drive"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/car-dealer-promo-post.jpg",
+  "preview_url": "/templates/collection/car-dealer-promo-post-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "social-015",
+  "slug": "interior-design-studio-post",
+  "title": "Interior Design Studio Post",
+  "category": "Social media and promotional designs",
+  "subcategory": "Product",
+  "site_category": "Social Media",
+  "description": "Calm interior photo right, italic headline and service line left. Half-bleed photo.",
+  "design_brief": "Calm interior photo right, italic headline and service line left. Half-bleed photo.",
+  "design_style": "product",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=interior%20design%20studio%20post%20minimal",
+  "inspiration_query": "interior design studio post minimal",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "calm interior photo right, italic headline and service line left",
+   "typography": "Playfair Display italic, Montserrat",
+   "palette": "greige, charcoal, taupe",
+   "decor": "half-bleed photo"
+  },
+  "palette": [
+   "#ECE7E0",
+   "#3A332C",
+   "#8A7A66"
+  ],
+  "content": {
+   "headline": "Calm spaces",
+   "message": "Interior design for homes that feel like you",
+   "signature": "Book a free consultation"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/interior-design-studio-post.jpg",
+  "preview_url": "/templates/collection/interior-design-studio-post-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "social-016",
+  "slug": "restaurant-new-menu-post",
+  "title": "Restaurant New Menu Post",
+  "category": "Social media and promotional designs",
+  "subcategory": "Product",
+  "site_category": "Social Media",
+  "description": "Food photo with a NEW pill, italic headline and dish description. Rounded photo, NEW pill.",
+  "design_brief": "Food photo with a NEW pill, italic headline and dish description. Rounded photo, NEW pill.",
+  "design_style": "product",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=restaurant%20new%20menu%20instagram%20post",
+  "inspiration_query": "restaurant new menu instagram post",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "food photo with a NEW pill, italic headline and dish description",
+   "typography": "Playfair Display italic, Lora italic, Montserrat caps",
+   "palette": "charcoal, cream, gold",
+   "decor": "rounded photo, NEW pill"
+  },
+  "palette": [
+   "#1C1A17",
+   "#E9C877",
+   "#F3E6CB",
+   "#C9B99A"
+  ],
+  "content": {
+   "headline": "New on the menu",
+   "message": "Wood-fired flatbread with roasted tomatoes & herbs",
+   "signature": "Available from today"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/restaurant-new-menu-post.jpg",
+  "preview_url": "/templates/collection/restaurant-new-menu-post-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "social-017",
+  "slug": "giveaway-contest-post",
+  "title": "Giveaway Contest Post",
+  "category": "Social media and promotional designs",
+  "subcategory": "Engagement",
+  "site_category": "Social Media",
+  "description": "Gift and giant title with three numbered entry steps. Confetti, gift, step circles.",
+  "design_brief": "Gift and giant title with three numbered entry steps. Confetti, gift, step circles.",
+  "design_style": "engagement",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=instagram%20giveaway%20contest%20post",
+  "inspiration_query": "instagram giveaway contest post",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "gift and giant title with three numbered entry steps",
+   "typography": "Luckiest Guy outlined, Fredoka, Montserrat caps",
+   "palette": "coral to pink, white, violet",
+   "decor": "confetti, gift, step circles"
+  },
+  "palette": [
+   "#FF9A8B",
+   "#FF6A88",
+   "#FFFFFF",
+   "#7B5CFF",
+   "#FFE14D",
+   "#7B1E3A"
+  ],
+  "content": {
+   "headline": "GIVEAWAY",
+   "message": "Win a beauty bundle worth AED 500 · Like · Follow · Tag 2 friends",
+   "signature": "Ends Sunday"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/giveaway-contest-post.jpg",
+  "preview_url": "/templates/collection/giveaway-contest-post-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "wrapped-gift"
+  ]
+ },
+ {
+  "id": "social-018",
+  "slug": "this-or-that-story",
+  "title": "This or That Story",
+  "category": "Social media and promotional designs",
+  "subcategory": "Engagement",
+  "site_category": "Social Media",
+  "description": "Split story: coffee above, tea below, OR disc in the middle. Split halves, OR disc.",
+  "design_brief": "Split story: coffee above, tea below, OR disc in the middle. Split halves, OR disc.",
+  "design_style": "engagement",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=this%20or%20that%20instagram%20story%20poll",
+  "inspiration_query": "this or that instagram story poll",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "split story: coffee above, tea below, OR disc in the middle",
+   "typography": "Pacifico, Anton, Fredoka",
+   "palette": "coffee brown, matcha green, white",
+   "decor": "split halves, OR disc"
+  },
+  "palette": [
+   "#6F4E37",
+   "#7FB069",
+   "#FFFFFF",
+   "#2A2A2A"
+  ],
+  "content": {
+   "headline": "This or that?",
+   "message": "Coffee · Tea",
+   "signature": "Vote below!"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1920,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/this-or-that-story.jpg",
+  "preview_url": "/templates/collection/this-or-that-story-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "hot-beverage",
+   "teacup-without-handle"
+  ]
+ },
+ {
+  "id": "social-019",
+  "slug": "ask-me-anything-story",
+  "title": "Ask Me Anything Story",
+  "category": "Social media and promotional designs",
+  "subcategory": "Engagement",
+  "site_category": "Social Media",
+  "description": "Big italic prompt above a question-box mock-up. Question card, gradient button, sparkles.",
+  "design_brief": "Big italic prompt above a question-box mock-up. Question card, gradient button, sparkles.",
+  "design_style": "engagement",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=ask%20me%20anything%20story%20template",
+  "inspiration_query": "ask me anything story template",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "big italic prompt above a question-box mock-up",
+   "typography": "Playfair Display italic, DM Sans, Caveat",
+   "palette": "pink to aqua, charcoal",
+   "decor": "question card, gradient button, sparkles"
+  },
+  "palette": [
+   "#FFDEE9",
+   "#B5FFFC",
+   "#2A2A2A",
+   "#4A4A4A",
+   "#FFFFFF",
+   "#B0B0B0"
+  ],
+  "content": {
+   "headline": "Ask me anything",
+   "message": "About design, freelancing and coffee",
+   "signature": "Drop your questions"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1920,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/ask-me-anything-story.jpg",
+  "preview_url": "/templates/collection/ask-me-anything-story-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "sparkles"
+  ]
+ },
+ {
+  "id": "social-020",
+  "slug": "customer-review-post",
+  "title": "Customer Review Post",
+  "category": "Social media and promotional designs",
+  "subcategory": "Engagement",
+  "site_category": "Social Media",
+  "description": "Five stars, oversized quote mark and customer quote. Stars, quote mark, croissant.",
+  "design_brief": "Five stars, oversized quote mark and customer quote. Stars, quote mark, croissant.",
+  "design_style": "engagement",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=customer%20review%20testimonial%20post",
+  "inspiration_query": "customer review testimonial post",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "five stars, oversized quote mark and customer quote",
+   "typography": "Playfair Display italic, Montserrat",
+   "palette": "butter cream, cocoa, gold",
+   "decor": "stars, quote mark, croissant"
+  },
+  "palette": [
+   "#FFF8EE",
+   "#F2B84B",
+   "#E3C08F",
+   "#3A2418",
+   "#B5523B",
+   "#6E4A38"
+  ],
+  "content": {
+   "headline": "★★★★★",
+   "message": "“The best croissants in Dubai — I come back every weekend.”",
+   "signature": "— Amira K., verified customer"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/customer-review-post.jpg",
+  "preview_url": "/templates/collection/customer-review-post-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "croissant"
+  ]
+ },
+ {
+  "id": "social-021",
+  "slug": "quote-of-the-day-post",
+  "title": "Quote of the Day Post",
+  "category": "Social media and promotional designs",
+  "subcategory": "Engagement",
+  "site_category": "Social Media",
+  "description": "Label, large italic quote, short accent rule with two colour discs. Two circles, rule.",
+  "design_brief": "Label, large italic quote, short accent rule with two colour discs. Two circles, rule.",
+  "design_style": "engagement",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=quote%20of%20the%20day%20instagram%20post",
+  "inspiration_query": "quote of the day instagram post",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "label, large italic quote, short accent rule with two colour discs",
+   "typography": "Montserrat caps, Playfair Display italic",
+   "palette": "navy, cream, tangerine, sunflower",
+   "decor": "two circles, rule"
+  },
+  "palette": [
+   "#1E3D59",
+   "#FF6E40",
+   "#FFC13B",
+   "#F5F0E1"
+  ],
+  "content": {
+   "headline": "Quote of the day",
+   "message": "Small steps every day add up to big changes.",
+   "signature": ""
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/quote-of-the-day-post.jpg",
+  "preview_url": "/templates/collection/quote-of-the-day-post-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "social-022",
+  "slug": "sleep-tips-carousel-cover",
+  "title": "Sleep Tips Carousel Cover",
+  "category": "Social media and promotional designs",
+  "subcategory": "Engagement",
+  "site_category": "Social Media",
+  "description": "Carousel cover: moon illustration, big two-line title, swipe button. Moon, dots, swipe pill.",
+  "design_brief": "Carousel cover: moon illustration, big two-line title, swipe button. Moon, dots, swipe pill.",
+  "design_style": "engagement",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=tips%20carousel%20cover%20post",
+  "inspiration_query": "tips carousel cover post",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "carousel cover: moon illustration, big two-line title, swipe button",
+   "typography": "Outfit ExtraBold, DM Sans",
+   "palette": "mist blue, navy",
+   "decor": "moon, dots, swipe pill"
+  },
+  "palette": [
+   "#E8EEF8",
+   "#7A8BB8",
+   "#1B2559",
+   "#4A5A88",
+   "#FFFFFF"
+  ],
+  "content": {
+   "headline": "5 tips for better sleep",
+   "message": "Swipe for simple habits that work",
+   "signature": "@wellness.lab"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/sleep-tips-carousel-cover.jpg",
+  "preview_url": "/templates/collection/sleep-tips-carousel-cover-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "crescent-moon"
+  ]
+ },
+ {
+  "id": "social-023",
+  "slug": "follow-us-post",
+  "title": "Follow Us Post",
+  "category": "Social media and promotional designs",
+  "subcategory": "Engagement",
+  "site_category": "Social Media",
+  "description": "Profile-style card with a ringed avatar, script call and handle button. Gradient ring, card shadow.",
+  "design_brief": "Profile-style card with a ringed avatar, script call and handle button. Gradient ring, card shadow.",
+  "design_style": "engagement",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=follow%20us%20instagram%20post",
+  "inspiration_query": "follow us instagram post",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "profile-style card with a ringed avatar, script call and handle button",
+   "typography": "Pacifico, DM Sans",
+   "palette": "sunset gradient, white, charcoal",
+   "decor": "gradient ring, card shadow"
+  },
+  "palette": [
+   "#FEDA75",
+   "#FA7E1E",
+   "#D62976",
+   "#4F5BD5",
+   "#FFFFFF",
+   "#3A3A3A"
+  ],
+  "content": {
+   "headline": "Follow us!",
+   "message": "Daily inspiration, behind the scenes & exclusive offers",
+   "signature": "@magical.studio"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/follow-us-post.jpg",
+  "preview_url": "/templates/collection/follow-us-post-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "sparkles"
+  ]
+ },
+ {
+  "id": "social-024",
+  "slug": "sale-countdown-story",
+  "title": "Sale Countdown Story",
+  "category": "Social media and promotional designs",
+  "subcategory": "Engagement",
+  "site_category": "Social Media",
+  "description": "Huge number in a pink tile, DAYS LEFT and reminder pill. Tile, alarm clock.",
+  "design_brief": "Huge number in a pink tile, DAYS LEFT and reminder pill. Tile, alarm clock.",
+  "design_style": "engagement",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=countdown%20story%20sale",
+  "inspiration_query": "countdown story sale",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "huge number in a pink tile, DAYS LEFT and reminder pill",
+   "typography": "Anton, DM Sans",
+   "palette": "black, hot pink, white",
+   "decor": "tile, alarm clock"
+  },
+  "palette": [
+   "#111111",
+   "#FF2E63",
+   "#FFFFFF",
+   "#BDBDBD"
+  ],
+  "content": {
+   "headline": "2 days left",
+   "message": "until our biggest sale of the year",
+   "signature": "Turn on notifications"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1920,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/sale-countdown-story.jpg",
+  "preview_url": "/templates/collection/sale-countdown-story-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "alarm-clock"
+  ]
+ },
+ {
+  "id": "social-025",
+  "slug": "coming-soon-teaser-post",
+  "title": "Coming Soon Teaser Post",
+  "category": "Social media and promotional designs",
+  "subcategory": "Brand",
+  "site_category": "Social Media",
+  "description": "Steaming cup in concentric rings above a lowercase italic teaser. Rings, steam curls.",
+  "design_brief": "Steaming cup in concentric rings above a lowercase italic teaser. Rings, steam curls.",
+  "design_style": "brand",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=coming%20soon%20teaser%20post",
+  "inspiration_query": "coming soon teaser post",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "steaming cup in concentric rings above a lowercase italic teaser",
+   "typography": "Playfair Display italic, Lora italic, Montserrat",
+   "palette": "oat, espresso",
+   "decor": "rings, steam curls"
+  },
+  "palette": [
+   "#EFE6DA",
+   "#2B1A12",
+   "#6E4A38"
+  ],
+  "content": {
+   "headline": "Coming soon",
+   "message": "Something beautiful is brewing",
+   "signature": "@thedailygrind"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/coming-soon-teaser-post.jpg",
+  "preview_url": "/templates/collection/coming-soon-teaser-post-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "hot-beverage"
+  ]
+ },
+ {
+  "id": "social-026",
+  "slug": "were-open-post",
+  "title": "We’re Open Post",
+  "category": "Social media and promotional designs",
+  "subcategory": "Brand",
+  "site_category": "Social Media",
+  "description": "Hanging shop sign with script ‘We’re open!’, hours below. Hanging sign with strings.",
+  "design_brief": "Hanging shop sign with script ‘We’re open!’, hours below. Hanging sign with strings.",
+  "design_style": "brand",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=we%27re%20open%20shop%20post",
+  "inspiration_query": "we're open shop post",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "hanging shop sign with script ‘We’re open!’, hours below",
+   "typography": "Pacifico, Montserrat caps, Anton, Caveat",
+   "palette": "shop green, cream, yellow",
+   "decor": "hanging sign with strings"
+  },
+  "palette": [
+   "#2E7D5B",
+   "#FFF6E0",
+   "#FFE14D",
+   "#DDEFE5"
+  ],
+  "content": {
+   "headline": "We’re open!",
+   "message": "Mon–Sat · 8 AM – 10 PM · Al Wasl Road",
+   "signature": "Come say hi"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/were-open-post.jpg",
+  "preview_url": "/templates/collection/were-open-post-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "social-027",
+  "slug": "were-hiring-post",
+  "title": "We’re Hiring Post",
+  "category": "Social media and promotional designs",
+  "subcategory": "Brand",
+  "site_category": "Social Media",
+  "description": "Giant WE'RE HIRING with a black role card. Role card, cup illustration.",
+  "design_brief": "Giant WE'RE HIRING with a black role card. Role card, cup illustration.",
+  "design_style": "brand",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=we%20are%20hiring%20instagram%20post",
+  "inspiration_query": "we are hiring instagram post",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "giant WE'RE HIRING with a black role card",
+   "typography": "Anton, Montserrat",
+   "palette": "yellow, black, white",
+   "decor": "role card, cup illustration"
+  },
+  "palette": [
+   "#FFE14D",
+   "#111111",
+   "#FFFFFF"
+  ],
+  "content": {
+   "headline": "We’re hiring",
+   "message": "Barista · Full time · Dubai",
+   "signature": "Send your CV to jobs@thedailygrind.ae"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/were-hiring-post.jpg",
+  "preview_url": "/templates/collection/were-hiring-post-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "hot-beverage"
+  ]
+ },
+ {
+  "id": "social-028",
+  "slug": "meet-the-team-post",
+  "title": "Meet the Team Post",
+  "category": "Social media and promotional designs",
+  "subcategory": "Brand",
+  "site_category": "Social Media",
+  "description": "Staff portrait in an arch, name, role and a short quote. Arch photo, rule.",
+  "design_brief": "Staff portrait in an arch, name, role and a short quote. Arch photo, rule.",
+  "design_style": "brand",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=meet%20the%20team%20post%20photo",
+  "inspiration_query": "meet the team post photo",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "staff portrait in an arch, name, role and a short quote",
+   "typography": "Playfair Display, Montserrat, Lora italic",
+   "palette": "linen, charcoal, terracotta",
+   "decor": "arch photo, rule"
+  },
+  "palette": [
+   "#F4EFE6",
+   "#B5523B",
+   "#2A2A2A",
+   "#6A6058",
+   "#3A3A3A"
+  ],
+  "content": {
+   "headline": "Meet the team",
+   "message": "Karim · Head Chef — 12 years of making people happy",
+   "signature": ""
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/meet-the-team-post.jpg",
+  "preview_url": "/templates/collection/meet-the-team-post-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "social-029",
+  "slug": "behind-the-scenes-story",
+  "title": "Behind the Scenes Story",
+  "category": "Social media and promotional designs",
+  "subcategory": "Brand",
+  "site_category": "Social Media",
+  "description": "Two overlapping bakery photos with a handwritten-feel title. Overlapping rounded photos.",
+  "design_brief": "Two overlapping bakery photos with a handwritten-feel title. Overlapping rounded photos.",
+  "design_style": "brand",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=behind%20the%20scenes%20story%20bakery",
+  "inspiration_query": "behind the scenes story bakery",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "two overlapping bakery photos with a handwritten-feel title",
+   "typography": "Montserrat caps, Playfair Display italic, Lora italic",
+   "palette": "peach cream, cocoa, terracotta",
+   "decor": "overlapping rounded photos"
+  },
+  "palette": [
+   "#FFF4EC",
+   "#B5523B",
+   "#3A2418",
+   "#6E4A38"
+  ],
+  "content": {
+   "headline": "Behind the scenes",
+   "message": "How our cakes are made — every day, by hand",
+   "signature": ""
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1920,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/behind-the-scenes-story.jpg",
+  "preview_url": "/templates/collection/behind-the-scenes-story-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "social-030",
+  "slug": "thank-you-customers-post",
+  "title": "Thank You Customers Post",
+  "category": "Social media and promotional designs",
+  "subcategory": "Brand",
+  "site_category": "Social Media",
+  "description": "Gold 1 in confetti with YEAR! and a thank-you line. Confetti.",
+  "design_brief": "Gold 1 in confetti with YEAR! and a thank-you line. Confetti.",
+  "design_style": "brand",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=one%20year%20anniversary%20business%20post",
+  "inspiration_query": "one year anniversary business post",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "gold 1 in confetti with YEAR! and a thank-you line",
+   "typography": "Playfair Display gold, Anton, Lora italic, Montserrat caps",
+   "palette": "espresso, gold, cream",
+   "decor": "confetti"
+  },
+  "palette": [
+   "#2B1A12",
+   "#FFFFFF",
+   "#E3A07A",
+   "#F3D58A",
+   "#8A6A2E",
+   "#E9C877"
+  ],
+  "content": {
+   "headline": "1 year!",
+   "message": "Thank you for 12 months of coffee, chats and kindness",
+   "signature": "The Daily Grind"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/thank-you-customers-post.jpg",
+  "preview_url": "/templates/collection/thank-you-customers-post-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "social-031",
+  "slug": "podcast-episode-post",
+  "title": "Podcast Episode Post",
+  "category": "Social media and promotional designs",
+  "subcategory": "Brand",
+  "site_category": "Social Media",
+  "description": "Episode number and title with a waveform and microphone. Audio waveform bars, microphone.",
+  "design_brief": "Episode number and title with a waveform and microphone. Audio waveform bars, microphone.",
+  "design_style": "brand",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=podcast%20episode%20instagram%20post",
+  "inspiration_query": "podcast episode instagram post",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "episode number and title with a waveform and microphone",
+   "typography": "Anton, Playfair Display italic, Montserrat",
+   "palette": "black, green, white",
+   "decor": "audio waveform bars, microphone"
+  },
+  "palette": [
+   "#121212",
+   "#1DB954",
+   "#FFFFFF",
+   "#BDBDBD"
+  ],
+  "content": {
+   "headline": "New episode",
+   "message": "Ep. 24 · Building a brand from zero · with Dana Khalil",
+   "signature": "Listen on all platforms"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/podcast-episode-post.jpg",
+  "preview_url": "/templates/collection/podcast-episode-post-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "microphone"
+  ]
+ },
+ {
+  "id": "social-032",
+  "slug": "blog-post-promo",
+  "title": "Blog Post Promo",
+  "category": "Social media and promotional designs",
+  "subcategory": "Brand",
+  "site_category": "Social Media",
+  "description": "Interior photo with an article card overlapping it. Card with shadow.",
+  "design_brief": "Interior photo with an article card overlapping it. Card with shadow.",
+  "design_style": "brand",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=blog%20post%20promo%20instagram",
+  "inspiration_query": "blog post promo instagram",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "interior photo with an article card overlapping it",
+   "typography": "Montserrat caps, Playfair Display, Montserrat",
+   "palette": "white, charcoal, clay",
+   "decor": "card with shadow"
+  },
+  "palette": [
+   "#FFFFFF",
+   "#C26A4A",
+   "#1E1E1E",
+   "#6A6A6A"
+  ],
+  "content": {
+   "headline": "New on the blog",
+   "message": "10 ways to style a small living room",
+   "signature": "Read now — link in bio"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/blog-post-promo.jpg",
+  "preview_url": "/templates/collection/blog-post-promo-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "social-033",
+  "slug": "before-and-after-post",
+  "title": "Before and After Post",
+  "category": "Social media and promotional designs",
+  "subcategory": "Brand",
+  "site_category": "Social Media",
+  "description": "Side-by-side before (greyscale) and after photos with labels and an arrow. Label pills, arrow disc, greyscale filter.",
+  "design_brief": "Side-by-side before (greyscale) and after photos with labels and an arrow. Label pills, arrow disc, greyscale filter.",
+  "design_style": "brand",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=before%20after%20interior%20post",
+  "inspiration_query": "before after interior post",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "side-by-side before (greyscale) and after photos with labels and an arrow",
+   "typography": "Playfair Display italic, Montserrat",
+   "palette": "warm white, charcoal",
+   "decor": "label pills, arrow disc, greyscale filter"
+  },
+  "palette": [
+   "#F4F1EC",
+   "#1E1E1E",
+   "#FFFFFF",
+   "#6A6A6A"
+  ],
+  "content": {
+   "headline": "Before / After",
+   "message": "Living room refresh in 2 weeks",
+   "signature": "Swipe to see more"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/before-and-after-post.jpg",
+  "preview_url": "/templates/collection/before-and-after-post-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "social-034",
+  "slug": "gym-membership-promo",
+  "title": "Gym Membership Promo",
+  "category": "Social media and promotional designs",
+  "subcategory": "Wellness",
+  "site_category": "Social Media",
+  "description": "Diagonal black slab over a workout photo with a lime headline. Angled panel, photo.",
+  "design_brief": "Diagonal black slab over a workout photo with a lime headline. Angled panel, photo.",
+  "design_style": "wellness",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=gym%20membership%20promo%20post",
+  "inspiration_query": "gym membership promo post",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "diagonal black slab over a workout photo with a lime headline",
+   "typography": "Anton, Montserrat caps",
+   "palette": "black, lime, white",
+   "decor": "angled panel, photo"
+  },
+  "palette": [
+   "#0A0A0A",
+   "#D4FF3A",
+   "#FFFFFF"
+  ],
+  "content": {
+   "headline": "No excuses",
+   "message": "First month free · join this week",
+   "signature": "Iron House Gym"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/gym-membership-promo.jpg",
+  "preview_url": "/templates/collection/gym-membership-promo-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "social-035",
+  "slug": "yoga-studio-class-post",
+  "title": "Yoga Studio Class Post",
+  "category": "Social media and promotional designs",
+  "subcategory": "Wellness",
+  "site_category": "Social Media",
+  "description": "Rounded yoga photo with an italic headline and class details. Rounded photo, pill.",
+  "design_brief": "Rounded yoga photo with an italic headline and class details. Rounded photo, pill.",
+  "design_style": "wellness",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=yoga%20studio%20class%20post",
+  "inspiration_query": "yoga studio class post",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "rounded yoga photo with an italic headline and class details",
+   "typography": "Playfair Display italic, Montserrat",
+   "palette": "sage mist, forest, leaf",
+   "decor": "rounded photo, pill"
+  },
+  "palette": [
+   "#EEF2EC",
+   "#2F4A3A",
+   "#5E8C6A"
+  ],
+  "content": {
+   "headline": "Find your balance",
+   "message": "New morning flow classes · 7 AM daily",
+   "signature": "Book on our app"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/yoga-studio-class-post.jpg",
+  "preview_url": "/templates/collection/yoga-studio-class-post-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": []
+ },
+ {
+  "id": "social-036",
+  "slug": "healthy-recipe-post",
+  "title": "Healthy Recipe Post",
+  "category": "Social media and promotional designs",
+  "subcategory": "Wellness",
+  "site_category": "Social Media",
+  "description": "Avocado photo with a recipe card: title, line and three quick facts. Card with shadow, icon row.",
+  "design_brief": "Avocado photo with a recipe card: title, line and three quick facts. Card with shadow, icon row.",
+  "design_style": "wellness",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=healthy%20recipe%20instagram%20post",
+  "inspiration_query": "healthy recipe instagram post",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "avocado photo with a recipe card: title, line and three quick facts",
+   "typography": "Playfair Display italic, Lora italic, Montserrat",
+   "palette": "avocado green, cream, white",
+   "decor": "card with shadow, icon row"
+  },
+  "palette": [
+   "#F3F6EA",
+   "#FFFFFF",
+   "#3A5A2A",
+   "#4E5F45",
+   "#6A7A5A"
+  ],
+  "content": {
+   "headline": "Avocado toast, 3 ways",
+   "message": "Quick, healthy breakfast ideas",
+   "signature": "Recipe in caption"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/healthy-recipe-post.jpg",
+  "preview_url": "/templates/collection/healthy-recipe-post-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "alarm-clock",
+   "fork-and-knife-with-plate",
+   "leafy-green"
+  ]
+ },
+ {
+  "id": "social-037",
+  "slug": "salon-offer-story",
+  "title": "Salon Offer Story",
+  "category": "Social media and promotional designs",
+  "subcategory": "Wellness",
+  "site_category": "Social Media",
+  "description": "Portrait in a tall arch with sparkles, script offer title. Arch photo, sparkles.",
+  "design_brief": "Portrait in a tall arch with sparkles, script offer title. Arch photo, sparkles.",
+  "design_style": "wellness",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=beauty%20salon%20offer%20story",
+  "inspiration_query": "beauty salon offer story",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "portrait in a tall arch with sparkles, script offer title",
+   "typography": "Great Vibes, Montserrat",
+   "palette": "blush, terracotta rose, cocoa",
+   "decor": "arch photo, sparkles"
+  },
+  "palette": [
+   "#F8E8E4",
+   "#A65A4C",
+   "#5A3A35",
+   "#FFFFFF"
+  ],
+  "content": {
+   "headline": "Glow up Tuesday",
+   "message": "20% off facials every Tuesday",
+   "signature": "Book now"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1920,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/salon-offer-story.jpg",
+  "preview_url": "/templates/collection/salon-offer-story-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "sparkles"
+  ]
+ },
+ {
+  "id": "social-038",
+  "slug": "loyalty-card-promo",
+  "title": "Loyalty Card Promo",
+  "category": "Social media and promotional designs",
+  "subcategory": "Promotional",
+  "site_category": "Social Media",
+  "description": "Coffee stamp card with ten slots (six stamped, the tenth free). Stamp card, cup stamps.",
+  "design_brief": "Coffee stamp card with ten slots (six stamped, the tenth free). Stamp card, cup stamps.",
+  "design_style": "promotional",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=loyalty%20card%20promo%20post%20coffee",
+  "inspiration_query": "loyalty card promo post coffee",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "coffee stamp card with ten slots (six stamped, the tenth free)",
+   "typography": "Pacifico, Montserrat",
+   "palette": "coffee brown, cream, terracotta",
+   "decor": "stamp card, cup stamps"
+  },
+  "palette": [
+   "#6B3A1E",
+   "#FBF3E8",
+   "#B5523B",
+   "#FFFFFF",
+   "#F3E3CF"
+  ],
+  "content": {
+   "headline": "Buy 9, get the 10th free",
+   "message": "Ask for your loyalty card at the counter",
+   "signature": "The Daily Grind"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/loyalty-card-promo.jpg",
+  "preview_url": "/templates/collection/loyalty-card-promo-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "hot-beverage"
+  ]
+ },
+ {
+  "id": "social-039",
+  "slug": "app-launch-post",
+  "title": "App Launch Post",
+  "category": "Social media and promotional designs",
+  "subcategory": "Promotional",
+  "site_category": "Social Media",
+  "description": "Phone mock-up showing the app beside a bold announcement. Vector phone with screen UI.",
+  "design_brief": "Phone mock-up showing the app beside a bold announcement. Vector phone with screen UI.",
+  "design_style": "promotional",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=app%20launch%20promo%20post%20phone",
+  "inspiration_query": "app launch promo post phone",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "phone mock-up showing the app beside a bold announcement",
+   "typography": "Outfit ExtraBold, DM Sans, Fredoka",
+   "palette": "violet to teal, white, coffee",
+   "decor": "vector phone with screen UI"
+  },
+  "palette": [
+   "#7B5CFF",
+   "#00C2A8",
+   "#111111",
+   "#FFF6EE",
+   "#6B3A1E",
+   "#FFFFFF"
+  ],
+  "content": {
+   "headline": "Our app is here",
+   "message": "Order ahead, skip the queue, earn rewards",
+   "signature": "Download now"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/app-launch-post.jpg",
+  "preview_url": "/templates/collection/app-launch-post-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "hot-beverage"
+  ]
+ },
+ {
+  "id": "social-040",
+  "slug": "travel-agency-deal-post",
+  "title": "Travel Agency Deal Post",
+  "category": "Social media and promotional designs",
+  "subcategory": "Promotional",
+  "site_category": "Social Media",
+  "description": "Destination photo with a wave cut, italic destination and price. Wave edge, plane.",
+  "design_brief": "Destination photo with a wave cut, italic destination and price. Wave edge, plane.",
+  "design_style": "promotional",
+  "inspiration_reference_url": "https://www.pinterest.com/search/pins/?q=travel%20agency%20deal%20post",
+  "inspiration_query": "travel agency deal post",
+  "inspiration_pin_url": null,
+  "reference_type": "pinterest_search",
+  "reference_verified": false,
+  "design_notes": {
+   "layout": "destination photo with a wave cut, italic destination and price",
+   "typography": "Playfair Display italic, Montserrat, Anton",
+   "palette": "Aegean blue, white, sun yellow",
+   "decor": "wave edge, plane"
+  },
+  "palette": [
+   "#1F4E8C",
+   "#FFFFFF",
+   "#CFE0F5",
+   "#FFD54F"
+  ],
+  "content": {
+   "headline": "Escape to Santorini",
+   "message": "5 nights · flights + hotel · from AED 3,999",
+   "signature": "Book by 31 March"
+  },
+  "dimensions": {
+   "width": 1080,
+   "height": 1080,
+   "unit": "px"
+  },
+  "pages": 1,
+  "thumbnail_url": "/templates/collection/travel-agency-deal-post.jpg",
+  "preview_url": "/templates/collection/travel-agency-deal-post-preview.jpg",
+  "status": "published",
+  "is_editable": true,
+  "assets": [
+   "airplane"
+  ]
+ }
+]
