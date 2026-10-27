@@ -5,15 +5,16 @@
 
 import Link from 'next/link';
 import { ReactNode } from 'react';
-import { LayoutDashboard, Inbox, Server, CalendarHeart, PenLine, Mail, LayoutTemplate, Sparkles, Award, GraduationCap, Megaphone, Info } from 'lucide-react';
+import { LayoutDashboard, Inbox, Server, CalendarHeart, PenLine, Mail, LayoutTemplate, Sparkles, Award, GraduationCap, Megaphone, Info, HeartPulse } from 'lucide-react';
 import { AppHeader } from '@/components/AppHeader';
 import { PageHero } from '@/components/PageHero';
 import { useAppTheme } from '@/hooks/useAppTheme';
 
-export type AdminSection = 'overview' | 'messages' | 'services' | 'occasions' | 'wording' | 'email' | 'templates' | 'brand' | 'certificates' | 'courses' | 'about' | 'seo';
+export type AdminSection = 'overview' | 'messages' | 'services' | 'occasions' | 'wording' | 'email' | 'templates' | 'brand' | 'certificates' | 'courses' | 'about' | 'seo' | 'health';
 
 const NAV: { id: AdminSection; label: string; href: string; icon: ReactNode }[] = [
   { id: 'overview', label: 'Overview', href: '/admin', icon: <LayoutDashboard size={17} /> },
+  { id: 'health', label: 'Site health', href: '/admin/health', icon: <HeartPulse size={17} /> },
   { id: 'messages', label: 'Messages', href: '/admin?tab=messages', icon: <Inbox size={17} /> },
   { id: 'occasions', label: 'Festivals & occasions', href: '/admin?tab=occasions', icon: <CalendarHeart size={17} /> },
   { id: 'services', label: 'Hosting & renewals', href: '/admin?tab=services', icon: <Server size={17} /> },
