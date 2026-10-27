@@ -727,3 +727,22 @@ scenarios.push({
     t.check('every look and dot shape scans', failed.length === 0, failed.join(', '));
   },
 });
+
+// Mockups: the studio opens from the editor, draws every scene for the
+// page and shows a large preview of the chosen one.
+scenarios.push({
+  name: 'mockups',
+  async run(t) {
+    await t.editor('w=1080&h=1350');
+    await t.eval(() => { const F = window.fabric, c = window.__fabricCanvas; const ab = c.getObjects().find((o) => o.__isArtboard); c.add(new F.Rect({ left: ab.left + 100, top: ab.top + 100, width: 880, height: 600, fill: '#e91e63' })); c.add(new F.Textbox('MOCKUP', { left: ab.left + 140, top: ab.top + 800, width: 800, fontSize: 140, fill: '#222' })); c.requestRenderAll(); });
+    await t.page.getByTestId('open-mockups').click();
+    await t.page.waitForTimeout(6000);
+    const thumbs = await t.page.locator('[data-testid^=mockup-] img').count();
+    t.check('scene previews drawn', thumbs >= 12, String(thumbs));
+    await t.shot('gallery');
+    await t.page.getByTestId('mockup-frame-wall').click();
+    await t.page.waitForSelector('[data-testid=mockup-large]', { timeout: 20000 });
+    t.check('large preview shown', (await t.page.locator('[data-testid=mockup-large]').count()) === 1);
+    await t.shot('frame-wall');
+  },
+});

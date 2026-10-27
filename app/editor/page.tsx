@@ -52,6 +52,9 @@ import { HelpPanel } from '@/components/editor/shell/panels/HelpPanel';
 import { AdjustPanel } from '@/components/editor/shell/panels/AdjustPanel';
 import { QrPanel } from '@/components/editor/shell/panels/QrPanel';
 import { QrCode as QrCodeIcon } from 'lucide-react';
+import { Frame as MockupIcon } from 'lucide-react';
+import dynamic from 'next/dynamic';
+const MockupStudio = dynamic(() => import('@/components/editor/MockupStudio').then((m) => m.MockupStudio), { ssr: false });
 import { useAppTheme } from '@/hooks/useAppTheme';
 
 import { ToolMode, DocUnit, isDrawTool, PASTEBOARD_BG, RULER_SIZE } from '@/lib/editor/types';
@@ -292,6 +295,7 @@ function EditorContent() {
     };
   }, []);
   const [showExportDialog, setShowExportDialog] = useState(false);
+  const [showMockups, setShowMockups] = useState(false);
   const [showTranslate, setShowTranslate] = useState(false);
   const [showDesignLimitDialog, setShowDesignLimitDialog] = useState(false);
   const [exporting, setExporting] = useState(false);
@@ -6995,6 +6999,7 @@ function EditorContent() {
         { label: 'Version History...', onClick: () => setShowVersionHistory(true), disabled: isLocalTabId(activeTabId) },
         { divider: true },
         { label: 'Export...', onClick: () => setShowExportDialog(true) },
+        { label: 'Mockups...', onClick: () => setShowMockups(true) },
         { label: 'Export as PNG', onClick: exportAsPNG },
         { label: 'Export as JPG', onClick: exportAsJPG },
         { label: 'Export as PDF', onClick: exportAsPDF },
@@ -7605,6 +7610,15 @@ function EditorContent() {
         </button>
         <button
           type="button"
+          onClick={() => setShowMockups(true)}
+          title="See your design on a wall, a phone, a T-shirt, a mug and more"
+          data-testid="open-mockups"
+          className="hidden sm:inline-flex h-9 items-center gap-1.5 px-3 rounded-full border border-mt-border text-sm font-semibold text-mt-ink hover:bg-mt-surface2"
+        >
+          <MockupIcon size={15} /> Mockups
+        </button>
+        <button
+          type="button"
           onClick={() => setShowExportDialog(true)}
           disabled={exporting}
           className="h-9 inline-flex items-center gap-1.5 px-3 sm:px-4 rounded-full border border-mt-border text-sm font-semibold text-mt-ink hover:bg-mt-surface2 disabled:opacity-50"
@@ -7681,6 +7695,16 @@ function EditorContent() {
           error={saveChooser.error}
           onChoose={chooseSaveLocation}
           onCancel={() => setSaveChooser(null)}
+        />
+      )}
+      {showMockups && (
+        <MockupStudio
+          onClose={() => setShowMockups(false)}
+          pages={artboardsRef.current.map((ab, i) => ({
+            id: ab.id,
+            name: ab.name || `Page ${i + 1}`,
+            render: async () => capturePicture(ab, { format: 'png', multiplier: 1800 / Math.max(ab.width, ab.height, 1), artboardId: ab.id }).dataUrl,
+          }))}
         />
       )}
       {showCloudOpen && <CloudOpenDialog onOpened={openCloudResult} onClose={() => setShowCloudOpen(false)} />}
