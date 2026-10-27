@@ -652,3 +652,38 @@ scenarios.push({
     }
   },
 });
+
+// Language fonts: every added family really exists on Google Fonts (the
+// proxy returns the file), so no language list shows a broken font.
+scenarios.push({
+  name: 'language-fonts-exist',
+  async run(t) {
+    const src = await import('node:fs').then((fs) => fs.readFileSync('lib/editor/fontLanguages.ts', 'utf8'));
+    const extra = [...src.matchAll(/\{ family: '([^']+)', weights: \[([^\]]+)\] \}/g)].map((m) => ({ family: m[1], weights: m[2].split(',').map((x) => x.trim()) }));
+    const bad = [];
+    for (let i = 0; i < extra.length; i += 6) {
+      const rs = await Promise.all(extra.slice(i, i + 6).flatMap((f) => f.weights.map(async (w) => {
+        const r = await t.page.request.get(`${t.BASE}/api/font-file?family=${encodeURIComponent(f.family)}&weight=${w}`);
+        return r.ok() ? null : `${f.family} ${w} (${r.status()})`;
+      })));
+      bad.push(...rs.filter(Boolean));
+    }
+    t.check(`all ${extra.length} language fonts load at every listed weight`, bad.length === 0, bad.join(', '));
+  },
+});
+
+// Translate: words go to the target language, while addresses, numbers
+// and "keep" words stay exactly as they were.
+scenarios.push({
+  name: 'translate-api',
+  async run(t) {
+    const r = await t.page.request.post(`${t.BASE}/api/translate`, { data: { target: 'ta', keep: ['Magical Touch'], texts: ['Happy Birthday', 'Visit www.example.com or call +971 50 123 4567', 'Magical Touch Grand Opening', '50% OFF'] } });
+    const j = await r.json();
+    t.check('translate responds', r.ok(), JSON.stringify(j).slice(0, 300));
+    const out = j.texts || [];
+    t.check('Tamil letters in result', /[஀-௿]/.test(out[0] || ''), out[0]);
+    t.check('address and phone kept', (out[1] || '').includes('www.example.com') && (out[1] || '').includes('+971 50 123 4567'), out[1]);
+    t.check('brand name kept', (out[2] || '').includes('Magical Touch'), out[2]);
+    t.check('number kept', (out[3] || '').includes('50%'), out[3]);
+  },
+});
