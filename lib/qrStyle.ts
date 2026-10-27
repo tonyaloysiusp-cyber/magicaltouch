@@ -51,10 +51,10 @@ export const DEFAULT_LOOK: QrLook = {
 export const LOOK_PRESETS: { name: string; look: Partial<QrLook> }[] = [
   { name: 'Classic', look: { fg: '#000000', fill: 'solid', dot: 'square', eyeFrame: 'square', eyeBall: 'square', eyeColor: null, eyeBallColor: null, bg: '#ffffff', frame: 'none' } },
   { name: 'Soft', look: { fg: '#1F2A44', fill: 'solid', dot: 'rounded', eyeFrame: 'rounded', eyeBall: 'rounded', eyeColor: null, eyeBallColor: null, bg: '#ffffff', frame: 'none' } },
-  { name: 'Dots', look: { fg: '#3B1D5A', fill: 'solid', dot: 'dots', eyeFrame: 'rounded', eyeBall: 'circle', eyeColor: null, eyeBallColor: '#7B1046', bg: '#ffffff', frame: 'none' } },
+  { name: 'Dots', look: { fg: '#3B1D5A', fill: 'solid', dot: 'dots', eyeFrame: 'rounded', eyeBall: 'rounded', eyeColor: null, eyeBallColor: '#7B1046', bg: '#ffffff', frame: 'none' } },
   { name: 'Fluid', look: { fg: '#0F4C3A', fill: 'solid', dot: 'fluid', eyeFrame: 'rounded', eyeBall: 'circle', eyeColor: null, eyeBallColor: null, bg: '#F1FAF5', frame: 'none' } },
   { name: 'Sunset', look: { fg: '#A0134B', fg2: '#C25400', fill: 'linear', angle: 45, dot: 'rounded', eyeFrame: 'leaf', eyeBall: 'leaf', eyeColor: '#7A1F2B', eyeBallColor: '#7A1F2B', bg: '#ffffff', frame: 'none' } },
-  { name: 'Ocean', look: { fg: '#0D47A1', fg2: '#00727D', fill: 'radial', dot: 'dots', eyeFrame: 'rounded', eyeBall: 'circle', eyeColor: '#0D47A1', eyeBallColor: '#0D47A1', bg: '#ffffff', frame: 'none' } },
+  { name: 'Ocean', look: { fg: '#0D47A1', fg2: '#00727D', fill: 'radial', dot: 'dots', eyeFrame: 'rounded', eyeBall: 'rounded', eyeColor: '#0D47A1', eyeBallColor: '#0D47A1', bg: '#ffffff', frame: 'none' } },
   { name: 'Gold', look: { fg: '#4E342E', fg2: '#7A5A10', fill: 'linear', angle: 135, dot: 'rounded', eyeFrame: 'square', eyeBall: 'rounded', eyeColor: '#3E2723', eyeBallColor: '#6D4C0F', bg: '#FFFBF0', frame: 'none' } },
   { name: 'Scan me', look: { fg: '#111111', fill: 'solid', dot: 'rounded', eyeFrame: 'rounded', eyeBall: 'rounded', eyeColor: null, eyeBallColor: null, bg: '#ffffff', frame: 'box', frameColor: '#111111', caption: 'SCAN ME', captionColor: '#ffffff' } },
   { name: 'Menu', look: { fg: '#3E2723', fill: 'solid', dot: 'vbars', eyeFrame: 'rounded', eyeBall: 'rounded', eyeColor: null, eyeBallColor: null, bg: '#FFF8E1', frame: 'badge', frameColor: '#3E2723', caption: 'SEE OUR MENU', captionColor: '#FFF8E1' } },
@@ -178,8 +178,10 @@ export function qrDesignSvg(G: QrGrid, L: QrLook, logoDataUrl?: string | null, s
       : L.fill === 'radial'
         ? `<radialGradient id="qrg" gradientUnits="userSpaceOnUse" cx="${T / 2}" cy="${T / 2}" r="${T * 0.62}"><stop offset="0" stop-color="${L.fg2}"/><stop offset="1" stop-color="${L.fg}"/></radialGradient>`
         : '';
+  // Round dots with round corner centres confuse some phone readers.
+  const ball: EyeBall = L.dot === 'dots' && L.eyeBall === 'circle' ? 'rounded' : L.eyeBall;
   const eyes = ([[0, 0, 'tl'], [n - 7, 0, 'tr'], [0, n - 7, 'bl']] as [number, number, 'tl' | 'tr' | 'bl'][])
-    .map(([ex, ey, c]) => `<path fill-rule="evenodd" fill="${L.eyeColor || paint}" d="${eyeFramePath(q + ex, q + ey, L.eyeFrame, c)}"/><path fill="${L.eyeBallColor || L.eyeColor || paint}" d="${eyeBallPath(q + ex, q + ey, L.eyeBall, c)}"/>`)
+    .map(([ex, ey, c]) => `<path fill-rule="evenodd" fill="${L.eyeColor || paint}" d="${eyeFramePath(q + ex, q + ey, L.eyeFrame, c)}"/><path fill="${L.eyeBallColor || L.eyeColor || paint}" d="${eyeBallPath(q + ex, q + ey, ball, c)}"/>`)
     .join('');
   let logo = '';
   if (G.hole && logoDataUrl) {
