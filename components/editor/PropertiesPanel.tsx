@@ -596,7 +596,7 @@ function TextSection({ p, colorProps }: { p: Props; colorProps: any }) {
   return (
     <>
       <Section title="Text" action={hasSelection ? <span className="text-[11px] text-[#3B82C4]">Selected letters</span> : undefined}>
-        <FontPicker value={font.mixed ? undefined : font.value} mixed={font.mixed} disabled={locked} onChange={(f) => a.applyCharProp({ fontFamily: f })} />
+        <FontPicker value={font.mixed ? undefined : font.value} mixed={font.mixed} disabled={locked} sampleText={typeof sel?.text === "string" ? sel.text : undefined} onChange={(f) => a.applyCharProp({ fontFamily: f })} />
         <div className="grid grid-cols-[1fr_92px] gap-2">
           <select
             aria-label="Font weight"

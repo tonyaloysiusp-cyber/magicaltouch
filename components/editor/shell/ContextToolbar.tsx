@@ -511,7 +511,7 @@ export function ContextToolbar({
     return wrap(
       <>
         <div className="w-40 shrink-0">
-          <FontPicker value={font.mixed ? undefined : font.value} mixed={font.mixed} disabled={sel.locked} onChange={(f) => a.applyCharProp({ fontFamily: f })} />
+          <FontPicker value={font.mixed ? undefined : font.value} mixed={font.mixed} disabled={sel.locked} sampleText={typeof sel?.text === "string" ? sel.text : undefined} onChange={(f) => a.applyCharProp({ fontFamily: f })} />
         </div>
         {weights.length > 1 && (
           <select

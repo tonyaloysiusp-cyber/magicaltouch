@@ -4,6 +4,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronDown, Search } from 'lucide-react';
 import { useAvailableGoogleFonts } from '@/lib/editor/googleFonts';
+import { FONT_LANGUAGES, detectFontLanguage } from '@/lib/editor/fontLanguages';
 
 interface Props {
   // undefined/empty when the current selection spans multiple different
@@ -12,6 +13,8 @@ interface Props {
   mixed?: boolean;
   disabled?: boolean;
   onChange: (family: string) => void;
+  /** The selected text, so the list can open on fonts for its language. */
+  sampleText?: string;
 }
 
 // A searchable, live-previewed replacement for a plain <select> — native
@@ -21,10 +24,13 @@ interface Props {
 // considers real (see lib/editor/fontAvailability.ts): a family that
 // fails to load drops out of this list on its own, nothing extra needed
 // here.
-export function FontPicker({ value, mixed, disabled, onChange }: Props) {
+export function FontPicker({ value, mixed, disabled, onChange, sampleText }: Props) {
   const fonts = useAvailableGoogleFonts();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
+  // Language filter: '' = all fonts. Opens on the language of the selected
+  // text (Tamil text → Tamil fonts), else the last one chosen.
+  const [lang, setLang] = useState('');
   const rootRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -68,12 +74,22 @@ export function FontPicker({ value, mixed, disabled, onChange }: Props) {
   useEffect(() => {
     if (open) {
       setQuery('');
+      const detected = detectFontLanguage(sampleText || '');
+      let saved = '';
+      try { saved = localStorage.getItem('mt:fontLang') || ''; } catch {}
+      setLang(detected || (saved && !sampleText ? saved : ''));
       requestAnimationFrame(() => inputRef.current?.focus());
     }
   }, [open]);
 
   const q = query.trim().toLowerCase();
-  const filtered = q ? fonts.filter((f) => f.family.toLowerCase().includes(q)) : fonts;
+  const language = FONT_LANGUAGES.find((l) => l.code === lang);
+  const pool = language ? language.fonts.map((name) => fonts.find((f) => f.family === name)).filter(Boolean) as typeof fonts : fonts;
+  const filtered = q ? pool.filter((f) => f.family.toLowerCase().includes(q)) : pool;
+  const pickLang = (code: string) => {
+    setLang(code);
+    try { localStorage.setItem('mt:fontLang', code); } catch {}
+  };
 
   return (
     <div className="relative" ref={rootRef} data-testid="font-picker">
@@ -104,6 +120,12 @@ export function FontPicker({ value, mixed, disabled, onChange }: Props) {
               className="w-full text-xs outline-none bg-transparent dark:text-mt-ink"
             />
           </div>
+          <div className="px-2 py-1.5 border-b dark:border-mt-border">
+            <select value={lang} onChange={(e) => pickLang(e.target.value)} aria-label="Fonts for language" className="w-full h-7 text-xs rounded-md border border-mt-border bg-mt-surface px-1.5">
+              <option value="">All fonts</option>
+              {FONT_LANGUAGES.map((l) => <option key={l.code} value={l.code}>{l.label} ({l.fonts.length})</option>)}
+            </select>
+          </div>
           <div className="overflow-y-auto">
             {filtered.length === 0 && (
               <p className="text-xs text-mt-faint px-3 py-3">No fonts match &quot;{query}&quot;</p>
@@ -121,7 +143,8 @@ export function FontPicker({ value, mixed, disabled, onChange }: Props) {
                 }`}
                 style={{ fontFamily: f.family }}
               >
-                {f.family}
+                <span className="block truncate">{language ? language.sample : f.family}</span>
+                {language && <span className="block text-[10px] text-mt-faint" style={{ fontFamily: 'inherit' }}>{f.family}</span>}
               </button>
             ))}
           </div>
