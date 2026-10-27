@@ -17,6 +17,7 @@ import { supabase, getSessionUser } from '@/lib/supabase';
 import { getOrCreateProfile } from '@/lib/profile';
 import { apiFetch } from '@/lib/api/client';
 import { ALL_LANDINGS } from '@/lib/landings';
+import { useTemplateCountLabel } from '@/lib/templateCount';
 
 const SITE = 'https://www.magicaltouchdesign.com';
 const card = 'rounded-3xl border border-mt-border bg-mt-surface p-5 sm:p-6';
@@ -456,7 +457,8 @@ function Channels({ promo, reload }: { promo: Promo[]; reload: () => Promise<voi
   }, []);
   const setStatus = async (p: Promo, status: Promo['status']) => { await supabase.from('promo_items').update({ status, updated_at: new Date().toISOString() }).eq('id', p.id); reload(); };
   const done = rows.filter((r) => r.status === 'done').length;
-  const blurb = 'Magical Touch Design is a free online design tool with 1,000+ professional templates for flyers, posters, invitations, resumes, menus, certificates and social media. Full editor, photo studio with background removal, and print-ready PDF / CMYK export — every feature free, no watermark, English and Arabic.';
+  const tplCount = useTemplateCountLabel();
+  const blurb = `Magical Touch Design is a free online design tool with ${tplCount} professional templates for flyers, posters, invitations, resumes, menus, certificates and social media. Full editor, photo studio with background removal, and print-ready PDF / CMYK export — every feature free, no watermark, English and Arabic.`;
   const [copied, setCopied] = useState(false);
   return (
     <section className={card}>

@@ -4,10 +4,11 @@
 // to the nearest 50, so the home page stays honest as the library grows
 // (856 → "850+", 912 → "900+") without anyone editing copy.
 
-import { useEffect, useState } from 'react';
+import { createContext, createElement, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 
-export const roundedCountLabel = (n: number) => (n >= 100 ? `${Math.floor(n / 50) * 50}+` : n > 0 ? `${n}+` : '');
+import { roundedCountLabel } from './templateCountLabel';
+export { roundedCountLabel };
 
 const KEY = 'mt:templateCount';
 let cached: number | null = null;
@@ -33,9 +34,18 @@ function load(): Promise<number | null> {
   return pending;
 }
 
+// The server passes the current number down (app/layout.tsx), so the first
+// paint already shows it — no "1,000+" flashing before the real count.
+const ServerCount = createContext<number | null>(null);
+export function TemplateCountProvider({ value, children }: { value: number | null; children: React.ReactNode }) {
+  return createElement(ServerCount.Provider, { value }, children);
+}
+
 /** Rounded label like "850+"; shows `fallback` until the real number arrives. */
-export function useTemplateCountLabel(fallback = '700+') {
+export function useTemplateCountLabel(fallback = '1,000+') {
+  const server = useContext(ServerCount);
   const [n, setN] = useState<number | null>(() => {
+    if (server) return server;
     if (cached) return cached;
     try {
       const v = typeof window !== 'undefined' ? Number(sessionStorage.getItem(KEY)) : 0;

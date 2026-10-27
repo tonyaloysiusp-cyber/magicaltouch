@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { getTemplateCountLabel, withCount } from '@/lib/templateCountServer';
 import Link from 'next/link';
 import { SeoShell, Crumbs } from '@/components/seo/SeoShell';
 import { SITE_URL, SITE_NAME, getSiteSetting } from '@/lib/seo';
@@ -12,13 +13,19 @@ import { companyProfile } from '@/lib/email/config';
 
 export const revalidate = 600;
 
-export const metadata: Metadata = {
+const baseMetadata: Metadata = {
   title: { absolute: `About Magical Touch Design — Free Online Graphic Design Platform` },
   description:
     'Magical Touch Design is a free online graphic design platform: 1,000+ templates, a full design editor, a photo studio and free tutorials. Founded by Tony Aloysius, Founder & CEO.',
   alternates: { canonical: `${SITE_URL}/about` },
   openGraph: { type: 'website', url: `${SITE_URL}/about`, title: 'About Magical Touch Design', description: 'A free online graphic design platform — templates, editor and photo studio. Founder & CEO: Tony Aloysius.', siteName: SITE_NAME, images: [`${SITE_URL}/og-image.png`] },
 };
+
+// The template count in the text follows the real library ("1,850+").
+export async function generateMetadata(): Promise<Metadata> {
+  const label = await getTemplateCountLabel();
+  return JSON.parse(withCount(JSON.stringify(baseMetadata), label));
+}
 
 const OFFER = [
   ['1,000+ professional templates', 'Flyers, posters, invitations, resumes, menus, certificates, business cards, brand kits and social media posts — all editable.'],
@@ -40,6 +47,7 @@ const VALUES = [
 ];
 
 export default async function AboutPage() {
+  const label = await getTemplateCountLabel();
   const [story, vision, mission, founderBio] = await Promise.all(['about_story', 'about_vision', 'about_mission', 'about_founder_bio'].map((k) => getSiteSetting(k).catch(() => null)));
   const jsonLd = [
     {
@@ -79,7 +87,7 @@ export default async function AboutPage() {
         </header>
 
         <section aria-label="At a glance" className="mt-12 grid gap-4 sm:grid-cols-2 max-w-3xl">
-          {[['1,000+', 'free, editable templates'], ['100%', 'free — no watermark']].map(([n, l]) => (
+          {[[label, 'free, editable templates'], ['100%', 'free — no watermark']].map(([n, l]) => (
             <div key={l} className="rounded-3xl border border-mt-border p-6">
               <p className="text-4xl font-semibold tracking-tight">{n}</p>
               <p className="mt-1 text-mt-muted">{l}</p>
@@ -110,7 +118,7 @@ export default async function AboutPage() {
         <section aria-labelledby="offer" className="mt-16">
           <h2 id="offer" className="text-2xl sm:text-3xl font-semibold tracking-tight">What we offer</h2>
           <ul className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {OFFER.map(([t, d]) => (
+            {OFFER.map(([t0, d]) => [withCount(t0, label), d]).map(([t, d]) => (
               <li key={t} className="rounded-2xl border border-mt-border p-5">
                 <p className="font-semibold">{t}</p>
                 <p className="mt-2 text-[14px] text-mt-muted leading-relaxed">{d}</p>

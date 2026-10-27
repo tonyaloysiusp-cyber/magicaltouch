@@ -2,6 +2,8 @@ import { Poppins } from 'next/font/google';
 import './globals.css';
 import { ChunkRecovery } from '@/components/ChunkRecovery';
 import { VisitCounter } from '@/components/VisitCounter';
+import { TemplateCountProvider } from '@/lib/templateCount';
+import { getTemplateCount, getTemplateCountLabel, withCount } from '@/lib/templateCountServer';
 
 const poppins = Poppins({
   subsets: ['latin'],
@@ -25,8 +27,10 @@ const baseMetadata: Metadata = {
 
 // The Google Search Console code is set from Admin → SEO & promotion.
 export async function generateMetadata(): Promise<Metadata> {
-  const google = await getSiteSetting('google_verification');
-  return google ? { ...baseMetadata, verification: { google } } : baseMetadata;
+  const [google, label] = await Promise.all([getSiteSetting('google_verification'), getTemplateCountLabel()]);
+  const description = withCount(SITE_DESCRIPTION, label);
+  const meta: Metadata = { ...baseMetadata, description, openGraph: { ...baseMetadata.openGraph, description }, twitter: { ...baseMetadata.twitter, description } };
+  return google ? { ...meta, verification: { google } } : meta;
 }
 
 export const viewport: Viewport = { themeColor: [{ media: '(prefers-color-scheme: light)', color: '#ffffff' }, { media: '(prefers-color-scheme: dark)', color: '#000000' }] };
@@ -69,11 +73,13 @@ const ORG_JSON_LD = [
   },
 ];
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const count = await getTemplateCount();
+  const label = await getTemplateCountLabel();
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
@@ -86,10 +92,10 @@ export default function RootLayout({
         />
       </head>
       <body className={poppins.className}>
-        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(ORG_JSON_LD) }} />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: withCount(JSON.stringify(ORG_JSON_LD), label) }} />
         <ChunkRecovery />
         <VisitCounter />
-        {children}
+        <TemplateCountProvider value={count}>{children}</TemplateCountProvider>
       </body>
     </html>
   );

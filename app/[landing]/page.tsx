@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import { SeoShell, Crumbs } from '@/components/seo/SeoShell';
 import { SITE_URL, SITE_NAME, searchTemplates, getSeoPage, getHiddenLandings } from '@/lib/seo';
 import { landingBySlug, Landing } from '@/lib/landings';
+import { getTemplateCountLabel, withCount } from '@/lib/templateCountServer';
 
 // Landing pages: /free-flyer-maker, /christmas-templates, ...
 // Built-in pages come from lib/landings.ts; Admin → SEO → Landing pages can
@@ -14,6 +15,12 @@ export const revalidate = 3600;
 export const dynamicParams = true;
 
 async function resolveLanding(slug: string): Promise<Landing | null> {
+  const [l, label] = await Promise.all([resolveLandingRaw(slug), getTemplateCountLabel()]);
+  // "1,000+ templates" in the copy follows the real library size.
+  return l ? (JSON.parse(withCount(JSON.stringify(l), label)) as Landing) : null;
+}
+
+async function resolveLandingRaw(slug: string): Promise<Landing | null> {
   if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(slug)) return null;
   const [hidden, p] = await Promise.all([getHiddenLandings(), getSeoPage(slug)]);
   if (hidden.has(slug)) return null;

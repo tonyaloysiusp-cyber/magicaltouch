@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { SeoShell, Crumbs } from '@/components/seo/SeoShell';
 import { SITE_URL, SITE_NAME, getHiddenLandings, getPublishedSeoPages } from '@/lib/seo';
 import { ALL_LANDINGS } from '@/lib/landings';
+import { getTemplateCountLabel, withCount } from '@/lib/templateCountServer';
 
 // Hub linking every keyword landing page (good for users and crawlers).
 export const metadata: Metadata = {
@@ -14,7 +15,7 @@ export const metadata: Metadata = {
 export const revalidate = 3600;
 
 export default async function FreeToolsPage() {
-  const [hidden, custom] = await Promise.all([getHiddenLandings(), getPublishedSeoPages()]);
+  const [hidden, custom, label] = await Promise.all([getHiddenLandings(), getPublishedSeoPages(), getTemplateCountLabel()]);
   const edits = new Map(custom.map((p) => [p.slug, p]));
   const all = ALL_LANDINGS().filter((l) => !hidden.has(l.slug)).map((l) => (edits.has(l.slug) ? { ...l, h1: edits.get(l.slug)!.h1, description: edits.get(l.slug)!.description } : l));
   const builtSlugs = new Set(all.map((l) => l.slug));
@@ -27,8 +28,8 @@ export default async function FreeToolsPage() {
   const Card = ({ slug, h1, description }: { slug: string; h1: string; description: string }) => (
     <li>
       <Link href={`/${slug}`} className="block h-full rounded-2xl border border-mt-border p-5 hover:bg-mt-surface2 transition-colors">
-        <p className="font-semibold">{h1}</p>
-        <p className="mt-2 text-[13px] text-mt-muted line-clamp-3">{description}</p>
+        <p className="font-semibold">{withCount(h1, label)}</p>
+        <p className="mt-2 text-[13px] text-mt-muted line-clamp-3">{withCount(description, label)}</p>
       </Link>
     </li>
   );
