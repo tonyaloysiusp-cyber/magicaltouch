@@ -106,6 +106,7 @@ import { OpenDesignDialog, OpenableDesign } from '@/components/editor/OpenDesign
 import { ImportDialog } from '@/components/editor/ImportDialog';
 import { UnsavedChangesDialog } from '@/components/editor/UnsavedChangesDialog';
 import { useLeaveGuard } from '@/hooks/useLeaveGuard';
+import { shrinkEmbeddedImages } from '@/lib/editor/templateSave';
 import { loadTabSession, saveTabSession, clearTabSession } from '@/lib/editor/tabSession';
 import { WorkspaceSwitcher, EditorWorkspace } from '@/components/editor/WorkspaceSwitcher';
 import type { PhotoEditResult, CropRect } from '@/lib/photo/editTypes';
@@ -5500,7 +5501,20 @@ function EditorContent() {
   performSaveRef.current = performSave;
   const loadFailedIdRef = useRef<string | null>(null);
 
-  const saveDesign = () => performSave(designIdRef.current ?? designId, designNameRef.current || designName);
+  // Editing a template / brand design: Save (button, File menu, Ctrl/Cmd+S)
+  // puts the changes into it. An issued certificate: Save keeps them with
+  // that certificate. Before, both made a separate copy and the edits
+  // (e.g. a signature) seemed lost.
+  const saveDesign = (): Promise<any> | void => {
+    if (templateEditRef.current) return saveToTemplateRef.current();
+    if (certEditRef.current) return saveCertificateDesignRef.current();
+    return performSave(designIdRef.current ?? designId, designNameRef.current || designName);
+  };
+  const templateEditRef = useRef<TemplateRecord | null>(null);
+  templateEditRef.current = templateEdit;
+  const certEditRef = useRef<any>(null);
+  const saveToTemplateRef = useRef<() => Promise<boolean>>(async () => false);
+  const saveCertificateDesignRef = useRef<() => Promise<boolean>>(async () => false);
 
   // Unsaved work: ask before the Back arrow, the logo, any link, the
   // browser's Back button or closing the tab.
@@ -5508,6 +5522,8 @@ function EditorContent() {
     dirty: saveStatus === 'unsaved' || saveStatus === 'error' || tabs.some((t) => t.dirty),
     what: `“${designName || 'this design'}”`,
     onSave: async () => {
+      if (templateEditRef.current) return saveToTemplateRef.current();
+      if (certEditRef.current) return saveCertificateDesignRef.current();
       if (!designIdRef.current && !isLocalTabId(activeTabIdRef.current)) {
         setSaveChooser({ mode: 'first', busy: null, error: null });
         return false;
@@ -5525,15 +5541,19 @@ function EditorContent() {
   const [certSave, setCertSave] = useState<{ busy: boolean; msg: string | null }>({ busy: false, msg: null });
   // This certificate only: its finished design (with the signature etc.)
   // is kept with the certificate and used for its downloads.
-  const saveCertificateDesign = async () => {
+  certEditRef.current = certEdit;
+  const saveCertificateDesign = async (): Promise<boolean> => {
     const canvas = fabricCanvasRef.current;
-    if (!certEdit || !canvas) return;
+    if (!certEdit || !canvas) return false;
     setCertSave({ busy: true, msg: null });
-    const json = canvas.toJSON(SAVE_JSON_PROPS);
+    // A photographed signature can be several MB: shrink it so it always saves.
+    const json = await shrinkEmbeddedImages(canvas.toJSON(SAVE_JSON_PROPS));
     const { error } = await supabase.from('certificate_issues').update({ canvas_json: json }).eq('id', certEdit.id);
     if (!error) { dirtyRef.current = false; setSaveStatus('saved'); setTabs((ts) => ts.map((t) => ({ ...t, dirty: false }))); }
     setCertSave({ busy: false, msg: error ? 'Could not save the certificate. Please try again.' : `Saved. Downloads of ${certEdit.code} now use this design.` });
+    return !error;
   };
+  saveCertificateDesignRef.current = saveCertificateDesign;
   // The master template: every certificate issued from it gets the change
   // (e.g. the signature). This person's details go back to {{fields}} and
   // the QR block back to its empty slot first.
@@ -5557,6 +5577,7 @@ function EditorContent() {
       if (slot?.__certSlot) objs.push(slot.__certSlot);
       else if (slot) objs.push({ type: 'rect', version: slot.version, left: slot.left, top: slot.top, width: slot.width, height: slot.height, fill: 'rgba(0,0,0,0.04)', stroke: 'rgba(0,0,0,0.25)', strokeDashArray: [6, 4], strokeWidth: 1, name: 'Verification slot', __artboardId: slot.__artboardId });
       json.objects = objs;
+      await shrinkEmbeddedImages(json);
       const tpl = await fetchTemplateById(certEdit.masterId);
       const { data: auth } = await supabase.auth.getUser();
       let version = tpl?.currentVersion || '1.0';
@@ -5572,10 +5593,10 @@ function EditorContent() {
     }
   };
 
-  const saveToTemplate = async () => {
+  const saveToTemplate = async (): Promise<boolean> => {
     const canvas = fabricCanvasRef.current;
     const firstAb = artboardsRef.current[0];
-    if (!templateEdit?.id || !canvas || !firstAb) return;
+    if (!templateEdit?.id || !canvas || !firstAb) return false;
     setTemplateSave({ busy: true, msg: null });
     try {
       const { data: auth } = await supabase.auth.getUser();
@@ -5583,18 +5604,26 @@ function EditorContent() {
         const next = await createVersion(templateEdit, auth.user.id, 'Before design edit');
         if (next) setTemplateEdit((t) => (t ? { ...t, currentVersion: next } : t));
       }
-      const canvasJson = canvas.toJSON(SAVE_JSON_PROPS);
+      const canvasJson = await shrinkEmbeddedImages(canvas.toJSON(SAVE_JSON_PROPS));
       // Private brand designs keep no uploaded picture (the Brand workspace
       // draws its own previews), so nothing about them is ever public.
       const isBrand = cameFrom === 'brand' || (templateEdit.tags || []).includes('mt-internal');
       const image: string | null = isBrand ? null : capturePicture(firstAb, { format: 'jpeg', quality: 0.88, multiplier: 1200 / Math.max(firstAb.width, firstAb.height, 1) }).dataUrl;
       const ok = await setTemplateContent(templateEdit.id, templateEdit.currentVersion || '1.0', canvasJson, image);
       setTemplateSave({ busy: false, msg: ok ? (isBrand ? 'Brand design saved.' : 'Template saved. Customers now get the updated design.') : 'Could not save. Please try again.' });
+      if (ok) {
+        dirtyRef.current = false;
+        setSaveStatus('saved');
+        setTabs((ts) => ts.map((t) => (t.id === activeTabIdRef.current ? { ...t, dirty: false } : t)));
+      }
+      return ok;
     } catch (err) {
       console.error('Template save failed:', err);
       setTemplateSave({ busy: false, msg: 'Could not save the template. Please try again.' });
+      return false;
     }
   };
+  saveToTemplateRef.current = saveToTemplate;
 
   // ---------- .mtd project files on the customer's computer ----------
 

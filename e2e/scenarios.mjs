@@ -612,3 +612,27 @@ scenarios.push({
     await t.shot('filled');
   },
 });
+
+// Studio boards: shaped photo frames (heart, hexagon, blob) load and stay replaceable frames.
+scenarios.push({
+  name: 'studio-boards-load',
+  async run(t) {
+    await t.editor('w=1080&h=1350');
+    for (const slug of ['pink-heart-photo-valentine-post', 'orange-hexagon-birthday-post', 'navy-gold-wave-certificate-of-achievement', 'blush-polaroid-collage']) {
+      const r = await t.eval(async (slug) => {
+        const list = await (await fetch('/templates/collection/boards-2026-10.json')).json();
+        const tpl = list.find((x) => x.slug === slug);
+        const c = window.__fabricCanvas;
+        await new Promise((res) => c.loadFromJSON(tpl.canvasJson, res));
+        c.requestRenderAll();
+        const imgs = c.getObjects().filter((o) => o.type === 'image');
+        return { objects: c.getObjects().length, frames: imgs.filter((o) => o.__frame).length, images: imgs.length, broken: imgs.filter((o) => { const el = o._originalElement || o._element; return !el || !(el.naturalWidth || el.width); }).length };
+      }, slug);
+      await t.page.waitForTimeout(1500);
+      await t.shot(slug);
+      t.check(`${slug}: loads`, r.objects > 5, JSON.stringify(r));
+      t.check(`${slug}: images load`, r.broken === 0, JSON.stringify(r));
+      t.check(`${slug}: photos are frames`, r.frames === r.images, JSON.stringify(r));
+    }
+  },
+});
