@@ -11,6 +11,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { RefreshCw, Plus, Check, Archive, Mail, ExternalLink, CalendarHeart, Server, Inbox, Users, Brush, LayoutTemplate, Send, X, RotateCcw, Sparkles } from 'lucide-react';
 import { supabase, getSessionUser } from '@/lib/supabase';
+import { allPages } from '@/lib/templatesData';
 import { AdminShell, AdminCard, AdminSection } from '@/components/admin/AdminShell';
 import { VisitorStats } from '@/components/admin/VisitorStats';
 import { welcomeEmail, passwordChangedEmail, EmailCopy } from '@/lib/email/templates';
@@ -67,7 +68,7 @@ export default function AdminHome() {
       supabase.from('admin_messages').select('*').eq('archived', false).order('created_at', { ascending: false }).limit(200),
       supabase.from('occasions').select('*').gte('occasion_date', from).order('occasion_date', { ascending: true }).limit(400),
       supabase.from('admin_services').select('*').order('renews_on', { ascending: true, nullsFirst: false }),
-      supabase.from('templates').select('name, category, tags, occasion').eq('status', 'published').limit(1000),
+      allPages<any>((from, to) => supabase.from('templates').select('name, category, tags, occasion').eq('status', 'published').order('id').range(from, to)),
     ]);
     if (ov.data) setStats(ov.data as any);
     setMessages((msg.data as any) || []);

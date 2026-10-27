@@ -21,6 +21,8 @@
 
 import { supabase } from './supabase';
 import { uploadTemplateImages } from './templates/media';
+import { allPages } from './allPages';
+export { allPages };
 
 // Display name of a template's category. Kept as a plain string because
 // admins can now add categories without a code change.
@@ -240,7 +242,7 @@ function inputToRow(t: TemplateInput) {
 // Admin list: every status. RLS returns only published rows to anyone
 // who isn't an admin, so this is safe even if called elsewhere.
 export async function fetchTemplates(): Promise<Template[]> {
-  const { data, error } = await supabase.from('templates').select(LIST_COLUMNS).order('sort_order', { ascending: true });
+  const { data, error } = await allPages<any>((from, to) => supabase.from('templates').select(LIST_COLUMNS).order('sort_order', { ascending: true }).order('id').range(from, to));
   if (error || !data || data.length === 0) {
     if (error) console.error('Failed to load templates, falling back to the built-in list:', error);
     return TEMPLATES;
@@ -269,13 +271,17 @@ async function loadPublicTemplates(): Promise<Template[]> {
       // fall back to the database directly
     }
   }
-  const { data, error } = await supabase
-    .from('templates')
-    .select(LIST_COLUMNS)
-    .eq('status', 'published')
-    .not('canvas_json', 'is', null)
-    .order('is_featured', { ascending: false })
-    .order('sort_order', { ascending: true });
+  const { data, error } = await allPages<any>((from, to) =>
+    supabase
+      .from('templates')
+      .select(LIST_COLUMNS)
+      .eq('status', 'published')
+      .not('canvas_json', 'is', null)
+      .order('is_featured', { ascending: false })
+      .order('sort_order', { ascending: true })
+      .order('id')
+      .range(from, to),
+  );
   if (error || !data || data.length === 0) {
     if (error) console.error('Failed to load templates, falling back to the built-in list:', error);
     return TEMPLATES;

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createAnonSupabaseClient } from '@/lib/supabase/server';
+import { allPages } from '@/lib/allPages';
 
 // The public template gallery list (no designs inside), built once and
 // served from Vercel's cache for 5 minutes: every visitor gets it from a
@@ -11,13 +12,18 @@ const COLS =
 
 export async function GET() {
   const sb = createAnonSupabaseClient();
-  const { data, error } = await sb
-    .from('templates')
-    .select(COLS)
-    .eq('status', 'published')
-    .not('canvas_json', 'is', null)
-    .order('is_featured', { ascending: false })
-    .order('sort_order', { ascending: true });
+  // Every published template (the database returns 1,000 rows per request).
+  const { data, error } = await allPages<any>((from, to) =>
+    sb
+      .from('templates')
+      .select(COLS)
+      .eq('status', 'published')
+      .not('canvas_json', 'is', null)
+      .order('is_featured', { ascending: false })
+      .order('sort_order', { ascending: true })
+      .order('id')
+      .range(from, to),
+  );
   if (error) return NextResponse.json({ error: error.message }, { status: 502 });
   return NextResponse.json(data || [], { headers: { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=3600' } });
 }

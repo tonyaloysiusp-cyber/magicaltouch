@@ -64,7 +64,7 @@ export async function getTemplatesInCategory(category: string, limit = 400): Pro
 export async function getAllPublishedTemplates(): Promise<SeoTemplate[]> {
   const out: SeoTemplate[] = [];
   for (let from = 0; from < 20000; from += 1000) {
-    const rows = await rest<SeoTemplate[]>(`templates?select=${COLS}&${PUBLISHED}&order=sort_order.asc&offset=${from}&limit=1000`);
+    const rows = await rest<SeoTemplate[]>(`templates?select=${COLS}&${PUBLISHED}&order=sort_order.asc,id.asc&offset=${from}&limit=1000`);
     if (!rows || !rows.length) break;
     out.push(...rows);
     if (rows.length < 1000) break;
