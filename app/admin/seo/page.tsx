@@ -348,101 +348,143 @@ function Pages({ pages, hidden, setHidden, reload, flash }: { pages: SeoPage[]; 
 }
 
 // ---------------------------------------------------------------- keywords
-// Keywords are just a list of the searches we target. They never create
-// pages. Each one shows how many templates the site search finds for it
-// (so you can see where templates are missing) and which existing page fits.
-const SUGGESTED = ['free design tool', 'canva alternative free', 'free photoshop alternative', 'free flyer maker', 'free poster maker', 'free invitation maker', 'free resume maker', 'free certificate maker', 'free business card maker', 'free menu maker', 'instagram post maker', 'remove background free', 'design templates free', 'تصميم فلاير مجانا', 'تصميم بطاقة دعوة', 'christmas templates', 'uae national day templates', 'diwali templates'];
+// Search keywords: the words people use to find things. They are not pages.
+// Each keyword can list other words it also finds (so "nikah" finds wedding
+// templates) and can be shown as a popular search on the Templates page.
+// The list is published as one small public setting the gallery search
+// reads. Below it: what visitors really searched, and which searches found
+// nothing — add those as keywords to fix them.
+const SUGGESTED = ['free design tool', 'canva alternative free', 'free flyer maker', 'free poster maker', 'free invitation maker', 'free resume maker', 'free certificate maker', 'business card', 'menu', 'instagram post', 'birthday', 'wedding', 'eid', 'diwali', 'christmas', 'uae national day'];
 const STOP = ['free', 'online', 'the', 'and', 'for', 'maker', 'template', 'templates', 'design', 'with'];
 
-function Keywords({ promo, pages, hidden, reload }: { promo: Promo[]; pages: SeoPage[]; hidden: Set<string>; reload: () => Promise<void> }) {
+function Keywords({ promo, reload }: { promo: Promo[]; pages: SeoPage[]; hidden: Set<string>; reload: () => Promise<void> }) {
   const [k, setK] = useState('');
   const [q, setQ] = useState('');
-  const [edit, setEdit] = useState<{ id: string; name: string; notes: string } | null>(null);
-  const [tpl, setTpl] = useState<{ name: string; kw: string }[]>([]);
+  const [edit, setEdit] = useState<{ id: string; name: string; also: string; notes: string } | null>(null);
+  const [tpl, setTpl] = useState<{ hay: string }[]>([]);
+  const [searches, setSearches] = useState<{ q: string; searches: number; results: number }[] | null>(null);
+  const [days, setDays] = useState(30);
+  const [note, setNote] = useState<string | null>(null);
   useEffect(() => {
-    fetch('/api/public-templates').then((r) => r.json()).then((rows: any[]) => setTpl((rows || []).map((t) => ({ name: (t.name || '').toLowerCase(), kw: `${t.category || ''} ${(t.tags || []).join(' ')} ${t.search_keywords || ''}`.toLowerCase() })))).catch(() => {});
+    fetch('/api/public-templates').then((r) => r.json()).then((rows: any[]) => setTpl((rows || []).map((t) => ({ hay: `${t.name || ''} ${t.category || ''} ${(t.tags || []).join(' ')} ${t.search_keywords || ''} ${t.occasion || ''} ${t.industry || ''}`.toLowerCase() })))).catch(() => {});
   }, []);
+  useEffect(() => {
+    supabase.rpc('admin_searches', { p_days: days }).then(({ data }) => setSearches((data as any[]) || []));
+  }, [days]);
   const kws = promo.filter((p) => p.kind === 'keyword');
-  const allPages = useMemo(() => {
-    const db = pages.filter((p) => p.status === 'published' && !hidden.has(p.slug)).map((p) => ({ slug: p.slug, h1: p.h1, text: `${p.h1} ${p.title} ${p.terms.join(' ')}` }));
-    const dbSlugs = new Set(db.map((p) => p.slug));
-    return [...ALL_LANDINGS().filter((l) => !hidden.has(l.slug) && !dbSlugs.has(l.slug)).map((l) => ({ slug: l.slug, h1: l.h1, text: `${l.h1} ${l.title} ${l.terms.join(' ')}` })), ...db];
-  }, [pages, hidden]);
-  const words = (kw: string) => kw.toLowerCase().split(/\s+/).filter((w) => w.length > 2 && !STOP.includes(w));
-  const bestPage = (kw: string) => {
-    const ws = words(kw);
-    let best: { slug: string; h1: string } | null = null, score = 0;
-    allPages.forEach((p) => { const t = p.text.toLowerCase(); const s = ws.filter((w) => t.includes(w)).length; if (s > score) { score = s; best = p; } });
-    return best as { slug: string; h1: string } | null;
+  const alsoOf = (p: Promo): string[] => (Array.isArray(p.meta?.also) ? p.meta.also : []);
+  const words = (kw: string) => kw.toLowerCase().split(/\s+/).filter((w) => w.length > 1 && !STOP.includes(w));
+  const count = (kw: string, also: string[] = []) => {
+    if (!tpl.length) return null;
+    const groups = [words(kw).concat(also.map((a) => a.toLowerCase()))];
+    if (!groups[0].length) return null;
+    return tpl.filter((t) => groups[0].some((w) => t.hay.includes(w))).length;
   };
-  const matches = (kw: string) => {
-    const ws = words(kw);
-    if (!ws.length || !tpl.length) return null;
-    return tpl.filter((t) => ws.every((w) => t.name.includes(w) || t.kw.includes(w))).length;
+
+  // The public list the gallery search uses.
+  const publish = async (list: Promo[]) => {
+    const value = JSON.stringify(list.filter((p) => p.kind === 'keyword').map((p) => ({ k: p.name.trim().toLowerCase(), also: alsoOf(p), popular: !!p.meta?.popular })));
+    await supabase.from('site_settings').upsert({ key: 'search_keywords', value, updated_at: new Date().toISOString() });
   };
-  const add = async (name: string) => {
+  const after = async () => {
+    await reload();
+    const { data } = await supabase.from('promo_items').select('*').eq('kind', 'keyword');
+    await publish((data as Promo[]) || []);
+    setNote('Saved — the Templates search uses it straight away.');
+    setTimeout(() => setNote(null), 4000);
+  };
+
+  const add = async (name: string, also: string[] = []) => {
     const parts = name.split(/[,\n]/).map((x) => x.trim()).filter(Boolean).filter((n) => !kws.some((x) => x.name.toLowerCase() === n.toLowerCase()));
     if (!parts.length) return;
-    await supabase.from('promo_items').insert(parts.map((n) => ({ kind: 'keyword', name: n, status: 'todo' })));
+    await supabase.from('promo_items').insert(parts.map((n) => ({ kind: 'keyword', name: n, status: 'todo', meta: { also } })));
     setK('');
-    reload();
+    after();
   };
   const setStatus = async (p: Promo, status: Promo['status']) => { await supabase.from('promo_items').update({ status, updated_at: new Date().toISOString() }).eq('id', p.id); reload(); };
+  const togglePopular = async (p: Promo) => { await supabase.from('promo_items').update({ meta: { ...(p.meta || {}), popular: !p.meta?.popular } }).eq('id', p.id); after(); };
   const saveEdit = async () => {
     if (!edit || !edit.name.trim()) return;
-    await supabase.from('promo_items').update({ name: edit.name.trim(), notes: edit.notes.trim() || null, updated_at: new Date().toISOString() }).eq('id', edit.id);
+    const p = kws.find((x) => x.id === edit.id);
+    const also = edit.also.split(',').map((x) => x.trim()).filter(Boolean);
+    await supabase.from('promo_items').update({ name: edit.name.trim(), notes: edit.notes.trim() || null, meta: { ...(p?.meta || {}), also }, updated_at: new Date().toISOString() }).eq('id', edit.id);
     setEdit(null);
-    reload();
+    after();
   };
   const remove = async (p: Promo) => {
     if (!window.confirm(`Remove the keyword “${p.name}”?`)) return;
     await supabase.from('promo_items').delete().eq('id', p.id);
-    reload();
+    after();
   };
   const shown = kws.filter((p) => !q.trim() || p.name.toLowerCase().includes(q.trim().toLowerCase()));
+  const known = new Set(kws.map((x) => x.name.toLowerCase()));
+
   return (
-    <section className={card}>
-      <h2 className="text-lg font-semibold inline-flex items-center gap-2"><Search size={19} /> Keywords we target</h2>
-      <p className="mt-1 text-[13px] text-mt-muted">A list of the searches you want to be found for. Adding a keyword never creates a page — it only shows how many templates our search finds for it and which existing page fits best. Add several at once by separating them with commas.</p>
-      <div className="mt-4 flex gap-2"><input value={k} onChange={(e) => setK(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && add(k)} placeholder="e.g. free logo maker, eid card" className={field} /><button onClick={() => add(k)} className={`${btn} bg-mt-primary text-mt-onprimary`}><Plus size={14} /> Add</button></div>
-      <div className="mt-3 flex flex-wrap gap-1.5">{SUGGESTED.filter((s) => !kws.some((x) => x.name === s)).map((s) => <button key={s} onClick={() => add(s)} className="h-7 px-2.5 rounded-full border border-mt-border text-[12px] text-mt-muted hover:text-mt-ink">+ {s}</button>)}</div>
-      {kws.length > 8 && <div className="mt-4 relative max-w-sm"><Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-mt-faint" /><input value={q} onChange={(e) => setQ(e.target.value)} placeholder={`Search ${kws.length} keywords`} className={`${field} pl-9`} /></div>}
-      <div className="mt-4 overflow-x-auto">
-        <table className="w-full text-[13px] min-w-[720px]">
-          <thead className="text-left text-mt-muted"><tr><th className="py-2">Keyword</th><th>Templates found</th><th>Best page</th><th>Check</th><th>Ranking</th><th></th></tr></thead>
-          <tbody>
-            {shown.map((p) => {
-              const page = bestPage(p.name);
-              const n = matches(p.name);
-              const isEdit = edit?.id === p.id;
-              return (
-                <tr key={p.id} className="border-t border-mt-border align-top">
-                  <td className="py-2 pr-3">
-                    {isEdit ? (
-                      <div className="flex flex-col gap-1.5">
-                        <input autoFocus value={edit!.name} onChange={(e) => setEdit({ ...edit!, name: e.target.value })} onKeyDown={(e) => e.key === 'Enter' && saveEdit()} className={field} />
-                        <input value={edit!.notes} onChange={(e) => setEdit({ ...edit!, notes: e.target.value })} placeholder="Note (optional)" className={field} />
-                      </div>
-                    ) : (
-                      <><span className="font-medium text-mt-ink">{p.name}</span>{p.notes && <div className="text-mt-faint text-[12px]">{p.notes}</div>}</>
-                    )}
-                  </td>
-                  <td className="py-2">{n === null ? <span className="text-mt-faint">—</span> : <a href={`/templates?q=${encodeURIComponent(words(p.name).join(' '))}`} target="_blank" className={n ? 'text-mt-ink' : 'text-amber-600'}>{n} {n === 1 ? 'template' : 'templates'}</a>}</td>
-                  <td className="py-2">{page ? <a href={`/${page.slug}`} target="_blank" className="text-[#3B82C4]">/{page.slug}</a> : <span className="text-mt-faint">—</span>}</td>
-                  <td className="py-2"><a href={`https://www.google.com/search?q=${encodeURIComponent(p.name)}`} target="_blank" rel="noreferrer" className="text-mt-muted hover:text-mt-ink">Google</a> · <a href={`https://www.bing.com/search?q=${encodeURIComponent(p.name)}`} target="_blank" rel="noreferrer" className="text-mt-muted hover:text-mt-ink">Bing</a></td>
-                  <td className="py-2"><select value={p.status} onChange={(e) => setStatus(p, e.target.value as any)} className="h-8 rounded-lg border border-mt-border bg-mt-surface text-[12px] px-2"><option value="todo">Not ranking yet</option><option value="doing">On page 2–5</option><option value="done">On page 1</option></select></td>
-                  <td className="py-2 text-right whitespace-nowrap space-x-3">
-                    {isEdit ? <><button onClick={saveEdit} className="text-emerald-600 font-semibold">Save</button><button onClick={() => setEdit(null)} className="text-mt-muted">Cancel</button></>
-                      : <><button onClick={() => setEdit({ id: p.id, name: p.name, notes: p.notes || '' })} className="text-mt-muted hover:text-mt-ink">Edit</button><button onClick={() => remove(p)} className="text-rose-600">Remove</button></>}
-                  </td>
-                </tr>
-              );
-            })}
-            {!kws.length && <tr><td colSpan={6} className="py-4 text-mt-muted">Add keywords above or tap a suggestion.</td></tr>}
-          </tbody>
-        </table>
-      </div>
-    </section>
+    <>
+      <section className={card}>
+        <h2 className="text-lg font-semibold inline-flex items-center gap-2"><Search size={19} /> Search keywords</h2>
+        <p className="mt-1 text-[13px] text-mt-muted">The words people use to find templates. Keywords are not pages: they make the Templates search smarter. Give a keyword other words it should also find (e.g. <i>nikah</i> → wedding, walima), and switch on <i>Popular</i> to show it as a one-tap search under the search box. Separate several keywords with commas.</p>
+        <div className="mt-4 flex gap-2"><input value={k} onChange={(e) => setK(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && add(k)} placeholder="e.g. nikah, graduation party" className={field} /><button onClick={() => add(k)} className={`${btn} bg-mt-primary text-mt-onprimary`}><Plus size={14} /> Add</button></div>
+        <div className="mt-3 flex flex-wrap gap-1.5">{SUGGESTED.filter((s) => !known.has(s)).map((s) => <button key={s} onClick={() => add(s)} className="h-7 px-2.5 rounded-full border border-mt-border text-[12px] text-mt-muted hover:text-mt-ink">+ {s}</button>)}</div>
+        {note && <p className="mt-3 text-[13px] text-emerald-600">{note}</p>}
+        {kws.length > 8 && <div className="mt-4 relative max-w-sm"><Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-mt-faint" /><input value={q} onChange={(e) => setQ(e.target.value)} placeholder={`Search ${kws.length} keywords`} className={`${field} pl-9`} /></div>}
+        <div className="mt-4 overflow-x-auto">
+          <table className="w-full text-[13px] min-w-[760px]">
+            <thead className="text-left text-mt-muted"><tr><th className="py-2">Keyword</th><th>Also finds</th><th>Templates found</th><th>Popular</th><th>Google ranking</th><th></th></tr></thead>
+            <tbody>
+              {shown.map((p) => {
+                const n = count(p.name, alsoOf(p));
+                const isEdit = edit?.id === p.id;
+                return (
+                  <tr key={p.id} className="border-t border-mt-border align-top">
+                    <td className="py-2 pr-3">
+                      {isEdit ? <input autoFocus value={edit!.name} onChange={(e) => setEdit({ ...edit!, name: e.target.value })} className={field} /> : <><span className="font-medium text-mt-ink">{p.name}</span>{p.notes && <div className="text-mt-faint text-[12px]">{p.notes}</div>}</>}
+                    </td>
+                    <td className="py-2 pr-3 max-w-[240px]">
+                      {isEdit ? (
+                        <div className="flex flex-col gap-1.5">
+                          <input value={edit!.also} onChange={(e) => setEdit({ ...edit!, also: e.target.value })} placeholder="wedding, walima" className={field} />
+                          <input value={edit!.notes} onChange={(e) => setEdit({ ...edit!, notes: e.target.value })} placeholder="Note (optional)" className={field} />
+                        </div>
+                      ) : alsoOf(p).length ? <span className="text-mt-muted">{alsoOf(p).join(', ')}</span> : <span className="text-mt-faint">—</span>}
+                    </td>
+                    <td className="py-2">{n === null ? <span className="text-mt-faint">—</span> : <a href={`/templates?q=${encodeURIComponent(p.name)}`} target="_blank" className={n ? 'text-mt-ink hover:underline' : 'text-amber-600'}>{n} {n === 1 ? 'template' : 'templates'}{!n && ' — add “also finds” words'}</a>}</td>
+                    <td className="py-2"><input type="checkbox" aria-label={`Show ${p.name} as a popular search`} checked={!!p.meta?.popular} onChange={() => togglePopular(p)} /></td>
+                    <td className="py-2"><select value={p.status} onChange={(e) => setStatus(p, e.target.value as any)} className="h-8 rounded-lg border border-mt-border bg-mt-surface text-[12px] px-2"><option value="todo">Not ranking yet</option><option value="doing">On page 2–5</option><option value="done">On page 1</option></select></td>
+                    <td className="py-2 text-right whitespace-nowrap space-x-3">
+                      {isEdit ? <><button onClick={saveEdit} className="text-emerald-600 font-semibold">Save</button><button onClick={() => setEdit(null)} className="text-mt-muted">Cancel</button></>
+                        : <><button onClick={() => setEdit({ id: p.id, name: p.name, also: alsoOf(p).join(', '), notes: p.notes || '' })} className="text-mt-muted hover:text-mt-ink">Edit</button><button onClick={() => remove(p)} className="text-rose-600">Remove</button></>}
+                    </td>
+                  </tr>
+                );
+              })}
+              {!kws.length && <tr><td colSpan={6} className="py-4 text-mt-muted">Add keywords above or tap a suggestion.</td></tr>}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section className={card}>
+        <div className="flex flex-wrap items-center gap-2">
+          <h2 className="text-lg font-semibold flex-1">What visitors searched</h2>
+          {[7, 30, 90].map((d) => <button key={d} onClick={() => setDays(d)} className={`h-8 px-3 rounded-full text-[12px] border ${days === d ? 'bg-mt-ink text-mt-bg border-transparent' : 'border-mt-border text-mt-muted'}`}>{d} days</button>)}
+        </div>
+        <p className="mt-1 text-[13px] text-mt-muted">Searches typed in the Templates gallery. Searches that found nothing are in amber — add them as keywords with “also finds” words, or make templates for them.</p>
+        {searches === null ? <p className="mt-3 text-[13px] text-mt-muted">Loading…</p> : !searches.length ? <p className="mt-3 text-[13px] text-mt-muted">No searches yet.</p> : (
+          <ul className="mt-3 grid sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-1 text-[13px]">
+            {searches.map((r) => (
+              <li key={r.q} className="flex items-center justify-between gap-2 py-1 border-b border-mt-border">
+                <span className={r.results ? 'text-mt-ink truncate' : 'text-amber-600 truncate'}>{r.q}</span>
+                <span className="flex items-center gap-2 shrink-0">
+                  <span className="text-mt-muted tabular-nums">{r.searches}× · {r.results} found</span>
+                  {!known.has(r.q) && <button onClick={() => add(r.q)} className="text-[12px] text-[#3B82C4] hover:underline">+ keyword</button>}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+    </>
   );
 }
 

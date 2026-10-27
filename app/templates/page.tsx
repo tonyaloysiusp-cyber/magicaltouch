@@ -19,6 +19,7 @@ import { ProfileMenu } from '@/components/ProfileMenu';
 import { BrandLogo } from '@/components/BrandLogo';
 import { PageHero } from '@/components/PageHero';
 import { useAppTheme } from '@/hooks/useAppTheme';
+import { loadSearchKeywords, expandQuery, reportSearch, SearchKeyword } from '@/lib/searchKeywords';
 
 const display = Fraunces({
   subsets: ['latin'],
@@ -109,6 +110,8 @@ function readFiltersFromUrl(): Partial<Filters> & { catName?: string; subName?: 
 export default function TemplatesPage() {
   const { theme, toggleTheme } = useAppTheme();
   const [f, setF] = useState<Filters>(NO_FILTERS);
+  const [searchKeywords, setSearchKeywords] = useState<SearchKeyword[]>([]);
+  useEffect(() => { loadSearchKeywords().then(setSearchKeywords); }, []);
   const set = (patch: Partial<Filters>) => setF((cur) => ({ ...cur, ...patch }));
   // ?q=… (Google's site-search box, shared links) pre-fills the search.
   useEffect(() => {
@@ -227,11 +230,11 @@ export default function TemplatesPage() {
       if (skip !== 'recent' && fl.recent && newest - time(t) > RECENT_DAYS * 86400000) return false;
       if (skip !== 'q') {
         const q = fl.q.trim().toLowerCase();
-        if (q && !q.split(/\s+/).every((w) => x.hay.includes(w))) return false;
+        if (q && !expandQuery(q, searchKeywords).every((alts) => alts.some((w) => x.hay.includes(w)))) return false;
       }
       return true;
     },
-    [meta, usingDbCategories, parentOf, newest]
+    [meta, usingDbCategories, parentOf, newest, searchKeywords]
   );
   const countWith = (patch: Partial<Filters>) => templates.filter((t) => matches(t, { ...f, ...patch })).length;
 
@@ -255,6 +258,13 @@ export default function TemplatesPage() {
     if (f.sort === 'az') return [...list].sort((a, b) => a.name.localeCompare(b.name));
     return list; // curated order: featured first, then the editors' order
   }, [templates, f, matches]);
+
+  // What visitors search (and how many templates they found) for Admin → Keywords.
+  useEffect(() => {
+    if (!f.q.trim() || !templates.length) return;
+    const t = window.setTimeout(() => reportSearch(f.q, filtered.length), 1500);
+    return () => window.clearTimeout(t);
+  }, [f.q, filtered.length, templates.length]);
 
   // Active filter chips (each one removable).
   const active: { label: string; clear: () => void }[] = [];
@@ -325,6 +335,13 @@ export default function TemplatesPage() {
             className="w-full h-12 pl-11 pr-4 rounded-2xl border border-mt-input-border bg-mt-surface text-[15px] shadow-[0_10px_30px_-18px_rgba(9,9,11,0.35)] placeholder:text-mt-faint focus:outline-none focus:border-[#3B82C4] focus:ring-4 focus:ring-[#8CCBFF]/30 transition-all"
           />
         </div>
+        {searchKeywords.some((k) => k.popular) && (
+          <div className="mt-3 flex flex-wrap justify-center gap-1.5" aria-label="Popular searches">
+            {searchKeywords.filter((k) => k.popular).slice(0, 8).map((k) => (
+              <button key={k.k} type="button" onClick={() => set({ q: k.k })} className="h-7 px-3 rounded-full border border-mt-border bg-mt-surface text-[12px] text-mt-muted hover:text-mt-ink">{k.k}</button>
+            ))}
+          </div>
+        )}
       </PageHero>
       <div className="h-8" />
 

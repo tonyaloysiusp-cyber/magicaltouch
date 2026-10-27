@@ -39,7 +39,9 @@ export async function POST(req: NextRequest) {
   const headers = { apikey: KEY, Authorization: auth && /^Bearer [\w.-]+$/.test(auth) ? auth : `Bearer ${KEY}`, 'Content-Type': 'application/json' };
   const city = req.headers.get('x-vercel-ip-city');
   const body =
-    b?.kind === 'error'
+    b?.kind === 'search'
+      ? { fn: 'track_search', args: { p_q: String(b.q || '').slice(0, 60), p_results: Number(b.results) || 0 } }
+      : b?.kind === 'error'
       ? { fn: 'track_error', args: { p_path: String(b.path || '/'), p_message: String(b.message || '').slice(0, 300) } }
       : {
           fn: 'track_visit2',

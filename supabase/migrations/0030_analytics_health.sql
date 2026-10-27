@@ -119,3 +119,32 @@ begin
 end $$;
 revoke all on function public.admin_health() from public;
 grant execute on function public.admin_health() to authenticated;
+
+-- What visitors search for in the template gallery (Admin → SEO → Keywords).
+create table if not exists public.site_searches_daily (
+  day date not null default current_date,
+  q text not null,
+  results integer not null default 0,
+  count integer not null default 0,
+  primary key (day, q)
+);
+alter table public.site_searches_daily enable row level security;
+create policy "admins read searches" on public.site_searches_daily for select using (public.is_admin());
+create or replace function public.track_search(p_q text, p_results integer)
+returns void language plpgsql security definer set search_path = public as $$
+declare q text := lower(regexp_replace(btrim(coalesce(p_q, '')), '\s+', ' ', 'g'));
+begin
+  if length(q) < 2 or length(q) > 60 then return; end if;
+  insert into site_searches_daily(day, q, results, count) values (current_date, q, greatest(0, coalesce(p_results, 0)), 1)
+    on conflict (day, q) do update set count = site_searches_daily.count + 1, results = excluded.results;
+end $$;
+revoke all on function public.track_search(text, integer) from public;
+grant execute on function public.track_search(text, integer) to anon, authenticated;
+create or replace function public.admin_searches(p_days integer default 30)
+returns jsonb language plpgsql security definer set search_path = public as $$
+begin
+  if not public.is_admin() then raise exception 'admins only'; end if;
+  return (select coalesce(jsonb_agg(t), '[]') from (select q, sum(count) searches, min(results) results from site_searches_daily where day > current_date - p_days group by q order by 2 desc limit 60) t);
+end $$;
+revoke all on function public.admin_searches(integer) from public;
+grant execute on function public.admin_searches(integer) to authenticated;
