@@ -23,7 +23,7 @@ export function TranslateDialog({
   hasPages,
 }: {
   onClose: () => void;
-  onTranslate: (code: string, scope: TranslateScope, switchFonts: boolean) => Promise<number>;
+  onTranslate: (code: string, scope: TranslateScope, switchFonts: boolean, keep: string[]) => Promise<{ done: number; english: number }>;
   hasSelection: boolean;
   hasPages: boolean;
 }) {
@@ -33,6 +33,9 @@ export function TranslateDialog({
   const [scope, setScope] = useState<TranslateScope>(hasSelection ? 'selection' : hasPages ? 'page' : 'all');
   const [switchFonts, setSwitchFonts] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [keepText, setKeepText] = useState(() => {
+    try { return localStorage.getItem('mt:translateKeep') || ''; } catch { return ''; }
+  });
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const list = useMemo(() => {
     const t = q.trim().toLowerCase();
@@ -44,8 +47,13 @@ export function TranslateDialog({
     setBusy(true);
     setMsg(null);
     try {
-      const n = await onTranslate(code, scope, switchFonts);
-      setMsg({ ok: true, text: `Translated ${n} text${n === 1 ? '' : 's'} into ${lang?.name}. Press Undo to go back.` });
+      try { localStorage.setItem('mt:translateKeep', keepText); } catch {}
+      const keep = keepText.split(/[,\n]/).map((w) => w.trim()).filter(Boolean);
+      const { done, english } = await onTranslate(code, scope, switchFonts, keep);
+      setMsg({
+        ok: true,
+        text: `Translated ${done} text${done === 1 ? '' : 's'} into ${lang?.name}.${english ? ` ${english} stayed in English (couldn’t be translated or shown in this language).` : ''} Press Undo to go back.`,
+      });
     } catch (e: any) {
       setMsg({ ok: false, text: e?.message || 'Translation didn’t work. Please try again.' });
     } finally {
@@ -109,6 +117,11 @@ export function TranslateDialog({
                 </button>
               ))}
             </div>
+          </section>
+          <section>
+            <label className="text-[13px] font-semibold block mb-1.5" htmlFor="tr-keep">Keep in English <span className="font-normal text-mt-muted">(optional)</span></label>
+            <input id="tr-keep" value={keepText} onChange={(e) => setKeepText(e.target.value)} placeholder="Brand or person names, separated by commas" className="h-10 w-full rounded-xl border border-mt-input-border bg-mt-surface px-3 text-[14px] focus:outline-none focus:border-[#3B82C4]" />
+            <p className="mt-1 text-[12px] text-mt-muted">Web and e-mail addresses, phone numbers, prices and @handles always stay as they are.</p>
           </section>
           {lang && SCRIPT_FONTS[lang.code] && (
             <label className="flex items-start gap-3 cursor-pointer">

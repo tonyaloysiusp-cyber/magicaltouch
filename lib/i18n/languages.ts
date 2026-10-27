@@ -52,21 +52,52 @@ export const LANGUAGES: TranslateLang[] = [
 
 export const langByCode = (code: string) => LANGUAGES.find((l) => l.code === code);
 
-/** Sends texts to /api/translate in chunks; returns them in the same order. */
-export async function translateTexts(texts: string[], target: string): Promise<string[]> {
-  const out: string[] = [];
+/**
+ * Translates texts in the same order. Our server does it first; anything it
+ * couldn't do is tried again straight from this browser (Google's free
+ * endpoint, which allows it). A text that still can't be translated stays
+ * as it was (`failed` lists them), so one problem never stops the rest.
+ */
+export async function translateTexts(texts: string[], target: string, keep: string[] = []): Promise<{ texts: string[]; failed: number[] }> {
+  const out = [...texts];
+  let failed: number[] = [];
   for (let i = 0; i < texts.length; i += 40) {
     const chunk = texts.slice(i, i + 40);
-    const res = await fetch('/api/translate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ texts: chunk, target }),
-    });
-    if (!res.ok) throw new Error((await res.json().catch(() => ({})))?.error || 'Translation is not available right now.');
-    const j = await res.json();
-    out.push(...(j.texts as string[]));
+    try {
+      const res = await fetch('/api/translate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ texts: chunk, target, keep }) });
+      const j = await res.json().catch(() => ({}));
+      if (Array.isArray(j.texts)) j.texts.forEach((t: string, k: number) => (out[i + k] = t));
+      const bad: number[] = Array.isArray(j.failed) ? j.failed : res.ok ? [] : chunk.map((_, k) => k);
+      failed.push(...bad.map((k) => i + k));
+    } catch {
+      failed.push(...chunk.map((_, k) => i + k));
+    }
   }
-  return out;
+  if (failed.length) {
+    const { splitProtected } = await import('./protect');
+    const still: number[] = [];
+    for (const idx of failed) {
+      try {
+        const pieces = splitProtected(texts[idx], keep);
+        const parts = await Promise.all(pieces.map((p) => (p.keep || !/\p{L}/u.test(p.text) ? p.text : browserTranslate(p.text, target))));
+        out[idx] = parts.join('');
+      } catch {
+        out[idx] = texts[idx];
+        still.push(idx);
+      }
+    }
+    failed = still;
+  }
+  return { texts: out, failed };
+}
+
+async function browserTranslate(text: string, target: string): Promise<string> {
+  const lead = text.match(/^\s*/)![0], trail = text.match(/\s*$/)![0];
+  const res = await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${encodeURIComponent(target)}&dt=t&q=${encodeURIComponent(text.trim())}`);
+  if (!res.ok) throw new Error('translate');
+  const data = await res.json();
+  if (!Array.isArray(data?.[0])) throw new Error('translate');
+  return lead + data[0].map((seg: any) => (Array.isArray(seg) ? seg[0] || '' : '')).join('').replace(/ *\n */g, '\n') + trail;
 }
 
 // ---------------------------------------------------------------------

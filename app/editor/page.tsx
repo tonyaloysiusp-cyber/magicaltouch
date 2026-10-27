@@ -6521,10 +6521,10 @@ function EditorContent() {
   // File > Export as PDF exports every artboard as its own page, matching
   // how Illustrator treats "the document" as all of its artboards.
   // Rewrites the design's words in another language (one undo step).
-  const translateDesign = async (code: string, scope: TranslateScope, switchFonts: boolean): Promise<number> => {
+  const translateDesign = async (code: string, scope: TranslateScope, switchFonts: boolean, keep: string[] = []): Promise<{ done: number; english: number }> => {
     const canvas = fabricCanvasRef.current;
-    if (!canvas) return 0;
-    const [{ translateTexts, langByCode, pickFontFor, fontStyleKind, CHECK_COVERAGE }, { applyTextFx }, { googleFontByName }] = await Promise.all([
+    if (!canvas) return { done: 0, english: 0 };
+    const [{ translateTexts, langByCode, pickFontFor, fontStyleKind, CHECK_COVERAGE, SCRIPT_FONTS }, { applyTextFx }, { googleFontByName }] = await Promise.all([
       import('@/lib/i18n/languages'),
       import('@/lib/editor/textEffects'),
       import('@/lib/editor/googleFonts'),
@@ -6547,7 +6547,9 @@ function EditorContent() {
     else roots = canvas.getObjects();
     const targets = collect(roots, []);
     if (!targets.length) throw new Error('There’s no text to translate here.');
-    const out = await translateTexts(targets.map((o) => o.text), code);
+    const { texts: out, failed } = await translateTexts(targets.map((o) => o.text), code, keep);
+    if (failed.length === targets.length) throw new Error('Translation is not available right now. Please check your connection and try again.');
+    const english = new Set<number>(failed);
     // Each text keeps its own style: the font it had before any
     // translation decides the style (sans / serif / display / script) of
     // the font it gets for the new script; its weight and italic stay.
@@ -6577,6 +6579,22 @@ function EditorContent() {
     await Promise.all(
       targets.flatMap((o, i) => (newFonts[i] ? [ensureFontLoaded(newFonts[i]!, weightOf(o), o.fontStyle === 'italic')] : []))
     );
+    // A text whose letters its font can't draw (it would show empty boxes):
+    // try the language's plain font; if that can't either, keep the text in
+    // English instead of showing broken letters.
+    const plain = SCRIPT_FONTS[code]?.sans;
+    for (let i = 0; i < targets.length; i++) {
+      if (english.has(i) || out[i] === targets[i].text) continue;
+      const fam = newFonts[i] || targets[i].fontFamily;
+      if (covers(fam, out[i])) continue;
+      if (plain && plain !== fam) {
+        await ensureFontLoaded(plain, weightOf(targets[i]), targets[i].fontStyle === 'italic');
+        if (covers(plain, out[i])) { newFonts[i] = plain; continue; }
+      }
+      out[i] = targets[i].text;
+      newFonts[i] = null;
+      english.add(i);
+    }
     const F = (window as any).fabric;
     const arabicScript = code === 'ar' || code === 'ur' || code === 'fa';
     targets.forEach((o, i) => {
@@ -6634,7 +6652,7 @@ function EditorContent() {
     refreshTextMetrics(canvas);
     canvas.requestRenderAll();
     pushHistory();
-    return targets.length;
+    return { done: targets.length - english.size, english: english.size };
   };
 
   const exportAsPDF = async () => {
