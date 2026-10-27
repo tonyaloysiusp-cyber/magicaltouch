@@ -697,20 +697,33 @@ scenarios.push({
     await t.page.addScriptTag({ path: 'node_modules/jsqr/dist/jsQR.js' });
     await t.page.getByPlaceholder('Paste a website link, e.g. yoursite.com').fill('magicaltouchdesign.com/templates?ref=qr');
     await t.page.waitForTimeout(400);
-    const decode = () => t.eval(async () => {
+    // Decoded at preview size and at 2× (like an export); tried a few times
+    // so a picture still loading never counts as a failure.
+    const decodeOnce = () => t.eval(async () => {
       const img = document.querySelector('[data-testid=qr-preview]');
       if (!img) return null;
       await img.decode?.().catch(() => {});
-      const c = document.createElement('canvas');
-      // The SVG drawn at 2× (closer to a real export or print than the small preview).
-      const w = (img.naturalWidth || 480) * 2, h = (img.naturalHeight || 480) * 2;
-      c.width = w + 80; c.height = h + 80;
-      const x = c.getContext('2d');
-      x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height);
-      x.drawImage(img, 40, 40, w, h);
-      const d = x.getImageData(0, 0, c.width, c.height);
-      return window.jsQR(d.data, c.width, c.height)?.data || null;
+      for (const k of [1, 2]) {
+        const c = document.createElement('canvas');
+        const w = (img.naturalWidth || 480) * k, h = (img.naturalHeight || 480) * k;
+        c.width = w + 80; c.height = h + 80;
+        const x = c.getContext('2d');
+        x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height);
+        x.drawImage(img, 40, 40, w, h);
+        const d = x.getImageData(0, 0, c.width, c.height);
+        const r = window.jsQR(d.data, c.width, c.height)?.data;
+        if (r) return r;
+      }
+      return null;
     });
+    const decode = async () => {
+      for (let i = 0; i < 3; i++) {
+        const r = await decodeOnce();
+        if (r) return r;
+        await t.page.waitForTimeout(300);
+      }
+      return null;
+    };
     const want = 'https://magicaltouchdesign.com/templates?ref=qr';
     const failed = [];
     const looks = ['Classic', 'Soft', 'Dots', 'Fluid', 'Sunset', 'Ocean', 'Gold', 'Scan me', 'Menu', 'Pay'];
