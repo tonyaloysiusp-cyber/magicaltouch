@@ -6,7 +6,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Award, Check, Download, ExternalLink, Loader2, RefreshCw, Rocket, Search, X } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { supabase, getSessionUser } from '@/lib/supabase';
 import { newCertificateCode, verifyUrl } from '@/lib/certificates';
 import { packageCertificates } from '@/lib/certificatesBulk';
 import type { CourseProgress } from '@/lib/courses';
@@ -146,7 +146,7 @@ export function CertificateRequests({ onCount }: { onCount?: (n: number) => void
         issue = data;
       }
       if (!issue) {
-        const { data: { user } } = await supabase.auth.getUser();
+        const { data: { user } } = await getSessionUser();
         const completed = (r.requested_at || new Date().toISOString()).slice(0, 10);
         const total = (lessonIds[r.course_id] || []).length;
         const { data, error } = await supabase

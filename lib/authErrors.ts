@@ -14,6 +14,6 @@ export function friendlyAuthError(message: string | undefined | null): string {
   if (m.includes('unable to validate email') || m.includes('invalid email') || m.includes('email address') && m.includes('invalid'))
     return 'Please enter a valid email address.';
   if (m.includes('signups not allowed')) return 'New sign-ups are paused right now. Please try again later.';
-  if (m.includes('network') || m.includes('fetch')) return 'No connection. Check your internet and try again.';
+  if (m.includes('network') || m.includes('fetch') || m.includes('abort') || m.includes('timed out')) return 'We couldn’t reach our server just now. Please press the button again — it usually works on the second try.';
   return message as string;
 }

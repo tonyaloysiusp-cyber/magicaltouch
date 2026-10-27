@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowUp, Mail } from 'lucide-react';
 import { resolveAuthedPath } from '@/lib/authNav';
-import { supabase } from '@/lib/supabase';
+import { supabase, getSessionUser } from '@/lib/supabase';
 import { BrandLogo } from '@/components/BrandLogo';
 import { AppTheme } from '@/hooks/useAppTheme';
 
@@ -33,7 +33,7 @@ export function Footer({ theme }: { theme: AppTheme }) {
   const [loggedIn, setLoggedIn] = useState(false);
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => setLoggedIn(!!data.user));
+    getSessionUser().then(({ data }) => setLoggedIn(!!data.user));
     const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => setLoggedIn(!!session?.user));
     return () => sub.subscription.unsubscribe();
   }, []);

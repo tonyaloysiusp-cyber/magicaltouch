@@ -7,7 +7,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Sun, Moon } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { supabase, getSessionUser } from '@/lib/supabase';
 import {
   Profile,
   CreatorLevel,
@@ -50,7 +50,7 @@ export default function ProfilePage() {
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
   useEffect(() => {
-    supabase.auth.getUser().then(async ({ data }) => {
+    getSessionUser().then(async ({ data }) => {
       const user = data.user;
       if (!user) {
         router.push('/login?next=/profile');

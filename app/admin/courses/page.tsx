@@ -8,7 +8,7 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { AdminShell } from '@/components/admin/AdminShell';
-import { supabase } from '@/lib/supabase';
+import { supabase, getSessionUser } from '@/lib/supabase';
 import { getOrCreateProfile } from '@/lib/profile';
 import { CertificateRequests } from '@/components/admin/courses/CertificateRequests';
 import { CourseManager } from '@/components/admin/courses/CourseManager';
@@ -25,7 +25,7 @@ export default function AdminCoursesPage() {
   useEffect(() => {
     if (new URLSearchParams(window.location.search).get('tab') === 'courses') setTab('courses');
     (async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user } } = await getSessionUser();
       if (!user) return router.push('/login?next=/admin/courses');
       const profile = await getOrCreateProfile(user.id, user.email?.split('@')[0]);
       setState(profile?.is_admin ? 'ok' : 'denied');

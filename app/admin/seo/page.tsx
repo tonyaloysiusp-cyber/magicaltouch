@@ -13,7 +13,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Check, Copy, ExternalLink, Globe, Loader2, Megaphone, Plus, Search, Send, Trash2, Link2, Sparkles } from 'lucide-react';
 import { AdminShell } from '@/components/admin/AdminShell';
-import { supabase } from '@/lib/supabase';
+import { supabase, getSessionUser } from '@/lib/supabase';
 import { getOrCreateProfile } from '@/lib/profile';
 import { apiFetch } from '@/lib/api/client';
 import { ALL_LANDINGS } from '@/lib/landings';
@@ -70,7 +70,7 @@ export default function SeoAdminPage() {
 
   useEffect(() => {
     (async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user } } = await getSessionUser();
       if (!user) return router.push('/login?next=/admin/seo');
       const profile = await getOrCreateProfile(user.id, user.email?.split('@')[0]);
       if (!profile?.is_admin) return setState('denied');

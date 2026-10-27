@@ -5,7 +5,7 @@ import { useRef, useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Upload, FileImage, Save, ChevronDown, HardDrive, Cloud, Loader2 } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { supabase, getSessionUser } from '@/lib/supabase';
 import { MAX_DESIGNS, getDesignCount } from '@/lib/profile';
 import { DocUnit } from '@/lib/editor/types';
 import { physicalUnitToPx, pxToPhysicalUnit, useDisplayUnit } from '@/lib/editor/units';
@@ -127,7 +127,7 @@ function PhotoStudioContent() {
       setCheckingAuth(false);
       return;
     }
-    supabase.auth.getUser().then(({ data }) => {
+    getSessionUser().then(({ data }) => {
       if (!data.user) {
         router.push('/login?next=/photo-studio');
       } else {
@@ -316,7 +316,7 @@ function PhotoStudioContent() {
       }
       const {
         data: { user },
-      } = await supabase.auth.getUser();
+      } = await getSessionUser();
       if (!user) {
         alert('You must be logged in to save.');
         return false;

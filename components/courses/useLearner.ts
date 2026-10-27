@@ -3,7 +3,7 @@
 // The signed-in learner and their course progress rows.
 
 import { useCallback, useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase';
+import { supabase, getSessionUser } from '@/lib/supabase';
 import type { CourseProgress } from '@/lib/courses';
 
 export interface Learner {
@@ -27,7 +27,7 @@ export function useLearner(): Learner {
 
   const reload = useCallback(async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user } } = await getSessionUser();
       if (!user) {
         setUserId(null);
         setProgress({});

@@ -6,7 +6,7 @@ import { useEffect, useRef, useState, useCallback, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { BrandLogo } from '@/components/BrandLogo';
 import Link from 'next/link';
-import { supabase } from '@/lib/supabase';
+import { supabase, getSessionUser } from '@/lib/supabase';
 import { certificateTokens, buildVerificationBlock } from '@/lib/certificates';
 import { fetchTemplateById, setTemplateContent, createVersion, Template as TemplateRecord } from '@/lib/templatesData';
 import {
@@ -206,7 +206,7 @@ function EditorContent() {
       setCheckingAuth(false);
       return;
     }
-    supabase.auth.getUser().then(({ data }) => {
+    getSessionUser().then(({ data }) => {
       if (!data.user) {
         router.push(`/login?next=${encodeURIComponent(window.location.pathname + window.location.search)}`);
       } else {
@@ -2407,7 +2407,7 @@ function EditorContent() {
           // "Untitled Design" (easy to find later; rename any time).
           if (template?.name) setDesignName(template.name.replace(/^MT Brand · /, ''));
           if (template && wantsTemplateEdit) {
-            const { data: auth } = await supabase.auth.getUser();
+            const { data: auth } = await getSessionUser();
             if (auth.user) {
               const { data: prof } = await supabase.from('profiles').select('is_admin').eq('id', auth.user.id).single();
               if (prof?.is_admin) setTemplateEdit({ ...template, canvasJson: undefined });
@@ -5311,7 +5311,7 @@ function EditorContent() {
     // Only an explicit Save -- a background autosave tick must never
     // silently kick the user out of an in-progress photo edit.
     if (!silent) await ensurePhotoEditsApplied();
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { user } } = await getSessionUser();
     if (!user) {
       setSaving(false);
       if (silent) {
@@ -5579,7 +5579,7 @@ function EditorContent() {
       json.objects = objs;
       await shrinkEmbeddedImages(json);
       const tpl = await fetchTemplateById(certEdit.masterId);
-      const { data: auth } = await supabase.auth.getUser();
+      const { data: auth } = await getSessionUser();
       let version = tpl?.currentVersion || '1.0';
       if (tpl && auth.user) {
         const next = await createVersion({ ...tpl, canvasJson: undefined } as any, auth.user.id, 'Before certificate edit');
@@ -5599,7 +5599,7 @@ function EditorContent() {
     if (!templateEdit?.id || !canvas || !firstAb) return false;
     setTemplateSave({ busy: true, msg: null });
     try {
-      const { data: auth } = await supabase.auth.getUser();
+      const { data: auth } = await getSessionUser();
       if (auth.user) {
         const next = await createVersion(templateEdit, auth.user.id, 'Before design edit');
         if (next) setTemplateEdit((t) => (t ? { ...t, currentVersion: next } : t));
@@ -5960,7 +5960,7 @@ function EditorContent() {
   // both need to respect the same active-design cap — checked here
   // against the real count rather than a cached/stale number.
   const withDesignLimitCheck = async (thenDo: () => void) => {
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { user } } = await getSessionUser();
     if (!user) return;
     const count = await getDesignCount(user.id);
     if (count >= MAX_DESIGNS) {

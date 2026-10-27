@@ -20,7 +20,7 @@ import Link from 'next/link';
 import { MoreVertical, Plus, Search, X } from 'lucide-react';
 import { countPhotosInJson, stripTemplatePhotos } from '@/lib/templates/stripPhotos';
 import { renderTemplatePages } from '@/lib/templates/renderPages';
-import { supabase } from '@/lib/supabase';
+import { supabase, getSessionUser } from '@/lib/supabase';
 import { getOrCreateProfile } from '@/lib/profile';
 import { listProjects, getProject, ProjectSummary } from '@/lib/api/projects';
 import { readMtd, MtdError, OpenedMtd } from '@/lib/mtd/format';
@@ -153,7 +153,7 @@ export default function AdminTemplatesPage() {
 
   useEffect(() => {
     (async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user } } = await getSessionUser();
       if (!user) {
         router.push('/login?next=/admin/templates');
         return;

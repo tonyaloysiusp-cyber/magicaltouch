@@ -1,7 +1,7 @@
 // The user's brand kit (colours, fonts, logo, business details), saved to
 // their account and cached on the device so it works offline too.
 
-import { supabase } from '@/lib/supabase';
+import { supabase, getSessionUser } from '@/lib/supabase';
 import { normalizeColor, hexToRgb, rgbToHex, rgbToHsl, hslToRgb, contrastRatio } from './color';
 
 export interface BrandKit {
@@ -38,7 +38,7 @@ function writeLocal(k: BrandKit) {
 export async function loadBrandKit(): Promise<BrandKit> {
   const local = readLocal();
   try {
-    const { data: auth } = await supabase.auth.getUser();
+    const { data: auth } = await getSessionUser();
     if (!auth.user) return local || EMPTY_KIT;
     const { data, error } = await supabase.from('brand_kits').select('*').eq('user_id', auth.user.id).maybeSingle();
     if (error || !data) return local || EMPTY_KIT;
@@ -60,7 +60,7 @@ export async function loadBrandKit(): Promise<BrandKit> {
 export async function saveBrandKit(kit: BrandKit): Promise<boolean> {
   writeLocal(kit);
   try {
-    const { data: auth } = await supabase.auth.getUser();
+    const { data: auth } = await getSessionUser();
     if (!auth.user) return false;
     const { error } = await supabase.from('brand_kits').upsert({
       user_id: auth.user.id,

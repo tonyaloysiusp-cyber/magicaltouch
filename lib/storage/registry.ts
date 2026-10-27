@@ -6,7 +6,7 @@
 // Never tokens, never passwords, never the project itself.
 // ---------------------------------------------------------------------
 
-import { supabase } from '@/lib/supabase';
+import { supabase, getSessionUser } from '@/lib/supabase';
 import type { CloudProviderId } from './oauth';
 import type { CloudFile } from './providers';
 
@@ -32,7 +32,7 @@ export interface StorageConnection {
 }
 
 async function userId(): Promise<string | null> {
-  const { data } = await supabase.auth.getUser();
+  const { data } = await getSessionUser();
   return data.user?.id ?? null;
 }
 

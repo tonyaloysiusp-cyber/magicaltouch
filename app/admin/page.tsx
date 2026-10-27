@@ -10,7 +10,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { RefreshCw, Plus, Check, Archive, Mail, ExternalLink, CalendarHeart, Server, Inbox, Users, Brush, LayoutTemplate, Send, X, RotateCcw, Sparkles } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { supabase, getSessionUser } from '@/lib/supabase';
 import { AdminShell, AdminCard, AdminSection } from '@/components/admin/AdminShell';
 import { welcomeEmail, passwordChangedEmail, EmailCopy } from '@/lib/email/templates';
 
@@ -77,7 +77,7 @@ export default function AdminHome() {
 
   useEffect(() => {
     (async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user } } = await getSessionUser();
       if (!user) return router.push('/login?next=/admin');
       const { data: profile } = await supabase.from('profiles').select('is_admin').eq('id', user.id).maybeSingle();
       if (!profile?.is_admin) return setState('denied');
@@ -660,7 +660,7 @@ function Wording({ flash }: { flash: (t: string) => void }) {
   }, [key, cur]);
   const save = async () => {
     setSaving(true);
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { user } } = await getSessionUser();
     const blank = (v?: string | null) => (v && v.trim() ? v : null);
     const { error } = await supabase.from('email_copy').upsert({ key, subject: blank(cur.subject), heading: blank(cur.heading), intro: blank(cur.intro), body: blank(cur.body), updated_at: new Date().toISOString(), updated_by: user?.id || null });
     setSaving(false);

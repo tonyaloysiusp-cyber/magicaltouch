@@ -18,7 +18,7 @@ import { HAS_CLOUD_DRIVES, providerById, popupIfNeeded, CloudProviderId, CloudFi
 import { openFromCloud } from '@/lib/storage/cloudProject';
 import { listProjects as listCloudProjects, forgetProject, ProjectReference } from '@/lib/storage/registry';
 import type { OpenedMtd } from '@/lib/mtd/format';
-import { supabase } from '@/lib/supabase';
+import { supabase, getSessionUser } from '@/lib/supabase';
 import { listProjects, getProject, updateProject, deleteProject, duplicateProject } from '@/lib/api/projects';
 import { apiFetch } from '@/lib/api/client';
 import { ProfileMenu } from '@/components/ProfileMenu';
@@ -89,7 +89,7 @@ export default function DashboardPage() {
   };
 
   const fetchDesigns = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { user } } = await getSessionUser();
 
     if (!user) {
       router.push('/login?next=/dashboard');

@@ -14,7 +14,7 @@ import { resolveAuthedPath } from '@/lib/authNav';
 import { MockDesignCard } from '@/components/MockDesignCard';
 import { PrintSpecs } from '@/components/templates/PrintSpecs';
 import { Template, TemplateCategory, CATEGORIES, TEMPLATES, fetchPublicTemplates, fetchCategories, fetchTemplateById } from '@/lib/templatesData';
-import { supabase } from '@/lib/supabase';
+import { supabase, getSessionUser } from '@/lib/supabase';
 import { ProfileMenu } from '@/components/ProfileMenu';
 import { BrandLogo } from '@/components/BrandLogo';
 import { PageHero } from '@/components/PageHero';
@@ -177,7 +177,7 @@ export default function TemplatesPage() {
   }, [previewing]);
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => setLoggedIn(!!data.user));
+    getSessionUser().then(({ data }) => setLoggedIn(!!data.user));
     const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
       setLoggedIn(!!session?.user);
     });

@@ -15,7 +15,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { X } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { supabase, getSessionUser } from '@/lib/supabase';
 import { getOrCreateProfile } from '@/lib/profile';
 import { apiFetch } from '@/lib/api/client';
 import {
@@ -131,7 +131,7 @@ export default function EmailCenterPage() {
 
   useEffect(() => {
     (async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user } } = await getSessionUser();
       if (!user) {
         router.push('/login?next=/admin/email');
         return;

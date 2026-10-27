@@ -12,7 +12,7 @@ import { useRouter } from 'next/navigation';
 import { Award, Copy, Check, ExternalLink, ShieldX, Search, Loader2, QrCode, Ban, Users, Download, Pencil, X, Plus, Trash2 } from 'lucide-react';
 import { parseBulkNames, packageCertificates, BulkRow } from '@/lib/certificatesBulk';
 import { AdminShell } from '@/components/admin/AdminShell';
-import { supabase } from '@/lib/supabase';
+import { supabase, getSessionUser } from '@/lib/supabase';
 import { getOrCreateProfile } from '@/lib/profile';
 import { newCertificateCode, verifyUrl, fillCertificateJson, certificateTokens } from '@/lib/certificates';
 import { renderTemplatePages } from '@/lib/templates/renderPages';
@@ -113,7 +113,7 @@ function BulkIssue({ masters, onIssued }: { masters: Master[]; onIssued: () => v
     const missing = clean.findIndex((r) => !r.recipient || !r.title);
     if (missing >= 0) return setErr(`Row ${missing + 1} needs a name and a certificate title.`);
     if (!window.confirm(`Issue ${clean.length} certificates? Each gets its own code and QR check.`)) return;
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { user } } = await getSessionUser();
     const out: Issue[] = [];
     for (let i = 0; i < clean.length; i += 50) {
       setBusy(`Issuing ${Math.min(i + 50, clean.length)} of ${clean.length}…`);
@@ -251,7 +251,7 @@ export default function CertificatesAdminPage() {
 
   useEffect(() => {
     (async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user } } = await getSessionUser();
       if (!user) return router.push('/login?next=/admin/certificates');
       const profile = await getOrCreateProfile(user.id, user.email?.split('@')[0]);
       if (!profile?.is_admin) return setState('denied');
@@ -265,7 +265,7 @@ export default function CertificatesAdminPage() {
     setErr(null);
     if (!form.recipient.trim() || !form.title.trim()) return setErr('Add the name and the certificate title.');
     setBusy(true);
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { user } } = await getSessionUser();
     let row: Issue | null = null;
     for (let tries = 0; tries < 4 && !row; tries++) {
       const { data, error } = await supabase

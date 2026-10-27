@@ -12,7 +12,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Copy, Check, ExternalLink, Loader2, ShieldCheck, Pencil } from 'lucide-react';
 import { AdminShell } from '@/components/admin/AdminShell';
-import { supabase } from '@/lib/supabase';
+import { supabase, getSessionUser } from '@/lib/supabase';
 import { getOrCreateProfile } from '@/lib/profile';
 import { renderTemplatePages } from '@/lib/templates/renderPages';
 import { hexToCmykPercent } from '@/lib/color/cmyk';
@@ -43,7 +43,7 @@ export default function BrandWorkspacePage() {
 
   useEffect(() => {
     (async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user } } = await getSessionUser();
       if (!user) return router.push('/login?next=/admin/brand');
       const profile = await getOrCreateProfile(user.id, user.email?.split('@')[0]);
       if (!profile?.is_admin) return setState('denied');

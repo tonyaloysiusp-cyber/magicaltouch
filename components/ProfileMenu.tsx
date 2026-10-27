@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { User, Settings, LogOut, FolderOpen, LayoutTemplate, Mail } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { supabase, getSessionUser } from '@/lib/supabase';
 import { Profile, CreatorLevel, getOrCreateProfile, getDesignCount, creatorLevelForCount } from '@/lib/profile';
 import { avatarVariant } from '@/lib/avatar/optimize';
 
@@ -79,7 +79,7 @@ export function ProfileMenu() {
       setLevel(creatorLevelForCount(count));
     };
 
-    supabase.auth.getUser().then(({ data }) => loadForUser(data.user));
+    getSessionUser().then(({ data }) => loadForUser(data.user));
     // A one-time getUser() on mount misses a login/logout that happens
     // without this component remounting (e.g. logging in on another tab,
     // or a redirect flow that keeps the same page shell) — subscribing

@@ -10,7 +10,7 @@ import { AppHeader } from '@/components/AppHeader';
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Lock, Unlock, Search, Wand2, ArrowRightLeft, ChevronDown, Check, Ruler, ArrowRight, X } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { supabase, getSessionUser } from '@/lib/supabase';
 import { DocUnit } from '@/lib/editor/types';
 import { formatUnit, unitToPx, useDisplayUnit } from '@/lib/editor/units';
 import { EdgeValues } from '@/lib/editor/printSetup';
@@ -69,7 +69,7 @@ export default function CreateDesignPage() {
   const [useBrand, setUseBrand] = useState(false);
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
+    getSessionUser().then(({ data }) => {
       if (!data.user) router.push('/login?next=/create');
       else setCheckingAuth(false);
     });

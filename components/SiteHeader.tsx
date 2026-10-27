@@ -12,7 +12,7 @@ import { Menu, Plus, X } from 'lucide-react';
 import { ThemeSwitch } from '@/components/ThemeSwitch';
 import { ProfileMenu } from '@/components/ProfileMenu';
 import { BrandLogo } from '@/components/BrandLogo';
-import { supabase } from '@/lib/supabase';
+import { supabase, getSessionUser } from '@/lib/supabase';
 import { resolveAuthedPath } from '@/lib/authNav';
 import type { AppTheme } from '@/hooks/useAppTheme';
 
@@ -47,7 +47,7 @@ export function SiteHeader({
   const [scrolled, setScrolled] = useState(!transparentTop);
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => setLoggedIn(!!data.user));
+    getSessionUser().then(({ data }) => setLoggedIn(!!data.user));
     const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setLoggedIn(!!s?.user));
     return () => sub.subscription.unsubscribe();
   }, []);

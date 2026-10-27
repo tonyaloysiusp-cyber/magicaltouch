@@ -251,7 +251,24 @@ export async function fetchTemplates(): Promise<Template[]> {
 // Customer gallery: published templates that have real editable content.
 // The canvas_json filter runs in the database, so the content itself is
 // never transferred while browsing.
-export async function fetchPublicTemplates(): Promise<Template[]> {
+let publicCache: Promise<Template[]> | null = null;
+export function fetchPublicTemplates(): Promise<Template[]> {
+  // One request per tab, shared by the gallery, the editor panel and the home page.
+  if (!publicCache) publicCache = loadPublicTemplates().then((list) => { if (list === TEMPLATES) publicCache = null; return list; });
+  return publicCache;
+}
+async function loadPublicTemplates(): Promise<Template[]> {
+  if (typeof window !== 'undefined') {
+    try {
+      const r = await fetch('/api/public-templates');
+      if (r.ok) {
+        const rows = (await r.json()) as TemplateRow[];
+        if (Array.isArray(rows) && rows.length) return rows.map(rowToTemplate);
+      }
+    } catch {
+      // fall back to the database directly
+    }
+  }
   const { data, error } = await supabase
     .from('templates')
     .select(LIST_COLUMNS)

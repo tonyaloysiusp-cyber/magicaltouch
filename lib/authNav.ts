@@ -6,10 +6,10 @@
 // so it lives in one place instead of being re-implemented per page.
 // ---------------------------------------------------------------------
 
-import { supabase } from '@/lib/supabase';
+import { supabase, getSessionUser } from '@/lib/supabase';
 
 export async function isLoggedIn(): Promise<boolean> {
-  const { data } = await supabase.auth.getUser();
+  const { data } = await getSessionUser();
   return !!data.user;
 }
 
