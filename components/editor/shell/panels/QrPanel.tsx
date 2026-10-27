@@ -29,8 +29,9 @@ const DOTS: { id: DotShape; label: string }[] = [
   { id: 'square', label: 'Square' }, { id: 'rounded', label: 'Rounded' }, { id: 'dots', label: 'Dots' }, { id: 'fluid', label: 'Fluid' },
   { id: 'classy', label: 'Classy' }, { id: 'diamond', label: 'Diamond' }, { id: 'vbars', label: 'Bars ↕' }, { id: 'hbars', label: 'Bars ↔' },
 ];
-const FRAMES_EYE: { id: EyeFrame; label: string }[] = [{ id: 'square', label: 'Square' }, { id: 'rounded', label: 'Rounded' }, { id: 'circle', label: 'Circle' }, { id: 'leaf', label: 'Leaf' }, { id: 'thin', label: 'Thin' }];
-const BALLS: { id: EyeBall; label: string }[] = [{ id: 'square', label: 'Square' }, { id: 'rounded', label: 'Rounded' }, { id: 'circle', label: 'Circle' }, { id: 'diamond', label: 'Diamond' }, { id: 'leaf', label: 'Leaf' }];
+// Only corner shapes that phone cameras reliably find (checked in tests).
+const FRAMES_EYE: { id: EyeFrame; label: string }[] = [{ id: 'square', label: 'Square' }, { id: 'rounded', label: 'Rounded' }, { id: 'leaf', label: 'Leaf' }];
+const BALLS: { id: EyeBall; label: string }[] = [{ id: 'square', label: 'Square' }, { id: 'rounded', label: 'Rounded' }, { id: 'circle', label: 'Circle' }, { id: 'leaf', label: 'Leaf' }];
 const FRAMES: { id: FrameStyle; label: string }[] = [{ id: 'none', label: 'None' }, { id: 'box', label: 'Box' }, { id: 'badge', label: 'Badge' }, { id: 'bubble', label: 'Bubble' }, { id: 'ribbon', label: 'Ribbon' }, { id: 'border', label: 'Border' }];
 const CAPTIONS = ['SCAN ME', 'SCAN TO PAY', 'SEE OUR MENU', 'FOLLOW US', 'VISIT OUR WEBSITE', 'JOIN WI-FI', 'SAVE CONTACT', 'RSVP'];
 
@@ -108,7 +109,12 @@ export function QrPanel({ onAdd, brandLogoUrl }: { onAdd: (pngDataUrl: string) =
   const [kind, setKind] = useState<QrKind>('link');
   const [f, setF] = useState<QrFields>({ platform: 'instagram', security: 'WPA' });
   const [look, setLook] = useState<QrLook>(() => {
-    try { return { ...DEFAULT_LOOK, ...JSON.parse(localStorage.getItem('mt:qrLook') || '{}') }; } catch { return DEFAULT_LOOK; }
+    try {
+      const l = { ...DEFAULT_LOOK, ...JSON.parse(localStorage.getItem('mt:qrLook') || '{}') };
+      if (!FRAMES_EYE.some((x) => x.id === l.eyeFrame)) l.eyeFrame = 'rounded';
+      if (!BALLS.some((x) => x.id === l.eyeBall)) l.eyeBall = 'rounded';
+      return l;
+    } catch { return DEFAULT_LOOK; }
   });
   const L = (patch: Partial<QrLook>) => setLook((x) => ({ ...x, ...patch }));
   useEffect(() => { try { localStorage.setItem('mt:qrLook', JSON.stringify(look)); } catch {} }, [look]);
@@ -140,8 +146,9 @@ export function QrPanel({ onAdd, brandLogoUrl }: { onAdd: (pngDataUrl: string) =
     return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
   }, [layout, look, logoActive, logo]);
 
-  const darkest = look.fill === 'solid' ? fg : [fg, look.fg2].sort((x, y) => (contrastWarning(x, '#ffffff') ? 1 : 0) - (contrastWarning(y, '#ffffff') ? 1 : 0)).pop()!;
-  const warn = contrastWarning(darkest, bg === 'transparent' ? '#ffffff' : bg) || (look.eyeColor ? contrastWarning(look.eyeColor, bg === 'transparent' ? '#ffffff' : bg) : null);
+  // Every colour used for the code must stand out from the background.
+  const bgc = bg === 'transparent' ? '#ffffff' : bg;
+  const warn = [fg, ...(look.fill === 'solid' ? [] : [look.fg2]), look.eyeColor, look.eyeBallColor].filter(Boolean).map((c) => contrastWarning(c as string, bgc)).find(Boolean) || null;
   const dense = layout && layout.modules > 57 ? 'This code holds a lot of data, so its squares are small. Print it at least 3 cm wide, or shorten the text.' : null;
 
   useEffect(() => {
@@ -383,11 +390,11 @@ export function QrPanel({ onAdd, brandLogoUrl }: { onAdd: (pngDataUrl: string) =
 
       <PanelSection title="Corners">
         <p className="text-[11px] text-mt-muted mb-1">Frame</p>
-        <div className="grid grid-cols-5 gap-1.5">
+        <div className="grid grid-cols-3 gap-1.5">
           {FRAMES_EYE.map((d) => <button key={d.id} type="button" aria-pressed={look.eyeFrame === d.id} onClick={() => L({ eyeFrame: d.id })} className={CHIP(look.eyeFrame === d.id)}>{d.label}</button>)}
         </div>
         <p className="text-[11px] text-mt-muted mt-2 mb-1">Centre</p>
-        <div className="grid grid-cols-5 gap-1.5">
+        <div className="grid grid-cols-4 gap-1.5">
           {BALLS.map((d) => <button key={d.id} type="button" aria-pressed={look.eyeBall === d.id} onClick={() => L({ eyeBall: d.id })} className={CHIP(look.eyeBall === d.id)}>{d.label}</button>)}
         </div>
         <div className="mt-2 grid grid-cols-2 gap-2">

@@ -51,14 +51,14 @@ export const DEFAULT_LOOK: QrLook = {
 export const LOOK_PRESETS: { name: string; look: Partial<QrLook> }[] = [
   { name: 'Classic', look: { fg: '#000000', fill: 'solid', dot: 'square', eyeFrame: 'square', eyeBall: 'square', eyeColor: null, eyeBallColor: null, bg: '#ffffff', frame: 'none' } },
   { name: 'Soft', look: { fg: '#1F2A44', fill: 'solid', dot: 'rounded', eyeFrame: 'rounded', eyeBall: 'rounded', eyeColor: null, eyeBallColor: null, bg: '#ffffff', frame: 'none' } },
-  { name: 'Dots', look: { fg: '#3B1D5A', fill: 'solid', dot: 'dots', eyeFrame: 'circle', eyeBall: 'circle', eyeColor: null, eyeBallColor: '#C2185B', bg: '#ffffff', frame: 'none' } },
+  { name: 'Dots', look: { fg: '#3B1D5A', fill: 'solid', dot: 'dots', eyeFrame: 'rounded', eyeBall: 'circle', eyeColor: null, eyeBallColor: '#C2185B', bg: '#ffffff', frame: 'none' } },
   { name: 'Fluid', look: { fg: '#0F4C3A', fill: 'solid', dot: 'fluid', eyeFrame: 'rounded', eyeBall: 'circle', eyeColor: null, eyeBallColor: null, bg: '#F1FAF5', frame: 'none' } },
   { name: 'Sunset', look: { fg: '#C2185B', fg2: '#F57C00', fill: 'linear', angle: 45, dot: 'classy', eyeFrame: 'leaf', eyeBall: 'leaf', eyeColor: '#7A1F2B', eyeBallColor: '#7A1F2B', bg: '#ffffff', frame: 'none' } },
-  { name: 'Ocean', look: { fg: '#0D47A1', fg2: '#00ACC1', fill: 'radial', dot: 'dots', eyeFrame: 'rounded', eyeBall: 'circle', eyeColor: '#0D47A1', eyeBallColor: '#00838F', bg: '#ffffff', frame: 'none' } },
-  { name: 'Gold', look: { fg: '#5D4037', fg2: '#B8860B', fill: 'linear', angle: 135, dot: 'diamond', eyeFrame: 'square', eyeBall: 'diamond', eyeColor: '#3E2723', eyeBallColor: '#B8860B', bg: '#FFFBF0', frame: 'none' } },
+  { name: 'Ocean', look: { fg: '#0D47A1', fg2: '#00727D', fill: 'radial', dot: 'dots', eyeFrame: 'rounded', eyeBall: 'circle', eyeColor: '#0D47A1', eyeBallColor: '#00838F', bg: '#ffffff', frame: 'none' } },
+  { name: 'Gold', look: { fg: '#4E342E', fg2: '#7A5A10', fill: 'linear', angle: 135, dot: 'diamond', eyeFrame: 'square', eyeBall: 'rounded', eyeColor: '#3E2723', eyeBallColor: '#6D4C0F', bg: '#FFFBF0', frame: 'none' } },
   { name: 'Scan me', look: { fg: '#111111', fill: 'solid', dot: 'rounded', eyeFrame: 'rounded', eyeBall: 'rounded', eyeColor: null, eyeBallColor: null, bg: '#ffffff', frame: 'box', frameColor: '#111111', caption: 'SCAN ME', captionColor: '#ffffff' } },
   { name: 'Menu', look: { fg: '#3E2723', fill: 'solid', dot: 'vbars', eyeFrame: 'rounded', eyeBall: 'rounded', eyeColor: null, eyeBallColor: null, bg: '#FFF8E1', frame: 'badge', frameColor: '#3E2723', caption: 'SEE OUR MENU', captionColor: '#FFF8E1' } },
-  { name: 'Pay', look: { fg: '#1B5E20', fill: 'solid', dot: 'square', eyeFrame: 'thin', eyeBall: 'square', eyeColor: null, eyeBallColor: null, bg: '#ffffff', frame: 'bubble', frameColor: '#1B5E20', caption: 'SCAN TO PAY', captionColor: '#ffffff' } },
+  { name: 'Pay', look: { fg: '#1B5E20', fill: 'solid', dot: 'square', eyeFrame: 'rounded', eyeBall: 'square', eyeColor: null, eyeBallColor: null, bg: '#ffffff', frame: 'bubble', frameColor: '#1B5E20', caption: 'SCAN TO PAY', captionColor: '#ffffff' } },
 ];
 
 export interface QrGrid {
