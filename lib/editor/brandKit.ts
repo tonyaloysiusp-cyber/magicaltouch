@@ -12,7 +12,24 @@ export interface BrandKit {
   fonts: { heading?: string; body?: string };
   logoUrl?: string | null;
   info: { business?: string; tagline?: string; phone?: string; email?: string; website?: string; address?: string };
+  /** Pro: named text styles ("Add heading" in the brand's own look). */
+  styles?: Partial<Record<BrandTextRole, BrandTextStyle>>;
+  /** Pro: more logos (light version, icon, …). The main one is logoUrl. */
+  logos?: { name: string; url: string }[];
+  /** Pro: names for the brand colours (Primary, Accent…), same order as colors. */
+  colorNames?: string[];
+  /** Pro: the person's other brands; switching swaps one in. */
+  others?: BrandKit[];
 }
+
+export type BrandTextRole = 'heading' | 'subheading' | 'body' | 'quote';
+export interface BrandTextStyle { font: string; weight: number; size: number; color: string; upper?: boolean; spacing?: number; italic?: boolean }
+export const DEFAULT_TEXT_STYLES: Record<BrandTextRole, BrandTextStyle> = {
+  heading: { font: 'Montserrat', weight: 800, size: 96, color: '#111111' },
+  subheading: { font: 'Montserrat', weight: 600, size: 48, color: '#333333', upper: true, spacing: 120 },
+  body: { font: 'Inter', weight: 400, size: 30, color: '#333333' },
+  quote: { font: 'Playfair Display', weight: 500, size: 44, color: '#111111', italic: true },
+};
 
 export const DEFAULT_BRAND_APPLY = { colors: true, fonts: false, logo: false };
 
@@ -49,7 +66,12 @@ export async function loadBrandKit(): Promise<BrandKit> {
       logoUrl: data.logo_url,
       info: data.info || {},
       apply: data.info?._apply || undefined,
+      styles: data.info?._styles || undefined,
+      logos: data.info?._logos || undefined,
+      colorNames: data.info?._colorNames || undefined,
+      others: data.info?._others || undefined,
     };
+    ['_apply', '_styles', '_logos', '_colorNames', '_others'].forEach((k) => delete (kit.info as any)[k]);
     writeLocal(kit);
     return kit;
   } catch {
@@ -68,7 +90,7 @@ export async function saveBrandKit(kit: BrandKit): Promise<boolean> {
       colors: kit.colors,
       fonts: kit.fonts,
       logo_url: kit.logoUrl || null,
-      info: { ...kit.info, _apply: kit.apply },
+      info: { ...kit.info, _apply: kit.apply, _styles: kit.styles, _logos: kit.logos, _colorNames: kit.colorNames, _others: kit.others },
       updated_at: new Date().toISOString(),
     });
     return !error;

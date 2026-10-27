@@ -1,5 +1,6 @@
 'use client';
 
+import { BrandPro } from './BrandPro';
 import { useRef, useState } from 'react';
 import { Plus, X, Wand2, ImagePlus, Type, Loader2, Check } from 'lucide-react';
 import { BrandKit, BRAND_PALETTES, DEFAULT_BRAND_APPLY } from '@/lib/editor/brandKit';
@@ -46,6 +47,7 @@ export function BrandPanel({
   allPages,
   onAllPages,
   pageCount,
+  pro,
 }: {
   kit: BrandKit;
   onChange: (k: BrandKit) => void;
@@ -63,6 +65,7 @@ export function BrandPanel({
   allPages: boolean;
   onAllPages: (v: boolean) => void;
   pageCount: number;
+  pro?: Omit<React.ComponentProps<typeof BrandPro>, 'kit' | 'onChange'>;
 }) {
   const apply = kit.apply || DEFAULT_BRAND_APPLY;
   const setApply = (patch: Partial<typeof apply>) => onChange({ ...kit, apply: { ...apply, ...patch } });
@@ -136,6 +139,8 @@ export function BrandPanel({
           ) : null}
         </p>
       </div>
+
+      {pro && <BrandPro kit={kit} onChange={onChange} {...pro} />}
 
       <PanelSection title="Brand colours">
         <div className="flex flex-wrap gap-2">

@@ -132,6 +132,7 @@ import { BrushSettings, DEFAULT_BRUSH, StrokePoint, strokePathD, createStrokeObj
 import { useEditorFeatures, TextPreset, clearCharStyle } from '@/hooks/useEditorFeatures';
 import { planResize } from '@/lib/editor/smartResize';
 import { BrandKit, EMPTY_KIT, DEFAULT_BRAND_APPLY, loadBrandKit, saveBrandKit, applyBrandToObjects, resetOriginalColors, hasOriginalColors } from '@/lib/editor/brandKit';
+import { checkBrand, shrinkLogo } from '@/lib/editor/brandPro';
 import { fromFabricGradient, toFabricGradient, GradientSpec } from '@/lib/editor/gradients';
 import { documentColors as collectDocumentColors } from '@/lib/editor/color';
 import type { QuickStart } from '@/components/editor/shell/OnboardingDialog';
@@ -3488,7 +3489,7 @@ function EditorContent() {
     setLocalNotice(brandAllPages ? 'Original colours restored on every page.' : 'Original colours restored on this page.');
   };
   // Applies only what the customer switched on in the Brand panel.
-  const applyBrandToPage = (colorsOverride?: string[]) => {
+  const applyBrandToPage = (colorsOverride?: string[], force?: { colors: boolean; fonts: boolean }) => {
     const { canvas, page, objs: allObjs } = pageObjects(brandAllPages);
     if (!canvas) return;
     // Each page is matched on its own (its own background, its own accents).
@@ -3501,7 +3502,7 @@ function EditorContent() {
     }
     const apply = brandKit.apply || DEFAULT_BRAND_APPLY;
     const kit = colorsOverride ? { ...brandKit, colors: colorsOverride } : brandKit;
-    const opts = colorsOverride ? { colors: true, fonts: false } : { colors: apply.colors, fonts: apply.fonts };
+    const opts = force ? { colors: force.colors && kit.colors.length > 0, fonts: force.fonts } : colorsOverride ? { colors: true, fonts: false } : { colors: apply.colors, fonts: apply.fonts };
     groups.forEach((list, abId) => {
       const ab = canvas.getObjects().find((o: any) => o.__isArtboard && o.__artboardId === abId);
       const area = ab ? ab.width * (ab.scaleX || 1) * ab.height * (ab.scaleY || 1) : page.width * page.height;
@@ -3550,7 +3551,7 @@ function EditorContent() {
     if (!url) return;
     // The logo stays inside the brand kit itself; it is not uploaded
     // to file storage.
-    updateBrandKit({ ...brandKit, logoUrl: url });
+    updateBrandKit({ ...brandKit, logoUrl: await shrinkLogo(url) });
   };
   const addBrandInfo = () => {
     const i = brandKit.info;
@@ -7386,6 +7387,30 @@ function EditorContent() {
           onAddInfo={addBrandInfo}
           onUploadLogo={uploadBrandLogo}
           documentColors={docColors}
+          pro={{
+            onAddStyledText: (role, st) =>
+              features.addTextPreset({
+                id: `brand-${role}`,
+                label: role,
+                text: role === 'heading' ? 'Your heading' : role === 'subheading' ? 'Your subheading' : role === 'quote' ? '“Your words, beautifully said.”' : 'Add your text here — a short paragraph in your brand’s body style.',
+                fontFamily: st.font,
+                fontSize: st.size,
+                fontWeight: st.weight,
+                fontStyle: st.italic ? 'italic' : 'normal',
+                charSpacing: st.spacing || 0,
+                upper: !!st.upper,
+                fill: st.color,
+                lineHeight: role === 'body' ? 1.45 : 1.15,
+              }),
+            onFillSelection: (hex) => {
+              const o = fabricCanvasRef.current?.getActiveObject();
+              if (!o) return setLocalNotice('Select something on the page first, then tap a colour.');
+              features.setFill(hex);
+            },
+            onCheck: () => checkBrand(pageObjects(brandAllPages).objs, brandKit),
+            onFix: () => applyBrandToPage(undefined, { colors: true, fonts: !!(brandKit.fonts.heading || brandKit.fonts.body) }),
+            onPlaceImage: (url) => placeImageUrl(url),
+          }}
         />
       ),
     },
