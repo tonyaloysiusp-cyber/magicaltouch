@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { SeoShell, Crumbs } from '@/components/seo/SeoShell';
-import { SITE_URL, SITE_NAME } from '@/lib/seo';
+import { SITE_URL, SITE_NAME, getHiddenLandings, getPublishedSeoPages } from '@/lib/seo';
 import { ALL_LANDINGS } from '@/lib/landings';
 
 // Hub linking every keyword landing page (good for users and crawlers).
@@ -11,8 +11,14 @@ export const metadata: Metadata = {
   alternates: { canonical: `${SITE_URL}/free-design-tools` },
 };
 
-export default function FreeToolsPage() {
-  const all = ALL_LANDINGS();
+export const revalidate = 3600;
+
+export default async function FreeToolsPage() {
+  const [hidden, custom] = await Promise.all([getHiddenLandings(), getPublishedSeoPages()]);
+  const edits = new Map(custom.map((p) => [p.slug, p]));
+  const all = ALL_LANDINGS().filter((l) => !hidden.has(l.slug)).map((l) => (edits.has(l.slug) ? { ...l, h1: edits.get(l.slug)!.h1, description: edits.get(l.slug)!.description } : l));
+  const builtSlugs = new Set(all.map((l) => l.slug));
+  const extra = custom.filter((p) => !builtSlugs.has(p.slug) && !hidden.has(p.slug));
   const features = all.filter((l) => l.ctaHref && !l.lang);
   const tools = all.filter((l) => !l.seasonal && !l.ctaHref && !l.lang && !l.country);
   const countries = all.filter((l) => l.country);
@@ -35,7 +41,7 @@ export default function FreeToolsPage() {
         <h2 className="mt-10 text-xl font-semibold">Tools — every feature free</h2>
         <ul className="mt-4 grid sm:grid-cols-2 lg:grid-cols-3 gap-4">{features.map((l) => <Card key={l.slug} {...l} />)}</ul>
         <h2 className="mt-12 text-xl font-semibold">Makers</h2>
-        <ul className="mt-4 grid sm:grid-cols-2 lg:grid-cols-3 gap-4">{tools.map((l) => <Card key={l.slug} {...l} />)}</ul>
+        <ul className="mt-4 grid sm:grid-cols-2 lg:grid-cols-3 gap-4">{tools.map((l) => <Card key={l.slug} {...l} />)}{extra.map((p) => <Card key={p.slug} slug={p.slug} h1={p.h1} description={p.description} />)}</ul>
         <h2 className="mt-12 text-xl font-semibold">Seasonal & festivals</h2>
         <ul className="mt-4 grid sm:grid-cols-2 lg:grid-cols-3 gap-4">{seasonal.map((l) => <Card key={l.slug} {...l} />)}</ul>
         <h2 className="mt-12 text-xl font-semibold">By country</h2>

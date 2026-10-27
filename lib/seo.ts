@@ -136,3 +136,9 @@ export async function getSeoPage(slug: string): Promise<SeoPageRow | null> {
   const rows = await rest<SeoPageRow[]>(`seo_pages?select=slug,title,h1,description,intro,thing,terms,faqs,updated_at&status=eq.published&slug=eq.${encodeURIComponent(slug)}&limit=1`, 600);
   return rows?.[0] || null;
 }
+
+/** Built-in landing pages switched off in Admin → SEO (Landing pages). */
+export async function getHiddenLandings(): Promise<Set<string>> {
+  const v = await getSiteSetting('hidden_landings');
+  return new Set((v || '').split(',').map((x) => x.trim()).filter(Boolean));
+}

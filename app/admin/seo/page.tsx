@@ -4,14 +4,14 @@
 //  · Search engines — Google verification code, send all pages to Bing / Yandex
 //  · Landing pages — create keyword pages ("free logo maker", "eid templates")
 //    without code; they go live at /<slug> and in the sitemap
-//  · Keywords — the searches we target and which page answers each
+//  · Keywords — the searches we target (never creates pages)
 //  · Free promotion — a checklist of free channels to list the site on
 //  · Campaign links — tracked links (UTM) for posts, ads and partners
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Check, Copy, ExternalLink, Globe, Loader2, Megaphone, Plus, Search, Send, Trash2, Link2, Sparkles } from 'lucide-react';
+import { Check, Copy, ExternalLink, Eye, EyeOff, Globe, Loader2, Megaphone, Pencil, Plus, Search, Send, Trash2, Link2, Sparkles, X } from 'lucide-react';
 import { AdminShell } from '@/components/admin/AdminShell';
 import { supabase, getSessionUser } from '@/lib/supabase';
 import { getOrCreateProfile } from '@/lib/profile';
@@ -54,6 +54,7 @@ export default function SeoAdminPage() {
   const [pages, setPages] = useState<SeoPage[]>([]);
   const [promo, setPromo] = useState<Promo[]>([]);
   const [gcode, setGcode] = useState('');
+  const [hidden, setHiddenState] = useState<Set<string>>(new Set());
   const [msg, setMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
 
@@ -66,6 +67,7 @@ export default function SeoAdminPage() {
     setPages((p as SeoPage[]) || []);
     setPromo((pr as Promo[]) || []);
     setGcode(((s as any[]) || []).find((x) => x.key === 'google_verification')?.value || '');
+    setHiddenState(new Set((((s as any[]) || []).find((x) => x.key === 'hidden_landings')?.value || '').split(',').map((x: string) => x.trim()).filter(Boolean)));
   }, []);
 
   useEffect(() => {
@@ -79,6 +81,11 @@ export default function SeoAdminPage() {
     })();
   }, [router, load]);
 
+  const setHidden = async (h: Set<string>) => {
+    const { error } = await supabase.from('site_settings').upsert({ key: 'hidden_landings', value: Array.from(h).sort().join(','), updated_at: new Date().toISOString() });
+    if (error) { flash(error.message); return; }
+    setHiddenState(new Set(h));
+  };
   const flash = (m: string) => { setMsg(m); setTimeout(() => setMsg((x) => (x === m ? null : x)), 6000); };
 
   if (state === 'loading') return <main className="min-h-screen flex items-center justify-center text-mt-faint bg-mt-bg">Loading…</main>;
@@ -95,8 +102,8 @@ export default function SeoAdminPage() {
         </nav>
         {msg && <p className="rounded-2xl bg-mt-accentsoft text-[#4B2FB0] px-4 py-2.5 text-sm">{msg}</p>}
         {tab === 'engines' && <Engines gcode={gcode} setGcode={setGcode} flash={flash} busy={busy} setBusy={setBusy} />}
-        {tab === 'pages' && <Pages pages={pages} reload={load} flash={flash} />}
-        {tab === 'keywords' && <Keywords promo={promo} pages={pages} reload={load} />}
+        {tab === 'pages' && <Pages pages={pages} hidden={hidden} setHidden={setHidden} reload={load} flash={flash} />}
+        {tab === 'keywords' && <Keywords promo={promo} pages={pages} hidden={hidden} reload={load} />}
         {tab === 'promo' && <Channels promo={promo} reload={load} />}
         {tab === 'links' && <Campaigns promo={promo} reload={load} />}
       </div>
@@ -154,128 +161,286 @@ function Engines({ gcode, setGcode, flash, busy, setBusy }: { gcode: string; set
 }
 
 // ---------------------------------------------------------------- landing pages
-const EMPTY = { slug: '', title: '', h1: '', description: '', intro: '', thing: 'design', terms: '', faqs: '', status: 'draft' as 'draft' | 'published' };
+// One list for every landing page: the built-in ones that ship with the site
+// and the ones made here. Built-in pages can be edited (the edit is saved as a
+// page with the same address and wins), reset to the original, switched off
+// or back on. Custom pages can be edited, unpublished and deleted.
+const EMPTY = { slug: '', title: '', h1: '', description: '', intro: '', thing: 'design', terms: '', faqs: '' };
+type Row = { slug: string; h1: string; title: string; description: string; kind: 'builtin' | 'custom'; db?: SeoPage; hidden: boolean; edited: boolean; live: boolean };
 
-function Pages({ pages, reload, flash }: { pages: SeoPage[]; reload: () => Promise<void>; flash: (m: string) => void }) {
+function Pages({ pages, hidden, setHidden, reload, flash }: { pages: SeoPage[]; hidden: Set<string>; setHidden: (h: Set<string>) => Promise<void>; reload: () => Promise<void>; flash: (m: string) => void }) {
+  const builtIn = useMemo(() => ALL_LANDINGS(), []);
   const [f, setF] = useState(EMPTY);
-  const [editId, setEditId] = useState<string | null>(null);
-  const builtIn = ALL_LANDINGS();
-  const set = (k: keyof typeof EMPTY, v: string) => setF((x) => ({ ...x, [k]: v, ...(k === 'h1' && !editId && (!x.slug || x.slug === slugify(x.h1)) ? { slug: slugify(v) } : {}) }));
-  const edit = (p: SeoPage) => { setEditId(p.id); setF({ slug: p.slug, title: p.title, h1: p.h1, description: p.description, intro: p.intro, thing: p.thing, terms: p.terms.join(', '), faqs: (p.faqs || []).map(([q, a]) => `${q} | ${a}`).join('\n'), status: p.status }); };
+  const [editing, setEditing] = useState<{ slug: string | null; id: string | null; builtin: boolean } | null>(null);
+  const [q, setQ] = useState('');
+  const [show, setShow] = useState<'all' | 'live' | 'builtin' | 'custom' | 'edited' | 'off'>('all');
+  const [sel, setSel] = useState<Set<string>>(new Set());
+  const [busy, setBusy] = useState(false);
+
+  const rows: Row[] = useMemo(() => {
+    const db = new Map(pages.map((p) => [p.slug, p]));
+    const seen = new Set<string>();
+    const out: Row[] = [];
+    builtIn.forEach((l) => {
+      if (seen.has(l.slug)) return;
+      seen.add(l.slug);
+      const d = db.get(l.slug);
+      const edited = !!d && d.status === 'published';
+      out.push({ slug: l.slug, h1: edited ? d!.h1 : l.h1, title: edited ? d!.title : l.title, description: edited ? d!.description : l.description, kind: 'builtin', db: d, hidden: hidden.has(l.slug), edited, live: !hidden.has(l.slug) });
+    });
+    pages.forEach((p) => {
+      if (seen.has(p.slug)) return;
+      out.push({ slug: p.slug, h1: p.h1, title: p.title, description: p.description, kind: 'custom', db: p, hidden: hidden.has(p.slug), edited: false, live: p.status === 'published' && !hidden.has(p.slug) });
+    });
+    return out;
+  }, [builtIn, pages, hidden]);
+
+  const list = rows.filter((r) => {
+    if (show === 'live' && !r.live) return false;
+    if (show === 'builtin' && r.kind !== 'builtin') return false;
+    if (show === 'custom' && r.kind !== 'custom') return false;
+    if (show === 'edited' && !r.edited) return false;
+    if (show === 'off' && r.live) return false;
+    const t = q.trim().toLowerCase();
+    return !t || `${r.slug} ${r.h1} ${r.title}`.toLowerCase().includes(t);
+  });
+  const counts = { all: rows.length, live: rows.filter((r) => r.live).length, builtin: rows.filter((r) => r.kind === 'builtin').length, custom: rows.filter((r) => r.kind === 'custom').length, edited: rows.filter((r) => r.edited).length, off: rows.filter((r) => !r.live).length };
+
+  const set = (k: keyof typeof EMPTY, v: string) => setF((x) => ({ ...x, [k]: v, ...(k === 'h1' && !editing?.slug && (!x.slug || x.slug === slugify(x.h1)) ? { slug: slugify(v) } : {}) }));
+  const openNew = () => { setEditing({ slug: null, id: null, builtin: false }); setF(EMPTY); window.scrollTo({ top: 0, behavior: 'smooth' }); };
+  const openEdit = (r: Row) => {
+    const b = builtIn.find((l) => l.slug === r.slug);
+    const d = r.db;
+    const src = d ? { title: d.title, h1: d.h1, description: d.description, intro: d.intro, thing: d.thing, terms: d.terms || [], faqs: d.faqs || [] } : { title: b!.title, h1: b!.h1, description: b!.description, intro: b!.intro.join('\n\n'), thing: b!.thing, terms: b!.terms, faqs: b!.faqs };
+    setEditing({ slug: r.slug, id: d?.id || null, builtin: r.kind === 'builtin' });
+    setF({ slug: r.slug, title: src.title, h1: src.h1, description: src.description, intro: src.intro, thing: src.thing, terms: src.terms.join(', '), faqs: src.faqs.map(([qq, aa]) => `${qq} | ${aa}`).join('\n') });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+  const close = () => { setEditing(null); setF(EMPTY); };
+
   const save = async (status: 'draft' | 'published') => {
-    const slug = slugify(f.slug || f.h1);
+    const slug = editing?.slug || slugify(f.slug || f.h1);
     if (!slug || !f.h1.trim() || !f.title.trim() || !f.description.trim()) return flash('Add a page heading, a Google title and a description.');
-    if (builtIn.some((l) => l.slug === slug) && !editId) return flash(`/${slug} already exists as a built-in page.`);
-    const row = { slug, title: f.title.trim(), h1: f.h1.trim(), description: f.description.trim(), intro: f.intro.trim(), thing: f.thing.trim() || 'design', terms: f.terms.split(',').map((t) => t.trim()).filter(Boolean), faqs: f.faqs.split('\n').map((l) => l.split('|').map((x) => x.trim())).filter((x) => x[0] && x[1]).map(([q, a]) => [q, a]), status, updated_at: new Date().toISOString() };
-    const { error } = editId ? await supabase.from('seo_pages').update(row).eq('id', editId) : await supabase.from('seo_pages').insert(row);
+    if (!editing?.slug && rows.some((r) => r.slug === slug)) return flash(`/${slug} already exists — edit that page instead.`);
+    const row = { slug, title: f.title.trim(), h1: f.h1.trim(), description: f.description.trim(), intro: f.intro.trim(), thing: f.thing.trim() || 'design', terms: f.terms.split(',').map((t) => t.trim()).filter(Boolean), faqs: f.faqs.split('\n').map((l) => l.split('|').map((x) => x.trim())).filter((x) => x[0] && x[1]).map(([qq, aa]) => [qq, aa]), status, updated_at: new Date().toISOString() };
+    const { error } = editing?.id ? await supabase.from('seo_pages').update(row).eq('id', editing.id) : await supabase.from('seo_pages').insert(row);
     if (error) return flash(error.message.includes('duplicate') ? 'That address is already used.' : error.message);
-    flash(status === 'published' ? `Live at /${slug} (within an hour on Google’s next visit). Press “Send now” in Search engines to tell Bing.` : 'Saved as draft.');
-    setF(EMPTY);
-    setEditId(null);
+    flash(status === 'published' ? `Saved — /${slug} shows the new text within an hour.` : editing?.builtin ? 'Saved as draft — the original text stays live until you publish.' : 'Saved as draft (not visible on the site).');
+    close();
     reload();
   };
-  const remove = async (p: SeoPage) => {
-    if (!window.confirm(`Delete the page /${p.slug}?`)) return;
-    await supabase.from('seo_pages').delete().eq('id', p.id);
+
+  const toggleHidden = async (slugs: string[], off: boolean) => {
+    const h = new Set(hidden);
+    slugs.forEach((x) => (off ? h.add(x) : h.delete(x)));
+    await setHidden(h);
+    flash(off ? `${slugs.length} page${slugs.length > 1 ? 's' : ''} switched off — removed from the site and the sitemap within an hour.` : `${slugs.length} page${slugs.length > 1 ? 's' : ''} back on.`);
+  };
+  const setStatus = async (r: Row, status: 'draft' | 'published') => {
+    if (!r.db) return;
+    await supabase.from('seo_pages').update({ status, updated_at: new Date().toISOString() }).eq('id', r.db.id);
     reload();
   };
+  const removeRows = async (rs: Row[]) => {
+    const custom = rs.filter((r) => r.kind === 'custom' && r.db);
+    const builtins = rs.filter((r) => r.kind === 'builtin');
+    const msg = [custom.length && `delete ${custom.length} custom page${custom.length > 1 ? 's' : ''}`, builtins.length && `switch off ${builtins.length} built-in page${builtins.length > 1 ? 's' : ''} (they can be switched back on)`].filter(Boolean).join(' and ');
+    if (!msg || !window.confirm(`This will ${msg}. Continue?`)) return;
+    setBusy(true);
+    if (custom.length) await supabase.from('seo_pages').delete().in('id', custom.map((r) => r.db!.id));
+    if (builtins.length) await toggleHidden(builtins.map((r) => r.slug), true);
+    setSel(new Set());
+    setBusy(false);
+    reload();
+  };
+  const resetBuiltin = async (r: Row) => {
+    if (!r.db || !window.confirm(`Put /${r.slug} back to its original text?`)) return;
+    await supabase.from('seo_pages').delete().eq('id', r.db.id);
+    reload();
+  };
+
+  const selected = rows.filter((r) => sel.has(r.slug));
   const titleLen = f.title.length, descLen = f.description.length;
   return (
     <>
+      {editing && (
+        <section className={card}>
+          <div className="flex items-center gap-2">
+            <h2 className="text-lg font-semibold inline-flex items-center gap-2 flex-1">{editing.slug ? <><Pencil size={18} /> Edit /{editing.slug}</> : <><Plus size={19} /> New landing page</>}</h2>
+            <button onClick={close} aria-label="Close" className="w-9 h-9 rounded-full inline-flex items-center justify-center text-mt-muted hover:bg-mt-surface2"><X size={18} /></button>
+          </div>
+          <p className="mt-1 text-[13px] text-mt-muted">{editing.builtin ? 'This is a built-in page. Your edit replaces its text; “Reset” in the list brings the original back.' : 'One page per search phrase. It lists every template whose name or keywords match the words you give, plus your text and questions.'}</p>
+          <div className="mt-4 grid gap-3 lg:grid-cols-2">
+            <label className="text-[12px] text-mt-muted">Page heading (H1)<input className={field} value={f.h1} onChange={(e) => set('h1', e.target.value)} placeholder="Free logo maker" /></label>
+            <label className="text-[12px] text-mt-muted">Address<div className="flex items-center gap-1"><span className="text-[13px] text-mt-faint">/</span><input className={field} value={f.slug} disabled={!!editing.slug} onChange={(e) => set('slug', slugify(e.target.value))} placeholder="free-logo-maker" /></div></label>
+            <label className="text-[12px] text-mt-muted lg:col-span-2">Google title <span className={titleLen > 60 ? 'text-amber-600' : ''}>({titleLen}/60)</span><input className={field} value={f.title} onChange={(e) => set('title', e.target.value)} placeholder="Free Logo Maker — Design a Logo Online in Minutes" /></label>
+            <label className="text-[12px] text-mt-muted lg:col-span-2">Google description <span className={descLen > 160 ? 'text-amber-600' : ''}>({descLen}/160)</span><textarea rows={2} className={`${field} h-auto py-2`} value={f.description} onChange={(e) => set('description', e.target.value)} /></label>
+            <label className="text-[12px] text-mt-muted lg:col-span-2">Intro text (paragraphs separated by an empty line)<textarea rows={4} className={`${field} h-auto py-2`} value={f.intro} onChange={(e) => set('intro', e.target.value)} /></label>
+            <label className="text-[12px] text-mt-muted">What it makes (e.g. “logo”, “Eid card”)<input className={field} value={f.thing} onChange={(e) => set('thing', e.target.value)} /></label>
+            <label className="text-[12px] text-mt-muted">Template words to match (comma separated)<input className={field} value={f.terms} onChange={(e) => set('terms', e.target.value)} placeholder="logo, brand, business card" /></label>
+            <label className="text-[12px] text-mt-muted lg:col-span-2">Questions — one per line: Question | Answer<textarea rows={4} className={`${field} h-auto py-2 font-mono text-[12px]`} value={f.faqs} onChange={(e) => set('faqs', e.target.value)} placeholder={'Is the logo maker free? | Yes, every template and download is free.'} /></label>
+          </div>
+          <div className="mt-4 rounded-2xl border border-mt-border p-4 max-w-2xl">
+            <p className="text-[12px] text-mt-muted mb-1">How it can look on Google</p>
+            <p className="text-[12px] text-[#4D5156]">{SITE.replace('https://', '')} › {f.slug || 'your-page'}</p>
+            <p className="text-[18px] text-[#1A0DAB] leading-snug truncate">{f.title || 'Your Google title'}</p>
+            <p className="text-[13px] text-[#4D5156] line-clamp-2">{f.description || 'Your description appears here.'}</p>
+          </div>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <button onClick={() => save('published')} className={`${btn} bg-emerald-600 text-white`}><Globe size={14} /> {editing.slug ? 'Save & publish' : 'Publish'}</button>
+            <button onClick={() => save('draft')} className={`${btn} border border-mt-border text-mt-ink`}>Save draft</button>
+            <button onClick={close} className={`${btn} text-mt-muted`}>Cancel</button>
+          </div>
+        </section>
+      )}
       <section className={card}>
-        <h2 className="text-lg font-semibold inline-flex items-center gap-2"><Plus size={19} /> {editId ? 'Edit landing page' : 'New landing page'}</h2>
-        <p className="mt-1 text-[13px] text-mt-muted">One page per search phrase. It lists every template whose name or keywords match the words you give, plus your text and questions.</p>
-        <div className="mt-4 grid gap-3 lg:grid-cols-2">
-          <label className="text-[12px] text-mt-muted">Page heading (H1)<input className={field} value={f.h1} onChange={(e) => set('h1', e.target.value)} placeholder="Free logo maker" /></label>
-          <label className="text-[12px] text-mt-muted">Address<div className="flex items-center gap-1"><span className="text-[13px] text-mt-faint">/</span><input className={field} value={f.slug} onChange={(e) => set('slug', slugify(e.target.value))} placeholder="free-logo-maker" /></div></label>
-          <label className="text-[12px] text-mt-muted lg:col-span-2">Google title <span className={titleLen > 60 ? 'text-amber-600' : ''}>({titleLen}/60)</span><input className={field} value={f.title} onChange={(e) => set('title', e.target.value)} placeholder="Free Logo Maker — Design a Logo Online in Minutes" /></label>
-          <label className="text-[12px] text-mt-muted lg:col-span-2">Google description <span className={descLen > 160 ? 'text-amber-600' : ''}>({descLen}/160)</span><textarea rows={2} className={`${field} h-auto py-2`} value={f.description} onChange={(e) => set('description', e.target.value)} /></label>
-          <label className="text-[12px] text-mt-muted lg:col-span-2">Intro text (a short paragraph or two)<textarea rows={3} className={`${field} h-auto py-2`} value={f.intro} onChange={(e) => set('intro', e.target.value)} /></label>
-          <label className="text-[12px] text-mt-muted">What it makes (e.g. “logo”, “Eid card”)<input className={field} value={f.thing} onChange={(e) => set('thing', e.target.value)} /></label>
-          <label className="text-[12px] text-mt-muted">Template words to match (comma separated)<input className={field} value={f.terms} onChange={(e) => set('terms', e.target.value)} placeholder="logo, brand, business card" /></label>
-          <label className="text-[12px] text-mt-muted lg:col-span-2">Questions — one per line: Question | Answer<textarea rows={3} className={`${field} h-auto py-2 font-mono text-[12px]`} value={f.faqs} onChange={(e) => set('faqs', e.target.value)} placeholder={'Is the logo maker free? | Yes, every template and download is free.'} /></label>
+        <div className="flex flex-wrap items-center gap-3">
+          <h2 className="text-lg font-semibold flex-1">Landing pages <span className="text-mt-muted font-normal">({counts.live} live)</span></h2>
+          <button onClick={openNew} className={`${btn} bg-mt-primary text-mt-onprimary`}><Plus size={14} /> New page</button>
         </div>
-        <div className="mt-4 rounded-2xl border border-mt-border p-4 max-w-2xl">
-          <p className="text-[12px] text-mt-muted mb-1">How it can look on Google</p>
-          <p className="text-[12px] text-[#4D5156]">{SITE.replace('https://', '')} › {f.slug || 'your-page'}</p>
-          <p className="text-[18px] text-[#1A0DAB] leading-snug truncate">{f.title || 'Your Google title'}</p>
-          <p className="text-[13px] text-[#4D5156] line-clamp-2">{f.description || 'Your description appears here.'}</p>
-        </div>
-        <div className="mt-4 flex flex-wrap gap-2">
-          <button onClick={() => save('published')} className={`${btn} bg-emerald-600 text-white`}><Globe size={14} /> Publish</button>
-          <button onClick={() => save('draft')} className={`${btn} border border-mt-border text-mt-ink`}>Save draft</button>
-          {editId && <button onClick={() => { setEditId(null); setF(EMPTY); }} className={`${btn} text-mt-muted`}>Cancel</button>}
-        </div>
-      </section>
-      <section className={card}>
-        <h2 className="text-lg font-semibold">Your pages <span className="text-mt-muted font-normal">({pages.length})</span></h2>
-        <ul className="mt-3 divide-y divide-mt-border">
-          {pages.map((p) => (
-            <li key={p.id} className="py-3 flex flex-wrap items-center gap-3">
-              <span className={`text-[11px] font-semibold uppercase px-2 py-0.5 rounded-full ${p.status === 'published' ? 'bg-emerald-600/10 text-emerald-600' : 'bg-mt-surface2 text-mt-muted'}`}>{p.status}</span>
-              <span className="flex-1 min-w-[200px]"><b className="text-mt-ink">{p.h1}</b> <span className="text-mt-muted text-[13px]">/{p.slug}</span></span>
-              {p.status === 'published' && <a href={`/${p.slug}`} target="_blank" className="text-[13px] text-[#3B82C4] inline-flex items-center gap-1"><ExternalLink size={13} /> View</a>}
-              <button onClick={() => edit(p)} className="text-[13px] text-mt-muted hover:text-mt-ink">Edit</button>
-              <button onClick={() => remove(p)} className="text-[13px] text-rose-600 inline-flex items-center gap-1"><Trash2 size={13} /> Delete</button>
-            </li>
+        <p className="mt-1 text-[13px] text-mt-muted">Pages are built when someone first opens them and cached — nothing is pre-made or stored. Switching a page off removes it from the site and the sitemap.</p>
+        <div className="mt-4 flex flex-wrap gap-2 items-center">
+          <div className="relative flex-1 min-w-[220px]"><Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-mt-faint" /><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search pages" className={`${field} pl-9`} /></div>
+          {([['all', 'All'], ['live', 'Live'], ['builtin', 'Built-in'], ['custom', 'Custom'], ['edited', 'Edited'], ['off', 'Off / draft']] as const).map(([id, label]) => (
+            <button key={id} onClick={() => setShow(id)} className={`h-8 px-3 rounded-full text-[12px] border ${show === id ? 'bg-mt-ink text-mt-bg border-transparent' : 'border-mt-border text-mt-muted'}`}>{label} {counts[id]}</button>
           ))}
-          {!pages.length && <li className="py-3 text-[13px] text-mt-muted">No custom pages yet.</li>}
-        </ul>
-        <details className="mt-4">
-          <summary className="cursor-pointer text-[13px] font-semibold">Built-in pages ({builtIn.length})</summary>
-          <ul className="mt-2 grid sm:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-1 text-[13px]">
-            {builtIn.map((l) => <li key={l.slug}><a href={`/${l.slug}`} target="_blank" className="text-mt-muted hover:text-mt-ink">/{l.slug}</a></li>)}
-          </ul>
-        </details>
+        </div>
+        {selected.length > 0 && (
+          <div className="mt-3 flex flex-wrap items-center gap-2 rounded-2xl bg-mt-surface2 px-3 py-2 text-[13px]">
+            <b>{selected.length} selected</b>
+            <button disabled={busy} onClick={() => toggleHidden(selected.map((r) => r.slug), true).then(() => setSel(new Set()))} className={`${btn} border border-mt-border`}><EyeOff size={14} /> Switch off</button>
+            <button disabled={busy} onClick={() => toggleHidden(selected.map((r) => r.slug), false).then(() => setSel(new Set()))} className={`${btn} border border-mt-border`}><Eye size={14} /> Switch on</button>
+            <button disabled={busy} onClick={() => removeRows(selected)} className={`${btn} text-rose-600`}><Trash2 size={14} /> Remove</button>
+            <button onClick={() => setSel(new Set())} className={`${btn} text-mt-muted`}>Clear</button>
+          </div>
+        )}
+        <div className="mt-3 overflow-x-auto">
+          <table className="w-full text-[13px] min-w-[640px]">
+            <thead className="text-left text-mt-muted"><tr>
+              <th className="py-2 w-8"><input type="checkbox" aria-label="Select all shown" checked={list.length > 0 && list.every((r) => sel.has(r.slug))} onChange={(e) => setSel(e.target.checked ? new Set(list.map((r) => r.slug)) : new Set())} /></th>
+              <th>Page</th><th>Type</th><th>Status</th><th className="text-right">Actions</th>
+            </tr></thead>
+            <tbody>
+              {list.map((r) => (
+                <tr key={r.slug} className="border-t border-mt-border align-top">
+                  <td className="py-2.5"><input type="checkbox" aria-label={`Select ${r.slug}`} checked={sel.has(r.slug)} onChange={(e) => setSel((x) => { const n = new Set(x); e.target.checked ? n.add(r.slug) : n.delete(r.slug); return n; })} /></td>
+                  <td className="py-2.5 pr-3"><b className="text-mt-ink">{r.h1}</b><div className="text-mt-faint">/{r.slug}</div></td>
+                  <td className="py-2.5 text-mt-muted">{r.kind === 'builtin' ? (r.edited ? 'Built-in · edited' : 'Built-in') : 'Custom'}</td>
+                  <td className="py-2.5"><span className={`text-[11px] font-semibold uppercase px-2 py-0.5 rounded-full ${r.live ? 'bg-emerald-600/10 text-emerald-600' : 'bg-mt-surface2 text-mt-muted'}`}>{r.hidden ? 'Off' : r.live ? 'Live' : 'Draft'}</span></td>
+                  <td className="py-2.5 text-right whitespace-nowrap space-x-3">
+                    {r.live && <a href={`/${r.slug}`} target="_blank" className="text-[#3B82C4] inline-flex items-center gap-1"><ExternalLink size={13} /> View</a>}
+                    <button onClick={() => openEdit(r)} className="text-mt-muted hover:text-mt-ink">Edit</button>
+                    {r.kind === 'builtin' && r.db && <button onClick={() => resetBuiltin(r)} className="text-mt-muted hover:text-mt-ink">Reset</button>}
+                    {r.kind === 'custom' && !r.hidden && r.db && <button onClick={() => setStatus(r, r.db!.status === 'published' ? 'draft' : 'published')} className="text-mt-muted hover:text-mt-ink">{r.db.status === 'published' ? 'Unpublish' : 'Publish'}</button>}
+                    {r.hidden ? <button onClick={() => toggleHidden([r.slug], false)} className="text-emerald-600">Switch on</button> : r.kind === 'builtin' && <button onClick={() => toggleHidden([r.slug], true)} className="text-mt-muted hover:text-mt-ink">Switch off</button>}
+                    {r.kind === 'custom' && <button onClick={() => removeRows([r])} className="text-rose-600 inline-flex items-center gap-1"><Trash2 size={13} /> Delete</button>}
+                  </td>
+                </tr>
+              ))}
+              {!list.length && <tr><td colSpan={5} className="py-4 text-mt-muted">No pages match.</td></tr>}
+            </tbody>
+          </table>
+        </div>
       </section>
     </>
   );
 }
 
 // ---------------------------------------------------------------- keywords
+// Keywords are just a list of the searches we target. They never create
+// pages. Each one shows how many templates the site search finds for it
+// (so you can see where templates are missing) and which existing page fits.
 const SUGGESTED = ['free design tool', 'canva alternative free', 'free photoshop alternative', 'free flyer maker', 'free poster maker', 'free invitation maker', 'free resume maker', 'free certificate maker', 'free business card maker', 'free menu maker', 'instagram post maker', 'remove background free', 'design templates free', 'تصميم فلاير مجانا', 'تصميم بطاقة دعوة', 'christmas templates', 'uae national day templates', 'diwali templates'];
+const STOP = ['free', 'online', 'the', 'and', 'for', 'maker', 'template', 'templates', 'design', 'with'];
 
-function Keywords({ promo, pages, reload }: { promo: Promo[]; pages: SeoPage[]; reload: () => Promise<void> }) {
+function Keywords({ promo, pages, hidden, reload }: { promo: Promo[]; pages: SeoPage[]; hidden: Set<string>; reload: () => Promise<void> }) {
   const [k, setK] = useState('');
+  const [q, setQ] = useState('');
+  const [edit, setEdit] = useState<{ id: string; name: string; notes: string } | null>(null);
+  const [tpl, setTpl] = useState<{ name: string; kw: string }[]>([]);
+  useEffect(() => {
+    fetch('/api/public-templates').then((r) => r.json()).then((rows: any[]) => setTpl((rows || []).map((t) => ({ name: (t.name || '').toLowerCase(), kw: `${t.category || ''} ${(t.tags || []).join(' ')} ${t.search_keywords || ''}`.toLowerCase() })))).catch(() => {});
+  }, []);
   const kws = promo.filter((p) => p.kind === 'keyword');
-  const allPages = useMemo(() => [...ALL_LANDINGS().map((l) => ({ slug: l.slug, h1: l.h1, text: `${l.h1} ${l.title} ${l.terms.join(' ')}` })), ...pages.filter((p) => p.status === 'published').map((p) => ({ slug: p.slug, h1: p.h1, text: `${p.h1} ${p.title} ${p.terms.join(' ')}` }))], [pages]);
+  const allPages = useMemo(() => {
+    const db = pages.filter((p) => p.status === 'published' && !hidden.has(p.slug)).map((p) => ({ slug: p.slug, h1: p.h1, text: `${p.h1} ${p.title} ${p.terms.join(' ')}` }));
+    const dbSlugs = new Set(db.map((p) => p.slug));
+    return [...ALL_LANDINGS().filter((l) => !hidden.has(l.slug) && !dbSlugs.has(l.slug)).map((l) => ({ slug: l.slug, h1: l.h1, text: `${l.h1} ${l.title} ${l.terms.join(' ')}` })), ...db];
+  }, [pages, hidden]);
+  const words = (kw: string) => kw.toLowerCase().split(/\s+/).filter((w) => w.length > 2 && !STOP.includes(w));
   const bestPage = (kw: string) => {
-    const words = kw.toLowerCase().split(/\s+/).filter((w) => w.length > 2 && !['free', 'online', 'the', 'and'].includes(w));
+    const ws = words(kw);
     let best: { slug: string; h1: string } | null = null, score = 0;
-    allPages.forEach((p) => { const t = p.text.toLowerCase(); const s = words.filter((w) => t.includes(w)).length; if (s > score) { score = s; best = p; } });
+    allPages.forEach((p) => { const t = p.text.toLowerCase(); const s = ws.filter((w) => t.includes(w)).length; if (s > score) { score = s; best = p; } });
     return best as { slug: string; h1: string } | null;
   };
+  const matches = (kw: string) => {
+    const ws = words(kw);
+    if (!ws.length || !tpl.length) return null;
+    return tpl.filter((t) => ws.every((w) => t.name.includes(w) || t.kw.includes(w))).length;
+  };
   const add = async (name: string) => {
-    const n = name.trim();
-    if (!n || kws.some((x) => x.name.toLowerCase() === n.toLowerCase())) return;
-    await supabase.from('promo_items').insert({ kind: 'keyword', name: n, status: 'todo' });
+    const parts = name.split(/[,\n]/).map((x) => x.trim()).filter(Boolean).filter((n) => !kws.some((x) => x.name.toLowerCase() === n.toLowerCase()));
+    if (!parts.length) return;
+    await supabase.from('promo_items').insert(parts.map((n) => ({ kind: 'keyword', name: n, status: 'todo' })));
     setK('');
     reload();
   };
   const setStatus = async (p: Promo, status: Promo['status']) => { await supabase.from('promo_items').update({ status, updated_at: new Date().toISOString() }).eq('id', p.id); reload(); };
+  const saveEdit = async () => {
+    if (!edit || !edit.name.trim()) return;
+    await supabase.from('promo_items').update({ name: edit.name.trim(), notes: edit.notes.trim() || null, updated_at: new Date().toISOString() }).eq('id', edit.id);
+    setEdit(null);
+    reload();
+  };
+  const remove = async (p: Promo) => {
+    if (!window.confirm(`Remove the keyword “${p.name}”?`)) return;
+    await supabase.from('promo_items').delete().eq('id', p.id);
+    reload();
+  };
+  const shown = kws.filter((p) => !q.trim() || p.name.toLowerCase().includes(q.trim().toLowerCase()));
   return (
     <section className={card}>
       <h2 className="text-lg font-semibold inline-flex items-center gap-2"><Search size={19} /> Keywords we target</h2>
-      <p className="mt-1 text-[13px] text-mt-muted">Type the words people search for. Each keyword shows the page that answers it — if there is none, create one in Landing pages.</p>
-      <div className="mt-4 flex gap-2"><input value={k} onChange={(e) => setK(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && add(k)} placeholder="e.g. free logo maker" className={field} /><button onClick={() => add(k)} className={`${btn} bg-mt-primary text-mt-onprimary`}><Plus size={14} /> Add</button></div>
+      <p className="mt-1 text-[13px] text-mt-muted">A list of the searches you want to be found for. Adding a keyword never creates a page — it only shows how many templates our search finds for it and which existing page fits best. Add several at once by separating them with commas.</p>
+      <div className="mt-4 flex gap-2"><input value={k} onChange={(e) => setK(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && add(k)} placeholder="e.g. free logo maker, eid card" className={field} /><button onClick={() => add(k)} className={`${btn} bg-mt-primary text-mt-onprimary`}><Plus size={14} /> Add</button></div>
       <div className="mt-3 flex flex-wrap gap-1.5">{SUGGESTED.filter((s) => !kws.some((x) => x.name === s)).map((s) => <button key={s} onClick={() => add(s)} className="h-7 px-2.5 rounded-full border border-mt-border text-[12px] text-mt-muted hover:text-mt-ink">+ {s}</button>)}</div>
-      <table className="mt-5 w-full text-[13px]">
-        <thead className="text-left text-mt-muted"><tr><th className="py-2">Keyword</th><th>Page that answers it</th><th>Check</th><th>Status</th></tr></thead>
-        <tbody>
-          {kws.map((p) => {
-            const page = bestPage(p.name);
-            return (
-              <tr key={p.id} className="border-t border-mt-border">
-                <td className="py-2 font-medium text-mt-ink">{p.name}</td>
-                <td>{page ? <a href={`/${page.slug}`} target="_blank" className="text-[#3B82C4]">/{page.slug}</a> : <span className="text-amber-600">No page yet — create one</span>}</td>
-                <td><a href={`https://www.google.com/search?q=${encodeURIComponent(p.name)}`} target="_blank" rel="noreferrer" className="text-mt-muted hover:text-mt-ink">Google</a> · <a href={`https://www.bing.com/search?q=${encodeURIComponent(p.name)}`} target="_blank" rel="noreferrer" className="text-mt-muted hover:text-mt-ink">Bing</a></td>
-                <td><select value={p.status} onChange={(e) => setStatus(p, e.target.value as any)} className="h-8 rounded-lg border border-mt-border bg-mt-surface text-[12px] px-2"><option value="todo">Not ranking yet</option><option value="doing">On page 2–5</option><option value="done">On page 1</option></select></td>
-              </tr>
-            );
-          })}
-          {!kws.length && <tr><td colSpan={4} className="py-4 text-mt-muted">Add keywords above or tap a suggestion.</td></tr>}
-        </tbody>
-      </table>
+      {kws.length > 8 && <div className="mt-4 relative max-w-sm"><Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-mt-faint" /><input value={q} onChange={(e) => setQ(e.target.value)} placeholder={`Search ${kws.length} keywords`} className={`${field} pl-9`} /></div>}
+      <div className="mt-4 overflow-x-auto">
+        <table className="w-full text-[13px] min-w-[720px]">
+          <thead className="text-left text-mt-muted"><tr><th className="py-2">Keyword</th><th>Templates found</th><th>Best page</th><th>Check</th><th>Ranking</th><th></th></tr></thead>
+          <tbody>
+            {shown.map((p) => {
+              const page = bestPage(p.name);
+              const n = matches(p.name);
+              const isEdit = edit?.id === p.id;
+              return (
+                <tr key={p.id} className="border-t border-mt-border align-top">
+                  <td className="py-2 pr-3">
+                    {isEdit ? (
+                      <div className="flex flex-col gap-1.5">
+                        <input autoFocus value={edit!.name} onChange={(e) => setEdit({ ...edit!, name: e.target.value })} onKeyDown={(e) => e.key === 'Enter' && saveEdit()} className={field} />
+                        <input value={edit!.notes} onChange={(e) => setEdit({ ...edit!, notes: e.target.value })} placeholder="Note (optional)" className={field} />
+                      </div>
+                    ) : (
+                      <><span className="font-medium text-mt-ink">{p.name}</span>{p.notes && <div className="text-mt-faint text-[12px]">{p.notes}</div>}</>
+                    )}
+                  </td>
+                  <td className="py-2">{n === null ? <span className="text-mt-faint">—</span> : <a href={`/templates?q=${encodeURIComponent(words(p.name).join(' '))}`} target="_blank" className={n ? 'text-mt-ink' : 'text-amber-600'}>{n} {n === 1 ? 'template' : 'templates'}</a>}</td>
+                  <td className="py-2">{page ? <a href={`/${page.slug}`} target="_blank" className="text-[#3B82C4]">/{page.slug}</a> : <span className="text-mt-faint">—</span>}</td>
+                  <td className="py-2"><a href={`https://www.google.com/search?q=${encodeURIComponent(p.name)}`} target="_blank" rel="noreferrer" className="text-mt-muted hover:text-mt-ink">Google</a> · <a href={`https://www.bing.com/search?q=${encodeURIComponent(p.name)}`} target="_blank" rel="noreferrer" className="text-mt-muted hover:text-mt-ink">Bing</a></td>
+                  <td className="py-2"><select value={p.status} onChange={(e) => setStatus(p, e.target.value as any)} className="h-8 rounded-lg border border-mt-border bg-mt-surface text-[12px] px-2"><option value="todo">Not ranking yet</option><option value="doing">On page 2–5</option><option value="done">On page 1</option></select></td>
+                  <td className="py-2 text-right whitespace-nowrap space-x-3">
+                    {isEdit ? <><button onClick={saveEdit} className="text-emerald-600 font-semibold">Save</button><button onClick={() => setEdit(null)} className="text-mt-muted">Cancel</button></>
+                      : <><button onClick={() => setEdit({ id: p.id, name: p.name, notes: p.notes || '' })} className="text-mt-muted hover:text-mt-ink">Edit</button><button onClick={() => remove(p)} className="text-rose-600">Remove</button></>}
+                  </td>
+                </tr>
+              );
+            })}
+            {!kws.length && <tr><td colSpan={6} className="py-4 text-mt-muted">Add keywords above or tap a suggestion.</td></tr>}
+          </tbody>
+        </table>
+      </div>
     </section>
   );
 }

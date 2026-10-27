@@ -12,6 +12,7 @@ import { useRouter } from 'next/navigation';
 import { RefreshCw, Plus, Check, Archive, Mail, ExternalLink, CalendarHeart, Server, Inbox, Users, Brush, LayoutTemplate, Send, X, RotateCcw, Sparkles } from 'lucide-react';
 import { supabase, getSessionUser } from '@/lib/supabase';
 import { AdminShell, AdminCard, AdminSection } from '@/components/admin/AdminShell';
+import { VisitorStats } from '@/components/admin/VisitorStats';
 import { welcomeEmail, passwordChangedEmail, EmailCopy } from '@/lib/email/templates';
 
 type Tab = 'overview' | 'messages' | 'occasions' | 'services' | 'wording';
@@ -202,6 +203,8 @@ function Overview({ stats, messages, occasions, services, templates, go }: { sta
         <Stat icon={<Inbox size={17} />} label="Unread messages" value={s('unread')} tint="#8CC84B" />
         <Stat icon={<Server size={17} />} label="Renewals in 30 days" value={s('renewals_30d')} tint="#F59E0B" />
       </div>
+
+      <VisitorStats />
 
       <div className="grid xl:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] gap-6 items-start">
         <AdminCard title="Festivals coming up" action={<button className="text-xs font-medium text-[#3B82C4] hover:underline" onClick={() => go('occasions')}>See all</button>}>

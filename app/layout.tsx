@@ -1,6 +1,7 @@
 import { Poppins } from 'next/font/google';
 import './globals.css';
 import { ChunkRecovery } from '@/components/ChunkRecovery';
+import { VisitCounter } from '@/components/VisitCounter';
 
 const poppins = Poppins({
   subsets: ['latin'],
@@ -87,6 +88,7 @@ export default function RootLayout({
       <body className={poppins.className}>
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(ORG_JSON_LD) }} />
         <ChunkRecovery />
+        <VisitCounter />
         {children}
       </body>
     </html>

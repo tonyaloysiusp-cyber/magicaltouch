@@ -2,26 +2,34 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { SeoShell, Crumbs } from '@/components/seo/SeoShell';
-import { SITE_URL, SITE_NAME, searchTemplates, getSeoPage } from '@/lib/seo';
-import { ALL_LANDINGS, landingBySlug, Landing } from '@/lib/landings';
+import { SITE_URL, SITE_NAME, searchTemplates, getSeoPage, getHiddenLandings } from '@/lib/seo';
+import { landingBySlug, Landing } from '@/lib/landings';
 
-// Keyword landing pages: /free-flyer-maker, /christmas-templates, ...
-// Only the slugs in lib/landings.ts exist; anything else is a 404.
+// Landing pages: /free-flyer-maker, /christmas-templates, ...
+// Built-in pages come from lib/landings.ts; Admin → SEO → Landing pages can
+// edit them (a published seo_pages row with the same address wins), switch
+// them off (site setting hidden_landings) or add new ones. Pages are made on
+// first visit and cached for an hour — nothing is pre-built or stored.
 export const revalidate = 3600;
-// Built-in pages are pre-rendered; pages made in Admin → SEO & promotion
-// are looked up on demand (anything else is a 404).
 export const dynamicParams = true;
 
 async function resolveLanding(slug: string): Promise<Landing | null> {
-  const built = landingBySlug(slug);
-  if (built) return built;
   if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(slug)) return null;
-  const p = await getSeoPage(slug);
-  if (!p) return null;
-  return { slug: p.slug, thing: p.thing || 'design', h1: p.h1, title: p.title, description: p.description, intro: (p.intro || '').split(/\n{2,}/).filter(Boolean), terms: p.terms || [], uses: [], faqs: (p.faqs || []).filter((x) => Array.isArray(x) && x[0] && x[1]) as [string, string][], related: ['free-online-design-tool', 'free-design-templates', 'free-flyer-maker'] };
-}
-export function generateStaticParams() {
-  return ALL_LANDINGS().map((l) => ({ landing: l.slug }));
+  const [hidden, p] = await Promise.all([getHiddenLandings(), getSeoPage(slug)]);
+  if (hidden.has(slug)) return null;
+  const built = landingBySlug(slug);
+  if (!p) return built || null;
+  return {
+    ...(built || { uses: [], related: ['free-online-design-tool', 'free-design-templates', 'free-flyer-maker'] }),
+    slug: p.slug,
+    thing: p.thing || built?.thing || 'design',
+    h1: p.h1,
+    title: p.title,
+    description: p.description,
+    intro: (p.intro || '').split(/\n{2,}/).filter(Boolean),
+    terms: p.terms?.length ? p.terms : built?.terms || [],
+    faqs: (p.faqs || []).filter((x) => Array.isArray(x) && x[0] && x[1]) as [string, string][],
+  } as Landing;
 }
 
 export async function generateMetadata({ params }: { params: { landing: string } }): Promise<Metadata> {
@@ -86,7 +94,8 @@ export default async function LandingPage({ params }: { params: { landing: strin
       ],
     },
   ];
-  const related = l.related.map(landingBySlug).filter(Boolean) as Landing[];
+  const hiddenSet = await getHiddenLandings();
+  const related = l.related.filter((s) => !hiddenSet.has(s)).map(landingBySlug).filter(Boolean) as Landing[];
   return (
     <SeoShell>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
