@@ -636,3 +636,19 @@ scenarios.push({
     }
   },
 });
+
+// Every published template reaches the gallery (the database pages at 1,000),
+// and the page titles carry the live, rounded count instead of "1,000+".
+scenarios.push({
+  name: 'template-count-live',
+  async run(t) {
+    const r = await t.page.request.get(`${t.BASE}/api/public-templates`);
+    const list = await r.json();
+    t.check('gallery list has every template (more than 1,000)', Array.isArray(list) && list.length > 1000, String(list.length));
+    for (const path of ['/', '/templates']) {
+      await t.page.goto(`${t.BASE}${path}`);
+      const title = await t.page.title();
+      t.check(`${path} title has live count`, /\d,\d{3}\+/.test(title) && !/1,000\+/.test(title), title);
+    }
+  },
+});
