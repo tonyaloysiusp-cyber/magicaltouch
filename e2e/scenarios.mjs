@@ -687,3 +687,43 @@ scenarios.push({
     t.check('number kept', (out[3] || '').includes('50%'), out[3]);
   },
 });
+
+// Pro QR styles: every ready-made look, dot shape and corner shape still
+// scans (decoded with jsQR, the same kind of reader phones use).
+scenarios.push({
+  name: 'qr-pro-styles-scan',
+  async run(t) {
+    await t.editor('w=1080&h=1080&panel=qr');
+    await t.page.addScriptTag({ path: 'node_modules/jsqr/dist/jsQR.js' });
+    await t.page.getByPlaceholder('Paste a website link, e.g. yoursite.com').fill('magicaltouchdesign.com/templates?ref=qr');
+    await t.page.waitForTimeout(400);
+    const decode = () => t.eval(async () => {
+      const img = document.querySelector('[data-testid=qr-preview]');
+      if (!img) return null;
+      await img.decode?.().catch(() => {});
+      const c = document.createElement('canvas');
+      const w = img.naturalWidth || 480, h = img.naturalHeight || 480;
+      c.width = w + 80; c.height = h + 80;
+      const x = c.getContext('2d');
+      x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height);
+      x.drawImage(img, 40, 40, w, h);
+      const d = x.getImageData(0, 0, c.width, c.height);
+      return window.jsQR(d.data, c.width, c.height)?.data || null;
+    });
+    const want = 'https://magicaltouchdesign.com/templates?ref=qr';
+    const failed = [];
+    const looks = ['Classic', 'Soft', 'Dots', 'Fluid', 'Sunset', 'Ocean', 'Gold', 'Scan me', 'Menu', 'Pay'];
+    for (const name of looks) {
+      await t.page.getByRole('button', { name: `${name} look` }).click();
+      await t.page.waitForTimeout(250);
+      if ((await decode()) !== want) failed.push(`look ${name}`);
+    }
+    await t.shot('looks');
+    for (const dot of ['Square', 'Rounded', 'Dots', 'Fluid', 'Classy', 'Diamond', 'Bars ↕', 'Bars ↔']) {
+      await t.page.getByRole('button', { name: dot, exact: true }).first().click();
+      await t.page.waitForTimeout(200);
+      if ((await decode()) !== want) failed.push(`dot ${dot}`);
+    }
+    t.check('every look and dot shape scans', failed.length === 0, failed.join(', '));
+  },
+});

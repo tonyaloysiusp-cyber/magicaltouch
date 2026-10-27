@@ -15,7 +15,7 @@
 
 import { qrMatrix, type Ecc } from './qr';
 
-export type QrKind = 'link' | 'username' | 'text' | 'email' | 'phone' | 'whatsapp' | 'wifi';
+export type QrKind = 'link' | 'username' | 'text' | 'email' | 'phone' | 'whatsapp' | 'wifi' | 'sms' | 'vcard' | 'event' | 'location';
 export type QrStyle = 'square' | 'rounded' | 'dots';
 
 export const SOCIAL_PLATFORMS: { id: string; label: string; prefix: string }[] = [
@@ -41,6 +41,19 @@ export interface QrFields {
   password?: string;
   security?: 'WPA' | 'WEP' | 'nopass';
   hidden?: boolean;
+  // contact card
+  firstName?: string;
+  lastName?: string;
+  org?: string;
+  title?: string;
+  phone?: string;
+  email?: string;
+  website?: string;
+  address?: string;
+  // event
+  start?: string; // datetime-local value
+  end?: string;
+  location?: string;
 }
 
 /** "example.com/x" → "https://example.com/x"; leaves real schemes alone. */
@@ -82,6 +95,34 @@ export function buildQrPayload(kind: QrKind, f: QrFields): string {
       const n = digits(v).replace(/^\+/, '');
       if (!n) return '';
       return `https://wa.me/${n}${f.message?.trim() ? `?text=${encodeURIComponent(f.message.trim())}` : ''}`;
+    }
+    case 'sms': {
+      const n = digits(v);
+      return n ? `SMSTO:${n}:${f.message?.trim() || ''}` : '';
+    }
+    case 'vcard': {
+      const fn = [f.firstName, f.lastName].map((x) => (x || '').trim()).filter(Boolean).join(' ');
+      if (!fn && !f.org?.trim()) return '';
+      const e = (x?: string) => (x || '').trim().replace(/([\\;,])/g, '\\$1');
+      return [
+        'BEGIN:VCARD', 'VERSION:3.0',
+        `N:${e(f.lastName)};${e(f.firstName)};;;`, `FN:${e(fn || f.org)}`,
+        f.org?.trim() && `ORG:${e(f.org)}`, f.title?.trim() && `TITLE:${e(f.title)}`,
+        f.phone?.trim() && `TEL;TYPE=CELL:${digits(f.phone)}`, f.email?.trim() && `EMAIL:${f.email.trim()}`,
+        f.website?.trim() && `URL:${normalizeLink(f.website)}`, f.address?.trim() && `ADR:;;${e(f.address)};;;;`,
+        'END:VCARD',
+      ].filter(Boolean).join('\n');
+    }
+    case 'event': {
+      const title = (f.value || '').trim();
+      if (!title || !f.start) return '';
+      const stamp = (x: string) => x.replace(/[-:]/g, '').replace(/(T\d{4})$/, (m) => `${m}00`);
+      return ['BEGIN:VEVENT', `SUMMARY:${title}`, `DTSTART:${stamp(f.start)}`, f.end && `DTEND:${stamp(f.end)}`, f.location?.trim() && `LOCATION:${f.location.trim()}`, 'END:VEVENT'].filter(Boolean).join('\n');
+    }
+    case 'location': {
+      if (!v) return '';
+      const m = v.match(/^\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$/);
+      return m ? `https://maps.google.com/?q=${m[1]},${m[2]}` : `https://maps.google.com/?q=${encodeURIComponent(v)}`;
     }
     case 'wifi': {
       const ssid = (f.ssid || '').trim();

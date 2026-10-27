@@ -6,19 +6,9 @@
 // controls appear only when the switch is turned on.
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ImagePlus, Download, Plus, Link2, AtSign, Type, Mail, Phone, MessageCircle, Wifi, AlertTriangle, X } from 'lucide-react';
-import {
-  QrKind,
-  QrStyle,
-  QrFields,
-  SOCIAL_PLATFORMS,
-  buildQrPayload,
-  contrastWarning,
-  drawLogo,
-  drawQr,
-  layoutQr,
-  qrSvg,
-} from '@/lib/qrDesign';
+import { ImagePlus, Download, Plus, Link2, AtSign, Type, Mail, Phone, MessageCircle, Wifi, AlertTriangle, X, MessageSquare, Contact, CalendarDays, MapPin } from 'lucide-react';
+import { QrKind, QrFields, SOCIAL_PLATFORMS, buildQrPayload, contrastWarning } from '@/lib/qrDesign';
+import { QrLook, DEFAULT_LOOK, LOOK_PRESETS, DotShape, EyeFrame, EyeBall, FrameStyle, buildGrid, qrDesignSvg, qrDesignPng } from '@/lib/qrStyle';
 import { PanelSection, cx } from '../ui';
 
 const KINDS: { id: QrKind; label: string; icon: React.ReactNode }[] = [
@@ -29,16 +19,21 @@ const KINDS: { id: QrKind; label: string; icon: React.ReactNode }[] = [
   { id: 'phone', label: 'Phone', icon: <Phone size={15} /> },
   { id: 'whatsapp', label: 'WhatsApp', icon: <MessageCircle size={15} /> },
   { id: 'wifi', label: 'Wi‑Fi', icon: <Wifi size={15} /> },
+  { id: 'sms', label: 'SMS', icon: <MessageSquare size={15} /> },
+  { id: 'vcard', label: 'Contact', icon: <Contact size={15} /> },
+  { id: 'event', label: 'Event', icon: <CalendarDays size={15} /> },
+  { id: 'location', label: 'Location', icon: <MapPin size={15} /> },
 ];
 
-const PRESETS: { fg: string; bg: string; label: string }[] = [
-  { fg: '#000000', bg: '#ffffff', label: 'Classic' },
-  { fg: '#1F2A44', bg: '#ffffff', label: 'Navy' },
-  { fg: '#3B1D5A', bg: '#F6F1FF', label: 'Plum' },
-  { fg: '#0F4C3A', bg: '#F1FAF5', label: 'Forest' },
-  { fg: '#7A1F2B', bg: '#FFF6F2', label: 'Wine' },
-  { fg: '#000000', bg: 'transparent', label: 'No background' },
+const DOTS: { id: DotShape; label: string }[] = [
+  { id: 'square', label: 'Square' }, { id: 'rounded', label: 'Rounded' }, { id: 'dots', label: 'Dots' }, { id: 'fluid', label: 'Fluid' },
+  { id: 'classy', label: 'Classy' }, { id: 'diamond', label: 'Diamond' }, { id: 'vbars', label: 'Bars ↕' }, { id: 'hbars', label: 'Bars ↔' },
 ];
+const FRAMES_EYE: { id: EyeFrame; label: string }[] = [{ id: 'square', label: 'Square' }, { id: 'rounded', label: 'Rounded' }, { id: 'circle', label: 'Circle' }, { id: 'leaf', label: 'Leaf' }, { id: 'thin', label: 'Thin' }];
+const BALLS: { id: EyeBall; label: string }[] = [{ id: 'square', label: 'Square' }, { id: 'rounded', label: 'Rounded' }, { id: 'circle', label: 'Circle' }, { id: 'diamond', label: 'Diamond' }, { id: 'leaf', label: 'Leaf' }];
+const FRAMES: { id: FrameStyle; label: string }[] = [{ id: 'none', label: 'None' }, { id: 'box', label: 'Box' }, { id: 'badge', label: 'Badge' }, { id: 'bubble', label: 'Bubble' }, { id: 'ribbon', label: 'Ribbon' }, { id: 'border', label: 'Border' }];
+const CAPTIONS = ['SCAN ME', 'SCAN TO PAY', 'SEE OUR MENU', 'FOLLOW US', 'VISIT OUR WEBSITE', 'JOIN WI-FI', 'SAVE CONTACT', 'RSVP'];
+
 
 const PX = 1600; // export size: sharp in print up to ~13 cm at 300 dpi
 
@@ -97,18 +92,32 @@ const loadImage = (src: string) =>
     i.src = src;
   });
 
+const CHIP = (on: boolean) => cx('h-8 px-1 rounded-lg border text-[11px] truncate', on ? 'border-mt-primary bg-mt-primary/10 text-mt-ink font-medium' : 'border-mt-border text-mt-muted hover:text-mt-ink');
+
+function ColorRow({ label, value, fallback, onChange }: { label: string; value: string | null; fallback: string; onChange: (v: string | null) => void }) {
+  return (
+    <span className="flex items-center gap-1.5 text-[11px] text-mt-muted">
+      <input type="color" value={value || fallback} onChange={(e) => onChange(e.target.value)} className="w-7 h-7 rounded-md border border-mt-border" aria-label={label} />
+      <span className="truncate">{label}</span>
+      {value && <button type="button" onClick={() => onChange(null)} aria-label={`Reset ${label}`} className="text-mt-faint hover:text-mt-ink"><X size={12} /></button>}
+    </span>
+  );
+}
+
 export function QrPanel({ onAdd, brandLogoUrl }: { onAdd: (pngDataUrl: string) => Promise<void> | void; brandLogoUrl?: string | null }) {
   const [kind, setKind] = useState<QrKind>('link');
   const [f, setF] = useState<QrFields>({ platform: 'instagram', security: 'WPA' });
-  const [fg, setFg] = useState('#000000');
-  const [bg, setBg] = useState('#ffffff');
-  const [style, setStyle] = useState<QrStyle>('square');
+  const [look, setLook] = useState<QrLook>(() => {
+    try { return { ...DEFAULT_LOOK, ...JSON.parse(localStorage.getItem('mt:qrLook') || '{}') }; } catch { return DEFAULT_LOOK; }
+  });
+  const L = (patch: Partial<QrLook>) => setLook((x) => ({ ...x, ...patch }));
+  useEffect(() => { try { localStorage.setItem('mt:qrLook', JSON.stringify(look)); } catch {} }, [look]);
+  const { fg, bg } = look;
   const [useLogo, setUseLogo] = useState(false);
   const [logo, setLogo] = useState<string | null>(null);
   const [logoImg, setLogoImg] = useState<HTMLImageElement | null>(null);
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<string | null>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const set = (patch: Partial<QrFields>) => setF((p) => ({ ...p, ...patch }));
 
@@ -118,13 +127,21 @@ export function QrPanel({ onAdd, brandLogoUrl }: { onAdd: (pngDataUrl: string) =
   const { layout, error } = useMemo(() => {
     if (!payload) return { layout: null, error: null };
     try {
-      return { layout: layoutQr(payload, logoActive), error: null };
+      return { layout: buildGrid(payload, look, logoActive), error: null };
     } catch (e) {
       return { layout: null, error: (e as Error).message };
     }
-  }, [payload, logoActive]);
+  }, [payload, logoActive, look]);
 
-  const warn = contrastWarning(fg, bg === 'transparent' ? '#ffffff' : bg);
+  // Live preview: the very same SVG that gets exported.
+  const preview = useMemo(() => {
+    if (!layout) return null;
+    const { svg } = qrDesignSvg(layout, look, logoActive ? logo : null, 480);
+    return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+  }, [layout, look, logoActive, logo]);
+
+  const darkest = look.fill === 'solid' ? fg : [fg, look.fg2].sort((x, y) => (contrastWarning(x, '#ffffff') ? 1 : 0) - (contrastWarning(y, '#ffffff') ? 1 : 0)).pop()!;
+  const warn = contrastWarning(darkest, bg === 'transparent' ? '#ffffff' : bg) || (look.eyeColor ? contrastWarning(look.eyeColor, bg === 'transparent' ? '#ffffff' : bg) : null);
   const dense = layout && layout.modules > 57 ? 'This code holds a lot of data, so its squares are small. Print it at least 3 cm wide, or shorten the text.' : null;
 
   useEffect(() => {
@@ -145,37 +162,14 @@ export function QrPanel({ onAdd, brandLogoUrl }: { onAdd: (pngDataUrl: string) =
     };
   }, [logo]);
 
-  // Live preview: the very same drawing that gets exported.
-  useEffect(() => {
-    const cv = canvasRef.current;
-    if (!cv) return;
-    const ctx = cv.getContext('2d');
-    if (!ctx) return;
-    const px = cv.width;
-    if (!layout) {
-      ctx.clearRect(0, 0, px, px);
-      return;
-    }
-    drawQr(ctx, layout, px, { fg, bg, style });
-    if (logoActive && logoImg) drawLogo(ctx, layout, px, logoImg, bg);
-  }, [layout, fg, bg, style, logoActive, logoImg]);
 
-  const render = () => {
-    if (!layout) return null;
-    const cv = document.createElement('canvas');
-    cv.width = cv.height = PX;
-    const ctx = cv.getContext('2d');
-    if (!ctx) return null;
-    drawQr(ctx, layout, PX, { fg, bg, style });
-    if (logoActive && logoImg) drawLogo(ctx, layout, PX, logoImg, bg);
-    return cv.toDataURL('image/png');
-  };
+  const render = async () => (layout ? qrDesignPng(layout, look, logoActive ? logo : null, 1600) : null);
 
   const add = async () => {
     setNote(null);
-    const url = render();
-    if (!url) return;
     setBusy(true);
+    const url = await render().catch(() => null);
+    if (!url) { setBusy(false); return; }
     try {
       await onAdd(url);
       setNote('Added to your design. Test it with your phone camera before you print or share.');
@@ -184,16 +178,15 @@ export function QrPanel({ onAdd, brandLogoUrl }: { onAdd: (pngDataUrl: string) =
     }
   };
 
-  const download = (fmt: 'png' | 'svg') => {
+  const download = async (fmt: 'png' | 'svg') => {
     if (!layout) return;
-    const name = 'qr-code';
     let href: string | null;
-    if (fmt === 'png') href = render();
-    else href = URL.createObjectURL(new Blob([qrSvg(layout, { fg, bg, style }, logoActive ? logo : null)], { type: 'image/svg+xml' }));
+    if (fmt === 'png') href = await render();
+    else href = URL.createObjectURL(new Blob([qrDesignSvg(layout, look, logoActive ? logo : null, 1024).svg], { type: 'image/svg+xml' }));
     if (!href) return;
     const a = document.createElement('a');
     a.href = href;
-    a.download = `${name}.${fmt}`;
+    a.download = `qr-code.${fmt}`;
     a.click();
     if (fmt === 'svg') setTimeout(() => URL.revokeObjectURL(href as string), 2000);
   };
@@ -228,6 +221,9 @@ export function QrPanel({ onAdd, brandLogoUrl }: { onAdd: (pngDataUrl: string) =
     email: 'name@example.com',
     phone: '+971 50 123 4567',
     whatsapp: 'Number with country code, e.g. +971 50 123 4567',
+    sms: 'Phone number, e.g. +971 50 123 4567',
+    event: 'Event name',
+    location: 'Address, place name or “25.2048, 55.2708”',
   };
 
   return (
@@ -262,7 +258,27 @@ export function QrPanel({ onAdd, brandLogoUrl }: { onAdd: (pngDataUrl: string) =
               ))}
             </select>
           )}
-          {kind === 'text' ? (
+          {kind === 'vcard' ? (
+            <>
+              <div className="grid grid-cols-2 gap-2">
+                <input aria-label="First name" className={input} placeholder="First name" value={f.firstName || ''} onChange={(e) => set({ firstName: e.target.value })} />
+                <input aria-label="Last name" className={input} placeholder="Last name" value={f.lastName || ''} onChange={(e) => set({ lastName: e.target.value })} />
+              </div>
+              <input aria-label="Company" className={input} placeholder="Company" value={f.org || ''} onChange={(e) => set({ org: e.target.value })} />
+              <input aria-label="Job title" className={input} placeholder="Job title" value={f.title || ''} onChange={(e) => set({ title: e.target.value })} />
+              <input aria-label="Phone" className={input} inputMode="tel" placeholder="Phone" value={f.phone || ''} onChange={(e) => set({ phone: e.target.value })} />
+              <input aria-label="Email" className={input} inputMode="email" placeholder="Email" value={f.email || ''} onChange={(e) => set({ email: e.target.value })} />
+              <input aria-label="Website" className={input} placeholder="Website" value={f.website || ''} onChange={(e) => set({ website: e.target.value })} />
+              <input aria-label="Address" className={input} placeholder="Address" value={f.address || ''} onChange={(e) => set({ address: e.target.value })} />
+            </>
+          ) : kind === 'event' ? (
+            <>
+              <input aria-label="Event name" className={input} placeholder={placeholder.event} value={f.value || ''} onChange={(e) => set({ value: e.target.value })} />
+              <label className="block text-[11px] text-mt-muted">Starts<input type="datetime-local" className={input} value={f.start || ''} onChange={(e) => set({ start: e.target.value })} /></label>
+              <label className="block text-[11px] text-mt-muted">Ends (optional)<input type="datetime-local" className={input} value={f.end || ''} onChange={(e) => set({ end: e.target.value })} /></label>
+              <input aria-label="Place" className={input} placeholder="Place (optional)" value={f.location || ''} onChange={(e) => set({ location: e.target.value })} />
+            </>
+          ) : kind === 'text' ? (
             <textarea aria-label="Text" rows={4} value={f.value || ''} onChange={(e) => set({ value: e.target.value })} placeholder="Type or paste any text" className={cx(input, 'h-auto py-2 resize-y')} />
           ) : kind === 'wifi' ? (
             <>
@@ -278,17 +294,17 @@ export function QrPanel({ onAdd, brandLogoUrl }: { onAdd: (pngDataUrl: string) =
             <input
               aria-label={KINDS.find((k) => k.id === kind)?.label}
               className={input}
-              inputMode={kind === 'phone' || kind === 'whatsapp' ? 'tel' : kind === 'email' ? 'email' : 'url'}
+              inputMode={kind === 'phone' || kind === 'whatsapp' || kind === 'sms' ? 'tel' : kind === 'email' ? 'email' : kind === 'location' ? 'text' : 'url'}
               placeholder={placeholder[kind]}
               value={f.value || ''}
               onChange={(e) => set({ value: e.target.value })}
             />
           )}
           {kind === 'email' && <input aria-label="Subject" className={input} placeholder="Subject (optional)" value={f.subject || ''} onChange={(e) => set({ subject: e.target.value })} />}
-          {(kind === 'email' || kind === 'whatsapp') && (
+          {(kind === 'email' || kind === 'whatsapp' || kind === 'sms') && (
             <input aria-label="Message" className={input} placeholder="Message (optional)" value={f.message || ''} onChange={(e) => set({ message: e.target.value })} />
           )}
-          {payload && kind !== 'text' && kind !== 'wifi' && (
+          {payload && !['text', 'wifi', 'vcard', 'event'].includes(kind) && (
             <p className="text-[11px] text-mt-muted break-all">
               Opens: <span className="text-mt-ink">{payload}</span>
             </p>
@@ -297,7 +313,8 @@ export function QrPanel({ onAdd, brandLogoUrl }: { onAdd: (pngDataUrl: string) =
       </PanelSection>
 
       <div className="mb-5 rounded-2xl border border-mt-border p-3" style={{ background: 'repeating-conic-gradient(#eef0f3 0 25%, #fff 0 50%) 50% / 14px 14px' }}>
-        <canvas ref={canvasRef} width={480} height={480} className={cx('block w-full aspect-square', !layout && 'hidden')} aria-label="QR code preview" role="img" />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        {preview && <img src={preview} alt="QR code preview" data-testid="qr-preview" className="block w-full h-auto" />}
         {!layout && <div className="aspect-square flex items-center justify-center text-center text-[13px] text-mt-muted px-6 bg-mt-surface/80 rounded-xl">{error || 'Your QR code appears here as soon as you type something.'}</div>}
       </div>
 
@@ -338,51 +355,117 @@ export function QrPanel({ onAdd, brandLogoUrl }: { onAdd: (pngDataUrl: string) =
         )}
       </PanelSection>
 
-      <PanelSection title="Colours">
-        <div className="grid grid-cols-6 gap-1.5">
-          {PRESETS.map((p) => (
-            <button
-              key={p.label}
-              type="button"
-              title={p.label}
-              aria-label={`${p.label} colours`}
-              onClick={() => {
-                setFg(p.fg);
-                setBg(p.bg);
-              }}
-              className={cx('aspect-square rounded-lg ring-1 ring-black/10 flex items-center justify-center', fg === p.fg && bg === p.bg && 'ring-2 ring-mt-primary')}
-              style={{ background: p.bg === 'transparent' ? 'repeating-conic-gradient(#e5e7eb 0 25%, #fff 0 50%) 50% / 8px 8px' : p.bg }}
-            >
-              <span className="w-1/2 h-1/2 rounded-[3px]" style={{ background: p.fg }} />
-            </button>
-          ))}
-        </div>
-        <div className="mt-2 grid grid-cols-2 gap-2">
-          <label className="flex items-center gap-2 text-[12px] text-mt-muted">
-            <input type="color" value={fg} onChange={(e) => setFg(e.target.value)} className="w-8 h-8 rounded-md border border-mt-border" aria-label="Code colour" />
-            Code
-          </label>
-          <label className="flex items-center gap-2 text-[12px] text-mt-muted">
-            <input type="color" value={bg === 'transparent' ? '#ffffff' : bg} onChange={(e) => setBg(e.target.value)} className="w-8 h-8 rounded-md border border-mt-border" aria-label="Background colour" />
-            Background
-          </label>
+      <PanelSection title="Ready-made looks">
+        <div className="grid grid-cols-5 gap-1.5">
+          {LOOK_PRESETS.map((p) => {
+            const look2 = { ...look, ...p.look };
+            let src = '';
+            try {
+              const g = buildGrid('https://mt.design', look2, false);
+              src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(qrDesignSvg(g, look2, null, 96).svg)}`;
+            } catch {}
+            return (
+              <button key={p.name} type="button" title={p.name} aria-label={`${p.name} look`} onClick={() => L(p.look)} className="rounded-lg border border-mt-border p-1 hover:border-mt-primary bg-white">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                {src && <img src={src} alt="" className="w-full h-auto" />}
+                <span className="block text-[9px] text-center text-neutral-600 truncate">{p.name}</span>
+              </button>
+            );
+          })}
         </div>
       </PanelSection>
 
-      <PanelSection title="Style">
-        <div className="grid grid-cols-3 gap-1.5">
-          {(['square', 'rounded', 'dots'] as QrStyle[]).map((s) => (
-            <button
-              key={s}
-              type="button"
-              aria-pressed={style === s}
-              onClick={() => setStyle(s)}
-              className={cx('h-9 rounded-xl border text-[13px] capitalize', style === s ? 'border-mt-primary bg-mt-primary/10 text-mt-ink font-medium' : 'border-mt-border text-mt-muted')}
-            >
-              {s}
-            </button>
-          ))}
+      <PanelSection title="Dots">
+        <div className="grid grid-cols-4 gap-1.5">
+          {DOTS.map((d) => <button key={d.id} type="button" aria-pressed={look.dot === d.id} onClick={() => L({ dot: d.id })} className={CHIP(look.dot === d.id)}>{d.label}</button>)}
         </div>
+      </PanelSection>
+
+      <PanelSection title="Corners">
+        <p className="text-[11px] text-mt-muted mb-1">Frame</p>
+        <div className="grid grid-cols-5 gap-1.5">
+          {FRAMES_EYE.map((d) => <button key={d.id} type="button" aria-pressed={look.eyeFrame === d.id} onClick={() => L({ eyeFrame: d.id })} className={CHIP(look.eyeFrame === d.id)}>{d.label}</button>)}
+        </div>
+        <p className="text-[11px] text-mt-muted mt-2 mb-1">Centre</p>
+        <div className="grid grid-cols-5 gap-1.5">
+          {BALLS.map((d) => <button key={d.id} type="button" aria-pressed={look.eyeBall === d.id} onClick={() => L({ eyeBall: d.id })} className={CHIP(look.eyeBall === d.id)}>{d.label}</button>)}
+        </div>
+        <div className="mt-2 grid grid-cols-2 gap-2">
+          <ColorRow label="Frame colour" value={look.eyeColor} fallback={fg} onChange={(v) => L({ eyeColor: v })} />
+          <ColorRow label="Centre colour" value={look.eyeBallColor} fallback={look.eyeColor || fg} onChange={(v) => L({ eyeBallColor: v })} />
+        </div>
+      </PanelSection>
+
+      <PanelSection title="Colours">
+        <div className="grid grid-cols-3 gap-1.5 mb-2">
+          {(['solid', 'linear', 'radial'] as const).map((m) => <button key={m} type="button" aria-pressed={look.fill === m} onClick={() => L({ fill: m })} className={CHIP(look.fill === m)}>{m === 'solid' ? 'Solid' : m === 'linear' ? 'Gradient' : 'Radial'}</button>)}
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <label className="flex items-center gap-2 text-[12px] text-mt-muted">
+            <input type="color" value={fg} onChange={(e) => L({ fg: e.target.value })} className="w-8 h-8 rounded-md border border-mt-border" aria-label="Code colour" />
+            {look.fill === 'solid' ? 'Code' : 'Colour 1'}
+          </label>
+          {look.fill !== 'solid' ? (
+            <label className="flex items-center gap-2 text-[12px] text-mt-muted">
+              <input type="color" value={look.fg2} onChange={(e) => L({ fg2: e.target.value })} className="w-8 h-8 rounded-md border border-mt-border" aria-label="Second colour" />
+              Colour 2
+            </label>
+          ) : <span />}
+          <label className="flex items-center gap-2 text-[12px] text-mt-muted">
+            <input type="color" value={bg === 'transparent' ? '#ffffff' : bg} onChange={(e) => L({ bg: e.target.value })} className="w-8 h-8 rounded-md border border-mt-border" aria-label="Background colour" />
+            Background
+          </label>
+          <label className="flex items-center gap-2 text-[12px] text-mt-muted">
+            <input type="checkbox" checked={bg === 'transparent'} onChange={(e) => L({ bg: e.target.checked ? 'transparent' : '#ffffff' })} /> See-through
+          </label>
+        </div>
+        {look.fill === 'linear' && (
+          <label className="mt-2 block text-[11px] text-mt-muted">Direction {look.angle}°
+            <input type="range" min={0} max={360} step={15} value={look.angle} onChange={(e) => L({ angle: +e.target.value })} className="w-full" />
+          </label>
+        )}
+      </PanelSection>
+
+      <PanelSection title="Frame & caption">
+        <div className="grid grid-cols-3 gap-1.5">
+          {FRAMES.map((d) => <button key={d.id} type="button" aria-pressed={look.frame === d.id} onClick={() => L({ frame: d.id })} className={CHIP(look.frame === d.id)}>{d.label}</button>)}
+        </div>
+        {look.frame !== 'none' && (
+          <div className="mt-2 space-y-2">
+            <input aria-label="Caption" list="qr-captions" className={input} maxLength={24} value={look.caption} onChange={(e) => L({ caption: e.target.value.toUpperCase() })} placeholder="SCAN ME" />
+            <datalist id="qr-captions">{CAPTIONS.map((c) => <option key={c} value={c} />)}</datalist>
+            <div className="grid grid-cols-2 gap-2">
+              <label className="flex items-center gap-2 text-[12px] text-mt-muted"><input type="color" value={look.frameColor} onChange={(e) => L({ frameColor: e.target.value })} className="w-8 h-8 rounded-md border border-mt-border" aria-label="Frame colour" /> Frame</label>
+              <label className="flex items-center gap-2 text-[12px] text-mt-muted"><input type="color" value={look.captionColor} onChange={(e) => L({ captionColor: e.target.value })} className="w-8 h-8 rounded-md border border-mt-border" aria-label="Caption colour" /> Caption</label>
+            </div>
+          </div>
+        )}
+      </PanelSection>
+
+      <PanelSection title="Advanced">
+        <label className="block text-[11px] text-mt-muted">Margin around the code: {look.quiet} squares
+          <input type="range" min={2} max={6} step={1} value={look.quiet} onChange={(e) => L({ quiet: +e.target.value })} className="w-full" />
+        </label>
+        <label className="mt-2 block text-[11px] text-mt-muted">Error correction {logoActive ? '(High — needed for the logo)' : ''}
+          <select disabled={logoActive} value={logoActive ? 'H' : look.ecc} onChange={(e) => L({ ecc: e.target.value as QrLook['ecc'] })} className={input}>
+            <option value="auto">Automatic (Medium)</option>
+            <option value="L">Low — smallest code (7%)</option>
+            <option value="M">Medium (15%)</option>
+            <option value="Q">Quartile (25%)</option>
+            <option value="H">High — survives damage (30%)</option>
+          </select>
+        </label>
+        {useLogo && (
+          <>
+            <label className="mt-2 block text-[11px] text-mt-muted">Logo size: {Math.round(look.logoScale * 100)}%
+              <input type="range" min={0.15} max={0.26} step={0.01} value={look.logoScale} onChange={(e) => L({ logoScale: +e.target.value })} className="w-full" />
+            </label>
+            <div className="mt-2 grid grid-cols-3 gap-1.5">
+              {(['square', 'circle', 'none'] as const).map((m) => <button key={m} type="button" aria-pressed={look.logoPlate === m} onClick={() => L({ logoPlate: m })} className={CHIP(look.logoPlate === m)}>{m === 'none' ? 'No plate' : m === 'circle' ? 'Round plate' : 'Square plate'}</button>)}
+            </div>
+          </>
+        )}
+        <button type="button" onClick={() => setLook(DEFAULT_LOOK)} className="mt-3 text-[12px] text-mt-muted underline">Reset all styling</button>
       </PanelSection>
 
       <button
