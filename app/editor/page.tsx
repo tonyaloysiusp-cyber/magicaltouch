@@ -106,7 +106,7 @@ import { OpenDesignDialog, OpenableDesign } from '@/components/editor/OpenDesign
 import { ImportDialog } from '@/components/editor/ImportDialog';
 import { UnsavedChangesDialog } from '@/components/editor/UnsavedChangesDialog';
 import { useLeaveGuard } from '@/hooks/useLeaveGuard';
-import { shrinkEmbeddedImages } from '@/lib/editor/templateSave';
+import { shrinkEmbeddedImages, canvasJsonForSave } from '@/lib/editor/templateSave';
 import { loadTabSession, saveTabSession, clearTabSession } from '@/lib/editor/tabSession';
 import { WorkspaceSwitcher, EditorWorkspace } from '@/components/editor/WorkspaceSwitcher';
 import type { PhotoEditResult, CropRect } from '@/lib/photo/editTypes';
@@ -5547,8 +5547,16 @@ function EditorContent() {
     if (!certEdit || !canvas) return false;
     setCertSave({ busy: true, msg: null });
     // A photographed signature can be several MB: shrink it so it always saves.
-    const json = await shrinkEmbeddedImages(canvas.toJSON(SAVE_JSON_PROPS));
-    const { error } = await supabase.from('certificate_issues').update({ canvas_json: json }).eq('id', certEdit.id);
+    let json: any;
+    try {
+      await ensurePhotoEditsApplied();
+      json = (await canvasJsonForSave(canvas, SAVE_JSON_PROPS)).json;
+    } catch (err: any) {
+      setCertSave({ busy: false, msg: err?.message || 'Could not save the certificate.' });
+      return false;
+    }
+    const { data: saved, error: saveErr } = await supabase.from('certificate_issues').update({ canvas_json: json }).eq('id', certEdit.id).select('id');
+    const error = saveErr || (!saved?.length ? { message: 'not saved' } : null);
     if (!error) { dirtyRef.current = false; setSaveStatus('saved'); setTabs((ts) => ts.map((t) => ({ ...t, dirty: false }))); }
     setCertSave({ busy: false, msg: error ? 'Could not save the certificate. Please try again.' : `Saved. Downloads of ${certEdit.code} now use this design.` });
     return !error;
@@ -5563,7 +5571,8 @@ function EditorContent() {
     if (!window.confirm('Save this design as the master template? All certificates made from it will use it (names, dates and QR codes stay automatic).')) return;
     setCertSave({ busy: true, msg: null });
     try {
-      const json: any = JSON.parse(JSON.stringify(canvas.toJSON(SAVE_JSON_PROPS)));
+      await ensurePhotoEditsApplied();
+      const json: any = (await canvasJsonForSave(canvas, SAVE_JSON_PROPS)).json;
       let slot: any = null;
       const objs: any[] = [];
       (json.objects || []).forEach((o: any) => {
@@ -5587,9 +5596,9 @@ function EditorContent() {
       }
       const ok = await setTemplateContent(certEdit.masterId, version, json, null);
       setCertSave({ busy: false, msg: ok ? 'Master template saved: new and downloaded certificates use it.' : 'Could not save the master. Please try again.' });
-    } catch (err) {
+    } catch (err: any) {
       console.error('Certificate master save failed:', err);
-      setCertSave({ busy: false, msg: 'Could not save the master. Please try again.' });
+      setCertSave({ busy: false, msg: err?.message && !/fetch|network/i.test(err.message) ? err.message : 'Could not save the master. Please try again.' });
     }
   };
 
@@ -5599,17 +5608,22 @@ function EditorContent() {
     if (!templateEdit?.id || !canvas || !firstAb) return false;
     setTemplateSave({ busy: true, msg: null });
     try {
+      await ensurePhotoEditsApplied();
+      // Build what will be stored first: if it can't be saved, say why and
+      // don't make an empty version.
+      const { json: canvasJson } = await canvasJsonForSave(canvas, SAVE_JSON_PROPS);
       const { data: auth } = await getSessionUser();
-      if (auth.user) {
-        const next = await createVersion(templateEdit, auth.user.id, 'Before design edit');
-        if (next) setTemplateEdit((t) => (t ? { ...t, currentVersion: next } : t));
+      if (!auth.user) {
+        setTemplateSave({ busy: false, msg: 'You were signed out. Sign in again in another tab, then press Save — your changes are still here.' });
+        return false;
       }
-      const canvasJson = await shrinkEmbeddedImages(canvas.toJSON(SAVE_JSON_PROPS));
+      const next = await createVersion(templateEdit, auth.user.id, 'Before design edit');
+      if (next) setTemplateEdit((t) => (t ? { ...t, currentVersion: next } : t));
       // Private brand designs keep no uploaded picture (the Brand workspace
       // draws its own previews), so nothing about them is ever public.
       const isBrand = cameFrom === 'brand' || (templateEdit.tags || []).includes('mt-internal');
       const image: string | null = isBrand ? null : capturePicture(firstAb, { format: 'jpeg', quality: 0.88, multiplier: 1200 / Math.max(firstAb.width, firstAb.height, 1) }).dataUrl;
-      const ok = await setTemplateContent(templateEdit.id, templateEdit.currentVersion || '1.0', canvasJson, image);
+      const ok = await setTemplateContent(templateEdit.id, next || templateEdit.currentVersion || '1.0', canvasJson, image);
       setTemplateSave({ busy: false, msg: ok ? (isBrand ? 'Brand design saved.' : 'Template saved. Customers now get the updated design.') : 'Could not save. Please try again.' });
       if (ok) {
         dirtyRef.current = false;
@@ -5617,9 +5631,9 @@ function EditorContent() {
         setTabs((ts) => ts.map((t) => (t.id === activeTabIdRef.current ? { ...t, dirty: false } : t)));
       }
       return ok;
-    } catch (err) {
+    } catch (err: any) {
       console.error('Template save failed:', err);
-      setTemplateSave({ busy: false, msg: 'Could not save the template. Please try again.' });
+      setTemplateSave({ busy: false, msg: err?.message && !/fetch|network/i.test(err.message) ? err.message : 'Could not save the template. Please try again.' });
       return false;
     }
   };
@@ -7274,13 +7288,17 @@ function EditorContent() {
       action: () => railUploadInputRef.current?.click(),
       render: () => null,
     },
-    {
-      id: 'photos',
-      label: 'Photos',
-      title: 'Photos from our templates — free to reuse',
-      icon: <ImagesIcon size={20} />,
-      render: () => <PhotosPanel onPick={(src) => placeImageUrl(src)} />,
-    },
+    // The photo library (photos used across our templates) is a tool for
+    // admins building templates only — customers never see it.
+    ...(templateEdit
+      ? [{
+          id: 'photos',
+          label: 'Photos',
+          title: 'Template photo library (admins, template editing only)',
+          icon: <ImagesIcon size={20} />,
+          render: () => <PhotosPanel onPick={(src) => placeImageUrl(src)} />,
+        }]
+      : []),
     {
       id: 'qr',
       label: 'QR code',

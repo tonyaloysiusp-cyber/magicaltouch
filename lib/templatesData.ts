@@ -388,9 +388,12 @@ export async function setTemplateContent(
     update.thumbnail = media?.thumbnail ?? imageSrc;
     update.preview = media?.preview ?? null;
   }
-  const { error } = await supabase.from('templates').update(update).eq('id', id);
+  // .select() returns the changed row: an empty answer means nothing was
+  // saved (e.g. the session expired), which before looked like success.
+  const { data, error } = await supabase.from('templates').update(update).eq('id', id).select('id');
   if (error) console.error('Failed to set template content:', error);
-  return !error;
+  else if (!data?.length) console.error('Template content not saved: no row updated (signed out or not an admin?)');
+  return !error && !!data?.length;
 }
 
 export async function replaceThumbnail(id: string, version: string, file: File): Promise<string | null> {

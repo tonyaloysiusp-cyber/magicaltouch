@@ -5,7 +5,7 @@
 // synchronously in the tap so a cloud sign-in popup is never blocked.
 
 import { useEscapeKey } from '@/hooks/useEscapeKey';
-import { HardDrive, Cloud, UserRound, X } from 'lucide-react';
+import { HardDrive, Cloud, X } from 'lucide-react';
 import { AVAILABLE_CLOUD_PROVIDERS, CloudProviderId } from '@/lib/storage/providers';
 import { supportsSaveInPlace } from '@/lib/mtd/fileAccess';
 
@@ -38,19 +38,9 @@ export function SaveLocationDialog({ busy, error, onChoose, onCancel }: Props) {
             <X size={18} />
           </button>
         </div>
-        <p className="text-sm text-mt-muted dark:text-mt-muted mb-4">Choose where to keep it. You can always save a copy somewhere else later.</p>
+        <p className="text-sm text-mt-muted dark:text-mt-muted mb-4">{AVAILABLE_CLOUD_PROVIDERS.length ? 'Your project is kept in your own drive, not on our servers. Choose Google Drive or Dropbox to open it from any computer, iPad or phone.' : 'Your project is kept as a .mtd file on your device, not on our servers.'}</p>
 
         <div className="flex flex-col gap-2">
-          <button className={row} disabled={!!busy} onClick={() => onChoose('computer')}>
-            <HardDrive size={20} className="text-mt-accent shrink-0" />
-            <span className="flex-1">
-              <span className="block text-sm font-semibold">This device (computer, iPad or phone)</span>
-              <span className="block text-xs text-mt-muted dark:text-mt-muted">
-                {supportsSaveInPlace() ? 'A .mtd file in a folder you choose' : 'Downloads a .mtd file to your device'}
-              </span>
-            </span>
-          </button>
-
           {AVAILABLE_CLOUD_PROVIDERS.map((p) => (
             <button key={p.id} className={row} disabled={!!busy} onClick={() => onChoose(p.id)}>
               <Cloud size={20} className="text-mt-accent shrink-0" />
@@ -63,13 +53,17 @@ export function SaveLocationDialog({ busy, error, onChoose, onCancel }: Props) {
             </button>
           ))}
 
-          <button className={row} disabled={!!busy} onClick={() => onChoose('account')}>
-            <UserRound size={20} className="text-mt-accent shrink-0" />
+          <button className={row} disabled={!!busy} onClick={() => onChoose('computer')}>
+            <HardDrive size={20} className="text-mt-accent shrink-0" />
             <span className="flex-1">
-              <span className="block text-sm font-semibold">Online — my Magical Touch account</span>
-              <span className="block text-xs text-mt-muted dark:text-mt-muted">Open it from any computer, iPad or phone. Saved automatically.</span>
+              <span className="block text-sm font-semibold">This device (computer, iPad or phone)</span>
+              <span className="block text-xs text-mt-muted dark:text-mt-muted">
+                {supportsSaveInPlace() ? 'A .mtd file in a folder you choose' : 'Downloads a .mtd file to your device'}
+              </span>
             </span>
           </button>
+
+
         </div>
 
         {busy && <p className="mt-4 text-sm text-mt-accent">{busy}</p>}

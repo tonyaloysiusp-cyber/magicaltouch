@@ -14,6 +14,7 @@ import { listRecent, rememberRecent, forgetRecent, RecentLocalFile } from '@/lib
 import { putHandoff, newLocalKey, editorUrlForLocal } from '@/lib/mtd/handoff';
 import { Cloud } from 'lucide-react';
 import { CloudOpenDialog } from '@/components/storage/CloudOpenDialog';
+import { DriveProjects } from '@/components/storage/DriveProjects';
 import { HAS_CLOUD_DRIVES, providerById, popupIfNeeded, CloudProviderId, CloudFile } from '@/lib/storage/providers';
 import { openFromCloud } from '@/lib/storage/cloudProject';
 import { listProjects as listCloudProjects, forgetProject, ProjectReference } from '@/lib/storage/registry';
@@ -419,47 +420,18 @@ export default function DashboardPage() {
           <div className="fixed bottom-5 left-1/2 -translate-x-1/2 z-[70] bg-[#14121F] text-white text-sm rounded-xl shadow-xl px-4 py-3">{cloudBusy}</div>
         )}
 
-        {cloudProjects.length > 0 && (
-          <section className="mb-12">
-            <h2 className="text-xs font-semibold text-mt-muted dark:text-mt-muted tracking-wide uppercase mb-1 flex items-center gap-1.5">
-              <Cloud size={13} /> In your cloud drives
-            </h2>
-            <p className="text-xs text-mt-muted/70 dark:text-mt-muted/70 mb-4">Stored in your own Google Drive, OneDrive or Dropbox.</p>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-5">
-              {cloudProjects.map((p) => (
-                <div key={p.id} className="group relative rounded-2xl overflow-hidden border border-black/10 dark:border-white/10 bg-mt-surface dark:bg-mt-surface">
-                  <button onClick={() => openCloudProject(p)} disabled={!!cloudBusy} className="block w-full text-left">
-                    <div className="aspect-[4/3] bg-mt-accentsoft dark:bg-mt-bg flex items-center justify-center overflow-hidden">
-                      {p.thumbnail ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={p.thumbnail} alt="" className="w-full h-full object-contain" />
-                      ) : (
-                        <Cloud size={28} className="text-mt-accent/40" />
-                      )}
-                    </div>
-                    <div className="p-3">
-                      <p className="text-sm font-semibold truncate">{p.projectName}</p>
-                      <p className="text-[10px] font-semibold tracking-wide text-mt-accent dark:text-mt-accent mt-1">
-                        {providerById(p.provider).label.toUpperCase()}
-                      </p>
-                      <p className="text-[11px] text-mt-muted dark:text-mt-muted">
-                        Last saved {new Date(p.modifiedAt || p.updatedAt).toLocaleDateString()}
-                      </p>
-                    </div>
-                  </button>
-                  <button
-                    onClick={() => forgetCloud(p)}
-                    title="Remove from this list (the file stays in your drive)"
-                    aria-label={`Remove ${p.projectName} from this list`}
-                    className="absolute top-2 right-2 p-1 rounded-full bg-mt-surface/90 dark:bg-black/60 text-mt-muted dark:text-mt-muted opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
-                  >
-                    <X size={13} />
-                  </button>
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
+        <DriveProjects
+          refs={cloudProjects}
+          setRefs={setCloudProjects}
+          busy={!!cloudBusy}
+          onOpen={(provider, file, popup) => {
+            setCloudBusy(popup ? `Sign in to ${providerById(provider).label} in the window that opened…` : `Opening "${file.name.replace(/\.mtd$/i, '')}"…`);
+            openFromCloud(provider, popup, file)
+              .then((opened) => goToCloudProject(opened, provider, file))
+              .catch((err) => alert(err?.message || 'Could not open this project.'))
+              .finally(() => setCloudBusy(null));
+          }}
+        />
 
         {localFiles.length > 0 && (
           <section className="mb-12">
@@ -532,7 +504,7 @@ export default function DashboardPage() {
         {!loading && designs.length > 0 && (
           <>
             <h2 className="text-xs font-semibold text-mt-muted dark:text-mt-muted tracking-wide uppercase mb-4">
-              Recent Designs <span className="normal-case font-normal tracking-normal opacity-70">· saved in your account</span>
+              Earlier designs <span className="normal-case font-normal tracking-normal opacity-70">· saved online before projects moved to your own drive — open one and use File → Save a copy to keep it in your drive</span>
             </h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-5 mb-12">
               {designs.slice(0, RECENT_COUNT).map((design) => renderDesignCard(design))}

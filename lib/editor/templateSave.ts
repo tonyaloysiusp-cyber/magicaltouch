@@ -16,6 +16,11 @@ function loadImage(src: string): Promise<HTMLImageElement> {
 export async function shrinkEmbeddedImages(json: any): Promise<any> {
   const jobs: Promise<void>[] = [];
   const visit = (o: any) => {
+    if (!o || typeof o !== 'object') return;
+    // The untouched original of an edited photo (kept for "Reset photo") can
+    // be many MB — far too big to send with every save. Drop it when huge.
+    if (typeof o.__originalSrc === 'string' && o.__originalSrc.startsWith('data:') && o.__originalSrc.length > MAX_CHARS) delete o.__originalSrc;
+    if (o.clipPath && typeof o.clipPath === 'object') visit(o.clipPath);
     if (o && o.type === 'image' && !o.clipPath && typeof o.src === 'string' && o.src.startsWith('data:image/') && o.src.length > MAX_CHARS) {
       jobs.push(
         (async () => {
@@ -55,6 +60,26 @@ export async function shrinkEmbeddedImages(json: any): Promise<any> {
     (o?.objects || []).forEach(visit);
   };
   (json.objects || []).forEach(visit);
+  if (json.backgroundImage) visit(json.backgroundImage);
   await Promise.all(jobs);
   return json;
+}
+
+/**
+ * The canvas as plain JSON, ready to store: a real copy (no live Fabric
+ * objects inside), big embedded photos shrunk. Throws a readable error when
+ * the design cannot be saved, instead of failing silently.
+ */
+export async function canvasJsonForSave(canvas: any, props: string[]): Promise<{ json: any; bytes: number }> {
+  let json: any;
+  try {
+    json = JSON.parse(JSON.stringify(canvas.toJSON(props)));
+  } catch (err) {
+    console.error('Canvas could not be serialized:', err);
+    throw new Error('One item on the page could not be saved. Remove the last thing you added and try again.');
+  }
+  await shrinkEmbeddedImages(json);
+  const bytes = JSON.stringify(json).length;
+  if (bytes > 12_000_000) throw new Error(`This design is too large to save (${Math.round(bytes / 1e6)} MB). Use smaller pictures — for example a signature as a small PNG.`);
+  return { json, bytes };
 }
