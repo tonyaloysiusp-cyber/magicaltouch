@@ -366,3 +366,13 @@ textarea::placeholder {
 .mt-howto-shimmer { background: linear-gradient(110deg, transparent 20%, rgba(255,255,255,.75) 45%, rgba(143,227,255,.5) 50%, transparent 75%); background-size: 250% 100%; animation: mt-shimmer 1.2s ease-in-out infinite; }
 @keyframes mt-shimmer { from { background-position: 130% 0; } to { background-position: -30% 0; } }
 @media (prefers-reduced-motion: reduce) { .mt-howto-shimmer { animation: none; } }
+
+/* Sign-in pages: the bright Magical Touch brand colours on the main button. */
+.mt-auth-btn {
+  background: linear-gradient(90deg, #EC1E79, #8B6FC4, #3FA9E8, #4FC8C0, #7ED33E);
+  background-size: 160% 100%;
+  color: #fff !important;
+  transition: background-position 0.4s ease, box-shadow 0.2s ease, transform 0.2s ease;
+  box-shadow: 0 10px 24px -10px rgba(139, 111, 196, 0.7);
+}
+.mt-auth-btn:hover:not(:disabled) { background-position: 100% 0; transform: translateY(-1px); }

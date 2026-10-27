@@ -175,7 +175,7 @@ function SignupForm() {
           <button
             type="submit"
             disabled={loading}
-            className="bg-brand-gradient text-white font-semibold p-3 rounded-full shadow-md disabled:opacity-60"
+            className="mt-auth-btn font-semibold p-3 rounded-full shadow-md disabled:opacity-60"
           >
             {loading ? 'Signing up...' : 'Sign Up'}
           </button>

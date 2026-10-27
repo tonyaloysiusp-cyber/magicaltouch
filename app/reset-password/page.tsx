@@ -120,7 +120,7 @@ export default function ResetPasswordPage() {
                   <button
                     type="submit"
                     disabled={status === 'saving'}
-                    className="bg-brand-gradient text-white font-semibold p-3 rounded-full shadow-md disabled:opacity-50"
+                    className="mt-auth-btn font-semibold p-3 rounded-full shadow-md disabled:opacity-50"
                   >
                     {status === 'saving' ? 'Saving…' : 'Save new password'}
                   </button>

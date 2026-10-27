@@ -116,7 +116,7 @@ function LoginForm() {
               <button
                 type="submit"
                 disabled={loading}
-                className="bg-brand-gradient text-white font-semibold p-3 rounded-full shadow-md disabled:opacity-50"
+                className="mt-auth-btn font-semibold p-3 rounded-full shadow-md disabled:opacity-50"
               >
                 {loading ? 'Logging in...' : 'Log In'}
               </button>
@@ -165,7 +165,7 @@ function LoginForm() {
                 <button
                   type="submit"
                   disabled={resetLoading}
-                  className="bg-brand-gradient text-white font-semibold p-3 rounded-full shadow-md disabled:opacity-50"
+                  className="mt-auth-btn font-semibold p-3 rounded-full shadow-md disabled:opacity-50"
                 >
                   {resetLoading ? 'Sending link...' : 'Send Reset Link'}
                 </button>
