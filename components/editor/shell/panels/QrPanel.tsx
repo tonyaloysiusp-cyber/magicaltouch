@@ -27,7 +27,7 @@ const KINDS: { id: QrKind; label: string; icon: React.ReactNode }[] = [
 
 const DOTS: { id: DotShape; label: string }[] = [
   { id: 'square', label: 'Square' }, { id: 'rounded', label: 'Rounded' }, { id: 'dots', label: 'Dots' }, { id: 'fluid', label: 'Fluid' },
-  { id: 'classy', label: 'Classy' }, { id: 'diamond', label: 'Diamond' }, { id: 'vbars', label: 'Bars ↕' }, { id: 'hbars', label: 'Bars ↔' },
+  { id: 'vbars', label: 'Bars ↕' }, { id: 'hbars', label: 'Bars ↔' },
 ];
 // Only corner shapes that phone cameras reliably find (checked in tests).
 const FRAMES_EYE: { id: EyeFrame; label: string }[] = [{ id: 'square', label: 'Square' }, { id: 'rounded', label: 'Rounded' }, { id: 'leaf', label: 'Leaf' }];
@@ -113,6 +113,7 @@ export function QrPanel({ onAdd, brandLogoUrl }: { onAdd: (pngDataUrl: string) =
       const l = { ...DEFAULT_LOOK, ...JSON.parse(localStorage.getItem('mt:qrLook') || '{}') };
       if (!FRAMES_EYE.some((x) => x.id === l.eyeFrame)) l.eyeFrame = 'rounded';
       if (!BALLS.some((x) => x.id === l.eyeBall)) l.eyeBall = 'rounded';
+      if (!DOTS.some((x) => x.id === l.dot)) l.dot = 'rounded';
       return l;
     } catch { return DEFAULT_LOOK; }
   });
@@ -383,7 +384,7 @@ export function QrPanel({ onAdd, brandLogoUrl }: { onAdd: (pngDataUrl: string) =
       </PanelSection>
 
       <PanelSection title="Dots">
-        <div className="grid grid-cols-4 gap-1.5">
+        <div className="grid grid-cols-3 gap-1.5">
           {DOTS.map((d) => <button key={d.id} type="button" aria-pressed={look.dot === d.id} onClick={() => L({ dot: d.id })} className={CHIP(look.dot === d.id)}>{d.label}</button>)}
         </div>
       </PanelSection>

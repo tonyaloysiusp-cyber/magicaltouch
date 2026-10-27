@@ -719,7 +719,7 @@ scenarios.push({
       if ((await decode()) !== want) failed.push(`look ${name}`);
     }
     await t.shot('looks');
-    for (const dot of ['Square', 'Rounded', 'Dots', 'Fluid', 'Classy', 'Diamond', 'Bars ↕', 'Bars ↔']) {
+    for (const dot of ['Square', 'Rounded', 'Dots', 'Fluid', 'Bars ↕', 'Bars ↔']) {
       await t.page.getByRole('button', { name: dot, exact: true }).first().click();
       await t.page.waitForTimeout(200);
       if ((await decode()) !== want) failed.push(`dot ${dot}`);
