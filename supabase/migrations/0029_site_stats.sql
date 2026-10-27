@@ -1,8 +1,5 @@
--- Landing pages: where a row came from ('custom' or an edited/hidden 'builtin')
-alter table public.seo_pages add column if not exists source text not null default 'custom';
-
 -- Visitor counts. Small on purpose: one row per day+page and one per day+visitor
--- (an anonymous random id kept in the browser), trimmed to one year.
+-- (an anonymous random id kept in the browser).
 create table if not exists public.site_views_daily (
   day date not null default current_date,
   path text not null,
@@ -37,10 +34,6 @@ begin
     values (current_date, p_visitor, auth.uid(), 1, p_path, left(p_referrer, 200), left(p_device, 20))
     on conflict (day, visitor) do update set views = site_visitors_daily.views + 1,
       user_id = coalesce(site_visitors_daily.user_id, excluded.user_id);
-  if random() < 0.01 then
-    delete from site_views_daily where day < current_date - 366;
-    delete from site_visitors_daily where day < current_date - 366;
-  end if;
 end $$;
 revoke all on function public.track_visit(text, text, text, text) from public;
 grant execute on function public.track_visit(text, text, text, text) to anon, authenticated;
@@ -87,9 +80,9 @@ begin
     and exists (
       select 1 from public.course_lessons d
       where d.course_id = new.course_id and d.visible and d.id = any (new.completed_lessons)
-        and (d.sort, d.created_at) > (l.sort, l.created_at)
+        and (d.sort, d.title) > (l.sort, l.title)
     )
-  order by l.sort, l.created_at limit 1;
+  order by l.sort, l.title limit 1;
   if missing is not null and (tg_op = 'INSERT' or exists (select unnest(new.completed_lessons) except select unnest(old.completed_lessons))) then
     raise exception 'Finish “%” first — lessons unlock one after another', missing;
   end if;

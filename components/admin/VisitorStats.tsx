@@ -96,7 +96,7 @@ export function VisitorStats() {
               <ul className="flex flex-col gap-1">{(s?.devices || []).map((r) => <li key={r.device} className="flex justify-between gap-3"><span className="capitalize text-mt-muted">{r.device}</span><span className="tabular-nums">{nf(r.visitors)}</span></li>)}</ul>
             </div>
           </div>
-          <p className="mt-4 text-[12px] text-mt-faint">Counted without cookies or outside trackers. Admin pages and search-engine robots are not counted. Kept for one year.</p>
+          <p className="mt-4 text-[12px] text-mt-faint">Counted without cookies or outside trackers. Admin pages and search-engine robots are not counted.</p>
         </>
       )}
     </section>
