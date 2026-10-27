@@ -702,7 +702,8 @@ scenarios.push({
       if (!img) return null;
       await img.decode?.().catch(() => {});
       const c = document.createElement('canvas');
-      const w = img.naturalWidth || 480, h = img.naturalHeight || 480;
+      // The SVG drawn at 2× (closer to a real export or print than the small preview).
+      const w = (img.naturalWidth || 480) * 2, h = (img.naturalHeight || 480) * 2;
       c.width = w + 80; c.height = h + 80;
       const x = c.getContext('2d');
       x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height);

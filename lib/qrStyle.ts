@@ -110,7 +110,7 @@ function dotsPath(G: QrGrid, shape: DotShape) {
       if (!on(x, y)) continue;
       const X = q + x, Y = q + y;
       switch (shape) {
-        case 'dots': d += circlePath(X + 0.5, Y + 0.5, 0.45); break;
+        case 'dots': d += circlePath(X + 0.5, Y + 0.5, 0.47); break;
         case 'rounded': d += rectPath(X + 0.04, Y + 0.04, 0.92, 0.92, [0.3, 0.3, 0.3, 0.3]); break;
         case 'diamond': d += `M${X + 0.5} ${Y}L${X + 1} ${Y + 0.5}L${X + 0.5} ${Y + 1}L${X} ${Y + 0.5}Z`; break;
         case 'classy': d += rectPath(X, Y, 1, 1, [0.5, 0, 0.5, 0]); break;
