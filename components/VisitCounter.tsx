@@ -57,12 +57,15 @@ export function VisitCounter() {
     try { sessionStorage.setItem('mt:seen', '1'); } catch {}
     const send = () => {
       const token = accessToken();
-      fetch(`${URL_}/rest/v1/rpc/track_visit`, {
+      const init: RequestInit = {
         method: 'POST',
         keepalive: true,
         headers: { apikey: KEY, Authorization: `Bearer ${token || KEY}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ p_path: path, p_visitor: vid, p_referrer: first ? referrerHost() : null, p_device: device() }),
-      }).catch(() => {});
+      };
+      // Same route as the rest of the site: direct, or through our own
+      // domain when Supabase can't be reached directly (lib/supabase.ts).
+      fetch(`${URL_}/rest/v1/rpc/track_visit`, init).catch(() => fetch(`${window.location.origin}/sb/rest/v1/rpc/track_visit`, init).catch(() => {}));
     };
     const t = window.setTimeout(send, 1500);
     return () => window.clearTimeout(t);
