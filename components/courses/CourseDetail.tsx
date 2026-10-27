@@ -3,9 +3,9 @@
 // Course page and lesson page. Lesson content is rendered from server data;
 // progress (ticks, status, certificate) is the learner's own row.
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, ArrowRight, BookOpen, Check, CheckCircle2, ChevronRight, Circle, Clock, Loader2, PlayCircle } from 'lucide-react';
+import { ArrowLeft, ArrowRight, BookOpen, Check, CheckCircle2, ChevronRight, Circle, Clock, Loader2, Lock, PlayCircle, Square, SquareCheck } from 'lucide-react';
 import { CourseWithLessons, Lesson, doneCount, formatMinutes, learnerStatus, totalMinutes } from '@/lib/courses';
 import { saveCompleted, useLearner, Learner } from './useLearner';
 import { LevelBadge, ProgressBar, StatusBadge } from './CourseBits';
@@ -21,7 +21,11 @@ function useCourseState(course: CourseWithLessons, me: Learner, prerequisite: Pr
   const locked = status === 'pending' || status === 'approved' || status === 'released';
   const prerequisiteApproved = !prerequisite || me.progress[prerequisite.id]?.status === 'approved';
   const next = course.lessons.find((l) => !completed.has(l.id)) || course.lessons[0];
-  return { row, status, done, completed, locked, prerequisiteApproved, next };
+  // Lessons open one after another: a lesson unlocks when every lesson
+  // before it is complete (signed-in learners; visitors can read them all).
+  const firstOpen = course.lessons.findIndex((l) => !completed.has(l.id));
+  const isLessonLocked = (i: number) => !!me.userId && firstOpen !== -1 && i > firstOpen;
+  return { row, status, done, completed, locked, prerequisiteApproved, next, isLessonLocked };
 }
 
 export function CourseDetail({ course, prerequisite }: { course: CourseWithLessons; prerequisite: PrereqInfo | null }) {
@@ -74,10 +78,11 @@ export function CourseDetail({ course, prerequisite }: { course: CourseWithLesso
               <ol className="mt-3 divide-y divide-mt-border rounded-2xl border border-mt-border overflow-hidden">
                 {course.lessons.map((l, i) => {
                   const ok = s.completed.has(l.id);
+                  const shut = s.isLessonLocked(i);
                   return (
                     <li key={l.id}>
-                      <Link href={`/tutorials/${course.slug}/${l.slug}`} className="flex items-center gap-3 px-4 py-3.5 hover:bg-mt-surface2">
-                        {ok ? <CheckCircle2 size={20} className="shrink-0 text-emerald-600" aria-label="Completed" /> : <Circle size={20} className="shrink-0 text-mt-faint" aria-label="Not completed" />}
+                      <Link href={`/tutorials/${course.slug}/${l.slug}`} className={`flex items-center gap-3 px-4 py-3.5 hover:bg-mt-surface2 ${shut ? 'opacity-60' : ''}`}>
+                        {ok ? <CheckCircle2 size={20} className="shrink-0 text-emerald-600" aria-label="Completed" /> : shut ? <Lock size={18} className="shrink-0 text-mt-faint" aria-label="Locked — finish the lessons before it" /> : <Circle size={20} className="shrink-0 text-mt-faint" aria-label="Not completed" />}
                         <span className="flex-1 min-w-0">
                           <span className="block text-[15px] font-medium">{i + 1}. {l.title}</span>
                           <span className="block text-[13px] text-mt-muted truncate">{l.tool}</span>
@@ -124,9 +129,39 @@ export function LessonView({ course, lesson, prerequisite }: { course: CourseWit
   const prev = idx > 0 ? course.lessons[idx - 1] : null;
   const next = idx < course.lessons.length - 1 ? course.lessons[idx + 1] : null;
   const isDone = s.completed.has(lesson.id);
+  const lessonLocked = s.isLessonLocked(idx);
+  const firstOpenLesson = course.lessons.find((l) => !s.completed.has(l.id));
+
+  // The lesson's tasks: every step, the practice task, and opening the tool.
+  // All must be ticked before the lesson can be marked complete. Ticks are
+  // kept on this device (they are only a guide; completion is saved online).
+  const tasks: { id: string; text: string }[] = [
+    ...lesson.steps.map((st, i) => ({ id: `s${i}`, text: st })),
+    ...(lesson.task ? [{ id: 'task', text: `Practice task: ${lesson.task}` }] : []),
+  ];
+  const tickKey = `mt:lessonTasks:${lesson.id}`;
+  const [ticks, setTicks] = useState<Record<string, boolean>>({});
+  const [triedTool, setTriedTool] = useState(false);
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(tickKey) || '{}');
+      setTicks(saved.ticks || {});
+      setTriedTool(!!saved.tried);
+    } catch {}
+  }, [tickKey]);
+  const persist = (t: Record<string, boolean>, tried: boolean) => {
+    try { localStorage.setItem(tickKey, JSON.stringify({ ticks: t, tried })); } catch {}
+  };
+  const tick = (id: string) => setTicks((t) => { const n = { ...t, [id]: !t[id] }; persist(n, triedTool); return n; });
+  const markTried = () => { setTriedTool(true); persist(ticks, true); };
+  const needTool = !!lesson.try_href;
+  const tasksDone = tasks.filter((t) => ticks[t.id]).length + (needTool && triedTool ? 1 : 0);
+  const tasksTotal = tasks.length + (needTool ? 1 : 0);
+  const ready = isDone || tasksDone >= tasksTotal;
 
   const toggle = async () => {
-    if (!me.userId || s.locked) return;
+    if (!me.userId || s.locked || lessonLocked) return;
+    if (!isDone && !ready) { setErr('Tick every task above first — then you can mark the lesson complete.'); return; }
     setBusy(true);
     setErr(null);
     try {
@@ -159,10 +194,11 @@ export function LessonView({ course, lesson, prerequisite }: { course: CourseWit
               {course.lessons.map((l, i) => {
                 const ok = s.completed.has(l.id);
                 const here = l.id === lesson.id;
+                const shut = s.isLessonLocked(i);
                 return (
                   <li key={l.id}>
-                    <Link href={`/tutorials/${course.slug}/${l.slug}`} aria-current={here ? 'page' : undefined} className={`flex items-start gap-2.5 px-4 py-2.5 text-[14px] ${here ? 'bg-mt-surface2 font-semibold' : 'hover:bg-mt-surface2'}`}>
-                      {ok ? <CheckCircle2 size={17} className="mt-0.5 shrink-0 text-emerald-600" aria-label="Completed" /> : <Circle size={17} className="mt-0.5 shrink-0 text-mt-faint" aria-label="Not completed" />}
+                    <Link href={`/tutorials/${course.slug}/${l.slug}`} aria-current={here ? 'page' : undefined} className={`flex items-start gap-2.5 px-4 py-2.5 text-[14px] ${here ? 'bg-mt-surface2 font-semibold' : 'hover:bg-mt-surface2'} ${shut && !here ? 'opacity-60' : ''}`}>
+                      {ok ? <CheckCircle2 size={17} className="mt-0.5 shrink-0 text-emerald-600" aria-label="Completed" /> : shut ? <Lock size={15} className="mt-0.5 shrink-0 text-mt-faint" aria-label="Locked" /> : <Circle size={17} className="mt-0.5 shrink-0 text-mt-faint" aria-label="Not completed" />}
                       <span>{i + 1}. {l.title}</span>
                     </Link>
                   </li>
@@ -178,6 +214,14 @@ export function LessonView({ course, lesson, prerequisite }: { course: CourseWit
           </p>
           <h1 className="mt-2 text-3xl sm:text-4xl font-semibold tracking-tight">{lesson.title}</h1>
           {lesson.intro && <p className="mt-4 text-lg text-mt-muted leading-relaxed">{lesson.intro}</p>}
+
+          {me.ready && lessonLocked && firstOpenLesson && (
+            <div role="status" className="mt-6 rounded-2xl border border-amber-500/40 bg-amber-500/10 px-5 py-4 text-[15px]">
+              <p className="font-semibold inline-flex items-center gap-2"><Lock size={16} aria-hidden /> This lesson unlocks after the ones before it</p>
+              <p className="mt-1 text-mt-muted">Finish the tasks in “{firstOpenLesson.title}” first, then come back.</p>
+              <Link href={`/tutorials/${course.slug}/${firstOpenLesson.slug}`} className="mt-3 h-10 px-4 rounded-full bg-mt-primary text-mt-onprimary text-[14px] font-semibold inline-flex items-center gap-1.5">Go to {firstOpenLesson.title} <ArrowRight size={15} aria-hidden /></Link>
+            </div>
+          )}
 
           {lesson.steps.length > 0 && (
             <section aria-labelledby="steps" className="mt-8">
@@ -198,10 +242,39 @@ export function LessonView({ course, lesson, prerequisite }: { course: CourseWit
               <h2 id="task" className="text-[12px] font-semibold uppercase tracking-wide text-mt-muted">Your task</h2>
               <p className="mt-1 text-[16px]">{lesson.task}</p>
               {lesson.try_href && (
-                <Link href={lesson.try_href} className="mt-3 h-10 px-4 rounded-full border border-mt-border bg-mt-surface text-[14px] font-semibold inline-flex items-center gap-1.5 hover:bg-mt-bg">
+                <a href={lesson.try_href} target="_blank" rel="noopener" onClick={markTried} className="mt-3 h-10 px-4 rounded-full border border-mt-border bg-mt-surface text-[14px] font-semibold inline-flex items-center gap-1.5 hover:bg-mt-bg">
                   <PlayCircle size={15} aria-hidden /> {lesson.try_label || 'Try it'}
-                </Link>
+                </a>
               )}
+            </section>
+          )}
+
+          {me.userId && !lessonLocked && !isDone && tasksTotal > 0 && (
+            <section aria-labelledby="checklist" className="mt-8 rounded-2xl border border-mt-border p-4 sm:p-5">
+              <div className="flex items-baseline justify-between gap-3">
+                <h2 id="checklist" className="text-lg font-semibold">Complete these tasks</h2>
+                <span className="text-[13px] text-mt-muted tabular-nums">{tasksDone} of {tasksTotal} done</span>
+              </div>
+              <p className="mt-1 text-[14px] text-mt-muted">Do each one in the editor, then tick it. The next lesson opens when all are ticked and the lesson is marked complete.</p>
+              <ul className="mt-3 flex flex-col gap-1.5">
+                {needTool && (
+                  <li>
+                    <a href={lesson.try_href} target="_blank" rel="noopener" onClick={markTried} className="w-full flex items-start gap-3 rounded-xl px-2 py-2 text-left text-[15px] hover:bg-mt-surface2">
+                      {triedTool ? <SquareCheck size={20} className="shrink-0 text-emerald-600" aria-hidden /> : <Square size={20} className="shrink-0 text-mt-faint" aria-hidden />}
+                      <span className={triedTool ? 'text-mt-muted' : ''}>Open the tool: {lesson.try_label || 'Try it'} <span className="text-mt-faint">(opens in a new tab)</span></span>
+                    </a>
+                  </li>
+                )}
+                {tasks.map((t) => (
+                  <li key={t.id}>
+                    <button type="button" role="checkbox" aria-checked={!!ticks[t.id]} onClick={() => tick(t.id)} className="w-full flex items-start gap-3 rounded-xl px-2 py-2 text-left text-[15px] hover:bg-mt-surface2">
+                      {ticks[t.id] ? <SquareCheck size={20} className="shrink-0 text-emerald-600" aria-hidden /> : <Square size={20} className="shrink-0 text-mt-faint" aria-hidden />}
+                      <span className={ticks[t.id] ? 'text-mt-muted line-through decoration-mt-faint' : ''}>{t.text}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+              <div className="mt-3"><ProgressBar done={tasksDone} total={tasksTotal} /></div>
             </section>
           )}
 
@@ -215,13 +288,14 @@ export function LessonView({ course, lesson, prerequisite }: { course: CourseWit
                 <button
                   type="button"
                   onClick={toggle}
-                  disabled={busy || s.locked}
+                  disabled={busy || s.locked || lessonLocked || (!isDone && !ready)}
                   aria-pressed={isDone}
                   className={`h-11 px-5 rounded-full text-[14px] font-semibold inline-flex items-center gap-2 disabled:opacity-60 ${isDone ? 'bg-emerald-600 text-white' : 'bg-mt-primary text-mt-onprimary'}`}
                 >
                   {busy ? <Loader2 size={16} className="animate-spin" aria-hidden /> : <Check size={16} aria-hidden />} {isDone ? 'Completed' : 'Mark lesson complete'}
                 </button>
                 {isDone && !s.locked && <span className="text-[13px] text-mt-muted">Click again to mark it not done.</span>}
+                {!isDone && !ready && !lessonLocked && <span className="text-[13px] text-mt-muted">Tick all {tasksTotal} tasks above to finish this lesson.</span>}
                 {s.locked && <span className="text-[13px] text-mt-muted">Your certificate request is in — lessons are locked while it’s reviewed.</span>}
               </div>
             )}
@@ -239,7 +313,11 @@ export function LessonView({ course, lesson, prerequisite }: { course: CourseWit
                 <ArrowLeft size={15} aria-hidden /> <span className="truncate">Previous: {prev.title}</span>
               </Link>
             ) : <span />}
-            {next ? (
+            {next && me.userId && !isDone ? (
+              <span title="Finish this lesson to unlock the next one" className="h-11 px-4 rounded-full border border-mt-border text-mt-muted text-[14px] font-semibold inline-flex items-center gap-1.5 max-w-full cursor-not-allowed">
+                <Lock size={14} aria-hidden /> <span className="truncate">Next: {next.title}</span>
+              </span>
+            ) : next ? (
               <Link href={`/tutorials/${course.slug}/${next.slug}`} className="h-11 px-4 rounded-full bg-mt-primary text-mt-onprimary text-[14px] font-semibold inline-flex items-center gap-1.5 max-w-full">
                 <span className="truncate">Next: {next.title}</span> <ArrowRight size={15} aria-hidden />
               </Link>

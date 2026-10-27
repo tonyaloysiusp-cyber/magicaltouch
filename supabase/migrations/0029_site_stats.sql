@@ -73,3 +73,28 @@ begin
 end $$;
 revoke all on function public.admin_site_stats(integer) from public;
 grant execute on function public.admin_site_stats(integer) to authenticated;
+
+-- Tutorials: lessons are completed in order. A lesson can only be marked
+-- complete when every visible lesson before it is complete.
+create or replace function public.course_order_guard() returns trigger
+language plpgsql security definer set search_path = public as $$
+declare missing text;
+begin
+  if public.is_admin() then return new; end if;
+  select l.title into missing
+  from public.course_lessons l
+  where l.course_id = new.course_id and l.visible and not (l.id = any (new.completed_lessons))
+    and exists (
+      select 1 from public.course_lessons d
+      where d.course_id = new.course_id and d.visible and d.id = any (new.completed_lessons)
+        and (d.sort, d.created_at) > (l.sort, l.created_at)
+    )
+  order by l.sort, l.created_at limit 1;
+  if missing is not null and (tg_op = 'INSERT' or exists (select unnest(new.completed_lessons) except select unnest(old.completed_lessons))) then
+    raise exception 'Finish “%” first — lessons unlock one after another', missing;
+  end if;
+  return new;
+end $$;
+drop trigger if exists course_order_guard on public.course_progress;
+create trigger course_order_guard before insert or update on public.course_progress
+  for each row execute function public.course_order_guard();
