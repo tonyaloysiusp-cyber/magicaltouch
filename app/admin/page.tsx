@@ -224,7 +224,11 @@ function Overview({ stats, messages, occasions, services, templates, go }: { sta
                       {o.name} <span className="font-normal text-mt-faint">· {o.region}</span>
                     </p>
                     <p className="text-[12px] text-mt-muted mt-0.5 line-clamp-2">{o.ideas}</p>
-                    <p className="text-[12px] mt-1 text-mt-faint">{have ? `${have} matching template${have === 1 ? '' : 's'} live` : 'No matching templates yet'}</p>
+                    <p className="text-[12px] mt-1 text-mt-faint">
+                      {have ? `${have} matching template${have === 1 ? '' : 's'} live` : 'No matching templates yet'}
+                      {' · '}
+                      <Link href={`/admin/templates?claude=${encodeURIComponent(`${o.name} (${o.region})${o.ideas ? ` — ideas: ${o.ideas}` : ''}`)}`} className="font-medium text-[#D97757] hover:underline">Make one with Claude</Link>
+                    </p>
                   </div>
                   <span className={`shrink-0 text-[12px] font-semibold ${n <= 10 ? 'text-rose-600' : 'text-mt-muted'}`}>{when(n)}</span>
                 </li>
