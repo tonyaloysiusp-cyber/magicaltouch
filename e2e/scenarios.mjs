@@ -716,7 +716,7 @@ scenarios.push({
     for (const name of looks) {
       await t.page.getByRole('button', { name: `${name} look` }).click();
       await t.page.waitForTimeout(250);
-      if ((await decode()) !== want) failed.push(`look ${name}`);
+      if ((await decode()) !== want) { failed.push(`look ${name}`); await t.page.locator('[data-testid=qr-preview]').screenshot({ path: `e2e-out/shots/qr-pro-styles-scan--fail-${name.replace(/\W+/g, '')}.png` }).catch(() => {}); }
     }
     await t.shot('looks');
     for (const dot of ['Square', 'Rounded', 'Dots', 'Fluid', 'Bars ↕', 'Bars ↔']) {
