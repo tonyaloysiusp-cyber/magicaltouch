@@ -51,7 +51,7 @@ export const DEFAULT_LOOK: QrLook = {
 export const LOOK_PRESETS: { name: string; look: Partial<QrLook> }[] = [
   { name: 'Classic', look: { fg: '#000000', fill: 'solid', dot: 'square', eyeFrame: 'square', eyeBall: 'square', eyeColor: null, eyeBallColor: null, bg: '#ffffff', frame: 'none' } },
   { name: 'Soft', look: { fg: '#1F2A44', fill: 'solid', dot: 'rounded', eyeFrame: 'rounded', eyeBall: 'rounded', eyeColor: null, eyeBallColor: null, bg: '#ffffff', frame: 'none' } },
-  { name: 'Dots', look: { fg: '#3B1D5A', fill: 'solid', dot: 'dots', eyeFrame: 'rounded', eyeBall: 'square', eyeColor: null, eyeBallColor: null, bg: '#ffffff', frame: 'none' } },
+  { name: 'Dots', look: { fg: '#2A1446', fill: 'solid', dot: 'dots', eyeFrame: 'rounded', eyeBall: 'rounded', frame: 'border', frameColor: '#2A1446', caption: 'SCAN ME', captionColor: '#ffffff', eyeColor: null, eyeBallColor: null, bg: '#ffffff' } },
   { name: 'Fluid', look: { fg: '#0F4C3A', fill: 'solid', dot: 'fluid', eyeFrame: 'rounded', eyeBall: 'circle', eyeColor: null, eyeBallColor: null, bg: '#F1FAF5', frame: 'none' } },
   { name: 'Sunset', look: { fg: '#A0134B', fg2: '#C25400', fill: 'linear', angle: 45, dot: 'rounded', eyeFrame: 'leaf', eyeBall: 'leaf', eyeColor: '#7A1F2B', eyeBallColor: '#7A1F2B', bg: '#ffffff', frame: 'none' } },
   { name: 'Ocean', look: { fg: '#0D47A1', fg2: '#00727D', fill: 'linear', angle: 90, dot: 'rounded', eyeFrame: 'rounded', eyeBall: 'circle', eyeColor: '#0D47A1', eyeBallColor: '#0D47A1', bg: '#ffffff', frame: 'none' } },
