@@ -53,6 +53,9 @@ export const PERSIST_PROPS = [
   '__origColors',
   // Text box behaviour (auto-fit)
   '__autoFit',
+  // Issued certificate: QR block and the {{token}} a filled-in text came from
+  '__certCode',
+  '__certToken',
   // Fabric's own interaction locks are not serialized by default.
   'lockMovementX',
   'lockMovementY',

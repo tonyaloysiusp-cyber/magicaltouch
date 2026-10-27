@@ -106,6 +106,7 @@ import { OpenDesignDialog, OpenableDesign } from '@/components/editor/OpenDesign
 import { ImportDialog } from '@/components/editor/ImportDialog';
 import { UnsavedChangesDialog } from '@/components/editor/UnsavedChangesDialog';
 import { useLeaveGuard } from '@/hooks/useLeaveGuard';
+import { toCertificateMaster, shrinkEmbeddedImages } from '@/lib/editor/templateSave';
 import { loadTabSession, saveTabSession, clearTabSession } from '@/lib/editor/tabSession';
 import { WorkspaceSwitcher, EditorWorkspace } from '@/components/editor/WorkspaceSwitcher';
 import type { PhotoEditResult, CropRect } from '@/lib/photo/editTypes';
@@ -465,6 +466,10 @@ function EditorContent() {
   const backLabel = cameFrom === 'brand' ? 'Back to Brand workspace' : wantsTemplateEdit ? 'Back to Template Manager' : cameFromTemplate ? 'Back to templates' : 'Back to dashboard';
   const [templateEdit, setTemplateEdit] = useState<TemplateRecord | null>(null);
   const [templateSave, setTemplateSave] = useState<{ busy: boolean; msg: string | null }>({ busy: false, msg: null });
+  // Opened from Admin → Verified certificates: the issued certificate's code,
+  // and the master's empty QR slot (put back when saving the master design).
+  const [certMode, setCertMode] = useState<{ code: string; recipient: string } | null>(null);
+  const certSlotRef = useRef<any>(null);
   // A .mtd project opened from the customer's computer (see lib/mtd/).
   // Its tab id IS this key; the parsed file waits in lib/mtd/handoff.
   const urlLocalDoc = searchParams.get('localDoc');
@@ -2405,7 +2410,7 @@ function EditorContent() {
           // The new design starts with the template's name instead of
           // "Untitled Design" (easy to find later; rename any time).
           if (template?.name) setDesignName(template.name.replace(/^MT Brand · /, ''));
-          if (template && wantsTemplateEdit) {
+          if (template && (wantsTemplateEdit || searchParams.get('cert'))) {
             const { data: auth } = await supabase.auth.getUser();
             if (auth.user) {
               const { data: prof } = await supabase.from('profiles').select('is_admin').eq('id', auth.user.id).single();
@@ -3293,6 +3298,7 @@ function EditorContent() {
       if (typeof o.text === 'string' && o.text.includes('{{')) {
         let t = o.text;
         Object.entries(tokens).forEach(([k, v]) => (t = t.split(k).join(v)));
+        o.__certToken = o.text; // so "Save to master design" can put the placeholder back
         o.set({ text: t, styles: {} });
         o.initDimensions?.();
         o.setCoords?.();
@@ -3303,6 +3309,7 @@ function EditorContent() {
     const slot = canvas.getObjects().find((o: any) => o.name === 'Verification slot');
     const size = slot ? Math.min(slot.getScaledWidth(), slot.getScaledHeight()) : Math.min(pageBox.w, pageBox.h) * 0.13;
     const at = slot ? { x: slot.left, y: slot.top, size } : { x: pageBox.x + pageBox.w - size * 1.6, y: pageBox.y + pageBox.h - size * 1.9, size };
+    certSlotRef.current = slot ? slot.toObject(PERSIST_PROPS) : null;
     if (slot) canvas.remove(slot);
     canvas.getObjects().filter((o: any) => o.__certCode).forEach((o: any) => canvas.remove(o));
     buildVerificationBlock(F, data as any, at).forEach((o: any) => {
@@ -3310,6 +3317,7 @@ function EditorContent() {
       canvas.add(o);
     });
     setDesignName(`Certificate — ${data.recipient}`);
+    setCertMode({ code: data.code, recipient: data.recipient });
     canvas.requestRenderAll();
     refreshLayers();
     pushHistory();
@@ -5478,7 +5486,9 @@ function EditorContent() {
   performSaveRef.current = performSave;
   const loadFailedIdRef = useRef<string | null>(null);
 
-  const saveDesign = () => performSave(designIdRef.current ?? designId, designNameRef.current || designName);
+  // Editing a template / brand design / certificate master: Save (button,
+  // menu, Ctrl/Cmd+S) puts the changes into that template, not a new copy.
+  const saveDesign = () => (templateEditRef.current ? saveToTemplate() : performSave(designIdRef.current ?? designId, designNameRef.current || designName));
 
   // Unsaved work: ask before the Back arrow, the logo, any link, the
   // browser's Back button or closing the tab.
@@ -5490,6 +5500,7 @@ function EditorContent() {
         setSaveChooser({ mode: 'first', busy: null, error: null });
         return false;
       }
+      if (templateEditRef.current) return await saveToTemplate();
       await saveDesign();
       return !dirtyRef.current;
     },
@@ -5498,27 +5509,52 @@ function EditorContent() {
   // Saves the canvas back into the template being edited (admins only;
   // RLS enforces it server-side too). The previous content is kept as a
   // version first, so nothing is ever lost.
-  const saveToTemplate = async () => {
+  const templateEditRef = useRef<TemplateRecord | null>(null);
+  templateEditRef.current = templateEdit;
+  const saveToTemplate = async (): Promise<boolean> => {
     const canvas = fabricCanvasRef.current;
     const firstAb = artboardsRef.current[0];
-    if (!templateEdit?.id || !canvas || !firstAb) return;
+    if (!templateEdit?.id || !canvas || !firstAb) return false;
     setTemplateSave({ busy: true, msg: null });
     try {
       const { data: auth } = await supabase.auth.getUser();
       if (auth.user) {
-        const next = await createVersion(templateEdit, auth.user.id, 'Before design edit');
+        const next = await createVersion(templateEdit, auth.user.id, certMode ? 'Before certificate design edit' : 'Before design edit');
         if (next) setTemplateEdit((t) => (t ? { ...t, currentVersion: next } : t));
       }
-      const canvasJson = canvas.toJSON(SAVE_JSON_PROPS);
+      let canvasJson = canvas.toJSON(SAVE_JSON_PROPS);
+      // A certificate opened for one person: keep the design changes
+      // (signature, logo, colours, layout) but put the {{placeholders}} and
+      // the empty QR slot back, so every certificate gets its own name and code.
+      if (certMode) canvasJson = toCertificateMaster(canvasJson, certSlotRef.current);
+      // Big pasted pictures (a phone photo of a signature) are shrunk so the
+      // template stays light and always saves.
+      canvasJson = await shrinkEmbeddedImages(canvasJson);
       // Private brand designs keep no uploaded picture (the Brand workspace
       // draws its own previews), so nothing about them is ever public.
       const isBrand = cameFrom === 'brand' || (templateEdit.tags || []).includes('mt-internal');
       const image: string | null = isBrand ? null : capturePicture(firstAb, { format: 'jpeg', quality: 0.88, multiplier: 1200 / Math.max(firstAb.width, firstAb.height, 1) }).dataUrl;
       const ok = await setTemplateContent(templateEdit.id, templateEdit.currentVersion || '1.0', canvasJson, image);
-      setTemplateSave({ busy: false, msg: ok ? (isBrand ? 'Brand design saved.' : 'Template saved. Customers now get the updated design.') : 'Could not save. Please try again.' });
+      setTemplateSave({
+        busy: false,
+        msg: ok
+          ? certMode
+            ? 'Saved to the master certificate design. Every certificate now uses it.'
+            : isBrand
+              ? 'Brand design saved.'
+              : 'Template saved. Customers now get the updated design.'
+          : 'Could not save. Please try again.',
+      });
+      if (ok) {
+        dirtyRef.current = false;
+        setSaveStatus('saved');
+        setTabs((ts) => ts.map((t) => (t.id === activeTabIdRef.current ? { ...t, dirty: false } : t)));
+      }
+      return ok;
     } catch (err) {
       console.error('Template save failed:', err);
       setTemplateSave({ busy: false, msg: 'Could not save the template. Please try again.' });
+      return false;
     }
   };
 
@@ -7525,7 +7561,8 @@ function EditorContent() {
       {templateEdit && (
         <div className="fixed bottom-[88px] right-3 z-[75] max-w-md w-[calc(100%-1.5rem)] sm:w-auto bg-[#14121F] text-white text-sm rounded-xl shadow-xl px-4 py-2.5 flex items-center gap-3">
           <span className="flex-1 min-w-0 truncate">
-            {cameFrom === 'brand' ? 'Editing brand design' : 'Editing template'}: <strong>{templateEdit.name.replace(/^MT Brand · /, '')}</strong>
+            {certMode ? <>Certificate for <strong>{certMode.recipient}</strong> · master: <strong>{templateEdit.name.replace(/^MT Brand · /, '')}</strong></> : <>{cameFrom === 'brand' ? 'Editing brand design' : 'Editing template'}: <strong>{templateEdit.name.replace(/^MT Brand · /, '')}</strong></>}
+            {certMode && !templateSave.msg && <span className="block text-xs text-white/70 truncate">Your signature, logo and layout changes are saved into the master. Names, dates and QR codes stay per person.</span>}
             {templateSave.msg && <span className="block text-xs text-white/70 truncate">{templateSave.msg}</span>}
           </span>
           {/* Quick controls for brand / template editing: undo, redo, download. */}
@@ -7543,7 +7580,7 @@ function EditorContent() {
             disabled={templateSave.busy}
             className="shrink-0 text-xs font-semibold bg-white text-[#09090B] rounded-full px-4 py-2 disabled:opacity-60"
           >
-            {templateSave.busy ? 'Saving…' : cameFrom === 'brand' ? 'Save brand design' : 'Save to template'}
+            {templateSave.busy ? 'Saving…' : certMode ? 'Save to master design' : cameFrom === 'brand' ? 'Save brand design' : 'Save to template'}
           </button>
           <a href={backHref} className="shrink-0 text-xs text-white/70 hover:text-white underline">
             Back
