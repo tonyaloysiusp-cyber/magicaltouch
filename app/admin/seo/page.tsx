@@ -24,6 +24,7 @@ import { Overview } from '@/components/admin/seo/Overview';
 import { KeywordIdeas } from '@/components/admin/seo/KeywordIdeas';
 import { Promotion } from '@/components/admin/seo/Promotion';
 import { Social } from '@/components/admin/seo/Social';
+import { Performance } from '@/components/admin/seo/Performance';
 import type { LandingDraft } from '@/lib/landingDraft';
 
 const SITE = 'https://www.magicaltouchdesign.com';
@@ -35,7 +36,7 @@ interface SeoPage { id: string; slug: string; title: string; h1: string; descrip
 interface Promo { id: string; kind: 'channel' | 'campaign' | 'keyword'; name: string; url: string | null; status: 'todo' | 'doing' | 'done'; notes: string | null; meta: any }
 
 
-type Tab = 'overview' | 'ideas' | 'pages' | 'engines' | 'promo' | 'social' | 'keywords' | 'links';
+type Tab = 'overview' | 'performance' | 'ideas' | 'pages' | 'engines' | 'promo' | 'social' | 'keywords' | 'links';
 type PageRequest = { edit: string } | { draft: LandingDraft };
 
 const slugify = (s: string) => s.toLowerCase().replace(/&/g, 'and').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 80);
@@ -73,6 +74,9 @@ export default function SeoAdminPage() {
       if (!user) return router.push('/login?next=/admin/seo');
       const profile = await getOrCreateProfile(user.id, user.email?.split('@')[0]);
       if (!profile?.is_admin) return setState('denied');
+      // Open a tab from the address (e.g. the autopilot report links to ?tab=performance).
+      const t = new URLSearchParams(window.location.search).get('tab') as Tab | null;
+      if (t && ['overview', 'performance', 'ideas', 'pages', 'engines', 'promo', 'social', 'keywords', 'links'].includes(t)) setTab(t);
       await load();
       setState('ok');
     })();
@@ -88,7 +92,7 @@ export default function SeoAdminPage() {
   if (state === 'loading') return <main className="min-h-screen flex items-center justify-center text-mt-faint bg-mt-bg">Loading…</main>;
   if (state === 'denied') return <main className="min-h-screen flex flex-col items-center justify-center gap-3 bg-mt-bg"><p className="text-lg font-semibold text-mt-ink">Administrators only</p><Link href="/dashboard" className="text-sm text-mt-accent hover:underline">Back to your dashboard</Link></main>;
 
-  const TABS: [Tab, string][] = [['overview', 'Overview'], ['ideas', 'Keyword ideas'], ['pages', 'Landing pages'], ['engines', 'Search engines'], ['promo', 'Free promotion'], ['social', 'Social & promo kit'], ['keywords', 'Site search'], ['links', 'Campaign links']];
+  const TABS: [Tab, string][] = [['overview', 'Overview'], ['performance', 'Performance'], ['ideas', 'Keyword ideas'], ['pages', 'Landing pages'], ['engines', 'Search engines'], ['promo', 'Free promotion'], ['social', 'Social & promo kit'], ['keywords', 'Site search'], ['links', 'Campaign links']];
   const openPage = (r: PageRequest) => { setRequest(r); setTab('pages'); };
   const trackKeyword = async (name: string) => {
     const exists = promo.some((p) => p.kind === 'keyword' && p.name.toLowerCase() === name.toLowerCase());
@@ -105,6 +109,7 @@ export default function SeoAdminPage() {
         </nav>
         {msg && <p className="rounded-2xl bg-mt-accentsoft text-[#4B2FB0] px-4 py-2.5 text-sm">{msg}</p>}
         {tab === 'overview' && <Overview onEdit={(slug) => openPage({ edit: slug })} onTab={setTab} />}
+        {tab === 'performance' && <Performance onEdit={(slug) => openPage({ edit: slug })} onDraft={(draft) => openPage({ draft })} flash={flash} />}
         {tab === 'ideas' && <KeywordIdeas onDraft={(draft) => openPage({ draft })} onKeyword={trackKeyword} />}
         {tab === 'engines' && <Engines gcode={gcode} setGcode={setGcode} bcode={bcode} setBcode={setBcode} flash={flash} busy={busy} setBusy={setBusy} />}
         {tab === 'pages' && <Pages pages={pages} hidden={hidden} setHidden={setHidden} reload={load} flash={flash} request={request} clearRequest={() => setRequest(null)} />}

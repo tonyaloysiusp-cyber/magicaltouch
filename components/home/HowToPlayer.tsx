@@ -108,20 +108,25 @@ export function HowToPlayer() {
   const [s, setS] = useState<S>(START);
   const [playing, setPlaying] = useState(true);
   const [scale, setScale] = useState(0.6);
+  // Phones: instead of shrinking the whole 1440-px editor to an unreadable
+  // stamp, a camera follows the cursor over a smaller window of it.
+  const [boxW, setBoxW] = useState(W * 0.6);
   const [reduced, setReduced] = useState(false);
   const [visible, setVisible] = useState(true);
   const boxRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const barRef = useRef<HTMLDivElement>(null);
   const clock = useRef({ t: 0, idx: 0, last: 0 });
+  const chipsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => setReduced(window.matchMedia('(prefers-reduced-motion: reduce)').matches), []);
   useEffect(() => {
     const el = boxRef.current;
     if (!el) return;
-    const ro = new ResizeObserver(() => setScale(el.clientWidth / W));
+    const fit = () => { setBoxW(el.clientWidth); setScale(el.clientWidth / W); };
+    const ro = new ResizeObserver(fit);
     ro.observe(el);
-    setScale(el.clientWidth / W);
+    fit();
     const io = new IntersectionObserver(([e]) => setVisible(e.isIntersecting), { threshold: 0.15 });
     io.observe(el);
     return () => { ro.disconnect(); io.disconnect(); };
@@ -158,6 +163,12 @@ export function HowToPlayer() {
     return () => cancelAnimationFrame(raf);
   }, [s.target, s.dlg, s.sel, s.fxOpen, s.panel, s.search]);
 
+  // Keep the current step's chip in view on narrow screens.
+  useEffect(() => {
+    const bar = chipsRef.current, chip = bar?.querySelector('[aria-current="true"]') as HTMLElement | null;
+    if (bar && chip) bar.scrollTo({ left: chip.offsetLeft - bar.clientWidth / 2 + chip.clientWidth / 2, behavior: 'smooth' });
+  }, [s.step]);
+
   const jump = (i: number) => {
     const target = STEPS[i].at;
     let st = START, idx = 0;
@@ -168,25 +179,40 @@ export function HowToPlayer() {
   };
   const view: S = reduced ? { ...START, panel: false, loaded: true, name: 'LAYLA MANSOUR', fx: 'glow', photo: 589, step: 0 } : s;
   const step = STEPS[view.step];
+  const cam = boxW < 640;
+  const CW = 640, CH = 720;
+  const k = cam ? boxW / CW : scale;
+  // Dialogs sit in the middle of the editor: frame them whole.
+  const focusX = view.dlg !== 'none' ? (W + 76) / 2 : view.cx;
+  const focusY = view.dlg !== 'none' ? H / 2 : view.cy;
+  const camL = cam ? Math.max(0, Math.min(W - CW, focusX - CW / 2)) : 0;
+  const camT = cam ? Math.max(0, Math.min(H - CH, focusY - CH / 2)) : 0;
+  const caption = (
+    <div key={view.step} className={cam ? 'px-3 pt-3' : 'mt-howto-caption relative rounded-[22px] bg-black/80 text-white px-7 py-5 shadow-2xl ring-1 ring-white/10 w-[360px]'}>
+      {!cam && <span className="mt-howto-spark" aria-hidden><Sparkles size={26} /></span>}
+      <p className={cam ? 'text-[11px] font-semibold uppercase tracking-[0.18em] text-[#3B82C4]' : 'text-[13px] font-semibold uppercase tracking-[0.2em] text-[#8FE3FF]'}>Step {view.step + 1} of {STEPS.length}</p>
+      <p className={cam ? 'text-[18px] font-semibold leading-tight mt-0.5 text-mt-ink' : 'text-[27px] font-semibold leading-tight mt-0.5'}>{step.title}</p>
+      <p className={cam ? 'text-[14px] text-mt-muted' : 'text-[17px] text-white/75'}>{step.sub.replace('{count}', count)}</p>
+    </div>
+  );
 
   return (
     <div className="relative select-none">
       <FontFaces />
-      <div ref={boxRef} className="relative w-full overflow-hidden" style={{ height: H * scale }} role="img" aria-label="How Magical Touch works: an animated walkthrough of the editor">
-        <div ref={stageRef} className="absolute left-0 top-0 origin-top-left" style={{ width: W, height: H, transform: `scale(${scale})` }}>
+      <div ref={boxRef} className="relative w-full overflow-hidden" style={{ height: (cam ? CH : H) * k }} role="img" aria-label="How Magical Touch works: an animated walkthrough of the editor">
+        <div ref={stageRef} className="absolute left-0 top-0 origin-top-left" style={{ width: W, height: H, transform: `scale(${k}) translate(${-camL}px, ${-camT}px)`, transition: cam ? 'transform .9s cubic-bezier(.45,0,.25,1)' : undefined }}>
           <Stage s={view} />
-          {/* caption */}
-          <div className="absolute right-[44px] top-[330px] pointer-events-none z-40" style={{ opacity: view.fade ? 0 : 1, transition: 'opacity .5s' }}>
-            <div key={view.step} className="mt-howto-caption relative rounded-[22px] bg-black/80 text-white px-7 py-5 shadow-2xl ring-1 ring-white/10 w-[360px]">
-              <span className="mt-howto-spark" aria-hidden><Sparkles size={26} /></span>
-              <p className="text-[13px] font-semibold uppercase tracking-[0.2em] text-[#8FE3FF]">Step {view.step + 1} of {STEPS.length}</p>
-              <p className="text-[27px] font-semibold leading-tight mt-0.5">{step.title}</p>
-              <p className="text-[17px] text-white/75">{step.sub.replace('{count}', count)}</p>
+          {/* caption (desktop: floating card on the stage) */}
+          {!cam && (
+            <div className="absolute right-[44px] top-[330px] pointer-events-none z-40" style={{ opacity: view.fade ? 0 : 1, transition: 'opacity .5s' }}>
+              {caption}
             </div>
-          </div>
+          )}
         </div>
       </div>
-      <div className="relative flex items-center gap-1.5 px-2 sm:px-3 py-2 border-t border-mt-border bg-mt-surface overflow-x-auto no-scrollbar">
+      {/* phones: the caption sits under the screen, full size */}
+      {cam && <div className="border-t border-mt-border bg-mt-surface pb-1">{caption}</div>}
+      <div ref={chipsRef} className="relative flex items-center gap-1.5 px-2 sm:px-3 py-2 border-t border-mt-border bg-mt-surface overflow-x-auto no-scrollbar">
         <button onClick={() => setPlaying((p) => !p)} aria-label={playing ? 'Pause walkthrough' : 'Play walkthrough'} className="shrink-0 w-8 h-8 rounded-full grid place-items-center bg-mt-primary text-mt-onprimary">
           {playing ? <Pause size={14} /> : <Play size={14} />}
         </button>

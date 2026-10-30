@@ -12,11 +12,14 @@ export const dynamicParams = true;
 // on first visits when each page was made on demand far from the data.
 export const preferredRegion = 'bom1';
 
-// Build every published template page ahead of time, so Google and visitors
-// get an instant, ready-made page. New templates are still made on first visit.
+// Build the first template pages in gallery order ahead of time, so Google and visitors get them instantly. The rest are
+// made on first visit — quickly, next to the database — and cached. Kept to
+// 500 so a deploy stays well inside Vercel's 45-minute build limit (all
+// ~1,900 took about 40 minutes).
+const PREBUILD = 500;
 export async function generateStaticParams() {
   const all = await getAllPublishedTemplates().catch(() => []);
-  return all.slice(0, 3000).map((t) => ({ slug: t.slug }));
+  return all.slice(0, PREBUILD).map((t) => ({ slug: t.slug }));
 }
 
 export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {

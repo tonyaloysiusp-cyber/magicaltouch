@@ -11,17 +11,33 @@ export function coreWords(phrase: string): string[] {
   return phrase.toLowerCase().replace(/[^a-z0-9\s'-]/g, ' ').split(/\s+/).filter((w) => w.length > 1 && !STOP.has(w));
 }
 
-const cap = (s: string) => s.replace(/\b([a-z])/g, (m) => m.toUpperCase()).replace(/\b(And|For|Of|To|In|With|A|An|The)\b/g, (m) => m.toLowerCase());
-const slugify = (s: string) => s.toLowerCase().replace(/&/g, 'and').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 70);
+const cap = (s: string) => s.replace(/(^|[\s-])([a-z])/g, (m) => m.toUpperCase()).replace(/\b(And|For|Of|To|In|With|A|An|The)\b/g, (m) => m.toLowerCase()).replace(/\b(Uae|Us|Uk|Usa|Ksa|Nye|Ai|Cv|Qr|Diy)\b/g, (m) => m.toUpperCase());
+const slugify = (s: string) => s.toLowerCase().replace(/['’]/g, '').replace(/&/g, 'and').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 70);
 const fit = (s: string, n: number) => (s.length <= n ? s : s.slice(0, s.lastIndexOf(' ', n - 1)).replace(/(\s+(&|and|or|with|for|to|—))+$/i, '').replace(/[—,:;&\s-]+$/, ''));
+
+// Words too general to find the right templates on their own ("day" would
+// match every birthday template).
+const GENERIC = new Set(['day', 'days', 'card', 'cards', 'post', 'posts', 'poster', 'posters', 'flyer', 'flyers', 'invitation', 'invitations', 'invite', 'story', 'stories', 'party', 'sale', 'greeting', 'greetings', 'happy', 'new', 'us', 'uk', 'eve', 'night', 'wishes', 'mubarak',
+  // places: "UAE Commemoration Day" must not borrow UAE National Day designs
+  'uae', 'dubai', 'india', 'indian', 'saudi', 'arabia', 'ksa', 'usa', 'america', 'british', 'canada', 'australia', 'world', 'international', 'national']);
+
+/** Template words for a phrase: the whole phrase plus its most specific word. */
+export function termsFor(phrase: string): string[] {
+  // "father's day" → "father day": template search drops the apostrophe anyway.
+  const words = coreWords(phrase.replace(/\([^)]*\)/g, ' ').replace(/['’]s\b/g, ''));
+  if (!words.length) return [];
+  const specific = words.find((w) => !GENERIC.has(w) && w.length > 2);
+  return [...new Set([words.join(' '), ...(specific ? [specific] : [])])];
+}
 
 export interface LandingDraft { slug: string; title: string; h1: string; description: string; intro: string; thing: string; terms: string; faqs: string }
 
 export function draftLanding(phrase: string, templateCount = 0): LandingDraft {
-  const words = coreWords(phrase);
+  const words = coreWords(phrase.replace(/\([^)]*\)/g, ' '));
   const thing = words.join(' ') || phrase.toLowerCase();
   const isTemplates = /template|ideas|design/.test(phrase.toLowerCase()) && !/maker|generator/.test(phrase.toLowerCase());
-  const h1 = isTemplates ? `Free ${thing} templates` : `Free ${thing} maker`;
+  const acr = (x: string) => x.replace(/\b(uae|us|uk|usa|ksa|nye|ai|cv|qr)\b/g, (m) => m.toUpperCase());
+  const h1 = acr(isTemplates ? `Free ${thing} templates` : `Free ${thing} maker`);
   const T = cap(thing);
   // Longest suffix that still fits Google's ~60 characters.
   const base = isTemplates ? `Free ${T} Templates` : `Free ${T} Maker`;
@@ -39,5 +55,5 @@ export function draftLanding(phrase: string, templateCount = 0): LandingDraft {
     [`Can I add my own photos and logo?`, 'Yes. Upload them from your computer or phone and drop them into any photo frame, or place them anywhere on the design.'],
     [`Can I change the size?`, 'Yes. Use Resize to switch between A4, A5, US Letter, Instagram post, story and custom sizes in one click.'],
   ].map(([q, a]) => `${q} | ${a}`).join('\n');
-  return { slug: slugify(isTemplates ? `${thing} templates` : `free ${thing} maker`), title, h1, description, intro, thing, terms: words.length > 1 ? [words.join(' '), words[words.length - 1]].join(', ') : words.join(', '), faqs };
+  return { slug: slugify(isTemplates ? `${thing} templates` : `free ${thing} maker`), title, h1, description, intro, thing, terms: termsFor(phrase).join(', '), faqs };
 }
