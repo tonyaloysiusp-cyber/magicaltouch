@@ -15,6 +15,8 @@ import { allPages } from '@/lib/templatesData';
 import { AdminShell, AdminCard, AdminSection } from '@/components/admin/AdminShell';
 import { VisitorStats } from '@/components/admin/VisitorStats';
 import { welcomeEmail, passwordChangedEmail, EmailCopy } from '@/lib/email/templates';
+import { OccasionPlanner } from '@/components/admin/occasions/OccasionPlanner';
+import { FREE_TOOL_COUNT } from '@/lib/freeTools';
 
 type Tab = 'overview' | 'messages' | 'occasions' | 'services' | 'wording';
 const TABS: Tab[] = ['overview', 'messages', 'occasions', 'services', 'wording'];
@@ -398,6 +400,13 @@ function Occasions({ occasions, templates, reload, flash }: { occasions: Occasio
   const [region, setRegion] = useState('All');
   const [adding, setAdding] = useState(false);
   const [draft, setDraft] = useState({ name: '', occasion_date: '', region: 'UAE / Gulf', ideas: '', lead_days: 10 });
+  const [planning, setPlanning] = useState<Occasion | null>(null);
+  // Posts scheduled for the next 7 days, across every occasion.
+  const [week, setWeek] = useState<{ id: string; name: string; status: string; meta: any }[]>([]);
+  useEffect(() => {
+    const today = new Date().toISOString().slice(0, 10), end = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
+    supabase.from('promo_items').select('id,name,status,meta').eq('kind', 'post').gte('meta->>post_on', today).lte('meta->>post_on', end).then(({ data }) => setWeek(((data as any[]) || []).sort((a, b) => String(a.meta.post_on).localeCompare(String(b.meta.post_on)))));
+  }, [planning]);
   const list = occasions.filter((o) => daysUntil(o.occasion_date) >= 0 && (region === 'All' || o.region === region));
   const byMonth = list.reduce<Record<string, Occasion[]>>((acc, o) => {
     const k = fmtDate(o.occasion_date, { month: 'long', year: 'numeric' });
@@ -427,10 +436,30 @@ function Occasions({ occasions, templates, reload, flash }: { occasions: Occasio
             </button>
           ))}
         </div>
-        <button type="button" onClick={() => setAdding(true)} className={btnPrimary}>
-          <Plus size={14} /> Add occasion
-        </button>
+        <div className="flex gap-2">
+          {list[0] && <button type="button" onClick={() => setPlanning(list[0])} className={btnGhost} title={`${FREE_TOOL_COUNT} free creative tools inside every plan`}><Sparkles size={14} /> Plan next: {list[0].name}</button>}
+          <button type="button" onClick={() => setAdding(true)} className={btnPrimary}>
+            <Plus size={14} /> Add occasion
+          </button>
+        </div>
       </div>
+
+      {week.length > 0 && (
+        <AdminCard title={`Posts this week · ${week.filter((p) => p.status === 'done').length}/${week.length} done`}>
+          <ul className="divide-y divide-mt-border">
+            {week.map((p) => {
+              const o = occasions.find((x) => x.id === p.meta.occasion_id);
+              return (
+                <li key={p.id} className="py-2 flex items-center gap-3 text-[13px]">
+                  <span className="w-24 shrink-0 text-mt-faint">{fmtDate(p.meta.post_on, { weekday: 'short', day: 'numeric', month: 'short' })}</span>
+                  <span className={`flex-1 min-w-0 truncate ${p.status === 'done' ? 'line-through text-mt-muted' : 'text-mt-ink'}`}>{p.name} <span className="text-mt-faint">· {p.meta.channel}</span></span>
+                  {o && <button type="button" onClick={() => setPlanning(o)} className="text-[12px] font-semibold text-[#3B82C4] hover:underline shrink-0">Open</button>}
+                </li>
+              );
+            })}
+          </ul>
+        </AdminCard>
+      )}
 
       {adding && (
         <AdminCard title="New occasion" action={<button type="button" aria-label="Close" onClick={() => setAdding(false)} className="text-mt-muted hover:text-mt-ink"><X size={18} /></button>}>
@@ -469,7 +498,8 @@ function Occasions({ occasions, templates, reload, flash }: { occasions: Occasio
                   <div className="mt-3 flex flex-wrap items-center gap-2">
                     <span className={`text-[12px] ${have ? 'text-emerald-700 dark:text-emerald-400' : 'text-mt-faint'}`}>{have ? `${have} matching template${have === 1 ? '' : 's'} live` : 'No templates yet'}</span>
                     <span className="flex-1" />
-                    <Link href="/admin/templates" className="text-[12px] font-semibold text-[#3B82C4] hover:underline">Make templates</Link>
+                    <button type="button" onClick={() => setPlanning(o)} className="text-[12px] font-semibold text-white bg-mt-primary rounded-full px-3 py-1 inline-flex items-center gap-1"><CalendarHeart size={12} /> Plan & schedule</button>
+                    <Link href={`/admin/templates?claude=${encodeURIComponent(`${o.name} greeting post`)}`} className="text-[12px] font-semibold text-[#3B82C4] hover:underline inline-flex items-center gap-1"><Sparkles size={12} /> AI template</Link>
                     <button type="button" onClick={() => toggle(o)} className="text-[12px] text-mt-muted hover:text-mt-ink">
                       {o.active ? 'Mute' : 'Unmute'}
                     </button>
@@ -481,6 +511,7 @@ function Occasions({ occasions, templates, reload, flash }: { occasions: Occasio
         </section>
       ))}
       {!list.length && <AdminCard><p className="text-sm text-mt-muted text-center py-8">No upcoming occasions for this region.</p></AdminCard>}
+      {planning && <OccasionPlanner occasion={planning} onClose={() => setPlanning(null)} flash={flash} />}
     </div>
   );
 }

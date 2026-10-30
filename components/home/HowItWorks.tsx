@@ -6,9 +6,9 @@ import { Reveal } from './Reveal';
 // A real sequence, so the numbers carry meaning. Each takes one of the
 // logo's colours.
 const STEPS = [
-  { n: '1', color: '#EC5F84', title: 'Pick a template', body: 'Choose from {count} designs for festivals, birthdays, weddings, business, resumes and more, or start blank.' },
-  { n: '2', color: '#1FAEE6', title: 'Make it yours', body: 'Change the words, colours, fonts and photos. Everything on the page can be edited.' },
-  { n: '3', color: '#6DB33A', title: 'Download or share', body: 'Save it as an image or a print-ready PDF, or keep it in your account for later.' },
+  { n: '1', color: '#EC5F84', title: 'Pick a template — or paste any design', body: 'Choose from {count} designs for festivals, birthdays, weddings, business and more, start blank, or paste a design you like and let free AI rebuild it.' },
+  { n: '2', color: '#1FAEE6', title: 'Make it yours', body: 'Change the words, colours, fonts and photos. Remove backgrounds, add effects, translate to Arabic or Hindi, resize for any platform.' },
+  { n: '3', color: '#6DB33A', title: 'Download or share', body: 'Download a print-ready PDF (CMYK too), PNG or JPG — no watermark — or share it straight to WhatsApp and Instagram.' },
 ];
 
 export function HowItWorks() {
