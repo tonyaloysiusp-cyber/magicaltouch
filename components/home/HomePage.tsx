@@ -7,7 +7,7 @@ import { Navbar } from './Navbar';
 import { WorkspaceHero } from './WorkspaceHero';
 import { StudioTools } from './StudioTools';
 import { TemplateShowcase } from './TemplateShowcase';
-import { AiShowcase } from './AiShowcase';
+import { StudioTour } from './StudioTour';
 import { HowItWorks } from './HowItWorks';
 import { PricingFree } from './PricingFree';
 import { FinalCTA } from './FinalCTA';
@@ -43,7 +43,7 @@ export function HomePage() {
         <Navbar theme={theme} onToggleTheme={toggleTheme} />
         <WorkspaceHero />
         <TemplateShowcase />
-        <AiShowcase />
+        <StudioTour />
         <StudioTools />
         <HowItWorks />
         <PricingFree />
