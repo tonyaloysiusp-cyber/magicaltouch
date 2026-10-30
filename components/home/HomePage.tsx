@@ -8,6 +8,7 @@ import { WorkspaceHero } from './WorkspaceHero';
 import { StudioTools } from './StudioTools';
 import { TemplateShowcase } from './TemplateShowcase';
 import { StudioTour } from './StudioTour';
+import { SocialShowcase } from './SocialShowcase';
 import { HowItWorks } from './HowItWorks';
 import { PricingFree } from './PricingFree';
 import { FinalCTA } from './FinalCTA';
@@ -47,6 +48,7 @@ export function HomePage() {
         <StudioTools />
         <HowItWorks />
         <PricingFree />
+        <SocialShowcase />
         <FinalCTA />
         <Footer theme={theme} />
       </main>
