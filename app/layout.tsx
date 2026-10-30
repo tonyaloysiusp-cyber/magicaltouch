@@ -27,10 +27,12 @@ const baseMetadata: Metadata = {
 
 // The Google Search Console code is set from Admin → SEO & promotion.
 export async function generateMetadata(): Promise<Metadata> {
-  const [google, label] = await Promise.all([getSiteSetting('google_verification'), getTemplateCountLabel()]);
+  const [google, bing, label] = await Promise.all([getSiteSetting('google_verification'), getSiteSetting('bing_verification'), getTemplateCountLabel()]);
   const description = withCount(SITE_DESCRIPTION, label);
   const meta: Metadata = { ...baseMetadata, description, openGraph: { ...baseMetadata.openGraph, description }, twitter: { ...baseMetadata.twitter, description } };
-  return google ? { ...meta, verification: { google } } : meta;
+  // Bing Webmaster Tools code, also set from Admin → SEO → Search engines.
+  const verification: Metadata['verification'] = { ...(google ? { google } : {}), ...(bing ? { other: { 'msvalidate.01': bing } } : {}) };
+  return google || bing ? { ...meta, verification } : meta;
 }
 
 export const viewport: Viewport = { themeColor: [{ media: '(prefers-color-scheme: light)', color: '#ffffff' }, { media: '(prefers-color-scheme: dark)', color: '#000000' }] };

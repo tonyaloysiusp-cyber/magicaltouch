@@ -54,7 +54,7 @@ export const LANDINGS: Landing[] = [
     thing: 'poster',
     h1: 'Free poster maker',
     title: 'Free Poster Maker — Event, Sale & Wall Art Posters',
-    description: 'Design eye-catching posters online for free. Music festivals, exhibitions, film nights, sales and wall art — edit a template and download a print-ready A3 or A4 PDF.',
+    description: 'Design eye-catching posters online for free — events, exhibitions, sales and wall art. Edit a template and download a print-ready A3 or A4 PDF.',
     intro: [
       'Posters have to work from across the room. Our poster templates use bold type, strong colour and clear hierarchy so the big message lands first and the details follow.',
       'Pick a design, replace the text and photos, and export at full print quality — A3, A4, A5 mini posters or a custom size.',
@@ -236,7 +236,7 @@ export const LANDINGS: Landing[] = [
     slug: 'free-brochure-maker',
     thing: 'brochure',
     h1: 'Free brochure & company profile maker',
-    title: 'Free Brochure Maker — Company Profile & Presentation Templates',
+    title: 'Free Brochure Maker — Company Profiles & Brochures',
     description: 'Design brochures, company profiles and presentation decks online for free. Multi-page templates you can edit and export as PDF.',
     intro: [
       'Tell your company’s story with a professional multi-page brochure or deck. Edit each page, keep your brand colours consistent and export one tidy PDF.',
@@ -281,7 +281,7 @@ export const LANDINGS: Landing[] = [
     slug: 'real-estate-flyer-maker',
     thing: 'real estate design',
     h1: 'Real estate flyer & listing post maker',
-    title: 'Free Real Estate Flyer & Listing Templates — Just Listed, Open House',
+    title: 'Free Real Estate Flyer Maker — Listing Templates',
     description: 'Free real estate templates for agents: just listed, open house, sold, for rent and luxury property flyers and Instagram posts.',
     intro: [
       'Listings sell faster with great presentation. Our real estate templates put the photos first, with price, bedrooms and contact details clear at a glance.',
@@ -312,7 +312,7 @@ export const LANDINGS: Landing[] = [
     thing: 'UAE National Day design',
     seasonal: true,
     h1: 'UAE National Day templates',
-    title: 'Free UAE National Day Templates — Eid Al Etihad Posters & Posts',
+    title: 'Free UAE National Day Templates — Eid Al Etihad',
     description: 'Celebrate UAE National Day (Eid Al Etihad, 2 December) with free poster, social post and story templates in the flag colours.',
     intro: ['Mark Eid Al Etihad with designs in the UAE flag colours — posters for the office, greeting posts for your brand and fireworks stories. Add your logo and share.'],
     terms: ['national day', 'uae'],
@@ -338,7 +338,7 @@ export const LANDINGS: Landing[] = [
     thing: 'New Year design',
     seasonal: true,
     h1: 'New Year 2027 templates',
-    title: 'Free New Year 2027 Templates — NYE Party Posters, Cards & Posts',
+    title: 'Free New Year 2027 Templates — NYE Posters & Cards',
     description: 'Free New Year’s Eve and 2027 templates: party posters, countdown posts, fireworks stories, greeting cards and corporate New Year wishes.',
     intro: ['Ring in 2027 with gold, glitter and fireworks — or a calm, corporate greeting for your clients. Edit the date and venue and share.'],
     terms: ['new year', '2027', 'nye'],
@@ -390,7 +390,7 @@ export const LANDINGS: Landing[] = [
     thing: 'sale design',
     seasonal: true,
     h1: 'Black Friday & White Friday templates',
-    title: 'Free Black Friday, White Friday & Cyber Monday Sale Templates',
+    title: 'Free Black Friday & White Friday Sale Templates',
     description: 'Free sale templates for Black Friday, White Friday and Cyber Monday: bold discount posts, luxury sale posts and neon stories.',
     intro: ['Make your biggest sale of the year impossible to miss. Bold discount posts, quiet luxury sale designs and neon Cyber Monday stories — just add your discount and code.'],
     terms: ['black friday', 'white friday', 'cyber monday', 'sale'],
@@ -400,7 +400,303 @@ export const LANDINGS: Landing[] = [
   }),
 ];
 
-export const ALL_LANDINGS = () => [...LANDINGS, ...MORE_LANDINGS, ...ALT_LANDINGS, ...COUNTRY_LANDINGS];
+// ---------------- added Oct 2026: searches we track that had no page yet.
+// Each one only targets a phrase the library really has templates for
+// (checked against published templates, 8+ matches each).
+const FREE_FAQ: [string, string] = ['Is it really free?', 'Yes. Every template, the editor and every download format are free, with no watermark. A free account lets you save designs and come back to them.'];
+export const NEW_LANDINGS: Landing[] = [
+  L({
+    slug: 'instagram-story-templates',
+    thing: 'Instagram story',
+    h1: 'Free Instagram story templates',
+    title: 'Free Instagram Story Templates — Edit Online',
+    description: 'Free Instagram story templates for sales, events, quotes, launches and announcements. Edit online, download 1080 × 1920 PNG and post — no watermark.',
+    intro: [
+      'Stories are where followers check in every day. Our story templates are built at 1080 × 1920 px with text kept clear of the app buttons at the top and bottom, so nothing important gets covered.',
+      'Pick a design for a sale, a new product, an event countdown, a quote or a “link in bio” reminder, change the words and photos, and download a crisp PNG ready to post — or share the same design as a WhatsApp status.',
+    ],
+    terms: ['story'],
+    uses: ['Sale and discount stories', 'New product launches', 'Event countdowns', 'Quotes and tips', 'WhatsApp status updates'],
+    faqs: [FREE_FAQ, ['What size is an Instagram story?', '1080 × 1920 pixels, a 9:16 ratio. Every story template here is already that size.'], ['Can I turn a post into a story?', 'Yes — open any post template and use Resize to change it to a story in one click.']],
+    related: ['free-instagram-post-maker', 'linkedin-post-templates', 'quote-post-maker', 'sale-poster-maker'],
+  }),
+  L({
+    slug: 'linkedin-post-templates',
+    thing: 'LinkedIn post',
+    h1: 'Free LinkedIn post templates',
+    title: 'Free LinkedIn Post & Banner Templates',
+    description: 'Professional LinkedIn post, carousel and banner templates for hiring, announcements, tips and company news. Edit online for free and download PNG or PDF.',
+    intro: [
+      'LinkedIn rewards posts that look clean and say something useful. These templates are designed for company news, hiring, event announcements, tips and personal milestones, in a calm, professional style.',
+      'Add your logo and brand colours, download a PNG for a single image post or a PDF for a swipeable carousel, and match it with a LinkedIn banner for your profile or company page.',
+    ],
+    terms: ['linkedin'],
+    uses: ['Company announcements', 'Hiring posts', 'Tips and carousels', 'Event promotion', 'Profile and company banners'],
+    faqs: [FREE_FAQ, ['How do I post a LinkedIn carousel?', 'Download the design as a PDF and upload it as a document post — LinkedIn shows each page as a swipeable slide.'], ['What size is a LinkedIn banner?', '1584 × 396 pixels for a personal profile.']],
+    related: ['free-hiring-poster-maker', 'instagram-story-templates', 'free-certificate-maker'],
+  }),
+  L({
+    slug: 'quote-post-maker',
+    thing: 'quote post',
+    h1: 'Free quote post maker',
+    title: 'Free Quote Post Maker — Quote Templates for Instagram',
+    description: 'Turn any quote into a beautiful post. Free quote templates for Instagram, Facebook and WhatsApp with elegant fonts and backgrounds. Edit and download free.',
+    intro: [
+      'A good quote deserves good typography. These templates pair elegant fonts with calm backgrounds, so motivational lines, customer reviews, Islamic quotes and daily thoughts look polished and consistent.',
+      'Paste your quote, add the author or your handle, and download a square or portrait post. Keep the same design for a weekly series so followers recognise your posts instantly.',
+    ],
+    terms: ['quote'],
+    uses: ['Motivational posts', 'Customer reviews and testimonials', 'Daily thoughts', 'Religious and inspirational quotes'],
+    faqs: [FREE_FAQ, ['Can I use my own fonts?', 'Choose from hundreds of fonts in the editor, including Arabic fonts, or upload your own.']],
+    related: ['free-instagram-post-maker', 'instagram-story-templates', 'free-greeting-card-maker'],
+  }),
+  L({
+    slug: 'sale-poster-maker',
+    thing: 'sale poster',
+    h1: 'Free sale poster maker',
+    title: 'Free Sale Poster Maker — Discount & Offer Templates',
+    description: 'Make sale posters and discount posts for free: big percentages, bold offers and seasonal sales. Edit online and download for print or Instagram.',
+    intro: [
+      'A sale poster has one job: make the discount impossible to miss. These templates put the percentage or price front and centre, with space for dates, terms and your logo.',
+      'Use them for shop windows, Instagram posts, stories and WhatsApp broadcasts — then reuse the same design for your next offer by changing the number and colour.',
+    ],
+    terms: ['sale', 'discount', 'offer'],
+    uses: ['Shop window posters', 'Instagram sale posts', 'Seasonal sales', 'Grand openings', 'Flash deals'],
+    faqs: [FREE_FAQ, ['Can I print a sale poster?', 'Yes — download “PDF (print)” for A4 or A3 posters, or PNG for social media.']],
+    related: ['black-friday-templates', 'free-flyer-maker', 'free-poster-maker', 'instagram-story-templates'],
+  }),
+  L({
+    slug: 'free-banner-maker',
+    thing: 'banner',
+    h1: 'Free banner maker',
+    title: 'Free Banner Maker — Web, Social & Event Banners',
+    description: 'Design banners online for free: website headers, social media covers, roll-ups and event banners. Edit any template and download PNG or print-ready PDF.',
+    intro: [
+      'Banners appear everywhere — the top of your website, your Facebook and LinkedIn covers, email headers and the roll-up stand at your next event. These templates cover each format at the right size.',
+      'Change the headline, colours and images, then download a sharp PNG for screens or a print-ready PDF for large-format printing.',
+    ],
+    terms: ['banner', 'cover', 'header'],
+    uses: ['Website headers', 'Facebook and LinkedIn covers', 'Email headers', 'Event and roll-up banners'],
+    faqs: [FREE_FAQ, ['Can I make a custom size?', 'Yes — set any width and height, or resize a template to the size you need.']],
+    related: ['linkedin-post-templates', 'free-poster-maker', 'free-youtube-thumbnail-maker'],
+  }),
+  L({
+    slug: 'save-the-date-maker',
+    thing: 'save the date',
+    h1: 'Free save the date maker',
+    title: 'Free Save the Date Templates — Cards & Digital',
+    description: 'Free save the date templates for weddings and engagements. Add your names, date and city, then print cards or send on WhatsApp. Edit online free.',
+    intro: [
+      'A save the date gives guests time to plan travel and leave. It only needs your names, the date and the city — so the design can be simple, elegant and very you.',
+      'Choose a style that matches your wedding colours, add a photo if you like, and send it on WhatsApp or print it as a card. Later, use the same design for the full invitation set.',
+    ],
+    terms: ['save the date'],
+    uses: ['Wedding save the dates', 'Engagement announcements', 'Destination weddings', 'Anniversary celebrations'],
+    faqs: [FREE_FAQ, ['When should I send a save the date?', 'Usually 6–8 months before the wedding, or 8–12 months for a destination wedding.']],
+    related: ['free-wedding-invitation-maker', 'nikah-invitation-maker', 'free-invitation-maker'],
+  }),
+  L({
+    slug: 'nikah-invitation-maker',
+    thing: 'nikah invitation',
+    h1: 'Free nikah invitation maker',
+    title: 'Free Nikah Invitation Templates — Arabic & English',
+    description: 'Elegant nikah and walima invitation templates with Islamic patterns and Arabic calligraphy. Add names and details, then print or share. Free online.',
+    intro: [
+      'Nikah invitations deserve care: graceful arches, Islamic geometric patterns and beautiful Arabic calligraphy. These templates are designed for nikah ceremonies, walima receptions and family gatherings.',
+      'Write the couple’s and families’ names in English, Arabic or both, add the date and venue, and download a PDF to print or a PNG to send on WhatsApp.',
+    ],
+    terms: ['nikah', 'walima'],
+    uses: ['Nikah ceremonies', 'Walima receptions', 'Engagement (mangni) invitations', 'Bilingual Arabic–English cards'],
+    faqs: [FREE_FAQ, ['Can I write in Arabic and Urdu?', 'Yes — the editor supports right-to-left text with Arabic and Urdu fonts.']],
+    related: ['free-wedding-invitation-maker', 'save-the-date-maker', 'eid-templates'],
+  }),
+  L({
+    slug: 'thank-you-card-maker',
+    thing: 'thank you card',
+    h1: 'Free thank you card maker',
+    title: 'Free Thank You Card Maker — Print or Send Online',
+    description: 'Make thank you cards for weddings, birthdays, customers and teachers. Free templates you can personalise, print or share on WhatsApp in minutes.',
+    intro: [
+      'A thank you card is remembered long after the event. Add a photo from the day, a short personal message and your name — it takes a couple of minutes and means a lot.',
+      'Businesses use them too: a thank you card in every order or a thank-you post for customers builds loyalty and repeat sales.',
+    ],
+    terms: ['thank you'],
+    uses: ['Wedding thank yous', 'Birthday and party thanks', 'Customer thank-you inserts', 'Teacher appreciation'],
+    faqs: [FREE_FAQ, ['Can I add a photo?', 'Yes — upload a photo and drop it into any frame on the card.']],
+    related: ['free-greeting-card-maker', 'anniversary-card-maker', 'free-birthday-invitation-maker'],
+  }),
+  L({
+    slug: 'anniversary-card-maker',
+    thing: 'anniversary card',
+    h1: 'Free anniversary card maker',
+    title: 'Free Anniversary Card & Post Templates',
+    description: 'Free anniversary card and post templates for couples, parents and work anniversaries. Add photos and a message, then print or share online.',
+    intro: [
+      'Celebrate years together with a card that feels personal — a favourite photo, the number of years and a few words that matter.',
+      'Use them for wedding anniversaries, parents’ anniversaries or company milestones, and download a print-ready PDF or a PNG to share.',
+    ],
+    terms: ['anniversary'],
+    uses: ['Wedding anniversaries', 'Parents’ anniversaries', 'Work and company anniversaries'],
+    faqs: [FREE_FAQ],
+    related: ['thank-you-card-maker', 'free-greeting-card-maker', 'valentines-day-templates'],
+  }),
+  L({
+    slug: 'baby-shower-invitation-maker',
+    thing: 'baby shower invitation',
+    h1: 'Free baby shower invitation maker',
+    title: 'Free Baby Shower Invitation Templates',
+    description: 'Sweet baby shower and gender reveal invitation templates in soft colours. Add the details, then print or send on WhatsApp. Free to edit online.',
+    intro: [
+      'Soft pastels, playful illustrations and gentle fonts set the tone for a baby shower. Pick a design for a boy, a girl or a surprise, and add the parents’ names, date and place.',
+      'Send it as an image on WhatsApp or print cards — and use the same style for the welcome sign and thank-you cards.',
+    ],
+    terms: ['baby shower', 'gender reveal', 'baby'],
+    uses: ['Baby showers', 'Gender reveal parties', 'Welcome baby announcements'],
+    faqs: [FREE_FAQ],
+    related: ['free-invitation-maker', 'free-birthday-invitation-maker', 'thank-you-card-maker'],
+  }),
+  L({
+    slug: 'salon-flyer-maker',
+    thing: 'salon flyer',
+    h1: 'Free salon & spa flyer maker',
+    title: 'Free Salon, Spa & Beauty Flyer Templates',
+    description: 'Salon, spa, barber and beauty flyer templates: price lists, offers and grand openings. Edit for free and print or post on Instagram.',
+    intro: [
+      'Beauty is visual, so your flyer should be too. These templates show your services, prices and offers in an elegant layout with space for your best photos.',
+      'Make a price list, a new-client offer or a grand-opening flyer, then download it for print or as an Instagram post and story.',
+    ],
+    terms: ['salon', 'spa', 'beauty', 'barber'],
+    uses: ['Price lists', 'New-client offers', 'Grand openings', 'Bridal packages'],
+    faqs: [FREE_FAQ],
+    related: ['free-flyer-maker', 'gym-poster-maker', 'free-business-card-maker'],
+  }),
+  L({
+    slug: 'gym-poster-maker',
+    thing: 'gym poster',
+    h1: 'Free gym & fitness poster maker',
+    title: 'Free Gym & Fitness Poster Templates',
+    description: 'Bold gym and fitness posters and posts: memberships, classes, personal training and challenges. Edit online free and download for print or social.',
+    intro: [
+      'Fitness marketing needs energy. These templates use strong type and dynamic layouts for membership offers, class timetables, personal training and transformation challenges.',
+      'Change the prices and photos, then print posters for your gym or post them on Instagram and WhatsApp.',
+    ],
+    terms: ['gym', 'fitness', 'workout'],
+    uses: ['Membership offers', 'Class timetables', 'Personal training', 'Fitness challenges'],
+    faqs: [FREE_FAQ],
+    related: ['free-poster-maker', 'salon-flyer-maker', 'sale-poster-maker'],
+  }),
+  // occasions
+  L({
+    slug: 'graduation-templates',
+    thing: 'graduation design',
+    seasonal: true,
+    h1: 'Graduation templates',
+    title: 'Free Graduation Templates — Invitations, Posts & Cards',
+    description: 'Free graduation templates: party invitations, announcement posts, congratulations cards and school posters. Edit the name and year and share.',
+    intro: [
+      'Celebrate the class of the year with designs for graduation parties, announcements and congratulations. Add the graduate’s photo, name, school and year.',
+      'Schools and universities can use the posters and certificates for ceremonies, and families can share the posts on Instagram and WhatsApp.',
+    ],
+    terms: ['graduation', 'graduate'],
+    uses: ['Graduation party invitations', 'Announcement posts', 'Congratulations cards', 'School ceremony posters'],
+    faqs: [FREE_FAQ],
+    related: ['free-certificate-maker', 'free-invitation-maker', 'thank-you-card-maker'],
+  }),
+  L({
+    slug: 'valentines-day-templates',
+    thing: 'Valentine’s Day design',
+    seasonal: true,
+    h1: 'Valentine’s Day templates',
+    title: 'Free Valentine’s Day Templates — Cards, Posts & Offers',
+    description: 'Free Valentine’s Day templates: love cards, couple posts, restaurant dinner offers and sale posts. Edit online and share on 14 February.',
+    intro: [
+      'From a sweet card for someone special to a Valentine’s dinner menu or a gift-shop sale post, find romantic designs in reds, pinks and gold.',
+      'Add your photos and message, then download for print or post on Instagram and WhatsApp before the big day.',
+    ],
+    terms: ['valentine'],
+    uses: ['Love cards', 'Couple posts', 'Valentine’s dinner offers', 'Gift shop sales'],
+    faqs: [FREE_FAQ, ['When is Valentine’s Day?', 'Valentine’s Day is on 14 February each year.']],
+    related: ['anniversary-card-maker', 'free-greeting-card-maker', 'sale-poster-maker'],
+  }),
+  L({
+    slug: 'holi-templates',
+    thing: 'Holi design',
+    seasonal: true,
+    h1: 'Holi templates',
+    title: 'Free Holi Templates — Wishes, Party Posters & Posts',
+    description: 'Colourful Holi templates: Happy Holi wishes, party posters, festival sale posts and stories. Edit online for free and share.',
+    intro: [
+      'Holi is all about colour. These templates burst with gulal powder splashes and bright palettes for Happy Holi wishes, party invitations and festival offers.',
+      'Add your name or logo, download, and share on Instagram, Facebook and WhatsApp.',
+    ],
+    terms: ['holi'],
+    uses: ['Happy Holi wishes', 'Holi party posters', 'Festival sales', 'Company greetings'],
+    faqs: [FREE_FAQ],
+    related: ['diwali-templates', 'free-greeting-card-maker', 'free-instagram-post-maker'],
+  }),
+  L({
+    slug: 'mothers-day-templates',
+    thing: 'Mother’s Day design',
+    seasonal: true,
+    h1: 'Mother’s Day templates',
+    title: 'Free Mother’s Day Templates — Cards & Posts',
+    description: 'Free Mother’s Day cards, posts and offer templates. Add a photo and message for mum, or promote your Mother’s Day sale. Edit online free.',
+    intro: [
+      'Say thank you to mum with a card that includes your favourite photo together and a few heartfelt words.',
+      'Shops, cafés and salons can use the offer posts to promote Mother’s Day gifts and treatments.',
+    ],
+    terms: ['mother'],
+    uses: ['Cards for mum', 'Photo posts', 'Gift and salon offers'],
+    faqs: [FREE_FAQ, ['When is Mother’s Day?', 'It depends on the country: 21 March in the UAE and Arab world, the second Sunday of May in the US and many others, and in March in the UK.']],
+    related: ['fathers-day-templates', 'free-greeting-card-maker', 'thank-you-card-maker'],
+  }),
+  L({
+    slug: 'fathers-day-templates',
+    thing: 'Father’s Day design',
+    seasonal: true,
+    h1: 'Father’s Day templates',
+    title: 'Free Father’s Day Templates — Cards & Posts',
+    description: 'Free Father’s Day card, post and offer templates. Add a photo and message for dad, or promote a Father’s Day sale. Edit online free.',
+    intro: [
+      'Make dad a card with a photo and a message he’ll keep. Choose a classic, funny or modern style.',
+      'Businesses can promote Father’s Day gifts, grooming and dining offers with matching posts and stories.',
+    ],
+    terms: ['father'],
+    uses: ['Cards for dad', 'Photo posts', 'Gift and dining offers'],
+    faqs: [FREE_FAQ, ['When is Father’s Day?', 'In the US, UK, UAE and many countries it is the third Sunday of June.']],
+    related: ['mothers-day-templates', 'free-greeting-card-maker', 'sale-poster-maker'],
+  }),
+];
+
+// Every page gets at least 3 questions (Google can show them as a dropdown
+// under the result). Pages that already answer a question keep their own.
+const DEFAULT_FAQS: Record<'en' | 'ar' | 'tool', [string, string][]> = {
+  en: [
+    ['Is it really free?', 'Yes. Every template, the editor and every download format are free, with no watermark. A free account lets you save designs and come back later.'],
+    ['Can I print it?', 'Yes. Download “PDF (print)” with 3 mm bleed and crop marks — CMYK is available too, which is what print shops ask for. Or download PNG / JPG for WhatsApp and social media.'],
+    ['Can I change the size?', 'Yes. Resize any design to A4, A5, US Letter, Instagram post, story or a custom size in one click.'],
+    ['Does it work on my phone?', 'Yes. It runs in the browser on phones, tablets and computers — nothing to install.'],
+  ],
+  tool: [
+    ['Is it really free?', 'Yes — free with no watermark, no trial and no paid tier.'],
+    ['Do I need to install anything?', 'No. It runs in your browser on a computer, tablet or phone.'],
+    ['Are my files private?', 'Yes. Your images are processed in your browser and are not shared with anyone.'],
+  ],
+  ar: [
+    ['هل الخدمة مجانية؟', 'نعم، جميع القوالب والأدوات والتنزيلات مجانية وبدون علامة مائية.'],
+    ['هل يمكنني الطباعة؟', 'نعم، حمّل ملف PDF جاهز للطباعة مع هوامش القص، أو صورة PNG / JPG للواتساب ووسائل التواصل.'],
+    ['هل يعمل على الجوال؟', 'نعم، يعمل في المتصفح على الجوال والكمبيوتر دون تثبيت أي برنامج.'],
+  ],
+};
+function withDefaults(l: Landing): Landing {
+  if (l.faqs.length >= 3) return l;
+  const pool = DEFAULT_FAQS[l.lang === 'ar' ? 'ar' : l.ctaHref ? 'tool' : 'en'];
+  const have = new Set(l.faqs.map(([q]) => q.toLowerCase()));
+  const extra = pool.filter(([q]) => !have.has(q.toLowerCase()) && !(/free/i.test(q) && [...have].some((h) => /free|مجان/.test(h))));
+  return { ...l, faqs: [...l.faqs, ...extra].slice(0, Math.max(3, l.faqs.length)) };
+}
+
+export const ALL_LANDINGS = () => [...LANDINGS, ...MORE_LANDINGS, ...ALT_LANDINGS, ...COUNTRY_LANDINGS, ...NEW_LANDINGS].map(withDefaults);
 export const landingBySlug = (s: string) => ALL_LANDINGS().find((l) => l.slug === s);
 
 const FREE_FEATURES: [string, string][] = [
@@ -417,8 +713,8 @@ export const MORE_LANDINGS: Landing[] = [
     slug: 'free-qr-code-generator',
     thing: 'QR code',
     h1: 'Free QR code generator — with your logo',
-    title: 'Free QR Code Generator with Logo — Links, Instagram, WhatsApp & Wi‑Fi',
-    description: 'Make real, scannable QR codes for free: website links, Instagram and TikTok usernames, WhatsApp, email, phone and Wi‑Fi. Add your logo in the centre if you want one, then place it on your design or download PNG / SVG.',
+    title: 'Free QR Code Generator with Logo — No Expiry',
+    description: 'Make scannable QR codes free: links, Instagram, WhatsApp, email, phone and Wi‑Fi. Add your logo, place it on a design or download PNG / SVG. Never expires.',
     intro: [
       'Paste a link or a username and your QR code appears instantly. It is a standard code that every phone camera can read — no sign-up page in between, and it never expires.',
       'Want your logo in the middle? Turn on the logo option and upload it; the code automatically uses extra error correction so it still scans. Leave it off for a plain code.',
@@ -470,7 +766,7 @@ export const MORE_LANDINGS: Landing[] = [
     thing: 'design',
     h1: 'A free alternative to paid design apps',
     title: 'Free Canva Alternative — Every Feature Free, No Watermark',
-    description: 'Looking for a free Canva alternative? Magical Touch gives you 1,000+ templates, background removal, CMYK print PDFs and brand kits — all free, with no premium tier.',
+    description: 'A free Canva alternative: 1,000+ templates, background removal, CMYK print PDFs and brand kits — every feature free, no premium tier, no watermark.',
     intro: [
       'Many design apps keep their best templates and tools behind a subscription. Magical Touch takes a different approach: everything is included for free.',
       'You get a familiar drag-and-drop editor, professional templates, a photo studio with background removal, and print-ready exports that print shops accept — CMYK PDF and TIFF included.',
@@ -546,7 +842,7 @@ export const MORE_LANDINGS: Landing[] = [
     slug: 'free-image-resizer',
     thing: 'photo',
     h1: 'Free image resizer & print size calculator',
-    title: 'Free Image Resizer — Resize Photos to Pixels, cm, mm or Inches',
+    title: 'Free Image Resizer — Pixels, cm, mm or Inches',
     description: 'Resize images online for free. Set the exact size in pixels, cm, mm or inches with DPI, check the print size, and export JPG, PNG, PDF or TIFF.',
     intro: [
       'Need a photo at an exact size for a form, a print shop or social media? Enter the width and height in the unit you need, set the resolution, and download.',
@@ -607,7 +903,7 @@ export const MORE_LANDINGS: Landing[] = [
     country: 'UAE',
     thing: 'design',
     h1: 'Free design templates for UAE businesses',
-    title: 'Free Design Templates UAE — Dubai, Abu Dhabi & Sharjah Businesses',
+    title: 'Free Design Templates UAE — Dubai & Abu Dhabi',
     description: 'Free design templates made for the UAE: Arabic and English designs, National Day, Ramadan and Eid posts, White Friday sales, menus and A4 print files.',
     intro: [
       'Magical Touch is made for businesses across the Emirates. Designs support Arabic and English, follow local occasions — UAE National Day, Ramadan, Eid and White Friday — and export print files for local print shops.',
@@ -693,8 +989,8 @@ const C = (country: string, slug: string, size: string, occasions: string, terms
     country,
     thing: 'design',
     h1: `Free design templates — ${country}`,
-    title: `Free Online Design Tool ${country} — 1,000+ Free Templates, No Watermark`,
-    description: `Free online design tool for ${country}: flyers, posters, invitations, resumes and social posts in ${size}. ${occasions} templates. Every feature free, no watermark.`,
+    title: `Free Design Templates ${country} — Online Editor`,
+    description: `Free design templates for ${country}: flyers, posters, invitations, CVs and social posts. Edit online, download print-ready PDF or PNG — no watermark.`,
     intro: [
       `Magical Touch is a free online design tool used by small businesses, students and creators in ${country}. Every template, the full editor, the photo studio and every download format are free — no subscription and no watermark.`,
       `Templates come in ${size}, and you can resize any design in one click. ${extra}`,
@@ -704,6 +1000,8 @@ const C = (country: string, slug: string, size: string, occasions: string, terms
     faqs: [
       [`Is Magical Touch free to use in ${country}?`, 'Yes. It is free everywhere — all templates, tools and downloads, with no watermark and no paid plan.'],
       ...faqs,
+      [`Which occasions are covered for ${country}?`, `${occasions} templates, plus everyday flyers, posters, invitations, menus and CVs.`],
+      ['Do I need to install anything?', 'No. It runs in your browser on a computer, tablet or phone.'],
     ],
     related: ['free-online-design-tool', 'free-flyer-maker', 'free-resume-maker', 'free-instagram-post-maker'],
   });
@@ -740,8 +1038,8 @@ export const ALT_LANDINGS: Landing[] = [
     slug: 'free-photoshop-alternative',
     thing: 'photo',
     h1: 'Free Photoshop alternative — online',
-    title: 'Free Photoshop Alternative Online — Layers, Healing Brush, No Install',
-    description: 'A free online photo editor with Photoshop-style tools: layers, blend modes, selections, healing brush, dodge & burn, filters, text and CMYK TIFF export. Runs in your browser.',
+    title: 'Free Photoshop Alternative Online — No Install',
+    description: 'Free online photo editor with Photoshop-style tools: layers, blend modes, selections, healing brush, filters and CMYK TIFF export. Runs in your browser.',
     intro: [
       'Need to edit a photo but don’t want to pay for Photoshop or install anything? Photo Studio’s Pro mode gives you the tools you know — layers, blend modes, marquee and subject selection, healing brush, dodge and burn, curves and levels — free in your browser.',
       'Simple mode does one-tap fixes for everyone else. Export JPG, PNG, WebP, print PDF or CMYK TIFF for print shops.',
@@ -769,8 +1067,8 @@ export const ALT_LANDINGS: Landing[] = [
     slug: 'free-illustrator-alternative',
     thing: 'vector design',
     h1: 'Free Illustrator alternative — online',
-    title: 'Free Illustrator Alternative Online — Vector Design & Print PDF',
-    description: 'Design vector graphics online for free: shapes, pen tool, text, layers and pages, with vector PDF and CMYK print export. A free browser alternative to Adobe Illustrator for everyday design.',
+    title: 'Free Illustrator Alternative Online — Vector Design',
+    description: 'Design vector graphics online for free: shapes, pen tool, text, layers and pages, with vector PDF and CMYK export. A free Illustrator alternative.',
     intro: [
       'For flyers, posters, business cards, certificates and social graphics you don’t need an expensive vector app. Magical Touch’s editor works with real vector shapes and text, so your exports stay sharp at any size.',
       'Use the pen tool and shapes, align and distribute, work across multiple pages, then export a vector PDF or a CMYK PDF with bleed for print.',
@@ -797,8 +1095,8 @@ export const ALT_LANDINGS: Landing[] = [
     slug: 'easy-graphic-design-software',
     thing: 'design',
     h1: 'Easy graphic design software — free & online',
-    title: 'Easy Graphic Design Software — Free Online Design Platform for Beginners',
-    description: 'The easiest way to design online: pick a template, click to change text and photos, download. A free online design platform for beginners and businesses — no install, no watermark.',
+    title: 'Easy Graphic Design Software — Free & Online',
+    description: 'The easiest way to design: pick a template, click to change text and photos, download. Free graphic design software for beginners — no install.',
     intro: [
       'You don’t need design training. Pick a professional template, click any word to change it, drop in your photos, and download. Simple mode keeps the screen clean; switch to Pro when you want more control.',
       'It runs in any browser on Windows, Mac, iPad, Android and iPhone.',
@@ -819,7 +1117,7 @@ export const ALT_LANDINGS: Landing[] = [
     thing: 'design',
     h1: 'Free design templates',
     title: '1,000+ Free Design Templates — Editable Online, No Watermark',
-    description: 'Over 1,000 free design templates: flyers, posters, invitations, resumes, menus, certificates, business cards and social media posts. Edit online and download for free.',
+    description: '1,000+ free design templates: flyers, posters, invitations, resumes, menus, certificates and social posts. Edit online and download free.',
     intro: ['Every template on Magical Touch is free to edit and download — no premium badges, no watermark. Browse by category or search for what you need.'],
     terms: ['poster', 'flyer', 'invitation', 'card', 'post'],
     uses: ['Business marketing', 'Events and parties', 'Job applications', 'Restaurants', 'Festivals and holidays'],

@@ -15,6 +15,9 @@ const baseMetadata: Metadata = {
 };
 
 // The template count in the text follows the real library ("1,850+").
+// Render next to the database (Supabase, Mumbai) for faster first visits.
+export const preferredRegion = 'bom1';
+
 export async function generateMetadata(): Promise<Metadata> {
   const label = await getTemplateCountLabel();
   return JSON.parse(withCount(JSON.stringify(baseMetadata), label));

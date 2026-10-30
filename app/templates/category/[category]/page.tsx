@@ -8,6 +8,12 @@ import { SITE_URL, SITE_NAME, getCategories, getTemplatesInCategory } from '@/li
 // template page in it.
 export const revalidate = 3600;
 export const dynamicParams = true;
+export const preferredRegion = 'bom1';
+
+export async function generateStaticParams() {
+  const cats = await getCategories().catch(() => []);
+  return cats.map((c) => ({ category: c.slug }));
+}
 
 async function resolve(slug: string) {
   const cats = await getCategories();
