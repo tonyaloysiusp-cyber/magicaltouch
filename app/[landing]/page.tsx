@@ -3,7 +3,8 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { SeoShell, Crumbs } from '@/components/seo/SeoShell';
 import { SITE_URL, SITE_NAME, searchTemplates, getSeoPage, getHiddenLandings } from '@/lib/seo';
-import { landingBySlug, Landing } from '@/lib/landings';
+import { landingBySlug, Landing, ALL_LANDINGS } from '@/lib/landings';
+import { guideFor } from '@/lib/landingGuide';
 import { getTemplateCountLabel, withCount } from '@/lib/templateCountServer';
 
 // Landing pages: /free-flyer-maker, /christmas-templates, ...
@@ -13,6 +14,17 @@ import { getTemplateCountLabel, withCount } from '@/lib/templateCountServer';
 // first visit and cached for an hour — nothing is pre-built or stored.
 export const revalidate = 3600;
 export const dynamicParams = true;
+// Render next to the database (Supabase, Mumbai) — every lookup is a round
+// trip, so a far-away server made first visits slow.
+export const preferredRegion = 'bom1';
+
+// Built ahead at deploy time, so Google and the first visitor get a ready
+// page instead of waiting for it to be made. Pages added in Admin → SEO are
+// still made on first visit (dynamicParams).
+export function generateStaticParams() {
+  const seen = new Set<string>();
+  return ALL_LANDINGS().filter((l) => !seen.has(l.slug) && seen.add(l.slug)).map((l) => ({ landing: l.slug }));
+}
 
 async function resolveLanding(slug: string): Promise<Landing | null> {
   const [l, label] = await Promise.all([resolveLandingRaw(slug), getTemplateCountLabel()]);
@@ -75,6 +87,12 @@ export default async function LandingPage({ params }: { params: { landing: strin
   const items = l.terms.length ? await searchTemplates(l.terms, 40) : [];
   const url = `${SITE_URL}/${l.slug}`;
   const steps = u.steps(l.thing);
+  // English pages get the long-form guide (Arabic pages keep their own copy).
+  const guide = l.lang ? null : guideFor(l);
+  // Real style words from the matching templates, linked to the gallery search.
+  const styleCount = new Map<string, number>();
+  items.forEach((t) => (t.tags || []).filter((x) => /^style:/.test(x)).forEach((x) => { const k = x.slice(6).replace(/-/g, ' '); styleCount.set(k, (styleCount.get(k) || 0) + 1); }));
+  const styles = [...styleCount.entries()].sort((a, b) => b[1] - a[1]).slice(0, 12).map(([k]) => k);
   const jsonLd = [
     {
       '@context': 'https://schema.org',
@@ -86,6 +104,16 @@ export default async function LandingPage({ params }: { params: { landing: strin
       mainEntity: { '@type': 'ItemList', numberOfItems: items.length, itemListElement: items.slice(0, 30).map((t, i) => ({ '@type': 'ListItem', position: i + 1, url: `${SITE_URL}/templates/${t.slug}`, name: t.name })) },
     },
     ...(l.faqs.length ? [{ '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: l.faqs.map(([q, a]) => ({ '@type': 'Question', name: q, acceptedAnswer: { '@type': 'Answer', text: a } })) }] : []),
+    {
+      '@context': 'https://schema.org',
+      '@type': 'WebApplication',
+      name: `${SITE_NAME} — ${l.h1}`,
+      url,
+      applicationCategory: 'DesignApplication',
+      operatingSystem: 'Any (runs in the browser)',
+      isAccessibleForFree: true,
+      offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+    },
     {
       '@context': 'https://schema.org',
       '@type': 'HowTo',
@@ -184,6 +212,47 @@ export default async function LandingPage({ params }: { params: { landing: strin
             </ul>
           </div>}
         </section>
+
+        {guide && (
+          <section className="mt-14" aria-labelledby="guide-h">
+            <h2 id="guide-h" className="text-xl sm:text-2xl font-semibold">{`Tips for a great ${l.thing}`}</h2>
+            <div className="mt-6 grid gap-10 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
+              <ol className="space-y-5">
+                {guide.tips.map(([t, d], i) => (
+                  <li key={t} className="flex gap-4">
+                    <span className="shrink-0 h-7 w-7 rounded-full border border-mt-border text-[13px] font-semibold inline-flex items-center justify-center">{i + 1}</span>
+                    <div><h3 className="font-semibold">{t}</h3><p className="mt-1 text-[14px] text-mt-muted leading-relaxed">{d}</p></div>
+                  </li>
+                ))}
+              </ol>
+              <div className="flex flex-col gap-8">
+                <div>
+                  <h3 className="font-semibold">{`What to put on your ${l.thing}`}</h3>
+                  <ul className="mt-3 space-y-2 text-[14px] text-mt-muted list-disc pl-5">{guide.write.map((w) => <li key={w}>{w}</li>)}</ul>
+                </div>
+                <div>
+                  <h3 className="font-semibold">Before you download</h3>
+                  <ul className="mt-3 space-y-2 text-[14px] text-mt-muted list-disc pl-5">{guide.checklist.map((w) => <li key={w}>{w}</li>)}</ul>
+                </div>
+              </div>
+            </div>
+            <h3 className="mt-12 text-lg font-semibold">{`Common ${l.thing} sizes`}</h3>
+            <div className="mt-4 overflow-x-auto">
+              <table className="w-full max-w-3xl text-[14px]">
+                <thead className="text-left text-mt-muted"><tr><th className="py-2 pr-4 font-medium">Format</th><th className="py-2 pr-4 font-medium">Size</th><th className="py-2 font-medium">Best for</th></tr></thead>
+                <tbody>{guide.sizes.map(([n, s, u]) => <tr key={n} className="border-t border-mt-border"><td className="py-2.5 pr-4 font-medium">{n}</td><td className="py-2.5 pr-4 tabular-nums">{s}</td><td className="py-2.5 text-mt-muted">{u}</td></tr>)}</tbody>
+              </table>
+            </div>
+            {styles.length > 2 && (
+              <>
+                <h3 className="mt-12 text-lg font-semibold">{`Popular ${l.thing} styles`}</h3>
+                <ul className="mt-4 flex flex-wrap gap-2">
+                  {styles.map((s) => <li key={s}><Link href={`/templates?q=${encodeURIComponent(s)}`} className="inline-flex px-3.5 py-1.5 rounded-full border border-mt-border text-[13px] hover:bg-mt-surface2">{s}</Link></li>)}
+                </ul>
+              </>
+            )}
+          </section>
+        )}
 
         {l.faqs.length > 0 && <section className="mt-14 max-w-3xl">
           <h2 className="text-xl sm:text-2xl font-semibold">{u.faq}</h2>

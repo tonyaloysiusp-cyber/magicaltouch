@@ -1,6 +1,9 @@
 'use client';
 
 // SEO & promotion (admins only):
+//  · Overview — every landing page scored as Working / Needs work / Not
+//    working, setup checks, visitors from search, and Ads & posts per page
+//  · Keyword ideas — real autocomplete searches, one tap to draft a page
 //  · Search engines — Google verification code, send all pages to Bing / Yandex
 //  · Landing pages — create keyword pages ("free logo maker", "eid templates")
 //    without code; they go live at /<slug> and in the sitemap
@@ -11,13 +14,16 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Check, Copy, ExternalLink, Eye, EyeOff, Globe, Loader2, Megaphone, Pencil, Plus, Search, Send, Trash2, Link2, Sparkles, X } from 'lucide-react';
+import { Check, Copy, ExternalLink, Eye, EyeOff, Globe, Loader2, Pencil, Plus, Search, Send, Trash2, Link2, Sparkles, X } from 'lucide-react';
 import { AdminShell } from '@/components/admin/AdminShell';
 import { supabase, getSessionUser } from '@/lib/supabase';
 import { getOrCreateProfile } from '@/lib/profile';
 import { apiFetch } from '@/lib/api/client';
 import { ALL_LANDINGS } from '@/lib/landings';
-import { useTemplateCountLabel } from '@/lib/templateCount';
+import { Overview } from '@/components/admin/seo/Overview';
+import { KeywordIdeas } from '@/components/admin/seo/KeywordIdeas';
+import { Promotion } from '@/components/admin/seo/Promotion';
+import type { LandingDraft } from '@/lib/landingDraft';
 
 const SITE = 'https://www.magicaltouchdesign.com';
 const card = 'rounded-3xl border border-mt-border bg-mt-surface p-5 sm:p-6';
@@ -27,34 +33,22 @@ const btn = 'h-9 px-4 rounded-full text-[13px] font-semibold inline-flex items-c
 interface SeoPage { id: string; slug: string; title: string; h1: string; description: string; intro: string; thing: string; terms: string[]; faqs: [string, string][]; status: 'draft' | 'published' }
 interface Promo { id: string; kind: 'channel' | 'campaign' | 'keyword'; name: string; url: string | null; status: 'todo' | 'doing' | 'done'; notes: string | null; meta: any }
 
-const CHANNELS: [string, string, string][] = [
-  ['Google Search Console', 'https://search.google.com/search-console', 'Verify the site and submit sitemap.xml — the most important step for Google.'],
-  ['Bing Webmaster Tools', 'https://www.bing.com/webmasters', 'Import from Search Console; also covers Yahoo and DuckDuckGo.'],
-  ['Google Business Profile', 'https://business.google.com', 'Category: Graphic designer / Software company — not interior design.'],
-  ['AlternativeTo', 'https://alternativeto.net', 'Add as a free alternative to Canva and Photoshop.'],
-  ['Product Hunt', 'https://www.producthunt.com', 'Launch: “Free design tool — every feature free”.'],
-  ['SaaSHub', 'https://www.saashub.com', 'Free software listing.'],
-  ['BetaList', 'https://betalist.com', 'Startup listing.'],
-  ['Pinterest', 'https://www.pinterest.com', 'Pin template previews with links — big free traffic for templates.'],
-  ['Behance', 'https://www.behance.net', 'Show template collections with the site link.'],
-  ['Dribbble', 'https://dribbble.com', 'Post designs with the site link.'],
-  ['Figma Community', 'https://www.figma.com/community', 'Publish a free template pack, site link in profile.'],
-  ['Instagram', 'https://www.instagram.com', 'Link in bio; post a template every day.'],
-  ['Facebook Page', 'https://www.facebook.com', 'Page + posts in small-business groups.'],
-  ['LinkedIn', 'https://www.linkedin.com', 'Company page and founder posts.'],
-  ['YouTube', 'https://www.youtube.com', 'Short tutorials linking to /tutorials.'],
-  ['Reddit', 'https://www.reddit.com', 'Helpful answers in r/canva, r/graphic_design, r/smallbusiness — no spam.'],
-];
+
+type Tab = 'overview' | 'ideas' | 'pages' | 'engines' | 'promo' | 'keywords' | 'links';
+type PageRequest = { edit: string } | { draft: LandingDraft };
 
 const slugify = (s: string) => s.toLowerCase().replace(/&/g, 'and').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 80);
 
 export default function SeoAdminPage() {
   const router = useRouter();
   const [state, setState] = useState<'loading' | 'denied' | 'ok'>('loading');
-  const [tab, setTab] = useState<'engines' | 'pages' | 'keywords' | 'promo' | 'links'>('engines');
+  const [tab, setTab] = useState<Tab>('overview');
+  // A page to open in the Landing pages editor (from Overview or Keyword ideas).
+  const [request, setRequest] = useState<PageRequest | null>(null);
   const [pages, setPages] = useState<SeoPage[]>([]);
   const [promo, setPromo] = useState<Promo[]>([]);
   const [gcode, setGcode] = useState('');
+  const [bcode, setBcode] = useState('');
   const [hidden, setHiddenState] = useState<Set<string>>(new Set());
   const [msg, setMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -68,6 +62,7 @@ export default function SeoAdminPage() {
     setPages((p as SeoPage[]) || []);
     setPromo((pr as Promo[]) || []);
     setGcode(((s as any[]) || []).find((x) => x.key === 'google_verification')?.value || '');
+    setBcode(((s as any[]) || []).find((x) => x.key === 'bing_verification')?.value || '');
     setHiddenState(new Set((((s as any[]) || []).find((x) => x.key === 'hidden_landings')?.value || '').split(',').map((x: string) => x.trim()).filter(Boolean)));
   }, []);
 
@@ -92,9 +87,15 @@ export default function SeoAdminPage() {
   if (state === 'loading') return <main className="min-h-screen flex items-center justify-center text-mt-faint bg-mt-bg">Loading…</main>;
   if (state === 'denied') return <main className="min-h-screen flex flex-col items-center justify-center gap-3 bg-mt-bg"><p className="text-lg font-semibold text-mt-ink">Administrators only</p><Link href="/dashboard" className="text-sm text-mt-accent hover:underline">Back to your dashboard</Link></main>;
 
-  const TABS = [['engines', 'Search engines'], ['pages', 'Landing pages'], ['keywords', 'Keywords'], ['promo', 'Free promotion'], ['links', 'Campaign links']] as const;
+  const TABS: [Tab, string][] = [['overview', 'Overview'], ['ideas', 'Keyword ideas'], ['pages', 'Landing pages'], ['engines', 'Search engines'], ['promo', 'Free promotion'], ['keywords', 'Site search'], ['links', 'Campaign links']];
+  const openPage = (r: PageRequest) => { setRequest(r); setTab('pages'); };
+  const trackKeyword = async (name: string) => {
+    const exists = promo.some((p) => p.kind === 'keyword' && p.name.toLowerCase() === name.toLowerCase());
+    if (!exists) await supabase.from('promo_items').insert({ kind: 'keyword', name, status: 'todo', meta: { also: [] } });
+    await load();
+  };
   return (
-    <AdminShell active="seo" title="SEO & promotion" accent="SEO" subtitle="Get found on Google and Bing: landing pages for the searches people make, quick submission to search engines, free promotion channels and tracked campaign links.">
+    <AdminShell active="seo" title="SEO & promotion" accent="SEO" subtitle="See which pages work and which don’t, find the searches people make, fix pages in one place, send everything to Google and Bing, and promote the site for free.">
       <div className="flex flex-col gap-6">
         <nav role="tablist" className="flex gap-2 overflow-x-auto mt-scroll">
           {TABS.map(([id, label]) => (
@@ -102,10 +103,12 @@ export default function SeoAdminPage() {
           ))}
         </nav>
         {msg && <p className="rounded-2xl bg-mt-accentsoft text-[#4B2FB0] px-4 py-2.5 text-sm">{msg}</p>}
-        {tab === 'engines' && <Engines gcode={gcode} setGcode={setGcode} flash={flash} busy={busy} setBusy={setBusy} />}
-        {tab === 'pages' && <Pages pages={pages} hidden={hidden} setHidden={setHidden} reload={load} flash={flash} />}
+        {tab === 'overview' && <Overview onEdit={(slug) => openPage({ edit: slug })} onTab={setTab} />}
+        {tab === 'ideas' && <KeywordIdeas onDraft={(draft) => openPage({ draft })} onKeyword={trackKeyword} />}
+        {tab === 'engines' && <Engines gcode={gcode} setGcode={setGcode} bcode={bcode} setBcode={setBcode} flash={flash} busy={busy} setBusy={setBusy} />}
+        {tab === 'pages' && <Pages pages={pages} hidden={hidden} setHidden={setHidden} reload={load} flash={flash} request={request} clearRequest={() => setRequest(null)} />}
         {tab === 'keywords' && <Keywords promo={promo} pages={pages} hidden={hidden} reload={load} />}
-        {tab === 'promo' && <Channels promo={promo} reload={load} />}
+        {tab === 'promo' && <Promotion promo={promo} reload={load} />}
         {tab === 'links' && <Campaigns promo={promo} reload={load} />}
       </div>
     </AdminShell>
@@ -113,7 +116,14 @@ export default function SeoAdminPage() {
 }
 
 // ---------------------------------------------------------------- search engines
-function Engines({ gcode, setGcode, flash, busy, setBusy }: { gcode: string; setGcode: (v: string) => void; flash: (m: string) => void; busy: string | null; setBusy: (v: string | null) => void }) {
+function Engines({ gcode, setGcode, bcode, setBcode, flash, busy, setBusy }: { gcode: string; setGcode: (v: string) => void; bcode: string; setBcode: (v: string) => void; flash: (m: string) => void; busy: string | null; setBusy: (v: string | null) => void }) {
+  const saveBing = async () => {
+    const m = bcode.match(/content=["']([^"']+)["']/);
+    const value = (m ? m[1] : bcode).trim();
+    setBcode(value);
+    await supabase.from('site_settings').upsert({ key: 'bing_verification', value, updated_at: new Date().toISOString() });
+    flash(value ? 'Saved. It is on every page within an hour — then press Verify in Bing Webmaster Tools.' : 'Removed the Bing code.');
+  };
   const saveCode = async () => {
     // Accept the whole <meta …> tag or just the content value.
     const m = gcode.match(/content=["']([^"']+)["']/);
@@ -127,6 +137,7 @@ function Engines({ gcode, setGcode, flash, busy, setBusy }: { gcode: string; set
     try {
       const r: any = await apiFetch('/api/admin/indexnow', { method: 'POST', body: JSON.stringify({}) });
       flash(`Sent ${r.submitted} pages: ${r.results.map((x: any) => `${x.engine} ${x.ok ? '✓' : `✕ (${x.status})`}`).join(' · ')}`);
+      if (r.results.some((x: any) => x.ok)) await supabase.from('site_settings').upsert({ key: 'indexnow_last', value: new Date().toISOString(), updated_at: new Date().toISOString() });
     } catch (e: any) {
       flash(`Could not send: ${e?.message || e}`);
     }
@@ -144,6 +155,17 @@ function Engines({ gcode, setGcode, flash, busy, setBusy }: { gcode: string; set
         <div className="mt-4 flex flex-wrap gap-2">
           <input value={gcode} onChange={(e) => setGcode(e.target.value)} placeholder='<meta name="google-site-verification" content="…" />' className={`${field} flex-1 min-w-[260px] font-mono text-[12px]`} />
           <button onClick={saveCode} className={`${btn} bg-mt-primary text-mt-onprimary`}><Check size={14} /> Save</button>
+        </div>
+      </section>
+      <section className={card}>
+        <h2 className="text-lg font-semibold inline-flex items-center gap-2"><Globe size={19} /> Bing Webmaster Tools <span className="text-[12px] font-normal text-mt-muted">— also Yahoo, DuckDuckGo and ChatGPT search</span></h2>
+        <ol className="mt-3 list-decimal pl-5 text-[14px] text-mt-muted space-y-1">
+          <li><b>Fastest:</b> verify Google first, then in <a className="underline" href="https://www.bing.com/webmasters" target="_blank" rel="noreferrer">Bing Webmaster Tools</a> choose <b>Import from Google Search Console</b> — nothing to paste here.</li>
+          <li>Or choose <b>HTML Meta Tag</b>, copy the tag, paste it below and Save, then press Verify in Bing.</li>
+        </ol>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <input value={bcode} onChange={(e) => setBcode(e.target.value)} placeholder='<meta name="msvalidate.01" content="…" />' className={`${field} flex-1 min-w-[260px] font-mono text-[12px]`} />
+          <button onClick={saveBing} className={`${btn} bg-mt-primary text-mt-onprimary`}><Check size={14} /> Save</button>
         </div>
       </section>
       <section className={card}>
@@ -169,7 +191,7 @@ function Engines({ gcode, setGcode, flash, busy, setBusy }: { gcode: string; set
 const EMPTY = { slug: '', title: '', h1: '', description: '', intro: '', thing: 'design', terms: '', faqs: '' };
 type Row = { slug: string; h1: string; title: string; description: string; kind: 'builtin' | 'custom'; db?: SeoPage; hidden: boolean; edited: boolean; live: boolean };
 
-function Pages({ pages, hidden, setHidden, reload, flash }: { pages: SeoPage[]; hidden: Set<string>; setHidden: (h: Set<string>) => Promise<void>; reload: () => Promise<void>; flash: (m: string) => void }) {
+function Pages({ pages, hidden, setHidden, reload, flash, request, clearRequest }: { pages: SeoPage[]; hidden: Set<string>; setHidden: (h: Set<string>) => Promise<void>; reload: () => Promise<void>; flash: (m: string) => void; request: PageRequest | null; clearRequest: () => void }) {
   const builtIn = useMemo(() => ALL_LANDINGS(), []);
   const [f, setF] = useState(EMPTY);
   const [editing, setEditing] = useState<{ slug: string | null; id: string | null; builtin: boolean } | null>(null);
@@ -218,6 +240,21 @@ function Pages({ pages, hidden, setHidden, reload, flash }: { pages: SeoPage[]; 
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
   const close = () => { setEditing(null); setF(EMPTY); };
+
+  // Opened from Overview ("Fix this page") or Keyword ideas ("Create page").
+  useEffect(() => {
+    if (!request) return;
+    if ('edit' in request) {
+      const r = rows.find((x) => x.slug === request.edit);
+      if (r) openEdit(r);
+    } else {
+      const d = request.draft;
+      if (rows.some((r) => r.slug === d.slug)) flash(`/${d.slug} already exists — edit that page instead.`);
+      else { setEditing({ slug: null, id: null, builtin: false }); setF({ ...d }); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+    }
+    clearRequest();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [request, rows]);
 
   const save = async (status: 'draft' | 'published') => {
     const slug = editing?.slug || slugify(f.slug || f.h1);
@@ -281,6 +318,7 @@ function Pages({ pages, hidden, setHidden, reload, flash }: { pages: SeoPage[]; 
             <label className="text-[12px] text-mt-muted">Template words to match (comma separated)<input className={field} value={f.terms} onChange={(e) => set('terms', e.target.value)} placeholder="logo, brand, business card" /></label>
             <label className="text-[12px] text-mt-muted lg:col-span-2">Questions — one per line: Question | Answer<textarea rows={4} className={`${field} h-auto py-2 font-mono text-[12px]`} value={f.faqs} onChange={(e) => set('faqs', e.target.value)} placeholder={'Is the logo maker free? | Yes, every template and download is free.'} /></label>
           </div>
+          <EditorChecks f={f} />
           <div className="mt-4 rounded-2xl border border-mt-border p-4 max-w-2xl">
             <p className="text-[12px] text-mt-muted mb-1">How it can look on Google</p>
             <p className="text-[12px] text-[#4D5156]">{SITE.replace('https://', '')} › {f.slug || 'your-page'}</p>
@@ -488,37 +526,26 @@ function Keywords({ promo, reload }: { promo: Promo[]; pages: SeoPage[]; hidden:
   );
 }
 
-// ---------------------------------------------------------------- free promotion checklist
-function Channels({ promo, reload }: { promo: Promo[]; reload: () => Promise<void> }) {
-  const rows = promo.filter((p) => p.kind === 'channel');
-  useEffect(() => {
-    // Seed the checklist the first time.
-    if (rows.length) return;
-    supabase.from('promo_items').insert(CHANNELS.map(([name, url, notes]) => ({ kind: 'channel', name, url, notes, status: 'todo' }))).then(() => reload());
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-  const setStatus = async (p: Promo, status: Promo['status']) => { await supabase.from('promo_items').update({ status, updated_at: new Date().toISOString() }).eq('id', p.id); reload(); };
-  const done = rows.filter((r) => r.status === 'done').length;
-  const tplCount = useTemplateCountLabel();
-  const blurb = `Magical Touch Design is a free online design tool with ${tplCount} professional templates for flyers, posters, invitations, resumes, menus, certificates and social media. Full editor, photo studio with background removal, and print-ready PDF / CMYK export — every feature free, no watermark, English and Arabic.`;
-  const [copied, setCopied] = useState(false);
+// ---------------------------------------------------------------- editor checks
+// Live checks while writing a landing page, so it scores well before publishing.
+function EditorChecks({ f }: { f: typeof EMPTY }) {
+  const words = [f.h1, f.intro, f.faqs].join(' ').split(/\s+/).filter(Boolean).length;
+  const kw = f.h1.toLowerCase().replace(/^free\s+/, '').split(/\s+/).slice(0, 2).join(' ');
+  const faqs = f.faqs.split('\n').filter((l) => l.includes('|')).length;
+  const checks: [boolean, string][] = [
+    [f.title.length >= 30 && f.title.length <= 60, `Google title 30–60 characters (now ${f.title.length})`],
+    [!!kw && f.title.toLowerCase().includes(kw), `Title contains the main phrase “${kw || '…'}”`],
+    [f.description.length >= 120 && f.description.length <= 160, `Description 120–160 characters (now ${f.description.length})`],
+    [words >= 150, `Your own text: ${words} words (aim for 150+; the built-in guide adds ~350 more)`],
+    [faqs >= 3, `3+ questions (now ${faqs}) — they can show on Google`],
+    [f.terms.trim().length > 0, 'Template words set, so the page shows templates'],
+  ];
+  const ok = checks.filter((c) => c[0]).length;
   return (
-    <section className={card}>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-lg font-semibold inline-flex items-center gap-2"><Megaphone size={19} /> Free promotion — {done}/{rows.length} done</h2>
-        <button onClick={() => navigator.clipboard?.writeText(blurb).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500); })} className={`${btn} border border-mt-border text-mt-ink`}>{copied ? <Check size={14} /> : <Copy size={14} />} Copy our description</button>
-      </div>
-      <p className="mt-1 text-[13px] text-mt-muted">Every listing is a link to the site — the more good links, the higher Google ranks it. All free.</p>
-      <ul className="mt-4 divide-y divide-mt-border">
-        {rows.map((r) => (
-          <li key={r.id} className="py-3 flex flex-wrap items-center gap-3">
-            <button onClick={() => setStatus(r, r.status === 'done' ? 'todo' : 'done')} aria-label={`Mark ${r.name} done`} className={`h-6 w-6 rounded-md border inline-flex items-center justify-center ${r.status === 'done' ? 'bg-emerald-600 border-emerald-600 text-white' : 'border-mt-border'}`}>{r.status === 'done' && <Check size={14} />}</button>
-            <span className="flex-1 min-w-[220px]"><b className={r.status === 'done' ? 'line-through text-mt-muted' : 'text-mt-ink'}>{r.name}</b><span className="block text-[12px] text-mt-muted">{r.notes}</span></span>
-            {r.url && <a href={r.url} target="_blank" rel="noreferrer" className="text-[13px] text-[#3B82C4] inline-flex items-center gap-1">Open <ExternalLink size={13} /></a>}
-          </li>
-        ))}
-      </ul>
-    </section>
+    <div className="mt-4 rounded-2xl bg-mt-surface2 p-4 max-w-2xl">
+      <p className="text-[12px] font-semibold text-mt-ink">SEO check — {ok}/{checks.length}</p>
+      <ul className="mt-2 grid gap-1 text-[12px]">{checks.map(([pass, t]) => <li key={t} className={pass ? 'text-emerald-600' : 'text-amber-600'}>{pass ? '✓' : '•'} {t}</li>)}</ul>
+    </div>
   );
 }
 

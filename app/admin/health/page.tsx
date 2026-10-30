@@ -16,6 +16,21 @@ import { getOrCreateProfile } from '@/lib/profile';
 
 type Level = 'ok' | 'warn' | 'bad' | 'run';
 interface Check { id: string; name: string; level: Level; detail: string; ms?: number; fix?: { label: string; run: () => Promise<string> } }
+
+// How to fix each check when it isn't green — shown under the check.
+const HELP: Record<string, string[]> = {
+  db: ['Open the Supabase dashboard → Project → check it says “Healthy” (paused projects show “Restore”).', 'If it is paused, press Restore project and wait 2–3 minutes.', 'If it is slow, check Reports → Database for high CPU; heavy templates (below) are the usual cause.'],
+  auth: ['Supabase → Authentication → check the service status.', 'If people can’t log in, check Authentication → URL configuration still lists https://www.magicaltouchdesign.com.'],
+  proxy: ['Vercel → Project → Settings → Environment variables: NEXT_PUBLIC_SUPABASE_URL must be set.', 'Redeploy after changing environment variables.'],
+  gallery: ['Press “Refresh the site now”.', 'If templates are still missing, open Admin → Templates and check they are Published and have a picture.'],
+  translate: ['Usually nothing to do — visitors’ browsers translate directly.', 'If it stays red for a day, check the translation key in Vercel environment variables.'],
+  fonts: ['Press “Run checks again” — font servers can have short outages.', 'If it stays red, check /api/font-file in Vercel → Logs.'],
+  speed: ['Pages are now built ahead of time and served from Mumbai, next to the database — speeds improve after the next deploy.', 'Open the slowest page on your phone; if it is a template page, open that template and press Save to shrink its pictures.', 'Vercel → Project → Speed Insights shows real-visitor speed per page (free on Hobby).', 'Big photos on the home page or in templates are the most common cause — keep uploads under 1 MB.'],
+  errors: ['Open the page shown in the error and repeat what a visitor would do.', 'Errors on /editor mentioning “_cacheContext” come from canvas memory on low-end phones — usually harmless; ask the visitor to reload.', 'If one error repeats more than 20 times a week, send the message to your developer.'],
+  google: ['SEO & promotion → Search engines → paste the Google HTML tag and Save.', 'In Google Search Console press Verify, then submit sitemap.xml.'],
+  sitemap: ['Press “Refresh the site now”, wait a minute, then run checks again.', 'If it stays empty, check Vercel → Logs for errors on /sitemap.xml.'],
+  seo: ['Open SEO & promotion → Overview and fix the pages marked “Not working”, worst first.'],
+};
 const SB = (process.env.NEXT_PUBLIC_SUPABASE_URL || '').replace(/\/$/, '');
 const KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 const card = 'rounded-3xl border border-mt-border bg-mt-surface p-5 sm:p-6';
@@ -53,7 +68,7 @@ export default function HealthPage() {
   const run = useCallback(async () => {
     setChecks([]);
     setMsg(null);
-    const ids: [string, string][] = [['db', 'Database'], ['auth', 'Sign-in service'], ['proxy', 'Backup route (for blocked networks)'], ['gallery', 'Template gallery'], ['translate', 'Translation'], ['fonts', 'Fonts'], ['speed', 'Page speed (visitors, last 7 days)'], ['errors', 'Errors visitors hit (last 7 days)']];
+    const ids: [string, string][] = [['db', 'Database'], ['auth', 'Sign-in service'], ['proxy', 'Backup route (for blocked networks)'], ['gallery', 'Template gallery'], ['translate', 'Translation'], ['fonts', 'Fonts'], ['speed', 'Page speed (visitors, last 7 days)'], ['errors', 'Errors visitors hit (last 7 days)'], ['google', 'Google can find the site'], ['sitemap', 'Sitemap']];
     ids.forEach(([id, name]) => put({ id, name, level: 'run', detail: 'Checking…' }));
 
     const db = await timed(async () => { const { error, count } = await supabase.from('templates').select('id', { count: 'exact', head: true }).eq('status', 'published'); if (error) throw error; return count || 0; });
@@ -91,6 +106,12 @@ export default function HealthPage() {
     const errs = ((st as any)?.errors || []) as any[];
     const total = errs.reduce((a, e) => a + Number(e.count || 0), 0);
     put({ id: 'errors', name: 'Errors visitors hit (last 7 days)', level: !total ? 'ok' : total < 20 ? 'warn' : 'bad', detail: !total ? 'No errors reported.' : errs.slice(0, 4).map((e) => `${e.count}× on ${e.path}: ${e.message}`).join(' · ') });
+
+    const { data: gv } = await supabase.from('site_settings').select('value').eq('key', 'google_verification').maybeSingle();
+    put({ id: 'google', name: 'Google can find the site', level: gv?.value ? 'ok' : 'bad', detail: gv?.value ? 'Google Search Console code is on every page.' : 'Google Search Console is not verified — the site may not be on Google at all. This is the most important SEO step.' });
+
+    const sm = await timed(async () => { const r = await fetch('/sitemap.xml', { cache: 'no-store' }); if (!r.ok) throw new Error(`status ${r.status}`); return ((await r.text()).match(/<loc>/g) || []).length; });
+    put({ id: 'sitemap', name: 'Sitemap', ms: sm.ms, level: sm.error || !sm.value ? 'bad' : sm.value < 100 ? 'warn' : 'ok', detail: sm.error ? `Not loading: ${sm.error}` : `${sm.value} pages listed for Google and Bing.` });
 
     const { data: hh, error } = await supabase.rpc('admin_health');
     setH(error ? { error: error.message } : hh);
@@ -182,6 +203,12 @@ export default function HealthPage() {
                 <div className="flex-1 min-w-0">
                   <p className="text-[14px] font-medium text-mt-ink">{c.name}</p>
                   <p className="text-[13px] text-mt-muted break-words">{c.detail}</p>
+                  {(c.level === 'bad' || c.level === 'warn') && HELP[c.id] && (
+                    <details className="mt-1.5">
+                      <summary className="cursor-pointer text-[12px] font-semibold text-mt-accent">How to fix</summary>
+                      <ol className="mt-1 list-decimal pl-5 text-[12px] text-mt-muted space-y-0.5">{HELP[c.id].map((h) => <li key={h}>{h}</li>)}</ol>
+                    </details>
+                  )}
                 </div>
                 {c.fix && <button onClick={() => fix(c.id, c.fix!.run)} disabled={busy === c.id} className={`${btn} border border-mt-border shrink-0`}>{busy === c.id ? <Loader2 size={13} className="animate-spin" /> : <Wrench size={13} />} {c.fix.label}</button>}
               </li>
@@ -212,6 +239,21 @@ export default function HealthPage() {
           </ul>
         </section>
 
+        <section className={card}>
+          <h2 className="text-lg font-semibold">Loading problems — what to do</h2>
+          <p className="mt-1 text-[13px] text-mt-muted">If a visitor says the site is slow or won’t open, go down this list.</p>
+          <ul className="mt-3 flex flex-col gap-2 text-[13px]">
+            {LOADING_GUIDE.map(([q, steps]) => (
+              <li key={q} className="rounded-2xl border border-mt-border">
+                <details>
+                  <summary className="cursor-pointer px-4 py-3 font-medium text-mt-ink">{q}</summary>
+                  <ol className="px-4 pb-3 list-decimal pl-9 text-mt-muted space-y-1">{steps.map((x) => <li key={x}>{x}</li>)}</ol>
+                </details>
+              </li>
+            ))}
+          </ul>
+        </section>
+
         {h && !h.error && (
           <section className={card}>
             <h2 className="text-lg font-semibold">Storage</h2>
@@ -232,3 +274,12 @@ export default function HealthPage() {
     </AdminShell>
   );
 }
+
+const LOADING_GUIDE: [string, string[]][] = [
+  ['The whole site is down or shows an error', ['Open vercel.com → your project → Deployments. If the latest one failed (red), press ⋯ → Redeploy on the last green one.', 'Check vercel-status.com and status.supabase.com for outages.', 'Run the checks above — a red Database means Supabase is paused or down: open Supabase and press Restore.']],
+  ['Pages load slowly (more than 3 seconds)', ['Template and landing pages are built ahead of time at each deploy, so the first visit after a deploy is fast. If a page is still slow, press “Refresh the site now”.', 'Look at “Page speed” above for the slowest pages and open them on your phone.', 'Heavy templates (over 0.9 MB, listed under “Problems found in the data”): open each in the editor and press Save.', 'Avoid uploading photos over 1 MB to the home page, About page or templates.']],
+  ['The editor opens blank or freezes', ['Ask the visitor to reload with Ctrl+Shift+R (or close and reopen the tab on a phone).', 'Old browsers (iOS 14 and older, very old Android) may not support the editor — ask them to update.', 'Check “Errors visitors hit” above for the exact message.']],
+  ['“Check your connection” or login fails', ['Some office and school networks block the database address; the “Backup route” check above must be green for those visitors.', 'If only one person has the problem, ask them to try mobile data instead of Wi-Fi.']],
+  ['New templates or pages don’t appear', ['Press “Refresh the site now”. Lists refresh by themselves within 5–60 minutes.', 'Check the template is Published and has a picture.', 'For Google: SEO & promotion → Search engines → Send now.']],
+  ['A page shows “not found”', ['Landing pages: SEO & promotion → Landing pages — check it isn’t switched off or still a draft.', 'Templates: check the template is published; unpublished templates return “not found”.']],
+];

@@ -2,12 +2,22 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { SeoShell, UseTemplateButton, Crumbs } from '@/components/seo/SeoShell';
-import { SITE_URL, SITE_NAME, SeoTemplate, getTemplateBySlug, getRelatedTemplates, templateDescription, sizeLabel, formatLabel, categorySlug } from '@/lib/seo';
+import { SITE_URL, SITE_NAME, SeoTemplate, getAllPublishedTemplates, getTemplateBySlug, getRelatedTemplates, templateDescription, sizeLabel, formatLabel, categorySlug } from '@/lib/seo';
 
 // One page per template, so each design can be found on Google
 // ("free birthday poster template", "restaurant menu template"…).
 export const revalidate = 3600;
 export const dynamicParams = true;
+// Render next to the database (Supabase, Mumbai): visitors measured 5–17 s
+// on first visits when each page was made on demand far from the data.
+export const preferredRegion = 'bom1';
+
+// Build every published template page ahead of time, so Google and visitors
+// get an instant, ready-made page. New templates are still made on first visit.
+export async function generateStaticParams() {
+  const all = await getAllPublishedTemplates().catch(() => []);
+  return all.slice(0, 3000).map((t) => ({ slug: t.slug }));
+}
 
 export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
   const t = await getTemplateBySlug(params.slug);
