@@ -118,7 +118,7 @@ export default function AdminTemplatesPage() {
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
-  // "Create with Claude" (opened from here or from a festival on Admin → Overview).
+  // AI Template Studio (opened from here or from a festival on Admin → Overview).
   const [claude, setClaude] = useState<{ topic: string } | null>(null);
   useEffect(() => {
     const t = new URLSearchParams(window.location.search).get('claude');
@@ -616,8 +616,8 @@ export default function AdminTemplatesPage() {
             <button onClick={runGenerate} disabled={generating} className="text-sm font-medium text-mt-ink bg-mt-surface border rounded-full px-4 py-2 disabled:opacity-50">
               {generating ? 'Generating…' : 'Generate starter templates'}
             </button>
-            <button onClick={() => setClaude({ topic: '' })} className="inline-flex items-center gap-1.5 text-sm font-semibold text-white bg-[#D97757] rounded-full px-4 py-2" title="Write a brief, let Claude design it (free Claude account works), paste the result">
-              <Sparkles size={15} /> Create with Claude
+            <button onClick={() => setClaude({ topic: '' })} className="inline-flex items-center gap-1.5 text-sm font-semibold text-white bg-[#D97757] rounded-full px-4 py-2" title="Recreate any reference image or describe a design — free AI (Claude, ChatGPT, Gemini…) builds an editable template">
+              <Sparkles size={15} /> AI Studio
             </button>
             <button onClick={startNew} className="inline-flex items-center gap-1 text-sm font-semibold text-white bg-brand-gradient rounded-full px-4 py-2">
               <Plus size={15} /> New template

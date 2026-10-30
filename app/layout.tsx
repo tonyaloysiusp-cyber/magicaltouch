@@ -12,6 +12,7 @@ const poppins = Poppins({
 
 import type { Metadata, Viewport } from 'next';
 import { SITE_URL, SITE_NAME, SITE_DESCRIPTION, getSiteSetting } from '@/lib/seo';
+import { parseSocial } from '@/lib/social';
 
 const baseMetadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -82,6 +83,9 @@ export default async function RootLayout({
 }) {
   const count = await getTemplateCount();
   const label = await getTemplateCountLabel();
+  // Social profiles from Admin → SEO → Social: tells Google they belong to us.
+  const sameAs = Object.values(parseSocial(await getSiteSetting('social_links')));
+  const orgLd = sameAs.length ? ORG_JSON_LD.map((o, i) => (i === 0 ? { ...o, sameAs } : o)) : ORG_JSON_LD;
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
@@ -94,7 +98,7 @@ export default async function RootLayout({
         />
       </head>
       <body className={poppins.className}>
-        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: withCount(JSON.stringify(ORG_JSON_LD), label) }} />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: withCount(JSON.stringify(orgLd), label) }} />
         <ChunkRecovery />
         <VisitCounter />
         <TemplateCountProvider value={count}>{children}</TemplateCountProvider>

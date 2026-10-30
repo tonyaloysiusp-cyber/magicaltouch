@@ -78,6 +78,26 @@ Rules:
 - No logos, trademarks or copyrighted characters. Return only the JSON.`;
 }
 
+/**
+ * Instructions to recreate a reference image as an editable template.
+ * Works with any AI chat that accepts an attached image (Claude, ChatGPT,
+ * Gemini, Copilot…). The colours we measured from the image are passed in
+ * too, so even a weaker model gets the palette right.
+ */
+export function recreatePrompt(brief: { format: { w: number; h: number; label: string }; palette?: string[]; topic?: string; wording?: string; language?: string; closeness?: 'close' | 'inspired' }) {
+  const base = claudePrompt({ topic: brief.topic || 'the design in the attached image', format: brief.format, wording: brief.wording, language: brief.language });
+  const how = brief.closeness === 'inspired'
+    ? 'Use the attached image as inspiration: keep its mood, colour palette and type style, but make a fresh, original layout.'
+    : 'RECREATE the attached image as an editable template: keep the same layout, positions, proportions, colour palette, font styles (closest fonts from the list), text hierarchy and decorative shapes. Measure positions against the page size.';
+  return `${how}
+- Replace all text with editable sample text of the same length and purpose${brief.wording ? ' (or the wording given below)' : ''}; never copy brand names or logos.
+- Each photo in the image becomes a "photo" element in the same place, described in 2–4 words.
+- Rebuild illustrations and ornaments with simple shapes (rect, circle, ellipse, triangle, line) where you can.
+${brief.palette?.length ? `- Colours measured from the image (use them): ${brief.palette.join(', ')}.
+` : ''}
+${base.replace(/If I attach a screenshot[^\n]*\n/, '')}`;
+}
+
 /** Takes Claude's whole reply (with or without ``` fences) and reads the JSON. */
 export function parseSpec(raw: string): TemplateSpec {
   let t = raw.trim();
@@ -160,10 +180,12 @@ export function specToCanvasJson(spec: TemplateSpec, photos: LibraryPhotoLite[] 
         break;
       }
       case 'photo': {
-        const p = pickPhoto(String(e.photo || ''), photos, used);
-        const src = p?.src || '/templates/photo-frame-placeholder.jpg';
+        // A direct picture address (e.g. a free AI-generated photo) is used as is.
+        const direct = /^https:\/\//.test(String(e.photo || '')) ? String(e.photo) : null;
+        const p = direct ? null : pickPhoto(String(e.photo || ''), photos, used);
+        const src = direct || p?.src || '/templates/photo-frame-placeholder.jpg';
         if (p) used.add(p.src);
-        const iw = p?.w || 1200, ih = p?.h || 1200;
+        const iw = direct ? Math.round(w) : p?.w || 1200, ih = direct ? Math.round(h) : p?.h || 1200;
         // cover the frame, centred
         const k = Math.max(w / iw, h / ih);
         const cw = w / k, ch = h / k;
@@ -177,7 +199,7 @@ export function specToCanvasJson(spec: TemplateSpec, photos: LibraryPhotoLite[] 
               : { type: 'rect', version: '5.1.0', originX: 'center', originY: 'center', left: 0, top: 0, width: cw, height: ch, rx: r, ry: r, fill: '#000' };
         objects.push(base({
           type: 'image', left: x, top: y, width: cw, height: ch, cropX: (iw - cw) / 2, cropY: (ih - ch) / 2, scaleX: k, scaleY: k,
-          src, crossOrigin: 'anonymous', filters: [], clipPath: clip, __frame: { kind: shape === 'rect' ? 'rect' : 'custom', empty: !p }, opacity, angle, name: 'Photo',
+          src, crossOrigin: 'anonymous', filters: [], clipPath: clip, __frame: { kind: shape === 'rect' ? 'rect' : 'custom', empty: !p && !direct }, opacity, angle, name: 'Photo',
         }));
         break;
       }
@@ -197,4 +219,16 @@ export function specToCanvasJson(spec: TemplateSpec, photos: LibraryPhotoLite[] 
     }
   });
   return { version: '5.1.0', objects };
+}
+
+/** Free AI photo for a photo element (Pollinations — no key, nothing stored). */
+export function freeAiPhotoUrl(words: string, w: number, h: number, seed = 1) {
+  const k = Math.min(1, 1024 / Math.max(w, h));
+  return `https://image.pollinations.ai/prompt/${encodeURIComponent(`${words}, professional photograph, high quality, no text`)}?width=${Math.round(w * k)}&height=${Math.round(h * k)}&nologo=true&seed=${seed}`;
+}
+
+/** Swap every photo description for a free AI-generated photo of it. */
+export function withAiPhotos(spec: TemplateSpec): TemplateSpec {
+  let seed = 7;
+  return { ...spec, elements: spec.elements.map((e) => (e.type === 'photo' && e.photo && !/^https:/.test(e.photo) ? { ...e, photo: freeAiPhotoUrl(e.photo, Number(e.w) || 800, Number(e.h) || 800, seed++) } : e)) };
 }

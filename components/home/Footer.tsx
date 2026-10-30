@@ -10,6 +10,7 @@ import { resolveAuthedPath } from '@/lib/authNav';
 import { supabase, getSessionUser } from '@/lib/supabase';
 import { BrandLogo } from '@/components/BrandLogo';
 import { AppTheme } from '@/hooks/useAppTheme';
+import { NETWORKS, parseSocial, SocialLinks } from '@/lib/social';
 
 const EMAIL = 'hellomagicaltouch.design@gmail.com';
 
@@ -31,6 +32,11 @@ const head = 'text-[12px] font-semibold uppercase tracking-[0.14em] text-mt-ink'
 export function Footer({ theme }: { theme: AppTheme }) {
   const router = useRouter();
   const [loggedIn, setLoggedIn] = useState(false);
+  // The site's social profiles, set in Admin → SEO → Social.
+  const [social, setSocial] = useState<SocialLinks>({});
+  useEffect(() => {
+    supabase.from('site_settings').select('value').eq('key', 'social_links').maybeSingle().then(({ data }) => setSocial(parseSocial((data as any)?.value)));
+  }, []);
 
   useEffect(() => {
     getSessionUser().then(({ data }) => setLoggedIn(!!data.user));
@@ -60,6 +66,15 @@ export function Footer({ theme }: { theme: AppTheme }) {
             <a href={`mailto:${EMAIL}`} className="mt-5 inline-flex items-center gap-2 rounded-full border border-mt-border px-4 py-2 text-[13px] font-medium text-mt-ink hover:bg-mt-surface2 break-all">
               <Mail size={15} aria-hidden className="shrink-0" /> {EMAIL}
             </a>
+            {Object.keys(social).length > 0 && (
+              <nav aria-label="Follow us" className="mt-4">
+                <ul className="flex flex-wrap gap-2">
+                  {NETWORKS.filter((n) => social[n.id]).map((n) => (
+                    <li key={n.id}><a href={social[n.id]} target="_blank" rel="noopener me" className="inline-flex items-center gap-1.5 rounded-full border border-mt-border px-3 py-1.5 text-[13px] text-mt-muted hover:text-mt-ink"><span aria-hidden className="h-2 w-2 rounded-full" style={{ background: n.color }} />{n.name}</a></li>
+                  ))}
+                </ul>
+              </nav>
+            )}
           </div>
 
           {/* Link columns */}
@@ -70,6 +85,7 @@ export function Footer({ theme }: { theme: AppTheme }) {
                 <li><button onClick={() => go('/create')} className={link}>Create a design</button></li>
                 <li><Link href="/templates" className={link}>Templates</Link></li>
                 <li><Link href="/photo-studio" className={link}>Photo Studio</Link></li>
+                <li><Link href="/ai-studio" className={link}>AI Template Studio</Link></li>
                 <li><Link href="/tutorials" className={link}>Tutorials &amp; courses</Link></li>
                 <li><Link href="/free-design-tools" className={link}>Free design tools</Link></li>
                 <li><Link href="/#features" className={link}>Features</Link></li>
