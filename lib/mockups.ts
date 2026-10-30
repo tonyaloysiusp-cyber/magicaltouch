@@ -462,10 +462,15 @@ export const SCENES: Scene[] = [
       ctx.moveTo(36 * s, 13 * s);
       ctx.quadraticCurveTo(50 * s, 24 * s, 64 * s, 13 * s);
       ctx.stroke();
-      // print
+      // print — on a light shirt the ink is multiplied into the fabric, so a
+      // design's white background disappears like real printing (no box)
       const { w, h } = fitRect(art.width, art.height, 34 * s, 38 * s);
+      const hex = /^#([0-9a-f]{6})$/i.exec(o.accent || '')?.[1];
+      const light = !hex || (0.299 * parseInt(hex.slice(0, 2), 16) + 0.587 * parseInt(hex.slice(2, 4), 16) + 0.114 * parseInt(hex.slice(4, 6), 16)) / 255 > 0.6;
       ctx.globalAlpha = 0.95;
+      if (light) ctx.globalCompositeOperation = 'multiply';
       ctx.drawImage(art, 50 * s - w / 2, 30 * s, w, h);
+      ctx.globalCompositeOperation = 'source-over';
       ctx.globalAlpha = 1;
       ctx.globalCompositeOperation = 'multiply';
       ctx.fillStyle = g;
