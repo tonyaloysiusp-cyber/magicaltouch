@@ -28,7 +28,7 @@ export async function generateMetadata({ params }: { params: { course: string } 
     title: { absolute: `${d.course.title} — Free Design Course | Magical Touch Design` },
     description: `${d.course.summary} ${d.course.lessons.length} short lessons. Free, with a reviewed certificate.`.slice(0, 300),
     alternates: { canonical: url },
-    openGraph: { type: 'website', url, title: d.course.title, description: d.course.summary, siteName: SITE_NAME, images: [`${SITE_URL}/og-image.png`] },
+    openGraph: { type: 'website', url, title: d.course.title, description: d.course.summary, siteName: SITE_NAME, images: [`${SITE_URL}/api/og`] },
   };
 }
 

@@ -16,6 +16,7 @@ import { PROMO_KIT, withTemplateCount } from '@/lib/promoKit';
 import { useTemplateCountLabel } from '@/lib/templateCount';
 import { SocialSetup } from './SocialSetup';
 import { SocialPosts } from './SocialPosts';
+import { BrandImages } from './BrandImages';
 
 const SITE = 'https://www.magicaltouchdesign.com';
 const card = 'rounded-3xl border border-mt-border bg-mt-surface p-5 sm:p-6';
@@ -71,6 +72,7 @@ export function Social({ flash }: { flash: (m: string) => void }) {
       </section>
       {Object.keys(saved).length >= 4 && <details className={card}><summary className="cursor-pointer text-[14px] font-semibold">Profile pictures, bio and sign-up links</summary><div className="mt-3"><SocialSetup /></div></details>}
 
+      <BrandImages flash={flash} />
       <section className={card}>
         <h2 className="text-lg font-semibold">Promo kit — posters & videos</h2>
         <p className="mt-1 text-[13px] text-mt-muted">Made from your own templates, in your brand colours. Download, copy the caption, post. For reels, add a trending sound inside Instagram or TikTok — it helps reach.</p>

@@ -59,8 +59,8 @@ export async function generateMetadata({ params }: { params: { landing: string }
     title: { absolute: `${l.title} | ${SITE_NAME}` },
     description: l.description,
     alternates: { canonical: url },
-    openGraph: { type: 'website', url, title: l.title, description: l.description, siteName: SITE_NAME, images: [`${SITE_URL}/og-image.png`], locale: l.lang === 'ar' ? 'ar_AE' : 'en_AE' },
-    twitter: { card: 'summary_large_image', title: l.title, description: l.description, images: [`${SITE_URL}/og-image.png`] },
+    openGraph: { type: 'website', url, title: l.title, description: l.description, siteName: SITE_NAME, images: [`${SITE_URL}/api/og`], locale: l.lang === 'ar' ? 'ar_AE' : 'en_AE' },
+    twitter: { card: 'summary_large_image', title: l.title, description: l.description, images: [`${SITE_URL}/api/og`] },
   };
 }
 

@@ -20,8 +20,8 @@ const baseMetadata: Metadata = {
   description: SITE_DESCRIPTION,
   applicationName: SITE_NAME,
   keywords: ['free design templates', 'online graphic design', 'flyer maker', 'poster maker', 'instagram post templates', 'menu templates', 'invitation maker', 'certificate maker', 'business card design', 'free online design tool', 'free canva alternative', 'resume maker', 'photo editor online'],
-  openGraph: { type: 'website', siteName: SITE_NAME, url: SITE_URL, title: 'Magical Touch Design — Free Online Design Templates & Editor', description: SITE_DESCRIPTION, images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'Magical Touch Design' }], locale: 'en_US', alternateLocale: ['en_GB', 'en_IN', 'en_CA', 'en_AU', 'en_AE', 'ar_AE'] },
-  twitter: { card: 'summary_large_image', title: 'Magical Touch Design — Free Online Design Templates', description: SITE_DESCRIPTION, images: ['/og-image.png'] },
+  openGraph: { type: 'website', siteName: SITE_NAME, url: SITE_URL, title: 'Magical Touch Design — Free Online Design Templates & Editor', description: SITE_DESCRIPTION, images: [{ url: '/api/og', width: 1200, height: 630, alt: 'Magical Touch Design' }], locale: 'en_US', alternateLocale: ['en_GB', 'en_IN', 'en_CA', 'en_AU', 'en_AE', 'ar_AE'] },
+  twitter: { card: 'summary_large_image', title: 'Magical Touch Design — Free Online Design Templates', description: SITE_DESCRIPTION, images: ['/api/og'] },
   robots: { index: true, follow: true, googleBot: { index: true, follow: true, 'max-image-preview': 'large', 'max-snippet': -1 } },
   formatDetection: { telephone: false },
 };

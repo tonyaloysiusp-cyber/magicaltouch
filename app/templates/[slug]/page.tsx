@@ -22,19 +22,23 @@ export async function generateStaticParams() {
   return all.slice(0, PREBUILD).map((t) => ({ slug: t.slug }));
 }
 
+const abs = (u?: string | null) => (!u ? null : u.startsWith('http') ? u : `${SITE_URL}${u}`);
+/** "Sage Kids Party Invitation" → "Sage Kids Party Invitation Template", so searches for "… template" match. */
+const withTemplate = (name: string) => (/template/i.test(name) ? name : `${name} Template`);
+
 export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
   const t = await getTemplateBySlug(params.slug);
   if (!t) return { title: 'Template not found', robots: { index: false } };
-  const title = `${t.name} — Free Template`;
+  const title = `${withTemplate(t.name)} — Free & Editable`;
   const description = templateDescription(t);
   const url = `${SITE_URL}/templates/${t.slug}`;
-  const image = t.preview || t.thumbnail || `${SITE_URL}/og-image.png`;
+  const image = abs(t.preview || t.thumbnail) || `${SITE_URL}/api/og`;
   return {
     title,
     description,
     keywords: [t.name, `${t.category} template`, 'free template', 'online design', ...(t.search_keywords || '').split(',').map((s) => s.trim()).filter(Boolean)].slice(0, 15),
     alternates: { canonical: url },
-    openGraph: { type: 'website', url, title, description, siteName: SITE_NAME, images: [{ url: image, width: 1300, alt: t.name }] },
+    openGraph: { type: 'website', url, title, description, siteName: SITE_NAME, images: [{ url: image, alt: `${withTemplate(t.name)} — ${t.category}` }] },
     twitter: { card: 'summary_large_image', title, description, images: [image] },
   };
 }
@@ -54,13 +58,30 @@ export default async function TemplatePage({ params }: { params: { slug: string 
       name: t.name,
       description: templateDescription(t),
       url,
-      image: t.preview || t.thumbnail,
+      image: abs(t.preview || t.thumbnail),
       genre: t.category,
       keywords: [...tags, ...(t.search_keywords || '').split(',').map((s) => s.trim())].filter(Boolean).join(', '),
       isAccessibleForFree: true,
       inLanguage: 'en',
       publisher: { '@type': 'Organization', name: SITE_NAME, url: SITE_URL, logo: `${SITE_URL}/logo.png` },
       offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD', availability: 'https://schema.org/InStock' },
+    },
+    // Image licence details: Google Images can show the picture with a
+    // "Licensable" label and link people straight to this free template.
+    {
+      '@context': 'https://schema.org',
+      '@type': 'ImageObject',
+      contentUrl: abs(t.preview || t.thumbnail),
+      thumbnailUrl: abs(t.thumbnail || t.preview),
+      name: withTemplate(t.name),
+      caption: `${withTemplate(t.name)} — free ${t.category.toLowerCase()} template you can edit online`,
+      license: `${SITE_URL}/terms`,
+      acquireLicensePage: url,
+      creditText: SITE_NAME,
+      creator: { '@type': 'Organization', name: SITE_NAME, url: SITE_URL },
+      copyrightNotice: `© ${SITE_NAME}`,
+      width: t.width,
+      height: t.height,
     },
     {
       '@context': 'https://schema.org',

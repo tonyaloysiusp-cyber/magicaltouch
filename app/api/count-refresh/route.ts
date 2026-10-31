@@ -24,5 +24,6 @@ export async function POST(request: NextRequest) {
   revalidateTag(COUNT_TAG);
   revalidatePath('/', 'layout');
   revalidatePath('/api/public-templates');
+  revalidatePath('/api/og');
   return NextResponse.json({ refreshed: true, at: new Date().toISOString() });
 }

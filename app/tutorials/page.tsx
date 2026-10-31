@@ -13,7 +13,7 @@ export const metadata: Metadata = {
   description:
     'Learn graphic design step by step, free: short hands-on lessons in Beginner, Intermediate and Pro courses — templates, text, photos, brand kits, Photo Studio and print-ready PDFs. Request a reviewed certificate when you finish.',
   alternates: { canonical: `${SITE_URL}/tutorials` },
-  openGraph: { type: 'website', url: `${SITE_URL}/tutorials`, title: 'Free design tutorials & courses — Beginner to Pro', description: 'Hands-on lessons with a reviewed certificate for every course.', siteName: SITE_NAME, images: [`${SITE_URL}/og-image.png`] },
+  openGraph: { type: 'website', url: `${SITE_URL}/tutorials`, title: 'Free design tutorials & courses — Beginner to Pro', description: 'Hands-on lessons with a reviewed certificate for every course.', siteName: SITE_NAME, images: [`${SITE_URL}/api/og`] },
 };
 
 export default async function TutorialsPage() {

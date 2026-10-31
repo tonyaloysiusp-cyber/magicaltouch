@@ -18,7 +18,7 @@ const baseMetadata: Metadata = {
   description:
     'Magical Touch Design is a free online graphic design platform: 1,000+ templates, a full design editor, a photo studio and free tutorials. Founded by Tony Aloysius, Founder & CEO.',
   alternates: { canonical: `${SITE_URL}/about` },
-  openGraph: { type: 'website', url: `${SITE_URL}/about`, title: 'About Magical Touch Design', description: 'A free online graphic design platform — templates, editor and photo studio. Founder & CEO: Tony Aloysius.', siteName: SITE_NAME, images: [`${SITE_URL}/og-image.png`] },
+  openGraph: { type: 'website', url: `${SITE_URL}/about`, title: 'About Magical Touch Design', description: 'A free online graphic design platform — templates, editor and photo studio. Founder & CEO: Tony Aloysius.', siteName: SITE_NAME, images: [`${SITE_URL}/api/og`] },
 };
 
 // The template count in the text follows the real library ("1,850+").
