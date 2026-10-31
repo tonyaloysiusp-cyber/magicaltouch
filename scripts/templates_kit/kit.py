@@ -29,7 +29,7 @@ PUBLIC = os.path.abspath(os.path.join(HERE, "..", "..", "public"))
 FS_MULT = 1.13  # fabric.Text._fontSizeMult
 
 # ---------------------------------------------------------------- fonts
-_SPECIAL = {"EBGaramond": "EB Garamond", "DMSans": "DM Sans", "Baloo2": "Baloo 2"}
+_SPECIAL = {"EBGaramond": "EB Garamond", "DMSans": "DM Sans", "Baloo2": "Baloo 2", "DMSerifDisplay": "DM Serif Display"}
 _WEIGHTS = {"Thin": 100, "ExtraLight": 200, "Light": 300, "Regular": 400, "Medium": 500, "SemiBold": 600, "Bold": 700, "ExtraBold": 800, "Black": 900, "": 400}
 
 

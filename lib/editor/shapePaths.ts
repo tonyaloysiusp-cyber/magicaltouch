@@ -36,7 +36,18 @@ export type ShapeKind =
   | 'drop'
   | 'moon'
   | 'line'
-  | 'arrowLine';
+  | 'arrowLine'
+  | 'pill'
+  | 'squircle'
+  | 'octagon'
+  | 'flower'
+  | 'scallop'
+  | 'stamp'
+  | 'ticket'
+  | 'leaf'
+  | 'shield'
+  | 'wave'
+  | 'slant';
 
 export interface ShapeParams {
   sides?: number; // polygon
@@ -78,6 +89,17 @@ export const SHAPES: ShapeDef[] = [
   { kind: 'arch', label: 'Arch', group: 'symbols', aspect: 0.75 },
   { kind: 'blob', label: 'Blob', group: 'symbols' },
   { kind: 'cross', label: 'Plus', group: 'symbols' },
+  { kind: 'pill', label: 'Pill', group: 'basic', aspect: 2 },
+  { kind: 'squircle', label: 'Squircle', group: 'basic' },
+  { kind: 'octagon', label: 'Octagon', group: 'polygons' },
+  { kind: 'flower', label: 'Flower', group: 'symbols' },
+  { kind: 'scallop', label: 'Scallop', group: 'symbols' },
+  { kind: 'stamp', label: 'Stamp', group: 'symbols', aspect: 0.82 },
+  { kind: 'ticket', label: 'Ticket', group: 'symbols', aspect: 1.8 },
+  { kind: 'leaf', label: 'Leaf', group: 'symbols' },
+  { kind: 'shield', label: 'Shield', group: 'symbols', aspect: 0.85 },
+  { kind: 'wave', label: 'Wavy square', group: 'basic' },
+  { kind: 'slant', label: 'Slanted', group: 'basic', aspect: 1.4 },
   { kind: 'speech', label: 'Speech bubble', group: 'callouts', aspect: 1.3 },
   { kind: 'speechRound', label: 'Thought bubble', group: 'callouts', aspect: 1.3 },
   { kind: 'banner', label: 'Banner', group: 'callouts', aspect: 3.2 },
@@ -266,6 +288,80 @@ export function shapePathD(kind: ShapeKind, w: number, h: number, params: ShapeP
       ]);
     case 'chevron':
       return pts([[0, 0], [w * 0.6, 0], [w, h / 2], [w * 0.6, h], [0, h], [w * 0.4, h / 2]]);
+    case 'pill':
+      return roundRectD(w, h, Math.min(w, h) / 2);
+    case 'squircle': {
+      // Superellipse (n = 4): the soft "app icon" square.
+      const list: [number, number][] = [];
+      for (let i = 0; i < 64; i++) {
+        const a = (i / 64) * 2 * Math.PI;
+        const c = Math.cos(a), s = Math.sin(a);
+        list.push([w / 2 + (w / 2) * Math.sign(c) * Math.pow(Math.abs(c), 0.5), h / 2 + (h / 2) * Math.sign(s) * Math.pow(Math.abs(s), 0.5)]);
+      }
+      return pts(list);
+    }
+    case 'octagon':
+      return regular(w, h, 8, -Math.PI / 8);
+    case 'flower':
+    case 'scallop': {
+      // Round petals (flower) or a fine scalloped edge (scallop).
+      const n = kind === 'flower' ? 8 : 20;
+      const depth = kind === 'flower' ? 0.72 : 0.9;
+      const parts: string[] = [];
+      for (let i = 0; i <= n; i++) {
+        const a = -Math.PI / 2 + (i * 2 * Math.PI) / n;
+        const am = a - Math.PI / n;
+        const x = w / 2 + ((Math.cos(a) * w) / 2) * depth;
+        const y = h / 2 + ((Math.sin(a) * h) / 2) * depth;
+        // Each petal is a cubic bulge between two neighbouring valley points.
+        const out = kind === 'flower' ? 1.3 : 1.1, spread = Math.PI / n / 1.6;
+        const c1x = w / 2 + ((Math.cos(am - spread) * w) / 2) * out, c1y = h / 2 + ((Math.sin(am - spread) * h) / 2) * out;
+        const c2x = w / 2 + ((Math.cos(am + spread) * w) / 2) * out, c2y = h / 2 + ((Math.sin(am + spread) * h) / 2) * out;
+        parts.push(i === 0 ? `M ${r(x)} ${r(y)}` : `C ${r(c1x)} ${r(c1y)} ${r(c2x)} ${r(c2y)} ${r(x)} ${r(y)}`);
+      }
+      return parts.join(' ') + ' Z';
+    }
+    case 'stamp': {
+      // Postage stamp: little round bites all the way round.
+      const bite = Math.max(4, Math.min(w, h) / 18);
+      const edge = (x0: number, y0: number, x1: number, y1: number) => {
+        const len = Math.hypot(x1 - x0, y1 - y0);
+        const n = Math.max(2, Math.round(len / (bite * 2.6)));
+        const out: string[] = [];
+        const nx = (y1 - y0) / len, ny = -(x1 - x0) / len; // points outward, into the bite
+        for (let i = 0; i < n; i++) {
+          const t = (i + 0.5) / n;
+          const mx = x0 + (x1 - x0) * t, my = y0 + (y1 - y0) * t;
+          const ux = (x1 - x0) / len, uy = (y1 - y0) / len;
+          const sx = mx - ux * bite, sy = my - uy * bite, ex = mx + ux * bite, ey = my + uy * bite, k = bite * 1.33;
+          out.push(`L ${r(sx)} ${r(sy)}`, `C ${r(sx - nx * k)} ${r(sy - ny * k)} ${r(ex - nx * k)} ${r(ey - ny * k)} ${r(ex)} ${r(ey)}`);
+        }
+        return out.join(' ');
+      };
+      return `M 0 0 ${edge(0, 0, w, 0)} L ${r(w)} 0 ${edge(w, 0, w, h)} L ${r(w)} ${r(h)} ${edge(w, h, 0, h)} L 0 ${r(h)} ${edge(0, h, 0, 0)} Z`;
+    }
+    case 'ticket': {
+      const n = Math.min(w, h) * 0.14;
+      return `M 0 0 L ${r(w)} 0 L ${r(w)} ${r(h / 2 - n)} Q ${r(w - n * 1.3)} ${r(h / 2)} ${r(w)} ${r(h / 2 + n)} L ${r(w)} ${r(h)} L 0 ${r(h)} L 0 ${r(h / 2 + n)} Q ${r(n * 1.3)} ${r(h / 2)} 0 ${r(h / 2 - n)} Z`;
+    }
+    case 'leaf': {
+      // Two opposite corners fully rounded.
+      const k = Math.min(w, h) * 0.5;
+      return `M ${r(k)} 0 L ${r(w)} 0 L ${r(w)} ${r(h - k)} Q ${r(w)} ${r(h)} ${r(w - k)} ${r(h)} L 0 ${r(h)} L 0 ${r(k)} Q 0 0 ${r(k)} 0 Z`;
+    }
+    case 'shield':
+      return `M ${r(w / 2)} 0 L ${r(w)} ${r(h * 0.12)} L ${r(w)} ${r(h * 0.5)} C ${r(w)} ${r(h * 0.78)} ${r(w * 0.72)} ${r(h * 0.92)} ${r(w / 2)} ${r(h)} C ${r(w * 0.28)} ${r(h * 0.92)} 0 ${r(h * 0.78)} 0 ${r(h * 0.5)} L 0 ${r(h * 0.12)} Z`;
+    case 'wave': {
+      // Square with gently waving top and bottom edges.
+      const a = h * 0.04, n = 3, seg = w / (n * 2);
+      let d = `M 0 ${r(a)}`;
+      for (let i = 0; i < n * 2; i++) d += ` Q ${r(seg * i + seg / 2)} ${r(i % 2 ? a * 2 : 0)} ${r(seg * (i + 1))} ${r(a)}`;
+      d += ` L ${r(w)} ${r(h - a)}`;
+      for (let i = n * 2; i > 0; i--) d += ` Q ${r(seg * i - seg / 2)} ${r(i % 2 ? h : h - a * 2)} ${r(seg * (i - 1))} ${r(h - a)}`;
+      return d + ' Z';
+    }
+    case 'slant':
+      return pts([[w * 0.14, 0], [w, 0], [w * 0.86, h], [0, h]]);
     case 'line':
       return `M 0 ${r(h / 2)} L ${r(w)} ${r(h / 2)}`;
     case 'arrowLine': {

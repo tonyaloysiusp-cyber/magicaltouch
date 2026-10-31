@@ -1,0 +1,27 @@
+<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="fonts.css"><script src="fabric.min.js"></script></head><body>
+<script>
+fabric.Object.prototype.objectCaching = false;
+async function loadFonts(fams){ await Promise.all(fams.flatMap(f=>[300,400,500,600,700,800].flatMap(w=>[document.fonts.load(`${w} 40px "${f}"`), document.fonts.load(`italic ${w} 40px "${f}"`)]))); }
+window.renderOne = async function(t, long){
+  const W=t.width, H=t.height;
+  const el=document.createElement('canvas'); el.width=W; el.height=H;
+  const c=new fabric.StaticCanvas(el,{width:W,height:H,enableRetinaScaling:false,backgroundColor:'#ffffff'});
+  const fams=[...new Set(t.canvasJson.objects.filter(o=>o.fontFamily).map(o=>o.fontFamily))];
+  await loadFonts(fams);
+  await new Promise(r=>c.loadFromJSON(t.canvasJson, r));
+  c.getObjects().forEach(o=>{ if(o.__isArtboard){ o.set({stroke:null, shadow:null}); } });
+  c.renderAll();
+  const out={};
+  for (const [k,target] of [['thumb',{w:520}],['preview',{long:1300}]]){
+    const scale = target.w ? target.w/W : target.long/Math.max(W,H);
+    const ow=Math.round(W*scale), oh=Math.round(H*scale);
+    const o=document.createElement('canvas'); o.width=ow; o.height=oh;
+    const x=o.getContext('2d'); x.fillStyle='#fff'; x.fillRect(0,0,ow,oh); x.imageSmoothingQuality='high';
+    // re-render at the output scale for crisp text
+    c.setDimensions({width:ow,height:oh}); c.setViewportTransform([scale,0,0,scale,0,0]); c.renderAll();
+    x.drawImage(c.getElement(),0,0);
+    out[k]=o.toDataURL('image/jpeg', k==='thumb'?0.84:0.86);
+  }
+  return out;
+};
+</script></body></html>
