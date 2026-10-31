@@ -8,7 +8,7 @@ import { ALL_LANDINGS } from '@/lib/landings';
 //  GET                                  statuses, settings, last run
 //  POST { action: 'check' }             check every page now (and clean up if on)
 //  POST { action: 'settings', on, days } auto-cleanup on/off and monitoring days
-//  POST { action: 'remove', slug }      switch a page off by hand
+//  POST { action: 'remove', slug, del }  switch a page off (or delete it) by hand
 //  POST { action: 'restore', slug }     bring a removed page back
 export const runtime = 'nodejs';
 export const maxDuration = 120;
@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
     }
     if (b?.action === 'remove' && slug) {
       const kind = ALL_LANDINGS().some((l) => l.slug === slug) ? 'builtin' : 'custom';
-      const { data, error } = await supabase.rpc('landing_apply', { p_token: null, p_rows: [], p_remove: [{ slug, kind, reason: 'Removed by an admin' }], p_summary: null });
+      const { data, error } = await supabase.rpc('landing_apply', { p_token: null, p_rows: [], p_remove: [{ slug, kind, reason: b.del ? 'Deleted by an admin' : 'Switched off by an admin', delete: !!b.del }], p_summary: null });
       if (error) return NextResponse.json({ error: error.message }, { status: 500 });
       return NextResponse.json(data);
     }
