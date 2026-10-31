@@ -34,8 +34,14 @@ export function Footer({ theme }: { theme: AppTheme }) {
   const [loggedIn, setLoggedIn] = useState(false);
   // The site's social profiles, set in Admin → SEO → Social.
   const [social, setSocial] = useState<SocialLinks>({});
+  // Landing pages switched off in Admin → SEO (or by the page check) aren't linked.
+  const [hidden, setHidden] = useState<Set<string>>(new Set());
   useEffect(() => {
-    supabase.from('site_settings').select('value').eq('key', 'social_links').maybeSingle().then(({ data }) => setSocial(parseSocial((data as any)?.value)));
+    supabase.from('site_settings').select('key, value').in('key', ['social_links', 'hidden_landings']).then(({ data }) => {
+      const rows = (data as { key: string; value: string }[]) || [];
+      setSocial(parseSocial(rows.find((r) => r.key === 'social_links')?.value));
+      setHidden(new Set((rows.find((r) => r.key === 'hidden_landings')?.value || '').split(',').map((x) => x.trim()).filter(Boolean)));
+    });
   }, []);
 
   useEffect(() => {
@@ -138,7 +144,7 @@ export function Footer({ theme }: { theme: AppTheme }) {
           <nav aria-label="Free design tools">
             <p className={head}>Free design tools</p>
             <ul className="mt-3 flex flex-wrap gap-2">
-              {TOOLS.map(([slug, label]) => (
+              {TOOLS.filter(([slug]) => !hidden.has(slug)).map(([slug, label]) => (
                 <li key={slug}>
                   <Link href={`/${slug}`} className="inline-flex rounded-full border border-mt-border px-3 py-1.5 text-[13px] text-mt-muted hover:text-mt-ink hover:border-mt-ink/30 transition-colors">
                     {label}

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Crown, Plus, Loader2 } from 'lucide-react';
 import { Template, TemplateCategory, fetchPublicTemplates, fetchCategories } from '@/lib/templatesData';
 import { SearchField, cx } from '../ui';
+import { usePremiumGate } from '@/components/monetization/Paywall';
 
 const ORDER = ['Birthday', 'Events', 'Wedding', 'Business', 'Social Media', 'Marketing', 'Menus', 'Certificates', 'Resume', 'Cards'];
 
@@ -23,6 +24,8 @@ export function TemplatesPanel({
   const [loading, setLoading] = useState(!cache);
   const [q, setQ] = useState('');
   const [cat, setCat] = useState<string>(initialCategory || 'All');
+  // Premium templates need a purchase only once charging is switched on.
+  const gate = usePremiumGate();
 
   useEffect(() => {
     if (cache) return;
@@ -85,7 +88,7 @@ export function TemplatesPanel({
             onDragStart={(e) => e.dataTransfer.setData('application/x-mt-asset', `template:${t.id}`)}
             className="group relative break-inside-avoid rounded-xl overflow-hidden ring-1 ring-mt-border bg-mt-surface2 mt-card-hover"
           >
-            <button type="button" onClick={() => onUse(t, 'replace')} className="block w-full text-left" title={`Use “${t.name}”`}>
+            <button type="button" onClick={() => gate.guard(t.isFree) && onUse(t, 'replace')} className="block w-full text-left" title={`Use “${t.name}”`}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={t.thumbnail!}
@@ -102,7 +105,7 @@ export function TemplatesPanel({
             )}
             <button
               type="button"
-              onClick={() => onUse(t, 'newPage')}
+              onClick={() => gate.guard(t.isFree) && onUse(t, 'newPage')}
               title="Add as a new page"
               aria-label={`Add ${t.name} as a new page`}
               className="absolute top-1.5 right-1.5 h-7 w-7 inline-flex items-center justify-center rounded-full bg-white/95 text-[#09090B] shadow opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
@@ -118,6 +121,7 @@ export function TemplatesPanel({
           </div>
         ))}
       </div>
+      {gate.dialog}
     </div>
   );
 }
