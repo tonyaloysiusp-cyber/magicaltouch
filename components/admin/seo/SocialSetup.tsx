@@ -9,19 +9,20 @@
 
 import { useState } from 'react';
 import { Check, Copy, Download, ExternalLink } from 'lucide-react';
+import { useTemplateCountLabel } from '@/lib/templateCount';
 
 const SITE = 'https://www.magicaltouchdesign.com';
 const card = 'rounded-3xl border border-mt-border bg-mt-surface p-5 sm:p-6';
 
-const DETAILS: [string, string][] = [
+const details = (count: string): [string, string][] => [
   ['Business name', 'Magical Touch Design'],
   ['Username', 'magicaltouchdesign'],
   ['Category', 'Graphic designer · Software / design tool'],
   ['Website', SITE],
   ['Location', 'Tamil Nadu, India — serving customers worldwide'],
   ['Founder', 'Tony Aloysius — Founder & CEO'],
-  ['Short bio (150)', 'Free online design tool ✨ 1,800+ templates · flyers, posters, invitations, posts · no watermark · print-ready PDF 👇'],
-  ['Long description', 'Magical Touch Design is a free online graphic design tool from Tamil Nadu, India, for creators and small businesses worldwide. Pick from 1,800+ templates — flyers, posters, invitations, resumes, menus, certificates and social media posts — edit text, fonts, colours and photos in your browser, and download a print-ready PDF, PNG or JPG with no watermark.'],
+  ['Short bio (150)', `Free online design tool ✨ ${count} templates · flyers, posters, invitations, posts · no watermark · print-ready PDF 👇`],
+  ['Long description', 'Magical Touch Design is a free online graphic design tool from Tamil Nadu, India, for creators and small businesses worldwide. Pick from {count} templates — flyers, posters, invitations, resumes, menus, certificates and social media posts — edit text, fonts, colours and photos in your browser, and download a print-ready PDF, PNG or JPG with no watermark.'],
   ['Hashtags', '#magicaltouchdesign #freedesign #graphicdesign #templates #flyerdesign #postermaker #smallbusiness #tamilnadu #india'],
 ];
 
@@ -37,6 +38,8 @@ const NETS: { name: string; url: string; tip: string; cover?: string }[] = [
 ];
 
 export function SocialSetup() {
+  const count = useTemplateCountLabel();
+  const DETAILS = details(count).map(([k, v]) => [k, v.replace(/\{count\}/g, count)] as [string, string]);
   const [copied, setCopied] = useState<string | null>(null);
   const copy = (k: string, t: string) => navigator.clipboard?.writeText(t).then(() => { setCopied(k); setTimeout(() => setCopied(null), 1500); });
   return (

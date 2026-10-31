@@ -18,7 +18,7 @@ const POSTS: { src: string; alt: string; w: number; h: number; tag: string }[] =
   { src: '/home/promo/promo-ai-studio.webp', alt: 'Paste any design. Edit it in a minute. — AI Template Studio post', w: 720, h: 900, tag: 'New feature' },
   { src: '/home/promo/promo-linkedin.webp', alt: 'Professional design. Zero cost. — LinkedIn post', w: 720, h: 376, tag: 'LinkedIn' },
   { src: '/home/promo/promo-square.webp', alt: 'Every design tool. Every feature free. — square post', w: 720, h: 720, tag: 'Facebook' },
-  { src: '/home/promo/promo-pinterest.webp', alt: '1,800+ free design templates — Pinterest pin', w: 720, h: 1080, tag: 'Pinterest' },
+  { src: '/home/promo/promo-pinterest.webp', alt: 'Free design templates — Pinterest pin', w: 720, h: 1080, tag: 'Pinterest' },
 ];
 
 export function SocialShowcase() {

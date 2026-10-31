@@ -12,7 +12,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { Check, Copy, Download, ExternalLink, Share2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { NETWORKS, parseSocial, shareLinks, SocialLinks } from '@/lib/social';
-import { PROMO_KIT } from '@/lib/promoKit';
+import { PROMO_KIT, withTemplateCount } from '@/lib/promoKit';
+import { useTemplateCountLabel } from '@/lib/templateCount';
 import { SocialSetup } from './SocialSetup';
 import { SocialPosts } from './SocialPosts';
 
@@ -26,7 +27,9 @@ export function Social({ flash }: { flash: (m: string) => void }) {
   const [saved, setSaved] = useState<SocialLinks>({});
   const [copied, setCopied] = useState<string | null>(null);
   const [page, setPage] = useState('/');
-  const [text, setText] = useState('Free online design tool — 1,800+ templates, no watermark');
+  const count = useTemplateCountLabel();
+  const [text, setText] = useState('');
+  const shareText = text || `Free online design tool — ${count} templates, no watermark`;
 
   useEffect(() => {
     supabase.from('site_settings').select('value').eq('key', 'social_links').maybeSingle().then(({ data }) => { const v = parseSocial((data as any)?.value); setLinks(v); setSaved(v); });
@@ -47,7 +50,7 @@ export function Social({ flash }: { flash: (m: string) => void }) {
   };
   const copy = (id: string, t: string) => navigator.clipboard?.writeText(t).then(() => { setCopied(id); setTimeout(() => setCopied(null), 1500); });
   const url = useMemo(() => (page.startsWith('http') ? page : `${SITE}${page.startsWith('/') ? '' : '/'}${page}`), [page]);
-  const share = shareLinks(url, text);
+  const share = shareLinks(url, shareText);
   const dirty = JSON.stringify(links) !== JSON.stringify(saved);
 
   return (
@@ -84,7 +87,7 @@ export function Social({ flash }: { flash: (m: string) => void }) {
                 <p className="text-[12px] text-mt-muted">{a.channels.join(' · ')}</p>
                 <div className="mt-auto flex gap-2">
                   <a href={a.file} download className="h-8 px-3 rounded-full bg-mt-primary text-mt-onprimary text-[12px] font-semibold inline-flex items-center gap-1.5"><Download size={13} /> Download</a>
-                  <button onClick={() => copy(a.file, a.caption)} className="h-8 px-3 rounded-full border border-mt-border text-[12px] inline-flex items-center gap-1.5">{copied === a.file ? <Check size={13} /> : <Copy size={13} />} Caption</button>
+                  <button onClick={() => copy(a.file, withTemplateCount(a.caption, count))} className="h-8 px-3 rounded-full border border-mt-border text-[12px] inline-flex items-center gap-1.5">{copied === a.file ? <Check size={13} /> : <Copy size={13} />} Caption</button>
                 </div>
               </div>
             </li>
@@ -97,7 +100,7 @@ export function Social({ flash }: { flash: (m: string) => void }) {
         <p className="mt-1 text-[13px] text-mt-muted">Opens each network’s own share box with the link and text filled in — post from your account in one tap.</p>
         <div className="mt-4 grid gap-3 md:grid-cols-2">
           <label className="text-[12px] text-mt-muted">Page<input className={field} value={page} onChange={(e) => setPage(e.target.value)} placeholder="/free-flyer-maker" /></label>
-          <label className="text-[12px] text-mt-muted">Text<input className={field} value={text} onChange={(e) => setText(e.target.value)} /></label>
+          <label className="text-[12px] text-mt-muted">Text<input className={field} value={shareText} onChange={(e) => setText(e.target.value)} /></label>
         </div>
         <div className="mt-3 flex flex-wrap gap-2">
           {share.map((s) => <a key={s.id} href={s.href} target="_blank" rel="noreferrer" className={`${btn} border border-mt-border`}>{s.name}</a>)}
