@@ -26,7 +26,9 @@ export async function generateMetadata({ params }: { params: { slug: string } })
     description: desc,
     keywords: [...p.hashtags, 'magical touch design', 'free templates', 'online design tool'],
     alternates: { canonical: url },
-    openGraph: { type: p.kind === 'video' ? 'video.other' : 'website', url, title: p.title, description: desc, siteName: SITE_NAME, images: [{ url: img, alt: p.title }], ...(p.kind === 'video' && p.video_url ? { videos: [{ url: abs(p.video_url) as string }] } : {}) },
+    openGraph: p.kind === 'video' && p.video_url
+      ? { type: 'video.other', url, title: p.title, description: desc, siteName: SITE_NAME, images: [{ url: img, alt: p.title }], videos: [{ url: abs(p.video_url) as string }] }
+      : { type: 'website', url, title: p.title, description: desc, siteName: SITE_NAME, images: [{ url: img, alt: p.title }] },
     twitter: { card: 'summary_large_image', title: p.title, description: desc, images: [img] },
   };
 }
