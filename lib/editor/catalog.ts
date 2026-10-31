@@ -64,6 +64,22 @@ export const FRAME_KINDS: { kind: FrameKind; label: string }[] = [
   { kind: 'drop', label: 'Drop' },
   { kind: 'badge', label: 'Badge' },
   { kind: 'cloud', label: 'Cloud' },
+  { kind: 'pill', label: 'Pill' },
+  { kind: 'squircle', label: 'Squircle' },
+  { kind: 'octagon', label: 'Octagon' },
+  { kind: 'flower', label: 'Flower' },
+  { kind: 'scallop', label: 'Scallop' },
+  { kind: 'stamp', label: 'Stamp' },
+  { kind: 'ticket', label: 'Ticket' },
+  { kind: 'leaf', label: 'Leaf' },
+  { kind: 'shield', label: 'Shield' },
+  { kind: 'wave', label: 'Wavy' },
+  { kind: 'slant', label: 'Slanted' },
+  { kind: 'triangle', label: 'Triangle' },
+  { kind: 'pentagon', label: 'Pentagon' },
+  { kind: 'star4', label: 'Sparkle' },
+  { kind: 'moon', label: 'Moon' },
+  { kind: 'speech', label: 'Speech' },
 ];
 
 // Emoji stickers are real text (they stay crisp at any size).
