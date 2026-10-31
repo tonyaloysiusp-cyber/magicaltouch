@@ -45,9 +45,9 @@ export async function runLandingCheck(supabase: SupabaseClient, token: string | 
 
   const { decisions, blocked } = decide(checks, ((life as any).status || []) as StatusRow[], settings, (life as any).google_since || null);
   const summary = summarize(decisions, blocked);
-  const remove = apply ? decisions.filter((d) => d.remove).map((d) => ({ slug: d.slug, kind: d.kind, reason: d.reason })) : [];
+  const remove = apply ? decisions.filter((d) => d.remove).map((d) => ({ slug: d.slug, kind: d.kind, reason: d.reason, delete: !!d.del })) : [];
   const rows = decisions.filter((d) => !remove.some((r) => r.slug === d.slug)).map((d) => ({ slug: d.slug, kind: d.kind, status: d.status, reason: d.reason, views30: d.views30, search30: d.search30, templates: d.templates, http: d.http }));
   const { data: res, error } = await supabase.rpc('landing_apply', { p_token: token, p_rows: rows, p_remove: remove, p_summary: summary });
   if (error) throw new Error(error.message);
-  return { removed: (res as any)?.removed || 0, checked: decisions.length, blocked, summary, settings };
+  return { removed: (res as any)?.removed || 0, deleted: (res as any)?.deleted || 0, checked: decisions.length, blocked, summary, settings };
 }

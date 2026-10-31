@@ -8,8 +8,8 @@
 //                anyone, so "no visitors" would say nothing about the page
 //   not-working  broken (page error, or no templates to show), or no
 //                visitors at all after the monitoring window
-// Not-working pages are removed (switched off / unpublished, never
-// deleted) when auto-cleanup is on. Safety: if a run would remove more than
+// Broken pages (page error / no templates) are DELETED when auto-cleanup is
+// on; pages that only lack visitors after the watch period are switched off. Safety: if a run would remove more than
 // a third of the live pages at once, it removes nothing and reports instead.
 
 import { ALL_LANDINGS, Landing } from '@/lib/landings';
@@ -17,7 +17,7 @@ import { ALL_LANDINGS, Landing } from '@/lib/landings';
 export interface LifecycleSettings { on: boolean; days: number }
 export interface StatusRow { slug: string; kind: 'builtin' | 'custom'; first_seen: string; status: string; reason: string | null; views30: number; search30: number; templates: number | null; http: number | null; checked_at: string | null; removed_at: string | null; snapshot?: any }
 export interface PageCheck { slug: string; h1: string; kind: 'builtin' | 'custom'; tool: boolean; templates: number | null; http: number | null; views30: number; search30: number }
-export interface Decision extends PageCheck { status: 'working' | 'warming' | 'not-working'; reason: string; day: number; remove: boolean }
+export interface Decision extends PageCheck { status: 'working' | 'warming' | 'not-working'; reason: string; day: number; remove: boolean; del?: boolean }
 
 export const DEFAULT_SETTINGS: LifecycleSettings = { on: true, days: 14 };
 
@@ -44,8 +44,8 @@ export function decide(pages: PageCheck[], status: StatusRow[], settings: Lifecy
     const age = daysBetween(start, today);
     const day = Math.max(0, daysBetween(first, today));
     const base = { ...p, day };
-    if (!siteDown && p.http !== null && p.http !== 200) return { ...base, status: 'not-working', reason: `Page error (${p.http || 'no answer'})`, remove: true };
-    if (!p.tool && p.templates === 0) return { ...base, status: 'not-working', reason: 'Shows no templates — visitors land on an empty page', remove: true };
+    if (!siteDown && p.http !== null && p.http !== 200) return { ...base, status: 'not-working', reason: `Page error (${p.http || 'no answer'})`, remove: true, del: true };
+    if (!p.tool && p.templates === 0) return { ...base, status: 'not-working', reason: 'Shows no templates — visitors land on an empty page', remove: true, del: true };
     if (p.views30 > 0 || p.search30 > 0) return { ...base, status: 'working', reason: p.search30 ? `${p.search30} visitor${p.search30 > 1 ? 's' : ''} from search, ${p.views30} views` : `${p.views30} view${p.views30 > 1 ? 's' : ''} in 30 days`, remove: false };
     if (!googleSince) return { ...base, status: 'warming', reason: 'Waiting for Google Search Console — judged once Google can send visitors', remove: false };
     if (age < settings.days) return { ...base, status: 'warming', reason: `Monitoring: day ${age + 1} of ${settings.days}`, remove: false };
@@ -83,7 +83,7 @@ export function summarize(ds: Decision[], blocked: string | null) {
   const rm = ds.filter((d) => d.remove);
   return [
     `${c('working')} working · ${c('warming')} warming up · ${c('not-working')} not working`,
-    ...rm.map((d) => `Removed /${d.slug} — ${d.reason}`),
+    ...rm.map((d) => `${d.del ? 'Deleted' : 'Switched off'} /${d.slug} — ${d.reason}`),
     ...(blocked ? [blocked] : []),
   ].join('\n');
 }

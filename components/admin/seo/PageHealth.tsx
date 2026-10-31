@@ -6,24 +6,29 @@
 //    templates, do visitors (and Google / Bing visitors) arrive?
 //  · Working / Warming up (new pages are watched for the monitoring window
 //    first) / Not working / Removed — with the reason for each
-//  · Auto-cleanup removes not-working pages (switched off, never deleted);
-//    Restore brings any page back and restarts its monitoring
+//  · Auto-cleanup DELETES broken pages (page error / no templates) and
+//    switches off pages with no visitors after the watch period;
+//    Restore brings switched-off pages back and restarts their monitoring
 
 import { useEffect, useState } from 'react';
-import { CheckCircle2, Clock, ExternalLink, Loader2, RefreshCw, RotateCcw, ShieldCheck, ToggleLeft, ToggleRight, XCircle } from 'lucide-react';
+import { CheckCircle2, Clock, Trash2, ExternalLink, Loader2, RefreshCw, RotateCcw, ShieldCheck, ToggleLeft, ToggleRight, XCircle } from 'lucide-react';
 import { apiFetch } from '@/lib/api/client';
 
 const card = 'rounded-3xl border border-mt-border bg-mt-surface p-5 sm:p-6';
 const btn = 'h-9 px-4 rounded-full text-[13px] font-semibold inline-flex items-center gap-1.5 disabled:opacity-40';
-type St = 'working' | 'warming' | 'not-working' | 'removed';
+type St = 'working' | 'warming' | 'not-working' | 'removed' | 'deleted';
 interface Row { slug: string; h1: string; kind: string; first_seen: string; status: St; reason: string | null; views30: number; search30: number; templates: number | null; http: number | null; checked_at: string | null; removed_at: string | null }
 interface Data { status: Row[]; settings: string | { on: boolean; days: number }; googleSince: string | null; last: { at: string; removed: number; checked: number; summary: string | null } | null }
+
+const ORDER: St[] = ['not-working', 'warming', 'working', 'removed', 'deleted'];
+const broken = (r: { http: number | null; templates: number | null; reason: string | null }) => (r.http !== null && r.http !== 200) || r.templates === 0;
 
 const META: Record<St, { label: string; cls: string; icon: JSX.Element }> = {
   working: { label: 'Working', cls: 'bg-emerald-600/10 text-emerald-700 dark:text-emerald-400', icon: <CheckCircle2 size={14} /> },
   warming: { label: 'Warming up', cls: 'bg-sky-500/10 text-sky-700 dark:text-sky-400', icon: <Clock size={14} /> },
   'not-working': { label: 'Not working', cls: 'bg-rose-600/10 text-rose-700 dark:text-rose-400', icon: <XCircle size={14} /> },
-  removed: { label: 'Removed', cls: 'bg-mt-surface2 text-mt-muted', icon: <XCircle size={14} /> },
+  removed: { label: 'Switched off', cls: 'bg-mt-surface2 text-mt-muted', icon: <XCircle size={14} /> },
+  deleted: { label: 'Deleted', cls: 'bg-rose-950/10 text-rose-900 dark:text-rose-300', icon: <Trash2 size={14} /> },
 };
 
 export function PageHealth({ flash, onTab }: { flash: (m: string) => void; onTab: (t: 'engines') => void }) {
@@ -42,7 +47,7 @@ export function PageHealth({ flash, onTab }: { flash: (m: string) => void; onTab
   };
 
   if (!d) return <section className={card}><p className="text-sm text-mt-muted inline-flex items-center gap-2"><Loader2 size={15} className="animate-spin" /> Loading…</p></section>;
-  const rows = [...d.status].sort((a, b) => ['not-working', 'warming', 'working', 'removed'].indexOf(a.status) - ['not-working', 'warming', 'working', 'removed'].indexOf(b.status) || b.views30 - a.views30);
+  const rows = [...d.status].sort((a, b) => ORDER.indexOf(a.status) - ORDER.indexOf(b.status) || b.views30 - a.views30);
   const count = (s: St) => d.status.filter((r) => r.status === s).length;
   const list = rows.filter((r) => show === 'all' || r.status === show);
   const never = !d.status.length;
@@ -54,7 +59,7 @@ export function PageHealth({ flash, onTab }: { flash: (m: string) => void; onTab
           <ShieldCheck size={22} className={settings.on ? 'text-emerald-600' : 'text-mt-muted'} />
           <div className="flex-1 min-w-[240px]">
             <h2 className="text-lg font-semibold">Automatic page check {settings.on ? <span className="text-emerald-600">· clean-up on</span> : <span className="text-mt-muted">· report only</span>}</h2>
-            <p className="text-[13px] text-mt-muted">Every morning each landing page is opened and checked. Broken pages (error or no templates) are removed straight away; new pages are watched for <b>{settings.days} days</b>, then removed if nobody visits. Removed pages are switched off, never deleted — restore any of them below.</p>
+            <p className="text-[13px] text-mt-muted">Every morning each landing page is opened and checked. Broken pages (page error or no templates) are <b>deleted</b> straight away. New pages are watched for <b>{settings.days} days</b>, then switched off if nobody visits — those can be restored below.</p>
             {d.last && <p className="mt-1 text-[12px] text-mt-faint">Last check {new Date(d.last.at).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' })}: {d.last.checked} pages, {d.last.removed} removed.</p>}
           </div>
           <label className="text-[12px] text-mt-muted inline-flex items-center gap-2">Watch new pages
@@ -63,18 +68,18 @@ export function PageHealth({ flash, onTab }: { flash: (m: string) => void; onTab
             </select>
           </label>
           <button onClick={() => post('toggle', { action: 'settings', on: !settings.on, days: settings.days }, () => (!settings.on ? 'Auto clean-up on.' : 'Auto clean-up off — pages are only reported.'))} disabled={!!busy} className={`${btn} ${settings.on ? 'bg-emerald-600 text-white' : 'border border-mt-border'}`}>{settings.on ? <ToggleRight size={16} /> : <ToggleLeft size={16} />} Clean-up {settings.on ? 'on' : 'off'}</button>
-          <button onClick={() => post('check', { action: 'check' }, (r) => `Checked ${r.checked} pages — ${r.removed} removed.${r.blocked ? ` ${r.blocked}` : ''}`)} disabled={!!busy} className={`${btn} bg-mt-primary text-mt-onprimary`}>{busy === 'check' ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />} {busy === 'check' ? 'Checking every page…' : 'Check now'}</button>
+          <button onClick={() => post('check', { action: 'check' }, (r) => `Checked ${r.checked} pages — ${r.deleted || 0} deleted, ${(r.removed || 0) - (r.deleted || 0)} switched off.${r.blocked ? ` ${r.blocked}` : ''}`)} disabled={!!busy} className={`${btn} bg-mt-primary text-mt-onprimary`}>{busy === 'check' ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />} {busy === 'check' ? 'Checking every page…' : 'Check now'}</button>
         </div>
         {!d.googleSince && (
           <div className="mt-4 rounded-2xl bg-amber-500/10 px-4 py-3 text-[13px] text-amber-800 dark:text-amber-300 flex flex-wrap items-center gap-3">
-            <span className="flex-1 min-w-[220px]"><b>Waiting for Google.</b> Pages with no visitors aren’t removed until Google Search Console is verified — before that Google can’t send anyone, so “no visitors” says nothing about the page. Broken pages are still removed.</span>
+            <span className="flex-1 min-w-[220px]"><b>Waiting for Google.</b> Pages with no visitors aren’t removed until Google Search Console is verified — before that Google can’t send anyone, so “no visitors” says nothing about the page. Broken pages are still deleted.</span>
             <button onClick={() => onTab('engines')} className={`${btn} border border-amber-600/40`}>Verify Google</button>
           </div>
         )}
       </section>
 
-      <section className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {(['working', 'warming', 'not-working', 'removed'] as St[]).map((s) => (
+      <section className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+        {(['working', 'warming', 'not-working', 'removed', 'deleted'] as St[]).map((s) => (
           <button key={s} onClick={() => setShow(show === s ? 'all' : s)} className={`text-left rounded-3xl border bg-mt-surface p-4 ${show === s ? 'border-mt-ink' : 'border-mt-border'}`}>
             <span className={`inline-flex items-center gap-1 text-[11px] font-semibold uppercase px-2 py-0.5 rounded-full ${META[s].cls}`}>{META[s].icon}{META[s].label}</span>
             <p className="mt-2 text-2xl font-semibold tabular-nums">{count(s)}</p>
@@ -97,15 +102,19 @@ export function PageHealth({ flash, onTab }: { flash: (m: string) => void; onTab
                 <span className="flex-1 min-w-[220px]">
                   <span className="text-[14px] font-medium text-mt-ink">{r.h1}</span>
                   <span className="block text-[12px] text-mt-muted">{r.reason}</span>
-                  <span className="block text-[11px] text-mt-faint">/{r.slug} · {r.views30} views · {r.search30} from search{r.templates !== null ? ` · ${r.templates >= 60 ? '60+' : r.templates} templates` : ''}{r.status === 'removed' && r.removed_at ? ` · removed ${new Date(r.removed_at).toLocaleDateString('en-GB')}` : ` · since ${new Date(`${r.first_seen}T00:00:00`).toLocaleDateString('en-GB')}`}</span>
+                  <span className="block text-[11px] text-mt-faint">/{r.slug} · {r.views30} views · {r.search30} from search{r.templates !== null ? ` · ${r.templates >= 60 ? '60+' : r.templates} templates` : ''}{(r.status === 'removed' || r.status === 'deleted') && r.removed_at ? ` · ${r.status === 'deleted' ? 'deleted' : 'switched off'} ${new Date(r.removed_at).toLocaleDateString('en-GB')}` : ` · since ${new Date(`${r.first_seen}T00:00:00`).toLocaleDateString('en-GB')}`}</span>
                 </span>
-                {r.status !== 'removed' ? (
+                {r.status === 'removed' || (r.status === 'deleted' && r.kind !== 'custom') ? (
+                  <button onClick={() => post(`rs-${r.slug}`, { action: 'restore', slug: r.slug }, () => `/${r.slug} is back — monitoring again.`)} disabled={!!busy} className={`${btn} border border-mt-border`}><RotateCcw size={13} /> Restore</button>
+                ) : r.status === 'deleted' ? null : (
                   <>
                     <a href={`/${r.slug}`} target="_blank" className={`${btn} border border-mt-border`} aria-label="View"><ExternalLink size={13} /></a>
-                    <button onClick={() => post(`rm-${r.slug}`, { action: 'remove', slug: r.slug }, () => `/${r.slug} switched off.`)} disabled={!!busy} className={`${btn} text-rose-600 border border-rose-600/30`}>Remove</button>
+                    {r.status === 'not-working' && broken(r) ? (
+                      <button onClick={() => { if (window.confirm(`Delete /${r.slug} for good?`)) post(`rm-${r.slug}`, { action: 'remove', slug: r.slug, del: true }, () => `/${r.slug} deleted.`); }} disabled={!!busy} className={`${btn} bg-rose-600 text-white`}><Trash2 size={13} /> Delete</button>
+                    ) : (
+                      <button onClick={() => post(`rm-${r.slug}`, { action: 'remove', slug: r.slug }, () => `/${r.slug} switched off.`)} disabled={!!busy} className={`${btn} text-rose-600 border border-rose-600/30`}>Switch off</button>
+                    )}
                   </>
-                ) : (
-                  <button onClick={() => post(`rs-${r.slug}`, { action: 'restore', slug: r.slug }, () => `/${r.slug} is back — monitoring again.`)} disabled={!!busy} className={`${btn} border border-mt-border`}><RotateCcw size={13} /> Restore</button>
                 )}
               </li>
             ))}
