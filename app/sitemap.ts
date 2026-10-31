@@ -3,6 +3,7 @@ import { SITE_URL, getAllPublishedTemplates, categorySlug, getPublishedSeoPages,
 import { ALL_LANDINGS } from '@/lib/landings';
 import { createAnonSupabaseClient } from '@/lib/supabase/server';
 import { loadCourses } from '@/lib/courses';
+import { getActivePosts } from '@/lib/sitePosts';
 
 // Rebuilt at most once an hour, so new templates appear without a deploy.
 export const revalidate = 3600;
@@ -32,6 +33,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     pages.push({ url: `${SITE_URL}/tutorials/${c.slug}`, lastModified: now, changeFrequency: 'monthly', priority: 0.7 });
     c.lessons.forEach((l) => pages.push({ url: `${SITE_URL}/tutorials/${c.slug}/${l.slug}`, lastModified: now, changeFrequency: 'monthly', priority: 0.6 }));
   });
+  pages.push({ url: `${SITE_URL}/showcase`, lastModified: now, changeFrequency: 'daily', priority: 0.8 });
+  (await getActivePosts()).forEach((p) => pages.push({ url: `${SITE_URL}/showcase/${p.slug}`, lastModified: new Date(p.updated_at), changeFrequency: 'weekly', priority: 0.85 }));
   const templates = await getAllPublishedTemplates();
   const cats = new Set<string>();
   templates.forEach((t) => {

@@ -11,6 +11,7 @@
 //  · Free promotion — a checklist of free channels to list the site on
 //  · Campaign links — tracked links (UTM) for posts, ads and partners
 
+import { GooglePosts } from '@/components/admin/seo/GooglePosts';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -37,7 +38,7 @@ interface SeoPage { id: string; slug: string; title: string; h1: string; descrip
 interface Promo { id: string; kind: 'channel' | 'campaign' | 'keyword'; name: string; url: string | null; status: 'todo' | 'doing' | 'done'; notes: string | null; meta: any }
 
 
-type Tab = 'overview' | 'performance' | 'health' | 'ideas' | 'pages' | 'engines' | 'promo' | 'social' | 'keywords' | 'links';
+type Tab = 'overview' | 'performance' | 'health' | 'ideas' | 'pages' | 'engines' | 'promo' | 'social' | 'posts' | 'keywords' | 'links';
 type PageRequest = { edit: string } | { draft: LandingDraft };
 
 const slugify = (s: string) => s.toLowerCase().replace(/&/g, 'and').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 80);
@@ -77,7 +78,7 @@ export default function SeoAdminPage() {
       if (!profile?.is_admin) return setState('denied');
       // Open a tab from the address (e.g. the autopilot report links to ?tab=performance).
       const t = new URLSearchParams(window.location.search).get('tab') as Tab | null;
-      if (t && ['overview', 'performance', 'health', 'ideas', 'pages', 'engines', 'promo', 'social', 'keywords', 'links'].includes(t)) setTab(t);
+      if (t && ['overview', 'performance', 'health', 'ideas', 'pages', 'engines', 'promo', 'social', 'posts', 'keywords', 'links'].includes(t)) setTab(t);
       await load();
       setState('ok');
     })();
@@ -93,7 +94,7 @@ export default function SeoAdminPage() {
   if (state === 'loading') return <main className="min-h-screen flex items-center justify-center text-mt-faint bg-mt-bg">Loading…</main>;
   if (state === 'denied') return <main className="min-h-screen flex flex-col items-center justify-center gap-3 bg-mt-bg"><p className="text-lg font-semibold text-mt-ink">Administrators only</p><Link href="/dashboard" className="text-sm text-mt-accent hover:underline">Back to your dashboard</Link></main>;
 
-  const TABS: [Tab, string][] = [['overview', 'Overview'], ['performance', 'Performance'], ['health', 'Page health'], ['ideas', 'Keyword ideas'], ['pages', 'Landing pages'], ['engines', 'Search engines'], ['promo', 'Free promotion'], ['social', 'Social & promo kit'], ['keywords', 'Site search'], ['links', 'Campaign links']];
+  const TABS: [Tab, string][] = [['overview', 'Overview'], ['performance', 'Performance'], ['health', 'Page health'], ['ideas', 'Keyword ideas'], ['pages', 'Landing pages'], ['engines', 'Search engines'], ['promo', 'Free promotion'], ['posts', 'Google posts'], ['social', 'Social & promo kit'], ['keywords', 'Site search'], ['links', 'Campaign links']];
   const openPage = (r: PageRequest) => { setRequest(r); setTab('pages'); };
   const trackKeyword = async (name: string) => {
     const exists = promo.some((p) => p.kind === 'keyword' && p.name.toLowerCase() === name.toLowerCase());
@@ -117,6 +118,7 @@ export default function SeoAdminPage() {
         {tab === 'pages' && <Pages pages={pages} hidden={hidden} setHidden={setHidden} reload={load} flash={flash} request={request} clearRequest={() => setRequest(null)} />}
         {tab === 'keywords' && <Keywords promo={promo} pages={pages} hidden={hidden} reload={load} />}
         {tab === 'promo' && <Promotion promo={promo} reload={load} />}
+        {tab === 'posts' && <GooglePosts flash={flash} />}
         {tab === 'social' && <Social flash={flash} />}
         {tab === 'links' && <Campaigns promo={promo} reload={load} />}
       </div>
