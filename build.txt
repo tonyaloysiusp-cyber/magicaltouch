@@ -1,0 +1,119 @@
+
+> magicaltouch@0.1.0 build
+> next build
+
+⚠ No build cache found. Please configure build caching for faster rebuilds. Read more: https://nextjs.org/docs/messages/no-cache
+  ▲ Next.js 14.2.5
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully
+   Linting and checking validity of types ...
+   Collecting page data ...
+ ⚠ Using edge runtime on a page currently disables static generation for that page
+   Generating static pages (0/651) ...
+   Generating static pages (162/651) 
+   Generating static pages (325/651) 
+   Generating static pages (488/651) 
+ ✓ Generating static pages (651/651)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                                          Size     First Load JS
+┌ ○ /                                                32.5 kB         216 kB
+├ ○ /_not-found                                      879 B          88.5 kB
+├ ● /[landing]                                       166 B           181 kB
+├   ├ /free-flyer-maker
+├   ├ /free-poster-maker
+├   ├ /free-invitation-maker
+├   └ [+53 more paths]
+├ ○ /about                                           167 B           181 kB
+├ ○ /admin                                           19.8 kB         208 kB
+├ ○ /admin/about                                     4.83 kB         179 kB
+├ ○ /admin/brand                                     13.5 kB         194 kB
+├ ○ /admin/certificates                              7.82 kB         198 kB
+├ ○ /admin/courses                                   15.1 kB         200 kB
+├ ○ /admin/email                                     7.95 kB         190 kB
+├ ○ /admin/health                                    10.9 kB         185 kB
+├ ○ /admin/pricing                                   10.3 kB         184 kB
+├ ○ /admin/seo                                       66.6 kB         241 kB
+├ ○ /admin/templates                                 17.9 kB         232 kB
+├ ○ /admin/tutorials                                 180 B          87.8 kB
+├ ○ /ai-studio                                       4.47 kB         204 kB
+├ ƒ /api/admin/ai-template                           0 B                0 B
+├ ƒ /api/admin/campaigns/[id]/send                   0 B                0 B
+├ ƒ /api/admin/campaigns/[id]/test                   0 B                0 B
+├ ƒ /api/admin/indexnow                              0 B                0 B
+├ ƒ /api/admin/keyword-ideas                         0 B                0 B
+├ ƒ /api/admin/landing-health                        0 B                0 B
+├ ƒ /api/admin/revalidate                            0 B                0 B
+├ ƒ /api/admin/seo-audit                             0 B                0 B
+├ ƒ /api/admin/seo-performance                       0 B                0 B
+├ ƒ /api/admin/sheets-sync                           0 B                0 B
+├ ƒ /api/admin/site-posts                            0 B                0 B
+├ ƒ /api/count-refresh                               0 B                0 B
+├ ƒ /api/courses/notify                              0 B                0 B
+├ ƒ /api/cron/daily-digest                           0 B                0 B
+├ ƒ /api/cron/landing-check                          0 B                0 B
+├ ƒ /api/cron/seo-autopilot                          0 B                0 B
+├ ƒ /api/email/password-changed                      0 B                0 B
+├ ƒ /api/email/welcome                               0 B                0 B
+├ ƒ /api/font-file                                   0 B                0 B
+├ ○ /api/og                                          0 B                0 B
+├ ƒ /api/payments/stripe                             0 B                0 B
+├ ƒ /api/projects                                    0 B                0 B
+├ ƒ /api/projects/[id]                               0 B                0 B
+├ ƒ /api/projects/[id]/duplicate                     0 B                0 B
+├ ○ /api/public-templates                            0 B                0 B
+├ ƒ /api/track                                       0 B                0 B
+├ ƒ /api/translate                                   0 B                0 B
+├ ƒ /api/unsubscribe                                 0 B                0 B
+├ ○ /auth/storage-callback                           1.71 kB        89.4 kB
+├ ○ /contact                                         5.03 kB         179 kB
+├ ○ /create                                          11.4 kB         200 kB
+├ ○ /dashboard                                       15.3 kB         212 kB
+├ ○ /editor                                          172 kB          449 kB
+├ ○ /free-design-tools                               167 B           181 kB
+├ ○ /icon.png                                        0 B                0 B
+├ ○ /image-sitemap.xml                               0 B                0 B
+├ ○ /login                                           5.84 kB         164 kB
+├ ○ /photo-studio                                    9.96 kB         254 kB
+├ ○ /privacy                                         167 B           182 kB
+├ ○ /profile                                         8.25 kB         188 kB
+├ ○ /reset-password                                  5.47 kB         163 kB
+├ ○ /robots.txt                                      0 B                0 B
+├ ○ /showcase                                        167 B           181 kB
+├ ● /showcase/[slug]                                 167 B           181 kB
+├   ├ /showcase/magical-touch-instagram-launch-post
+├   ├ /showcase/magical-touch-template-grid-post
+├   ├ /showcase/magical-touch-instagram-story
+├   └ [+9 more paths]
+├ ○ /signup                                          4.9 kB          166 kB
+├ ○ /sitemap.xml                                     0 B                0 B
+├ ○ /templates                                       18.2 kB         205 kB
+├ ● /templates/[slug]                                3.3 kB          181 kB
+├   ├ /templates/forest-arch-birthday-story
+├   ├ /templates/quiet-confidence-quote-post
+├   ├ /templates/orange-hexagon-birthday-post
+├   └ [+497 more paths]
+├ ● /templates/category/[category]                   166 B           181 kB
+├   ├ /templates/category/marketing
+├   ├ /templates/category/social-media
+├   ├ /templates/category/business
+├   └ [+18 more paths]
+├ ○ /terms                                           167 B           182 kB
+├ ○ /tutorials                                       7.04 kB         185 kB
+├ ƒ /tutorials/[course]                              219 B           193 kB
+├ ƒ /tutorials/[course]/[lesson]                     217 B           193 kB
+├ ○ /unsubscribe                                     2.36 kB         167 kB
+├ ○ /verify                                          166 B           184 kB
+└ ƒ /verify/[code]                                   167 B           184 kB
++ First Load JS shared by all                        87.7 kB
+  ├ chunks/7023-e53932aa19a865b9.js                  31.7 kB
+  ├ chunks/fd9d1056-2b291e7403366f25.js              53.6 kB
+  └ other shared chunks (total)                      2.34 kB
+
+
+○  (Static)   prerendered as static content
+●  (SSG)      prerendered as static HTML (uses getStaticProps)
+ƒ  (Dynamic)  server-rendered on demand
+
