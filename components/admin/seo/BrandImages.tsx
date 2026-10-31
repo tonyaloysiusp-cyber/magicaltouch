@@ -71,7 +71,7 @@ export function BrandImages({ flash }: { flash: (m: string) => void }) {
         <div className="flex flex-wrap items-start gap-3">
           <div className="flex-1 min-w-[240px]">
             <h2 className="text-lg font-semibold">Share image</h2>
-            <p className="text-[13px] text-mt-muted">The picture Google, WhatsApp, Facebook and LinkedIn show for your site. Change the words, colours and templates — <b>{'{count}'}</b> is always the live number ({count}).</p>
+            <p className="text-[13px] text-mt-muted">The picture Google, WhatsApp, Facebook and LinkedIn show for your site. Change the words, theme and templates — <b>{'{count}'}</b> is always the live number ({count}).</p>
           </div>
           <a href="/api/og" target="_blank" className={`${btn} border border-mt-border`}><ExternalLink size={14} /> Open full size</a>
         </div>
@@ -81,11 +81,15 @@ export function BrandImages({ flash }: { flash: (m: string) => void }) {
             <label className="text-[12px] text-mt-muted">Headline<input className={field} value={s.headline} onChange={set('headline')} /></label>
             <label className="text-[12px] text-mt-muted">Coloured line<input className={field} value={s.highlight} onChange={set('highlight')} /></label>
             <label className="text-[12px] text-mt-muted">Description<input className={field} value={s.sub} onChange={set('sub')} /></label>
-            <div className="grid grid-cols-[1fr_auto_auto] gap-2 items-end">
+            <div className="grid grid-cols-[1fr_auto] gap-2 items-end">
               <label className="text-[12px] text-mt-muted">Website<input className={field} value={s.website} onChange={set('website')} /></label>
-              <label className="text-[12px] text-mt-muted">Background<input type="color" className="block h-10 w-14 rounded-xl border border-mt-input-border" value={s.bg} onChange={set('bg')} /></label>
-              <label className="text-[12px] text-mt-muted">Accent<input type="color" className="block h-10 w-14 rounded-xl border border-mt-input-border" value={s.accent} onChange={set('accent')} /></label>
+              <div className="text-[12px] text-mt-muted">Brand theme
+                <div className="mt-1 flex rounded-xl border border-mt-input-border overflow-hidden h-10">
+                  {(['light', 'dark'] as const).map((th) => <button key={th} onClick={() => setS({ ...s, theme: th })} className={`px-3 text-[13px] ${s.theme === th ? 'bg-mt-ink text-mt-bg' : ''}`}>{th === 'light' ? 'Light' : 'Dark'}</button>)}
+                </div>
+              </div>
             </div>
+            <p className="text-[11px] text-mt-faint">Always in your brand: Poppins, your logo and the logo’s rainbow colours.</p>
             <p className="mt-2 text-[12px] text-mt-muted">Templates shown ({picked.length}/4 — empty = your featured posts)</p>
             <div className="flex flex-wrap gap-2">
               {picked.map((p) => (

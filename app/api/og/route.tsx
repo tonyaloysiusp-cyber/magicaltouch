@@ -3,11 +3,15 @@ import { SITE_URL } from '@/lib/seo';
 import { getTemplateCountLabel } from '@/lib/templateCountServer';
 import { parseShareImage } from '@/lib/shareImage';
 
-// GET /api/og — the site's share image (1200 × 630), drawn live: wording and
-// colours from Admin → SEO → Social → "Share image", the live template count,
-// and real template previews. Used by every page that has no image of its own.
+// GET /api/og — the site's share image (1200 × 630) in the Magical Touch
+// brand: Poppins, the logo, the logo's spectrum, pastel washes (light) or
+// black with a spectrum bar and glow (dark). Wording, theme and templates
+// come from Admin → SEO → Social → "Share image"; {count} is the live count.
 export const runtime = 'nodejs';
 export const revalidate = 600;
+
+const SPECTRUM = 'linear-gradient(90deg, #F2708F 0%, #A69BD3 22%, #35C2F1 45%, #5DCCB8 64%, #8CC84B 82%, #DDE23B 100%)';
+const SPEC_TEXT = 'linear-gradient(90deg, #EC5F84 0%, #8E7FD0 30%, #1FAEE6 58%, #33B79C 80%, #6DB33A 100%)';
 
 async function rest<T>(path: string): Promise<T | null> {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -21,11 +25,21 @@ async function rest<T>(path: string): Promise<T | null> {
   }
 }
 
+async function font(weight: number): Promise<ArrayBuffer | null> {
+  try {
+    const r = await fetch(`${SITE_URL}/api/font-file?family=Poppins&weight=${weight}`, { next: { revalidate: 86400 } } as RequestInit);
+    return r.ok ? await r.arrayBuffer() : null;
+  } catch {
+    return null;
+  }
+}
+
 const absUrl = (u: string) => (u.startsWith('http') ? u : `${SITE_URL}${u}`);
 
 export async function GET() {
-  const [setting, label] = await Promise.all([rest<{ value: string }[]>('site_settings?select=value&key=eq.share_image'), getTemplateCountLabel()]);
+  const [setting, label, f400, f600, f700] = await Promise.all([rest<{ value: string }[]>('site_settings?select=value&key=eq.share_image'), getTemplateCountLabel(), font(400), font(600), font(700)]);
   const s = parseShareImage(setting?.[0]?.value);
+  const dark = s.theme === 'dark';
   const slugs = s.templates.length ? s.templates : null;
   const rows = await rest<{ slug: string; preview: string | null; thumbnail: string | null }[]>(
     slugs
@@ -39,31 +53,36 @@ export async function GET() {
     .slice(0, 4)
     .map((u) => absUrl(u as string));
   const sub = s.sub.replace(/\{count\}/g, label);
-  const tilt = [-6, 4, -3, 6];
+  const ink = dark ? '#FFFFFF' : '#09090B';
+  const fonts = [f400 && { name: 'Poppins', data: f400, weight: 400 as const }, f600 && { name: 'Poppins', data: f600, weight: 600 as const }, f700 && { name: 'Poppins', data: f700, weight: 700 as const }].filter(Boolean) as any[];
+  const spots = [[20, 30, -5], [255, 60, 5], [40, 330, 4], [270, 350, -4]];
 
   return new ImageResponse(
     (
-      <div style={{ width: '100%', height: '100%', display: 'flex', background: s.bg, fontFamily: 'sans-serif', position: 'relative' }}>
-        <div style={{ position: 'absolute', right: -120, top: -120, width: 420, height: 420, borderRadius: 420, background: s.accent, opacity: 0.12, display: 'flex' }} />
-        <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '0 0 0 64px', width: 640 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-            <img src={`${SITE_URL}/brand/profile-picture.png`} width={52} height={52} style={{ borderRadius: 52 }} />
-            <div style={{ fontSize: 26, fontWeight: 700, color: '#1F1A2E', letterSpacing: 1 }}>{s.kicker}</div>
-          </div>
-          <div style={{ fontSize: 66, fontWeight: 800, color: '#14111F', marginTop: 34, lineHeight: 1.05 }}>{s.headline}</div>
-          <div style={{ fontSize: 66, fontWeight: 800, color: s.accent, lineHeight: 1.1 }}>{s.highlight}</div>
-          <div style={{ fontSize: 26, color: '#4B4660', marginTop: 26, lineHeight: 1.4, maxWidth: 540 }}>{sub}</div>
-          <div style={{ display: 'flex', marginTop: 34 }}>
-            <div style={{ fontSize: 22, fontWeight: 700, color: '#FFFFFF', background: s.accent, padding: '12px 24px', borderRadius: 40 }}>{s.website}</div>
-          </div>
+      <div style={{ width: '100%', height: '100%', display: 'flex', position: 'relative', fontFamily: 'Poppins', background: dark ? '#09090B' : '#FFFFFF' }}>
+        {dark ? (
+          <>
+            <div style={{ position: 'absolute', inset: 0, display: 'flex', backgroundImage: 'radial-gradient(circle at 100% 60%, rgba(31,174,230,0.32), rgba(31,174,230,0) 55%), radial-gradient(circle at 0% 100%, rgba(124,58,237,0.38), rgba(124,58,237,0) 55%)' }} />
+            <div style={{ position: 'absolute', left: 0, top: 0, width: '100%', height: 8, display: 'flex', backgroundImage: SPECTRUM }} />
+          </>
+        ) : (
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', backgroundImage: 'radial-gradient(circle at 0% 0%, rgba(243,166,184,0.55), rgba(243,166,184,0) 60%), radial-gradient(circle at 100% 0%, rgba(140,203,255,0.55), rgba(140,203,255,0) 55%), radial-gradient(circle at 50% 110%, rgba(191,232,200,0.6), rgba(191,232,200,0) 60%)' }} />
+        )}
+        <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '0 0 0 60px', width: 640 }}>
+          <img src={`${SITE_URL}${dark ? '/logo-white.png' : '/logo.png'}`} width={330} height={47} />
+          <div style={{ fontSize: 64, fontWeight: 700, color: ink, marginTop: 30, lineHeight: 1.05, letterSpacing: -1 }}>{s.headline}</div>
+          <div style={{ fontSize: 64, fontWeight: 700, lineHeight: 1.1, letterSpacing: -1, backgroundImage: SPEC_TEXT, backgroundClip: 'text', color: 'transparent' }}>{s.highlight}</div>
+          <div style={{ fontSize: 25, fontWeight: 400, color: dark ? 'rgba(255,255,255,0.8)' : '#52525B', marginTop: 22, lineHeight: 1.4, maxWidth: 560 }}>{sub}</div>
+          <div style={{ width: 520, height: 6, borderRadius: 6, marginTop: 28, display: 'flex', backgroundImage: SPECTRUM }} />
+          <div style={{ fontSize: 24, fontWeight: 600, color: ink, marginTop: 18 }}>{s.website}</div>
         </div>
-        <div style={{ display: 'flex', flexWrap: 'wrap', width: 520, alignContent: 'center', justifyContent: 'center', gap: 18, paddingRight: 30 }}>
+        <div style={{ display: 'flex', position: 'relative', width: 560, height: 630 }}>
           {pics.map((src, i) => (
-            <img key={src} src={src} width={210} height={262} style={{ objectFit: 'cover', borderRadius: 18, transform: `rotate(${tilt[i]}deg)`, boxShadow: '0 18px 40px rgba(0,0,0,0.18)', border: '6px solid #FFFFFF' }} />
+            <img key={src} src={src} width={230} height={280} style={{ position: 'absolute', left: spots[i][0], top: spots[i][1], objectFit: 'cover', borderRadius: 14, transform: `rotate(${spots[i][2]}deg)`, boxShadow: '0 18px 40px rgba(0,0,0,0.22)', border: '7px solid #FFFFFF' }} />
           ))}
         </div>
       </div>
     ),
-    { width: 1200, height: 630, headers: { 'Cache-Control': 'public, s-maxage=600, stale-while-revalidate=86400' } },
+    { width: 1200, height: 630, fonts: fonts.length ? fonts : undefined, headers: { 'Cache-Control': 'public, s-maxage=600, stale-while-revalidate=86400' } },
   );
 }
