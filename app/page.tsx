@@ -10,7 +10,7 @@ const baseMetadata: Metadata = {
   openGraph: {
     title: 'Magical Touch Design — Design anything. Make it magical.',
     description: '1,000+ free, editable templates and a full online design studio — every feature free, no watermark. Used worldwide.',
-    images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'Magical Touch Design' }],
+    images: [{ url: '/api/og', width: 1200, height: 630, alt: 'Magical Touch Design' }],
   },
 };
 

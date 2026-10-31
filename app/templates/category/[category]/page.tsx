@@ -26,7 +26,7 @@ export async function generateMetadata({ params }: { params: { category: string 
   const title = `${cat.count}+ Free ${cat.name} Templates`;
   const description = `Browse ${cat.count} free, editable ${cat.name.toLowerCase()} templates. Customise them online in minutes and download print-ready PDF, PNG or JPG — no design skills needed.`;
   const url = `${SITE_URL}/templates/category/${cat.slug}`;
-  return { title, description, alternates: { canonical: url }, openGraph: { type: 'website', url, title, description, siteName: SITE_NAME, images: [`${SITE_URL}/og-image.png`] } };
+  return { title, description, alternates: { canonical: url }, openGraph: { type: 'website', url, title, description, siteName: SITE_NAME, images: [`${SITE_URL}/api/og`] } };
 }
 
 export default async function CategoryPage({ params }: { params: { category: string } }) {

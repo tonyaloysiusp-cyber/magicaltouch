@@ -29,7 +29,7 @@ export async function generateMetadata({ params }: { params: { course: string; l
     title: { absolute: `${d.lesson.title} — ${d.course.title} | Magical Touch Design` },
     description: (d.lesson.intro || d.course.summary).slice(0, 300),
     alternates: { canonical: url },
-    openGraph: { type: 'article', url, title: d.lesson.title, description: d.lesson.intro, siteName: SITE_NAME, images: [`${SITE_URL}/og-image.png`] },
+    openGraph: { type: 'article', url, title: d.lesson.title, description: d.lesson.intro, siteName: SITE_NAME, images: [`${SITE_URL}/api/og`] },
   };
 }
 
