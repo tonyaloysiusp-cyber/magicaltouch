@@ -13,6 +13,7 @@
 // ---------------------------------------------------------------------
 
 import { TemplateSizes } from '@/components/admin/templates/TemplateSizes';
+import { TemplateCountCard } from '@/components/admin/templates/TemplateCountCard';
 import { ClaudeTemplate } from '@/components/admin/ClaudeTemplate';
 import { AdminShell } from '@/components/admin/AdminShell';
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
@@ -579,6 +580,7 @@ export default function AdminTemplatesPage() {
     <AdminShell active="templates" title="Template Manager" accent="Template" subtitle="Templates are provided by Magical Touch Design. Customers only see published ones." actions={<Link href="/templates" target="_blank" className="h-9 px-4 rounded-full text-[13px] font-semibold inline-flex items-center gap-1.5 border border-mt-border text-mt-ink hover:bg-mt-surface2">View the gallery</Link>}>
     <div onClick={() => setMenuFor(null)}>
       <input ref={thumbInput} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={onThumbnailFile} />
+      <TemplateCountCard />
 
 
       <div className="">

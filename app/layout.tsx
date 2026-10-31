@@ -3,7 +3,7 @@ import './globals.css';
 import { ChunkRecovery } from '@/components/ChunkRecovery';
 import { VisitCounter } from '@/components/VisitCounter';
 import { TemplateCountProvider } from '@/lib/templateCount';
-import { getTemplateCount, getTemplateCountLabel, withCount } from '@/lib/templateCountServer';
+import { getCountStyle, getTemplateCount, getTemplateCountLabel, withCount } from '@/lib/templateCountServer';
 
 const poppins = Poppins({
   subsets: ['latin'],
@@ -81,8 +81,7 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const count = await getTemplateCount();
-  const label = await getTemplateCountLabel();
+  const [count, label, countStyle] = await Promise.all([getTemplateCount(), getTemplateCountLabel(), getCountStyle()]);
   // Social profiles from Admin → SEO → Social: tells Google they belong to us.
   const sameAs = Object.values(parseSocial(await getSiteSetting('social_links')));
   const orgLd = sameAs.length ? ORG_JSON_LD.map((o, i) => (i === 0 ? { ...o, sameAs } : o)) : ORG_JSON_LD;
@@ -101,7 +100,7 @@ export default async function RootLayout({
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: withCount(JSON.stringify(orgLd), label) }} />
         <ChunkRecovery />
         <VisitCounter />
-        <TemplateCountProvider value={count}>{children}</TemplateCountProvider>
+        <TemplateCountProvider value={count} style={countStyle}>{children}</TemplateCountProvider>
       </body>
     </html>
   );

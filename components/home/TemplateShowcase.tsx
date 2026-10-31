@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { ArrowRight, ArrowUpRight, Crown } from 'lucide-react';
 import { Template, TemplateCategory, fetchPublicTemplates, fetchCategories } from '@/lib/templatesData';
-import { roundedCountLabel } from '@/lib/templateCount';
+import { countLabel, useCountStyle } from '@/lib/templateCount';
 import { Reveal } from './Reveal';
 
 const CATEGORY_ORDER = ['Birthday', 'Events', 'Wedding', 'Business', 'Social Media', 'Marketing', 'Menus', 'Certificates', 'Resume', 'Cards'];
@@ -14,6 +14,7 @@ const CATEGORY_ORDER = ['Birthday', 'Events', 'Wedding', 'Business', 'Social Med
 // an endless scrolling strip -- so new templates appear here the moment
 // they are published.
 export function TemplateShowcase() {
+  const countStyle = useCountStyle();
   const [templates, setTemplates] = useState<Template[]>([]);
   const [categories, setCategories] = useState<TemplateCategory[]>([]);
   const [active, setActive] = useState<string>('All');
@@ -55,7 +56,7 @@ export function TemplateShowcase() {
           <div className="flex flex-wrap items-end justify-between gap-6">
             <div>
               <h2 className="font-[family-name:var(--font-display)] font-medium text-3xl sm:text-5xl leading-[1.08] tracking-[-0.03em]">
-                {roundedCountLabel(templates.length)} designs,
+                {countLabel(templates.length, countStyle)} designs,
                 <br />
                 ready to make yours.
               </h2>

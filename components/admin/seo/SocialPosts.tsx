@@ -12,7 +12,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { CalendarPlus, Check, Copy, Download, ExternalLink, Loader2, Send, Trash2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
-import { PROMO_KIT } from '@/lib/promoKit';
+import { PROMO_KIT, withTemplateCount } from '@/lib/promoKit';
+import { useTemplateCountLabel } from '@/lib/templateCount';
 import { shareLinks } from '@/lib/social';
 
 const SITE = 'https://www.magicaltouchdesign.com';
@@ -28,6 +29,7 @@ const channelsOf = (p: Post): string[] => (Array.isArray(p.meta?.channels) ? p.m
 const captionOf = (p: Post) => p.notes || p.meta?.caption || p.name;
 
 export function SocialPosts({ flash }: { flash: (m: string) => void }) {
+  const count = useTemplateCountLabel();
   const [posts, setPosts] = useState<Post[] | null>(null);
   const [form, setForm] = useState({ date: today(), image: PROMO_KIT[0]?.file || '', caption: '', channels: ['Instagram', 'Facebook'] as string[], link: '/' });
   const [open, setOpen] = useState<string | null>(null);
@@ -80,7 +82,7 @@ export function SocialPosts({ flash }: { flash: (m: string) => void }) {
         <div className="grid gap-2">
           <div className="grid gap-2 sm:grid-cols-[150px_minmax(0,1fr)]">
             <label className="text-[12px] text-mt-muted">Date<input type="date" className={field} value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} /></label>
-            <label className="text-[12px] text-mt-muted">Picture<select className={field} value={PROMO_KIT.some((a) => a.file === form.image) ? form.image : ''} onChange={(e) => setForm({ ...form, image: e.target.value, caption: form.caption || PROMO_KIT.find((a) => a.file === e.target.value)?.caption || '' })}>
+            <label className="text-[12px] text-mt-muted">Picture<select className={field} value={PROMO_KIT.some((a) => a.file === form.image) ? form.image : ''} onChange={(e) => setForm({ ...form, image: e.target.value, caption: form.caption || withTemplateCount(PROMO_KIT.find((a) => a.file === e.target.value)?.caption || '', count) })}>
               <option value="">Other — paste address below</option>
               {PROMO_KIT.map((a) => <option key={a.file} value={a.file}>{a.title} ({a.size})</option>)}
             </select></label>
