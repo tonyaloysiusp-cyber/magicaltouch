@@ -88,7 +88,7 @@ export default async function TemplatePage({ params }: { params: { slug: string 
             <h1 className="mt-2 text-3xl sm:text-4xl font-semibold tracking-tight leading-tight">{t.name}</h1>
             <p className="mt-4 text-[15px] leading-relaxed text-mt-muted">{templateDescription(t)}</p>
             <div className="mt-6">
-              <UseTemplateButton id={t.id} width={t.width} height={t.height} />
+              <UseTemplateButton id={t.id} width={t.width} height={t.height} premium={t.is_free === false} />
             </div>
             <dl className="mt-8 grid grid-cols-2 gap-4 text-[14px]">
               <div><dt className="text-mt-muted text-[12px]">Format</dt><dd className="font-semibold">{formatLabel(t.width, t.height)}</dd></div>

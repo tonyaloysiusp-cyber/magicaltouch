@@ -5,12 +5,12 @@
 
 import Link from 'next/link';
 import { ReactNode } from 'react';
-import { LayoutDashboard, Inbox, Server, CalendarHeart, PenLine, Mail, LayoutTemplate, Sparkles, Award, GraduationCap, Megaphone, Info, HeartPulse } from 'lucide-react';
+import { LayoutDashboard, Inbox, Server, CalendarHeart, PenLine, Mail, LayoutTemplate, Sparkles, Award, GraduationCap, Megaphone, Info, HeartPulse, BadgeDollarSign } from 'lucide-react';
 import { AppHeader } from '@/components/AppHeader';
 import { PageHero } from '@/components/PageHero';
 import { useAppTheme } from '@/hooks/useAppTheme';
 
-export type AdminSection = 'overview' | 'messages' | 'services' | 'occasions' | 'wording' | 'email' | 'templates' | 'brand' | 'certificates' | 'courses' | 'about' | 'seo' | 'health';
+export type AdminSection = 'overview' | 'messages' | 'services' | 'occasions' | 'wording' | 'email' | 'templates' | 'brand' | 'certificates' | 'courses' | 'about' | 'seo' | 'health' | 'pricing';
 
 const NAV: { id: AdminSection; label: string; href: string; icon: ReactNode }[] = [
   { id: 'overview', label: 'Overview', href: '/admin', icon: <LayoutDashboard size={17} /> },
@@ -24,6 +24,7 @@ const NAV: { id: AdminSection; label: string; href: string; icon: ReactNode }[] 
   { id: 'courses', label: 'Courses & certificates', href: '/admin/courses', icon: <GraduationCap size={17} /> },
   { id: 'about', label: 'About page', href: '/admin/about', icon: <Info size={17} /> },
   { id: 'seo', label: 'SEO & promotion', href: '/admin/seo', icon: <Megaphone size={17} /> },
+  { id: 'pricing', label: 'Pricing & payments', href: '/admin/pricing', icon: <BadgeDollarSign size={17} /> },
   { id: 'email', label: 'Email Center', href: '/admin/email', icon: <Mail size={17} /> },
   { id: 'wording', label: 'Email wording', href: '/admin?tab=wording', icon: <PenLine size={17} /> },
 ];

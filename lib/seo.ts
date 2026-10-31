@@ -21,9 +21,10 @@ export interface SeoTemplate {
   color1: string | null;
   updated_at: string | null;
   published_at: string | null;
+  is_free?: boolean | null;
 }
 
-const COLS = 'id,name,slug,category,width,height,preview,thumbnail,tags,search_keywords,color1,updated_at,published_at';
+const COLS = 'id,name,slug,category,width,height,preview,thumbnail,tags,search_keywords,color1,updated_at,published_at,is_free';
 
 async function rest<T>(query: string, revalidate = 3600): Promise<T | null> {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;

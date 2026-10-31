@@ -6,7 +6,8 @@
 import { ReactNode } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Wand2 } from 'lucide-react';
+import { Crown, Wand2 } from 'lucide-react';
+import { usePremiumGate } from '@/components/monetization/Paywall';
 import { AppHeader } from '@/components/AppHeader';
 import type { SiteTab } from '@/components/SiteHeader';
 import { Footer } from '@/components/home/Footer';
@@ -26,17 +27,22 @@ export function SeoShell({ children, active }: { children: ReactNode; active?: S
   );
 }
 
-export function UseTemplateButton({ id, width, height, label = 'Use this template — free' }: { id: string; width: number; height: number; label?: string }) {
+export function UseTemplateButton({ id, width, height, label = 'Use this template — free', premium = false }: { id: string; width: number; height: number; label?: string; premium?: boolean }) {
   const router = useRouter();
+  const gate = usePremiumGate();
   const path = `/editor?w=${width}&h=${height}&templateId=${id}`;
+  const locked = gate.locked(premium ? false : true);
   return (
-    <button
-      type="button"
-      onClick={async () => router.push(await resolveAuthedPath(path))}
-      className="h-12 px-6 rounded-2xl bg-mt-primary text-mt-onprimary font-semibold inline-flex items-center gap-2 hover:opacity-90"
-    >
-      <Wand2 size={18} /> {label}
-    </button>
+    <>
+      <button
+        type="button"
+        onClick={async () => { if (gate.guard(premium ? false : true)) router.push(await resolveAuthedPath(path)); }}
+        className="h-12 px-6 rounded-2xl bg-mt-primary text-mt-onprimary font-semibold inline-flex items-center gap-2 hover:opacity-90"
+      >
+        {locked ? <Crown size={18} /> : <Wand2 size={18} />} {locked ? 'Premium template — unlock' : label}
+      </button>
+      {gate.dialog}
+    </>
   );
 }
 

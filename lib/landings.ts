@@ -759,7 +759,7 @@ export const MORE_LANDINGS: Landing[] = [
       ['Do I need to install anything?', 'No. It works in Chrome, Safari, Edge and Firefox on any device.'],
       ['Can I use my designs commercially?', 'Yes — use your finished designs for your business, clients, print and social media.'],
     ],
-    related: ['free-photo-editor-online', 'free-canva-alternative', 'free-flyer-maker', 'free-design-tools'],
+    related: ['free-photo-editor-online', 'free-canva-alternative', 'free-flyer-maker', 'free-design-templates'],
   }),
   L({
     slug: 'free-canva-alternative',
@@ -1110,7 +1110,7 @@ export const ALT_LANDINGS: Landing[] = [
       ['Which is the easiest design software for beginners?', 'Template-based online editors are the easiest: you change words and photos instead of designing from scratch. Magical Touch works this way and is completely free.'],
       ['Does it work on a phone?', 'Yes — the editor and photo studio work on phones and tablets.'],
     ],
-    related: ['free-online-design-tool', 'free-canva-alternative', 'free-design-tools'],
+    related: ['free-online-design-tool', 'free-canva-alternative', 'free-design-templates'],
   }),
   L({
     slug: 'free-design-templates',
