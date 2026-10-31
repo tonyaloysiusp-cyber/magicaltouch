@@ -14,6 +14,12 @@ export const runtime = 'nodejs';
 export const maxDuration = 120;
 export const preferredRegion = 'bom1';
 
+/** Deletes the Admin copy (seo_pages row) of every page marked deleted — run with the admin's session. */
+async function purge(supabase: any, rows: any[]) {
+  const slugs = rows.filter((s) => s.deleted_at).map((s) => s.slug);
+  if (slugs.length) await supabase.from('seo_pages').delete().in('slug', slugs);
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { supabase } = await requireAdmin(request);
@@ -25,7 +31,9 @@ export async function GET(request: NextRequest) {
     const names = new Map(ALL_LANDINGS().map((l) => [l.slug, l.h1]));
     let last = null;
     try { last = log?.value ? JSON.parse(log.value) : null; } catch {}
-    const status = ((data as any).status || []).map((s: any) => ({ ...s, h1: names.get(s.slug) || s.snapshot?.h1 || s.slug.replace(/-/g, ' ') }));
+    const raw = ((data as any).status || []) as any[];
+    await purge(supabase, raw);
+    const status = raw.map((s: any) => ({ ...s, status: s.deleted_at ? 'deleted' : s.status, h1: names.get(s.slug) || s.snapshot?.h1 || s.slug.replace(/-/g, ' ') }));
     return NextResponse.json({ status, settings: (data as any).settings, googleSince: (data as any).google_since, last });
   } catch (err) {
     if (err instanceof ApiAuthError) return NextResponse.json({ error: err.message }, { status: err.status });
@@ -38,7 +46,12 @@ export async function POST(request: NextRequest) {
     const { supabase } = await requireAdmin(request);
     const b = await request.json().catch(() => ({}));
     const slug = typeof b?.slug === 'string' && /^[a-z0-9]+(-[a-z0-9]+)*$/.test(b.slug) ? b.slug : null;
-    if (b?.action === 'check') return NextResponse.json(await runLandingCheck(supabase, null, true));
+    if (b?.action === 'check') {
+      const r = await runLandingCheck(supabase, null, true);
+      const { data } = await supabase.rpc('landing_data');
+      await purge(supabase, (data as any)?.status || []);
+      return NextResponse.json(r);
+    }
     if (b?.action === 'settings') {
       const value = JSON.stringify({ on: !!b.on, days: Math.max(7, Math.min(90, Number(b.days) || 14)) });
       const { error } = await supabase.from('site_settings').upsert({ key: 'landing_lifecycle', value, updated_at: new Date().toISOString() });
@@ -49,6 +62,7 @@ export async function POST(request: NextRequest) {
       const kind = ALL_LANDINGS().some((l) => l.slug === slug) ? 'builtin' : 'custom';
       const { data, error } = await supabase.rpc('landing_apply', { p_token: null, p_rows: [], p_remove: [{ slug, kind, reason: b.del ? 'Deleted by an admin' : 'Switched off by an admin', delete: !!b.del }], p_summary: null });
       if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      if (b.del) await supabase.from('seo_pages').delete().eq('slug', slug);
       return NextResponse.json(data);
     }
     if (b?.action === 'restore' && slug) {

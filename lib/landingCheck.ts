@@ -1,6 +1,6 @@
 // Runs the landing page check (server only): gathers visitors, search
 // visitors and template counts, opens every live page to make sure it
-// loads, decides each page's status (lib/landingLifecycle.ts) and saves it —
+// loads and count the template cards it really shows, decides each page's status (lib/landingLifecycle.ts) and saves it —
 // removing not-working pages when auto-cleanup is on and `apply` is true.
 // Used by the daily job and by "Check now" in Admin → SEO → Page health.
 
@@ -15,11 +15,15 @@ async function pool<T, R>(items: T[], n: number, fn: (x: T) => Promise<R>): Prom
   return out;
 }
 
-async function status(url: string): Promise<number> {
+/** Opens the live page like a visitor: its HTTP status and how many template cards it really shows. */
+async function openPage(url: string): Promise<{ http: number; shown: number | null }> {
   try {
     const r = await fetch(url, { method: 'GET', redirect: 'manual', cache: 'no-store', headers: { 'User-Agent': 'MagicalTouch-PageCheck/1.0 (bot)' }, signal: AbortSignal.timeout(15000) });
-    return r.status;
-  } catch { return 0; }
+    if (r.status !== 200) return { http: r.status, shown: null };
+    const html = await r.text();
+    const shown = new Set(html.match(/href="\/templates\/[a-z0-9-]+"/g) || []).size;
+    return { http: 200, shown };
+  } catch { return { http: 0, shown: null }; }
 }
 
 export async function runLandingCheck(supabase: SupabaseClient, token: string | null, apply: boolean) {
@@ -36,11 +40,13 @@ export async function runLandingCheck(supabase: SupabaseClient, token: string | 
 
   const checks: PageCheck[] = await pool(pages, 6, async ({ l, kind }) => {
     const tool = !!l.ctaHref;
-    const [templates, http] = await Promise.all([
+    const [matching, page] = await Promise.all([
       l.terms.length ? searchTemplates(l.terms, 60).then((r) => r.length) : Promise.resolve(tool ? null : 0),
-      status(`${SITE_URL}/${l.slug}`),
+      openPage(`${SITE_URL}/${l.slug}`),
     ]);
-    return { slug: l.slug, h1: l.h1, kind, tool, templates, http, views30: views.get(`/${l.slug}`) || 0, search30: search.get(`/${l.slug}`) || 0 };
+    // What visitors actually see wins; the database count is the fallback.
+    const templates = tool && !page.shown ? null : page.shown ?? matching;
+    return { slug: l.slug, h1: l.h1, kind, tool, templates, http: page.http, views30: views.get(`/${l.slug}`) || 0, search30: search.get(`/${l.slug}`) || 0 };
   });
 
   const { decisions, blocked } = decide(checks, ((life as any).status || []) as StatusRow[], settings, (life as any).google_since || null);

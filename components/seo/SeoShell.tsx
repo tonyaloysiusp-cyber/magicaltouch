@@ -31,12 +31,12 @@ export function UseTemplateButton({ id, width, height, label = 'Use this templat
   const router = useRouter();
   const gate = usePremiumGate();
   const path = `/editor?w=${width}&h=${height}&templateId=${id}`;
-  const locked = gate.locked(premium ? false : true);
+  const locked = gate.locked(premium ? false : true, id);
   return (
     <>
       <button
         type="button"
-        onClick={async () => { if (gate.guard(premium ? false : true)) router.push(await resolveAuthedPath(path)); }}
+        onClick={async () => { if (gate.guard(premium ? false : true, id)) router.push(await resolveAuthedPath(path)); }}
         className="h-12 px-6 rounded-2xl bg-mt-primary text-mt-onprimary font-semibold inline-flex items-center gap-2 hover:opacity-90"
       >
         {locked ? <Crown size={18} /> : <Wand2 size={18} />} {locked ? 'Premium template — unlock' : label}

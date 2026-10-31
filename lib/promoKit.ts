@@ -8,7 +8,7 @@ export interface PromoAsset { file: string; kind: 'image' | 'video'; title: stri
 
 export const PROMO_KIT: PromoAsset[] = [
   { file: '/promo/promo-reel-9x16.mp4', kind: 'video', title: 'Launch reel', size: '1080 × 1920 · 15 s', channels: ['Instagram Reels', 'TikTok', 'YouTube Shorts', 'Facebook Reels', 'WhatsApp status'],
-    caption: `Design anything — free, forever ✨\n\n1,800+ templates, an AI Template Studio that turns any design you like into an editable one, Photo Studio and print-ready PDF. No watermark, no trial.\n\nLink in bio 👉 magicaltouchdesign.com\n\n#graphicdesign #freetemplates #canvaalternative #smallbusiness #dubai #designtools` },
+    caption: `Design anything — free, forever ✨\n\n1,800+ templates, an AI Template Studio that turns any design you like into an editable one, Photo Studio and print-ready PDF. No watermark, no trial.\n\nLink in bio 👉 magicaltouchdesign.com\n\n#graphicdesign #freetemplates #canvaalternative #smallbusiness #india #designtools` },
   { file: '/promo/promo-square-1x1.mp4', kind: 'video', title: 'Square video', size: '1080 × 1080 · 15 s', channels: ['LinkedIn', 'Facebook', 'Instagram feed', 'X'],
     caption: `We built a design platform where every feature is free.\n\n✔ 1,800+ professional templates\n✔ AI Template Studio — paste any design, edit it in a minute (works with free Claude, ChatGPT and Gemini)\n✔ Photo Studio with background removal\n✔ Print-ready CMYK PDF\n✔ No watermark, no paid tier\n\nTry it: ${link('linkedin')}\n\n#design #marketing #smallbusiness #startup` },
   { file: '/promo/promo-instagram-post.jpg', kind: 'image', title: 'Instagram post', size: '1080 × 1350', channels: ['Instagram', 'Facebook'],

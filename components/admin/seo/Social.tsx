@@ -5,14 +5,16 @@
 //    Google as "sameAs" (links your brand panel to them)
 //  · Promo kit — ready posters and videos with a caption per channel
 //  · Share any page — one tap opens each network's own share box
-//  · Coming up — posts scheduled from Festivals & occasions
+//  · Create your business profiles — sign-up links, pictures, bio
+//  · Posts — plan, post to each network, mark posted
 
 import { useEffect, useMemo, useState } from 'react';
 import { Check, Copy, Download, ExternalLink, Share2 } from 'lucide-react';
-import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { NETWORKS, parseSocial, shareLinks, SocialLinks } from '@/lib/social';
 import { PROMO_KIT } from '@/lib/promoKit';
+import { SocialSetup } from './SocialSetup';
+import { SocialPosts } from './SocialPosts';
 
 const SITE = 'https://www.magicaltouchdesign.com';
 const card = 'rounded-3xl border border-mt-border bg-mt-surface p-5 sm:p-6';
@@ -25,12 +27,9 @@ export function Social({ flash }: { flash: (m: string) => void }) {
   const [copied, setCopied] = useState<string | null>(null);
   const [page, setPage] = useState('/');
   const [text, setText] = useState('Free online design tool — 1,800+ templates, no watermark');
-  const [posts, setPosts] = useState<{ id: string; name: string; status: string; meta: any }[]>([]);
 
   useEffect(() => {
     supabase.from('site_settings').select('value').eq('key', 'social_links').maybeSingle().then(({ data }) => { const v = parseSocial((data as any)?.value); setLinks(v); setSaved(v); });
-    const today = new Date().toISOString().slice(0, 10);
-    supabase.from('promo_items').select('id,name,status,meta').eq('kind', 'post').gte('meta->>post_on', today).neq('status', 'done').limit(200).then(({ data }) => setPosts(((data as any[]) || []).sort((a, b) => String(a.meta.post_on).localeCompare(String(b.meta.post_on))).slice(0, 8)));
   }, []);
 
   const save = async () => {
@@ -53,6 +52,7 @@ export function Social({ flash }: { flash: (m: string) => void }) {
 
   return (
     <>
+      {Object.keys(saved).length < 4 && <SocialSetup />}
       <section className={card}>
         <h2 className="text-lg font-semibold">Your social profiles <span className="text-mt-muted font-normal text-[13px]">{Object.keys(saved).length}/{NETWORKS.length} connected</span></h2>
         <p className="mt-1 text-[13px] text-mt-muted">Paste each profile address. They appear in the footer of every page and are given to Google, which links them to your brand in search results. Leave empty to hide.</p>
@@ -66,6 +66,7 @@ export function Social({ flash }: { flash: (m: string) => void }) {
         </div>
         <button onClick={save} disabled={!dirty} className={`${btn} mt-4 bg-mt-primary text-mt-onprimary`}><Check size={14} /> Save profiles</button>
       </section>
+      {Object.keys(saved).length >= 4 && <details className={card}><summary className="cursor-pointer text-[14px] font-semibold">Profile pictures, bio and sign-up links</summary><div className="mt-3"><SocialSetup /></div></details>}
 
       <section className={card}>
         <h2 className="text-lg font-semibold">Promo kit — posters & videos</h2>
@@ -103,17 +104,7 @@ export function Social({ flash }: { flash: (m: string) => void }) {
         </div>
       </section>
 
-      <section className={card}>
-        <div className="flex flex-wrap items-center gap-3">
-          <h2 className="text-lg font-semibold flex-1">Coming up to post</h2>
-          <Link href="/admin?tab=occasions" className="text-[13px] font-semibold text-[#3B82C4] hover:underline">Festival planner →</Link>
-        </div>
-        {posts.length ? (
-          <ul className="mt-3 divide-y divide-mt-border text-[13px]">
-            {posts.map((p) => <li key={p.id} className="py-2 flex gap-3"><span className="w-28 shrink-0 text-mt-faint">{new Date(`${p.meta.post_on}T12:00:00`).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}</span><span className="flex-1 truncate">{p.name} <span className="text-mt-faint">· {p.meta.channel}</span></span></li>)}
-          </ul>
-        ) : <p className="mt-2 text-[13px] text-mt-muted">Nothing scheduled. Open the Festival planner and tap “Auto-plan” on the next occasion.</p>}
-      </section>
+      <SocialPosts flash={flash} />
     </>
   );
 }

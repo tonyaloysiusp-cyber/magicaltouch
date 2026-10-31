@@ -12,6 +12,7 @@
 // changes customer designs already made from it.
 // ---------------------------------------------------------------------
 
+import { TemplateSizes } from '@/components/admin/templates/TemplateSizes';
 import { ClaudeTemplate } from '@/components/admin/ClaudeTemplate';
 import { AdminShell } from '@/components/admin/AdminShell';
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
@@ -124,7 +125,7 @@ export default function AdminTemplatesPage() {
     const t = new URLSearchParams(window.location.search).get('claude');
     if (t !== null) setClaude({ topic: t });
   }, []);
-  const [tab, setTab] = useState<'templates' | 'categories' | 'images'>('templates');
+  const [tab, setTab] = useState<'templates' | 'categories' | 'images' | 'sizes'>('templates');
   const [templates, setTemplates] = useState<Template[]>([]);
   const [categories, setCategories] = useState<TemplateCategory[]>([]);
   const [statusFilter, setStatusFilter] = useState<TemplateStatus | 'all'>('all');
@@ -582,13 +583,13 @@ export default function AdminTemplatesPage() {
 
       <div className="">
         <div className="flex gap-1 border-b">
-          {(['templates', 'images', 'categories'] as const).map((t) => (
+          {(['templates', 'images', 'categories', 'sizes'] as const).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
               className={`px-4 py-2 text-sm font-medium -mb-px border-b-2 ${tab === t ? 'border-mt-accent text-mt-accent' : 'border-transparent text-mt-muted'}`}
             >
-              {t === 'templates' ? 'Templates' : t === 'images' ? 'Image library' : 'Categories'}
+              {t === 'templates' ? 'Templates' : t === 'images' ? 'Image library' : t === 'sizes' ? 'File sizes' : 'Categories'}
             </button>
           ))}
         </div>
@@ -600,7 +601,9 @@ export default function AdminTemplatesPage() {
         </div>
       )}
 
-      {tab === 'images' ? (
+      {tab === 'sizes' ? (
+        <TemplateSizes />
+      ) : tab === 'images' ? (
         <ImageLibrary />
       ) : tab === 'templates' ? (
         <section className="py-4 sm:py-6">

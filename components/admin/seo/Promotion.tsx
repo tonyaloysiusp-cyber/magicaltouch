@@ -34,7 +34,7 @@ const CH: Channel[] = [
   { name: 'SourceForge', url: 'https://sourceforge.net/software/add', stage: 'listings', time: '10 min', gives: 'Old, trusted domain link', steps: ['Add software → Web app, Free'] },
   { name: 'BetaList', url: 'https://betalist.com/submit', stage: 'listings', time: '10 min', gives: 'Early adopters', steps: ['Submit startup with tagline and one screenshot'] },
   { name: 'Indie Hackers', url: 'https://www.indiehackers.com/products', stage: 'listings', time: '15 min', gives: 'Founders community', steps: ['Add product page', 'Write a short story post about building it'] },
-  { name: 'Crunchbase', url: 'https://www.crunchbase.com/add-new', stage: 'listings', time: '10 min', gives: 'Company knowledge panel signal', steps: ['Add organization: Magical Touch Design, Dubai, Founder Tony Aloysius'] },
+  { name: 'Crunchbase', url: 'https://www.crunchbase.com/add-new', stage: 'listings', time: '10 min', gives: 'Company knowledge panel signal', steps: ['Add organization: Magical Touch Design, Tamil Nadu, India, Founder Tony Aloysius'] },
   { name: 'Behance', url: 'https://www.behance.net', stage: 'listings', time: '30 min', gives: 'Designers + a portfolio link', steps: ['Post 3 template collections as projects', 'Link each project to its landing page'] },
   { name: 'Dribbble', url: 'https://dribbble.com', stage: 'listings', time: '20 min', gives: 'Designers + profile link', steps: ['Post your best templates as shots with the site link in the profile'] },
   { name: 'Figma Community', url: 'https://www.figma.com/community', stage: 'listings', time: '30 min', gives: 'Designer audience', steps: ['Publish a free mini template pack', 'Site link in profile and description'] },
@@ -76,12 +76,12 @@ export function Promotion({ promo, reload }: { promo: Promo[]; reload: () => Pro
     ['Website', SITE],
     ['Tagline (60)', 'Free online design tool — templates, editor, no watermark'],
     ['Short description (160)', `Free online design tool with ${tpl} templates for flyers, posters, invitations and social posts. Edit in your browser, download print-ready PDF — no watermark.`],
-    ['Long description', `Magical Touch Design is a free online graphic design platform with ${tpl} professional templates for flyers, posters, invitations, resumes, menus, certificates, business cards and social media.\n\nEverything is free: the full editor (text, fonts, colours, layers, pages, brand kits), a photo studio with background removal, and print-ready export — PDF with bleed and crop marks, CMYK PDF and TIFF, plus PNG, JPG and WebP. There is no watermark and no paid tier.\n\nIt works in any browser on a computer, tablet or phone, supports English and Arabic, and includes free tutorials with certificates. Made in Dubai for small businesses, students, teachers and creators everywhere.`],
+    ['Long description', `Magical Touch Design is a free online graphic design platform with ${tpl} professional templates for flyers, posters, invitations, resumes, menus, certificates, business cards and social media.\n\nEverything is free: the full editor (text, fonts, colours, layers, pages, brand kits), a photo studio with background removal, and print-ready export — PDF with bleed and crop marks, CMYK PDF and TIFF, plus PNG, JPG and WebP. There is no watermark and no paid tier.\n\nIt works in any browser on a computer, tablet or phone, supports English and Arabic, and includes free tutorials with certificates. Made in Tamil Nadu, India, for small businesses, students, teachers and creators everywhere.`],
     ['Category', 'Graphic Design Software · Design Tools · Productivity'],
     ['Tags', 'graphic design, templates, flyer maker, poster maker, invitation maker, canva alternative, free design tool, print design, social media design'],
     ['Pricing', 'Free (every feature, no watermark)'],
     ['Alternatives to', 'Canva, Adobe Express, Photopea, VistaCreate (Crello), Fotor'],
-    ['Founder', 'Tony Aloysius — Founder & CEO, Dubai, UAE'],
+    ['Founder', 'Tony Aloysius — Founder & CEO, Tamil Nadu, India'],
     ['Contact', 'hello@magicaltouchdesign.com'],
   ];
 

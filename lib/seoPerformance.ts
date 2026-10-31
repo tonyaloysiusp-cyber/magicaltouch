@@ -68,7 +68,7 @@ export function liveLandings(d: Pick<PerfData, 'pages' | 'hidden'>): { l: Landin
   });
   d.pages.forEach((p) => {
     if (seen.has(p.slug) || p.status !== 'published' || hidden.has(p.slug)) return;
-    out.push({ l: { slug: p.slug, thing: p.thing, h1: p.h1, title: p.title, description: p.description, intro: p.intro.split(/\n{2,}/).filter(Boolean), terms: p.terms || [], uses: [], faqs: p.faqs || [], related: ['free-online-design-tool', 'free-design-templates', 'free-flyer-maker'] }, kind: 'custom' });
+    out.push({ l: { slug: p.slug, thing: p.thing, h1: p.h1, title: p.title, description: p.description, intro: p.intro.split(/\n{2,}/).filter(Boolean), terms: p.terms || [], uses: [], faqs: p.faqs || [], related: ['free-design-templates', 'free-flyer-maker', 'free-poster-maker'] }, kind: 'custom' });
   });
   return out;
 }

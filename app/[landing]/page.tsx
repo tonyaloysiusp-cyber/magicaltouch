@@ -39,7 +39,7 @@ async function resolveLandingRaw(slug: string): Promise<Landing | null> {
   const built = landingBySlug(slug);
   if (!p) return built || null;
   return {
-    ...(built || { uses: [], related: ['free-online-design-tool', 'free-design-templates', 'free-flyer-maker'] }),
+    ...(built || { uses: [], related: ['free-design-templates', 'free-flyer-maker', 'free-poster-maker'] }),
     slug: p.slug,
     thing: p.thing || built?.thing || 'design',
     h1: p.h1,

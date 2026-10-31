@@ -7,7 +7,8 @@
 //    with each problem and how to fix it, plus Ads & posts for each page
 
 import { useEffect, useMemo, useState } from 'react';
-import { AlertTriangle, CheckCircle2, ChevronDown, ExternalLink, Loader2, Megaphone, Pencil, RefreshCw, Search, XCircle } from 'lucide-react';
+import { AlertTriangle, Check, CheckCircle2, ChevronDown, ExternalLink, Loader2, Megaphone, Pencil, RefreshCw, Search, Send, Trash2, XCircle } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
 import { apiFetch } from '@/lib/api/client';
 import type { AuditRow } from '@/app/api/admin/seo-audit/route';
 import { AdsDialog } from './AdsDialog';
@@ -39,7 +40,64 @@ function ScoreRing({ v }: { v: number }) {
   );
 }
 
-export function Overview({ onEdit, onTab }: { onEdit: (slug: string) => void; onTab: (t: 'engines' | 'promo' | 'ideas') => void }) {
+// Fix a setup step right where it is flagged — no hunting through other tabs.
+function SetupFix({ id, rows, onEdit, onTab, done }: { id: string; rows: AuditRow[]; onEdit: (slug: string) => void; onTab: (t: 'engines' | 'promo' | 'ideas' | 'health') => void; done: () => void }) {
+  const [v, setV] = useState('');
+  const [msg, setMsg] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const field = 'h-9 flex-1 min-w-[220px] rounded-xl border border-mt-input-border bg-mt-surface px-3 font-mono text-[12px]';
+  const saveTag = async (key: 'google_verification' | 'bing_verification') => {
+    const m = v.match(/content=["']([^"']+)["']/);
+    const value = (m ? m[1] : v).trim();
+    if (!value) return setMsg('Paste the tag first.');
+    setBusy(true);
+    const { error } = await supabase.from('site_settings').upsert({ key, value, updated_at: new Date().toISOString() });
+    setBusy(false);
+    if (error) return setMsg(error.message);
+    setMsg(`Saved — it’s on every page within a few minutes. Now press Verify in ${key === 'google_verification' ? 'Google Search Console, then add sitemap.xml under Sitemaps' : 'Bing Webmaster Tools'}.`);
+    done();
+  };
+  const send = async () => {
+    setBusy(true);
+    try { const r: any = await apiFetch('/api/admin/indexnow', { method: 'POST', body: JSON.stringify({}) }); setMsg(`Sent ${r.submitted} pages to ${r.results.filter((x: any) => x.ok).map((x: any) => x.engine).join(', ') || 'no engine (try later)'}. This now also happens automatically every week.`); done(); }
+    catch (e: any) { setMsg(e?.message || 'Could not send'); }
+    setBusy(false);
+  };
+  const box = (children: React.ReactNode) => <div className="mt-3 rounded-2xl bg-mt-surface2 p-3 flex flex-col gap-2">{children}{msg && <p className="text-[12px] text-mt-ink">{msg}</p>}</div>;
+  if (id === 'google' || id === 'bing') {
+    const g = id === 'google';
+    return box(<>
+      <ol className="list-decimal pl-5 text-[12px] text-mt-muted space-y-0.5">
+        {g ? <>
+          <li><a className="underline text-mt-ink" href="https://search.google.com/search-console/welcome" target="_blank" rel="noreferrer">Open Search Console</a> → <b>URL prefix</b> → <span className="font-mono">https://www.magicaltouchdesign.com</span></li>
+          <li>Choose <b>HTML tag</b> → Copy → paste here → Save</li>
+          <li>Back in Google press <b>Verify</b>, then Sitemaps → add <span className="font-mono">sitemap.xml</span></li>
+        </> : <>
+          <li><b>Easiest:</b> once Google is verified, <a className="underline text-mt-ink" href="https://www.bing.com/webmasters" target="_blank" rel="noreferrer">open Bing Webmaster Tools</a> → <b>Import from Google Search Console</b>. Nothing to paste.</li>
+          <li>Or choose <b>HTML Meta Tag</b> → paste here → Save → Verify in Bing</li>
+        </>}
+      </ol>
+      <div className="flex flex-wrap gap-2">
+        <input value={v} onChange={(e) => setV(e.target.value)} placeholder={g ? '<meta name="google-site-verification" content="…" />' : '<meta name="msvalidate.01" content="…" />'} className={field} />
+        <button disabled={busy} onClick={() => saveTag(g ? 'google_verification' : 'bing_verification')} className={`${btn} bg-mt-primary text-mt-onprimary`}>{busy ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />} Save</button>
+      </div>
+    </>);
+  }
+  if (id === 'indexnow') return box(<div className="flex flex-wrap items-center gap-2"><button disabled={busy} onClick={send} className={`${btn} bg-mt-primary text-mt-onprimary`}>{busy ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />} Send all pages now</button><span className="text-[12px] text-mt-muted">Runs by itself every week from now on.</span></div>);
+  if (id === 'listings') return box(<div className="flex flex-wrap items-center gap-2"><button onClick={() => onTab('promo')} className={`${btn} bg-mt-primary text-mt-onprimary`}>Open the free listings checklist</button><span className="text-[12px] text-mt-muted">Each site takes 5–15 minutes. Tick it off there when done.</span></div>);
+  if (id === 'thin' || id === 'empty') {
+    const bad = rows.filter((r) => r.live && (id === 'thin' ? r.words < 250 : r.templates === 0));
+    return box(<ul className="flex flex-col gap-1.5">{bad.map((r) => (
+      <li key={r.slug} className="flex flex-wrap items-center gap-2 text-[13px]">
+        <span className="flex-1 min-w-[180px] text-mt-ink">{r.h1} <span className="text-mt-faint">/{r.slug}</span></span>
+        <button onClick={() => onEdit(r.slug)} className={`${btn} h-8 border border-mt-border`}><Pencil size={13} /> Fix</button>
+        <button onClick={() => onTab('health')} className={`${btn} h-8 text-rose-600 border border-rose-600/30`}><Trash2 size={13} /> Delete</button>
+      </li>))}</ul>);
+  }
+  return null;
+}
+
+export function Overview({ onEdit, onTab }: { onEdit: (slug: string) => void; onTab: (t: 'engines' | 'promo' | 'ideas' | 'health') => void }) {
   const [a, setA] = useState<Audit | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -47,6 +105,7 @@ export function Overview({ onEdit, onTab }: { onEdit: (slug: string) => void; on
   const [q, setQ] = useState('');
   const [open, setOpen] = useState<string | null>(null);
   const [ads, setAds] = useState<AuditRow | null>(null);
+  const [fixing, setFixing] = useState<string | null>(null);
 
   const load = async () => {
     setBusy(true); setErr(null);
@@ -95,10 +154,10 @@ export function Overview({ onEdit, onTab }: { onEdit: (slug: string) => void; on
               {s.ok ? <CheckCircle2 size={18} className="text-emerald-600 mt-0.5 shrink-0" /> : <XCircle size={18} className="text-rose-600 mt-0.5 shrink-0" />}
               <div className="flex-1 min-w-0">
                 <p className={`text-[14px] font-medium ${s.ok ? 'text-mt-muted' : 'text-mt-ink'}`}>{s.title}</p>
-                {!s.ok && <p className="text-[13px] text-mt-muted"><span className="text-mt-ink">Why it matters:</span> {s.why}<br /><span className="text-mt-ink">How to fix:</span> {s.fix}</p>}
+                {!s.ok && <p className="text-[13px] text-mt-muted"><span className="text-mt-ink">Why it matters:</span> {s.why}</p>}
+                {!s.ok && fixing === s.id && <SetupFix id={s.id} rows={a.rows} onEdit={onEdit} onTab={onTab} done={() => setTimeout(load, 1500)} />}
               </div>
-              {!s.ok && (s.id === 'google' || s.id === 'bing' || s.id === 'indexnow') && <button onClick={() => onTab('engines')} className={`${btn} border border-mt-border shrink-0`}>Fix</button>}
-              {!s.ok && s.id === 'listings' && <button onClick={() => onTab('promo')} className={`${btn} border border-mt-border shrink-0`}>Fix</button>}
+              {!s.ok && <button onClick={() => setFixing(fixing === s.id ? null : s.id)} className={`${btn} shrink-0 ${fixing === s.id ? 'border border-mt-border' : 'bg-mt-primary text-mt-onprimary'}`}>{fixing === s.id ? 'Close' : 'Fix it here'}</button>}
             </li>
           ))}
         </ul>

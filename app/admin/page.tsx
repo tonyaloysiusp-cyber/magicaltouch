@@ -399,7 +399,7 @@ function Occasions({ occasions, templates, reload, flash }: { occasions: Occasio
   const regions = useMemo(() => ['All', ...Array.from(new Set(occasions.map((o) => o.region))).sort()], [occasions]);
   const [region, setRegion] = useState('All');
   const [adding, setAdding] = useState(false);
-  const [draft, setDraft] = useState({ name: '', occasion_date: '', region: 'UAE / Gulf', ideas: '', lead_days: 10 });
+  const [draft, setDraft] = useState({ name: '', occasion_date: '', region: 'Worldwide', ideas: '', lead_days: 10 });
   const [planning, setPlanning] = useState<Occasion | null>(null);
   // Posts scheduled for the next 7 days, across every occasion.
   const [week, setWeek] = useState<{ id: string; name: string; status: string; meta: any }[]>([]);
@@ -418,7 +418,7 @@ function Occasions({ occasions, templates, reload, flash }: { occasions: Occasio
     const { error } = await supabase.from('occasions').insert({ ...draft, name: draft.name.trim() });
     if (error) return flash(error.message);
     setAdding(false);
-    setDraft({ name: '', occasion_date: '', region: 'UAE / Gulf', ideas: '', lead_days: 10 });
+    setDraft({ name: '', occasion_date: '', region: 'Worldwide', ideas: '', lead_days: 10 });
     flash('Occasion added. You’ll get a reminder before it.');
     reload();
   };
