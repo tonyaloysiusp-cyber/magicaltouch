@@ -453,12 +453,13 @@ def product(doc, c, p, pair, kind="circle", title_size=120):
         s = W * 0.62
         px, py = (W - s) / 2, H * 0.12
     framed_photo(doc, c["photo"], px, py, s, s, kind=kind, r=s * 0.08, focus=c.get("focus", (0.5, 0.5)), shadow_=shadow("rgba(0,0,0,0.22)", 40, 0, 18))
-    # price badge
-    br = s * 0.17
+    # price badge (optional)
+    br = s * 0.17 if c.get("price") else 0
     bx, by = px + s - br * 0.4, py + br * 0.6
-    doc.star(bx, by, br, p["accent"], points=18, inner=0.86)
-    doc.text(bx - br, by - br * 0.5, br * 2, c.get("price_label", "Only"), t.p["kick"], br * 0.24, p.get("cta_fg", "#FFFFFF"), weight=700, align="center", spacing=120, upper=True, name="Price label")
-    doc.text(bx - br, by - br * 0.22, br * 2, c["price"], t.p["head"], doc.fit(c["price"], br * 1.5, t.p["head"], br * 0.62, t.p["hw"]), p.get("cta_fg", "#FFFFFF"), weight=t.p["hw"], align="center", name="Price")
+    if br:
+        doc.star(bx, by, br, p["accent"], points=18, inner=0.86)
+    br and doc.text(bx - br, by - br * 0.5, br * 2, c.get("price_label", "Only"), t.p["kick"], br * 0.24, p.get("cta_fg", "#FFFFFF"), weight=700, align="center", spacing=120, upper=True, name="Price label")
+    br and doc.text(bx - br, by - br * 0.22, br * 2, c["price"], t.p["head"], doc.fit(c["price"], br * 1.5, t.p["head"], br * 0.62, t.p["hw"]), p.get("cta_fg", "#FFFFFF"), weight=t.p["hw"], align="center", name="Price")
     if land:
         x, cw, align = m, W * 0.5 - 2 * m, "left"
         y0 = H * 0.16
