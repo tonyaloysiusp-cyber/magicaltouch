@@ -17,11 +17,11 @@ const btn = 'h-9 px-4 rounded-full text-[13px] font-semibold inline-flex items-c
 
 interface Idea { phrase: string; engines: string[]; strength: number; page: { slug: string; h1: string } | null; templates: number }
 const SEEDS = ['flyer', 'invitation', 'poster', 'certificate', 'menu', 'eid', 'wedding card', 'instagram post', 'business card', 'resume', 'birthday', 'logo'];
-const COUNTRIES: [string, string][] = [['ae', 'UAE'], ['in', 'India'], ['sa', 'Saudi Arabia'], ['us', 'USA'], ['gb', 'UK'], ['ca', 'Canada'], ['au', 'Australia']];
+const COUNTRIES: [string, string][] = [['in', 'India'], ['us', 'USA'], ['ae', 'UAE'], ['sa', 'Saudi Arabia'], ['gb', 'UK'], ['ca', 'Canada'], ['au', 'Australia']];
 
 export function KeywordIdeas({ onDraft, onKeyword }: { onDraft: (d: LandingDraft) => void; onKeyword: (k: string) => Promise<void> }) {
   const [q, setQ] = useState('');
-  const [gl, setGl] = useState('ae');
+  const [gl, setGl] = useState('in');
   const [ideas, setIdeas] = useState<Idea[] | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);

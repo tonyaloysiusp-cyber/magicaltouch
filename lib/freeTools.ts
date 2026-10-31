@@ -12,7 +12,6 @@ export const FREE_TOOLS: ToolGroup[] = [
     { name: 'Editor', url: '/create', what: 'Design from a template or a blank page' },
     { name: 'Photo Studio', url: '/photo-studio', what: 'Retouch, filters and background removal' },
     { name: 'QR code generator', url: '/free-qr-code-generator', what: 'Scannable QR codes with your logo' },
-    { name: 'Image resizer', url: '/free-image-resizer', what: 'Exact sizes for every platform' },
   ] },
   { id: 'chat', title: 'AI that designs templates (free chat)', tools: [
     { name: 'Claude', url: 'https://claude.ai', what: 'Clean layouts; follows the template format best' },

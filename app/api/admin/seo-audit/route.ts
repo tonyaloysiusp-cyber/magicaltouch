@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
     db.forEach((d, slug) => {
       if (seen.has(slug)) return;
       pages.push({
-        l: { slug, thing: d.thing || 'design', h1: d.h1, title: d.title, description: d.description, intro: String(d.intro || '').split(/\n{2,}/).filter(Boolean), terms: d.terms || [], uses: [], faqs: d.faqs || [], related: ['free-online-design-tool', 'free-design-templates', 'free-flyer-maker'] },
+        l: { slug, thing: d.thing || 'design', h1: d.h1, title: d.title, description: d.description, intro: String(d.intro || '').split(/\n{2,}/).filter(Boolean), terms: d.terms || [], uses: [], faqs: d.faqs || [], related: ['free-design-templates', 'free-flyer-maker', 'free-poster-maker'] },
         kind: 'custom', live: d.status === 'published' && !hidden.has(slug),
       });
     });

@@ -19,6 +19,7 @@
 // "Use Template", and the editor turns it into the customer's own copy.
 // ---------------------------------------------------------------------
 
+import { shrinkDesignImages } from '@/lib/editor/shrinkImages';
 import { supabase } from './supabase';
 import { uploadTemplateImages } from './templates/media';
 import { allPages } from './allPages';
@@ -388,6 +389,9 @@ export async function setTemplateContent(
   canvasJson: any,
   imageSrc: string | null,
 ): Promise<boolean> {
+  // Oversized pictures (phone photos, background-removed cut-outs) are
+  // scaled to what the design uses and re-encoded — same look, far smaller.
+  await shrinkDesignImages(canvasJson).catch(() => null);
   const update: Record<string, unknown> = { canvas_json: canvasJson, updated_at: new Date().toISOString() };
   if (imageSrc) {
     const media = await uploadTemplateImages(id, version, imageSrc);

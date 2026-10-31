@@ -8,6 +8,7 @@ import { BrandLogo } from '@/components/BrandLogo';
 import Link from 'next/link';
 import { supabase, getSessionUser } from '@/lib/supabase';
 import { certificateTokens, buildVerificationBlock } from '@/lib/certificates';
+import { shrinkDesignImages } from '@/lib/editor/shrinkImages';
 import { fetchTemplateById, setTemplateContent, createVersion, Template as TemplateRecord } from '@/lib/templatesData';
 import {
   Keyboard,
@@ -5341,8 +5342,11 @@ function EditorContent() {
     }
     const revAtSave = editRevRef.current;
     // Pictures stay embedded inside the design itself: they are never
-    // stored as separate files, wherever the design is saved.
+    // stored as separate files, wherever the design is saved. Oversized
+    // ones (phone photos, background-removed cut-outs) are scaled to what
+    // the design uses and re-encoded first — same look, far smaller file.
     const canvasJson = fabricCanvasRef.current.toJSON(SAVE_JSON_PROPS);
+    await shrinkDesignImages(canvasJson).catch(() => null);
     // width/height stay as the dashboard/thumbnail-facing summary size —
     // the first artboard's current dimensions, not the URL params a brand
     // new document happened to start from.

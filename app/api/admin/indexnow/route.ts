@@ -11,9 +11,11 @@ export const maxDuration = 60;
 
 export async function POST(request: NextRequest) {
   try {
-    await requireAdmin(request);
+    const { supabase } = await requireAdmin(request);
     const body = await request.json().catch(() => ({}));
-    return NextResponse.json(await submitIndexNow(Array.isArray(body?.urls) ? body.urls : undefined));
+    const r = await submitIndexNow(Array.isArray(body?.urls) ? body.urls : undefined);
+    if (r.results.some((x) => x.ok)) await supabase.rpc('cron_mark_indexnow', { p_token: null });
+    return NextResponse.json(r);
   } catch (err) {
     if (err instanceof ApiAuthError) return NextResponse.json({ error: err.message }, { status: err.status });
     return NextResponse.json({ error: 'Could not submit' }, { status: 500 });

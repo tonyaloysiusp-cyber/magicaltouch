@@ -65,6 +65,8 @@ export default async function AboutPage() {
       '@type': 'Person',
       name: 'Tony Aloysius',
       jobTitle: 'Founder & CEO',
+      nationality: { '@type': 'Country', name: 'India' },
+      homeLocation: { '@type': 'Place', name: 'Tamil Nadu, India' },
       worksFor: { '@type': 'Organization', name: SITE_NAME, url: SITE_URL },
     },
   ];
@@ -138,6 +140,7 @@ export default async function AboutPage() {
             </div>
             <h2 id="founder" className="mt-5 text-2xl font-semibold">Tony Aloysius</h2>
             <p className="text-mt-muted">Founder &amp; CEO, {SITE_NAME}</p>
+            <p className="text-[13px] text-mt-faint">Tamil Nadu, India</p>
             {founderBio && paras(founderBio).map((t, i) => <p key={i} className="mt-4 text-[15px] leading-relaxed text-mt-muted">{t}</p>)}
           </div>
           <div>

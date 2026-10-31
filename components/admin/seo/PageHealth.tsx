@@ -104,16 +104,13 @@ export function PageHealth({ flash, onTab }: { flash: (m: string) => void; onTab
                   <span className="block text-[12px] text-mt-muted">{r.reason}</span>
                   <span className="block text-[11px] text-mt-faint">/{r.slug} · {r.views30} views · {r.search30} from search{r.templates !== null ? ` · ${r.templates >= 60 ? '60+' : r.templates} templates` : ''}{(r.status === 'removed' || r.status === 'deleted') && r.removed_at ? ` · ${r.status === 'deleted' ? 'deleted' : 'switched off'} ${new Date(r.removed_at).toLocaleDateString('en-GB')}` : ` · since ${new Date(`${r.first_seen}T00:00:00`).toLocaleDateString('en-GB')}`}</span>
                 </span>
-                {r.status === 'removed' || (r.status === 'deleted' && r.kind !== 'custom') ? (
+                {r.status === 'removed' ? (
                   <button onClick={() => post(`rs-${r.slug}`, { action: 'restore', slug: r.slug }, () => `/${r.slug} is back — monitoring again.`)} disabled={!!busy} className={`${btn} border border-mt-border`}><RotateCcw size={13} /> Restore</button>
                 ) : r.status === 'deleted' ? null : (
                   <>
                     <a href={`/${r.slug}`} target="_blank" className={`${btn} border border-mt-border`} aria-label="View"><ExternalLink size={13} /></a>
-                    {r.status === 'not-working' && broken(r) ? (
-                      <button onClick={() => { if (window.confirm(`Delete /${r.slug} for good?`)) post(`rm-${r.slug}`, { action: 'remove', slug: r.slug, del: true }, () => `/${r.slug} deleted.`); }} disabled={!!busy} className={`${btn} bg-rose-600 text-white`}><Trash2 size={13} /> Delete</button>
-                    ) : (
-                      <button onClick={() => post(`rm-${r.slug}`, { action: 'remove', slug: r.slug }, () => `/${r.slug} switched off.`)} disabled={!!busy} className={`${btn} text-rose-600 border border-rose-600/30`}>Switch off</button>
-                    )}
+                    {!broken(r) && <button onClick={() => post(`rm-${r.slug}`, { action: 'remove', slug: r.slug }, () => `/${r.slug} switched off.`)} disabled={!!busy} className={`${btn} text-mt-muted border border-mt-border`}>Switch off</button>}
+                    <button onClick={() => { if (window.confirm(`Delete /${r.slug} for good? It disappears from the site and Google.`)) post(`rm-${r.slug}`, { action: 'remove', slug: r.slug, del: true }, () => `/${r.slug} deleted.`); }} disabled={!!busy} className={`${btn} ${broken(r) ? 'bg-rose-600 text-white' : 'text-rose-600 border border-rose-600/30'}`}><Trash2 size={13} /> Delete</button>
                   </>
                 )}
               </li>

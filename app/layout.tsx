@@ -53,7 +53,7 @@ const ORG_JSON_LD = [
     url: SITE_URL,
     logo: `${SITE_URL}/logo.png`,
     email: 'hello@magicaltouchdesign.com',
-    address: { '@type': 'PostalAddress', addressLocality: 'Dubai', addressCountry: 'AE' },
+    address: { '@type': 'PostalAddress', addressRegion: 'Tamil Nadu', addressCountry: 'IN' },
     areaServed: 'Worldwide',
   },
   {
