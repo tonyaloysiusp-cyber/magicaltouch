@@ -14,7 +14,7 @@ const nextConfig = {
       'free-online-design-tool': '/free-design-templates',
       'free-canva-alternative': '/free-design-templates',
       'free-photo-editor-online': '/photo-studio',
-      'remove-background-free': '/photo-studio',
+      'remove-background-free': '/remove-background',
       'free-image-resizer': '/free-design-templates',
       'free-photoshop-alternative': '/free-design-templates',
       'free-illustrator-alternative': '/free-design-templates',
