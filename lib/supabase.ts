@@ -63,13 +63,24 @@ const resilientFetch: typeof fetch = async (input: any, init?: RequestInit) => {
       return timedFetch(url, init, ms ? ms * 2 : null);
     }
   }
+  let res: Response;
   try {
-    return await timedFetch(url, init, ms);
+    res = await timedFetch(url, init, ms);
   } catch (err) {
     if (isStorage || (init?.signal && init.signal.aborted)) throw err;
     rememberProxy();
     return timedFetch(viaProxy(url), init, ms ? ms * 2 : null);
   }
+  // Some networks don't fail the request — they answer with their own web
+  // page (a block or captive page). Supabase's API only ever answers with
+  // data, so a web page means "use our own domain instead". (On iPad/Safari
+  // this showed as "The string did not match the expected pattern.")
+  const ct = res.headers.get('content-type') || '';
+  if (!isStorage && !url.startsWith(`${supabaseUrl}/functions/`) && ct && !/json/i.test(ct)) {
+    rememberProxy();
+    return timedFetch(viaProxy(url), init, ms ? ms * 2 : null);
+  }
+  return res;
 };
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
