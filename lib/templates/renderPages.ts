@@ -22,8 +22,16 @@ export async function renderTemplatePages(canvasJson: any, maxSide = 1100, opts:
   const mod: any = await import('fabric');
   const F = mod.fabric;
   const el = document.createElement('canvas');
+  // Some privacy browsers / extensions hand back a fake 2D context with
+  // missing methods; drawing would throw deep inside fabric. Show the
+  // ready-made thumbnail instead.
+  const probe: any = el.getContext('2d');
+  if (!probe || typeof probe.measureText !== 'function' || typeof probe.setTransform !== 'function' || typeof probe.translate !== 'function') return [];
   const canvas = new F.StaticCanvas(el, { enableRetinaScaling: false, renderOnAddRemove: false });
-  await new Promise<void>((resolve) => canvas.loadFromJSON(json, () => resolve()));
+  await new Promise<void>((resolve, reject) => {
+    const timer = setTimeout(() => resolve(), 15000);
+    try { canvas.loadFromJSON(json, () => { clearTimeout(timer); resolve(); }); } catch (e) { clearTimeout(timer); reject(e); }
+  });
   const boards = canvas
     .getObjects()
     .filter((o: any) => o.__isArtboard)
