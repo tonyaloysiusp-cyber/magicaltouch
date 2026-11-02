@@ -15,6 +15,9 @@ function LoginForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [unconfirmed, setUnconfirmed] = useState(false);
+  const [resendMsg, setResendMsg] = useState('');
+  const [resending, setResending] = useState(false);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -31,15 +34,31 @@ function LoginForm() {
     e.preventDefault();
     setLoading(true);
     setError('');
+    setResendMsg('');
 
     const { error } = await supabase.auth.signInWithPassword({ email, password });
 
     if (error) {
+      setUnconfirmed(/email not confirmed/i.test(error.message));
       setError(friendlyAuthError(error.message));
       setLoading(false);
     } else {
       router.push(next);
     }
+  };
+
+  // Sign-ups who lost or never got the confirmation email can get a new one here.
+  const resendConfirmation = async () => {
+    if (!email) return;
+    setResending(true);
+    setResendMsg('');
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email,
+      options: { emailRedirectTo: `${window.location.origin}/login?confirmed=1${next !== '/dashboard' ? `&next=${encodeURIComponent(next)}` : ''}` },
+    });
+    setResending(false);
+    setResendMsg(error ? friendlyAuthError(error.message) : `New confirmation link sent to ${email}. Open it (check spam too), then log in.`);
   };
 
   const handleForgotPassword = async (e: React.FormEvent) => {
@@ -113,6 +132,14 @@ function LoginForm() {
               </div>
 
               {error && <p className="text-red-500 text-sm">{error}</p>}
+              {unconfirmed && (
+                <div className="-mt-1 flex flex-col gap-1.5">
+                  <button type="button" onClick={resendConfirmation} disabled={resending} className="self-start text-sm font-semibold text-brand-blue hover:underline disabled:opacity-50">
+                    {resending ? 'Sending…' : 'Resend confirmation email'}
+                  </button>
+                  {resendMsg && <p className="text-sm text-mt-muted">{resendMsg}</p>}
+                </div>
+              )}
               <button
                 type="submit"
                 disabled={loading}
