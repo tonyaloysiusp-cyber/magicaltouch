@@ -12,6 +12,7 @@ export const FREE_TOOLS: ToolGroup[] = [
     { name: 'Editor', url: '/create', what: 'Design from a template or a blank page' },
     { name: 'Photo Studio', url: '/photo-studio', what: 'Retouch, filters and background removal' },
     { name: 'Background remover', url: '/remove-background', what: 'Remove backgrounds from many photos at once, free' },
+    { name: 'Mockup generator', url: '/mockups', what: 'Your design or logo on 100+ photo and product mockups' },
     { name: 'QR code generator', url: '/free-qr-code-generator', what: 'Scannable QR codes with your logo' },
   ] },
   { id: 'chat', title: 'AI that designs templates (free chat)', tools: [
