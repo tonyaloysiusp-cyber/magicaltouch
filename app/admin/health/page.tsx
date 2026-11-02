@@ -1,4 +1,5 @@
 'use client';
+import { expandList } from '@/lib/templatesData';
 
 // Admin → Site health. Runs live checks (database, sign-in service, the
 // template gallery, translation, fonts, page speed, errors visitors hit)
@@ -80,7 +81,7 @@ export default function HealthPage() {
     const proxy = await timed(async () => { const r = await fetch(`/sb/auth/v1/health`, { headers: { apikey: KEY } }); if (!r.ok) throw new Error(`status ${r.status}`); return r; });
     put({ id: 'proxy', name: 'Backup route (for blocked networks)', ms: proxy.ms, level: proxy.error ? 'bad' : speed(proxy.ms, 900, 2500), detail: proxy.error ? `Not working: ${proxy.error}. Visitors whose network blocks the database would see “check your connection”.` : `Working (${proxy.ms} ms). People on networks that block the database are routed through our own domain automatically.` });
 
-    const gal = await timed(async () => { const r = await fetch('/api/public-templates', { cache: 'no-store' }); if (!r.ok) throw new Error(`status ${r.status}`); return (await r.json()) as any[]; });
+    const gal = await timed(async () => { const r = await fetch('/api/public-templates', { cache: 'no-store' }); if (!r.ok) throw new Error(`status ${r.status}`); return expandList(await r.json()) as any[]; });
     const galCount = gal.value?.length || 0;
     put({
       id: 'gallery', name: 'Template gallery', ms: gal.ms,

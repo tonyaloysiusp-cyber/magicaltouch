@@ -149,7 +149,7 @@ interface TemplateRow {
   search_keywords?: string | null;
 }
 
-function rowToTemplate(row: TemplateRow): Template {
+export function rowToTemplate(row: TemplateRow): Template {
   return {
     id: row.id,
     name: row.name,
@@ -251,6 +251,29 @@ export async function fetchTemplates(): Promise<Template[]> {
   return (data as TemplateRow[]).map(rowToTemplate);
 }
 
+// /api/public-templates sends a compact table ({ v: 2, cols, rows }); the
+// old format (an array of objects) is still accepted.
+const DIR = '/templates/collection/';
+export function expandList(body: any): TemplateRow[] {
+  if (Array.isArray(body)) return body as TemplateRow[];
+  if (!body || body.v !== 2 || !Array.isArray(body.rows) || !Array.isArray(body.cols)) return [];
+  const cols: string[] = body.cols;
+  return body.rows.map((a: any[]) => {
+    const o: any = { status: 'published', rights_status: 'verified', unit: 'px', dpi: 72, color_mode: 'rgb', current_version: '1.0', language: null, canvas_json: null };
+    cols.forEach((c, i) => { o[c] = a[i]; });
+    const full = (p: any) => (typeof p === 'string' && p.startsWith('~') ? DIR + p.slice(1) : p);
+    o.thumbnail = full(o.thumbnail);
+    if (o.preview === 1 && typeof o.thumbnail === 'string') {
+      const i = o.thumbnail.lastIndexOf('.');
+      o.preview = `${o.thumbnail.slice(0, i)}-preview${o.thumbnail.slice(i)}`;
+    } else o.preview = full(o.preview);
+    o.tags = o.tags || [];
+    o.is_featured = !!o.is_featured;
+    o.is_free = !!o.is_free;
+    return o as TemplateRow;
+  });
+}
+
 // Customer gallery: published templates that have real editable content.
 // The canvas_json filter runs in the database, so the content itself is
 // never transferred while browsing.
@@ -265,8 +288,9 @@ async function loadPublicTemplates(): Promise<Template[]> {
     try {
       const r = await fetch('/api/public-templates');
       if (r.ok) {
-        const rows = (await r.json()) as TemplateRow[];
-        if (Array.isArray(rows) && rows.length) return rows.map(rowToTemplate);
+        const body = await r.json();
+        const rows = expandList(body);
+        if (rows.length) return rows.map(rowToTemplate);
       }
     } catch {
       // fall back to the database directly

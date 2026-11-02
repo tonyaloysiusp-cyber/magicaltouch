@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Crown, Plus, Loader2 } from 'lucide-react';
 import { Template, TemplateCategory, fetchPublicTemplates, fetchCategories } from '@/lib/templatesData';
 import { SearchField, cx } from '../ui';
@@ -60,6 +60,18 @@ export function TemplatesPanel({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [templates, categories, q, cat]);
 
+  // Draw 40 at a time (more as you scroll) instead of all 8,000+ at once.
+  const [shown, setShown] = useState(40);
+  useEffect(() => { setShown(40); }, [visible]);
+  const moreRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = moreRef.current;
+    if (!el || shown >= visible.length) return;
+    const io = new IntersectionObserver((es) => { if (es.some((e) => e.isIntersecting)) setShown((n) => n + 40); }, { rootMargin: '600px 0px' });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [shown, visible.length]);
+
   return (
     <div className="flex flex-col h-full">
       <SearchField value={q} onChange={setQ} placeholder="Search templates" />
@@ -81,7 +93,7 @@ export function TemplatesPanel({
         {loading ? 'Loading templates…' : `${visible.length} template${visible.length === 1 ? '' : 's'}. Tap to use, or drag onto your page.`}
       </p>
       <div className="columns-2 gap-2 [&>*]:mb-2 pb-6">
-        {visible.map((t) => (
+        {visible.slice(0, shown).map((t) => (
           <div
             key={t.id}
             draggable
@@ -121,6 +133,11 @@ export function TemplatesPanel({
           </div>
         ))}
       </div>
+      {shown < visible.length && (
+        <div ref={moreRef} className="pb-6 flex justify-center">
+          <button type="button" onClick={() => setShown((n) => n + 80)} className="text-xs font-semibold px-3 py-1.5 rounded-full border border-mt-border text-mt-muted hover:text-mt-ink">Show more</button>
+        </div>
+      )}
       {gate.dialog}
     </div>
   );
