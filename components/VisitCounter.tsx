@@ -79,7 +79,7 @@ export function VisitCounter() {
 
   useEffect(() => {
     const onErr = (e: ErrorEvent) => e.message && !/ResizeObserver loop|Script error/i.test(e.message) && reportError(e.message);
-    const onRej = (e: PromiseRejectionEvent) => { const m = String((e.reason && (e.reason.message || e.reason)) || ''); if (m && !/AbortError|aborted/i.test(m)) reportError(`Unhandled: ${m}`); };
+    const onRej = (e: PromiseRejectionEvent) => { const r: any = e.reason; const m = r && typeof Event !== 'undefined' && r instanceof Event ? `${r.type} loading ${String((r.target && (r.target.src || r.target.href)) || 'a file').slice(0, 120)}` : String((r && (r.message || r)) || ''); if (m && !/AbortError|aborted/i.test(m)) reportError(`Unhandled: ${m}`); };
     window.addEventListener('error', onErr);
     window.addEventListener('unhandledrejection', onRej);
     return () => { window.removeEventListener('error', onErr); window.removeEventListener('unhandledrejection', onRej); };
