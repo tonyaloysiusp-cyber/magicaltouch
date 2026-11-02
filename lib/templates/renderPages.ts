@@ -25,7 +25,7 @@ export async function renderTemplatePages(canvasJson: any, maxSide = 1100, opts:
   // Some privacy browsers / extensions hand back a fake 2D context with
   // missing methods; drawing would throw deep inside fabric. Show the
   // ready-made thumbnail instead.
-  const probe: any = el.getContext && el.getContext('2d');
+  const probe: any = el.getContext('2d');
   if (!probe || typeof probe.measureText !== 'function' || typeof probe.setTransform !== 'function' || typeof probe.translate !== 'function') return [];
   const canvas = new F.StaticCanvas(el, { enableRetinaScaling: false, renderOnAddRemove: false });
   await new Promise<void>((resolve, reject) => {
