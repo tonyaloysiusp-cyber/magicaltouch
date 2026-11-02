@@ -27,6 +27,7 @@ import { Promotion } from '@/components/admin/seo/Promotion';
 import { Social } from '@/components/admin/seo/Social';
 import { Performance } from '@/components/admin/seo/Performance';
 import { PageHealth } from '@/components/admin/seo/PageHealth';
+import { Automation } from '@/components/admin/seo/Automation';
 import type { LandingDraft } from '@/lib/landingDraft';
 
 const SITE = 'https://www.magicaltouchdesign.com';
@@ -94,25 +95,52 @@ export default function SeoAdminPage() {
   if (state === 'loading') return <main className="min-h-screen flex items-center justify-center text-mt-faint bg-mt-bg">Loading…</main>;
   if (state === 'denied') return <main className="min-h-screen flex flex-col items-center justify-center gap-3 bg-mt-bg"><p className="text-lg font-semibold text-mt-ink">Administrators only</p><Link href="/dashboard" className="text-sm text-mt-accent hover:underline">Back to your dashboard</Link></main>;
 
-  const TABS: [Tab, string][] = [['overview', 'Overview'], ['performance', 'Performance'], ['health', 'Page health'], ['ideas', 'Keyword ideas'], ['pages', 'Landing pages'], ['engines', 'Search engines'], ['promo', 'Free promotion'], ['posts', 'Google posts'], ['social', 'Social & promo kit'], ['keywords', 'Site search'], ['links', 'Campaign links']];
-  const openPage = (r: PageRequest) => { setRequest(r); setTab('pages'); };
+  const GROUPS: { name: string; hint: string; tabs: [Tab, string][] }[] = [
+    { name: 'Dashboard', hint: 'Is everything working? What runs on its own?', tabs: [['overview', 'Status'], ['performance', 'Visitors from Google']] },
+    { name: 'Pages', hint: 'Your keyword pages — create, fix, remove', tabs: [['pages', 'Landing pages'], ['health', 'Page check']] },
+    { name: 'Google', hint: 'Connect Google & Bing, and your posters/videos on Google', tabs: [['engines', 'Google & Bing setup'], ['posts', 'Google posts']] },
+    { name: 'Social & promotion', hint: 'Profiles, post planner, free listings, tracked links', tabs: [['social', 'Social media'], ['promo', 'Free listings'], ['links', 'Tracked links']] },
+    { name: 'Keywords', hint: 'What people search for', tabs: [['ideas', 'Keyword ideas'], ['keywords', 'Searches on our site']] },
+  ];
+  const group = GROUPS.find((g) => g.tabs.some(([id]) => id === tab)) || GROUPS[0];
+  const pick = (t: Tab) => {
+    setTab(t);
+    try { const u = new URL(window.location.href); if (t === 'overview') u.searchParams.delete('tab'); else u.searchParams.set('tab', t); window.history.replaceState(null, '', u.toString()); } catch { /* ignore */ }
+  };
+  const openPage = (r: PageRequest) => { setRequest(r); pick('pages'); };
   const trackKeyword = async (name: string) => {
     const exists = promo.some((p) => p.kind === 'keyword' && p.name.toLowerCase() === name.toLowerCase());
     if (!exists) await supabase.from('promo_items').insert({ kind: 'keyword', name, status: 'todo', meta: { also: [] } });
     await load();
   };
   return (
-    <AdminShell active="seo" title="SEO & promotion" accent="SEO" subtitle="See which pages work and which don’t, find the searches people make, fix pages in one place, send everything to Google and Bing, and promote the site for free.">
+    <AdminShell active={tab === 'posts' ? 'posts' : tab === 'social' ? 'social' : 'seo'} title="SEO & Google" accent="SEO" subtitle="Five simple sections: check the status, manage pages, connect Google, promote on social media, and see what people search for."
+      onNavigate={(id) => { if (id === 'posts' || id === 'social') { pick(id); return true; } if (id === 'seo') { pick('overview'); return true; } return false; }}>
       <div className="flex flex-col gap-6">
-        <nav role="tablist" className="flex gap-2 overflow-x-auto mt-scroll">
-          {TABS.map(([id, label]) => (
-            <button key={id} role="tab" aria-selected={tab === id} onClick={() => setTab(id)} className={`shrink-0 h-9 px-4 rounded-full text-[13px] font-medium border ${tab === id ? 'bg-mt-primary text-mt-onprimary border-transparent' : 'border-mt-border text-mt-muted hover:text-mt-ink'}`}>{label}</button>
-          ))}
-        </nav>
+        <div className="rounded-3xl border border-mt-border bg-mt-surface p-2">
+          <nav role="tablist" aria-label="SEO sections" className="grid grid-cols-2 sm:grid-cols-5 gap-1">
+            {GROUPS.map((g) => {
+              const on = g === group;
+              return (
+                <button key={g.name} role="tab" aria-selected={on} onClick={() => pick(g.tabs[0][0])} className={`rounded-2xl px-3 py-2.5 text-left transition-colors ${on ? 'bg-mt-ink text-mt-bg' : 'hover:bg-mt-surface2 text-mt-ink'}`}>
+                  <span className="block text-[14px] font-semibold">{g.name}</span>
+                  <span className={`block text-[11.5px] leading-snug mt-0.5 ${on ? 'opacity-75' : 'text-mt-faint'}`}>{g.hint}</span>
+                </button>
+              );
+            })}
+          </nav>
+          {group.tabs.length > 1 && (
+            <div className="mt-2 px-1 pb-1 flex flex-wrap gap-1.5">
+              {group.tabs.map(([id, label]) => (
+                <button key={id} onClick={() => pick(id)} aria-pressed={tab === id} className={`h-8 px-3.5 rounded-full text-[13px] border ${tab === id ? 'border-mt-ink text-mt-ink font-semibold' : 'border-transparent text-mt-muted hover:text-mt-ink'}`}>{label}</button>
+              ))}
+            </div>
+          )}
+        </div>
         {msg && <p className="rounded-2xl bg-mt-accentsoft text-[#4B2FB0] px-4 py-2.5 text-sm">{msg}</p>}
-        {tab === 'overview' && <Overview onEdit={(slug) => openPage({ edit: slug })} onTab={setTab} />}
+        {tab === 'overview' && <><Automation flash={flash} /><Overview onEdit={(slug) => openPage({ edit: slug })} onTab={pick} /></>}
         {tab === 'performance' && <Performance onEdit={(slug) => openPage({ edit: slug })} onDraft={(draft) => openPage({ draft })} flash={flash} />}
-        {tab === 'health' && <PageHealth flash={flash} onTab={setTab} />}
+        {tab === 'health' && <PageHealth flash={flash} onTab={pick} />}
         {tab === 'ideas' && <KeywordIdeas onDraft={(draft) => openPage({ draft })} onKeyword={trackKeyword} />}
         {tab === 'engines' && <Engines gcode={gcode} setGcode={setGcode} bcode={bcode} setBcode={setBcode} flash={flash} busy={busy} setBusy={setBusy} />}
         {tab === 'pages' && <Pages pages={pages} hidden={hidden} setHidden={setHidden} reload={load} flash={flash} request={request} clearRequest={() => setRequest(null)} />}

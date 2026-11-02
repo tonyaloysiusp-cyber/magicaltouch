@@ -13,6 +13,7 @@
 // ---------------------------------------------------------------------
 
 import { TemplateSizes } from '@/components/admin/templates/TemplateSizes';
+import { TemplateGoogle } from '@/components/admin/templates/TemplateGoogle';
 import { TemplateCountCard } from '@/components/admin/templates/TemplateCountCard';
 import { ClaudeTemplate } from '@/components/admin/ClaudeTemplate';
 import { AdminShell } from '@/components/admin/AdminShell';
@@ -125,8 +126,10 @@ export default function AdminTemplatesPage() {
   useEffect(() => {
     const t = new URLSearchParams(window.location.search).get('claude');
     if (t !== null) setClaude({ topic: t });
+    const tb = new URLSearchParams(window.location.search).get('tab');
+    if (tb === 'google' || tb === 'sizes' || tb === 'images' || tb === 'categories') setTab(tb);
   }, []);
-  const [tab, setTab] = useState<'templates' | 'categories' | 'images' | 'sizes'>('templates');
+  const [tab, setTab] = useState<'templates' | 'categories' | 'images' | 'sizes' | 'google'>('templates');
   const [templates, setTemplates] = useState<Template[]>([]);
   const [categories, setCategories] = useState<TemplateCategory[]>([]);
   const [statusFilter, setStatusFilter] = useState<TemplateStatus | 'all'>('all');
@@ -577,7 +580,7 @@ export default function AdminTemplatesPage() {
   }
 
   return (
-    <AdminShell active="templates" title="Template Manager" accent="Template" subtitle="Templates are provided by Magical Touch Design. Customers only see published ones." actions={<Link href="/templates" target="_blank" className="h-9 px-4 rounded-full text-[13px] font-semibold inline-flex items-center gap-1.5 border border-mt-border text-mt-ink hover:bg-mt-surface2">View the gallery</Link>}>
+    <AdminShell active={tab === 'google' ? 'google' : 'templates'} onNavigate={(id) => { if (id === 'google') { setTab('google'); return true; } if (id === 'templates') { setTab('templates'); return true; } return false; }} title="Template Manager" accent="Template" subtitle="Templates are provided by Magical Touch Design. Customers only see published ones." actions={<Link href="/templates" target="_blank" className="h-9 px-4 rounded-full text-[13px] font-semibold inline-flex items-center gap-1.5 border border-mt-border text-mt-ink hover:bg-mt-surface2">View the gallery</Link>}>
     <div onClick={() => setMenuFor(null)}>
       <input ref={thumbInput} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={onThumbnailFile} />
       <TemplateCountCard />
@@ -585,13 +588,13 @@ export default function AdminTemplatesPage() {
 
       <div className="">
         <div className="flex gap-1 border-b">
-          {(['templates', 'images', 'categories', 'sizes'] as const).map((t) => (
+          {(['templates', 'google', 'images', 'categories', 'sizes'] as const).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
               className={`px-4 py-2 text-sm font-medium -mb-px border-b-2 ${tab === t ? 'border-mt-accent text-mt-accent' : 'border-transparent text-mt-muted'}`}
             >
-              {t === 'templates' ? 'Templates' : t === 'images' ? 'Image library' : t === 'sizes' ? 'File sizes' : 'Categories'}
+              {t === 'templates' ? 'Templates' : t === 'google' ? 'Google & hashtags' : t === 'images' ? 'Image library' : t === 'sizes' ? 'File sizes' : 'Categories'}
             </button>
           ))}
         </div>
@@ -603,7 +606,9 @@ export default function AdminTemplatesPage() {
         </div>
       )}
 
-      {tab === 'sizes' ? (
+      {tab === 'google' ? (
+        <TemplateGoogle />
+      ) : tab === 'sizes' ? (
         <TemplateSizes />
       ) : tab === 'images' ? (
         <ImageLibrary />

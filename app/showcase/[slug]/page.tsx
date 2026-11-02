@@ -40,7 +40,7 @@ export default async function PostPage({ params }: { params: { slug: string } })
   const img = postImage(p);
   const more = (await getActivePosts()).filter((x) => x.slug !== p.slug).slice(0, 6);
   const media = p.kind === 'video' && p.video_url
-    ? { '@context': 'https://schema.org', '@type': 'VideoObject', name: p.title, description: p.description, thumbnailUrl: img, contentUrl: abs(p.video_url), uploadDate: p.published_at || p.updated_at, embedUrl: url, publisher: { '@type': 'Organization', name: SITE_NAME, logo: { '@type': 'ImageObject', url: `${SITE_URL}/logo.png` } }, keywords: p.hashtags.join(', ') }
+    ? { '@context': 'https://schema.org', '@type': 'VideoObject', name: p.title, description: p.description, thumbnailUrl: img, contentUrl: abs(p.video_url), uploadDate: p.published_at || p.updated_at, embedUrl: url, publisher: { '@type': 'Organization', name: SITE_NAME, logo: { '@type': 'ImageObject', url: `${SITE_URL}/logo-google.png` } }, keywords: p.hashtags.join(', ') }
     : { '@context': 'https://schema.org', '@type': 'ImageObject', name: p.title, caption: p.description, contentUrl: img, license: `${SITE_URL}/terms`, acquireLicensePage: `${SITE_URL}${p.link || '/templates'}`, creditText: SITE_NAME, creator: { '@type': 'Organization', name: SITE_NAME, url: SITE_URL }, copyrightNotice: `© ${SITE_NAME}`, keywords: p.hashtags.join(', '), datePublished: p.published_at };
   const crumbs = { '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: [{ '@type': 'ListItem', position: 1, name: 'Home', item: SITE_URL }, { '@type': 'ListItem', position: 2, name: 'Showcase', item: `${SITE_URL}/showcase` }, { '@type': 'ListItem', position: 3, name: p.title, item: url }] };
   return (

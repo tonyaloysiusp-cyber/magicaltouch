@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { templateHashtags } from '@/lib/templateHashtags';
 import { notFound } from 'next/navigation';
 import { SeoShell, UseTemplateButton, Crumbs } from '@/components/seo/SeoShell';
 import { SITE_URL, SITE_NAME, SeoTemplate, getAllPublishedTemplates, getTemplateBySlug, getRelatedTemplates, templateDescription, sizeLabel, formatLabel, categorySlug } from '@/lib/seo';
@@ -36,7 +37,7 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   return {
     title,
     description,
-    keywords: [t.name, `${t.category} template`, 'free template', 'online design', ...(t.search_keywords || '').split(',').map((s) => s.trim()).filter(Boolean)].slice(0, 15),
+    keywords: [t.name, `${t.category} template`, 'free template', 'online design', ...(t.search_keywords || '').split(',').map((s) => s.trim()).filter(Boolean), ...templateHashtags(t)].slice(0, 25),
     alternates: { canonical: url },
     openGraph: { type: 'website', url, title, description, siteName: SITE_NAME, images: [{ url: image, alt: `${withTemplate(t.name)} — ${t.category}` }] },
     twitter: { card: 'summary_large_image', title, description, images: [image] },
@@ -63,7 +64,7 @@ export default async function TemplatePage({ params }: { params: { slug: string 
       keywords: [...tags, ...(t.search_keywords || '').split(',').map((s) => s.trim())].filter(Boolean).join(', '),
       isAccessibleForFree: true,
       inLanguage: 'en',
-      publisher: { '@type': 'Organization', name: SITE_NAME, url: SITE_URL, logo: `${SITE_URL}/logo.png` },
+      publisher: { '@type': 'Organization', name: SITE_NAME, url: SITE_URL, logo: `${SITE_URL}/logo-google.png` },
       offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD', availability: 'https://schema.org/InStock' },
     },
     // Image licence details: Google Images can show the picture with a
@@ -123,8 +124,11 @@ export default async function TemplatePage({ params }: { params: { slug: string 
               <li>Change the words, colours, fonts and photos (upload your own or pick from the library).</li>
               <li>Download a print-ready PDF or a picture for social media, or print it directly.</li>
             </ol>
+            <p className="mt-6 flex flex-wrap gap-x-2 gap-y-1 text-[13px] text-[#3B82C4]">
+              {templateHashtags(t).map((h) => <span key={h}>#{h}</span>)}
+            </p>
             {tags.length > 0 && (
-              <div className="mt-6 flex flex-wrap gap-2">
+              <div className="mt-3 flex flex-wrap gap-2">
                 {tags.map((x) => (
                   <span key={x} className="px-3 py-1 rounded-full border border-mt-border text-[12px] text-mt-muted">{x}</span>
                 ))}
