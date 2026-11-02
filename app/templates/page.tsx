@@ -63,6 +63,7 @@ interface Filters {
   sub: string | null;
   styles: string[];
   palette: string | null;
+  region: string | null;
   shape: Shape;
   aspect: string | null;
   medium: 'all' | 'print' | 'digital';
@@ -71,7 +72,14 @@ interface Filters {
   recent: boolean;
   sort: SortKey;
 }
-const NO_FILTERS: Filters = { q: '', cat: 'All', sub: null, styles: [], palette: null, shape: 'all', aspect: null, medium: 'all', pages: 'all', featured: false, recent: false, sort: 'recommended' };
+const NO_FILTERS: Filters = { q: '', cat: 'All', sub: null, styles: [], palette: null, region: null, shape: 'all', aspect: null, medium: 'all', pages: 'all', featured: false, recent: false, sort: 'recommended' };
+
+// Location mode: templates made for a part of the world (tag region-<id>).
+const REGIONS: { id: string; label: string }[] = [
+  { id: 'north-america', label: 'North America' }, { id: 'uk-europe', label: 'UK & Europe' }, { id: 'middle-east', label: 'Middle East' },
+  { id: 'south-asia', label: 'India & South Asia' }, { id: 'east-asia', label: 'East & Southeast Asia' }, { id: 'africa', label: 'Africa' },
+  { id: 'latin-america', label: 'Latin America' }, { id: 'oceania', label: 'Australia & NZ' },
+];
 
 // Curated starting points: each one is just a combination of real filters.
 const COLLECTIONS: { title: string; note: string; f: Partial<Filters> & { catName?: string } }[] = [
@@ -93,6 +101,7 @@ function readFiltersFromUrl(): Partial<Filters> & { catName?: string; subName?: 
   if (p.get('type')) out.subName = p.get('type')!;
   if (p.get('style')) out.styles = p.get('style')!.split(',').filter(Boolean);
   if (p.get('palette')) out.palette = p.get('palette');
+  if (p.get('region')) out.region = p.get('region');
   const sh = p.get('shape');
   if (sh === 'portrait' || sh === 'landscape' || sh === 'square') out.shape = sh;
   if (p.get('ratio')) out.aspect = p.get('ratio');
@@ -158,6 +167,7 @@ export default function TemplatesPage() {
     if (subName) p.set('type', subName);
     if (f.styles.length) p.set('style', f.styles.join(','));
     if (f.palette) p.set('palette', f.palette);
+    if (f.region) p.set('region', f.region);
     if (f.shape !== 'all') p.set('shape', f.shape);
     if (f.aspect) p.set('ratio', f.aspect);
     if (f.medium !== 'all') p.set('use', f.medium);
@@ -210,7 +220,7 @@ export default function TemplatesPage() {
 
   const newest = useMemo(() => templates.reduce((mx, t) => Math.max(mx, time(t)), 0), [templates]);
 
-  type Key = 'cat' | 'sub' | 'styles' | 'palette' | 'shape' | 'aspect' | 'medium' | 'pages' | 'featured' | 'recent' | 'q';
+  type Key = 'cat' | 'sub' | 'styles' | 'palette' | 'region' | 'shape' | 'aspect' | 'medium' | 'pages' | 'featured' | 'recent' | 'q';
   const matches = useCallback(
     (t: Template, fl: Filters, skip?: Key) => {
       const x = meta.get(t)!;
@@ -222,6 +232,7 @@ export default function TemplatesPage() {
       if (skip !== 'sub' && fl.sub && t.categoryId !== fl.sub) return false;
       if (skip !== 'styles' && fl.styles.length && !fl.styles.some((s) => x.styles.includes(s))) return false;
       if (skip !== 'palette' && fl.palette && !x.palettes.includes(fl.palette)) return false;
+      if (skip !== 'region' && fl.region && !(t.tags || []).includes(`region-${fl.region}`)) return false;
       if (skip !== 'shape' && fl.shape !== 'all' && x.shape !== fl.shape) return false;
       if (skip !== 'aspect' && fl.aspect && x.aspect !== fl.aspect) return false;
       if (skip !== 'medium' && fl.medium !== 'all' && x.medium !== fl.medium) return false;
@@ -273,6 +284,7 @@ export default function TemplatesPage() {
   if (f.sub) active.push({ label: categories.find((c) => c.id === f.sub)?.name || 'Type', clear: () => set({ sub: null }) });
   f.styles.forEach((s) => active.push({ label: styleLabel(s), clear: () => set({ styles: f.styles.filter((x) => x !== s) }) }));
   if (f.palette) active.push({ label: PALETTES.find((p) => p.id === f.palette)?.label || f.palette, clear: () => set({ palette: null }) });
+  if (f.region) active.push({ label: REGIONS.find((r) => r.id === f.region)?.label || f.region, clear: () => set({ region: null }) });
   if (f.shape !== 'all') active.push({ label: f.shape[0].toUpperCase() + f.shape.slice(1), clear: () => set({ shape: 'all' }) });
   if (f.aspect) active.push({ label: ASPECTS.find((a) => a.id === f.aspect)?.label || f.aspect, clear: () => set({ aspect: null }) });
   if (f.medium !== 'all') active.push({ label: f.medium === 'print' ? 'For print' : 'For screens', clear: () => set({ medium: 'all' }) });
@@ -280,7 +292,7 @@ export default function TemplatesPage() {
   if (f.featured) active.push({ label: 'Featured', clear: () => set({ featured: false }) });
   if (f.recent) active.push({ label: 'Recently added', clear: () => set({ recent: false }) });
   const clearAll = () => setF({ ...NO_FILTERS, sort: f.sort });
-  const extraCount = [f.palette, f.shape !== 'all', f.aspect, f.medium !== 'all', f.pages !== 'all', f.featured, f.recent].filter(Boolean).length;
+  const extraCount = [f.palette, f.region, f.shape !== 'all', f.aspect, f.medium !== 'all', f.pages !== 'all', f.featured, f.recent].filter(Boolean).length;
 
   const applyCollection = (c: (typeof COLLECTIONS)[number]) => {
     const { catName, ...rest } = c.f;
@@ -451,6 +463,23 @@ export default function TemplatesPage() {
                 })}
               </div>
             </fieldset>
+            {REGIONS.some((r) => f.region === r.id || countWith({ region: r.id }) > 0) && (
+              <fieldset className="sm:col-span-2">
+                <legend className="text-[11px] font-semibold uppercase tracking-[0.12em] text-mt-faint mb-2">Region</legend>
+                <div className="flex flex-wrap gap-1.5">
+                  {REGIONS.map((r) => {
+                    const on = f.region === r.id;
+                    const n = countWith({ region: r.id });
+                    if (!n && !on) return null;
+                    return (
+                      <button key={r.id} onClick={() => set({ region: on ? null : r.id })} aria-pressed={on} className={`rounded-full px-3 py-1.5 border text-xs ${on ? 'mt-active-blue text-mt-ink' : 'border-mt-border text-mt-muted hover:text-mt-ink'}`}>
+                        {r.label} <span className="text-mt-faint">{n}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </fieldset>
+            )}
             <fieldset>
               <legend className="text-[11px] font-semibold uppercase tracking-[0.12em] text-mt-faint mb-2">Shape</legend>
               <div className="flex flex-wrap gap-1.5">
