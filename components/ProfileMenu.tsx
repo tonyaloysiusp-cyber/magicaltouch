@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { User, Settings, LogOut, FolderOpen, LayoutTemplate, Mail } from 'lucide-react';
+import { User, Settings, LogOut, FolderOpen, LayoutTemplate, Mail, LayoutDashboard, Megaphone, Share2, Sparkles, HeartPulse } from 'lucide-react';
 import { supabase, getSessionUser } from '@/lib/supabase';
 import { Profile, CreatorLevel, getOrCreateProfile, getDesignCount, creatorLevelForCount } from '@/lib/profile';
 import { avatarVariant } from '@/lib/avatar/optimize';
@@ -136,14 +136,25 @@ export function ProfileMenu() {
             <Settings size={14} /> Account Settings
           </Link>
           {profile?.is_admin && (
-            <Link href="/admin/templates" onClick={() => setOpen(false)} className="flex items-center gap-2 px-4 py-2 hover:bg-mt-surface2 text-mt-ink">
-              <LayoutTemplate size={14} /> Manage Templates
-            </Link>
-          )}
-          {profile?.is_admin && (
-            <Link href="/admin/email" onClick={() => setOpen(false)} className="flex items-center gap-2 px-4 py-2 hover:bg-mt-surface2 text-mt-ink">
-              <Mail size={14} /> Email Center
-            </Link>
+            <div className="mt-1 pt-2 pb-1 border-t border-mt-border">
+              <Link href="/admin" onClick={() => setOpen(false)} className="mx-2 flex items-center gap-2 px-3 h-9 rounded-lg bg-mt-ink text-mt-bg text-[13px] font-semibold">
+                <LayoutDashboard size={14} /> Admin panel
+              </Link>
+              <div className="mt-1.5 px-2 grid grid-cols-2 gap-1">
+                {([
+                  ['/admin/templates', 'Templates', <LayoutTemplate key="t" size={13} />],
+                  ['/admin/seo', 'SEO & Google', <Megaphone key="s" size={13} />],
+                  ['/admin/seo?tab=social', 'Social media', <Share2 key="so" size={13} />],
+                  ['/admin/email', 'Email', <Mail key="e" size={13} />],
+                  ['/admin/brand', 'Brand', <Sparkles key="b" size={13} />],
+                  ['/admin/health', 'Site health', <HeartPulse key="h" size={13} />],
+                ] as [string, string, JSX.Element][]).map(([href, label, icon]) => (
+                  <Link key={href} href={href} onClick={() => setOpen(false)} className="flex items-center gap-1.5 px-2 h-8 rounded-lg text-[12px] text-mt-muted hover:text-mt-ink hover:bg-mt-surface2">
+                    {icon} {label}
+                  </Link>
+                ))}
+              </div>
+            </div>
           )}
           <button onClick={logout} className="w-full flex items-center gap-2 px-4 py-2 hover:bg-red-50 text-red-500 text-left">
             <LogOut size={14} /> Logout

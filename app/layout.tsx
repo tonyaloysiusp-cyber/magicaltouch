@@ -51,7 +51,7 @@ const ORG_JSON_LD = [
     knowsAbout: ['Graphic design', 'Design templates', 'Online photo editing', 'Print design', 'Social media design'],
     founder: { '@type': 'Person', name: 'Tony Aloysius', jobTitle: 'Founder & CEO' },
     url: SITE_URL,
-    logo: `${SITE_URL}/logo.png`,
+    logo: `${SITE_URL}/logo-google.png`,
     email: 'hello@magicaltouchdesign.com',
     address: { '@type': 'PostalAddress', addressRegion: 'Tamil Nadu', addressCountry: 'IN' },
     areaServed: 'Worldwide',
