@@ -12,6 +12,7 @@
 //  · Campaign links — tracked links (UTM) for posts, ads and partners
 
 import { GooglePosts } from '@/components/admin/seo/GooglePosts';
+import { expandList } from '@/lib/templatesData';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -443,7 +444,7 @@ function Keywords({ promo, reload }: { promo: Promo[]; pages: SeoPage[]; hidden:
   const [days, setDays] = useState(30);
   const [note, setNote] = useState<string | null>(null);
   useEffect(() => {
-    fetch('/api/public-templates').then((r) => r.json()).then((rows: any[]) => setTpl((rows || []).map((t) => ({ hay: `${t.name || ''} ${t.category || ''} ${(t.tags || []).join(' ')} ${t.search_keywords || ''} ${t.occasion || ''} ${t.industry || ''}`.toLowerCase() })))).catch(() => {});
+    fetch('/api/public-templates').then((r) => r.json()).then((body: any) => setTpl((expandList(body) as any[]).map((t) => ({ hay: `${t.name || ''} ${t.category || ''} ${(t.tags || []).join(' ')} ${t.search_keywords || ''} ${t.occasion || ''} ${t.industry || ''}`.toLowerCase() })))).catch(() => {});
   }, []);
   useEffect(() => {
     supabase.rpc('admin_searches', { p_days: days }).then(({ data }) => setSearches((data as any[]) || []));

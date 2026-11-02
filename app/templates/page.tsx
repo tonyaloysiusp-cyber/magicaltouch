@@ -270,6 +270,20 @@ export default function TemplatesPage() {
     return list; // curated order: featured first, then the editors' order
   }, [templates, f, matches]);
 
+  // Draw the grid in steps (60 at a time, more as you scroll) — putting all
+  // 8,000+ cards on the page at once made it slow, especially on phones/iPad.
+  const STEP = 60;
+  const [shown, setShown] = useState(STEP);
+  useEffect(() => { setShown(STEP); }, [filtered]);
+  const moreRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = moreRef.current;
+    if (!el || shown >= filtered.length) return;
+    const io = new IntersectionObserver((es) => { if (es.some((e) => e.isIntersecting)) setShown((n) => n + STEP); }, { rootMargin: '1200px 0px' });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [shown, filtered.length]);
+
   // What visitors search (and how many templates they found) for Admin → Keywords.
   useEffect(() => {
     if (!f.q.trim() || !templates.length) return;
@@ -571,7 +585,7 @@ export default function TemplatesPage() {
 
       <section id="template-grid" className="max-w-[1400px] mx-auto px-4 sm:px-6 py-10 scroll-mt-20">
         <div className="columns-2 md:columns-3 lg:columns-4 xl:columns-5 min-[1800px]:columns-6 gap-4 2xl:gap-5 [&>*]:mb-4">
-          {filtered.map((t) => {
+          {filtered.slice(0, shown).map((t) => {
             const x = meta.get(t);
             const pages = x?.pages || 1;
             return (
@@ -612,6 +626,11 @@ export default function TemplatesPage() {
             );
           })}
         </div>
+        {shown < filtered.length && (
+          <div ref={moreRef} className="py-8 flex justify-center">
+            <button onClick={() => setShown((n) => n + STEP * 2)} className="h-10 px-5 rounded-full border border-mt-border text-sm font-semibold text-mt-ink hover:bg-mt-surface2">Show more templates</button>
+          </div>
+        )}
 
         {filtered.length === 0 && (
           <div className="text-center py-20">

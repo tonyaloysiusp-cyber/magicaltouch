@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { ArrowRight, ArrowUpRight, Crown } from 'lucide-react';
-import { Template, TemplateCategory, fetchPublicTemplates, fetchCategories } from '@/lib/templatesData';
+import { Template, TemplateCategory, fetchCategories, expandList, rowToTemplate } from '@/lib/templatesData';
 import { countLabel, useCountStyle } from '@/lib/templateCount';
 import { Reveal } from './Reveal';
 
@@ -18,9 +18,20 @@ export function TemplateShowcase() {
   const [templates, setTemplates] = useState<Template[]>([]);
   const [categories, setCategories] = useState<TemplateCategory[]>([]);
   const [active, setActive] = useState<string>('All');
+  const [counts, setCounts] = useState<Record<string, number>>({});
+  const [total, setTotal] = useState(0);
 
   useEffect(() => {
-    fetchPublicTemplates().then((list) => setTemplates(list.filter((t) => !!t.id && !!t.thumbnail)));
+    // A small list made for this section (counts + first templates per category).
+    fetch('/api/home-showcase')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((body) => {
+        if (!body) return;
+        setTemplates(expandList(body).map(rowToTemplate).filter((t) => !!t.id && !!t.thumbnail));
+        setCounts(body.counts || {});
+        setTotal(body.total || 0);
+      })
+      .catch(() => {});
     fetchCategories().then(setCategories);
   }, []);
 
@@ -34,9 +45,13 @@ export function TemplateShowcase() {
     });
     return Object.entries(by)
       .sort(([a], [b]) => (CATEGORY_ORDER.indexOf(a) + 100) % 100 - (CATEGORY_ORDER.indexOf(b) + 100) % 100)
-      .map(([name, list]) => ({ name, count: list.length, covers: list.slice(0, 3) }));
+      .map(([name, list]) => {
+        const ids = Array.from(new Set(list.map((t) => t.categoryId || t.category)));
+        const n = ids.reduce((s, id) => s + (counts[id as string] || 0), 0);
+        return { name, count: n || list.length, covers: list.slice(0, 3) };
+      });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [templates, categories]);
+  }, [templates, categories, counts]);
 
   const visible = useMemo(() => {
     const list = active === 'All' ? templates : templates.filter((t) => catName(t) === active);
@@ -56,7 +71,7 @@ export function TemplateShowcase() {
           <div className="flex flex-wrap items-end justify-between gap-6">
             <div>
               <h2 className="font-[family-name:var(--font-display)] font-medium text-3xl sm:text-5xl leading-[1.08] tracking-[-0.03em]">
-                {countLabel(templates.length, countStyle)} designs,
+                {countLabel(total || templates.length, countStyle)} designs,
                 <br />
                 ready to make yours.
               </h2>
