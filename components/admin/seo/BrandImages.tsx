@@ -19,7 +19,9 @@ import { useTemplateCountLabel } from '@/lib/templateCount';
 const card = 'rounded-3xl border border-mt-border bg-mt-surface p-5 sm:p-6';
 const field = 'w-full h-10 rounded-xl border border-mt-input-border bg-mt-surface px-3 text-sm text-mt-ink';
 const btn = 'h-9 px-4 rounded-full text-[13px] font-semibold inline-flex items-center gap-1.5 disabled:opacity-40';
-interface T { id: string; slug: string; name: string; thumbnail: string | null; preview: string | null; width: number; height: number; status?: string }
+interface T { id: string; slug: string; name: string; thumbnail: string | null; preview: string | null; width: number; height: number; status?: string; tags?: string[] | null }
+const FORMATS: [string, string][] = [['all', 'All'], ['post', 'Instagram'], ['story', 'Stories'], ['google', 'Google Business'], ['fb', 'Facebook'], ['linkedin', 'LinkedIn'], ['pin', 'Pinterest'], ['yt', 'YouTube'], ['header', 'X header'], ['square', 'Square'], ['quote', 'Founder quotes']];
+const fmtOf = (p: T) => (p.tags || []).find((t) => t.startsWith('promo-'))?.slice(6) || (/Quote/.test(p.name) ? 'quote' : 'other');
 
 export function BrandImages({ flash }: { flash: (m: string) => void }) {
   const count = useTemplateCountLabel();
@@ -30,6 +32,9 @@ export function BrandImages({ flash }: { flash: (m: string) => void }) {
   const [v, setV] = useState(Date.now());
   const [busy, setBusy] = useState(false);
   const [promos, setPromos] = useState<T[] | null>(null);
+  const [pf, setPf] = useState('all');
+  const [pq, setPq] = useState('');
+  const [more, setMore] = useState(24);
 
   useEffect(() => {
     supabase.from('site_settings').select('value').eq('key', 'share_image').maybeSingle().then(async ({ data }) => {
@@ -40,7 +45,7 @@ export function BrandImages({ flash }: { flash: (m: string) => void }) {
         setPicked(((rows as T[]) || []).sort((a, b) => x.templates.indexOf(a.slug) - x.templates.indexOf(b.slug)));
       }
     });
-    supabase.from('templates').select('id,slug,name,thumbnail,preview,width,height,status').contains('tags', ['brand-promo']).order('sort_order').then(({ data }) => setPromos((data as T[]) || []));
+    supabase.from('templates').select('id,slug,name,thumbnail,preview,width,height,status,tags').contains('tags', ['brand-promo']).order('sort_order').then(({ data }) => setPromos((data as T[]) || []));
   }, []);
 
   useEffect(() => {
@@ -132,8 +137,18 @@ export function BrandImages({ flash }: { flash: (m: string) => void }) {
         {promos === null ? <p className="mt-3 text-sm text-mt-muted inline-flex items-center gap-2"><Loader2 size={15} className="animate-spin" /> Loading…</p> : !promos.length ? (
           <p className="mt-3 text-[13px] text-mt-muted">No promo designs yet.</p>
         ) : (
+          <>
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            {FORMATS.map(([id, l]) => {
+              const n = id === 'all' ? promos.length : promos.filter((p) => fmtOf(p) === id).length;
+              if (!n) return null;
+              return <button key={id} onClick={() => { setPf(id); setMore(24); }} className={`h-8 px-3 rounded-full text-[12px] border ${pf === id ? 'bg-mt-ink text-mt-bg border-transparent' : 'border-mt-border text-mt-muted'}`}>{l} <span className="opacity-60">{n}</span></button>;
+            })}
+            <label className="relative ml-auto"><Search size={13} className="absolute left-2.5 top-2.5 text-mt-faint" /><input value={pq} onChange={(e) => { setPq(e.target.value); setMore(24); }} placeholder="Search promos" className="h-8 w-48 rounded-full border border-mt-input-border bg-mt-surface pl-7 pr-3 text-[12px] text-mt-ink" /></label>
+          </div>
+          <p className="mt-2 text-[12px] text-mt-faint">Only admins can see and edit these. Post them to your social profiles, or show them on Google from <b>Google posts</b>.</p>
           <ul className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            {promos.map((p) => (
+            {promos.filter((p) => (pf === 'all' || fmtOf(p) === pf) && (!pq.trim() || p.name.toLowerCase().includes(pq.trim().toLowerCase()))).slice(0, more).map((p) => (
               <li key={p.id} className="rounded-2xl border border-mt-border overflow-hidden flex flex-col">
                 <div className="aspect-square bg-mt-surface2 grid place-items-center">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -149,6 +164,10 @@ export function BrandImages({ flash }: { flash: (m: string) => void }) {
               </li>
             ))}
           </ul>
+          {promos.filter((p) => (pf === 'all' || fmtOf(p) === pf) && (!pq.trim() || p.name.toLowerCase().includes(pq.trim().toLowerCase()))).length > more && (
+            <button onClick={() => setMore(more + 48)} className="mt-4 h-9 px-4 rounded-full border border-mt-border text-[13px] font-semibold">Show more</button>
+          )}
+          </>
         )}
       </section>
     </>
