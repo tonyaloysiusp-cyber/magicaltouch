@@ -76,7 +76,7 @@ const resilientFetch: typeof fetch = async (input: any, init?: RequestInit) => {
   // data, so a web page means "use our own domain instead". (On iPad/Safari
   // this showed as "The string did not match the expected pattern.")
   const ct = res.headers.get('content-type') || '';
-  if (!isStorage && ct && !/json/i.test(ct)) {
+  if (!isStorage && !url.startsWith(`${supabaseUrl}/functions/`) && ct && !/json/i.test(ct)) {
     rememberProxy();
     return timedFetch(viaProxy(url), init, ms ? ms * 2 : null);
   }
