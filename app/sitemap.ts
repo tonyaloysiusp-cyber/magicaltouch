@@ -33,6 +33,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     pages.push({ url: `${SITE_URL}/tutorials/${c.slug}`, lastModified: now, changeFrequency: 'monthly', priority: 0.7 });
     c.lessons.forEach((l) => pages.push({ url: `${SITE_URL}/tutorials/${c.slug}/${l.slug}`, lastModified: now, changeFrequency: 'monthly', priority: 0.6 }));
   });
+  pages.push({ url: `${SITE_URL}/mockups`, lastModified: now, changeFrequency: 'weekly', priority: 0.9 });
+  pages.push({ url: `${SITE_URL}/remove-background`, lastModified: now, changeFrequency: 'weekly', priority: 0.9 });
   pages.push({ url: `${SITE_URL}/showcase`, lastModified: now, changeFrequency: 'daily', priority: 0.8 });
   (await getActivePosts()).forEach((p) => pages.push({ url: `${SITE_URL}/showcase/${p.slug}`, lastModified: new Date(p.updated_at), changeFrequency: 'weekly', priority: 0.85 }));
   const templates = await getAllPublishedTemplates();
