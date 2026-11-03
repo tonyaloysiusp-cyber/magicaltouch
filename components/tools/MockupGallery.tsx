@@ -41,6 +41,21 @@ export function MockupGallery() {
   const input = useRef<HTMLInputElement>(null);
   const gen = useRef(0);
 
+  // /mockups?img=/templates/… opens with that design (from a template page's
+  // "See it as a mockup" button). Only our own template pictures are allowed.
+  useEffect(() => {
+    try {
+      const u = new URLSearchParams(window.location.search).get('img');
+      if (u && /^\/templates\/[\w./-]+\.(webp|png|jpe?g)$/i.test(u) && !u.includes('..')) {
+        setSrc(u);
+        setOwn(true);
+        setMode('design');
+      }
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
   // Build the art whenever the picture, mode or logo colour changes.
   useEffect(() => {
     let live = true;
