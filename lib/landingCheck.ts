@@ -6,7 +6,8 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { SITE_URL, searchTemplates } from '@/lib/seo';
-import { decide, livePages, parseSettings, summarize, PageCheck, StatusRow } from '@/lib/landingLifecycle';
+import { decide, livePages, parseSettings, summarize, PageCheck, StatusRow, Decision } from '@/lib/landingLifecycle';
+import { festivalDates, seasonState, OccasionDate } from '@/lib/landingSeasons';
 
 async function pool<T, R>(items: T[], n: number, fn: (x: T) => Promise<R>): Promise<R[]> {
   const out: R[] = new Array(items.length);
@@ -34,9 +35,16 @@ export async function runLandingCheck(supabase: SupabaseClient, token: string | 
   if (e1 || e2 || !perf || !life) throw new Error((e1 || e2)?.message || 'No data');
   const settings = parseSettings((life as any).settings);
   const hidden = new Set(String((perf as any).hidden || '').split(',').map((x) => x.trim()).filter(Boolean));
+  // Pages the festival season switched off are still ours to switch back on.
+  const seasonOff = new Set(String((life as any).season_off || '').split(',').map((x) => x.trim()).filter(Boolean));
+  const occasions = ((life as any).occasions || []) as OccasionDate[];
   const views = new Map<string, number>(((perf as any).views || []).map((v: any) => [v.path, Number(v.v30) || 0]));
   const search = new Map<string, number>(((perf as any).entries || []).map((e: any) => [e.path, Number(e.search) || 0]));
-  const pages = livePages((perf as any).pages || [], hidden);
+  const all = livePages((perf as any).pages || [], new Set(Array.from(hidden).filter((x) => !seasonOff.has(x))));
+  const seasons = new Map(all.map(({ l }) => [l.slug, seasonState(festivalDates(l.slug, l.h1, occasions))]));
+  // Off-season festival pages aren't opened or judged — they wait for their season.
+  const pages = all.filter(({ l }) => { const st = seasons.get(l.slug); return !(st?.seasonal && !st.inSeason && seasonOff.has(l.slug)); });
+  const resting = all.filter((x) => !pages.includes(x));
 
   const checks: PageCheck[] = await pool(pages, 6, async ({ l, kind }) => {
     const tool = !!l.ctaHref;
@@ -49,7 +57,17 @@ export async function runLandingCheck(supabase: SupabaseClient, token: string | 
     return { slug: l.slug, h1: l.h1, kind, tool, templates, http: page.http, views30: views.get(`/${l.slug}`) || 0, search30: search.get(`/${l.slug}`) || 0 };
   });
 
-  const { decisions, blocked } = decide(checks, ((life as any).status || []) as StatusRow[], settings, (life as any).google_since || null);
+  const { decisions: judged, blocked } = decide(checks, ((life as any).status || []) as StatusRow[], settings, (life as any).google_since || null, new Date(), seasons);
+  const decisions: Decision[] = [
+    ...judged,
+    ...resting.map(({ l, kind }) => ({ slug: l.slug, h1: l.h1, kind, tool: !!l.ctaHref, templates: null, http: null, views30: 0, search30: 0, day: 0, status: 'off-season' as const, reason: `Festival page — switched off until ${seasons.get(l.slug)?.next || 'its next date'}`, remove: false, season: 'off' as const })),
+  ];
+  // Festival seasons: switch on before the day, off a week after.
+  if (apply && settings.on) {
+    const off = decisions.filter((d) => d.season === 'off' && !hidden.has(d.slug)).map((d) => d.slug);
+    const on = decisions.filter((d) => d.season === 'on' && seasonOff.has(d.slug)).map((d) => d.slug);
+    if (off.length || on.length) await supabase.rpc('landing_season', { p_token: token, p_off: off, p_on: on });
+  }
   const summary = summarize(decisions, blocked);
   const remove = apply ? decisions.filter((d) => d.remove).map((d) => ({ slug: d.slug, kind: d.kind, reason: d.reason, delete: !!d.del })) : [];
   const rows = decisions.filter((d) => !remove.some((r) => r.slug === d.slug)).map((d) => ({ slug: d.slug, kind: d.kind, status: d.status, reason: d.reason, views30: d.views30, search30: d.search30, templates: d.templates, http: d.http }));

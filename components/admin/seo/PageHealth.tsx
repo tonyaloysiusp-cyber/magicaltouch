@@ -16,17 +16,18 @@ import { apiFetch } from '@/lib/api/client';
 
 const card = 'rounded-3xl border border-mt-border bg-mt-surface p-5 sm:p-6';
 const btn = 'h-9 px-4 rounded-full text-[13px] font-semibold inline-flex items-center gap-1.5 disabled:opacity-40';
-type St = 'working' | 'warming' | 'not-working' | 'removed' | 'deleted';
+type St = 'working' | 'warming' | 'not-working' | 'off-season' | 'removed' | 'deleted';
 interface Row { slug: string; h1: string; kind: string; first_seen: string; status: St; reason: string | null; views30: number; search30: number; templates: number | null; http: number | null; checked_at: string | null; removed_at: string | null }
 interface Data { status: Row[]; settings: string | { on: boolean; days: number }; googleSince: string | null; last: { at: string; removed: number; checked: number; summary: string | null } | null }
 
-const ORDER: St[] = ['not-working', 'warming', 'working', 'removed', 'deleted'];
+const ORDER: St[] = ['not-working', 'warming', 'working', 'off-season', 'removed', 'deleted'];
 const broken = (r: { http: number | null; templates: number | null; reason: string | null }) => (r.http !== null && r.http !== 200) || r.templates === 0;
 
 const META: Record<St, { label: string; cls: string; icon: JSX.Element }> = {
   working: { label: 'Working', cls: 'bg-emerald-600/10 text-emerald-700 dark:text-emerald-400', icon: <CheckCircle2 size={14} /> },
   warming: { label: 'Warming up', cls: 'bg-sky-500/10 text-sky-700 dark:text-sky-400', icon: <Clock size={14} /> },
   'not-working': { label: 'Not working', cls: 'bg-rose-600/10 text-rose-700 dark:text-rose-400', icon: <XCircle size={14} /> },
+  'off-season': { label: 'Off season', cls: 'bg-amber-500/10 text-amber-700 dark:text-amber-400', icon: <Clock size={14} /> },
   removed: { label: 'Switched off', cls: 'bg-mt-surface2 text-mt-muted', icon: <XCircle size={14} /> },
   deleted: { label: 'Deleted', cls: 'bg-rose-950/10 text-rose-900 dark:text-rose-300', icon: <Trash2 size={14} /> },
 };
@@ -79,7 +80,7 @@ export function PageHealth({ flash, onTab }: { flash: (m: string) => void; onTab
       </section>
 
       <section className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-        {(['working', 'warming', 'not-working', 'removed', 'deleted'] as St[]).map((s) => (
+        {(['working', 'warming', 'not-working', 'off-season', 'removed', 'deleted'] as St[]).map((s) => (
           <button key={s} onClick={() => setShow(show === s ? 'all' : s)} className={`text-left rounded-3xl border bg-mt-surface p-4 ${show === s ? 'border-mt-ink' : 'border-mt-border'}`}>
             <span className={`inline-flex items-center gap-1 text-[11px] font-semibold uppercase px-2 py-0.5 rounded-full ${META[s].cls}`}>{META[s].icon}{META[s].label}</span>
             <p className="mt-2 text-2xl font-semibold tabular-nums">{count(s)}</p>

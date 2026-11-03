@@ -7,13 +7,17 @@ export const BRAND_TAGS = ['magicaltouchdesign', 'magicaltouch', 'freetemplates'
 const clean = (s: string) => s.toLowerCase().replace(/&/g, 'and').replace(/[^a-z0-9]+/g, '');
 const STOP = new Set(['the', 'and', 'for', 'with', 'your', 'a', 'an', 'of', 'to', 'in', 'on', 'my', 'our', 'post', 'story', 'template', 'templates', 'design', 'free', 'modern', 'simple', 'minimal']);
 
-export interface HashtagSource { name: string; category: string; occasion?: string | null; industry?: string | null; hashtags?: string[] | null; search_keywords?: string | null }
+import { typeHashtags } from '@/lib/designTypes';
+
+export interface HashtagSource { name: string; category: string; occasion?: string | null; industry?: string | null; hashtags?: string[] | null; search_keywords?: string | null; width?: number; height?: number; tags?: string[] | null }
 
 /** Automatic tags only (ignores any written ones). */
-export function autoHashtags(t: HashtagSource, max = 10): string[] {
+export function autoHashtags(t: HashtagSource, max = 12): string[] {
   const out: string[] = [];
   const add = (s?: string | null) => { const v = s ? clean(s) : ''; if (v.length >= 3 && v.length <= 32 && !out.includes(v)) out.push(v); };
   const cat = t.category || '';
+  // What it is + what it's for first ("birthday flyer", "photo album", "photo editing").
+  typeHashtags({ name: t.name, category: cat, width: t.width || 1080, height: t.height || 1080, tags: t.tags, occasion: t.occasion, industry: t.industry, searchKeywords: t.search_keywords }).forEach(add);
   add(`${cat} template`);
   add(`${cat} design`);
   if (t.occasion) { add(t.occasion); add(`${t.occasion} template`); }

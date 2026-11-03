@@ -90,11 +90,21 @@ async function fetchAllPublished(): Promise<SeoTemplate[]> {
 }
 
 /** Published templates whose name or keywords contain any of the terms. */
+// A term with "+" needs every part ("wedding+album": wedding AND album, each
+// in the name, keywords, category or occasion) — so a page for "business
+// flyer" shows business flyers, not every flyer and every business design.
 export async function searchTemplates(terms: string[], limit = 40): Promise<SeoTemplate[]> {
+  const clean = (t: string) => t.replace(/[^\p{L}\p{N} ]/gu, '').trim();
   const ors = terms
-    .map((t) => t.replace(/[^\p{L}\p{N} ]/gu, '').trim())
-    .filter(Boolean)
-    .flatMap((t) => [`name.ilike.*${t}*`, `search_keywords.ilike.*${t}*`])
+    .flatMap((t) => {
+      if (t.includes('+')) {
+        const parts = t.split('+').map(clean).filter(Boolean);
+        if (!parts.length) return [];
+        return [`and(${parts.map((w) => `or(name.ilike.*${w}*,search_keywords.ilike.*${w}*,category.ilike.*${w}*,occasion.ilike.*${w}*)`).join(',')})`];
+      }
+      const w = clean(t);
+      return w ? [`name.ilike.*${w}*`, `search_keywords.ilike.*${w}*`] : [];
+    })
     .join(',');
   if (!ors) return [];
   const rows = await rest<SeoTemplate[]>(`templates?select=${COLS}&${PUBLISHED}&or=(${encodeURIComponent(ors)})&order=is_featured.desc,sort_order.asc&limit=${limit}`);
