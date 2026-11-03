@@ -8,7 +8,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Menu, Plus, X } from 'lucide-react';
+import { ImagePlus, Menu, Plus, X } from 'lucide-react';
 import { ThemeSwitch } from '@/components/ThemeSwitch';
 import { ProfileMenu } from '@/components/ProfileMenu';
 import { BrandLogo } from '@/components/BrandLogo';
@@ -20,7 +20,6 @@ export type SiteTab = 'create' | 'templates' | 'photo' | 'tutorials' | 'tools' |
 
 const TABS: { id: SiteTab; label: string; href: string; xl?: boolean }[] = [
   { id: 'templates', label: 'Templates', href: '/templates' },
-  { id: 'photo', label: 'Photo Studio', href: '/photo-studio' },
   { id: 'tutorials', label: 'Tutorials', href: '/tutorials' },
   { id: 'tools', label: 'Free tools', href: '/free-design-tools', xl: true },
   { id: 'about', label: 'About', href: '/about' },
@@ -117,6 +116,14 @@ export function SiteHeader({
           >
             <Plus size={15} aria-hidden /> {loggedIn ? 'New design' : 'Start designing'}
           </button>
+          <Link
+            href="/photo-studio"
+            aria-current={active === 'photo' ? 'page' : undefined}
+            title="Upload a photo to edit, retouch or remove its background"
+            className="hidden md:inline-flex items-center gap-1.5 text-sm font-semibold px-3.5 py-2.5 rounded-full border border-mt-border text-mt-ink hover:bg-mt-surface2"
+          >
+            <ImagePlus size={15} aria-hidden /> Photo Studio
+          </Link>
           {loggedIn && <ProfileMenu />}
           <button
             className="lg:hidden h-10 w-10 -mr-1 inline-flex items-center justify-center rounded-full text-mt-ink hover:bg-mt-surface2"
@@ -134,6 +141,7 @@ export function SiteHeader({
         <div id="site-menu" className="lg:hidden border-t border-mt-border bg-mt-bg h-[calc(100dvh-4rem)] overflow-y-auto">
           <div className="mt-container py-4 flex flex-col">
             <button onClick={create} className="py-3 text-left text-[17px] font-medium text-mt-ink border-b border-mt-border">Create a design</button>
+            <Link href="/photo-studio" onClick={() => setOpen(false)} className="py-3 text-[17px] font-medium text-mt-ink border-b border-mt-border">Photo Studio — edit a photo</Link>
             {TABS.map((t) => (
               <Link key={t.id} href={t.href} onClick={() => setOpen(false)} aria-current={active === t.id ? 'page' : undefined} className={`py-3 text-[17px] font-medium border-b border-mt-border ${active === t.id ? 'text-mt-ink' : 'text-mt-muted'}`}>
                 {t.label}
