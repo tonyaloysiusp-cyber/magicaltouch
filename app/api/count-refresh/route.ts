@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { revalidatePath, revalidateTag } from 'next/cache';
 import { createAnonSupabaseClient } from '@/lib/supabase/server';
 import { requireAdmin } from '@/lib/api/admin';
-import { COUNT_TAG } from '@/lib/templateCountServer';
+import { COUNT_TAG, clearCountMemo } from '@/lib/templateCountServer';
 
 // POST /api/count-refresh — makes every page show the new template count at
 // once. Called by the database whenever templates are added, published,
@@ -21,8 +21,12 @@ export async function POST(request: NextRequest) {
     try { await requireAdmin(request); ok = true; } catch { ok = false; }
   }
   if (!ok) return NextResponse.json({ error: 'Not allowed' }, { status: 401 });
+  clearCountMemo();
   revalidateTag(COUNT_TAG);
-  revalidatePath('/', 'layout');
+  // Not revalidatePath('/', 'layout'): that threw away every cached page on
+  // each import, and the rebuild storm timed the database out (522s). Pages
+  // pick up the new count on their normal hourly refresh.
+  revalidatePath('/');
   revalidatePath('/api/public-templates');
   revalidatePath('/api/og');
   return NextResponse.json({ refreshed: true, at: new Date().toISOString() });

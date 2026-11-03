@@ -65,7 +65,20 @@ export async function getTemplatesInCategory(category: string, limit = 400): Pro
 }
 
 /** Every published template (paged, PostgREST returns at most 1000 rows per call). */
-export async function getAllPublishedTemplates(): Promise<SeoTemplate[]> {
+// Kept in memory for 10 minutes per server instance as well as in the data
+// cache: the full list is ~5 MB over 9 requests, and logs showed it being
+// fetched thousands of times a day (it fed every category page).
+let allMemo: { at: number; p: Promise<SeoTemplate[]> } | null = null;
+export function getAllPublishedTemplates(): Promise<SeoTemplate[]> {
+  if (allMemo && Date.now() - allMemo.at < 600_000) return allMemo.p;
+  const p = fetchAllPublished().then((rows) => {
+    if (!rows.length) allMemo = null; // don't keep a failed fetch
+    return rows;
+  });
+  allMemo = { at: Date.now(), p };
+  return p;
+}
+async function fetchAllPublished(): Promise<SeoTemplate[]> {
   const out: SeoTemplate[] = [];
   for (let from = 0; from < 20000; from += 1000) {
     const rows = await rest<SeoTemplate[]>(`templates?select=${COLS}&${PUBLISHED}&order=sort_order.asc,id.asc&offset=${from}&limit=1000`);
@@ -91,9 +104,14 @@ export async function searchTemplates(terms: string[], limit = 40): Promise<SeoT
 // Category ↔ URL segment ("Social Media" ↔ "social-media").
 export const categorySlug = (c: string) => c.toLowerCase().replace(/&/g, 'and').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 export async function getCategories(): Promise<{ name: string; slug: string; count: number }[]> {
-  const rows = await getAllPublishedTemplates();
+  // Only the category column (~150 KB) instead of the full list.
   const m = new Map<string, number>();
-  rows.forEach((r) => m.set(r.category, (m.get(r.category) || 0) + 1));
+  for (let from = 0; from < 20000; from += 1000) {
+    const rows = await rest<{ category: string }[]>(`templates?select=category&${PUBLISHED}&order=id.asc&offset=${from}&limit=1000`);
+    if (!rows || !rows.length) break;
+    rows.forEach((r) => m.set(r.category, (m.get(r.category) || 0) + 1));
+    if (rows.length < 1000) break;
+  }
   return [...m.entries()].sort((a, b) => b[1] - a[1]).map(([name, count]) => ({ name, slug: categorySlug(name), count }));
 }
 
