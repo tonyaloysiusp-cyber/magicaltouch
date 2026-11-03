@@ -18,7 +18,25 @@ async function rest(path: string, extra: Record<string, string> = {}) {
   } as RequestInit);
 }
 
+// Also memoised in memory per server instance (5 min): every page's layout
+// asks for the count, and logs showed hundreds of count queries every 15
+// minutes reaching the database.
+let countMemo: { at: number; n: number | null } | null = null;
+let styleMemo: { at: number; s: CountStyle } | null = null;
+
+export function clearCountMemo() {
+  countMemo = null;
+  styleMemo = null;
+}
+
 export async function getTemplateCount(): Promise<number | null> {
+  if (countMemo && Date.now() - countMemo.at < 300_000) return countMemo.n;
+  const n = await fetchCount();
+  if (n) countMemo = { at: Date.now(), n };
+  return n;
+}
+
+async function fetchCount(): Promise<number | null> {
   try {
     const res = await rest('templates?select=id&status=eq.published&limit=1', { Prefer: 'count=exact' });
     if (!res) return null;
@@ -30,10 +48,13 @@ export async function getTemplateCount(): Promise<number | null> {
 }
 
 export async function getCountStyle(): Promise<CountStyle> {
+  if (styleMemo && Date.now() - styleMemo.at < 300_000) return styleMemo.s;
   try {
     const res = await rest('site_settings?select=value&key=eq.template_count_style');
     const rows = res && res.ok ? ((await res.json()) as { value: string }[]) : [];
-    return parseCountStyle(rows[0]?.value);
+    const s = parseCountStyle(rows[0]?.value);
+    if (res && res.ok) styleMemo = { at: Date.now(), s };
+    return s;
   } catch {
     return 'rounded50';
   }
