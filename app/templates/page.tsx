@@ -60,6 +60,7 @@ const RECENT_DAYS = 30;
 type Shape = 'all' | 'portrait' | 'landscape' | 'square';
 interface Filters {
   q: string;
+  group: string | null; // Social media, Print & marketing…
   kind: string | null; // design type id (flyer, poster, photo-album…)
   occ: string | null; // occasion id
   photo: boolean;
@@ -76,7 +77,7 @@ interface Filters {
   recent: boolean;
   sort: SortKey;
 }
-const NO_FILTERS: Filters = { q: '', kind: null, occ: null, photo: false, cat: 'All', sub: null, styles: [], palette: null, region: null, shape: 'all', aspect: null, medium: 'all', pages: 'all', featured: false, recent: false, sort: 'recommended' };
+const NO_FILTERS: Filters = { q: '', group: null, kind: null, occ: null, photo: false, cat: 'All', sub: null, styles: [], palette: null, region: null, shape: 'all', aspect: null, medium: 'all', pages: 'all', featured: false, recent: false, sort: 'recommended' };
 
 // Location mode: templates made for a part of the world (tag region-<id>).
 const REGIONS: { id: string; label: string }[] = [
@@ -116,6 +117,15 @@ const OCCASIONS: { id: string; label: string; words: string[] }[] = [
   { id: 'back-to-school', label: 'Back to school', words: ['back to school', 'first day of school'] },
 ];
 const PHOTO_TYPES = ['photo-album', 'photo-collage', 'photo-frame'];
+// The few big groups people think in; each is a set of design types.
+const GROUPS: { id: string; label: string; types: string[] }[] = [
+  { id: 'social', label: 'Social media', types: ['social-post', 'story', 'thumbnail', 'banner'] },
+  { id: 'print', label: 'Print & marketing', types: ['flyer', 'poster', 'brochure', 'magazine', 'ad', 'sign', 'label', 'ticket'] },
+  { id: 'cards', label: 'Invitations & cards', types: ['invitation', 'greeting-card'] },
+  { id: 'photos', label: 'Photos & albums', types: ['photo-album', 'photo-collage', 'photo-frame'] },
+  { id: 'business', label: 'Business & documents', types: ['business-card', 'letterhead', 'menu', 'resume', 'certificate', 'presentation', 'invoice', 'planner', 'logo', 'email', 'mockup'] },
+];
+const GROUP_BY_ID = new Map(GROUPS.map((g) => [g.id, g]));
 const POPULAR = ['Business flyer', 'Wedding album', 'Birthday invitation', 'Instagram post', 'Restaurant menu', 'Diwali post', 'Resume', 'Certificate'];
 
 interface Meta { styles: string[]; palettes: string[]; medium: string; pages: number; shape: string; aspect: string | null; types: string[]; topic: string; photo: boolean; occs: string[]; name: string; hay: string }
@@ -138,6 +148,7 @@ function readFiltersFromUrl(): Partial<Filters> & { catName?: string; subName?: 
   const out: Partial<Filters> & { catName?: string; subName?: string } = {};
   if (p.get('q')) out.q = p.get('q')!;
   if (p.get('kind') && TYPE_BY_ID.has(p.get('kind')!)) out.kind = p.get('kind');
+  if (p.get('group') && GROUP_BY_ID.has(p.get('group')!)) out.group = p.get('group');
   if (p.get('occasion')) out.occ = p.get('occasion');
   if (p.get('photo') === '1') out.photo = true;
   if (p.get('category')) out.catName = p.get('category')!;
@@ -167,7 +178,6 @@ export default function TemplatesPage() {
   const set = (patch: Partial<Filters>) => setF((cur) => ({ ...cur, ...patch }));
   const [draft, setDraft] = useState('');
   const [suggestOpen, setSuggestOpen] = useState(false);
-  const [drawer, setDrawer] = useState(false);
   const [categories, setCategories] = useState<TemplateCategory[]>([]);
   const [previewing, setPreviewing] = useState<Template | null>(null);
   const [loggedIn, setLoggedIn] = useState(false);
@@ -207,6 +217,7 @@ export default function TemplatesPage() {
     const catName = categories.find((c) => c.id === f.cat)?.name;
     const subName = categories.find((c) => c.id === f.sub)?.name;
     if (f.q) p.set('q', f.q);
+    if (f.group) p.set('group', f.group);
     if (f.kind) p.set('kind', f.kind);
     if (f.occ) p.set('occasion', f.occ);
     if (catName) p.set('category', catName);
@@ -228,13 +239,13 @@ export default function TemplatesPage() {
     window.history.replaceState(null, '', qs ? `?${qs}` : window.location.pathname);
   }, [f, urlReady, categories]);
 
-  // Close the preview / drawer with Escape.
+  // Close the preview with Escape.
   useEffect(() => {
-    if (!previewing && !drawer) return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') { setPreviewing(null); setDrawer(false); } };
+    if (!previewing) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setPreviewing(null); };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [previewing, drawer]);
+  }, [previewing]);
 
   useEffect(() => {
     getSessionUser().then(({ data }) => setLoggedIn(!!data.user));
@@ -278,7 +289,7 @@ export default function TemplatesPage() {
   const newest = useMemo(() => templates.reduce((mx, t) => Math.max(mx, time(t)), 0), [templates]);
   const parsed = useMemo(() => parseQuery(f.q), [f.q]);
 
-  type Key = 'cat' | 'sub' | 'kind' | 'occ' | 'styles' | 'palette' | 'region' | 'shape' | 'aspect' | 'medium' | 'pages' | 'photo' | 'featured' | 'recent' | 'q';
+  type Key = 'cat' | 'sub' | 'group' | 'kind' | 'occ' | 'styles' | 'palette' | 'region' | 'shape' | 'aspect' | 'medium' | 'pages' | 'photo' | 'featured' | 'recent' | 'q';
   // Every filter except the search words.
   const passes = useCallback(
     (t: Template, fl: Filters, skip?: Key) => {
@@ -289,6 +300,7 @@ export default function TemplatesPage() {
         if (!ok) return false;
       }
       if (skip !== 'sub' && fl.sub && t.categoryId !== fl.sub) return false;
+      if (skip !== 'group' && fl.group && !x.types.some((id) => GROUP_BY_ID.get(fl.group!)?.types.includes(id))) return false;
       if (skip !== 'kind' && fl.kind && !x.types.includes(fl.kind)) return false;
       if (skip !== 'occ' && fl.occ && !x.occs.includes(fl.occ)) return false;
       if (skip !== 'styles' && fl.styles.length && !fl.styles.some((s) => x.styles.includes(s))) return false;
@@ -370,9 +382,10 @@ export default function TemplatesPage() {
     [templates, f, passes, searching, searchLevel, parsed, meta]
   );
   const typeCounts = useMemo(() => facet('kind', (_, x) => x.types), [facet]);
+  const groupCounts = useMemo(() => facet('group', (_, x) => GROUPS.filter((g) => x.types.some((id) => g.types.includes(id))).map((g) => g.id)), [facet]);
+  const [menu, setMenu] = useState<string | null>(null);
   const occCounts = useMemo(() => facet('occ', (_, x) => x.occs), [facet]);
   const catCounts = useMemo(() => facet('cat', (t) => { const p = parentOf(t.categoryId); return [p || t.categoryId || t.category]; }), [facet, parentOf]);
-  const subCounts = useMemo(() => facet('sub', (t) => (t.categoryId ? [t.categoryId] : [])), [facet]);
   const styleCounts = useMemo(() => facet('styles', (_, x) => x.styles), [facet]);
   const palCounts = useMemo(() => facet('palette', (_, x) => x.palettes), [facet]);
   const regionCounts = useMemo(() => facet('region', (t) => (t.tags || []).filter((g) => g.startsWith('region-')).map((g) => g.slice(7))), [facet]);
@@ -385,7 +398,6 @@ export default function TemplatesPage() {
     const rank = (name: string) => { const i = CATEGORY_ORDER.indexOf(name); return i === -1 ? 99 : i; };
     return categories.filter((c) => !c.parentId).sort((a, b) => rank(a.name) - rank(b.name)).map((c) => ({ id: c.id, label: c.name }));
   }, [categories, usingDbCategories]);
-  const subChips = useMemo(() => (f.cat === 'All' ? [] : categories.filter((c) => c.parentId === f.cat).map((c) => ({ id: c.id, label: c.name }))), [categories, f.cat]);
 
   // Suggestions while typing: design types, occasions and popular searches.
   const suggestions = useMemo(() => {
@@ -430,6 +442,7 @@ export default function TemplatesPage() {
   // Active filter chips (each one removable).
   const active: { label: string; clear: () => void }[] = [];
   if (f.q) active.push({ label: `“${f.q}”`, clear: () => search('') });
+  if (f.group) active.push({ label: GROUP_BY_ID.get(f.group)?.label || f.group, clear: () => set({ group: null, kind: null }) });
   if (f.kind) active.push({ label: TYPE_BY_ID.get(f.kind)?.label || f.kind, clear: () => set({ kind: null }) });
   if (f.occ) active.push({ label: OCCASIONS.find((o) => o.id === f.occ)?.label || f.occ, clear: () => set({ occ: null }) });
   if (f.cat !== 'All') active.push({ label: catChips.find((c) => c.id === f.cat)?.label || f.cat, clear: () => set({ cat: 'All', sub: null }) });
@@ -445,7 +458,6 @@ export default function TemplatesPage() {
   if (f.featured) active.push({ label: 'Featured', clear: () => set({ featured: false }) });
   if (f.recent) active.push({ label: 'Recently added', clear: () => set({ recent: false }) });
   const clearAll = () => { setDraft(''); setF({ ...NO_FILTERS, sort: f.sort }); };
-  const filterCount = active.filter((a) => !a.label.startsWith('“')).length;
 
   const applyCollection = (c: (typeof COLLECTIONS)[number]) => {
     const { catName, ...rest } = c.f;
@@ -485,102 +497,123 @@ export default function TemplatesPage() {
       return `Results for “${f.q.trim()}”`;
     }
     if (f.kind) return TYPE_BY_ID.get(f.kind)?.label || 'Templates';
+    if (f.group) return GROUP_BY_ID.get(f.group)?.label || 'Templates';
     if (f.occ) return `${OCCASIONS.find((o) => o.id === f.occ)?.label} templates`;
     if (f.sub) return categories.find((c) => c.id === f.sub)?.name || 'Templates';
     if (f.cat !== 'All') return `${catChips.find((c) => c.id === f.cat)?.label || ''} templates`;
     return 'All templates';
   })();
 
-  const sidebar = (
-    <FilterPanel>
-      <Section title="Design type" defaultOpen>
-        <List
-          items={DESIGN_TYPES.map((ty) => ({ id: ty.id, label: ty.label, n: typeCounts.get(ty.id) || 0 }))}
-          selected={f.kind}
-          onPick={(id) => set({ kind: f.kind === id ? null : id })}
-          limit={10}
-        />
-      </Section>
-      <Section title="Occasion" defaultOpen>
-        <List
-          items={OCCASIONS.map((o) => ({ id: o.id, label: o.label, n: occCounts.get(o.id) || 0 }))}
-          selected={f.occ}
-          onPick={(id) => set({ occ: f.occ === id ? null : id })}
-          limit={8}
-        />
-      </Section>
-      <Section title="Category" defaultOpen={f.cat !== 'All'}>
-        <List
-          items={catChips.map((c) => ({ id: c.id, label: c.label, n: catCounts.get(c.id) || 0 }))}
-          selected={f.cat === 'All' ? null : f.cat}
-          onPick={(id) => set({ cat: f.cat === id ? 'All' : id, sub: null })}
-          limit={8}
-        />
-        {subChips.length > 1 && (
-          <div className="mt-2 ml-3 pl-3 border-l border-mt-border">
-            <List items={subChips.map((c) => ({ id: c.id, label: c.label, n: subCounts.get(c.id) || 0 }))} selected={f.sub} onPick={(id) => set({ sub: f.sub === id ? null : id })} limit={12} small />
-          </div>
-        )}
-      </Section>
-      <Section title="Style">
+  // Short filter bar: a few dropdowns, each opening a small panel.
+  const typeList = (f.group ? GROUP_BY_ID.get(f.group)!.types : GROUPS.flatMap((g) => g.types)).map((id) => TYPE_BY_ID.get(id)!).filter(Boolean);
+  const pickType = (id: string) => { set({ kind: f.kind === id ? null : id }); setMenu(null); };
+  const MENUS: { id: string; label: string; value: string | null; body: JSX.Element }[] = [
+    {
+      id: 'type', label: 'Design type', value: f.kind ? TYPE_BY_ID.get(f.kind)?.label || null : null,
+      body: f.group ? (
+        <List items={typeList.map((ty) => ({ id: ty.id, label: ty.label, n: typeCounts.get(ty.id) || 0 }))} selected={f.kind} onPick={pickType} limit={40} />
+      ) : (
+        <div className="grid sm:grid-cols-2 gap-x-5 gap-y-3">
+          {GROUPS.map((g) => (
+            <div key={g.id}>
+              <p className="px-2 mb-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-mt-faint">{g.label}</p>
+              <List items={g.types.map((id) => TYPE_BY_ID.get(id)!).map((ty) => ({ id: ty.id, label: ty.label, n: typeCounts.get(ty.id) || 0 }))} selected={f.kind} onPick={pickType} limit={40} small />
+            </div>
+          ))}
+        </div>
+      ),
+    },
+    {
+      id: 'occ', label: 'Occasion', value: f.occ ? OCCASIONS.find((o) => o.id === f.occ)?.label || null : null,
+      body: <List items={OCCASIONS.map((o) => ({ id: o.id, label: o.label, n: occCounts.get(o.id) || 0 }))} selected={f.occ} onPick={(id) => { set({ occ: f.occ === id ? null : id }); setMenu(null); }} limit={40} />,
+    },
+    {
+      id: 'style', label: 'Style', value: f.styles.length ? f.styles.map(styleLabel).join(', ') : null,
+      body: (
         <div className="flex flex-wrap gap-1.5">
           {STYLES.map((st) => {
             const on = f.styles.includes(st.id);
             const n = styleCounts.get(st.id) || 0;
             if (!on && !n) return null;
             return (
-              <button key={st.id} onClick={() => set({ styles: on ? f.styles.filter((x) => x !== st.id) : [...f.styles, st.id] })} aria-pressed={on} className={`text-xs rounded-full px-2.5 py-1 border ${on ? 'mt-active-blue text-mt-ink' : 'border-mt-border text-mt-muted hover:text-mt-ink'}`}>
-                {st.label}
+              <button key={st.id} onClick={() => set({ styles: on ? f.styles.filter((x) => x !== st.id) : [...f.styles, st.id] })} aria-pressed={on} className={`text-[13px] rounded-full px-3 py-1.5 border ${on ? 'mt-active-blue text-mt-ink' : 'border-mt-border text-mt-muted hover:text-mt-ink'}`}>
+                {st.label} <span className="text-mt-faint text-[11px]">{n}</span>
               </button>
             );
           })}
         </div>
-      </Section>
-      <Section title="Colour">
+      ),
+    },
+    {
+      id: 'colour', label: 'Colour', value: f.palette ? PALETTES.find((p) => p.id === f.palette)?.label || null : null,
+      body: (
         <div className="grid grid-cols-2 gap-1.5">
           {PALETTES.map((pl) => {
             const on = f.palette === pl.id;
             const n = palCounts.get(pl.id) || 0;
             if (!n && !on) return null;
             return (
-              <button key={pl.id} onClick={() => set({ palette: on ? null : pl.id })} aria-pressed={on} className={`flex items-center gap-2 rounded-lg px-2 py-1.5 border text-xs text-left ${on ? 'mt-active-blue text-mt-ink' : 'border-transparent text-mt-muted hover:bg-mt-surface2'}`}>
-                <span className="flex w-6 h-4 shrink-0 rounded overflow-hidden ring-1 ring-black/10">
+              <button key={pl.id} onClick={() => { set({ palette: on ? null : pl.id }); setMenu(null); }} aria-pressed={on} className={`flex items-center gap-2 rounded-lg px-2 py-1.5 border text-[13px] text-left ${on ? 'mt-active-blue text-mt-ink' : 'border-transparent text-mt-muted hover:bg-mt-surface2'}`}>
+                <span className="flex w-7 h-5 shrink-0 rounded overflow-hidden ring-1 ring-black/10">
                   <span className="flex-1" style={{ background: pl.swatch[0] }} />
                   <span className="flex-1" style={{ background: pl.swatch[1] }} />
                 </span>
-                <span className="truncate">{pl.label}</span>
+                <span className="truncate flex-1">{pl.label}</span>
+                <span className="text-[11px] text-mt-faint">{n}</span>
               </button>
             );
           })}
         </div>
-      </Section>
-      <Section title="Format">
-        <p className="text-[11px] text-mt-faint mb-1">Made for</p>
-        <Seg value={f.medium} onChange={(v) => set({ medium: v as Filters['medium'] })} options={[['all', 'Any'], ['print', `Print ${mediumCounts.get('print') || 0}`], ['digital', `Screens ${mediumCounts.get('digital') || 0}`]]} />
-        <p className="text-[11px] text-mt-faint mt-3 mb-1">Shape</p>
-        <Seg value={f.shape} onChange={(v) => set({ shape: v as Shape })} options={[['all', 'Any'], ['portrait', 'Portrait'], ['square', 'Square'], ['landscape', 'Landscape']]} />
-        <p className="text-[11px] text-mt-faint mt-3 mb-1">Pages</p>
-        <Seg value={f.pages} onChange={(v) => set({ pages: v as Filters['pages'] })} options={[['all', 'Any'], ['single', `Single ${pagesCounts.get('single') || 0}`], ['multi', `Multi ${pagesCounts.get('multi') || 0}`]]} />
-        <p className="text-[11px] text-mt-faint mt-3 mb-1">Aspect ratio</p>
-        <select value={f.aspect || ''} onChange={(e) => set({ aspect: e.target.value || null })} className="w-full rounded-lg px-2.5 h-9 border border-mt-input-border bg-mt-surface text-mt-ink text-xs">
-          <option value="">Any ratio</option>
-          {ASPECTS.map((a) => <option key={a.id} value={a.id}>{a.label}</option>)}
-        </select>
-      </Section>
-      {REGIONS.some((r) => (regionCounts.get(r.id) || 0) > 0 || f.region === r.id) && (
-        <Section title="Region">
-          <List items={REGIONS.map((r) => ({ id: r.id, label: r.label, n: regionCounts.get(r.id) || 0 }))} selected={f.region} onPick={(id) => set({ region: f.region === id ? null : id })} limit={8} />
-        </Section>
-      )}
-      <Section title="More" defaultOpen>
-        <div className="space-y-2 text-[13px] text-mt-ink">
-          <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={f.photo} onChange={(e) => set({ photo: e.target.checked })} className="accent-[#3B82C4] w-4 h-4" /> With photos to replace <span className="ml-auto text-[11px] text-mt-faint">{photoCount}</span></label>
-          <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={f.featured} onChange={(e) => set({ featured: e.target.checked })} className="accent-[#3B82C4] w-4 h-4" /> Featured picks</label>
-          <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={f.recent} onChange={(e) => set({ recent: e.target.checked })} className="accent-[#3B82C4] w-4 h-4" /> Added in the last {RECENT_DAYS} days</label>
+      ),
+    },
+    {
+      id: 'more', label: 'More filters', value: [f.medium !== 'all', f.shape !== 'all', f.pages !== 'all', f.aspect, f.cat !== 'All', f.region, f.photo, f.featured, f.recent].filter(Boolean).length ? `${[f.medium !== 'all', f.shape !== 'all', f.pages !== 'all', f.aspect, f.cat !== 'All', f.region, f.photo, f.featured, f.recent].filter(Boolean).length} on` : null,
+      body: (
+        <div className="space-y-4">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-mt-faint mb-1.5">Made for</p>
+            <Seg value={f.medium} onChange={(v) => set({ medium: v as Filters['medium'] })} options={[['all', 'Any'], ['print', `Print · ${mediumCounts.get('print') || 0}`], ['digital', `Screens · ${mediumCounts.get('digital') || 0}`]]} />
+          </div>
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-mt-faint mb-1.5">Shape</p>
+            <Seg value={f.shape} onChange={(v) => set({ shape: v as Shape })} options={[['all', 'Any'], ['portrait', 'Portrait'], ['square', 'Square'], ['landscape', 'Landscape']]} />
+          </div>
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-mt-faint mb-1.5">Pages</p>
+            <Seg value={f.pages} onChange={(v) => set({ pages: v as Filters['pages'] })} options={[['all', 'Any'], ['single', `Single · ${pagesCounts.get('single') || 0}`], ['multi', `Multi-page · ${pagesCounts.get('multi') || 0}`]]} />
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <label className="text-[11px] font-semibold uppercase tracking-[0.1em] text-mt-faint">Category
+              <select value={f.cat} onChange={(e) => set({ cat: e.target.value, sub: null })} className="mt-1 w-full rounded-lg px-2 h-9 border border-mt-input-border bg-mt-surface text-mt-ink text-[13px] normal-case tracking-normal font-normal">
+                <option value="All">Any</option>
+                {catChips.map((c) => <option key={c.id} value={c.id}>{c.label} ({catCounts.get(c.id) || 0})</option>)}
+              </select>
+            </label>
+            <label className="text-[11px] font-semibold uppercase tracking-[0.1em] text-mt-faint">Region
+              <select value={f.region || ''} onChange={(e) => set({ region: e.target.value || null })} className="mt-1 w-full rounded-lg px-2 h-9 border border-mt-input-border bg-mt-surface text-mt-ink text-[13px] normal-case tracking-normal font-normal">
+                <option value="">Anywhere</option>
+                {REGIONS.filter((r) => (regionCounts.get(r.id) || 0) > 0 || f.region === r.id).map((r) => <option key={r.id} value={r.id}>{r.label}</option>)}
+              </select>
+            </label>
+          </div>
+          <div className="space-y-2 text-[13px] text-mt-ink">
+            <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={f.photo} onChange={(e) => set({ photo: e.target.checked })} className="accent-[#3B82C4] w-4 h-4" /> With photos to replace <span className="ml-auto text-[11px] text-mt-faint">{photoCount}</span></label>
+            <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={f.featured} onChange={(e) => set({ featured: e.target.checked })} className="accent-[#3B82C4] w-4 h-4" /> Featured picks</label>
+            <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={f.recent} onChange={(e) => set({ recent: e.target.checked })} className="accent-[#3B82C4] w-4 h-4" /> Added in the last {RECENT_DAYS} days</label>
+          </div>
         </div>
-      </Section>
-    </FilterPanel>
-  );
+      ),
+    },
+  ];
+  // Close an open filter menu on outside tap or Escape.
+  useEffect(() => {
+    if (!menu) return;
+    const close = (e: MouseEvent) => { if (!(e.target as HTMLElement)?.closest?.('[data-filter-menu]')) setMenu(null); };
+    const esc = (e: KeyboardEvent) => e.key === 'Escape' && setMenu(null);
+    document.addEventListener('mousedown', close);
+    window.addEventListener('keydown', esc);
+    return () => { document.removeEventListener('mousedown', close); window.removeEventListener('keydown', esc); };
+  }, [menu]);
 
   const card = (t: Template) => {
     const x = meta.get(t);
@@ -675,42 +708,64 @@ export default function TemplatesPage() {
         </div>
       </PageHero>
 
-      <div className="max-w-[1500px] mx-auto px-4 sm:px-6 pt-8 lg:grid lg:grid-cols-[250px_1fr] lg:gap-8">
-        {/* Filters: a sidebar on big screens, a drawer on phones and iPad */}
-        <aside className="hidden lg:block" aria-label="Filters">
-          <div className="sticky top-20 max-h-[calc(100vh-6rem)] overflow-y-auto mt-scroll pr-2 pb-10">
-            {sidebar}
-          </div>
-        </aside>
-
+      <div className="max-w-[1500px] mx-auto px-4 sm:px-6 pt-8">
         <div className="min-w-0">
-          {/* Quick design types (phones/iPad) */}
-          <div className="lg:hidden flex gap-1.5 overflow-x-auto pb-2 -mx-4 px-4 mt-scroll" aria-label="Design type">
-            {DESIGN_TYPES.filter((ty) => (typeCounts.get(ty.id) || 0) > 0 || f.kind === ty.id).slice(0, 14).map((ty) => (
-              <button key={ty.id} onClick={() => set({ kind: f.kind === ty.id ? null : ty.id })} aria-pressed={f.kind === ty.id} className={`shrink-0 text-[13px] font-medium rounded-full px-3.5 py-1.5 border ${f.kind === ty.id ? 'bg-[#14121F] dark:bg-white text-white dark:text-[#14121F] border-transparent' : 'border-mt-border text-mt-ink'}`}>
-                {ty.label}
-              </button>
-            ))}
+          {/* What you're making: five groups */}
+          <div role="tablist" aria-label="What are you making?" className="flex gap-1 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 border-b border-mt-border mt-scroll">
+            {[{ id: null as string | null, label: 'All templates' }, ...GROUPS.map((g) => ({ id: g.id as string | null, label: g.label }))].map((g) => {
+              const on = f.group === g.id;
+              const n = g.id ? groupCounts.get(g.id) || 0 : null;
+              return (
+                <button key={g.label} role="tab" aria-selected={on} onClick={() => set({ group: g.id, kind: null })} className={`shrink-0 relative px-3.5 pb-3 pt-1 text-[14px] font-semibold transition-colors ${on ? 'text-mt-ink' : 'text-mt-muted hover:text-mt-ink'}`}>
+                  {g.label}{n !== null && <span className="ml-1.5 text-[11px] font-normal text-mt-faint">{n.toLocaleString()}</span>}
+                  {on && <span className="absolute left-2 right-2 -bottom-px h-[3px] rounded-full bg-mt-ink" />}
+                </button>
+              );
+            })}
           </div>
 
-          {/* Results header */}
-          <div className="mt-2 lg:mt-0 flex flex-wrap items-end justify-between gap-3">
-            <div>
-              <h2 className="font-[family-name:var(--font-display)] text-2xl sm:text-3xl leading-tight">{heading}</h2>
-              <p className="mt-1 text-[13px] text-mt-muted" aria-live="polite">
-                {results.exact.length.toLocaleString()} {results.exact.length === 1 ? 'template' : 'templates'}
-                {results.related.length > 0 && ` · ${results.related.length.toLocaleString()} related`}
-                {results.loose && ' · no exact match, showing close results'}
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <button onClick={() => setDrawer(true)} className={`lg:hidden inline-flex items-center gap-1.5 h-9 rounded-full px-3.5 border text-[13px] font-medium ${filterCount ? 'mt-active-blue text-mt-ink' : 'border-mt-border text-mt-ink'}`}>
-                <SlidersHorizontal size={14} /> Filters{filterCount ? ` · ${filterCount}` : ''}
-              </button>
+          {/* Filter bar: a few dropdowns + sort */}
+          <div className="mt-3 flex items-center gap-2 overflow-x-auto sm:overflow-visible -mx-4 px-4 sm:mx-0 sm:px-0 pb-1 sm:flex-wrap" aria-label="Filters">
+            {MENUS.map((m) => (
+              <div key={m.id} className="relative shrink-0" data-filter-menu>
+                <button onClick={() => setMenu(menu === m.id ? null : m.id)} aria-expanded={menu === m.id} className={`h-9 inline-flex items-center gap-1.5 rounded-full px-3.5 border text-[13px] font-medium transition-colors ${m.value ? 'mt-active-blue text-mt-ink' : menu === m.id ? 'border-mt-ink text-mt-ink' : 'border-mt-border text-mt-ink hover:border-mt-ink/40'}`}>
+                  {m.id === 'more' && <SlidersHorizontal size={14} />}
+                  {m.value && m.id !== 'more' ? <span className="max-w-[160px] truncate">{m.value}</span> : m.label}
+                  {m.id === 'more' && m.value && <span className="text-[11px] text-mt-muted">· {m.value}</span>}
+                  <ChevronDown size={14} className={`text-mt-faint transition-transform ${menu === m.id ? 'rotate-180' : ''}`} />
+                </button>
+                {menu === m.id && (
+                  <>
+                    <div className="sm:hidden fixed inset-0 z-40 bg-black/40" onClick={() => setMenu(null)} />
+                    <div className="fixed sm:absolute z-50 inset-x-0 bottom-0 sm:inset-auto sm:left-0 sm:top-11 sm:bottom-auto w-full sm:w-[420px] max-h-[75vh] sm:max-h-[440px] overflow-y-auto mt-scroll rounded-t-3xl sm:rounded-2xl border border-mt-border bg-mt-surface shadow-2xl p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-[14px] font-semibold">{m.label}</p>
+                        <button onClick={() => setMenu(null)} aria-label="Close" className="p-1 text-mt-faint hover:text-mt-ink"><X size={16} /></button>
+                      </div>
+                      {m.body}
+                      <div className="sm:hidden mt-4">
+                        <button onClick={() => setMenu(null)} className="w-full h-11 rounded-full bg-mt-primary text-mt-onprimary text-sm font-semibold">Show {results.exact.length.toLocaleString()} templates</button>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            ))}
+            <div className="ml-auto shrink-0 flex items-center gap-2">
               <select value={f.sort} onChange={(e) => set({ sort: e.target.value as SortKey })} aria-label="Sort" className="h-9 rounded-full px-3 border border-mt-border bg-mt-surface text-mt-ink text-[13px] focus:outline-none">
                 {SORTS.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
               </select>
             </div>
+          </div>
+
+          {/* Results header */}
+          <div className="mt-5">
+            <h2 className="font-[family-name:var(--font-display)] text-2xl sm:text-3xl leading-tight">{heading}</h2>
+            <p className="mt-1 text-[13px] text-mt-muted" aria-live="polite">
+              {results.exact.length.toLocaleString()} {results.exact.length === 1 ? 'template' : 'templates'}
+              {results.related.length > 0 && ` · ${results.related.length.toLocaleString()} related`}
+              {results.loose && ' · no exact match, showing close results'}
+            </p>
           </div>
 
           {active.length > 0 && (
@@ -778,23 +833,6 @@ export default function TemplatesPage() {
         </div>
       </div>
 
-      {drawer && (
-        <div className="fixed inset-0 z-[55] lg:hidden" role="dialog" aria-modal="true" aria-label="Filters">
-          <button className="absolute inset-0 bg-black/45" aria-label="Close filters" onClick={() => setDrawer(false)} />
-          <div className="absolute inset-y-0 left-0 w-[88%] max-w-[360px] bg-mt-surface shadow-2xl flex flex-col">
-            <div className="flex items-center justify-between px-4 h-14 border-b border-mt-border">
-              <p className="font-semibold">Filters</p>
-              <button onClick={() => setDrawer(false)} aria-label="Close" className="p-1.5"><X size={20} /></button>
-            </div>
-            <div className="flex-1 overflow-y-auto px-4 py-3">{sidebar}</div>
-            <div className="p-3 border-t border-mt-border flex gap-2">
-              <button onClick={clearAll} className="h-11 px-4 rounded-full border border-mt-border text-sm font-semibold">Clear</button>
-              <button onClick={() => setDrawer(false)} className="flex-1 h-11 rounded-full bg-mt-primary text-mt-onprimary text-sm font-semibold">Show {results.exact.length.toLocaleString()} templates</button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {previewing && <TemplatePreview t={previewing} types={meta.get(previewing)?.types || []} onClose={() => setPreviewing(null)} onUse={() => useTemplate(previewing)} onTag={(tag) => { search(tag); setPreviewing(null); }} onStyle={(st) => { set({ styles: [st] }); setPreviewing(null); }} />}
 
       <Footer theme={theme} />
@@ -804,20 +842,6 @@ export default function TemplatesPage() {
 }
 
 // ------------------------------------------------------------ filter parts
-function FilterPanel({ children }: { children: React.ReactNode }) {
-  return <div className="divide-y divide-mt-border">{children}</div>;
-}
-function Section({ title, defaultOpen = false, children }: { title: string; defaultOpen?: boolean; children: React.ReactNode }) {
-  const [open, setOpen] = useState(defaultOpen);
-  return (
-    <div className="py-3">
-      <button onClick={() => setOpen((v) => !v)} aria-expanded={open} className="w-full flex items-center justify-between text-[13px] font-semibold text-mt-ink py-1">
-        {title} <ChevronDown size={15} className={`text-mt-faint transition-transform ${open ? 'rotate-180' : ''}`} />
-      </button>
-      {open && <div className="mt-2">{children}</div>}
-    </div>
-  );
-}
 function List({ items, selected, onPick, limit, small }: { items: { id: string; label: string; n: number }[]; selected: string | null; onPick: (id: string) => void; limit: number; small?: boolean }) {
   const [all, setAll] = useState(false);
   const usable = items.filter((i) => i.n > 0 || i.id === selected).sort((a, b) => (a.id === selected ? -1 : b.id === selected ? 1 : 0));
