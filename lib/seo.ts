@@ -169,6 +169,21 @@ export async function getSeoPage(slug: string): Promise<SeoPageRow | null> {
   return rows?.[0] || null;
 }
 
+/** Landing addresses that open the template gallery with a filter instead of
+ *  their own page (Admin → SEO → Landing pages → "Link to gallery"), e.g.
+ *  /free-brochure-templates → /templates?kind=brochure. Faster: no page to build. */
+export function parseRedirects(v: string | null | undefined): Map<string, string> {
+  try {
+    const o = JSON.parse(v || '{}');
+    return new Map(Object.entries(o).filter(([k, u]) => /^[a-z0-9]+(-[a-z0-9]+)*$/.test(k) && typeof u === 'string' && /^\/templates(\/|\?|$)/.test(u)) as [string, string][]);
+  } catch {
+    return new Map();
+  }
+}
+export async function getLandingRedirects(): Promise<Map<string, string>> {
+  return parseRedirects(await getSiteSetting('landing_redirects'));
+}
+
 /** Built-in landing pages switched off in Admin → SEO (Landing pages). */
 export async function getHiddenLandings(): Promise<Set<string>> {
   const v = await getSiteSetting('hidden_landings');
