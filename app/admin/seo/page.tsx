@@ -29,6 +29,7 @@ import { Social } from '@/components/admin/seo/Social';
 import { Performance } from '@/components/admin/seo/Performance';
 import { PageHealth } from '@/components/admin/seo/PageHealth';
 import { Automation } from '@/components/admin/seo/Automation';
+import { LandingIdeas } from '@/components/admin/seo/LandingIdeas';
 import type { LandingDraft } from '@/lib/landingDraft';
 
 const SITE = 'https://www.magicaltouchdesign.com';
@@ -236,9 +237,15 @@ function Pages({ pages, hidden, setHidden, reload, flash, request, clearRequest 
   const [f, setF] = useState(EMPTY);
   const [editing, setEditing] = useState<{ slug: string | null; id: string | null; builtin: boolean } | null>(null);
   const [q, setQ] = useState('');
-  const [show, setShow] = useState<'all' | 'live' | 'builtin' | 'custom' | 'edited' | 'off'>('all');
+  const [show, setShow] = useState<'all' | 'live' | 'builtin' | 'custom' | 'edited' | 'off'>('live');
   const [sel, setSel] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
+  const [confirmDel, setConfirmDel] = useState<string | null>(null);
+  // What the daily check found for each page (visitors, status, what happens next).
+  const [health, setHealth] = useState<Map<string, { status: string; reason: string | null; views30: number; search30: number }>>(new Map());
+  useEffect(() => {
+    supabase.rpc('landing_data').then(({ data }) => setHealth(new Map((((data as any)?.status || []) as any[]).map((r) => [r.slug, r]))));
+  }, [pages, hidden]);
 
   const rows: Row[] = useMemo(() => {
     const db = new Map(pages.map((p) => [p.slug, p]));
@@ -319,25 +326,30 @@ function Pages({ pages, hidden, setHidden, reload, flash, request, clearRequest 
     await supabase.from('seo_pages').update({ status, updated_at: new Date().toISOString() }).eq('id', r.db.id);
     reload();
   };
+  // Delete: custom pages are deleted for good; built-in pages (part of the
+  // site's code) are removed from the site and sitemap and listed under
+  // "Off / removed", where they can be restored. Two taps, no pop-up.
   const removeRows = async (rs: Row[]) => {
     const custom = rs.filter((r) => r.kind === 'custom' && r.db);
     const builtins = rs.filter((r) => r.kind === 'builtin');
-    const msg = [custom.length && `delete ${custom.length} custom page${custom.length > 1 ? 's' : ''}`, builtins.length && `switch off ${builtins.length} built-in page${builtins.length > 1 ? 's' : ''} (they can be switched back on)`].filter(Boolean).join(' and ');
-    if (!msg || !window.confirm(`This will ${msg}. Continue?`)) return;
+    if (!custom.length && !builtins.length) return;
     setBusy(true);
+    setConfirmDel(null);
     if (custom.length) await supabase.from('seo_pages').delete().in('id', custom.map((r) => r.db!.id));
     if (builtins.length) await toggleHidden(builtins.map((r) => r.slug), true);
     setSel(new Set());
     setBusy(false);
+    flash(`Deleted ${rs.length} page${rs.length > 1 ? 's' : ''} — gone from the site and the sitemap within an hour.${builtins.length ? ' Built-in pages can be restored from “Off / removed”.' : ''}`);
     reload();
   };
   const resetBuiltin = async (r: Row) => {
-    if (!r.db || !window.confirm(`Put /${r.slug} back to its original text?`)) return;
+    if (!r.db) return;
     await supabase.from('seo_pages').delete().eq('id', r.db.id);
     reload();
   };
 
   const selected = rows.filter((r) => sel.has(r.slug));
+  const existing = useMemo(() => rows.map((r) => ({ slug: r.slug, h1: r.h1 })), [rows]);
   const titleLen = f.title.length, descLen = f.description.length;
   return (
     <>
@@ -355,7 +367,7 @@ function Pages({ pages, hidden, setHidden, reload, flash, request, clearRequest 
             <label className="text-[12px] text-mt-muted lg:col-span-2">Google description <span className={descLen > 160 ? 'text-amber-600' : ''}>({descLen}/160)</span><textarea rows={2} className={`${field} h-auto py-2`} value={f.description} onChange={(e) => set('description', e.target.value)} /></label>
             <label className="text-[12px] text-mt-muted lg:col-span-2">Intro text (paragraphs separated by an empty line)<textarea rows={4} className={`${field} h-auto py-2`} value={f.intro} onChange={(e) => set('intro', e.target.value)} /></label>
             <label className="text-[12px] text-mt-muted">What it makes (e.g. “logo”, “Eid card”)<input className={field} value={f.thing} onChange={(e) => set('thing', e.target.value)} /></label>
-            <label className="text-[12px] text-mt-muted">Template words to match (comma separated)<input className={field} value={f.terms} onChange={(e) => set('terms', e.target.value)} placeholder="logo, brand, business card" /></label>
+            <label className="text-[12px] text-mt-muted">Template words to match (comma separated; use + to need both, e.g. wedding+album)<input className={field} value={f.terms} onChange={(e) => set('terms', e.target.value)} placeholder="logo, brand, business card" /></label>
             <label className="text-[12px] text-mt-muted lg:col-span-2">Questions — one per line: Question | Answer<textarea rows={4} className={`${field} h-auto py-2 font-mono text-[12px]`} value={f.faqs} onChange={(e) => set('faqs', e.target.value)} placeholder={'Is the logo maker free? | Yes, every template and download is free.'} /></label>
           </div>
           <EditorChecks f={f} />
@@ -372,15 +384,16 @@ function Pages({ pages, hidden, setHidden, reload, flash, request, clearRequest 
           </div>
         </section>
       )}
+      {!editing && <LandingIdeas existing={existing} onApproved={reload} flash={flash} />}
       <section className={card}>
         <div className="flex flex-wrap items-center gap-3">
           <h2 className="text-lg font-semibold flex-1">Landing pages <span className="text-mt-muted font-normal">({counts.live} live)</span></h2>
           <button onClick={openNew} className={`${btn} bg-mt-primary text-mt-onprimary`}><Plus size={14} /> New page</button>
         </div>
-        <p className="mt-1 text-[13px] text-mt-muted">Pages are built when someone first opens them and cached — nothing is pre-made or stored. Switching a page off removes it from the site and the sitemap.</p>
+        <p className="mt-1 text-[13px] text-mt-muted">Checked every morning. Pages with no visitors after a month are removed automatically, festival pages switch on 60 days before the festival and off a week after, and a page is only removed for an error after failing 3 days in a row.</p>
         <div className="mt-4 flex flex-wrap gap-2 items-center">
           <div className="relative flex-1 min-w-[220px]"><Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-mt-faint" /><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search pages" className={`${field} pl-9`} /></div>
-          {([['all', 'All'], ['live', 'Live'], ['builtin', 'Built-in'], ['custom', 'Custom'], ['edited', 'Edited'], ['off', 'Off / draft']] as const).map(([id, label]) => (
+          {([['live', 'Live'], ['all', 'All'], ['builtin', 'Built-in'], ['custom', 'Made here'], ['edited', 'Edited'], ['off', 'Off / removed']] as const).map(([id, label]) => (
             <button key={id} onClick={() => setShow(id)} className={`h-8 px-3 rounded-full text-[12px] border ${show === id ? 'bg-mt-ink text-mt-bg border-transparent' : 'border-mt-border text-mt-muted'}`}>{label} {counts[id]}</button>
           ))}
         </div>
@@ -389,7 +402,7 @@ function Pages({ pages, hidden, setHidden, reload, flash, request, clearRequest 
             <b>{selected.length} selected</b>
             <button disabled={busy} onClick={() => toggleHidden(selected.map((r) => r.slug), true).then(() => setSel(new Set()))} className={`${btn} border border-mt-border`}><EyeOff size={14} /> Switch off</button>
             <button disabled={busy} onClick={() => toggleHidden(selected.map((r) => r.slug), false).then(() => setSel(new Set()))} className={`${btn} border border-mt-border`}><Eye size={14} /> Switch on</button>
-            <button disabled={busy} onClick={() => removeRows(selected)} className={`${btn} text-rose-600`}><Trash2 size={14} /> Remove</button>
+            {confirmDel === '__sel' ? <button disabled={busy} onClick={() => removeRows(selected)} className={`${btn} bg-rose-600 text-white`}><Trash2 size={14} /> Yes, delete {selected.length}</button> : <button disabled={busy} onClick={() => setConfirmDel('__sel')} className={`${btn} text-rose-600`}><Trash2 size={14} /> Delete</button>}
             <button onClick={() => setSel(new Set())} className={`${btn} text-mt-muted`}>Clear</button>
           </div>
         )}
@@ -397,22 +410,24 @@ function Pages({ pages, hidden, setHidden, reload, flash, request, clearRequest 
           <table className="w-full text-[13px] min-w-[640px]">
             <thead className="text-left text-mt-muted"><tr>
               <th className="py-2 w-8"><input type="checkbox" aria-label="Select all shown" checked={list.length > 0 && list.every((r) => sel.has(r.slug))} onChange={(e) => setSel(e.target.checked ? new Set(list.map((r) => r.slug)) : new Set())} /></th>
-              <th>Page</th><th>Type</th><th>Status</th><th className="text-right">Actions</th>
+              <th>Page</th><th>Visitors (30 days)</th><th>Status</th><th className="text-right">Actions</th>
             </tr></thead>
             <tbody>
               {list.map((r) => (
                 <tr key={r.slug} className="border-t border-mt-border align-top">
                   <td className="py-2.5"><input type="checkbox" aria-label={`Select ${r.slug}`} checked={sel.has(r.slug)} onChange={(e) => setSel((x) => { const n = new Set(x); e.target.checked ? n.add(r.slug) : n.delete(r.slug); return n; })} /></td>
-                  <td className="py-2.5 pr-3"><b className="text-mt-ink">{r.h1}</b><div className="text-mt-faint">/{r.slug}</div></td>
-                  <td className="py-2.5 text-mt-muted">{r.kind === 'builtin' ? (r.edited ? 'Built-in · edited' : 'Built-in') : 'Custom'}</td>
-                  <td className="py-2.5"><span className={`text-[11px] font-semibold uppercase px-2 py-0.5 rounded-full ${r.live ? 'bg-emerald-600/10 text-emerald-600' : 'bg-mt-surface2 text-mt-muted'}`}>{r.hidden ? 'Off' : r.live ? 'Live' : 'Draft'}</span></td>
+                  <td className="py-2.5 pr-3"><b className="text-mt-ink">{r.h1}</b><div className="text-mt-faint">/{r.slug} · {r.kind === 'builtin' ? (r.edited ? 'built-in, edited' : 'built-in') : 'made here'}</div>{health.get(r.slug)?.reason && <div className="text-[11.5px] text-mt-muted mt-0.5">{health.get(r.slug)!.reason}</div>}</td>
+                  <td className="py-2.5 text-mt-muted tabular-nums">{health.has(r.slug) ? <>{health.get(r.slug)!.views30} views{health.get(r.slug)!.search30 ? <span className="text-emerald-600"> · {health.get(r.slug)!.search30} from Google</span> : null}</> : '—'}</td>
+                  <td className="py-2.5"><span className={`text-[11px] font-semibold uppercase px-2 py-0.5 rounded-full ${r.live ? 'bg-emerald-600/10 text-emerald-600' : health.get(r.slug)?.status === 'off-season' ? 'bg-amber-500/10 text-amber-700' : 'bg-mt-surface2 text-mt-muted'}`}>{health.get(r.slug)?.status === 'off-season' && r.hidden ? 'Off season' : r.hidden ? 'Removed' : r.live ? 'Live' : 'Draft'}</span></td>
                   <td className="py-2.5 text-right whitespace-nowrap space-x-3">
                     {r.live && <a href={`/${r.slug}`} target="_blank" className="text-[#3B82C4] inline-flex items-center gap-1"><ExternalLink size={13} /> View</a>}
                     <button onClick={() => openEdit(r)} className="text-mt-muted hover:text-mt-ink">Edit</button>
                     {r.kind === 'builtin' && r.db && <button onClick={() => resetBuiltin(r)} className="text-mt-muted hover:text-mt-ink">Reset</button>}
                     {r.kind === 'custom' && !r.hidden && r.db && <button onClick={() => setStatus(r, r.db!.status === 'published' ? 'draft' : 'published')} className="text-mt-muted hover:text-mt-ink">{r.db.status === 'published' ? 'Unpublish' : 'Publish'}</button>}
-                    {r.hidden ? <button onClick={() => toggleHidden([r.slug], false)} className="text-emerald-600">Switch on</button> : r.kind === 'builtin' && <button onClick={() => toggleHidden([r.slug], true)} className="text-mt-muted hover:text-mt-ink">Switch off</button>}
-                    {r.kind === 'custom' && <button onClick={() => removeRows([r])} className="text-rose-600 inline-flex items-center gap-1"><Trash2 size={13} /> Delete</button>}
+                    {r.hidden && <button onClick={() => toggleHidden([r.slug], false)} className="text-emerald-600">Restore</button>}
+                    {!r.hidden && (confirmDel === r.slug
+                      ? <button onClick={() => removeRows([r])} className="text-white bg-rose-600 rounded-full px-2.5 py-0.5 inline-flex items-center gap-1"><Trash2 size={13} /> Sure? Delete</button>
+                      : <button onClick={() => setConfirmDel(r.slug)} className="text-rose-600 inline-flex items-center gap-1"><Trash2 size={13} /> Delete</button>)}
                   </td>
                 </tr>
               ))}

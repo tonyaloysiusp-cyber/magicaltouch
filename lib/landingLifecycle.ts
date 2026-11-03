@@ -8,35 +8,41 @@
 //                anyone, so "no visitors" would say nothing about the page
 //   not-working  broken (page error, or no templates to show), or no
 //                visitors at all after the monitoring window
-// Broken pages (page error / no templates) are DELETED when auto-cleanup is
-// on; pages that only lack visitors after the watch period are switched off. Safety: if a run would remove more than
-// a third of the live pages at once, it removes nothing and reports instead.
+// Safety (Nov 2026, after a database outage made every page look empty and
+// 10 good pages were deleted): a broken page is only removed after it fails
+// 3 daily checks in a row, and if more than 1 in 5 pages look broken at once
+// the site (not the pages) has a problem, so nothing is removed. Pages with
+// no visitors are removed after `days` (default 30 — one month): custom
+// pages are deleted, built-in ones switched off. Festival pages are never
+// removed for "no visitors"; they switch on 60 days before the festival
+// and off 7 days after (lib/landingSeasons.ts).
 
 import { ALL_LANDINGS, Landing } from '@/lib/landings';
+import { seasonState } from '@/lib/landingSeasons';
 
 export interface LifecycleSettings { on: boolean; days: number }
 export interface StatusRow { slug: string; kind: 'builtin' | 'custom'; first_seen: string; status: string; reason: string | null; views30: number; search30: number; templates: number | null; http: number | null; checked_at: string | null; removed_at: string | null; snapshot?: any }
 export interface PageCheck { slug: string; h1: string; kind: 'builtin' | 'custom'; tool: boolean; templates: number | null; http: number | null; views30: number; search30: number }
-export interface Decision extends PageCheck { status: 'working' | 'warming' | 'not-working'; reason: string; day: number; remove: boolean; del?: boolean }
+export interface Decision extends PageCheck { status: 'working' | 'warming' | 'not-working' | 'off-season'; reason: string; day: number; remove: boolean; del?: boolean; season?: 'on' | 'off' }
 
-export const DEFAULT_SETTINGS: LifecycleSettings = { on: true, days: 14 };
+export const DEFAULT_SETTINGS: LifecycleSettings = { on: true, days: 30 };
 
 export function parseSettings(v: unknown): LifecycleSettings {
   try {
     const o = typeof v === 'string' ? JSON.parse(v) : v;
-    const days = Math.max(7, Math.min(90, Number((o as any)?.days) || 14));
+    const days = Math.max(7, Math.min(90, Number((o as any)?.days) || 30));
     return { on: (o as any)?.on !== false, days };
   } catch { return DEFAULT_SETTINGS; }
 }
 
 const daysBetween = (a: string, b: Date) => Math.floor((b.getTime() - new Date(`${a}T00:00:00Z`).getTime()) / 86400000);
 
-export function decide(pages: PageCheck[], status: StatusRow[], settings: LifecycleSettings, googleSince: string | null, today = new Date()): { decisions: Decision[]; blocked: string | null } {
+export function decide(pages: PageCheck[], status: StatusRow[], settings: LifecycleSettings, googleSince: string | null, today = new Date(), seasons: Map<string, ReturnType<typeof seasonState>> = new Map()): { decisions: Decision[]; blocked: string | null } {
   const known = new Map(status.map((s) => [s.slug, s]));
   const todayIso = today.toISOString().slice(0, 10);
-  // A page error on most pages at once means the site (not the pages) had a problem.
-  const errors = pages.filter((p) => p.http !== null && p.http !== 200).length;
-  const siteDown = pages.length > 0 && errors / pages.length > 0.3;
+  // Many pages broken or empty at once = the site or database had a problem.
+  const broken = (p: PageCheck) => (p.http !== null && p.http !== 200) || (!p.tool && p.templates === 0);
+  const siteDown = pages.length > 0 && pages.filter(broken).length / pages.length > 0.2;
 
   const decisions: Decision[] = pages.map((p) => {
     const first = known.get(p.slug)?.first_seen || todayIso;
@@ -44,12 +50,25 @@ export function decide(pages: PageCheck[], status: StatusRow[], settings: Lifecy
     const age = daysBetween(start, today);
     const day = Math.max(0, daysBetween(first, today));
     const base = { ...p, day };
-    if (!siteDown && p.http !== null && p.http !== 200) return { ...base, status: 'not-working', reason: `Page error (${p.http || 'no answer'})`, remove: true, del: true };
-    if (!p.tool && p.templates === 0) return { ...base, status: 'not-working', reason: 'Shows no templates — visitors land on an empty page', remove: true, del: true };
-    if (p.views30 > 0 || p.search30 > 0) return { ...base, status: 'working', reason: p.search30 ? `${p.search30} visitor${p.search30 > 1 ? 's' : ''} from search, ${p.views30} views` : `${p.views30} view${p.views30 > 1 ? 's' : ''} in 30 days`, remove: false };
+    const season = seasons.get(p.slug);
+    if (season?.seasonal && !season.inSeason) {
+      return { ...base, status: 'off-season', reason: season.next ? `Festival page — switched off until ${season.next}` : 'Festival page — off until the next date is added in Festivals', remove: false, season: 'off' };
+    }
+    const inSeason = season?.seasonal ? { season: 'on' as const } : {};
+    if (broken(p)) {
+      const what = p.http !== null && p.http !== 200 ? `Page error (${p.http || 'no answer'})` : 'Shows no templates';
+      if (siteDown) return { ...base, ...inSeason, status: 'warming', reason: `${what} — but many pages failed at once, so the site had a problem; nothing removed`, remove: false };
+      // Three failed daily checks in a row before anything is removed.
+      const prev = /check (\d) of 3/.exec(known.get(p.slug)?.reason || '');
+      const strike = prev && known.get(p.slug)?.status === 'not-working' ? Number(prev[1]) + 1 : 1;
+      if (strike < 3) return { ...base, ...inSeason, status: 'not-working', reason: `${what} — check ${strike} of 3 (removed only if it fails 3 days in a row)`, remove: false };
+      return { ...base, ...inSeason, status: 'not-working', reason: `${what} on 3 checks in a row`, remove: true, del: p.kind === 'custom' };
+    }
+    if (p.views30 > 0 || p.search30 > 0) return { ...base, ...inSeason, status: 'working', reason: p.search30 ? `${p.search30} visitor${p.search30 > 1 ? 's' : ''} from search, ${p.views30} views` : `${p.views30} view${p.views30 > 1 ? 's' : ''} in 30 days`, remove: false };
+    if (season?.seasonal) return { ...base, ...inSeason, status: 'warming', reason: `Festival page — live until ${season.offAfter}`, remove: false };
     if (!googleSince) return { ...base, status: 'warming', reason: 'Waiting for Google Search Console — judged once Google can send visitors', remove: false };
     if (age < settings.days) return { ...base, status: 'warming', reason: `Monitoring: day ${age + 1} of ${settings.days}`, remove: false };
-    return { ...base, status: 'not-working', reason: `No visitors in ${age} days on Google`, remove: true };
+    return { ...base, status: 'not-working', reason: `No visitors in ${age} days — ${p.kind === 'custom' ? 'deleted' : 'switched off'}`, remove: true, del: p.kind === 'custom' };
   });
 
   let blocked: string | null = null;
@@ -80,9 +99,10 @@ export function livePages(dbPages: { slug: string; h1: string; status: string; t
 
 export function summarize(ds: Decision[], blocked: string | null) {
   const c = (s: Decision['status']) => ds.filter((d) => d.status === s).length;
+  const off = c('off-season');
   const rm = ds.filter((d) => d.remove);
   return [
-    `${c('working')} working · ${c('warming')} warming up · ${c('not-working')} not working`,
+    `${c('working')} working · ${c('warming')} warming up · ${c('not-working')} not working${off ? ` · ${off} festival pages off-season` : ''}`,
     ...rm.map((d) => `${d.del ? 'Deleted' : 'Switched off'} /${d.slug} — ${d.reason}`),
     ...(blocked ? [blocked] : []),
   ].join('\n');

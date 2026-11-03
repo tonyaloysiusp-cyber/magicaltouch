@@ -130,7 +130,7 @@ export default async function TemplatePage({ params }: { params: { slug: string 
               <li>Download a print-ready PDF or a picture for social media, or print it directly.</li>
             </ol>
             <p className="mt-6 flex flex-wrap gap-x-2 gap-y-1 text-[13px] text-[#3B82C4]">
-              {templateHashtags(t).map((h) => <span key={h}>#{h}</span>)}
+              {templateHashtags(t).map((h) => <Link key={h} href={`/templates?q=${encodeURIComponent(h)}`} className="hover:underline">#{h}</Link>)}
             </p>
             {tags.length > 0 && (
               <div className="mt-3 flex flex-wrap gap-2">
