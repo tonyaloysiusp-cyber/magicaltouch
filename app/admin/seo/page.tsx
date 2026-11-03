@@ -13,7 +13,7 @@
 
 import { GooglePosts } from '@/components/admin/seo/GooglePosts';
 import { expandList } from '@/lib/templatesData';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Check, Copy, ExternalLink, Eye, EyeOff, Globe, Loader2, Pencil, Plus, Search, Send, Trash2, Link2, Sparkles, X } from 'lucide-react';
@@ -30,6 +30,7 @@ import { Performance } from '@/components/admin/seo/Performance';
 import { PageHealth } from '@/components/admin/seo/PageHealth';
 import { Automation } from '@/components/admin/seo/Automation';
 import { LandingIdeas } from '@/components/admin/seo/LandingIdeas';
+import { galleryLink, Idea } from '@/lib/landingIdeas';
 import type { LandingDraft } from '@/lib/landingDraft';
 
 const SITE = 'https://www.magicaltouchdesign.com';
@@ -241,6 +242,27 @@ function Pages({ pages, hidden, setHidden, reload, flash, request, clearRequest 
   const [sel, setSel] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
   const [confirmDel, setConfirmDel] = useState<string | null>(null);
+  // Addresses that open the gallery with a filter instead of their own page.
+  const [links, setLinks] = useState<Record<string, string>>({});
+  const [linkEdit, setLinkEdit] = useState<{ slug: string; url: string } | null>(null);
+  useEffect(() => {
+    supabase.from('site_settings').select('value').eq('key', 'landing_redirects').maybeSingle().then(({ data }) => { try { setLinks(JSON.parse(data?.value || '{}')); } catch { setLinks({}); } });
+  }, []);
+  const saveLink = async (slug: string, url: string | null) => {
+    if (url && !/^\/templates(\/|\?|$)/.test(url.trim())) { flash('Use a gallery link that starts with /templates, e.g. /templates?kind=brochure'); return; }
+    const next = { ...links };
+    if (url) next[slug] = url.trim(); else delete next[slug];
+    const { error } = await supabase.from('site_settings').upsert({ key: 'landing_redirects', value: JSON.stringify(next), updated_at: new Date().toISOString() });
+    if (error) { flash(error.message); return; }
+    setLinks(next);
+    setLinkEdit(null);
+    flash(url ? `/${slug} now opens ${url.trim()} (within an hour).` : `/${slug} shows its own page again.`);
+  };
+  const openIdea = (i: Idea) => {
+    setEditing({ slug: null, id: null, builtin: false });
+    setF({ slug: i.slug, title: i.title, h1: i.h1, description: i.description, intro: i.intro, thing: i.thing, terms: i.terms.join(', '), faqs: i.faqs.map(([qq, aa]) => `${qq} | ${aa}`).join('\n') });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
   // What the daily check found for each page (visitors, status, what happens next).
   const [health, setHealth] = useState<Map<string, { status: string; reason: string | null; views30: number; search30: number }>>(new Map());
   useEffect(() => {
@@ -384,7 +406,7 @@ function Pages({ pages, hidden, setHidden, reload, flash, request, clearRequest 
           </div>
         </section>
       )}
-      {!editing && <LandingIdeas existing={existing} onApproved={reload} flash={flash} />}
+      {!editing && <LandingIdeas existing={existing} onEdit={openIdea} onLink={(slug, url) => saveLink(slug, url)} flash={flash} />}
       <section className={card}>
         <div className="flex flex-wrap items-center gap-3">
           <h2 className="text-lg font-semibold flex-1">Landing pages <span className="text-mt-muted font-normal">({counts.live} live)</span></h2>
@@ -414,13 +436,17 @@ function Pages({ pages, hidden, setHidden, reload, flash, request, clearRequest 
             </tr></thead>
             <tbody>
               {list.map((r) => (
-                <tr key={r.slug} className="border-t border-mt-border align-top">
+                <Fragment key={r.slug}>
+                <tr className="border-t border-mt-border align-top">
                   <td className="py-2.5"><input type="checkbox" aria-label={`Select ${r.slug}`} checked={sel.has(r.slug)} onChange={(e) => setSel((x) => { const n = new Set(x); e.target.checked ? n.add(r.slug) : n.delete(r.slug); return n; })} /></td>
                   <td className="py-2.5 pr-3"><b className="text-mt-ink">{r.h1}</b><div className="text-mt-faint">/{r.slug} · {r.kind === 'builtin' ? (r.edited ? 'built-in, edited' : 'built-in') : 'made here'}</div>{health.get(r.slug)?.reason && <div className="text-[11.5px] text-mt-muted mt-0.5">{health.get(r.slug)!.reason}</div>}</td>
                   <td className="py-2.5 text-mt-muted tabular-nums">{health.has(r.slug) ? <>{health.get(r.slug)!.views30} views{health.get(r.slug)!.search30 ? <span className="text-emerald-600"> · {health.get(r.slug)!.search30} from Google</span> : null}</> : '—'}</td>
-                  <td className="py-2.5"><span className={`text-[11px] font-semibold uppercase px-2 py-0.5 rounded-full ${r.live ? 'bg-emerald-600/10 text-emerald-600' : health.get(r.slug)?.status === 'off-season' ? 'bg-amber-500/10 text-amber-700' : 'bg-mt-surface2 text-mt-muted'}`}>{health.get(r.slug)?.status === 'off-season' && r.hidden ? 'Off season' : r.hidden ? 'Removed' : r.live ? 'Live' : 'Draft'}</span></td>
+                  <td className="py-2.5"><span className={`text-[11px] font-semibold uppercase px-2 py-0.5 rounded-full ${r.live ? 'bg-emerald-600/10 text-emerald-600' : health.get(r.slug)?.status === 'off-season' ? 'bg-amber-500/10 text-amber-700' : 'bg-mt-surface2 text-mt-muted'}`}>{links[r.slug] ? 'Gallery link' : health.get(r.slug)?.status === 'off-season' && r.hidden ? 'Off season' : r.hidden ? 'Removed' : r.live ? 'Live' : 'Draft'}</span>{links[r.slug] && <div className="text-[11px] text-mt-faint mt-1 break-all">→ {links[r.slug]}</div>}</td>
                   <td className="py-2.5 text-right whitespace-nowrap space-x-3">
                     {r.live && <a href={`/${r.slug}`} target="_blank" className="text-[#3B82C4] inline-flex items-center gap-1"><ExternalLink size={13} /> View</a>}
+                    {links[r.slug]
+                      ? <button onClick={() => saveLink(r.slug, null)} className="text-mt-muted hover:text-mt-ink">Unlink</button>
+                      : <button onClick={() => setLinkEdit(linkEdit?.slug === r.slug ? null : { slug: r.slug, url: galleryLink(r.h1.replace(/—.*$/, '')) })} className="text-mt-muted hover:text-mt-ink">Link to gallery</button>}
                     <button onClick={() => openEdit(r)} className="text-mt-muted hover:text-mt-ink">Edit</button>
                     {r.kind === 'builtin' && r.db && <button onClick={() => resetBuiltin(r)} className="text-mt-muted hover:text-mt-ink">Reset</button>}
                     {r.kind === 'custom' && !r.hidden && r.db && <button onClick={() => setStatus(r, r.db!.status === 'published' ? 'draft' : 'published')} className="text-mt-muted hover:text-mt-ink">{r.db.status === 'published' ? 'Unpublish' : 'Publish'}</button>}
@@ -430,6 +456,17 @@ function Pages({ pages, hidden, setHidden, reload, flash, request, clearRequest 
                       : <button onClick={() => setConfirmDel(r.slug)} className="text-rose-600 inline-flex items-center gap-1"><Trash2 size={13} /> Delete</button>)}
                   </td>
                 </tr>
+                {linkEdit?.slug === r.slug && (
+                  <tr><td colSpan={5} className="pb-3">
+                    <div className="flex flex-wrap items-center gap-2 rounded-xl bg-mt-surface2 p-3">
+                      <span className="text-[12px] text-mt-muted">/{r.slug} opens</span>
+                      <input value={linkEdit.url} onChange={(e) => setLinkEdit({ slug: r.slug, url: e.target.value })} className="flex-1 min-w-[220px] h-9 rounded-lg border border-mt-input-border bg-mt-surface px-3 text-[13px]" />
+                      <a href={linkEdit.url} target="_blank" rel="noreferrer" className="text-[12px] text-[#3B82C4] hover:underline">Check it</a>
+                      <button onClick={() => saveLink(r.slug, linkEdit.url)} className={`${btn} bg-mt-primary text-mt-onprimary`}>Save</button>
+                    </div>
+                  </td></tr>
+                )}
+                </Fragment>
               ))}
               {!list.length && <tr><td colSpan={5} className="py-4 text-mt-muted">No pages match.</td></tr>}
             </tbody>

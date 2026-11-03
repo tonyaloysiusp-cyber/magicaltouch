@@ -25,6 +25,7 @@ export interface Idea {
   templates: number;
   score: number;
   festivalDate?: string;
+  link: string; // the gallery with this filter, used instead of a page
 }
 
 const slugify = (s: string) => s.toLowerCase().replace(/&/g, 'and').replace(/['’]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 70);
@@ -50,8 +51,21 @@ export function countFor(q: string, list: Pre[]): number {
   return n;
 }
 
+/** The template gallery filtered to a search ("business flyer" →
+ *  /templates?kind=flyer&q=business) — used instead of a separate page. */
+export function galleryLink(q: string): string {
+  const pq = parseQuery(q.replace(/\+/g, ' '));
+  const p = new URLSearchParams();
+  if (pq.types[0]) p.set('kind', pq.types[0]);
+  const topic = pq.topics.map((g) => g[0]).join(' ');
+  if (topic) p.set('q', topic);
+  if (pq.photo && !pq.types.length) p.set('photo', '1');
+  const qs = p.toString();
+  return qs ? `/templates?${qs}` : '/templates';
+}
+
 /** Ready-to-publish text for a page about `topic` + `thing` ("wedding" + "photo album"). */
-export function draft(topic: string, thingOne: string, count: number, extra?: { festivalDate?: string }): Omit<Idea, 'source' | 'why' | 'templates' | 'score'> {
+export function draft(topic: string, thingOne: string, count: number, extra?: { festivalDate?: string }): Omit<Idea, 'source' | 'why' | 'templates' | 'score' | 'link'> {
   const t = topic.trim();
   const phrase = `${t ? `${t} ` : ''}${thingOne}`.trim();
   const Phrase = cap(phrase);
@@ -110,7 +124,7 @@ export function buildIdeas(opts: {
     if (count < 8) continue;
     const d = draft(name, 'design', count, { festivalDate: o.date });
     const days = Math.round((new Date(`${o.date}T00:00:00Z`).getTime() - today.getTime()) / 86400000);
-    add({ ...d, slug: slugify(`${name} templates`), h1: `${cap(name)} templates — free & editable`, title: `Free ${cap(name)} Templates — Posts, Cards & Posters`.slice(0, 60), terms: d.terms, source: 'festival', why: `${cap(name)} is in ${days} days · ${count} templates · seasonal: switches off a week after`, templates: count, score: 1000 - days + count });
+    add({ ...d, link: galleryLink(name), slug: slugify(`${name} templates`), h1: `${cap(name)} templates — free & editable`, title: `Free ${cap(name)} Templates — Posts, Cards & Posters`.slice(0, 60), terms: d.terms, source: 'festival', why: `${cap(name)} is in ${days} days · ${count} templates · seasonal: switches off a week after`, templates: count, score: 1000 - days + count });
   }
 
   // 2. What visitors searched (30 days).
@@ -123,7 +137,7 @@ export function buildIdeas(opts: {
     const count = countFor(s.q, pre);
     if (count < 6) continue;
     const d = draft(topic, ty ? ty.one : 'design', count);
-    add({ ...d, source: 'searches', why: `Searched ${s.count} times on the site this month · ${count} templates`, templates: count, score: 500 + s.count * 20 + count });
+    add({ ...d, link: galleryLink(s.q), source: 'searches', why: `Searched ${s.count} times on the site this month · ${count} templates`, templates: count, score: 500 + s.count * 20 + count });
   }
 
   // 3. Popular combinations with plenty of templates.
@@ -133,7 +147,7 @@ export function buildIdeas(opts: {
       const count = countFor(`${topic} ${ty.one}`, pre);
       if (count < 20) continue;
       const d = draft(topic, ty.one, count);
-      add({ ...d, source: 'coverage', why: `${count} matching templates · a common Google search`, templates: count, score: count });
+      add({ ...d, link: galleryLink(`${topic} ${ty.one}`), source: 'coverage', why: `${count} matching templates · a common Google search`, templates: count, score: count });
     }
   }
   return out.sort((a, b) => b.score - a.score);

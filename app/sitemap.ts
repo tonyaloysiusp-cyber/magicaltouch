@@ -1,5 +1,5 @@
 import type { MetadataRoute } from 'next';
-import { SITE_URL, getAllPublishedTemplates, categorySlug, getPublishedSeoPages, getHiddenLandings } from '@/lib/seo';
+import { SITE_URL, getAllPublishedTemplates, categorySlug, getPublishedSeoPages, getHiddenLandings, getLandingRedirects } from '@/lib/seo';
 import { ALL_LANDINGS } from '@/lib/landings';
 import { createAnonSupabaseClient } from '@/lib/supabase/server';
 import { loadCourses } from '@/lib/courses';
@@ -10,7 +10,9 @@ export const revalidate = 3600;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
-  const hidden = await getHiddenLandings();
+  // Pages linked to the gallery are left out (their address only redirects).
+  const [hiddenSet, redirects] = await Promise.all([getHiddenLandings(), getLandingRedirects()]);
+  const hidden = new Set([...Array.from(hiddenSet), ...Array.from(redirects.keys())]);
   const seen = new Set<string>();
   const pages: MetadataRoute.Sitemap = [
     { url: `${SITE_URL}/`, lastModified: now, changeFrequency: 'weekly', priority: 1 },

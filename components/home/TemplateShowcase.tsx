@@ -9,6 +9,22 @@ import { Reveal } from './Reveal';
 
 const CATEGORY_ORDER = ['Birthday', 'Events', 'Wedding', 'Business', 'Social Media', 'Marketing', 'Menus', 'Certificates', 'Resume', 'Cards'];
 
+// Each tile opens the gallery with the matching filter of the new filter bar
+// (group tab, design type or occasion), so the gallery shows exactly that.
+const TILE_LINK: Record<string, string> = {
+  'Social Media': '/templates?group=social',
+  Marketing: '/templates?group=print',
+  Business: '/templates?group=business',
+  'Photo Collage': '/templates?group=photos',
+  Cards: '/templates?kind=greeting-card',
+  Menus: '/templates?kind=menu',
+  Certificates: '/templates?kind=certificate',
+  Resume: '/templates?kind=resume',
+  Birthday: '/templates?occasion=birthday',
+  Wedding: '/templates?occasion=wedding',
+};
+const tileHref = (name: string) => TILE_LINK[name] || `/templates?category=${encodeURIComponent(name)}`;
+
 // The live template library on the homepage: real thumbnails straight
 // from the database, category tiles with counts, a filterable grid and
 // an endless scrolling strip -- so new templates appear here the moment
@@ -93,7 +109,7 @@ export function TemplateShowcase() {
           {tiles.map((c, i) => (
             <Reveal key={c.name} delayMs={i * 50}>
               <Link
-                href={`/templates?category=${encodeURIComponent(c.name)}`}
+                href={tileHref(c.name)}
                 className="group block rounded-2xl border border-mt-border bg-mt-surface p-4 mt-card-hover hover:-translate-y-1"
               >
                 <div className="relative h-28 [perspective:600px]">

@@ -1,8 +1,8 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
+import { notFound, permanentRedirect } from 'next/navigation';
 import { SeoShell, Crumbs } from '@/components/seo/SeoShell';
-import { SITE_URL, SITE_NAME, searchTemplates, getSeoPage, getHiddenLandings } from '@/lib/seo';
+import { SITE_URL, SITE_NAME, searchTemplates, getSeoPage, getHiddenLandings, getLandingRedirects } from '@/lib/seo';
 import { landingBySlug, Landing, ALL_LANDINGS } from '@/lib/landings';
 import { guideFor } from '@/lib/landingGuide';
 import { getTemplateCountLabel, withCount } from '@/lib/templateCountServer';
@@ -80,6 +80,9 @@ const UI = {
 };
 
 export default async function LandingPage({ params }: { params: { landing: string } }) {
+  // Linked to the gallery instead (Admin → SEO → Landing pages).
+  const to = (await getLandingRedirects()).get(params.landing);
+  if (to) permanentRedirect(to);
   const found = await resolveLanding(params.landing);
   if (!found) notFound();
   const l = found as Landing;
@@ -187,7 +190,7 @@ export default async function LandingPage({ params }: { params: { landing: strin
               New designs are on the way. Meanwhile, <Link href="/templates" className="underline">browse all templates</Link>.
             </p>
           )}
-          <p className="mt-6"><Link href={`/templates?q=${encodeURIComponent(l.terms[0])}`} className="text-[14px] font-medium underline underline-offset-4">{u.seeAll(l.thing)}</Link></p>
+          <p className="mt-6"><Link href={`/templates?q=${encodeURIComponent(l.terms[0].replace(/\+/g, ' '))}`} className="text-[14px] font-medium underline underline-offset-4">{u.seeAll(l.thing)}</Link></p>
         </section>
         )}
 

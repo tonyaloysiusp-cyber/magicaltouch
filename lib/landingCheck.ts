@@ -5,7 +5,7 @@
 // Used by the daily job and by "Check now" in Admin → SEO → Page health.
 
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { SITE_URL, searchTemplates } from '@/lib/seo';
+import { SITE_URL, searchTemplates, getLandingRedirects } from '@/lib/seo';
 import { decide, livePages, parseSettings, summarize, PageCheck, StatusRow, Decision } from '@/lib/landingLifecycle';
 import { festivalDates, seasonState, OccasionDate } from '@/lib/landingSeasons';
 
@@ -40,7 +40,9 @@ export async function runLandingCheck(supabase: SupabaseClient, token: string | 
   const occasions = ((life as any).occasions || []) as OccasionDate[];
   const views = new Map<string, number>(((perf as any).views || []).map((v: any) => [v.path, Number(v.v30) || 0]));
   const search = new Map<string, number>(((perf as any).entries || []).map((e: any) => [e.path, Number(e.search) || 0]));
-  const all = livePages((perf as any).pages || [], new Set(Array.from(hidden).filter((x) => !seasonOff.has(x))));
+  // Addresses linked to the gallery have no page of their own to check.
+  const redirects = await getLandingRedirects().catch(() => new Map<string, string>());
+  const all = livePages((perf as any).pages || [], new Set(Array.from(hidden).filter((x) => !seasonOff.has(x)))).filter(({ l }) => !redirects.has(l.slug));
   const seasons = new Map(all.map(({ l }) => [l.slug, seasonState(festivalDates(l.slug, l.h1, occasions))]));
   // Off-season festival pages aren't opened or judged — they wait for their season.
   const pages = all.filter(({ l }) => { const st = seasons.get(l.slug); return !(st?.seasonal && !st.inSeason && seasonOff.has(l.slug)); });
