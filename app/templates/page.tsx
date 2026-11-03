@@ -10,6 +10,7 @@ import { Fraunces, Inter } from 'next/font/google';
 import { Menu, X, Search, ArrowUpRight, Instagram, Twitter, Facebook, Youtube, BadgeCheck, Crown, SlidersHorizontal, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { STYLES, PALETTES, ASPECTS, stylesOf, styleLabel, palettesOf, mediumOf, pageCountOf, shapeOf, aspectOf, visibleTags } from '@/lib/templates/taxonomy';
 import { renderTemplatePages, pageLabel, PageImage } from '@/lib/templates/renderPages';
+import { autoHashtags } from '@/lib/templateHashtags';
 import { resolveAuthedPath } from '@/lib/authNav';
 import { MockDesignCard } from '@/components/MockDesignCard';
 import { PrintSpecs } from '@/components/templates/PrintSpecs';
@@ -212,7 +213,7 @@ export default function TemplatesPage() {
         pages: pageCountOf(t),
         shape: shapeOf(t),
         aspect: aspectOf(t),
-        hay: [t.name, t.category, t.description, t.searchKeywords, t.occasion, t.industry, ...(t.tags || []).map((x) => x.replace('style:', ''))].filter(Boolean).join(' ').toLowerCase(),
+        hay: [t.name, t.category, t.description, t.searchKeywords, t.occasion, t.industry, ...(t.tags || []).map((x) => x.replace('style:', '')), ...autoHashtags({ name: t.name, category: t.category, occasion: t.occasion, industry: t.industry, search_keywords: t.searchKeywords }).map((h) => `#${h} ${h}`)].filter(Boolean).join(' ').toLowerCase(),
       })
     );
     return m;
@@ -263,8 +264,41 @@ export default function TemplatesPage() {
     return categories.filter((c) => c.parentId === f.cat && used.has(c.id)).map((c) => ({ id: c.id, label: c.name }));
   }, [categories, templates, f.cat, usingDbCategories, parentOf]);
 
+  // Festivals and occasions people look for, with how many templates each has.
+  const occasionChips = useMemo(() => {
+    const OCC = ['Christmas', 'New Year', "Valentine's", "Mother's Day", "Father's Day", 'Diwali', 'Eid', 'Ramadan', 'Pongal', 'Onam', 'Holi', 'Easter', 'Halloween', 'Thanksgiving', 'Lunar New Year', 'Navratri', 'Ganesh Chaturthi', 'Raksha Bandhan', 'Independence Day', 'Graduation', 'Anniversary', 'Baby Shower', 'Wedding', 'Birthday'];
+    return OCC.map((o) => {
+      const k = o.toLowerCase().replace("'s", '');
+      const n = templates.filter((t) => { const x = meta.get(t); return x && x.hay.includes(k); }).length;
+      return [o, n] as [string, number];
+    }).filter(([, n]) => n > 0);
+  }, [templates, meta]);
+  // The most used hashtags in the chosen category (or overall).
+  const catHashtags = useMemo(() => {
+    const pool = templates.filter((t) => matches(t, { ...f, q: '' }));
+    const count = new Map<string, number>();
+    pool.slice(0, 1500).forEach((t) => autoHashtags({ name: t.name, category: t.category, occasion: t.occasion, industry: t.industry, search_keywords: t.searchKeywords }, 6).forEach((h) => count.set(h, (count.get(h) || 0) + 1)));
+    return Array.from(count.entries()).filter(([h]) => h !== 'graphicdesign').sort((a, b) => b[1] - a[1]).slice(0, 14).map(([h]) => h);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [templates, f.cat, f.sub, matches]);
+
   const filtered = useMemo(() => {
     const list = templates.filter((t) => matches(t, f));
+    // Searching: titles that match come first, then hashtags / occasion, then the rest.
+    const q = f.q.trim().toLowerCase().replace(/^#/, '');
+    if (q && f.sort === 'recommended') {
+      const words = q.split(/\s+/).filter(Boolean);
+      const score = (t: Template) => {
+        const name = t.name.toLowerCase();
+        let sc = 0;
+        if (name.includes(q)) sc += 100;
+        words.forEach((w) => { if (name.includes(w)) sc += 20; });
+        if ((t.occasion || '').toLowerCase().includes(q)) sc += 40;
+        if ((t.tags || []).some((x) => x.toLowerCase().includes(q))) sc += 15;
+        return sc;
+      };
+      return list.map((t, i) => ({ t, i, sc: score(t) })).sort((a, b) => b.sc - a.sc || a.i - b.i).map((x) => x.t);
+    }
     if (f.sort === 'recent') return [...list].sort((a, b) => time(b) - time(a));
     if (f.sort === 'az') return [...list].sort((a, b) => a.name.localeCompare(b.name));
     return list; // curated order: featured first, then the editors' order
@@ -400,6 +434,31 @@ export default function TemplatesPage() {
               >
                 {c.label}
               </button>
+            ))}
+          </div>
+        )}
+
+        {/* Festivals & occasions: one tap searches by title and hashtag */}
+        {occasionChips.length > 0 && (
+          <div className="mt-4">
+            <p className="text-center text-[11px] font-semibold uppercase tracking-[0.14em] text-mt-faint mb-2">Festivals & occasions</p>
+            <div role="group" aria-label="Festivals and occasions" className="flex gap-1.5 overflow-x-auto pb-1 -mx-4 px-4 md:mx-0 md:px-0 md:flex-wrap md:justify-center">
+              {occasionChips.map(([name, n]) => {
+                const on = f.q.trim().toLowerCase() === name.toLowerCase();
+                return (
+                  <button key={name} onClick={() => set({ q: on ? '' : name })} aria-pressed={on} className={`shrink-0 text-xs font-medium rounded-full px-3 py-1.5 border transition-colors ${on ? 'mt-active-blue text-mt-ink' : 'border-black/10 dark:border-white/15 text-mt-muted hover:text-mt-ink'}`}>
+                    {name} <span className="text-mt-faint">{n}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+        {/* Hashtags for the chosen category */}
+        {catHashtags.length > 0 && (
+          <div aria-label="Hashtags" className="mt-3 flex gap-x-3 gap-y-1 overflow-x-auto pb-1 -mx-4 px-4 md:mx-0 md:px-0 md:flex-wrap md:justify-center">
+            {catHashtags.map((h) => (
+              <button key={h} onClick={() => set({ q: h })} className="shrink-0 text-[13px] text-[#3B82C4] hover:underline">#{h}</button>
             ))}
           </div>
         )}

@@ -9,7 +9,8 @@ import { Footer } from '@/components/home/Footer';
 import { AppHeader } from '@/components/AppHeader';
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Lock, Unlock, Search, Wand2, ArrowRightLeft, ChevronDown, Check, Ruler, ArrowRight, X } from 'lucide-react';
+import { Lock, Unlock, Search, Wand2, ArrowRightLeft, ChevronDown, Check, Ruler, ArrowRight, X, ImagePlus } from 'lucide-react';
+import Link from 'next/link';
 import { supabase, getSessionUser } from '@/lib/supabase';
 import { DocUnit } from '@/lib/editor/types';
 import { formatUnit, unitToPx, useDisplayUnit } from '@/lib/editor/units';
@@ -212,6 +213,20 @@ export default function CreateDesignPage() {
               <button type="button" onClick={() => setWizard(true)} className="h-12 px-5 rounded-2xl mt-spectrum-border bg-mt-surface text-[15px] font-semibold inline-flex items-center justify-center gap-2 hover:bg-mt-surface2">
                 <Wand2 size={17} className="text-[#7565C2]" /> Help me choose
               </button>
+            </div>
+
+            {/* Start from a photo: the photo tools sit right here with "new design" */}
+            <div className="mt-4 flex flex-wrap gap-2" aria-label="Start from a photo">
+              {[
+                ['/photo-studio', 'Edit a photo', 'Retouch, filters, crop'],
+                ['/remove-background', 'Remove background', 'One or many photos'],
+                ['/mockups', 'Mockups', 'See your design for real'],
+              ].map(([href, label, sub]) => (
+                <Link key={href} href={href} className="inline-flex items-center gap-2.5 h-12 pl-3 pr-4 rounded-2xl border border-mt-border bg-mt-surface hover:-translate-y-0.5 transition-transform">
+                  <ImagePlus size={17} className="text-[#7565C2]" />
+                  <span className="text-left leading-tight"><span className="block text-[13px] font-semibold">{label}</span><span className="block text-[11px] text-mt-muted">{sub}</span></span>
+                </Link>
+              ))}
             </div>
 
             {/* Goals */}

@@ -16,6 +16,7 @@ function SignupForm() {
   const { theme, toggleTheme } = useAppTheme();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [password2, setPassword2] = useState('');
   const [phone, setPhone] = useState('');
   // Marketing is opt-in only and off by default (never pre-ticked).
   const [marketingOptIn, setMarketingOptIn] = useState(false);
@@ -33,6 +34,10 @@ function SignupForm() {
     const cleanEmail = email.trim().toLowerCase();
     if (password.length < 8) {
       setError('Please use at least 8 characters for your password.');
+      return;
+    }
+    if (password !== password2) {
+      setError('The two passwords don’t match — please type the same password twice.');
       return;
     }
     setLoading(true);
@@ -149,6 +154,23 @@ function SignupForm() {
             >
               {showPw ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
+          </div>
+          <div className="relative">
+            <input
+              type={showPw ? 'text' : 'password'}
+              placeholder="Confirm password"
+              value={password2}
+              onChange={(e) => setPassword2(e.target.value)}
+              autoComplete="new-password"
+              aria-label="Confirm password"
+              className={`w-full border bg-mt-surface text-mt-ink p-3 pr-11 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-blue ${password2 && password2 !== password ? 'border-rose-500' : 'border-mt-border'}`}
+              required
+            />
+            {password2 && (
+              <span className={`absolute right-3 top-1/2 -translate-y-1/2 text-[12px] font-semibold ${password2 === password ? 'text-emerald-600' : 'text-rose-600'}`}>
+                {password2 === password ? '✓ Match' : 'No match'}
+              </span>
+            )}
           </div>
           <input
             type="tel"
