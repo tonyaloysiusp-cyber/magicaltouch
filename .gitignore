@@ -6,3 +6,8 @@ next-env.d.ts
 tsconfig.tsbuildinfo
 e2e-out/
 __pycache__/
+
+# Cloudflare (OpenNext) build output
+.open-next
+.wrangler
+.dev.vars

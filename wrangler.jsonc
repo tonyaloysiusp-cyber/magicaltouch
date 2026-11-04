@@ -1,0 +1,36 @@
+// Cloudflare Workers config for the Next.js site (OpenNext adapter 1.15.1).
+// Staging runs at magicaltouch.<account>.workers.dev; the real domain is NOT
+// routed here until the staging tests pass and Tony approves the switch.
+// Secrets (Supabase service key, Stripe, SMTP, Gemini…) are added in the
+// Cloudflare dashboard (Worker → Settings → Variables and Secrets), never here.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "main": ".open-next/worker.js",
+  "name": "magicaltouch",
+  "compatibility_date": "2025-12-01",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "services": [
+    {
+      // Self-reference service binding; must match the worker name.
+      "binding": "WORKER_SELF_REFERENCE",
+      "service": "magicaltouch"
+    }
+  ],
+  "r2_buckets": [
+    {
+      // Page cache (ISR). Create the bucket "magicaltouch-cache" first
+      // (R2 must be switched on in the Cloudflare dashboard; 10 GB free).
+      "binding": "NEXT_INC_CACHE_R2_BUCKET",
+      "bucket_name": "magicaltouch-cache"
+    }
+  ],
+  "vars": {
+    "NEXT_PUBLIC_SUPABASE_URL": "https://rqkjogzljsbufbrdlbfr.supabase.co",
+    "SITE_URL": "https://www.magicaltouchdesign.com"
+  },
+  "observability": { "enabled": true }
+}

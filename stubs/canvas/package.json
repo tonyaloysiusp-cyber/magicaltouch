@@ -1,0 +1,7 @@
+{
+  "name": "canvas",
+  "version": "0.0.0-stub",
+  "description": "Placeholder: behaves like the optional 'canvas' package not being installed (require() throws), so jsdom/fabric fall back exactly as before. Needed because Cloudflare's bundler must resolve every require.",
+  "main": "index.js",
+  "license": "MIT"
+}
