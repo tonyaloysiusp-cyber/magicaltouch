@@ -1,0 +1,51 @@
+name: Cloudflare staging
+# Builds the site for Cloudflare Workers (OpenNext) on the cloudflare-staging
+# branch and reports the worker size and file count. Deploys to the staging
+# address (magicaltouch.<account>.workers.dev) only when the repository has
+# the CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID secrets. The real domain
+# is never touched by this workflow.
+on:
+  push:
+    branches: [cloudflare-staging]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: cloudflare-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: https://rqkjogzljsbufbrdlbfr.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJxa2pvZ3psanNidWZicmRsYmZyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkyNzgyMDcsImV4cCI6MjEwNDg1NDIwN30.-OHCqhZNWsdlbkIE3qUV6It5VUoAN1lQDUFCRLtUaPM
+      NEXT_TELEMETRY_DISABLED: '1'
+      CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install
+        run: npm install --no-audit --no-fund
+      - name: Build for Cloudflare
+        run: npx opennextjs-cloudflare build
+      - name: Report size
+        run: |
+          echo "worker.js: $(du -h .open-next/worker.js | cut -f1)"
+          echo "server bundle (gzip): $(tar -cz -C .open-next server-functions 2>/dev/null | wc -c | awk '{printf "%.1f MiB", $1/1048576}')"
+          echo "static asset files: $(find .open-next/assets -type f | wc -l) (Workers Free 20,000 / Paid 100,000)"
+          echo "static assets size: $(du -sh .open-next/assets | cut -f1)"
+      - name: Keep the updated lockfile
+        uses: actions/upload-artifact@v4
+        with:
+          name: package-lock
+          path: package-lock.json
+          retention-days: 7
+      - name: Deploy to staging (workers.dev)
+        if: env.CF_TOKEN != ''
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx opennextjs-cloudflare deploy

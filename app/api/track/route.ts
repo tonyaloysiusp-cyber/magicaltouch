@@ -5,7 +5,8 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 
-export const runtime = 'edge';
+// Node.js runtime: works on Vercel and on Cloudflare (OpenNext), which does not run Edge routes.
+export const runtime = 'nodejs';
 
 const URL_ = (process.env.NEXT_PUBLIC_SUPABASE_URL || '').replace(/\/$/, '');
 const KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
@@ -37,7 +38,8 @@ export async function POST(req: NextRequest) {
   try { b = await req.json(); } catch { return new NextResponse(null, { status: 400 }); }
   const auth = req.headers.get('authorization');
   const headers = { apikey: KEY, Authorization: auth && /^Bearer [\w.-]+$/.test(auth) ? auth : `Bearer ${KEY}`, 'Content-Type': 'application/json' };
-  const city = req.headers.get('x-vercel-ip-city');
+  // Vercel and Cloudflare both pass the visitor's country (and city when enabled).
+  const city = req.headers.get('x-vercel-ip-city') || req.headers.get('cf-ipcity');
   const body =
     b?.kind === 'search'
       ? { fn: 'track_search', args: { p_q: String(b.q || '').slice(0, 60), p_results: Number(b.results) || 0 } }
@@ -47,7 +49,7 @@ export async function POST(req: NextRequest) {
           fn: 'track_visit2',
           args: {
             p_path: String(b.path || '/'), p_visitor: String(b.visitor || ''), p_referrer: b.referrer ? String(b.referrer) : null, p_device: b.device ? String(b.device) : null,
-            p_country: req.headers.get('x-vercel-ip-country'), p_city: city ? decodeURIComponent(city) : null,
+            p_country: req.headers.get('x-vercel-ip-country') || req.headers.get('cf-ipcountry'), p_city: city ? decodeURIComponent(city) : null,
             p_browser: browserOf(ua), p_os: osOf(ua), p_utm: b.utm ? String(b.utm).slice(0, 80) : null,
             p_load_ms: Number.isFinite(b.loadMs) ? Math.round(b.loadMs) : null,
           },

@@ -4,7 +4,7 @@ on:
     branches-ignore: [main, e2e-results]
   workflow_dispatch:
 permissions:
-  contents: write
+  contents: read
 concurrency:
   group: e2e-${{ github.ref }}
   cancel-in-progress: true
@@ -25,14 +25,13 @@ jobs:
           cache: npm
       - name: Build and test
         run: bash e2e/ci.sh
-      - name: Publish results
+      # Results are kept as a downloadable artifact. (They used to be pushed to an
+      # "e2e-results" branch, which made Vercel start a failing build every time.)
+      - name: Keep results
         if: always()
-        run: |
-          mkdir -p e2e-out
-          cd e2e-out
-          git init -q -b e2e-results
-          git config user.name "mt-e2e"
-          git config user.email "e2e@users.noreply.github.com"
-          git add -A
-          git commit -qm "E2E results for $GITHUB_SHA"
-          git push -fq "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" e2e-results
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-results
+          path: e2e-out
+          retention-days: 14
+          if-no-files-found: ignore
