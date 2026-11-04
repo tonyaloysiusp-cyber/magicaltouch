@@ -29,8 +29,14 @@ jobs:
           node-version: 22
       - name: Install
         run: npm install --no-audit --no-fund
+      # Google Fonts sometimes fails to answer the build machine; retry twice.
       - name: Build for Cloudflare
-        run: npx opennextjs-cloudflare build
+        run: |
+          for i in 1 2 3; do
+            npx opennextjs-cloudflare build && exit 0
+            echo "Build attempt $i failed; retrying in 20 s"; sleep 20
+          done
+          exit 1
       - name: Report size
         run: |
           echo "worker.js: $(du -h .open-next/worker.js | cut -f1)"
