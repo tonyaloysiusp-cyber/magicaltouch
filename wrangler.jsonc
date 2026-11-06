@@ -1,6 +1,6 @@
 // Cloudflare Workers config for the Next.js site (OpenNext adapter 1.15.1).
-// Staging runs at magicaltouch.<account>.workers.dev; the real domain is NOT
-// routed here until the staging tests pass and Tony approves the switch.
+// Live on magicaltouchdesign.com and www via the routes below; the test copy
+// stays at magicaltouch.tonyaloysiusp.workers.dev.
 // Secrets (Supabase service key, Stripe, SMTP, Gemini…) are added in the
 // Cloudflare dashboard (Worker → Settings → Variables and Secrets), never here.
 {
@@ -32,5 +32,13 @@
     "NEXT_PUBLIC_SUPABASE_URL": "https://rqkjogzljsbufbrdlbfr.supabase.co",
     "SITE_URL": "https://www.magicaltouchdesign.com"
   },
+  // Live since 6 Nov 2026 (approved by Tony after the staging checks passed).
+  // Zone routes: the existing proxied DNS records stay as they are; Cloudflare
+  // hands the requests to this Worker instead of the old Vercel origin.
+  "routes": [
+    { "pattern": "magicaltouchdesign.com/*", "zone_name": "magicaltouchdesign.com" },
+    { "pattern": "www.magicaltouchdesign.com/*", "zone_name": "magicaltouchdesign.com" }
+  ],
+  "workers_dev": true,
   "observability": { "enabled": true }
 }
