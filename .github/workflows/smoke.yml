@@ -1,0 +1,21 @@
+name: smoke
+on: { push: { branches: [smoke-mcp] } }
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          B=https://www.magicaltouchdesign.com
+          echo "--- pages"
+          for p in / /templates/wedding-album-ivory-gold-40-pages /templates/birthday-album-pop-8-pages /login /remove-background /mockups /admin; do
+            curl -s -o /tmp/b -m 60 -w "%{http_code} %{time_total}s $p  " "$B$p"; grep -o '<title>[^<]*' /tmp/b | head -1; echo
+          done
+          echo "--- menu has Tools: $(curl -s $B/ | grep -c '>Tools<\|Tools<!-- -->')"
+          echo "--- login has Show button: $(curl -s $B/login | grep -c 'Show password')"
+          echo "--- gallery list has new albums: $(curl -s $B/api/public-templates | grep -o 'wedding-album-ivory-gold-40-pages' | head -1)"
+          echo "--- mcp GET"; curl -s -o /dev/null -w "%{http_code}\n" $B/api/mcp
+          echo "--- mcp no key"; curl -s -w " %{http_code}\n" -X POST -H 'content-type: application/json' -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' $B/api/mcp
+          echo "--- mcp initialize"; curl -s -X POST -H 'content-type: application/json' -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"t","version":"1"}}}' $B/api/mcp/mt_71b03271977f079349fdc3969c3a15696b70bb61b1aff5421047cbb91a17346c | head -c 300; echo
+          echo "--- mcp tools/list"; curl -s -X POST -H 'content-type: application/json' -d '{"jsonrpc":"2.0","id":2,"method":"tools/list"}' $B/api/mcp/mt_71b03271977f079349fdc3969c3a15696b70bb61b1aff5421047cbb91a17346c | grep -o '"name":"[a-z_]*"' | tr '\n' ' '; echo
+          echo "--- mcp call"; curl -s -X POST -H 'content-type: application/json' -d '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"site_overview","arguments":{}}}' $B/api/mcp/mt_71b03271977f079349fdc3969c3a15696b70bb61b1aff5421047cbb91a17346c | head -c 400; echo
+          echo "--- mcp bearer"; curl -s -X POST -H "authorization: Bearer mt_71b03271977f079349fdc3969c3a15696b70bb61b1aff5421047cbb91a17346c" -H 'content-type: application/json' -d '{"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"upcoming_festivals","arguments":{"limit":2}}}' $B/api/mcp | head -c 300; echo
