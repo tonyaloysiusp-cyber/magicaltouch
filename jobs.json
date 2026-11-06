@@ -1,5 +1,7 @@
 [
- {"name":"m-home","url":"/","wait":9000,"steps":[{"js":"window.scrollTo(0, 650)","wait":9000}]},
- {"name":"d-tutorials","device":"desktop","url":"/tutorials","wait":6000,"steps":[{"js":"window.scrollTo(0, document.body.scrollHeight)","wait":2000}]},
- {"name":"d-tpl","device":"desktop","url":"/templates/wedding-album-ivory-gold-40-pages","wait":5000,"steps":[]}
+ {"name":"cut","device":"desktop","url":"/remove-background","wait":4000,
+  "steps":[{"upload":["tool/ad/entrepreneur-3.jpg","tool/ad/businessman-1.jpg"],"wait":2000},
+   {"waitFor":"li:nth-child(2) button[aria-label^='Touch up']","wait":2000},
+   {"download":"li button:has-text('PNG')","nth":0,"as":"entrepreneur-3-cut.png","wait":1500},
+   {"download":"li button:has-text('PNG')","nth":1,"as":"businessman-1-cut.png","wait":1500}]}
 ]

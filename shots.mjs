@@ -22,6 +22,7 @@ for (const j of jobs) {
         if (s.js) await page.evaluate(s.js);
         if (s.upload) await page.setInputFiles(s.sel || 'input[type=file]', s.upload);
         if (s.click) await page.locator(s.click).first().click({ timeout: 8000 });
+        if (s.download) { const [dl] = await Promise.all([page.waitForEvent('download', { timeout: 60000 }), page.locator(s.download).nth(s.nth || 0).click()]); await dl.saveAs(`${out}/${s.as}`); }
         if (s.waitFor) await page.locator(s.waitFor).first().waitFor({ timeout: 120000 });
         if (s.label) await page.getByLabel(s.label).first().click({ timeout: 5000 });
         await page.waitForTimeout(s.wait || 1500);
