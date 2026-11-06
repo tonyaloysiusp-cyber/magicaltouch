@@ -5,7 +5,7 @@ const out = 'shots'; fs.mkdirSync(out, { recursive: true });
 const browser = await chromium.launch();
 const jobs = JSON.parse(fs.readFileSync('jobs.json', 'utf8'));
 for (const j of jobs) {
-  const ctx = await browser.newContext({ ...devices[j.device || 'iPhone 13'] });
+  const ctx = await browser.newContext(j.device === 'desktop' ? { viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2 } : j.device === 'ipad' ? { ...devices['iPad Pro 11 landscape'] } : { ...devices[j.device || 'iPhone 13'] });
   await ctx.addInitScript(() => { try { localStorage.setItem('mt:onboarded', '1'); } catch {} });
   const page = await ctx.newPage();
   try {
@@ -20,6 +20,9 @@ for (const j of jobs) {
         if (s.rail) await page.locator('nav[aria-label="Editor panels"] button', { hasText: s.rail }).first().click({ timeout: 5000 });
         if (s.close) await page.getByRole('button', { name: 'Close' }).last().click({ timeout: 5000 });
         if (s.js) await page.evaluate(s.js);
+        if (s.upload) await page.setInputFiles(s.sel || 'input[type=file]', s.upload);
+        if (s.click) await page.locator(s.click).first().click({ timeout: 8000 });
+        if (s.waitFor) await page.locator(s.waitFor).first().waitFor({ timeout: 120000 });
         if (s.label) await page.getByLabel(s.label).first().click({ timeout: 5000 });
         await page.waitForTimeout(s.wait || 1500);
         await page.screenshot({ path: `${out}/${j.name}-${n++}.png` });

@@ -19,7 +19,7 @@ jobs:
       - run: cd site && npm ci --no-audit --no-fund && (npm run build || npm run build)
       - run: cd site && npm i --no-save playwright@1.47.2 && npx playwright install --with-deps chromium
       - run: cd site && (npx next start -p 3000 > ../server.txt 2>&1 &) && for i in $(seq 1 60); do curl -s -o /dev/null http://localhost:3000 && break; sleep 1; done
-      - run: cd site && cp ../tool/shots.mjs ../tool/jobs.json . && BASE=http://localhost:3000 node shots.mjs
+      - run: cd site && cp ../tool/shots.mjs ../tool/jobs.json . && cd .. && BASE=http://localhost:3000 node site/shots.mjs; mv shots site/ || true
       - run: |
           cd tool; rm -rf shots; cp -r ../site/shots .
           git config user.name mt-shots; git config user.email shots@users.noreply.github.com

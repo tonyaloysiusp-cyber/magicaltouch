@@ -1,5 +1,22 @@
 [
- {"name":"tpl","url":"/editor?templateId=00abe880-d03b-457b-b33b-39dadf8415d7","wait":14000,
-  "steps":[{"js":"(()=>{const c=window.__fabricCanvas;const o=c.getObjects().find(o=>o.type==='textbox'||o.type==='i-text');if(o){c.setActiveObject(o);c.requestRenderAll();}})()"},{"text":"Align","exact":true},{"text":"Centre","exact":true},{"js":"(()=>{const c=window.__fabricCanvas;const o=c.getObjects().find(o=>o.type==='image');if(o){c.setActiveObject(o);c.requestRenderAll();}})()"}]},
- {"name":"album","url":"/editor?w=1200&h=1200","steps":[{"text":"Page","exact":true}]}
+ {"name":"d-editor","device":"desktop","url":"/editor?templateId=00abe880-d03b-457b-b33b-39dadf8415d7","wait":14000,
+  "steps":[
+   {"js":"(()=>{const c=window.__fabricCanvas;const o=c.getObjects().find(o=>o.type==='textbox'||o.type==='i-text');if(o){c.setActiveObject(o);c.requestRenderAll();}})()"},
+   {"js":"(()=>{const c=window.__fabricCanvas;const o=c.getObjects().find(o=>o.type==='image');if(o){c.setActiveObject(o);c.requestRenderAll();}})()"},
+   {"js":"window.__fabricCanvas.discardActiveObject();window.__fabricCanvas.requestRenderAll()"},
+   {"rail":"Templates"},{"rail":"Text"},{"rail":"Elements"},{"rail":"Brand"},{"rail":"Background"},
+   {"text":"Export","exact":true,"wait":2000},{"js":"document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape'}))"},
+   {"text":"Resize","exact":true,"wait":2000}
+  ]},
+ {"name":"d-gallery","device":"desktop","url":"/templates","wait":8000,"steps":[]},
+ {"name":"d-home","device":"desktop","url":"/","wait":9000,"steps":[{"js":"window.scrollTo(0, 900)","wait":3000}]},
+ {"name":"d-remover","device":"desktop","url":"/remove-background","wait":5000,
+  "steps":[{"upload":["site/public/templates/photos/pro/perfume.jpg","site/public/templates/photos/pro/x_sunglass.jpg","site/public/templates/photos/pro/sneakers.jpg"],"wait":3000},
+   {"waitFor":"button[aria-label^='Touch up']","wait":2000},
+   {"js":"document.querySelectorAll('ul li')[0]?.scrollIntoView()","wait":3000},
+   {"click":"button[aria-label^='Touch up']","wait":3000},
+   {"text":"Erase","exact":true,"wait":1000},
+   {"text":"Result","exact":true,"wait":1500},
+   {"text":"Before","exact":true,"wait":1500}]},
+ {"name":"d-photo","device":"desktop","url":"/photo-studio","wait":8000,"steps":[]}
 ]
