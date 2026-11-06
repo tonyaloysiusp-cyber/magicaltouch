@@ -1354,11 +1354,17 @@ function EditorContent() {
     const vw = canvas.getWidth();
     const vh = canvas.getHeight();
     if (!vw || !vh || rect.width <= 0 || rect.height <= 0) return;
-    let z = Math.min((vw - pad * 2) / rect.width, (vh - pad * 2) / rect.height);
+    // Phones: use the whole width and keep the page clear of the tool bar
+    // that appears under it, so the design sits centred in the free space.
+    const phone = typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches;
+    const padX = phone ? 18 : pad;
+    const padTop = phone ? 18 : pad;
+    const padBottom = phone ? 128 : pad;
+    let z = Math.min((vw - padX * 2) / rect.width, (vh - padTop - padBottom) / rect.height);
     if (!isFinite(z) || z <= 0) z = 1;
     z = Math.max(0.05, Math.min(4, z));
     const panX = (vw - rect.width * z) / 2 - rect.x * z;
-    const panY = (vh - rect.height * z) / 2 - rect.y * z;
+    const panY = padTop + (vh - padTop - padBottom - rect.height * z) / 2 - rect.y * z;
     canvas.setViewportTransform([z, 0, 0, z, panX, panY]);
     setZoom(Math.round(z * 100));
   };
@@ -7936,6 +7942,7 @@ function EditorContent() {
                 onCropDone={features.finishCrop}
                 onSmartCrop={features.smartCrop}
                 pro={pro}
+                compact={compact}
               />
             </div>
           )}

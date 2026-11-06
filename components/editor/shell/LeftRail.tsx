@@ -58,7 +58,7 @@ export function LeftRail({
               type="button"
               onClick={() => (it.action ? it.action() : onActivate(active === it.id ? null : it.id))}
               aria-pressed={it.action ? undefined : active === it.id}
-              className={cx('flex-1 min-w-[64px] flex flex-col items-center gap-1 py-2 text-[10px] font-medium', active === it.id ? 'text-mt-ink' : 'text-mt-muted')}
+              className={cx('flex-1 min-w-[54px] flex flex-col items-center gap-1 py-2 text-[10px] font-medium', active === it.id ? 'text-mt-ink' : 'text-mt-muted')}
             >
               <span className={cx('h-8 w-12 rounded-full flex items-center justify-center', active === it.id && 'mt-active-blue border')}>{it.icon}</span>
               {it.label}

@@ -46,6 +46,44 @@ export function PagesBar({
   // evenly spaced and the whole 5%–800% range fits.
   const toSlider = (z: number) => Math.round(Math.log2(Math.max(5, z) / 100) * 100);
   const fromSlider = (v: number) => 100 * Math.pow(2, v / 100);
+  // Phones: one slim row instead of a strip of thumbnails, so the design
+  // gets the room. Go between pages, fit, copy, delete, add.
+  if (compact) {
+    const go = (d: -1 | 1) => {
+      const next = pages[activeIndex + d];
+      if (next) onSelect(next.id);
+    };
+    return (
+      <div className="shrink-0 h-12 border-t border-mt-border bg-mt-surface flex items-center gap-1 px-2" role="group" aria-label="Pages">
+        <button type="button" aria-label="Previous page" disabled={activeIndex <= 0} onClick={() => go(-1)} className={btn}>
+          <ChevronLeft size={18} />
+        </button>
+        <span className="text-[13px] font-semibold text-mt-ink tabular-nums min-w-[64px] text-center">
+          {pages.length > 1 ? `Page ${activeIndex + 1} / ${pages.length}` : 'Page 1'}
+        </span>
+        <button type="button" aria-label="Next page" disabled={activeIndex >= pages.length - 1} onClick={() => go(1)} className={btn}>
+          <ChevronRight size={18} />
+        </button>
+        <span className="flex-1" />
+        <button type="button" aria-label="Fit page to screen" title="Fit to screen" onClick={onFit} className={btn}>
+          <Maximize size={16} />
+        </button>
+        {pages.length > 1 && (
+          <>
+            <button type="button" aria-label="Duplicate page" onClick={() => activeIndex >= 0 && onDuplicate(pages[activeIndex].id)} className={btn}>
+              <Copy size={16} />
+            </button>
+            <button type="button" aria-label="Delete page" onClick={() => activeIndex >= 0 && onDelete(pages[activeIndex].id)} className={cx(btn, 'hover:text-red-600')}>
+              <Trash2 size={16} />
+            </button>
+          </>
+        )}
+        <button type="button" onClick={onAdd} className="h-8 px-3 rounded-full border border-mt-border text-[12.5px] font-semibold text-mt-ink inline-flex items-center gap-1">
+          <Plus size={14} /> Page
+        </button>
+      </div>
+    );
+  }
   return (
     <div className={cx('shrink-0 border-t border-mt-border bg-mt-surface flex items-center gap-3 px-3', compact ? 'h-[64px]' : 'h-[76px]')}>
       <div className="flex-1 min-w-0 flex items-center gap-2 overflow-x-auto mt-scroll py-1">

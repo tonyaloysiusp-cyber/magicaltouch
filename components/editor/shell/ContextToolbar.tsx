@@ -131,7 +131,66 @@ function firstChildFill(o: any): string | GradientSpec | null {
   return FillValue(o);
 }
 
-export function ContextToolbar({
+// Phones: a row of big, labelled one-tap actions above the tools —
+// centre on the page, align, duplicate, delete — so the most common
+// layout jobs never hide inside the scrolling toolbar.
+export function ContextToolbar(props: Parameters<typeof ContextToolbarInner>[0] & { compact?: boolean }) {
+  const { compact, ...rest } = props;
+  const sel = props.sel;
+  const showQuick = compact && sel && !sel.__isArtboard && !props.cropping;
+  if (!showQuick) return <ContextToolbarInner {...rest} />;
+  const multi = sel.type === 'activeSelection';
+  const big = 'pointer-events-auto flex-1 min-w-0 h-11 rounded-xl inline-flex flex-col items-center justify-center gap-0.5 text-[10.5px] font-semibold text-mt-ink active:bg-mt-surface2';
+  return (
+    <div className="flex flex-col items-stretch gap-1.5 w-full max-w-[460px]">
+      <div role="toolbar" aria-label="Quick actions" className="pointer-events-auto flex items-stretch gap-1 rounded-2xl border border-mt-border bg-mt-surface/95 backdrop-blur px-1.5 py-1 shadow-[0_12px_32px_-12px_rgba(9,9,11,0.25)]">
+        <button type="button" className={big} onClick={() => { props.a.align('centerH', multi ? 'page' : 'page'); props.a.align('centerV', 'page'); }}>
+          <Maximize2 size={17} /> Centre
+        </button>
+        <Popover
+          width={260}
+          trigger={({ toggle, open }) => (
+            <button type="button" className={cx(big, open && 'bg-mt-surface2')} onClick={toggle} aria-expanded={open}>
+              <AlignCenterVertical size={17} /> Align
+            </button>
+          )}
+        >
+          <p className="text-[13px] font-semibold mb-2">Align to page</p>
+          <div className="grid grid-cols-3 gap-1.5">
+            {([
+              ['left', <AlignStartVertical key="1" size={16} />, 'Left'],
+              ['centerH', <AlignCenterVertical key="2" size={16} />, 'Centre'],
+              ['right', <AlignEndVertical key="3" size={16} />, 'Right'],
+              ['top', <AlignStartHorizontal key="4" size={16} />, 'Top'],
+              ['centerV', <AlignCenterHorizontal key="5" size={16} />, 'Middle'],
+              ['bottom', <AlignEndHorizontal key="6" size={16} />, 'Bottom'],
+            ] as [AlignMode, React.ReactNode, string][]).map(([m, icon, l]) => (
+              <button key={m} type="button" onClick={() => props.a.align(m, 'page')} className="h-12 rounded-lg border border-mt-border text-[11px] inline-flex flex-col items-center justify-center gap-0.5 hover:bg-mt-surface2">
+                {icon} {l}
+              </button>
+            ))}
+          </div>
+          <p className="text-[13px] font-semibold mt-3 mb-2">Layer</p>
+          <div className="grid grid-cols-2 gap-1.5">
+            <button type="button" onClick={props.a.bringForward} className="h-10 rounded-lg border border-mt-border text-xs inline-flex items-center justify-center gap-1.5"><ArrowUp size={14} /> Forward</button>
+            <button type="button" onClick={props.a.sendBackward} className="h-10 rounded-lg border border-mt-border text-xs inline-flex items-center justify-center gap-1.5"><ArrowDown size={14} /> Backward</button>
+          </div>
+        </Popover>
+        <button type="button" className={big} onClick={props.a.duplicate}>
+          <Copy size={17} /> Copy
+        </button>
+        <button type="button" className={cx(big, 'text-red-600')} onClick={props.a.remove}>
+          <Trash2 size={17} /> Delete
+        </button>
+      </div>
+      <div className="relative flex justify-center">
+        <ContextToolbarInner {...rest} />
+      </div>
+    </div>
+  );
+}
+
+function ContextToolbarInner({
   sel,
   a,
   brandColors,
