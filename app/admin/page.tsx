@@ -662,6 +662,7 @@ function Services({ services, reload, flash }: { services: Service[]; reload: ()
           <div className="grid md:grid-cols-2 2xl:grid-cols-3 gap-3">{rest.map(card)}</div>
         </>
       )}
+      <ClaudeConnector flash={flash} />
       <Maintenance />
 
       {editing && (
@@ -733,6 +734,83 @@ function SiteMap({ services }: { services: Service[] }) {
         <p className="inline-flex items-start gap-2"><GitBranch size={14} className="mt-0.5 shrink-0" /> <span>Code lives on <b className="text-mt-ink">{of('code', 'GitHub')}</b>. Every change to the main branch is built and published automatically; if a build fails, the last good version stays live.</span></p>
         <p className="inline-flex items-start gap-2"><Mail size={14} className="mt-0.5 shrink-0" /> <span>Site e-mails (welcome, password, campaigns) are sent through <b className="text-mt-ink">{of('email', 'Not set')}</b>.</span></p>
       </div>
+    </AdminCard>
+  );
+}
+
+// "Run the site from Claude": a private key for the Claude connector
+// (app/api/mcp). The key is shown once; only a hash is stored.
+function ClaudeConnector({ flash }: { flash: (t: string) => void }) {
+  const [keys, setKeys] = useState<{ id: string; label: string; created_at: string; last_used_at: string | null }[] | null>(null);
+  const [fresh, setFresh] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const load = useCallback(async () => {
+    const { data } = await supabase.rpc('mcp_keys_list');
+    setKeys((data as any) || []);
+  }, []);
+  useEffect(() => {
+    load();
+  }, [load]);
+  const make = async () => {
+    setBusy(true);
+    const { data, error } = await supabase.rpc('mcp_new_key', { p_label: `Claude ${new Date().toLocaleDateString('en-GB')}` });
+    setBusy(false);
+    if (error || !data) return flash('Could not make a key.');
+    setFresh(`https://www.magicaltouchdesign.com/api/mcp/${data}`);
+    load();
+  };
+  const revoke = async (id: string) => {
+    if (!window.confirm('Turn off this key? Claude will stop working with the site until you add a new one.')) return;
+    await supabase.rpc('mcp_key_revoke', { p_id: id });
+    load();
+  };
+  return (
+    <AdminCard title="Claude connector — run the site from Claude">
+      <p className="text-[13px] text-mt-muted leading-relaxed">
+        Lets Claude (free plan included: one custom connector) check the site, read your inbox and renewals, find, publish or retag templates, and see what people search. It cannot delete anything.
+      </p>
+      <ol className="mt-3 space-y-1.5 text-[13px] text-mt-ink list-decimal pl-5">
+        <li>Tap <b>Make a connector link</b> below and copy the link (it is shown only once).</li>
+        <li>In Claude open <b>Customize → Connectors</b>, tap <b>+ Add</b> → <b>Add custom connector</b>.</li>
+        <li>Name: <b>Magical Touch</b>. URL: paste the link. Authentication: <b>No sign in</b>. Tap <b>Add</b>.</li>
+        <li>In any chat, ask e.g. “How is my site doing?” or “Publish the template called …”.</li>
+      </ol>
+      <div className="mt-4 flex flex-wrap items-center gap-2">
+        <button type="button" onClick={make} disabled={busy} className={btnPrimary}>
+          {busy ? 'Making…' : 'Make a connector link'}
+        </button>
+        <a href="https://claude.ai" target="_blank" rel="noreferrer" className={btnGhost}>
+          <ExternalLink size={13} /> Open Claude
+        </a>
+      </div>
+      {fresh && (
+        <div className="mt-3 rounded-2xl border border-amber-300 bg-amber-50 dark:bg-amber-950/30 p-3">
+          <p className="text-[12.5px] font-semibold text-amber-800 dark:text-amber-300">Copy this link now — it will not be shown again. Keep it private: anyone with it can manage templates.</p>
+          <div className="mt-2 flex gap-2">
+            <input readOnly value={fresh} onFocus={(e) => e.currentTarget.select()} className={`${field} font-mono text-[11.5px]`} />
+            <button
+              type="button"
+              className={btnPrimary}
+              onClick={() => {
+                navigator.clipboard?.writeText(fresh).then(() => flash('Link copied.')).catch(() => flash('Select the link and copy it.'));
+              }}
+            >
+              Copy
+            </button>
+          </div>
+        </div>
+      )}
+      {keys && keys.length > 0 && (
+        <ul className="mt-4 divide-y divide-mt-border rounded-2xl border border-mt-border">
+          {keys.map((k) => (
+            <li key={k.id} className="flex items-center gap-3 px-3 py-2 text-[12.5px]">
+              <span className="flex-1 text-mt-ink">{k.label}</span>
+              <span className="text-mt-faint">{k.last_used_at ? `last used ${new Date(k.last_used_at).toLocaleDateString('en-GB')}` : 'not used yet'}</span>
+              <button type="button" onClick={() => revoke(k.id)} className="text-mt-faint hover:text-rose-600">Turn off</button>
+            </li>
+          ))}
+        </ul>
+      )}
     </AdminCard>
   );
 }
