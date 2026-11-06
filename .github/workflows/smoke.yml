@@ -7,4 +7,4 @@ jobs:
       - run: |
           B=https://www.magicaltouchdesign.com
           for p in / /home/ad/magical-touch-ad.mp4 /home/ad/magical-touch-ad-720.mp4 /home/ad/poster.webp /photo-studio; do curl -s -o /dev/null -m 60 -w "%{http_code} %{size_download}B %{content_type} $p\n" "$B$p"; done
-          curl -s -r 0-99 -o /dev/null -w "range %{http_code}\n" $B/home/ad/magical-touch-ad.mp4
+          for u in /api/media/home/ad/magical-touch-ad.mp4 /api/media/home/ad/magical-touch-ad-720.mp4; do curl -s -r 0-99 -D - -o /tmp/r $B$u | grep -iE "^(HTTP|content-range|content-length|accept-ranges)"; curl -s -r 7000000- -o /dev/null -w "tail %{http_code} %{size_download}\n" $B$u; done
