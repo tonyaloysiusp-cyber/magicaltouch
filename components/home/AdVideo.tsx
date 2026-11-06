@@ -43,7 +43,7 @@ export function AdVideo() {
         <video
           ref={v}
           className="absolute inset-0 w-full h-full object-cover"
-          src={small ? '/home/ad/magical-touch-ad-720.mp4' : '/home/ad/magical-touch-ad.mp4'}
+          src={small ? '/api/media/home/ad/magical-touch-ad-720.mp4' : '/api/media/home/ad/magical-touch-ad.mp4'}
           poster={small ? '/home/ad/poster-720.webp' : '/home/ad/poster.webp'}
           muted
           loop
