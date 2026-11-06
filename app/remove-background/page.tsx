@@ -45,7 +45,7 @@ export default function RemoveBackgroundPage() {
         <div className="mt-8"><BulkRemover /></div>
 
         <section className="mt-14 grid gap-4 sm:grid-cols-3">
-          {[['1. Add photos', 'Choose or drop up to 60 photos — people, products, pets, logos.'], ['2. Backgrounds go', 'The AI finds the subject and removes the rest, right in your browser.'], ['3. Save', 'Download one, all in a ZIP, or save them straight into a folder.']].map(([h, p]) => (
+          {[['1. Add photos', 'Choose or drop up to 60 photos — people, products, pets, logos.'], ['2. Backgrounds go', 'The AI finds the subject and removes the rest. Tap ✎ Edit on any photo to restore or erase areas with a brush.'], ['3. Save', 'Download one, all in a ZIP, or save them straight into a folder.']].map(([h, p]) => (
             <div key={h} className="rounded-3xl border border-mt-border bg-mt-surface p-5"><h2 className="text-[16px] font-semibold">{h}</h2><p className="mt-1 text-[14px] text-mt-muted">{p}</p></div>
           ))}
         </section>

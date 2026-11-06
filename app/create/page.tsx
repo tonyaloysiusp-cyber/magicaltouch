@@ -220,7 +220,6 @@ export default function CreateDesignPage() {
               {[
                 ['/photo-studio', 'Edit a photo', 'Retouch, filters, crop'],
                 ['/remove-background', 'Remove background', 'One or many photos'],
-                ['/mockups', 'Mockups', 'See your design for real'],
               ].map(([href, label, sub]) => (
                 <Link key={href} href={href} className="inline-flex items-center gap-2.5 h-12 pl-3 pr-4 rounded-2xl border border-mt-border bg-mt-surface hover:-translate-y-0.5 transition-transform">
                   <ImagePlus size={17} className="text-[#7565C2]" />

@@ -5,7 +5,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, ArrowRight, BookOpen, Check, CheckCircle2, ChevronRight, Circle, Clock, Loader2, Lock, PlayCircle, Square, SquareCheck } from 'lucide-react';
+import { ArrowLeft, ArrowRight, BookOpen, Check, CheckCircle2, Circle, Clock, Loader2, Lock, PlayCircle, Square, SquareCheck } from 'lucide-react';
 import { CourseWithLessons, Lesson, doneCount, formatMinutes, learnerStatus, totalMinutes } from '@/lib/courses';
 import { saveCompleted, useLearner, Learner } from './useLearner';
 import { LevelBadge, ProgressBar, StatusBadge } from './CourseBits';
@@ -36,9 +36,6 @@ export function CourseDetail({ course, prerequisite }: { course: CourseWithLesso
 
   return (
     <div className="mt-container py-8 sm:py-12">
-      <nav aria-label="Breadcrumb" className="text-[13px] text-mt-muted">
-        <Link href="/tutorials" className="hover:underline">Tutorials</Link> <ChevronRight size={12} className="inline" aria-hidden /> <span className="text-mt-ink">{course.title}</span>
-      </nav>
 
       <div className="mt-6 grid gap-8 lg:grid-cols-[1fr_380px] lg:items-start">
         <div>
@@ -177,11 +174,6 @@ export function LessonView({ course, lesson, prerequisite }: { course: CourseWit
 
   return (
     <div className="mt-container py-8 sm:py-10">
-      <nav aria-label="Breadcrumb" className="text-[13px] text-mt-muted">
-        <Link href="/tutorials" className="hover:underline">Tutorials</Link> <ChevronRight size={12} className="inline" aria-hidden />{' '}
-        <Link href={`/tutorials/${course.slug}`} className="hover:underline">{course.title}</Link> <ChevronRight size={12} className="inline" aria-hidden />{' '}
-        <span className="text-mt-ink">Lesson {idx + 1}</span>
-      </nav>
 
       <div className="mt-6 grid gap-8 lg:grid-cols-[300px_1fr] lg:items-start">
         <aside className="lg:sticky lg:top-24 order-2 lg:order-1">

@@ -299,7 +299,7 @@ export const LANDINGS: Landing[] = [
     description: 'Free brand guidelines (brand book) templates and brand mockups: logo usage, colour palette, typography, business cards, packaging, signage and app screens.',
     intro: [
       'A brand book keeps your logo, colours and fonts consistent everywhere. Our templates cover the essentials — story, logo rules, colour codes, typography, photography and real-world examples.',
-      'Pair them with our mockup scenes to show clients how their new brand looks on business cards, packaging, tote bags, shop signs and phone screens.',
+      'Show clients how their new brand looks on business cards, packaging, shop signs and phone screens — every page is editable.',
     ],
     terms: ['brand', 'mockup', 'guidelines'],
     uses: ['Brand books for clients', 'Logo presentations', 'Packaging and merchandise previews', 'Style guides for teams'],

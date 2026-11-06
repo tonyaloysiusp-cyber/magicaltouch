@@ -6,12 +6,13 @@
 // into a folder on your device.
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { CheckCircle2, Download, FolderDown, ImagePlus, Loader2, Trash2, X } from 'lucide-react';
+import { CheckCircle2, Download, FolderDown, ImagePlus, Loader2, Pencil, Trash2, X } from 'lucide-react';
+import { RefineCutout, CutoutEdits } from './RefineCutout';
 import { detectSubject, refinedMaskCanvas, composeCutout, DEFAULT_REFINE, SubjectMask } from '@/lib/editor/bgRemove';
 import { makeZip } from '@/lib/zipStore';
 
 type Bg = 'none' | 'white' | 'color';
-interface Item { id: string; file: File; name: string; src: string; img?: HTMLImageElement; mask?: SubjectMask; out?: string; status: 'waiting' | 'working' | 'done' | 'error'; error?: string }
+interface Item { id: string; file: File; name: string; src: string; img?: HTMLImageElement; mask?: SubjectMask; edits?: CutoutEdits; out?: string; status: 'waiting' | 'working' | 'done' | 'error'; error?: string }
 const MAX = 60;
 const CHECKER = 'repeating-conic-gradient(#e5e7eb 0% 25%, #ffffff 0% 50%) 50% / 18px 18px';
 
@@ -26,6 +27,7 @@ export function BulkRemover() {
   const [color, setColor] = useState('#FFFFFF');
   const [drag, setDrag] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [editing, setEditing] = useState<string | null>(null);
   const running = useRef(false);
   const input = useRef<HTMLInputElement>(null);
   const itemsRef = useRef<Item[]>([]);
@@ -33,8 +35,9 @@ export function BulkRemover() {
 
   const render = useCallback((it: Item): string | undefined => {
     if (!it.img || !it.mask) return undefined;
-    const m = refinedMaskCanvas(it.mask, { ...DEFAULT_REFINE, softness: soft });
-    const cut = composeCutout(it.img, m, undefined, 4096);
+    // A photo you touched up keeps its own edges and brush work.
+    const m = refinedMaskCanvas(it.mask, it.edits?.opt || { ...DEFAULT_REFINE, softness: soft });
+    const cut = composeCutout(it.img, m, it.edits ? { restore: it.edits.restore, erase: it.edits.erase } : undefined, 4096);
     if (bg === 'none') return cut.toDataURL('image/png');
     const c = document.createElement('canvas');
     c.width = cut.width; c.height = cut.height;
@@ -170,6 +173,12 @@ export function BulkRemover() {
                   {it.status === 'working' && <span className="absolute inset-0 grid place-items-center"><Loader2 size={26} className="animate-spin text-mt-ink" /></span>}
                   {it.status === 'waiting' && <span className="absolute bottom-2 left-2 text-[11px] px-2 py-0.5 rounded-full bg-black/60 text-white">Waiting</span>}
                   <button onClick={() => remove(it.id)} className="absolute top-2 right-2 h-7 w-7 rounded-full bg-black/55 text-white grid place-items-center" aria-label={`Remove ${it.name}`}><X size={14} /></button>
+                  {it.status === 'done' && (
+                    <button onClick={() => setEditing(it.id)} className="absolute top-2 left-2 h-8 px-2.5 rounded-full bg-white/95 text-mt-ink shadow text-[12px] font-semibold inline-flex items-center gap-1" aria-label={`Touch up ${it.name}`} title="Touch up: restore or erase areas">
+                      <Pencil size={13} /> Edit
+                    </button>
+                  )}
+                  {it.edits && <span className="absolute bottom-2 left-2 text-[11px] px-2 py-0.5 rounded-full bg-emerald-600 text-white">Touched up</span>}
                 </div>
                 <div className="p-2.5 flex items-center gap-2">
                   <span className="flex-1 min-w-0 text-[12.5px] truncate" title={it.name}>{it.status === 'error' ? <span className="text-rose-600">{it.error}</span> : it.name}</span>
@@ -180,6 +189,21 @@ export function BulkRemover() {
           </ul>
         </div>
       )}
+      {(() => {
+        const it = editing ? items.find((i) => i.id === editing) : null;
+        if (!it || !it.img || !it.mask) return null;
+        return (
+          <RefineCutout
+            name={it.name}
+            img={it.img}
+            mask={it.mask}
+            edits={it.edits}
+            background={{ kind: bg, color }}
+            onSave={(edits) => setItems((l) => l.map((x) => (x.id === it.id ? (() => { const n = { ...x, edits }; n.out = render(n); return n; })() : x)))}
+            onClose={() => setEditing(null)}
+          />
+        );
+      })()}
     </div>
   );
 }

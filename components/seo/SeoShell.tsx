@@ -46,21 +46,9 @@ export function UseTemplateButton({ id, width, height, label = 'Use this templat
   );
 }
 
-export function Crumbs({ items }: { items: { href?: string; label: string }[] }) {
-  return (
-    <nav aria-label="Breadcrumb" className="text-[13px] text-mt-muted">
-      {items.map((it, i) => (
-        <span key={i}>
-          {i > 0 && <span className="mx-1.5">›</span>}
-          {it.href ? (
-            <Link href={it.href} className="hover:text-mt-ink underline-offset-2 hover:underline">
-              {it.label}
-            </Link>
-          ) : (
-            <span className="text-mt-ink">{it.label}</span>
-          )}
-        </span>
-      ))}
-    </nav>
-  );
+// Visible breadcrumbs were removed (Nov 2026): the top menu is the only
+// navigation. Google still gets the trail from each page's BreadcrumbList data.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function Crumbs(_props: { items: { href?: string; label: string }[] }) {
+  return null;
 }

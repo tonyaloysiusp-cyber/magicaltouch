@@ -53,7 +53,6 @@ import { HelpPanel } from '@/components/editor/shell/panels/HelpPanel';
 import { AdjustPanel } from '@/components/editor/shell/panels/AdjustPanel';
 import { QrPanel } from '@/components/editor/shell/panels/QrPanel';
 import { QrCode as QrCodeIcon } from 'lucide-react';
-import { Frame as MockupIcon } from 'lucide-react';
 import { Gem as StudioIcon } from 'lucide-react';
 import { StudioPanel, StudioPublish } from '@/components/editor/shell/panels/StudioPanel';
 import dynamic from 'next/dynamic';
@@ -7020,7 +7019,6 @@ function EditorContent() {
         { label: 'Version History...', onClick: () => setShowVersionHistory(true), disabled: isLocalTabId(activeTabId) },
         { divider: true },
         { label: 'Export...', onClick: () => setShowExportDialog(true) },
-        { label: 'Mockups...', onClick: () => setShowMockups(true) },
         { label: 'Export as PNG', onClick: exportAsPNG },
         { label: 'Export as JPG', onClick: exportAsJPG },
         { label: 'Export as PDF', onClick: exportAsPDF },
@@ -7785,15 +7783,6 @@ function EditorContent() {
           className="hidden sm:inline-flex h-9 items-center gap-1.5 px-3 rounded-full border border-mt-border text-sm font-semibold text-mt-ink hover:bg-mt-surface2 disabled:opacity-50"
         >
           <FileText size={15} /> PDF
-        </button>
-        <button
-          type="button"
-          onClick={() => setShowMockups(true)}
-          title="See your design on a wall, a phone, a T-shirt, a mug and more"
-          data-testid="open-mockups"
-          className="hidden sm:inline-flex h-9 items-center gap-1.5 px-3 rounded-full border border-mt-border text-sm font-semibold text-mt-ink hover:bg-mt-surface2"
-        >
-          <MockupIcon size={15} /> Mockups
         </button>
         <button
           type="button"

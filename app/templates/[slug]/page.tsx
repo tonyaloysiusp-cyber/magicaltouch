@@ -111,11 +111,6 @@ export default async function TemplatePage({ params }: { params: { slug: string 
             <p className="mt-4 text-[15px] leading-relaxed text-mt-muted">{templateDescription(t)}</p>
             <div className="mt-6">
               <UseTemplateButton id={t.id} width={t.width} height={t.height} premium={t.is_free === false} />
-              {(t.preview || t.thumbnail || '').startsWith('/templates/') && (
-                <Link href={`/mockups?img=${encodeURIComponent(t.preview || t.thumbnail || '')}`} className="mt-3 inline-flex items-center gap-1.5 text-[14px] font-semibold text-mt-accent hover:underline">
-                  See it as a mockup (phone, poster, mug…) →
-                </Link>
-              )}
             </div>
             <dl className="mt-8 grid grid-cols-2 gap-4 text-[14px]">
               <div><dt className="text-mt-muted text-[12px]">Format</dt><dd className="font-semibold">{formatLabel(t.width, t.height)}</dd></div>

@@ -20,7 +20,8 @@ import {
 } from 'lucide-react';
 
 const W = 1440, H = 900;
-const PH = (n: number) => `/templates/photos/mt-${n}.jpg`;
+// No faces in the walkthrough (Nov 2026): the poster uses city skylines.
+const PH = (n: number) => (n === 813 ? '/templates/photos/pro/city.jpg' : n === 589 ? '/templates/photos/pro/x_city2.jpg' : `/templates/photos/mt-${n}.jpg`);
 
 type Dlg = 'none' | 'translate' | 'resize' | 'export' | 'mockups';
 type Brand = 'nw' | 'au';
@@ -41,7 +42,7 @@ interface S {
 }
 const START: S = {
   step: 0, cx: 900, cy: 520, click: 0, down: false, target: null, panel: true, loaded: false, sel: null, editing: false,
-  name: 'DANIEL OKAFOR', fx: 'none', fxOpen: false, photo: 813, swapping: false, cut: false,
+  name: 'MAIN STAGE', fx: 'none', fxOpen: false, photo: 813, swapping: false, cut: false,
   brand: 'nw', brandPanel: false, brandPick: false, pro: false, menu: false, mk: 0, lang: 'en',
   dlg: 'none', search: '', langPick: false, scopeAll: false, busy: false, done: false, storyPick: false, story: false,
   pdfPick: false, preparing: false, toast: null, fade: false,
@@ -56,7 +57,6 @@ const STEPS: { at: number; title: string; sub: string }[] = [
   { at: 0, title: 'Swap in your photo', sub: 'It fits the frame perfectly' },
   { at: 0, title: 'Remove the background', sub: 'One click — done in your browser' },
   { at: 0, title: 'Apply your brand kit', sub: 'Your logo, colours and fonts, everywhere' },
-  { at: 0, title: 'See it in real life', sub: 'Pro menus → Mockups: wall, phone, tote…' },
   { at: 0, title: 'Translate in one click', sub: 'Arabic, French, Hindi… right fonts too' },
   { at: 0, title: 'Resize for anywhere', sub: 'Post to story — nothing stretched' },
   { at: 0, title: 'Download print-ready', sub: 'Vector PDF, sharp at any size' },
@@ -78,7 +78,7 @@ function buildTimeline() {
   // 1 · words
   step(1, 4000); move(4300, 'name'); click(5100); at(5250, { sel: 'name' });
   click(5700); click(5900); at(6100, { editing: true });
-  at(6800, { name: '' }); type(6800, 'LAYLA MANSOUR', 150, 'name');
+  at(6800, { name: '' }); type(6800, 'INNOVATION HALL', 150, 'name');
   move(9100, 'empty'); click(9800); at(9950, { sel: null, editing: false });
   // 2 · effects
   step(2, 10500); move(10800, 'headline'); click(11600); at(11750, { sel: 'headline' });
@@ -97,32 +97,26 @@ function buildTimeline() {
   move(30300, 'kit-au'); click(31000); at(31150, { brandPick: true });
   move(31700, 'brand-apply'); click(32400); at(32550, { brand: 'au', toast: 'Aurum Capital applied · colours, fonts and logo' });
   at(34200, { brandPanel: false, toast: null });
-  // 6 · Pro menus → mockups
-  step(6, 34700); move(35000, 'top-pro'); click(35700); at(35850, { pro: true });
-  move(36400, 'menu-file'); click(37000); at(37150, { menu: true });
-  move(37700, 'menu-mockups'); click(38400); at(38550, { menu: false, dlg: 'mockups', mk: 0 });
-  MOCKS.slice(1, 4).forEach((_, i) => { const t0 = 39800 + i * 1500; move(t0, `mk-${i + 1}`); click(t0 + 700); at(t0 + 850, { mk: i + 1 }); });
-  move(44400, 'mk-close'); click(45100); at(45250, { dlg: 'none', pro: false });
-  // 7 · translate
-  step(7, 45800); move(46100, 'headline'); click(46800); at(46950, { sel: 'headline' });
-  move(47500, 'tb-translate'); click(48200); at(48350, { dlg: 'translate' });
-  move(49000, 'tr-search'); click(49600); type(49700, 'Arab', 160, 'search');
-  move(50700, 'tr-arabic'); click(51400); at(51550, { langPick: true });
-  move(52100, 'tr-all'); click(52800); at(52950, { scopeAll: true });
-  move(53400, 'tr-go'); click(54100); at(54250, { busy: true }); at(55200, { busy: false, done: true, lang: 'ar' });
-  move(56000, 'tr-close'); click(56800); at(56950, { dlg: 'none', sel: null, search: '', langPick: false, scopeAll: false, done: false });
-  move(57800, 'undo'); click(58700); at(58850, { lang: 'en', toast: 'Undo · back to English' }); at(59900, { toast: null });
-  // 8 · resize
-  step(8, 60100); move(60400, 'top-resize'); click(61200); at(61350, { dlg: 'resize' });
-  move(62000, 'rs-story'); click(62700); at(62850, { storyPick: true });
-  move(63400, 'rs-go'); click(64100); at(64250, { dlg: 'none', story: true, storyPick: false });
-  // 9 · download
-  step(9, 67300); move(67600, 'top-export'); click(68400); at(68550, { dlg: 'export' });
-  move(69200, 'ex-pdf'); click(69900); at(70050, { pdfPick: true });
-  move(70600, 'ex-go'); click(71300); at(71450, { preparing: true });
-  at(72900, { preparing: false, dlg: 'none', pdfPick: false, toast: 'Growth Summit 2027.pdf saved · vector, print-ready' });
-  move(73500, 'empty'); at(76800, { toast: null }); at(78800, { fade: true });
-  const total = 79700;
+  // 6 · translate
+  step(6, 34700); move(35000, 'headline'); click(35700); at(35850, { sel: 'headline' });
+  move(36400, 'tb-translate'); click(37100); at(37250, { dlg: 'translate' });
+  move(37900, 'tr-search'); click(38500); type(38600, 'Arab', 160, 'search');
+  move(39600, 'tr-arabic'); click(40300); at(40450, { langPick: true });
+  move(41000, 'tr-all'); click(41700); at(41850, { scopeAll: true });
+  move(42300, 'tr-go'); click(43000); at(43150, { busy: true }); at(44100, { busy: false, done: true, lang: 'ar' });
+  move(44900, 'tr-close'); click(45700); at(45850, { dlg: 'none', sel: null, search: '', langPick: false, scopeAll: false, done: false });
+  move(46700, 'undo'); click(47600); at(47750, { lang: 'en', toast: 'Undo · back to English' }); at(48800, { toast: null });
+  // 7 · resize
+  step(7, 49000); move(49300, 'top-resize'); click(50100); at(50250, { dlg: 'resize' });
+  move(50900, 'rs-story'); click(51600); at(51750, { storyPick: true });
+  move(52300, 'rs-go'); click(53000); at(53150, { dlg: 'none', story: true, storyPick: false });
+  // 8 · download
+  step(8, 56200); move(56500, 'top-export'); click(57300); at(57450, { dlg: 'export' });
+  move(58100, 'ex-pdf'); click(58800); at(58950, { pdfPick: true });
+  move(59500, 'ex-go'); click(60200); at(60350, { preparing: true });
+  at(61800, { preparing: false, dlg: 'none', pdfPick: false, toast: 'Growth Summit 2027.pdf saved · vector, print-ready' });
+  move(62400, 'empty'); at(65700, { toast: null }); at(67700, { fade: true });
+  const total = 68600;
   evs.sort((a, b) => a[0] - b[0]);
   return { evs, total };
 }
@@ -204,7 +198,7 @@ export function HowToPlayer() {
     setS(st);
     setPlaying(true);
   };
-  const view: S = reduced ? { ...START, panel: false, loaded: true, name: 'LAYLA MANSOUR', fx: 'glow', photo: 589, cut: true, brand: 'au', step: 0 } : s;
+  const view: S = reduced ? { ...START, panel: false, loaded: true, name: 'INNOVATION HALL', fx: 'glow', photo: 589, cut: true, brand: 'au', step: 0 } : s;
   const step = STEPS[view.step];
   const cam = boxW < 640;
   const CW = 640, CH = 720;
@@ -369,7 +363,7 @@ function Stage({ s }: { s: S }) {
           {['File', 'Edit', 'Object', 'Type', 'Select', 'View', 'Window', 'Help'].map((m) => <span key={m} data-t={m === 'File' ? 'menu-file' : undefined} className={cx('px-3 h-8 grid place-items-center rounded', m === 'File' && s.menu && 'bg-mt-surface2')}>{m}</span>)}
           {s.menu && (
             <div className="absolute left-2 top-9 w-[300px] rounded-lg border border-mt-border bg-mt-surface shadow-2xl py-1.5 mt-howto-pop">
-              {[['New Design', ''], ['Open…', ''], ['Save', '⌘S'], ['Version History…', ''], ['Export…', ''], ['Mockups…', ''], ['Preflight…', ''], ['Document & Print Setup', '']].map(([l, k]) => (
+              {[['New Design', ''], ['Open…', ''], ['Save', '⌘S'], ['Version History…', ''], ['Export…', ''], ['Preflight…', ''], ['Document & Print Setup', '']].map(([l, k]) => (
                 <span key={l} data-t={l === 'Mockups…' ? 'menu-mockups' : undefined} className={cx('mx-1.5 px-3 h-9 rounded flex items-center justify-between', l === 'Mockups…' && 'bg-[#2F6FE4] text-white font-medium')}>{l}{k && <span className="text-[12px] text-mt-faint">{k}</span>}</span>
               ))}
             </div>
@@ -628,13 +622,13 @@ function Design({ s, k }: { s: S; k: number }) {
         <span className="absolute inset-0 overflow-hidden">
           {!s.cut ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img key={s.photo} src={PH(s.photo)} alt="" className={cx('absolute inset-0 w-full h-full object-cover', s.photo !== 813 && 'mt-howto-pop')} style={{ objectPosition: s.photo === 813 ? '40% 22%' : '50% 18%' }} />
+            <img key={s.photo} src={PH(s.photo)} alt="" className={cx('absolute inset-0 w-full h-full object-cover', s.photo !== 813 && 'mt-howto-pop')} style={{ objectPosition: s.photo === 813 ? '62% 40%' : '55% 50%' }} />
           ) : (
             <>
               <span className="absolute rounded-full mt-howto-pop" style={{ width: story ? 820 : 600, height: story ? 820 : 600, left: story ? 130 : 30, top: story ? 120 : 170, background: kit.grad, opacity: 0.9, transition: T }} />
               <span className="absolute rounded-full" style={{ width: story ? 980 : 720, height: story ? 980 : 720, left: story ? 50 : -30, top: story ? 40 : 110, border: `3px solid ${kit.solid}`, opacity: 0.35, transition: T }} />
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/home/tutorial/speaker-cutout.webp" alt="" className="absolute mt-howto-pop" style={{ height: story ? 1000 : 900, left: story ? 210 : 40, bottom: 0, transition: T }} />
+              <img src="/home/tutorial/skyline-cutout.webp" alt="" className="absolute mt-howto-pop max-w-none" style={{ height: story ? 520 : 470, right: story ? -60 : -150, bottom: story ? 150 : 230, transition: T }} />
             </>
           )}
           {s.swapping && <span className="absolute inset-0 mt-howto-shimmer" />}
@@ -666,10 +660,10 @@ function Design({ s, k }: { s: S; k: number }) {
       {/* glass name tag on the photo */}
       <span className="absolute rounded-2xl" style={{ left: L.tag[0], top: L.tag[1], padding: '18px 26px', background: `rgba(${fadeTo},.55)`, border: '1.5px solid rgba(255,255,255,.22)', backdropFilter: 'blur(10px)', transition: T }}>
         <span data-t="name" className="relative block" style={{ fontFamily: sans, fontWeight: 700, fontSize: 30, color: '#fff', letterSpacing: '0.06em', whiteSpace: 'pre', ...selBox(s.sel === 'name') }}>
-          <span className={s.editing && s.name === 'DANIEL OKAFOR' ? 'bg-[#2563EB]' : ''}>{s.name}</span>
+          <span className={s.editing && s.name === 'MAIN STAGE' ? 'bg-[#2563EB]' : ''}>{s.name}</span>
           {s.editing && <span className="inline-block w-[3px] h-[30px] align-middle bg-white mt-howto-caret" />}
         </span>
-        <span className="block mt-1" style={{ fontFamily: body, fontSize: 21, color: kit.solid, ...align }}>{ar ? 'الرئيسة التنفيذية، نورث غيت' : 'CEO, Northgate Retail · Keynote'}</span>
+        <span className="block mt-1" style={{ fontFamily: body, fontSize: 21, color: kit.solid, ...align }}>{ar ? 'الكلمات الرئيسية · القاعة أ' : 'Keynotes · Hall A · Level 2'}</span>
       </span>
       {/* info row */}
       <span className="absolute flex" style={{ left: 80, right: 80, top: L.info, borderTop: '2px solid rgba(255,255,255,.14)', paddingTop: 26, transition: T, direction: ar ? 'rtl' : 'ltr' }}>
