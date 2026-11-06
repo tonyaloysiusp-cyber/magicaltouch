@@ -7433,7 +7433,7 @@ function EditorContent() {
         }
         links.push({ name: g.name, slug: o.publish ? t.slug || undefined : undefined, id: t.id });
       }
-      return { ok: true, msg: o.publish ? `Published ${links.length} template${links.length === 1 ? '' : 's'} — live in the gallery within a minute.` : `Saved ${links.length} draft${links.length === 1 ? '' : 's'} in Admin → Templates.`, links };
+      return { ok: true, msg: o.publish ? `Published ${links.length} template${links.length === 1 ? '' : 's'}. The page works now; the gallery list updates at the next site refresh (twice a day).` : `Saved ${links.length} draft${links.length === 1 ? '' : 's'} in Admin → Templates.`, links };
     } catch (err: any) {
       console.error('Studio publish failed:', err);
       return { ok: false, msg: err?.message || 'Could not publish. Please try again.' };

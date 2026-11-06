@@ -43,7 +43,7 @@ const TOOLS = [
 ];
 
 const INSTRUCTIONS =
-  'Admin tools for magicaltouchdesign.com, a free online design tool. Use site_overview first for a summary. Never claim a change worked unless the tool returned updated: 1. Template pages live at https://www.magicaltouchdesign.com/templates/<slug>; the admin panel is https://www.magicaltouchdesign.com/admin.';
+  'Admin tools for magicaltouchdesign.com, a free online design tool. Use site_overview first for a summary. Never claim a change worked unless the tool returned updated: 1. The gallery list and sitemap update at the next site refresh (twice a day, 01:23 and 13:23 UTC). Template pages live at https://www.magicaltouchdesign.com/templates/<slug>; the admin panel is https://www.magicaltouchdesign.com/admin.';
 
 function keyFrom(req: NextRequest, params: { key?: string[] }) {
   const fromPath = params.key?.[0];

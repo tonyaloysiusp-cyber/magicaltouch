@@ -1,0 +1,21 @@
+name: Refresh site data
+# The gallery, template pages and sitemap are built into the site. This
+# rebuilds it twice a day (and on demand: Actions → Refresh site data →
+# Run workflow) so templates published from the Studio or the Claude
+# connector appear in the gallery.
+on:
+  schedule:
+    - cron: '23 1,13 * * *'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          git config user.name mt-refresh
+          git config user.email refresh@users.noreply.github.com
+          git commit --allow-empty -m "Refresh site data (gallery, template pages, sitemap)"
+          git push origin HEAD:main
