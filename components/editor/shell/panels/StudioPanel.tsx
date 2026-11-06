@@ -10,7 +10,7 @@
 // Everything is checked again by the database (admins only).
 
 import { useEffect, useState } from 'react';
-import { Check, Crosshair, Layers, Loader2, Palette, Plus, Send, Trash2, BookmarkPlus, ExternalLink } from 'lucide-react';
+import { Sparkles, Check, Crosshair, Layers, Loader2, Palette, Plus, Send, Trash2, BookmarkPlus, ExternalLink } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { fetchCategories, TemplateCategory } from '@/lib/templatesData';
 import { cx } from '../ui';
@@ -123,6 +123,9 @@ export function StudioPanel({
   return (
     <div className="flex flex-col gap-5 pb-4">
       <p className={hint}>Admin tools for making templates. Customers never see this panel.</p>
+      <a href="/admin/templates?claude=" target="_blank" rel="noreferrer" className={cx(btn, 'bg-gradient-to-r from-[#D97757] to-[#8B5CF6] text-white')}>
+        <Sparkles size={14} /> Create a design with AI
+      </a>
       {note && <p className="text-[12.5px] rounded-lg bg-mt-surface2 px-3 py-2 text-mt-ink" aria-live="polite">{note}</p>}
 
       {/* 1. precision */}

@@ -1,6 +1,7 @@
 'use client';
 
-// AI Studio for everyone (/ai-studio): paste or upload any design you like,
+// AI Studio — ADMINS ONLY since Nov 2026 (/ai-studio): anyone else is sent
+// to the template gallery. Originally for everyone: paste or upload any design you like,
 // or describe one, and a free AI chat (Claude, ChatGPT, Gemini, Copilot…)
 // rebuilds it as an editable design in your account. Visitors who aren't
 // signed in see what it does and are asked to sign in first (designs are
@@ -14,7 +15,7 @@ import { ArrowRight, ImagePlus, MousePointerClick, Sparkles, Wand2 } from 'lucid
 import { AppHeader } from '@/components/AppHeader';
 import { Footer } from '@/components/home/Footer';
 import { ClaudeTemplate } from '@/components/admin/ClaudeTemplate';
-import { getSessionUser } from '@/lib/supabase';
+import { getSessionUser, supabase } from '@/lib/supabase';
 import { useAppTheme } from '@/hooks/useAppTheme';
 import { AI_PROVIDERS } from '@/lib/templates/aiProviders';
 
@@ -35,10 +36,20 @@ export default function AiStudioPage() {
   const { theme, toggleTheme } = useAppTheme();
   const [user, setUser] = useState<string | null | undefined>(undefined);
   const [open, setOpen] = useState(false);
-  useEffect(() => { getSessionUser().then(({ data }) => setUser(data.user?.id || null)); }, []);
+  // Admins only: everyone else goes to the template gallery.
+  useEffect(() => {
+    getSessionUser().then(async ({ data }) => {
+      if (!data.user) return router.replace('/templates');
+      const { data: prof } = await supabase.from('profiles').select('is_admin').eq('id', data.user.id).single();
+      if (!prof?.is_admin) return router.replace('/templates');
+      setUser(data.user.id);
+    });
+  }, [router]);
   const start = () => (user ? setOpen(true) : router.push('/login?next=/ai-studio'));
   const jsonLd = { '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: FAQS.map(([q, a]) => ({ '@type': 'Question', name: q, acceptedAnswer: { '@type': 'Answer', text: a } })) };
 
+  // Nothing is shown until the admin check has passed.
+  if (!user) return <main className="min-h-screen bg-mt-bg" />;
   return (
     <div className={theme === 'dark' ? 'dark' : ''}>
       <main className="min-h-screen bg-mt-bg text-mt-ink">

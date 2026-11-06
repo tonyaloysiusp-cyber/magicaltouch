@@ -93,7 +93,6 @@ export function Footer({ theme }: { theme: AppTheme }) {
                 <li><Link href="/photo-studio" className={link}>Photo Studio</Link></li>
                 <li><Link href="/remove-background" className={link}>Free background remover</Link></li>
                 <li><Link href="/mockups" className={link}>Free mockups</Link></li>
-                <li><Link href="/ai-studio" className={link}>AI Template Studio</Link></li>
                 <li><Link href="/tutorials" className={link}>Tutorials &amp; courses</Link></li>
                 <li><Link href="/free-design-tools" className={link}>Free design tools</Link></li>
                 <li><Link href="/#features" className={link}>Features</Link></li>

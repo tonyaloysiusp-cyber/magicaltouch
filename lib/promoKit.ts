@@ -15,8 +15,6 @@ export const PROMO_KIT: PromoAsset[] = [
     caption: `Design anything. Free. Forever. 🎨\n\nWedding invites, birthday posts, flyers, certificates, menus — {count} templates you edit in your browser.\n\nLink in bio.\n#freetemplates #graphicdesign #instagramtemplates` },
   { file: '/promo/promo-instagram-story.jpg', kind: 'image', title: 'Story', size: '1080 × 1920', channels: ['Instagram story', 'WhatsApp status', 'Facebook story'],
     caption: 'Add a link sticker → magicaltouchdesign.com' },
-  { file: '/promo/promo-ai-studio.jpg', kind: 'image', title: 'AI Studio announcement', size: '1080 × 1350', channels: ['Instagram', 'LinkedIn', 'Facebook'],
-    caption: `NEW: AI Template Studio 🤖✨\n\nSee a design you love? Paste a screenshot — free AI (Claude, ChatGPT, Gemini…) rebuilds it as a fully editable template in about a minute. Change every word, colour and photo.\n\nFree on magicaltouchdesign.com\n#ai #design #productivity` },
   { file: '/promo/promo-linkedin.jpg', kind: 'image', title: 'LinkedIn / link image', size: '1200 × 627', channels: ['LinkedIn', 'Facebook link', 'X', 'Product Hunt'],
     caption: `Small teams shouldn’t need a design budget. Magical Touch Design is free: {count} templates, AI Template Studio, Photo Studio and print-ready CMYK PDF — no watermark.\n\n${link('linkedin')}` },
   { file: '/promo/promo-square.jpg', kind: 'image', title: 'Square post', size: '1080 × 1080', channels: ['Facebook', 'Instagram', 'WhatsApp groups'],
