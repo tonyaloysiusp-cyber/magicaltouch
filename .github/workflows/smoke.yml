@@ -1,18 +1,10 @@
 name: smoke
 on: { push: { branches: [smoke-mcp] } }
-permissions: { contents: write }
 jobs:
-  fetch:
+  check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
       - run: |
-          mkdir -p fonts; cd fonts
-          for f in "notosansarabic/NotoSansArabic%5Bwdth,wght%5D.ttf" "notosansdevanagari/NotoSansDevanagari%5Bwdth,wght%5D.ttf" "notosansjp/NotoSansJP%5Bwght%5D.ttf"; do
-            curl -sSL -o "$(basename "$f" | sed 's/%5B.*//').ttf" "https://raw.githubusercontent.com/google/fonts/main/ofl/$f"
-          done
-          ls -la
-      - run: |
-          git config user.name mt-fetch; git config user.email fetch@users.noreply.github.com
-          git checkout --orphan fonts-out && git rm -rqf --cached . >/dev/null
-          git add -f fonts && git commit -qm "fonts" && git push -f origin fonts-out
+          B=https://www.magicaltouchdesign.com
+          for p in / /home/ad/magical-touch-ad.mp4 /home/ad/magical-touch-ad-720.mp4 /home/ad/poster.webp /photo-studio; do curl -s -o /dev/null -m 60 -w "%{http_code} %{size_download}B %{content_type} $p\n" "$B$p"; done
+          curl -s -r 0-99 -o /dev/null -w "range %{http_code}\n" $B/home/ad/magical-touch-ad.mp4
