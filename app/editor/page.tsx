@@ -9,7 +9,7 @@ import Link from 'next/link';
 import { supabase, getSessionUser } from '@/lib/supabase';
 import { certificateTokens, buildVerificationBlock } from '@/lib/certificates';
 import { shrinkDesignImages } from '@/lib/editor/shrinkImages';
-import { fetchTemplateById, setTemplateContent, createVersion, Template as TemplateRecord } from '@/lib/templatesData';
+import { fetchTemplateById, setTemplateContent, createVersion, createTemplate, setTemplateStatus, Template as TemplateRecord } from '@/lib/templatesData';
 import {
   Keyboard,
   ChevronLeft,
@@ -54,6 +54,8 @@ import { AdjustPanel } from '@/components/editor/shell/panels/AdjustPanel';
 import { QrPanel } from '@/components/editor/shell/panels/QrPanel';
 import { QrCode as QrCodeIcon } from 'lucide-react';
 import { Frame as MockupIcon } from 'lucide-react';
+import { Gem as StudioIcon } from 'lucide-react';
+import { StudioPanel, StudioPublish } from '@/components/editor/shell/panels/StudioPanel';
 import dynamic from 'next/dynamic';
 const MockupStudio = dynamic(() => import('@/components/editor/MockupStudio').then((m) => m.MockupStudio), { ssr: false });
 import { useAppTheme } from '@/hooks/useAppTheme';
@@ -471,6 +473,15 @@ function EditorContent() {
   const backHref = cameFrom === 'brand' ? '/admin/brand' : wantsTemplateEdit ? '/admin/templates' : cameFromTemplate ? '/templates' : '/dashboard';
   const backLabel = cameFrom === 'brand' ? 'Back to Brand workspace' : wantsTemplateEdit ? 'Back to Template Manager' : cameFromTemplate ? 'Back to templates' : 'Back to dashboard';
   const [templateEdit, setTemplateEdit] = useState<TemplateRecord | null>(null);
+  // Admin design studio (the Studio panel) — the database checks admin rights too.
+  const [isAdminUser, setIsAdminUser] = useState(false);
+  useEffect(() => {
+    getSessionUser().then(async ({ data }) => {
+      if (!data.user) return;
+      const { data: prof } = await supabase.from('profiles').select('is_admin').eq('id', data.user.id).single();
+      setIsAdminUser(!!prof?.is_admin);
+    });
+  }, []);
   const [templateSave, setTemplateSave] = useState<{ busy: boolean; msg: string | null }>({ busy: false, msg: null });
   // A .mtd project opened from the customer's computer (see lib/mtd/).
   // Its tab id IS this key; the parsed file waits in lib/mtd/handoff.
@@ -3353,7 +3364,7 @@ function EditorContent() {
   };
 
   // Resize: the current page (or a resized copy of it) to a new size.
-  const resizePage = (size: { width: number; height: number; dpi?: number }, mode: 'this' | 'copy') => {
+  const resizePage = (size: { width: number; height: number; dpi?: number }, mode: 'this' | 'copy', copyName?: string) => {
     const canvas = fabricCanvasRef.current;
     const F = (window as any).fabric;
     if (!canvas || !F) return;
@@ -3385,7 +3396,7 @@ function EditorContent() {
     const pos = nextArtboardPosition(metas);
     const members = canvas.getObjects().filter((o: any) => isArtwork(o) && o.__artboardId === page.id);
     rect.clone((nr: any) => {
-      nr.set({ left: pos.x, top: pos.y, name: `${rect.name || 'Page'} (resized)` });
+      nr.set({ left: pos.x, top: pos.y, name: copyName || `${rect.name || 'Page'} (resized)` });
       nr.__isArtboard = true;
       nr.__artboardId = createArtboardId();
       nr.__print = JSON.parse(JSON.stringify(rect.__print || createDefaultPrintSettings()));
@@ -7295,6 +7306,140 @@ function EditorContent() {
     />
   );
 
+  // ---------- Admin design studio (admins only; the database checks too) ----------
+  const studioWait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+  const precisionOn = pro && showRulers && showGrid && snapToObjects && snapToGuides;
+  const setPrecision = (on: boolean) => {
+    if (on) {
+      setMode('pro');
+      setShowRulers(true);
+      setShowGrid(true);
+      setSnapToObjects(true);
+      setSnapToGuides(true);
+    } else {
+      setShowGrid(false);
+    }
+  };
+  const studioMakeSizes = async (sizes: { label: string; w: number; h: number }[]) => {
+    const orig = activeArtboardIdRef.current;
+    if (!orig) throw new Error('Open a page first.');
+    for (const s of sizes) {
+      selectArtboard(orig);
+      activeArtboardIdRef.current = orig;
+      await studioWait(80);
+      resizePage({ width: s.w, height: s.h }, 'copy', `${s.label} ${s.w}×${s.h}`);
+      await studioWait(900);
+    }
+  };
+  const studioColourVersions = async (palettes: { name: string; colors: string[] }[]) => {
+    const canvas = fabricCanvasRef.current;
+    const orig = activeArtboardIdRef.current;
+    if (!canvas || !orig) throw new Error('Open a page first.');
+    for (const pal of palettes) {
+      selectArtboard(orig);
+      activeArtboardIdRef.current = orig;
+      await studioWait(80);
+      duplicateArtboard(orig);
+      await studioWait(900);
+      const id = activeArtboardIdRef.current;
+      if (!id || id === orig) continue;
+      const rect = canvas.getObjects().find((o: any) => o.__isArtboard && o.__artboardId === id);
+      if (rect) rect.set({ name: pal.name });
+      const objs = canvas.getObjects().filter((o: any) => isArtwork(o) && o.__artboardId === id);
+      applyBrandToObjects(objs, { ...EMPTY_KIT, colors: pal.colors } as BrandKit, { colors: true, fonts: false }, (rect?.width || 0) * (rect?.height || 0));
+      objs.forEach((o: any) => o.__origColors && delete o.__origColors);
+      canvas.requestRenderAll();
+      refreshArtboards();
+      pushHistory();
+    }
+  };
+  const studioSaveToLibrary = async (name: string): Promise<string | null> => {
+    const canvas = fabricCanvasRef.current;
+    const active = canvas?.getActiveObject();
+    if (!active) return 'Select something on the page first.';
+    await copySelected();
+    let objects: any = null;
+    try {
+      objects = JSON.parse(localStorage.getItem('mt:clipboard') || 'null')?.objects;
+    } catch {
+      objects = null;
+    }
+    if (!objects?.length) return 'Could not copy the selection.';
+    let thumb: string | null = null;
+    try {
+      const m = 220 / Math.max(active.getScaledWidth(), active.getScaledHeight(), 1);
+      thumb = active.toDataURL({ format: 'png', multiplier: m });
+    } catch {
+      thumb = null; // a picture from another site without permission: no preview
+    }
+    const { data: auth } = await getSessionUser();
+    const { error } = await supabase.from('admin_library').insert({ name, objects, thumb, created_by: auth.user?.id || null });
+    return error ? 'Could not save — are you signed in as an admin?' : null;
+  };
+  const studioInsertFromLibrary = async (objects: any) => {
+    try {
+      localStorage.setItem('mt:clipboard', JSON.stringify({ at: Date.now(), objects }));
+    } catch {
+      throw new Error('Could not add it (browser storage is full).');
+    }
+    await pasteClipboard();
+  };
+  const studioPublish = async (o: StudioPublish): Promise<{ ok: boolean; msg: string; links?: { name: string; slug?: string; id: string }[] }> => {
+    const canvas = fabricCanvasRef.current;
+    if (!canvas) return { ok: false, msg: 'The editor is not ready yet.' };
+    try {
+      await ensurePhotoEditsApplied();
+      const { data: auth } = await getSessionUser();
+      if (!auth.user) return { ok: false, msg: 'You were signed out. Sign in again in another tab, then try again.' };
+      const { json } = await canvasJsonForSave(canvas, SAVE_JSON_PROPS);
+      const pages = getArtboardMetas();
+      if (!pages.length) return { ok: false, msg: 'There is no page to publish.' };
+      const groups = o.each
+        ? pages.map((pg, i) => ({ name: pages.length > 1 ? `${o.name} ${pg.name && !/^(Page|Artboard) ?\d*$/.test(pg.name) ? `— ${pg.name}` : i + 1}` : o.name, pages: [pg] }))
+        : [{ name: o.name, pages }];
+      const links: { name: string; slug?: string; id: string }[] = [];
+      for (const g of groups) {
+        const first = g.pages[0];
+        const ids = new Set(g.pages.map((pg) => pg.id));
+        let objects = (json.objects || []).filter((x: any) => !x.__artboardId || ids.has(x.__artboardId));
+        if (o.each) {
+          // One page on its own: move it to the top-left corner.
+          objects = JSON.parse(JSON.stringify(objects)).map((x: any) => ({ ...x, left: (x.left || 0) - first.x, top: (x.top || 0) - first.y }));
+        }
+        const content = { ...json, objects };
+        const image = capturePicture(first, { format: 'jpeg', quality: 0.88, multiplier: 1200 / Math.max(first.width, first.height, 1) }).dataUrl;
+        const t = await createTemplate(
+          {
+            name: g.name,
+            category: o.categoryName || 'Templates',
+            categoryId: o.categoryId,
+            width: Math.round(first.width),
+            height: Math.round(first.height),
+            colors: ['#FFFFFF', '#09090B'],
+            tags: [...o.tags, ...(g.pages.length > 1 ? ['multi-page', `${g.pages.length}-pages`] : [])],
+            isFeatured: o.featured,
+            isFree: true,
+            searchKeywords: o.keywords || null,
+            occasion: o.occasion || null,
+          },
+          auth.user.id
+        );
+        if (!t?.id) return { ok: false, msg: `Could not create “${g.name}”. Are you signed in as an admin?`, links };
+        const ok = await setTemplateContent(t.id, t.currentVersion || '1.0', content, image);
+        if (!ok) return { ok: false, msg: `Saved “${g.name}” but its design did not upload. Open Admin → Templates to finish it.`, links };
+        if (o.publish) {
+          const err = await setTemplateStatus({ ...t, thumbnail: 'set' } as any, 'published', auth.user.id);
+          if (err) return { ok: false, msg: `“${g.name}”: ${err}`, links };
+        }
+        links.push({ name: g.name, slug: o.publish ? t.slug || undefined : undefined, id: t.id });
+      }
+      return { ok: true, msg: o.publish ? `Published ${links.length} template${links.length === 1 ? '' : 's'} — live in the gallery within a minute.` : `Saved ${links.length} draft${links.length === 1 ? '' : 's'} in Admin → Templates.`, links };
+    } catch (err: any) {
+      console.error('Studio publish failed:', err);
+      return { ok: false, msg: err?.message || 'Could not publish. Please try again.' };
+    }
+  };
+
   const railItems: RailItem[] = [
     {
       id: 'templates',
@@ -7449,6 +7594,29 @@ function EditorContent() {
         />
       ),
     },
+    ...(isAdminUser
+      ? [{
+          id: 'studio',
+          label: 'Studio',
+          title: 'Admin design studio: sizes, colour versions, library, publish',
+          icon: <StudioIcon size={20} />,
+          special: true,
+          render: () => (
+            <StudioPanel
+              designName={designName}
+              pageCount={artboards.length}
+              hasSelection={hasSelection}
+              precisionOn={precisionOn}
+              onPrecision={setPrecision}
+              onMakeSizes={studioMakeSizes}
+              onColourVersions={studioColourVersions}
+              onSaveToLibrary={studioSaveToLibrary}
+              onInsertFromLibrary={studioInsertFromLibrary}
+              onPublish={studioPublish}
+            />
+          ),
+        }]
+      : []),
   ];
 
   // While the first photo of a "New Photo Project" session is still open
