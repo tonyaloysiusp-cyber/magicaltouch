@@ -15,6 +15,7 @@ import { useRouter } from 'next/navigation';
 import { Sun, Moon } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { apiFetch } from '@/lib/api/client';
+import { PasswordInput } from '@/components/PasswordInput';
 import { ArtworkPanel } from '@/components/ArtworkPanel';
 import { BrandLogo } from '@/components/BrandLogo';
 import { useAppTheme } from '@/hooks/useAppTheme';
@@ -28,6 +29,7 @@ export default function ResetPasswordPage() {
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [error, setError] = useState('');
+  const [showPw, setShowPw] = useState(false);
 
   useEffect(() => {
     let settled = false;
@@ -62,9 +64,6 @@ export default function ResetPasswordPage() {
     setTimeout(() => router.push('/dashboard'), 2500);
   };
 
-  const input =
-    'border border-mt-border dark:border-white/15 dark:bg-mt-surface dark:text-mt-ink p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-blue';
-
   return (
     <div className={theme === 'dark' ? 'dark' : ''}>
       <main className="min-h-screen lg:grid lg:grid-cols-2 bg-transparent transition-colors duration-300">
@@ -98,24 +97,8 @@ export default function ResetPasswordPage() {
                   Enter a new password for your Magical Touch Design account.
                 </p>
                 <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-                  <input
-                    type="password"
-                    placeholder="New password"
-                    autoComplete="new-password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className={input}
-                    required
-                  />
-                  <input
-                    type="password"
-                    placeholder="Confirm new password"
-                    autoComplete="new-password"
-                    value={confirm}
-                    onChange={(e) => setConfirm(e.target.value)}
-                    className={input}
-                    required
-                  />
+                  <PasswordInput value={password} onChange={setPassword} placeholder="New password" autoComplete="new-password" minLength={8} shown={showPw} onToggle={() => setShowPw((v) => !v)} />
+                  <PasswordInput value={confirm} onChange={setConfirm} placeholder="Confirm new password" autoComplete="new-password" matchWith={password} shown={showPw} onToggle={() => setShowPw((v) => !v)} />
                   {error && <p className="text-red-500 text-sm">{error}</p>}
                   <button
                     type="submit"

@@ -5,10 +5,10 @@
 // same behaviour everywhere; on phones and tablets the tabs move into a
 // menu so nothing is ever cut off.
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ImagePlus, Menu, Plus, X } from 'lucide-react';
+import { ChevronDown, Eraser, Frame, ImagePlus, LayoutGrid, Menu, Plus, X } from 'lucide-react';
 import { ThemeSwitch } from '@/components/ThemeSwitch';
 import { ProfileMenu } from '@/components/ProfileMenu';
 import { BrandLogo } from '@/components/BrandLogo';
@@ -18,12 +18,61 @@ import type { AppTheme } from '@/hooks/useAppTheme';
 
 export type SiteTab = 'create' | 'templates' | 'photo' | 'tutorials' | 'tools' | 'about' | 'dashboard' | 'profile' | 'home' | 'contact';
 
-const TABS: { id: SiteTab; label: string; href: string; xl?: boolean }[] = [
+const TABS: { id: SiteTab; label: string; href: string }[] = [
   { id: 'templates', label: 'Templates', href: '/templates' },
   { id: 'tutorials', label: 'Tutorials', href: '/tutorials' },
-  { id: 'tools', label: 'Free tools', href: '/free-design-tools', xl: true },
   { id: 'about', label: 'About', href: '/about' },
 ];
+
+// The "Tools" menu: the free tools people look for by name.
+const TOOLS = [
+  { href: '/remove-background', label: 'Remove background', hint: 'One photo or many at once', icon: <Eraser size={17} /> },
+  { href: '/mockups', label: 'Mockups', hint: 'See your design on 100+ products', icon: <Frame size={17} /> },
+  { href: '/photo-studio', label: 'Photo Studio', hint: 'Edit, retouch and crop a photo', icon: <ImagePlus size={17} /> },
+  { href: '/free-design-tools', label: 'All free tools', hint: 'Everything in one place', icon: <LayoutGrid size={17} /> },
+];
+
+function ToolsMenu({ active }: { active: boolean }) {
+  const [open, setOpen] = useState(false);
+  const box = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const away = (e: PointerEvent) => box.current && !box.current.contains(e.target as Node) && setOpen(false);
+    const key = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false);
+    document.addEventListener('pointerdown', away);
+    window.addEventListener('keydown', key);
+    return () => { document.removeEventListener('pointerdown', away); window.removeEventListener('keydown', key); };
+  }, [open]);
+  return (
+    <div ref={box} className="relative" onMouseLeave={() => setOpen(false)}>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        onMouseEnter={() => setOpen(true)}
+        aria-expanded={open}
+        aria-haspopup="menu"
+        className={`relative text-sm font-medium px-3 py-2 rounded-full transition-colors inline-flex items-center gap-1 ${active || open ? 'text-mt-ink bg-mt-surface2' : 'text-mt-muted hover:text-mt-ink'}`}
+      >
+        Tools <ChevronDown size={14} className={`transition-transform ${open ? 'rotate-180' : ''}`} aria-hidden />
+      </button>
+      {open && (
+        <div role="menu" className="absolute left-1/2 -translate-x-1/2 top-full pt-2 w-[300px]">
+          <div className="rounded-2xl border border-mt-border bg-mt-surface shadow-[0_18px_40px_-12px_rgba(9,9,11,0.25)] p-2">
+            {TOOLS.map((t) => (
+              <Link key={t.href} role="menuitem" href={t.href} onClick={() => setOpen(false)} className="flex items-start gap-3 rounded-xl px-3 py-2.5 hover:bg-mt-surface2">
+                <span className="mt-0.5 w-8 h-8 shrink-0 rounded-lg bg-mt-surface2 text-mt-ink inline-flex items-center justify-center">{t.icon}</span>
+                <span>
+                  <span className="block text-[14px] font-semibold text-mt-ink">{t.label}</span>
+                  <span className="block text-[12px] text-mt-muted">{t.hint}</span>
+                </span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function SiteHeader({
   theme,
@@ -95,9 +144,12 @@ export function SiteHeader({
         <div className="hidden lg:flex items-center gap-0.5">
           <button onClick={create} className={tabClass(active === 'create')}>Create</button>
           {TABS.map((t) => (
-            <Link key={t.id} href={t.href} aria-current={active === t.id ? 'page' : undefined} className={`${t.xl ? 'hidden xl:inline-flex' : ''} ${tabClass(active === t.id)}`}>
-              {t.label}
-            </Link>
+            <span key={t.id} className="contents">
+              <Link href={t.href} aria-current={active === t.id ? 'page' : undefined} className={tabClass(active === t.id)}>
+                {t.label}
+              </Link>
+              {t.id === 'templates' && <ToolsMenu active={active === 'tools' || active === 'photo'} />}
+            </span>
           ))}
         </div>
 
@@ -141,10 +193,15 @@ export function SiteHeader({
         <div id="site-menu" className="lg:hidden border-t border-mt-border bg-mt-bg h-[calc(100dvh-4rem)] overflow-y-auto">
           <div className="mt-container py-4 flex flex-col">
             <button onClick={create} className="py-3 text-left text-[17px] font-medium text-mt-ink border-b border-mt-border">Create a design</button>
-            <Link href="/photo-studio" onClick={() => setOpen(false)} className="py-3 text-[17px] font-medium text-mt-ink border-b border-mt-border">Photo Studio — edit a photo</Link>
             {TABS.map((t) => (
               <Link key={t.id} href={t.href} onClick={() => setOpen(false)} aria-current={active === t.id ? 'page' : undefined} className={`py-3 text-[17px] font-medium border-b border-mt-border ${active === t.id ? 'text-mt-ink' : 'text-mt-muted'}`}>
                 {t.label}
+              </Link>
+            ))}
+            <p className="pt-5 pb-1 text-[12px] font-semibold uppercase tracking-wide text-mt-faint">Free tools</p>
+            {TOOLS.map((t) => (
+              <Link key={t.href} href={t.href} onClick={() => setOpen(false)} className="py-3 flex items-center gap-3 text-[17px] font-medium text-mt-ink border-b border-mt-border">
+                <span className="text-mt-muted">{t.icon}</span> {t.label}
               </Link>
             ))}
             <Link href="/contact" onClick={() => setOpen(false)} className="py-3 text-[17px] font-medium text-mt-muted border-b border-mt-border">Contact</Link>

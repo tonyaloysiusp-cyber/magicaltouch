@@ -2,7 +2,7 @@
 
 import { ThemeSwitch } from '@/components/ThemeSwitch';
 import { friendlyAuthError } from '@/lib/authErrors';
-import { Eye, EyeOff } from 'lucide-react';
+import { PasswordInput } from '@/components/PasswordInput';
 import { Suspense, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -135,43 +135,8 @@ function SignupForm() {
             className="border border-mt-border bg-mt-surface text-mt-ink p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-blue"
             required
           />
-          <div className="relative">
-            <input
-              type={showPw ? 'text' : 'password'}
-              placeholder="Password (at least 8 characters)"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              autoComplete="new-password"
-              minLength={8}
-              className="w-full border border-mt-border bg-mt-surface text-mt-ink p-3 pr-11 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-blue"
-              required
-            />
-            <button
-              type="button"
-              onClick={() => setShowPw((v) => !v)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-mt-muted hover:text-mt-ink"
-              aria-label={showPw ? 'Hide password' : 'Show password'}
-            >
-              {showPw ? <EyeOff size={18} /> : <Eye size={18} />}
-            </button>
-          </div>
-          <div className="relative">
-            <input
-              type={showPw ? 'text' : 'password'}
-              placeholder="Confirm password"
-              value={password2}
-              onChange={(e) => setPassword2(e.target.value)}
-              autoComplete="new-password"
-              aria-label="Confirm password"
-              className={`w-full border bg-mt-surface text-mt-ink p-3 pr-11 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-blue ${password2 && password2 !== password ? 'border-rose-500' : 'border-mt-border'}`}
-              required
-            />
-            {password2 && (
-              <span className={`absolute right-3 top-1/2 -translate-y-1/2 text-[12px] font-semibold ${password2 === password ? 'text-emerald-600' : 'text-rose-600'}`}>
-                {password2 === password ? '✓ Match' : 'No match'}
-              </span>
-            )}
-          </div>
+          <PasswordInput value={password} onChange={setPassword} placeholder="Password (at least 8 characters)" autoComplete="new-password" minLength={8} shown={showPw} onToggle={() => setShowPw((v) => !v)} />
+          <PasswordInput value={password2} onChange={setPassword2} placeholder="Confirm password" autoComplete="new-password" matchWith={password} shown={showPw} onToggle={() => setShowPw((v) => !v)} />
           <input
             type="tel"
             placeholder="Phone number (optional)"

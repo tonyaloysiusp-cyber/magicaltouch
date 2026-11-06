@@ -5,7 +5,8 @@ import { friendlyAuthError } from '@/lib/authErrors';
 import { Suspense, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Sun, Moon, Eye, EyeOff } from 'lucide-react';
+import { Sun, Moon } from 'lucide-react';
+import { PasswordInput } from '@/components/PasswordInput';
 import { ArtworkPanel } from '@/components/ArtworkPanel';
 import { BrandLogo } from '@/components/BrandLogo';
 import { useAppTheme } from '@/hooks/useAppTheme';
@@ -14,7 +15,6 @@ function LoginForm() {
   const { theme, toggleTheme } = useAppTheme();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [showPw, setShowPw] = useState(false);
   const [error, setError] = useState('');
   const [unconfirmed, setUnconfirmed] = useState(false);
   const [resendMsg, setResendMsg] = useState('');
@@ -108,20 +108,7 @@ function LoginForm() {
                 className="border border-mt-border dark:border-white/15 dark:bg-mt-surface dark:text-mt-ink p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-blue"
                 required
               />
-              <div className="relative">
-                <input
-                  type={showPw ? 'text' : 'password'}
-                  placeholder="Password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  autoComplete="current-password"
-                  className="w-full border border-mt-border dark:border-white/15 dark:bg-mt-surface dark:text-mt-ink p-3 pr-11 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-blue"
-                  required
-                />
-                <button type="button" onClick={() => setShowPw((v) => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-mt-muted hover:text-mt-ink" aria-label={showPw ? 'Hide password' : 'Show password'}>
-                  {showPw ? <EyeOff size={18} /> : <Eye size={18} />}
-                </button>
-              </div>
+              <PasswordInput value={password} onChange={setPassword} autoComplete="current-password" />
 
               <div className="flex justify-end -mt-2">
                 <button
