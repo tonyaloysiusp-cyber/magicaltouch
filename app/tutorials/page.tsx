@@ -4,6 +4,7 @@ import { SITE_URL, SITE_NAME } from '@/lib/seo';
 import { createAnonSupabaseClient } from '@/lib/supabase/server';
 import { loadCourses, totalMinutes } from '@/lib/courses';
 import { CoursesCatalog } from '@/components/courses/CoursesCatalog';
+import { PdfGuides } from '@/components/courses/PdfGuides';
 
 // Course content is managed in Admin → Courses; refreshed every minute.
 export const revalidate = 60;
@@ -41,6 +42,7 @@ export default async function TutorialsPage() {
     <SeoShell active="tutorials">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <CoursesCatalog courses={courses} />
+      <PdfGuides />
     </SeoShell>
   );
 }
