@@ -15,7 +15,7 @@
 
 import type { CSSProperties } from 'react';
 import { blockBrowserShortcut } from '@/lib/editor/browserKeys';
-import { Fragment, forwardRef, ReactNode, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
+import { Fragment, forwardRef, ReactNode, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   SlidersHorizontal, Sparkles, Crop as CropIcon, Scissors, Brush, Maximize2, Download, Undo2, Redo2, Plus, Minus,
   Maximize, RotateCcw, RotateCw, FlipHorizontal2, FlipVertical2, Loader2, Check, X, Eye, Printer, Lock, Unlock, Palette, Wand2,
@@ -28,7 +28,7 @@ import { CropBox, PhysUnit, cropTo, flip, fmtNum, fromPx, inscribedRect, makeCan
 import { ColourMode, FORMAT_INFO, PhotoFormat, downloadBlob, exportPhoto, extFor } from '@/lib/photo/exportPhoto';
 import { loadProofTable, proofRgbaInPlace, PRESS_PROFILE_NAME } from '@/lib/color/cmyk';
 import { BgRemoveDialog } from '@/components/editor/shell/BgRemoveDialog';
-import { Layer, Selection, makeLayer, composite, isPlain, translate, placeImage, mergeDown, maskShape, maskAll, invertMask, maskFromAlpha, blendMasked, clearMasked, copyMasked, fillMasked, paintStroke, blankLike, maskPolygon, combineMasks, maskIsEmpty, SelectionMode } from '@/lib/photo/layers';
+import { Layer, Selection, makeLayer, composite, compositeAdjusted, isPlain, translate, placeImage, mergeDown, maskShape, maskAll, invertMask, maskFromAlpha, blendMasked, clearMasked, copyMasked, fillMasked, paintStroke, blankLike, maskPolygon, combineMasks, maskIsEmpty, SelectionMode } from '@/lib/photo/layers';
 import { FILTERS, FilterId, applyFilter } from '@/lib/photo/filters';
 import { PenPoint, contentAwareFill, maskEdges, pathToMask, penPathD } from '@/lib/photo/fillMask';
 import { ProMenuBar, LayersPanel, HistoryPanel, Menu } from './ProPanels';
@@ -334,6 +334,10 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [stageSize, setStageSize] = useState({ w: 800, h: 600 });
   const stageRef = useRef<HTMLDivElement>(null);
+  // The side panel keeps its scroll position while you adjust (it used to
+  // jump when the picture re-drew); a new tool starts at the top.
+  const asideRef = useRef<HTMLElement>(null);
+  const asideScroll = useRef(0);
   const displayRef = useRef<HTMLCanvasElement>(null);
   const draftRef = useRef<HTMLCanvasElement>(null);
   const firstPreviewRef = useRef<HTMLCanvasElement | null>(null);
@@ -367,9 +371,11 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
   const undo = () => setHistory((h) => (h.index > 0 ? { ...h, index: h.index - 1 } : h));
   const redo = () => setHistory((h) => (h.index < h.list.length - 1 ? { ...h, index: h.index + 1 } : h));
   // Keep the live controls in step with the history position.
+  // Adjustments belong to a layer: the sliders always show the selected
+  // layer's own settings, and only that layer changes.
   useEffect(() => {
     if (!snap) return;
-    setAdjust(snap.adjust);
+    setAdjust(snap.layers[Math.min(snap.active, snap.layers.length - 1)]?.adjust || NO_ADJUST);
     setDpi(snap.dpi);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [history.index, history.list]);
@@ -403,17 +409,30 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
   }, [source]);
 
   // ---------------- preview copy of the pixels
-  const preview = useMemo(() => {
-    if (!base) return null;
+  // With several layers the sliders work on the SELECTED layer only: the
+  // preview copy is that layer, and the layers below / above are drawn
+  // around it (each with its own adjustments).
+  const multi = !!layers && layers.length > 1;
+  const stack = useMemo(() => {
+    if (!layers || layers.length < 2 || !base) return null;
     const k = Math.min(1, PREVIEW_MAX / Math.max(base.width, base.height));
-    const c = k < 1 ? resample(base, base.width * k, base.height * k) : base;
+    const below = activeIdx > 0 ? compositeAdjusted(layers.slice(0, activeIdx), k) : null;
+    const above = activeIdx < layers.length - 1 ? compositeAdjusted(layers.slice(activeIdx + 1), k) : null;
+    return { below, above, layer: layers[activeIdx] };
+  }, [layers, activeIdx, base]);
+  const preview = useMemo(() => {
+    const src0 = layers && layers.length > 1 ? layers[activeIdx].canvas : base;
+    if (!src0) return null;
+    const k = Math.min(1, PREVIEW_MAX / Math.max(src0.width, src0.height));
+    const c = k < 1 ? resample(src0, src0.width * k, src0.height * k) : src0;
     const data = c.getContext('2d', { willReadFrequently: true })!.getImageData(0, 0, c.width, c.height);
     if (!firstPreviewRef.current) firstPreviewRef.current = c;
     return { canvas: c, data, k, owner: {} };
-  }, [base]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [base, multi ? layers : null, activeIdx]);
   // Small draft copy used while dragging, so sliders follow instantly.
   const draft = useMemo(() => {
-    if (!preview) return null;
+    if (!preview || multi) return null;
     const long = Math.max(preview.canvas.width, preview.canvas.height);
     const target = 900;
     if (long <= target * 1.25) return null;
@@ -522,8 +541,25 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
       let img: ImageData;
       if (comparing) img = src.getContext('2d')!.getImageData(0, 0, src.width, src.height);
       else img = isNeutral(adjust) ? new ImageData(new Uint8ClampedArray(preview.data.data), preview.data.width, preview.data.height) : applyAdjust(preview.data, adjust, preview.owner);
-      if (proof && proofTable.current) proofRgbaInPlace(img.data, proofTable.current);
       if (!comparing) computeHistogram(img);
+      if (stack && !comparing) {
+        // Layers below, the selected layer with its live adjustments, layers above.
+        const one = makeCanvas(img.width, img.height);
+        one.getContext('2d')!.putImageData(img, 0, 0);
+        const all = makeCanvas(img.width, img.height);
+        const x = all.getContext('2d')!;
+        if (stack.below) x.drawImage(stack.below, 0, 0, img.width, img.height);
+        if (stack.layer.visible && stack.layer.opacity > 0) {
+          x.globalAlpha = stack.layer.opacity;
+          x.globalCompositeOperation = (stack.layer.blend === 'normal' ? 'source-over' : stack.layer.blend) as GlobalCompositeOperation;
+          x.drawImage(one, 0, 0);
+          x.globalAlpha = 1;
+          x.globalCompositeOperation = 'source-over';
+        }
+        if (stack.above) x.drawImage(stack.above, 0, 0, img.width, img.height);
+        img = x.getImageData(0, 0, img.width, img.height);
+      }
+      if (proof && proofTable.current) proofRgbaInPlace(img.data, proofTable.current);
       d.width = img.width;
       d.height = img.height;
       if (tool === 'crop' && cropAngle) {
@@ -537,7 +573,7 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
         ctx.restore();
       } else ctx.putImageData(img, 0, 0);
     });
-  }, [preview, draft, dragging, adjust, comparing, proof, tool, cropAngle, tick]);
+  }, [preview, draft, stack, dragging, adjust, comparing, proof, tool, cropAngle, tick]);
 
   // ---------------- histogram (Pro)
   const histData = useRef<Uint32Array[] | null>(null);
@@ -582,8 +618,9 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
   // ---------------- actions
   const commitAdjust = (a: Adjust = adjust, label = 'Adjust') => {
     if (!snap) return;
-    if (JSON.stringify(a) === JSON.stringify(snap.adjust)) return;
-    push({ adjust: a, label });
+    const act = Math.min(snap.active, snap.layers.length - 1);
+    if (JSON.stringify(a) === JSON.stringify(snap.layers[act]?.adjust || NO_ADJUST)) return;
+    push({ layers: snap.layers.map((l, i) => (i === act ? { ...l, adjust: isNeutral(a) ? undefined : a } : l)), label });
   };
   const setOne = (k: keyof Adjust, v: number) => setAdjust((a) => ({ ...a, [k]: v }));
   const runAuto = () => {
@@ -636,8 +673,10 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
 
   const renderResult = useCallback((): HTMLCanvasElement | null => {
     if (!base) return null;
+    // Every layer with its own adjustments (the selected one with the live sliders).
+    if (layers && layers.length > 1) return compositeAdjusted(layers, 1, { index: activeIdx, adjust });
     return renderAdjusted(base, adjust);
-  }, [base, adjust]);
+  }, [base, adjust, layers, activeIdx]);
 
   const doApply = async () => {
     if (!onApply) return;
@@ -1145,7 +1184,7 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
     },
     flatten: () => {
       if (!layers || layers.length < 2) return;
-      setLayers([makeLayer(composite(layers), 'Background')], 0, 'Flatten');
+      setLayers([makeLayer(compositeAdjusted(layers), 'Background')], 0, 'Flatten');
     },
     patch: (i: number, p: Partial<Layer>, label: string) => {
       if (!layers) return;
@@ -1511,6 +1550,14 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
   const [quality, setQuality] = useState(92);
 
   // ======================================================== render
+  useLayoutEffect(() => {
+    asideScroll.current = 0;
+    if (asideRef.current) asideRef.current.scrollTop = 0;
+  }, [tool]);
+  useLayoutEffect(() => {
+    const a = asideRef.current;
+    if (a && Math.abs(a.scrollTop - asideScroll.current) > 2) a.scrollTop = asideScroll.current;
+  });
   if (error) {
     return (
       <div className="h-full min-h-[60vh] flex flex-col items-center justify-center gap-3 text-center p-6">
@@ -1617,6 +1664,11 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
           : [{ t: 'Light', s: SIMPLE_LIGHT }, { t: 'Colour', s: SIMPLE_COLOR }, { t: 'Detail', s: SIMPLE_DETAIL }];
         return (
           <>
+            {multi && layers && (
+              <p className="mt-3 rounded-lg bg-[#2680EB]/10 text-[12px] text-mt-ink px-2.5 py-1.5">
+                Adjusting layer <b>{layers[activeIdx].name}</b> only. Pick another layer to adjust it separately.
+              </p>
+            )}
             <div className="pt-4 pb-1 flex gap-2">
               <button className={cx(btnPrimary, 'flex-1')} onClick={runAuto}><Wand2 size={15} /> Auto enhance</button>
               <button className={btnGhost} onClick={() => { setAdjust(NO_ADJUST); commitAdjust(NO_ADJUST, 'Reset all'); }}>Reset</button>
@@ -2503,6 +2555,8 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
 
         {/* panel */}
         <aside
+          ref={asideRef}
+          onScroll={(e) => { asideScroll.current = (e.currentTarget as HTMLElement).scrollTop; }}
           onPointerDownCapture={(e) => { if ((e.target as HTMLElement).closest?.('[data-live]')) setDragging(true); }}
           className={cx('order-2 lg:order-3 shrink-0 max-h-[42vh] lg:max-h-none overflow-y-auto border-t lg:border-t-0 lg:border-l border-mt-border bg-mt-surface', pro ? 'lg:w-[320px] px-3' : 'lg:w-[340px] px-4')}>
           {pro && (
@@ -2520,7 +2574,9 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
             </div>
           )}
           <Fragment key={tool}>{panel}</Fragment>
+          {pro && showHistory && <HistoryPanel labels={history.list.map((h) => h.label)} index={history.index} onJump={(i) => setHistory((h) => ({ ...h, index: i }))} />}
           {pro && layers && showLayers && (
+            <div className="sticky bottom-0 z-10 -mx-3 px-3 bg-mt-surface border-t border-mt-border max-h-[45%] overflow-y-auto shadow-[0_-8px_16px_-12px_rgba(0,0,0,0.25)]">
             <LayersPanel
               layers={layers}
               active={activeIdx}
@@ -2539,8 +2595,8 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
               onFlatten={layerOps.flatten}
               onLoadSelection={(i) => base && setSel({ mask: maskFromAlpha(layers[i].canvas, base.width, base.height), shape: null })}
             />
+            </div>
           )}
-          {pro && showHistory && <HistoryPanel labels={history.list.map((h) => h.label)} index={history.index} onJump={(i) => setHistory((h) => ({ ...h, index: i }))} />}
         </aside>
       </div>
 

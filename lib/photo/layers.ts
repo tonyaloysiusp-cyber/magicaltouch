@@ -5,6 +5,7 @@
 // can share untouched layers safely.
 
 import { makeCanvas } from './ops';
+import { Adjust, isNeutral, renderAdjusted } from './adjust';
 
 export type Blend = 'normal' | 'multiply' | 'screen' | 'overlay' | 'soft-light' | 'darken' | 'lighten' | 'color' | 'luminosity' | 'difference';
 export const BLENDS: { id: Blend; label: string }[] = [
@@ -20,6 +21,8 @@ export interface Layer {
   visible: boolean;
   opacity: number; // 0..1
   blend: Blend;
+  /** This layer's own adjustments (brightness, contrast, curves…). Only this layer changes. */
+  adjust?: Adjust;
 }
 
 let seq = 0;
@@ -70,17 +73,41 @@ export function placeImage(img: CanvasImageSource & { width: number; height: num
   return out;
 }
 
-/** Merge `upper` into `lower` (keeps the lower layer's name and settings). */
+/** A layer's pixels with its own adjustments applied. */
+export function adjustedCanvas(l: Layer, live?: Adjust): HTMLCanvasElement {
+  const a = live || l.adjust;
+  return a && !isNeutral(a) ? renderAdjusted(l.canvas, a) : l.canvas;
+}
+
+/** Flattens the visible layers, each with its own adjustments. `scale` < 1
+ *  gives a smaller copy; `live` swaps in unsaved adjustments for one layer. */
+export function compositeAdjusted(layers: Layer[], scale = 1, live?: { index: number; adjust: Adjust }): HTMLCanvasElement {
+  const w0 = layers[0].canvas.width, h0 = layers[0].canvas.height;
+  const w = Math.max(1, Math.round(w0 * scale)), h = Math.max(1, Math.round(h0 * scale));
+  const c = makeCanvas(w, h);
+  const ctx = c.getContext('2d')!;
+  ctx.imageSmoothingQuality = 'high';
+  layers.forEach((l, i) => {
+    if (!l.visible || l.opacity <= 0) return;
+    ctx.globalAlpha = l.opacity;
+    ctx.globalCompositeOperation = op(l.blend);
+    ctx.drawImage(adjustedCanvas(l, live && live.index === i ? live.adjust : undefined), 0, 0, w, h);
+  });
+  return c;
+}
+
+/** Merge `upper` into `lower` (keeps the lower layer's name and settings).
+ *  Each layer's own adjustments are baked in first. */
 export function mergeDown(lower: Layer, upper: Layer): Layer {
   const c = blankLike(lower.canvas);
   const ctx = c.getContext('2d')!;
-  ctx.drawImage(lower.canvas, 0, 0);
+  ctx.drawImage(adjustedCanvas(lower), 0, 0);
   if (upper.visible) {
     ctx.globalAlpha = upper.opacity;
     ctx.globalCompositeOperation = op(upper.blend);
-    ctx.drawImage(upper.canvas, 0, 0);
+    ctx.drawImage(adjustedCanvas(upper), 0, 0);
   }
-  return { ...lower, canvas: c };
+  return { ...lower, canvas: c, adjust: undefined };
 }
 
 // ---------------------------------------------------------------- selection
