@@ -1,0 +1,419 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>
+@font-face{font-family:P;src:url(fonts/Poppins-Regular.ttf);font-weight:400}
+@font-face{font-family:P;src:url(fonts/Poppins-Medium.ttf);font-weight:500}
+@font-face{font-family:P;src:url(fonts/Poppins-SemiBold.ttf);font-weight:600}
+@font-face{font-family:P;src:url(fonts/Poppins-Bold.ttf);font-weight:700}
+@font-face{font-family:P;src:url(fonts/Poppins-ExtraBold.ttf);font-weight:800}
+@font-face{font-family:I;src:url('fonts/Inter[opsz,wght].ttf');font-weight:100 900}
+@font-face{font-family:PF;src:url('fonts/PlayfairDisplay[wght].ttf');font-weight:400 900}
+@font-face{font-family:AR;src:url(fonts/NotoSansArabic.ttf);font-weight:100 900}
+@font-face{font-family:HI;src:url(fonts/NotoSansDevanagari.ttf);font-weight:100 900}
+@font-face{font-family:JP;src:url(fonts/NotoSansJP.ttf);font-weight:100 900}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:1920px;height:1080px;overflow:hidden;background:#070A14;font-family:I,sans-serif;color:#fff}
+#stage{position:absolute;inset:0;overflow:hidden}
+.abs{position:absolute}
+.scene{position:absolute;inset:0;opacity:0}
+.spec{background:linear-gradient(90deg,#F2708F,#A69BD3,#35C2F1,#5DCCB8,#8CC84B,#DDE23B)}
+.spec-text{background:linear-gradient(90deg,#F2708F,#A69BD3 30%,#35C2F1 55%,#5DCCB8 75%,#8CC84B);-webkit-background-clip:text;background-clip:text;color:transparent}
+.cap{position:absolute;left:120px;bottom:96px;font:600 22px P;letter-spacing:.22em;text-transform:uppercase;color:#8FE3FF}
+.big{position:absolute;left:120px;bottom:132px;font:700 64px/1.05 P;letter-spacing:-.02em;max-width:820px}
+.glow{position:absolute;border-radius:50%;filter:blur(120px);opacity:.55}
+/* poster */
+.poster{position:absolute;overflow:hidden;border-radius:18px;box-shadow:0 40px 90px -30px rgba(0,0,0,.7);background:var(--bg,#0B1530)}
+.poster .ph{position:absolute;inset:0;background-size:cover}
+.poster .shade{position:absolute;inset:0}
+.poster .k{position:absolute;font:600 13px P;letter-spacing:.24em;color:var(--kick,#8FE3FF)}
+.poster .h{position:absolute;font:800 64px/1 P;letter-spacing:-.02em;color:#fff}
+.poster .h .g{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+.poster .s{position:absolute;font:400 17px/1.45 I;color:rgba(255,255,255,.78)}
+.poster .info{position:absolute;display:flex;gap:28px;font:600 13px P;letter-spacing:.08em;color:#fff}
+.poster .info span b{display:block;font:600 10px P;letter-spacing:.22em;color:var(--kick,#8FE3FF);margin-bottom:4px}
+.poster .btn{position:absolute;padding:12px 24px;border-radius:999px;font:700 15px P;color:#0B1020;background:var(--grad)}
+.poster .logo{position:absolute;display:flex;align-items:center;gap:10px;font:800 16px P;letter-spacing:.18em}
+.poster .logo i{width:22px;height:22px;border-radius:50%;background:var(--grad);display:block}
+/* ui */
+.win{position:absolute;border-radius:22px;background:#F6F7FB;box-shadow:0 50px 120px -40px rgba(0,0,0,.8);overflow:hidden;color:#0B1020}
+.bar{height:58px;background:#fff;border-bottom:1px solid #E6E8EF;display:flex;align-items:center;padding:0 22px;gap:14px;font:600 15px P}
+.pill{height:36px;border-radius:999px;padding:0 16px;display:flex;align-items:center;gap:8px;font:600 14px P}
+.rail{position:absolute;left:0;top:58px;bottom:0;width:86px;background:#fff;border-right:1px solid #E6E8EF;display:flex;flex-direction:column;align-items:center;gap:6px;padding-top:14px}
+.rail span{width:64px;height:54px;border-radius:14px;display:flex;flex-direction:column;align-items:center;justify-content:center;font:500 11px P;color:#5b6170;gap:5px}
+.rail span i{width:20px;height:20px;border-radius:6px;border:2px solid #9aa0ad;display:block}
+.cursor{position:absolute;width:30px;height:30px;z-index:50;filter:drop-shadow(0 6px 10px rgba(0,0,0,.35))}
+.chip{position:absolute;padding:14px 22px;border-radius:16px;background:rgba(16,20,36,.86);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.14);font:600 18px P;color:#fff;display:flex;gap:12px;align-items:center}
+.chip b{font:700 12px P;letter-spacing:.2em;color:#8FE3FF}
+.panel{position:absolute;background:#fff;border-radius:18px;box-shadow:0 30px 70px -30px rgba(0,0,0,.6);color:#0B1020;padding:22px}
+.sl{height:6px;border-radius:6px;background:#E3E6EE;position:relative;margin:10px 0 20px}
+.sl i{position:absolute;left:0;top:0;bottom:0;border-radius:6px;background:#2F6FE4}
+.sl u{position:absolute;top:-7px;width:20px;height:20px;border-radius:50%;background:#fff;border:2px solid #2F6FE4;margin-left:-10px}
+.lbl{display:flex;justify-content:space-between;font:500 14px P;color:#4b5161}
+.layer{display:flex;align-items:center;gap:12px;padding:10px;border-radius:12px;font:500 15px P}
+.layer.on{background:#E9F1FF;outline:2px solid #2F6FE4}
+.layer s{width:54px;height:38px;border-radius:8px;background-size:cover;background-position:center;text-decoration:none;display:block;border:1px solid #dfe3ea}
+.file{position:absolute;width:210px;height:250px;border-radius:18px;background:#fff;color:#0B1020;box-shadow:0 30px 60px -25px rgba(0,0,0,.6);padding:20px;display:flex;flex-direction:column;justify-content:space-between}
+.file .t{font:800 36px P}
+.file .d{font:500 14px P;color:#5b6170}
+</style></head>
+<body><div id="stage">
+
+<!-- shared ambient -->
+<div class="glow" id="g1" style="width:900px;height:900px;background:#35C2F1;left:-200px;top:-300px"></div>
+<div class="glow" id="g2" style="width:800px;height:800px;background:#F2708F;right:-250px;bottom:-350px"></div>
+
+<!-- S1 intro -->
+<div class="scene" id="s1">
+  <div class="abs spec" id="s1line" style="left:660px;top:600px;height:4px;width:0;border-radius:4px"></div>
+  <img class="abs" id="s1logo" src="img/logo-white.png" style="left:50%;top:420px;height:120px;transform:translateX(-50%)">
+  <div class="abs" id="s1tag" style="left:0;right:0;top:640px;text-align:center;font:700 54px P;letter-spacing:-.02em">Design anything. <span class="spec-text">Make it magical.</span></div>
+</div>
+
+<!-- S2 templates -->
+<div class="scene" id="s2">
+  <div class="abs" style="left:120px;top:150px;font:600 22px P;letter-spacing:.22em;color:#8FE3FF">PROFESSIONAL TEMPLATES</div>
+  <div class="abs" id="s2h" style="left:120px;top:196px;font:800 74px/1.04 P;letter-spacing:-.03em;width:800px">8,450+ designs,<br><span class="spec-text">ready for business.</span></div>
+  <div class="abs" style="left:120px;top:400px;font:400 26px/1.5 I;color:rgba(255,255,255,.75);width:640px">Posters, social posts, presentations, business cards, brochures and more — made by designers, edited by you.</div>
+  <div id="s2wall" class="abs" style="left:880px;top:-120px;width:1200px;height:1400px;transform:rotate(-12deg)"></div>
+</div>
+
+<!-- S3 editor -->
+<div class="scene" id="s3">
+  <div class="win" id="s3win" style="left:200px;top:110px;width:1520px;height:860px">
+    <div class="bar"><img src="img/logo.png" style="height:22px"><span style="margin-left:18px;padding:6px 12px;border:1px solid #E6E8EF;border-radius:10px;font-weight:500">Leaders Summit 2027</span><span style="flex:1"></span>
+      <span class="pill" style="border:1px solid #E6E8EF">Simple · <b style="color:#2F6FE4">Pro</b></span><span class="pill" style="color:#2F6FE4">✦ Resize</span><span class="pill" style="border:1px solid #E6E8EF">⤓ Export</span><span class="pill" style="background:#0B1020;color:#fff">Save</span></div>
+    <div class="rail"><span><i></i>Templates</span><span><i></i>Elements</span><span><i></i>Text</span><span><i></i>Upload</span><span><i></i>Brand</span><span><i></i>Layers</span><span><i></i>Pages</span></div>
+    <div class="abs" id="s3tb" style="left:520px;top:72px;height:54px;border-radius:14px;background:#fff;box-shadow:0 10px 30px -12px rgba(0,0,0,.25);display:flex;align-items:center;gap:18px;padding:0 18px;font:600 14px P;color:#0B1020;opacity:0">
+      <span style="border:1px solid #E6E8EF;border-radius:8px;padding:6px 10px">Poppins ▾</span><span>ExtraBold</span><span>72</span><span style="width:22px;height:22px;border-radius:6px" class="spec"></span><b>B</b><i>I</i><span>≡</span><span style="color:#2F6FE4">✦ Effects</span><span style="color:#2F6FE4">文A Translate</span>
+    </div>
+  </div>
+</div>
+
+<!-- the hero poster (moves between scenes) -->
+<div class="poster" id="P" style="--grad:linear-gradient(90deg,#F2708F,#A69BD3,#35C2F1,#5DCCB8,#8CC84B);--bg:#0B1530;--kick:#8FE3FF;width:540px;height:675px;opacity:0">
+  <div class="ph" id="Pph" style="background-image:url(img/businessman-1.jpg);background-position:30% 30%;left:200px"></div>
+  <div class="shade" id="Pshade" style="background:linear-gradient(90deg,var(--bg) 0%,var(--bg) 30%,rgba(11,21,48,0) 70%),linear-gradient(0deg,var(--bg) 0%,rgba(11,21,48,0) 45%)"></div>
+  <div class="logo" style="left:40px;top:38px"><i></i>NORTHWIND</div>
+  <div class="k" style="left:40px;top:250px">GLOBAL LEADERS SUMMIT · 2027</div>
+  <div class="h" id="Ph" style="left:40px;top:276px;width:420px">Lead<br>what’s <span class="g">next.</span></div>
+  <div class="s" style="left:40px;top:430px;width:300px">Three days of strategy, AI and leadership — live in 20 cities and online.</div>
+  <div class="info" style="left:40px;top:540px"><span><b>DATE</b>12–14 MAY</span><span><b>WHERE</b>20 CITIES + ONLINE</span></div>
+  <div class="btn" style="left:40px;top:600px">Register now →</div>
+</div>
+<div class="abs" id="Pring" style="border:3px solid #2F6FE4;border-radius:6px;opacity:0;pointer-events:none"></div>
+
+<!-- S4 brand -->
+<div class="scene" id="s4">
+  <div class="panel" id="s4panel" style="left:1180px;top:250px;width:520px">
+    <div style="font:700 22px P">Brand kit</div>
+    <div style="font:400 15px I;color:#5b6170;margin:6px 0 18px">Your logo, colours and fonts — applied in one click.</div>
+    <div id="s4kits"></div>
+  </div>
+</div>
+
+<!-- S5 background removal -->
+<div class="scene" id="s5">
+  <div class="abs" id="s5card" style="left:250px;top:150px;width:520px;height:780px;border-radius:24px;overflow:hidden;box-shadow:0 40px 90px -30px rgba(0,0,0,.7)">
+    <div class="abs" id="s5checker" style="inset:0;background:repeating-conic-gradient(#e7e9ef 0 25%,#fff 0 50%) 0 0/28px 28px;opacity:0"></div>
+    <div class="abs" id="s5newbg" style="inset:0;background:linear-gradient(160deg,#35C2F1,#A69BD3 55%,#F2708F);opacity:0"></div>
+    <img class="abs" id="s5orig" src="img/entrepreneur-3.jpg" style="left:0;top:0;width:520px;height:780px;object-fit:cover">
+    <div class="abs" id="s5red" style="inset:0;opacity:0"></div>
+    <img class="abs" id="s5cut" src="img/entrepreneur-3-cut.png" style="left:0;top:0;width:520px;height:780px;object-fit:cover;opacity:0">
+    <div class="abs" id="s5scan" style="left:0;right:0;height:6px;background:linear-gradient(90deg,transparent,#8FE3FF,transparent);box-shadow:0 0 30px #35C2F1;opacity:0"></div>
+    <div class="abs" id="s5brush" style="width:70px;height:70px;border-radius:50%;border:3px solid #22c55e;box-shadow:0 0 0 2px rgba(0,0,0,.35);opacity:0"></div>
+  </div>
+  <div class="abs" style="left:880px;top:250px;font:600 22px P;letter-spacing:.22em;color:#8FE3FF">BACKGROUND REMOVER</div>
+  <div class="abs" style="left:880px;top:296px;font:800 80px/1.02 P;letter-spacing:-.03em;width:900px">One click.<br><span class="spec-text">Every edge perfect.</span></div>
+  <div class="abs" id="s5tools" style="left:880px;top:540px;display:flex;gap:14px">
+    <div class="pill" id="s5restore" style="height:56px;padding:0 24px;font-size:18px;background:#16a34a">✎ Restore</div>
+    <div class="pill" id="s5erase" style="height:56px;padding:0 24px;font-size:18px;border:2px solid rgba(255,255,255,.3)">⌫ Erase</div>
+    <div class="pill" id="s5view" style="height:56px;padding:0 24px;font-size:18px;border:2px solid rgba(255,255,255,.3)">◐ Red overlay</div>
+  </div>
+  <div class="abs" style="left:880px;top:640px;font:400 24px/1.55 I;color:rgba(255,255,255,.75);width:780px">Remove backgrounds from one photo or sixty — on your device, nothing uploaded. Touch up hair and fine edges with a brush.</div>
+</div>
+
+<!-- S6 sizes -->
+<div class="scene" id="s6">
+  <div class="abs" style="left:120px;top:90px;font:600 22px P;letter-spacing:.22em;color:#8FE3FF">MAGIC RESIZE</div>
+  <div class="abs" style="left:120px;top:134px;font:800 72px/1 P;letter-spacing:-.03em">One design. <span class="spec-text">Every size.</span></div>
+  <div id="s6grid"></div>
+</div>
+
+<!-- S7 languages -->
+<div class="scene" id="s7">
+  <div class="abs" style="left:1000px;top:250px;font:600 22px P;letter-spacing:.22em;color:#8FE3FF">TRANSLATE IN ONE CLICK</div>
+  <div class="abs" style="left:1000px;top:296px;font:800 80px/1.02 P;letter-spacing:-.03em;width:800px">37 languages.<br><span class="spec-text">One world.</span></div>
+  <div class="abs" style="left:1000px;top:520px;font:400 24px/1.55 I;color:rgba(255,255,255,.75);width:760px">Translate the whole design — the right fonts and right-to-left layouts are chosen for you.</div>
+  <div id="s7chips" class="abs" style="left:1000px;top:640px;width:800px;display:flex;flex-wrap:wrap;gap:12px"></div>
+  <div id="s7dots" class="abs" style="inset:0;pointer-events:none"></div>
+</div>
+
+<!-- S8 photo studio -->
+<div class="scene" id="s8">
+  <div class="win" id="s8win" style="left:160px;top:120px;width:1600px;height:840px;background:#1c1f26;color:#fff">
+    <div class="bar" style="background:#262a33;border-color:#333845;color:#fff"><span style="font:700 16px P">Photo Studio</span><span style="opacity:.6;font-weight:500">File  Edit  Image  Layer  Select  Filter  View</span><span style="flex:1"></span><span class="pill" style="background:#2F6FE4">Export</span></div>
+    <div class="abs" style="left:24px;top:82px;width:1080px;height:736px;border-radius:14px;overflow:hidden;background:#111">
+      <div class="abs" id="s8bg" style="inset:0;background:url(img/business-team-10.jpg) center/cover"></div>
+      <img class="abs" id="s8sub" src="img/businessman-1-cut.png" style="left:180px;top:0;height:736px">
+    </div>
+    <div class="panel" style="left:1130px;top:82px;width:446px;height:736px;border-radius:14px">
+      <div style="font:700 18px P">Adjust</div>
+      <div id="s8note" style="margin:10px 0 16px;padding:10px 12px;border-radius:10px;background:#E9F1FF;font:500 14px P">Adjusting layer <b>Skyline</b> only</div>
+      <div class="lbl"><span>Brightness</span><span id="v1">0</span></div><div class="sl"><i id="b1"></i><u id="k1"></u></div>
+      <div class="lbl"><span>Contrast</span><span id="v2">0</span></div><div class="sl"><i id="b2"></i><u id="k2"></u></div>
+      <div class="lbl"><span>Warmth</span><span id="v3">0</span></div><div class="sl"><i id="b3"></i><u id="k3"></u></div>
+      <div class="lbl"><span>Blur</span><span id="v4">0</span></div><div class="sl"><i id="b4"></i><u id="k4"></u></div>
+      <div style="font:700 18px P;margin:18px 0 10px">Layers</div>
+      <div class="layer" id="L2"><s style="background-image:url(img/businessman-1-cut.png);background-color:#ddd"></s>Speaker<span style="margin-left:auto;opacity:.5">👁</span></div>
+      <div class="layer on" id="L1"><s style="background-image:url(img/business-team-10.jpg)"></s>Skyline<span style="margin-left:auto;opacity:.5">👁</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- S9 export -->
+<div class="scene" id="s9">
+  <div class="abs" style="left:120px;top:300px;font:600 22px P;letter-spacing:.22em;color:#8FE3FF">DOWNLOAD</div>
+  <div class="abs" style="left:120px;top:346px;font:800 84px/1.02 P;letter-spacing:-.03em;width:800px">Print-ready.<br><span class="spec-text">No watermark.</span></div>
+  <div class="abs" style="left:120px;top:580px;font:400 24px/1.55 I;color:rgba(255,255,255,.75);width:700px">Vector PDF, CMYK for print shops with bleed and crop marks, PNG, JPG, TIFF and WebP — free.</div>
+  <div id="s9files"></div>
+</div>
+
+<!-- S10 CTA -->
+<div class="scene" id="s10">
+  <img class="abs" src="img/logo-white.png" style="left:50%;top:300px;height:96px;transform:translateX(-50%)">
+  <div class="abs" style="left:0;right:0;top:450px;text-align:center;font:800 84px/1.05 P;letter-spacing:-.03em">Design like a pro. <span class="spec-text">Free, worldwide.</span></div>
+  <div class="abs" style="left:0;right:0;top:580px;text-align:center;font:400 28px I;color:rgba(255,255,255,.75)">Templates · Editor · Photo Studio · Background remover · Brand kit · 37 languages</div>
+  <div class="abs" id="s10btn" style="left:50%;top:680px;transform:translateX(-50%);padding:22px 44px;border-radius:999px;font:700 30px P;color:#0B1020" class="spec">magicaltouchdesign.com</div>
+</div>
+
+<!-- captions -->
+<div class="abs" id="capbar" style="left:0;right:0;bottom:0;height:6px;opacity:.9" class="spec"></div>
+<svg class="cursor" id="cur" viewBox="0 0 24 24" style="opacity:0"><path d="M3 2l7 19 2.6-7.4L20 11z" fill="#fff" stroke="#0B1020" stroke-width="1.4" stroke-linejoin="round"/></svg>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const clamp = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x));
+const ease = (x) => { x = clamp(x); return x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2; };
+const out = (x) => 1 - Math.pow(1 - clamp(x), 3);
+const lerp = (a, b, k) => a + (b - a) * k;
+const seg = (t, a, b) => clamp((t - a) / (b - a));
+document.getElementById('capbar').className = 'abs spec';
+document.getElementById('s10btn').className = 'abs spec';
+
+// scene windows [start, end]
+const SC = { s1: [0, 3.6], s2: [3.4, 8.2], s3: [8.0, 13.6], s4: [13.4, 18.4], s5: [18.2, 24.4], s6: [24.2, 29.4], s7: [29.2, 34.4], s8: [34.2, 39.6], s9: [39.4, 43.0], s10: [42.8, 47.0] };
+const T_END = 47;
+
+// S2 wall of business posters (built from the same parts)
+const WALL = [
+  { img: 'businessman-1.jpg', pos: '30% 30%', bg: '#0B1530', h: 'Lead what’s next.', k: 'LEADERS SUMMIT' },
+  { img: 'professional-woman-9.jpg', pos: '50% 50%', bg: '#10322b', h: 'We’re hiring.', k: 'REMOTE · ANYWHERE' },
+  { img: 'entrepreneur-3.jpg', pos: '50% 20%', bg: '#2b1630', h: 'Build your brand.', k: 'WORKSHOP' },
+  { img: 'entrepreneur-8.jpg', pos: '60% 30%', bg: '#14213D', h: 'Grow with clarity.', k: 'CONSULTING' },
+  { img: 'business-team-10.jpg', pos: '50% 40%', bg: '#0E2638', h: 'Annual report 2027', k: 'INVESTORS' },
+  { img: 'ceo-4.jpg', pos: '50% 30%', bg: '#3a1d12', h: 'Meet the founder.', k: 'PODCAST · EP 12' },
+];
+const wall = $('s2wall');
+for (let c = 0; c < 3; c++) for (let r = 0; r < 4; r++) {
+  const w = WALL[(c * 4 + r) % WALL.length];
+  const d = document.createElement('div');
+  d.className = 'abs';
+  d.dataset.col = c;
+  d.style.cssText = `left:${c * 380}px;top:${r * 470}px;width:350px;height:440px;border-radius:16px;overflow:hidden;background:${w.bg};box-shadow:0 30px 60px -25px rgba(0,0,0,.7)`;
+  d.innerHTML = `<div class="abs" style="inset:0 0 40% 0;background:url(img/${w.img}) ${w.pos}/cover"></div><div class="abs" style="inset:0;background:linear-gradient(0deg,${w.bg} 42%,transparent 70%)"></div><div class="abs" style="left:24px;bottom:96px;font:600 11px P;letter-spacing:.22em;color:#8FE3FF">${w.k}</div><div class="abs" style="left:24px;bottom:30px;right:24px;font:800 32px/1.05 P;letter-spacing:-.02em">${w.h}</div>`;
+  wall.appendChild(d);
+}
+
+// S4 kits
+const KITS = [
+  { name: 'Northwind', grad: 'linear-gradient(90deg,#F2708F,#A69BD3,#35C2F1,#5DCCB8,#8CC84B)', bg: '#0B1530', kick: '#8FE3FF', sw: ['#0B1530', '#35C2F1', '#F2708F', '#8CC84B'] },
+  { name: 'Aurum Capital', grad: 'linear-gradient(90deg,#E9C46A,#F4A261)', bg: '#0F0D0A', kick: '#E9C46A', sw: ['#0F0D0A', '#E9C46A', '#F4A261', '#FFFFFF'] },
+  { name: 'Verde Health', grad: 'linear-gradient(90deg,#B7F171,#3DDC97)', bg: '#0D2B22', kick: '#B7F171', sw: ['#0D2B22', '#3DDC97', '#B7F171', '#F1F7F2'] },
+  { name: 'Rosé Studio', grad: 'linear-gradient(90deg,#FFB4C6,#FF6F91)', bg: '#3A1427', kick: '#FFB4C6', sw: ['#3A1427', '#FF6F91', '#FFB4C6', '#FFF2F5'] },
+];
+$('s4kits').innerHTML = KITS.map((k, i) => `<div id="kit${i}" style="display:flex;align-items:center;gap:14px;padding:14px;border-radius:14px;border:2px solid #E6E8EF;margin-bottom:10px"><div style="display:flex">${k.sw.map((c) => `<span style="width:30px;height:30px;border-radius:50%;background:${c};border:2px solid #fff;margin-left:-6px;box-shadow:0 0 0 1px #ddd"></span>`).join('')}</div><span style="font:600 17px P">${k.name}</span></div>`).join('');
+
+// S6 sizes
+const SIZES = [
+  { l: 'Instagram post', w: 1, h: 1, x: 120, y: 330, H: 330 },
+  { l: 'Story · Reel', w: 9, h: 16, x: 500, y: 290, H: 560 },
+  { l: 'A4 print', w: 794, h: 1123, x: 870, y: 290, H: 480 },
+  { l: 'Presentation 16:9', w: 16, h: 9, x: 1250, y: 300, H: 300 },
+  { l: 'LinkedIn banner', w: 4, h: 1, x: 1250, y: 680, H: 150 },
+];
+$('s6grid').innerHTML = SIZES.map((s, i) => {
+  const W = Math.round(s.H * s.w / s.h);
+  const tall = s.h / s.w > 1.2, wide = s.w / s.h > 2.5;
+  const hs = wide ? 30 : tall ? Math.min(54, W / 6) : s.H / 7.5;
+  return `<div class="abs" id="sz${i}" style="left:${s.x}px;top:${s.y}px;width:${W}px;height:${s.H}px;border-radius:14px;overflow:hidden;background:#0B1530;box-shadow:0 30px 60px -25px rgba(0,0,0,.7)">
+   <div class="abs" style="${tall ? 'left:0;right:0;top:0;height:55%' : 'top:0;bottom:0;right:0;width:55%'};background:url(img/businessman-1.jpg) 30% 30%/cover"></div>
+   <div class="abs" style="inset:0;background:${tall ? 'linear-gradient(0deg,#0B1530 45%,transparent 70%)' : 'linear-gradient(90deg,#0B1530 45%,transparent 75%)'}"></div>
+   <div class="abs" style="left:${wide ? 24 : 22}px;${tall ? 'bottom:22%' : wide ? 'top:38px' : 'top:18%'};font:800 ${hs}px/1 P;letter-spacing:-.02em;width:${wide ? 600 : W * 0.6}px">Lead what’s <span class="spec-text">next.</span></div>
+   <div class="abs" style="left:${wide ? 24 : 22}px;${tall ? 'bottom:12%' : wide ? 'top:84px' : 'bottom:10%'};padding:6px 14px;border-radius:999px;font:700 ${wide ? 12 : 13}px P;color:#0B1020" class="spec">Register now</div>
+  </div><div class="abs" id="szl${i}" style="left:${s.x}px;top:${s.y + s.H + 14}px;font:600 16px P;color:rgba(255,255,255,.75)">${s.l}</div>`;
+}).join('');
+document.querySelectorAll('#s6grid .spec, #s6grid div[class="abs"][style*="Register"]').forEach(() => {});
+document.querySelectorAll('#s6grid div').forEach((d) => { if (d.textContent === 'Register now') d.className = 'abs spec'; });
+
+// S7 languages
+const LANGS = [
+  ['English', 'Lead<br>what’s <span class="g">next.</span>', 'P'],
+  ['Español', 'Lidera<br>lo que <span class="g">viene.</span>', 'P'],
+  ['Français', 'Menez<br>ce qui <span class="g">vient.</span>', 'P'],
+  ['Deutsch', 'Gestalte<br>was <span class="g">kommt.</span>', 'P'],
+  ['日本語', '次の時代を<br><span class="g">リードする。</span>', 'JP'],
+  ['العربية', 'قُد<br><span class="g">المستقبل.</span>', 'AR'],
+  ['हिन्दी', 'आगे की राह<br><span class="g">दिखाएँ।</span>', 'HI'],
+  ['Português', 'Lidere<br>o que <span class="g">vem.</span>', 'P'],
+];
+$('s7chips').innerHTML = LANGS.map((l, i) => `<span id="lc${i}" style="padding:10px 18px;border-radius:999px;border:1.5px solid rgba(255,255,255,.25);font:600 18px ${l[2] === 'P' ? 'P' : l[2]};color:#fff">${l[0]}</span>`).join('');
+// world dots
+const dots = [];
+for (let i = 0; i < 120; i++) { const d = document.createElement('div'); d.className = 'abs'; const x = 960 + Math.cos(i * 2.399) * (100 + (i % 17) * 52); const y = 540 + Math.sin(i * 2.399) * (60 + (i % 13) * 34); d.style.cssText = `left:${x}px;top:${y}px;width:5px;height:5px;border-radius:50%;background:#8FE3FF`; $('s7dots').appendChild(d); dots.push(d); }
+
+// S9 files
+const FILES = [['PDF', 'Vector · print'], ['CMYK', 'Print shop · bleed'], ['PNG', 'Transparent'], ['JPG', 'Social · email']];
+$('s9files').innerHTML = FILES.map((f, i) => `<div class="file" id="f${i}" style="left:${1000 + (i % 2) * 250}px;top:${200 + Math.floor(i / 2) * 290}px"><div class="t spec-text">${f[0]}</div><div><div style="height:6px;border-radius:6px;margin-bottom:12px" class="spec"></div><div class="d">${f[1]}</div></div></div>`).join('');
+
+// ---------------------------------------------------------------- render(t)
+function vis(id, t) {
+  const [a, b] = SC[id];
+  const o = Math.min(seg(t, a, a + 0.45), 1 - seg(t, b - 0.45, b));
+  $(id).style.opacity = o;
+  return o;
+}
+function poster(x, y, s, o) { const P = $('P'); P.style.left = x + 'px'; P.style.top = y + 'px'; P.style.transform = `scale(${s})`; P.style.transformOrigin = '0 0'; P.style.opacity = o; }
+function cursor(x, y, o, press) { const c = $('cur'); c.style.left = x + 'px'; c.style.top = y + 'px'; c.style.opacity = o; c.style.transform = `scale(${press ? .85 : 1})`; }
+function applyKit(k) { const P = $('P'); P.style.setProperty('--grad', k.grad); P.style.setProperty('--bg', k.bg); P.style.setProperty('--kick', k.kick); $('Pshade').style.background = `linear-gradient(90deg,${k.bg} 0%,${k.bg} 30%,transparent 70%),linear-gradient(0deg,${k.bg} 0%,transparent 45%)`; }
+
+window.render = function (t) {
+  // ambient
+  $('g1').style.transform = `translate(${Math.sin(t * .3) * 120}px,${Math.cos(t * .25) * 80}px)`;
+  $('g2').style.transform = `translate(${Math.cos(t * .27) * 140}px,${Math.sin(t * .2) * 90}px)`;
+  $('capbar').style.width = (t / T_END * 100) + '%';
+  let posterO = 0; let cur = [0, 0, 0, false];
+
+  // S1
+  if (vis('s1', t) > 0) {
+    $('s1line').style.width = out(seg(t, .2, 1.4)) * 600 + 'px';
+    $('s1logo').style.opacity = out(seg(t, .4, 1.2));
+    $('s1logo').style.transform = `translateX(-50%) translateY(${(1 - out(seg(t, .4, 1.2))) * 30}px)`;
+    $('s1tag').style.opacity = out(seg(t, 1.1, 2));
+    $('s1tag').style.transform = `translateY(${(1 - out(seg(t, 1.1, 2))) * 30}px)`;
+  }
+  // S2
+  if (vis('s2', t) > 0) {
+    const k = t - 3.4;
+    wall.querySelectorAll('div[data-col]').forEach((d) => { const c = +d.dataset.col; d.style.transform = `translateY(${(c % 2 ? 1 : -1) * k * 60 + (c % 2 ? -200 : 0)}px)`; });
+    $('s2h').style.transform = `translateY(${(1 - out(seg(t, 3.5, 4.3))) * 40}px)`;
+  }
+  // S3 editor
+  const o3 = vis('s3', t);
+  if (o3 > 0) {
+    $('s3win').style.transform = `scale(${lerp(1.04, 1, out(seg(t, 8, 9)))})`;
+    posterO = o3;
+    poster(800, 252, 0.94, o3);
+    // cursor to headline, click, type
+    const c1 = out(seg(t, 9.0, 10.0));
+    cur = [lerp(1500, 900, c1), lerp(900, 560, c1), o3, t > 10.0 && t < 10.15];
+    const sel = t > 10.05;
+    const ring = $('Pring');
+    ring.style.opacity = sel && t < 13.4 ? 1 : 0; ring.style.left = 830 + 'px'; ring.style.top = 505 + 'px'; ring.style.width = '405px'; ring.style.height = '138px';
+    $('s3tb').style.opacity = sel ? out(seg(t, 10.05, 10.4)) : 0;
+    const full = ['Lead<br>what’s <span class="g">next.</span>'];
+    const words = 'Shape the future.';
+    if (t > 10.6 && t < 13.6) {
+      const n = Math.floor(clamp((t - 10.8) / 1.6) * words.length);
+      const typed = words.slice(0, n);
+      $('Ph').innerHTML = t < 10.8 ? '' : (typed.length > 9 ? 'Shape the<br><span class="g">' + typed.slice(10) + '</span>' : typed) + (Math.floor(t * 3) % 2 ? '|' : '');
+    } else $('Ph').innerHTML = t >= 13.6 ? 'Shape the<br><span class="g">future.</span>' : full[0];
+    $('Pph').style.left = '200px';
+    if (t > 12.4) { const c2 = out(seg(t, 12.4, 13.2)); cur = [lerp(900, 1180, c2), lerp(560, 250, c2), o3, false]; }
+  } else $('Pring').style.opacity = 0;
+  // S4 brand
+  const o4 = vis('s4', t);
+  if (o4 > 0) {
+    posterO = Math.max(posterO, o4);
+    poster(lerp(800, 420, out(seg(t, 13.4, 14.2))), lerp(252, 200, out(seg(t, 13.4, 14.2))), lerp(.94, 1, out(seg(t, 13.4, 14.2))), Math.max(o3, o4));
+    $('s4panel').style.transform = `translateX(${(1 - out(seg(t, 13.6, 14.4))) * 80}px)`;
+    const idx = t < 14.8 ? 0 : t < 15.9 ? 1 : t < 17.0 ? 2 : 3;
+    KITS.forEach((k, i) => { const el = $('kit' + i); el.style.borderColor = i === idx ? '#2F6FE4' : '#E6E8EF'; el.style.background = i === idx ? '#E9F1FF' : '#fff'; });
+    applyKit(KITS[idx]);
+    const ty = 360 + idx * 82;
+    cur = [lerp(1500, 1470, (t % 1.1) / 1.1), ty, o4, (t - 14.8) % 1.1 < .12 && t > 14.8];
+  }
+  if (t < 13.4) applyKit(KITS[0]);
+  if (t > 18.4 && t < 29.2) applyKit(KITS[0]);
+  // S5 remove background
+  const o5 = vis('s5', t);
+  if (o5 > 0) {
+    const scan = seg(t, 19.0, 20.4);
+    $('s5scan').style.opacity = scan > 0 && scan < 1 ? 1 : 0;
+    $('s5scan').style.top = scan * 780 + 'px';
+    const cut = out(seg(t, 20.2, 20.9));
+    $('s5checker').style.opacity = cut;
+    $('s5cut').style.opacity = cut;
+    $('s5orig').style.opacity = 1 - cut;
+    // red overlay + brush (touch up)
+    const red = t > 21.2 && t < 22.9;
+    $('s5view').style.background = red ? 'rgba(239,68,68,.85)' : 'transparent';
+    // Red overlay: original photo, removed area tinted red, subject on top.
+    $('s5red').style.opacity = red ? 1 : 0;
+    $('s5red').style.background = 'rgba(239,68,68,.55)';
+    $('s5orig').style.opacity = red ? 1 : 1 - cut;
+    $('s5cut').style.opacity = red ? 1 : cut;
+    $('s5checker').style.opacity = red ? 0 : cut;
+    if (red) {
+      const b = seg(t, 21.4, 22.7);
+      $('s5brush').style.opacity = 1;
+      $('s5brush').style.left = (300 + Math.sin(b * 9) * 60) + 'px';
+      $('s5brush').style.top = (90 + b * 160) + 'px';
+      $('s5restore').style.boxShadow = '0 0 0 4px rgba(34,197,94,.35)';
+    } else { $('s5brush').style.opacity = 0; $('s5restore').style.boxShadow = 'none'; }
+    const nb = out(seg(t, 23.0, 23.6));
+    $('s5newbg').style.opacity = nb;
+    if (nb > 0) $('s5checker').style.opacity = 1 - nb;
+    if (nb > 0) $('s5orig').style.opacity = 0;
+    $('s5card').style.transform = `rotate(${lerp(-2, 0, out(seg(t, 18.2, 19)))}deg)`;
+  }
+  // S6 sizes
+  const o6 = vis('s6', t);
+  if (o6 > 0) SIZES.forEach((s, i) => { const k = out(seg(t, 24.5 + i * .28, 25.2 + i * .28)); $('sz' + i).style.transform = `translateY(${(1 - k) * 80}px) scale(${lerp(.9, 1, k)})`; $('sz' + i).style.opacity = k; $('szl' + i).style.opacity = k; });
+  // S7 languages
+  const o7 = vis('s7', t);
+  if (o7 > 0) {
+    posterO = o7;
+    poster(240, 200, 1, o7);
+    const li = Math.min(LANGS.length - 1, Math.floor(clamp((t - 29.8) / .6, 0, 99)));
+    const L = LANGS[li];
+    $('Ph').innerHTML = L[1];
+    $('Ph').style.fontFamily = L[2] === 'P' ? 'P' : L[2];
+    $('Ph').style.direction = L[2] === 'AR' ? 'rtl' : 'ltr';
+    $('Ph').style.fontSize = L[2] === 'P' ? '64px' : '54px';
+    $('Ph').style.lineHeight = L[2] === 'P' ? '1' : '1.35';
+    LANGS.forEach((_, i) => { const el = $('lc' + i); el.style.background = i === li ? '#fff' : 'transparent'; el.style.color = i === li ? '#0B1020' : '#fff'; });
+    dots.forEach((d, i) => { d.style.opacity = (0.15 + 0.6 * (0.5 + 0.5 * Math.sin(t * 2 + i))) * o7 * 0.5; });
+  } else { $('Ph').style.fontFamily = 'P'; $('Ph').style.direction = 'ltr'; $('Ph').style.fontSize = '64px'; $('Ph').style.lineHeight = '1'; }
+  // S8 photo studio
+  const o8 = vis('s8', t);
+  if (o8 > 0) {
+    const a = out(seg(t, 35.2, 36.6)), b = out(seg(t, 36.2, 37.4)), c = out(seg(t, 36.8, 38.0)), d = out(seg(t, 37.4, 38.6));
+    const vals = [a * 18, b * 24, -c * 30, d * 6];
+    [[1, vals[0], -100, 100], [2, vals[1], -100, 100], [3, vals[2], -100, 100], [4, vals[3], 0, 20]].forEach(([n, v, mn, mx]) => { const p = (v - mn) / (mx - mn) * 100; $('b' + n).style.width = p + '%'; $('k' + n).style.left = p + '%'; $('v' + n).textContent = Math.round(v); });
+    $('s8bg').style.filter = `brightness(${1 + vals[0] / 100}) contrast(${1 + vals[1] / 100}) hue-rotate(${vals[2] * .6}deg) saturate(${1 - vals[2] / 200}) blur(${vals[3] * .8}px)`;
+    cur = [1180 + 320 * (t < 36.6 ? .2 + a * .35 : t < 37.4 ? .2 + b * .4 : t < 38 ? .5 - c * .3 : .1 + d * .2), t < 36.6 ? 360 : t < 37.4 ? 440 : t < 38 ? 520 : 600, o8, false];
+  }
+  // S9 export
+  const o9 = vis('s9', t);
+  if (o9 > 0) FILES.forEach((_, i) => { const k = out(seg(t, 39.8 + i * .2, 40.6 + i * .2)); $('f' + i).style.transform = `translateY(${(1 - k) * 120}px) rotate(${(i % 2 ? 3 : -3) * (1 - k)}deg)`; $('f' + i).style.opacity = k; });
+  // S10
+  if (vis('s10', t) > 0) $('s10btn').style.transform = `translateX(-50%) scale(${1 + Math.sin(t * 4) * .015})`;
+
+  if (!posterO) $('P').style.opacity = 0;
+  cursor(cur[0], cur[1], cur[2], cur[3]);
+};
+window.T_END = T_END;
+render(0);
+</script>
+</body></html>
