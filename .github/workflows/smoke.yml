@@ -6,7 +6,8 @@ jobs:
     steps:
       - run: |
           B=https://www.magicaltouchdesign.com
-          for p in / /templates /editor /ai-studio /sitemap.xml /templates/family-album-sage-16-pages; do curl -s -o /tmp/b -m 60 -w "%{http_code} $p  " "$B$p"; grep -o '<title>[^<]*' /tmp/b | head -1; echo; done
-          echo "ai-studio in sitemap: $(curl -s $B/sitemap.xml | grep -c ai-studio)"
-          echo "ai-studio noindex: $(curl -s $B/ai-studio | grep -o 'noindex[^"]*' | head -1)"
-          echo "AI on home: $(curl -s $B/ | grep -o 'AI Studio\|AI Template Studio\|free AI rebuild' | sort | uniq -c | tr '\n' ' ')"
+          for p in / /tutorials /remove-background /guides/magical-touch-design-handbook.pdf /guides/design-editor-guide.pdf /tutorials/background-removal-and-photo-cleanup; do curl -s -o /tmp/b -m 60 -w "%{http_code} %{size_download}B $p  " "$B$p"; grep -o '<title>[^<]*' /tmp/b | head -1; echo; done
+          curl -s -o /dev/null -w "mockups -> %{http_code} %{redirect_url}\n" $B/mockups
+          echo "breadcrumb on remover: $(curl -s $B/remove-background | grep -c 'aria-label="Breadcrumb"')"
+          echo "mockups in menu: $(curl -s $B/ | grep -c 'href="/mockups"')"
+          echo "face photos on home: $(curl -s $B/ | grep -o 'mt-813\|mt-589\|speaker-cutout' | wc -l)"
