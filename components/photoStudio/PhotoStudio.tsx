@@ -412,7 +412,7 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
   // With several layers the sliders work on the SELECTED layer only: the
   // preview copy is that layer, and the layers below / above are drawn
   // around it (each with its own adjustments).
-  const multi = !!layers && layers.length > 1;
+  const manyLayers = !!layers && layers.length > 1;
   const stack = useMemo(() => {
     if (!layers || layers.length < 2 || !base) return null;
     const k = Math.min(1, PREVIEW_MAX / Math.max(base.width, base.height));
@@ -429,10 +429,10 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
     if (!firstPreviewRef.current) firstPreviewRef.current = c;
     return { canvas: c, data, k, owner: {} };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [base, multi ? layers : null, activeIdx]);
+  }, [base, manyLayers ? layers : null, activeIdx]);
   // Small draft copy used while dragging, so sliders follow instantly.
   const draft = useMemo(() => {
-    if (!preview || multi) return null;
+    if (!preview || manyLayers) return null;
     const long = Math.max(preview.canvas.width, preview.canvas.height);
     const target = 900;
     if (long <= target * 1.25) return null;
@@ -1664,7 +1664,7 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
           : [{ t: 'Light', s: SIMPLE_LIGHT }, { t: 'Colour', s: SIMPLE_COLOR }, { t: 'Detail', s: SIMPLE_DETAIL }];
         return (
           <>
-            {multi && layers && (
+            {manyLayers && layers && (
               <p className="mt-3 rounded-lg bg-[#2680EB]/10 text-[12px] text-mt-ink px-2.5 py-1.5">
                 Adjusting layer <b>{layers[activeIdx].name}</b> only. Pick another layer to adjust it separately.
               </p>
