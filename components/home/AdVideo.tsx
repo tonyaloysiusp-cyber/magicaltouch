@@ -4,6 +4,7 @@
 // templates, editing, brand kit, background removal with touch-up, magic
 // resize, 37 languages, Photo Studio layers, print-ready export).
 // Muted, looping, plays only while on screen; phones get the 720p file.
+// Two versions: light and dark, following the site's theme switch.
 
 import { useEffect, useRef, useState } from 'react';
 import { Pause, Play, RotateCcw } from 'lucide-react';
@@ -12,6 +13,17 @@ export function AdVideo() {
   const v = useRef<HTMLVideoElement>(null);
   const [playing, setPlaying] = useState(false);
   const [small, setSmall] = useState<boolean | null>(null);
+  const [dark, setDark] = useState(false);
+
+  // Follow the site theme (useAppTheme puts `dark` on <html>).
+  useEffect(() => {
+    const el = document.documentElement;
+    const read = () => setDark(el.classList.contains('dark'));
+    read();
+    const mo = new MutationObserver(read);
+    mo.observe(el, { attributes: true, attributeFilter: ['class'] });
+    return () => mo.disconnect();
+  }, []);
 
   useEffect(() => {
     setSmall(window.matchMedia('(max-width: 900px)').matches || ((navigator as any).connection?.saveData ?? false));
@@ -28,7 +40,7 @@ export function AdVideo() {
     }, { threshold: 0.35 });
     io.observe(el);
     return () => io.disconnect();
-  }, [small]);
+  }, [small, dark]);
 
   const toggle = () => {
     const el = v.current;
@@ -38,13 +50,14 @@ export function AdVideo() {
   };
 
   return (
-    <div className="relative bg-[#070A14] aspect-video">
+    <div className="relative bg-[#F4F6FB] dark:bg-[#070A14] aspect-video">
       {small !== null && (
         <video
           ref={v}
           className="absolute inset-0 w-full h-full object-cover"
-          src={small ? '/api/media/home/ad/magical-touch-ad-720.mp4?v=2' : '/api/media/home/ad/magical-touch-ad.mp4?v=2'}
-          poster={small ? '/home/ad/poster-720.webp?v=2' : '/home/ad/poster.webp?v=2'}
+          key={dark ? 'dark' : 'light'}
+          src={`/api/media/home/ad/magical-touch-ad${dark ? '' : '-light'}${small ? '-720' : ''}.mp4?v=3`}
+          poster={`/home/ad/poster${dark ? '' : '-light'}${small ? '-720' : ''}.webp?v=3`}
           muted
           loop
           playsInline

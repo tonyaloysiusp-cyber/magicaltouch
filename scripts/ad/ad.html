@@ -55,6 +55,22 @@ html,body{width:1920px;height:1080px;overflow:hidden;background:#070A14;font-fam
 .file{position:absolute;width:210px;height:250px;border-radius:18px;background:#fff;color:#0B1020;box-shadow:0 30px 60px -25px rgba(0,0,0,.6);padding:20px;display:flex;flex-direction:column;justify-content:space-between}
 .file .t{font:800 36px P}
 .file .d{font:500 14px P;color:#5b6170}
+/* light theme (?theme=light) */
+body.light,body.light html{background:#F4F6FB;color:#0B1020}
+body.light{background:#F4F6FB;color:#0B1020}
+body.light .glow{opacity:.28}
+body.light [style*="#8FE3FF"]{color:#2F6FE4 !important}
+body.light [style*="rgba(255,255,255,.75)"]{color:#4b5161 !important}
+body.light #s7dots div{background:#2F6FE4 !important}
+body.light #s5tools .pill{border-color:rgba(11,16,32,.2) !important}
+body.light #s5restore{color:#fff}
+body.light .chip{background:#fff;color:#0B1020;border-color:#e3e6ee}
+body.light .file{box-shadow:0 30px 60px -25px rgba(11,16,32,.35)}
+body.light .poster{box-shadow:0 40px 90px -30px rgba(11,16,32,.45)}
+body.light .win{box-shadow:0 50px 120px -40px rgba(11,16,32,.4)}
+.onDark{color:#fff}
+.poster{color:#fff}
+body.light [id^="szl"]{color:#4b5161 !important}
 </style></head>
 <body><div id="stage">
 
@@ -199,6 +215,8 @@ const out = (x) => 1 - Math.pow(1 - clamp(x), 3);
 const lerp = (a, b, k) => a + (b - a) * k;
 const seg = (t, a, b) => clamp((t - a) / (b - a));
 document.getElementById('capbar').className = 'abs spec';
+const LIGHT = /theme=light/.test(location.search);
+if (LIGHT) { document.body.classList.add('light'); document.querySelectorAll('img[src="img/logo-white.png"]').forEach((i) => (i.src = 'img/logo.png')); }
 document.getElementById('s10btn').className = 'abs spec';
 
 // scene windows [start, end]
@@ -220,7 +238,7 @@ for (let c = 0; c < 3; c++) for (let r = 0; r < 4; r++) {
   const d = document.createElement('div');
   d.className = 'abs';
   d.dataset.col = c;
-  d.style.cssText = `left:${c * 380}px;top:${r * 470}px;width:350px;height:440px;border-radius:16px;overflow:hidden;background:${w.bg};box-shadow:0 30px 60px -25px rgba(0,0,0,.7)`;
+  d.style.cssText = `color:#fff;left:${c * 380}px;top:${r * 470}px;width:350px;height:440px;border-radius:16px;overflow:hidden;background:${w.bg};box-shadow:0 30px 60px -25px rgba(0,0,0,.7)`;
   d.innerHTML = `<div class="abs" style="inset:0 0 40% 0;background:url(img/${w.img}) ${w.pos}/cover"></div><div class="abs" style="inset:0;background:linear-gradient(0deg,${w.bg} 42%,transparent 70%)"></div><div class="abs" style="left:24px;bottom:96px;font:600 11px P;letter-spacing:.22em;color:#8FE3FF">${w.k}</div><div class="abs" style="left:24px;bottom:30px;right:24px;font:800 32px/1.05 P;letter-spacing:-.02em">${w.h}</div>`;
   wall.appendChild(d);
 }
@@ -246,7 +264,7 @@ $('s6grid').innerHTML = SIZES.map((s, i) => {
   const W = Math.round(s.H * s.w / s.h);
   const tall = s.h / s.w > 1.2, wide = s.w / s.h > 2.5;
   const hs = wide ? 30 : tall ? Math.min(54, W / 6) : s.H / 7.5;
-  return `<div class="abs" id="sz${i}" style="left:${s.x}px;top:${s.y}px;width:${W}px;height:${s.H}px;border-radius:14px;overflow:hidden;background:#0B1530;box-shadow:0 30px 60px -25px rgba(0,0,0,.7)">
+  return `<div class="abs" id="sz${i}" style="color:#fff;left:${s.x}px;top:${s.y}px;width:${W}px;height:${s.H}px;border-radius:14px;overflow:hidden;background:#0B1530;box-shadow:0 30px 60px -25px rgba(0,0,0,.7)">
    <div class="abs" style="${tall ? 'left:0;right:0;top:0;height:55%' : 'top:0;bottom:0;right:0;width:55%'};background:url(img/businessman-1.jpg) 30% 30%/cover"></div>
    <div class="abs" style="inset:0;background:${tall ? 'linear-gradient(0deg,#0B1530 45%,transparent 70%)' : 'linear-gradient(90deg,#0B1530 45%,transparent 75%)'}"></div>
    <div class="abs" style="left:${wide ? 24 : 22}px;${tall ? 'bottom:22%' : wide ? 'top:38px' : 'top:18%'};font:800 ${hs}px/1 P;letter-spacing:-.02em;width:${wide ? 600 : W * 0.6}px">Lead what’s <span class="spec-text">next.</span></div>
@@ -392,7 +410,7 @@ window.render = function (t) {
     $('Ph').style.direction = L[2] === 'AR' ? 'rtl' : 'ltr';
     $('Ph').style.fontSize = L[2] === 'P' ? '64px' : '54px';
     $('Ph').style.lineHeight = L[2] === 'P' ? '1' : '1.35';
-    LANGS.forEach((_, i) => { const el = $('lc' + i); el.style.background = i === li ? '#fff' : 'transparent'; el.style.color = i === li ? '#0B1020' : '#fff'; });
+    LANGS.forEach((_, i) => { const el = $('lc' + i); el.style.background = i === li ? (LIGHT ? '#0B1020' : '#fff') : 'transparent'; el.style.color = i === li ? (LIGHT ? '#fff' : '#0B1020') : (LIGHT ? '#0B1020' : '#fff'); el.style.borderColor = LIGHT ? 'rgba(11,16,32,.2)' : 'rgba(255,255,255,.25)'; });
     dots.forEach((d, i) => { d.style.opacity = (0.15 + 0.6 * (0.5 + 0.5 * Math.sin(t * 2 + i))) * o7 * 0.5; });
   } else { $('Ph').style.fontFamily = 'P'; $('Ph').style.direction = 'ltr'; $('Ph').style.fontSize = '64px'; $('Ph').style.lineHeight = '1'; }
   // S8 photo studio
