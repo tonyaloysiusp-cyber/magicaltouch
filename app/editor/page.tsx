@@ -7341,7 +7341,7 @@ function EditorContent() {
       await studioWait(80);
       duplicateArtboard(orig);
       await studioWait(900);
-      const id = activeArtboardIdRef.current;
+      const id: string | null = activeArtboardIdRef.current as string | null;
       if (!id || id === orig) continue;
       const rect = canvas.getObjects().find((o: any) => o.__isArtboard && o.__artboardId === id);
       if (rect) rect.set({ name: pal.name });
