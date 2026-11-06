@@ -1,0 +1,14 @@
+name: smoke
+on: { push: { branches: [smoke-live] } }
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          B=https://www.magicaltouchdesign.com
+          for p in / /templates "/templates?kind=photo-album" /templates/forest-arch-birthday-story /templates/category/festivals /editor /login /signup /dashboard /api/public-templates /sitemap.xml /free-flyer-maker /templates/collection/21-and-fabulous-preview.jpg; do
+            curl -s -o /tmp/b -m 60 -w "%{http_code} %{time_total}s %{size_download}B $p  " "$B$p"; grep -o '<title>[^<]*' /tmp/b | head -1; echo
+          done
+          echo "--- headers"; curl -sI $B/ | grep -iE "^(server|x-vercel|cf-ray|x-opennext|x-nextjs|location|HTTP)"
+          echo "--- apex"; curl -s -o /dev/null -w "apex %{http_code} -> %{redirect_url}\n" https://magicaltouchdesign.com/
+          echo "--- errors"; curl -s $B/ | grep -oiE 'application error|internal server error|hello world|DEPLOYMENT_DISABLED|paused' | sort | uniq -c || true
