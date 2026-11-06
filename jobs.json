@@ -1,0 +1,5 @@
+[
+ {"name":"blank","url":"/editor","steps":[]},
+ {"name":"tpl","url":"/editor?templateId=00abe880-d03b-457b-b33b-39dadf8415d7","wait":12000,
+  "steps":[{"tap":[195,400]},{"tap":[195,250]},{"text":"Text","exact":true},{"tap":[195,120]}]}
+]
