@@ -9,7 +9,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { RefreshCw, Plus, Check, Archive, Mail, ExternalLink, CalendarHeart, Server, Inbox, Users, Brush, LayoutTemplate, Send, X, RotateCcw, Sparkles } from 'lucide-react';
+import { RefreshCw, Plus, Check, Archive, Mail, ExternalLink, CalendarHeart, Server, Inbox, Users, Brush, LayoutTemplate, Send, X, RotateCcw, Sparkles, ChevronDown, Globe, Cloud, Database, GitBranch, ShieldCheck, Wrench } from 'lucide-react';
 import { supabase, getSessionUser } from '@/lib/supabase';
 import { allPages } from '@/lib/templatesData';
 import { AdminShell, AdminCard, AdminSection } from '@/components/admin/AdminShell';
@@ -23,7 +23,7 @@ const TABS: Tab[] = ['overview', 'messages', 'occasions', 'services', 'wording']
 
 interface Message { id: string; kind: string; title: string; body: string | null; link: string | null; priority: string; due_on: string | null; meta: any; read_at: string | null; archived: boolean; created_at: string }
 interface Occasion { id: string; name: string; occasion_date: string; region: string; template_category: string | null; ideas: string | null; lead_days: number; active: boolean; built_in: boolean }
-interface Service { id: string; name: string; kind: string; provider: string | null; plan: string | null; account_url: string | null; renew_url?: string | null; cost: number | null; currency: string; billing_cycle: string; renews_on: string | null; auto_renew: boolean; status: string; notes: string | null }
+interface Service { id: string; name: string; kind: string; provider: string | null; plan: string | null; account_url: string | null; renew_url?: string | null; cost: number | null; currency: string; billing_cycle: string; renews_on: string | null; auto_renew: boolean; status: string; notes: string | null; details?: string | null; account_email?: string | null; sort?: number | null }
 
 const today = () => {
   const d = new Date();
@@ -69,7 +69,7 @@ export default function AdminHome() {
       supabase.rpc('admin_overview'),
       supabase.from('admin_messages').select('*').eq('archived', false).order('created_at', { ascending: false }).limit(200),
       supabase.from('occasions').select('*').gte('occasion_date', from).order('occasion_date', { ascending: true }).limit(400),
-      supabase.from('admin_services').select('*').order('renews_on', { ascending: true, nullsFirst: false }),
+      supabase.from('admin_services').select('*').order('sort', { ascending: true, nullsFirst: false }).order('renews_on', { ascending: true, nullsFirst: false }),
       allPages<any>((from, to) => supabase.from('templates').select('name, category, tags, occasion').eq('status', 'published').order('id').range(from, to)),
     ]);
     if (ov.data) setStats(ov.data as any);
@@ -518,8 +518,8 @@ function Occasions({ occasions, templates, reload, flash }: { occasions: Occasio
 
 // ------------------------------------------------------------- services
 
-const KINDS = ['hosting', 'domain', 'email', 'database', 'ssl', 'software', 'storage', 'other'];
-const KIND_NAMES: Record<string, string> = { hosting: 'Hosting', domain: 'Domain', email: 'E-mail', database: 'Database', ssl: 'SSL certificate', software: 'Software', storage: 'Storage', other: 'Other' };
+const KINDS = ['domain', 'dns', 'hosting', 'database', 'email', 'storage', 'code', 'payments', 'ai', 'analytics', 'ssl', 'software', 'other'];
+const KIND_NAMES: Record<string, string> = { hosting: 'Hosting', domain: 'Domain', dns: 'DNS & security', email: 'E-mail', database: 'Database', storage: 'Storage', code: 'Code', payments: 'Payments', ai: 'AI', analytics: 'Google & stats', ssl: 'SSL certificate', software: 'Software', other: 'Other' };
 
 // Where to pay, for the providers people use most — filled in when the
 // renew link is left empty.
@@ -535,6 +535,9 @@ const RENEW_LINKS: [RegExp, string][] = [
   [/dynadot/i, 'https://www.dynadot.com/account/domain/name/list.html'],
   [/bigrock/i, 'https://manage.bigrock.in/'],
   [/wix/i, 'https://manage.wix.com/account/domains'],
+  [/github/i, 'https://github.com/settings/billing'],
+  [/stripe/i, 'https://dashboard.stripe.com/settings/billing'],
+  [/gemini/i, 'https://aistudio.google.com/apikey'],
   [/vercel/i, 'https://vercel.com/account/billing'],
   [/supabase/i, 'https://supabase.com/dashboard/org/_/billing'],
   [/google workspace/i, 'https://admin.google.com/ac/billing/subscriptions'],
@@ -560,6 +563,8 @@ function Services({ services, reload, flash }: { services: Service[]; reload: ()
       auto_renew: !!editing.auto_renew,
       status: editing.status || 'active',
       notes: editing.notes || null,
+      details: editing.details || null,
+      account_email: editing.account_email || null,
       updated_at: new Date().toISOString(),
     };
     const q = editing.id ? supabase.from('admin_services').update(row).eq('id', editing.id) : supabase.from('admin_services').insert(row);
@@ -584,18 +589,18 @@ function Services({ services, reload, flash }: { services: Service[]; reload: ()
     await supabase.from('admin_services').delete().eq('id', s.id);
     reload();
   };
-  const total = services.filter((s) => s.status === 'active' && s.cost).reduce((sum, s) => sum + (s.billing_cycle === 'monthly' ? Number(s.cost) * 12 : s.billing_cycle === 'yearly' ? Number(s.cost) : 0), 0);
-  return (
-    <div className="flex flex-col gap-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-mt-muted">{total ? `About ${total.toLocaleString('en-GB', { maximumFractionDigits: 0 })} a year in running costs (mixed currencies are added as-is).` : 'Add costs to see your yearly running total.'}</p>
-        <button type="button" onClick={() => setEditing({ kind: 'hosting', billing_cycle: 'yearly', currency: 'AED', status: 'active' })} className={btnPrimary}>
-          <Plus size={14} /> Add service
-        </button>
-      </div>
-      <div className="grid md:grid-cols-2 2xl:grid-cols-3 gap-3">
-        {services.map((s) => (
-          <article key={s.id} className="rounded-3xl border border-mt-border bg-mt-surface p-5 flex flex-col">
+  const [openId, setOpenId] = useState<string | null>(null);
+  const live = services.filter((s) => s.status === 'active');
+  const rest = services.filter((s) => s.status !== 'active');
+  const perYear: Record<string, number> = {};
+  live.forEach((s) => {
+    if (!s.cost) return;
+    const y = s.billing_cycle === 'monthly' ? Number(s.cost) * 12 : s.billing_cycle === 'yearly' ? Number(s.cost) : 0;
+    if (y) perYear[s.currency] = (perYear[s.currency] || 0) + y;
+  });
+  const costText = Object.entries(perYear).map(([c, v]) => `${c} ${v.toLocaleString('en-GB', { maximumFractionDigits: 0 })}`).join(' + ');
+  const card = (s: Service) => (
+<article key={s.id} className={`rounded-3xl border border-mt-border bg-mt-surface p-5 flex flex-col ${s.status === 'active' ? '' : 'opacity-80'}`}>
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <p className="text-[11px] font-semibold uppercase tracking-wide text-mt-faint">{KIND_NAMES[s.kind] || s.kind}</p>
@@ -611,9 +616,18 @@ function Services({ services, reload, flash }: { services: Service[]; reload: ()
               <dt className="text-mt-faint">Auto-renew</dt>
               <dd className={`text-right ${s.auto_renew ? 'text-emerald-700 dark:text-emerald-400' : 'text-mt-ink'}`}>{s.auto_renew ? 'On' : 'Off'}</dd>
               <dt className="text-mt-faint">Status</dt>
-              <dd className="text-mt-ink text-right capitalize">{s.status}</dd>
+              <dd className={`text-right capitalize ${s.status === 'active' ? 'text-mt-ink' : 'text-amber-700 dark:text-amber-400'}`}>{s.status === 'standby' ? 'Standby — not in use' : s.status}</dd>
             </dl>
+            {s.account_email && <p className="mt-2 text-[12px] text-mt-muted">Account: <span className="text-mt-ink">{s.account_email}</span></p>}
             {s.notes && <p className="mt-3 text-[12px] text-mt-muted leading-relaxed">{s.notes}</p>}
+            {s.details && (
+              <div className="mt-3">
+                <button type="button" onClick={() => setOpenId(openId === s.id ? null : s.id)} className="text-[12px] font-semibold text-[#3B82C4] inline-flex items-center gap-1">
+                  Technical details <ChevronDown size={13} className={openId === s.id ? 'rotate-180' : ''} />
+                </button>
+                {openId === s.id && <pre className="mt-2 rounded-xl bg-mt-surface2 p-3 text-[11.5px] leading-relaxed text-mt-ink whitespace-pre-wrap break-words font-mono">{s.details}</pre>}
+              </div>
+            )}
             <div className="mt-auto pt-4 flex flex-wrap gap-2">
               {(s.renew_url || s.account_url || renewLinkFor(s.provider)) ? (
                 <a href={(s.renew_url || s.account_url || renewLinkFor(s.provider))!} target="_blank" rel="noreferrer" className={btnPrimary}>
@@ -631,8 +645,24 @@ function Services({ services, reload, flash }: { services: Service[]; reload: ()
               <button type="button" onClick={() => remove(s)} className="ml-auto text-[12px] text-mt-faint hover:text-rose-600">Remove</button>
             </div>
           </article>
-        ))}
+  );
+  return (
+    <div className="flex flex-col gap-5">
+      <SiteMap services={services} />
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm text-mt-muted">{costText ? `Running costs: about ${costText} a year · ${live.length} services in use.` : 'Add costs to see your yearly running total.'}</p>
+        <button type="button" onClick={() => setEditing({ kind: 'hosting', billing_cycle: 'yearly', currency: 'AED', status: 'active' })} className={btnPrimary}>
+          <Plus size={14} /> Add service
+        </button>
       </div>
+      <div className="grid md:grid-cols-2 2xl:grid-cols-3 gap-3">{live.map(card)}</div>
+      {rest.length > 0 && (
+        <>
+          <h3 className="mt-2 text-[13px] font-semibold uppercase tracking-wide text-mt-faint">Standby &amp; not in use</h3>
+          <div className="grid md:grid-cols-2 2xl:grid-cols-3 gap-3">{rest.map(card)}</div>
+        </>
+      )}
+      <Maintenance />
 
       {editing && (
         <div className="fixed inset-0 z-[100] bg-black/45 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-6" onMouseDown={(e) => e.target === e.currentTarget && setEditing(null)}>
@@ -654,9 +684,11 @@ function Services({ services, reload, flash }: { services: Service[]; reload: ()
                 <label className="text-xs text-mt-muted flex flex-col gap-1">Billed<select className={field} value={editing.billing_cycle || 'yearly'} onChange={(e) => setEditing({ ...editing, billing_cycle: e.target.value })}><option value="monthly">Monthly</option><option value="yearly">Yearly</option><option value="one-time">One time</option><option value="free">Free</option></select></label>
               </div>
               <label className="text-xs text-mt-muted flex flex-col gap-1 sm:col-span-2">Renew / pay link<input className={field} value={editing.account_url || ''} onChange={(e) => setEditing({ ...editing, account_url: e.target.value })} placeholder="The page where you pay, e.g. https://account.godaddy.com/products" /></label>
+              <label className="text-xs text-mt-muted flex flex-col gap-1 sm:col-span-2">Account (login e-mail)<input className={field} value={editing.account_email || ''} onChange={(e) => setEditing({ ...editing, account_email: e.target.value })} placeholder="Which e-mail owns this account" /></label>
               <label className="text-xs text-mt-muted flex flex-col gap-1 sm:col-span-2">Notes<textarea className={`${field} h-20 py-2`} value={editing.notes || ''} onChange={(e) => setEditing({ ...editing, notes: e.target.value })} /></label>
+              <label className="text-xs text-mt-muted flex flex-col gap-1 sm:col-span-2">Technical details<textarea className={`${field} h-32 py-2 font-mono text-[12px]`} value={editing.details || ''} onChange={(e) => setEditing({ ...editing, details: e.target.value })} placeholder="Project IDs, servers, limits, settings names — never passwords or keys" /></label>
               <label className="flex items-center gap-2 text-sm text-mt-ink"><input type="checkbox" className="w-4 h-4 accent-[#3B82C4]" checked={!!editing.auto_renew} onChange={(e) => setEditing({ ...editing, auto_renew: e.target.checked })} /> Renews automatically</label>
-              <label className="text-xs text-mt-muted flex flex-col gap-1">Status<select className={field} value={editing.status || 'active'} onChange={(e) => setEditing({ ...editing, status: e.target.value })}><option value="active">Active</option><option value="cancelled">Cancelled</option><option value="expired">Expired</option></select></label>
+              <label className="text-xs text-mt-muted flex flex-col gap-1">Status<select className={field} value={editing.status || 'active'} onChange={(e) => setEditing({ ...editing, status: e.target.value })}><option value="active">Active</option><option value="standby">Standby (kept, not in use)</option><option value="cancelled">Cancelled</option><option value="expired">Expired</option></select></label>
             </div>
             <p className="mt-3 text-[11px] text-mt-faint">Never store passwords here — just the details you need to renew on time.</p>
             <div className="mt-5 flex gap-2">
@@ -667,6 +699,76 @@ function Services({ services, reload, flash }: { services: Service[]; reload: ()
         </div>
       )}
     </div>
+  );
+}
+
+// How the site is put together, drawn from the services list (provider
+// names update when the list is edited), plus a maintenance routine.
+function SiteMap({ services }: { services: Service[] }) {
+  const of = (kind: string, fallback: string) => services.find((s) => s.kind === kind && s.status === 'active')?.provider || fallback;
+  const steps: { icon: JSX.Element; label: string; who: string }[] = [
+    { icon: <Users size={15} />, label: 'Visitor', who: 'magicaltouchdesign.com' },
+    { icon: <Globe size={15} />, label: 'Domain', who: of('domain', 'Not set') },
+    { icon: <ShieldCheck size={15} />, label: 'DNS, SSL & security', who: of('dns', 'Not set') },
+    { icon: <Cloud size={15} />, label: 'Website (hosting)', who: of('hosting', 'Not set') },
+    { icon: <Database size={15} />, label: 'Data, sign-in & files', who: of('database', 'Not set') },
+  ];
+  const Box = ({ icon, label, who }: { icon: JSX.Element; label: string; who: string }) => (
+    <div className="rounded-2xl border border-mt-border bg-mt-surface px-3.5 py-2.5 min-w-[150px]">
+      <p className="text-[11px] font-semibold uppercase tracking-wide text-mt-faint inline-flex items-center gap-1.5">{icon} {label}</p>
+      <p className="text-[13px] font-semibold text-mt-ink">{who}</p>
+    </div>
+  );
+  return (
+    <AdminCard title="How the site runs">
+      <div className="flex flex-wrap items-center gap-2">
+        {steps.map((x, i) => (
+          <div key={x.label} className="flex items-center gap-2">
+            <Box {...x} />
+            {i < steps.length - 1 && <span className="text-mt-faint" aria-hidden>→</span>}
+          </div>
+        ))}
+      </div>
+      <div className="mt-3 grid sm:grid-cols-2 gap-2 text-[12.5px] text-mt-muted">
+        <p className="inline-flex items-start gap-2"><GitBranch size={14} className="mt-0.5 shrink-0" /> <span>Code lives on <b className="text-mt-ink">{of('code', 'GitHub')}</b>. Every change to the main branch is built and published automatically; if a build fails, the last good version stays live.</span></p>
+        <p className="inline-flex items-start gap-2"><Mail size={14} className="mt-0.5 shrink-0" /> <span>Site e-mails (welcome, password, campaigns) are sent through <b className="text-mt-ink">{of('email', 'Not set')}</b>.</span></p>
+      </div>
+    </AdminCard>
+  );
+}
+
+function Maintenance() {
+  const groups: [string, string[]][] = [
+    ['Every month', [
+      'Cloudflare → Workers & Pages → magicaltouch → Metrics: look for errors or a sudden jump in requests.',
+      'Supabase → Usage: stay under the free limits (database, storage, data transfer).',
+      'Check the card on Cloudflare billing is valid (hosting renews monthly).',
+    ]],
+    ['Every year', [
+      'Renew the domain before its date (the card above warns you 30, 14, 7 and 1 day before).',
+      'Review "Standby" services: delete what you no longer need.',
+    ]],
+    ['After any website change', [
+      'Cloudflare → magicaltouch → Deployments: the newest build should say Success within about 15 minutes.',
+    ]],
+    ['Never', [
+      'Write passwords or secret keys here. Secrets live only in Cloudflare → magicaltouch → Settings → Variables and Secrets (EMAIL_APP_PASSWORD, EMAIL_FROM_ADDRESS).',
+      'Change DNS records for magicaltouchdesign.com without checking the website still opens afterwards.',
+    ]],
+  ];
+  return (
+    <AdminCard title="Maintenance routine">
+      <div className="grid md:grid-cols-2 gap-4">
+        {groups.map(([title, items]) => (
+          <div key={title}>
+            <p className="text-[12px] font-semibold uppercase tracking-wide text-mt-faint inline-flex items-center gap-1.5"><Wrench size={13} /> {title}</p>
+            <ul className="mt-1.5 space-y-1.5">
+              {items.map((t) => <li key={t} className="text-[13px] text-mt-muted leading-relaxed flex gap-2"><Check size={14} className="mt-0.5 shrink-0 text-emerald-600" /> <span>{t}</span></li>)}
+            </ul>
+          </div>
+        ))}
+      </div>
+    </AdminCard>
   );
 }
 
