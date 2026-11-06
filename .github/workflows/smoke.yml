@@ -6,10 +6,7 @@ jobs:
     steps:
       - run: |
           B=https://www.magicaltouchdesign.com
-          curl -s $B/api/public-templates -o /tmp/pt; ls -l /tmp/pt | awk '{print "public-templates bytes", $5}'
-          echo "ivory: $(grep -o 'Ivory[^"]\{0,20\}' /tmp/pt | head -2 | tr '\n' ' ')"
-          echo "albums v2 tag: $(grep -o 'albums-2026-11-v2' /tmp/pt | wc -l)"
-          head -c 300 /tmp/pt; echo
-          curl -s $B/ > /tmp/h; echo "Tools in header: $(grep -o 'Tools[^a-z]\{0,30\}' /tmp/h | head -3 | tr '\n' '|')"
-          curl -s $B/login > /tmp/l; echo "login: $(grep -o 'Show password\|aria-pressed\|Hide password' /tmp/l | head -3 | tr '\n' '|') size $(wc -c < /tmp/l)"
-          curl -s "$B/templates?q=wedding+album" | grep -o 'Ivory[^<]\{0,30\}' | head -2
+          for p in / /templates /editor /ai-studio /sitemap.xml /templates/family-album-sage-16-pages; do curl -s -o /tmp/b -m 60 -w "%{http_code} $p  " "$B$p"; grep -o '<title>[^<]*' /tmp/b | head -1; echo; done
+          echo "ai-studio in sitemap: $(curl -s $B/sitemap.xml | grep -c ai-studio)"
+          echo "ai-studio noindex: $(curl -s $B/ai-studio | grep -o 'noindex[^"]*' | head -1)"
+          echo "AI on home: $(curl -s $B/ | grep -o 'AI Studio\|AI Template Studio\|free AI rebuild' | sort | uniq -c | tr '\n' ' ')"
