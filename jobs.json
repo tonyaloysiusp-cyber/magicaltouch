@@ -1,5 +1,5 @@
 [
  {"name":"tpl","url":"/editor?templateId=00abe880-d03b-457b-b33b-39dadf8415d7","wait":14000,
-  "steps":[{"js":"(()=>{const c=window.__fabricCanvas;const o=c.getObjects().find(o=>o.type==='textbox'||o.type==='i-text');if(o){c.setActiveObject(o);c.requestRenderAll();}})()"},{"js":"(()=>{const c=window.__fabricCanvas;const o=c.getObjects().find(o=>o.type==='image');if(o){c.setActiveObject(o);c.requestRenderAll();}})()"},{"js":"window.__fabricCanvas.discardActiveObject();window.__fabricCanvas.requestRenderAll()"},{"rail":"Text"},{"close":true},{"rail":"Elements"}]},
- {"name":"blank","url":"/editor?w=1080&h=1350","steps":[]}
+  "steps":[{"js":"(()=>{const c=window.__fabricCanvas;const o=c.getObjects().find(o=>o.type==='textbox'||o.type==='i-text');if(o){c.setActiveObject(o);c.requestRenderAll();}})()"},{"text":"Align","exact":true},{"text":"Centre","exact":true},{"js":"(()=>{const c=window.__fabricCanvas;const o=c.getObjects().find(o=>o.type==='image');if(o){c.setActiveObject(o);c.requestRenderAll();}})()"}]},
+ {"name":"album","url":"/editor?w=1200&h=1200","steps":[{"text":"Page","exact":true}]}
 ]
