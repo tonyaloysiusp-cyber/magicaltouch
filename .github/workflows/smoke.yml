@@ -1,13 +1,22 @@
 name: smoke
 on: { push: { branches: [smoke-mcp] } }
+permissions: { contents: write }
 jobs:
-  check:
+  fetch:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
       - run: |
-          B=https://www.magicaltouchdesign.com
-          for p in / /tutorials /remove-background /guides/magical-touch-design-handbook.pdf /guides/design-editor-guide.pdf /tutorials/background-removal-and-photo-cleanup; do curl -s -o /tmp/b -m 60 -w "%{http_code} %{size_download}B $p  " "$B$p"; grep -o '<title>[^<]*' /tmp/b | head -1; echo; done
-          curl -s -o /dev/null -w "mockups -> %{http_code} %{redirect_url}\n" $B/mockups
-          echo "breadcrumb on remover: $(curl -s $B/remove-background | grep -c 'aria-label="Breadcrumb"')"
-          echo "mockups in menu: $(curl -s $B/ | grep -c 'href="/mockups"')"
-          echo "face photos on home: $(curl -s $B/ | grep -o 'mt-813\|mt-589\|speaker-cutout' | wc -l)"
+          mkdir -p stock; cd stock
+          UA="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124 Safari/537.36"
+          for q in businessman businesswoman ceo professional-woman business-portrait office-woman entrepreneur business-team; do
+            curl -sL -A "$UA" "https://stocksnap.io/search/$q" -o "s-$q.html"
+            grep -oE 'https://cdn.stocksnap.io/img-thumbs/280h/[A-Za-z0-9_-]+\.jpg' "s-$q.html" | sort -u | head -10 > "u-$q.txt" || true
+            echo "Q $q $(wc -l < u-$q.txt) $(wc -c < s-$q.html)"
+            n=0; while read u; do n=$((n+1)); big=${u/280h/960w}; curl -sL -A "$UA" "$big" -o "$q-$n.jpg"; done < "u-$q.txt"
+          done
+          rm -f s-*.html; ls | wc -l
+      - run: |
+          git config user.name mt-fetch; git config user.email fetch@users.noreply.github.com
+          git checkout --orphan stock-out && git rm -rqf --cached . >/dev/null
+          git add -f stock && git commit -qm "stock" && git push -f origin stock-out
