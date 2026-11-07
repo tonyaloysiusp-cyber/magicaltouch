@@ -1,16 +1,19 @@
 name: smoke
 on: { push: { branches: [smoke-mcp] } }
-permissions: { contents: write }
 jobs:
-  fonts:
+  check:
     runs-on: ubuntu-latest
     steps:
       - run: |
-          set -e
-          mkdir out && cd out
-          curl -sSfL -o NotoSansMalayalam.ttf "https://raw.githubusercontent.com/google/fonts/main/ofl/notosansmalayalam/NotoSansMalayalam%5Bwdth,wght%5D.ttf"
-          curl -sSfL -o NotoSansTamil.ttf "https://raw.githubusercontent.com/google/fonts/main/ofl/notosanstamil/NotoSansTamil%5Bwdth,wght%5D.ttf"
-          curl -sSfL -o OFL.txt "https://raw.githubusercontent.com/google/fonts/main/ofl/notosanstamil/OFL.txt"
-          ls -la
-          git init -q && git checkout -q -b fonts-out2 && git add . && git -c user.name=bot -c user.email=bot@example.com commit -qm fonts
-          git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" fonts-out2
+          B=https://www.magicaltouchdesign.com
+          for p in / /about /free-design-tools /open /manifest.webmanifest /brand/file-icon/mtd-256.png /admin/documents /api/media/home/ad/magical-touch-ad-light.mp4; do curl -s -o /dev/null -m 60 -w "%{http_code} %{size_download}B $p\n" "$B$p"; done
+          echo "--- robots"; curl -s $B/robots.txt | grep -i -E "home/ad|open"
+          echo "--- manifest"; curl -s $B/manifest.webmanifest | grep -o '"file_handlers[^]]*' | head -c 300; echo
+          echo "--- home json-ld"; curl -s $B/ | grep -o 'primaryImageOfPage[^}]*' | head -1
+          echo "--- image sitemap"; curl -s $B/image-sitemap.xml | head -c 400 | tail -c 250; echo
+          echo "--- indexnow"
+          KEY=b2e48e40a28ff25772f97a10d0c1869a
+          URLS=$(curl -s $B/sitemap.xml | grep -o '<loc>[^<]*' | sed 's/<loc>//' | head -9000 | python3 -c "import sys,json; print(json.dumps([l.strip() for l in sys.stdin if l.strip()]))")
+          echo "urls: $(echo $URLS | python3 -c 'import sys,json; print(len(json.load(sys.stdin)))')"
+          BODY=$(python3 -c "import json,sys; print(json.dumps({'host':'www.magicaltouchdesign.com','key':'$KEY','keyLocation':'$B/$KEY.txt','urlList':json.loads(sys.argv[1])}))" "$URLS")
+          for e in https://api.indexnow.org/indexnow https://www.bing.com/indexnow https://yandex.com/indexnow; do curl -s -o /dev/null -w "$e %{http_code}\n" -X POST -H 'Content-Type: application/json; charset=utf-8' --data "$BODY" $e; done
