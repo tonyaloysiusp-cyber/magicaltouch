@@ -6,7 +6,6 @@ jobs:
     steps:
       - run: |
           B=https://www.magicaltouchdesign.com
-          for p in /templates/photos/mt-813.jpg /templates/photos/thumbs/mt-813.jpg /admin/documents/print/company-profile /privacy?print=1; do curl -s -o /dev/null -w "%{http_code} $p\n" "$B$p"; done
-          curl -sI $B/templates/photos/mt-1400.jpg | grep -i -E "^HTTP|x-robots"
-          curl -sI $B/templates/collection/plaid-happy-birthday-dad-post-preview.jpg | grep -i -E "^HTTP|x-robots" || true
-          curl -s -o /dev/null -w "indexnow %{http_code}\n" "https://api.indexnow.org/indexnow?url=$B/templates/photos/mt-813.jpg&key=b2e48e40a28ff25772f97a10d0c1869a"
+          for p in /templates/collection/dwp-emerald-happy-diwali-mandala-instagram-post.webp /templates/collection/dwp-emerald-happy-diwali-mandala-instagram-post-preview.webp "/templates?occasion=Diwali" /templates; do curl -s -o /dev/null -w "%{http_code} %{size_download} $p\n" "$B$p"; done
+          curl -s "$B/templates?q=diwali" | grep -o 'dwp-[a-z0-9-]*' | sort -u | head -8
+          curl -s "$B/templates" | grep -o 'dwp-[a-z0-9-]*' | sort -u | wc -l
