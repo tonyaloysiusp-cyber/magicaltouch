@@ -5,7 +5,7 @@ name: Refresh site data
 # connector appear in the gallery.
 on:
   schedule:
-    - cron: '23 1,13 * * *'
+    - cron: '23 1,7,13,19 * * *'
   workflow_dispatch:
 permissions:
   contents: write

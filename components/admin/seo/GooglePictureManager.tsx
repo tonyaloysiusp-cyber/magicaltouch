@@ -65,7 +65,7 @@ export function GooglePictureManager({ flash }: { flash: (m: string) => void }) 
     const { error } = await supabase.from('site_settings').upsert({ key: 'google_picture', value: JSON.stringify(value), updated_at: now });
     if (error) return flash(error.message);
     setSaved(value); setUrl(value.url); setAlt(value.alt);
-    flash(next.url ? 'Saved. The site uses it within 10 minutes; Google shows it after its next visit (open Search Console → Request indexing to speed it up).' : 'Cleared — the site uses the standard share image again.');
+    flash(next.url ? 'Saved. It goes live with the next site refresh (every 6 hours — 5am, 11am, 5pm, 11pm Dubai); Google shows it after its next visit (open Search Console → Request indexing to speed it up).' : 'Cleared — the site uses the standard share image again.');
   };
 
   const dirty = url !== saved.url || alt !== saved.alt;
