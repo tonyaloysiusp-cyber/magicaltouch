@@ -23,6 +23,7 @@ type Status = 'todo' | 'active' | 'renew' | 'expired' | 'not_needed';
 interface Doc {
   id: string; title: string; category: Cat; issuer: string | null; doc_number: string | null; issued_on: string | null; expires_on: string | null;
   official_url: string | null; account_email: string | null; notes: string | null; file_path: string | null; file_name: string | null; status: Status; sort: number | null; updated_at: string;
+  live?: string | null; // built-in document that is always up to date
 }
 
 const CATS: [Cat, string][] = [
@@ -46,11 +47,21 @@ const svcStatus = (st: Status) => (st === 'expired' ? 'expired' : st === 'not_ne
 function fromRow(r: any): Doc {
   let d: any = {};
   try { d = JSON.parse(r.details || '{}'); } catch { d = {}; }
-  return { id: r.id, title: r.name, category: d.category || 'other', issuer: r.provider || null, doc_number: d.doc_number || null, issued_on: d.issued_on || null, expires_on: r.renews_on || null, official_url: r.account_url || null, account_email: r.account_email || null, notes: r.notes || null, file_path: d.file_path || null, file_name: d.file_name || null, status: d.status || 'todo', sort: r.sort ?? null, updated_at: r.updated_at };
+  return { id: r.id, title: r.name, category: d.category || 'other', issuer: r.provider || null, doc_number: d.doc_number || null, issued_on: d.issued_on || null, expires_on: r.renews_on || null, official_url: r.account_url || null, account_email: r.account_email || null, notes: r.notes || null, file_path: d.file_path || null, file_name: d.file_name || null, status: d.status || 'todo', sort: r.sort ?? null, updated_at: r.updated_at, live: d.live || null };
 }
 function toRow(x: Omit<Doc, 'id' | 'updated_at'>) {
-  return { name: x.title, kind: 'other', plan: MARK, provider: x.issuer || 'Magical Touch Design', billing_cycle: 'free', cost: null, renews_on: x.expires_on || null, auto_renew: false, status: svcStatus(x.status), account_url: x.official_url || null, account_email: x.account_email || null, notes: x.notes || null, sort: x.sort, details: JSON.stringify({ category: x.category, doc_number: x.doc_number || null, issued_on: x.issued_on || null, file_path: x.file_path || null, file_name: x.file_name || null, status: x.status }) };
+  return { name: x.title, kind: 'other', plan: MARK, provider: x.issuer || 'Magical Touch Design', billing_cycle: 'free', cost: null, renews_on: x.expires_on || null, auto_renew: false, status: svcStatus(x.status), account_url: x.official_url || null, account_email: x.account_email || null, notes: x.notes || null, sort: x.sort, details: JSON.stringify({ category: x.category, doc_number: x.doc_number || null, issued_on: x.issued_on || null, file_path: x.file_path || null, file_name: x.file_name || null, status: x.status, live: x.live || null }) };
 }
+
+// Built-in documents, made from the site's current data every time.
+const LIVE: Record<string, { open: string; pdf: string }> = {
+  'company-profile': { open: '/admin/documents/print/company-profile', pdf: '/admin/documents/print/company-profile' },
+  'brand-guidelines': { open: '/admin/documents/print/brand-guidelines', pdf: '/admin/documents/print/brand-guidelines' },
+  'ownership-record': { open: '/admin/documents/print/ownership-record', pdf: '/admin/documents/print/ownership-record' },
+  privacy: { open: '/privacy', pdf: '/privacy?print=1' },
+  terms: { open: '/terms', pdf: '/terms?print=1' },
+};
+const LIVE_BY_TITLE: Record<string, string> = { 'Company profile': 'company-profile', 'Brand guidelines': 'brand-guidelines', 'Website ownership record': 'ownership-record', 'Privacy policy': 'privacy', 'Terms of use': 'terms' };
 
 const STARTERS: [string, Cat, string | null, string | null, string, Status][] = [
   ['Business registration / trade licence', 'registration', 'Government business registry', null, 'Udyam (India MSME), a GST-registered business, or a trade licence where the company is based. Add the number, dates and the certificate.', 'todo'],
@@ -60,11 +71,11 @@ const STARTERS: [string, Cat, string | null, string | null, string, Status][] = 
   ['Google Business Profile', 'registration', 'Google', 'https://business.google.com', 'The verified business listing on Google Search and Maps.', 'active'],
   ['Business bank account', 'bank', 'Bank', null, 'Account holder name, bank and branch. Never store card numbers or passwords here.', 'todo'],
   ['Payment provider account (Stripe)', 'bank', 'Stripe', 'https://dashboard.stripe.com', 'Business verification documents for receiving payments.', 'todo'],
-  ['Privacy policy', 'policy', 'Magical Touch Design', 'https://www.magicaltouchdesign.com/privacy', 'Public page. Review once a year. Attach the PDF sent in chat.', 'active'],
-  ['Terms of use', 'policy', 'Magical Touch Design', 'https://www.magicaltouchdesign.com/terms', 'Public page. Review once a year. Attach the PDF sent in chat.', 'active'],
-  ['Company profile', 'other', 'Magical Touch Design', 'https://www.magicaltouchdesign.com/about', 'Two-page company profile. Attach the PDF sent in chat.', 'active'],
-  ['Brand guidelines', 'other', 'Magical Touch Design', null, 'Logo, colours and type rules. Attach the PDF sent in chat.', 'active'],
-  ['Website ownership record', 'domain', 'Magical Touch Design', null, 'Internal record of domain, hosting and services. Keep private. Attach the PDF sent in chat.', 'active'],
+  ['Privacy policy', 'policy', 'Magical Touch Design', 'https://www.magicaltouchdesign.com/privacy', 'Public page. Review once a year. Built in and always up to date.', 'active'],
+  ['Terms of use', 'policy', 'Magical Touch Design', 'https://www.magicaltouchdesign.com/terms', 'Public page. Review once a year. Built in and always up to date.', 'active'],
+  ['Company profile', 'other', 'Magical Touch Design', 'https://www.magicaltouchdesign.com/about', 'Two-page company profile. Built in and always up to date.', 'active'],
+  ['Brand guidelines', 'other', 'Magical Touch Design', null, 'Logo, colours and type rules. Built in and always up to date.', 'active'],
+  ['Website ownership record', 'domain', 'Magical Touch Design', null, 'Internal record of domain, hosting and services. Keep private. Built in and always up to date.', 'active'],
   ['Founder ID and address proof', 'identity', null, null, 'For registrations and bank / payment checks. Private to admins.', 'todo'],
 ];
 const field = 'w-full h-10 rounded-xl border border-mt-input-border bg-mt-surface px-3 text-sm text-mt-ink';
@@ -100,7 +111,7 @@ export default function BusinessDocumentsPage() {
     // First visit: add the starting checklist (once).
     if (!rows.length && !sessionStorage.getItem('mt:docs-seeded')) {
       try { sessionStorage.setItem('mt:docs-seeded', '1'); } catch { /* private mode */ }
-      const seed = STARTERS.map(([title, category, issuer, official_url, notes, status], i) => toRow({ ...EMPTY, title, category, issuer, official_url, notes, status, sort: (i + 1) * 10 }));
+      const seed = STARTERS.map(([title, category, issuer, official_url, notes, status], i) => toRow({ ...EMPTY, title, category, issuer, official_url, notes, status, sort: (i + 1) * 10, live: LIVE_BY_TITLE[title] || null }));
       const ins = await supabase.from('admin_services').insert(seed).select('*');
       if (!ins.error) rows = (ins.data as any[]) || [];
     }
@@ -154,7 +165,7 @@ export default function BusinessDocumentsPage() {
         title: edit.title.trim(), category: edit.category, issuer: edit.issuer?.trim() || null, doc_number: edit.doc_number?.trim() || null,
         issued_on: edit.issued_on || null, expires_on: edit.expires_on || null, official_url: edit.official_url?.trim() || null,
         account_email: edit.account_email?.trim() || null, notes: edit.notes?.trim() || null, file_path, file_name,
-        status: edit.status === 'todo' && (file_path || edit.doc_number) ? 'active' : edit.status, sort: edit.sort ?? (docs.length + 1) * 10,
+        status: edit.status === 'todo' && (file_path || edit.doc_number) ? 'active' : edit.status, sort: edit.sort ?? (docs.length + 1) * 10, live: edit.live || null,
       }), updated_at: new Date().toISOString() };
       const { error } = edit.id ? await supabase.from('admin_services').update(row).eq('id', edit.id) : await supabase.from('admin_services').insert(row);
       if (error) throw error;
@@ -231,6 +242,10 @@ export default function BusinessDocumentsPage() {
                       {d.notes && <p className="mt-1 text-[12px] text-mt-faint line-clamp-2">{d.notes}</p>}
                     </div>
                     <div className="flex flex-wrap gap-1.5">
+                      {d.live && LIVE[d.live] && <>
+                        <a href={LIVE[d.live].open} target="_blank" rel="noreferrer" className="h-8 px-3 rounded-full border border-emerald-500/50 text-emerald-700 dark:text-emerald-300 text-[12px] font-semibold inline-flex items-center gap-1"><FileText size={12} /> Open · always up to date</a>
+                        <a href={LIVE[d.live].pdf} target="_blank" rel="noreferrer" className="h-8 px-3 rounded-full border border-mt-border text-[12px] inline-flex items-center gap-1"><Paperclip size={12} /> Save PDF</a>
+                      </>}
                       {d.file_path && <button onClick={() => openFile(d)} className="h-8 px-3 rounded-full border border-mt-border text-[12px] inline-flex items-center gap-1"><Paperclip size={12} /> File</button>}
                       {d.official_url && <a href={d.official_url} target="_blank" rel="noreferrer" className="h-8 px-3 rounded-full border border-mt-border text-[12px] inline-flex items-center gap-1"><ExternalLink size={12} /> Official site</a>}
                       <button onClick={() => { setEdit({ ...d }); setFile(null); }} className="h-8 px-3 rounded-full bg-mt-primary text-mt-onprimary text-[12px] font-semibold inline-flex items-center gap-1"><Pencil size={12} /> Edit</button>

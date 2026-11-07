@@ -4,10 +4,12 @@
 import Link from 'next/link';
 import { SeoShell } from '@/components/seo/SeoShell';
 import { PageHero } from '@/components/PageHero';
+import { AutoPrint } from '@/components/AutoPrint';
 
 export function LegalPage({ title, updated, children }: { title: string; updated: string; children: React.ReactNode }) {
   return (
     <SeoShell>
+      <AutoPrint />
       <PageHero eyebrow="Magical Touch Design" title={title} accent={title.split(' ').slice(-1)[0]} subtitle={`Last updated ${updated}`} compact />
       <div className="mt-container py-10 grid lg:grid-cols-[minmax(0,1fr)_320px] gap-10 items-start">
         <article className="max-w-3xl leading-relaxed text-[15px] text-mt-muted [&_h2]:mt-10 [&_h2]:first:mt-0 [&_h2]:mb-3 [&_h2]:text-xl [&_h2]:font-semibold [&_h2]:text-mt-ink [&_p]:mb-4 [&_ul]:mb-4 [&_ul]:list-disc [&_ul]:pl-6 [&_li]:mb-1.5 [&_a]:text-mt-accent [&_a]:underline">

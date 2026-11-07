@@ -1,0 +1,4 @@
+# Stock photos used inside templates are not for Google Images: only finished
+# template previews should appear in search (Cloudflare static-asset headers).
+/templates/photos/*
+  X-Robots-Tag: noindex, noimageindex
