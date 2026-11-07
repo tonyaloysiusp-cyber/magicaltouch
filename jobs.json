@@ -1,4 +1,102 @@
 [
- {"name":"d-home","device":"desktop","url":"/","wait":10000,"steps":[{"js":"window.scrollTo(0, 700)","wait":6000}]},
- {"name":"m-home","url":"/","wait":10000,"steps":[{"js":"window.scrollTo(0, 600)","wait":6000}]}
+ {
+  "name": "tools-d",
+  "device": "desktop",
+  "url": "/free-design-tools",
+  "wait": 6000,
+  "full": true
+ },
+ {
+  "name": "tools-m",
+  "url": "/free-design-tools",
+  "wait": 6000,
+  "full": true
+ },
+ {
+  "name": "about-d",
+  "device": "desktop",
+  "url": "/about",
+  "wait": 6000,
+  "full": true
+ },
+ {
+  "name": "about-m",
+  "url": "/about",
+  "wait": 6000,
+  "full": true
+ },
+ {
+  "name": "back",
+  "device": "desktop",
+  "url": "/templates",
+  "wait": 9000,
+  "steps": [
+   {
+    "text": "Business card",
+    "wait": 3000,
+    "url": 1
+   },
+   {
+    "goto": "/editor?w=1050&h=600",
+    "wait": 6000,
+    "url": 1
+   },
+   {
+    "back": 1,
+    "wait": 7000,
+    "url": 1
+   },
+   {
+    "back": 1,
+    "wait": 5000,
+    "url": 1
+   }
+  ]
+ },
+ {
+  "name": "ps",
+  "device": "desktop",
+  "url": "/photo-studio",
+  "wait": 7000,
+  "steps": [
+   {
+    "upload": "tool/ad/businessman-1.jpg",
+    "wait": 6000
+   },
+   {
+    "key": "v",
+    "wait": 800
+   },
+   {
+    "drag": [
+     720,
+     450,
+     1240,
+     450
+    ],
+    "wait": 2000
+   },
+   {
+    "drag": [
+     1240,
+     450,
+     720,
+     450
+    ],
+    "wait": 2500
+   }
+  ]
+ },
+ {
+  "name": "open",
+  "device": "desktop",
+  "url": "/open",
+  "wait": 4000
+ },
+ {
+  "name": "manifest",
+  "device": "desktop",
+  "url": "/manifest.webmanifest",
+  "wait": 2000
+ }
 ]

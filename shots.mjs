@@ -12,7 +12,7 @@ for (const j of jobs) {
     await page.goto(base + j.url, { waitUntil: 'domcontentloaded', timeout: 60000 });
     await page.waitForTimeout(j.wait || 9000);
     let n = 0;
-    await page.screenshot({ path: `${out}/${j.name}-${n++}.png` });
+    await page.screenshot({ path: `${out}/${j.name}-${n++}.png`, fullPage: !!j.full });
     for (const s of j.steps || []) {
       try {
         if (s.tap) await page.mouse.click(s.tap[0], s.tap[1]);
@@ -25,6 +25,11 @@ for (const j of jobs) {
         if (s.download) { const [dl] = await Promise.all([page.waitForEvent('download', { timeout: 60000 }), page.locator(s.download).nth(s.nth || 0).click()]); await dl.saveAs(`${out}/${s.as}`); }
         if (s.waitFor) await page.locator(s.waitFor).first().waitFor({ timeout: 120000 });
         if (s.label) await page.getByLabel(s.label).first().click({ timeout: 5000 });
+        if (s.key) await page.keyboard.press(s.key);
+        if (s.drag) { const [a, b, c, d] = s.drag; await page.mouse.move(a, b); await page.mouse.down(); for (let k = 1; k <= 12; k++) await page.mouse.move(a + (c - a) * k / 12, b + (d - b) * k / 12); await page.mouse.up(); }
+        if (s.goto) await page.goto(base + s.goto, { waitUntil: 'domcontentloaded' });
+        if (s.back) await page.goBack({ waitUntil: 'domcontentloaded' });
+        if (s.url) console.log(j.name, 'URL', page.url());
         await page.waitForTimeout(s.wait || 1500);
         await page.screenshot({ path: `${out}/${j.name}-${n++}.png` });
       } catch (e) { console.log(j.name, 'step failed', JSON.stringify(s), String(e).slice(0, 120)); }
@@ -33,3 +38,4 @@ for (const j of jobs) {
   await ctx.close();
 }
 await browser.close();
+console.log('SHOTS_DONE');
