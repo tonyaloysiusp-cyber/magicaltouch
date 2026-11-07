@@ -7,20 +7,8 @@
   "full": true
  },
  {
-  "name": "tools-m",
-  "url": "/free-design-tools",
-  "wait": 6000,
-  "full": true
- },
- {
   "name": "about-d",
   "device": "desktop",
-  "url": "/about",
-  "wait": 6000,
-  "full": true
- },
- {
-  "name": "about-m",
   "url": "/about",
   "wait": 6000,
   "full": true
@@ -32,7 +20,7 @@
   "wait": 9000,
   "steps": [
    {
-    "text": "Business card",
+    "text": "Business & documents",
     "wait": 3000,
     "url": 1
    },
@@ -69,34 +57,22 @@
    },
    {
     "drag": [
-     720,
+     500,
      450,
-     1240,
+     1000,
      450
     ],
     "wait": 2000
    },
    {
     "drag": [
-     1240,
+     900,
      450,
-     720,
+     400,
      450
     ],
     "wait": 2500
    }
   ]
- },
- {
-  "name": "open",
-  "device": "desktop",
-  "url": "/open",
-  "wait": 4000
- },
- {
-  "name": "manifest",
-  "device": "desktop",
-  "url": "/manifest.webmanifest",
-  "wait": 2000
  }
 ]
