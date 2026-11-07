@@ -13,6 +13,7 @@ import { HowItWorks } from './HowItWorks';
 import { PricingFree } from './PricingFree';
 import { FinalCTA } from './FinalCTA';
 import { Footer } from './Footer';
+import { FestivalWish } from '@/components/festival/FestivalWish';
 
 // Unbounded's wide, rounded geometry echoes the Magical Touch wordmark.
 const display = Unbounded({
@@ -38,6 +39,7 @@ export function HomePage() {
   return (
     <div className={theme === 'dark' ? 'dark' : ''}>
       <IntroAnimation theme={theme} />
+      <FestivalWish />
       <main
         className={`${display.variable} ${body.variable} font-[family-name:var(--font-body)] bg-mt-bg text-mt-ink transition-colors duration-300`}
       >

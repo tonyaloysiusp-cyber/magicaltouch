@@ -6891,6 +6891,33 @@ function EditorContent() {
 
     const scope: ExportScope = settings.includeMarks ? 'marks' : settings.includeBleed ? 'bleed' : 'artboard';
 
+    // Animated video of the page you are on (all your own elements).
+    if (settings.format === 'video') {
+      try {
+        const page = list.find((a) => a.id === activeArtboardId) || list[0];
+        const json = canvas.toJSON(PERSIST_PROPS);
+        const all = (json.objects || []).filter((o: any) => !isHelperObject(o));
+        const onPage = page ? all.filter((o: any) => o.__artboardId === page.id) : all;
+        json.objects = onPage.some((o: any) => o.__isArtboard) ? onPage : all;
+        const { makeTemplateVideo } = await import('@/lib/templateVideo');
+        setLocalNotice(`Recording your video (${settings.videoSeconds || 8} s)… keep this tab open.`);
+        const { blob, ext } = await makeTemplateVideo(json, { seconds: settings.videoSeconds || 8, style: settings.videoStyle || 'glide', maxSide: 1920 });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${(designNameRef.current || 'design').replace(/[^\w\- ]+/g, '').trim() || 'design'}.${ext}`;
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 60000);
+        setLocalNotice(`Video downloaded (${(blob.size / 1048576).toFixed(1)} MB).`);
+        setShowExportDialog(false);
+      } catch (e: any) {
+        setLocalNotice(e?.message || 'The video could not be made.');
+      } finally {
+        setExporting(false);
+      }
+      return;
+    }
+
     try {
       if (settings.format === 'tiff') {
         await exportPrintFiles(list, settings);

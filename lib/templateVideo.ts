@@ -19,7 +19,10 @@ export function videoMime(): { mime: string; ext: 'mp4' | 'webm' } {
 
 const ease = (x: number) => 1 - Math.pow(1 - Math.min(1, Math.max(0, x)), 3);
 
-export async function makeTemplateVideo(canvasJson: any, opts: { seconds?: number; maxSide?: number; onProgress?: (p: number) => void } = {}): Promise<{ blob: Blob; ext: 'mp4' | 'webm' }> {
+export type VideoStyle = 'glide' | 'pop' | 'fade';
+
+export async function makeTemplateVideo(canvasJson: any, opts: { seconds?: number; maxSide?: number; style?: VideoStyle; onProgress?: (p: number) => void } = {}): Promise<{ blob: Blob; ext: 'mp4' | 'webm' }> {
+  const style = opts.style || 'glide';
   const seconds = opts.seconds ?? 8;
   const { mime, ext } = videoMime();
   if (!(window as any).MediaRecorder) throw new Error('This browser cannot record video. Please use Safari or Chrome.');
@@ -36,7 +39,12 @@ export async function makeTemplateVideo(canvasJson: any, opts: { seconds?: numbe
       out.width = vw; out.height = vh;
       const ctx = out.getContext('2d')!;
       const objs = canvas.getObjects().filter((o: any) => !o.__isGuide);
-      const isBg = (o: any) => o.__isArtboard || BG_NAMES.has(o.name);
+      // Background = the page itself, named backgrounds, and anything that covers (almost) the whole page.
+      const isBg = (o: any) => {
+        if (o.__isArtboard || BG_NAMES.has(o.name)) return true;
+        const r = o.getBoundingRect(true, true);
+        return r.width * r.height >= W * H * 0.85;
+      };
       const anim = objs.filter((o: any) => !isBg(o));
       const base = new Map<any, any>(objs.map((o: any) => [o, { top: o.top, opacity: o.opacity ?? 1, scaleX: o.scaleX, scaleY: o.scaleY, angle: o.angle || 0 }]));
       const step = Math.min(0.09, 3.0 / Math.max(1, anim.length));
@@ -48,12 +56,16 @@ export async function makeTemplateVideo(canvasJson: any, opts: { seconds?: numbe
           const b = base.get(o);
           if (isBg(o)) { o.opacity = b.opacity * ease(t / 0.5); continue; }
           const s = start.get(o)!;
-          const p = ease((t - s) / 0.6);
+          const raw = Math.min(1, Math.max(0, (t - s) / 0.6));
+          const p = ease(raw);
           const isArt = o.type === 'image' && o.name !== 'Logo';
           const small = (o.width || 0) * (o.scaleX || 1) < 40;
           o.opacity = b.opacity * p * (small && p >= 1 ? 0.65 + 0.35 * Math.abs(Math.sin(t * 3 + s * 7)) : 1);
-          o.top = b.top + (1 - p) * 40 + (isArt && p >= 1 ? Math.sin((t - s) * 2.2) * 6 : 0);
-          const sc = 0.92 + 0.08 * p;
+          const float = isArt && p >= 1 ? Math.sin((t - s) * 2.2) * 6 : 0;
+          let sc = 1;
+          if (style === 'glide') { o.top = b.top + (1 - p) * 40 + float; sc = 0.92 + 0.08 * p; }
+          else if (style === 'pop') { o.top = b.top + float; sc = raw >= 1 ? 1 : 0.6 + 0.4 * p + Math.sin(raw * Math.PI) * 0.12; }
+          else { o.top = b.top + float * 0.5; }
           o.scaleX = b.scaleX * sc; o.scaleY = b.scaleY * sc;
         }
         canvas.renderAll();

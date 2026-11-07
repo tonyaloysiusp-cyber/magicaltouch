@@ -4,13 +4,13 @@
 // what it's for and what you'll get (pixel size, number of files).
 
 import { useEffect, useState } from 'react';
-import { X, Image as ImageIcon, FileImage, FileText, Printer, Loader2, Download, Check } from 'lucide-react';
+import { X, Image as ImageIcon, FileImage, FileText, Printer, Loader2, Download, Check, Film } from 'lucide-react';
 import { ArtboardMeta } from '@/lib/editor/artboards';
 import { PX_PER_INCH } from '@/lib/editor/units';
 import { cx } from './shell/ui';
 
 export type ExportRangeMode = 'current' | 'range' | 'selected' | 'all';
-export type ExportFormat = 'png' | 'jpg' | 'webp' | 'pdf' | 'tiff';
+export type ExportFormat = 'png' | 'jpg' | 'webp' | 'pdf' | 'tiff' | 'video';
 export type ExportColour = 'rgb' | 'cmyk';
 
 export interface ExportSettings {
@@ -29,9 +29,12 @@ export interface ExportSettings {
   transparentBackground: boolean;
   /** CMYK = a real 4-ink file through the FOGRA39 press profile (PDF and TIFF). */
   colour: ExportColour;
+  /** Animated video of the current page. */
+  videoSeconds?: number;
+  videoStyle?: 'glide' | 'pop' | 'fade';
 }
 
-type Choice = 'png' | 'jpg' | 'webp' | 'pdf' | 'pdf-print' | 'tiff';
+type Choice = 'png' | 'jpg' | 'webp' | 'pdf' | 'pdf-print' | 'tiff' | 'video';
 
 const CHOICES: { id: Choice; label: string; hint: string; icon: React.ReactNode }[] = [
   { id: 'png', label: 'PNG', hint: 'Sharp graphics and text. Can be transparent.', icon: <ImageIcon size={18} /> },
@@ -40,6 +43,7 @@ const CHOICES: { id: Choice; label: string; hint: string; icon: React.ReactNode 
   { id: 'pdf-print', label: 'PDF for print shops', hint: 'Vector CMYK (FOGRA39), with bleed and crop marks.', icon: <Printer size={18} /> },
   { id: 'tiff', label: 'TIFF', hint: 'Lossless, for print shops. RGB or CMYK.', icon: <FileImage size={18} /> },
   { id: 'webp', label: 'WebP', hint: 'Small, high-quality pictures for websites.', icon: <FileImage size={18} /> },
+  { id: 'video', label: 'Animated video (MP4)', hint: 'Your design comes to life — for Reels, Stories and posts.', icon: <Film size={18} /> },
 ];
 
 const DPI_PRESETS = [
@@ -89,6 +93,8 @@ export function ExportDialog({ artboards, activeArtboardId, exporting, onClose, 
   const [marks, setMarks] = useState(false);
   const [transparent, setTransparent] = useState(false);
   const [colour, setColour] = useState<'rgb' | 'cmyk'>('rgb');
+  const [videoSeconds, setVideoSeconds] = useState(8);
+  const [videoStyle, setVideoStyle] = useState<'glide' | 'pop' | 'fade'>('glide');
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
@@ -102,7 +108,7 @@ export function ExportDialog({ artboards, activeArtboardId, exporting, onClose, 
   const cmyk = cmykPossible && colour === 'cmyk';
   // A CMYK PDF is made from a full-resolution picture of each page, so it
   // needs a resolution like the picture formats do.
-  const isRaster = format !== 'pdf';
+  const isRaster = format !== 'pdf' && format !== 'video';
   const includeMarks = printPreset || marks;
   const includeBleed = printPreset || bleed || marks;
 
@@ -136,6 +142,8 @@ export function ExportDialog({ artboards, activeArtboardId, exporting, onClose, 
       includeMarks,
       transparentBackground: format === 'png' && transparent,
       colour: cmyk ? 'cmyk' : 'rgb',
+      videoSeconds,
+      videoStyle,
     });
   };
 
@@ -209,6 +217,31 @@ export function ExportDialog({ artboards, activeArtboardId, exporting, onClose, 
             </section>
           )}
 
+          {choice === 'video' && (
+            <section className="flex flex-col gap-3">
+              <div>
+                <p className="text-[13px] font-semibold mb-2">Animation</p>
+                <div className="flex gap-2">
+                  {([['glide', 'Glide in', 'Elements rise into place'], ['pop', 'Pop', 'Elements pop with a bounce'], ['fade', 'Fade', 'Calm, elegant fade']] as const).map(([v, l, h]) => (
+                    <button key={v} type="button" onClick={() => setVideoStyle(v)} aria-pressed={videoStyle === v} className={cx('flex-1 rounded-xl border py-2 px-3 text-left', videoStyle === v ? 'mt-active-blue' : 'border-mt-border hover:bg-mt-surface2')}>
+                      <span className="block text-sm font-semibold">{l}</span>
+                      <span className="block text-[11px] text-mt-faint">{h}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <p className="text-[13px] font-semibold mb-2">Length</p>
+                <div className="flex gap-2">
+                  {[6, 8, 10, 15].map((sec) => (
+                    <button key={sec} type="button" onClick={() => setVideoSeconds(sec)} aria-pressed={videoSeconds === sec} className={cx('flex-1 rounded-xl border py-2 text-sm', videoSeconds === sec ? 'mt-active-blue font-semibold' : 'border-mt-border hover:bg-mt-surface2')}>{sec} s</button>
+                  ))}
+                </div>
+              </div>
+              <p className="text-[11px] text-mt-muted leading-snug">Animates {multi ? 'the page you are on' : 'your design'} exactly as it is now — every text, photo and element you added. Keep this tab open while it records ({videoSeconds} seconds). Saved as MP4 (WebM on browsers that cannot record MP4).</p>
+            </section>
+          )}
+
           {isRaster && (
             <section>
               <p className="text-[13px] font-semibold mb-2">Quality</p>
@@ -261,7 +294,7 @@ export function ExportDialog({ artboards, activeArtboardId, exporting, onClose, 
             </section>
           )}
 
-          {multi && (
+          {multi && choice !== 'video' && (
             <section>
               <p className="text-[13px] font-semibold mb-2">Pages</p>
               <div className="flex flex-wrap gap-1.5">
