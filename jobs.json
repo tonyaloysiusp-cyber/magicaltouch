@@ -1,74 +1,9 @@
 [
- {
-  "name": "tx",
-  "device": "desktop",
-  "url": "/photo-studio",
-  "wait": 7000,
-  "steps": [
-   {
-    "upload": "tool/ad/businessman-1.jpg",
-    "wait": 6000
-   },
-   {
-    "key": "t",
-    "wait": 800
-   },
-   {
-    "tap": [
-     300,
-     400
-    ],
-    "wait": 800
-   },
-   {
-    "type": "SALE",
-    "wait": 400
-   },
-   {
-    "key": "Enter",
-    "wait": 1500
-   },
-   {
-    "click": "button[title=\"Rose gold\"]",
-    "wait": 1200
-   },
-   {
-    "text": "Adjust",
-    "exact": true,
-    "wait": 1500
-   },
-   {
-    "text": "Looks",
-    "exact": true,
-    "wait": 1500
-   },
-   {
-    "key": "b",
-    "wait": 1000
-   },
-   {
-    "key": "c",
-    "wait": 1200
-   },
-   {
-    "key": "Escape",
-    "wait": 600
-   },
-   {
-    "key": "t",
-    "wait": 1500
-   },
-   {
-    "fill": [
-     "#ps-text-edit",
-     "BIG SALE"
-    ],
-    "wait": 1200
-   },
-   {
-    "click": "button[title=\"Cyber\"]",
-    "wait": 1500
-   }
-  ]
- }
+ {"name":"wish","device":"desktop","url":"/?festivalPreview=Diwali","wait":3500,"steps":[{"wait":2500}]},
+ {"name":"wishm","device":"iPhone 13","url":"/?festivalPreview=Christmas","wait":5000,"steps":[]},
+ {"name":"vid","device":"desktop","url":"/editor?w=1080&h=1350&templateId=387ba1e7-c409-4f71-b4fc-3678fbdfe3b0","wait":10000,"steps":[
+   {"click":"button:visible:has-text(\"Export\")","wait":1500},
+   {"text":"Animated video (MP4)","wait":800},
+   {"download":"button:visible:has-text(\"Download\")","as":"design-video.bin","wait":1000}
+ ]}
 ]
