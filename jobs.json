@@ -1,79 +1,73 @@
 [
  {
-  "name": "tp-happiest-birthday-bu",
+  "name": "tx",
   "device": "desktop",
-  "url": "/editor?w=1080&h=1920&templateId=8a701cda-4578-41b6-867f-680e1a437ce3",
-  "wait": 16000,
+  "url": "/photo-studio",
+  "wait": 7000,
   "steps": [
    {
-    "saveData": "(() => { const c=window.__fabricCanvas; c.discardActiveObject(); const v=c.viewportTransform.slice(); c.setViewportTransform([1,0,0,1,0,0]); const u=c.toDataURL({left:0,top:0,width:1080,height:1920,multiplier:0.6771,format:'jpeg',quality:0.9}); c.setViewportTransform(v); c.requestRenderAll(); return u; })()",
-    "as": "happiest-birthday-buddy-dark-story-preview.jpg",
-    "wait": 500
-   }
-  ]
- },
- {
-  "name": "tp-plaid-happy-birthday",
-  "device": "desktop",
-  "url": "/editor?w=1080&h=1350&templateId=387ba1e7-c409-4f71-b4fc-3678fbdfe3b0",
-  "wait": 16000,
-  "steps": [
+    "upload": "tool/ad/businessman-1.jpg",
+    "wait": 6000
+   },
    {
-    "saveData": "(() => { const c=window.__fabricCanvas; c.discardActiveObject(); const v=c.viewportTransform.slice(); c.setViewportTransform([1,0,0,1,0,0]); const u=c.toDataURL({left:0,top:0,width:1080,height:1350,multiplier:0.9630,format:'jpeg',quality:0.9}); c.setViewportTransform(v); c.requestRenderAll(); return u; })()",
-    "as": "plaid-happy-birthday-dad-post-preview.jpg",
-    "wait": 500
-   }
-  ]
- },
- {
-  "name": "tp-emerald-gold-script-",
-  "device": "desktop",
-  "url": "/editor?w=1080&h=1350&templateId=5817b2e0-9133-4474-88ec-4dace20e90f6",
-  "wait": 16000,
-  "steps": [
+    "key": "t",
+    "wait": 800
+   },
    {
-    "saveData": "(() => { const c=window.__fabricCanvas; c.discardActiveObject(); const v=c.viewportTransform.slice(); c.setViewportTransform([1,0,0,1,0,0]); const u=c.toDataURL({left:0,top:0,width:1080,height:1350,multiplier:0.9630,format:'jpeg',quality:0.9}); c.setViewportTransform(v); c.requestRenderAll(); return u; })()",
-    "as": "emerald-gold-script-portrait-birthday-flyer-preview.jpg",
-    "wait": 500
-   }
-  ]
- },
- {
-  "name": "tp-live-webinar-speaker",
-  "device": "desktop",
-  "url": "/editor?w=1080&h=1080&templateId=a19de586-ee64-40ab-b6fa-aef3279c3ace",
-  "wait": 16000,
-  "steps": [
+    "tap": [
+     300,
+     400
+    ],
+    "wait": 800
+   },
    {
-    "saveData": "(() => { const c=window.__fabricCanvas; c.discardActiveObject(); const v=c.viewportTransform.slice(); c.setViewportTransform([1,0,0,1,0,0]); const u=c.toDataURL({left:0,top:0,width:1080,height:1080,multiplier:1.2037,format:'jpeg',quality:0.9}); c.setViewportTransform(v); c.requestRenderAll(); return u; })()",
-    "as": "live-webinar-speaker-announcement-post-preview.jpg",
-    "wait": 500
-   }
-  ]
- },
- {
-  "name": "tp-navy-professional-ph",
-  "device": "desktop",
-  "url": "/editor?w=794&h=1123&templateId=b7a25788-71fe-447f-8c82-ca219c016efe",
-  "wait": 16000,
-  "steps": [
+    "type": "SALE",
+    "wait": 400
+   },
    {
-    "saveData": "(() => { const c=window.__fabricCanvas; c.discardActiveObject(); const v=c.viewportTransform.slice(); c.setViewportTransform([1,0,0,1,0,0]); const u=c.toDataURL({left:0,top:0,width:794,height:1123,multiplier:1.1576,format:'jpeg',quality:0.9}); c.setViewportTransform(v); c.requestRenderAll(); return u; })()",
-    "as": "navy-professional-photo-resume-preview.jpg",
-    "wait": 500
-   }
-  ]
- },
- {
-  "name": "tp-midnight-gradient-de",
-  "device": "desktop",
-  "url": "/editor?w=1920&h=1080&templateId=176f956f-a552-4ed4-91ff-a4504edadba7",
-  "wait": 16000,
-  "steps": [
+    "key": "Enter",
+    "wait": 1500
+   },
    {
-    "saveData": "(() => { const c=window.__fabricCanvas; c.discardActiveObject(); const v=c.viewportTransform.slice(); c.setViewportTransform([1,0,0,1,0,0]); const u=c.toDataURL({left:0,top:0,width:1920,height:1080,multiplier:0.6771,format:'jpeg',quality:0.9}); c.setViewportTransform(v); c.requestRenderAll(); return u; })()",
-    "as": "midnight-gradient-design-portfolio-deck-preview.jpg",
-    "wait": 500
+    "click": "button[title=\"Rose gold\"]",
+    "wait": 1200
+   },
+   {
+    "text": "Adjust",
+    "exact": true,
+    "wait": 1500
+   },
+   {
+    "text": "Looks",
+    "exact": true,
+    "wait": 1500
+   },
+   {
+    "key": "b",
+    "wait": 1000
+   },
+   {
+    "key": "c",
+    "wait": 1200
+   },
+   {
+    "key": "Escape",
+    "wait": 600
+   },
+   {
+    "key": "t",
+    "wait": 1500
+   },
+   {
+    "fill": [
+     "#ps-text-edit",
+     "BIG SALE"
+    ],
+    "wait": 1200
+   },
+   {
+    "click": "button[title=\"Cyber\"]",
+    "wait": 1500
    }
   ]
  }
