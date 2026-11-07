@@ -30,6 +30,7 @@ for (const j of jobs) {
         if (s.type) await page.keyboard.type(s.type, { delay: 20 });
         if (s.fill) await page.locator(s.fill[0]).first().fill(s.fill[1]);
         if (s.pdf) { await page.addStyleTag({ content: 'header,footer,nav,[class*="SiteHeader"],button{display:none!important} body{background:#fff!important}' }); await page.emulateMedia({ media: 'print' }); await page.pdf({ path: `${out}/${s.pdf}`, format: 'A4', printBackground: true, margin: { top: '18mm', bottom: '18mm', left: '16mm', right: '16mm' } }); }
+        if (s.saveData) { const url = await page.evaluate(s.saveData); if (url && url.startsWith('data:')) fs.writeFileSync(`${out}/${s.as}`, Buffer.from(url.split(',')[1], 'base64')); else console.log(j.name, 'no data', String(url).slice(0, 80)); }
         if (s.goto) await page.goto(base + s.goto, { waitUntil: 'domcontentloaded' });
         if (s.back) await page.goBack({ waitUntil: 'domcontentloaded' });
         if (s.url) console.log(j.name, 'URL', page.url());
