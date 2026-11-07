@@ -1,11 +1,11 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import type { ComponentType } from 'react';
 import {
   Award, Baby, BookOpen, Briefcase, Cake, CalendarHeart, CreditCard, Dumbbell, Eraser, FileText, Flag, Flame, MapPin, Gift, Ghost,
   Globe, GraduationCap, Heart, Image as ImageIcon, LayoutTemplate, Mail, Megaphone, Moon, Palette, PartyPopper, Percent, Play, Printer,
   QrCode, Quote, Scissors, SlidersHorizontal, Smartphone, Sparkles, Tag, TreePine, User, UtensilsCrossed, Wand2, Home, Languages,
 } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { SeoShell } from '@/components/seo/SeoShell';
 import { SITE_URL, SITE_NAME, getHiddenLandings, getPublishedSeoPages } from '@/lib/seo';
 import { ALL_LANDINGS } from '@/lib/landings';
@@ -21,7 +21,7 @@ export const metadata: Metadata = {
 
 export const revalidate = 3600;
 
-type Icon = ComponentType<{ size?: number; strokeWidth?: number; className?: string }>;
+type Icon = LucideIcon;
 const ICONS: [RegExp, Icon][] = [
   [/qr/, QrCode], [/print/, Printer], [/youtube/, Play], [/resume|cv/, User], [/business-card/, CreditCard], [/menu/, UtensilsCrossed],
   [/certificate/, Award], [/instagram|story/, Smartphone], [/linkedin|hiring/, Briefcase], [/quote/, Quote], [/sale|black-friday/, Percent],

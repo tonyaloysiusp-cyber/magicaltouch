@@ -2,8 +2,8 @@ import type { Metadata } from 'next';
 import { getTemplateCountLabel, withCount } from '@/lib/templateCountServer';
 import Link from 'next/link';
 import { SeoShell } from '@/components/seo/SeoShell';
-import type { ComponentType } from 'react';
 import { BadgeCheck, Eraser, LayoutTemplate, Printer, SlidersHorizontal, Wand2 } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { SITE_URL, SITE_NAME, getSiteSetting } from '@/lib/seo';
 import { companyProfile } from '@/lib/email/config';
 
@@ -47,7 +47,7 @@ const PRINCIPLES: [string, string][] = [
 ];
 const DEFAULT_MISSION = 'To give every business, school and creator in the world the power to look professional — in minutes, at no cost.';
 const paras = (t: string) => t.split(/\n{2,}/).map((x) => x.trim()).filter(Boolean);
-type Icon = ComponentType<{ size?: number; strokeWidth?: number; className?: string }>;
+type Icon = LucideIcon;
 
 export default async function AboutPage() {
   const label = await getTemplateCountLabel();

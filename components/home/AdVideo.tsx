@@ -56,7 +56,7 @@ export function AdVideo() {
           ref={v}
           className="absolute inset-0 w-full h-full object-cover"
           key={dark ? 'dark' : 'light'}
-          src={`/api/media/home/ad/magical-touch-ad${dark ? '' : '-light'}${small ? '-720' : ''}.mp4?v=3`}
+          src={`/api/media/home/ad/magical-touch-ad${dark ? '' : '-light'}${small ? '-720' : ''}.mp4?v=4`}
           poster={`/home/ad/poster${dark ? '' : '-light'}${small ? '-720' : ''}.webp?v=3`}
           muted
           loop

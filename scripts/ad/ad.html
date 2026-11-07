@@ -11,6 +11,8 @@
 @font-face{font-family:AR;src:url(fonts/NotoSansArabic.ttf);font-weight:100 900}
 @font-face{font-family:HI;src:url(fonts/NotoSansDevanagari.ttf);font-weight:100 900}
 @font-face{font-family:JP;src:url(fonts/NotoSansJP.ttf);font-weight:100 900}
+@font-face{font-family:ML;src:url(fonts/NotoSansMalayalam.ttf);font-weight:100 900}
+@font-face{font-family:TA;src:url(fonts/NotoSansTamil.ttf);font-weight:100 900}
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{width:1920px;height:1080px;overflow:hidden;background:#070A14;font-family:I,sans-serif;color:#fff}
 #stage{position:absolute;inset:0;overflow:hidden}
@@ -279,10 +281,12 @@ const LANGS = [
   ['English', 'Shape the<br><span class="g">future.</span>', 'P'],
   ['Español', 'Da forma al<br><span class="g">futuro.</span>', 'P'],
   ['Français', 'Façonnez<br><span class="g">l’avenir.</span>', 'P'],
-  ['Deutsch', 'Gestalte die<br><span class="g">Zukunft.</span>', 'P'],
-  ['日本語', '未来を<br><span class="g">形にする。</span>', 'JP'],
   ['العربية', 'اصنع<br><span class="g">المستقبل.</span>', 'AR'],
   ['हिन्दी', 'भविष्य को<br><span class="g">आकार दें।</span>', 'HI'],
+  ['മലയാളം', 'ഭാവിയെ<br><span class="g">രൂപപ്പെടുത്തൂ.</span>', 'ML'],
+  ['தமிழ்', 'எதிர்காலத்தை<br><span class="g">உருவாக்குவோம்.</span>', 'TA'],
+  ['日本語', '未来を<br><span class="g">形にする。</span>', 'JP'],
+  ['Deutsch', 'Gestalte die<br><span class="g">Zukunft.</span>', 'P'],
   ['Português', 'Molde o<br><span class="g">futuro.</span>', 'P'],
 ];
 $('s7chips').innerHTML = LANGS.map((l, i) => `<span id="lc${i}" style="padding:10px 18px;border-radius:999px;border:1.5px solid rgba(255,255,255,.25);font:600 18px ${l[2] === 'P' ? 'P' : l[2]};color:#fff">${l[0]}</span>`).join('');
@@ -403,12 +407,12 @@ window.render = function (t) {
   if (o7 > 0) {
     posterO = o7;
     poster(240, 200, 1, o7);
-    const li = Math.min(LANGS.length - 1, Math.floor(clamp((t - 29.8) / .6, 0, 99)));
+    const li = Math.min(LANGS.length - 1, Math.floor(clamp((t - 29.7) / .47, 0, 99)));
     const L = LANGS[li];
     $('Ph').innerHTML = L[1];
     $('Ph').style.fontFamily = L[2] === 'P' ? 'P' : L[2];
     $('Ph').style.direction = L[2] === 'AR' ? 'rtl' : 'ltr';
-    $('Ph').style.fontSize = L[2] === 'P' ? '64px' : '54px';
+    $('Ph').style.fontSize = L[2] === 'P' ? '64px' : (L[2] === 'ML' || L[2] === 'TA') ? '40px' : '54px';
     $('Ph').style.lineHeight = L[2] === 'P' ? '1' : '1.35';
     LANGS.forEach((_, i) => { const el = $('lc' + i); el.style.background = i === li ? (LIGHT ? '#0B1020' : '#fff') : 'transparent'; el.style.color = i === li ? (LIGHT ? '#fff' : '#0B1020') : (LIGHT ? '#0B1020' : '#fff'); el.style.borderColor = LIGHT ? 'rgba(11,16,32,.2)' : 'rgba(255,255,255,.25)'; });
     dots.forEach((d, i) => { d.style.opacity = (0.15 + 0.6 * (0.5 + 0.5 * Math.sin(t * 2 + i))) * o7 * 0.5; });
