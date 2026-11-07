@@ -1,228 +1,36 @@
 [
  {
-  "name": "wiz",
+  "name": "privacy",
   "device": "desktop",
-  "url": "/create?wizard=1",
-  "wait": 8000,
+  "url": "/privacy",
+  "wait": 5000,
   "steps": [
    {
-    "text": "Invitation",
-    "wait": 1500
-   },
-   {
-    "text": "Wedding",
-    "wait": 1000
-   },
-   {
-    "text": "Next",
-    "exact": true,
-    "wait": 2500
+    "pdf": "privacy-policy.pdf",
+    "wait": 500
    }
   ]
  },
  {
-  "name": "wizbc",
+  "name": "terms",
   "device": "desktop",
-  "url": "/create?wizard=1",
-  "wait": 8000,
+  "url": "/terms",
+  "wait": 5000,
   "steps": [
    {
-    "text": "Business card",
-    "wait": 1500
-   },
-   {
-    "text": "Next",
-    "exact": true,
-    "wait": 2500
+    "pdf": "terms-of-use.pdf",
+    "wait": 500
    }
   ]
  },
  {
-  "name": "edfx",
+  "name": "tut",
   "device": "desktop",
-  "url": "/editor?w=1080&h=1080",
-  "wait": 12000,
+  "url": "/tutorials",
+  "wait": 6000,
   "steps": [
    {
-    "rail": "Text",
-    "wait": 1500
-   },
-   {
-    "text": "Add a heading",
-    "wait": 1500
-   },
-   {
-    "js": "const c=window.__fabricCanvas; c.getObjects().filter(o=>/text/.test(o.type)).forEach(o=>{o.set({text:'GOLD',fontSize:180,fontWeight:800}); o.__textFx={effect:'gold',color:'#F7D774',amount:50,curve:0,wave:0}; o.objectCaching=false; o.dirty=true}); c.requestRenderAll()",
-    "wait": 1500
-   },
-   {
-    "js": "const c=window.__fabricCanvas; c.getObjects().filter(o=>/text/.test(o.type)).forEach(o=>{o.set({text:'3D BLOCK'}); o.__textFx={effect:'block3d',color:'#3B82F6',amount:50,curve:0,wave:0}; o.dirty=true}); c.requestRenderAll()",
-    "wait": 1500
-   }
-  ]
- },
- {
-  "name": "pstext",
-  "device": "desktop",
-  "url": "/photo-studio",
-  "wait": 7000,
-  "steps": [
-   {
-    "upload": "tool/ad/businessman-1.jpg",
-    "wait": 6000
-   },
-   {
-    "key": "t",
-    "wait": 800
-   },
-   {
-    "tap": [
-     300,
-     400
-    ],
-    "wait": 800
-   },
-   {
-    "type": "HELLO",
-    "wait": 500
-   },
-   {
-    "key": "Enter",
-    "wait": 1500
-   },
-   {
-    "click": "button[title=\"Gold\"]",
-    "wait": 1500
-   },
-   {
-    "fill": [
-     "#ps-text-edit",
-     "WORLD"
-    ],
-    "wait": 1500
-   },
-   {
-    "click": "button[title=\"Neon tube\"]",
-    "wait": 1500
-   },
-   {
-    "key": "v",
-    "wait": 500
-   },
-   {
-    "drag": [
-     400,
-     430,
-     700,
-     600
-    ],
-    "wait": 1500
-   },
-   {
-    "key": "t",
-    "wait": 500
-   },
-   {
-    "tap": [
-     620,
-     610
-    ],
-    "wait": 1500
-   }
-  ]
- },
- {
-  "name": "g",
-  "device": "desktop",
-  "url": "/photo-studio",
-  "wait": 7000,
-  "steps": [
-   {
-    "upload": "tool/ad/businessman-1.jpg",
-    "wait": 6000
-   },
-   {
-    "text": "Adjust",
-    "exact": true,
-    "wait": 1500
-   },
-   {
-    "text": "Colour",
-    "exact": true,
-    "wait": 1500
-   },
-   {
-    "text": "Filters",
-    "exact": true,
-    "wait": 1500
-   },
-   {
-    "text": "Looks",
-    "exact": true,
-    "wait": 1500
-   },
-   {
-    "key": "j",
-    "wait": 1200
-   },
-   {
-    "key": "b",
-    "wait": 1200
-   },
-   {
-    "key": "m",
-    "wait": 800
-   },
-   {
-    "drag": [
-     300,
-     300,
-     700,
-     600
-    ],
-    "wait": 1200
-   },
-   {
-    "key": "w",
-    "wait": 6000
-   },
-   {
-    "key": "c",
-    "wait": 1500
-   },
-   {
-    "key": "Escape",
-    "wait": 800
-   },
-   {
-    "key": "u",
-    "wait": 1200
-   },
-   {
-    "key": "g",
-    "wait": 1200
-   },
-   {
-    "text": "Layer",
-    "exact": true,
-    "wait": 1200
-   },
-   {
-    "key": "Escape",
-    "wait": 500
-   },
-   {
-    "text": "File",
-    "exact": true,
-    "wait": 1200
-   },
-   {
-    "key": "Escape",
-    "wait": 500
-   },
-   {
-    "text": "Simple",
-    "exact": true,
+    "js": "document.getElementById('guides-title')?.scrollIntoView()",
     "wait": 2500
    }
   ]

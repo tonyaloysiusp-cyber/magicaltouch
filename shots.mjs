@@ -29,6 +29,7 @@ for (const j of jobs) {
         if (s.drag) { const [a, b, c, d] = s.drag; await page.mouse.move(a, b); await page.mouse.down(); for (let k = 1; k <= 12; k++) await page.mouse.move(a + (c - a) * k / 12, b + (d - b) * k / 12); await page.mouse.up(); }
         if (s.type) await page.keyboard.type(s.type, { delay: 20 });
         if (s.fill) await page.locator(s.fill[0]).first().fill(s.fill[1]);
+        if (s.pdf) { await page.addStyleTag({ content: 'header,footer,nav,[class*="SiteHeader"],button{display:none!important} body{background:#fff!important}' }); await page.emulateMedia({ media: 'print' }); await page.pdf({ path: `${out}/${s.pdf}`, format: 'A4', printBackground: true, margin: { top: '18mm', bottom: '18mm', left: '16mm', right: '16mm' } }); }
         if (s.goto) await page.goto(base + s.goto, { waitUntil: 'domcontentloaded' });
         if (s.back) await page.goBack({ waitUntil: 'domcontentloaded' });
         if (s.url) console.log(j.name, 'URL', page.url());
