@@ -10,7 +10,7 @@ const EMAIL = 'hellomagicaltouch.design@gmail.com';
 
 export default function PrivacyPage() {
   return (
-    <LegalPage title="Privacy Policy" updated="8 October 2026">
+    <LegalPage title="Privacy Policy" updated="7 November 2026">
       <p>
         Magical Touch Design (&quot;we&quot;, &quot;us&quot;) runs the online design application at magicaltouchdesign.com. This policy explains what
         information we collect, why we collect it, where it is kept, and the choices you have. We keep it short because we collect as little as we can.
@@ -46,7 +46,7 @@ export default function PrivacyPage() {
       <p>We use a small number of service providers to run Magical Touch Design:</p>
       <ul>
         <li><strong>Supabase</strong> — account sign-in, database and file storage.</li>
-        <li><strong>Vercel</strong> — hosting the website.</li>
+        <li><strong>Cloudflare</strong> — hosting the website, its domain name, security and delivery.</li>
         <li><strong>Google (Gmail)</strong> — sending our e-mails from {EMAIL}.</li>
         <li><strong>Google, Microsoft and Dropbox</strong> — only when you choose to connect your own drive to save or open projects.</li>
       </ul>
