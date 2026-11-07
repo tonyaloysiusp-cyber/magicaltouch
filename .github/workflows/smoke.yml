@@ -7,9 +7,8 @@ jobs:
       - run: |
           B=https://www.magicaltouchdesign.com
           curl -s -A "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)" $B/ > home.html
-          echo "--- meta images"; grep -o '<meta[^>]*\(og:image\|twitter:image\|thumbnail\)[^>]*>' home.html | head
-          echo "--- json-ld image"; grep -o 'primaryImageOfPage[^}]*' home.html
-          echo "--- all img/poster urls in html"; grep -o -E '(src|poster|srcSet|href)="[^"]*\.(jpg|jpeg|png|webp)[^"]*"' home.html | sort -u | head -60
-          echo "--- background urls"; grep -o -E 'url\([^)]*\)' home.html | sort -u | head -20
-          echo "--- old poster urls"; for p in /home/ad/poster.webp /home/ad/poster-720.webp /home/ad/poster-light.webp /og-image.png; do curl -s -o /dev/null -w "%{http_code} $p\n" $B$p; done
-          curl -s -o pic.webp "https://rqkjogzljsbufbrdlbfr.supabase.co/storage/v1/object/public/template-media/site/google/1794051979881.webp" -w "pic %{http_code} %{size_download}\n"
+          grep -o '<meta[^>]*\(og:image"\|twitter:image\|thumbnail\)[^>]*>' home.html | head -4
+          grep -o 'primaryImageOfPage[^}]*' home.html | head -1
+          curl -s $B/image-sitemap.xml | grep -o '<url><loc>https://www.magicaltouchdesign.com/</loc>[^/]*/[^<]*<[^<]*' | head -1
+          for p in /home/ad/poster.webp /home/ad/poster-720.webp /home/ad/poster-light.webp /home/ad/cover.webp; do curl -s -o /dev/null -w "%{http_code} $p\n" $B$p; done
+          curl -s -o /dev/null -w "indexnow %{http_code}\n" "https://api.indexnow.org/indexnow?url=$B/&key=b2e48e40a28ff25772f97a10d0c1869a"
