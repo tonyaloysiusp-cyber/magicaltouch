@@ -1,48 +1,68 @@
 [
  {
-  "name": "tools-d",
+  "name": "wiz",
   "device": "desktop",
-  "url": "/free-design-tools",
-  "wait": 6000,
-  "full": true
- },
- {
-  "name": "about-d",
-  "device": "desktop",
-  "url": "/about",
-  "wait": 6000,
-  "full": true
- },
- {
-  "name": "back",
-  "device": "desktop",
-  "url": "/templates",
-  "wait": 9000,
+  "url": "/create?wizard=1",
+  "wait": 8000,
   "steps": [
    {
-    "text": "Business & documents",
-    "wait": 3000,
-    "url": 1
+    "text": "Invitation",
+    "wait": 1500
    },
    {
-    "goto": "/editor?w=1050&h=600",
-    "wait": 6000,
-    "url": 1
+    "text": "Wedding",
+    "wait": 1000
    },
    {
-    "back": 1,
-    "wait": 7000,
-    "url": 1
-   },
-   {
-    "back": 1,
-    "wait": 5000,
-    "url": 1
+    "text": "Next",
+    "exact": true,
+    "wait": 2500
    }
   ]
  },
  {
-  "name": "ps",
+  "name": "wizbc",
+  "device": "desktop",
+  "url": "/create?wizard=1",
+  "wait": 8000,
+  "steps": [
+   {
+    "text": "Business card",
+    "wait": 1500
+   },
+   {
+    "text": "Next",
+    "exact": true,
+    "wait": 2500
+   }
+  ]
+ },
+ {
+  "name": "edfx",
+  "device": "desktop",
+  "url": "/editor?w=1080&h=1080",
+  "wait": 12000,
+  "steps": [
+   {
+    "rail": "Text",
+    "wait": 1500
+   },
+   {
+    "text": "Add a heading",
+    "wait": 1500
+   },
+   {
+    "js": "const c=window.__fabricCanvas; c.getObjects().filter(o=>/text/.test(o.type)).forEach(o=>{o.set({text:'GOLD',fontSize:180,fontWeight:800}); o.__textFx={effect:'gold',color:'#F7D774',amount:50,curve:0,wave:0}; o.objectCaching=false; o.dirty=true}); c.requestRenderAll()",
+    "wait": 1500
+   },
+   {
+    "js": "const c=window.__fabricCanvas; c.getObjects().filter(o=>/text/.test(o.type)).forEach(o=>{o.set({text:'3D BLOCK'}); o.__textFx={effect:'block3d',color:'#3B82F6',amount:50,curve:0,wave:0}; o.dirty=true}); c.requestRenderAll()",
+    "wait": 1500
+   }
+  ]
+ },
+ {
+  "name": "pstext",
   "device": "desktop",
   "url": "/photo-studio",
   "wait": 7000,
@@ -52,25 +72,157 @@
     "wait": 6000
    },
    {
+    "key": "t",
+    "wait": 800
+   },
+   {
+    "tap": [
+     300,
+     400
+    ],
+    "wait": 800
+   },
+   {
+    "type": "HELLO",
+    "wait": 500
+   },
+   {
+    "key": "Enter",
+    "wait": 1500
+   },
+   {
+    "click": "button[title=\"Gold\"]",
+    "wait": 1500
+   },
+   {
+    "fill": [
+     "#ps-text-edit",
+     "WORLD"
+    ],
+    "wait": 1500
+   },
+   {
+    "click": "button[title=\"Neon tube\"]",
+    "wait": 1500
+   },
+   {
     "key": "v",
+    "wait": 500
+   },
+   {
+    "drag": [
+     400,
+     430,
+     700,
+     600
+    ],
+    "wait": 1500
+   },
+   {
+    "key": "t",
+    "wait": 500
+   },
+   {
+    "tap": [
+     620,
+     610
+    ],
+    "wait": 1500
+   }
+  ]
+ },
+ {
+  "name": "g",
+  "device": "desktop",
+  "url": "/photo-studio",
+  "wait": 7000,
+  "steps": [
+   {
+    "upload": "tool/ad/businessman-1.jpg",
+    "wait": 6000
+   },
+   {
+    "text": "Adjust",
+    "exact": true,
+    "wait": 1500
+   },
+   {
+    "text": "Colour",
+    "exact": true,
+    "wait": 1500
+   },
+   {
+    "text": "Filters",
+    "exact": true,
+    "wait": 1500
+   },
+   {
+    "text": "Looks",
+    "exact": true,
+    "wait": 1500
+   },
+   {
+    "key": "j",
+    "wait": 1200
+   },
+   {
+    "key": "b",
+    "wait": 1200
+   },
+   {
+    "key": "m",
     "wait": 800
    },
    {
     "drag": [
-     500,
-     450,
-     1000,
-     450
+     300,
+     300,
+     700,
+     600
     ],
-    "wait": 2000
+    "wait": 1200
    },
    {
-    "drag": [
-     900,
-     450,
-     400,
-     450
-    ],
+    "key": "w",
+    "wait": 6000
+   },
+   {
+    "key": "c",
+    "wait": 1500
+   },
+   {
+    "key": "Escape",
+    "wait": 800
+   },
+   {
+    "key": "u",
+    "wait": 1200
+   },
+   {
+    "key": "g",
+    "wait": 1200
+   },
+   {
+    "text": "Layer",
+    "exact": true,
+    "wait": 1200
+   },
+   {
+    "key": "Escape",
+    "wait": 500
+   },
+   {
+    "text": "File",
+    "exact": true,
+    "wait": 1200
+   },
+   {
+    "key": "Escape",
+    "wait": 500
+   },
+   {
+    "text": "Simple",
+    "exact": true,
     "wait": 2500
    }
   ]
