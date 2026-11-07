@@ -39,6 +39,12 @@ const shortName = (slug: string) => {
   const t = s.replace(/\buae\b/g, 'UAE').replace(/\bcv\b/g, 'CV').replace(/\bpdf\b/gi, 'PDF').replace(/\bqr\b/g, 'QR');
   return t.charAt(0).toUpperCase() + t.slice(1);
 };
+// Custom pages sometimes have a web address as their slug: use the title.
+const nameFor = (slug: string, h1: string) => {
+  if (!/https?|www|\b(com|category)\b/.test(slug.replace(/-/g, ' ')) && slug.length <= 40) return shortName(slug);
+  const t = h1.split(/\s[—|–:-]\s|\s\|\s/)[0].replace(/^free\s+/i, '').replace(/\s+(maker|templates?|online)$/i, '').trim();
+  return t.length > 28 ? t.slice(0, 26).trim() + '…' : t;
+};
 const kindOf = (slug: string) => (/maker$/.test(slug) ? 'Maker' : /generator$/.test(slug) ? 'Generator' : /templates?$/.test(slug) ? 'Templates' : 'Tool');
 
 const STUDIO: { href: string; name: string; note: string; icon: Icon; tint: string }[] = [
@@ -69,7 +75,7 @@ export default async function FreeToolsPage() {
       <li>
         <Link href={`/${slug}`} title={withCount(description, label)} className="group flex flex-col items-center text-center gap-2 rounded-2xl border border-mt-border bg-mt-surface p-4 h-full hover:border-mt-ink/30 hover:-translate-y-0.5 transition-all">
           <span className="grid place-items-center h-11 w-11 rounded-xl bg-mt-surface2 text-mt-ink group-hover:bg-mt-primary group-hover:text-mt-onprimary transition-colors"><I size={20} strokeWidth={1.8} /></span>
-          <span className="text-[13px] font-semibold leading-tight">{shortName(slug)}</span>
+          <span className="text-[13px] font-semibold leading-tight">{withCount(nameFor(slug, h1), label)}</span>
           <span className="text-[11px] text-mt-faint -mt-1">{kindOf(slug)}</span>
           <span className="sr-only">{withCount(h1, label)}</span>
         </Link>
@@ -104,7 +110,7 @@ export default async function FreeToolsPage() {
         <h2 className="mt-12 text-lg font-semibold inline-flex items-center gap-2"><Globe size={18} /> By country</h2>
         <ul className="mt-4 flex flex-wrap gap-2">{countries.map((l) => <li key={l.slug}><Link href={`/${l.slug}`} className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full border border-mt-border text-[13px] hover:bg-mt-surface2"><MapPin size={13} className="text-mt-faint" />{l.country}</Link></li>)}</ul>
 
-        <h2 className="mt-12 text-lg font-semibold" lang="ar" dir="rtl">بالعربي</h2>
+        {arabic.length > 0 && <h2 className="mt-12 text-lg font-semibold" lang="ar" dir="rtl">بالعربي</h2>}
         <ul className={grid} lang="ar" dir="rtl">{arabic.map((l) => (
           <li key={l.slug}>
             <Link href={`/${l.slug}`} title={withCount(l.description, label)} className="flex flex-col items-center text-center gap-2 rounded-2xl border border-mt-border bg-mt-surface p-4 h-full hover:-translate-y-0.5 transition-transform">

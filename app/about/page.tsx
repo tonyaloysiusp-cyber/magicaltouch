@@ -111,8 +111,17 @@ export default async function AboutPage() {
 
         <section aria-labelledby="mission" className="mt-16 rounded-3xl p-8 sm:p-12 bg-mt-ink text-mt-bg">
           <p id="mission" className="text-[12px] font-semibold tracking-[0.22em] uppercase opacity-60">Our mission</p>
-          {paras(mission || DEFAULT_MISSION).map((t, i) => <p key={i} className="mt-4 text-2xl sm:text-3xl font-semibold tracking-tight leading-snug max-w-4xl">{t}</p>)}
-          {vision && <div className="mt-8 pt-6 border-t border-white/15 max-w-3xl"><p className="text-[12px] font-semibold tracking-[0.22em] uppercase opacity-60">Our vision</p>{paras(vision).map((t, i) => <p key={i} className="mt-3 text-[16px] leading-relaxed opacity-80">{t}</p>)}</div>}
+          {(() => { const [first, ...rest] = paras(mission || DEFAULT_MISSION); return <>
+            <p className="mt-4 text-2xl sm:text-3xl font-semibold tracking-tight leading-snug max-w-4xl">{first}</p>
+            {rest.length > 0 && <details className="mt-4 max-w-3xl group"><summary className="cursor-pointer text-[13px] font-semibold opacity-70 hover:opacity-100 list-none">Read more <span className="group-open:hidden">+</span><span className="hidden group-open:inline">−</span></summary>{rest.map((t, i) => <p key={i} className="mt-3 text-[16px] leading-relaxed opacity-80">{t}</p>)}</details>}
+          </>; })()}
+          {vision && (() => { const [first, ...rest] = paras(vision); return (
+            <div className="mt-8 pt-6 border-t border-white/15 max-w-3xl">
+              <p className="text-[12px] font-semibold tracking-[0.22em] uppercase opacity-60">Our vision</p>
+              <p className="mt-3 text-[17px] leading-relaxed opacity-90">{first}</p>
+              {rest.length > 0 && <details className="mt-3 group"><summary className="cursor-pointer text-[13px] font-semibold opacity-70 hover:opacity-100 list-none">Read more <span className="group-open:hidden">+</span><span className="hidden group-open:inline">−</span></summary>{rest.map((t, i) => <p key={i} className="mt-3 text-[15px] leading-relaxed opacity-75">{t}</p>)}</details>}
+            </div>
+          ); })()}
         </section>
 
         <section aria-labelledby="platform" className="mt-16">
