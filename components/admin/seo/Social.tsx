@@ -3,6 +3,7 @@
 // Admin → SEO → Social. Social media integration without paid tools:
 //  · Your profiles — saved once; shown in the site footer and given to
 //    Google as "sameAs" (links your brand panel to them)
+//  · Our brand designs — the Magical Touch promo posts (moved out of template drafts)
 //  · Promo kit — ready posters and videos with a caption per channel
 //  · Share any page — one tap opens each network's own share box
 //  · Create your business profiles — sign-up links, pictures, bio
@@ -18,6 +19,7 @@ import { SocialSetup } from './SocialSetup';
 import { SocialPosts } from './SocialPosts';
 import { BrandImages } from './BrandImages';
 import { PromoVideoMaker } from './PromoVideoMaker';
+import { BrandDesigns } from './BrandDesigns';
 
 const SITE = 'https://www.magicaltouchdesign.com';
 const card = 'rounded-3xl border border-mt-border bg-mt-surface p-5 sm:p-6';
@@ -73,6 +75,7 @@ export function Social({ flash }: { flash: (m: string) => void }) {
       </section>
       {Object.keys(saved).length >= 4 && <details className={card}><summary className="cursor-pointer text-[14px] font-semibold">Profile pictures, bio and sign-up links</summary><div className="mt-3"><SocialSetup /></div></details>}
 
+      <BrandDesigns />
       <BrandImages flash={flash} />
       <PromoVideoMaker />
       <section className={card}>

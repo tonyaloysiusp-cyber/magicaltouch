@@ -59,7 +59,11 @@ const ORG_JSON_LD = [
   {
     '@context': 'https://schema.org',
     '@type': 'WebSite',
+    '@id': `${SITE_URL}/#website`,
     name: SITE_NAME,
+    alternateName: ['Magical Touch', 'magicaltouchdesign.com'],
+    publisher: { '@id': `${SITE_URL}/#organization` },
+    inLanguage: 'en',
     url: SITE_URL,
     potentialAction: { '@type': 'SearchAction', target: `${SITE_URL}/templates?q={search_term_string}`, 'query-input': 'required name=search_term_string' },
   },

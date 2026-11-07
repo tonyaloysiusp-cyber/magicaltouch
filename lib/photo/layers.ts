@@ -23,6 +23,13 @@ export interface Layer {
   blend: Blend;
   /** This layer's own adjustments (brightness, contrast, curves…). Only this layer changes. */
   adjust?: Adjust;
+  /** The whole picture, including parts moved outside the document; drawn
+   *  at (fx, fy). `canvas` is only the part inside the document, so moving
+   *  a layer off the edge hides it and moving it back shows it again.
+   *  Only erasing, cutting or cropping removes pixels. */
+  full?: HTMLCanvasElement;
+  fx?: number;
+  fy?: number;
 }
 
 let seq = 0;
@@ -47,9 +54,39 @@ export function composite(layers: Layer[], scale = 1, override?: { index: number
     const dy = override && override.index === i ? (override.dy || 0) * scale : 0;
     ctx.globalAlpha = l.opacity;
     ctx.globalCompositeOperation = op(l.blend);
-    ctx.drawImage(src, dx, dy, w, h);
+    if (src === l.canvas) ctx.drawImage(src, dx, dy, w, h);
+    else ctx.drawImage(src, dx, dy, src.width * scale, src.height * scale);
   });
   return c;
+}
+
+/** Moves a layer without losing anything: parts pushed outside the document
+ *  are kept (hidden) and come back when the layer is moved back. */
+export function moveLayer(l: Layer, dx: number, dy: number): Layer {
+  const full = l.full || l.canvas;
+  const fx = (l.full ? l.fx || 0 : 0) + Math.round(dx);
+  const fy = (l.full ? l.fy || 0 : 0) + Math.round(dy);
+  const c = blankLike(l.canvas);
+  c.getContext('2d')!.drawImage(full, fx, fy);
+  return { ...l, canvas: c, full, fx, fy };
+}
+
+/** After a pixel edit (paint, erase, filter…) the edited document area is
+ *  written into the layer's whole picture, so hidden parts stay as they were.
+ *  A change of document size (crop / canvas size) drops the hidden parts. */
+export function syncFull(prev: Layer | undefined, next: Layer): Layer {
+  if (!next.full || !prev || prev.id !== next.id || next.canvas === prev.canvas) return next;
+  if (next.full !== prev.full || next.fx !== prev.fx || next.fy !== prev.fy) return next; // a move
+  const W = next.canvas.width, H = next.canvas.height;
+  if (W !== prev.canvas.width || H !== prev.canvas.height) return { ...next, full: undefined, fx: undefined, fy: undefined };
+  const full = next.full, fx = next.fx || 0, fy = next.fy || 0;
+  const x0 = Math.min(fx, 0), y0 = Math.min(fy, 0);
+  const out = makeCanvas(Math.max(fx + full.width, W) - x0, Math.max(fy + full.height, H) - y0);
+  const ctx = out.getContext('2d')!;
+  ctx.drawImage(full, fx - x0, fy - y0);
+  ctx.clearRect(-x0, -y0, W, H);
+  ctx.drawImage(next.canvas, -x0, -y0);
+  return { ...next, full: out, fx: x0, fy: y0 };
 }
 
 export function blankLike(c: HTMLCanvasElement) {

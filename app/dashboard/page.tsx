@@ -450,11 +450,16 @@ export default function DashboardPage() {
                         // eslint-disable-next-line @next/next/no-img-element
                         <img src={f.thumbnail} alt="" className="w-full h-full object-contain" />
                       ) : (
-                        <HardDrive size={28} className="text-mt-accent/40" />
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src="/brand/file-icon/mtd-128.png" alt="" width={72} height={72} />
                       )}
                     </div>
                     <div className="p-3">
-                      <p className="text-sm font-semibold truncate">{f.name}</p>
+                      <p className="text-sm font-semibold truncate flex items-center gap-1.5">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src="/brand/file-icon/mtd-32.png" alt="" width={18} height={18} className="shrink-0" />
+                        <span className="truncate">{f.name}</span>
+                      </p>
                       <p className="text-[11px] text-mt-muted dark:text-mt-muted mt-0.5">
                         Stored on your computer · {new Date(f.savedAt).toLocaleDateString()}
                       </p>

@@ -236,8 +236,30 @@ export default function TemplatesPage() {
     const keep = new URLSearchParams(window.location.search).get('template');
     if (keep) p.set('template', keep);
     const qs = p.toString();
-    window.history.replaceState(null, '', qs ? `?${qs}` : window.location.pathname);
+    const url = qs ? `${window.location.pathname}?${qs}` : window.location.pathname;
+    try { sessionStorage.setItem('mt:galleryUrl', url); } catch { /* private mode */ }
+    if (window.location.pathname + window.location.search === url) return;
+    // Choosing a category / type / occasion is a step the Back button can
+    // undo (Business cards → back → All); typing and fine filters are not.
+    const main = (x: URLSearchParams) => ['group', 'kind', 'occasion', 'category', 'type'].map((k) => x.get(k) || '').join('|');
+    const step = main(p) !== main(new URLSearchParams(window.location.search));
+    if (step) window.history.pushState(null, '', url);
+    else window.history.replaceState(null, '', url);
   }, [f, urlReady, categories]);
+
+  // Back / Forward between filter steps: read the filters from the address again.
+  useEffect(() => {
+    const onPop = () => {
+      if (window.location.pathname !== '/templates') return;
+      const { catName, subName, ...rest } = readFiltersFromUrl();
+      const byName = (n?: string) => (n ? categories.find((c) => c.name.toLowerCase() === n.toLowerCase() || c.slug === n.toLowerCase()) : undefined);
+      const c = byName(catName), sc = byName(subName);
+      setF({ ...NO_FILTERS, ...rest, cat: (sc?.parentId || c?.id) ?? NO_FILTERS.cat, sub: sc ? sc.id : null });
+      setDraft(rest.q || '');
+    };
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, [categories]);
 
   // Close the preview with Escape.
   useEffect(() => {

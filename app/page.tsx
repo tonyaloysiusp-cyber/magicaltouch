@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
 import { getTemplateCountLabel, withCount } from '@/lib/templateCountServer';
 import { HomePage } from '@/components/home/HomePage';
+import { getGooglePicture } from '@/lib/googlePictureServer';
+import { SITE_URL } from '@/lib/seo';
 
 const baseMetadata: Metadata = {
   title: { absolute: 'Free Online Design Tool & 1,000+ Templates — No Watermark | Magical Touch Design' },
@@ -19,10 +21,32 @@ const baseMetadata: Metadata = {
 export const preferredRegion = 'bom1';
 
 export async function generateMetadata(): Promise<Metadata> {
-  const label = await getTemplateCountLabel();
-  return JSON.parse(withCount(JSON.stringify(baseMetadata), label));
+  const [label, pic] = await Promise.all([getTemplateCountLabel(), getGooglePicture()]);
+  const meta: Metadata = JSON.parse(withCount(JSON.stringify(baseMetadata), label));
+  // Admin → SEO & Google → Google picture: the picture next to our result.
+  if (!pic) return meta;
+  const image = { url: pic.url, alt: pic.alt };
+  return { ...meta, openGraph: { ...meta.openGraph, images: [image, ...((baseMetadata.openGraph?.images as any[]) || [])] }, twitter: { card: 'summary_large_image', images: [pic.url] }, other: { thumbnail: pic.url } };
 }
 
-export default function Page() {
-  return <HomePage />;
+export default async function Page() {
+  const pic = await getGooglePicture();
+  // The page's main picture for Google (the film is hidden from Google in robots.txt).
+  const ld = {
+    '@context': 'https://schema.org',
+    '@type': 'WebPage',
+    '@id': `${SITE_URL}/#webpage`,
+    url: SITE_URL,
+    name: 'Magical Touch Design — Free Online Design Tool & Templates',
+    isPartOf: { '@id': `${SITE_URL}/#website` },
+    about: { '@id': `${SITE_URL}/#organization` },
+    primaryImageOfPage: { '@type': 'ImageObject', url: pic ? pic.url : `${SITE_URL}/api/og`, caption: pic?.alt || 'Magical Touch Design' },
+    image: pic ? pic.url : `${SITE_URL}/api/og`,
+  };
+  return (
+    <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(ld) }} />
+      <HomePage />
+    </>
+  );
 }

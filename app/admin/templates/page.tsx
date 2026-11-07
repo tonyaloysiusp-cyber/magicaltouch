@@ -186,7 +186,8 @@ export default function AdminTemplatesPage() {
     ((rf.data as TemplateRef[]) || []).forEach((r) => (map[r.template_id] = r));
     setRefs(map);
     // The company's own brand kit lives in /admin/brand, never in the public catalogue.
-    setTemplates(t.filter((x) => !!x.id && !(x.tags || []).includes('mt-internal')));
+    // Our promo posts ("brand-promo") live in Admin → Social media → Our brand designs.
+    setTemplates(t.filter((x) => !!x.id && !(x.tags || []).some((g) => g === 'mt-internal' || g === 'brand-promo')));
     setCategories(c);
   };
 

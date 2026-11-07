@@ -28,7 +28,7 @@ import { CropBox, PhysUnit, cropTo, flip, fmtNum, fromPx, inscribedRect, makeCan
 import { ColourMode, FORMAT_INFO, PhotoFormat, downloadBlob, exportPhoto, extFor } from '@/lib/photo/exportPhoto';
 import { loadProofTable, proofRgbaInPlace, PRESS_PROFILE_NAME } from '@/lib/color/cmyk';
 import { BgRemoveDialog } from '@/components/editor/shell/BgRemoveDialog';
-import { Layer, Selection, makeLayer, composite, compositeAdjusted, isPlain, translate, placeImage, mergeDown, maskShape, maskAll, invertMask, maskFromAlpha, blendMasked, clearMasked, copyMasked, fillMasked, paintStroke, blankLike, maskPolygon, combineMasks, maskIsEmpty, SelectionMode } from '@/lib/photo/layers';
+import { Layer, Selection, makeLayer, composite, compositeAdjusted, isPlain, translate, moveLayer, syncFull, placeImage, mergeDown, maskShape, maskAll, invertMask, maskFromAlpha, blendMasked, clearMasked, copyMasked, fillMasked, paintStroke, blankLike, maskPolygon, combineMasks, maskIsEmpty, SelectionMode } from '@/lib/photo/layers';
 import { FILTERS, FilterId, applyFilter } from '@/lib/photo/filters';
 import { PenPoint, contentAwareFill, maskEdges, pathToMask, penPathD } from '@/lib/photo/fillMask';
 import { ProMenuBar, LayersPanel, HistoryPanel, Menu } from './ProPanels';
@@ -79,7 +79,7 @@ const SIMPLE_DETAIL: SliderDef[] = [
 ];
 interface Snapshot { layers: Layer[]; active: number; adjust: Adjust; dpi: number; label: string }
 // What an edit can change. `base` replaces the selected layer's pixels.
-type SnapPatch = { label: string; base?: HTMLCanvasElement; layers?: Layer[]; active?: number; adjust?: Adjust; dpi?: number };
+type SnapPatch = { label: string; base?: HTMLCanvasElement; layers?: Layer[]; active?: number; adjust?: Adjust; dpi?: number; moveBy?: { dx: number; dy: number } };
 
 export interface PhotoStudioHandle {
   /** The finished picture at full size, adjustments included. */
@@ -349,6 +349,10 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
       let ls = s.layers || cur.layers;
       const act = Math.min(s.active ?? cur.active, ls.length - 1);
       if (s.base) ls = ls.map((l, i) => (i === act ? { ...l, canvas: s.base! } : l));
+      if (s.moveBy) ls = ls.map((l, i) => (i === act ? moveLayer(l, s.moveBy!.dx, s.moveBy!.dy) : l));
+      // Edits inside the document are written into each layer's whole picture.
+      const prevById = new Map(cur.layers.map((l) => [l.id, l]));
+      ls = ls.map((l) => syncFull(prevById.get(l.id), l));
       const next: Snapshot = { layers: ls, active: act, adjust: s.adjust || cur.adjust, dpi: s.dpi ?? cur.dpi, label: s.label };
       // Keep memory in check for big photos.
       const px = ls[0].canvas.width * ls[0].canvas.height * ls.length;
@@ -362,10 +366,10 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
   // (Safari otherwise keeps it until much later, and the page slows down).
   const releaseDropped = (before: Snapshot[], after: Snapshot[]) => {
     const keep = new Set<HTMLCanvasElement>();
-    after.forEach((sn) => sn.layers.forEach((l) => keep.add(l.canvas)));
+    after.forEach((sn) => sn.layers.forEach((l) => { keep.add(l.canvas); if (l.full) keep.add(l.full); }));
     if (firstPreviewRef.current) keep.add(firstPreviewRef.current);
     const drop: HTMLCanvasElement[] = [];
-    before.forEach((sn) => sn.layers.forEach((l) => { if (!keep.has(l.canvas)) drop.push(l.canvas); }));
+    before.forEach((sn) => sn.layers.forEach((l) => { [l.canvas, l.full].forEach((c) => { if (c && !keep.has(c) && !drop.includes(c)) drop.push(c); }); }));
     if (drop.length) setTimeout(() => drop.forEach((c) => { c.width = 0; c.height = 0; }), 1500);
   };
   const undo = () => setHistory((h) => (h.index > 0 ? { ...h, index: h.index - 1 } : h));
@@ -1037,7 +1041,8 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
       g.dx = p.x - g.start.x;
       g.dy = p.y - g.start.y;
       const k = overlayScale(target.width, target.height);
-      showOverlay(composite(layers, k, { index: activeIdx, canvas: target, dx: g.dx, dy: g.dy }));
+      const L = layers[activeIdx];
+      showOverlay(composite(layers, k, L.full ? { index: activeIdx, canvas: L.full, dx: (L.fx || 0) + g.dx, dy: (L.fy || 0) + g.dy } : { index: activeIdx, canvas: target, dx: g.dx, dy: g.dy }));
     } else if (g.kind === 'marquee' && base) {
       const p = toBase(e.clientX, e.clientY);
       let w = p.x - g.start.x, h = p.y - g.start.y;
@@ -1110,8 +1115,8 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
     if (g?.kind === 'move') {
       const dx = Math.round(g.dx), dy = Math.round(g.dy);
       if ((dx || dy) && target) {
-        const moved = translate(target, dx, dy);
-        push({ base: moved, label: 'Move' });
+        // Nothing is cut: parts outside the canvas are only hidden.
+        push({ moveBy: { dx, dy }, label: 'Move' });
       }
       setTimeout(hideOverlay, 60);
     }

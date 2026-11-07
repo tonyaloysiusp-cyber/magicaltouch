@@ -8,11 +8,11 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ReactNode, useEffect, useMemo, useRef, useState } from 'react';
-import { LayoutDashboard, Inbox, Server, CalendarHeart, PenLine, Mail, LayoutTemplate, Sparkles, Award, GraduationCap, Megaphone, Info, HeartPulse, BadgeDollarSign, Hash, Image as ImageIcon, Share2, Search, ExternalLink } from 'lucide-react';
+import { LayoutDashboard, Inbox, Server, CalendarHeart, PenLine, Mail, LayoutTemplate, Sparkles, Award, GraduationCap, Megaphone, Info, HeartPulse, BadgeDollarSign, Hash, Image as ImageIcon, Share2, Search, ExternalLink, FileText } from 'lucide-react';
 import { AppHeader } from '@/components/AppHeader';
 import { useAppTheme } from '@/hooks/useAppTheme';
 
-export type AdminSection = 'overview' | 'messages' | 'services' | 'occasions' | 'wording' | 'email' | 'templates' | 'brand' | 'certificates' | 'courses' | 'about' | 'seo' | 'health' | 'pricing' | 'google' | 'posts' | 'social';
+export type AdminSection = 'overview' | 'messages' | 'services' | 'occasions' | 'wording' | 'email' | 'templates' | 'brand' | 'certificates' | 'courses' | 'about' | 'seo' | 'health' | 'pricing' | 'google' | 'posts' | 'social' | 'picture' | 'documents';
 
 interface NavItem { id: AdminSection; label: string; href: string; icon: ReactNode; hint: string }
 export const ADMIN_GROUPS: { title: string; items: NavItem[] }[] = [
@@ -29,6 +29,7 @@ export const ADMIN_GROUPS: { title: string; items: NavItem[] }[] = [
   ] },
   { title: 'Growth', items: [
     { id: 'seo', label: 'SEO & Google', href: '/admin/seo', icon: <Megaphone size={16} />, hint: 'Landing pages, Google, keywords' },
+    { id: 'picture', label: 'Google picture', href: '/admin/seo?tab=picture', icon: <ImageIcon size={16} />, hint: 'The picture next to our Google result' },
     { id: 'posts', label: 'Google posts', href: '/admin/seo?tab=posts', icon: <ImageIcon size={16} />, hint: 'Posters and videos on Google' },
     { id: 'social', label: 'Social media', href: '/admin/seo?tab=social', icon: <Share2 size={16} />, hint: 'Profiles, post planner, promo kit' },
     { id: 'email', label: 'Email Center', href: '/admin/email', icon: <Mail size={16} />, hint: 'Campaigns and subscribers' },
@@ -42,6 +43,7 @@ export const ADMIN_GROUPS: { title: string; items: NavItem[] }[] = [
   { title: 'Operations', items: [
     { id: 'occasions', label: 'Festivals & occasions', href: '/admin?tab=occasions', icon: <CalendarHeart size={16} />, hint: 'Calendar and reminders' },
     { id: 'services', label: 'Hosting & renewals', href: '/admin?tab=services', icon: <Server size={16} />, hint: 'Domain, hosting, bills' },
+    { id: 'documents', label: 'Business documents', href: '/admin/documents', icon: <FileText size={16} />, hint: 'Registration, tax, trademark, official sites' },
   ] },
 ];
 const ALL = ADMIN_GROUPS.flatMap((g) => g.items);

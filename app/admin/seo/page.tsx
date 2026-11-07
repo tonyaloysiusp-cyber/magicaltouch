@@ -12,6 +12,7 @@
 //  · Campaign links — tracked links (UTM) for posts, ads and partners
 
 import { GooglePosts } from '@/components/admin/seo/GooglePosts';
+import { GooglePictureManager } from '@/components/admin/seo/GooglePictureManager';
 import { expandList } from '@/lib/templatesData';
 import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
@@ -42,7 +43,7 @@ interface SeoPage { id: string; slug: string; title: string; h1: string; descrip
 interface Promo { id: string; kind: 'channel' | 'campaign' | 'keyword'; name: string; url: string | null; status: 'todo' | 'doing' | 'done'; notes: string | null; meta: any }
 
 
-type Tab = 'overview' | 'performance' | 'health' | 'ideas' | 'pages' | 'engines' | 'promo' | 'social' | 'posts' | 'keywords' | 'links';
+type Tab = 'overview' | 'performance' | 'health' | 'ideas' | 'pages' | 'engines' | 'promo' | 'social' | 'posts' | 'keywords' | 'links' | 'picture';
 type PageRequest = { edit: string } | { draft: LandingDraft };
 
 const slugify = (s: string) => s.toLowerCase().replace(/&/g, 'and').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 80);
@@ -82,7 +83,7 @@ export default function SeoAdminPage() {
       if (!profile?.is_admin) return setState('denied');
       // Open a tab from the address (e.g. the autopilot report links to ?tab=performance).
       const t = new URLSearchParams(window.location.search).get('tab') as Tab | null;
-      if (t && ['overview', 'performance', 'health', 'ideas', 'pages', 'engines', 'promo', 'social', 'posts', 'keywords', 'links'].includes(t)) setTab(t);
+      if (t && ['overview', 'performance', 'health', 'ideas', 'pages', 'engines', 'promo', 'social', 'posts', 'keywords', 'links', 'picture'].includes(t)) setTab(t);
       await load();
       setState('ok');
     })();
@@ -101,7 +102,7 @@ export default function SeoAdminPage() {
   const GROUPS: { name: string; hint: string; tabs: [Tab, string][] }[] = [
     { name: 'Dashboard', hint: 'Is everything working? What runs on its own?', tabs: [['overview', 'Status'], ['performance', 'Visitors from Google']] },
     { name: 'Pages', hint: 'Your keyword pages — create, fix, remove', tabs: [['pages', 'Landing pages'], ['health', 'Page check']] },
-    { name: 'Google', hint: 'Connect Google & Bing, and your posters/videos on Google', tabs: [['engines', 'Google & Bing setup'], ['posts', 'Google posts']] },
+    { name: 'Google', hint: 'Your picture on Google, setup, posters and videos', tabs: [['picture', 'Google picture'], ['engines', 'Google & Bing setup'], ['posts', 'Google posts']] },
     { name: 'Social & promotion', hint: 'Profiles, post planner, free listings, tracked links', tabs: [['social', 'Social media'], ['promo', 'Free listings'], ['links', 'Tracked links']] },
     { name: 'Keywords', hint: 'What people search for', tabs: [['ideas', 'Keyword ideas'], ['keywords', 'Searches on our site']] },
   ];
@@ -117,8 +118,8 @@ export default function SeoAdminPage() {
     await load();
   };
   return (
-    <AdminShell active={tab === 'posts' ? 'posts' : tab === 'social' ? 'social' : 'seo'} title="SEO & Google" accent="SEO" subtitle="Five simple sections: check the status, manage pages, connect Google, promote on social media, and see what people search for."
-      onNavigate={(id) => { if (id === 'posts' || id === 'social') { pick(id); return true; } if (id === 'seo') { pick('overview'); return true; } return false; }}>
+    <AdminShell active={tab === 'posts' ? 'posts' : tab === 'social' ? 'social' : tab === 'picture' ? 'picture' : 'seo'} title="SEO & Google" accent="SEO" subtitle="Five simple sections: check the status, manage pages, connect Google, promote on social media, and see what people search for."
+      onNavigate={(id) => { if (id === 'posts' || id === 'social' || id === 'picture') { pick(id); return true; } if (id === 'seo') { pick('overview'); return true; } return false; }}>
       <div className="flex flex-col gap-6">
         <div className="rounded-3xl border border-mt-border bg-mt-surface p-2">
           <nav role="tablist" aria-label="SEO sections" className="grid grid-cols-2 sm:grid-cols-5 gap-1">
@@ -149,6 +150,7 @@ export default function SeoAdminPage() {
         {tab === 'pages' && <Pages pages={pages} hidden={hidden} setHidden={setHidden} reload={load} flash={flash} request={request} clearRequest={() => setRequest(null)} />}
         {tab === 'keywords' && <Keywords promo={promo} pages={pages} hidden={hidden} reload={load} />}
         {tab === 'promo' && <Promotion promo={promo} reload={load} />}
+        {tab === 'picture' && <GooglePictureManager flash={flash} />}
         {tab === 'posts' && <GooglePosts flash={flash} />}
         {tab === 'social' && <Social flash={flash} />}
         {tab === 'links' && <Campaigns promo={promo} reload={load} />}

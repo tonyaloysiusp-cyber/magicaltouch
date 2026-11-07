@@ -1,5 +1,6 @@
 import { SITE_URL, getAllPublishedTemplates } from '@/lib/seo';
 import { getActivePosts, postImage, abs } from '@/lib/sitePosts';
+import { getGooglePicture } from '@/lib/googlePictureServer';
 
 // Google Images sitemap: every template page with its preview image, so
 // template pictures can show up (and link back) in image search.
@@ -8,7 +9,9 @@ export const revalidate = 3600;
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;');
 
 export async function GET() {
-  const [rows, posts] = await Promise.all([getAllPublishedTemplates(), getActivePosts()]);
+  const [rows, posts, pic] = await Promise.all([getAllPublishedTemplates(), getActivePosts(), getGooglePicture()]);
+  // Home page: the picture chosen in Admin → SEO & Google → Google picture.
+  const home = `<url><loc>${SITE_URL}/</loc><image:image><image:loc>${esc(pic ? pic.url : `${SITE_URL}/api/og`)}</image:loc></image:image></url>`;
   // Google posts first (posters with an image, videos with video details).
   const postXml = posts.map((p) => {
     const img = postImage(p);
@@ -17,7 +20,7 @@ export async function GET() {
       return `<url><loc>${url}</loc><video:video><video:thumbnail_loc>${esc(img)}</video:thumbnail_loc><video:title>${esc(p.title)}</video:title><video:description>${esc(p.description.slice(0, 2000))}</video:description><video:content_loc>${esc(abs(p.video_url) as string)}</video:content_loc>${p.hashtags.slice(0, 32).map((h) => `<video:tag>${esc(h)}</video:tag>`).join('')}</video:video></url>`;
     return img ? `<url><loc>${url}</loc><image:image><image:loc>${esc(img)}</image:loc></image:image></url>` : '';
   }).filter(Boolean);
-  const body = postXml.join('\n') + '\n' + rows
+  const body = home + '\n' + postXml.join('\n') + '\n' + rows
     .filter((t) => t.preview || t.thumbnail)
     .map((t) => {
       const img = (t.preview || t.thumbnail) as string;
