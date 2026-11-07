@@ -4,7 +4,9 @@ import type { MetadataRoute } from 'next';
 // Mac or ChromeOS: the install button in the address bar), .mtd project
 // files show the Magical Touch file icon and open here with a double-click.
 export default function manifest(): MetadataRoute.Manifest {
-  const m: MetadataRoute.Manifest & Record<string, unknown> = {
+  // Plain object: Next's type for file_handlers differs from the web standard
+  // (accept is an object of MIME type → extensions), so it is cast below.
+  const m = {
     name: 'Magical Touch Design',
     short_name: 'Magical Touch',
     description: 'Free online design studio: templates, editor, photo studio and background remover.',
@@ -31,5 +33,5 @@ export default function manifest(): MetadataRoute.Manifest {
       },
     ],
   };
-  return m;
+  return m as unknown as MetadataRoute.Manifest;
 }
