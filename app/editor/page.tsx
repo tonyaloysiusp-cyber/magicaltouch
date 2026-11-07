@@ -6895,7 +6895,9 @@ function EditorContent() {
     if (settings.format === 'video') {
       try {
         const page = list.find((a) => a.id === activeArtboardId) || list[0];
-        const json = canvas.toJSON(PERSIST_PROPS);
+        // A clean JSON copy: PERSIST_PROPS includes 'clipPath', which would
+        // otherwise hand live clip objects (and their caches) to the recorder.
+        const json = JSON.parse(JSON.stringify(canvas.toJSON(PERSIST_PROPS)));
         const all = (json.objects || []).filter((o: any) => !isHelperObject(o));
         const onPage = page ? all.filter((o: any) => o.__artboardId === page.id) : all;
         json.objects = onPage.some((o: any) => o.__isArtboard) ? onPage : all;

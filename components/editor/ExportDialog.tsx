@@ -147,7 +147,7 @@ export function ExportDialog({ artboards, activeArtboardId, exporting, onClose, 
     });
   };
 
-  const fileNote = pages.length > 1 && format !== 'pdf' ? `${pages.length} pictures in one .zip file` : pages.length > 1 ? `One PDF with ${pages.length} pages` : format === 'pdf' ? 'One PDF' : 'One picture';
+  const fileNote = format === 'video' ? 'One video of this page' : pages.length > 1 && format !== 'pdf' ? `${pages.length} pictures in one .zip file` : pages.length > 1 ? `One PDF with ${pages.length} pages` : format === 'pdf' ? 'One PDF' : 'One picture';
 
   return (
     <div className="fixed inset-0 z-[110] flex items-end sm:items-center justify-center bg-black/40 p-0 sm:p-4" onClick={onClose}>
@@ -332,7 +332,7 @@ export function ExportDialog({ artboards, activeArtboardId, exporting, onClose, 
             </section>
           )}
 
-          <section className="rounded-2xl border border-mt-border px-3 py-1">
+          {format !== 'video' && <section className="rounded-2xl border border-mt-border px-3 py-1">
             {format === 'png' && <Switch checked={transparent} onChange={setTransparent} label="Transparent background" hint="Only what you added, no page colour" />}
             {!printPreset && (
               <>
@@ -341,7 +341,7 @@ export function ExportDialog({ artboards, activeArtboardId, exporting, onClose, 
               </>
             )}
             {printPreset && <p className="text-xs text-mt-muted py-2">Bleed, crop marks and a colour bar are included, the way print shops expect.</p>}
-          </section>
+          </section>}
         </div>
 
         <div className="flex items-center justify-between gap-3 px-5 py-4 border-t border-mt-border shrink-0">

@@ -80,15 +80,19 @@ export async function makeTemplateVideo(canvasJson: any, opts: { seconds?: numbe
       const done = new Promise<void>((r) => (rec.onstop = () => r()));
       rec.start(250);
       const t0 = performance.now();
+      let failure: unknown = null;
       await new Promise<void>((resolve) => {
+        // A timer keeps recording even when the browser pauses animation
+        // frames (e.g. a tab that loses focus on iPad).
         const tick = () => {
           const t = (performance.now() - t0) / 1000;
-          frame(Math.min(t, seconds));
+          try { frame(Math.min(t, seconds)); } catch (e) { failure = e; resolve(); return; }
           opts.onProgress?.(Math.min(1, t / seconds));
-          if (t < seconds) requestAnimationFrame(tick); else resolve();
+          if (t < seconds) setTimeout(tick, 1000 / 30); else resolve();
         };
-        requestAnimationFrame(tick);
+        tick();
       });
+      if (failure) { try { rec.stop(); } catch {} for (const o of objs) Object.assign(o, base.get(o)); throw failure; }
       rec.stop();
       await done;
       // Put the design back as it was (the pages rendered next are not used).
