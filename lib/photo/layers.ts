@@ -30,6 +30,8 @@ export interface Layer {
   full?: HTMLCanvasElement;
   fx?: number;
   fy?: number;
+  /** Live text (lib/photo/textLayer.ts): the layer is re-drawn from this. */
+  text?: import('./textLayer').TextSpec;
 }
 
 let seq = 0;

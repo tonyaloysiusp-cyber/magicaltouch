@@ -2,7 +2,10 @@
 // highlight, gradient fill and curved/wavy baselines. Nothing here turns
 // text into a picture.
 
-export type TextEffectKind = 'none' | 'shadow' | 'lift' | 'glow' | 'neon' | 'outline' | 'hollow' | 'highlight' | 'echo' | 'retro' | 'pop' | 'dreamy';
+import { isPremium, PremiumLook } from '@/lib/textfx/premium';
+import { installPremiumText, premiumObjectProps } from '@/lib/textfx/fabricPremium';
+
+export type TextEffectKind = 'none' | 'shadow' | 'lift' | 'glow' | 'neon' | 'outline' | 'hollow' | 'highlight' | 'echo' | 'retro' | 'pop' | 'dreamy' | PremiumLook;
 
 export interface TextFx {
   effect: TextEffectKind; // the "look": shadow, glow, neon…
@@ -52,6 +55,7 @@ const withAlpha = (hex: string, a: number) => {
 
 // Applies the effect part (shadow/glow/outline/highlight) of `fx`.
 export function applyTextEffect(F: any, obj: any, fx: TextFx) {
+  installPremiumText(F);
   const size = obj.fontSize || 40;
   const k = fx.amount / 100;
   // Reset everything the effects own.
@@ -126,8 +130,12 @@ export function applyTextEffect(F: any, obj: any, fx: TextFx) {
       break;
     }
     default:
+      // Professional looks (3D, gold, chrome, neon tube…) are painted live
+      // by lib/textfx/fabricPremium.ts; here only the export bounds are set.
+      if (isPremium(fx.effect)) obj.set(premiumObjectProps(F, obj, fx.effect));
       break;
   }
+  if (isPremium(fx.effect)) { obj.dirty = true; return; }
   // Layers on top of the look.
   if (fx.outline && fx.effect !== 'neon' && fx.effect !== 'hollow') {
     obj.set({ stroke: fx.outline.color, strokeWidth: outlineWidth(size, fx.outline.width), paintFirst: 'stroke', strokeLineJoin: 'round' });

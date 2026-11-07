@@ -39,7 +39,7 @@ export function DesignWizard({
   const matches = useMemo(() => {
     if (!preset) return [];
     const { width, height } = sizeOf(preset);
-    return matchTemplates(templates, width, height, goal?.categories || [], 9);
+    return matchTemplates(templates, width, height, goal?.id || '', preset.id, 11);
   }, [preset, goal, templates]);
 
   const titles = ['What are you making?', 'Where will it be used?', 'Pick a starting point'];
@@ -147,10 +147,11 @@ export function DesignWizard({
                       )}
                     </span>
                     <span className="block px-2.5 py-2 text-[12px] font-medium text-mt-ink truncate">{t.name}</span>
+                    {Math.abs(t.width / t.height / (sizeOf(preset).width / sizeOf(preset).height) - 1) >= 0.04 && <span className="block px-2.5 pb-2 -mt-1 text-[10.5px] text-mt-faint">Its own size: {t.width} × {t.height}</span>}
                   </button>
                 ))}
               </div>
-              {!matches.length && <p className="text-sm text-mt-muted">No templates in this exact size yet — start blank, or pick another size.</p>}
+              {!matches.length && <p className="text-sm text-mt-muted">No matching templates yet — start blank, or go back and pick another size.</p>}
             </div>
           )}
         </div>

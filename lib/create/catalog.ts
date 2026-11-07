@@ -1,3 +1,4 @@
+import { typesOf, topicText, hasWord } from '@/lib/designTypes';
 // What people make, mapped to real document sizes and to the template
 // categories that suit them. Used by the New Design page and its wizard.
 
@@ -31,16 +32,39 @@ export const GOALS: Goal[] = [
 
 export const presetById = (id: string): SizePreset | undefined => ALL_PRESETS.find((p) => p.id === id);
 
-// Templates whose page has the same shape as the chosen size (within 4%),
-// templates from the preferred categories first, then featured ones.
-export function matchTemplates(all: Template[], w: number, h: number, prefer: string[] = [], limit = 12): Template[] {
+// "Help me choose" results: templates that ARE what was picked — the right
+// design type (business card, invitation, menu…) and, for sizes tied to an
+// occasion (wedding, birthday…), that occasion. Same page shape first, then
+// the same orientation. Nothing unrelated is shown just because it fits.
+const GOAL_TYPES: Record<string, string[]> = {
+  social: ['social-post'], story: ['story'], invitation: ['invitation'], flyer: ['flyer', 'poster', 'ad'],
+  card: ['greeting-card'], businesscard: ['business-card'], resume: ['resume'], certificate: ['certificate'],
+  menu: ['menu'], presentation: ['presentation', 'thumbnail'], print: ['letterhead', 'invoice'], publishing: ['magazine', 'brochure', 'photo-album'],
+};
+const PRESET_TOPIC: Record<string, string[]> = {
+  birthday: ['birthday'], wedding: ['wedding', 'nikah', 'engagement', 'save the date'], 'baby-shower': ['baby', 'shower'],
+  graduation: ['graduation', 'graduate'], anniversary: ['anniversary'], festival: ['festival', 'diwali', 'eid', 'christmas', 'holi', 'new year', 'ramadan'],
+  religious: ['church', 'mosque', 'temple', 'prayer', 'eid', 'ramadan', 'christmas', 'easter'], 'id-card': ['id', 'badge'],
+  'price-list': ['price'], invoice: ['invoice'], receipt: ['receipt'], 'yt-thumb': ['youtube', 'thumbnail'],
+};
+const PRESET_TYPES: Record<string, string[]> = { 'yt-thumb': ['thumbnail'], 'id-card': ['business-card', 'label'], invoice: ['invoice'], receipt: ['invoice'], letterhead: ['letterhead'], newsletter: ['magazine'], catalog: ['brochure', 'magazine'] };
+
+export function matchTemplates(all: Template[], w: number, h: number, goalId = '', presetId = '', limit = 12): Template[] {
+  const types = PRESET_TYPES[presetId] || GOAL_TYPES[goalId] || [];
+  const topics = PRESET_TOPIC[presetId] || [];
   const ratio = w / h;
-  const fits = all.filter((t) => t.id && t.width && t.height && Math.abs(t.width / t.height / ratio - 1) < 0.04);
-  const rank = (t: Template) => {
-    const i = prefer.indexOf(t.category);
-    return (i === -1 ? 100 : i * 10) - (t.isFeatured ? 1 : 0);
-  };
-  return [...fits].sort((a, b) => rank(a) - rank(b)).slice(0, limit);
+  const scored: [Template, number][] = [];
+  for (const t of all) {
+    if (!t.id || !t.width || !t.height) continue;
+    const src = { name: t.name, category: t.category, width: t.width, height: t.height, tags: t.tags, occasion: t.occasion, industry: t.industry, searchKeywords: t.searchKeywords };
+    if (types.length && !typesOf(src).some((x) => types.includes(x))) continue;
+    if (topics.length) { const tx = topicText(src); if (!topics.some((k) => hasWord(tx, k))) continue; }
+    const r = t.width / t.height;
+    const same = Math.abs(r / ratio - 1) < 0.04;
+    const sameOrient = (r > 1.05) === (ratio > 1.05) && (r < 0.95) === (ratio < 0.95);
+    scored.push([t, (same ? 0 : sameOrient ? 10 : 20) - (t.isFeatured ? 1 : 0)]);
+  }
+  return scored.sort((a, b) => a[1] - b[1]).slice(0, limit).map((x) => x[0]);
 }
 
 export function sizeOf(p: SizePreset) {

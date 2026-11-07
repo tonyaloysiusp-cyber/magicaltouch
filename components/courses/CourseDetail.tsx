@@ -10,6 +10,8 @@ import { CourseWithLessons, Lesson, doneCount, formatMinutes, learnerStatus, tot
 import { saveCompleted, useLearner, Learner } from './useLearner';
 import { LevelBadge, ProgressBar, StatusBadge } from './CourseBits';
 import { CertificatePanel } from './CertificatePanel';
+import { EvidenceUpload } from './EvidenceUpload';
+import { needsEvidence } from '@/lib/courseEvidence';
 
 export interface PrereqInfo { id: string; title: string; slug: string }
 
@@ -152,13 +154,16 @@ export function LessonView({ course, lesson, prerequisite }: { course: CourseWit
   const tick = (id: string) => setTicks((t) => { const n = { ...t, [id]: !t[id] }; persist(n, triedTool); return n; });
   const markTried = () => { setTriedTool(true); persist(ticks, true); };
   const needTool = !!lesson.try_href;
-  const tasksDone = tasks.filter((t) => ticks[t.id]).length + (needTool && triedTool ? 1 : 0);
-  const tasksTotal = tasks.length + (needTool ? 1 : 0);
+  // Intermediate and Pro lessons: a screenshot of the edited design is proof.
+  const needProof = needsEvidence(course.level);
+  const [hasProof, setHasProof] = useState(false);
+  const tasksDone = tasks.filter((t) => ticks[t.id]).length + (needTool && triedTool ? 1 : 0) + (needProof && hasProof ? 1 : 0);
+  const tasksTotal = tasks.length + (needTool ? 1 : 0) + (needProof ? 1 : 0);
   const ready = isDone || tasksDone >= tasksTotal;
 
   const toggle = async () => {
     if (!me.userId || s.locked || lessonLocked) return;
-    if (!isDone && !ready) { setErr('Tick every task above first — then you can mark the lesson complete.'); return; }
+    if (!isDone && !ready) { setErr(needProof && !hasProof ? 'Upload your screenshot and tick every task above first.' : 'Tick every task above first — then you can mark the lesson complete.'); return; }
     setBusy(true);
     setErr(null);
     try {
@@ -255,6 +260,11 @@ export function LessonView({ course, lesson, prerequisite }: { course: CourseWit
                       {triedTool ? <SquareCheck size={20} className="shrink-0 text-emerald-600" aria-hidden /> : <Square size={20} className="shrink-0 text-mt-faint" aria-hidden />}
                       <span className={triedTool ? 'text-mt-muted' : ''}>Open the tool: {lesson.try_label || 'Try it'} <span className="text-mt-faint">(opens in a new tab)</span></span>
                     </a>
+                  </li>
+                )}
+                {needProof && me.userId && (
+                  <li className="px-2 py-1.5">
+                    <EvidenceUpload userId={me.userId} courseId={course.id} lessonId={lesson.id} locked={s.locked} onChange={setHasProof} />
                   </li>
                 )}
                 {tasks.map((t) => (

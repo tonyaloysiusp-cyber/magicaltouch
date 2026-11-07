@@ -10,6 +10,36 @@ import { supabase, getSessionUser } from '@/lib/supabase';
 import { newCertificateCode, verifyUrl } from '@/lib/certificates';
 import { packageCertificates } from '@/lib/certificatesBulk';
 import type { CourseProgress } from '@/lib/courses';
+import { listEvidence } from '@/lib/courseEvidence';
+
+// Screenshots the learner uploaded as proof for practical lessons.
+function EvidenceStrip({ userId, courseId }: { userId: string; courseId: string }) {
+  const [items, setItems] = useState<{ id: string; url: string; size: number }[] | null>(null);
+  const [open, setOpen] = useState<string | null>(null);
+  useEffect(() => { listEvidence(userId, courseId).then((m) => setItems(Object.entries(m).map(([id, v]) => ({ id, url: v.url, size: v.size })))).catch(() => setItems([])); }, [userId, courseId]);
+  if (!items) return null;
+  return (
+    <div className="mt-4">
+      <p className="text-[13px] font-semibold">Practical screenshots <span className="font-normal text-mt-muted">{items.length ? `· ${items.length}` : '· none uploaded'}</span></p>
+      {items.length > 0 && (
+        <ul className="mt-2 flex flex-wrap gap-2">
+          {items.map((e) => (
+            <li key={e.id}><button type="button" onClick={() => setOpen(e.url)} className="block rounded-lg overflow-hidden border border-mt-border" title={`${Math.round(e.size / 1024)} KB`}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={e.url} alt="Learner screenshot" className="h-20 w-28 object-cover" />
+            </button></li>
+          ))}
+        </ul>
+      )}
+      {open && (
+        <div className="fixed inset-0 z-50 bg-black/70 grid place-items-center p-4" onClick={() => setOpen(null)}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={open} alt="Learner screenshot" className="max-w-full max-h-[90vh] rounded-xl" />
+        </div>
+      )}
+    </div>
+  );
+}
 
 interface Row extends CourseProgress {
   courses: { id: string; title: string; slug: string; certificate_title: string; prerequisite_slug: string | null } | null;
@@ -243,6 +273,7 @@ export function CertificateRequests({ onCount }: { onCount?: (n: number) => void
                 {r.certificate_code && (<><dt className="text-mt-muted">Certificate ID</dt><dd className="font-mono">{r.certificate_code}</dd></>)}
                 {r.status === 'rejected' && r.review_note && (<><dt className="text-mt-muted">Reason given</dt><dd>{r.review_note}</dd></>)}
               </dl>
+              <EvidenceStrip userId={r.user_id} courseId={r.course_id} />
 
               {r.status === 'pending' && (
                 <div className="mt-5 flex flex-col gap-3">

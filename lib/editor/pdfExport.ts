@@ -82,6 +82,8 @@ function needsRasterFallback(obj: any): boolean {
   // Effects a PDF can't express as plain vectors are drawn as a sharp
   // high-resolution picture of just that object.
   if (obj.shadow) return true;
+  // Professional text looks (3D, gold…) are painted live: export as a sharp picture.
+  if (obj.__textFx && obj.__textFx.effect && !['none','shadow','lift','glow','neon','outline','hollow','highlight','echo','retro','pop','dreamy'].includes(obj.__textFx.effect)) return true;
   if (obj.path && (obj.type === 'textbox' || obj.type === 'i-text' || obj.type === 'text')) return true;
   if (obj.globalCompositeOperation && obj.globalCompositeOperation !== 'source-over') return true;
   if (obj.strokeDashArray && obj.strokeDashArray.length) return true;

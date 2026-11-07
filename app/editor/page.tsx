@@ -64,6 +64,7 @@ import { useDisplayUnit, formatUnit } from '@/lib/editor/units';
 import { allFontFacesCSS, ensureFontLoaded, ensureFontsLoadedForCanvasJSON, validateAllFonts, refreshTextMetrics } from '@/lib/editor/googleFonts';
 import { getAbsolutePolygonPoints, multiPolygonToPathD } from '@/lib/editor/geometry';
 import { exportCanvasToPDF, exportArtboardsToPDF, toPt } from '@/lib/editor/pdfExport';
+import { installPremiumText } from '@/lib/textfx/fabricPremium';
 import { exportArtboardToSVG } from '@/lib/editor/svgExport';
 import { computeSnap, computeGuideSnap, computeGridSnap, computeSpacingSnap, computeEdgeSnap, allXAnchors, allYAnchors, GuideLine, SpacingMark } from '@/lib/editor/snapping';
 import {
@@ -1385,6 +1386,8 @@ function EditorContent() {
   useEffect(() => {
     import('fabric').then((mod) => {
       const F: any = mod.fabric;
+      // Professional text looks are drawn live; install before any design loads.
+      installPremiumText(F);
       const initialW = viewportRef.current?.clientWidth || 900;
       const initialH = viewportRef.current?.clientHeight || 600;
 

@@ -170,9 +170,11 @@ export default function CreateDesignPage() {
     () => (q.length >= 2 ? templates.filter((t) => t.id && `${t.name} ${t.category} ${(t.tags || []).join(' ')}`.toLowerCase().includes(q)).slice(0, 8) : []),
     [q, templates]
   );
-  const prefer = [selected?.templateCategory, ...(goalDef?.categories || [])].filter(Boolean) as string[];
-  const sizeMatches = useMemo(() => matchTemplates(templates, widthPx, heightPx, prefer, 6), [templates, widthPx, heightPx, prefer.join('|')]); // eslint-disable-line react-hooks/exhaustive-deps
-  const allSizeMatches = useMemo(() => matchTemplates(templates, widthPx, heightPx, [], 999).length, [templates, widthPx, heightPx]);
+  // Matching templates: the same kind of design (and occasion) as the chosen size.
+  const goalId = goal || GOALS.find((g) => selected && g.presets.includes(selected.id))?.id || '';
+  const allMatches = useMemo(() => matchTemplates(templates, widthPx, heightPx, goalId, selected?.id || '', 999), [templates, widthPx, heightPx, goalId, selected?.id]);
+  const sizeMatches = allMatches.slice(0, 6);
+  const allSizeMatches = allMatches.length;
 
   if (checkingAuth) {
     return <main className="min-h-screen flex items-center justify-center text-mt-faint bg-mt-bg">Loading…</main>;
@@ -492,7 +494,7 @@ export default function CreateDesignPage() {
                 <div className="border-t border-mt-border pt-4">
                   <div className="flex items-center justify-between mb-2.5">
                     <p className="text-[13px] font-semibold">Or start from a template</p>
-                    <span className="text-[11px] text-mt-faint">{allSizeMatches} in this shape</span>
+                    <span className="text-[11px] text-mt-faint">{allSizeMatches} matching</span>
                   </div>
                   {brandReady && (
                     <label className="mb-3 flex items-center justify-between gap-2 rounded-xl bg-mt-surface2 px-3 py-2 text-xs">

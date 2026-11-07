@@ -21,6 +21,7 @@ export async function renderTemplatePages(canvasJson: any, maxSide = 1100, opts:
   await ensureFontsLoadedForCanvasJSON(json).catch(() => undefined);
   const mod: any = await import('fabric');
   const F = mod.fabric;
+  (await import('@/lib/textfx/fabricPremium')).installPremiumText(F);
   const el = document.createElement('canvas');
   // Some privacy browsers / extensions hand back a fake 2D context with
   // missing methods; drawing would throw deep inside fabric. Show the

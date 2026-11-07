@@ -5,6 +5,8 @@
 // stays live, editable text.
 
 import { TextFx } from '@/lib/editor/textEffects';
+import { isPremium, PREMIUM_LOOKS } from '@/lib/textfx/premium';
+import { LookGallery } from '@/components/textfx/LookGallery';
 import { DEFAULT_SWATCHES } from './ColorPicker';
 import { Slider, cx } from './ui';
 
@@ -61,13 +63,25 @@ function Toggle({ on, onChange, label }: { on: boolean; onChange: (v: boolean) =
 
 export function TextEffectsEditor({ value, onChange }: { value: TextFx; onChange: (fx: TextFx, commit: boolean) => void }) {
   const set = (patch: Partial<TextFx>, commit = true) => onChange({ ...value, ...patch }, commit);
-  const usesColor = value.effect !== 'none' && value.effect !== 'lift' && value.effect !== 'dreamy';
+  const premium = isPremium(value.effect);
+  const usesColor = premium ? !!PREMIUM_LOOKS.find((l) => l.id === value.effect)?.usesColor : value.effect !== 'none' && value.effect !== 'lift' && value.effect !== 'dreamy';
   const outline = value.outline || null;
   const highlight = value.highlight || null;
   return (
     <div className="flex flex-col gap-4">
       <section>
-        <p className="text-[13px] font-semibold text-mt-ink mb-2">Look</p>
+        <p className="text-[13px] font-semibold text-mt-ink mb-2">Pro effects <span className="font-normal text-mt-faint">· text stays editable</span></p>
+        <LookGallery value={value.effect} color={value.color} onPick={(id, def) => set({ effect: id, color: value.effect === id ? value.color : def, outline: null, highlight: null })} />
+        {premium && (
+          <div className="mt-3 flex flex-col gap-2">
+            {usesColor && <Swatches label="Effect colour" value={value.color} onPick={(c) => set({ color: c })} />}
+            <button type="button" onClick={() => set({ effect: 'none' })} className="self-start text-xs text-mt-accent hover:underline">Remove effect</button>
+          </div>
+        )}
+      </section>
+
+      <section className="border-t border-mt-border pt-3">
+        <p className="text-[13px] font-semibold text-mt-ink mb-2">Simple looks</p>
         <div className="grid grid-cols-4 gap-1.5">
           {LOOKS.map((e) => (
             <button
@@ -91,7 +105,7 @@ export function TextEffectsEditor({ value, onChange }: { value: TextFx; onChange
             </button>
           ))}
         </div>
-        {value.effect !== 'none' && (
+        {value.effect !== 'none' && !premium && (
           <div className="mt-3 flex flex-col gap-2.5">
             <Slider label={value.effect === 'hollow' ? 'Thickness' : 'Strength'} value={value.amount} min={0} max={100} onChange={(v) => set({ amount: v }, false)} onCommit={(v) => set({ amount: v })} />
             {usesColor && <Swatches label="Effect colour" value={value.color} onPick={(c) => set({ color: c })} />}

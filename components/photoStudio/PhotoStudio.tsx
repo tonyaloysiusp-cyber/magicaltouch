@@ -33,21 +33,22 @@ import { FILTERS, FilterId, applyFilter } from '@/lib/photo/filters';
 import { PenPoint, contentAwareFill, maskEdges, pathToMask, penPathD } from '@/lib/photo/fillMask';
 import { ProMenuBar, LayersPanel, HistoryPanel, Menu } from './ProPanels';
 import { GOOGLE_FONTS, allFontFacesCSS, ensureFontLoaded } from '@/lib/editor/googleFonts';
+import { renderTextSpec, textLayerAt, TextSpec } from '@/lib/photo/textLayer';
+import { isPremium, PREMIUM_LOOKS } from '@/lib/textfx/premium';
+import { LookGallery } from '@/components/textfx/LookGallery';
 
 type Tool = 'adjust' | 'color' | 'looks' | 'crop' | 'bg' | 'retouch' | 'resize' | 'export' | 'move' | 'select' | 'filter' | 'hand' | 'zoom' | 'eyedropper' | 'text' | 'gradient' | 'shape' | 'bucket' | 'pen';
 // Tools that work directly on the picture (the rest are panels).
 const CANVAS_TOOLS: Tool[] = ['move', 'select', 'pen', 'crop', 'retouch', 'hand', 'zoom', 'eyedropper', 'text', 'gradient', 'shape', 'bucket', 'bg', 'resize', 'export'];
 // The same font library as the design editor (loaded on demand).
 const FONT_GROUPS = (['Sans Serif', 'Serif', 'Display', 'Script', 'Classic', 'Monospace', 'World'] as const).map((c) => ({ c, fonts: GOOGLE_FONTS.filter((f) => f.category === c).map((f) => f.family) }));
-type TextEffect = 'none' | 'shadow' | 'glow' | 'outline' | 'neon' | 'retro' | 'highlight' | 'lift';
+type TextEffect = string;
 const TEXT_EFFECTS: { id: TextEffect; label: string; css: CSSProperties }[] = [
   { id: 'none', label: 'None', css: {} },
   { id: 'shadow', label: 'Shadow', css: { textShadow: '2px 2px 4px rgba(0,0,0,0.55)' } },
   { id: 'lift', label: 'Lift', css: { textShadow: '0 6px 10px rgba(0,0,0,0.35)' } },
   { id: 'glow', label: 'Glow', css: { textShadow: '0 0 8px #8CCBFF, 0 0 16px #8CCBFF' } },
-  { id: 'neon', label: 'Neon', css: { color: '#fff', textShadow: '0 0 6px #F2708F, 0 0 14px #F2708F' } },
   { id: 'outline', label: 'Outline', css: { WebkitTextStroke: '1.5px #09090B', color: '#fff' } as any },
-  { id: 'retro', label: 'Retro', css: { color: '#F2708F', WebkitTextStroke: '1px #FFF4E0', textShadow: '3px 3px 0 #1A1A1A' } as any },
   { id: 'highlight', label: 'Highlight', css: { background: '#F7C948', padding: '0 4px' } },
 ];
 type Mode = 'simple' | 'pro';
@@ -79,7 +80,7 @@ const SIMPLE_DETAIL: SliderDef[] = [
 ];
 interface Snapshot { layers: Layer[]; active: number; adjust: Adjust; dpi: number; label: string }
 // What an edit can change. `base` replaces the selected layer's pixels.
-type SnapPatch = { label: string; base?: HTMLCanvasElement; layers?: Layer[]; active?: number; adjust?: Adjust; dpi?: number; moveBy?: { dx: number; dy: number } };
+type SnapPatch = { label: string; base?: HTMLCanvasElement; layers?: Layer[]; active?: number; adjust?: Adjust; dpi?: number; moveBy?: { dx: number; dy: number }; merge?: boolean };
 
 export interface PhotoStudioHandle {
   /** The finished picture at full size, adjustments included. */
@@ -349,11 +350,24 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
       let ls = s.layers || cur.layers;
       const act = Math.min(s.active ?? cur.active, ls.length - 1);
       if (s.base) ls = ls.map((l, i) => (i === act ? { ...l, canvas: s.base! } : l));
-      if (s.moveBy) ls = ls.map((l, i) => (i === act ? moveLayer(l, s.moveBy!.dx, s.moveBy!.dy) : l));
+      if (s.moveBy) ls = ls.map((l, i) => {
+        if (i !== act) return l;
+        // Live text moves by its position, so it stays editable.
+        if (l.text) { const r = renderTextSpec({ ...l.text, x: l.text.x + s.moveBy!.dx, y: l.text.y + s.moveBy!.dy }, l.canvas.width, l.canvas.height); return { ...l, canvas: r.canvas, text: r.spec }; }
+        return moveLayer(l, s.moveBy!.dx, s.moveBy!.dy);
+      });
       // Edits inside the document are written into each layer's whole picture.
       const prevById = new Map(cur.layers.map((l) => [l.id, l]));
       ls = ls.map((l) => syncFull(prevById.get(l.id), l));
+      // Painting, erasing or cropping a text layer turns it into pixels.
+      ls = ls.map((l) => { const pv = prevById.get(l.id); return l.text && pv && pv.canvas !== l.canvas && pv.text === l.text ? { ...l, text: undefined } : l; });
       const next: Snapshot = { layers: ls, active: act, adjust: s.adjust || cur.adjust, dpi: s.dpi ?? cur.dpi, label: s.label };
+      // Live text edits (typing, sliders) update one history step.
+      if (s.merge && cur.label === s.label && h.index === h.list.length - 1 && h.index > 0) {
+        const list = [...h.list]; list[h.index] = next;
+        releaseDropped(h.list, list);
+        return { list, index: h.index };
+      }
       // Keep memory in check for big photos.
       const px = ls[0].canvas.width * ls[0].canvas.height * ls.length;
       const cap = Math.max(IS_TOUCH_DEVICE ? 3 : 6, Math.min(MAX_HISTORY, Math.floor(HISTORY_BYTES / Math.max(1, px * 4))));
@@ -886,6 +900,11 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
       return;
     }
     if (tool === 'move' && layers && target) {
+      if (e.detail === 2 && layers) {
+        const p2 = toBase(e.clientX, e.clientY);
+        const hit = textLayerAt(layers, p2.x, p2.y);
+        if (hit >= 0) { if (hit !== activeIdx) layerOps.select(hit); setTool('text'); gesture.current = null; setTimeout(() => document.getElementById('ps-text-edit')?.focus(), 80); return; }
+      }
       gesture.current = { kind: 'move', start: toBase(e.clientX, e.clientY), dx: 0, dy: 0 };
       return;
     }
@@ -900,6 +919,15 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
       e.preventDefault(); // keep focus in the text box that is about to open
       if (textDraft) { commitText(); return; }
       const p = toBase(e.clientX, e.clientY);
+      // Clicking on existing text selects it for editing in the Type panel.
+      const hit = layers ? textLayerAt(layers, p.x, p.y) : -1;
+      if (hit >= 0) {
+        if (hit !== activeIdx) layerOps.select(hit);
+        loadedTextId.current = null;
+        gesture.current = null;
+        setTimeout(() => document.getElementById('ps-text-edit')?.focus(), 60);
+        return;
+      }
       setTextDraft({ x: p.x, y: p.y, value: '' });
       gesture.current = null;
       return;
@@ -1340,75 +1368,50 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
   const [gradDrag, setGradDrag] = useState<{ x0: number; y0: number; x1: number; y1: number } | null>(null);
   const statusRef = useRef<HTMLSpanElement>(null);
   const textPx = textOpts.size || Math.max(12, Math.round((base?.width || 1000) * 0.06));
+  // The live text layer that the Type panel is editing (if any).
+  const activeText = layers && layers[activeIdx]?.text ? layers[activeIdx] : null;
+  const specFromOpts = (value: string, x: number, y: number): TextSpec => ({ value, x, y, font: textOpts.font, size: textPx, bold: textOpts.bold, italic: textOpts.italic, align: textOpts.align, spacing: textOpts.spacing, color: paintColor, effect: textOpts.effect, fxColor: textOpts.fxColor });
   const commitText = async () => {
     const d = textDraft;
     setTextDraft(null);
     if (!d || !d.value.trim() || !target) return;
-    const o = textOpts;
-    await ensureFontLoaded(o.font, o.bold ? 700 : 400, o.italic).catch(() => {});
-    const c = blankLike(target);
-    const ctx = c.getContext('2d')!;
-    const px = textPx;
-    ctx.textBaseline = 'top';
-    ctx.font = `${o.italic ? 'italic ' : ''}${o.bold ? 700 : 400} ${px}px "${o.font}", sans-serif`;
-    try { (ctx as any).letterSpacing = `${o.spacing}px`; } catch { /* older browsers */ }
-    const lines = d.value.split('\n');
-    const widths = lines.map((l) => ctx.measureText(l).width);
-    const blockW = Math.max(...widths);
-    // The click point is the left edge, centre or right edge of the block.
-    const lineX = (i: number) => (o.align === 'left' ? d.x : o.align === 'center' ? d.x + (blockW - widths[i]) / 2 : d.x + blockW - widths[i]);
-    const lineY = (i: number) => d.y + i * px * 1.2;
-    const fx = o.fxColor;
-    const fillAll = (dx = 0, dy = 0, style: string = paintColor) => {
-      ctx.fillStyle = style;
-      lines.forEach((l, i) => ctx.fillText(l, lineX(i) + dx, lineY(i) + dy));
-    };
-    const strokeAll = (w: number, style: string) => {
-      ctx.lineWidth = w;
-      ctx.lineJoin = 'round';
-      ctx.strokeStyle = style;
-      lines.forEach((l, i) => ctx.strokeText(l, lineX(i), lineY(i)));
-    };
-    ctx.save();
-    switch (o.effect) {
-      case 'highlight':
-        ctx.fillStyle = fx === '#09090B' ? '#F7C948' : fx;
-        lines.forEach((l, i) => l.trim() && ctx.fillRect(lineX(i) - px * 0.15, lineY(i) - px * 0.05, widths[i] + px * 0.3, px * 1.15));
-        fillAll();
-        break;
-      case 'shadow':
-        ctx.shadowColor = 'rgba(0,0,0,0.55)'; ctx.shadowBlur = px * 0.12; ctx.shadowOffsetX = ctx.shadowOffsetY = px * 0.06;
-        fillAll();
-        break;
-      case 'lift':
-        ctx.shadowColor = 'rgba(0,0,0,0.35)'; ctx.shadowBlur = px * 0.3; ctx.shadowOffsetY = px * 0.1;
-        fillAll();
-        break;
-      case 'glow':
-        ctx.shadowColor = fx === '#09090B' ? '#8CCBFF' : fx; ctx.shadowBlur = px * 0.35;
-        fillAll(); fillAll();
-        break;
-      case 'neon':
-        ctx.shadowColor = fx === '#09090B' ? '#F2708F' : fx; ctx.shadowBlur = px * 0.4;
-        fillAll(); fillAll();
-        ctx.shadowBlur = 0;
-        strokeAll(Math.max(1, px * 0.02), 'rgba(255,255,255,0.9)');
-        break;
-      case 'outline':
-        strokeAll(Math.max(2, px * 0.1), fx);
-        fillAll();
-        break;
-      case 'retro':
-        fillAll(px * 0.07, px * 0.07, '#1A1A1A');
-        strokeAll(Math.max(2, px * 0.09), fx === '#09090B' ? '#FFF4E0' : fx);
-        fillAll();
-        break;
-      default:
-        fillAll();
-    }
-    ctx.restore();
-    insertAbove(makeLayer(c, `Text: ${d.value.slice(0, 24)}`), 'Add text');
+    await ensureFontLoaded(textOpts.font, textOpts.bold ? 700 : 400, textOpts.italic).catch(() => {});
+    const r = renderTextSpec(specFromOpts(d.value, d.x, d.y), target.width, target.height);
+    insertAbove(makeLayer(r.canvas, `Text: ${d.value.slice(0, 24)}`, { text: r.spec }), 'Add text');
   };
+  // Loads a text layer's settings into the Type panel.
+  const loadTextOpts = (t: TextSpec) => {
+    setTextOpts((o) => ({ ...o, font: t.font, size: t.size, bold: t.bold, italic: t.italic, align: t.align, spacing: t.spacing, effect: t.effect, fxColor: t.fxColor }));
+    setPaintColor(t.color);
+  };
+  const loadedTextId = useRef<string | null>(null);
+  useEffect(() => {
+    if (tool !== 'text' || !activeText?.text) { loadedTextId.current = null; return; }
+    if (loadedTextId.current === activeText.id) return;
+    loadedTextId.current = activeText.id;
+    loadTextOpts(activeText.text);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tool, activeText?.id]);
+  // Changing the font, size, colour or effect re-draws the selected text layer.
+  const updateActiveText = (patch: Partial<TextSpec>) => {
+    if (!layers || !activeText?.text) return;
+    const t0 = activeText.text;
+    const nextSpec: TextSpec = { ...t0, ...patch };
+    const go = () => {
+      const r = renderTextSpec(nextSpec, activeText.canvas.width, activeText.canvas.height);
+      push({ layers: layers.map((l, k) => (k === activeIdx ? { ...l, canvas: r.canvas, text: r.spec, name: `Text: ${r.spec.value.slice(0, 24)}` } : l)), active: activeIdx, label: 'Edit text', merge: true });
+    };
+    if (patch.font || patch.bold !== undefined || patch.italic !== undefined) ensureFontLoaded(nextSpec.font, nextSpec.bold ? 700 : 400, nextSpec.italic).catch(() => {}).then(go);
+    else go();
+  };
+  useEffect(() => {
+    if (tool !== 'text' || !activeText?.text || loadedTextId.current !== activeText.id) return;
+    const t = activeText.text;
+    const want: Partial<TextSpec> = { font: textOpts.font, size: textPx, bold: textOpts.bold, italic: textOpts.italic, align: textOpts.align, spacing: textOpts.spacing, effect: textOpts.effect, fxColor: textOpts.fxColor, color: paintColor };
+    const changed = (Object.keys(want) as (keyof TextSpec)[]).some((k) => want[k] !== t[k]);
+    if (changed) updateActiveText(want);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [textOpts, paintColor]);
   const commitShape = (g: { x0: number; y0: number; x1: number; y1: number }) => {
     if (!target) return;
     const c = blankLike(target);
@@ -1602,7 +1605,18 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
       case 'text':
         return (
           <Section title="Text">
-            <p className="text-[12px] text-mt-muted">Click on the picture where the text should start, type, then press Enter (Shift+Enter for a new line). Each text goes on its own layer.</p>
+            {activeText?.text ? (
+              <div className="rounded-xl border border-[#2680EB]/50 bg-[#2680EB]/5 p-2.5 flex flex-col gap-1.5">
+                <p className="text-[12px] font-semibold text-mt-ink">Editing “{activeText.text.value.slice(0, 28)}”</p>
+                <textarea id="ps-text-edit" rows={Math.min(5, Math.max(2, activeText.text.value.split('\n').length))} value={activeText.text.value}
+                  onChange={(e) => e.target.value.trim() && updateActiveText({ value: e.target.value })}
+                  onKeyDown={(e) => e.stopPropagation()}
+                  className="w-full rounded-lg border border-mt-input-border bg-mt-surface px-2 py-1.5 text-[13px] text-mt-ink" />
+                <p className="text-[11px] text-mt-faint">Change the words, font, size, colour or effect — the text updates live. Drag with Move to place it. Click empty space to add new text.</p>
+              </div>
+            ) : (
+              <p className="text-[12px] text-mt-muted">Click on the picture where the text should start, type, then press Enter (Shift+Enter for a new line). Each text stays editable: click it again with the Type tool, or double-click it with Move.</p>
+            )}
             <label className="text-[11px] text-mt-muted">Font<select className={field} value={textOpts.font} onChange={(e) => setTextOpts({ ...textOpts, font: e.target.value })} style={{ fontFamily: `"${textOpts.font}"` }}>{FONT_GROUPS.map((g) => <optgroup key={g.c} label={g.c}>{g.fonts.map((f) => <option key={f} value={f}>{f}</option>)}</optgroup>)}</select></label>
             <Range def={{ key: 'exposure', label: 'Size (px)', min: 8, max: Math.max(200, Math.round(base.width * 0.3)) }} value={textPx} onChange={(v) => setTextOpts({ ...textOpts, size: v })} onCommit={() => {}} />
             <div className="flex gap-1.5 flex-wrap">
@@ -1611,7 +1625,9 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
               {(['left', 'center', 'right'] as const).map((a) => <button key={a} className={chip(textOpts.align === a)} onClick={() => setTextOpts({ ...textOpts, align: a })}>{a[0].toUpperCase() + a.slice(1)}</button>)}
             </div>
             <Range def={{ key: 'exposure', label: 'Letter spacing', min: -10, max: 60 }} value={textOpts.spacing} onChange={(v) => setTextOpts({ ...textOpts, spacing: v })} onCommit={() => {}} />
-            <p className="text-[12px] font-semibold text-mt-ink mt-1">Effect</p>
+            <p className="text-[12px] font-semibold text-mt-ink mt-1">Pro effects</p>
+            <LookGallery value={textOpts.effect} color={textOpts.fxColor} onPick={(id, def) => setTextOpts({ ...textOpts, effect: id, fxColor: textOpts.effect === id ? textOpts.fxColor : def })} />
+            <p className="text-[12px] font-semibold text-mt-ink mt-1">Simple</p>
             <div className="grid grid-cols-4 gap-1.5">
               {TEXT_EFFECTS.map((fx) => (
                 <button key={fx.id} onClick={() => setTextOpts({ ...textOpts, effect: fx.id })} aria-pressed={textOpts.effect === fx.id} className={cx('h-14 rounded-lg border flex flex-col items-center justify-center gap-0.5', textOpts.effect === fx.id ? 'border-[#2680EB] ring-1 ring-[#2680EB]' : 'border-mt-border hover:bg-mt-surface2')}>
@@ -1620,7 +1636,7 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
                 </button>
               ))}
             </div>
-            {textOpts.effect !== 'none' && textOpts.effect !== 'shadow' && textOpts.effect !== 'lift' && (
+            {textOpts.effect !== 'none' && textOpts.effect !== 'shadow' && textOpts.effect !== 'lift' && (!isPremium(textOpts.effect) || PREMIUM_LOOKS.find((l) => l.id === textOpts.effect)?.usesColor) && (
               <label className="flex items-center gap-2 text-[12px]">Effect colour <input type="color" value={textOpts.fxColor} onChange={(e) => setTextOpts({ ...textOpts, fxColor: e.target.value })} className="w-8 h-8 rounded border border-mt-border bg-transparent" /></label>
             )}
             <label className="flex items-center gap-2 text-[12px]">Text colour <input type="color" value={paintColor} onChange={(e) => setPaintColor(e.target.value)} className="w-8 h-8 rounded border border-mt-border bg-transparent" /></label>
