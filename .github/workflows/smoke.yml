@@ -6,5 +6,6 @@ jobs:
     steps:
       - run: |
           B=https://www.magicaltouchdesign.com
-          for p in / /photo-studio /tutorials /create /privacy "/guides/photo-studio-guide.pdf?v=2" "/guides/magical-touch-design-handbook.pdf?v=2" "/guides/photo-studio-guide.webp?v=2"; do curl -s -o /dev/null -m 60 -w "%{http_code} %{size_download}B $p\n" "$B$p"; done
-          curl -s $B/privacy | grep -o "Cloudflare</strong>[^<]*" | head -1
+          for p in /templates/photos/mt-813.jpg /templates/photos/mt-1400.jpg /admin/documents /templates/collection/plaid-happy-birthday-dad-post-preview.jpg; do curl -s -o /dev/null -w "%{http_code} %{size_download}B $p\n" "$B$p"; done
+          curl -s $B/templates/photos/mt-813.jpg | sha1sum
+          curl -s -o /dev/null -w "indexnow %{http_code}\n" "https://api.indexnow.org/indexnow?url=$B/templates/photos/mt-813.jpg&key=b2e48e40a28ff25772f97a10d0c1869a"
