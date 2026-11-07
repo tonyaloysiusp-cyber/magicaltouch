@@ -75,7 +75,8 @@ export default function AdminHome() {
     if (ov.data) setStats(ov.data as any);
     setMessages((msg.data as any) || []);
     setOccasions((occ.data as any) || []);
-    setServices((svc.data as any) || []);
+    // Business documents share this table (plan 'Business document') but live in Admin → Business documents.
+    setServices(((svc.data as any[]) || []).filter((x) => x.plan !== 'Business document'));
     setTemplates((tpl.data as any) || []);
   }, []);
 

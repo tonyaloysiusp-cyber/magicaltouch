@@ -4,8 +4,11 @@
 // one private place: business registration / trade licence, tax, trademark,
 // domain, bank and payment accounts, website policies, contracts and IDs.
 // Each entry keeps the official website, number, dates, the account email,
-// notes and the scanned file. Files live in the private "business-docs"
-// bucket — only admins can open them, through a link that expires in 1 hour.
+// notes and the scanned file.
+// Storage (no extra tables needed): each document is a row in the admin-only
+// admin_services table with plan = 'Business document' (its own fields in
+// `details` as JSON); files go to the private "certificates" bucket under
+// business-docs/ — only admins can open them, through a 1-hour link.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
@@ -34,7 +37,36 @@ const STATUS: Record<Status, [string, string]> = {
   expired: ['Expired', 'bg-rose-100 text-rose-700'],
   not_needed: ['Not needed', 'bg-slate-100 text-slate-500'],
 };
-const BUCKET = 'business-docs';
+const BUCKET = 'certificates';
+const FOLDER = 'business-docs';
+const MARK = 'Business document';
+
+// admin_services row <-> document
+const svcStatus = (st: Status) => (st === 'expired' ? 'expired' : st === 'not_needed' ? 'cancelled' : st === 'todo' ? 'standby' : 'active');
+function fromRow(r: any): Doc {
+  let d: any = {};
+  try { d = JSON.parse(r.details || '{}'); } catch { d = {}; }
+  return { id: r.id, title: r.name, category: d.category || 'other', issuer: r.provider || null, doc_number: d.doc_number || null, issued_on: d.issued_on || null, expires_on: r.renews_on || null, official_url: r.account_url || null, account_email: r.account_email || null, notes: r.notes || null, file_path: d.file_path || null, file_name: d.file_name || null, status: d.status || 'todo', sort: r.sort ?? null, updated_at: r.updated_at };
+}
+function toRow(x: Omit<Doc, 'id' | 'updated_at'>) {
+  return { name: x.title, kind: 'other', plan: MARK, provider: x.issuer || 'Magical Touch Design', billing_cycle: 'free', cost: null, renews_on: x.expires_on || null, auto_renew: false, status: svcStatus(x.status), account_url: x.official_url || null, account_email: x.account_email || null, notes: x.notes || null, sort: x.sort, details: JSON.stringify({ category: x.category, doc_number: x.doc_number || null, issued_on: x.issued_on || null, file_path: x.file_path || null, file_name: x.file_name || null, status: x.status }) };
+}
+
+const STARTERS: [string, Cat, string | null, string | null, string, Status][] = [
+  ['Business registration / trade licence', 'registration', 'Government business registry', null, 'Udyam (India MSME), a GST-registered business, or a trade licence where the company is based. Add the number, dates and the certificate.', 'todo'],
+  ['Tax registration (GST / VAT)', 'tax', 'Tax authority', 'https://www.gst.gov.in', 'Needed once sales pass the local limit or for paid plans. Keep the certificate and login email here.', 'todo'],
+  ['Trademark — "Magical Touch Design" name and logo', 'trademark', 'Trademark office', 'https://ipindia.gov.in', 'Protects the name and logo. Class 42 covers online design software. Keep the application number and status.', 'todo'],
+  ['Domain — magicaltouchdesign.com', 'domain', 'Cloudflare Registrar', 'https://dash.cloudflare.com/fddad344660309ea4130ec9e9655a51a/domains/registrations', 'Proof of ownership of the website address. Renews 11 Sep 2027.', 'active'],
+  ['Google Business Profile', 'registration', 'Google', 'https://business.google.com', 'The verified business listing on Google Search and Maps.', 'active'],
+  ['Business bank account', 'bank', 'Bank', null, 'Account holder name, bank and branch. Never store card numbers or passwords here.', 'todo'],
+  ['Payment provider account (Stripe)', 'bank', 'Stripe', 'https://dashboard.stripe.com', 'Business verification documents for receiving payments.', 'todo'],
+  ['Privacy policy', 'policy', 'Magical Touch Design', 'https://www.magicaltouchdesign.com/privacy', 'Public page. Review once a year. Attach the PDF sent in chat.', 'active'],
+  ['Terms of use', 'policy', 'Magical Touch Design', 'https://www.magicaltouchdesign.com/terms', 'Public page. Review once a year. Attach the PDF sent in chat.', 'active'],
+  ['Company profile', 'other', 'Magical Touch Design', 'https://www.magicaltouchdesign.com/about', 'Two-page company profile. Attach the PDF sent in chat.', 'active'],
+  ['Brand guidelines', 'other', 'Magical Touch Design', null, 'Logo, colours and type rules. Attach the PDF sent in chat.', 'active'],
+  ['Website ownership record', 'domain', 'Magical Touch Design', null, 'Internal record of domain, hosting and services. Keep private. Attach the PDF sent in chat.', 'active'],
+  ['Founder ID and address proof', 'identity', null, null, 'For registrations and bank / payment checks. Private to admins.', 'todo'],
+];
 const field = 'w-full h-10 rounded-xl border border-mt-input-border bg-mt-surface px-3 text-sm text-mt-ink';
 const btn = 'h-9 px-4 rounded-full text-[13px] font-semibold inline-flex items-center gap-1.5 disabled:opacity-40';
 const EMPTY: Omit<Doc, 'id' | 'updated_at'> = { title: '', category: 'registration', issuer: '', doc_number: '', issued_on: null, expires_on: null, official_url: '', account_email: '', notes: '', file_path: null, file_name: null, status: 'todo', sort: null };
@@ -62,9 +94,17 @@ export default function BusinessDocumentsPage() {
   const flash = (m: string) => { setMsg(m); setTimeout(() => setMsg((x) => (x === m ? null : x)), 5000); };
 
   const load = useCallback(async () => {
-    const { data, error } = await supabase.from('admin_documents').select('*').order('sort', { ascending: true, nullsFirst: false }).order('title');
-    if (error) { setState(/does not exist|schema cache/i.test(error.message) ? 'missing' : 'ok'); if (!/does not exist|schema cache/i.test(error.message)) flash(error.message); return; }
-    setDocs((data as Doc[]) || []);
+    const { data, error } = await supabase.from('admin_services').select('*').eq('plan', MARK).order('sort', { ascending: true, nullsFirst: false }).order('name');
+    if (error) { flash(error.message); setState('ok'); return; }
+    let rows = (data as any[]) || [];
+    // First visit: add the starting checklist (once).
+    if (!rows.length && !sessionStorage.getItem('mt:docs-seeded')) {
+      try { sessionStorage.setItem('mt:docs-seeded', '1'); } catch { /* private mode */ }
+      const seed = STARTERS.map(([title, category, issuer, official_url, notes, status], i) => toRow({ ...EMPTY, title, category, issuer, official_url, notes, status, sort: (i + 1) * 10 }));
+      const ins = await supabase.from('admin_services').insert(seed).select('*');
+      if (!ins.error) rows = (ins.data as any[]) || [];
+    }
+    setDocs(rows.map(fromRow));
     setState('ok');
   }, []);
 
@@ -105,19 +145,18 @@ export default function BusinessDocumentsPage() {
       if (file) {
         if (file.size > 20 * 1024 * 1024) throw new Error('The file is larger than 20 MB.');
         const safe = file.name.replace(/[^\w.-]+/g, '-').slice(-80);
-        const path = `${edit.category}/${Date.now()}-${safe}`;
+        const path = `${FOLDER}/${edit.category}/${Date.now()}-${safe}`;
         const { error } = await supabase.storage.from(BUCKET).upload(path, file, { contentType: file.type || 'application/octet-stream' });
         if (error) throw error;
-        if (edit.file_path) await supabase.storage.from(BUCKET).remove([edit.file_path]);
         file_path = path; file_name = file.name;
       }
-      const row = {
+      const row = { ...toRow({
         title: edit.title.trim(), category: edit.category, issuer: edit.issuer?.trim() || null, doc_number: edit.doc_number?.trim() || null,
         issued_on: edit.issued_on || null, expires_on: edit.expires_on || null, official_url: edit.official_url?.trim() || null,
         account_email: edit.account_email?.trim() || null, notes: edit.notes?.trim() || null, file_path, file_name,
-        status: edit.status === 'todo' && (file_path || edit.doc_number) ? 'active' : edit.status, sort: edit.sort, updated_at: new Date().toISOString(),
-      };
-      const { error } = edit.id ? await supabase.from('admin_documents').update(row).eq('id', edit.id) : await supabase.from('admin_documents').insert(row);
+        status: edit.status === 'todo' && (file_path || edit.doc_number) ? 'active' : edit.status, sort: edit.sort ?? (docs.length + 1) * 10,
+      }), updated_at: new Date().toISOString() };
+      const { error } = edit.id ? await supabase.from('admin_services').update(row).eq('id', edit.id) : await supabase.from('admin_services').insert(row);
       if (error) throw error;
       setEdit(null); setFile(null);
       await load();
@@ -130,9 +169,8 @@ export default function BusinessDocumentsPage() {
   };
 
   const remove = async (d: Doc) => {
-    if (!window.confirm(`Delete “${d.title}”${d.file_name ? ` and its file ${d.file_name}` : ''}? This cannot be undone.`)) return;
-    if (d.file_path) await supabase.storage.from(BUCKET).remove([d.file_path]);
-    const { error } = await supabase.from('admin_documents').delete().eq('id', d.id);
+    if (!window.confirm(`Delete “${d.title}” from the list? This cannot be undone.`)) return;
+    const { error } = await supabase.from('admin_services').delete().eq('id', d.id);
     if (error) return flash(error.message);
     setEdit(null);
     await load();
