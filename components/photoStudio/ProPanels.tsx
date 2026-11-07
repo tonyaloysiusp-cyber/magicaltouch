@@ -75,10 +75,11 @@ function Thumb({ canvas }: { canvas: HTMLCanvasElement }) {
   return <img src={url} alt="" className="w-11 h-11 object-contain rounded border border-mt-border bg-mt-surface2 shrink-0" />;
 }
 
-export function LayersPanel({ layers, active, onSelect, onToggle, onRename, onOpacity, onBlend, onAdd, onPlace, onDuplicate, onDelete, onUp, onDown, onMerge, onFlatten, onLoadSelection }: {
+export function LayersPanel({ layers, active, onSelect, onEditText, onToggle, onRename, onOpacity, onBlend, onAdd, onPlace, onDuplicate, onDelete, onUp, onDown, onMerge, onFlatten, onLoadSelection }: {
   layers: Layer[];
   active: number;
   onSelect: (i: number) => void;
+  onEditText?: (i: number) => void;
   onToggle: (i: number) => void;
   onRename: (i: number, name: string) => void;
   onOpacity: (i: number, v: number) => void;
@@ -141,11 +142,13 @@ export function LayersPanel({ layers, active, onSelect, onToggle, onRename, onOp
                 className="flex-1 min-w-0 h-7 rounded border border-mt-input-border bg-mt-surface px-1.5 text-[12px]"
               />
             ) : (
-              <span className="flex-1 min-w-0 truncate text-[12.5px]" onDoubleClick={(e) => { e.stopPropagation(); setEditing(i); }} title="Double-click to rename">
+              <span className="flex-1 min-w-0 truncate text-[12.5px]" onDoubleClick={(e) => { e.stopPropagation(); if ((l as any).text && onEditText) onEditText(i); else setEditing(i); }} title={(l as any).text ? 'Double-click to edit the text' : 'Double-click to rename'}>
+                {(l as any).text && <span className="inline-grid place-items-center h-4 w-4 mr-1 rounded bg-[#3B82C4] text-white text-[10px] font-bold align-[1px]" aria-label="Text layer">T</span>}
                 {l.name}
                 {(l.opacity < 1 || l.blend !== 'normal') && <span className="block text-[10.5px] text-mt-faint">{Math.round(l.opacity * 100)}% · {BLENDS.find((b) => b.id === l.blend)?.label}</span>}
               </span>
             )}
+            {(l as any).text && onEditText && <button className="h-6 px-2 rounded-md border border-mt-border text-[11px] font-semibold hover:bg-mt-surface2" onClick={(e) => { e.stopPropagation(); onEditText(i); }}>Edit</button>}
           </li>
         ))}
       </ul>

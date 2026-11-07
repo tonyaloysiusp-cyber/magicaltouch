@@ -665,12 +665,18 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
   };
 
   // Geometry edits (crop, rotate, flip, resize) change every layer together.
-  const runAll = async (label: string, fn: (c: HTMLCanvasElement) => HTMLCanvasElement, extra: Partial<SnapPatch> = {}) => {
+  // `textMap` moves/scales live text with the picture so it stays editable;
+  // without it (rotate, flip) text layers become pixels.
+  const runAll = async (label: string, fn: (c: HTMLCanvasElement) => HTMLCanvasElement, extra: Partial<SnapPatch> = {}, textMap?: (t: TextSpec) => TextSpec) => {
     if (!layers) return;
     setBusy(label);
     await new Promise((r) => setTimeout(r, 30));
     try {
-      push({ label, ...extra, layers: layers.map((l) => ({ ...l, canvas: fn(l.canvas) })) });
+      push({ label, ...extra, layers: layers.map((l) => {
+        const c = fn(l.canvas);
+        if (l.text && textMap) { const r = renderTextSpec(textMap(l.text), c.width, c.height); return { ...l, canvas: r.canvas, text: r.spec }; }
+        return { ...l, canvas: c, text: undefined };
+      }) });
       setSel(null);
     } catch (e) {
       console.error(e);
@@ -684,7 +690,9 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
     if (!base || !box) return;
     const outW = exactPx ? exactPx.w : Math.round(box.w);
     const outH = exactPx ? exactPx.h : Math.round(box.h);
-    runAll('Crop', (c) => cropTo(c, box, (cropAngle * Math.PI) / 180, outW, outH), exactPx ? { dpi: exactPx.dpi } : {}).then(() => {
+    const k = outW / box.w;
+    const keepText = cropAngle === 0 ? (t: TextSpec) => ({ ...t, x: (t.x - box.x) * k, y: (t.y - box.y) * k, size: Math.max(4, t.size * k), spacing: t.spacing * k }) : undefined;
+    runAll('Crop', (c) => cropTo(c, box, (cropAngle * Math.PI) / 180, outW, outH), exactPx ? { dpi: exactPx.dpi } : {}, keepText).then(() => {
       setCropAngle(0);
     });
   };
@@ -1385,6 +1393,26 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
     setPaintColor(t.color);
   };
   const loadedTextId = useRef<string | null>(null);
+  const lastTextId = useRef<string | null>(null);
+  useEffect(() => { if (activeText) lastTextId.current = activeText.id; }, [activeText?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Photo tools (adjust, colour, looks, filters, brushes, background, fill)
+  // work on the photo, never on text — so text always stays editable.
+  // Picking Type again goes straight back to your last text.
+  useEffect(() => {
+    if (!layers) return;
+    const PHOTO_TOOLS: Tool[] = ['adjust', 'color', 'looks', 'filter', 'retouch', 'bg', 'bucket'];
+    if (PHOTO_TOOLS.includes(tool) && layers[activeIdx]?.text) {
+      let j = -1;
+      for (let i = activeIdx - 1; i >= 0; i--) if (!layers[i].text) { j = i; break; }
+      if (j < 0) for (let i = layers.length - 1; i >= 0; i--) if (!layers[i].text) { j = i; break; }
+      if (j >= 0) { layerOps.select(j); setNotice(`Text stays editable — now working on “${layers[j].name}”.`); }
+    }
+    if (tool === 'text' && !layers[activeIdx]?.text && lastTextId.current) {
+      const j = layers.findIndex((l) => l.id === lastTextId.current && l.text);
+      if (j >= 0) layerOps.select(j);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tool]);
   useEffect(() => {
     if (tool !== 'text' || !activeText?.text) { loadedTextId.current = null; return; }
     if (loadedTextId.current === activeText.id) return;
@@ -1627,15 +1655,7 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
             <Range def={{ key: 'exposure', label: 'Letter spacing', min: -10, max: 60 }} value={textOpts.spacing} onChange={(v) => setTextOpts({ ...textOpts, spacing: v })} onCommit={() => {}} />
             <p className="text-[12px] font-semibold text-mt-ink mt-1">Pro effects</p>
             <LookGallery value={textOpts.effect} color={textOpts.fxColor} onPick={(id, def) => setTextOpts({ ...textOpts, effect: id, fxColor: textOpts.effect === id ? textOpts.fxColor : def })} />
-            <p className="text-[12px] font-semibold text-mt-ink mt-1">Simple</p>
-            <div className="grid grid-cols-4 gap-1.5">
-              {TEXT_EFFECTS.map((fx) => (
-                <button key={fx.id} onClick={() => setTextOpts({ ...textOpts, effect: fx.id })} aria-pressed={textOpts.effect === fx.id} className={cx('h-14 rounded-lg border flex flex-col items-center justify-center gap-0.5', textOpts.effect === fx.id ? 'border-[#2680EB] ring-1 ring-[#2680EB]' : 'border-mt-border hover:bg-mt-surface2')}>
-                  <span className="text-[17px] font-extrabold leading-none text-mt-ink" style={fx.css}>Ag</span>
-                  <span className="text-[10px] text-mt-muted">{fx.label}</span>
-                </button>
-              ))}
-            </div>
+            <button type="button" onClick={() => setTextOpts({ ...textOpts, effect: 'none' })} className={`self-start h-8 px-3 rounded-full border text-[12px] ${textOpts.effect === 'none' ? 'border-[#3B82C4] text-[#3B82C4]' : 'border-mt-border text-mt-muted'}`}>No effect</button>
             {textOpts.effect !== 'none' && textOpts.effect !== 'shadow' && textOpts.effect !== 'lift' && (!isPremium(textOpts.effect) || PREMIUM_LOOKS.find((l) => l.id === textOpts.effect)?.usesColor) && (
               <label className="flex items-center gap-2 text-[12px]">Effect colour <input type="color" value={textOpts.fxColor} onChange={(e) => setTextOpts({ ...textOpts, fxColor: e.target.value })} className="w-8 h-8 rounded border border-mt-border bg-transparent" /></label>
             )}
@@ -1921,7 +1941,7 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
                   // Only the print resolution changes.
                   const nd = Math.round(base.width / (fromPx(toPx(parseFloat(rz.w) || 0, rz.unit, d), 'in', d) || 1));
                   push({ dpi: rz.unit === 'px' ? Math.round(d) : Math.max(1, nd), label: 'Print size' });
-                } else runAll('Resize', (c) => resample(c, wpx, hpx), { dpi: Math.round(d) });
+                } else { const kx = wpx / (base?.width || wpx), ky = hpx / (base?.height || hpx); runAll('Resize', (c) => resample(c, wpx, hpx), { dpi: Math.round(d) }, (t) => ({ ...t, x: t.x * kx, y: t.y * ky, size: Math.max(4, t.size * Math.min(kx, ky)), spacing: t.spacing * kx })); }
               }}
             >
               <Maximize2 size={15} /> Apply size
@@ -2202,7 +2222,7 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
           <button className={cx(optOn(textOpts.bold), 'font-bold')} onClick={() => setTextOpts((o) => ({ ...o, bold: !o.bold }))} aria-pressed={textOpts.bold}>B</button>
           <button className={cx(optOn(textOpts.italic), 'italic')} onClick={() => setTextOpts((o) => ({ ...o, italic: !o.italic }))} aria-pressed={textOpts.italic}>I</button>
           <select className={optField} value={textOpts.align} onChange={(e) => setTextOpts((o) => ({ ...o, align: e.target.value as any }))} aria-label="Align"><option value="left">Left</option><option value="center">Centre</option><option value="right">Right</option></select>
-          <select className={optField} value={textOpts.effect} onChange={(e) => setTextOpts((o) => ({ ...o, effect: e.target.value as TextEffect }))} aria-label="Text effect">{TEXT_EFFECTS.map((fx) => <option key={fx.id} value={fx.id}>{fx.label}</option>)}</select>
+          <select className={optField} value={textOpts.effect} onChange={(e) => setTextOpts((o) => ({ ...o, effect: e.target.value as TextEffect }))} aria-label="Text effect"><option value="none">No effect</option>{PREMIUM_LOOKS.map((fx) => <option key={fx.id} value={fx.id}>{fx.label}</option>)}</select>
           <input type="color" value={paintColor} onChange={(e) => setPaintColor(e.target.value)} className="w-7 h-7 rounded border border-mt-input-border bg-transparent" aria-label="Text colour" />
           <span className={optLabel}>Click the picture to type · Enter to place</span>
         </>
@@ -2602,6 +2622,7 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
               layers={layers}
               active={activeIdx}
               onSelect={(i) => layerOps.select(i)}
+              onEditText={(i) => { layerOps.select(i); loadedTextId.current = null; setTool('text'); setTimeout(() => document.getElementById('ps-text-edit')?.focus(), 80); }}
               onToggle={(i) => layerOps.patch(i, { visible: !layers[i].visible }, layers[i].visible ? 'Hide layer' : 'Show layer')}
               onRename={(i, name) => layerOps.patch(i, { name }, 'Rename layer')}
               onOpacity={(i, v) => layerOps.patch(i, { opacity: v }, 'Layer opacity')}

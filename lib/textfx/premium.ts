@@ -5,7 +5,8 @@
 // each host draws its own glyphs for every pass with the paint given here.
 
 export type PremiumLook =
-  | 'block3d' | 'retro' | 'vintage' | 'gold' | 'chrome' | 'holo' | 'glass' | 'fire' | 'ice' | 'neontube' | 'candy' | 'comic' | 'sticker' | 'splice';
+  | 'block3d' | 'retro' | 'vintage' | 'gold' | 'chrome' | 'holo' | 'glass' | 'fire' | 'ice' | 'neontube' | 'candy' | 'comic' | 'sticker' | 'splice'
+  | 'rosegold' | 'emerald' | 'silver' | 'longshadow' | 'glitch' | 'double' | 'letterpress' | 'sunset' | 'cyber' | 'rainbow' | 'softpop' | 'lava';
 
 export interface Gradient { stops: [number, string][]; dir: 'v' | 'd' | 'h' }
 export type Paint = string | Gradient;
@@ -34,6 +35,18 @@ export const PREMIUM_LOOKS: { id: PremiumLook; label: string; usesColor: boolean
   { id: 'comic', label: 'Comic', usesColor: false, defaultColor: '#FFD400' },
   { id: 'sticker', label: 'Sticker', usesColor: true, defaultColor: '#7C3AED' },
   { id: 'splice', label: 'Splice', usesColor: true, defaultColor: '#22D3EE' },
+  { id: 'rosegold', label: 'Rose gold', usesColor: false, dark: true, defaultColor: '#F4B6A6' },
+  { id: 'silver', label: 'Silver foil', usesColor: false, dark: true, defaultColor: '#E5E7EB' },
+  { id: 'emerald', label: 'Emerald', usesColor: false, dark: true, defaultColor: '#10B981' },
+  { id: 'longshadow', label: 'Long shadow', usesColor: true, defaultColor: '#F97316' },
+  { id: 'softpop', label: 'Soft 3D', usesColor: true, defaultColor: '#6366F1' },
+  { id: 'double', label: 'Double line', usesColor: true, defaultColor: '#EC4899' },
+  { id: 'letterpress', label: 'Letterpress', usesColor: true, defaultColor: '#64748B' },
+  { id: 'glitch', label: 'Glitch', usesColor: false, dark: true, defaultColor: '#FFFFFF' },
+  { id: 'cyber', label: 'Cyber', usesColor: false, dark: true, defaultColor: '#00F0FF' },
+  { id: 'sunset', label: 'Sunset', usesColor: false, defaultColor: '#FF6B6B' },
+  { id: 'rainbow', label: 'Rainbow', usesColor: false, defaultColor: '#A855F7' },
+  { id: 'lava', label: 'Lava', usesColor: false, dark: true, defaultColor: '#FF4D00' },
 ];
 export const isPremium = (id: string | null | undefined): id is PremiumLook => !!id && PREMIUM_LOOKS.some((l) => l.id === id);
 
@@ -51,8 +64,8 @@ const gloss: Gradient = { dir: 'v', stops: [[0, 'rgba(255,255,255,0.75)'], [0.45
 /** How far the effect reaches outside the letters (so nothing is cut off). */
 export function premiumExtent(look: PremiumLook, size: number) {
   const u = size / 50;
-  const depth: Record<string, number> = { block3d: size * 0.12, retro: u * 9, vintage: u * 7.5, comic: u * 5, splice: u * 3.5, sticker: u * 2 };
-  const glow: Record<string, number> = { neontube: u * 16, fire: u * 12, holo: u * 7, ice: u * 6, gold: u * 4, chrome: u * 4, glass: u * 4, sticker: u * 6, candy: u * 5, block3d: u * 3, comic: u * 4 };
+  const depth: Record<string, number> = { block3d: size * 0.12, retro: u * 9, vintage: u * 7.5, comic: u * 5, splice: u * 3.5, sticker: u * 2, longshadow: size * 0.3, softpop: u * 4, glitch: u * 2 };
+  const glow: Record<string, number> = { cyber: u * 12, lava: u * 10, rosegold: u * 4, silver: u * 4, emerald: u * 6, softpop: u * 8, double: u * 4, neontube: u * 16, fire: u * 12, holo: u * 7, ice: u * 6, gold: u * 4, chrome: u * 4, glass: u * 4, sticker: u * 6, candy: u * 5, block3d: u * 3, comic: u * 4 };
   return { depth: depth[look] || 0, glow: (glow[look] || 0) + u * 4 };
 }
 
@@ -150,6 +163,82 @@ export function premiumPasses(look: PremiumLook, color: string, size: number): P
       P.push({ dx: 0, dy: u * 2, fill: null, stroke: '#FFFFFF', lineWidth: u * 9, shadow: { color: 'rgba(0,0,0,0.35)', blur: u * 6, dy: u * 2 } });
       P.push({ dx: 0, dy: 0, fill: null, stroke: '#FFFFFF', lineWidth: u * 9 });
       P.push({ dx: 0, dy: 0, fill: color });
+      break;
+    }
+    case 'rosegold': {
+      P.push({ dx: 0, dy: u * 2, fill: '#2A1210', shadow: { color: 'rgba(0,0,0,0.5)', blur: u * 4, dy: u * 2 } });
+      P.push({ dx: 0, dy: 0, fill: null, stroke: { dir: 'v', stops: [[0, '#B76E5D'], [1, '#5C2B22']] }, lineWidth: u * 2.6 });
+      P.push({ dx: 0, dy: 0, fill: { dir: 'v', stops: [[0, '#FFE4DA'], [0.3, '#F4B6A6'], [0.5, '#C98472'], [0.55, '#E7A693'], [0.8, '#FAD0C3'], [1, '#A35F4F']] } });
+      P.push({ dx: 0, dy: 0, fill: null, stroke: 'rgba(255,240,234,0.85)', lineWidth: u * 0.45 });
+      break;
+    }
+    case 'silver': {
+      P.push({ dx: 0, dy: u * 2, fill: 'rgba(0,0,0,0.5)', shadow: { color: 'rgba(0,0,0,0.5)', blur: u * 4, dy: u * 2 } });
+      P.push({ dx: 0, dy: 0, fill: null, stroke: '#374151', lineWidth: u * 2.4 });
+      P.push({ dx: 0, dy: 0, fill: { dir: 'd', stops: [[0, '#F9FAFB'], [0.25, '#C7CBD1'], [0.45, '#FFFFFF'], [0.6, '#9CA3AF'], [0.8, '#E5E7EB'], [1, '#6B7280']] } });
+      P.push({ dx: 0, dy: 0, fill: gloss, alpha: 0.5 });
+      break;
+    }
+    case 'emerald': {
+      P.push({ dx: 0, dy: 0, fill: '#10B981', shadow: { color: 'rgba(16,185,129,0.8)', blur: u * 6 } });
+      P.push({ dx: 0, dy: 0, fill: null, stroke: '#064E3B', lineWidth: u * 2.4 });
+      P.push({ dx: 0, dy: 0, fill: { dir: 'd', stops: [[0, '#A7F3D0'], [0.3, '#10B981'], [0.5, '#065F46'], [0.7, '#34D399'], [1, '#047857']] } });
+      P.push({ dx: 0, dy: 0, fill: gloss, alpha: 0.75 });
+      break;
+    }
+    case 'longshadow': {
+      const n = Math.max(6, Math.min(80, Math.round(size * 0.3)));
+      for (let i = n; i >= 1; i--) P.push({ dx: i, dy: i, fill: rgba(shade(color, -0.55), 0.55 * (1 - i / (n + 4)) + 0.12) });
+      P.push({ dx: 0, dy: 0, fill: color });
+      break;
+    }
+    case 'softpop': {
+      P.push({ dx: 0, dy: u * 4, fill: rgba(shade(color, -0.5), 0.5), shadow: { color: rgba(shade(color, -0.5), 0.45), blur: u * 8, dy: u * 3 } });
+      P.push({ dx: 0, dy: u * 2, fill: shade(color, -0.3) });
+      P.push({ dx: 0, dy: 0, fill: { dir: 'v', stops: [[0, shade(color, 0.35)], [1, color]] } });
+      P.push({ dx: 0, dy: 0, fill: gloss, alpha: 0.4 });
+      break;
+    }
+    case 'double': {
+      P.push({ dx: 0, dy: 0, fill: null, stroke: color, lineWidth: u * 7 });
+      P.push({ dx: 0, dy: 0, fill: null, stroke: '#FFFFFF', lineWidth: u * 4.2 });
+      P.push({ dx: 0, dy: 0, fill: null, stroke: color, lineWidth: u * 1.6 });
+      P.push({ dx: 0, dy: 0, fill: '#FFFFFF' });
+      break;
+    }
+    case 'letterpress': {
+      P.push({ dx: 0, dy: u * 0.9, fill: 'rgba(255,255,255,0.9)' });
+      P.push({ dx: 0, dy: -u * 0.5, fill: 'rgba(0,0,0,0.35)' });
+      P.push({ dx: 0, dy: 0, fill: color });
+      break;
+    }
+    case 'glitch': {
+      P.push({ dx: -u * 2, dy: 0, fill: 'rgba(255,0,90,0.9)' });
+      P.push({ dx: u * 2, dy: u * 0.5, fill: 'rgba(0,229,255,0.9)' });
+      P.push({ dx: 0, dy: 0, fill: '#FFFFFF' });
+      break;
+    }
+    case 'cyber': {
+      P.push({ dx: 0, dy: 0, fill: null, stroke: '#FF2BD6', lineWidth: u * 3, shadow: { color: '#FF2BD6', blur: u * 12 } });
+      P.push({ dx: 0, dy: 0, fill: { dir: 'v', stops: [[0, '#00F0FF'], [0.5, '#7C3AED'], [1, '#FF2BD6']] }, shadow: { color: 'rgba(0,240,255,0.7)', blur: u * 5 } });
+      P.push({ dx: 0, dy: 0, fill: null, stroke: 'rgba(255,255,255,0.9)', lineWidth: u * 0.6 });
+      break;
+    }
+    case 'sunset': {
+      P.push({ dx: u * 2.5, dy: u * 2.5, fill: '#3B0764' });
+      P.push({ dx: 0, dy: 0, fill: { dir: 'v', stops: [[0, '#FFE259'], [0.35, '#FFA751'], [0.65, '#FF5E62'], [1, '#C026D3']] }, stroke: '#3B0764', lineWidth: u * 1.2 });
+      break;
+    }
+    case 'rainbow': {
+      P.push({ dx: 0, dy: u * 2.5, fill: 'rgba(0,0,0,0.25)', shadow: { color: 'rgba(0,0,0,0.25)', blur: u * 3, dy: u * 2 } });
+      P.push({ dx: 0, dy: 0, fill: null, stroke: '#FFFFFF', lineWidth: u * 4 });
+      P.push({ dx: 0, dy: 0, fill: { dir: 'h', stops: [[0, '#EF4444'], [0.2, '#F59E0B'], [0.4, '#EAB308'], [0.6, '#22C55E'], [0.8, '#3B82F6'], [1, '#A855F7']] } });
+      break;
+    }
+    case 'lava': {
+      P.push({ dx: 0, dy: 0, fill: '#FF3D00', shadow: { color: 'rgba(255,61,0,0.9)', blur: u * 10 } });
+      P.push({ dx: 0, dy: 0, fill: null, stroke: '#1C0A00', lineWidth: u * 2.4 });
+      P.push({ dx: 0, dy: 0, fill: { dir: 'v', stops: [[0, '#2B0A00'], [0.3, '#FF4D00'], [0.55, '#FFB000'], [0.7, '#FF4D00'], [1, '#2B0A00']] } });
       break;
     }
     case 'splice': {
