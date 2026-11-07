@@ -1,11 +1,16 @@
 name: smoke
 on: { push: { branches: [smoke-mcp] } }
+permissions: { contents: write }
 jobs:
-  check:
+  fonts:
     runs-on: ubuntu-latest
     steps:
       - run: |
-          B=https://www.magicaltouchdesign.com
-          for p in / /home/ad/poster-light.webp /home/ad/poster-light-720.webp; do curl -s -o /dev/null -m 60 -w "%{http_code} %{size_download}B %{content_type} $p\n" "$B$p"; done
-          curl -s $B/ | grep -o 'magical-touch-ad[^"?]*' | sort -u || true
-          for u in /api/media/home/ad/magical-touch-ad-light.mp4 /api/media/home/ad/magical-touch-ad-light-720.mp4 /api/media/home/ad/magical-touch-ad.mp4; do curl -s -r 0-99 -D - -o /tmp/r $B$u | grep -iE "^(HTTP|content-range)"; done
+          set -e
+          mkdir out && cd out
+          curl -sSfL -o NotoSansMalayalam.ttf "https://raw.githubusercontent.com/google/fonts/main/ofl/notosansmalayalam/NotoSansMalayalam%5Bwdth,wght%5D.ttf"
+          curl -sSfL -o NotoSansTamil.ttf "https://raw.githubusercontent.com/google/fonts/main/ofl/notosanstamil/NotoSansTamil%5Bwdth,wght%5D.ttf"
+          curl -sSfL -o OFL.txt "https://raw.githubusercontent.com/google/fonts/main/ofl/notosanstamil/OFL.txt"
+          ls -la
+          git init -q && git checkout -q -b fonts-out2 && git add . && git -c user.name=bot -c user.email=bot@example.com commit -qm fonts
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" fonts-out2
