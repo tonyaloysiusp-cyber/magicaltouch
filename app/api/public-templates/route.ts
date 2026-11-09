@@ -14,8 +14,8 @@ import { allPages } from '@/lib/allPages';
 export const revalidate = 300;
 
 const SELECT =
-  'id, name, category, width, height, color1, color2, sort_order, thumbnail, slug, description, category_id, tags, is_featured, is_free, preview, published_at, orientation, occasion, industry, search_keywords';
-const COLS = ['id', 'name', 'category', 'width', 'height', 'color1', 'color2', 'sort_order', 'thumbnail', 'slug', 'description', 'category_id', 'tags', 'is_featured', 'is_free', 'preview', 'published_at', 'orientation', 'occasion', 'industry', 'search_keywords'] as const;
+  'id, name, category, width, height, color1, color2, sort_order, thumbnail, slug, description, category_id, tags, is_featured, is_free, preview, published_at, orientation, occasion, industry, search_keywords, hashtags';
+const COLS = ['id', 'name', 'category', 'width', 'height', 'color1', 'color2', 'sort_order', 'thumbnail', 'slug', 'description', 'category_id', 'tags', 'is_featured', 'is_free', 'preview', 'published_at', 'orientation', 'occasion', 'industry', 'search_keywords', 'hashtags'] as const;
 const DIR = '/templates/collection/';
 
 function shortThumb(t: string | null) {
