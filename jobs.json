@@ -1,9 +1,59 @@
 [
- {"name":"s-inv","device":"desktop","url":"/templates?q=invitation","wait":9000,"steps":[]},
- {"name":"s-doc","device":"desktop","url":"/templates?q=doctor","wait":9000,"steps":[]},
- {"name":"s-tag","device":"desktop","url":"/templates?q=%23birthdayinvitation","wait":9000,"steps":[]},
- {"name":"s-type","device":"desktop","url":"/templates","wait":8000,"steps":[{"fill":"input[type=search], input[placeholder*=earch]","text":"happydiw","wait":1500}]},
- {"name":"tag","device":"desktop","url":"/templates/tag/weddinginvitation","wait":4000,"steps":[]},
- {"name":"cat","device":"desktop","url":"/templates/category/wedding","wait":4000,"steps":[]},
- {"name":"sub","device":"iPhone 13","url":"/templates/category/wedding/invitation","wait":4000,"steps":[]}
+ {
+  "name": "s-inv",
+  "device": "desktop",
+  "url": "/templates?q=invitation",
+  "wait": 9000,
+  "steps": []
+ },
+ {
+  "name": "s-doc",
+  "device": "desktop",
+  "url": "/templates?q=doctor",
+  "wait": 9000,
+  "steps": []
+ },
+ {
+  "name": "s-tag",
+  "device": "desktop",
+  "url": "/templates?q=%23birthdayinvitation",
+  "wait": 9000,
+  "steps": []
+ },
+ {
+  "name": "s-type",
+  "device": "desktop",
+  "url": "/templates",
+  "wait": 8000,
+  "steps": [
+   {
+    "fill": [
+     "form[role=search] input",
+     "happydiw"
+    ],
+    "wait": 2000
+   }
+  ]
+ },
+ {
+  "name": "tag",
+  "device": "desktop",
+  "url": "/templates/tag/weddinginvitation",
+  "wait": 4000,
+  "steps": []
+ },
+ {
+  "name": "cat",
+  "device": "desktop",
+  "url": "/templates/category/wedding",
+  "wait": 4000,
+  "steps": []
+ },
+ {
+  "name": "sub",
+  "device": "iPhone 13",
+  "url": "/templates/category/wedding/invitation",
+  "wait": 4000,
+  "steps": []
+ }
 ]
