@@ -1,32 +1,9 @@
 [
- {
-  "name": "vid",
-  "device": "desktop",
-  "url": "/editor?w=1080&h=1350&templateId=387ba1e7-c409-4f71-b4fc-3678fbdfe3b0",
-  "wait": 10000,
-  "steps": [
-   {
-    "js": "window.__log=[];['error','warn','log'].forEach(k=>{const o=console[k];console[k]=(...a)=>{window.__log.push(k+': '+a.map(String).join(' ').slice(0,300));o.apply(console,a)}});window.addEventListener('error',e=>window.__log.push('ERR '+e.message));window.addEventListener('unhandledrejection',e=>window.__log.push('REJ '+(e.reason&&e.reason.message||e.reason)));const oc=HTMLAnchorElement.prototype.click;HTMLAnchorElement.prototype.click=function(){window.__log.push('ANCHOR '+this.download+' '+this.href.slice(0,30));return oc.call(this)}",
-    "wait": 200
-   },
-   {
-    "click": "button:visible:has-text(\"Export\")",
-    "wait": 1500
-   },
-   {
-    "text": "Animated video (MP4)",
-    "wait": 800
-   },
-   {
-    "download": "button:visible:has-text(\"Download\")",
-    "as": "design-video.bin",
-    "wait": 1500
-   },
-   {
-    "saveData": "'data:text/plain;base64,'+btoa(unescape(encodeURIComponent(JSON.stringify(window.__log,null,1)+'\\n---\\n'+document.body.innerText.slice(0,3000))))",
-    "as": "log.txt",
-    "wait": 100
-   }
-  ]
- }
+ {"name":"s-inv","device":"desktop","url":"/templates?q=invitation","wait":9000,"steps":[]},
+ {"name":"s-doc","device":"desktop","url":"/templates?q=doctor","wait":9000,"steps":[]},
+ {"name":"s-tag","device":"desktop","url":"/templates?q=%23birthdayinvitation","wait":9000,"steps":[]},
+ {"name":"s-type","device":"desktop","url":"/templates","wait":8000,"steps":[{"fill":"input[type=search], input[placeholder*=earch]","text":"happydiw","wait":1500}]},
+ {"name":"tag","device":"desktop","url":"/templates/tag/weddinginvitation","wait":4000,"steps":[]},
+ {"name":"cat","device":"desktop","url":"/templates/category/wedding","wait":4000,"steps":[]},
+ {"name":"sub","device":"iPhone 13","url":"/templates/category/wedding/invitation","wait":4000,"steps":[]}
 ]
