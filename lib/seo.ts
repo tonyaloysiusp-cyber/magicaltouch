@@ -25,9 +25,10 @@ export interface SeoTemplate {
   occasion?: string | null;
   industry?: string | null;
   hashtags?: string[] | null;
+  description?: string | null;
 }
 
-const COLS = 'id,name,slug,category,width,height,preview,thumbnail,tags,search_keywords,color1,updated_at,published_at,is_free,occasion,industry,hashtags';
+const COLS = 'id,name,slug,category,width,height,preview,thumbnail,tags,search_keywords,color1,updated_at,published_at,is_free,occasion,industry,hashtags,description';
 
 async function rest<T>(query: string, revalidate = 3600): Promise<T | null> {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -147,7 +148,22 @@ export function formatLabel(w: number, h: number) {
   return /^A\d|Letter|DL/.test(l) ? `${l.split(' (')[0]} print` : 'Print or digital';
 }
 
+const KINDS: [RegExp, string][] = [
+  [/invitation|invite|save the date|rsvp/i, 'Invitation'], [/business card/i, 'Business card'], [/flyer/i, 'Flyer'], [/poster/i, 'Poster'], [/menu/i, 'Menu'],
+  [/resume|\bcv\b/i, 'Resume'], [/certificate/i, 'Certificate'], [/letterhead/i, 'Letterhead'], [/invoice/i, 'Invoice'], [/brochure/i, 'Brochure'],
+  [/magazine/i, 'Magazine'], [/collage/i, 'Photo collage'], [/album/i, 'Photo album'], [/thumbnail/i, 'YouTube thumbnail'], [/banner|backdrop/i, 'Banner'],
+  [/presentation|slides/i, 'Presentation'], [/story/i, 'Story'], [/\bcard\b/i, 'Card'], [/wishes|greeting/i, 'Greeting'], [/announcement|reveal/i, 'Announcement'], [/\bpost\b/i, 'Social media post'],
+];
+
+/** One line under the title: what it is · occasion · size. */
+export function templateSubtitle(t: Pick<SeoTemplate, 'name' | 'category' | 'width' | 'height' | 'occasion' | 'industry'>) {
+  const kind = KINDS.find(([rx]) => rx.test(t.name))?.[1] || t.category;
+  const parts = [kind, t.occasion || t.industry || '', formatLabel(t.width, t.height) === 'Print or digital' ? sizeLabel(t.width, t.height) : formatLabel(t.width, t.height)];
+  return [...new Set(parts.filter(Boolean))].join(' · ');
+}
+
 export function templateDescription(t: SeoTemplate) {
+  if (t.description && t.description.length >= 60) return t.description.slice(0, 320);
   const kw = (t.search_keywords || '').split(',').map((s) => s.trim()).filter(Boolean).slice(0, 4).join(', ');
   return `Free ${t.name} template — ${formatLabel(t.width, t.height)}, ${sizeLabel(t.width, t.height)}. Edit the text, colours and photos online and download as PDF, PNG or JPG.${kw ? ` Great for ${kw}.` : ''}`.slice(0, 300);
 }

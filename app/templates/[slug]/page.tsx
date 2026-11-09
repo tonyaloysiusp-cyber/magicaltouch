@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { templateHashtags } from '@/lib/templateHashtags';
 import { notFound } from 'next/navigation';
 import { SeoShell, UseTemplateButton, Crumbs } from '@/components/seo/SeoShell';
-import { SITE_URL, SITE_NAME, SeoTemplate, getAllPublishedTemplates, getTemplateBySlug, getRelatedTemplates, templateDescription, sizeLabel, formatLabel, categorySlug } from '@/lib/seo';
+import { SITE_URL, SITE_NAME, SeoTemplate, getAllPublishedTemplates, getTemplateBySlug, getRelatedTemplates, templateDescription, templateSubtitle, sizeLabel, formatLabel, categorySlug } from '@/lib/seo';
 
 // One page per template, so each design can be found on Google
 // ("free birthday poster template", "restaurant menu template"…).
@@ -31,7 +31,9 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   const t = await getTemplateBySlug(params.slug);
   if (!t) return { title: 'Template not found', robots: { index: false } };
   const title = `${withTemplate(t.name)} — Free & Editable`;
-  const description = templateDescription(t);
+  const full = templateDescription(t);
+  // Search results show ~160 characters: end on a full sentence.
+  const description = full.length <= 160 ? full : (full.slice(0, 160).match(/^.*[.!?](?=\s)/)?.[0] || `${full.slice(0, 157)}…`);
   const url = `${SITE_URL}/templates/${t.slug}`;
   const image = abs(t.preview || t.thumbnail) || `${SITE_URL}/api/og`;
   return {
@@ -108,6 +110,7 @@ export default async function TemplatePage({ params }: { params: { slug: string 
           <div>
             <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-mt-muted">{t.category} template · Free</p>
             <h1 className="mt-2 text-3xl sm:text-4xl font-semibold tracking-tight leading-tight">{t.name}</h1>
+            <p className="mt-2 text-[15px] font-medium text-mt-ink/70">{templateSubtitle(t)}</p>
             <p className="mt-4 text-[15px] leading-relaxed text-mt-muted">{templateDescription(t)}</p>
             <div className="mt-6">
               <UseTemplateButton id={t.id} width={t.width} height={t.height} premium={t.is_free === false} />

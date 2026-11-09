@@ -691,7 +691,7 @@ export default function TemplatesPage() {
         <div className="px-3 py-2.5">
           <p className="text-sm font-semibold leading-snug truncate" title={t.name}>{t.name}</p>
           <div className="mt-1 flex items-center justify-between gap-2 text-[11px] text-mt-muted">
-            <span className="truncate">{ty ? ty.one[0].toUpperCase() + ty.one.slice(1) : t.category}</span>
+            <span className="truncate">{[ty ? ty.one[0].toUpperCase() + ty.one.slice(1) : t.category, t.occasion].filter(Boolean).join(' · ')}</span>
             {x?.styles[0] && <span className="truncate text-mt-faint">{styleLabel(x.styles[0])}</span>}
           </div>
         </div>
