@@ -186,3 +186,39 @@ export function vocabulary(docs: Iterable<SearchDoc>): Set<string> {
   for (const d of docs) [d.name, d.cat, d.occ, d.tag, d.kw].forEach((s) => s.forEach((w) => { if (w.length >= 3) v.add(w); }));
   return v;
 }
+
+/** "weddinginvitation" → "Wedding Invitation" for headings. */
+export function hashtagTitle(tag: string): string {
+  const KNOWN = ['instagram', 'invitation', 'birthday', 'wedding', 'business', 'card', 'cards', 'flyer', 'poster', 'post', 'story', 'menu', 'resume', 'certificate', 'collage', 'photo', 'greeting', 'happy', 'merry', 'christmas', 'diwali', 'eid', 'mubarak', 'new', 'year', 'sale', 'party', 'social', 'media', 'restaurant', 'food', 'template', 'status', 'whatsapp', 'thumbnail', 'youtube', 'linkedin', 'facebook', 'banner', 'event', 'wishes', 'day', 'mothers', 'fathers', 'valentines', 'baby', 'shower', 'save', 'the', 'date', 'real', 'estate', 'letterhead', 'invoice', 'album', 'memories', 'festival', 'ramadan', 'kareem', 'onam', 'holi', 'national', 'kids', 'family', 'love', 'anniversary', 'graduation', 'medical', 'clinic', 'fitness', 'beauty', 'salon', 'coffee', 'cafe', 'bakery', 'fashion', 'sports', 'school', 'education', 'music', 'travel', 'deepavali', 'easter', 'halloween', 'photography', 'women', 'destination', 'reception', 'announcement', 'corporate', 'company', 'planner', 'frame', 'grid', 'party', 'invite', 'greetings', 'christmas', 'kids', 'quote', 'quotes', 'motivation', 'offer', 'opening', 'grand', 'launch', 'product', 'wear', 'jewellery', 'jewelry', 'gold', 'flowers', 'floral'];
+  let s = tag.toLowerCase(), out: string[] = [];
+  while (s.length) {
+    const k = KNOWN.filter((w) => s.startsWith(w)).sort((a, b) => b.length - a.length)[0];
+    if (k) { out.push(k); s = s.slice(k.length); continue; }
+    let i = 1;
+    while (i < s.length && !KNOWN.some((w) => w.length >= 3 && s.startsWith(w, i))) i++;
+    const chunk = s.slice(0, i); s = s.slice(i);
+    if (chunk.length <= 2 && out.length) out[out.length - 1] += chunk; // photos, weddings
+    else out.push(chunk);
+  }
+  return out.map((w) => w[0].toUpperCase() + w.slice(1)).join(' ');
+}
+
+/** Related searches from hashtags: "photo" → Family Photo Collage, Wedding Photo, … */
+export function relatedSearches(q: string, tagCounts: [string, number][], max = 10): { label: string; q: string; count: number }[] {
+  const ws = norm(q.replace(/#/g, ' ')).trim().split(' ').filter((w) => w.length >= 3 && !STOP.has(w)).map((w) => stem(SYN[w] && !SYN[w].includes(' ') ? SYN[w] : w));
+  if (!ws.length) return [];
+  const glued = ws.join('');
+  const out: { label: string; q: string; count: number }[] = [];
+  const seen = new Set<string>();
+  for (const [h, n] of tagCounts) {
+    if (h === glued || !ws.every((w) => h.includes(w)) || h.length > 26) continue;
+    const label = hashtagTitle(h);
+    if (label.split(' ').some((p) => p.length > 14)) continue; // unsplittable
+    const key = label.toLowerCase();
+    if (seen.has(key) || stem(key.replace(/\s/g, '')) === glued) continue;
+    seen.add(key);
+    out.push({ label, q: label.toLowerCase(), count: n });
+    if (out.length >= max) break;
+  }
+  return out;
+}

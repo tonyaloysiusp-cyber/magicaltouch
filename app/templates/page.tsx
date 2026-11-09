@@ -21,7 +21,7 @@ import { BrandLogo } from '@/components/BrandLogo';
 import { PageHero } from '@/components/PageHero';
 import { useAppTheme } from '@/hooks/useAppTheme';
 import { loadSearchKeywords, reportSearch, SearchKeyword } from '@/lib/searchKeywords';
-import { buildDoc, parseSearch, scoreDoc, looseScore, vocabulary, SearchDoc } from '@/lib/templateSearch';
+import { buildDoc, parseSearch, scoreDoc, looseScore, vocabulary, SearchDoc, relatedSearches } from '@/lib/templateSearch';
 import { autoHashtags } from '@/lib/templateHashtags';
 
 const display = Fraunces({
@@ -189,10 +189,13 @@ export default function TemplatesPage() {
 
   // Typing searches after a short pause (8,000+ templates).
   useEffect(() => {
-    const id = window.setTimeout(() => setF((cur) => (cur.q === draft ? cur : { ...cur, q: draft })), 220);
+    const id = window.setTimeout(() => setF((cur) => (cur.q === draft ? cur : fresh(cur, draft))), 220);
     return () => window.clearTimeout(id);
   }, [draft]);
-  const search = (q: string) => { setDraft(q); setF((cur) => ({ ...cur, q })); setSuggestOpen(false); };
+  // A new search starts clean: filters left over from earlier browsing
+  // (e.g. "Diwali") are cleared so they can't hide the matches.
+  const fresh = (cur: Filters, q: string): Filters => (q.trim() && q.trim() !== cur.q.trim() ? { ...NO_FILTERS, sort: 'recommended', q } : { ...cur, q });
+  const search = (q: string) => { setDraft(q); setF((cur) => fresh(cur, q)); setSuggestOpen(false); };
 
   useEffect(() => {
     fetchPublicTemplates().then(setTemplates);
@@ -435,6 +438,7 @@ export default function TemplatesPage() {
     templates.forEach((t) => (t.hashtags || []).forEach((h) => m.set(h, (m.get(h) || 0) + 1)));
     return [...m.entries()].filter(([, n]) => n >= 3).sort((a, b) => b[1] - a[1]);
   }, [templates]);
+  const related = useMemo(() => (f.q.trim() ? relatedSearches(f.q, tagCounts, 12) : []), [f.q, tagCounts]);
   // Suggestions while typing: design types, occasions and popular searches.
   const suggestions = useMemo(() => {
     const q = draft.trim().toLowerCase();
@@ -451,8 +455,7 @@ export default function TemplatesPage() {
     OCCASIONS.forEach((o) => { if (o.label.toLowerCase().includes(q) || o.words.some((w) => w.startsWith(q))) out.push({ label: o.label, q: o.label, hint: 'Occasion' }); });
     searchKeywords.forEach((k) => { if (k.k.toLowerCase().includes(q)) out.push({ label: k.k, q: k.k, hint: '' }); });
     // Popular hashtags starting with what was typed.
-    const qg = q.replace(/[^a-z0-9]/g, '');
-    if (qg.length >= 3) tagCounts.filter(([h]) => h.startsWith(qg)).slice(0, 3).forEach(([h, n]) => out.push({ label: `#${h}`, q: h, hint: `${n}` }));
+    relatedSearches(q, tagCounts, 5).forEach((r) => out.unshift({ label: r.label, q: r.q, hint: `${r.count}` }));
     const seen = new Set<string>();
     return out.filter((s) => (seen.has(s.label.toLowerCase()) ? false : (seen.add(s.label.toLowerCase()), true))).slice(0, 9);
   }, [draft, typeCounts, searchKeywords, tagCounts]);
@@ -815,6 +818,25 @@ export default function TemplatesPage() {
                 </button>
               ))}
               <button onClick={clearAll} className="ml-1 font-semibold text-[#3B82C4] hover:underline px-2 py-1">Clear all</button>
+            </div>
+          )}
+
+          {/* Filters hiding every match: one tap searches everything again. */}
+          {searching && results.exact.length === 0 && active.length > 1 && (
+            <button onClick={() => { const q = f.q; setF({ ...NO_FILTERS, q }); }} className="mt-3 h-9 px-4 rounded-full bg-mt-primary text-mt-onprimary text-[13px] font-medium">
+              Show all results for “{f.q}” without filters
+            </button>
+          )}
+
+          {/* Related searches built from real hashtags: "photo" → Family Photo Collage, … */}
+          {related.length > 0 && (
+            <div className="mt-4 flex gap-2 overflow-x-auto pb-1 mt-scroll" aria-label="Related searches">
+              <span className="shrink-0 self-center text-[12px] font-medium text-mt-muted mr-1">Related:</span>
+              {related.map((r) => (
+                <button key={r.q} onClick={() => search(r.q)} className="shrink-0 h-8 px-3.5 rounded-full border border-mt-border bg-mt-surface text-[13px] text-mt-ink hover:border-mt-accent/40">
+                  {r.label} <span className="text-mt-muted">{r.count}</span>
+                </button>
+              ))}
             </div>
           )}
 

@@ -247,16 +247,4 @@ export async function getTemplatesInSubcategory(id: string, limit = 400): Promis
   return rows || [];
 }
 
-/** "weddinginvitation" → "Wedding Invitation" for headings. */
-export function hashtagTitle(tag: string): string {
-  const KNOWN = ['instagram', 'invitation', 'birthday', 'wedding', 'business', 'card', 'cards', 'flyer', 'poster', 'post', 'story', 'menu', 'resume', 'certificate', 'collage', 'photo', 'greeting', 'happy', 'merry', 'christmas', 'diwali', 'eid', 'mubarak', 'new', 'year', 'sale', 'party', 'social', 'media', 'restaurant', 'food', 'template', 'status', 'whatsapp', 'thumbnail', 'youtube', 'linkedin', 'facebook', 'banner', 'event', 'wishes', 'day', 'mothers', 'fathers', 'valentines', 'baby', 'shower', 'save', 'the', 'date', 'real', 'estate', 'letterhead', 'invoice', 'album', 'memories', 'festival', 'ramadan', 'kareem', 'onam', 'holi', 'national', 'kids', 'family', 'love', 'anniversary', 'graduation', 'medical', 'clinic', 'fitness', 'beauty', 'salon', 'coffee', 'cafe', 'bakery', 'fashion', 'sports', 'school', 'education', 'music', 'travel', 'deepavali', 'easter', 'halloween'];
-  let s = tag.toLowerCase(), out: string[] = [];
-  while (s.length) {
-    const k = KNOWN.filter((w) => s.startsWith(w)).sort((a, b) => b.length - a.length)[0];
-    if (k) { out.push(k); s = s.slice(k.length); continue; }
-    let i = 1;
-    while (i < s.length && !KNOWN.some((w) => w.length >= 3 && s.startsWith(w, i))) i++;
-    out.push(s.slice(0, i)); s = s.slice(i);
-  }
-  return out.map((w) => w[0].toUpperCase() + w.slice(1)).join(' ');
-}
+export { hashtagTitle } from '@/lib/templateSearch';
