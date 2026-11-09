@@ -1,4 +1,4 @@
 [
- {"name":"tpl","device":"desktop","url":"/templates/dwp-maroon-happy-diwali-diyas-instagram-post","wait":4000,"steps":[]},
+ {"name":"tpl","device":"desktop","url":"/templates/dwp-plum-marigold-shubh-deepavali-photo-arch-story","wait":4000,"steps":[]},
  {"name":"gal","device":"desktop","url":"/templates?q=diwali","wait":9000,"steps":[{"key":"End","wait":100},{"key":"Home","wait":100}]}
 ]
