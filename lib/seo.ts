@@ -158,7 +158,8 @@ const KINDS: [RegExp, string][] = [
 /** One line under the title: what it is · occasion · size. */
 export function templateSubtitle(t: Pick<SeoTemplate, 'name' | 'category' | 'width' | 'height' | 'occasion' | 'industry'>) {
   const kind = KINDS.find(([rx]) => rx.test(t.name))?.[1] || t.category;
-  const parts = [kind, t.occasion || t.industry || '', formatLabel(t.width, t.height) === 'Print or digital' ? sizeLabel(t.width, t.height) : formatLabel(t.width, t.height)];
+  const size = formatLabel(t.width, t.height) === 'Print or digital' ? sizeLabel(t.width, t.height) : formatLabel(t.width, t.height);
+  const parts = [size.toLowerCase().includes(kind.toLowerCase()) ? '' : kind, t.occasion || t.industry || '', size];
   return [...new Set(parts.filter(Boolean))].join(' · ');
 }
 
