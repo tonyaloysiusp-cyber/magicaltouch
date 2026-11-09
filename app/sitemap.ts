@@ -1,5 +1,5 @@
 import type { MetadataRoute } from 'next';
-import { SITE_URL, getAllPublishedTemplates, categorySlug, getPublishedSeoPages, getHiddenLandings, getLandingRedirects } from '@/lib/seo';
+import { SITE_URL, getAllPublishedTemplates, categorySlug, getPublishedSeoPages, getHiddenLandings, getLandingRedirects, getSubcategories } from '@/lib/seo';
 import { ALL_LANDINGS } from '@/lib/landings';
 import { createAnonSupabaseClient } from '@/lib/supabase/server';
 import { loadCourses } from '@/lib/courses';
@@ -49,5 +49,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     });
   });
   cats.forEach((c) => pages.push({ url: `${SITE_URL}/templates/category/${categorySlug(c)}`, lastModified: now, changeFrequency: 'weekly', priority: 0.8 }));
+  // Sub-category pages (Wedding → Invitation, Business → Business Card, …).
+  (await getSubcategories().catch(() => [])).filter((s) => s.count >= 4).forEach((s) => pages.push({ url: `${SITE_URL}/templates/category/${s.parentSlug}/${s.slug}`, lastModified: now, changeFrequency: 'weekly', priority: 0.75 }));
+  // Hashtag pages with enough templates to be useful.
+  const tagCount = new Map<string, number>();
+  templates.forEach((t) => (t.hashtags || []).forEach((h) => tagCount.set(h, (tagCount.get(h) || 0) + 1)));
+  [...tagCount.entries()].filter(([h, n]) => n >= 8 && /^[a-z0-9]{3,30}$/.test(h)).sort((a, b) => b[1] - a[1]).slice(0, 1500)
+    .forEach(([h]) => pages.push({ url: `${SITE_URL}/templates/tag/${h}`, lastModified: now, changeFrequency: 'weekly', priority: 0.6 }));
   return pages;
 }

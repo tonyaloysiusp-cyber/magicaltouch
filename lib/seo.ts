@@ -189,3 +189,74 @@ export async function getHiddenLandings(): Promise<Set<string>> {
   const v = await getSiteSetting('hidden_landings');
   return new Set((v || '').split(',').map((x) => x.trim()).filter(Boolean));
 }
+
+// ---------------------------------------------------------------- hashtags & sub-categories
+
+/** Templates carrying a hashtag (most featured first). */
+export async function getTemplatesByHashtag(tag: string, limit = 240): Promise<SeoTemplate[]> {
+  const t = tag.toLowerCase().replace(/[^a-z0-9]/g, '');
+  if (!t) return [];
+  const rows = await rest<SeoTemplate[]>(`templates?select=${COLS}&${PUBLISHED}&hashtags=cs.%7B${t}%7D&order=is_featured.desc,sort_order.asc&limit=${limit}`);
+  return rows || [];
+}
+
+/** Hashtags that appear most often alongside the given templates. */
+export function relatedHashtags(rows: SeoTemplate[], exclude: string[] = [], max = 24): { tag: string; count: number }[] {
+  const m = new Map<string, number>();
+  rows.forEach((r) => (r.hashtags || []).forEach((h) => { if (!exclude.includes(h)) m.set(h, (m.get(h) || 0) + 1); }));
+  return [...m.entries()].filter(([, n]) => n >= 2).sort((a, b) => b[1] - a[1]).slice(0, max).map(([tag, count]) => ({ tag, count }));
+}
+
+/** Every hashtag with its template count (for the sitemap and hashtag index). */
+export async function getHashtagCounts(): Promise<Map<string, number>> {
+  const m = new Map<string, number>();
+  for (let from = 0; from < 20000; from += 1000) {
+    const rows = await rest<{ hashtags: string[] | null }[]>(`templates?select=hashtags&${PUBLISHED}&order=id.asc&offset=${from}&limit=1000`);
+    if (!rows || !rows.length) break;
+    rows.forEach((r) => (r.hashtags || []).forEach((h) => m.set(h, (m.get(h) || 0) + 1)));
+    if (rows.length < 1000) break;
+  }
+  return m;
+}
+
+export interface SubCategory { id: string; name: string; slug: string; parent: string; parentSlug: string; count: number }
+
+/** Sub-categories ("Wedding → Invitation") with how many templates each has. */
+export async function getSubcategories(): Promise<SubCategory[]> {
+  const cats = await rest<{ id: string; name: string; parent_id: string | null }[]>(`template_categories?select=id,name,parent_id`);
+  if (!cats) return [];
+  const byId = new Map(cats.map((c) => [c.id, c]));
+  const counts = new Map<string, number>();
+  for (let from = 0; from < 20000; from += 1000) {
+    const rows = await rest<{ category_id: string | null }[]>(`templates?select=category_id&${PUBLISHED}&order=id.asc&offset=${from}&limit=1000`);
+    if (!rows || !rows.length) break;
+    rows.forEach((r) => r.category_id && counts.set(r.category_id, (counts.get(r.category_id) || 0) + 1));
+    if (rows.length < 1000) break;
+  }
+  return cats
+    .filter((c) => c.parent_id && byId.get(c.parent_id) && (counts.get(c.id) || 0) > 0)
+    .map((c) => {
+      const p = byId.get(c.parent_id!)!;
+      return { id: c.id, name: c.name, slug: categorySlug(c.name), parent: p.name, parentSlug: categorySlug(p.name), count: counts.get(c.id) || 0 };
+    })
+    .sort((a, b) => b.count - a.count);
+}
+
+export async function getTemplatesInSubcategory(id: string, limit = 400): Promise<SeoTemplate[]> {
+  const rows = await rest<SeoTemplate[]>(`templates?select=${COLS}&${PUBLISHED}&category_id=eq.${id}&order=is_featured.desc,sort_order.asc&limit=${limit}`);
+  return rows || [];
+}
+
+/** "weddinginvitation" → "Wedding Invitation" for headings. */
+export function hashtagTitle(tag: string): string {
+  const KNOWN = ['instagram', 'invitation', 'birthday', 'wedding', 'business', 'card', 'cards', 'flyer', 'poster', 'post', 'story', 'menu', 'resume', 'certificate', 'collage', 'photo', 'greeting', 'happy', 'merry', 'christmas', 'diwali', 'eid', 'mubarak', 'new', 'year', 'sale', 'party', 'social', 'media', 'restaurant', 'food', 'template', 'status', 'whatsapp', 'thumbnail', 'youtube', 'linkedin', 'facebook', 'banner', 'event', 'wishes', 'day', 'mothers', 'fathers', 'valentines', 'baby', 'shower', 'save', 'the', 'date', 'real', 'estate', 'letterhead', 'invoice', 'album', 'memories', 'festival', 'ramadan', 'kareem', 'onam', 'holi', 'national', 'kids', 'family', 'love', 'anniversary', 'graduation', 'medical', 'clinic', 'fitness', 'beauty', 'salon', 'coffee', 'cafe', 'bakery', 'fashion', 'sports', 'school', 'education', 'music', 'travel', 'deepavali', 'easter', 'halloween'];
+  let s = tag.toLowerCase(), out: string[] = [];
+  while (s.length) {
+    const k = KNOWN.filter((w) => s.startsWith(w)).sort((a, b) => b.length - a.length)[0];
+    if (k) { out.push(k); s = s.slice(k.length); continue; }
+    let i = 1;
+    while (i < s.length && !KNOWN.some((w) => w.length >= 3 && s.startsWith(w, i))) i++;
+    out.push(s.slice(0, i)); s = s.slice(i);
+  }
+  return out.map((w) => w[0].toUpperCase() + w.slice(1)).join(' ');
+}

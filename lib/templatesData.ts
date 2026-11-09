@@ -61,6 +61,7 @@ export interface Template {
   industry?: string | null;
   language?: string | null;
   searchKeywords?: string | null;
+  hashtags?: string[];
   sortOrder?: number;
 }
 
@@ -115,7 +116,7 @@ export const TEMPLATES: Template[] = [
 // Everything the gallery and admin list need -- deliberately NOT
 // canvas_json, which can be megabytes per template.
 const LIST_COLUMNS =
-  'id, name, category, width, height, color1, color2, sort_order, thumbnail, rights_status, slug, description, category_id, tags, status, is_featured, is_free, unit, dpi, color_mode, preview, current_version, published_at, orientation, occasion, industry, language, search_keywords';
+  'id, name, category, width, height, color1, color2, sort_order, thumbnail, rights_status, slug, description, category_id, tags, status, is_featured, is_free, unit, dpi, color_mode, preview, current_version, published_at, orientation, occasion, industry, language, search_keywords, hashtags';
 
 interface TemplateRow {
   id: string;
@@ -147,6 +148,7 @@ interface TemplateRow {
   industry?: string | null;
   language?: string | null;
   search_keywords?: string | null;
+  hashtags?: string[] | null;
 }
 
 export function rowToTemplate(row: TemplateRow): Template {
@@ -178,6 +180,7 @@ export function rowToTemplate(row: TemplateRow): Template {
     industry: row.industry,
     language: row.language,
     searchKeywords: row.search_keywords,
+    hashtags: row.hashtags || [],
     sortOrder: row.sort_order,
   };
 }

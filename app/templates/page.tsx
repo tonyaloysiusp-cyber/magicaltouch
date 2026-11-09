@@ -21,6 +21,8 @@ import { BrandLogo } from '@/components/BrandLogo';
 import { PageHero } from '@/components/PageHero';
 import { useAppTheme } from '@/hooks/useAppTheme';
 import { loadSearchKeywords, reportSearch, SearchKeyword } from '@/lib/searchKeywords';
+import { buildDoc, parseSearch, scoreDoc, looseScore, vocabulary, SearchDoc } from '@/lib/templateSearch';
+import { autoHashtags } from '@/lib/templateHashtags';
 
 const display = Fraunces({
   subsets: ['latin'],
@@ -128,7 +130,7 @@ const GROUPS: { id: string; label: string; types: string[] }[] = [
 const GROUP_BY_ID = new Map(GROUPS.map((g) => [g.id, g]));
 const POPULAR = ['Business flyer', 'Wedding album', 'Birthday invitation', 'Instagram post', 'Restaurant menu', 'Diwali post', 'Resume', 'Certificate'];
 
-interface Meta { styles: string[]; palettes: string[]; medium: string; pages: number; shape: string; aspect: string | null; types: string[]; topic: string; photo: boolean; occs: string[]; name: string; hay: string }
+interface Meta { styles: string[]; palettes: string[]; medium: string; pages: number; shape: string; aspect: string | null; types: string[]; topic: string; photo: boolean; occs: string[]; name: string; hay: string; doc: SearchDoc }
 
 // Curated starting points: each one is just a combination of real filters.
 const COLLECTIONS: { title: string; note: string; f: Partial<Filters> & { catName?: string } }[] = [
@@ -303,6 +305,12 @@ export default function TemplatesPage() {
         occs: OCCASIONS.filter((o) => o.words.some((w) => hasWord(topic, w))).map((o) => o.id),
         name: ` ${t.name.toLowerCase()} `,
         hay: `${topic} ${(t.description || '').toLowerCase()}`,
+        doc: buildDoc({
+          name: t.name, category: t.category, sub: src.sub, occasion: t.occasion, industry: t.industry,
+          hashtags: t.hashtags && t.hashtags.length ? t.hashtags : autoHashtags({ name: t.name, category: t.category, occasion: t.occasion, industry: t.industry, search_keywords: t.searchKeywords, width: t.width, height: t.height, tags: t.tags }),
+          keywords: t.searchKeywords, tags: t.tags, description: t.description,
+          extra: types.flatMap((id) => { const ty = TYPE_BY_ID.get(id); return ty ? [ty.one, ty.label] : []; }),
+        }),
       });
     });
     return m;
@@ -310,6 +318,15 @@ export default function TemplatesPage() {
 
   const newest = useMemo(() => templates.reduce((mx, t) => Math.max(mx, time(t)), 0), [templates]);
   const parsed = useMemo(() => parseQuery(f.q), [f.q]);
+  // Ranked search over titles, categories, occasions and hashtags.
+  const vocab = useMemo(() => vocabulary([...meta.values()].map((x) => x.doc)), [meta]);
+  const sq = useMemo(() => parseSearch(f.q, vocab), [f.q, vocab]);
+  const scores = useMemo(() => {
+    const m = new Map<Template, number>();
+    if (!f.q.trim() || !sq.terms.length) return m;
+    templates.forEach((t) => { const sc = scoreDoc(meta.get(t)!.doc, sq); if (sc) m.set(t, sc); });
+    return m;
+  }, [templates, meta, sq, f.q]);
 
   type Key = 'cat' | 'sub' | 'group' | 'kind' | 'occ' | 'styles' | 'palette' | 'region' | 'shape' | 'aspect' | 'medium' | 'pages' | 'photo' | 'featured' | 'recent' | 'q';
   // Every filter except the search words.
@@ -364,30 +381,21 @@ export default function TemplatesPage() {
       return list;
     };
     if (!searching) return { exact: sortList(base), related: [] as Template[], loose: false };
-    const exact: Template[] = [], related: Template[] = [];
-    base.forEach((t) => { const l = searchLevel(t, parsed); if (l === 2) exact.push(t); else if (l === 1) related.push(t); });
-    const rank = (list: Template[]) => {
+    const rank = (list: Template[], sc: (t: Template) => number) => {
       if (f.sort !== 'recommended') return sortList(list);
-      const phrase = ` ${parsed.raw} `;
-      const words = parsed.topics.map((g) => g[0]);
-      const score = (t: Template) => {
-        const x = meta.get(t)!;
-        let sc = 0;
-        if (x.name.includes(phrase)) sc += 120;
-        if (parsed.types.length && parsed.types.includes(x.types[0])) sc += 50; // its main type
-        words.forEach((w) => { if (hasWord(x.name, w)) sc += 30; });
-        if (words.some((w) => (t.occasion || '').toLowerCase().includes(w))) sc += 20;
-        if (t.isFeatured) sc += 5;
-        return sc;
-      };
-      return list.map((t, i) => ({ t, i, sc: score(t) })).sort((a, b) => b.sc - a.sc || a.i - b.i).map((r) => r.t);
+      return list.map((t, i) => ({ t, i, s: sc(t) + (t.isFeatured ? 3 : 0) })).sort((a, b) => b.s - a.s || a.i - b.i).map((r) => r.t);
     };
-    if (exact.length || related.length) return { exact: rank(exact), related: rank(related), loose: false };
-    // Nothing matched exactly: fall back to a looser search (any word, anywhere).
-    const words = f.q.toLowerCase().split(/\s+/).filter((w) => w.length > 2);
-    const loose = base.filter((t) => { const x = meta.get(t)!; return words.some((w) => x.hay.includes(w)); });
-    return { exact: rank(loose), related: [], loose: true };
-  }, [templates, f, passes, searching, searchLevel, parsed, meta]);
+    // Every word matched: ranked by where it matched (title first).
+    const exact = base.filter((t) => scores.has(t));
+    // Related design types (e.g. cards when searching invitations), after the matches.
+    const related = exact.length < 24 && parsed.types.length ? base.filter((t) => !scores.has(t) && searchLevel(t, parsed) === 1) : [];
+    if (exact.length || related.length) return { exact: rank(exact, (t) => scores.get(t) || 0), related: rank(related, () => 0), loose: false };
+    // Nothing matched every word: show templates matching most of the words.
+    const lsc = new Map<Template, number>();
+    base.forEach((t) => { const v = looseScore(meta.get(t)!.doc, sq); if (v) lsc.set(t, v); });
+    const loose = base.filter((t) => lsc.has(t));
+    return { exact: rank(loose, (t) => lsc.get(t) || 0), related: [], loose: true };
+  }, [templates, f, passes, searching, searchLevel, parsed, meta, scores, sq]);
   const filtered = useMemo(() => [...results.exact, ...results.related], [results]);
 
   // Facet counts (each ignores its own filter, like any good shop filter).
@@ -396,12 +404,12 @@ export default function TemplatesPage() {
       const m = new Map<string, number>();
       templates.forEach((t) => {
         if (!passes(t, f, skip)) return;
-        if (searching && searchLevel(t, parsed) !== 2) return;
+        if (searching && scores.size && !scores.has(t)) return;
         keyOf(t, meta.get(t)!).forEach((k) => m.set(k, (m.get(k) || 0) + 1));
       });
       return m;
     },
-    [templates, f, passes, searching, searchLevel, parsed, meta]
+    [templates, f, passes, searching, scores, meta]
   );
   const typeCounts = useMemo(() => facet('kind', (_, x) => x.types), [facet]);
   const groupCounts = useMemo(() => facet('group', (_, x) => GROUPS.filter((g) => x.types.some((id) => g.types.includes(id))).map((g) => g.id)), [facet]);
@@ -421,6 +429,12 @@ export default function TemplatesPage() {
     return categories.filter((c) => !c.parentId).sort((a, b) => rank(a.name) - rank(b.name)).map((c) => ({ id: c.id, label: c.name }));
   }, [categories, usingDbCategories]);
 
+  // Every hashtag with how many templates carry it (most used first).
+  const tagCounts = useMemo(() => {
+    const m = new Map<string, number>();
+    templates.forEach((t) => (t.hashtags || []).forEach((h) => m.set(h, (m.get(h) || 0) + 1)));
+    return [...m.entries()].filter(([, n]) => n >= 3).sort((a, b) => b[1] - a[1]);
+  }, [templates]);
   // Suggestions while typing: design types, occasions and popular searches.
   const suggestions = useMemo(() => {
     const q = draft.trim().toLowerCase();
@@ -436,9 +450,12 @@ export default function TemplatesPage() {
     });
     OCCASIONS.forEach((o) => { if (o.label.toLowerCase().includes(q) || o.words.some((w) => w.startsWith(q))) out.push({ label: o.label, q: o.label, hint: 'Occasion' }); });
     searchKeywords.forEach((k) => { if (k.k.toLowerCase().includes(q)) out.push({ label: k.k, q: k.k, hint: '' }); });
+    // Popular hashtags starting with what was typed.
+    const qg = q.replace(/[^a-z0-9]/g, '');
+    if (qg.length >= 3) tagCounts.filter(([h]) => h.startsWith(qg)).slice(0, 3).forEach(([h, n]) => out.push({ label: `#${h}`, q: h, hint: `${n}` }));
     const seen = new Set<string>();
-    return out.filter((s) => (seen.has(s.label.toLowerCase()) ? false : (seen.add(s.label.toLowerCase()), true))).slice(0, 8);
-  }, [draft, typeCounts, searchKeywords]);
+    return out.filter((s) => (seen.has(s.label.toLowerCase()) ? false : (seen.add(s.label.toLowerCase()), true))).slice(0, 9);
+  }, [draft, typeCounts, searchKeywords, tagCounts]);
 
   // Draw the grid in steps (60 at a time, more as you scroll) — putting all
   // 8,000+ cards on the page at once made it slow, especially on phones/iPad.
@@ -935,7 +952,7 @@ function TemplatePreview({ t, types, onClose, onUse, onTag, onStyle }: { t: Temp
   const show = pages && pages.length ? pages[Math.min(idx, pages.length - 1)].url : fallback;
   const many = !!pages && pages.length > 1;
   const st = stylesOf(t);
-  const tags = [...new Set([...typeHashtags({ name: t.name, category: t.category, width: t.width, height: t.height, tags: t.tags, occasion: t.occasion, industry: t.industry, searchKeywords: t.searchKeywords }, types)])].slice(0, 12);
+  const tags = [...new Set([...(t.hashtags || []), ...typeHashtags({ name: t.name, category: t.category, width: t.width, height: t.height, tags: t.tags, occasion: t.occasion, industry: t.industry, searchKeywords: t.searchKeywords }, types)])].slice(0, 12);
   const typeLabel = types[0] ? TYPE_BY_ID.get(types[0])?.one : null;
   return (
     <div className="fixed inset-0 z-[60] bg-black/55 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4" onClick={onClose}>
