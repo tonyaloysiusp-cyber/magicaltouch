@@ -1,10 +1,28 @@
 name: smoke
 on: { push: { branches: [smoke-mcp] } }
+permissions: { contents: write }
 jobs:
-  check:
+  dump:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+        with: { ref: main, path: site, sparse-checkout: .env.production }
       - run: |
-          B=https://www.magicaltouchdesign.com
-          for p in /templates/dwp-emerald-happy-diwali-mandala-instagram-post /templates/dwp-maroon-corporate-diwali-instagram-post /sitemap.xml; do curl -s -o /tmp/o -w "%{http_code} %{size_download} $p\n" "$B$p"; grep -o "<title>[^<]*" /tmp/o | head -1; done
-          curl -s $B/sitemap.xml | grep -c "dwp-" || true
+          set -e
+          U=$(grep '^NEXT_PUBLIC_SUPABASE_URL=' site/.env.production | cut -d= -f2-)
+          K=$(grep '^NEXT_PUBLIC_SUPABASE_ANON_KEY=' site/.env.production | cut -d= -f2-)
+          mkdir out; i=0
+          while :; do
+            f=$((i*1000)); t=$((f+999))
+            curl -s "$U/rest/v1/templates?select=id,name,category,category_id,occasion,industry,tags,search_keywords,hashtags,description,width,height,is_featured,slug&status=eq.published&order=id" -H "apikey: $K" -H "Authorization: Bearer $K" -H "Range: $f-$t" > out/p$i.json
+            n=$(python3 -c "import json;print(len(json.load(open('out/p$i.json'))))")
+            echo page $i $n; [ "$n" -lt 1000 ] && break; i=$((i+1))
+          done
+          curl -s "$U/rest/v1/template_categories?select=id,name,parent_id" -H "apikey: $K" -H "Authorization: Bearer $K" > out/cats.json
+          python3 -c "
+          import json,glob
+          rows=[r for f in sorted(glob.glob('out/p*.json')) for r in json.load(open(f))]
+          json.dump({'templates':rows,'cats':json.load(open('out/cats.json'))},open('dump.json','w'))
+          print(len(rows))"
+          git init -q d && cd d && cp ../dump.json . && git checkout -q -b data-out && git add dump.json && git -c user.name=bot -c user.email=bot@x commit -qm dump
+          git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" data-out
