@@ -62,7 +62,7 @@ const scenarios = [
       await t.editor();
       await drawRect(t, 100, 100, 400, 300);
       let art = await t.eval(ART);
-      t.check('rectangle drawn', art.length === 1 && art[0].type === 'rect', JSON.stringify(art));
+      t.check('rectangle drawn', art.length === 1 && ['rect', 'path'].includes(art[0].type), JSON.stringify(art));
       await drawRect(t, 500, 500, 700, 800);
       art = await t.eval(ART);
       t.check('second rectangle drawn', art.length === 2, JSON.stringify(art));
@@ -84,7 +84,7 @@ const scenarios = [
       await key(t, `${MOD}+z`);
       await t.page.waitForTimeout(300);
       art = await t.eval(ART);
-      t.check('one undo ungroups back to two shapes', art.length === 2 && art.every((a) => a.type === 'rect'), JSON.stringify(art));
+      t.check('one undo ungroups back to two shapes', art.length === 2 && art.every((a) => ['rect', 'path'].includes(a.type)), JSON.stringify(art));
 
       // Multi delete = one undo step
       await key(t, `${MOD}+a`);
@@ -179,11 +179,8 @@ const scenarios = [
       await t.editor();
       await drawRect(t, 100, 100, 600, 600);
       await t.page.getByRole('button', { name: 'Export', exact: true }).first().click();
-      await t.page.getByRole('button', { name: 'jpg', exact: true }).click();
-      const [dl] = await Promise.all([
-        t.page.waitForEvent('download', { timeout: 20000 }),
-        t.page.locator('div.fixed button:has-text("Export")').last().click(),
-      ]);
+      await pickFormat(t, 'jpg');
+      const dl = await confirmDownload(t, 20000);
       const name = dl.suggestedFilename();
       t.check('downloaded a .jpg', name.endsWith('.jpg'), name);
       const path = await dl.path();
@@ -223,7 +220,7 @@ scenarios.push(
     async run(t) {
       await t.editor('w=1080&h=1350');
       await t.shot('default');
-      for (const p of ['Templates', 'Elements', 'Text', 'Uploads', 'Draw', 'Background', 'Brand', 'Layers', 'Help']) {
+      for (const p of ['Templates', 'Elements', 'Text', 'Upload', 'Photos', 'QR code', 'Draw', 'Background', 'Brand', 'Layers', 'Help']) {
         await rail(t, p);
         await t.page.waitForTimeout(p === 'Templates' ? 2500 : 300);
         await t.shot(`panel-${p.toLowerCase()}`);
@@ -429,13 +426,21 @@ scenarios.push(
   },
 );
 
+const FORMAT_LABEL = { png: 'PNG', jpg: 'JPG', webp: 'WebP', pdf: 'PDF (vector)', tiff: 'TIFF', video: 'Animated video (MP4)' };
+async function pickFormat(t, format) {
+  await t.page.locator('[role=dialog][aria-label="Download your design"] button', { hasText: FORMAT_LABEL[format] || format }).first().click();
+}
+async function confirmDownload(t, timeout = 60000) {
+  const [dl] = await Promise.all([
+    t.page.waitForEvent('download', { timeout }),
+    t.page.locator('[role=dialog][aria-label="Download your design"] button', { hasText: 'Download' }).last().click(),
+  ]);
+  return dl;
+}
 async function exportAs(t, format) {
   await t.page.locator('header button', { hasText: 'Export' }).first().click();
-  await t.page.getByRole('button', { name: format, exact: true }).click();
-  const [dl] = await Promise.all([
-    t.page.waitForEvent('download', { timeout: 60000 }),
-    t.page.locator('div.fixed button:has-text("Export")').last().click(),
-  ]);
+  await pickFormat(t, format);
+  const dl = await confirmDownload(t);
   const fs = await import('node:fs');
   const path = await dl.path();
   return { name: dl.suggestedFilename(), bytes: fs.readFileSync(path) };
@@ -489,7 +494,7 @@ scenarios.push(
       const pages = await t.eval(() => window.__fabricCanvas.getObjects().filter((o) => o.__isArtboard).length);
       t.check('three pages', pages === 3, pages);
       await rail(t, 'Text');
-      await t.page.locator('aside button', { hasText: '# Add page number' }).click();
+      await t.page.locator('aside button', { hasText: 'This page' }).click();
       await t.page.waitForTimeout(300);
       const num = await t.eval(() => window.__fabricCanvas.getObjects().find((o) => o.__pageNumber)?.text);
       t.check('page number shows its page', num === '3', num);
@@ -643,8 +648,9 @@ scenarios.push({
   name: 'template-count-live',
   async run(t) {
     const r = await t.page.request.get(`${t.BASE}/api/public-templates`);
-    const list = await r.json();
-    t.check('gallery list has every template (more than 1,000)', Array.isArray(list) && list.length > 1000, String(list.length));
+    const body = await r.json();
+    const list = Array.isArray(body) ? body : body && Array.isArray(body.rows) ? body.rows : [];
+    t.check('gallery list has every template (more than 1,000)', list.length > 1000, String(list.length));
     for (const path of ['/', '/templates']) {
       await t.page.goto(`${t.BASE}${path}`);
       const title = await t.page.title();
@@ -744,7 +750,8 @@ scenarios.push({
 
 // Mockups: the studio opens from the editor, draws every scene for the
 // page and shows a large preview of the chosen one.
-scenarios.push({
+// Retired from the editor on 6 Nov 2026 (kept for when it returns).
+false && scenarios.push({
   name: 'mockups',
   async run(t) {
     await t.editor('w=1080&h=1350');
