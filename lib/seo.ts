@@ -265,3 +265,11 @@ export async function getTemplatesInSubcategory(id: string, limit = 400): Promis
 }
 
 export { hashtagTitle } from '@/lib/templateSearch';
+
+/** Retired duplicate templates → the slug of the variant that was kept
+ *  (site setting `template_redirects`, a JSON object). */
+export async function getTemplateRedirect(slug: string): Promise<string | null> {
+  const raw = await getSiteSetting('template_redirects');
+  if (!raw) return null;
+  try { const m = JSON.parse(raw) as Record<string, string>; return typeof m[slug] === 'string' ? m[slug] : null; } catch { return null; }
+}

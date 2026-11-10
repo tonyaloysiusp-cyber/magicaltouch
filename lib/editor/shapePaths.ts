@@ -306,7 +306,9 @@ export function shapePathD(kind: ShapeKind, w: number, h: number, params: ShapeP
     case 'scallop': {
       // Round petals (flower) or a fine scalloped edge (scallop).
       const n = kind === 'flower' ? 8 : 20;
-      const depth = kind === 'flower' ? 0.72 : 0.9;
+      // Valley radius and bulge are balanced so the curve's furthest point
+      // stays inside the box (a cubic bulge reaches ~(2·depth + 6·out)/8).
+      const depth = kind === 'flower' ? 0.66 : 0.9;
       const parts: string[] = [];
       for (let i = 0; i <= n; i++) {
         const a = -Math.PI / 2 + (i * 2 * Math.PI) / n;
@@ -314,7 +316,7 @@ export function shapePathD(kind: ShapeKind, w: number, h: number, params: ShapeP
         const x = w / 2 + ((Math.cos(a) * w) / 2) * depth;
         const y = h / 2 + ((Math.sin(a) * h) / 2) * depth;
         // Each petal is a cubic bulge between two neighbouring valley points.
-        const out = kind === 'flower' ? 1.3 : 1.1, spread = Math.PI / n / 1.6;
+        const out = kind === 'flower' ? 1.05 : 1.05, spread = Math.PI / n / 1.6;
         const c1x = w / 2 + ((Math.cos(am - spread) * w) / 2) * out, c1y = h / 2 + ((Math.sin(am - spread) * h) / 2) * out;
         const c2x = w / 2 + ((Math.cos(am + spread) * w) / 2) * out, c2y = h / 2 + ((Math.sin(am + spread) * h) / 2) * out;
         parts.push(i === 0 ? `M ${r(x)} ${r(y)}` : `C ${r(c1x)} ${r(c1y)} ${r(c2x)} ${r(c2y)} ${r(x)} ${r(y)}`);

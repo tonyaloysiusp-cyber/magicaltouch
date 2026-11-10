@@ -1,7 +1,7 @@
 name: Editor E2E
 on:
   push:
-    branches-ignore: [main, e2e-results]
+    branches-ignore: [e2e-results, shots-out, shots-tool, smoke-mcp, data-out, data-hashtags, data-meta, fonts-out2]
   workflow_dispatch:
 permissions:
   contents: read
@@ -25,6 +25,11 @@ jobs:
           cache: npm
       - name: Build and test
         run: bash e2e/ci.sh
+      # Turns the run red when a type error, unit test or browser check fails,
+      # and prints exactly which ones in the log and the run summary.
+      - name: Test summary
+        if: always()
+        run: node e2e/summary.mjs
       # Results are kept as a downloadable artifact. (They used to be pushed to an
       # "e2e-results" branch, which made Vercel start a failing build every time.)
       - name: Keep results

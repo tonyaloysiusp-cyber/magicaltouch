@@ -1,9 +1,9 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { templateHashtags } from '@/lib/templateHashtags';
-import { notFound } from 'next/navigation';
+import { notFound, permanentRedirect } from 'next/navigation';
 import { SeoShell, UseTemplateButton, Crumbs } from '@/components/seo/SeoShell';
-import { SITE_URL, SITE_NAME, SeoTemplate, getAllPublishedTemplates, getTemplateBySlug, getRelatedTemplates, templateDescription, templateSubtitle, sizeLabel, formatLabel, categorySlug } from '@/lib/seo';
+import { SITE_URL, SITE_NAME, SeoTemplate, getAllPublishedTemplates, getTemplateBySlug, getRelatedTemplates, templateDescription, templateSubtitle, sizeLabel, formatLabel, categorySlug, getTemplateRedirect } from '@/lib/seo';
 
 // One page per template, so each design can be found on Google
 // ("free birthday poster template", "restaurant menu template"…).
@@ -48,7 +48,12 @@ export async function generateMetadata({ params }: { params: { slug: string } })
 
 export default async function TemplatePage({ params }: { params: { slug: string } }) {
   const found = await getTemplateBySlug(params.slug);
-  if (!found) notFound();
+  if (!found) {
+    // A retired duplicate sends visitors (and Google) to the version that was kept.
+    const to = await getTemplateRedirect(params.slug);
+    if (to && to !== params.slug) permanentRedirect(`/templates/${to}`);
+    notFound();
+  }
   const t = found as SeoTemplate;
   const related = await getRelatedTemplates(t, 8);
   const url = `${SITE_URL}/templates/${t.slug}`;
