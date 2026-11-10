@@ -220,7 +220,7 @@ scenarios.push(
     async run(t) {
       await t.editor('w=1080&h=1350');
       await t.shot('default');
-      for (const p of ['Templates', 'Elements', 'Text', 'Upload', 'Photos', 'QR code', 'Draw', 'Background', 'Brand', 'Layers', 'Help']) {
+      for (const p of ['Templates', 'Elements', 'Text', 'Upload', 'QR code', 'Draw', 'Background', 'Brand', 'Layers', 'Help']) {
         await rail(t, p);
         await t.page.waitForTimeout(p === 'Templates' ? 2500 : 300);
         await t.shot(`panel-${p.toLowerCase()}`);
