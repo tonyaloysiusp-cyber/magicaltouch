@@ -6,16 +6,7 @@ jobs:
     steps:
       - run: |
           B=https://www.magicaltouchdesign.com
-          for p in /templates/dwp-plum-marigold-shubh-deepavali-photo-arch-story /sitemap.xml; do curl -s -o /tmp/o -w "%{http_code} %{size_download} $p\n" "$B$p"; grep -o "<title>[^<]*" /tmp/o | head -1; done
-          curl -s $B/sitemap.xml > sm.xml
-          echo "tag pages: $(grep -c '/templates/tag/' sm.xml)  sub pages: $(grep -o '/templates/category/[a-z-]*/[a-z-]*<' sm.xml | wc -l)  total: $(grep -c '<loc>' sm.xml)"
-          grep -o "<loc>[^<]*</loc>" sm.xml | sed 's/<[^>]*>//g' | grep -E '/templates/' > urls.txt
-          python3 - <<'PY'
-          import json,urllib.request
-          urls=[u.strip() for u in open('urls.txt') if u.strip()]
-          body=json.dumps({"host":"www.magicaltouchdesign.com","key":"b2e48e40a28ff25772f97a10d0c1869a","keyLocation":"https://www.magicaltouchdesign.com/b2e48e40a28ff25772f97a10d0c1869a.txt","urlList":urls}).encode()
-          for e in ("https://api.indexnow.org/indexnow","https://www.bing.com/indexnow","https://yandex.com/indexnow"):
-            try:
-              r=urllib.request.urlopen(urllib.request.Request(e,data=body,headers={"Content-Type":"application/json; charset=utf-8"}),timeout=60); print(e,r.status,len(urls))
-            except Exception as x: print(e,'ERR',getattr(x,'code',x))
-          PY
+          sleep 420
+          for p in /templates/noir-green-basket-website-banner /templates/sand-india-south-asia-navratri-card /templates/coral-green-basket-website-banner; do curl -s -o /dev/null -w "%{http_code} -> %{redirect_url}  $p\n" "$B$p"; done
+          curl -s $B/sitemap.xml | grep -c "<loc>" || true
+          curl -s $B/sitemap.xml | grep -c "noir-green-basket-website-banner" || true
