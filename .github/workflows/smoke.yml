@@ -1,20 +1,10 @@
 name: smoke
 on: { push: { branches: [smoke-mcp] } }
 jobs:
-  crawl:
+  check:
     runs-on: ubuntu-latest
-    timeout-minutes: 40
     steps:
-      - name: Every sitemap address
-        shell: bash {0}
+      - shell: bash {0}
         run: |
           B=https://www.magicaltouchdesign.com
-          curl -s $B/sitemap.xml | grep -o "<loc>[^<]*</loc>" | sed 's/<[^>]*>//g' > urls.txt
-          echo "URLs in sitemap: $(wc -l < urls.txt)"
-          grep -oE "^https://[^/]+/[^/]+" urls.txt | sed 's#https://[^/]*/##' | sort | uniq -c | sort -nr | head -12
-          < urls.txt xargs -P 16 -I{} sh -c 'curl -s -o /dev/null -w "%{http_code} %{time_total} {}\n" --max-time 40 --retry 1 "{}" || echo "000 0 {}"' > status.txt
-          echo "== status counts"; cut -d' ' -f1 status.txt | sort | uniq -c
-          echo "== not 200"; grep -v "^200 " status.txt | head -60
-          echo "== slowest"; sort -k2 -nr status.txt | head -8
-          echo "== extras"; for p in /robots.txt /image-sitemap.xml /manifest.webmanifest /api/public-templates /templates/noir-green-basket-website-banner /free-design-tools; do curl -s -o /dev/null -w "%{http_code} %{size_download} $p\n" "$B$p"; done
-          echo "== landing pages in sitemap"; grep -vE "/templates/" urls.txt | head -80
+          for p in /this-page-does-not-exist-xyz /https-www-magicaltouchdesign-com-templates-category-birthday /templates; do curl -s -o /tmp/o -w "%{http_code} %{redirect_url} $p\n" "$B$p"; grep -o "This page could not be found\|Search [0-9,]*+ templates" /tmp/o | head -2; done
