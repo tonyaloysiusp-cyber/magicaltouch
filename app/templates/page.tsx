@@ -21,6 +21,7 @@ import { BrandLogo } from '@/components/BrandLogo';
 import { PageHero } from '@/components/PageHero';
 import { useAppTheme } from '@/hooks/useAppTheme';
 import { loadSearchKeywords, reportSearch, SearchKeyword } from '@/lib/searchKeywords';
+import { countLabel } from '@/lib/templateCountLabel';
 import { buildDoc, parseSearch, scoreDoc, looseScore, vocabulary, SearchDoc, relatedSearches } from '@/lib/templateSearch';
 import { autoHashtags } from '@/lib/templateHashtags';
 
@@ -724,7 +725,7 @@ export default function TemplatesPage() {
             onChange={(e) => { setDraft(e.target.value); setSuggestOpen(true); }}
             onFocus={() => setSuggestOpen(true)}
             onBlur={() => window.setTimeout(() => setSuggestOpen(false), 150)}
-            placeholder="Search 8,000+ templates — flyer, wedding album, Diwali post…"
+            placeholder={`Search ${templates.length > 100 ? countLabel(templates.length) + ' ' : ''}templates — flyer, wedding album, Diwali post…`}
             aria-label="Search templates"
             autoComplete="off"
             className="w-full h-12 pl-11 pr-24 rounded-2xl border border-mt-input-border bg-mt-surface text-[15px] shadow-[0_10px_30px_-18px_rgba(9,9,11,0.35)] placeholder:text-mt-faint focus:outline-none focus:border-[#3B82C4] focus:ring-4 focus:ring-[#8CCBFF]/30 transition-all"

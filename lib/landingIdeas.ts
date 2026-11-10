@@ -28,7 +28,7 @@ export interface Idea {
   link: string; // the gallery with this filter, used instead of a page
 }
 
-const slugify = (s: string) => s.toLowerCase().replace(/&/g, 'and').replace(/['’]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 70);
+const slugify = (s: string) => s.replace(/https?:\/\/\S+|www\.\S+/gi, ' ').toLowerCase().replace(/&/g, 'and').replace(/['’]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 70);
 const cap = (s: string) => s.replace(/\b([a-z])/g, (m) => m.toUpperCase()).replace(/'S\b/g, "'s");
 const FILL = new Set(['free', 'template', 'templates', 'maker', 'online', 'design', 'designs', 'editable', 'make', 'create', 'for', 'the', 'a', 'and', 'of']);
 /** "Free Wedding Album Templates" and "wedding-album-templates" → "album wedding". */
@@ -129,6 +129,7 @@ export function buildIdeas(opts: {
 
   // 2. What visitors searched (30 days).
   for (const s of opts.searches) {
+    if (/https?:|www\.|\.com\b|\//i.test(s.q)) continue; // a pasted link, not a topic
     if (s.count < 2) continue;
     const pq = parseQuery(s.q);
     const ty = pq.types[0] ? TYPE_BY_ID.get(pq.types[0]) : null;

@@ -12,7 +12,7 @@ export function coreWords(phrase: string): string[] {
 }
 
 const cap = (s: string) => s.replace(/(^|[\s-])([a-z])/g, (m) => m.toUpperCase()).replace(/\b(And|For|Of|To|In|With|A|An|The)\b/g, (m) => m.toLowerCase()).replace(/\b(Uae|Us|Uk|Usa|Ksa|Nye|Ai|Cv|Qr|Diy)\b/g, (m) => m.toUpperCase());
-const slugify = (s: string) => s.toLowerCase().replace(/['’]/g, '').replace(/&/g, 'and').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 70);
+const slugify = (s: string) => s.replace(/https?:\/\/\S+|www\.\S+/gi, ' ').toLowerCase().replace(/['’]/g, '').replace(/&/g, 'and').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 70);
 const fit = (s: string, n: number) => (s.length <= n ? s : s.slice(0, s.lastIndexOf(' ', n - 1)).replace(/(\s+(&|and|or|with|for|to|—))+$/i, '').replace(/[—,:;&\s-]+$/, ''));
 
 // Words too general to find the right templates on their own ("day" would
