@@ -3,11 +3,16 @@
   "name": "home",
   "device": "desktop",
   "url": "/",
-  "wait": 7000,
+  "wait": 6000,
   "steps": [
    {
-    "js": "window.scrollTo(0, document.getElementById('features').offsetTop-60)",
-    "wait": 2500
+    "wait": 4000
+   },
+   {
+    "wait": 4000
+   },
+   {
+    "wait": 4000
    }
   ]
  },
@@ -15,40 +20,43 @@
   "name": "homem",
   "device": "iPhone 13",
   "url": "/",
-  "wait": 7000,
-  "steps": []
- },
- {
-  "name": "pat",
-  "device": "desktop",
-  "url": "/patterns",
   "wait": 5000,
-  "full": true,
   "steps": [
    {
-    "text": "Kaleidoscope",
-    "exact": true,
-    "wait": 1500
-   },
-   {
-    "text": "Show tile edges",
-    "wait": 1000
+    "js": "window.scrollTo(0,700)",
+    "wait": 2500
    }
   ]
  },
  {
-  "name": "patm",
-  "device": "iPhone 13",
-  "url": "/patterns",
-  "wait": 5000,
-  "steps": []
- },
- {
-  "name": "col",
+  "name": "tools",
   "device": "desktop",
-  "url": "/colours",
+  "url": "/tools",
   "wait": 4000,
   "full": true,
   "steps": []
+ },
+ {
+  "name": "trace",
+  "device": "desktop",
+  "url": "/trace",
+  "wait": 9000,
+  "steps": [
+   {
+    "text": "Black & white",
+    "exact": true,
+    "wait": 5000
+   },
+   {
+    "text": "Line drawing",
+    "exact": true,
+    "wait": 5000
+   },
+   {
+    "text": "8 colours",
+    "exact": true,
+    "wait": 6000
+   }
+  ]
  }
 ]
