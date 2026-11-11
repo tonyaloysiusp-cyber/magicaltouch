@@ -1,4 +1,45 @@
 [
- {"name":"tpl","device":"desktop","url":"/templates/dwp-plum-marigold-shubh-deepavali-photo-arch-story","wait":4000,"steps":[]},
- {"name":"gal","device":"desktop","url":"/templates?q=diwali","wait":9000,"steps":[{"key":"End","wait":100},{"key":"Home","wait":100}]}
+ {
+  "name": "tut",
+  "device": "desktop",
+  "url": "/tutorials",
+  "wait": 5000,
+  "full": true,
+  "steps": []
+ },
+ {
+  "name": "tutm",
+  "device": "iPhone 13",
+  "url": "/tutorials",
+  "wait": 5000,
+  "full": true,
+  "steps": []
+ },
+ {
+  "name": "course",
+  "device": "desktop",
+  "url": "/tutorials/beginner",
+  "wait": 5000,
+  "full": true,
+  "steps": [
+   {
+    "url": 1
+   }
+  ]
+ },
+ {
+  "name": "open",
+  "device": "desktop",
+  "url": "/pricing",
+  "wait": 3000,
+  "steps": [
+   {
+    "js": "(()=>{const f=document.createElement('form');f.method='post';f.action='/api/open-file';f.enctype='multipart/form-data';const t=document.createElement('textarea');t.name='mtd';t.value='H4sIAAUn9GoC/z1OPQ+CMBD9K6SzEEzEwdXFXeNiHEp7QA30CD0QJf3v9hpku/fufS2iwqGTJE6J6GRtlGxTwlE1qQZnait2yaq4w+AM2iDcB06jGjuw7FuElR1wwA0cJWc5aHa9jaaG1XmRB9iAqRuWH3OGoA3hwKa1xwdSSTtJFyOnrU0U2T7LORHLFyji/2MR9OljJ8FMJc7855OpC7QtMtFCRXEBNxL22/3fdoioQktX84U4zj95iXQOYtPi/Q/g/RFkIwEAAA==';f.appendChild(t);document.body.appendChild(f);f.submit()})()",
+    "wait": 6000
+   },
+   {
+    "url": 1
+   }
+  ]
+ }
 ]
