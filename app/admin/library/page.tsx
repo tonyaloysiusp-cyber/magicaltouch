@@ -98,6 +98,7 @@ export default function TemplateManager() {
   const [menu, setMenu] = useState<string | null>(null);
   const [catEdit, setCatEdit] = useState<{ mode: 'add' | 'rename' | 'move' | 'delete'; cat?: CatNode; parent?: string | null } | null>(null);
   const [manageCats, setManageCats] = useState(false);
+  const [catMenu, setCatMenu] = useState<string | null>(null);
 
   const tree = useMemo(() => buildTree(cats), [cats]);
   const flat = useMemo(() => flatten(tree), [tree]);
@@ -423,18 +424,21 @@ export default function TemplateManager() {
             <span className="truncate">{n.name}</span>
           </button>
           {manageCats ? (
-            <span className="flex items-center">
-              <button type="button" title="Move up" disabled={idx <= 0 || busy} onClick={() => reorder(n, -1)} className="h-7 w-6 grid place-items-center disabled:opacity-30"><ArrowUp size={12} /></button>
-              <button type="button" title="Move down" disabled={idx >= siblings.length - 1 || busy} onClick={() => reorder(n, 1)} className="h-7 w-6 grid place-items-center disabled:opacity-30"><ArrowDown size={12} /></button>
-              <button type="button" title="Rename" onClick={() => setCatEdit({ mode: 'rename', cat: n })} className="h-7 w-6 grid place-items-center"><Pencil size={12} /></button>
-              <button type="button" title="Move inside another category" onClick={() => setCatEdit({ mode: 'move', cat: n })} className="h-7 w-6 grid place-items-center"><FolderInput size={12} /></button>
-              <button type="button" title="Add a sub-category" onClick={() => setCatEdit({ mode: 'add', parent: n.id })} className="h-7 w-6 grid place-items-center"><Plus size={12} /></button>
-              <button type="button" title="Delete category" onClick={() => setCatEdit({ mode: 'delete', cat: n })} className="h-7 w-6 grid place-items-center text-red-500"><Trash2 size={12} /></button>
-            </span>
+            <button type="button" aria-label={`Organise ${n.name}`} onClick={() => setCatMenu(catMenu === n.id ? null : n.id)} className={`h-7 w-7 grid place-items-center rounded-md ${catMenu === n.id ? 'bg-mt-surface2 text-mt-ink' : ''}`}><MoreHorizontal size={14} /></button>
           ) : (
             <span className={`text-[11px] tabular-nums ${active ? 'opacity-80' : 'text-mt-muted'}`}>{subtreeCount(n.id).toLocaleString()}</span>
           )}
         </div>
+        {manageCats && catMenu === n.id && (
+          <div className="my-1 grid grid-cols-2 gap-1 rounded-lg border border-mt-border bg-mt-surface2 p-1.5 text-[12px]" style={{ marginLeft: 8 + n.depth * 14 }}>
+            <button type="button" disabled={idx <= 0 || busy} onClick={() => reorder(n, -1)} className="flex items-center gap-1.5 h-7 px-2 rounded-md hover:bg-mt-surface disabled:opacity-40"><ArrowUp size={12} /> Move up</button>
+            <button type="button" disabled={idx >= siblings.length - 1 || busy} onClick={() => reorder(n, 1)} className="flex items-center gap-1.5 h-7 px-2 rounded-md hover:bg-mt-surface disabled:opacity-40"><ArrowDown size={12} /> Move down</button>
+            <button type="button" onClick={() => setCatEdit({ mode: 'rename', cat: n })} className="flex items-center gap-1.5 h-7 px-2 rounded-md hover:bg-mt-surface"><Pencil size={12} /> Rename</button>
+            <button type="button" onClick={() => setCatEdit({ mode: 'move', cat: n })} className="flex items-center gap-1.5 h-7 px-2 rounded-md hover:bg-mt-surface"><FolderInput size={12} /> Move into…</button>
+            <button type="button" onClick={() => setCatEdit({ mode: 'add', parent: n.id })} className="flex items-center gap-1.5 h-7 px-2 rounded-md hover:bg-mt-surface"><Plus size={12} /> Sub-category</button>
+            <button type="button" onClick={() => setCatEdit({ mode: 'delete', cat: n })} className="flex items-center gap-1.5 h-7 px-2 rounded-md hover:bg-red-50 dark:hover:bg-red-950/40 text-red-600"><Trash2 size={12} /> Delete</button>
+          </div>
+        )}
         {kids && isOpen && n.children.map((k) => <CatRow key={k.id} n={k} />)}
       </>
     );
@@ -462,7 +466,7 @@ export default function TemplateManager() {
               <button type="button" title={manageCats ? 'Done' : 'Organise categories'} onClick={() => setManageCats((v) => !v)} className={`h-7 px-2 rounded-md text-[12px] font-semibold inline-flex items-center gap-1 ${manageCats ? 'bg-mt-primary text-mt-onprimary' : 'hover:bg-mt-surface2'}`}>{manageCats ? <><Check size={12} /> Done</> : <><Settings2 size={12} /> Organise</>}</button>
             </div>
           </div>
-          {manageCats && <p className="px-2 pb-2 text-[11.5px] text-mt-muted leading-snug">Reorder with the arrows, rename, move a category inside another, add sub-categories, or delete one (you choose where its templates go).</p>}
+          {manageCats && <p className="px-2 pb-2 text-[11.5px] text-mt-muted leading-snug">Press ⋯ next to a category to move it up or down, rename it, put it inside another, add a sub-category or delete it (you choose where its templates go).</p>}
           <div className="max-h-[60vh] lg:max-h-[calc(100vh-220px)] overflow-y-auto pr-0.5">
             <button type="button" onClick={() => { setCatSel(''); reset(); }} className={`w-full flex items-center justify-between h-8 px-2 rounded-lg text-[13px] ${catSel === '' ? 'bg-mt-primary text-mt-onprimary' : 'hover:bg-mt-surface2'}`}>
               <span className="font-semibold">All templates</span><span className="text-[11px] tabular-nums opacity-80">{(tabCounts.all ?? 0).toLocaleString()}</span>
