@@ -16,27 +16,21 @@
     "wait": 1200
    },
    {
-    "click": "button[title='Delete category']",
+    "click": "button[aria-label='Organise Social Media']",
     "wait": 1200
-   },
+   }
+  ]
+ },
+ {
+  "name": "libd",
+  "device": "desktop",
+  "url": "/admin/library",
+  "mock": "admin",
+  "wait": 9000,
+  "steps": [
    {
-    "text": "Cancel",
-    "exact": true,
-    "wait": 800
-   },
-   {
-    "click": "button[title='Add a category']",
+    "js": "document.documentElement.classList.add('dark')",
     "wait": 1000
-   },
-   {
-    "text": "Cancel",
-    "exact": true,
-    "wait": 800
-   },
-   {
-    "text": "Bin",
-    "exact": false,
-    "wait": 2000
    }
   ]
  }
