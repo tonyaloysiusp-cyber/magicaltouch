@@ -1,41 +1,54 @@
 [
  {
-  "name": "tut",
-  "device": "desktop",
-  "url": "/tutorials",
-  "wait": 5000,
-  "full": true,
-  "steps": []
- },
- {
-  "name": "tutm",
-  "device": "iPhone 13",
-  "url": "/tutorials",
-  "wait": 5000,
-  "full": true,
-  "steps": []
- },
- {
-  "name": "course",
-  "device": "desktop",
-  "url": "/tutorials/beginner-design-basics",
-  "wait": 5000,
-  "full": true,
-  "steps": []
- },
- {
-  "name": "coursem",
-  "device": "iPhone 13",
-  "url": "/tutorials/intermediate-brand-and-photo",
-  "wait": 5000,
-  "full": true,
-  "steps": []
- },
- {
   "name": "home",
   "device": "desktop",
   "url": "/",
-  "wait": 6000,
+  "wait": 7000,
+  "steps": [
+   {
+    "js": "window.scrollTo(0, document.getElementById('features').offsetTop-60)",
+    "wait": 2500
+   }
+  ]
+ },
+ {
+  "name": "homem",
+  "device": "iPhone 13",
+  "url": "/",
+  "wait": 7000,
+  "steps": []
+ },
+ {
+  "name": "pat",
+  "device": "desktop",
+  "url": "/patterns",
+  "wait": 5000,
+  "full": true,
+  "steps": [
+   {
+    "text": "Kaleidoscope",
+    "exact": true,
+    "wait": 1500
+   },
+   {
+    "text": "Show tile edges",
+    "wait": 1000
+   }
+  ]
+ },
+ {
+  "name": "patm",
+  "device": "iPhone 13",
+  "url": "/patterns",
+  "wait": 5000,
+  "steps": []
+ },
+ {
+  "name": "col",
+  "device": "desktop",
+  "url": "/colours",
+  "wait": 4000,
+  "full": true,
   "steps": []
  }
 ]
