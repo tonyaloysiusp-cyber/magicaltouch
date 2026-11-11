@@ -8,16 +8,8 @@
 import { useState } from 'react';
 import { Cloud, HardDrive, UserRound } from 'lucide-react';
 import { Reveal } from './Reveal';
+import { BrandPost, BRAND_SETS } from './BrandPost';
 
-// Same picture through a hue filter, so the swatches and picture agree.
-const BASE = ['#14233B', '#E3A72F', '#F4F1EA'];
-const PALETTES = [
-  { name: 'Navy & gold', filter: 'none' },
-  { name: 'Emerald', filter: 'hue-rotate(-60deg) saturate(1.05)' },
-  { name: 'Plum', filter: 'hue-rotate(55deg) saturate(0.95)' },
-  { name: 'Terracotta', filter: 'hue-rotate(160deg) saturate(0.9)' },
-  { name: 'Graphite', filter: 'grayscale(1) contrast(1.1)' },
-];
 
 const FORMATS = [
   ['PDF', 'Vector print'],
@@ -61,20 +53,13 @@ export function StudioTools() {
             <article className={tile}>
               <div className="grid gap-7 sm:grid-cols-[1fr_210px] sm:items-center">
                 <div className="relative mx-auto w-full max-w-[380px]">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src="/templates/collection/pro-northline-consulting-free-consultation-post.webp"
-                    alt={`A consulting post in the ${PALETTES[pal].name} palette`}
-                    loading="lazy"
-                    className="relative w-full aspect-square object-cover rounded-2xl ring-1 ring-black/5 shadow-[0_24px_50px_-24px_rgba(15,23,42,0.45)] transition-[filter] duration-500"
-                    style={{ filter: PALETTES[pal].filter }}
-                  />
+                  <BrandPost c={BRAND_SETS[pal].c} />
                 </div>
                 <div>
                   <h3 className="text-xl font-semibold text-mt-ink">Your brand colours, in one tap</h3>
                   <p className="mt-2 text-sm text-mt-muted leading-relaxed">Save your palette once and apply it to any template. Text stays readable.</p>
                   <div role="radiogroup" aria-label="Colour palette" className="mt-5 flex flex-wrap gap-2">
-                    {PALETTES.map((p, i) => (
+                    {BRAND_SETS.map((p, i) => (
                       <button
                         key={p.name}
                         role="radio"
@@ -83,7 +68,7 @@ export function StudioTools() {
                         className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-[12px] font-medium transition-colors ${pal === i ? 'border-mt-ink bg-mt-ink text-mt-bg' : 'border-mt-border text-mt-ink hover:border-mt-ink/40'}`}
                       >
                         <span className="flex -space-x-1" aria-hidden>
-                          {BASE.map((c) => <i key={c} className="block h-3.5 w-3.5 rounded-full ring-2 ring-mt-surface" style={{ background: c, filter: p.filter }} />)}
+                          {[p.c.bg, p.c.accent, p.c.ink].map((c, k) => <i key={k} className="block h-3.5 w-3.5 rounded-full ring-2 ring-mt-surface" style={{ background: c }} />)}
                         </span>
                         {p.name}
                       </button>

@@ -8,6 +8,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Check, FileDown, Grid3x3, Languages, LayoutTemplate, Palette, PenTool, Type } from 'lucide-react';
 import { DEFAULT_PATTERN, layout, svgDataUrl, tileSvg } from '@/lib/patterns';
+import { BrandPost, BRAND_SETS } from './BrandPost';
 
 const C = '/templates/collection/';
 const SCENES = [
@@ -28,12 +29,7 @@ const HEADLINES = [
   { t: 'Une stratégie qui fait avancer votre entreprise', dir: 'ltr', lang: 'Français' },
   { t: 'आपके व्यवसाय को आगे बढ़ाने वाली रणनीति', dir: 'ltr', lang: 'हिन्दी' },
 ];
-const BRANDS = [
-  { name: 'Navy & gold', f: 'none', c: ['#14233B', '#E3A72F'] },
-  { name: 'Emerald', f: 'hue-rotate(-60deg)', c: ['#0F3B33', '#4FC08D'] },
-  { name: 'Plum', f: 'hue-rotate(55deg)', c: ['#2B1640', '#C17BE0'] },
-  { name: 'Terracotta', f: 'hue-rotate(160deg) saturate(.9)', c: ['#3B1E14', '#E07A4F'] },
-];
+const BRANDS = BRAND_SETS.slice(0, 4).map((b) => ({ name: b.name, c: [b.c.bg, b.c.accent], set: b.c }));
 
 export function HeroTour() {
   const [i, setI] = useState(0);
@@ -115,8 +111,7 @@ export function HeroTour() {
               )}
               {s.id === 'brand' && (
                 <div className="flex items-center gap-4 h-full">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={`${C}pro-northline-consulting-free-consultation-post.webp`} alt="" className="h-[86%] aspect-square object-cover rounded-xl shadow-xl transition-[filter] duration-700" style={{ filter: brand.f }} />
+                  <BrandPost c={brand.set} className="h-[86%] w-auto" />
                   <div className="hidden sm:flex flex-col gap-2">
                     {BRANDS.map((b) => (
                       <span key={b.name} className={`flex items-center gap-2 rounded-full border px-2 py-1 text-[11px] font-medium transition-colors ${b === brand ? 'border-mt-ink bg-mt-ink text-mt-bg' : 'border-mt-border bg-mt-surface text-mt-ink'}`}>
