@@ -5,31 +5,17 @@
 // flyer, social post, poster) floating over it and a print-ready spec card
 // showing bleed and trim. Pure CSS animation; nothing heavy to download.
 
-import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowRight, Check } from 'lucide-react';
 import { useTemplateCountLabel } from '@/lib/templateCount';
 import { resolveAuthedPath } from '@/lib/authNav';
+import { HeroTour } from './HeroTour';
 
-const C = '/templates/collection/';
-const SHOWCASE = [
-  { slug: 'pro-northline-consulting-services-flyer', label: 'Services flyer · A4 print' },
-  { slug: 'pro-maison-vera-autumn-edit-fashion-poster', label: 'Fashion poster · A3' },
-  { slug: 'pro-future-forward-summit-speaker-announcement', label: 'Speaker post · 1080 × 1080' },
-  { slug: 'pro-saffron-table-brunch-menu', label: 'Restaurant menu · A4' },
-];
 
 export function WorkspaceHero() {
   const count = useTemplateCountLabel();
   const router = useRouter();
-  const [i, setI] = useState(0);
-
-  useEffect(() => {
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    const t = setInterval(() => setI((n) => (n + 1) % SHOWCASE.length), 3600);
-    return () => clearInterval(t);
-  }, []);
 
   const goToCreate = async () => router.push(await resolveAuthedPath('/create'));
 
@@ -61,7 +47,7 @@ export function WorkspaceHero() {
             <span className="bg-clip-text text-transparent" style={{ backgroundImage: 'linear-gradient(95deg,#1E3A5F 0%,#3B82C4 45%,#A69BD3 100%)' }}>global brand.</span>
           </h1>
           <p className="mt-6 text-base sm:text-lg text-mt-muted max-w-xl leading-relaxed">
-            {count} professionally designed templates for print and digital — letterheads, brochures, campaigns and social posts. Edit every word, colour and photo, then export print-ready files with bleed and crop marks.
+            {count} professional templates and a complete studio — vector tools, Image Trace, Pattern Studio, brand kit, translation into 37 languages and print-ready export with bleed.
           </p>
           <div className="mt-8 flex flex-wrap items-center gap-3">
             <button onClick={goToCreate} className="inline-flex items-center gap-2 text-[15px] font-semibold h-12 px-6 rounded-full bg-mt-primary text-mt-onprimary shadow-[0_12px_30px_-12px_rgba(9,9,11,0.55)] hover:-translate-y-0.5 transition-transform">
@@ -78,63 +64,8 @@ export function WorkspaceHero() {
           </ul>
         </div>
 
-        {/* Stage */}
-        <div className="relative mx-auto w-full max-w-[640px] aspect-[1/1.02] sm:aspect-[1.08/1]" aria-hidden>
-          {/* architecture photo */}
-          <div className="absolute inset-x-[6%] top-0 bottom-[10%] overflow-hidden rounded-[28px] shadow-[0_40px_90px_-40px_rgba(15,23,42,0.6)] mth-rise" style={{ animationDelay: '.1s' }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/templates/photos/pro/city.jpg" alt="" className="mth-pan absolute inset-0 h-full w-full object-cover" fetchPriority="high" />
-            <div className="absolute inset-0 bg-gradient-to-b from-[#0B1220]/55 via-transparent to-[#0B1220]/40" />
-            <div className="absolute left-6 top-5 text-white">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-white/70">Now designing</p>
-              <p className="mt-1 text-[15px] font-semibold transition-opacity duration-500" key={i}>{SHOWCASE[i].label}</p>
-            </div>
-          </div>
-
-          {/* letterhead (left) */}
-          <figure className="absolute left-0 top-[12%] w-[30%] mth-rise" style={{ animationDelay: '.35s' }}>
-            <div className="mth-float rounded-md bg-white shadow-[0_24px_50px_-20px_rgba(15,23,42,0.55)] ring-1 ring-black/5 overflow-hidden" style={{ ['--r' as any]: '-4deg', animationDelay: '-1s' }}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={`${C}pro-atlas-and-co-architects-letterhead.webp`} alt="" className="block w-full" />
-            </div>
-          </figure>
-
-          {/* rotating featured template (right) */}
-          <figure className="absolute right-0 top-[4%] w-[36%] mth-rise" style={{ animationDelay: '.5s' }}>
-            <div className="mth-float relative aspect-[1/1.414] rounded-md bg-white shadow-[0_30px_60px_-22px_rgba(15,23,42,0.6)] ring-1 ring-black/5 overflow-hidden" style={{ ['--r' as any]: '3deg', animationDelay: '-3s' }}>
-              {SHOWCASE.map((s, k) => (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img key={s.slug} src={`${C}${s.slug}.webp`} alt="" loading={k === 0 ? 'eager' : 'lazy'} className="absolute inset-0 h-full w-full object-cover transition-opacity duration-700" style={{ opacity: k === i ? 1 : 0 }} />
-              ))}
-            </div>
-          </figure>
-
-          {/* business card */}
-          <figure className="absolute left-[14%] bottom-[2%] w-[38%] mth-rise" style={{ animationDelay: '.65s' }}>
-            <div className="mth-float rounded-lg shadow-[0_24px_50px_-18px_rgba(15,23,42,0.6)] overflow-hidden ring-1 ring-black/10" style={{ ['--r' as any]: '-2deg', animationDelay: '-5s' }}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={`${C}pro-atlas-and-co-architects-business-card-front.webp`} alt="" className="block w-full" />
-            </div>
-          </figure>
-
-          {/* print spec card */}
-          <div className="absolute right-[3%] bottom-[6%] w-[44%] max-w-[250px] rounded-2xl border border-mt-border bg-mt-surface/95 backdrop-blur p-3.5 shadow-[0_20px_45px_-20px_rgba(15,23,42,0.5)] mth-rise" style={{ animationDelay: '.8s' }}>
-            <div className="flex items-center gap-3">
-              <svg viewBox="0 0 48 48" className="h-11 w-11 shrink-0 mth-draw" fill="none" strokeWidth="1.5">
-                <rect x="10" y="10" width="28" height="28" rx="1" className="stroke-mt-faint" strokeDasharray="2 2" />
-                <rect x="14" y="14" width="20" height="20" rx="1" stroke="#3B82C4" />
-                <path d="M4 14h6M4 34h6M38 14h6M38 34h6M14 4v6M34 4v6M14 38v6M34 38v6" className="stroke-mt-ink" />
-              </svg>
-              <div className="min-w-0">
-                <p className="text-[13px] font-semibold text-mt-ink">Print-ready PDF</p>
-                <p className="text-[11.5px] text-mt-muted leading-snug">3 mm bleed · crop marks · CMYK</p>
-              </div>
-            </div>
-            <div className="mt-3 flex gap-1.5">
-              {['#1E3A5F', '#3B82C4', '#C9A86A', '#F4F1EA', '#0B1220'].map((c) => <span key={c} className="h-4 flex-1 rounded" style={{ background: c }} />)}
-            </div>
-          </div>
-        </div>
+        {/* Self-playing product tour */}
+        <div className="mth-rise" style={{ animationDelay: '.15s' }}><HeroTour /></div>
       </div>
     </section>
   );

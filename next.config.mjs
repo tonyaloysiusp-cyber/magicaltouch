@@ -22,7 +22,6 @@ const nextConfig = {
       // Common guesses for pages that live elsewhere.
       features: '/#features',
       pricing: '/about',
-      tools: '/free-design-tools',
       'pattern-studio': '/patterns',
     };
     return Object.entries(gone).map(([from, to]) => ({ source: `/${from}`, destination: to, permanent: true }));

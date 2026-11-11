@@ -34,6 +34,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     c.lessons.forEach((l) => pages.push({ url: `${SITE_URL}/tutorials/${c.slug}/${l.slug}`, lastModified: now, changeFrequency: 'monthly', priority: 0.6 }));
   });
   pages.push({ url: `${SITE_URL}/remove-background`, lastModified: now, changeFrequency: 'weekly', priority: 0.9 });
+  pages.push({ url: `${SITE_URL}/tools`, lastModified: now, changeFrequency: 'monthly', priority: 0.9 });
+  pages.push({ url: `${SITE_URL}/trace`, lastModified: now, changeFrequency: 'monthly', priority: 0.85 });
   pages.push({ url: `${SITE_URL}/patterns`, lastModified: now, changeFrequency: 'monthly', priority: 0.85 });
   pages.push({ url: `${SITE_URL}/colours`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 });
   pages.push({ url: `${SITE_URL}/showcase`, lastModified: now, changeFrequency: 'daily', priority: 0.8 });
