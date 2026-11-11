@@ -2784,7 +2784,11 @@ function EditorContent() {
   }, []);
 
   // ?panel=qr (from the QR code generator page) opens that panel straight away.
-  const [leftPanel, setLeftPanel] = useState<string | null>(() => (searchParams.get('panel') === 'qr' ? 'qr' : null));
+  const [leftPanel, setLeftPanel] = useState<string | null>(() => {
+    // ?panel= opens a tool straight away (links from the Tools pages).
+    const p = searchParams.get('panel');
+    return p && ['qr', 'patterns', 'colours', 'trace', 'background', 'brand', 'text', 'elements', 'templates', 'draw', 'layers'].includes(p) ? p : null;
+  });
   const [templateCategory, setTemplateCategory] = useState<string | null>(null);
   const [showResize, setShowResize] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);

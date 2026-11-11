@@ -33,6 +33,7 @@ export default function TracePage() {
           <p className="text-[12px] font-semibold uppercase tracking-[0.2em] text-[#3B82C4]">Image Trace</p>
           <h1 className="mt-2 text-3xl sm:text-5xl font-semibold tracking-tight">Turn any picture into vectors</h1>
           <p className="mt-3 text-lg text-mt-muted leading-relaxed">Black & white, line drawing, or 3 to 32 colours. Compare with the original, recolour each layer, then download SVG or edit every shape in the editor.</p>
+          <a href="/editor?w=1080&h=1080&panel=trace" className="mt-4 inline-flex h-10 items-center gap-2 rounded-full border border-mt-border px-4 text-[14px] font-semibold hover:border-mt-ink/40">Use it inside the design editor (Trace panel) →</a>
         </header>
         <div className="mt-8"><ImageTrace /></div>
         <dl className="mt-14 max-w-3xl divide-y divide-mt-border">

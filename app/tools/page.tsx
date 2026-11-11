@@ -17,6 +17,7 @@ export const metadata: Metadata = {
 
 type Tool = { href: string; title: string; body: string; icon: any; tag?: string; tint: string };
 const STUDIOS: Tool[] = [
+  // (each standalone tool is also a panel inside the editor: /editor?panel=…)
   { href: '/create', title: 'Design Editor', body: 'Pages, layers, text effects, shapes, photos, brand kit and print-ready export — for print and digital.', icon: LayoutTemplate, tag: 'Core', tint: '#3B82C4' },
   { href: '/trace', title: 'Image Trace', body: 'Photos, sketches and logos into vectors: black & white, line drawing, or 3–32 colours.', icon: PenTool, tag: 'New', tint: '#1E3A5F' },
   { href: '/patterns', title: 'Pattern Studio', body: 'Seamless repeats — grid, brick, half-drop, mirror, radial, kaleidoscope — with product mockups.', icon: Grid3x3, tag: 'New', tint: '#C9A86A' },
@@ -24,6 +25,7 @@ const STUDIOS: Tool[] = [
   { href: '/photo-studio', title: 'Photo Studio', body: 'Adjust, retouch, selections, layers, live text effects, looks and filters, crop and export.', icon: Crop, tint: '#5DCCB8' },
   { href: '/remove-background', title: 'Background Remover', body: 'One photo or sixty at once, with Restore and Erase brushes. Runs on your device.', icon: Eraser, tint: '#8CC84B' },
 ];
+const PANEL: Record<string, string> = { '/trace': 'Trace panel', '/patterns': 'Patterns panel', '/colours': 'Colours panel', '/remove-background': 'Remove BG on any photo', '/photo-studio': 'Edit photo on any picture' };
 const EDITOR: { icon: any; title: string; body: string }[] = [
   { icon: PenTool, title: 'Pen & edit points', body: 'Draw Bézier paths, then move anchors and handles.' },
   { icon: Shapes, title: 'Pathfinder & shape builder', body: 'Unite, subtract, intersect and exclude shapes.' },
@@ -64,6 +66,7 @@ export default function ToolsPage() {
                 <h2 className="mt-5 text-xl font-semibold">{t.title}</h2>
                 <p className="mt-2 text-[14px] text-mt-muted leading-relaxed">{t.body}</p>
                 <span className="mt-5 inline-flex items-center gap-1 text-[14px] font-semibold">Open <ArrowUpRight size={15} className="transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" /></span>
+                {PANEL[t.href] && <span className="mt-1 block text-[12px] text-mt-muted">Also inside the editor → {PANEL[t.href]}</span>}
               </Link>
             </li>
           ))}
