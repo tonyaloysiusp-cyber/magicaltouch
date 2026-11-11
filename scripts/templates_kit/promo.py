@@ -24,7 +24,7 @@ from kit import Doc, lin, rad, rgba, shadow, FS_MULT, text_width  # noqa: E402
 from common import pill  # noqa: E402
 
 PUB = os.path.join(ROOT, "public")
-BOARD = json.load(open(os.path.join(ROOT, "public/templates/collection/collection500-birthday.json")))[0]["canvasJson"]["objects"][0]
+BOARD = json.load(open(os.path.join(ROOT, "data/collections/collection500-birthday.json")))[0]["canvasJson"]["objects"][0]
 BG = "#FFFFFF"
 VIOLET = "#8E7FD0"
 COUNT = "5,450+"

@@ -56,7 +56,6 @@ import { QrCode as QrCodeIcon } from 'lucide-react';
 import { Gem as StudioIcon } from 'lucide-react';
 import { StudioPanel, StudioPublish } from '@/components/editor/shell/panels/StudioPanel';
 import dynamic from 'next/dynamic';
-const MockupStudio = dynamic(() => import('@/components/editor/MockupStudio').then((m) => m.MockupStudio), { ssr: false });
 import { useAppTheme } from '@/hooks/useAppTheme';
 
 import { ToolMode, DocUnit, isDrawTool, PASTEBOARD_BG, RULER_SIZE } from '@/lib/editor/types';
@@ -298,7 +297,6 @@ function EditorContent() {
     };
   }, []);
   const [showExportDialog, setShowExportDialog] = useState(false);
-  const [showMockups, setShowMockups] = useState(false);
   const [showTranslate, setShowTranslate] = useState(false);
   const [showDesignLimitDialog, setShowDesignLimitDialog] = useState(false);
   const [exporting, setExporting] = useState(false);
@@ -7897,16 +7895,6 @@ function EditorContent() {
           error={saveChooser.error}
           onChoose={chooseSaveLocation}
           onCancel={() => setSaveChooser(null)}
-        />
-      )}
-      {showMockups && (
-        <MockupStudio
-          onClose={() => setShowMockups(false)}
-          pages={artboardsRef.current.map((ab, i) => ({
-            id: ab.id,
-            name: ab.name || `Page ${i + 1}`,
-            render: async () => capturePicture(ab, { format: 'png', multiplier: 1800 / Math.max(ab.width, ab.height, 1), artboardId: ab.id }).dataUrl,
-          }))}
         />
       )}
       {showCloudOpen && <CloudOpenDialog onOpened={openCloudResult} onClose={() => setShowCloudOpen(false)} />}

@@ -25,7 +25,7 @@ import mass  # noqa: E402,F401  (registers the new layouts)
 from mass_spec import CATS, gen, PH  # noqa: E402
 from studio_spec import PAL  # noqa: E402
 
-BOARD = json.load(open(os.path.join(ROOT, "public/templates/collection/collection500-birthday.json")))[0]["canvasJson"]["objects"][0]
+BOARD = json.load(open(os.path.join(ROOT, "data/collections/collection500-birthday.json")))[0]["canvasJson"]["objects"][0]
 GAP = 120
 SCREEN = {(1080, 1350), (1080, 1080), (1080, 1920), (1200, 628), (1584, 396), (1500, 500), (2560, 1440), (1280, 720), (1920, 1080), (1200, 900)}
 
@@ -107,7 +107,7 @@ def main():
     keys = list(CATS) if a.keys == ["all"] else a.keys
     for k in keys:
         out = build(k, a.limit)
-        json.dump(out, open(os.path.join(a.outdir, f"mass-2026-11-{k}.json"), "w"), ensure_ascii=False, separators=(",", ":"))
+        json.dump(out, open(os.path.join(ROOT, "data/collections", f"mass-2026-11-{k}.json"), "w"), ensure_ascii=False, separators=(",", ":"))
         print(k, len(out))
 
 

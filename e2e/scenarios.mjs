@@ -570,16 +570,17 @@ scenarios.push({
   name: 'collection500-birthday-load',
   async run(t) {
     await t.editor('w=1080&h=1080');
+    const { readFileSync } = await import('node:fs');
+    const list = JSON.parse(readFileSync('data/collections/collection500-birthday.json', 'utf8'));
     for (const slug of ['pink-arch-cake-birthday-card', 'gold-script-black-frame-card', 'synthwave-80s-40th-story', 'birthday-times-newspaper-print']) {
-      const r = await t.eval(async (slug) => {
-        const list = await (await fetch('/templates/collection/collection500-birthday.json')).json();
-        const tpl = list.find((x) => x.slug === slug);
+      const one = list.find((x) => x.slug === slug);
+      const r = await t.eval(async (tpl) => {
         const c = window.__fabricCanvas;
         await new Promise((res) => c.loadFromJSON(tpl.canvasJson, res));
         c.requestRenderAll();
         const imgs = c.getObjects().filter((o) => o.type === 'image');
         return { objects: c.getObjects().length, images: imgs.length, broken: imgs.filter((o) => { const el = o._originalElement || o._element; return !el || !(el.naturalWidth || el.width); }).map((o) => o.src || o.getSrc()) };
-      }, slug);
+      }, one);
       await t.page.waitForTimeout(1500);
       await t.shot(slug);
       t.check(`${slug}: loads`, r.objects > 3, JSON.stringify(r));
@@ -751,19 +752,3 @@ scenarios.push({
 // Mockups: the studio opens from the editor, draws every scene for the
 // page and shows a large preview of the chosen one.
 // Retired from the editor on 6 Nov 2026 (kept for when it returns).
-false && scenarios.push({
-  name: 'mockups',
-  async run(t) {
-    await t.editor('w=1080&h=1350');
-    await t.eval(() => { const F = window.fabric, c = window.__fabricCanvas; const ab = c.getObjects().find((o) => o.__isArtboard); c.add(new F.Rect({ left: ab.left + 100, top: ab.top + 100, width: 880, height: 600, fill: '#e91e63' })); c.add(new F.Textbox('MOCKUP', { left: ab.left + 140, top: ab.top + 800, width: 800, fontSize: 140, fill: '#222' })); c.requestRenderAll(); });
-    await t.page.getByTestId('open-mockups').click();
-    await t.page.waitForTimeout(6000);
-    const thumbs = await t.page.locator('[data-testid^=mockup-] img').count();
-    t.check('scene previews drawn', thumbs >= 12, String(thumbs));
-    await t.shot('gallery');
-    await t.page.getByTestId('mockup-frame-wall').click();
-    await t.page.waitForSelector('[data-testid=mockup-large]', { timeout: 20000 });
-    t.check('large preview shown', (await t.page.locator('[data-testid=mockup-large]').count()) === 1);
-    await t.shot('frame-wall');
-  },
-});

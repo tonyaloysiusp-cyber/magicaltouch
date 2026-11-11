@@ -16,7 +16,7 @@ os.makedirs(TH, exist_ok=True)
 STOP = set('the a an and of for with to in on at by your our my free template templates post story card poster flyer design 2026 2027 mt brand'.split())
 
 uses = collections.defaultdict(list)
-for f in glob.glob(os.path.join(ROOT, 'public/templates/collection/*.json')):
+for f in glob.glob(os.path.join(ROOT, 'data/collections/*.json')):
     try:
         rows = json.load(open(f))
     except Exception:

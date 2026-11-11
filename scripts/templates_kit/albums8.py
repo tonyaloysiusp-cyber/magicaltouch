@@ -1023,7 +1023,7 @@ def build_album(spec):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--out", default=os.path.join(ROOT, "public/templates/collection/albums-2026-11-v2.json"))
+    ap.add_argument("--out", default=os.path.join(ROOT, "data/collections/albums-2026-11-v2.json"))
     ap.add_argument("--only")
     a = ap.parse_args()
     specs = [s for s in ALBUMS if not a.only or a.only in s["slug"]]

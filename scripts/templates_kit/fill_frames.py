@@ -62,7 +62,7 @@ def main():
     dry = "--dry" in sys.argv
     out = []
     done = set()
-    for f in sorted(glob.glob(os.path.join(COLL, "*.json"))):
+    for f in sorted(glob.glob(os.path.join(ROOT, "data/collections", "*.json"))):
         try:
             items = json.load(open(f))
         except Exception:

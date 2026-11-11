@@ -4,7 +4,7 @@ Rebuild Collection 500 templates from the design modules.
   python3 build.py birthday [--ids 1-20] [--out preview.json] [--write]
 
 --out    writes the generated templates (editor format) for the renderer
---write  updates public/templates/collection/collection500-<cat>.json and the
+--write  updates data/collections/collection500-<cat>.json and the
          manifest in data/collection-500/ (brief, design notes, palette)
 """
 
@@ -53,7 +53,7 @@ def palette_of(doc):
     return seen[:6]
 
 
-ARTBOARD_SRC = os.path.join(ROOT, "public/templates/collection/collection500-birthday.json")
+ARTBOARD_SRC = os.path.join(ROOT, "data/collections/collection500-birthday.json")
 
 
 def _slug(t):
@@ -67,7 +67,7 @@ def new_records(cat):
     mod = importlib.import_module(MODULES[cat][0])
     boards = {}
     import glob
-    for f in [ARTBOARD_SRC] + sorted(glob.glob(os.path.join(ROOT, "public/templates/collection/collection500-*.json"))):
+    for f in [ARTBOARD_SRC] + sorted(glob.glob(os.path.join(ROOT, "data/collections/collection500-*.json"))):
         for t in json.load(open(f)):
             boards.setdefault((t["width"], t["height"]), t["canvasJson"]["objects"][0])
     print_board = boards[(480, 673)]
@@ -145,7 +145,7 @@ def main():
     ap.add_argument("--write", action="store_true")
     a = ap.parse_args()
 
-    pub_path = os.path.join(ROOT, "public/templates/collection", f"collection500-{a.cat}.json")
+    pub_path = os.path.join(ROOT, "data/collections", f"collection500-{a.cat}.json")
     man_path = os.path.join(ROOT, "data/collection-500", f"collection500-{a.cat}.json")
     designs = load_designs(a.cat)
     if os.path.exists(pub_path):

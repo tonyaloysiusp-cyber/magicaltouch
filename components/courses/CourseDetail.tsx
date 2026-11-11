@@ -5,11 +5,12 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, ArrowRight, BookOpen, Check, CheckCircle2, Circle, Clock, Loader2, Lock, PlayCircle, Square, SquareCheck } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Award, BookOpen, Check, CheckCircle2, Circle, Clock, Loader2, Lock, PlayCircle, Square, SquareCheck } from 'lucide-react';
 import { CourseWithLessons, Lesson, doneCount, formatMinutes, learnerStatus, totalMinutes } from '@/lib/courses';
 import { saveCompleted, useLearner, Learner } from './useLearner';
 import { LevelBadge, ProgressBar, StatusBadge } from './CourseBits';
 import { CertificatePanel } from './CertificatePanel';
+import { LEVEL_STYLE } from './CoursesCatalog';
 import { EvidenceUpload } from './EvidenceUpload';
 import { needsEvidence } from '@/lib/courseEvidence';
 
@@ -36,32 +37,49 @@ export function CourseDetail({ course, prerequisite }: { course: CourseWithLesso
   const mins = totalMinutes(course.lessons);
   const startLabel = s.status === 'not_started' || !me.userId ? 'Start course' : s.done < course.lessons.length ? 'Continue' : 'Review lessons';
 
+  const L = LEVEL_STYLE[course.level] || LEVEL_STYLE.Beginner;
+  const Icon = L.icon;
+
   return (
-    <div className="mt-container py-8 sm:py-12">
-
-      <div className="mt-6 grid gap-8 lg:grid-cols-[1fr_380px] lg:items-start">
-        <div>
-          <div className="flex flex-wrap items-center gap-2">
-            <LevelBadge level={course.level} />
-            {me.userId && <StatusBadge status={s.status} />}
+    <div>
+      <section className="relative overflow-hidden border-b border-mt-border">
+        <div aria-hidden className="absolute inset-0 opacity-[0.10] dark:opacity-[0.16]" style={{ background: `linear-gradient(120deg, ${L.from}, ${L.to})` }} />
+        <div className="mt-container relative py-10 sm:py-14">
+          <nav aria-label="Breadcrumb" className="text-[13px] text-mt-muted">
+            <Link href="/tutorials" className="hover:text-mt-ink">Tutorials</Link> <span aria-hidden>/</span> <span className="text-mt-ink">{course.title}</span>
+          </nav>
+          <div className="mt-6 flex flex-col sm:flex-row gap-6 sm:items-start">
+            <span aria-hidden className="grid h-16 w-16 shrink-0 place-items-center rounded-2xl text-white shadow-lg" style={{ background: `linear-gradient(135deg, ${L.from}, ${L.to})` }}><Icon size={28} /></span>
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <LevelBadge level={course.level} />
+                {me.userId && <StatusBadge status={s.status} />}
+              </div>
+              <h1 className="mt-3 text-3xl sm:text-[44px] font-semibold tracking-tight leading-tight">{course.title}</h1>
+              <p className="mt-3 text-lg text-mt-muted leading-relaxed max-w-2xl">{course.summary}</p>
+              <p className="mt-4 text-[14px] text-mt-muted inline-flex flex-wrap items-center gap-x-5 gap-y-2">
+                <span className="inline-flex items-center gap-1.5"><BookOpen size={15} aria-hidden /> {course.lessons.length} lessons</span>
+                <span className="inline-flex items-center gap-1.5"><Clock size={15} aria-hidden /> about {formatMinutes(mins)}</span>
+                <span className="inline-flex items-center gap-1.5"><Award size={15} aria-hidden /> Reviewed certificate</span>
+                {prerequisite && <span>Follows: <Link href={`/tutorials/${prerequisite.slug}`} className="underline underline-offset-2">{prerequisite.title}</Link></span>}
+              </p>
+              {me.userId && course.lessons.length > 0 && <div className="mt-5 max-w-xl"><ProgressBar done={s.done} total={course.lessons.length} /></div>}
+              {course.lessons.length > 0 && (
+                <Link href={`/tutorials/${course.slug}/${s.next.slug}`} className="mt-6 h-12 px-6 rounded-full bg-mt-primary text-mt-onprimary text-[15px] font-semibold inline-flex items-center gap-2 shadow-[0_10px_30px_-12px_rgba(9,9,11,0.5)]">
+                  <PlayCircle size={18} aria-hidden /> {startLabel}
+                </Link>
+              )}
+              {me.error && <p role="alert" className="mt-4 text-[14px] text-rose-600">{me.error}</p>}
+            </div>
           </div>
-          <h1 className="mt-4 text-3xl sm:text-4xl font-semibold tracking-tight">{course.title}</h1>
-          <p className="mt-3 text-lg text-mt-muted leading-relaxed max-w-2xl">{course.summary}</p>
-          <p className="mt-4 text-[14px] text-mt-muted inline-flex flex-wrap items-center gap-4">
-            <span className="inline-flex items-center gap-1.5"><BookOpen size={15} aria-hidden /> {course.lessons.length} lessons</span>
-            <span className="inline-flex items-center gap-1.5"><Clock size={15} aria-hidden /> about {formatMinutes(mins)}</span>
-            {prerequisite && <span>Follows: <Link href={`/tutorials/${prerequisite.slug}`} className="underline underline-offset-2">{prerequisite.title}</Link></span>}
-          </p>
-          {me.userId && course.lessons.length > 0 && <div className="mt-5 max-w-xl"><ProgressBar done={s.done} total={course.lessons.length} /></div>}
-          {course.lessons.length > 0 && (
-            <Link href={`/tutorials/${course.slug}/${s.next.slug}`} className="mt-6 h-11 px-5 rounded-full bg-mt-primary text-mt-onprimary text-[15px] font-semibold inline-flex items-center gap-2">
-              <PlayCircle size={17} aria-hidden /> {startLabel}
-            </Link>
-          )}
-          {me.error && <p role="alert" className="mt-4 text-[14px] text-rose-600">{me.error}</p>}
+        </div>
+      </section>
 
+    <div className="mt-container py-10 sm:py-12">
+      <div className="grid gap-8 lg:grid-cols-[1fr_380px] lg:items-start">
+        <div>
           {course.objectives.length > 0 && (
-            <section aria-labelledby="obj" className="mt-10">
+            <section aria-labelledby="obj" className="rounded-3xl border border-mt-border bg-mt-surface p-6">
               <h2 id="obj" className="text-xl font-semibold">What you will learn</h2>
               <ul className="mt-3 grid gap-2 sm:grid-cols-2">
                 {course.objectives.map((o) => <li key={o} className="flex gap-2 text-[15px]"><Check size={17} className="mt-0.5 shrink-0 text-emerald-600" aria-hidden />{o}</li>)}
@@ -74,7 +92,7 @@ export function CourseDetail({ course, prerequisite }: { course: CourseWithLesso
             {course.lessons.length === 0 ? (
               <p className="mt-3 text-mt-muted">Lessons for this course are coming soon.</p>
             ) : (
-              <ol className="mt-3 divide-y divide-mt-border rounded-2xl border border-mt-border overflow-hidden">
+              <ol className="mt-3 divide-y divide-mt-border rounded-2xl border border-mt-border bg-mt-surface overflow-hidden">
                 {course.lessons.map((l, i) => {
                   const ok = s.completed.has(l.id);
                   const shut = s.isLessonLocked(i);
@@ -83,7 +101,7 @@ export function CourseDetail({ course, prerequisite }: { course: CourseWithLesso
                       <Link href={`/tutorials/${course.slug}/${l.slug}`} className={`flex items-center gap-3 px-4 py-3.5 hover:bg-mt-surface2 ${shut ? 'opacity-60' : ''}`}>
                         {ok ? <CheckCircle2 size={20} className="shrink-0 text-emerald-600" aria-label="Completed" /> : shut ? <Lock size={18} className="shrink-0 text-mt-faint" aria-label="Locked — finish the lessons before it" /> : <Circle size={20} className="shrink-0 text-mt-faint" aria-label="Not completed" />}
                         <span className="flex-1 min-w-0">
-                          <span className="block text-[15px] font-medium">{i + 1}. {l.title}</span>
+                          <span className="block text-[15px] font-medium"><span className="text-mt-faint tabular-nums mr-1.5">{String(i + 1).padStart(2, '0')}</span>{l.title}</span>
                           <span className="block text-[13px] text-mt-muted truncate">{l.tool}</span>
                         </span>
                         <span className="text-[13px] text-mt-muted tabular-nums whitespace-nowrap">{l.minutes} min</span>
@@ -115,6 +133,7 @@ export function CourseDetail({ course, prerequisite }: { course: CourseWithLesso
           )}
         </aside>
       </div>
+    </div>
     </div>
   );
 }

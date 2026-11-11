@@ -30,7 +30,7 @@ COL = os.path.join(PUB, "templates/collection")
 
 def pool(pred, n=12, portrait=True):
     out = []
-    for f in sorted(glob.glob(os.path.join(COL, "mass-2026-11-*.json"))) + [os.path.join(COL, "studio-2026-11.json")] + sorted(glob.glob(os.path.join(COL, "collection500-*.json"))):
+    for f in sorted(glob.glob(os.path.join(PUB, "../data/collections", "mass-2026-11-*.json"))) + [os.path.join(PUB, "../data/collections", "studio-2026-11.json")] + sorted(glob.glob(os.path.join(PUB, "../data/collections", "collection500-*.json"))):
         try:
             data = json.load(open(f))
         except Exception:

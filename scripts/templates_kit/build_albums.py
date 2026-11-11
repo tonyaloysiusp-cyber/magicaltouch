@@ -9,7 +9,7 @@ Editorial, Scrapbook, Minimal, Dark Luxe, Romance, Garden, Bold Colour),
 which set the palette, fonts, frames, spacing and page rhythm, so two albums
 of the same theme look clearly different.
 
-Writes public/templates/collection/albums-2026-11.json.
+Writes data/collections/albums-2026-11.json.
 """
 
 import argparse
@@ -236,7 +236,7 @@ def main():
     ap.add_argument("--outdir", default=os.path.join(ROOT, "public/templates/collection"))
     a = ap.parse_args()
     out = build(a.limit)
-    json.dump(out, open(os.path.join(a.outdir, "albums-2026-11.json"), "w"), ensure_ascii=False, separators=(",", ":"))
+    json.dump(out, open(os.path.join(ROOT, "data/collections", "albums-2026-11.json"), "w"), ensure_ascii=False, separators=(",", ":"))
     from collections import Counter
     print(len(out), sum(len(json.dumps(x)) for x in out) // 1024, "KB", Counter(x["pages"] for x in out), len({x["slug"] for x in out}))
 

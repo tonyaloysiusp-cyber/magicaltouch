@@ -3,7 +3,7 @@ Build the Studio collection (studio_spec.py) into the editor format.
 
   MT_FONT_DIR=... python3 build_studio.py [--only 1-20] [--out preview.json] [--write]
 
---write  writes public/templates/collection/studio-2026-11.json (one record
+--write  writes data/collections/studio-2026-11.json (one record
          per template, same shape as the other collection files).
 Multi-page templates (magazines, photo albums) have one artboard per page,
 side by side with a 120 px gap, exactly as the editor lays out pages.
@@ -24,8 +24,8 @@ from kit import Doc  # noqa: E402
 import studio  # noqa: E402
 from studio_spec import S, PAL  # noqa: E402
 
-OUT = os.path.join(ROOT, "public/templates/collection/studio-2026-11.json")
-BOARD = json.load(open(os.path.join(ROOT, "public/templates/collection/collection500-birthday.json")))[0]["canvasJson"]["objects"][0]
+OUT = os.path.join(ROOT, "data/collections/studio-2026-11.json")
+BOARD = json.load(open(os.path.join(ROOT, "data/collections/collection500-birthday.json")))[0]["canvasJson"]["objects"][0]
 GAP = 120
 
 

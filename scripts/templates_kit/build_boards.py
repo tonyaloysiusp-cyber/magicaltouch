@@ -3,7 +3,7 @@ Build the Studio boards collection (boards_spec.py) into the editor format.
 
   MT_FONT_DIR=... python3 build_pro.py [--only 1-20] [--out preview.json] [--write]
 
---write  writes public/templates/collection/boards-2026-10.json (one record per
+--write  writes data/collections/boards-2026-10.json (one record per
          template, same shape as the other collection files).
 Previews and thumbnails are rendered separately with Fabric 5.3 in
 headless Chromium (thumbnail 520 px wide, preview 1300 px on the long side).
@@ -23,8 +23,8 @@ from kit import Doc  # noqa: E402
 import boards  # noqa: E402
 from boards_spec import S  # noqa: E402
 
-OUT = os.path.join(ROOT, "public/templates/collection/boards-2026-10.json")
-BOARD = json.load(open(os.path.join(ROOT, "public/templates/collection/collection500-birthday.json")))[0]["canvasJson"]["objects"][0]
+OUT = os.path.join(ROOT, "data/collections/boards-2026-10.json")
+BOARD = json.load(open(os.path.join(ROOT, "data/collections/collection500-birthday.json")))[0]["canvasJson"]["objects"][0]
 
 
 def slug(t):

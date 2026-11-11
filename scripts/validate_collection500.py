@@ -2,7 +2,7 @@
 """Validate the Collection 500 manifests and template files.
 
 Checks every record in data/collection-500/*.json against its packaged
-template (public/templates/collection/<file>.json) and writes a report to
+template (data/collections/<file>.json) and writes a report to
 data/collection-500/VALIDATION.md. Exit code 1 if any hard error is found.
 
 Run:  python3 scripts/validate_collection500.py

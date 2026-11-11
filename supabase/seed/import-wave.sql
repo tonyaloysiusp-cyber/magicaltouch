@@ -1,8 +1,8 @@
--- Imports a Wave 2 file (public/templates/collection/wave-2026-11-<key>.json
+-- Imports a Wave 2 file (data/collections/wave-2026-11-<key>.json
 -- or brand-promo2-2026-11.json) into templates. Previews are WebP (about 40 KB
 -- per template), the occasion and region tags are kept, and Brand Promo
 -- designs stay drafts (admin only).
---   1) select net.http_get(url := 'https://www.magicaltouchdesign.com/templates/collection/<file>.json', timeout_milliseconds := 60000);
+--   1) select net.http_get(url := 'https://raw.githubusercontent.com/tonyaloysiusp-cyber/magicaltouch/main/data/collections/<file>.json', timeout_milliseconds := 60000);
 --   2) this statement, with :id = the request id from step 1.
 -- Safe to re-run: existing slugs are skipped.
 with src as (

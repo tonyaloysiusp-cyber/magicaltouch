@@ -1,7 +1,7 @@
--- Imports a collection file (public/templates/collection/<file>.json, e.g.
+-- Imports a collection file (data/collections/<file>.json, e.g.
 -- studio-2026-11.json or mass-2026-11-birthday.json) into templates.
--- Run in two steps after the site is deployed:
---   1) select net.http_get(url := 'https://www.magicaltouchdesign.com/templates/collection/<file>.json', timeout_milliseconds := 60000);
+-- Run in two steps after the file is pushed to main (the file is read from GitHub):
+--   1) select net.http_get(url := 'https://raw.githubusercontent.com/tonyaloysiusp-cyber/magicaltouch/main/data/collections/<file>.json', timeout_milliseconds := 60000);
 --   2) this statement, with :id = the request id from step 1.
 -- Safe to re-run: existing slugs are skipped.
 with src as (

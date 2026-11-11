@@ -3,7 +3,7 @@ Build Wave 2 (big occasions, world regions, multi-page books):
 
   MT_FONT_DIR=... python3 build_wave.py KEY [KEY ...] [--limit N]
 
-Writes public/templates/collection/wave-2026-11-<key>.json. Magazines are
+Writes data/collections/wave-2026-11-<key>.json. Magazines are
 8, 12 or 16 pages (cover, contents, features, photo essays, back cover);
 photo albums are 8–12 pages (cover, collage pages, polaroid pages, end).
 Pages sit side by side with a 120 px gap, as in the editor.
@@ -165,7 +165,7 @@ def main():
     keys = list(CATS2) if a.keys == ["all"] else a.keys
     for k in keys:
         out = build(k, a.limit)
-        json.dump(out, open(os.path.join(a.outdir, f"wave-2026-11-{k}.json"), "w"), ensure_ascii=False, separators=(",", ":"))
+        json.dump(out, open(os.path.join(ROOT, "data/collections", f"wave-2026-11-{k}.json"), "w"), ensure_ascii=False, separators=(",", ":"))
         print(k, len(out), sum(len(json.dumps(x)) for x in out) // 1024, "KB")
 
 
