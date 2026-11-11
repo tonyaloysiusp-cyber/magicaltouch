@@ -30,7 +30,8 @@ async function loadPixels(src: string): Promise<{ data: Uint8ClampedArray; width
   c.width = Math.round(img.naturalWidth * k); c.height = Math.round(img.naturalHeight * k);
   const g = c.getContext('2d')!;
   g.drawImage(img, 0, 0, c.width, c.height);
-  return { ...g.getImageData(0, 0, c.width, c.height), url: src } as any;
+  const id = g.getImageData(0, 0, c.width, c.height);
+  return { data: id.data, width: id.width, height: id.height, url: src };
 }
 
 function Slider({ label, value, min, max, step = 1, onChange, fmt }: { label: string; value: number; min: number; max: number; step?: number; onChange: (v: number) => void; fmt?: (v: number) => string }) {
