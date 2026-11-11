@@ -18,7 +18,7 @@
  {
   "name": "course",
   "device": "desktop",
-  "url": "/tutorials/beginner",
+  "url": "/tutorials/beginner-design-basics",
   "wait": 5000,
   "full": true,
   "steps": [
@@ -39,6 +39,18 @@
    },
    {
     "url": 1
+   }
+  ]
+ },
+ {
+  "name": "lesson",
+  "device": "desktop",
+  "url": "/tutorials/beginner-design-basics",
+  "wait": 4000,
+  "steps": [
+   {
+    "click": "a[href^='/tutorials/beginner-design-basics/']",
+    "wait": 4000
    }
   ]
  }
