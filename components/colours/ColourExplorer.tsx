@@ -7,7 +7,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Check, Copy, Grid3x3, Heart, Search, Trash2 } from 'lucide-react';
-import { HARMONIES, Harmony, MOOD_PALETTES, Mood, contrast, harmony, hexToRgb, normHex, readableOn, rgbToCmyk } from '@/lib/colour';
+import { HARMONIES, Harmony, MOOD_PALETTES, Mood, contrast, harmony, hexToRgb, luminance, normHex, readableOn, rgbToCmyk } from '@/lib/colour';
 
 const SAVED = 'mt:palettes';
 const load = (): string[][] => { try { return JSON.parse(localStorage.getItem(SAVED) || '[]'); } catch { return []; } };
@@ -68,7 +68,8 @@ export function ColourExplorer() {
   };
 
   const apply = (v: string) => { setInput(v); const n = normHex(v); if (n) setBase(n); };
-  const ratio = contrast(palette[0], palette[palette.length - 1]);
+  const byLum = [...palette].sort((a, b) => luminance(a) - luminance(b));
+  const ratio = contrast(byLum[0], byLum[byLum.length - 1]);
 
   return (
     <div className="space-y-12">

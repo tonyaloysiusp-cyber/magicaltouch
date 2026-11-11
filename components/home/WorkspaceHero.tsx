@@ -84,8 +84,8 @@ export function WorkspaceHero() {
           <div className="absolute inset-x-[6%] top-0 bottom-[10%] overflow-hidden rounded-[28px] shadow-[0_40px_90px_-40px_rgba(15,23,42,0.6)] mth-rise" style={{ animationDelay: '.1s' }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/templates/photos/pro/city.jpg" alt="" className="mth-pan absolute inset-0 h-full w-full object-cover" fetchPriority="high" />
-            <div className="absolute inset-0 bg-gradient-to-t from-[#0B1220]/70 via-[#0B1220]/10 to-transparent" />
-            <div className="absolute left-6 bottom-5 text-white">
+            <div className="absolute inset-0 bg-gradient-to-b from-[#0B1220]/55 via-transparent to-[#0B1220]/40" />
+            <div className="absolute left-6 top-5 text-white">
               <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-white/70">Now designing</p>
               <p className="mt-1 text-[15px] font-semibold transition-opacity duration-500" key={i}>{SHOWCASE[i].label}</p>
             </div>

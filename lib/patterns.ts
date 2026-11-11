@@ -21,19 +21,30 @@ export const REPEATS: { id: RepeatType; label: string; hint: string }[] = [
   { id: 'random', label: 'Random', hint: 'Evenly scattered, seamless' },
 ];
 
+// A flower of n rounded petals around a small centre.
+function flower(n: number): string {
+  const rot = (x: number, y: number, a: number) => [x * Math.cos(a) - y * Math.sin(a), x * Math.sin(a) + y * Math.cos(a)].map((v) => Math.round(v * 10) / 10).join(' ');
+  let d = '';
+  for (let k = 0; k < n; k++) {
+    const a = (k / n) * Math.PI * 2;
+    d += `M${rot(0, -8, a)}C${rot(-20, -22, a)} ${rot(-14, -48, a)} ${rot(0, -48, a)}C${rot(14, -48, a)} ${rot(20, -22, a)} ${rot(0, -8, a)}Z`;
+  }
+  return d + 'M0-7A7 7 0 1 1 0 7A7 7 0 1 1 0-7Z';
+}
+
 // Original motifs, drawn in a 100 × 100 box centred on 0,0.
 export const MOTIFS: { id: string; label: string; d: string; stroke?: boolean }[] = [
   { id: 'sparkle', label: 'Sparkle', d: 'M0-50C4-14 14-4 50 0C14 4 4 14 0 50C-4 14-14 4-50 0C-14-4-4-14 0-50Z' },
   { id: 'dot', label: 'Dot', d: 'M0-40A40 40 0 1 1 0 40A40 40 0 1 1 0-40Z' },
   { id: 'ring', label: 'Ring', d: 'M0-44A44 44 0 1 1 0 44A44 44 0 1 1 0-44ZM0-26A26 26 0 1 0 0 26A26 26 0 1 0 0-26Z' },
   { id: 'leaf', label: 'Leaf', d: 'M0-50C30-30 30 30 0 50C-30 30-30-30 0-50Z' },
-  { id: 'petal', label: 'Flower', d: 'M0-10C-12-48 12-48 0-10C38-22 46 0 10-3C34 28 14 42 6 10C-14 42-34 28-10-3C-46 0-38-22 0-10ZM0-9A9 9 0 1 1 0 9A9 9 0 1 1 0-9Z' },
+  { id: 'petal', label: 'Flower', d: flower(5) },
   { id: 'diamond', label: 'Diamond', d: 'M0-50L36 0L0 50L-36 0Z' },
   { id: 'arch', label: 'Arch', d: 'M-36 50L-36-10A36 36 0 0 1 36-10L36 50Z' },
   { id: 'wave', label: 'Wave', d: 'M-50 6C-34-18-16-18 0 6C16 30 34 30 50 6L50 22C34 46 16 46 0 22C-16-2-34-2-50 22Z' },
   { id: 'triangle', label: 'Triangle', d: 'M0-46L44 34L-44 34Z' },
   { id: 'cross', label: 'Cross', d: 'M-12-46H12V-12H46V12H12V46H-12V12H-46V-12H-12Z' },
-  { id: 'crescent', label: 'Crescent', d: 'M10-46A46 46 0 1 0 10 46A36 36 0 1 1 10-46Z' },
+  { id: 'crescent', label: 'Crescent', d: 'M18-42A46 46 0 1 0 18 42A50 50 0 0 1 18-42Z' },
   { id: 'scallop', label: 'Scallop', d: 'M-50 20A25 25 0 0 1 0 20A25 25 0 0 1 50 20L50 50L-50 50Z' },
   { id: 'petal4', label: 'Quatrefoil', d: 'M0-48A20 20 0 0 1 0-8A20 20 0 0 1 40 0A20 20 0 0 1 0 8A20 20 0 0 1 0 48A20 20 0 0 1 0 8A20 20 0 0 1-40 0A20 20 0 0 1 0-8A20 20 0 0 1 0-48Z' },
   { id: 'line', label: 'Dash', d: 'M-44-7H44V7H-44Z' },
