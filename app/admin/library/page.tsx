@@ -42,6 +42,7 @@ const TABS: { id: Tab; label: string }[] = [
 const COLLECTIONS: [string, string][] = [['', 'All collections'], ['universe-2026-11', 'Creative Universe'], ['pro-pilot-2026-11', 'Pro brand sets'], ['birthday-pro-2026-11', 'Birthday collection'], ['diwali-pro-2026-11', 'Diwali Pro'], ['albums-2026-11', 'Photo albums'], ['collection-500', 'Collection 500'], ['wave-2026-11', 'Wave 2'], ['mass-collection', 'Mass collection']];
 const field = 'h-9 rounded-lg border border-mt-input-border bg-mt-surface px-2.5 text-[13px] text-mt-ink';
 const btn = 'inline-flex items-center gap-1.5 h-9 px-3 rounded-lg text-[13px] font-semibold border border-mt-border bg-mt-surface text-mt-ink hover:border-mt-ink/40 disabled:opacity-50';
+const iconBtn = 'inline-grid place-items-center shrink-0 h-8 w-8 rounded-lg border border-mt-border bg-mt-surface text-mt-ink hover:border-mt-ink/40 disabled:opacity-50';
 const btnDark = 'inline-flex items-center gap-1.5 h-9 px-3.5 rounded-lg text-[13px] font-semibold bg-mt-primary text-mt-onprimary hover:opacity-90 disabled:opacity-50';
 const STATUS_BADGE: Record<string, string> = { published: 'bg-emerald-600 text-white', unpublished: 'bg-zinc-700 text-white', draft: 'bg-amber-500 text-white' };
 const STATUS_LABEL: Record<string, string> = { published: 'Published', unpublished: 'Hidden', draft: 'Draft' };
@@ -417,7 +418,7 @@ export default function TemplateManager() {
           <button type="button" aria-label={isOpen ? 'Collapse' : 'Expand'} onClick={() => setOpen((s) => { const x = new Set(s); x.has(n.id) ? x.delete(n.id) : x.add(n.id); return x; })} className={`h-7 w-5 grid place-items-center ${kids ? '' : 'invisible'}`}>
             <ChevronRight size={13} className={`transition-transform ${isOpen ? 'rotate-90' : ''}`} />
           </button>
-          <button type="button" onClick={() => { setCatSel(n.id); reset(); }} className="flex-1 min-w-0 flex items-center gap-1.5 h-8 text-left text-[13px]">
+          <button type="button" onClick={() => { setCatSel(n.id); reset(); if (kids) setOpen((x) => new Set(x).add(n.id)); }} className="flex-1 min-w-0 flex items-center gap-1.5 h-8 text-left text-[13px]">
             {active || isOpen ? <FolderOpen size={14} className="shrink-0 opacity-70" /> : <Folder size={14} className="shrink-0 opacity-70" />}
             <span className="truncate">{n.name}</span>
           </button>
@@ -553,10 +554,10 @@ export default function TemplateManager() {
                           <>
                             <button type="button" onClick={() => setDetails({ ...t })} className={`${btn} h-8 flex-1 justify-center`}><Pencil size={13} /> Details</button>
                             {t.status === 'published'
-                              ? <button type="button" title="Hide from customers" onClick={() => run({ kind: 'hide', ids: [t.id] })} disabled={busy} className={`${btn} h-8 w-8 justify-center px-0`}><EyeOff size={13} /></button>
-                              : <button type="button" title="Publish" onClick={() => run({ kind: 'publish', ids: [t.id] })} disabled={busy} className={`${btn} h-8 w-8 justify-center px-0 text-emerald-700`}><Eye size={13} /></button>}
+                              ? <button type="button" title="Hide from customers" onClick={() => run({ kind: 'hide', ids: [t.id] })} disabled={busy} className={`${iconBtn}`}><EyeOff size={13} /></button>
+                              : <button type="button" title="Publish" onClick={() => run({ kind: 'publish', ids: [t.id] })} disabled={busy} className={`${iconBtn} text-emerald-700`}><Eye size={13} /></button>}
                             <div className="relative">
-                              <button type="button" aria-label="More" onClick={() => setMenu(menu === t.id ? null : t.id)} className={`${btn} h-8 w-8 justify-center px-0`}><MoreHorizontal size={14} /></button>
+                              <button type="button" aria-label="More" onClick={() => setMenu(menu === t.id ? null : t.id)} className={`${iconBtn}`}><MoreHorizontal size={14} /></button>
                               {menu === t.id && (
                                 <div className="absolute right-0 bottom-9 z-20 w-48 rounded-xl border border-mt-border bg-mt-surface shadow-xl p-1 text-[13px]" onMouseLeave={() => setMenu(null)}>
                                   <a href={editorUrl(t)} className="flex items-center gap-2 px-2.5 py-2 rounded-lg hover:bg-mt-surface2"><Wand2 size={13} /> Edit design</a>
@@ -596,8 +597,8 @@ export default function TemplateManager() {
                       <a href={editorUrl(t)} className={`${btn} h-8`}><Wand2 size={13} /> Edit design</a>
                       <button type="button" onClick={() => setDetails({ ...t })} className={`${btn} h-8`}><Pencil size={13} /> Details</button>
                       <button type="button" onClick={() => run({ kind: t.status === 'published' ? 'hide' : 'publish', ids: [t.id] })} className={`${btn} h-8`}>{t.status === 'published' ? <><EyeOff size={13} /> Hide</> : <><Eye size={13} /> Publish</>}</button>
-                      <button type="button" title="Duplicate" onClick={() => duplicate(t)} className={`${btn} h-8 w-8 justify-center px-0`}><Copy size={13} /></button>
-                      <button type="button" title="Move to bin" onClick={() => setConfirm({ kind: 'bin', ids: [t.id] })} className={`${btn} h-8 w-8 justify-center px-0 text-red-600`}><Trash2 size={13} /></button>
+                      <button type="button" title="Duplicate" onClick={() => duplicate(t)} className={`${iconBtn}`}><Copy size={13} /></button>
+                      <button type="button" title="Move to bin" onClick={() => setConfirm({ kind: 'bin', ids: [t.id] })} className={`${iconBtn} text-red-600`}><Trash2 size={13} /></button>
                     </>
                   )}
                 </div>
