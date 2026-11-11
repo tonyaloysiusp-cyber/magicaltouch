@@ -1,0 +1,26 @@
+name: copy-thumbs
+on: { push: { branches: [thumbs-u] } }
+jobs:
+  copy:
+    runs-on: ubuntu-latest
+    env:
+      ANON: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJxa2pvZ3psanNidWZicmRsYmZyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkyNzgyMDcsImV4cCI6MjEwNDg1NDIwN30.-OHCqhZNWsdlbkIE3qUV6It5VUoAN1lQDUFCRLtUaPM
+    steps:
+      - uses: actions/checkout@v4
+      - shell: bash {0}
+        run: |
+          ls u > all.txt; total=$(wc -l < all.txt); echo "files $total"
+          split -l 300 all.txt part_
+          ok=0; bad=0
+          for p in part_*; do
+            body=$(python3 -c "import json,sys;print(json.dumps({'branch':'thumbs-u','folder':'u','files':open('$p').read().split()}))")
+            for try in 1 2 3; do
+              r=$(curl -s -m 160 -X POST https://rqkjogzljsbufbrdlbfr.supabase.co/functions/v1/copy-thumbs -H "Authorization: Bearer $ANON" -H "Content-Type: application/json" -d "$body")
+              n=$(echo "$r" | python3 -c "import json,sys;d=json.load(sys.stdin);print(d.get('ok',0),d.get('failedCount',-1))" 2>/dev/null || echo "0 -1")
+              set -- $n
+              [ "$2" = "0" ] && break
+              echo "retry $p: $r" | cut -c1-200
+            done
+            ok=$((ok+$1)); echo "$p ok=$1 failed=$2"
+          done
+          echo "TOTAL ok=$ok of $total"
