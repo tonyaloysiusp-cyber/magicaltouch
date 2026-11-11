@@ -4,7 +4,8 @@ jobs:
   check:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
       - shell: bash {0}
         run: |
-          B=https://www.magicaltouchdesign.com
-          for p in /this-page-does-not-exist-xyz /https-www-magicaltouchdesign-com-templates-category-birthday /templates; do curl -s -o /tmp/o -w "%{http_code} %{redirect_url} $p\n" "$B$p"; grep -o "This page could not be found\|Search [0-9,]*+ templates" /tmp/o | head -2; done
+          npm i --no-save playwright@1.47.2 >/dev/null 2>&1 && npx playwright install --with-deps chromium >/dev/null 2>&1
+          node tools/weight.mjs
