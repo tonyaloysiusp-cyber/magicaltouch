@@ -5,7 +5,8 @@ const out = 'e2e-out';
 const read = (f) => { try { return fs.readFileSync(`${out}/${f}`, 'utf8'); } catch { return ''; } };
 let bad = 0;
 const steps = read('steps.txt');
-const failedSteps = steps.split('\n').filter((l) => l.startsWith('FAILED'));
+// A failed first browser install is fine when the fallback install worked.
+const failedSteps = steps.split('\n').filter((l) => l.startsWith('FAILED') && !(l === 'FAILED pw-install' && steps.includes('== pw-install-nodeps') && !steps.includes('FAILED pw-install-nodeps')));
 console.log('== Steps'); console.log(steps.trim() || '(none)');
 if (failedSteps.length) bad += failedSteps.length;
 const tsc = read('tsc.txt').split('\n').filter((l) => /error TS\d+/.test(l));
