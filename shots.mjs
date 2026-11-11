@@ -7,6 +7,19 @@ const jobs = JSON.parse(fs.readFileSync('jobs.json', 'utf8'));
 for (const j of jobs) {
   const ctx = await browser.newContext(j.device === 'desktop' ? { viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2 } : j.device === 'ipad' ? { ...devices['iPad Pro 11 landscape'] } : { ...devices[j.device || 'iPhone 13'] });
   await ctx.addInitScript(() => { try { localStorage.setItem('mt:onboarded', '1'); } catch {} });
+  if (j.mock === 'admin') {
+    const ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    const user = { id: '00000000-0000-4000-8000-000000000001', email: 'admin@example.test', aud: 'authenticated', role: 'authenticated', app_metadata: {}, user_metadata: {} };
+    const sess = { access_token: 'fake', token_type: 'bearer', expires_in: 360000, expires_at: Math.floor(Date.now() / 1000) + 360000, refresh_token: 'fake', user };
+    await ctx.addInitScript((v) => { try { localStorage.setItem('sb-rqkjogzljsbufbrdlbfr-auth-token', v); } catch {} }, JSON.stringify(sess));
+    await ctx.route('**/auth/v1/**', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(r.request().url().includes('/user') ? user : sess) }));
+    await ctx.route('**/rest/v1/**', (r) => {
+      const u = r.request().url();
+      if (u.includes('/rest/v1/profiles')) return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ id: user.id, name: 'Admin', is_admin: true }) });
+      if (r.request().method() !== 'GET' && r.request().method() !== 'HEAD') return r.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
+      return r.continue({ headers: { ...r.request().headers(), authorization: `Bearer ${ANON}`, apikey: ANON } });
+    });
+  }
   const page = await ctx.newPage();
   try {
     await page.goto(base + j.url, { waitUntil: 'domcontentloaded', timeout: 60000 });

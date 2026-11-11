@@ -1,4 +1,72 @@
 [
- {"name":"brand","device":"desktop","url":"/","wait":5000,"steps":[{"click":"nav[aria-label='Tour steps'] button:nth-child(3)","wait":700},{"wait":1200},{"wait":1300}]},
- {"name":"studio","device":"desktop","url":"/","wait":4000,"steps":[{"js":"window.scrollTo(0, document.getElementById('features').offsetTop-60)","wait":2000},{"text":"Emerald","exact":true,"wait":1200},{"text":"Terracotta","exact":true,"wait":1200}]}
+ {
+  "name": "lib",
+  "device": "desktop",
+  "url": "/admin/library",
+  "mock": "admin",
+  "wait": 9000,
+  "steps": [
+   {
+    "text": "Social Media",
+    "exact": true,
+    "wait": 2500
+   },
+   {
+    "click": "button[aria-label='Expand']",
+    "wait": 1200
+   },
+   {
+    "text": "Organise",
+    "exact": false,
+    "wait": 1200
+   },
+   {
+    "click": "button[title='Delete category']",
+    "wait": 1200
+   },
+   {
+    "text": "Cancel",
+    "exact": true,
+    "wait": 800
+   },
+   {
+    "text": "Done",
+    "exact": false,
+    "wait": 800
+   },
+   {
+    "click": "main label[aria-label='Select'] input",
+    "wait": 600
+   },
+   {
+    "click": "button:has-text('Move to\u2026')",
+    "wait": 1200
+   },
+   {
+    "text": "Cancel",
+    "exact": true,
+    "wait": 600
+   },
+   {
+    "click": "button:has-text('Details')",
+    "wait": 1500
+   },
+   {
+    "close": true,
+    "wait": 800
+   },
+   {
+    "click": "button[aria-label='List view']",
+    "wait": 2000
+   }
+  ]
+ },
+ {
+  "name": "libm",
+  "device": "iPhone 13",
+  "url": "/admin/library",
+  "mock": "admin",
+  "wait": 9000,
+  "full": true
+ }
 ]
