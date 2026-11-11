@@ -8,7 +8,7 @@
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ChevronDown, Eraser, ImagePlus, LayoutGrid, Menu, Plus, X } from 'lucide-react';
+import { ChevronDown, Eraser, Grid3x3, ImagePlus, LayoutGrid, Menu, Palette, Plus, X } from 'lucide-react';
 import { ThemeSwitch } from '@/components/ThemeSwitch';
 import { ProfileMenu } from '@/components/ProfileMenu';
 import { BrandLogo } from '@/components/BrandLogo';
@@ -28,6 +28,8 @@ const TABS: { id: SiteTab; label: string; href: string }[] = [
 const TOOLS = [
   { href: '/remove-background', label: 'Remove background', hint: 'One photo or many at once', icon: <Eraser size={17} /> },
   { href: '/photo-studio', label: 'Photo Studio', hint: 'Edit, retouch and crop a photo', icon: <ImagePlus size={17} /> },
+  { href: '/patterns', label: 'Pattern Studio', hint: 'Seamless repeat patterns', icon: <Grid3x3 size={17} /> },
+  { href: '/colours', label: 'Colour Explorer', hint: 'Palettes and harmonies', icon: <Palette size={17} /> },
   { href: '/free-design-tools', label: 'All free tools', hint: 'Everything in one place', icon: <LayoutGrid size={17} /> },
 ];
 

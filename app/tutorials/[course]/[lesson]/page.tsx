@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { SeoShell } from '@/components/seo/SeoShell';
-import { SITE_URL, SITE_NAME } from '@/lib/seo';
+import { SITE_URL, SITE_NAME, fitTitle, fitDescription } from '@/lib/seo';
 import { createAnonSupabaseClient } from '@/lib/supabase/server';
 import { loadCourse } from '@/lib/courses';
 import { LessonView } from '@/components/courses/CourseDetail';
@@ -26,7 +26,7 @@ export async function generateMetadata({ params }: { params: { course: string; l
   if (!d) return { title: 'Lesson not found', robots: { index: false } };
   const url = `${SITE_URL}/tutorials/${d.course.slug}/${d.lesson.slug}`;
   return {
-    title: { absolute: `${d.lesson.title} — ${d.course.title} | Magical Touch Design` },
+    title: fitTitle(`${d.lesson.title} — ${d.course.title}`),
     description: (d.lesson.intro || d.course.summary).slice(0, 300),
     alternates: { canonical: url },
     openGraph: { type: 'article', url, title: d.lesson.title, description: d.lesson.intro, siteName: SITE_NAME, images: [`${SITE_URL}/api/og`] },
@@ -40,7 +40,7 @@ export default async function LessonPage({ params }: { params: { course: string;
     '@context': 'https://schema.org',
     '@type': 'HowTo',
     name: d.lesson.title,
-    description: d.lesson.intro,
+    description: fitDescription(d.lesson.intro),
     totalTime: `PT${d.lesson.minutes}M`,
     step: d.lesson.steps.map((s, i) => ({ '@type': 'HowToStep', position: i + 1, text: s })),
     isPartOf: { '@type': 'Course', name: d.course.title, url: `${SITE_URL}/tutorials/${d.course.slug}` },

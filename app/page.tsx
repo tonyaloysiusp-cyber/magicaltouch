@@ -2,16 +2,15 @@ import type { Metadata } from 'next';
 import { getTemplateCountLabel, withCount } from '@/lib/templateCountServer';
 import { HomePage } from '@/components/home/HomePage';
 import { getGooglePicture } from '@/lib/googlePictureServer';
-import { SITE_URL } from '@/lib/seo';
+import { SITE_URL, fitTitle, fitDescription } from '@/lib/seo';
 
 const baseMetadata: Metadata = {
-  title: { absolute: 'Free Online Design Tool & 1,000+ Templates — No Watermark | Magical Touch Design' },
-  description:
-    'Design anything with 1,000+ free templates: Instagram posts, flyers, posters, menus, invitations, certificates and business cards. Edit online and download print-ready PDF, PNG or JPG.',
+  title: fitTitle('Free Online Design Studio & Templates'),
+  description: fitDescription('Design anything with 1,000+ free templates: Instagram posts, flyers, posters, menus, invitations, certificates and business cards. Edit online and download print-ready PDF, PNG or JPG.'),
   alternates: { canonical: '/' },
   openGraph: {
     title: 'Magical Touch Design — Design anything. Make it magical.',
-    description: '1,000+ free, editable templates and a full online design studio — every feature free, no watermark. Used worldwide.',
+    description: fitDescription('1,000+ free, editable templates and a full online design studio — every feature free, no watermark. Used worldwide.'),
     images: [{ url: '/api/og', width: 1200, height: 630, alt: 'Magical Touch Design' }],
   },
 };

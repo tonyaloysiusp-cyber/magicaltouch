@@ -1,9 +1,10 @@
 import type { Metadata } from 'next';
 import { VerifyView } from '../VerifyView';
+import { fitTitle } from '@/lib/seo';
 
 // Result pages are per-certificate: never indexed by search engines.
 export const metadata: Metadata = {
-  title: 'Certificate check — Magical Touch Design',
+  title: fitTitle('Certificate check'),
   robots: { index: false, follow: false },
 };
 

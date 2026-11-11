@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { CategoryLanding } from '@/components/seo/CategoryLanding';
-import { SITE_URL, SITE_NAME, getCategories, getTemplatesInCategory, getSubcategories } from '@/lib/seo';
+import { SITE_URL, SITE_NAME, getCategories, getTemplatesInCategory, getSubcategories, fitTitle } from '@/lib/seo';
 
 // A landing page per category ("Free Wedding templates"), with links to its
 // sub-categories, every template page in it and its popular hashtags.
@@ -25,7 +25,7 @@ export async function generateMetadata({ params }: { params: { category: string 
   const title = `${cat.count}+ Free ${cat.name} Templates – Edit Online`;
   const description = `Browse ${cat.count} free, editable ${cat.name.toLowerCase()} templates. Customise them online in minutes and download print-ready PDF, PNG or JPG — no design skills needed.`;
   const url = `${SITE_URL}/templates/category/${cat.slug}`;
-  return { title: { absolute: `${title} | ${SITE_NAME}` }, description, alternates: { canonical: url }, openGraph: { type: 'website', url, title, description, siteName: SITE_NAME, images: [`${SITE_URL}/api/og`] } };
+  return { title: fitTitle(`${title}`), description, alternates: { canonical: url }, openGraph: { type: 'website', url, title, description, siteName: SITE_NAME, images: [`${SITE_URL}/api/og`] } };
 }
 
 export default async function CategoryPage({ params }: { params: { category: string } }) {

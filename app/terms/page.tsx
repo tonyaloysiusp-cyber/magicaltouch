@@ -1,9 +1,11 @@
 import type { Metadata } from 'next';
 import { LegalPage } from '@/components/LegalPage';
+import { fitTitle, fitDescription } from '@/lib/seo';
 
 export const metadata: Metadata = {
-  title: 'Terms of Service · Magical Touch Design',
-  description: 'The terms for using Magical Touch Design.',
+  title: fitTitle('Terms of Service'),
+  alternates: { canonical: '/terms' },
+  description: fitDescription('The terms for using Magical Touch Design.'),
 };
 
 const EMAIL = 'hellomagicaltouch.design@gmail.com';

@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { templateHashtags } from '@/lib/templateHashtags';
 import { notFound, permanentRedirect } from 'next/navigation';
 import { SeoShell, UseTemplateButton, Crumbs } from '@/components/seo/SeoShell';
-import { SITE_URL, SITE_NAME, SeoTemplate, getAllPublishedTemplates, getTemplateBySlug, getRelatedTemplates, templateDescription, templateSubtitle, sizeLabel, formatLabel, categorySlug, getTemplateRedirect } from '@/lib/seo';
+import { SITE_URL, SITE_NAME, SeoTemplate, getAllPublishedTemplates, getTemplateBySlug, getRelatedTemplates, templateDescription, templateSubtitle, sizeLabel, formatLabel, categorySlug, getTemplateRedirect, fitTitle, fitDescription } from '@/lib/seo';
 
 // One page per template, so each design can be found on Google
 // ("free birthday poster template", "restaurant menu template"…).
@@ -31,13 +31,14 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   const t = await getTemplateBySlug(params.slug);
   if (!t) return { title: 'Template not found', robots: { index: false } };
   const title = `${withTemplate(t.name)} — Free & Editable`;
+  const pageTitle = fitTitle(title);
   const full = templateDescription(t);
   // Search results show ~160 characters: end on a full sentence.
   const description = full.length <= 160 ? full : (full.slice(0, 160).match(/^.*[.!?](?=\s)/)?.[0] || `${full.slice(0, 157)}…`);
   const url = `${SITE_URL}/templates/${t.slug}`;
   const image = abs(t.preview || t.thumbnail) || `${SITE_URL}/api/og`;
   return {
-    title,
+    title: pageTitle,
     description,
     keywords: [t.name, `${t.category} template`, 'free template', 'online design', ...(t.search_keywords || '').split(',').map((s) => s.trim()).filter(Boolean), ...templateHashtags(t)].slice(0, 25),
     alternates: { canonical: url },
@@ -51,7 +52,7 @@ export default async function TemplatePage({ params }: { params: { slug: string 
   if (!found) {
     // A retired duplicate sends visitors (and Google) to the version that was kept.
     const to = await getTemplateRedirect(params.slug);
-    if (to && to !== params.slug) permanentRedirect(`/templates/${to}`);
+    if (to && to !== params.slug) permanentRedirect(to.startsWith('/') ? to : `/templates/${to}`);
     notFound();
   }
   const t = found as SeoTemplate;

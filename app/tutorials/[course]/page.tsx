@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { SeoShell } from '@/components/seo/SeoShell';
-import { SITE_URL, SITE_NAME } from '@/lib/seo';
+import { SITE_URL, SITE_NAME, fitTitle, fitDescription } from '@/lib/seo';
 import { createAnonSupabaseClient } from '@/lib/supabase/server';
 import { loadCourse, totalMinutes } from '@/lib/courses';
 import { CourseDetail } from '@/components/courses/CourseDetail';
@@ -25,7 +25,7 @@ export async function generateMetadata({ params }: { params: { course: string } 
   if (!d) return { title: 'Course not found', robots: { index: false } };
   const url = `${SITE_URL}/tutorials/${d.course.slug}`;
   return {
-    title: { absolute: `${d.course.title} — Free Design Course | Magical Touch Design` },
+    title: fitTitle(`${d.course.title} — Free Design Course`),
     description: `${d.course.summary} ${d.course.lessons.length} short lessons. Free, with a reviewed certificate.`.slice(0, 300),
     alternates: { canonical: url },
     openGraph: { type: 'website', url, title: d.course.title, description: d.course.summary, siteName: SITE_NAME, images: [`${SITE_URL}/api/og`] },
@@ -40,7 +40,7 @@ export default async function CoursePage({ params }: { params: { course: string 
     '@context': 'https://schema.org',
     '@type': 'Course',
     name: course.title,
-    description: course.summary,
+    description: fitDescription(course.summary),
     url: `${SITE_URL}/tutorials/${course.slug}`,
     provider: { '@type': 'Organization', name: SITE_NAME, sameAs: SITE_URL },
     isAccessibleForFree: true,

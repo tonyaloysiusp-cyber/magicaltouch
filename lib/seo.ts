@@ -273,3 +273,30 @@ export async function getTemplateRedirect(slug: string): Promise<string | null> 
   if (!raw) return null;
   try { const m = JSON.parse(raw) as Record<string, string>; return typeof m[slug] === 'string' ? m[slug] : null; } catch { return null; }
 }
+
+// ---------- Site-wide SEO standard (see docs/TEMPLATE_SEO_STRATEGY.md) ----------
+// Titles: 60 characters or fewer when shown in Google, brand at the end.
+// Descriptions: 70–155 characters, ending on a whole sentence or word.
+export const TITLE_MAX = 60;
+export const DESC_MAX = 155;
+
+export function fitTitle(base: string): { absolute: string } {
+  const b = base.replace(/\s+/g, ' ').replace(/\s*\|\s*Magical Touch Design\s*$/i, '').trim();
+  const options = [`${b} | Magical Touch Design`, `${b} | Magical Touch`];
+  for (const o of options) if (o.length <= TITLE_MAX) return { absolute: o };
+  // Too long: keep the part before an em dash, then the brand if it fits.
+  const head = b.split(/\s+[—–|]\s+/)[0];
+  if (head !== b) return fitTitle(head);
+  if (b.length <= TITLE_MAX) return { absolute: b };
+  const cut = b.slice(0, TITLE_MAX + 1).replace(/\s+\S*$/, '');
+  return { absolute: cut.replace(/[\s,;:—–-]+$/, '') };
+}
+
+export function fitDescription(text: string, max = DESC_MAX): string {
+  const t = (text || '').replace(/\s+/g, ' ').trim();
+  if (t.length <= max) return t;
+  const slice = t.slice(0, max + 1);
+  const end = Math.max(slice.lastIndexOf('. '), slice.lastIndexOf('! '), slice.lastIndexOf('? '));
+  if (end >= 70) return slice.slice(0, end + 1);
+  return slice.replace(/\s+\S*$/, '').replace(/[\s,;:—–-]+$/, '') + '…';
+}

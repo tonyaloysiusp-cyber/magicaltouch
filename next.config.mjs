@@ -19,6 +19,11 @@ const nextConfig = {
       'free-photoshop-alternative': '/free-design-templates',
       'free-illustrator-alternative': '/free-design-templates',
       'free-graphic-design-templates': '/free-design-templates',
+      // Common guesses for pages that live elsewhere.
+      features: '/#features',
+      pricing: '/about',
+      tools: '/free-design-tools',
+      'pattern-studio': '/patterns',
     };
     return Object.entries(gone).map(([from, to]) => ({ source: `/${from}`, destination: to, permanent: true }));
   },

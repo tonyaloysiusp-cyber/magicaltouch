@@ -8,6 +8,11 @@ import { getActivePosts } from '@/lib/sitePosts';
 // Rebuilt at most once an hour, so new templates appear without a deploy.
 export const revalidate = 3600;
 
+const img = (t: { preview?: string | null; thumbnail?: string | null }) => {
+  const u = t.preview || t.thumbnail;
+  return u ? (u.startsWith('http') ? u : `${SITE_URL}${u}`) : '';
+};
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
   // Pages linked to the gallery are left out (their address only redirects).
@@ -35,6 +40,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     c.lessons.forEach((l) => pages.push({ url: `${SITE_URL}/tutorials/${c.slug}/${l.slug}`, lastModified: now, changeFrequency: 'monthly', priority: 0.6 }));
   });
   pages.push({ url: `${SITE_URL}/remove-background`, lastModified: now, changeFrequency: 'weekly', priority: 0.9 });
+  pages.push({ url: `${SITE_URL}/patterns`, lastModified: now, changeFrequency: 'monthly', priority: 0.85 });
+  pages.push({ url: `${SITE_URL}/colours`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 });
   pages.push({ url: `${SITE_URL}/showcase`, lastModified: now, changeFrequency: 'daily', priority: 0.8 });
   (await getActivePosts()).forEach((p) => pages.push({ url: `${SITE_URL}/showcase/${p.slug}`, lastModified: new Date(p.updated_at), changeFrequency: 'weekly', priority: 0.85 }));
   const templates = await getAllPublishedTemplates();
@@ -46,7 +53,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       lastModified: t.updated_at ? new Date(t.updated_at) : now,
       changeFrequency: 'monthly',
       priority: 0.7,
-    });
+      // Image sitemap: the template preview, so it can show in Google Images.
+      ...(img(t) ? { images: [img(t)] } : {}),
+    } as any);
   });
   cats.forEach((c) => pages.push({ url: `${SITE_URL}/templates/category/${categorySlug(c)}`, lastModified: now, changeFrequency: 'weekly', priority: 0.8 }));
   // Sub-category pages (Wedding → Invitation, Business → Business Card, …).

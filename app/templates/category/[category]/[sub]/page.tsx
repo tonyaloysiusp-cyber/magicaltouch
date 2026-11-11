@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { CategoryLanding, subFull } from '@/components/seo/CategoryLanding';
-import { SITE_URL, SITE_NAME, getSubcategories, getTemplatesInSubcategory } from '@/lib/seo';
+import { SITE_URL, SITE_NAME, getSubcategories, getTemplatesInSubcategory, fitTitle } from '@/lib/seo';
 
 // Sub-category landing pages: /templates/category/wedding/invitation,
 // /templates/category/business/business-card, …
@@ -21,7 +21,7 @@ export async function generateMetadata({ params }: { params: { category: string;
   const title = `${s.count}+ Free ${full} Templates – Edit Online`;
   const description = `${s.count} free, editable ${full.toLowerCase()} templates. Personalise the words, colours and photos online and download print-ready PDF, PNG or JPG.`;
   const url = `${SITE_URL}/templates/category/${s.parentSlug}/${s.slug}`;
-  return { title: { absolute: `${title} | ${SITE_NAME}` }, description, alternates: { canonical: url }, openGraph: { type: 'website', url, title, description, siteName: SITE_NAME, images: [`${SITE_URL}/api/og`] } };
+  return { title: fitTitle(`${title}`), description, alternates: { canonical: url }, openGraph: { type: 'website', url, title, description, siteName: SITE_NAME, images: [`${SITE_URL}/api/og`] } };
 }
 
 export default async function SubCategoryPage({ params }: { params: { category: string; sub: string } }) {

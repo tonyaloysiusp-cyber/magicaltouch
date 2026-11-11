@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { SeoShell, Crumbs } from '@/components/seo/SeoShell';
-import { SITE_URL, SITE_NAME, getTemplatesByHashtag, relatedHashtags, hashtagTitle, categorySlug } from '@/lib/seo';
+import { SITE_URL, SITE_NAME, getTemplatesByHashtag, relatedHashtags, hashtagTitle, categorySlug, fitTitle, fitDescription } from '@/lib/seo';
 
 // One page per hashtag (/templates/tag/weddinginvitation): every template
 // carrying it, related hashtags and categories. Made on first visit, cached.
@@ -23,8 +23,8 @@ export async function generateMetadata({ params }: { params: { tag: string } }):
   const url = `${SITE_URL}/templates/tag/${tag}`;
   const desc = `${n} free, editable ${title.toLowerCase()} templates (#${tag}). Change the words, colours and photos online and download print-ready PDF, PNG or JPG — no design skills needed.`;
   return {
-    title: { absolute: `${title} Templates – ${n} Free Editable Designs | ${SITE_NAME}` },
-    description: desc,
+    title: fitTitle(`${title} Templates – ${n} Free Editable Designs`),
+    description: fitDescription(desc),
     alternates: { canonical: url },
     robots: rows.length < MIN_INDEX ? { index: false, follow: true } : undefined,
     openGraph: { type: 'website', url, title: `${title} templates`, description: desc, siteName: SITE_NAME, images: rows[0]?.preview ? [rows[0].preview.startsWith('http') ? rows[0].preview : `${SITE_URL}${rows[0].preview}`] : [`${SITE_URL}/api/og`] },

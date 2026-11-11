@@ -1,9 +1,11 @@
 import type { Metadata } from 'next';
 import { LegalPage } from '@/components/LegalPage';
+import { fitTitle, fitDescription } from '@/lib/seo';
 
 export const metadata: Metadata = {
-  title: 'Privacy Policy · Magical Touch Design',
-  description: 'What Magical Touch Design collects, why, where it is kept, and the choices you have.',
+  title: fitTitle('Privacy Policy'),
+  alternates: { canonical: '/privacy' },
+  description: fitDescription('What Magical Touch Design collects, why, where it is kept, and the choices you have.'),
 };
 
 const EMAIL = 'hellomagicaltouch.design@gmail.com';

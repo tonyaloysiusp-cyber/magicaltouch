@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { SeoShell, Crumbs } from '@/components/seo/SeoShell';
-import { SITE_URL, SITE_NAME } from '@/lib/seo';
+import { SITE_URL, SITE_NAME, fitTitle, fitDescription } from '@/lib/seo';
 import { getActivePosts, postImage, hashtagText } from '@/lib/sitePosts';
 
 // /showcase — every active post from Admin → SEO → Google posts: brand
@@ -9,8 +9,8 @@ import { getActivePosts, postImage, hashtagText } from '@/lib/sitePosts';
 export const revalidate = 600;
 
 export const metadata: Metadata = {
-  title: 'Showcase — Posters, Videos & Free Template Designs',
-  description: 'Posters, videos and design ideas from Magical Touch Design — the free online design tool with thousands of editable templates. #magicaltouchdesign #graphicdesign #onlinedesigntool',
+  title: fitTitle('Showcase — Posters, Videos & Free Template Designs'),
+  description: fitDescription('Posters, videos and design ideas from Magical Touch Design — the free online design tool with thousands of editable templates. #magicaltouchdesign #graphicdesign #onlinedesigntool'),
   alternates: { canonical: `${SITE_URL}/showcase` },
   openGraph: { type: 'website', url: `${SITE_URL}/showcase`, title: `Showcase | ${SITE_NAME}`, siteName: SITE_NAME, images: [`${SITE_URL}/api/og`] },
 };

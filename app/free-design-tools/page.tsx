@@ -7,15 +7,15 @@ import {
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { SeoShell } from '@/components/seo/SeoShell';
-import { SITE_URL, SITE_NAME, getHiddenLandings, getPublishedSeoPages } from '@/lib/seo';
+import { SITE_URL, SITE_NAME, getHiddenLandings, getPublishedSeoPages, fitTitle, fitDescription } from '@/lib/seo';
 import { ALL_LANDINGS } from '@/lib/landings';
 import { getTemplateCountLabel, withCount } from '@/lib/templateCountServer';
 
 // Free tools hub: icon tiles with a short name (the long text stays on each
 // tool's own page). Links every keyword landing page for users and crawlers.
 export const metadata: Metadata = {
-  title: { absolute: `Free Design Tools — Flyer, Poster, Invitation & Resume Makers | ${SITE_NAME}` },
-  description: 'All of Magical Touch’s free online design makers in one place: flyers, posters, invitations, resumes, business cards, menus, certificates, social posts and seasonal templates.',
+  title: fitTitle(`Free Design Tools — Flyer, Poster, Invitation & Resume Makers`),
+  description: fitDescription('All of Magical Touch’s free online design makers in one place: flyers, posters, invitations, resumes, business cards, menus, certificates, social posts and seasonal templates.'),
   alternates: { canonical: `${SITE_URL}/free-design-tools` },
 };
 

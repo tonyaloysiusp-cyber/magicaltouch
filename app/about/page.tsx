@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { SeoShell } from '@/components/seo/SeoShell';
 import { BadgeCheck, Eraser, LayoutTemplate, Printer, SlidersHorizontal, Wand2 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import { SITE_URL, SITE_NAME, getSiteSetting } from '@/lib/seo';
+import { SITE_URL, SITE_NAME, getSiteSetting, fitTitle, fitDescription } from '@/lib/seo';
 import { companyProfile } from '@/lib/email/config';
 
 // About Magical Touch Design — the online design platform (not an interior
@@ -16,9 +16,8 @@ import { companyProfile } from '@/lib/email/config';
 export const revalidate = 600;
 
 const baseMetadata: Metadata = {
-  title: { absolute: `About Magical Touch Design — Free Online Graphic Design Platform` },
-  description:
-    'Magical Touch Design is a free online design studio: 1,000+ professional templates, a powerful editor, a photo studio and a background remover — on any device. Founded by Tony Aloysius.',
+  title: fitTitle(`About Magical Touch Design — Free Online Graphic Design Platform`),
+  description: fitDescription('Magical Touch Design is a free online design studio: 1,000+ professional templates, a powerful editor, a photo studio and a background remover — on any device. Founded by Tony Aloysius.'),
   alternates: { canonical: `${SITE_URL}/about` },
   openGraph: { type: 'website', url: `${SITE_URL}/about`, title: 'About Magical Touch Design', description: 'A free online graphic design platform — templates, editor and photo studio. Founder & CEO: Tony Aloysius.', siteName: SITE_NAME, images: [`${SITE_URL}/api/og`] },
 };

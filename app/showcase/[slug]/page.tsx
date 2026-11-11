@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { SeoShell, Crumbs } from '@/components/seo/SeoShell';
-import { SITE_URL, SITE_NAME } from '@/lib/seo';
+import { SITE_URL, SITE_NAME, fitTitle, fitDescription } from '@/lib/seo';
 import { getActivePosts, getPost, postImage, hashtagText, abs } from '@/lib/sitePosts';
 
 // One page per Google post: the big picture (or video), title, description
@@ -22,8 +22,8 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   const img = postImage(p) || `${SITE_URL}/api/og`;
   const desc = `${p.description} ${hashtagText(p.hashtags)}`.slice(0, 300);
   return {
-    title: { absolute: `${p.title} | ${SITE_NAME}` },
-    description: desc,
+    title: fitTitle(`${p.title}`),
+    description: fitDescription(desc),
     keywords: [...p.hashtags, 'magical touch design', 'free templates', 'online design tool'],
     alternates: { canonical: url },
     openGraph: p.kind === 'video' && p.video_url

@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound, permanentRedirect } from 'next/navigation';
 import { SeoShell, Crumbs } from '@/components/seo/SeoShell';
-import { SITE_URL, SITE_NAME, searchTemplates, getSeoPage, getHiddenLandings, getLandingRedirects } from '@/lib/seo';
+import { SITE_URL, SITE_NAME, searchTemplates, getSeoPage, getHiddenLandings, getLandingRedirects, fitTitle, fitDescription } from '@/lib/seo';
 import { landingBySlug, Landing, ALL_LANDINGS } from '@/lib/landings';
 import { guideFor } from '@/lib/landingGuide';
 import { getTemplateCountLabel, withCount } from '@/lib/templateCountServer';
@@ -44,7 +44,7 @@ async function resolveLandingRaw(slug: string): Promise<Landing | null> {
     thing: p.thing || built?.thing || 'design',
     h1: p.h1,
     title: p.title,
-    description: p.description,
+    description: fitDescription(p.description),
     intro: (p.intro || '').split(/\n{2,}/).filter(Boolean),
     terms: p.terms?.length ? p.terms : built?.terms || [],
     faqs: (p.faqs || []).filter((x) => Array.isArray(x) && x[0] && x[1]) as [string, string][],
@@ -56,8 +56,8 @@ export async function generateMetadata({ params }: { params: { landing: string }
   if (!l) return {};
   const url = `${SITE_URL}/${l.slug}`;
   return {
-    title: { absolute: `${l.title} | ${SITE_NAME}` },
-    description: l.description,
+    title: fitTitle(`${l.title}`),
+    description: fitDescription(l.description),
     alternates: { canonical: url },
     openGraph: { type: 'website', url, title: l.title, description: l.description, siteName: SITE_NAME, images: [`${SITE_URL}/api/og`], locale: l.lang === 'ar' ? 'ar_AE' : 'en_AE' },
     twitter: { card: 'summary_large_image', title: l.title, description: l.description, images: [`${SITE_URL}/api/og`] },

@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { SeoShell, Crumbs } from '@/components/seo/SeoShell';
-import { SITE_URL, SITE_NAME } from '@/lib/seo';
+import { SITE_URL, SITE_NAME, fitTitle, fitDescription } from '@/lib/seo';
 import { BulkRemover } from '@/components/tools/BulkRemover';
 
 // Free background remover: its own page because so many people search for
@@ -11,8 +11,8 @@ const DESC = 'Remove the background from photos for free — one or 60 at once. 
 const URL = `${SITE_URL}/remove-background`;
 
 export const metadata: Metadata = {
-  title: { absolute: `${TITLE} | ${SITE_NAME}` },
-  description: DESC,
+  title: fitTitle(`${TITLE}`),
+  description: fitDescription(DESC),
   keywords: ['remove background', 'background remover', 'free background remover', 'remove bg', 'transparent background', 'bulk background removal', 'remove background from image', 'png maker', 'magical touch design'],
   alternates: { canonical: URL },
   openGraph: { type: 'website', url: URL, title: TITLE, description: DESC, siteName: SITE_NAME, images: [`${SITE_URL}/api/og`] },
