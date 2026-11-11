@@ -203,6 +203,7 @@ function drawShape(pdf: any, F: any, obj: any, ctx: VectorCtx): boolean {
   if (!out) return false;
   const m = obj.calcTransformMatrix();
   if (obj.stroke && typeof obj.stroke === 'object') return false; // gradient strokes: picture
+  if (obj.fill && typeof obj.fill === 'object' && !isGradient(obj.fill)) return false; // pattern / picture fills (page backgrounds): drawn as a sharp picture
   const fillGrad = isGradient(obj.fill) ? shadingFor(pdf, F, obj, obj.fill, ctx) : null;
   if (isGradient(obj.fill) && !fillGrad) return false;
   const fill = fillGrad ? null : parseColor(F, obj.fill);
