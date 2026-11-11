@@ -19,7 +19,7 @@ export interface LocalFileRef {
 const pickerTypes = [
   {
     description: 'Magical Touch Design project',
-    accept: { [MTD_MIME]: [MTD_EXTENSION] },
+    accept: { 'text/html': ['.html'], [MTD_MIME]: [MTD_EXTENSION] },
   },
 ];
 
@@ -104,7 +104,7 @@ export async function pickMtdFile(): Promise<{ file: File; handle: any | null } 
     input.type = 'file';
     // iPad/iPhone grey out files with unknown extensions when filtered,
     // so they get an unfiltered picker; the file is validated on open.
-    if (!isAppleMobile()) input.accept = `${MTD_EXTENSION},${MTD_MIME}`;
+    if (!isAppleMobile()) input.accept = `${MTD_EXTENSION},.html,${MTD_MIME},text/html`;
     input.style.display = 'none';
     input.onchange = () => {
       const file = input.files?.[0];

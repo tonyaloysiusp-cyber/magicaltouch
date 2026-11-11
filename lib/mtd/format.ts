@@ -29,6 +29,12 @@ export const MTD_FORMAT = 'magical-touch-design';
 export const MTD_VERSION = 1;
 export const MTD_EXTENSION = '.mtd';
 export const MTD_MIME = 'application/x-magical-touch-design';
+// Saved files are "Name.mtd.html": the same project, wrapped in a tiny web
+// page so a double-click on any computer or phone opens the default browser,
+// which hands the design to the site and lands in the editor. (A bare .mtd
+// only opens by double-click where the site is installed as an app.)
+export const MTD_OPEN_EXTENSION = '.mtd.html';
+const SITE = 'https://www.magicaltouchdesign.com';
 const ASSET_PREFIX = 'mtd-asset://';
 const MAX_FILE_BYTES = 500 * 1024 * 1024;
 // Object keys whose string values may point at image data.
@@ -119,6 +125,13 @@ async function gzip(text: string): Promise<Blob> {
 
 async function readText(file: Blob): Promise<string> {
   const head = new Uint8Array(await file.slice(0, 2).arrayBuffer());
+  // A self-opening "Name.mtd.html" file: the project sits inside as base64.
+  if (head[0] === 0x3c /* < */) {
+    const html = await file.text();
+    const b64 = unwrapSelfOpening(html);
+    if (!b64) throw new MtdError("This doesn't look like a Magical Touch Design project file.");
+    return readText(new Blob([base64ToBytes(b64)]));
+  }
   const isGzip = head[0] === 0x1f && head[1] === 0x8b;
   if (!isGzip) return await file.text();
   if (typeof (globalThis as any).DecompressionStream === 'undefined') {
@@ -191,7 +204,71 @@ export async function buildMtd(opts: BuildOptions): Promise<BuildResult> {
     template: opts.template ?? null,
   };
   const blob = await gzip(JSON.stringify(file));
-  return { blob: new Blob([blob], { type: MTD_MIME }), unembedded };
+  const bytes = new Uint8Array(await new Blob([blob]).arrayBuffer());
+  const html = await wrapSelfOpening(file.document.name, file.thumbnail, bytes);
+  return { blob: new Blob([html], { type: 'text/html' }), unembedded };
+}
+
+// ---------- the self-opening wrapper ----------
+
+const DATA_OPEN = '<textarea name="mtd" hidden>';
+const DATA_CLOSE = '</textarea>';
+
+const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+export function bytesToBase64(bytes: Uint8Array): string {
+  let out = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) out += String.fromCharCode.apply(null, Array.from(bytes.subarray(i, i + 0x8000)));
+  return btoa(out);
+}
+
+export function base64ToBytes(b64: string): Uint8Array {
+  const bin = atob(b64.replace(/\s+/g, ''));
+  const out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out;
+}
+
+/** The base64 project inside a self-opening file, or null. */
+export function unwrapSelfOpening(html: string): string | null {
+  const a = html.indexOf(DATA_OPEN);
+  if (a < 0) return null;
+  const b = html.indexOf(DATA_CLOSE, a + DATA_OPEN.length);
+  if (b < 0) return null;
+  const b64 = html.slice(a + DATA_OPEN.length, b).replace(/\s+/g, '');
+  return /^[A-Za-z0-9+/]+=*$/.test(b64) ? b64 : null;
+}
+
+async function iconDataUrl(): Promise<string> {
+  try {
+    const r = await fetch('/brand/file-icon/mtd-128.png');
+    if (r.ok) return await blobToDataUrl(await r.blob());
+  } catch {}
+  return '';
+}
+
+async function wrapSelfOpening(name: string, thumbnail: string | null, bytes: Uint8Array): Promise<string> {
+  const title = esc(name || 'Untitled Design');
+  const icon = await iconDataUrl();
+  const origin = typeof window !== 'undefined' && /^https?:/.test(window.location.origin) ? window.location.origin : SITE;
+  const thumb = thumbnail && /^data:image\//.test(thumbnail) ? `<img class="t" src="${esc(thumbnail)}" alt="">` : '';
+  return `<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="generator" content="${MTD_FORMAT}">
+<title>${title} · Magical Touch Design</title>${icon ? `<link rel="icon" href="${icon}">` : ''}
+<style>body{margin:0;font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:#f6f5f2;color:#14121f;display:grid;place-items:center;min-height:100vh}main{max-width:440px;padding:32px 24px;text-align:center}h1{font-size:20px;margin:12px 0 2px}.s{color:#6b6878;font-size:13px;margin:4px 0}.t{display:block;margin:20px auto 0;max-width:100%;max-height:280px;border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,.14)}button{margin-top:22px;height:48px;padding:0 28px;border:0;border-radius:999px;background:#14121f;color:#fff;font:600 15px system-ui,sans-serif;cursor:pointer}</style>
+</head><body><main>
+${icon ? `<img src="${icon}" width="64" height="64" alt="">` : ''}
+<h1>${title}</h1><p class="s">Magical Touch Design file</p>${thumb}
+<form id="mtd-open" method="post" action="${origin}/api/open-file" enctype="multipart/form-data">
+<input type="hidden" name="name" value="${title}">
+${DATA_OPEN}${bytesToBase64(bytes)}${DATA_CLOSE}
+<button type="submit">Open in Magical Touch Design</button>
+</form>
+<p class="s" id="note">Opening in your browser… If nothing happens, press the button — or go to magicaltouchdesign.com → Dashboard → Open file and choose this file.</p>
+</main>
+<script>setTimeout(function(){try{document.getElementById('mtd-open').submit()}catch(e){}},500)</script>
+</body></html>`;
 }
 
 // ---------- reading ----------
@@ -255,10 +332,10 @@ export async function readMtd(file: Blob): Promise<OpenedMtd> {
 }
 
 export function fileNameFor(name: string): string {
-  const safe = (name || 'Untitled Design').replace(/[\\/:*?"<>|]+/g, '-').trim() || 'Untitled Design';
-  return safe.toLowerCase().endsWith(MTD_EXTENSION) ? safe : safe + MTD_EXTENSION;
+  const safe = (name || 'Untitled Design').replace(/[\\/:*?"<>|]+/g, '-').trim().replace(/\.mtd(\.html)?$/i, '') || 'Untitled Design';
+  return safe + MTD_OPEN_EXTENSION;
 }
 
 export function nameFromFileName(fileName: string): string {
-  return fileName.replace(/\.mtd$/i, '') || 'Untitled Design';
+  return fileName.replace(/\.mtd(\.html?)?$/i, '').replace(/\.html?$/i, '') || 'Untitled Design';
 }
