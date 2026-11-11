@@ -5,7 +5,7 @@ import { getGooglePicture } from '@/lib/googlePictureServer';
 import { SITE_URL, fitTitle, fitDescription } from '@/lib/seo';
 
 const baseMetadata: Metadata = {
-  title: fitTitle('Free Online Design Studio & Templates'),
+  title: fitTitle('1,000+ Free Templates & Online Design Studio'),
   description: fitDescription('Design anything with 1,000+ free templates: Instagram posts, flyers, posters, menus, invitations, certificates and business cards. Edit online and download print-ready PDF, PNG or JPG.'),
   alternates: { canonical: '/' },
   openGraph: {
