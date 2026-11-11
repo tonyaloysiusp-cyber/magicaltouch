@@ -753,3 +753,58 @@ scenarios.push({
 // Mockups: the studio opens from the editor, draws every scene for the
 // page and shows a large preview of the chosen one.
 // Retired from the editor on 6 Nov 2026 (kept for when it returns).
+
+// Page background patterns must survive export (PNG keeps the pattern,
+// PDF embeds it, SVG writes a real <pattern>).
+scenarios.push({
+  name: 'background-pattern-export',
+  async run(t) {
+    await t.editor('w=400&h=400&panel=background');
+    await t.page.getByRole('button', { name: 'Stripes pattern' }).click();
+    await t.page.waitForTimeout(1200);
+    const fill = await t.eval(() => { const ab = window.__fabricCanvas.getObjects().find((o) => o.__isArtboard); return ab && typeof ab.fill === 'object' && !!ab.fill.source; });
+    t.check('page has a pattern fill', fill, String(fill));
+    await t.shot('pattern');
+    const png = await exportAs(t, 'png');
+    const stats = await t.eval(async (b64) => {
+      const img = new Image(); img.src = 'data:image/png;base64,' + b64; await img.decode();
+      const c = document.createElement('canvas'); c.width = img.width; c.height = img.height;
+      const g = c.getContext('2d'); g.drawImage(img, 0, 0);
+      const d = g.getImageData(0, 0, c.width, c.height).data; const seen = new Set();
+      for (let i = 0; i < d.length; i += 4 * 97) seen.add((d[i] >> 4) * 256 + (d[i + 1] >> 4) * 16 + (d[i + 2] >> 4));
+      return { w: img.width, colours: seen.size };
+    }, png.bytes.toString('base64'));
+    t.check('PNG shows the pattern (more than 2 colours)', stats.colours > 2, JSON.stringify(stats));
+    const pdf = await exportAs(t, 'pdf');
+    t.check('PDF embeds the pattern as an image', /\/Subtype\s*\/Image/.test(pdf.bytes.toString('latin1')), `${pdf.bytes.length} bytes`);
+  },
+});
+
+// Creative tools inside the editor: Patterns, Colours and Image Trace panels.
+scenarios.push({
+  name: 'editor-creative-tools',
+  async run(t) {
+    await t.editor('w=600&h=600&panel=patterns');
+    await t.page.getByRole('button', { name: 'Set as page background' }).click();
+    await t.page.waitForTimeout(1000);
+    const pat = await t.eval(() => { const ab = window.__fabricCanvas.getObjects().find((o) => o.__isArtboard); return !!(ab && ab.fill && ab.fill.source); });
+    t.check('pattern set as page background', pat);
+    await t.shot('patterns');
+    await t.page.setInputFiles('#mainImageUploadInput', PHOTO);
+    await t.page.waitForTimeout(1500);
+    await t.eval(() => { const c = window.__fabricCanvas; const img = c.getObjects().find((o) => o.type === 'image'); c.setActiveObject(img); c.requestRenderAll(); });
+    await t.page.waitForTimeout(300);
+    await t.page.locator('nav[aria-label="Editor panels"] button', { hasText: 'Trace' }).first().click();
+    await t.page.getByRole('button', { name: '4 colours' }).click();
+    await t.page.getByRole('button', { name: /Trace & replace picture/ }).click();
+    await t.page.waitForFunction(() => window.__fabricCanvas.getObjects().some((o) => o.name === 'Traced artwork'), null, { timeout: 30000 });
+    const traced = await t.eval(() => { const c = window.__fabricCanvas; const g = c.getObjects().find((o) => o.name === 'Traced artwork'); return { paths: g.getObjects().filter((o) => o.type === 'path').length, images: c.getObjects().filter((o) => o.type === 'image').length }; });
+    t.check('picture traced into vector paths', traced.paths >= 2, JSON.stringify(traced));
+    t.check('original picture replaced', traced.images === 0, JSON.stringify(traced));
+    await t.shot('traced');
+    await t.page.locator('nav[aria-label="Editor panels"] button', { hasText: 'Colours' }).first().click();
+    await t.page.getByRole('button', { name: 'Apply' }).first().click();
+    await t.page.waitForTimeout(600);
+    await t.shot('colours');
+  },
+});

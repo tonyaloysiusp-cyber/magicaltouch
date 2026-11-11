@@ -7,9 +7,11 @@ const doc = { name: 'Café <Card> "A"', width: 1050, height: 600, editor: 'desig
 const canvas = { version: '5.1.0', objects: [{ type: 'textbox', text: 'Hello', fontFamily: 'Inter' }] };
 
 test('file names use .mtd.html and read back cleanly', () => {
-  assert.equal(fileNameFor('Business Card'), 'Business Card.mtd.html');
-  assert.equal(fileNameFor('Old.mtd'), 'Old.mtd.html');
-  assert.equal(fileNameFor('a/b:c'), 'a-b-c.mtd.html');
+  assert.equal(fileNameFor('Business Card'), 'Business Card.mtd.svg');
+  assert.equal(fileNameFor('Old.mtd'), 'Old.mtd.svg');
+  assert.equal(fileNameFor('Old.mtd.html'), 'Old.mtd.svg');
+  assert.equal(fileNameFor('a/b:c'), 'a-b-c.mtd.svg');
+  assert.equal(nameFromFileName('Business Card.mtd.svg'), 'Business Card');
   assert.equal(nameFromFileName('Business Card.mtd.html'), 'Business Card');
   assert.equal(nameFromFileName('Business Card.mtd'), 'Business Card');
   assert.equal(nameFromFileName('Business Card.html'), 'Business Card');
@@ -20,11 +22,12 @@ test('base64 round trip', () => {
   assert.deepEqual(base64ToBytes(bytesToBase64(bytes)), bytes);
 });
 
-test('saved file is an HTML page that posts to the site and opens again', async () => {
+test('saved file is an SVG picture that posts to the site and opens again', async () => {
   const { blob } = await buildMtd({ canvas, document: doc, thumbnail: 'data:image/png;base64,AAAA' });
-  assert.equal(blob.type, 'text/html');
+  assert.equal(blob.type, 'image/svg+xml');
   const html = await blob.text();
-  assert.match(html, /^<!doctype html>/);
+  assert.match(html, /^<\?xml[^>]*\?>\s*<svg[^>]+viewBox="0 0 1024 1024"/);
+  assert.match(html, /<image[^>]+href="data:image\/png;base64,AAAA"/);
   assert.match(html, /action="https:\/\/www\.magicaltouchdesign\.com\/api\/open-file"/);
   assert.ok(!html.includes('<Card>'), 'name is escaped');
   assert.ok(unwrapSelfOpening(html));
@@ -40,6 +43,14 @@ test('old .mtd (plain gzip) files still open', async () => {
   const gz = await new Response(new Blob([json]).stream().pipeThrough(new CompressionStream('gzip'))).blob();
   const opened = await readMtd(gz);
   assert.equal(opened.document.height, 600);
+});
+
+test('older .mtd.html files still open', async () => {
+  const { blob } = await buildMtd({ canvas, document: doc });
+  const svg = await blob.text();
+  const html = svg.replace(/<textarea name="mtd" hidden="hidden">/, '<!doctype html><textarea name="mtd" hidden>');
+  const opened = await readMtd(new Blob([html.slice(html.indexOf('<!doctype'))]));
+  assert.equal(opened.document.width, 1050);
 });
 
 test('random HTML is rejected', async () => {

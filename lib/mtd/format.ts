@@ -29,11 +29,13 @@ export const MTD_FORMAT = 'magical-touch-design';
 export const MTD_VERSION = 1;
 export const MTD_EXTENSION = '.mtd';
 export const MTD_MIME = 'application/x-magical-touch-design';
-// Saved files are "Name.mtd.html": the same project, wrapped in a tiny web
-// page so a double-click on any computer or phone opens the default browser,
-// which hands the design to the site and lands in the editor. (A bare .mtd
-// only opens by double-click where the site is installed as an app.)
-export const MTD_OPEN_EXTENSION = '.mtd.html';
+// Saved files are "Name.mtd.svg": the same project inside a picture of the
+// design with the Magical Touch badge. File managers (Mac Finder, iPhone and
+// iPad Files, Android, Linux) show that picture as the file's icon with
+// nothing to install, and a double-click opens the default browser (SVG files
+// open in the browser on Windows), which hands the design to the site and
+// lands in the editor. Older "Name.mtd.html" and ".mtd" files still open.
+export const MTD_OPEN_EXTENSION = '.mtd.svg';
 const SITE = 'https://www.magicaltouchdesign.com';
 const ASSET_PREFIX = 'mtd-asset://';
 const MAX_FILE_BYTES = 500 * 1024 * 1024;
@@ -206,12 +208,13 @@ export async function buildMtd(opts: BuildOptions): Promise<BuildResult> {
   const blob = await gzip(JSON.stringify(file));
   const bytes = new Uint8Array(await new Blob([blob]).arrayBuffer());
   const html = await wrapSelfOpening(file.document.name, file.thumbnail, bytes);
-  return { blob: new Blob([html], { type: 'text/html' }), unembedded };
+  return { blob: new Blob([html], { type: 'image/svg+xml' }), unembedded };
 }
 
 // ---------- the self-opening wrapper ----------
 
-const DATA_OPEN = '<textarea name="mtd" hidden>';
+const DATA_OPEN = '<textarea name="mtd" hidden="hidden">';
+const DATA_OPEN_RE = /<textarea name="mtd" hidden(?:="hidden")?>/;
 const DATA_CLOSE = '</textarea>';
 
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -231,11 +234,12 @@ export function base64ToBytes(b64: string): Uint8Array<ArrayBuffer> {
 
 /** The base64 project inside a self-opening file, or null. */
 export function unwrapSelfOpening(html: string): string | null {
-  const a = html.indexOf(DATA_OPEN);
-  if (a < 0) return null;
-  const b = html.indexOf(DATA_CLOSE, a + DATA_OPEN.length);
+  const m = DATA_OPEN_RE.exec(html);
+  if (!m) return null;
+  const start = m.index + m[0].length;
+  const b = html.indexOf(DATA_CLOSE, start);
   if (b < 0) return null;
-  const b64 = html.slice(a + DATA_OPEN.length, b).replace(/\s+/g, '');
+  const b64 = html.slice(start, b).replace(/\s+/g, '');
   return /^[A-Za-z0-9+/]+=*$/.test(b64) ? b64 : null;
 }
 
@@ -251,24 +255,31 @@ async function wrapSelfOpening(name: string, thumbnail: string | null, bytes: Ui
   const title = esc(name || 'Untitled Design');
   const icon = await iconDataUrl();
   const origin = typeof window !== 'undefined' && /^https?:/.test(window.location.origin) ? window.location.origin : SITE;
-  const thumb = thumbnail && /^data:image\//.test(thumbnail) ? `<img class="t" src="${esc(thumbnail)}" alt="">` : '';
-  return `<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="generator" content="${MTD_FORMAT}">
-<title>${title} · Magical Touch Design</title>${icon ? `<link rel="icon" href="${icon}">` : ''}
-<style>body{margin:0;font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:#f6f5f2;color:#14121f;display:grid;place-items:center;min-height:100vh}main{max-width:440px;padding:32px 24px;text-align:center}h1{font-size:20px;margin:12px 0 2px}.s{color:#6b6878;font-size:13px;margin:4px 0}.t{display:block;margin:20px auto 0;max-width:100%;max-height:280px;border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,.14)}button{margin-top:22px;height:48px;padding:0 28px;border:0;border-radius:999px;background:#14121f;color:#fff;font:600 15px system-ui,sans-serif;cursor:pointer}</style>
-</head><body><main>
-${icon ? `<img src="${icon}" width="64" height="64" alt="">` : ''}
-<h1>${title}</h1><p class="s">Magical Touch Design file</p>${thumb}
-<form id="mtd-open" method="post" action="${origin}/api/open-file" enctype="multipart/form-data">
-<input type="hidden" name="name" value="${title}">
-${DATA_OPEN}${bytesToBase64(bytes)}${DATA_CLOSE}
-<button type="submit">Open in Magical Touch Design</button>
-</form>
-<p class="s" id="note">Opening in your browser… If nothing happens, press the button — or go to magicaltouchdesign.com → Dashboard → Open file and choose this file.</p>
-</main>
-<script>setTimeout(function(){try{document.getElementById('mtd-open').submit()}catch(e){}},500)</script>
-</body></html>`;
+  const thumb = thumbnail && /^data:image\//.test(thumbnail) ? esc(thumbnail) : '';
+  // 1024 × 1024 picture: the design on a soft card + the brand badge.
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="1024" height="1024" viewBox="0 0 1024 1024">
+<title>${title} · Magical Touch Design</title>
+<desc>Magical Touch Design file (${MTD_FORMAT}). Double-click to open it in your browser and keep editing at magicaltouchdesign.com.</desc>
+<defs>
+<linearGradient id="mt-bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FDF2F6"/><stop offset=".5" stop-color="#EEF7FD"/><stop offset="1" stop-color="#F1F9EA"/></linearGradient>
+<linearGradient id="mt-sp" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#F2708F"/><stop offset=".3" stop-color="#A69BD3"/><stop offset=".55" stop-color="#35C2F1"/><stop offset=".78" stop-color="#5DCCB8"/><stop offset="1" stop-color="#8CC84B"/></linearGradient>
+<clipPath id="mt-card"><rect x="112" y="96" width="800" height="760" rx="36"/></clipPath>
+<filter id="mt-sh" x="-10%" y="-10%" width="120%" height="130%"><feDropShadow dx="0" dy="18" stdDeviation="22" flood-color="#0B0B0F" flood-opacity=".22"/></filter>
+</defs>
+<rect width="1024" height="1024" rx="120" fill="url(#mt-bg)"/>
+<rect x="112" y="96" width="800" height="760" rx="36" fill="#FFFFFF" filter="url(#mt-sh)"/>
+${thumb ? `<image clip-path="url(#mt-card)" x="132" y="116" width="760" height="720" preserveAspectRatio="xMidYMid meet" href="${thumb}" xlink:href="${thumb}"/>` : `<text x="512" y="490" text-anchor="middle" font-family="system-ui, sans-serif" font-size="56" font-weight="700" fill="#14121F">${title}</text>`}
+<rect x="0" y="928" width="1024" height="12" fill="url(#mt-sp)"/>
+${icon ? `<image x="760" y="740" width="200" height="200" href="${icon}" xlink:href="${icon}"/>` : `<circle cx="860" cy="840" r="96" fill="url(#mt-sp)"/>`}
+<text x="112" y="905" font-family="system-ui, -apple-system, Segoe UI, sans-serif" font-size="34" font-weight="700" fill="#14121F">${title.length > 34 ? title.slice(0, 33) + '…' : title}</text>
+<foreignObject x="0" y="0" width="1" height="1">
+<div xmlns="http://www.w3.org/1999/xhtml"><form id="mtd-open" method="post" action="${origin}/api/open-file" enctype="multipart/form-data"><input type="hidden" name="name" value="${title}"/>${DATA_OPEN}${bytesToBase64(bytes)}${DATA_CLOSE}<button type="submit">Open</button></form></div>
+</foreignObject>
+<script type="text/javascript"><![CDATA[
+setTimeout(function(){try{var f=document.getElementById('mtd-open');if(f&&f.submit)f.submit();}catch(e){}},400);
+]]></script>
+</svg>`;
 }
 
 // ---------- reading ----------
@@ -332,10 +343,10 @@ export async function readMtd(file: Blob): Promise<OpenedMtd> {
 }
 
 export function fileNameFor(name: string): string {
-  const safe = (name || 'Untitled Design').replace(/[\\/:*?"<>|]+/g, '-').trim().replace(/\.mtd(\.html)?$/i, '') || 'Untitled Design';
+  const safe = (name || 'Untitled Design').replace(/[\\/:*?"<>|]+/g, '-').trim().replace(/\.mtd(\.html|\.svg)?$/i, '') || 'Untitled Design';
   return safe + MTD_OPEN_EXTENSION;
 }
 
 export function nameFromFileName(fileName: string): string {
-  return fileName.replace(/\.mtd(\.html?)?$/i, '').replace(/\.html?$/i, '') || 'Untitled Design';
+  return fileName.replace(/\.mtd(\.html?|\.svg)?$/i, '').replace(/\.(html?|svg)$/i, '') || 'Untitled Design';
 }

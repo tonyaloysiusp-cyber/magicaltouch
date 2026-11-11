@@ -69,10 +69,10 @@ export function HeroTour() {
         <filter id="mtt-poster"><feComponentTransfer><feFuncR type="discrete" tableValues="0 .35 .7 1" /><feFuncG type="discrete" tableValues="0 .35 .7 1" /><feFuncB type="discrete" tableValues="0 .35 .7 1" /></feComponentTransfer></filter>
       </svg>
 
-      <div className="absolute -inset-6 rounded-[40px] opacity-50 blur-3xl" aria-hidden style={{ background: 'radial-gradient(60% 60% at 70% 30%, rgba(59,130,196,.35), transparent 70%), radial-gradient(50% 50% at 20% 80%, rgba(201,168,106,.3), transparent 70%)' }} />
+      <div className="absolute -inset-6 rounded-[40px] opacity-50 blur-3xl" aria-hidden style={{ background: 'radial-gradient(55% 55% at 75% 25%, rgba(53,194,241,.35), transparent 70%), radial-gradient(50% 50% at 20% 85%, rgba(242,112,143,.3), transparent 70%), radial-gradient(40% 40% at 90% 90%, rgba(140,200,75,.28), transparent 70%)' }} />
 
       {/* Studio window */}
-      <div className="relative rounded-[22px] border border-mt-border bg-mt-surface shadow-[0_40px_90px_-40px_rgba(15,23,42,0.55)] overflow-hidden" role="region" aria-roledescription="product tour" aria-label={`Feature ${i + 1} of ${SCENES.length}: ${s.title}`}>
+      <div className="relative rounded-[22px] p-[1.5px] mt-spectrum shadow-[0_40px_90px_-40px_rgba(15,23,42,0.55)]"><div className="relative rounded-[21px] bg-mt-surface overflow-hidden" role="region" aria-roledescription="product tour" aria-label={`Feature ${i + 1} of ${SCENES.length}: ${s.title}`}>
         <div className="flex items-center gap-2 border-b border-mt-border px-4 h-10">
           <span className="h-2.5 w-2.5 rounded-full bg-[#FF5F57]" /><span className="h-2.5 w-2.5 rounded-full bg-[#FEBC2E]" /><span className="h-2.5 w-2.5 rounded-full bg-[#28C840]" />
           <span className="ml-3 text-[12px] font-medium text-mt-muted truncate">Magical Touch Studio — {s.label}</span>
@@ -182,6 +182,7 @@ export function HeroTour() {
           </aside>
         </div>
       </div>
+      </div>
 
       {/* caption + progress */}
       <div className="relative mt-4 flex items-center gap-3">
@@ -189,7 +190,7 @@ export function HeroTour() {
         <div className="flex gap-1.5" role="tablist" aria-label="Tour">
           {SCENES.map((x, k) => (
             <button key={x.id} type="button" role="tab" aria-selected={k === i} aria-label={x.label} onClick={() => go(k)} className="relative h-1.5 w-6 sm:w-8 overflow-hidden rounded-full bg-mt-border">
-              <span className="absolute inset-y-0 left-0 bg-mt-ink" style={{ width: k < i ? '100%' : k === i ? `${p * 100}%` : '0%' }} />
+              <span className="absolute inset-y-0 left-0 mt-spectrum" style={{ width: k < i ? '100%' : k === i ? `${p * 100}%` : '0%' }} />
             </button>
           ))}
         </div>

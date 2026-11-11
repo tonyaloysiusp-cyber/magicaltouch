@@ -9,9 +9,8 @@
 // import, etc.), not a polygon approximation or an embedded bitmap.
 //
 // Honest limitations (documented, not hidden):
-// - Pattern fills/strokes are not real SVG patterns — they fall back to
-//   a flat mid-gray with a comment in the emitted markup, since this app
-//   doesn't expose a pattern-fill tool anywhere a user could reach one.
+// - Pattern and picture fills (page backgrounds) are written as real SVG
+//   <pattern> elements with the tile embedded.
 // - A clipPath chained onto another clipped object (clip-of-a-clip) only
 //   emits the outermost clip; nested clipping is not implemented.
 // - Raster <image> content is legitimately embedded as-is (a photo IS a
@@ -83,14 +82,29 @@ function serializeGradient(defs: string[], paint: any): string {
   return `url(#${id})`;
 }
 
-function paintToSvgAttr(defs: string[], paint: any): string | null {
+function paintToSvgAttr(defs: string[], paint: any, obj?: any): string | null {
   if (!paint) return null;
   if (typeof paint === 'string') return paint;
   if (isGradient(paint)) return serializeGradient(defs, paint);
-  if (typeof paint === 'object') {
-    // Pattern fill — no real SVG <pattern> serialization here (see file
-    // header); documented flat fallback rather than a silent raster.
-    return '#9ca3af';
+  if (typeof paint === 'object' && paint.source) {
+    // Pattern / picture fill (page background patterns and photos): a real
+    // SVG <pattern> with the tile embedded, positioned like Fabric draws it
+    // (from the object's top-left corner, plus offset and transform).
+    const el: any = paint.source;
+    let href = '';
+    try { href = el.src || (el.toDataURL ? el.toDataURL('image/png') : ''); } catch { href = ''; }
+    const tw = el.naturalWidth || el.width || 0;
+    const th = el.naturalHeight || el.height || 0;
+    if (!href || !tw || !th) return '#9ca3af';
+    const id = `mtpat${defs.length}`;
+    const w = obj?.width || 0, h = obj?.height || 0;
+    const x = -w / 2 + (paint.offsetX || 0), y = -h / 2 + (paint.offsetY || 0);
+    const t = Array.isArray(paint.patternTransform) ? ` patternTransform="translate(${x},${y}) matrix(${paint.patternTransform.join(' ')})"` : ` patternTransform="translate(${x},${y})"`;
+    const noRepeat = paint.repeat === 'no-repeat';
+    // A no-repeat picture is drawn once; give the tile a huge size so it never repeats.
+    const pw = noRepeat ? tw * 1000 : tw, ph = noRepeat ? th * 1000 : th;
+    defs.push(`<pattern id="${id}" patternUnits="userSpaceOnUse" width="${pw}" height="${ph}"${t}><image href="${escapeXml(href)}" width="${tw}" height="${th}" preserveAspectRatio="none" /></pattern>`);
+    return `url(#${id})`;
   }
   return null;
 }
@@ -138,8 +152,8 @@ function buildClipPathAttr(defs: string[], obj: any): string | null {
 function objectToSvgElement(defs: string[], obj: any, F: any): string {
   const matrix = obj.calcTransformMatrix();
   const opacity = typeof obj.opacity === 'number' ? obj.opacity : 1;
-  const fillAttr = paintToSvgAttr(defs, obj.fill);
-  const strokeAttr = paintToSvgAttr(defs, obj.stroke);
+  const fillAttr = paintToSvgAttr(defs, obj.fill, obj);
+  const strokeAttr = paintToSvgAttr(defs, obj.stroke, obj);
   const strokeWidth = obj.strokeWidth || 0;
   const dash = Array.isArray(obj.strokeDashArray) && obj.strokeDashArray.length ? ` stroke-dasharray="${obj.strokeDashArray.join(',')}"` : '';
   const cap = obj.strokeLineCap ? ` stroke-linecap="${obj.strokeLineCap}"` : '';
@@ -245,7 +259,7 @@ export function exportArtboardToSVG(canvas: any, F: any, artboard: RectLike & { 
 
   const defs: string[] = [];
   const abObj = artboard.id ? canvas.getObjects().find((o: any) => o.__isArtboard && o.__artboardId === artboard.id) : null;
-  const bg = abObj && isPaintable(abObj.fill) ? escapeXml(abObj.fill) : null;
+  const bg = abObj && isPaintable(abObj.fill) ? escapeXml(abObj.fill) : abObj && abObj.fill && typeof abObj.fill === 'object' && (abObj.fill as any).source ? paintToSvgAttr(defs, abObj.fill, { width: 0, height: 0 }) : null;
 
   const body = objects.map((obj) => objectToSvgElement(defs, obj, F)).join('');
 

@@ -52,6 +52,9 @@ import { BrandPanel } from '@/components/editor/shell/panels/BrandPanel';
 import { HelpPanel } from '@/components/editor/shell/panels/HelpPanel';
 import { AdjustPanel } from '@/components/editor/shell/panels/AdjustPanel';
 import { QrPanel } from '@/components/editor/shell/panels/QrPanel';
+import { PatternsPanel, ColoursPanel, TracePanel } from '@/components/editor/shell/panels/CreativePanels';
+import { Grid3x3 as PatternIcon, SwatchBook as ColoursIcon, PenTool as TraceIcon } from 'lucide-react';
+import { trace as traceImage, toFabricPath, type TraceOptions } from '@/lib/trace';
 import { QrCode as QrCodeIcon } from 'lucide-react';
 import { Gem as StudioIcon } from 'lucide-react';
 import { StudioPanel, StudioPublish } from '@/components/editor/shell/panels/StudioPanel';
@@ -7202,6 +7205,7 @@ function EditorContent() {
     replaceImage: () => replaceInputRef.current?.click(),
     startCrop: () => features.startCrop(),
     openAdjust: () => setLeftPanel('adjust'),
+    openTrace: () => setLeftPanel('trace'),
     editPhoto: () => openPhotoEditor(),
     removeBackground: () => {
       const t = fabricCanvasRef.current?.getActiveObject();
@@ -7471,6 +7475,62 @@ function EditorContent() {
     }
   };
 
+  // ---- Creative tools inside the editor (Patterns, Colours, Image Trace) ----
+  const [traceBusy, setTraceBusy] = useState(false);
+  const fillSelectionWithPattern = (tileUrl: string) => {
+    const F = (window as any).fabric;
+    const c = fabricCanvasRef.current;
+    const o = c?.getActiveObject();
+    if (!F || !o) return setLocalNotice('Select a shape or text first, then fill it with the pattern.');
+    F.util.loadImage(tileUrl, (el: any) => {
+      if (!el) return setLocalNotice("That pattern couldn't be loaded.");
+      const targets = o.type === 'activeSelection' ? o.getObjects() : [o];
+      targets.forEach((t: any) => t.set({ fill: new F.Pattern({ source: el, repeat: 'repeat' }) }));
+      c.requestRenderAll();
+      pushHistory();
+    }, null, 'anonymous');
+  };
+  const traceSelected = async (opts: TraceOptions, replace: boolean) => {
+    const F = (window as any).fabric;
+    const c = fabricCanvasRef.current;
+    const img = c?.getActiveObject();
+    if (!F || !img || img.type !== 'image') return setLocalNotice('Select a picture first.');
+    const el: any = img._originalElement || img._element;
+    if (!el) return setLocalNotice('This picture is still loading. Try again in a moment.');
+    setTraceBusy(true);
+    await new Promise((r) => setTimeout(r, 30));
+    try {
+      const w = Math.max(1, Math.round(img.width)), h = Math.max(1, Math.round(img.height));
+      const k = Math.min(1, 1600 / Math.max(w, h));
+      const cv = document.createElement('canvas');
+      cv.width = Math.max(1, Math.round(w * k)); cv.height = Math.max(1, Math.round(h * k));
+      const g = cv.getContext('2d')!;
+      g.drawImage(el, img.cropX || 0, img.cropY || 0, w, h, 0, 0, cv.width, cv.height);
+      const id = g.getImageData(0, 0, cv.width, cv.height);
+      const r = traceImage({ data: id.data, width: id.width, height: id.height }, opts);
+      if (!r.layers.length) { setLocalNotice('Nothing to trace — try more colours or less "Ignore specks".'); return; }
+      // An invisible frame pins the group to the picture's exact box.
+      const frame = new F.Rect({ left: 0, top: 0, width: r.width, height: r.height, fill: 'rgba(0,0,0,0)', strokeWidth: 0, selectable: false, name: 'Trace frame' });
+      const paths = r.layers.map((l, i) => new F.Path(toFabricPath(l.d) as any, { fill: l.color, fillRule: 'evenodd', strokeWidth: 0, objectCaching: true, name: `Traced colour ${i + 1}` }));
+      const group = new F.Group([frame, ...paths], { name: 'Traced artwork' });
+      const sx = (img.scaleX || 1) * (w / r.width), sy = (img.scaleY || 1) * (h / r.height);
+      group.set({ originX: img.originX, originY: img.originY, left: img.left, top: img.top, angle: img.angle || 0, flipX: !!img.flipX, flipY: !!img.flipY, scaleX: sx, scaleY: sy });
+      (group as any).__artboardId = (img as any).__artboardId;
+      const idx = c.getObjects().indexOf(img);
+      c.insertAt(group, idx + 1, false);
+      if (replace) c.remove(img);
+      c.setActiveObject(group);
+      c.requestRenderAll();
+      pushHistory();
+      setLocalNotice(`Traced into ${r.layers.length} vector colour${r.layers.length === 1 ? '' : 's'}. Ungroup to edit each shape.`);
+    } catch (e) {
+      console.error('Trace failed', e);
+      setLocalNotice('This picture could not be traced (some pictures from other websites block it).');
+    } finally {
+      setTraceBusy(false);
+    }
+  };
+
   const railItems: RailItem[] = [
     {
       id: 'templates',
@@ -7554,6 +7614,45 @@ function EditorContent() {
           onSet={(bg, commit = true) => features.setPageBackground(bg, commit)}
         />
       ),
+    },
+    {
+      id: 'patterns',
+      label: 'Patterns',
+      title: 'Pattern Studio — seamless repeat patterns',
+      icon: <PatternIcon size={20} />,
+      render: () => (
+        <PatternsPanel
+          hasSelection={!!selected && selected.type !== 'image'}
+          onBackground={(url) => features.setPageBackground({ pattern: url })}
+          onFillSelection={fillSelectionWithPattern}
+          onAddImage={(url) => placeImageUrl(url)}
+        />
+      ),
+    },
+    {
+      id: 'colours',
+      label: 'Colours',
+      title: 'Colour palettes and harmonies',
+      icon: <ColoursIcon size={20} />,
+      render: () => (
+        <ColoursPanel
+          documentColors={docColors}
+          onApply={(cols) => applyBrandToPage(cols)}
+          onFill={(hex) => {
+            const o = fabricCanvasRef.current?.getActiveObject();
+            if (!o) return setLocalNotice('Select something on the page first, then tap a colour.');
+            features.setFill(hex);
+          }}
+          onBackground={(hex) => features.setPageBackground({ color: hex })}
+        />
+      ),
+    },
+    {
+      id: 'trace',
+      label: 'Trace',
+      title: 'Image Trace — turn a picture into vectors',
+      icon: <TraceIcon size={20} />,
+      render: () => <TracePanel hasImage={!!selectedImage} busy={traceBusy} onTrace={traceSelected} />,
     },
     {
       id: 'brand',

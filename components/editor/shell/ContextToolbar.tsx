@@ -55,6 +55,7 @@ import {
   Sun,
   Wand2,
   Languages,
+  PenTool,
 } from 'lucide-react';
 import { FontPicker } from '../FontPicker';
 import { ColorPicker, ColorChip } from './ColorPicker';
@@ -86,6 +87,7 @@ export interface ToolbarActions {
   replaceImage: () => void;
   startCrop: () => void;
   openAdjust: () => void;
+  openTrace?: () => void;
   removeBackground: () => void;
   editPhoto?: () => void;
   maskWithShape: (k: FrameKind) => void;
@@ -685,6 +687,7 @@ function ContextToolbarInner({
             <ToolButton label="Crop" hint="Crop and reposition your image (or double-click it)" icon={<Crop size={16} />} onClick={a.startCrop} />
             <ToolButton label="Adjust" hint="Filters, light and colour" icon={<SlidersHorizontal size={16} />} onClick={a.openAdjust} />
             <ToolButton label="Remove BG" hint="Automatically remove the background from your image" icon={<Scissors size={16} />} onClick={a.removeBackground} special />
+            {a.openTrace && <ToolButton label="Trace" hint="Image Trace: turn this picture into editable vector shapes" icon={<PenTool size={16} />} onClick={a.openTrace} />}
             {a.editPhoto && <ToolButton label="Edit photo" hint="Open Photo Studio: light, colour, looks, exact crop, heal — saved back into this picture" icon={<Wand2 size={16} />} onClick={a.editPhoto} />}
           </>
         )}

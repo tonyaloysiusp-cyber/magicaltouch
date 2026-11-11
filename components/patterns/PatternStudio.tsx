@@ -110,7 +110,7 @@ export function PatternStudio() {
       const thumbnail: string = await new Promise((res) => { const r = new FileReader(); r.onload = () => res(String(r.result)); r.readAsDataURL(thumbBlob); });
       const canvas = { version: '5.1.0', background: p.background, objects: [{ type: 'image', version: '5.1.0', originX: 'left', originY: 'top', left: 0, top: 0, width: s.w, height: s.h, scaleX: 1, scaleY: 1, src, crossOrigin: 'anonymous', name: 'Pattern background' }] };
       const key = newLocalKey();
-      putHandoff(key, { opened: { document: { name: 'Pattern design', width: s.w, height: s.h, editor: 'design' }, canvas, fonts: [], thumbnail, template: null, missingAssets: [] } as any, file: { handle: null, fileName: 'Pattern design.mtd.html' } });
+      putHandoff(key, { opened: { document: { name: 'Pattern design', width: s.w, height: s.h, editor: 'design' }, canvas, fonts: [], thumbnail, template: null, missingAssets: [] } as any, file: { handle: null, fileName: 'Pattern design.mtd.svg' } });
       router.push(editorUrlForLocal(key, s.w, s.h));
     } catch { flash('Could not open the editor. Please try again.'); setBusy(null); }
   };

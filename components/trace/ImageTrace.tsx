@@ -102,7 +102,7 @@ export function ImageTrace() {
     if (!data.session) { router.push('/login?next=' + encodeURIComponent('/trace')); return; }
     const objects = out.layers.map((l, i) => ({ type: 'path', version: '5.1.0', originX: 'left', originY: 'top', path: toFabricPath(l.d), fill: l.color, fillRule: 'evenodd', stroke: null, strokeWidth: 0, name: `Traced colour ${i + 1}` }));
     const key = newLocalKey();
-    putHandoff(key, { opened: { document: { name: 'Traced artwork', width: out.width, height: out.height, editor: 'design' }, canvas: { version: '5.1.0', background: bg && o.mode !== 'colour' ? '#FFFFFF' : '#FFFFFF', objects }, fonts: [], thumbnail: null, template: null, missingAssets: [] } as any, file: { handle: null, fileName: 'Traced artwork.mtd.html' } });
+    putHandoff(key, { opened: { document: { name: 'Traced artwork', width: out.width, height: out.height, editor: 'design' }, canvas: { version: '5.1.0', background: bg && o.mode !== 'colour' ? '#FFFFFF' : '#FFFFFF', objects }, fonts: [], thumbnail: null, template: null, missingAssets: [] } as any, file: { handle: null, fileName: 'Traced artwork.mtd.svg' } });
     router.push(editorUrlForLocal(key, out.width, out.height));
   };
 

@@ -40,11 +40,11 @@ export function WorkspaceHero() {
         {/* Copy */}
         <div className="mth-rise">
           <p className="inline-flex items-center gap-2 rounded-full border border-mt-border bg-mt-surface/80 backdrop-blur px-3.5 py-1.5 text-[12px] font-semibold tracking-wide text-mt-muted">
-            <span className="h-1.5 w-1.5 rounded-full bg-[#3B82C4]" aria-hidden /> The design studio for growing brands
+            <span className="h-1.5 w-1.5 rounded-full mt-spectrum" aria-hidden /> The design studio for growing brands
           </p>
           <h1 className="mt-6 font-[family-name:var(--font-display)] font-medium text-[2.5rem] leading-[1.05] sm:text-[3.6rem] lg:text-[4.1rem] tracking-[-0.035em] text-mt-ink">
             Design with the polish of a{' '}
-            <span className="bg-clip-text text-transparent" style={{ backgroundImage: 'linear-gradient(95deg,#1E3A5F 0%,#3B82C4 45%,#A69BD3 100%)' }}>global brand.</span>
+            <span className="mt-spectrum-text">global brand.</span>
           </h1>
           <p className="mt-6 text-base sm:text-lg text-mt-muted max-w-xl leading-relaxed">
             {count} professional templates and a complete studio — vector tools, Image Trace, Pattern Studio, brand kit, translation into 37 languages and print-ready export with bleed.
@@ -58,8 +58,8 @@ export function WorkspaceHero() {
             </Link>
           </div>
           <ul className="mt-9 grid grid-cols-1 sm:grid-cols-3 gap-x-6 gap-y-2.5 text-[14px] text-mt-muted max-w-xl">
-            {['Free, no watermark', 'Print-ready PDF', 'Brand kit & fonts'].map((t) => (
-              <li key={t} className="inline-flex items-center gap-2"><Check size={16} className="text-[#3B82C4] shrink-0" aria-hidden /> {t}</li>
+            {['Free, no watermark', 'Print-ready PDF', 'Brand kit & fonts'].map((t, k) => (
+              <li key={t} className="inline-flex items-center gap-2"><Check size={16} className="shrink-0" style={{ color: ['#F2708F', '#35C2F1', '#8CC84B'][k] }} aria-hidden /> {t}</li>
             ))}
           </ul>
         </div>

@@ -8,11 +8,11 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ReactNode, useEffect, useMemo, useRef, useState } from 'react';
-import { LayoutDashboard, Inbox, Server, CalendarHeart, PenLine, Mail, LayoutTemplate, Sparkles, Award, GraduationCap, Megaphone, Info, HeartPulse, BadgeDollarSign, Hash, Image as ImageIcon, Share2, Search, ExternalLink, FileText, PartyPopper } from 'lucide-react';
+import { LayoutDashboard, Inbox, Server, CalendarHeart, PenLine, Mail, LayoutTemplate, Sparkles, Award, GraduationCap, Megaphone, Info, HeartPulse, BadgeDollarSign, Hash, Image as ImageIcon, Share2, Search, ExternalLink, FileText, PartyPopper, ClipboardCheck } from 'lucide-react';
 import { AppHeader } from '@/components/AppHeader';
 import { useAppTheme } from '@/hooks/useAppTheme';
 
-export type AdminSection = 'overview' | 'messages' | 'services' | 'occasions' | 'wording' | 'email' | 'templates' | 'brand' | 'certificates' | 'courses' | 'about' | 'seo' | 'health' | 'pricing' | 'google' | 'posts' | 'social' | 'picture' | 'documents' | 'wishes';
+export type AdminSection = 'overview' | 'messages' | 'services' | 'occasions' | 'wording' | 'email' | 'templates' | 'brand' | 'certificates' | 'courses' | 'about' | 'seo' | 'health' | 'pricing' | 'google' | 'posts' | 'social' | 'picture' | 'documents' | 'wishes' | 'review';
 
 interface NavItem { id: AdminSection; label: string; href: string; icon: ReactNode; hint: string }
 export const ADMIN_GROUPS: { title: string; items: NavItem[] }[] = [
@@ -23,6 +23,7 @@ export const ADMIN_GROUPS: { title: string; items: NavItem[] }[] = [
   ] },
   { title: 'Content', items: [
     { id: 'templates', label: 'Templates', href: '/admin/templates', icon: <LayoutTemplate size={16} />, hint: 'Add, edit, publish' },
+    { id: 'review', label: 'Template Quality & Review', href: '/admin/review', icon: <ClipboardCheck size={16} />, hint: 'Keep, improve, replace, archive' },
     { id: 'google', label: 'Google & hashtags', href: '/admin/templates?tab=google', icon: <Hash size={16} />, hint: 'Search words and hashtags per template' },
     { id: 'brand', label: 'Brand workspace', href: '/admin/brand', icon: <Sparkles size={16} />, hint: 'Logo, colours, brand designs' },
     { id: 'about', label: 'About page', href: '/admin/about', icon: <Info size={16} />, hint: 'Founder and story' },

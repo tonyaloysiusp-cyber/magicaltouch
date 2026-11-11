@@ -65,7 +65,7 @@ function OpenFile() {
       try {
         const bytes = base64ToBytes(rec.data);
         const opened = await readMtd(new Blob([bytes], { type: 'application/gzip' }));
-        if (!gone) setReady({ opened, fileName: opened.document.name + '.mtd.html' });
+        if (!gone) setReady({ opened, fileName: opened.document.name + '.mtd.svg' });
       } catch (e: any) {
         if (!gone) setMsg(e?.message || 'This file could not be opened.');
       }
