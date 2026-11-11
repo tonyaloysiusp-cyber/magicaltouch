@@ -474,7 +474,7 @@ function EditorContent() {
   // Back to templates returns to the same filtered view (e.g. Business cards).
   const [galleryUrl, setGalleryUrl] = useState('/templates');
   useEffect(() => { try { const u = sessionStorage.getItem('mt:galleryUrl'); if (u && u.startsWith('/templates')) setGalleryUrl(u); } catch { /* private mode */ } }, []);
-  const backHref = cameFrom === 'brand' ? '/admin/brand' : wantsTemplateEdit ? '/admin/templates' : cameFromTemplate ? galleryUrl : '/dashboard';
+  const backHref = cameFrom === 'brand' ? '/admin/brand' : wantsTemplateEdit ? '/admin/library' : cameFromTemplate ? galleryUrl : '/dashboard';
   const backLabel = cameFrom === 'brand' ? 'Back to Brand workspace' : wantsTemplateEdit ? 'Back to Template Manager' : cameFromTemplate ? 'Back to templates' : 'Back to dashboard';
   const [templateEdit, setTemplateEdit] = useState<TemplateRecord | null>(null);
   // Admin design studio (the Studio panel) — the database checks admin rights too.

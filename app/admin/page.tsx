@@ -144,7 +144,7 @@ export default function AdminHome() {
           <button type="button" onClick={runCheck} className={btnGhost} title="Look for festivals and renewals due now (this also runs by itself every morning)">
             <RefreshCw size={14} /> Check now
           </button>
-          <Link href="/admin/templates" className={btnPrimary}>
+          <Link href="/admin/library" className={btnPrimary}>
             <LayoutTemplate size={14} /> Templates
           </Link>
         </>

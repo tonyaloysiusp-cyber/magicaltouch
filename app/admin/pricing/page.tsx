@@ -141,7 +141,7 @@ export default function PricingAdminPage() {
                 </div>
               ))}
             </div>
-            {g.items.includes('single') && <p className="mt-3 text-[13px] text-mt-muted inline-flex items-center gap-1.5"><Layers size={14} /> {premium === null ? '…' : premium} Premium template{premium === 1 ? '' : 's'} today. Mark a template Premium by unticking <b>Free</b> in <Link href="/admin/templates" className="underline">Templates</Link>.</p>}
+            {g.items.includes('single') && <p className="mt-3 text-[13px] text-mt-muted inline-flex items-center gap-1.5"><Layers size={14} /> {premium === null ? '…' : premium} Premium template{premium === 1 ? '' : 's'} today. Mark a template Premium by unticking <b>Free</b> in <Link href="/admin/library" className="underline">Template Manager</Link> (Details).</p>}
           </section>
         ))}
         <div className="flex gap-2"><button onClick={() => save(m)} disabled={!dirty || !!busy} className={`${btn} bg-mt-primary text-mt-onprimary`}>{busy === 'save' ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />} Save prices & links</button>{dirty && <span className="text-[12px] text-mt-muted self-center">Unsaved changes</span>}</div>

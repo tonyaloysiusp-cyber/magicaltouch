@@ -142,7 +142,7 @@ export function ProfileMenu() {
               </Link>
               <div className="mt-1.5 px-2 grid grid-cols-2 gap-1">
                 {([
-                  ['/admin/templates', 'Templates', <LayoutTemplate key="t" size={13} />],
+                  ['/admin/library', 'Templates', <LayoutTemplate key="t" size={13} />],
                   ['/admin/seo', 'SEO & Google', <Megaphone key="s" size={13} />],
                   ['/admin/seo?tab=social', 'Social media', <Share2 key="so" size={13} />],
                   ['/admin/email', 'Email', <Mail key="e" size={13} />],

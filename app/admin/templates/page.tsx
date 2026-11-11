@@ -128,7 +128,9 @@ export default function AdminTemplatesPage() {
     if (t !== null) setClaude({ topic: t });
     const tb = new URLSearchParams(window.location.search).get('tab');
     if (tb === 'google' || tb === 'sizes' || tb === 'images' || tb === 'categories') setTab(tb);
+    if (new URLSearchParams(window.location.search).get('new') === '1') wantNew.current = true;
   }, []);
+  const wantNew = useRef(false);
   const [tab, setTab] = useState<'templates' | 'categories' | 'images' | 'sizes' | 'google'>('templates');
   const [templates, setTemplates] = useState<Template[]>([]);
   const [categories, setCategories] = useState<TemplateCategory[]>([]);
@@ -204,6 +206,15 @@ export default function AdminTemplatesPage() {
     { id: p.id, label: p.name },
     ...childrenOf(p.id).map((c) => ({ id: c.id, label: `${p.name} › ${c.name}` })),
   ]);
+  // Opened as /admin/templates?new=1 (from the Template Manager): start a new template.
+  useEffect(() => {
+    if (!wantNew.current || categories.length === 0) return;
+    wantNew.current = false;
+    setFormError(null);
+    setForm({ ...EMPTY_FORM, categoryId: categoryOptions[0]?.id || '' });
+    setEditing('new');
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [categories]);
 
   const counts = useMemo(() => {
     const out: Record<string, number> = { all: templates.length };
