@@ -435,7 +435,7 @@ export default function TemplateManager() {
             <button type="button" disabled={idx >= siblings.length - 1 || busy} onClick={() => reorder(n, 1)} className="flex items-center gap-1.5 h-7 px-2 rounded-md hover:bg-mt-surface disabled:opacity-40"><ArrowDown size={12} /> Move down</button>
             <button type="button" onClick={() => setCatEdit({ mode: 'rename', cat: n })} className="flex items-center gap-1.5 h-7 px-2 rounded-md hover:bg-mt-surface"><Pencil size={12} /> Rename</button>
             <button type="button" onClick={() => setCatEdit({ mode: 'move', cat: n })} className="flex items-center gap-1.5 h-7 px-2 rounded-md hover:bg-mt-surface"><FolderInput size={12} /> Move into…</button>
-            <button type="button" onClick={() => setCatEdit({ mode: 'add', parent: n.id })} className="flex items-center gap-1.5 h-7 px-2 rounded-md hover:bg-mt-surface"><Plus size={12} /> Sub-category</button>
+            <button type="button" onClick={() => setCatEdit({ mode: 'add', parent: n.id })} className="flex items-center gap-1.5 h-7 px-2 rounded-md hover:bg-mt-surface"><Plus size={12} /> Add inside</button>
             <button type="button" onClick={() => setCatEdit({ mode: 'delete', cat: n })} className="flex items-center gap-1.5 h-7 px-2 rounded-md hover:bg-red-50 dark:hover:bg-red-950/40 text-red-600"><Trash2 size={12} /> Delete</button>
           </div>
         )}
@@ -462,8 +462,8 @@ export default function TemplateManager() {
           <div className="flex items-center justify-between px-1.5 pb-2">
             <p className="text-[12px] font-semibold uppercase tracking-wide text-mt-muted">Categories</p>
             <div className="flex gap-1">
-              <button type="button" title="Add a category" onClick={() => setCatEdit({ mode: 'add', parent: null })} className="h-7 w-7 grid place-items-center rounded-md hover:bg-mt-surface2"><FolderPlus size={14} /></button>
-              <button type="button" title={manageCats ? 'Done' : 'Organise categories'} onClick={() => setManageCats((v) => !v)} className={`h-7 px-2 rounded-md text-[12px] font-semibold inline-flex items-center gap-1 ${manageCats ? 'bg-mt-primary text-mt-onprimary' : 'hover:bg-mt-surface2'}`}>{manageCats ? <><Check size={12} /> Done</> : <><Settings2 size={12} /> Organise</>}</button>
+              <button type="button" title="Add a category" onClick={() => setCatEdit({ mode: 'add', parent: null })} className="h-7 w-7 grid place-items-center rounded-md text-mt-ink hover:bg-mt-surface2"><FolderPlus size={14} /></button>
+              <button type="button" title={manageCats ? 'Done' : 'Organise categories'} onClick={() => setManageCats((v) => !v)} className={`h-7 px-2 rounded-md text-[12px] font-semibold inline-flex items-center gap-1 ${manageCats ? 'bg-mt-primary text-mt-onprimary' : 'text-mt-ink hover:bg-mt-surface2'}`}>{manageCats ? <><Check size={12} /> Done</> : <><Settings2 size={12} /> Organise</>}</button>
             </div>
           </div>
           {manageCats && <p className="px-2 pb-2 text-[11.5px] text-mt-muted leading-snug">Press ⋯ next to a category to move it up or down, rename it, put it inside another, add a sub-category or delete it (you choose where its templates go).</p>}
