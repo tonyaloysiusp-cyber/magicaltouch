@@ -1,11 +1,13 @@
 const B = 'https://www.magicaltouchdesign.com';
-for (const p of ['/patterns', '/colours', '/features', '/pricing', '/tools', '/pattern-studio', '/templates/bdp-black-and-gold-fortieth-invitation', '/templates/category/birthday', '/api/colour-search?hex=1E3A5F&limit=3', '/api/media/home/ad/magical-touch-ad.mp4']) {
+for (const p of ['/', '/tools', '/trace', '/patterns', '/templates', '/templates/category/business', '/templates/u-northline-advisory-grow-with-a-clear-plan-instagram-post-00000']) {
   const r = await fetch(B + p, { redirect: 'manual' });
-  let extra = r.headers.get('location') || '';
-  if (r.status === 200 && p.startsWith('/api/colour')) extra = (await r.text()).slice(0, 200);
-  else if (r.status === 200) { const h = await r.text(); extra = (h.match(/<title>([^<]*)/) || [])[1] || ''; }
-  console.log(r.status, p, extra);
+  const h = r.status === 200 ? await r.text() : '';
+  console.log(r.status, p, (h.match(/<title>([^<]*)/) || [])[1] || r.headers.get('location') || '');
 }
-// a retired template redirects to its category
+const j = await fetch(B + '/api/public-templates');
+const t = await j.text();
+console.log('gallery list', j.status, (t.length / 1e6).toFixed(1), 'MB decoded, rows', (JSON.parse(t).rows || []).length, 'encoding', j.headers.get('content-encoding'));
+const th = await fetch('https://rqkjogzljsbufbrdlbfr.supabase.co/storage/v1/object/public/template-thumbs/u-northline-advisory-grow-with-a-clear-plan-instagram-post-00000.webp');
+console.log('thumb', th.status, th.headers.get('content-type'), th.headers.get('content-length'));
 const sm = await (await fetch(B + '/sitemap.xml')).text();
-console.log('image tags in sitemap:', (sm.match(/<image:image>/g) || []).length, 'bdp in sitemap:', (sm.match(/bdp-/g) || []).length);
+console.log('sitemap URLs', (sm.match(/<loc>/g) || []).length, 'universe', (sm.match(/\/templates\/u-/g) || []).length);
