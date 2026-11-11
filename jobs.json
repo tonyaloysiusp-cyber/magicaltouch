@@ -12,12 +12,7 @@
     "wait": 2500
    },
    {
-    "click": "button[aria-label='Expand']",
-    "wait": 1200
-   },
-   {
-    "text": "Organise",
-    "exact": false,
+    "click": "button[title='Organise categories']",
     "wait": 1200
    },
    {
@@ -30,43 +25,19 @@
     "wait": 800
    },
    {
-    "text": "Done",
-    "exact": false,
-    "wait": 800
-   },
-   {
-    "click": "main label[aria-label='Select'] input",
-    "wait": 600
-   },
-   {
-    "click": "button:has-text('Move to\u2026')",
-    "wait": 1200
+    "click": "button[title='Add a category']",
+    "wait": 1000
    },
    {
     "text": "Cancel",
     "exact": true,
-    "wait": 600
-   },
-   {
-    "click": "button:has-text('Details')",
-    "wait": 1500
-   },
-   {
-    "close": true,
     "wait": 800
    },
    {
-    "click": "button[aria-label='List view']",
+    "text": "Bin",
+    "exact": false,
     "wait": 2000
    }
   ]
- },
- {
-  "name": "libm",
-  "device": "iPhone 13",
-  "url": "/admin/library",
-  "mock": "admin",
-  "wait": 9000,
-  "full": true
  }
 ]
