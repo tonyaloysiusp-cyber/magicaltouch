@@ -2,7 +2,7 @@
 # CI driver: every phase logs to e2e-out/, and results are always published.
 mkdir -p e2e-out
 status=ok
-step() { local name=$1; shift; echo "== $name" >> e2e-out/steps.txt; if ! "$@" > "e2e-out/$name.txt" 2>&1; then echo "FAILED $name" >> e2e-out/steps.txt; return 1; fi; }
+step() { local name=$1; shift; echo "== $name" >> e2e-out/steps.txt; if ! "$@" > "e2e-out/$name.txt" 2>&1; then echo "FAILED $name" >> e2e-out/steps.txt; echo "--- last lines of $name:"; tail -n 25 "e2e-out/$name.txt"; return 1; fi; }
 step npm-install npm install --no-audit --no-fund || status=npm
 if [ $status = ok ]; then
   step tsc npx tsc --noEmit -p . || true
@@ -10,7 +10,7 @@ if [ $status = ok ]; then
   step build npm run build || { sleep 10; step build-retry npm run build; } || status=build
 fi
 if [ $status = ok ]; then
-  step pw-install npx -y playwright@1.47.2 install --with-deps chromium || status=pw
+  step pw-install npx -y playwright@1.47.2 install --with-deps chromium || { sleep 20; step pw-install-retry npx -y playwright@1.47.2 install --with-deps chromium; } || status=pw
   npm i --no-save --no-audit --no-fund playwright@1.47.2 jsqr@1.4.0 > e2e-out/pw-npm.txt 2>&1
   (npx next start -p 3000 > e2e-out/server.txt 2>&1 &)
   for i in $(seq 1 60); do curl -s -o /dev/null http://localhost:3000 && break; sleep 1; done
