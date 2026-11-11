@@ -50,6 +50,8 @@ export async function GET() {
       if (c === 'thumbnail') return shortThumb(r.thumbnail);
       if (c === 'preview') return shortPreview(r.thumbnail, r.preview);
       if (c === 'tags') return r.tags && r.tags.length ? r.tags : null;
+      // Only the first sentence travels in the list (enough for search; the full text is on the template page).
+      if (c === 'description') return r.description ? String(r.description).split(/(?<=[.!?])\s/)[0].slice(0, 160) : null;
       if (c === 'is_featured' || c === 'is_free') return r[c] ? 1 : 0;
       return r[c] ?? null;
     }),

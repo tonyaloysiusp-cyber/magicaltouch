@@ -10,6 +10,13 @@
 - SEO standard: `fitTitle`/`fitDescription`, canonicals, image sitemap, redirects; audit tool.
 - Self-opening design files (`.mtd.html`), Tutorials redesign, clean-up of unused code and files (earlier today).
 
+## Done — 11 Nov 2026 (afternoon)
+- Hero: self-playing product tour (templates → edit → brand colours → translate → Image Trace → patterns → print export).
+- Tools hub (`/tools`) with every creative tool; Tools menu updated.
+- Image Trace (`/trace`, `lib/trace.ts`): black & white, line drawing, 2–32 colours, logo mode; SVG/PNG export; “Edit as vectors” opens editable paths in the editor. Unit tested.
+- Creative Universe library: 13,320 new templates (`scripts/templates_kit/universe.py`) — 30 industries × 3 fictional brand sets × 12 formats × 12 layout archetypes, plus business cards and letterheads. Thumbnails (640 px WebP) live in Supabase storage bucket `template-thumbs` (keeps the Worker under its static-file limit), copied by the `copy-thumbs` edge function from branch `thumbs-u`. Tagged `universe-2026-11`, `industry-*`, `layout-*`, `brand-set-*`.
+- Published library: about 18,580.
+
 ## Next (in order)
 1. Paginated server-side gallery search (remove the 5 MB list).
 2. Style / composition / palette columns (migration) + filters in the gallery + Creative Universe discovery page.

@@ -294,7 +294,7 @@ class Ctx:
         t = text or self.head
         up = self.upper if upper is None else upper
         fam, wt = font or self.disp, weight or self.dw
-        s = size_max * self.u
+        s = size_max * self.u * (1.55 if self.fmt in ("flyer", "poster", "rollup") else 1)
         while s > 14 * self.u:
             h = self.d.measure(t, w, fam, s, weight=wt, lh=lh, upper=up)
             longest = max(text_width(wd, fam, s, wt, False, 20 if up else 0) for wd in (t.upper() if up else t).split())
@@ -675,6 +675,7 @@ def L_letterhead(c):
     c.logo(m, m, c.ink, 30)
     c.T(W / 2, m, W / 2 - m, f"{c.city}\n{c.phone}\nhello@{c.web}", 18, c.mut, align="right", lh=1.5)
     y = m + 260 * u
+    c.u *= 1.25
     c.T(m, y, W - 2 * m, "12 November 2026\n\nMs. Sarah Lewis\nOperations Director\nBrightside Holdings", 22, c.ink, lh=1.45)
     body = ("Dear Ms. Lewis,\n\nThank you for meeting with our team last week. Following our conversation, please find attached our proposal outlining the scope, timeline and investment for the project. "
             "We have built the plan around the priorities you shared and included options to phase the work.\n\nWe would welcome the chance to walk you through it in person.\n\nKind regards,\n\nLayla Haddad\nManaging Director")
