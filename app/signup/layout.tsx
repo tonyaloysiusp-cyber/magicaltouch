@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { getTemplateCountLabel, withCount } from '@/lib/templateCountServer';
 
-const baseMetadata: Metadata = { title: 'Sign Up Free', description: 'Create a free Magical Touch Design account and start designing with 1,000+ templates.', alternates: { canonical: '/signup' } };
+const baseMetadata: Metadata = { title: 'Sign Up Free', description: 'Create a free Magical Touch Design account and start designing with 1,000+ templates.', alternates: { canonical: '/signup' }, robots: { index: false, follow: true } };
 
 // The template count in the text follows the real library ("1,850+").
 export async function generateMetadata(): Promise<Metadata> {

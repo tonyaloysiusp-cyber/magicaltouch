@@ -27,7 +27,7 @@ export async function generateMetadata({ params }: { params: { course: string; l
   const url = `${SITE_URL}/tutorials/${d.course.slug}/${d.lesson.slug}`;
   return {
     title: fitTitle(`${d.lesson.title} — ${d.course.title}`),
-    description: (d.lesson.intro || d.course.summary).slice(0, 300),
+    description: fitDescription(`${d.lesson.intro || d.course.summary} A free ${d.lesson.minutes}-minute lesson from the ${d.course.title} course.`),
     alternates: { canonical: url },
     openGraph: { type: 'article', url, title: d.lesson.title, description: d.lesson.intro, siteName: SITE_NAME, images: [`${SITE_URL}/api/og`] },
   };

@@ -23,7 +23,7 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   const desc = `${p.description} ${hashtagText(p.hashtags)}`.slice(0, 300);
   return {
     title: fitTitle(`${p.title}`),
-    description: fitDescription(desc),
+    description: fitDescription(`${p.title}: ${p.description}`),
     keywords: [...p.hashtags, 'magical touch design', 'free templates', 'online design tool'],
     alternates: { canonical: url },
     openGraph: p.kind === 'video' && p.video_url

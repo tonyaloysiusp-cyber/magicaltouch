@@ -8,11 +8,6 @@ import { getActivePosts } from '@/lib/sitePosts';
 // Rebuilt at most once an hour, so new templates appear without a deploy.
 export const revalidate = 3600;
 
-const img = (t: { preview?: string | null; thumbnail?: string | null }) => {
-  const u = t.preview || t.thumbnail;
-  return u ? (u.startsWith('http') ? u : `${SITE_URL}${u}`) : '';
-};
-
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
   // Pages linked to the gallery are left out (their address only redirects).
@@ -26,7 +21,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/photo-studio`, lastModified: now, changeFrequency: 'monthly', priority: 0.6 },
     { url: `${SITE_URL}/verify`, lastModified: now, changeFrequency: 'yearly', priority: 0.4 },
     { url: `${SITE_URL}/contact`, lastModified: now, changeFrequency: 'yearly', priority: 0.4 },
-    { url: `${SITE_URL}/signup`, lastModified: now, changeFrequency: 'yearly', priority: 0.5 },
     { url: `${SITE_URL}/privacy`, lastModified: now, changeFrequency: 'yearly', priority: 0.2 },
     { url: `${SITE_URL}/terms`, lastModified: now, changeFrequency: 'yearly', priority: 0.2 },
     { url: `${SITE_URL}/about`, lastModified: now, changeFrequency: 'monthly', priority: 0.7 },
@@ -53,9 +47,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       lastModified: t.updated_at ? new Date(t.updated_at) : now,
       changeFrequency: 'monthly',
       priority: 0.7,
-      // Image sitemap: the template preview, so it can show in Google Images.
-      ...(img(t) ? { images: [img(t)] } : {}),
-    } as any);
+    });
   });
   cats.forEach((c) => pages.push({ url: `${SITE_URL}/templates/category/${categorySlug(c)}`, lastModified: now, changeFrequency: 'weekly', priority: 0.8 }));
   // Sub-category pages (Wedding → Invitation, Business → Business Card, …).

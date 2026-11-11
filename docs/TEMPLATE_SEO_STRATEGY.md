@@ -9,14 +9,17 @@ Follows Google Search Central guidance (titles, snippets, image SEO, sitemaps, s
 - Canonical URL on every indexable page.
 - Open Graph image on every page (template preview, or `/api/og`).
 - Structured data: `WebPage`, `ItemList` (catalogues), `Course` (tutorials), `SoftwareApplication` + `FAQPage` (tools), `BreadcrumbList`.
-- Sitemap: all indexable pages; template entries include `<image:image>` with the preview (image sitemap).
+- Sitemaps: `/sitemap.xml` (all indexable pages) and `/image-sitemap.xml` (every template page with its preview, showcase posts with image/video). Both listed in robots.txt.
+- Login and sign-up pages are `noindex, follow` and left out of the sitemap.
 - Hidden/retired templates 301 to the kept template or to their category page — never a soft 404.
 - Common guessed URLs (`/features`, `/pricing`, `/tools`, `/pattern-studio`) redirect.
 
 ## Audit tool
 `smoke-mcp` branch, `tools/seo.mjs`: samples the sitemap and key pages, reports titles > 65, descriptions out of range, missing canonical/OG/H1, duplicate titles/descriptions, invalid JSON-LD, images without alt, non-200 status.
 
-Baseline (11 Nov 2026, before the fix): 105/124 titles over 65 characters, 20 descriptions over 165, 16 under 70, 4 pages without an H1 in HTML, 3 without canonical, 3 guessed URLs 404, sitemap without image tags.
+Baseline (11 Nov 2026, before the fix): 105/124 titles over 65 characters, 20 descriptions over 165, 16 under 70, 4 pages without an H1 in HTML, 3 without canonical, 3 guessed URLs 404, (image sitemap already existed separately).
+
+After the fix (live, 11 Nov 2026): 0 titles over 65, 0 descriptions over 165; remaining items were short descriptions on lessons/legal pages and duplicate showcase descriptions — fixed in the follow-up release.
 
 ## Content rules
 - Template titles describe purpose and style (e.g. “Atlas & Co. Architects Letterhead”), never “Flyer 01”.

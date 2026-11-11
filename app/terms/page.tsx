@@ -5,7 +5,7 @@ import { fitTitle, fitDescription } from '@/lib/seo';
 export const metadata: Metadata = {
   title: fitTitle('Terms of Service'),
   alternates: { canonical: '/terms' },
-  description: fitDescription('The terms for using Magical Touch Design.'),
+  description: fitDescription('The terms for using Magical Touch Design: your account, your designs, templates, acceptable use and how we handle problems.'),
 };
 
 const EMAIL = 'hellomagicaltouch.design@gmail.com';
