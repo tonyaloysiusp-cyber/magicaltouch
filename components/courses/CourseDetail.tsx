@@ -57,7 +57,7 @@ export function CourseDetail({ course, prerequisite }: { course: CourseWithLesso
               </div>
               <h1 className="mt-3 text-3xl sm:text-[44px] font-semibold tracking-tight leading-tight">{course.title}</h1>
               <p className="mt-3 text-lg text-mt-muted leading-relaxed max-w-2xl">{course.summary}</p>
-              <p className="mt-4 text-[14px] text-mt-muted inline-flex flex-wrap items-center gap-x-5 gap-y-2">
+              <p className="mt-4 text-[14px] text-mt-muted flex flex-wrap items-center gap-x-5 gap-y-2">
                 <span className="inline-flex items-center gap-1.5"><BookOpen size={15} aria-hidden /> {course.lessons.length} lessons</span>
                 <span className="inline-flex items-center gap-1.5"><Clock size={15} aria-hidden /> about {formatMinutes(mins)}</span>
                 <span className="inline-flex items-center gap-1.5"><Award size={15} aria-hidden /> Reviewed certificate</span>
@@ -65,7 +65,7 @@ export function CourseDetail({ course, prerequisite }: { course: CourseWithLesso
               </p>
               {me.userId && course.lessons.length > 0 && <div className="mt-5 max-w-xl"><ProgressBar done={s.done} total={course.lessons.length} /></div>}
               {course.lessons.length > 0 && (
-                <Link href={`/tutorials/${course.slug}/${s.next.slug}`} className="mt-6 h-12 px-6 rounded-full bg-mt-primary text-mt-onprimary text-[15px] font-semibold inline-flex items-center gap-2 shadow-[0_10px_30px_-12px_rgba(9,9,11,0.5)]">
+                <Link href={`/tutorials/${course.slug}/${s.next.slug}`} className="mt-6 w-fit h-12 px-6 rounded-full bg-mt-primary text-mt-onprimary text-[15px] font-semibold flex items-center gap-2 shadow-[0_10px_30px_-12px_rgba(9,9,11,0.5)]">
                   <PlayCircle size={18} aria-hidden /> {startLabel}
                 </Link>
               )}
