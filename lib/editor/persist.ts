@@ -32,6 +32,7 @@ export const PERSIST_PROPS = [
   '__fxStroke',
   '__fxHighlight',
   '__fxHollowFill',
+  '__fxFill',
   '__preCurveWidth',
   // Image adjustments kept as live filters (lib/editor/imageAdjust.ts)
   '__adjust',

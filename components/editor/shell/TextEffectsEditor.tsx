@@ -1,49 +1,41 @@
 'use client';
 
-// Text effects: one "look" (shadow, glow, neon…), plus an outline and a
-// highlight that combine with any look, plus curve or wave. Everything
-// stays live, editable text.
+// Text effects (v2, Nov 2026). A gallery of looks plus the layers each look
+// is made of — fill (solid or gradient), outline, shadow (soft, hard or
+// glow), highlight and curve/wave — all live, editable text. Everything is a
+// native text property, so the look is the same on screen and in PNG, JPG,
+// PDF and SVG downloads.
 
-import { TextFx } from '@/lib/editor/textEffects';
-import { isPremium, PREMIUM_LOOKS } from '@/lib/textfx/premium';
-import { LookGallery } from '@/components/textfx/LookGallery';
+import type React from 'react';
+import { TextFx, FxShadow, TEXT_LOOKS, lookFx, isLegacyFx, DEFAULT_TEXT_FX } from '@/lib/editor/textEffects';
 import { DEFAULT_SWATCHES } from './ColorPicker';
 import { Slider, cx } from './ui';
 
-const LOOKS: { id: TextFx['effect']; label: string }[] = [
-  { id: 'none', label: 'None' },
-  { id: 'shadow', label: 'Shadow' },
-  { id: 'lift', label: 'Lift' },
-  { id: 'glow', label: 'Glow' },
-  { id: 'neon', label: 'Neon' },
-  { id: 'echo', label: 'Echo' },
-  { id: 'hollow', label: 'Hollow' },
-  { id: 'retro', label: 'Retro' },
-  { id: 'pop', label: 'Pop' },
-  { id: 'dreamy', label: 'Dreamy' },
-];
-
-function EffectSample({ id }: { id: string }) {
-  const base: React.CSSProperties = { fontFamily: 'Montserrat, system-ui', fontWeight: 800, fontSize: 22, color: '#09090B' };
-  const map: Record<string, React.CSSProperties> = {
-    none: base,
-    shadow: { ...base, textShadow: '2px 2px 3px rgba(9,9,11,0.45)' },
-    lift: { ...base, textShadow: '0 6px 8px rgba(0,0,0,0.3)' },
-    glow: { ...base, color: '#fff', textShadow: '0 0 6px #A69BD3, 0 0 12px #A69BD3' },
-    neon: { ...base, color: '#F2708F', textShadow: '0 0 6px #F2708F, 0 0 14px #F2708F', WebkitTextStroke: '0.6px #fff' } as any,
-    hollow: { ...base, color: 'transparent', WebkitTextStroke: '1.2px #09090B' } as any,
-    echo: { ...base, textShadow: '3px 3px 0 #8CCBFF' },
-    retro: { ...base, color: '#F2708F', WebkitTextStroke: '1px #FFF4E0', textShadow: '3px 3px 0 #1A1A1A' } as any,
-    pop: { ...base, color: '#FFFFFF', textShadow: '4px 4px 0 #F2708F', WebkitTextStroke: '0.6px #09090B' } as any,
-    dreamy: { ...base, color: '#A69BD3', textShadow: '0 1px 10px rgba(166,155,211,0.9)' },
-  };
-  return <span style={map[id] || base}>Ag</span>;
+function lookStyle(id: string): React.CSSProperties {
+  const L = TEXT_LOOKS.find((l) => l.id === id);
+  const fx = L?.fx || {};
+  const st: any = { fontFamily: 'Montserrat, system-ui', fontWeight: 900, fontSize: 22, color: L?.dark ? '#FFFFFF' : '#09090B', lineHeight: 1 };
+  if (fx.gradient) { st.backgroundImage = `linear-gradient(${(fx.gradient.angle ?? 0) + 90}deg, ${fx.gradient.colors.join(', ')})`; st.WebkitBackgroundClip = 'text'; st.backgroundClip = 'text'; st.color = 'transparent'; }
+  if (fx.hollow) st.color = 'transparent';
+  if (fx.outline) { st.WebkitTextStroke = `${fx.hollow ? 1 : Math.max(1, fx.outline.width / 25)}px ${fx.outline.color}`; st.paintOrder = 'stroke fill'; }
+  if (fx.shadow) {
+    const s = fx.shadow, a = (s.angle * Math.PI) / 180, d = s.kind === 'glow' ? 0 : (s.distance / 100) * 5;
+    const col = hexA(s.color, s.opacity / 100);
+    st.textShadow = s.kind === 'glow' ? `0 0 ${4 + s.blur / 12}px ${col}, 0 0 ${8 + s.blur / 8}px ${col}` : `${(Math.cos(a) * d).toFixed(1)}px ${(Math.sin(a) * d).toFixed(1)}px ${s.kind === 'hard' ? 0 : s.blur / 12}px ${col}`;
+    if (fx.gradient) st.filter = `drop-shadow(${s.kind === 'glow' ? '0 0' : `${(Math.cos(a) * d).toFixed(1)}px ${(Math.sin(a) * d).toFixed(1)}px`} ${s.kind === 'hard' ? 0 : s.blur / 12}px ${col})`;
+  }
+  if (fx.highlight) st.background = fx.highlight.color;
+  return st;
 }
+const hexA = (hex: string, a: number) => {
+  const h = (hex || '#000').replace('#', '').padEnd(6, '0');
+  return `rgba(${parseInt(h.slice(0, 2), 16)}, ${parseInt(h.slice(2, 4), 16)}, ${parseInt(h.slice(4, 6), 16)}, ${a})`;
+};
 
 function Swatches({ value, onPick, label }: { value: string; onPick: (c: string) => void; label: string }) {
   return (
     <div className="flex items-center gap-1.5 flex-wrap">
-      {DEFAULT_SWATCHES.slice(0, 14).map((c) => (
+      {DEFAULT_SWATCHES.slice(0, 12).map((c) => (
         <button key={c} type="button" aria-label={`${label} ${c}`} onClick={() => onPick(c)} className={cx('w-5 h-5 rounded-full ring-1 ring-black/10 dark:ring-white/20', value.toUpperCase() === c && 'ring-2 ring-[#3B82C4] ring-offset-1 ring-offset-mt-surface')} style={{ background: c }} />
       ))}
       <label className="relative w-5 h-5 rounded-full overflow-hidden ring-1 ring-black/10 cursor-pointer" title="Any colour" style={{ background: 'conic-gradient(#F2708F, #F7C948, #8CC84B, #35C2F1, #A69BD3, #F2708F)' }}>
@@ -61,93 +53,102 @@ function Toggle({ on, onChange, label }: { on: boolean; onChange: (v: boolean) =
   );
 }
 
+const Head = ({ title, on, onToggle }: { title: string; on?: boolean; onToggle?: (v: boolean) => void }) => (
+  <div className="flex items-center justify-between">
+    <p className="text-[13px] font-semibold text-mt-ink">{title}</p>
+    {onToggle && <Toggle label={title} on={!!on} onChange={onToggle} />}
+  </div>
+);
+
 export function TextEffectsEditor({ value, onChange }: { value: TextFx; onChange: (fx: TextFx, commit: boolean) => void }) {
-  const set = (patch: Partial<TextFx>, commit = true) => onChange({ ...value, ...patch }, commit);
-  const premium = isPremium(value.effect);
-  const usesColor = premium ? !!PREMIUM_LOOKS.find((l) => l.id === value.effect)?.usesColor : value.effect !== 'none' && value.effect !== 'lift' && value.effect !== 'dreamy';
-  const outline = value.outline || null;
-  const highlight = value.highlight || null;
+  const legacy = isLegacyFx(value);
+  // Every change below is a v2 effect; an old effect is replaced by it.
+  const base: TextFx = legacy ? { ...DEFAULT_TEXT_FX, curve: value.curve, wave: value.wave, v: 2 } : { ...value, v: 2, effect: 'none' };
+  const set = (patch: Partial<TextFx>, commit = true) => onChange({ ...base, look: 'custom', ...patch }, commit);
+  const sh = base.shadow || null;
+  const setSh = (p: Partial<FxShadow>, commit = true) => set({ shadow: { ...(sh || { kind: 'soft', color: '#000000', opacity: 45, distance: 30, angle: 45, blur: 40 }), ...p } }, commit);
+  const g = base.gradient || null;
+  const outline = base.outline || null;
+  const active = legacy ? '' : base.look || (base.gradient || base.shadow || base.outline || base.highlight || base.hollow ? 'custom' : 'none');
+
   return (
     <div className="flex flex-col gap-4">
+      {legacy && (
+        <p className="rounded-xl bg-mt-surface2 px-3 py-2 text-[12px] text-mt-muted">This text uses an older effect. Pick a look below to replace it, or <button type="button" className="text-mt-accent underline" onClick={() => onChange({ ...DEFAULT_TEXT_FX, curve: value.curve, wave: value.wave }, true)}>remove it</button>.</p>
+      )}
       <section>
-        <p className="text-[13px] font-semibold text-mt-ink mb-2">Pro effects <span className="font-normal text-mt-faint">· text stays editable</span></p>
-        <LookGallery value={value.effect} color={value.color} onPick={(id, def) => set({ effect: id, color: value.effect === id ? value.color : def, outline: null, highlight: null })} />
-        {premium && (
-          <div className="mt-3 flex flex-col gap-2">
-            {usesColor && <Swatches label="Effect colour" value={value.color} onPick={(c) => set({ color: c })} />}
-            <button type="button" onClick={() => set({ effect: 'none' })} className="self-start text-xs text-mt-accent hover:underline">Remove effect</button>
-          </div>
-        )}
-      </section>
-
-      <section className="border-t border-mt-border pt-3">
-        <p className="text-[13px] font-semibold text-mt-ink mb-2">Simple looks</p>
+        <p className="text-[13px] font-semibold text-mt-ink mb-2">Looks <span className="font-normal text-mt-faint">· text stays editable</span></p>
         <div className="grid grid-cols-4 gap-1.5">
-          {LOOKS.map((e) => (
-            <button
-              key={e.id}
-              type="button"
-              onClick={() => {
-                // A sensible colour for each look the first time it's picked.
-                const defaults: Record<string, string> = { glow: '#8CCBFF', neon: '#F2708F', echo: '#8CCBFF', hollow: '#09090B', shadow: '#09090B' };
-                const keep = value.effect !== 'none' && value.color !== '#09090B';
-                set({ effect: e.id, color: keep ? value.color : defaults[e.id] || value.color });
-              }}
-              aria-pressed={value.effect === e.id}
-              className={cx(
-                'rounded-xl border flex flex-col items-center justify-center gap-0.5 py-1.5',
-                value.effect === e.id ? 'mt-active-blue' : 'border-mt-border hover:bg-mt-surface2',
-                (e.id === 'glow' || e.id === 'neon') && 'bg-[#11131f]'
-              )}
-            >
-              <EffectSample id={e.id} />
-              <span className={cx('text-[10px]', e.id === 'glow' || e.id === 'neon' ? 'text-white/80' : 'text-mt-muted')}>{e.label}</span>
+          {TEXT_LOOKS.map((l) => (
+            <button key={l.id} type="button" onClick={() => onChange(lookFx(l.id, value), true)} aria-pressed={active === l.id} title={l.label}
+              className={cx('rounded-xl border flex flex-col items-center justify-center gap-1 py-2 min-h-[58px]', active === l.id ? 'mt-active-blue' : 'border-mt-border hover:bg-mt-surface2', l.dark && 'bg-[#11131f]')}>
+              <span style={lookStyle(l.id)} className="px-0.5">Ag</span>
+              <span className={cx('text-[10px] leading-none', l.dark ? 'text-white/80' : 'text-mt-muted')}>{l.label}</span>
             </button>
           ))}
         </div>
-        {value.effect !== 'none' && !premium && (
-          <div className="mt-3 flex flex-col gap-2.5">
-            <Slider label={value.effect === 'hollow' ? 'Thickness' : 'Strength'} value={value.amount} min={0} max={100} onChange={(v) => set({ amount: v }, false)} onCommit={(v) => set({ amount: v })} />
-            {usesColor && <Swatches label="Effect colour" value={value.color} onPick={(c) => set({ color: c })} />}
+      </section>
+
+      <section className="border-t border-mt-border pt-3">
+        <Head title="Gradient fill" on={!!g} onToggle={(on) => set({ gradient: on ? { colors: ['#F2708F', '#35C2F1'], angle: 0 } : null, hollow: false })} />
+        {g && (
+          <div className="mt-2 flex flex-col gap-2.5">
+            <div className="h-6 rounded-lg ring-1 ring-black/10" style={{ background: `linear-gradient(90deg, ${g.colors.join(', ')})` }} />
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {g.colors.map((c, i) => (
+                <label key={i} className="relative w-7 h-7 rounded-lg ring-1 ring-black/10 cursor-pointer overflow-hidden" style={{ background: c }} title={`Colour ${i + 1}`}>
+                  <input type="color" value={c} aria-label={`Gradient colour ${i + 1}`} onChange={(e) => set({ gradient: { ...g, colors: g.colors.map((x, k) => (k === i ? e.target.value.toUpperCase() : x)) } }, false)} onBlur={() => set({ gradient: g })} className="absolute inset-0 opacity-0 cursor-pointer" />
+                </label>
+              ))}
+              {g.colors.length < 5 && <button type="button" onClick={() => set({ gradient: { ...g, colors: [...g.colors, g.colors[g.colors.length - 1]] } })} className="h-7 px-2 rounded-lg border border-mt-border text-[12px]">+ colour</button>}
+              {g.colors.length > 2 && <button type="button" onClick={() => set({ gradient: { ...g, colors: g.colors.slice(0, -1) } })} className="h-7 px-2 rounded-lg border border-mt-border text-[12px]">− colour</button>}
+            </div>
+            <Slider label="Direction" value={g.angle} min={0} max={360} onChange={(v) => set({ gradient: { ...g, angle: v } }, false)} onCommit={(v) => set({ gradient: { ...g, angle: v } })} />
           </div>
         )}
       </section>
 
       <section className="border-t border-mt-border pt-3">
-        <div className="flex items-center justify-between">
-          <p className="text-[13px] font-semibold text-mt-ink">Outline</p>
-          <Toggle label="Outline" on={!!outline} onChange={(on) => set({ outline: on ? { color: '#09090B', width: 35 } : null })} />
-        </div>
+        <Head title="Outline" on={!!outline} onToggle={(on) => set({ outline: on ? { color: '#09090B', width: 35 } : null, hollow: on ? base.hollow : false })} />
         {outline && (
           <div className="mt-2 flex flex-col gap-2.5">
-            <Slider label="Thickness" value={outline.width} min={0} max={100} onChange={(v) => set({ outline: { ...outline, width: v } }, false)} onCommit={(v) => set({ outline: { ...outline, width: v } })} />
+            <Slider label="Thickness" value={outline.width} min={1} max={100} onChange={(v) => set({ outline: { ...outline, width: v } }, false)} onCommit={(v) => set({ outline: { ...outline, width: v } })} />
             <Swatches label="Outline colour" value={outline.color} onPick={(c) => set({ outline: { ...outline, color: c } })} />
-            {(value.effect === 'neon' || value.effect === 'hollow') && <p className="text-[11px] text-mt-faint">{value.effect === 'neon' ? 'Neon' : 'Hollow'} uses its own outline.</p>}
+            <label className="flex items-center justify-between text-[12.5px] text-mt-ink"><span>Hollow letters (outline only)</span><Toggle label="Hollow" on={!!base.hollow} onChange={(v) => set({ hollow: v, gradient: v ? null : base.gradient })} /></label>
           </div>
         )}
       </section>
 
       <section className="border-t border-mt-border pt-3">
-        <div className="flex items-center justify-between">
-          <p className="text-[13px] font-semibold text-mt-ink">Highlight</p>
-          <Toggle label="Highlight" on={!!highlight} onChange={(on) => set({ highlight: on ? { color: '#F8E16C' } : null })} />
-        </div>
-        {highlight && (
-          <div className="mt-2">
-            <Swatches label="Highlight colour" value={highlight.color} onPick={(c) => set({ highlight: { color: c } })} />
+        <Head title="Shadow & glow" on={!!sh} onToggle={(on) => (on ? setSh({}) : set({ shadow: null }))} />
+        {sh && (
+          <div className="mt-2 flex flex-col gap-2.5">
+            <div className="grid grid-cols-3 gap-1 rounded-lg bg-mt-surface2 p-0.5">
+              {(['soft', 'hard', 'glow'] as const).map((k) => (
+                <button key={k} type="button" aria-pressed={sh.kind === k} onClick={() => setSh({ kind: k, blur: k === 'hard' ? 0 : sh.blur || 40, distance: k === 'glow' ? 0 : sh.distance || 30 })} className={cx('h-7 rounded-md text-[12px] font-semibold capitalize', sh.kind === k ? 'bg-mt-surface text-mt-ink shadow-sm' : 'text-mt-muted')}>{k}</button>
+              ))}
+            </div>
+            <Swatches label="Shadow colour" value={sh.color} onPick={(c) => setSh({ color: c })} />
+            <Slider label="Opacity" value={sh.opacity} min={0} max={100} onChange={(v) => setSh({ opacity: v }, false)} onCommit={(v) => setSh({ opacity: v })} />
+            {sh.kind !== 'glow' && <Slider label="Distance" value={sh.distance} min={0} max={100} onChange={(v) => setSh({ distance: v }, false)} onCommit={(v) => setSh({ distance: v })} />}
+            {sh.kind !== 'glow' && <Slider label="Direction" value={sh.angle} min={0} max={360} onChange={(v) => setSh({ angle: v }, false)} onCommit={(v) => setSh({ angle: v })} />}
+            {sh.kind !== 'hard' && <Slider label={sh.kind === 'glow' ? 'Glow size' : 'Blur'} value={sh.blur} min={0} max={100} onChange={(v) => setSh({ blur: v }, false)} onCommit={(v) => setSh({ blur: v })} />}
           </div>
         )}
+      </section>
+
+      <section className="border-t border-mt-border pt-3">
+        <Head title="Highlight" on={!!base.highlight} onToggle={(on) => set({ highlight: on ? { color: '#FFE45C' } : null })} />
+        {base.highlight && <div className="mt-2"><Swatches label="Highlight colour" value={base.highlight.color} onPick={(c) => set({ highlight: { color: c } })} /></div>}
       </section>
 
       <section className="border-t border-mt-border pt-3">
         <p className="text-[13px] font-semibold text-mt-ink mb-2">Shape</p>
         <div className="flex flex-col gap-2.5">
-          <Slider label="Curve" value={value.curve} min={-100} max={100} onChange={(v) => set({ curve: v, wave: 0 }, false)} onCommit={(v) => set({ curve: v, wave: 0 })} />
-          <Slider label="Wave" value={value.wave} min={0} max={100} onChange={(v) => set({ wave: v, curve: 0 }, false)} onCommit={(v) => set({ wave: v, curve: 0 })} />
+          <Slider label="Curve" value={value.curve} min={-100} max={100} onChange={(v) => onChange({ ...base, look: base.look, curve: v, wave: 0 }, false)} onCommit={(v) => onChange({ ...base, look: base.look, curve: v, wave: 0 }, true)} />
+          <Slider label="Wave" value={value.wave} min={0} max={100} onChange={(v) => onChange({ ...base, look: base.look, wave: v, curve: 0 }, false)} onCommit={(v) => onChange({ ...base, look: base.look, wave: v, curve: 0 }, true)} />
           {(value.curve !== 0 || value.wave !== 0) && (
-            <button type="button" onClick={() => set({ curve: 0, wave: 0 })} className="self-start text-xs text-mt-accent hover:underline">
-              Straighten text
-            </button>
+            <button type="button" onClick={() => onChange({ ...base, look: base.look, curve: 0, wave: 0 }, true)} className="self-start text-xs text-mt-accent hover:underline">Straighten text</button>
           )}
         </div>
       </section>

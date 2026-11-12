@@ -325,6 +325,13 @@ scenarios.push(
       await t.page.waitForTimeout(300);
       let a = await t.eval(ACTIVE);
       t.check('glow adds a shadow', a && a.shadow, JSON.stringify(a));
+      await t.page.locator('[role=dialog] button[title="Gold"]').click();
+      await t.page.waitForTimeout(300);
+      const gold = await t.eval(() => { const o = window.__fabricCanvas.getActiveObject(); return { gradient: !!(o.fill && o.fill.colorStops), stroke: o.stroke, shadow: !!o.shadow, fx: o.__textFx && o.__textFx.look }; });
+      t.check('gold look: gradient fill, outline and shadow', gold.gradient && !!gold.stroke && gold.shadow && gold.fx === 'gold', JSON.stringify(gold));
+      await t.page.locator('[role=dialog] button[title="Glow"]').click();
+      await t.page.waitForTimeout(300);
+      a = await t.eval(ACTIVE);
       // curve via slider: set value then dispatch events
       await t.page.locator('[role=dialog] label', { hasText: 'Curve' }).locator('input[type=range]').fill('60');
       await t.page.waitForTimeout(400);

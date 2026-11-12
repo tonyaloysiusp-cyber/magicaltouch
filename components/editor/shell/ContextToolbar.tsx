@@ -665,7 +665,7 @@ function ContextToolbarInner({
         {sel.type === 'textbox' && !fx.curve && !fx.wave && <TextFlowPopover sel={sel} a={a} />}
         <Popover
           width={300}
-          trigger={({ toggle, open }) => <ToolButton label="Effects" hint="Shadow, glow, outline, curve" icon={<Sparkles size={16} />} onClick={toggle} active={open} special />}
+          trigger={({ toggle, open }) => <ToolButton label="Effects" hint="Looks, gradient, outline, shadow, curve" icon={<Sparkles size={16} />} onClick={toggle} active={open} special />}
         >
           <TextEffectsEditor value={fx} onChange={(v, commit) => a.setTextFx(v, commit)} />
         </Popover>

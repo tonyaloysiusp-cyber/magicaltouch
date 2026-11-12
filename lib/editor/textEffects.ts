@@ -16,7 +16,53 @@ export interface TextFx {
   // Layers that combine with any look.
   outline?: { color: string; width: number } | null; // width 0..100
   highlight?: { color: string } | null;
+  // Text effects v2 (Nov 2026): native Fabric properties only, so the look is
+  // identical on screen, in PNG/JPG, PDF and SVG exports.
+  v?: 2;
+  look?: string; // the preset that set these layers (for the gallery highlight)
+  gradient?: { colors: string[]; angle: number } | null;
+  hollow?: boolean;
+  shadow?: { kind: 'soft' | 'hard' | 'glow'; color: string; opacity: number; distance: number; angle: number; blur: number } | null;
 }
+
+export type FxShadow = NonNullable<TextFx['shadow']>;
+
+/** The new effect presets: each one just sets the layers below. */
+export const TEXT_LOOKS: { id: string; label: string; fx: Partial<TextFx>; dark?: boolean }[] = [
+  { id: 'none', label: 'None', fx: {} },
+  { id: 'soft-shadow', label: 'Soft shadow', fx: { shadow: { kind: 'soft', color: '#000000', opacity: 45, distance: 30, angle: 45, blur: 40 } } },
+  { id: 'hard-shadow', label: 'Hard shadow', fx: { shadow: { kind: 'hard', color: '#09090B', opacity: 100, distance: 45, angle: 45, blur: 0 } } },
+  { id: 'lift', label: 'Lift', fx: { shadow: { kind: 'soft', color: '#000000', opacity: 30, distance: 45, angle: 90, blur: 80 } } },
+  { id: 'glow', label: 'Glow', dark: true, fx: { shadow: { kind: 'glow', color: '#8CCBFF', opacity: 95, distance: 0, angle: 0, blur: 60 } } },
+  { id: 'neon', label: 'Neon', dark: true, fx: { gradient: { colors: ['#FFFFFF', '#FFE3F1'], angle: 90 }, outline: { color: '#FF4FD8', width: 18 }, shadow: { kind: 'glow', color: '#FF4FD8', opacity: 100, distance: 0, angle: 0, blur: 70 } } },
+  { id: 'outline', label: 'Outline', fx: { outline: { color: '#09090B', width: 40 } } },
+  { id: 'hollow', label: 'Hollow', fx: { hollow: true, outline: { color: '#09090B', width: 25 } } },
+  { id: 'sticker', label: 'Sticker', fx: { outline: { color: '#FFFFFF', width: 90 }, shadow: { kind: 'soft', color: '#000000', opacity: 35, distance: 20, angle: 90, blur: 30 } } },
+  { id: 'retro', label: 'Retro', fx: { gradient: { colors: ['#FFB547', '#F2708F'], angle: 90 }, outline: { color: '#FFF4E0', width: 45 }, shadow: { kind: 'hard', color: '#1A1A1A', opacity: 100, distance: 55, angle: 45, blur: 0 } } },
+  { id: 'comic', label: 'Comic', fx: { gradient: { colors: ['#FFE14D', '#FFC400'], angle: 90 }, outline: { color: '#111111', width: 45 }, shadow: { kind: 'hard', color: '#111111', opacity: 100, distance: 50, angle: 60, blur: 0 } } },
+  { id: 'splice', label: 'Splice', fx: { hollow: true, outline: { color: '#09090B', width: 22 }, shadow: { kind: 'hard', color: '#35C2F1', opacity: 100, distance: 50, angle: 45, blur: 0 } } },
+  { id: 'gold', label: 'Gold', dark: true, fx: { gradient: { colors: ['#FFF3B0', '#E8B64C', '#9C6B1E', '#F7D774'], angle: 90 }, outline: { color: '#6B4A12', width: 8 }, shadow: { kind: 'soft', color: '#000000', opacity: 40, distance: 18, angle: 90, blur: 25 } } },
+  { id: 'rose-gold', label: 'Rose gold', dark: true, fx: { gradient: { colors: ['#FFE1D6', '#E8A08E', '#B5655A', '#F4B6A6'], angle: 90 }, shadow: { kind: 'soft', color: '#000000', opacity: 35, distance: 15, angle: 90, blur: 25 } } },
+  { id: 'silver', label: 'Silver', fx: { gradient: { colors: ['#FFFFFF', '#B8BEC8', '#6B7280', '#E5E7EB'], angle: 90 }, outline: { color: '#4B5563', width: 6 } } },
+  { id: 'chrome', label: 'Chrome', fx: { gradient: { colors: ['#F8FAFC', '#94A3B8', '#1E293B', '#CBD5E1', '#F8FAFC'], angle: 90 }, outline: { color: '#0F172A', width: 10 } } },
+  { id: 'sunset', label: 'Sunset', fx: { gradient: { colors: ['#FFB347', '#F2708F', '#7B5CFF'], angle: 0 } } },
+  { id: 'ocean', label: 'Ocean', fx: { gradient: { colors: ['#35C2F1', '#2563EB', '#1E3A8A'], angle: 90 } } },
+  { id: 'spectrum', label: 'Spectrum', fx: { gradient: { colors: ['#F2708F', '#A69BD3', '#35C2F1', '#5DCCB8', '#8CC84B'], angle: 0 } } },
+  { id: 'fire', label: 'Fire', dark: true, fx: { gradient: { colors: ['#FFF06A', '#FF8A00', '#E11D48'], angle: 90 }, shadow: { kind: 'glow', color: '#FF6A00', opacity: 80, distance: 0, angle: 0, blur: 45 } } },
+  { id: 'candy', label: 'Candy', fx: { gradient: { colors: ['#FF9AC8', '#FF5FA2'], angle: 90 }, outline: { color: '#FFFFFF', width: 35 }, shadow: { kind: 'hard', color: '#C2185B', opacity: 100, distance: 35, angle: 90, blur: 0 } } },
+  { id: 'marker', label: 'Marker', fx: { highlight: { color: '#FFE45C' } } },
+  { id: 'emerald', label: 'Emerald', dark: true, fx: { gradient: { colors: ['#A7F3D0', '#10B981', '#065F46'], angle: 90 }, shadow: { kind: 'glow', color: '#34D399', opacity: 50, distance: 0, angle: 0, blur: 35 } } },
+  { id: 'ice', label: 'Ice', fx: { gradient: { colors: ['#FFFFFF', '#BDE8FF', '#5BC0EB'], angle: 90 }, outline: { color: '#1D6FA3', width: 10 } } },
+];
+
+/** Fx from a preset (keeps curve/wave). */
+export function lookFx(id: string, cur: TextFx): TextFx {
+  const L = TEXT_LOOKS.find((l) => l.id === id) || TEXT_LOOKS[0];
+  return { ...DEFAULT_TEXT_FX, curve: cur.curve, wave: cur.wave, v: 2, look: L.id, gradient: null, hollow: false, shadow: null, outline: null, highlight: null, ...JSON.parse(JSON.stringify(L.fx)) };
+}
+
+/** Old effects (before Nov 2026) are still drawn for designs that use them, but no longer offered. */
+export const isLegacyFx = (fx: TextFx) => fx.v !== 2 && fx.effect !== 'none';
 
 export const DEFAULT_TEXT_FX: TextFx = { effect: 'none', color: '#09090B', amount: 50, curve: 0, wave: 0, outline: null, highlight: null };
 
@@ -54,6 +100,49 @@ const withAlpha = (hex: string, a: number) => {
 };
 
 // Applies the effect part (shadow/glow/outline/highlight) of `fx`.
+function gradientFor(F: any, g: { colors: string[]; angle: number }) {
+  const a = ((g.angle || 0) * Math.PI) / 180;
+  const cx = Math.cos(a) / 2, cy = Math.sin(a) / 2;
+  const n = Math.max(1, g.colors.length - 1);
+  return new F.Gradient({
+    type: 'linear', gradientUnits: 'percentage',
+    coords: { x1: 0.5 - cx, y1: 0.5 - cy, x2: 0.5 + cx, y2: 0.5 + cy },
+    colorStops: g.colors.map((color, i) => ({ offset: i / n, color })),
+  });
+}
+
+/** Text effects v2: gradient fill, hollow, outline, shadow (soft / hard / glow), highlight. */
+function applyFxV2(F: any, obj: any, fx: TextFx) {
+  const size = obj.fontSize || 40;
+  if (fx.gradient && fx.gradient.colors.length >= 2) {
+    obj.__fxFill = obj.__fxFill ?? (typeof obj.fill === 'string' && obj.fill ? obj.fill : '#09090B');
+    obj.set({ fill: gradientFor(F, fx.gradient) });
+  } else if (fx.hollow) {
+    obj.__fxFill = obj.__fxFill ?? (typeof obj.fill === 'string' && obj.fill ? obj.fill : '#09090B');
+    obj.set({ fill: 'rgba(0,0,0,0)' });
+  }
+  if (fx.outline && fx.outline.width > 0) {
+    // Outside outline (drawn under the fill) unless the text is hollow.
+    const w = fx.hollow ? Math.max(1, size * 0.05 * (0.15 + fx.outline.width / 100)) : outlineWidth(size, fx.outline.width) * 1.6;
+    obj.set({ stroke: fx.outline.color, strokeWidth: w, paintFirst: fx.hollow ? 'fill' : 'stroke', strokeLineJoin: 'round', strokeUniform: false });
+    obj.__fxStroke = true;
+  }
+  if (fx.shadow) {
+    const sh = fx.shadow;
+    const op = Math.max(0, Math.min(1, sh.opacity / 100));
+    const dist = sh.kind === 'glow' ? 0 : size * 0.16 * (sh.distance / 100);
+    const a = (sh.angle * Math.PI) / 180;
+    const blur = sh.kind === 'hard' ? 0 : sh.kind === 'glow' ? size * 0.7 * (0.1 + sh.blur / 100) : size * 0.5 * (sh.blur / 100);
+    obj.set({ shadow: new F.Shadow({ color: withAlpha(sh.color, op), blur, offsetX: Math.cos(a) * dist, offsetY: Math.sin(a) * dist, affectStroke: !!fx.hollow }) });
+  }
+  if (fx.highlight) {
+    obj.set({ textBackgroundColor: fx.highlight.color });
+    obj.__fxHighlight = true;
+  }
+  obj.set({ objectCaching: false });
+  obj.dirty = true;
+}
+
 export function applyTextEffect(F: any, obj: any, fx: TextFx) {
   installPremiumText(F);
   const size = obj.fontSize || 40;
@@ -70,8 +159,13 @@ export function applyTextEffect(F: any, obj: any, fx: TextFx) {
     obj.set({ fill: obj.__fxHollowFill });
     obj.__fxHollowFill = undefined;
   }
+  if (obj.__fxFill !== undefined) {
+    obj.set({ fill: obj.__fxFill });
+    obj.__fxFill = undefined;
+  }
   obj.__fxStroke = false;
   obj.__fxHighlight = false;
+  if (fx.v === 2) return applyFxV2(F, obj, fx);
 
   switch (fx.effect) {
     case 'shadow':
@@ -214,6 +308,6 @@ export function applyTextFx(F: any, obj: any, fx: TextFx) {
   if ((fx.curve || fx.wave) && typeof obj.text === 'string' && obj.text.includes('\n')) obj.set({ text: obj.text.replace(/\s*\n\s*/g, ' ') });
   applyTextEffect(F, obj, fx);
   applyTextShape(F, obj, fx.curve, fx.wave);
-  const empty = fx.effect === 'none' && !fx.curve && !fx.wave && !fx.outline && !fx.highlight;
+  const empty = fx.effect === 'none' && !fx.curve && !fx.wave && !fx.outline && !fx.highlight && !fx.gradient && !fx.shadow && !fx.hollow;
   obj.__textFx = empty ? undefined : { ...fx };
 }
