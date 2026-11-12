@@ -798,7 +798,7 @@ scenarios.push({
     await t.page.getByRole('button', { name: '4 colours' }).click();
     await t.page.getByRole('button', { name: /Trace & replace picture/ }).click();
     await t.page.waitForFunction(() => window.__fabricCanvas.getObjects().some((o) => o.name === 'Traced artwork'), null, { timeout: 30000 });
-    const traced = await t.eval(() => { const c = window.__fabricCanvas; const g = c.getObjects().find((o) => o.name === 'Traced artwork'); return { paths: g.getObjects().filter((o) => o.type === 'path').length, images: c.getObjects().filter((o) => o.type === 'image').length }; });
+    const traced = await t.eval(() => { const c = window.__fabricCanvas; const g = c.getObjects().find((o) => o.name === 'Traced artwork'); const deep = (o) => (o.type === 'group' ? o.getObjects().flatMap(deep) : [o]); return { paths: deep(g).filter((o) => o.type === 'path').length, images: c.getObjects().filter((o) => o.type === 'image').length }; });
     t.check('picture traced into vector paths', traced.paths >= 2, JSON.stringify(traced));
     t.check('original picture replaced', traced.images === 0, JSON.stringify(traced));
     await t.shot('traced');

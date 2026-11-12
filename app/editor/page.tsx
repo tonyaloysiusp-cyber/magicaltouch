@@ -54,7 +54,8 @@ import { AdjustPanel } from '@/components/editor/shell/panels/AdjustPanel';
 import { QrPanel } from '@/components/editor/shell/panels/QrPanel';
 import { PatternsPanel, ColoursPanel, TracePanel } from '@/components/editor/shell/panels/CreativePanels';
 import { Grid3x3 as PatternIcon, SwatchBook as ColoursIcon, PenTool as TraceIcon } from 'lucide-react';
-import { trace as traceImage, toFabricPath, type TraceOptions } from '@/lib/trace';
+import { trace as traceImage, type TraceOptions } from '@/lib/trace';
+import { traceLayerObjects } from '@/lib/traceVector';
 import { QrCode as QrCodeIcon } from 'lucide-react';
 import { Gem as StudioIcon } from 'lucide-react';
 import { StudioPanel, StudioPublish } from '@/components/editor/shell/panels/StudioPanel';
@@ -7515,8 +7516,9 @@ function EditorContent() {
       if (!r.layers.length) { setLocalNotice('Nothing to trace — try more colours or less "Ignore specks".'); return; }
       // An invisible frame pins the group to the picture's exact box.
       const frame = new F.Rect({ left: 0, top: 0, width: r.width, height: r.height, fill: 'rgba(0,0,0,0)', strokeWidth: 0, selectable: false, name: 'Trace frame' });
-      const paths = r.layers.map((l, i) => new F.Path(toFabricPath(l.d) as any, { fill: l.color, fillRule: 'evenodd', strokeWidth: 0, objectCaching: true, name: `Traced colour ${i + 1}` }));
-      const group = new F.Group([frame, ...paths], { name: 'Traced artwork' });
+      // One group per colour (and one path per shape when "Separate shapes" is on).
+      const paths = traceLayerObjects(F, r);
+      const group = new F.Group([frame, ...paths], { name: 'Traced artwork', subTargetCheck: true });
       const sx = (img.scaleX || 1) * (w / r.width), sy = (img.scaleY || 1) * (h / r.height);
       group.set({ originX: img.originX, originY: img.originY, left: img.left, top: img.top, angle: img.angle || 0, flipX: !!img.flipX, flipY: !!img.flipY, scaleX: sx, scaleY: sy });
       (group as any).__artboardId = (img as any).__artboardId;
@@ -7526,7 +7528,7 @@ function EditorContent() {
       c.setActiveObject(group);
       c.requestRenderAll();
       pushHistory();
-      setLocalNotice(`Traced into ${r.layers.length} vector colour${r.layers.length === 1 ? '' : 's'}. Ungroup to edit each shape.`);
+      setLocalNotice(`Traced into ${r.layers.length} colour${r.layers.length === 1 ? '' : 's'}. Ungroup once for colour layers, again for every shape.`);
     } catch (e) {
       console.error('Trace failed', e);
       setLocalNotice('This picture could not be traced (some pictures from other websites block it).');

@@ -1,13 +1,16 @@
 // ---------------------------------------------------------------------
 // lib/trace.ts — Image Trace: turns a photo or drawing into vector shapes.
 // Modes: colour (k-means palette of 2–32 colours), black & white (Otsu
-// threshold) and line drawing (edge detection). Each colour layer is traced
-// along pixel edges, simplified (Ramer–Douglas–Peucker) and smoothed into
-// quadratic curves. Pure functions on RGBA pixel data — runs in the browser
+// threshold), shades of grey and line drawing (edge detection). Small
+// artwork is enlarged first, stray pixels are cleaned up (majority filter),
+// each colour is traced along pixel edges, simplified (Ramer–Douglas–Peucker)
+// and fitted with smooth cubic curves while sharp corners stay sharp.
+// Colour layers are stacked (no hairline gaps) and can be split into one
+// editable shape per region. Pure functions on RGBA pixel data — runs in the browser
 // and in unit tests.
 // ---------------------------------------------------------------------
 
-export type TraceMode = 'colour' | 'bw' | 'line';
+export type TraceMode = 'colour' | 'bw' | 'line' | 'gray';
 
 export interface TraceOptions {
   mode: TraceMode;
@@ -18,31 +21,41 @@ export interface TraceOptions {
   ignoreWhite: boolean;  // leave the lightest colour out (transparent background)
   threshold?: number;    // bw/line: 0–255, empty = automatic
   curves: boolean;       // smooth corners into curves
+  corner?: number;       // turns sharper than this (degrees) stay sharp corners; default 60
+  despeckle?: number;    // clean-up passes that remove stray pixels (0–3); default 1
+  stack?: boolean;       // colour layers overlap slightly (no hairline gaps); default true
+  split?: boolean;       // one editable shape per region instead of one per colour
 }
 
 export const DEFAULT_TRACE: TraceOptions = { mode: 'colour', colors: 6, detail: 700, smooth: 1.2, noise: 12, ignoreWhite: false, curves: true };
 
-export const PRESETS: { id: string; label: string; o: Partial<TraceOptions> }[] = [
-  { id: 'bw', label: 'Black & white', o: { mode: 'bw', colors: 2, ignoreWhite: true } },
-  { id: 'line', label: 'Line drawing', o: { mode: 'line', colors: 2, ignoreWhite: true, smooth: 0.9 } },
-  { id: 'c3', label: '3 colours', o: { mode: 'colour', colors: 3 } },
-  { id: 'c4', label: '4 colours', o: { mode: 'colour', colors: 4 } },
-  { id: 'c6', label: '6 colours', o: { mode: 'colour', colors: 6 } },
-  { id: 'c8', label: '8 colours', o: { mode: 'colour', colors: 8 } },
-  { id: 'c16', label: '16 colours', o: { mode: 'colour', colors: 16, smooth: 0.9 } },
-  { id: 'logo', label: 'Logo (sharp)', o: { mode: 'colour', colors: 4, curves: false, smooth: 0.6, noise: 20 } },
+export const PRESETS: { id: string; label: string; hint: string; o: Partial<TraceOptions> }[] = [
+  { id: 'logo', label: 'Logo — clean', hint: 'Flat colours, crisp corners, smooth curves', o: { mode: 'colour', colors: 4, curves: true, corner: 55, smooth: 0.9, noise: 24, despeckle: 2, detail: 1400, ignoreWhite: true } },
+  { id: 'bw', label: 'Black & white', hint: 'One colour, like a stamp or stencil', o: { mode: 'bw', colors: 2, ignoreWhite: true, corner: 60, despeckle: 2, detail: 1400 } },
+  { id: 'silhouette', label: 'Silhouette', hint: 'A single solid shape', o: { mode: 'bw', colors: 2, ignoreWhite: true, smooth: 1.6, noise: 80, despeckle: 3, detail: 1000 } },
+  { id: 'line', label: 'Line art & sketch', hint: 'Outlines from a drawing or photo', o: { mode: 'line', colors: 2, ignoreWhite: true, smooth: 0.8, despeckle: 1, detail: 1200 } },
+  { id: 'lettering', label: 'Hand lettering', hint: 'Ink and brush letters, smooth strokes', o: { mode: 'bw', colors: 2, ignoreWhite: true, smooth: 0.7, corner: 75, noise: 10, despeckle: 2, detail: 1600 } },
+  { id: 'c3', label: '3 colours', hint: 'Poster style', o: { mode: 'colour', colors: 3, despeckle: 2 } },
+  { id: 'c4', label: '4 colours', hint: '', o: { mode: 'colour', colors: 4, despeckle: 2 } },
+  { id: 'c6', label: '6 colours', hint: '', o: { mode: 'colour', colors: 6, despeckle: 1 } },
+  { id: 'c8', label: '8 colours', hint: '', o: { mode: 'colour', colors: 8, despeckle: 1 } },
+  { id: 'c16', label: '16 colours', hint: 'Illustrations', o: { mode: 'colour', colors: 16, smooth: 0.9, despeckle: 1 } },
+  { id: 'photo', label: 'High fidelity photo', hint: '32 colours, fine detail', o: { mode: 'colour', colors: 32, smooth: 0.7, noise: 6, despeckle: 1, detail: 1200 } },
+  { id: 'gray', label: 'Shades of grey', hint: '5 grey tones', o: { mode: 'gray', colors: 5, despeckle: 1 } },
 ];
 
 export interface Px { data: Uint8ClampedArray | number[]; width: number; height: number }
-export interface Layer { color: string; d: string; area: number }
+export interface Layer { color: string; d: string; area: number; shapes?: string[] }
 export interface TraceResult { width: number; height: number; scale: number; layers: Layer[] }
 
 const hex = (r: number, g: number, b: number) => '#' + [r, g, b].map((v) => Math.round(v).toString(16).padStart(2, '0')).join('').toUpperCase();
 const lum = (r: number, g: number, b: number) => 0.299 * r + 0.587 * g + 0.114 * b;
 
 /** Nearest-neighbour resample to fit `max` px (keeps small images as they are). */
-export function resample(img: Px, max: number): Px & { scale: number } {
-  const k = Math.min(1, max / Math.max(img.width, img.height));
+export function resample(img: Px, max: number, upTo = 1): Px & { scale: number } {
+  const want = max / Math.max(img.width, img.height);
+  if (want > 1.05 && upTo > 1) return upsample(img, Math.min(upTo, want));
+  const k = Math.min(1, want);
   if (k >= 1) return { ...img, scale: 1 };
   const w = Math.max(1, Math.round(img.width * k)), h = Math.max(1, Math.round(img.height * k));
   const out = new Uint8ClampedArray(w * h * 4);
@@ -60,16 +73,108 @@ export function resample(img: Px, max: number): Px & { scale: number } {
   return { data: out, width: w, height: h, scale: 1 / k };
 }
 
+/** Bilinear enlargement: small logos trace with smoother, more exact edges. */
+export function upsample(img: Px, k: number): Px & { scale: number } {
+  const w = Math.round(img.width * k), h = Math.round(img.height * k);
+  const out = new Uint8ClampedArray(w * h * 4);
+  for (let y = 0; y < h; y++) {
+    const sy = Math.min(img.height - 1, Math.max(0, (y + 0.5) / k - 0.5));
+    const y0 = Math.floor(sy), y1 = Math.min(img.height - 1, y0 + 1), fy = sy - y0;
+    for (let x = 0; x < w; x++) {
+      const sx = Math.min(img.width - 1, Math.max(0, (x + 0.5) / k - 0.5));
+      const x0 = Math.floor(sx), x1 = Math.min(img.width - 1, x0 + 1), fx = sx - x0;
+      const o = (y * w + x) * 4;
+      for (let c = 0; c < 4; c++) {
+        const a = img.data[(y0 * img.width + x0) * 4 + c], b = img.data[(y0 * img.width + x1) * 4 + c];
+        const d = img.data[(y1 * img.width + x0) * 4 + c], e = img.data[(y1 * img.width + x1) * 4 + c];
+        out[o + c] = (a * (1 - fx) + b * fx) * (1 - fy) + (d * (1 - fx) + e * fx) * fy;
+      }
+    }
+  }
+  return { data: out, width: w, height: h, scale: 1 / k };
+}
+
+/** Majority (mode) filter on the label map: removes stray pixels and jagged specks. */
+export function despeckle(labels: Int16Array, w: number, h: number, passes = 1): Int16Array {
+  let cur = labels;
+  for (let pass = 0; pass < passes; pass++) {
+    const next = new Int16Array(cur);
+    for (let y = 1; y < h - 1; y++) for (let x = 1; x < w - 1; x++) {
+      const i = y * w + x, me = cur[i];
+      let same = 0;
+      const tally = new Map<number, number>();
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+        if (!dx && !dy) continue;
+        const v = cur[i + dy * w + dx];
+        if (v === me) same++;
+        tally.set(v, (tally.get(v) || 0) + 1);
+      }
+      if (same >= 3) continue;
+      let best = me, bn = 0;
+      for (const [v, n] of tally) if (n > bn) { bn = n; best = v; }
+      if (bn >= 5) next[i] = best;
+    }
+    cur = next;
+  }
+  return cur;
+}
+
+/**
+ * Anti-aliased edge pixels sit between two colours and would otherwise snap
+ * to whichever in-between colour is nearest (a thin coloured halo). They are
+ * given to the closest colour among their solid (non-edge) neighbours.
+ */
+export function fixEdges(img: Px, labels: Int16Array, colors: string[], thr = 40, radius = 3): Int16Array {
+  const { width: w, height: h, data: D } = img;
+  const rgb = colors.map((c) => [parseInt(c.slice(1, 3), 16), parseInt(c.slice(3, 5), 16), parseInt(c.slice(5, 7), 16)]);
+  const edge = new Uint8Array(w * h);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const i = y * w + x;
+    for (const j of [x + 1 < w ? i + 1 : -1, y + 1 < h ? i + w : -1]) {
+      if (j < 0) continue;
+      if (Math.max(Math.abs(D[i * 4] - D[j * 4]), Math.abs(D[i * 4 + 1] - D[j * 4 + 1]), Math.abs(D[i * 4 + 2] - D[j * 4 + 2])) > thr) { edge[i] = 1; edge[j] = 1; }
+    }
+  }
+  const out = new Int16Array(labels);
+  for (let y = 1; y < h - 1; y++) for (let x = 1; x < w - 1; x++) {
+    const i = y * w + x;
+    if (!edge[i] || labels[i] < 0) continue;
+    let best = -1, bd = Infinity;
+    for (let r = 1; r <= radius && best < 0; r++) for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
+      const yy = y + dy, xx = x + dx;
+      if (yy < 0 || xx < 0 || yy >= h || xx >= w) continue;
+      const j = yy * w + xx, l = labels[j];
+      if (edge[j] || l < 0) continue;
+      const c = rgb[l];
+      const dd = (D[i * 4] - c[0]) ** 2 + (D[i * 4 + 1] - c[1]) ** 2 + (D[i * 4 + 2] - c[2]) ** 2;
+      if (dd < bd) { bd = dd; best = l; }
+    }
+    if (best >= 0) out[i] = best;
+  }
+  return out;
+}
+
 /** k-means colour palette (deterministic k-means++ seeding). */
 export function palette(img: Px, k: number): [number, number, number][] {
   const n = img.width * img.height;
   const step = Math.max(1, Math.floor(n / 6000));
   const pts: [number, number, number][] = [];
-  for (let i = 0; i < n; i += step) {
-    const a = img.data[i * 4 + 3];
-    if (a < 128) continue;
-    pts.push([img.data[i * 4], img.data[i * 4 + 1], img.data[i * 4 + 2]]);
-  }
+  // Edge pixels (anti-aliasing between two colours) are left out of the
+  // palette, so a black logo on white gives black and white — not a grey halo.
+  const W = img.width, D = img.data;
+  const edgy = (i: number) => {
+    const x = i % W;
+    const nb = [x + 1 < W ? i + 1 : -1, i + W < n ? i + W : -1, x > 0 ? i - 1 : -1, i - W >= 0 ? i - W : -1];
+    return nb.some((j) => j >= 0 && Math.max(Math.abs(D[i * 4] - D[j * 4]), Math.abs(D[i * 4 + 1] - D[j * 4 + 1]), Math.abs(D[i * 4 + 2] - D[j * 4 + 2])) > 40);
+  };
+  const collect = (skipEdges: boolean) => {
+    for (let i = 0; i < n; i += step) {
+      if (D[i * 4 + 3] < 128 || (skipEdges && edgy(i))) continue;
+      pts.push([D[i * 4], D[i * 4 + 1], D[i * 4 + 2]]);
+    }
+  };
+  collect(true);
+  if (pts.length < 50) { pts.length = 0; collect(false); }
   if (!pts.length) return [[0, 0, 0]];
   k = Math.max(1, Math.min(k, pts.length));
   const d2 = (p: number[], q: number[]) => (p[0] - q[0]) ** 2 + (p[1] - q[1]) ** 2 + (p[2] - q[2]) ** 2;
@@ -129,6 +234,19 @@ export function classify(img: Px, o: TraceOptions): { labels: Int16Array; colors
   }
   const g = new Float32Array(w * h);
   for (let i = 0; i < w * h; i++) g[i] = data[i * 4 + 3] < 128 ? 255 : lum(data[i * 4], data[i * 4 + 1], data[i * 4 + 2]);
+  if (o.mode === 'gray') {
+    // k-means on brightness → n grey tones (darkest first).
+    const n = Math.max(2, Math.min(12, Math.round(o.colors)));
+    let c = Array.from({ length: n }, (_, i) => (255 * (i + 0.5)) / n);
+    for (let it = 0; it < 10; it++) {
+      const sum = new Array(n).fill(0), cnt = new Array(n).fill(0);
+      for (let i = 0; i < w * h; i += 3) { if (data[i * 4 + 3] < 128) continue; let bi = 0; for (let j = 1; j < n; j++) if (Math.abs(g[i] - c[j]) < Math.abs(g[i] - c[bi])) bi = j; sum[bi] += g[i]; cnt[bi]++; }
+      c = c.map((v, j) => (cnt[j] ? sum[j] / cnt[j] : v));
+    }
+    c.sort((a, b) => a - b);
+    for (let i = 0; i < w * h; i++) { if (data[i * 4 + 3] < 128) continue; let bi = 0; for (let j = 1; j < n; j++) if (Math.abs(g[i] - c[j]) < Math.abs(g[i] - c[bi])) bi = j; labels[i] = bi; }
+    return { labels, colors: c.map((v) => hex(v, v, v)) };
+  }
   let v = g;
   if (o.mode === 'line') {
     // Sobel edge strength, inverted so edges are dark.
@@ -228,62 +346,112 @@ export function simplify(p: Pt[], tol: number): Pt[] {
 
 const n2 = (v: number) => Math.round(v * 100) / 100;
 
-function loopPath(p: Pt[], s: number, curves: boolean): string {
-  if (!curves || p.length < 4) return 'M' + p.map(([x, y]) => `${n2(x * s)} ${n2(y * s)}`).join('L') + 'Z';
-  // Quadratic curves through edge midpoints, corners as control points.
-  const mid = (a: Pt, b: Pt): Pt => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
-  const m0 = mid(p[p.length - 1], p[0]);
-  let d = `M${n2(m0[0] * s)} ${n2(m0[1] * s)}`;
-  for (let i = 0; i < p.length; i++) {
-    const c = p[i], m = mid(c, p[(i + 1) % p.length]);
-    d += `Q${n2(c[0] * s)} ${n2(c[1] * s)} ${n2(m[0] * s)} ${n2(m[1] * s)}`;
+/**
+ * Closed loop → path data. Sharp turns (more than `corner` degrees) stay
+ * corners; everything else becomes smooth cubic curves (Catmull-Rom), so
+ * logos keep crisp points and round letters stay round.
+ */
+export function loopPath(p: Pt[], s: number, curves: boolean, corner = 60): string {
+  const n = p.length;
+  const P = (q: Pt) => `${n2(q[0] * s)} ${n2(q[1] * s)}`;
+  if (!curves || n < 4) return 'M' + p.map(P).join('L') + 'Z';
+  const at = (i: number) => p[((i % n) + n) % n];
+  const isCorner = p.map((_, i) => {
+    const a = at(i - 1), b = at(i), c = at(i + 1);
+    const v1 = [b[0] - a[0], b[1] - a[1]], v2 = [c[0] - b[0], c[1] - b[1]];
+    const l1 = Math.hypot(v1[0], v1[1]) || 1, l2 = Math.hypot(v2[0], v2[1]) || 1;
+    const turn = (Math.acos(Math.max(-1, Math.min(1, (v1[0] * v2[0] + v1[1] * v2[1]) / (l1 * l2)))) * 180) / Math.PI;
+    return turn > corner;
+  });
+  // Start on a corner when there is one, so the path closes cleanly.
+  const start = Math.max(0, isCorner.indexOf(true));
+  let d = `M${P(at(start))}`;
+  for (let k = 0; k < n; k++) {
+    const i = start + k;
+    const p0 = at(i - 1), p1 = at(i), p2 = at(i + 1), p3 = at(i + 2);
+    const c1 = isCorner[((i % n) + n) % n], c2 = isCorner[(((i + 1) % n) + n) % n];
+    if (c1 && c2) { d += `L${P(p2)}`; continue; }
+    const t1: Pt = c1 ? [(p2[0] - p1[0]) / 3, (p2[1] - p1[1]) / 3] : [(p2[0] - p0[0]) / 6, (p2[1] - p0[1]) / 6];
+    const t2: Pt = c2 ? [(p2[0] - p1[0]) / 3, (p2[1] - p1[1]) / 3] : [(p3[0] - p1[0]) / 6, (p3[1] - p1[1]) / 6];
+    d += `C${P([p1[0] + t1[0], p1[1] + t1[1]])} ${P([p2[0] - t2[0], p2[1] - t2[1]])} ${P(p2)}`;
   }
   return d + 'Z';
+}
+
+function inside(pt: Pt, poly: Pt[]): boolean {
+  let c = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const a = poly[i], b = poly[j];
+    if ((a[1] > pt[1]) !== (b[1] > pt[1]) && pt[0] < ((b[0] - a[0]) * (pt[1] - a[1])) / (b[1] - a[1] || 1e-9) + a[0]) c = !c;
+  }
+  return c;
 }
 
 /** Trace an image into vector layers. */
 export function trace(src: Px, opts: Partial<TraceOptions> = {}): TraceResult {
   const o = { ...DEFAULT_TRACE, ...opts };
-  const img = resample(src, Math.max(100, Math.min(2000, o.detail)));
+  const detail = Math.max(100, Math.min(2000, o.detail));
+  // Small flat artwork is enlarged first (up to 3×) for exact, smooth edges.
+  const img = resample(src, detail, o.mode === 'colour' && o.colors > 12 ? 1 : 3);
   const { width: w, height: h } = img;
-  const { labels, colors } = classify(img, o);
+  const cls = classify(img, o);
+  const colors = cls.colors;
+  const clean = o.mode === 'colour' || o.mode === 'gray' ? fixEdges(img, cls.labels, colors, Math.max(10, 40 * Math.min(1, img.scale)), img.scale < 1 ? Math.ceil(2 / img.scale) : 2) : cls.labels;
+  const labels = (o.despeckle ?? 1) > 0 ? despeckle(clean, w, h, Math.min(3, o.despeckle ?? 1)) : clean;
   const counts = colors.map(() => 0);
   for (let i = 0; i < labels.length; i++) if (labels[i] >= 0) counts[labels[i]]++;
-  // draw big areas first, details on top
+  // Big areas first, details on top.
   let order = colors.map((_, i) => i).filter((i) => counts[i] > 0).sort((a, b) => counts[b] - counts[a]);
-  if (o.mode !== 'colour') order = [0];
+  if (o.mode === 'bw' || o.mode === 'line') order = [0];
   else if (o.ignoreWhite) {
     const lightest = order.reduce((m, i) => { const c = colors[i]; const l = lum(parseInt(c.slice(1, 3), 16), parseInt(c.slice(3, 5), 16), parseInt(c.slice(5, 7), 16)); return l > m.l ? { i, l } : m; }, { i: -1, l: -1 });
     order = order.filter((i) => i !== lightest.i);
   }
+  const stack = o.stack !== false && o.mode !== 'bw' && o.mode !== 'line';
+  const rank = new Map(order.map((li, k) => [li, k]));
+  const noise = o.noise * Math.max(1, 1 / (img.scale * img.scale));
+  const tol = o.smooth / Math.min(1, img.scale);
   const mask = new Uint8Array(w * h);
   const layers: Layer[] = [];
   for (const li of order) {
-    for (let i = 0; i < mask.length; i++) mask[i] = labels[i] === li ? 1 : 0;
-    const loops = outlines(mask, w, h);
-    let d = '', a = 0;
-    for (const loop of loops) {
-      const ar = area(loop);
-      if (Math.abs(ar) < o.noise) continue;
-      const sp = simplify(loop, o.smooth);
-      if (sp.length < 3) continue;
-      d += loopPath(sp, img.scale, o.curves);
-      a += ar;
+    const me = rank.get(li)!;
+    // Stacked: a layer also covers the areas of the layers drawn above it,
+    // so neighbouring colours overlap instead of leaving hairline gaps.
+    for (let i = 0; i < mask.length; i++) { const v = labels[i]; mask[i] = v === li || (stack && v >= 0 && (rank.get(v) ?? -1) > me) ? 1 : 0; }
+    const loops = outlines(mask, w, h).filter((l) => Math.abs(area(l)) >= noise).map((l) => ({ l, a: area(l), s: simplify(l, tol) })).filter((x) => x.s.length >= 3);
+    if (!loops.length) continue;
+    const pathOf = (x: { s: Pt[] }) => loopPath(x.s, img.scale, o.curves, o.corner ?? 60);
+    let shapes: string[] | undefined;
+    if (o.split) {
+      // One shape per region: each outer outline with the holes inside it.
+      const outers = loops.filter((x) => x.a > 0).sort((a, b) => a.a - b.a);
+      const groups = new Map<number, string[]>(outers.map((_, i) => [i, [pathOf(outers[i])]]));
+      for (const hole of loops.filter((x) => x.a <= 0)) {
+        const k = outers.findIndex((ot) => inside(hole.l[0], ot.l));
+        if (k >= 0) groups.get(k)!.push(pathOf(hole));
+      }
+      shapes = outers.map((_, i) => groups.get(i)!.join(''));
     }
-    if (d) layers.push({ color: colors[li], d, area: Math.round(a * img.scale * img.scale) });
+    const d = loops.map(pathOf).join('');
+    const a = loops.reduce((t, x) => t + x.a, 0);
+    layers.push({ color: colors[li], d, area: Math.round(a * img.scale * img.scale), shapes });
   }
   return { width: Math.round(w * img.scale), height: Math.round(h * img.scale), scale: img.scale, layers };
 }
 
 export function toSvg(r: TraceResult, background?: string): string {
-  const bg = background ? `<rect width="${r.width}" height="${r.height}" fill="${background}"/>` : '';
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${r.width}" height="${r.height}" viewBox="0 0 ${r.width} ${r.height}">${bg}${r.layers.map((l) => `<path fill="${l.color}" fill-rule="evenodd" d="${l.d}"/>`).join('')}</svg>`;
+  const bg = background ? `<rect id="background" width="${r.width}" height="${r.height}" fill="${background}"/>` : '';
+  // One group per colour (named by its hex), one path per shape when split.
+  const body = r.layers.map((l, i) => l.shapes && l.shapes.length > 1
+    ? `<g id="colour-${i + 1}" data-colour="${l.color}">${l.shapes.map((d) => `<path fill="${l.color}" fill-rule="evenodd" d="${d}"/>`).join('')}</g>`
+    : `<path id="colour-${i + 1}" fill="${l.color}" fill-rule="evenodd" d="${l.d}"/>`).join('');
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${r.width}" height="${r.height}" viewBox="0 0 ${r.width} ${r.height}">${bg}${body}</svg>`;
 }
 
-/** SVG path data → fabric.js 5 path command arrays (absolute M/L/Q/Z only, as produced above). */
+/** SVG path data → fabric.js 5 path command arrays (absolute M/L/Q/C/Z, as produced above). */
 export function toFabricPath(d: string): (string | number)[][] {
   const out: (string | number)[][] = [];
-  const re = /([MLQZ])([^MLQZ]*)/g;
+  const re = /([MLQCZ])([^MLQCZ]*)/g;
   let m: RegExpExecArray | null;
   while ((m = re.exec(d))) {
     const nums = m[2].trim() ? m[2].trim().split(/[\s,]+/).map(Number) : [];

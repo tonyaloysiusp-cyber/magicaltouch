@@ -70,3 +70,46 @@ test('large images are traced at the detail size and scaled back', () => {
   const r = trace(im, { mode: 'bw', detail: 100, noise: 1 });
   assert.equal(r.width, 400); assert.equal(r.scale, 4);
 });
+
+// ---- Advanced tracing (Nov 2026) ----
+import { trace as trace2, loopPath, despeckle } from '../../lib/trace.ts';
+
+function canvasOf(w, h, paint) {
+  const data = new Uint8ClampedArray(w * h * 4);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const [r, g, b] = paint(x, y); const i = (y * w + x) * 4;
+    data[i] = r; data[i + 1] = g; data[i + 2] = b; data[i + 3] = 255;
+  }
+  return { data, width: w, height: h };
+}
+
+test('square corners stay sharp, circles become curves', () => {
+  const sq = loopPath([[0, 0], [10, 0], [10, 10], [0, 10]], 1, true, 60);
+  assert.ok(!sq.includes('C'), sq);
+  const ring = Array.from({ length: 24 }, (_, i) => [10 + 8 * Math.cos(i / 24 * Math.PI * 2), 10 + 8 * Math.sin(i / 24 * Math.PI * 2)]);
+  assert.ok(loopPath(ring, 1, true, 60).includes('C'));
+});
+
+test('split gives one shape per region, holes stay with their shape', () => {
+  // two separate black rings on white
+  const img = canvasOf(80, 40, (x, y) => {
+    const d1 = Math.hypot(x - 20, y - 20), d2 = Math.hypot(x - 60, y - 20);
+    return (d1 < 15 && d1 > 7) || (d2 < 15 && d2 > 7) ? [0, 0, 0] : [255, 255, 255];
+  });
+  const r = trace2(img, { mode: 'bw', split: true, ignoreWhite: true, detail: 80 });
+  assert.equal(r.layers.length, 1);
+  assert.equal(r.layers[0].shapes.length, 2);
+  for (const s of r.layers[0].shapes) assert.equal((s.match(/M/g) || []).length, 2); // outline + hole
+});
+
+test('shades of grey mode makes grey layers', () => {
+  const img = canvasOf(60, 20, (x) => (x < 20 ? [20, 20, 20] : x < 40 ? [128, 128, 128] : [240, 240, 240]).map((v) => v));
+  const r = trace2(img, { mode: 'gray', colors: 3, detail: 60 });
+  assert.equal(r.layers.length, 3);
+  for (const l of r.layers) assert.match(l.color, /^#([0-9A-F]{2})\1\1$/);
+});
+
+test('despeckle removes single stray pixels', () => {
+  const w = 9, h = 9; const L = new Int16Array(w * h).fill(0); L[4 * w + 4] = 1;
+  assert.equal(despeckle(L, w, h, 1)[4 * w + 4], 0);
+});

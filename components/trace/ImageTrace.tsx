@@ -7,7 +7,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Download, ImagePlus, Loader2, Wand2 } from 'lucide-react';
-import { DEFAULT_TRACE, PRESETS, TraceOptions, TraceResult, toFabricPath, toSvg, trace } from '@/lib/trace';
+import { DEFAULT_TRACE, PRESETS, TraceOptions, TraceResult, toSvg, trace } from '@/lib/trace';
+import { traceCanvasJson, tracePdf } from '@/lib/traceVector';
 import { putHandoff, newLocalKey, editorUrlForLocal } from '@/lib/mtd/handoff';
 import { supabase } from '@/lib/supabase';
 
@@ -47,8 +48,8 @@ export function ImageTrace() {
   const router = useRouter();
   const [src, setSrc] = useState(SAMPLE);
   const [px, setPx] = useState<{ data: Uint8ClampedArray; width: number; height: number } | null>(null);
-  const [o, setO] = useState<TraceOptions>({ ...DEFAULT_TRACE });
-  const [preset, setPreset] = useState('c6');
+  const [o, setO] = useState<TraceOptions>({ ...DEFAULT_TRACE, ...PRESETS[0].o, split: true });
+  const [preset, setPreset] = useState(PRESETS[0].id);
   const [res, setRes] = useState<TraceResult | null>(null);
   const [colors, setColors] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
@@ -68,13 +69,16 @@ export function ImageTrace() {
       const t0 = performance.now();
       const r = trace(px, o);
       setRes(r); setColors(r.layers.map((l) => l.color)); setBusy(false);
-      setMsg(`${r.layers.length} colour layer${r.layers.length === 1 ? '' : 's'} · ${Math.round(performance.now() - t0)} ms`);
+      const shapes = r.layers.reduce((n, l) => n + (l.shapes ? l.shapes.length : 1), 0);
+      setMsg(`${r.layers.length} colour${r.layers.length === 1 ? '' : 's'} · ${shapes} shape${shapes === 1 ? '' : 's'} · ${Math.round(performance.now() - t0)} ms`);
     }, 60);
   }, [px, o]);
   useEffect(run, [run]);
 
   const out = useMemo(() => (res ? { ...res, layers: res.layers.map((l, i) => ({ ...l, color: colors[i] || l.color })) } : null), [res, colors]);
-  const svg = useMemo(() => (out ? toSvg(out, bg && o.mode !== 'colour' ? '#FFFFFF' : undefined) : ''), [out, bg, o.mode]);
+  const flat = o.mode === 'bw' || o.mode === 'line';
+  const bgFill = bg && flat ? '#FFFFFF' : undefined;
+  const svg = useMemo(() => (out ? toSvg(out, bgFill) : ''), [out, bgFill]);
   const svgUrl = useMemo(() => (svg ? URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' })) : ''), [svg]);
   useEffect(() => () => { if (svgUrl) URL.revokeObjectURL(svgUrl); }, [svgUrl]);
 
@@ -83,7 +87,7 @@ export function ImageTrace() {
     if (!/^image\//.test(f.type)) { setMsg('Choose a picture (JPG, PNG or WebP).'); return; }
     setSrc(URL.createObjectURL(f));
   };
-  const pick = (id: string) => { const p = PRESETS.find((x) => x.id === id)!; setPreset(id); setO({ ...DEFAULT_TRACE, ...p.o, detail: o.detail }); };
+  const pick = (id: string) => { const p = PRESETS.find((x) => x.id === id)!; setPreset(id); setO({ ...DEFAULT_TRACE, ...p.o, split: o.split }); };
   const set = (x: Partial<TraceOptions>) => { setPreset('custom'); setO((v) => ({ ...v, ...x })); };
 
   const png = async () => {
@@ -96,13 +100,20 @@ export function ImageTrace() {
     c.toBlob((b) => b && save(b, 'traced.png'), 'image/png');
   };
 
+  const pdf = async () => {
+    if (!out) return;
+    try { save(await tracePdf(out, bgFill), 'traced.pdf'); } catch { setMsg('The PDF could not be made in this browser.'); }
+  };
+
+  // Opens the editor with the artwork grouped by colour: ungroup once for the
+  // colour layers, again for every single shape.
   const toEditor = async () => {
     if (!out) return;
     const { data } = await supabase.auth.getSession();
     if (!data.session) { router.push('/login?next=' + encodeURIComponent('/trace')); return; }
-    const objects = out.layers.map((l, i) => ({ type: 'path', version: '5.1.0', originX: 'left', originY: 'top', path: toFabricPath(l.d), fill: l.color, fillRule: 'evenodd', stroke: null, strokeWidth: 0, name: `Traced colour ${i + 1}` }));
+    const canvas = await traceCanvasJson(out, bgFill);
     const key = newLocalKey();
-    putHandoff(key, { opened: { document: { name: 'Traced artwork', width: out.width, height: out.height, editor: 'design' }, canvas: { version: '5.1.0', background: bg && o.mode !== 'colour' ? '#FFFFFF' : '#FFFFFF', objects }, fonts: [], thumbnail: null, template: null, missingAssets: [] } as any, file: { handle: null, fileName: 'Traced artwork.mtd.svg' } });
+    putHandoff(key, { opened: { document: { name: 'Traced artwork', width: out.width, height: out.height, editor: 'design' }, canvas, fonts: [], thumbnail: null, template: null, missingAssets: [] } as any, file: { handle: null, fileName: 'Traced artwork.mtd.svg' } });
     router.push(editorUrlForLocal(key, out.width, out.height));
   };
 
@@ -115,20 +126,25 @@ export function ImageTrace() {
           <h2 className="text-[13px] font-semibold uppercase tracking-wide text-mt-muted">Preset</h2>
           <div className="mt-3 grid grid-cols-2 gap-2">
             {PRESETS.map((p) => (
-              <button key={p.id} type="button" onClick={() => pick(p.id)} aria-pressed={preset === p.id} className={`h-9 rounded-xl border text-[13px] font-medium ${preset === p.id ? 'border-mt-ink bg-mt-ink text-mt-bg' : 'border-mt-border hover:border-mt-ink/40'}`}>{p.label}</button>
+              <button key={p.id} type="button" onClick={() => pick(p.id)} aria-pressed={preset === p.id} title={p.hint} className={`min-h-9 py-1.5 px-2 rounded-xl border text-[13px] font-medium leading-tight ${preset === p.id ? 'border-mt-ink bg-mt-ink text-mt-bg' : 'border-mt-border hover:border-mt-ink/40'}`}>{p.label}</button>
             ))}
           </div>
         </section>
         <section className="space-y-3">
           <h2 className="text-[13px] font-semibold uppercase tracking-wide text-mt-muted">Adjust</h2>
           {o.mode === 'colour' && <Slider label="Colours" value={o.colors} min={2} max={32} onChange={(v) => set({ colors: v })} />}
-          {o.mode !== 'colour' && <Slider label="Threshold" value={o.threshold ?? 128} min={10} max={245} onChange={(v) => set({ threshold: v })} />}
+          {o.mode === 'gray' && <Slider label="Grey tones" value={o.colors} min={2} max={12} onChange={(v) => set({ colors: v })} />}
+          {flat && <Slider label="Threshold" value={o.threshold ?? 128} min={10} max={245} onChange={(v) => set({ threshold: v })} />}
           <Slider label="Detail" value={o.detail} min={200} max={1600} step={50} onChange={(v) => set({ detail: v })} fmt={(v) => `${v}px`} />
           <Slider label="Smoothness" value={o.smooth} min={0.3} max={4} step={0.1} onChange={(v) => set({ smooth: v })} />
           <Slider label="Ignore specks under" value={o.noise} min={0} max={200} onChange={(v) => set({ noise: v })} fmt={(v) => `${v} px²`} />
+          <Slider label="Corners" value={o.corner ?? 60} min={20} max={150} step={5} onChange={(v) => set({ corner: v })} fmt={(v) => (v < 45 ? 'Very sharp' : v < 80 ? 'Sharp' : v < 115 ? 'Soft' : 'Round')} />
+          <Slider label="Clean-up" value={o.despeckle ?? 1} min={0} max={3} onChange={(v) => set({ despeckle: v })} fmt={(v) => ['Off', 'Light', 'Medium', 'Strong'][v]} />
           <label className="flex items-center justify-between text-[13px]"><span>Smooth curves</span><input type="checkbox" checked={o.curves} onChange={(e) => set({ curves: e.target.checked })} className="h-4 w-4 accent-[#3B82C4]" /></label>
+          <label className="flex items-center justify-between text-[13px]" title="Each separate region becomes its own editable shape"><span>Separate shapes</span><input type="checkbox" checked={!!o.split} onChange={(e) => set({ split: e.target.checked })} className="h-4 w-4 accent-[#3B82C4]" /></label>
+          {!flat && <label className="flex items-center justify-between text-[13px]" title="Colours overlap a little, so no thin gaps show between them"><span>Stack colours (no gaps)</span><input type="checkbox" checked={o.stack !== false} onChange={(e) => set({ stack: e.target.checked })} className="h-4 w-4 accent-[#3B82C4]" /></label>}
           {o.mode === 'colour' && <label className="flex items-center justify-between text-[13px]"><span>Remove white background</span><input type="checkbox" checked={o.ignoreWhite} onChange={(e) => set({ ignoreWhite: e.target.checked })} className="h-4 w-4 accent-[#3B82C4]" /></label>}
-          {o.mode !== 'colour' && <label className="flex items-center justify-between text-[13px]"><span>White background</span><input type="checkbox" checked={bg} onChange={(e) => setBg(e.target.checked)} className="h-4 w-4 accent-[#3B82C4]" /></label>}
+          {flat && <label className="flex items-center justify-between text-[13px]"><span>White background</span><input type="checkbox" checked={bg} onChange={(e) => setBg(e.target.checked)} className="h-4 w-4 accent-[#3B82C4]" /></label>}
         </section>
         {colors.length > 0 && (
           <section>
@@ -161,6 +177,7 @@ export function ImageTrace() {
         <div className="flex flex-wrap items-center gap-3">
           <button type="button" onClick={toEditor} disabled={!out} className="h-10 px-4 rounded-full bg-mt-primary text-mt-onprimary text-[14px] font-semibold inline-flex items-center gap-2 disabled:opacity-60"><Wand2 size={15} /> Edit as vectors</button>
           <button type="button" onClick={() => svg && save(new Blob([svg], { type: 'image/svg+xml' }), 'traced.svg')} disabled={!svg} className="h-10 px-4 rounded-full border border-mt-border text-[14px] font-semibold inline-flex items-center gap-2"><Download size={15} /> SVG</button>
+          <button type="button" onClick={pdf} disabled={!svg} className="h-10 px-4 rounded-full border border-mt-border text-[14px] font-semibold inline-flex items-center gap-2"><Download size={15} /> PDF</button>
           <button type="button" onClick={png} disabled={!svg} className="h-10 px-4 rounded-full border border-mt-border text-[14px] font-semibold inline-flex items-center gap-2"><Download size={15} /> PNG</button>
           {msg && <span role="status" className="text-[13px] text-mt-muted">{msg}</span>}
         </div>

@@ -144,20 +144,23 @@ export function ColoursPanel({ onApply, onFill, onBackground, documentColors }: 
 
 // ------------------------------------------------------------------ Trace
 export function TracePanel({ hasImage, busy, onTrace }: { hasImage: boolean; busy: boolean; onTrace: (o: TraceOptions, replace: boolean) => void }) {
-  const [preset, setPreset] = useState('c6');
-  const [o, setO] = useState<TraceOptions>({ ...DEFAULT_TRACE, ...PRESETS.find((x) => x.id === 'c6')!.o, detail: 600 });
-  const pick = (id: string) => { setPreset(id); setO({ ...DEFAULT_TRACE, ...PRESETS.find((x) => x.id === id)!.o, detail: o.detail }); };
+  const [preset, setPreset] = useState(PRESETS[0].id);
+  const [o, setO] = useState<TraceOptions>({ ...DEFAULT_TRACE, ...PRESETS[0].o, split: true });
+  const pick = (id: string) => { setPreset(id); setO({ ...DEFAULT_TRACE, ...PRESETS.find((x) => x.id === id)!.o, split: o.split }); };
   return (
     <div className="space-y-4 p-1">
-      <p className="text-[12px] text-mt-muted">{hasImage ? 'Turn the selected picture into editable vector shapes — one shape per colour.' : 'Select a picture on the page first.'}</p>
+      <p className="text-[12px] text-mt-muted">{hasImage ? 'Turn the selected picture into clean, editable vectors — grouped by colour. Ungroup to edit every shape.' : 'Select a picture on the page first.'}</p>
       <div className="grid grid-cols-2 gap-1.5">
-        {PRESETS.map((p) => <button key={p.id} type="button" aria-pressed={preset === p.id} onClick={() => pick(p.id)} className={`${btn} ${preset === p.id ? '!border-mt-ink bg-mt-ink text-mt-bg' : ''}`}>{p.label}</button>)}
+        {PRESETS.map((p) => <button key={p.id} type="button" title={p.hint} aria-pressed={preset === p.id} onClick={() => pick(p.id)} className={`${btn} !h-auto min-h-8 py-1 leading-tight ${preset === p.id ? '!border-mt-ink bg-mt-ink text-mt-bg' : ''}`}>{p.label}</button>)}
       </div>
       <div className="space-y-2">
-        {o.mode === 'colour' && <Range label="Colours" value={o.colors} min={2} max={32} onChange={(v) => { setPreset('custom'); setO({ ...o, colors: v }); }} />}
+        {(o.mode === 'colour' || o.mode === 'gray') && <Range label={o.mode === 'gray' ? 'Grey tones' : 'Colours'} value={o.colors} min={2} max={o.mode === 'gray' ? 12 : 32} onChange={(v) => { setPreset('custom'); setO({ ...o, colors: v }); }} />}
         <Range label="Detail" value={o.detail} min={200} max={1400} step={50} onChange={(v) => setO({ ...o, detail: v })} />
         <Range label="Smoothness" value={o.smooth} min={0.3} max={4} step={0.1} onChange={(v) => setO({ ...o, smooth: v })} />
         <Range label="Ignore specks" value={o.noise} min={0} max={200} onChange={(v) => setO({ ...o, noise: v })} />
+        <Range label="Corner sharpness" value={o.corner ?? 60} min={20} max={150} step={5} onChange={(v) => setO({ ...o, corner: v })} />
+        <Range label="Clean-up" value={o.despeckle ?? 1} min={0} max={3} onChange={(v) => setO({ ...o, despeckle: v })} />
+        <label className="flex items-center justify-between text-[12.5px]"><span>Separate shapes</span><input type="checkbox" checked={!!o.split} onChange={(e) => setO({ ...o, split: e.target.checked })} className="accent-[#3B82C4]" /></label>
         {o.mode === 'colour' && <label className="flex items-center justify-between text-[12.5px]"><span>Remove white background</span><input type="checkbox" checked={o.ignoreWhite} onChange={(e) => setO({ ...o, ignoreWhite: e.target.checked })} className="accent-[#3B82C4]" /></label>}
       </div>
       <button type="button" className={primary} disabled={!hasImage || busy} onClick={() => onTrace(o, true)}><PenTool size={15} /> {busy ? 'Tracing…' : 'Trace & replace picture'}</button>
