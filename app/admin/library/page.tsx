@@ -481,6 +481,7 @@ export default function TemplateManager() {
             )}
           </div>
           <div className="mt-2 border-t border-mt-border pt-2 px-1.5 text-[12px] space-y-1">
+            <Link href="/admin/library/copy" className="flex items-center gap-1.5 text-mt-muted hover:text-mt-ink"><Pencil size={12} /> Titles, descriptions &amp; hashtags</Link>
             <Link href="/admin/review" className="flex items-center gap-1.5 text-mt-muted hover:text-mt-ink"><Wand2 size={12} /> Quality review</Link>
             <Link href="/admin/templates" className="flex items-center gap-1.5 text-mt-muted hover:text-mt-ink"><Settings2 size={12} /> Advanced tools (AI studio, sizes, images)</Link>
           </div>
