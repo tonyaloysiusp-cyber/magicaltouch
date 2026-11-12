@@ -7,7 +7,7 @@
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { ArrowUpRight, ImagePlus, PaintBucket, PenTool, Shapes, Wand2 } from 'lucide-react';
-import { DEFAULT_PATTERN, MOTIFS, PALETTES, PatternSettings, REPEATS, layout, sheetSvg, svgDataUrl, tileSvg } from '@/lib/patterns';
+import { DEFAULT_PATTERN, MOTIFS, MOTIF_CATEGORIES, PALETTES, PatternSettings, REPEATS, layout, sheetSvg, svgDataUrl, tileSvg } from '@/lib/patterns';
 import { HARMONIES, Harmony, MOOD_PALETTES, harmony, normHex, readableOn } from '@/lib/colour';
 import { PRESETS, TraceOptions, DEFAULT_TRACE } from '@/lib/trace';
 
@@ -32,6 +32,7 @@ export function PatternsPanel({ onBackground, onFillSelection, onAddImage, hasSe
   hasSelection: boolean;
 }) {
   const [p, setP] = useState<PatternSettings>({ ...DEFAULT_PATTERN, tile: 90 });
+  const [cat, setCat] = useState<string>('Basic');
   const set = (o: Partial<PatternSettings>) => setP((x) => ({ ...x, ...o }));
   const tile = useMemo(() => tileSvg(p), [p]);
   const L = useMemo(() => layout(p), [p]);
@@ -41,8 +42,11 @@ export function PatternsPanel({ onBackground, onFillSelection, onAddImage, hasSe
       <div className="h-36 rounded-xl ring-1 ring-mt-border" style={{ backgroundImage: `url("${url}")`, backgroundSize: `${L.w / 1.5}px ${L.h / 1.5}px`, backgroundColor: p.background }} role="img" aria-label="Pattern preview" />
       <div>
         <p className={sec}>Motif</p>
-        <div className="mt-2 grid grid-cols-7 gap-1.5">
-          {MOTIFS.map((m) => (
+        <select value={cat} onChange={(e) => setCat(e.target.value)} aria-label="Shape group" className="mt-2 h-8 w-full rounded-lg border border-mt-border bg-mt-surface px-2 text-[12px]">
+          {MOTIF_CATEGORIES.map((c) => <option key={c} value={c}>{c} ({MOTIFS.filter((m) => m.cat === c).length})</option>)}
+        </select>
+        <div className="mt-2 grid grid-cols-7 gap-1.5 max-h-44 overflow-y-auto">
+          {MOTIFS.filter((m) => m.cat === cat).map((m) => (
             <button key={m.id} type="button" title={m.label} aria-label={m.label} aria-pressed={p.motif === m.id} onClick={() => set({ motif: m.id })} className={`aspect-square rounded-lg border grid place-items-center ${p.motif === m.id ? 'border-mt-ink bg-mt-surface2' : 'border-mt-border'}`}>
               <svg viewBox="-55 -55 110 110" className="h-5 w-5"><path d={m.d} fill="currentColor" fillRule="evenodd" /></svg>
             </button>

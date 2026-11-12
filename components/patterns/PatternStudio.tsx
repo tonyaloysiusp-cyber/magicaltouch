@@ -1,13 +1,16 @@
 'use client';
 
-// Pattern Studio — build a seamless repeat from a motif, preview it on
-// products, export SVG/PNG, or open it in the design editor as a full-page
-// background. All work happens in the browser.
+// Pattern Studio — build a seamless repeat from 130+ original vector motifs,
+// preview it on products, download real vectors (SVG with one path per
+// motif, vector PDF, seamless tile) or PNG, with or without a background,
+// open it in the editor as editable shapes, and keep a library of patterns.
+// All work happens in the browser.
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Download, Grid3x3, ImagePlus, RotateCcw, Save, Shuffle, Sparkles, Trash2, Type, Wand2 } from 'lucide-react';
-import { DEFAULT_PATTERN, MOTIFS, PALETTES, PatternSettings, REPEATS, layout, sheetSvg, svgDataUrl, tileSvg } from '@/lib/patterns';
+import { Copy, Download, FileUp, Grid3x3, ImagePlus, Pencil, RotateCcw, Save, Search, Shuffle, Sparkles, Trash2, Type, Wand2 } from 'lucide-react';
+import { DEFAULT_PATTERN, MOTIFS, MOTIF_CATEGORIES, PALETTES, PatternSettings, REPEATS, layout, sheetSvg, expandedSvg, svgDataUrl, tileSvg } from '@/lib/patterns';
+import { patternFabricJson, patternPdf } from '@/lib/patternVector';
 import { putHandoff, newLocalKey, editorUrlForLocal } from '@/lib/mtd/handoff';
 import { supabase } from '@/lib/supabase';
 
@@ -65,6 +68,11 @@ export function PatternStudio() {
   const [busy, setBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const libRef = useRef<HTMLInputElement>(null);
+  const [cat, setCat] = useState<string>('Basic');
+  const [mq, setMq] = useState('');
+  const [transparent, setTransparent] = useState(false);
+  const [renaming, setRenaming] = useState<string | null>(null);
 
   useEffect(() => { setP({ ...DEFAULT_PATTERN, ...load<Partial<PatternSettings>>(DRAFT, {}) }); setSaved(load<Saved[]>(STORE, [])); }, []);
   useEffect(() => { keep(DRAFT, p.motif === 'image' ? { ...p, image: undefined, motif: 'sparkle' } : p); }, [p]);
@@ -79,41 +87,67 @@ export function PatternStudio() {
 
   const flash = (m: string) => { setMsg(m); setTimeout(() => setMsg(null), 2600); };
 
-  const exportSvg = (kind: 'tile' | 'sheet') => {
+  const exportSvg = (kind: 'tile' | 'sheet' | 'paths', q: PatternSettings = p) => {
     const s = SIZES[size];
-    const svg = kind === 'tile' ? tile : sheetSvg(p, s.w, s.h);
-    save(new Blob([svg], { type: 'image/svg+xml' }), kind === 'tile' ? 'pattern-tile.svg' : `pattern-${s.w}x${s.h}.svg`);
+    const svg = kind === 'tile' ? tileSvg(q, { background: !transparent }) : kind === 'paths' ? expandedSvg(q, s.w, s.h, { transparent }) : sheetSvg(q, s.w, s.h, { transparent });
+    save(new Blob([svg], { type: 'image/svg+xml' }), kind === 'tile' ? 'pattern-tile.svg' : `pattern-${s.w}x${s.h}${kind === 'paths' ? '-editable' : ''}.svg`);
+  };
+  const exportPdf = async (q: PatternSettings = p) => {
+    const s = SIZES[size];
+    setBusy('pdf');
+    try { save(await patternPdf(q, s.w, s.h, { transparent }), `pattern-${s.w}x${s.h}.pdf`); } catch { flash('The PDF could not be made in this browser.'); }
+    setBusy(null);
   };
   const exportPng = async () => {
     const s = SIZES[size];
     setBusy('png');
-    try { save(await svgToPng(sheetSvg(p, s.w, s.h), s.w, s.h), `pattern-${s.w}x${s.h}.png`); } catch { flash('This image could not be made in your browser.'); }
+    try { save(await svgToPng(sheetSvg(p, s.w, s.h, { transparent }), s.w, s.h), `pattern-${s.w}x${s.h}.png`); } catch { flash('This image could not be made in your browser.'); }
     setBusy(null);
   };
 
+  const store = (next: Saved[]) => { setSaved(next); keep(STORE, next); };
   const savePattern = () => {
     const name = `${MOTIFS.find((m) => m.id === p.motif)?.label || 'Custom'} · ${REPEATS.find((r) => r.id === p.repeat)?.label}`;
-    const next = [{ id: String(Date.now()), name, at: Date.now(), p: p.motif === 'image' ? { ...p } : p }, ...saved].slice(0, 24);
-    setSaved(next); keep(STORE, next); flash('Pattern saved on this device.');
+    store([{ id: String(Date.now()), name, at: Date.now(), p: { ...p } }, ...saved].slice(0, 60));
+    flash('Saved to My patterns (on this device).');
   };
-  const removeSaved = (id: string) => { const next = saved.filter((s) => s.id !== id); setSaved(next); keep(STORE, next); };
+  const removeSaved = (id: string) => store(saved.filter((s) => s.id !== id));
+  const duplicateSaved = (s: Saved) => store([{ ...s, id: String(Date.now()), name: `${s.name} (copy)`, at: Date.now() }, ...saved].slice(0, 60));
+  const renameSaved = (id: string, name: string) => { store(saved.map((s) => (s.id === id ? { ...s, name: name.trim() || s.name } : s))); setRenaming(null); };
+  const exportLibrary = () => save(new Blob([JSON.stringify({ format: 'mt-patterns', version: 1, patterns: saved }, null, 1)], { type: 'application/json' }), 'my-patterns.json');
+  const importLibrary = (f?: File | null) => {
+    if (!f) return;
+    f.text().then((t) => {
+      try {
+        const j = JSON.parse(t);
+        const list: Saved[] = (j.patterns || []).filter((x: any) => x && x.p && typeof x.p.motif === 'string');
+        const ids = new Set(saved.map((x) => x.id));
+        store([...list.filter((x) => !ids.has(x.id)), ...saved].slice(0, 60));
+        flash(`Added ${list.length} pattern${list.length === 1 ? '' : 's'}.`);
+      } catch { flash('That file is not a My patterns backup.'); }
+    });
+  };
 
+  // Opens the editor with the pattern as real vector shapes (one path per
+  // motif, grouped): ungroup it there to recolour, move or delete motifs.
   const openInEditor = async () => {
     const { data } = await supabase.auth.getSession();
     if (!data.session) { router.push('/login?next=' + encodeURIComponent('/patterns')); return; }
     const s = SIZES[size];
     setBusy('editor');
     try {
-      const png = await svgToPng(sheetSvg(p, s.w, s.h), s.w, s.h);
-      const src: string = await new Promise((res) => { const r = new FileReader(); r.onload = () => res(String(r.result)); r.readAsDataURL(png); });
-      const thumbBlob = await svgToPng(sheetSvg(p, 400, Math.round((400 * s.h) / s.w)), 400, Math.round((400 * s.h) / s.w));
+      const doc = await patternFabricJson(p, s.w, s.h, { transparent });
+      const tw = 400, th = Math.round((400 * s.h) / s.w);
+      const thumbBlob = await svgToPng(sheetSvg(p, tw, th, { transparent }), tw, th);
       const thumbnail: string = await new Promise((res) => { const r = new FileReader(); r.onload = () => res(String(r.result)); r.readAsDataURL(thumbBlob); });
-      const canvas = { version: '5.1.0', background: p.background, objects: [{ type: 'image', version: '5.1.0', originX: 'left', originY: 'top', left: 0, top: 0, width: s.w, height: s.h, scaleX: 1, scaleY: 1, src, crossOrigin: 'anonymous', name: 'Pattern background' }] };
+      const canvas = { version: '5.1.0', background: doc.background || '#ffffff', objects: doc.objects };
       const key = newLocalKey();
       putHandoff(key, { opened: { document: { name: 'Pattern design', width: s.w, height: s.h, editor: 'design' }, canvas, fonts: [], thumbnail, template: null, missingAssets: [] } as any, file: { handle: null, fileName: 'Pattern design.mtd.svg' } });
       router.push(editorUrlForLocal(key, s.w, s.h));
     } catch { flash('Could not open the editor. Please try again.'); setBusy(null); }
   };
+
+  const shown = MOTIFS.filter((m) => (mq.trim() ? m.label.toLowerCase().includes(mq.trim().toLowerCase()) || m.id.includes(mq.trim().toLowerCase()) : m.cat === cat));
 
   const onImage = (f?: File | null) => {
     if (!f) return;
@@ -129,14 +163,26 @@ export function PatternStudio() {
       <aside className="rounded-3xl border border-mt-border bg-mt-surface p-5 space-y-6 lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto">
         <section>
           <h2 className="text-[13px] font-semibold uppercase tracking-wide text-mt-muted">1 · Motif</h2>
-          <div className="mt-3 grid grid-cols-5 gap-2">
-            {MOTIFS.map((m) => (
+          <div className="mt-3 relative">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-mt-muted" />
+            <input value={mq} onChange={(e) => setMq(e.target.value)} placeholder={`Search ${MOTIFS.length} shapes`} aria-label="Search shapes" className="w-full h-9 rounded-xl border border-mt-border bg-mt-bg pl-8 pr-3 text-[13px]" />
+          </div>
+          {!mq.trim() && (
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {MOTIF_CATEGORIES.map((c) => (
+                <button key={c} type="button" onClick={() => setCat(c)} aria-pressed={cat === c} className={`h-7 px-2.5 rounded-full text-[12px] font-medium border ${cat === c ? 'border-mt-ink bg-mt-ink text-mt-bg' : 'border-mt-border text-mt-muted hover:text-mt-ink'}`}>{c}</button>
+              ))}
+            </div>
+          )}
+          <div className="mt-3 grid grid-cols-5 gap-2 max-h-[260px] overflow-y-auto pr-0.5">
+            {shown.map((m) => (
               <button key={m.id} type="button" onClick={() => set({ motif: m.id })} aria-label={m.label} title={m.label} aria-pressed={p.motif === m.id}
                 className={`aspect-square rounded-xl border grid place-items-center transition-colors ${p.motif === m.id ? 'border-mt-ink bg-mt-surface2' : 'border-mt-border hover:border-mt-ink/40'}`}>
                 <svg viewBox="-55 -55 110 110" className="h-7 w-7"><path d={m.d} fill="currentColor" fillRule="evenodd" /></svg>
               </button>
             ))}
-            <button type="button" onClick={() => set({ motif: 'text', text: p.text || 'M' })} aria-pressed={p.motif === 'text'} title="Letter" className={`aspect-square rounded-xl border grid place-items-center ${p.motif === 'text' ? 'border-mt-ink bg-mt-surface2' : 'border-mt-border'}`}><Type size={18} /></button>
+            {!mq.trim() && cat === 'Basic' && <button type="button" onClick={() => set({ motif: 'text', text: p.text || 'M' })} aria-pressed={p.motif === 'text'} title="Letter" className={`aspect-square rounded-xl border grid place-items-center ${p.motif === 'text' ? 'border-mt-ink bg-mt-surface2' : 'border-mt-border'}`}><Type size={18} /></button>}
+            {!shown.length && <p className="col-span-5 text-[12px] text-mt-muted py-2">No shape called “{mq}”.</p>}
           </div>
           {p.motif === 'text' && (
             <input value={p.text || ''} maxLength={3} onChange={(e) => set({ text: e.target.value })} aria-label="Letters for the motif" className="mt-3 w-full h-10 rounded-xl border border-mt-border bg-mt-bg px-3 text-[14px]" placeholder="Up to 3 letters" />
@@ -227,11 +273,16 @@ export function PatternStudio() {
                 {SIZES.map((s, i) => <option key={s.label} value={i}>{s.label}</option>)}
               </select>
             </label>
-            <button type="button" onClick={openInEditor} disabled={!!busy} className="h-10 px-4 rounded-full bg-mt-primary text-mt-onprimary text-[14px] font-semibold inline-flex items-center gap-2 disabled:opacity-60"><Wand2 size={15} /> {busy === 'editor' ? 'Opening…' : 'Use in a design'}</button>
-            <button type="button" onClick={exportPng} disabled={!!busy} className="h-10 px-4 rounded-full border border-mt-border text-[14px] font-semibold inline-flex items-center gap-2 disabled:opacity-60"><Download size={15} /> {busy === 'png' ? 'Making…' : 'PNG'}</button>
-            <button type="button" onClick={() => exportSvg('sheet')} className="h-10 px-4 rounded-full border border-mt-border text-[14px] font-semibold inline-flex items-center gap-2"><Download size={15} /> SVG</button>
-            <button type="button" onClick={() => exportSvg('tile')} className="h-10 px-4 rounded-full border border-mt-border text-[14px] font-semibold inline-flex items-center gap-2"><Download size={15} /> Tile SVG</button>
+            <button type="button" onClick={openInEditor} disabled={!!busy} className="h-10 px-4 rounded-full bg-mt-primary text-mt-onprimary text-[14px] font-semibold inline-flex items-center gap-2 disabled:opacity-60"><Wand2 size={15} /> {busy === 'editor' ? 'Opening…' : 'Edit in a design'}</button>
             <button type="button" onClick={savePattern} className="h-10 px-4 rounded-full border border-mt-border text-[14px] font-semibold inline-flex items-center gap-2"><Save size={15} /> Save</button>
+          </div>
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            <span className="text-[12px] text-mt-muted mr-1">Download</span>
+            <button type="button" onClick={() => exportSvg('paths')} title="One editable path per motif — opens in Illustrator, Figma or Inkscape" className="h-9 px-3.5 rounded-full border border-mt-border text-[13px] font-semibold inline-flex items-center gap-1.5"><Download size={14} /> SVG vector</button>
+            <button type="button" onClick={() => exportPdf()} disabled={!!busy} title="Vector PDF, ready for print" className="h-9 px-3.5 rounded-full border border-mt-border text-[13px] font-semibold inline-flex items-center gap-1.5 disabled:opacity-60"><Download size={14} /> {busy === 'pdf' ? 'Making…' : 'PDF vector'}</button>
+            <button type="button" onClick={() => exportSvg('tile')} title="One seamless tile, for fills and swatches" className="h-9 px-3.5 rounded-full border border-mt-border text-[13px] font-semibold inline-flex items-center gap-1.5"><Download size={14} /> Seamless tile SVG</button>
+            <button type="button" onClick={exportPng} disabled={!!busy} className="h-9 px-3.5 rounded-full border border-mt-border text-[13px] font-semibold inline-flex items-center gap-1.5 disabled:opacity-60"><Download size={14} /> {busy === 'png' ? 'Making…' : 'PNG'}</button>
+            <label className="ml-auto inline-flex items-center gap-2 text-[13px] cursor-pointer select-none"><input type="checkbox" checked={transparent} onChange={(e) => setTransparent(e.target.checked)} className="h-4 w-4 accent-[#3B82C4]" /> Transparent background</label>
           </div>
           {msg && <p role="status" className="mt-3 text-[13px] text-mt-muted">{msg}</p>}
         </div>
@@ -257,23 +308,44 @@ export function PatternStudio() {
           </ul>
         </section>
 
-        {saved.length > 0 && (
-          <section aria-labelledby="saved-title">
-            <h2 id="saved-title" className="text-lg font-semibold">Saved on this device</h2>
-            <ul className="mt-3 grid grid-cols-3 sm:grid-cols-6 gap-3">
+        <section aria-labelledby="saved-title" className="rounded-3xl border border-mt-border bg-mt-surface p-5">
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 id="saved-title" className="text-lg font-semibold mr-auto">My patterns <span className="text-[13px] font-medium text-mt-faint">{saved.length}</span></h2>
+            <button type="button" onClick={savePattern} className="h-9 px-3.5 rounded-full border border-mt-border text-[13px] font-semibold inline-flex items-center gap-1.5"><Save size={14} /> Save current</button>
+            <button type="button" onClick={exportLibrary} disabled={!saved.length} className="h-9 px-3.5 rounded-full border border-mt-border text-[13px] font-semibold inline-flex items-center gap-1.5 disabled:opacity-50"><Download size={14} /> Back up</button>
+            <button type="button" onClick={() => libRef.current?.click()} className="h-9 px-3.5 rounded-full border border-mt-border text-[13px] font-semibold inline-flex items-center gap-1.5"><FileUp size={14} /> Restore</button>
+            <input ref={libRef} type="file" accept="application/json,.json" hidden onChange={(e) => { importLibrary(e.target.files?.[0]); e.target.value = ''; }} />
+          </div>
+          {saved.length === 0 ? (
+            <p className="mt-3 text-[13px] text-mt-muted">Press Save to keep a pattern here. Saved patterns stay on this device; use Back up to move them to another one.</p>
+          ) : (
+            <ul className="mt-4 grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-4">
               {saved.map((s) => {
                 const L = layout(s.p);
                 return (
-                  <li key={s.id} className="group relative">
-                    <button type="button" onClick={() => setP(s.p)} className="block w-full aspect-square rounded-xl border border-mt-border overflow-hidden" title={s.name} aria-label={`Open ${s.name}`}
+                  <li key={s.id} className="rounded-2xl border border-mt-border overflow-hidden bg-mt-bg">
+                    <button type="button" onClick={() => { setP(s.p); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="block w-full aspect-[4/3]" title={`Open ${s.name}`} aria-label={`Open ${s.name}`}
                       style={{ backgroundImage: `url("${svgDataUrl(tileSvg(s.p))}")`, backgroundSize: `${L.w / 2}px ${L.h / 2}px`, backgroundColor: s.p.background }} />
-                    <button type="button" onClick={() => removeSaved(s.id)} aria-label={`Delete ${s.name}`} className="absolute right-1 top-1 h-7 w-7 rounded-full bg-white/90 text-[#0B0B0F] grid place-items-center opacity-0 group-hover:opacity-100 focus:opacity-100"><Trash2 size={13} /></button>
+                    <div className="p-2.5">
+                      {renaming === s.id ? (
+                        <input autoFocus defaultValue={s.name} onBlur={(e) => renameSaved(s.id, e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); if (e.key === 'Escape') setRenaming(null); }} aria-label="Pattern name" className="w-full h-8 rounded-lg border border-mt-border bg-mt-surface px-2 text-[13px]" />
+                      ) : (
+                        <p className="text-[13px] font-semibold truncate" title={s.name}>{s.name}</p>
+                      )}
+                      <div className="mt-1.5 flex items-center gap-1 text-mt-muted">
+                        <button type="button" onClick={() => setRenaming(s.id)} title="Rename" aria-label={`Rename ${s.name}`} className="h-7 w-7 grid place-items-center rounded-md hover:bg-mt-surface2"><Pencil size={13} /></button>
+                        <button type="button" onClick={() => duplicateSaved(s)} title="Duplicate" aria-label={`Duplicate ${s.name}`} className="h-7 w-7 grid place-items-center rounded-md hover:bg-mt-surface2"><Copy size={13} /></button>
+                        <button type="button" onClick={() => exportSvg('paths', s.p)} title="Download SVG" className="h-7 px-1.5 rounded-md text-[11px] font-semibold hover:bg-mt-surface2">SVG</button>
+                        <button type="button" onClick={() => exportPdf(s.p)} title="Download PDF" className="h-7 px-1.5 rounded-md text-[11px] font-semibold hover:bg-mt-surface2">PDF</button>
+                        <button type="button" onClick={() => removeSaved(s.id)} title="Delete" aria-label={`Delete ${s.name}`} className="ml-auto h-7 w-7 grid place-items-center rounded-md hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950/40"><Trash2 size={13} /></button>
+                      </div>
+                    </div>
                   </li>
                 );
               })}
             </ul>
-          </section>
-        )}
+          )}
+        </section>
         <p className="text-[12px] text-mt-faint inline-flex items-center gap-1.5"><Sparkles size={12} /> Every motif here is original to Magical Touch Design — free to use in your own work.</p>
       </div>
     </div>
