@@ -6,7 +6,11 @@ import { SITE_URL, SITE_NAME, SeoTemplate, relatedHashtags } from '@/lib/seo';
 // intro, sub-category links, the templates, popular hashtags and FAQs.
 
 /** "Wedding" + "Invitation" → "Wedding Invitation"; "Business" + "Flyer" → "Flyer". */
+// Occasion sub-categories read naturally before the design type:
+// "Festival Social Media Posts", "Wedding Invitations", "Birthday Stories & Reels".
+const OCCASION_ADJ: Record<string, string> = { Festivals: 'Festival', Birthday: 'Birthday', 'Wedding & Engagement': 'Wedding', 'Love & Family': 'Love & Family', 'Events & Parties': 'Event & Party', 'Sale & Offers': 'Sale', 'Baby & Baby Shower': 'Baby Shower' };
 export function subFull(parent: { name: string; slug: string }, name: string) {
+  if (OCCASION_ADJ[name]) return `${OCCASION_ADJ[name]} ${parent.name}`;
   return ['social-media', 'marketing', 'business', 'events', 'print'].includes(parent.slug) || name.toLowerCase().includes(parent.name.toLowerCase()) ? name : `${parent.name} ${name}`;
 }
 
@@ -24,6 +28,27 @@ const INTRO: Record<string, string> = {
   certificates: 'Certificates of achievement, appreciation, completion and participation — print-ready with your logo and signatures.',
   resume: 'Clean, modern resumes and CVs that recruiters can read in seconds — edit online and download as PDF.',
   menus: 'Restaurant, café and bar menus, price lists and food promotions that are easy to update and print.',
+  'social-media-posts': 'Instagram, Facebook and LinkedIn posts for businesses, festivals, birthdays and offers — sized correctly for every platform and easy to make your own.',
+  'stories-and-reels': 'Vertical 1080 × 1920 stories, reel covers and WhatsApp status designs that stop the scroll.',
+  'youtube-thumbnails': 'Bold, readable YouTube thumbnails (1280 × 720) that get clicks — for vlogs, tutorials, podcasts and business channels.',
+  'banners-and-covers': 'Web banners, Facebook covers, LinkedIn banners, X headers and email headers in the right sizes.',
+  flyers: 'Flyers, leaflets and pamphlets for businesses, events and offers — A4 and A5, print-ready with bleed or ready for WhatsApp.',
+  posters: 'Event, sale, festival and wall posters — A3, A4 and larger, print-ready or ready to post.',
+  invitations: 'Wedding cards, birthday invitations, party invites and e-invites to print or send on WhatsApp.',
+  'greeting-cards': 'Greeting cards for every occasion — festivals, thank you, congratulations, love and family — to print or share.',
+  'business-cards': 'Visiting cards and business cards (3.5 × 2 in and 85 × 55 mm) with bleed, ready for any print shop.',
+  'letterheads-and-stationery': 'Letterheads, envelopes and stationery that match your brand — A4 print-ready.',
+  'invoices-and-documents': 'Invoices, quotations, receipts and reports that look professional and are quick to fill in.',
+  presentations: 'Pitch decks and presentation slides (16:9) for business, education and events.',
+  brochures: 'Brochures and company profiles — bi-fold, tri-fold and multi-page — print-ready.',
+  'magazines-and-booklets': 'Magazines, newsletters, catalogues and booklets with editorial layouts.',
+  'resumes-and-cvs': 'Clean, modern resumes and CVs that recruiters can read in seconds — edit online and download as PDF.',
+  'photo-albums': 'Photo albums and photo books with ready-made pages for weddings, babies, travel and family.',
+  'photo-collages-and-frames': 'Photo collages and frames — drop in your photos and add a title for memories and celebrations.',
+  'roll-ups-signs-and-flags': 'Roll-up banners, flex banners, standees, signs and flags for events, shops and exhibitions.',
+  'tickets-and-vouchers': 'Event tickets, gift vouchers, coupons and discount cards.',
+  'id-cards-badges-and-tags': 'ID cards, name badges, lanyard cards, labels and tags.',
+  'planners-and-calendars': 'Planners, calendars, schedules, agendas and checklists.',
 };
 
 export function CategoryLanding(props: {
