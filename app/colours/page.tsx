@@ -3,8 +3,8 @@ import { SeoShell, Crumbs } from '@/components/seo/SeoShell';
 import { SITE_URL, SITE_NAME, fitTitle, fitDescription } from '@/lib/seo';
 import { ColourExplorer } from '@/components/colours/ColourExplorer';
 
-const TITLE = 'Colour Palette Generator & Explorer — HEX, RGB, CMYK';
-const DESC = 'Build colour palettes from one colour: complementary, analogous, triadic and monochrome harmonies with HEX, RGB and CMYK values. Find templates in your colours.';
+const TITLE = 'Colour Palette Generator (Color Palettes) — HEX, CMYK';
+const DESC = 'Free color palette generator: build colour palettes from one colour — complementary, analogous, triadic and monochrome harmonies with HEX, RGB and CMYK values. Find templates in your colours.';
 const URL = `${SITE_URL}/colours`;
 
 export const metadata: Metadata = {

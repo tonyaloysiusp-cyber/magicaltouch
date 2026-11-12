@@ -7,7 +7,7 @@ import { PatternStudio } from '@/components/patterns/PatternStudio';
 // Pattern Studio: a real seamless-repeat generator (grid, brick, half-drop,
 // mirror, rotational, radial, kaleidoscope, geometric, organic, random).
 const TITLE = 'Free Pattern Maker — Seamless Repeat Patterns Online';
-const DESC = 'Make seamless repeat patterns for free: grid, brick, half-drop, mirror, radial and kaleidoscope repeats. Preview on fabric and packaging, export SVG or PNG, or use it in a design.';
+const DESC = 'Free seamless pattern maker with 130+ vector shapes: grid, brick, half-drop, mirror and kaleidoscope repeats. Preview on fabric, download vector SVG, PDF or PNG with a transparent background.';
 const URL = `${SITE_URL}/patterns`;
 
 export const metadata: Metadata = {
@@ -22,8 +22,10 @@ const FAQ: [string, string][] = [
   ['Are the patterns really seamless?', 'Yes. Every repeat is built as a tile whose edges join exactly with the next tile. Turn on “Show tile edges” to see where one tile meets the next.'],
   ['What is a half-drop repeat?', 'Every other column is moved down by half a tile. It hides the straight lines of a plain grid and is popular for wallpaper and fabric.'],
   ['Can I use my own artwork?', 'Yes. Upload a PNG, JPG, WebP or SVG drawing or logo, or type up to three letters, and it becomes the motif.'],
-  ['Which files can I download?', 'A vector SVG of the full sheet, a single SVG tile for textile and print software, or a PNG at post, story, A4, banner or wallpaper size.'],
-  ['Can I use the pattern in a design?', 'Yes — “Use in a design” opens the pattern as a background in the Magical Touch editor, where you can add text, photos and your logo.'],
+  ['Which files can I download?', 'SVG vector (one editable path per motif — opens in Illustrator, Figma and Inkscape), a vector PDF for print, a seamless tile SVG for textile software, or a PNG — each with or without a background.'],
+  ['How many shapes are there?', 'Over 130 original vector motifs in 8 groups — basic, geometric, stars, floral, nature, celebration, ornament and lines — plus your own letters or image.'],
+  ['Can I edit the pattern in a design?', 'Yes — “Edit in a design” opens the pattern in the editor as real vector shapes, grouped. Ungroup it to recolour, move or delete single motifs.'],
+  ['Can I keep my patterns?', 'Yes — save them to My patterns, rename, duplicate, download, and back them up to a file to move to another device.'],
 ];
 
 export default function PatternsPage() {
@@ -40,7 +42,7 @@ export default function PatternsPage() {
         <header className="mt-4 max-w-3xl">
           <p className="text-[12px] font-semibold uppercase tracking-[0.2em] text-[#3B82C4]">Pattern Studio</p>
           <h1 className="mt-2 text-3xl sm:text-5xl font-semibold tracking-tight">Seamless patterns, made in minutes</h1>
-          <p className="mt-3 text-lg text-mt-muted leading-relaxed">Pick a motif, choose how it repeats, then tune size, spacing, rotation and colour. See it on fabric, wallpaper and packaging, and export print-ready SVG or PNG.</p>
+          <p className="mt-3 text-lg text-mt-muted leading-relaxed">Pick from 130+ vector shapes, choose how it repeats, then tune size, spacing, rotation and colour. See it on fabric and packaging, and download vector SVG, PDF or PNG.</p>
           <a href="/editor?w=1080&h=1080&panel=patterns" className="mt-4 inline-flex h-10 items-center gap-2 rounded-full border border-mt-border px-4 text-[14px] font-semibold hover:border-mt-ink/40">Use it inside the design editor (Patterns panel) →</a>
         </header>
         <div className="mt-8"><PatternStudio /></div>

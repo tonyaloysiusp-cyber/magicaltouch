@@ -3,8 +3,8 @@ import { SeoShell, Crumbs } from '@/components/seo/SeoShell';
 import { SITE_URL, SITE_NAME, fitTitle, fitDescription } from '@/lib/seo';
 import { ImageTrace } from '@/components/trace/ImageTrace';
 
-const TITLE = 'Image Trace — Convert Images to Vector SVG Free';
-const DESC = 'Turn photos, sketches and logos into editable vector shapes: black & white, line drawing, or 3, 4, 6, 8 and 16 colours. Download SVG or edit the paths in the design editor.';
+const TITLE = 'Image to Vector Converter — PNG & JPG to SVG Free';
+const DESC = 'Convert images to vector free: PNG and JPG to SVG, logo vectorizer with clean curves and sharp corners, line art, black & white or 3–32 colours. Download SVG or PDF, or edit every shape.';
 const URL = `${SITE_URL}/trace`;
 
 export const metadata: Metadata = {
@@ -13,10 +13,11 @@ export const metadata: Metadata = {
 };
 
 const FAQ: [string, string][] = [
-  ['What does Image Trace do?', 'It redraws a picture as vector shapes — one shape per colour — so it stays sharp at any size and every colour can be changed.'],
-  ['Which setting should I use?', 'Black & white for stamps and silhouettes, Line drawing for sketches, Logo for flat artwork, and 6–16 colours for illustrations and photos.'],
+  ['How do I convert a PNG or JPG to SVG?', 'Choose your picture, pick a preset (Logo — clean for logos, Black & white for stamps, Line art for sketches, or 3–32 colours for illustrations), then download SVG. It takes a second and runs in your browser.'],
+  ['Is it good enough for logos?', 'Yes. The Logo preset cleans up stray pixels, ignores anti-aliased edges (no grey halo), enlarges small logos before tracing, keeps sharp corners sharp and fits smooth curves everywhere else.'],
+  ['Can I edit each shape?', 'Turn on “Separate shapes” and every region becomes its own path, grouped by colour. In the editor, ungroup once for the colour layers and again for single shapes — recolour, move, edit points or delete.'],
+  ['Which files can I download?', 'SVG (one group per colour), a vector PDF for print, or a PNG.'],
   ['Is my picture uploaded?', 'No. Tracing runs in your browser and the picture never leaves your device.'],
-  ['Can I edit the result?', 'Yes. “Edit as vectors” opens every colour as an editable path in the design editor, where you can change colours, edit points, combine shapes and add text.'],
 ];
 
 export default function TracePage() {

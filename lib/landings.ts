@@ -32,9 +32,9 @@ export const LANDINGS: Landing[] = [
   L({
     slug: 'free-flyer-maker',
     thing: 'flyer',
-    h1: 'Free flyer maker',
-    title: 'Free Flyer Maker — Design Flyers Online in Minutes',
-    description: 'Make a flyer online for free. Start from a professional flyer template, change the words, colours and photos, and download a print-ready PDF, PNG or JPG.',
+    h1: 'Free flyer, leaflet & pamphlet maker',
+    title: 'Free Flyer Maker — Leaflets & Pamphlets Online',
+    description: 'Make a flyer, leaflet or pamphlet online for free. Start from a professional template, change the words, colours and photos, and download a print-ready A4/A5 PDF, PNG or JPG.',
     intro: [
       'A good flyer gets one message across in three seconds. Our flyer templates are laid out by designers so the headline, the offer and the contact details are easy to find — you just swap in your own.',
       'Edit everything in your browser: text, fonts, colours, photos and logos. When you are done, download a print-ready A4 or A5 PDF with bleed, or a PNG for WhatsApp and Instagram.',
@@ -71,8 +71,8 @@ export const LANDINGS: Landing[] = [
   L({
     slug: 'free-invitation-maker',
     thing: 'invitation',
-    h1: 'Free invitation maker',
-    title: 'Free Invitation Maker — Birthday, Wedding & Party Invites',
+    h1: 'Free invitation card maker',
+    title: 'Free Invitation Card Maker — Birthday, Wedding & Party',
     description: 'Create beautiful invitations online for free. Birthday, wedding, baby shower and party invitation templates you can edit, print or share on WhatsApp.',
     intro: [
       'From a kids’ superhero party to a black-tie wedding, the right invitation sets the mood before anyone arrives. Choose a template, add the names, date and place, and it is ready.',
@@ -90,9 +90,9 @@ export const LANDINGS: Landing[] = [
   L({
     slug: 'free-wedding-invitation-maker',
     thing: 'wedding invitation',
-    h1: 'Free wedding invitation maker',
-    title: 'Free Wedding Invitation Maker — Elegant Editable Templates',
-    description: 'Design your wedding invitations online for free. Botanical, modern, classic and Arabic wedding invitation templates — edit and download print-ready PDFs.',
+    h1: 'Free wedding card & invitation maker',
+    title: 'Wedding Card Maker — Free Wedding Invitation Templates',
+    description: 'Design wedding cards and invitations online for free — Indian, Nikah, Christian, botanical and modern styles. Edit, share on WhatsApp or download print-ready PDFs.',
     intro: [
       'Your invitation is the first glimpse guests get of your wedding. Our wedding templates range from soft botanical arches to bold modern type and navy-and-gold Arabic designs.',
       'Add your names, date and venue, match the colours to your theme, then print or send digitally. Matching save-the-dates and reception cards are in the Wedding collection.',
@@ -128,7 +128,7 @@ export const LANDINGS: Landing[] = [
     slug: 'free-resume-maker',
     thing: 'resume',
     h1: 'Free resume & CV maker',
-    title: 'Free Resume Maker — Professional CV Templates (A4)',
+    title: 'Free CV & Resume Maker — Professional Templates (A4)',
     description: 'Build a professional resume online for free. Classic, modern, creative and developer CV templates with or without a photo — download as PDF.',
     intro: [
       'Recruiters spend seconds on the first look. Our resume templates keep your experience easy to scan, with clear headings, consistent spacing and fonts that print well.',
@@ -146,9 +146,9 @@ export const LANDINGS: Landing[] = [
   L({
     slug: 'free-business-card-maker',
     thing: 'business card',
-    h1: 'Free business card maker',
-    title: 'Free Business Card Maker — Print-Ready Card Templates',
-    description: 'Design business cards online for free. Minimal, bold and elegant business card templates at 90 × 55 mm with bleed, ready for any print shop.',
+    h1: 'Free business card & visiting card maker',
+    title: 'Free Visiting Card & Business Card Maker Online',
+    description: 'Design visiting cards and business cards online for free. Minimal, bold and elegant templates at 3.5 × 2 in and 85 × 55 mm with bleed, ready for any print shop.',
     intro: [
       'A business card is often the only thing people keep after meeting you. Our templates balance your name, role and contact details with a confident look for your brand.',
       'Every card is set up at the standard 90 × 55 mm with 3 mm bleed, so it prints perfectly.',
