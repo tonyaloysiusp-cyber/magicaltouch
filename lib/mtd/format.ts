@@ -216,6 +216,8 @@ export async function buildMtd(opts: BuildOptions): Promise<BuildResult> {
 const DATA_OPEN = '<textarea name="mtd" hidden="hidden">';
 const DATA_OPEN_RE = /<textarea name="mtd" hidden(?:="hidden")?>/;
 const DATA_CLOSE = '</textarea>';
+const MTD_NS = 'https://www.magicaltouchdesign.com/ns/mtd';
+const META_RE = /<mt:file\b[^>]*>([A-Za-z0-9+/=\s]+)<\/mt:file>/;
 
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
@@ -234,6 +236,10 @@ export function base64ToBytes(b64: string): Uint8Array<ArrayBuffer> {
 
 /** The base64 project inside a self-opening file, or null. */
 export function unwrapSelfOpening(html: string): string | null {
+  // Current files: the design is SVG metadata (<mt:file>…</mt:file>).
+  const meta = META_RE.exec(html);
+  if (meta) { const b = meta[1].replace(/\s+/g, ''); if (/^[A-Za-z0-9+/]+=*$/.test(b)) return b; }
+  // Older files: a hidden form field.
   const m = DATA_OPEN_RE.exec(html);
   if (!m) return null;
   const start = m.index + m[0].length;
@@ -273,11 +279,18 @@ ${thumb ? `<image clip-path="url(#mt-card)" x="132" y="116" width="760" height="
 <rect x="0" y="928" width="1024" height="12" fill="url(#mt-sp)"/>
 ${icon ? `<image x="760" y="740" width="200" height="200" href="${icon}" xlink:href="${icon}"/>` : `<circle cx="860" cy="840" r="96" fill="url(#mt-sp)"/>`}
 <text x="112" y="905" font-family="system-ui, -apple-system, Segoe UI, sans-serif" font-size="34" font-weight="700" fill="#14121F">${title.length > 34 ? title.slice(0, 33) + '…' : title}</text>
-<foreignObject x="0" y="0" width="1" height="1">
-<div xmlns="http://www.w3.org/1999/xhtml"><form id="mtd-open" method="post" action="${origin}/api/open-file" enctype="multipart/form-data"><input type="hidden" name="name" value="${title}"/>${DATA_OPEN}${bytesToBase64(bytes)}${DATA_CLOSE}<button type="submit">Open</button></form></div>
-</foreignObject>
+<metadata><mt:file xmlns:mt="${MTD_NS}" format="${MTD_FORMAT}" name="${title}" encoding="base64">${bytesToBase64(bytes)}</mt:file></metadata>
 <script type="text/javascript"><![CDATA[
-setTimeout(function(){try{var f=document.getElementById('mtd-open');if(f&&f.submit)f.submit();}catch(e){}},400);
+// Opened in a browser: send the design to Magical Touch Design to keep editing.
+// (Picture viewers and file thumbnails ignore this and just show the image.)
+setTimeout(function(){try{
+var NS='http://www.w3.org/1999/xhtml',d=document,m=d.getElementsByTagNameNS('${MTD_NS}','file')[0];if(!m)return;
+var fo=d.createElementNS('http://www.w3.org/2000/svg','foreignObject');fo.setAttribute('width','1');fo.setAttribute('height','1');
+var f=d.createElementNS(NS,'form');f.setAttribute('method','post');f.setAttribute('action','${origin}/api/open-file');f.setAttribute('enctype','multipart/form-data');
+var n=d.createElementNS(NS,'input');n.setAttribute('type','hidden');n.setAttribute('name','name');n.setAttribute('value',m.getAttribute('name')||'');
+var t=d.createElementNS(NS,'textarea');t.setAttribute('name','mtd');t.textContent=m.textContent;
+f.appendChild(n);f.appendChild(t);fo.appendChild(f);d.documentElement.appendChild(fo);f.submit();
+}catch(e){}},300);
 ]]></script>
 </svg>`;
 }

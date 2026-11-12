@@ -28,7 +28,9 @@ test('saved file is an SVG picture that posts to the site and opens again', asyn
   const html = await blob.text();
   assert.match(html, /^<\?xml[^>]*\?>\s*<svg[^>]+viewBox="0 0 1024 1024"/);
   assert.match(html, /<image[^>]+href="data:image\/png;base64,AAAA"/);
-  assert.match(html, /action="https:\/\/www\.magicaltouchdesign\.com\/api\/open-file"/);
+  assert.match(html, /'action','https:\/\/www\.magicaltouchdesign\.com\/api\/open-file'/);
+  assert.ok(!html.includes('<foreignObject'), 'no HTML inside the picture (thumbnails stay clean)');
+  assert.match(html, /<metadata><mt:file [^>]*encoding="base64">[A-Za-z0-9+/=]+<\/mt:file><\/metadata>/);
   assert.ok(!html.includes('<Card>'), 'name is escaped');
   assert.ok(unwrapSelfOpening(html));
   const opened = await readMtd(blob);
@@ -48,8 +50,9 @@ test('old .mtd (plain gzip) files still open', async () => {
 test('older .mtd.html files still open', async () => {
   const { blob } = await buildMtd({ canvas, document: doc });
   const svg = await blob.text();
-  const html = svg.replace(/<textarea name="mtd" hidden="hidden">/, '<!doctype html><textarea name="mtd" hidden>');
-  const opened = await readMtd(new Blob([html.slice(html.indexOf('<!doctype'))]));
+  const b64 = svg.match(/<mt:file [^>]*>([^<]+)<\/mt:file>/)[1];
+  const html = `<!doctype html><form><textarea name="mtd" hidden>${b64}</textarea></form>`;
+  const opened = await readMtd(new Blob([html]));
   assert.equal(opened.document.width, 1050);
 });
 

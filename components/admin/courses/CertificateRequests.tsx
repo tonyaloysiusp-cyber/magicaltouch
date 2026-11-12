@@ -200,6 +200,23 @@ export function CertificateRequests({ onCount }: { onCount?: (n: number) => void
       return `Released certificate ${issue.code} to ${r.learner_name}${sent ? ' and emailed them' : ' (email not sent — check the email settings)'}.`;
     });
 
+  // Renders the PDF again for an already released certificate (same code and
+  // design; e.g. after a design fix). Replaces the learner's file, no email.
+  const remake = (r: Row) =>
+    run(r.id, async () => {
+      if (!r.certificate_code) throw new Error('This certificate has no code yet.');
+      const { data: issue } = await supabase.from('certificate_issues').select('*').eq('code', r.certificate_code).maybeSingle();
+      if (!issue) throw new Error('The issued certificate was not found.');
+      const master = masters.find((m) => m.id === issue.template_id) || masters.find((m) => m.id === masterId);
+      if (!master) throw new Error('Choose a certificate design first.');
+      const { blob } = await packageCertificates(master.canvas_json, [issue], 'pdf');
+      const path = r.certificate_path || `${r.user_id}/${issue.code}.pdf`;
+      const up = await supabase.storage.from('certificates').upload(path, blob, { contentType: 'application/pdf', upsert: true });
+      if (up.error) throw new Error(up.error.message);
+      if (!r.certificate_path) await supabase.from('course_progress').update({ certificate_path: path }).eq('id', r.id);
+      return `Made the PDF of ${issue.code} again with “${master.name.replace(/^MT Brand · /, '')}”.`;
+    });
+
   const openPdf = async (r: Row) => {
     if (!r.certificate_path) return;
     const { data } = await supabase.storage.from('certificates').createSignedUrl(r.certificate_path, 120);
@@ -305,6 +322,7 @@ export function CertificateRequests({ onCount }: { onCount?: (n: number) => void
               {filterOf(r) === 'released' && (
                 <div className="mt-5 flex flex-wrap gap-2">
                   <button onClick={() => openPdf(r)} className={`${btn} border border-mt-border`}><Download size={14} /> PDF</button>
+                  <button disabled={b} onClick={() => remake(r)} className={`${btn} border border-mt-border`}>{b ? <Loader2 size={14} className="animate-spin" /> : <Award size={14} />} Remake PDF</button>
                   {r.certificate_code && <a href={verifyUrl(r.certificate_code)} target="_blank" rel="noreferrer" className={`${btn} border border-mt-border`}><ExternalLink size={14} /> Verify page</a>}
                 </div>
               )}
