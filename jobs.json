@@ -1,67 +1,79 @@
 [
  {
-  "name": "pat",
+  "name": "rang",
   "device": "desktop",
-  "url": "/patterns",
+  "url": "/rangoli-mandala-maker",
   "wait": 6000,
   "steps": [
    {
-    "text": "Floral",
-    "exact": true,
-    "wait": 800
-   },
-   {
-    "click": "button[aria-label='Daisy']",
-    "wait": 1000
-   },
-   {
-    "js": "window.scrollTo(0,700)",
-    "wait": 800
+    "text": "Surprise me",
+    "exact": false,
+    "wait": 1200
    }
   ]
  },
  {
-  "name": "tpl",
+  "name": "grad",
   "device": "desktop",
-  "url": "/templates",
-  "wait": 12000,
-  "steps": [
-   {
-    "js": "window.scrollTo(0,500)",
-    "wait": 1000
-   }
-  ]
+  "url": "/gradient-background-generator",
+  "wait": 6000
  },
  {
-  "name": "brand",
+  "name": "print",
   "device": "desktop",
-  "url": "/admin/brand",
+  "url": "/print-size-calculator",
+  "wait": 6000
+ },
+ {
+  "name": "pass",
+  "device": "desktop",
+  "url": "/passport-photo-maker",
+  "wait": 6000
+ },
+ {
+  "name": "trace",
+  "device": "desktop",
+  "url": "/trace",
+  "wait": 12000
+ },
+ {
+  "name": "fx",
+  "device": "desktop",
+  "url": "/editor?w=1080&h=1080",
   "mock": "admin",
-  "wait": 8000,
+  "wait": 14000,
   "steps": [
    {
-    "text": "Promotional posts",
-    "exact": true,
-    "wait": 5000
+    "rail": "Text",
+    "wait": 1200
    },
    {
-    "js": "window.scrollTo(0,0)",
-    "wait": 500
+    "click": "aside button:has-text('Add a heading')",
+    "wait": 1200
+   },
+   {
+    "click": "button:has-text('Effects')",
+    "wait": 1200
+   },
+   {
+    "click": "[role=dialog] button[title='Gold']",
+    "wait": 1500
+   },
+   {
+    "click": "[role=dialog] button[title='Neon']",
+    "wait": 1500
+   },
+   {
+    "click": "[role=dialog] button[title='Retro']",
+    "wait": 1500
    }
   ]
  },
  {
-  "name": "lib",
-  "device": "desktop",
-  "url": "/admin/library",
-  "mock": "admin",
-  "wait": 9000,
-  "steps": [
-   {
-    "text": "Invitations",
-    "exact": true,
-    "wait": 2500
-   }
-  ]
+  "name": "toolsm",
+  "device": "iPhone 13",
+  "url": "/tools",
+  "wait": 5000,
+  "full": true
  }
 ]
