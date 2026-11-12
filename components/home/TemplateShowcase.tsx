@@ -7,21 +7,25 @@ import { Template, TemplateCategory, fetchCategories, expandList, rowToTemplate 
 import { countLabel, useCountStyle } from '@/lib/templateCount';
 import { Reveal } from './Reveal';
 
-const CATEGORY_ORDER = ['Birthday', 'Events', 'Wedding', 'Business', 'Social Media', 'Marketing', 'Menus', 'Certificates', 'Resume', 'Cards'];
+import { CATEGORY_ORDER } from '@/lib/templateCategoryOrder';
 
 // Each tile opens the gallery with the matching filter of the new filter bar
 // (group tab, design type or occasion), so the gallery shows exactly that.
 const TILE_LINK: Record<string, string> = {
-  'Social Media': '/templates?group=social',
-  Marketing: '/templates?group=print',
-  Business: '/templates?group=business',
-  'Photo Collage': '/templates?group=photos',
-  Cards: '/templates?kind=greeting-card',
+  'Social Media Posts': '/templates?kind=social-post',
+  'Stories & Reels': '/templates?kind=story',
+  Flyers: '/templates?kind=flyer',
+  Posters: '/templates?kind=poster',
+  Invitations: '/templates?kind=invitation',
+  'Greeting Cards': '/templates?kind=greeting-card',
+  'Business Cards': '/templates?kind=business-card',
   Menus: '/templates?kind=menu',
   Certificates: '/templates?kind=certificate',
-  Resume: '/templates?kind=resume',
-  Birthday: '/templates?occasion=birthday',
-  Wedding: '/templates?occasion=wedding',
+  'Resumes & CVs': '/templates?kind=resume',
+  Presentations: '/templates?kind=presentation',
+  'YouTube Thumbnails': '/templates?kind=thumbnail',
+  'Photo Collages & Frames': '/templates?group=photos',
+  'Photo Albums': '/templates?kind=photo-album',
 };
 const tileHref = (name: string) => TILE_LINK[name] || `/templates?category=${encodeURIComponent(name)}`;
 

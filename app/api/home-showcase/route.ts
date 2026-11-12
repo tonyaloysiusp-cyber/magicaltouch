@@ -1,14 +1,16 @@
 import { NextResponse } from 'next/server';
 import { createAnonSupabaseClient } from '@/lib/supabase/server';
 import { allPages } from '@/lib/allPages';
+import { edgeCached } from '@/lib/edgeCache';
+import { collapseFamilies } from '@/lib/templateFamilies';
 
 // The home page's "Template showcase" needs only counts and the first few
 // templates of each category — not the whole 8,000+ list. Built here once
 // (cached 5 minutes at Vercel) so the home page downloads ~1/20 of the data.
 // Same compact row format as /api/public-templates (lib/templatesData expandList).
-export const revalidate = 300;
+export const dynamic = 'force-dynamic';
 
-const SELECT = 'id, name, category, width, height, color1, color2, sort_order, thumbnail, slug, category_id, is_featured, preview, orientation';
+const SELECT = 'id, name, category, width, height, color1, color2, sort_order, thumbnail, slug, category_id, is_featured, preview, orientation, tags';
 const COLS = ['id', 'name', 'category', 'width', 'height', 'color1', 'color2', 'sort_order', 'thumbnail', 'slug', 'category_id', 'is_featured', 'preview', 'orientation'] as const;
 const DIR = '/templates/collection/';
 const PER = 15;
@@ -16,6 +18,10 @@ const PER = 15;
 const short = (t: string | null) => (t && t.startsWith(DIR) ? `~${t.slice(DIR.length)}` : t);
 
 export async function GET() {
+  return edgeCached('home-showcase-v3', 300, build);
+}
+
+async function build() {
   const sb = createAnonSupabaseClient();
   const { data, error } = await allPages<any>((from, to) =>
     sb
@@ -30,13 +36,14 @@ export async function GET() {
       .range(from, to),
   );
   if (error) return NextResponse.json({ error: error.message }, { status: 502 });
-  const all = data || [];
+  const total = (data || []).length;
+  const all = collapseFamilies((data || []) as any[]).rows;
   const counts: Record<string, number> = {};
   const keep: any[] = [];
   const shown: Record<string, number> = {};
+  (data || []).forEach((r: any) => { const k = r.category_id || r.category || ''; counts[k] = (counts[k] || 0) + 1; });
   all.forEach((r: any, i: number) => {
     const k = r.category_id || r.category || '';
-    counts[k] = (counts[k] || 0) + 1;
     if (i < 24 || (shown[k] || 0) < PER) {
       shown[k] = (shown[k] || 0) + 1;
       keep.push(r);
@@ -49,5 +56,5 @@ export async function GET() {
       return r[c] ?? null;
     }),
   );
-  return NextResponse.json({ v: 2, cols: COLS, rows, counts, total: all.length }, { headers: { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=3600' } });
+  return NextResponse.json({ v: 2, cols: COLS, rows, counts, total });
 }

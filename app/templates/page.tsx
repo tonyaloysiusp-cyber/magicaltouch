@@ -48,7 +48,7 @@ function tileRatio(t: Template): string {
 }
 
 // High-demand categories first; anything else follows in its own order.
-const CATEGORY_ORDER = ['Festivals', 'Birthday', 'Love & Family', 'Events', 'Wedding', 'Business', 'Social Media', 'Marketing', 'Menus', 'Certificates', 'Resume', 'Cards'];
+import { CATEGORY_ORDER } from '@/lib/templateCategoryOrder';
 
 type SortKey = 'recommended' | 'recent' | 'az';
 const SORTS: { id: SortKey; label: string }[] = [
@@ -132,19 +132,6 @@ const GROUP_BY_ID = new Map(GROUPS.map((g) => [g.id, g]));
 const POPULAR = ['Business flyer', 'Wedding album', 'Birthday invitation', 'Instagram post', 'Restaurant menu', 'Diwali post', 'Resume', 'Certificate'];
 
 interface Meta { styles: string[]; palettes: string[]; medium: string; pages: number; shape: string; aspect: string | null; types: string[]; topic: string; photo: boolean; occs: string[]; name: string; hay: string; doc: SearchDoc }
-
-// Curated starting points: each one is just a combination of real filters.
-const COLLECTIONS: { title: string; note: string; f: Partial<Filters> & { catName?: string } }[] = [
-  { title: 'Black & gold luxury', note: 'Rich, dark and gilded', f: { palette: 'black-gold' } },
-  { title: 'Soft pastel parties', note: 'Gentle colours for celebrations', f: { catName: 'Birthday', palette: 'pastel' } },
-  { title: 'Photo wishes & collages', note: 'Drop your photos straight in', f: { photo: true, kind: 'social-post' } },
-  { title: 'Wedding albums', note: '40 and 48 pages', f: { kind: 'photo-album', occ: 'wedding' } },
-  { title: 'Business essentials', note: 'Cards, letterheads and stationery', f: { catName: 'Business', medium: 'print' } },
-  { title: 'Editorial & magazines', note: 'Multi-page layouts', f: { pages: 'multi' } },
-  { title: 'Elegant weddings', note: 'Invitations and keepsakes', f: { catName: 'Wedding', styles: ['elegant'] } },
-  { title: 'Bold & colourful', note: 'Loud, bright, scroll-stopping', f: { styles: ['colorful'] } },
-  { title: 'Festive season', note: 'Diwali, Christmas and more', f: { catName: 'Festivals' } },
-];
 
 function readFiltersFromUrl(): Partial<Filters> & { catName?: string; subName?: string } {
   const p = new URLSearchParams(window.location.search);
@@ -286,7 +273,6 @@ export default function TemplatesPage() {
   const usingDbCategories = categories.length > 0 && templates.some((t) => !!t.categoryId);
   const catById = useMemo(() => new Map(categories.map((c) => [c.id, c])), [categories]);
   const parentOf = useCallback((id: string | null | undefined) => (id ? catById.get(id)?.parentId ?? null : null), [catById]);
-  const catNameToId = (n: string) => categories.find((c) => !c.parentId && c.name === n)?.id || n;
 
   // Everything about a template the filters look at, worked out once.
   const meta = useMemo(() => {
@@ -501,24 +487,6 @@ export default function TemplatesPage() {
   if (f.featured) active.push({ label: 'Featured', clear: () => set({ featured: false }) });
   if (f.recent) active.push({ label: 'Recently added', clear: () => set({ recent: false }) });
   const clearAll = () => { setDraft(''); setF({ ...NO_FILTERS, sort: f.sort }); };
-
-  const applyCollection = (c: (typeof COLLECTIONS)[number]) => {
-    const { catName, ...rest } = c.f;
-    setDraft(rest.q || '');
-    setF({ ...NO_FILTERS, ...rest, cat: catName ? catNameToId(catName) : 'All' });
-    document.getElementById('template-grid')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  };
-  const collections = useMemo(
-    () =>
-      COLLECTIONS.map((c) => {
-        const { catName, ...rest } = c.f;
-        const fl = { ...NO_FILTERS, ...rest, cat: catName ? catNameToId(catName) : 'All' };
-        const items = templates.filter((t) => passes(t, fl));
-        return { c, items };
-      }).filter((x) => x.items.length >= 3),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [templates, passes, categories]
-  );
 
   const useTemplate = async (t: Template) => {
     // A real id means this row has actual editable canvas_json the
@@ -841,28 +809,6 @@ export default function TemplatesPage() {
             </div>
           )}
 
-          {active.length === 0 && collections.length > 0 && (
-            <section aria-label="Collections" className="pt-6">
-              <h3 className="text-sm font-semibold text-mt-muted mb-3">Collections</h3>
-              <div className="flex gap-3 overflow-x-auto pb-3 mt-scroll snap-x">
-                {collections.map(({ c, items }) => (
-                  <button key={c.title} onClick={() => applyCollection(c)} className="snap-start shrink-0 w-[230px] text-left rounded-2xl border border-mt-border bg-mt-surface overflow-hidden mt-card-hover">
-                    <div className="grid grid-cols-3 gap-0.5 h-[100px] bg-mt-surface2">
-                      {items.slice(0, 3).map((t) => (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img key={t.id || t.name} src={t.thumbnail || ''} alt="" loading="lazy" className="w-full h-full object-cover" />
-                      ))}
-                    </div>
-                    <div className="px-3 py-2.5">
-                      <p className="text-sm font-semibold text-mt-ink">{c.title}</p>
-                      <p className="text-xs text-mt-muted">{c.note}</p>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </section>
-          )}
-
           <section id="template-grid" className="pt-6 pb-10 scroll-mt-20">
             <div className="columns-2 md:columns-3 xl:columns-4 min-[1700px]:columns-5 gap-4 [&>*]:mb-4">
               {results.exact.slice(0, exactShown).map(card)}
@@ -1035,6 +981,7 @@ function TemplatePreview({ t, types, onClose, onUse, onTag, onStyle }: { t: Temp
             <dd>{mediumOf(t) === 'print' ? 'Print' : 'Screens & social'}</dd>
           </dl>
           <PrintSpecs width={t.width} height={t.height} print={mediumOf(t) === 'print'} canvasJson={design} colors={t.colors} />
+          {(t.sizes || 0) > 1 && <OtherSizes t={t} />}
           {st.length > 0 && (
             <div className="mt-4 flex flex-wrap gap-1.5">
               {st.map((s) => (
@@ -1056,6 +1003,38 @@ function TemplatePreview({ t, types, onClose, onUse, onTag, onStyle }: { t: Temp
             <p className="mt-3 text-xs text-center text-mt-muted">You get your own copy to edit, with every page. The original never changes.</p>
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+// Other sizes of the same design (the gallery shows each design once).
+function OtherSizes({ t }: { t: Template }) {
+  const [list, setList] = useState<{ id: string; name: string; width: number; height: number; thumbnail: string | null; slug: string | null }[] | null>(null);
+  useEffect(() => {
+    const brand = (t.tags || []).find((x) => x.startsWith('brand-set-'));
+    const layout = (t.tags || []).find((x) => x.startsWith('layout-'));
+    if (!brand || !layout) return;
+    let alive = true;
+    supabase.from('templates').select('id,name,width,height,thumbnail,slug').eq('status', 'published').contains('tags', [brand, layout]).order('width').limit(16)
+      .then(({ data }) => { if (alive) setList(((data as any[]) || []).filter((x) => x.id !== t.id)); });
+    return () => { alive = false; };
+  }, [t]);
+  if (!list || !list.length) return null;
+  const fmt = (n: string) => n.split(' · ')[0].split(' ').slice(-2).join(' ');
+  return (
+    <div className="mt-5">
+      <p className="text-[13px] font-semibold text-mt-ink">Also in {list.length} more size{list.length === 1 ? '' : 's'}</p>
+      <div className="mt-2 flex gap-2 overflow-x-auto pb-1 mt-scroll">
+        {list.map((x) => (
+          <a key={x.id} href={x.slug ? `/templates/${x.slug}` : `/editor?w=${x.width}&h=${x.height}&templateId=${x.id}`} className="shrink-0 w-[84px] text-center" title={x.name}>
+            <span className="block h-16 rounded-lg bg-mt-surface2 border border-mt-border overflow-hidden">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              {x.thumbnail && <img src={x.thumbnail} alt="" loading="lazy" className="h-full w-full object-contain" />}
+            </span>
+            <span className="mt-1 block text-[10.5px] text-mt-muted truncate">{fmt(x.name)}</span>
+          </a>
+        ))}
       </div>
     </div>
   );

@@ -36,6 +36,7 @@ type Row = {
 
 const COLS = 'id,name,slug,category,category_id,status,tags,thumbnail,width,height,is_free,is_featured,description,search_keywords,updated_at,created_at';
 const PAGE = 48;
+const BRAND_TAGS = '{mt-internal,brand-promo}';
 const TABS: { id: Tab; label: string }[] = [
   { id: 'all', label: 'All' }, { id: 'published', label: 'Published' }, { id: 'unpublished', label: 'Hidden' }, { id: 'draft', label: 'Drafts' }, { id: 'bin', label: 'Bin' },
 ];
@@ -127,7 +128,8 @@ export default function TemplateManager() {
   }, []);
   const loadCounts = useCallback(async (list: Cat[]) => {
     const notBin = (qq: any) => qq.not('tags', 'cs', `{${BIN_TAG}}`);
-    const head = () => supabase.from('templates').select('id', { count: 'exact', head: true });
+    // Brand designs live in Admin → Brand workspace, not here.
+    const head = () => supabase.from('templates').select('id', { count: 'exact', head: true }).not('tags', 'ov', BRAND_TAGS);
     const out: Record<string, number> = {};
     await each([...list.map((c) => c.id), 'none'], async (id) => {
       let qq: any = notBin(head());
@@ -154,7 +156,7 @@ export default function TemplateManager() {
   const load = useCallback(async () => {
     if (state !== 'ok') return;
     setBusy(true);
-    let qq: any = supabase.from('templates').select(COLS, { count: 'exact' });
+    let qq: any = supabase.from('templates').select(COLS, { count: 'exact' }).not('tags', 'ov', BRAND_TAGS);
     if (tab === 'bin') qq = qq.contains('tags', [BIN_TAG]);
     else { qq = qq.not('tags', 'cs', `{${BIN_TAG}}`); if (tab !== 'all') qq = qq.eq('status', tab); }
     if (catSel === 'none') qq = qq.is('category_id', null);

@@ -6,7 +6,7 @@ import { Template, TemplateCategory, fetchPublicTemplates, fetchCategories } fro
 import { SearchField, cx } from '../ui';
 import { usePremiumGate } from '@/components/monetization/Paywall';
 
-const ORDER = ['Birthday', 'Events', 'Wedding', 'Business', 'Social Media', 'Marketing', 'Menus', 'Certificates', 'Resume', 'Cards'];
+import { CATEGORY_ORDER as ORDER } from '@/lib/templateCategoryOrder';
 
 let cache: { templates: Template[]; categories: TemplateCategory[] } | null = null;
 

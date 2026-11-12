@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { createAnonSupabaseClient } from '@/lib/supabase/server';
 import { allPages } from '@/lib/allPages';
+import { edgeCached } from '@/lib/edgeCache';
+import { collapseFamilies } from '@/lib/templateFamilies';
 
 // The public template gallery list (no designs inside), built once and
 // served from Vercel's cache for 5 minutes: every visitor gets it from a
@@ -11,7 +13,9 @@ import { allPages } from '@/lib/allPages';
 // same for every published template are left out, and picture paths are
 // shortened ("~" = /templates/collection/, preview 1 = thumbnail with
 // "-preview" before the extension). lib/templatesData.ts expands it.
-export const revalidate = 300;
+// Dynamic + 5-minute edge cache, so hidden or deleted templates leave the
+// gallery within minutes (the build-time page cache never refreshes).
+export const dynamic = 'force-dynamic';
 
 const SELECT =
   'id, name, category, width, height, color1, color2, sort_order, thumbnail, slug, description, category_id, tags, is_featured, is_free, preview, published_at, orientation, occasion, industry, search_keywords, hashtags';
@@ -31,6 +35,10 @@ function shortPreview(thumb: string | null, preview: string | null) {
 }
 
 export async function GET() {
+  return edgeCached('public-templates-v3', 300, build);
+}
+
+async function build() {
   const sb = createAnonSupabaseClient();
   // Every published template (the database returns 1,000 rows per request).
   const { data, error } = await allPages<any>((from, to) =>
@@ -45,8 +53,12 @@ export async function GET() {
       .range(from, to),
   );
   if (error) return NextResponse.json({ error: error.message }, { status: 502 });
-  const rows = (data || []).map((r: any) =>
-    COLS.map((c) => {
+  // Each design once: resized copies of the same design are left out here
+  // (they stay published; the template window lists the other sizes).
+  const { rows: list, sizes } = collapseFamilies((data || []) as any[]);
+  const rows = list.map((r: any) =>
+    [...COLS, 'sizes'].map((c) => {
+      if (c === 'sizes') return sizes.get(r) || null;
       if (c === 'thumbnail') return shortThumb(r.thumbnail);
       if (c === 'preview') return shortPreview(r.thumbnail, r.preview);
       if (c === 'tags') return r.tags && r.tags.length ? r.tags : null;
@@ -56,5 +68,5 @@ export async function GET() {
       return r[c] ?? null;
     }),
   );
-  return NextResponse.json({ v: 2, cols: COLS, rows }, { headers: { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=3600' } });
+  return NextResponse.json({ v: 2, cols: [...COLS, 'sizes'], rows, total: (data || []).length });
 }

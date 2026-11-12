@@ -1,3 +1,4 @@
+import { collapseFamilies } from '@/lib/templateFamilies';
 // ---------------------------------------------------------------------
 // lib/templatesData.ts
 // Shared template catalog — used by both the /templates page and the
@@ -30,6 +31,8 @@ export { allPages };
 export type Category = string;
 
 export interface Template {
+  /** How many sizes this design comes in (gallery shows one per design). */
+  sizes?: number | null;
   id?: string; // present for real rows loaded from Supabase; absent for the static fallback below
   name: string;
   category: Category;
@@ -119,6 +122,7 @@ const LIST_COLUMNS =
   'id, name, category, width, height, color1, color2, sort_order, thumbnail, rights_status, slug, description, category_id, tags, status, is_featured, is_free, unit, dpi, color_mode, preview, current_version, published_at, orientation, occasion, industry, language, search_keywords, hashtags';
 
 interface TemplateRow {
+  sizes?: number | null;
   id: string;
   name: string;
   category: string;
@@ -182,6 +186,7 @@ export function rowToTemplate(row: TemplateRow): Template {
     searchKeywords: row.search_keywords,
     hashtags: row.hashtags || [],
     sortOrder: row.sort_order,
+    sizes: row.sizes ?? null,
   };
 }
 
@@ -314,7 +319,8 @@ async function loadPublicTemplates(): Promise<Template[]> {
     if (error) console.error('Failed to load templates, falling back to the built-in list:', error);
     return TEMPLATES;
   }
-  return (data as TemplateRow[]).map(rowToTemplate);
+  const { rows, sizes } = collapseFamilies(data as TemplateRow[]);
+  return rows.map((r) => rowToTemplate({ ...r, sizes: sizes.get(r) ?? null }));
 }
 
 // The full template, including its editable design -- only called when

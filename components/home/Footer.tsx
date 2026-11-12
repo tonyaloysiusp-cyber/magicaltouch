@@ -14,7 +14,7 @@ import { NETWORKS, parseSocial, SocialLinks } from '@/lib/social';
 
 const EMAIL = 'hellomagicaltouch.design@gmail.com';
 
-const CATEGORIES = ['Social Media', 'Marketing', 'Birthday', 'Business', 'Events', 'Wedding', 'Festivals', 'Menus', 'Cards', 'Certificates', 'Resume'];
+const CATEGORIES = ['Social Media Posts', 'Flyers', 'Posters', 'Invitations', 'Greeting Cards', 'Business Cards', 'Presentations', 'Menus', 'Certificates', 'Resumes & CVs'];
 const TOOLS: [string, string][] = [
   ['free-flyer-maker', 'Flyer maker'],
   ['free-poster-maker', 'Poster maker'],
@@ -134,7 +134,7 @@ export function Footer({ theme }: { theme: AppTheme }) {
             <ul className="mt-3 flex flex-wrap gap-2">
               {CATEGORIES.map((c) => (
                 <li key={c}>
-                  <Link href={`/templates/category/${c.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`} className="inline-flex rounded-full border border-mt-border px-3 py-1.5 text-[13px] text-mt-muted hover:text-mt-ink hover:border-mt-ink/30 transition-colors">
+                  <Link href={`/templates/category/${c.toLowerCase().replace(/&/g, 'and').replace(/[^a-z0-9]+/g, '-')}`} className="inline-flex rounded-full border border-mt-border px-3 py-1.5 text-[13px] text-mt-muted hover:text-mt-ink hover:border-mt-ink/30 transition-colors">
                     {c}
                   </Link>
                 </li>

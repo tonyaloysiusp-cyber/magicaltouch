@@ -6,10 +6,10 @@ import { SeoShell } from '@/components/seo/SeoShell';
 export default function NotFound() {
   const links = [
     { href: '/templates', label: 'All templates' },
-    { href: '/templates/category/festivals', label: 'Festivals' },
-    { href: '/templates/category/wedding', label: 'Wedding' },
-    { href: '/templates/category/birthday', label: 'Birthday' },
-    { href: '/templates/category/business', label: 'Business' },
+    { href: '/templates/category/social-media-posts', label: 'Social media posts' },
+    { href: '/templates/category/invitations', label: 'Invitations' },
+    { href: '/templates/category/flyers', label: 'Flyers' },
+    { href: '/templates/category/business-cards', label: 'Business cards' },
     { href: '/free-design-tools', label: 'Free design tools' },
   ];
   return (
