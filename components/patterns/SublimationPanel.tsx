@@ -82,7 +82,7 @@ export function SublimationPanel({ p, job, setJob }: { p: PatternSettings; job: 
       const c = await svgCanvas(print.svg, w, h);
       const blob: Blob = await new Promise((res, rej) => c.toBlob((b) => (b ? res(b) : rej(new Error('png'))), 'image/png'));
       const bytes = pngWithDpi(new Uint8Array(await blob.arrayBuffer()), d);
-      save(new Blob([bytes], { type: 'image/png' }), `${base}-print-${d}dpi.png`);
+      save(new Blob([bytes as BlobPart], { type: 'image/png' }), `${base}-print-${d}dpi.png`);
       if (d !== dpi) flash(`This print is too large for one picture at ${dpi} DPI in a browser, so it was made at ${d} DPI. For full resolution use the SVG print file or the PDF with one page per piece.`);
     } catch { flash('The PNG could not be made in this browser. Use the SVG print file instead.'); }
     setBusy(null);

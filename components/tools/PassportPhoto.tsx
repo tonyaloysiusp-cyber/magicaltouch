@@ -168,7 +168,7 @@ export function PassportPhoto() {
       const r = spec.digital ? await fitFileSize(d, enc) : { w: out.w, h: out.h, q: 0.95, bytes: await enc(out.w, out.h, 0.95), ok: true };
       const blob = cache.get(`${r.w}x${r.h}@${r.q.toFixed(3)}`) || await toBlob(photoCanvas(r.w, r.h), r.q);
       const bytes = jpegWithDpi(new Uint8Array(await blob.arrayBuffer()), out.dpi);
-      save(new Blob([bytes], { type: 'image/jpeg' }), `${name}-${r.w}x${r.h}.jpg`);
+      save(new Blob([bytes as BlobPart], { type: 'image/jpeg' }), `${name}-${r.w}x${r.h}.jpg`);
       const cs: Check[] = checkFile(spec, { w: r.w, h: r.h, bytes: bytes.length, format: 'jpeg', dpi: out.dpi });
       cs.push({ label: 'Plain background', ok: !keepBg, detail: keepBg ? 'Original background kept — make sure it is plain and light' : `Replaced with ${bg.toUpperCase()}` });
       setChecks(cs);
@@ -177,7 +177,7 @@ export function PassportPhoto() {
   };
   const dlPhoto = async () => {
     const b = await toBlob(photoCanvas(), 0.95);
-    save(new Blob([jpegWithDpi(new Uint8Array(await b.arrayBuffer()), DPI)], { type: 'image/jpeg' }), `${name}-${spec.w}x${spec.h}mm-300dpi.jpg`);
+    save(new Blob([jpegWithDpi(new Uint8Array(await b.arrayBuffer()), DPI) as BlobPart], { type: 'image/jpeg' }), `${name}-${spec.w}x${spec.h}mm-300dpi.jpg`);
   };
   const sheetCanvas = () => {
     const one = photoCanvas();
@@ -186,7 +186,7 @@ export function PassportPhoto() {
     for (const p of layout.spots) { ctx.drawImage(one, mmToPx(p.x), mmToPx(p.y), W, H); ctx.strokeStyle = '#cfcfcf'; ctx.lineWidth = 2; ctx.strokeRect(mmToPx(p.x), mmToPx(p.y), W, H); }
     return c;
   };
-  const dlSheet = async () => { const b = await toBlob(sheetCanvas(), 0.95); save(new Blob([jpegWithDpi(new Uint8Array(await b.arrayBuffer()), DPI)], { type: 'image/jpeg' }), `${name}-sheet-${sheet.id}.jpg`); };
+  const dlSheet = async () => { const b = await toBlob(sheetCanvas(), 0.95); save(new Blob([jpegWithDpi(new Uint8Array(await b.arrayBuffer()), DPI) as BlobPart], { type: 'image/jpeg' }), `${name}-sheet-${sheet.id}.jpg`); };
   const dlPdf = async () => {
     const one = photoCanvas().toDataURL('image/jpeg', 0.95);
     const { jsPDF } = await import('jspdf');
