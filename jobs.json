@@ -1,5 +1,56 @@
 [
  {
+  "name": "pat",
+  "device": "desktop",
+  "url": "/patterns",
+  "wait": 6000,
+  "steps": [
+   {
+    "text": "Floral",
+    "exact": true,
+    "wait": 800
+   },
+   {
+    "click": "button[aria-label='Daisy']",
+    "wait": 1000
+   },
+   {
+    "js": "window.scrollTo(0,700)",
+    "wait": 800
+   }
+  ]
+ },
+ {
+  "name": "tpl",
+  "device": "desktop",
+  "url": "/templates",
+  "wait": 12000,
+  "steps": [
+   {
+    "js": "window.scrollTo(0,500)",
+    "wait": 1000
+   }
+  ]
+ },
+ {
+  "name": "brand",
+  "device": "desktop",
+  "url": "/admin/brand",
+  "mock": "admin",
+  "wait": 8000,
+  "steps": [
+   {
+    "text": "Promotional posts",
+    "exact": true,
+    "wait": 5000
+   },
+   {
+    "js": "window.scrollTo(0,0)",
+    "wait": 500
+   }
+  ]
+ },
+ {
   "name": "lib",
   "device": "desktop",
   "url": "/admin/library",
@@ -7,30 +58,9 @@
   "wait": 9000,
   "steps": [
    {
-    "text": "Social Media",
+    "text": "Invitations",
     "exact": true,
     "wait": 2500
-   },
-   {
-    "click": "button[title='Organise categories']",
-    "wait": 1200
-   },
-   {
-    "click": "button[aria-label='Organise Social Media']",
-    "wait": 1200
-   }
-  ]
- },
- {
-  "name": "libd",
-  "device": "desktop",
-  "url": "/admin/library",
-  "mock": "admin",
-  "wait": 9000,
-  "steps": [
-   {
-    "js": "document.documentElement.classList.add('dark')",
-    "wait": 1000
    }
   ]
  }
