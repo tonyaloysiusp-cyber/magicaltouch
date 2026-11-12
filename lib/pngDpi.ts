@@ -40,3 +40,18 @@ export function pngWithDpi(png: Uint8Array, dpi: number): Uint8Array {
   for (const a of out) { res.set(a, o); o += a.length; }
   return res;
 }
+
+/** JPEG bytes with the JFIF density set to `dpi` (adds a JFIF header if missing). */
+export function jpegWithDpi(jpg: Uint8Array, dpi: number): Uint8Array {
+  const d = Math.max(1, Math.min(65535, Math.round(dpi)));
+  const isJfif = jpg[2] === 0xff && jpg[3] === 0xe0 && jpg[6] === 0x4a && jpg[7] === 0x46 && jpg[8] === 0x49 && jpg[9] === 0x46 && jpg[10] === 0;
+  if (isJfif) {
+    const out = jpg.slice();
+    out[13] = 1; out[14] = d >> 8; out[15] = d & 255; out[16] = d >> 8; out[17] = d & 255;
+    return out;
+  }
+  const app0 = new Uint8Array([0xff, 0xe0, 0, 16, 0x4a, 0x46, 0x49, 0x46, 0, 1, 1, 1, d >> 8, d & 255, d >> 8, d & 255, 0, 0]);
+  const out = new Uint8Array(jpg.length + app0.length);
+  out.set(jpg.subarray(0, 2), 0); out.set(app0, 2); out.set(jpg.subarray(2), 2 + app0.length);
+  return out;
+}
