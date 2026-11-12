@@ -8,7 +8,7 @@
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ChevronDown, Eraser, Grid3x3, ImagePlus, LayoutGrid, Menu, Palette, PenTool, Plus, X } from 'lucide-react';
+import { ChevronDown, Eraser, Flower2, Grid3x3, ImagePlus, LayoutGrid, Menu, Palette, PenTool, Plus, Ruler, ScanFace, X } from 'lucide-react';
 import { ThemeSwitch } from '@/components/ThemeSwitch';
 import { ProfileMenu } from '@/components/ProfileMenu';
 import { BrandLogo } from '@/components/BrandLogo';
@@ -31,6 +31,9 @@ const TOOLS = [
   { href: '/colours', label: 'Colour Explorer', hint: 'Palettes and harmonies', icon: <Palette size={17} /> },
   { href: '/remove-background', label: 'Remove background', hint: 'One photo or many at once', icon: <Eraser size={17} /> },
   { href: '/photo-studio', label: 'Photo Studio', hint: 'Edit, retouch and crop a photo', icon: <ImagePlus size={17} /> },
+  { href: '/passport-photo-maker', label: 'Passport photo maker', hint: 'White background, any country size', icon: <ScanFace size={17} /> },
+  { href: '/rangoli-mandala-maker', label: 'Rangoli & mandala maker', hint: 'Draw with symmetry', icon: <Flower2 size={17} /> },
+  { href: '/print-size-calculator', label: 'Print size calculator', hint: 'Pixels, DPI and bleed', icon: <Ruler size={17} /> },
   { href: '/tools', label: 'All tools', hint: 'Every creative tool in one place', icon: <LayoutGrid size={17} /> },
 ];
 

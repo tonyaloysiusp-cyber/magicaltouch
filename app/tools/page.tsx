@@ -1,13 +1,13 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { ArrowUpRight, Brush, Crop, Eraser, FileDown, Grid3x3, Languages, Layers, LayoutTemplate, Maximize2, Palette, PenTool, QrCode, Shapes, Sparkles, SwatchBook, Type, Wand2 } from 'lucide-react';
+import { ArrowUpRight, Blend, Brush, Crop, Eraser, FileDown, Flower2, Grid3x3, Languages, Layers, LayoutTemplate, Maximize2, Palette, PenTool, QrCode, Ruler, ScanFace, Shapes, Sparkles, SwatchBook, Type, Wand2 } from 'lucide-react';
 import { SeoShell, Crumbs } from '@/components/seo/SeoShell';
 import { SITE_URL, SITE_NAME, fitTitle, fitDescription } from '@/lib/seo';
 
 // One place for every creative tool: standalone tools and what the editor
 // can do. (Landing pages for “flyer maker” etc. live on /free-design-tools.)
 const TITLE = 'Creative Tools — Vector, Photo, Pattern & Colour';
-const DESC = 'Every Magical Touch tool in one place: design editor with vector tools, Image Trace, Pattern Studio, Colour Explorer, Photo Studio, background remover, translation and print-ready export.';
+const DESC = 'Free design tools in one place: image to vector, pattern maker, colour palettes, passport photo maker, rangoli maker, gradient backgrounds, print size calculator, photo editor and background remover.';
 const URL = `${SITE_URL}/tools`;
 
 export const metadata: Metadata = {
@@ -24,6 +24,10 @@ const STUDIOS: Tool[] = [
   { href: '/colours', title: 'Colour Explorer', body: 'Harmonies with HEX, RGB and CMYK, contrast checks, mood palettes and templates by colour.', icon: Palette, tag: 'New', tint: '#F2708F' },
   { href: '/photo-studio', title: 'Photo Studio', body: 'Adjust, retouch, selections, layers, live text effects, looks and filters, crop and export.', icon: Crop, tint: '#5DCCB8' },
   { href: '/remove-background', title: 'Background Remover', body: 'One photo or sixty at once, with Restore and Erase brushes. Runs on your device.', icon: Eraser, tint: '#8CC84B' },
+  { href: '/passport-photo-maker', title: 'Passport Photo Maker', body: 'White background and the exact size for India, UK, US, Schengen or UAE — print six on a 4×6 sheet.', icon: ScanFace, tag: 'New', tint: '#0EA5E9' },
+  { href: '/rangoli-mandala-maker', title: 'Rangoli & Mandala Maker', body: 'Draw once and it repeats around the centre. Rings of petals and dots, or a ready Diwali rangoli.', icon: Flower2, tag: 'New', tint: '#E11D48' },
+  { href: '/gradient-background-generator', title: 'Gradient Backgrounds', body: 'Mesh gradients with grain — 4K wallpapers, posts and slides, SVG or CSS.', icon: Blend, tag: 'New', tint: '#A69BD3' },
+  { href: '/print-size-calculator', title: 'Print Size Calculator', body: 'Any paper or card size in pixels, inches and mm at any DPI, with bleed and safe area.', icon: Ruler, tag: 'New', tint: '#B45309' },
 ];
 const PANEL: Record<string, string> = { '/trace': 'Trace panel', '/patterns': 'Patterns panel', '/colours': 'Colours panel', '/remove-background': 'Remove BG on any photo', '/photo-studio': 'Edit photo on any picture' };
 const EDITOR: { icon: any; title: string; body: string }[] = [
