@@ -41,7 +41,7 @@ export async function patternFabricJson(p: PatternSettings, width: number, heigh
         strokeLineJoin: 'round', strokeLineCap: 'round',
       });
     } else if (p.motif === 'text') {
-      children.push({ ...base, type: 'text', text: (p.text || 'M').slice(0, 3), fontFamily: 'Georgia', fontWeight: '600', fontSize: 80, fill: q.color, name: 'Motif' });
+      children.push({ ...base, type: 'text', text: (p.text || 'M').slice(0, 12), fontFamily: p.font || 'Georgia', fontWeight: String(p.fontWeight || 600), fontStyle: p.italic ? 'italic' : 'normal', fontSize: Math.min(80, Math.round(80 / Math.max(1, (p.text || 'M').length * 0.55))), fill: q.color, name: 'Motif' });
     } else if (p.image) {
       children.push({ ...base, type: 'image', src: p.image, width: 100, height: 100, crossOrigin: 'anonymous', name: 'Motif' });
     }

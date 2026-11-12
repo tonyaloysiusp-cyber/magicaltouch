@@ -29,7 +29,12 @@ export { MOTIF_CATEGORIES };
 
 export interface PatternSettings {
   motif: string;            // MOTIFS id, or 'text' / 'image'
-  text?: string;            // for motif 'text'
+  text?: string;            // for motif 'text' (up to 12 characters)
+  font?: string;            // text motif: Google font family
+  fontWeight?: number;      // text motif: 400 / 700 …
+  italic?: boolean;
+  letterSpacing?: number;   // text motif: share of the font size, -0.1–0.5
+  textPath?: string;        // text motif traced to a vector outline (-50…50 box)
   image?: string;           // data URL for motif 'image'
   repeat: RepeatType;
   tile: number;             // tile cell size in px (before the repeat multiplies it)
@@ -164,8 +169,10 @@ function motifMarkup(p: PatternSettings, color: string): string {
   const fill = p.stroke ? 'none' : color;
   const stroke = p.stroke ? ` stroke="${color}" stroke-width="${r2(p.strokeWidth)}" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"` : '';
   if (p.motif === 'text') {
-    const t = esc((p.text || 'M').slice(0, 3));
-    return `<text x="0" y="0" font-family="Georgia, 'Times New Roman', serif" font-size="80" font-weight="600" text-anchor="middle" dominant-baseline="central" fill="${fill}"${stroke}>${t}</text>`;
+    if (p.textPath) return `<path d="${p.textPath}" fill="${fill}" fill-rule="evenodd"${stroke}/>`;
+    const t = esc((p.text || 'M').slice(0, 12));
+    const fs = Math.round(80 / Math.max(1, t.length * 0.55));
+    return `<text x="0" y="0" font-family="'${esc(p.font || 'Georgia')}', Georgia, serif" font-size="${Math.min(80, fs)}" font-weight="${p.fontWeight || 600}"${p.italic ? ' font-style="italic"' : ''} text-anchor="middle" dominant-baseline="central" fill="${fill}"${stroke}>${t}</text>`;
   }
   if (p.motif === 'image' && p.image && /^data:image\/(png|jpe?g|webp|svg\+xml);/i.test(p.image)) {
     return `<image href="${p.image}" x="-50" y="-50" width="100" height="100" preserveAspectRatio="xMidYMid meet"/>`;
@@ -234,9 +241,10 @@ export function sheetPlacements(p: PatternSettings, width: number, height: numbe
   return out;
 }
 
-/** Path data of the chosen motif (null for letter/image motifs). */
+/** Path data of the chosen motif (letters once traced to outlines; null for images). */
 export function motifPath(p: PatternSettings): string | null {
-  if (p.motif === 'text' || p.motif === 'image') return null;
+  if (p.motif === 'text') return p.textPath || null;
+  if (p.motif === 'image') return null;
   return (MOTIFS.find((x) => x.id === p.motif) || MOTIFS[0]).d;
 }
 

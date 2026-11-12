@@ -8,14 +8,18 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Copy, Download, FileUp, Grid3x3, ImagePlus, Pencil, RotateCcw, Save, Search, Shuffle, Sparkles, Trash2, Type, Wand2 } from 'lucide-react';
+import { Copy, Download, FileJson, FileUp, Grid3x3, ImagePlus, Pencil, RotateCcw, Save, Search, Shuffle, Sparkles, Trash2, Type, Wand2 } from 'lucide-react';
 import { DEFAULT_PATTERN, MOTIFS, MOTIF_CATEGORIES, PALETTES, PatternSettings, REPEATS, layout, sheetSvg, expandedSvg, svgDataUrl, tileSvg } from '@/lib/patterns';
 import { patternFabricJson, patternPdf } from '@/lib/patternVector';
 import { putHandoff, newLocalKey, editorUrlForLocal } from '@/lib/mtd/handoff';
 import { supabase } from '@/lib/supabase';
+import { PATTERN_FONTS, textOutline } from '@/lib/patternText';
+import { WEIGHT_NAMES } from '@/lib/editor/googleFonts';
+import { DEFAULT_JOB, SublimationJob, SublimationPanel } from './SublimationPanel';
 
 const STORE = 'mt:patterns';
 const DRAFT = 'mt:pattern-draft';
+const JOB = 'mt:sublimation-job';
 type Saved = { id: string; name: string; at: number; p: PatternSettings };
 
 const load = <T,>(k: string, d: T): T => { try { const v = localStorage.getItem(k); return v ? (JSON.parse(v) as T) : d; } catch { return d; } };
@@ -73,9 +77,29 @@ export function PatternStudio() {
   const [mq, setMq] = useState('');
   const [transparent, setTransparent] = useState(false);
   const [renaming, setRenaming] = useState<string | null>(null);
+  const [job, setJob] = useState<SublimationJob>(DEFAULT_JOB);
+  const [outlining, setOutlining] = useState(false);
+  const patRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => { setP({ ...DEFAULT_PATTERN, ...load<Partial<PatternSettings>>(DRAFT, {}) }); setSaved(load<Saved[]>(STORE, [])); }, []);
+  useEffect(() => { setP({ ...DEFAULT_PATTERN, ...load<Partial<PatternSettings>>(DRAFT, {}) }); setSaved(load<Saved[]>(STORE, [])); setJob({ ...DEFAULT_JOB, ...load<Partial<SublimationJob>>(JOB, {}) }); }, []);
   useEffect(() => { keep(DRAFT, p.motif === 'image' ? { ...p, image: undefined, motif: 'sparkle' } : p); }, [p]);
+  useEffect(() => { keep(JOB, job); }, [job]);
+
+  // Letters → vector outline in the chosen font (debounced).
+  const textKey = p.motif === 'text' ? `${p.text}|${p.font}|${p.fontWeight}|${p.italic}|${p.letterSpacing}` : '';
+  useEffect(() => {
+    if (!textKey) return;
+    let live = true;
+    setOutlining(true);
+    const t = setTimeout(() => {
+      textOutline(p.text || 'M', { family: p.font || 'Playfair Display', weight: p.fontWeight || 700, italic: !!p.italic, spacing: p.letterSpacing || 0 })
+        .then((d) => { if (live) setP((x) => ({ ...x, textPath: d || undefined })); })
+        .catch(() => { if (live) flash('That font could not be loaded. Try another one.'); })
+        .finally(() => { if (live) setOutlining(false); });
+    }, 350);
+    return () => { live = false; clearTimeout(t); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [textKey]);
 
   const set = (o: Partial<PatternSettings>) => setP((x) => ({ ...x, ...o }));
   const tile = useMemo(() => tileSvg(p), [p]);
@@ -103,6 +127,22 @@ export function PatternStudio() {
     setBusy('png');
     try { save(await svgToPng(sheetSvg(p, s.w, s.h, { transparent }), s.w, s.h), `pattern-${s.w}x${s.h}.png`); } catch { flash('This image could not be made in your browser.'); }
     setBusy(null);
+  };
+
+  const exportJson = () => save(new Blob([JSON.stringify({ format: 'mt-pattern', version: 1, pattern: p.motif === 'image' ? p : { ...p, image: undefined } }, null, 1)], { type: 'application/json' }), 'pattern.json');
+  const importJson = (f?: File | null) => {
+    if (!f) return;
+    f.text().then((t) => {
+      try {
+        const j = JSON.parse(t);
+        const q = j.format === 'mt-pattern' || j.format === 'mt-sublimation-job' ? j.pattern : j.motif ? j : null;
+        if (j.format === 'mt-patterns') { importLibrary(f); return; }
+        if (!q || typeof q.motif !== 'string') throw new Error('bad');
+        setP({ ...DEFAULT_PATTERN, ...q });
+        if (j.format === 'mt-sublimation-job' && j.job) setJob({ ...DEFAULT_JOB, ...j.job });
+        flash('Pattern opened.');
+      } catch { flash('That file is not a Magical Touch pattern (JSON).'); }
+    });
   };
 
   const store = (next: Saved[]) => { setSaved(next); keep(STORE, next); };
@@ -181,11 +221,26 @@ export function PatternStudio() {
                 <svg viewBox="-55 -55 110 110" className="h-7 w-7"><path d={m.d} fill="currentColor" fillRule="evenodd" /></svg>
               </button>
             ))}
-            {!mq.trim() && cat === 'Basic' && <button type="button" onClick={() => set({ motif: 'text', text: p.text || 'M' })} aria-pressed={p.motif === 'text'} title="Letter" className={`aspect-square rounded-xl border grid place-items-center ${p.motif === 'text' ? 'border-mt-ink bg-mt-surface2' : 'border-mt-border'}`}><Type size={18} /></button>}
+            {!mq.trim() && cat === 'Basic' && <button type="button" onClick={() => set({ motif: 'text', text: p.text || 'M', font: p.font || 'Playfair Display', fontWeight: p.fontWeight || 700 })} aria-pressed={p.motif === 'text'} title="Letter" className={`aspect-square rounded-xl border grid place-items-center ${p.motif === 'text' ? 'border-mt-ink bg-mt-surface2' : 'border-mt-border'}`}><Type size={18} /></button>}
             {!shown.length && <p className="col-span-5 text-[12px] text-mt-muted py-2">No shape called “{mq}”.</p>}
           </div>
           {p.motif === 'text' && (
-            <input value={p.text || ''} maxLength={3} onChange={(e) => set({ text: e.target.value })} aria-label="Letters for the motif" className="mt-3 w-full h-10 rounded-xl border border-mt-border bg-mt-bg px-3 text-[14px]" placeholder="Up to 3 letters" />
+            <div className="mt-3 space-y-2.5 rounded-2xl bg-mt-bg p-3">
+              <input value={p.text || ''} maxLength={12} onChange={(e) => set({ text: e.target.value })} aria-label="Letters for the motif" className="w-full h-10 rounded-xl border border-mt-border bg-mt-surface px-3 text-[14px]" placeholder="Initials, a name or a number (up to 12)" />
+              <label className="block text-[12px] text-mt-muted">Font
+                <select value={p.font || 'Playfair Display'} onChange={(e) => { const f = PATTERN_FONTS.find((x) => x.family === e.target.value); set({ font: e.target.value, fontWeight: f && !f.weights.includes(p.fontWeight || 700) ? f.weights[f.weights.length - 1] : p.fontWeight || 700 }); }} className="mt-1 h-10 w-full rounded-xl border border-mt-border bg-mt-surface px-2 text-[13.5px]">
+                  {[...new Set(PATTERN_FONTS.map((f) => f.category))].map((c) => <optgroup key={c} label={c}>{PATTERN_FONTS.filter((f) => f.category === c).map((f) => <option key={f.family} value={f.family}>{f.family}</option>)}</optgroup>)}
+                </select>
+              </label>
+              <div className="flex flex-wrap gap-1.5">
+                {(PATTERN_FONTS.find((f) => f.family === (p.font || 'Playfair Display'))?.weights || [400, 700]).map((w) => (
+                  <button key={w} type="button" onClick={() => set({ fontWeight: w })} aria-pressed={(p.fontWeight || 700) === w} className={`h-8 px-3 rounded-full border text-[12.5px] font-medium ${(p.fontWeight || 700) === w ? 'border-mt-ink bg-mt-ink text-mt-bg' : 'border-mt-border'}`}>{WEIGHT_NAMES[w] || w}</button>
+                ))}
+                <button type="button" onClick={() => set({ italic: !p.italic })} aria-pressed={!!p.italic} className={`h-8 px-3 rounded-full border text-[12.5px] italic ${p.italic ? 'border-mt-ink bg-mt-ink text-mt-bg' : 'border-mt-border'}`}>Italic</button>
+              </div>
+              <Slider label="Letter spacing" value={p.letterSpacing || 0} min={-0.1} max={0.5} step={0.01} onChange={(v) => set({ letterSpacing: v })} fmt={(v) => `${Math.round(v * 100)}%`} />
+              <p className="text-[11.5px] text-mt-muted">{outlining ? 'Making vector outlines…' : p.textPath ? 'Letters are vector outlines — no font needed to print.' : 'Choose a font to make outlines.'}</p>
+            </div>
           )}
           <button type="button" onClick={() => fileRef.current?.click()} className="mt-3 w-full h-10 rounded-xl border border-dashed border-mt-border text-[13px] font-medium inline-flex items-center justify-center gap-2 hover:border-mt-ink/40">
             <ImagePlus size={15} /> {p.motif === 'image' ? 'Change your image' : 'Use your own drawing or logo'}
@@ -282,10 +337,15 @@ export function PatternStudio() {
             <button type="button" onClick={() => exportPdf()} disabled={!!busy} title="Vector PDF, ready for print" className="h-9 px-3.5 rounded-full border border-mt-border text-[13px] font-semibold inline-flex items-center gap-1.5 disabled:opacity-60"><Download size={14} /> {busy === 'pdf' ? 'Making…' : 'PDF vector'}</button>
             <button type="button" onClick={() => exportSvg('tile')} title="One seamless tile, for fills and swatches" className="h-9 px-3.5 rounded-full border border-mt-border text-[13px] font-semibold inline-flex items-center gap-1.5"><Download size={14} /> Seamless tile SVG</button>
             <button type="button" onClick={exportPng} disabled={!!busy} className="h-9 px-3.5 rounded-full border border-mt-border text-[13px] font-semibold inline-flex items-center gap-1.5 disabled:opacity-60"><Download size={14} /> {busy === 'png' ? 'Making…' : 'PNG'}</button>
+            <button type="button" onClick={exportJson} title="Pattern settings — open it again here later" className="h-9 px-3.5 rounded-full border border-mt-border text-[13px] font-semibold inline-flex items-center gap-1.5"><FileJson size={14} /> JSON</button>
+            <button type="button" onClick={() => patRef.current?.click()} title="Open a pattern or sublimation job (.json)" className="h-9 px-3.5 rounded-full border border-mt-border text-[13px] font-semibold inline-flex items-center gap-1.5"><FileUp size={14} /> Open JSON</button>
+            <input ref={patRef} type="file" accept="application/json,.json" hidden onChange={(e) => { importJson(e.target.files?.[0]); e.target.value = ''; }} />
             <label className="ml-auto inline-flex items-center gap-2 text-[13px] cursor-pointer select-none"><input type="checkbox" checked={transparent} onChange={(e) => setTransparent(e.target.checked)} className="h-4 w-4 accent-[#3B82C4]" /> Transparent background</label>
           </div>
           {msg && <p role="status" className="mt-3 text-[13px] text-mt-muted">{msg}</p>}
         </div>
+
+        <SublimationPanel p={p} job={job} setJob={setJob} />
 
         <section aria-labelledby="mock-title">
           <h2 id="mock-title" className="text-lg font-semibold">On products</h2>
