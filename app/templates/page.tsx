@@ -129,9 +129,21 @@ const GROUPS: { id: string; label: string; types: string[] }[] = [
   { id: 'business', label: 'Business & documents', types: ['business-card', 'letterhead', 'menu', 'resume', 'certificate', 'presentation', 'invoice', 'planner', 'logo', 'email', 'mockup'] },
 ];
 const GROUP_BY_ID = new Map(GROUPS.map((g) => [g.id, g]));
+// The same groups, made of the admin's design-type categories (by slug), so
+// the public filters show exactly the categories used in the Template Manager.
+const CAT_GROUPS: Record<string, string[]> = {
+  social: ['social-media-posts', 'stories-and-reels', 'youtube-thumbnails', 'banners-and-covers'],
+  print: ['flyers', 'posters', 'brochures', 'magazines-and-booklets', 'roll-ups-signs-and-flags', 'tickets-and-vouchers', 'digital-signage-and-screens'],
+  cards: ['invitations', 'greeting-cards'],
+  photos: ['photo-albums', 'photo-collages-and-frames'],
+  business: ['business-cards', 'letterheads-and-stationery', 'menus-cat', 'resumes-and-cvs', 'certificates-cat', 'presentations', 'invoices-and-documents', 'planners-and-calendars', 'logos-cat', 'email-signatures', 'id-cards-badges-and-tags', 'mockups-cat'],
+};
+const groupOfSlug = (slug?: string) => Object.keys(CAT_GROUPS).find((g) => slug && CAT_GROUPS[g].includes(slug)) || null;
+// Admin occasion sub-categories, in the order people look for them.
+const SUB_OCCASIONS = ['Festivals', 'Birthday', 'Wedding & Engagement', 'Baby & Baby Shower', 'Love & Family', 'Events & Parties', 'Sale & Offers'];
 const POPULAR = ['Business flyer', 'Wedding album', 'Birthday invitation', 'Instagram post', 'Restaurant menu', 'Diwali post', 'Resume', 'Certificate'];
 
-interface Meta { styles: string[]; palettes: string[]; medium: string; pages: number; shape: string; aspect: string | null; types: string[]; topic: string; photo: boolean; occs: string[]; name: string; hay: string; doc: SearchDoc }
+interface Meta { root: TemplateCategory | null; occName: string | null; styles: string[]; palettes: string[]; medium: string; pages: number; shape: string; aspect: string | null; types: string[]; topic: string; photo: boolean; occs: string[]; name: string; hay: string; doc: SearchDoc }
 
 function readFiltersFromUrl(): Partial<Filters> & { catName?: string; subName?: string } {
   const p = new URLSearchParams(window.location.search);
@@ -282,7 +294,10 @@ export default function TemplatesPage() {
       const src = { name: t.name, category: t.category, sub: subCat?.parentId ? subCat.name : null, width: t.width, height: t.height, tags: t.tags, occasion: t.occasion, industry: t.industry, searchKeywords: t.searchKeywords };
       const types = typesOf(src);
       const topic = topicText(src);
+      const root = subCat ? (subCat.parentId ? catById.get(subCat.parentId) || null : subCat) : null;
       m.set(t, {
+        root,
+        occName: subCat?.parentId ? subCat.name : null,
         styles: stylesOf(t),
         palettes: palettesOf(t),
         medium: mediumOf(t),
@@ -329,9 +344,9 @@ export default function TemplatesPage() {
         if (!ok) return false;
       }
       if (skip !== 'sub' && fl.sub && t.categoryId !== fl.sub) return false;
-      if (skip !== 'group' && fl.group && !x.types.some((id) => GROUP_BY_ID.get(fl.group!)?.types.includes(id))) return false;
+      if (skip !== 'group' && fl.group && !(usingDbCategories ? groupOfSlug(x.root?.slug) === fl.group : x.types.some((id) => GROUP_BY_ID.get(fl.group!)?.types.includes(id)))) return false;
       if (skip !== 'kind' && fl.kind && !x.types.includes(fl.kind)) return false;
-      if (skip !== 'occ' && fl.occ && !x.occs.includes(fl.occ)) return false;
+      if (skip !== 'occ' && fl.occ && !(fl.occ.startsWith('sub:') ? x.occName === fl.occ.slice(4) : x.occs.includes(fl.occ))) return false;
       if (skip !== 'styles' && fl.styles.length && !fl.styles.some((s) => x.styles.includes(s))) return false;
       if (skip !== 'palette' && fl.palette && !x.palettes.includes(fl.palette)) return false;
       if (skip !== 'region' && fl.region && !(t.tags || []).includes(`region-${fl.region}`)) return false;
@@ -402,9 +417,10 @@ export default function TemplatesPage() {
     [templates, f, passes, searching, scores, meta]
   );
   const typeCounts = useMemo(() => facet('kind', (_, x) => x.types), [facet]);
-  const groupCounts = useMemo(() => facet('group', (_, x) => GROUPS.filter((g) => x.types.some((id) => g.types.includes(id))).map((g) => g.id)), [facet]);
+  const groupCounts = useMemo(() => facet('group', (_, x) => (usingDbCategories ? [groupOfSlug(x.root?.slug)].filter(Boolean) as string[] : GROUPS.filter((g) => x.types.some((id) => g.types.includes(id))).map((g) => g.id))), [facet, usingDbCategories]);
   const [menu, setMenu] = useState<string | null>(null);
-  const occCounts = useMemo(() => facet('occ', (_, x) => x.occs), [facet]);
+  const occCounts = useMemo(() => facet('occ', (_, x) => (x.occName ? [...x.occs, `sub:${x.occName}`] : x.occs)), [facet]);
+  const occLabel = (id: string | null) => (id ? (id.startsWith('sub:') ? id.slice(4) : OCCASIONS.find((o) => o.id === id)?.label || id) : null);
   const catCounts = useMemo(() => facet('cat', (t) => { const p = parentOf(t.categoryId); return [p || t.categoryId || t.category]; }), [facet, parentOf]);
   const styleCounts = useMemo(() => facet('styles', (_, x) => x.styles), [facet]);
   const palCounts = useMemo(() => facet('palette', (_, x) => x.palettes), [facet]);
@@ -473,7 +489,7 @@ export default function TemplatesPage() {
   if (f.q) active.push({ label: `“${f.q}”`, clear: () => search('') });
   if (f.group) active.push({ label: GROUP_BY_ID.get(f.group)?.label || f.group, clear: () => set({ group: null, kind: null }) });
   if (f.kind) active.push({ label: TYPE_BY_ID.get(f.kind)?.label || f.kind, clear: () => set({ kind: null }) });
-  if (f.occ) active.push({ label: OCCASIONS.find((o) => o.id === f.occ)?.label || f.occ, clear: () => set({ occ: null }) });
+  if (f.occ) active.push({ label: occLabel(f.occ) || f.occ, clear: () => set({ occ: null }) });
   if (f.cat !== 'All') active.push({ label: catChips.find((c) => c.id === f.cat)?.label || f.cat, clear: () => set({ cat: 'All', sub: null }) });
   if (f.sub) active.push({ label: categories.find((c) => c.id === f.sub)?.name || 'Type', clear: () => set({ sub: null }) });
   f.styles.forEach((s) => active.push({ label: styleLabel(s), clear: () => set({ styles: f.styles.filter((x) => x !== s) }) }));
@@ -509,7 +525,7 @@ export default function TemplatesPage() {
     }
     if (f.kind) return TYPE_BY_ID.get(f.kind)?.label || 'Templates';
     if (f.group) return GROUP_BY_ID.get(f.group)?.label || 'Templates';
-    if (f.occ) return `${OCCASIONS.find((o) => o.id === f.occ)?.label} templates`;
+    if (f.occ) return `${occLabel(f.occ)} templates`;
     if (f.sub) return categories.find((c) => c.id === f.sub)?.name || 'Templates';
     if (f.cat !== 'All') return `${catChips.find((c) => c.id === f.cat)?.label || ''} templates`;
     return 'All templates';
@@ -519,7 +535,23 @@ export default function TemplatesPage() {
   const typeList = (f.group ? GROUP_BY_ID.get(f.group)!.types : GROUPS.flatMap((g) => g.types)).map((id) => TYPE_BY_ID.get(id)!).filter(Boolean);
   const pickType = (id: string) => { set({ kind: f.kind === id ? null : id }); setMenu(null); };
   const MENUS: { id: string; label: string; value: string | null; body: JSX.Element }[] = [
-    {
+    usingDbCategories ? {
+      id: 'type', label: 'Design type', value: f.cat !== 'All' ? catChips.find((c) => c.id === f.cat)?.label || null : null,
+      body: (
+        <div className="grid sm:grid-cols-2 gap-x-5 gap-y-3">
+          {GROUPS.filter((g) => !f.group || g.id === f.group).map((g) => {
+            const cats = catChips.filter((c) => CAT_GROUPS[g.id].includes(catById.get(c.id)?.slug || ''));
+            if (!cats.length) return null;
+            return (
+              <div key={g.id}>
+                <p className="px-2 mb-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-mt-faint">{g.label}</p>
+                <List items={cats.map((c) => ({ id: c.id, label: c.label, n: catCounts.get(c.id) || 0 }))} selected={f.cat === 'All' ? null : f.cat} onPick={(id) => { set({ cat: f.cat === id ? 'All' : id, sub: null, kind: null }); setMenu(null); }} limit={40} small />
+              </div>
+            );
+          })}
+        </div>
+      ),
+    } : {
       id: 'type', label: 'Design type', value: f.kind ? TYPE_BY_ID.get(f.kind)?.label || null : null,
       body: f.group ? (
         <List items={typeList.map((ty) => ({ id: ty.id, label: ty.label, n: typeCounts.get(ty.id) || 0 }))} selected={f.kind} onPick={pickType} limit={40} />
@@ -535,8 +567,21 @@ export default function TemplatesPage() {
       ),
     },
     {
-      id: 'occ', label: 'Occasion', value: f.occ ? OCCASIONS.find((o) => o.id === f.occ)?.label || null : null,
-      body: <List items={OCCASIONS.map((o) => ({ id: o.id, label: o.label, n: occCounts.get(o.id) || 0 }))} selected={f.occ} onPick={(id) => { set({ occ: f.occ === id ? null : id }); setMenu(null); }} limit={40} />,
+      id: 'occ', label: 'Occasion', value: occLabel(f.occ),
+      body: (
+        <div className="space-y-3">
+          {usingDbCategories && (
+            <div>
+              <p className="px-2 mb-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-mt-faint">Occasions</p>
+              <List items={SUB_OCCASIONS.map((n) => ({ id: `sub:${n}`, label: n, n: occCounts.get(`sub:${n}`) || 0 }))} selected={f.occ} onPick={(id) => { set({ occ: f.occ === id ? null : id }); setMenu(null); }} limit={20} />
+            </div>
+          )}
+          <div>
+            {usingDbCategories && <p className="px-2 mb-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-mt-faint">Festivals &amp; days</p>}
+            <List items={OCCASIONS.map((o) => ({ id: o.id, label: o.label, n: occCounts.get(o.id) || 0 }))} selected={f.occ} onPick={(id) => { set({ occ: f.occ === id ? null : id }); setMenu(null); }} limit={40} small={usingDbCategories} />
+          </div>
+        </div>
+      ),
     },
     {
       id: 'style', label: 'Style', value: f.styles.length ? f.styles.map(styleLabel).join(', ') : null,
@@ -578,7 +623,7 @@ export default function TemplatesPage() {
       ),
     },
     {
-      id: 'more', label: 'More filters', value: [f.medium !== 'all', f.shape !== 'all', f.pages !== 'all', f.aspect, f.cat !== 'All', f.region, f.photo, f.featured, f.recent].filter(Boolean).length ? `${[f.medium !== 'all', f.shape !== 'all', f.pages !== 'all', f.aspect, f.cat !== 'All', f.region, f.photo, f.featured, f.recent].filter(Boolean).length} on` : null,
+      id: 'more', label: 'More filters', value: [f.medium !== 'all', f.shape !== 'all', f.pages !== 'all', f.aspect, !usingDbCategories && f.cat !== 'All', f.region, f.photo, f.featured, f.recent].filter(Boolean).length ? `${[f.medium !== 'all', f.shape !== 'all', f.pages !== 'all', f.aspect, !usingDbCategories && f.cat !== 'All', f.region, f.photo, f.featured, f.recent].filter(Boolean).length} on` : null,
       body: (
         <div className="space-y-4">
           <div>
@@ -594,12 +639,12 @@ export default function TemplatesPage() {
             <Seg value={f.pages} onChange={(v) => set({ pages: v as Filters['pages'] })} options={[['all', 'Any'], ['single', `Single · ${pagesCounts.get('single') || 0}`], ['multi', `Multi-page · ${pagesCounts.get('multi') || 0}`]]} />
           </div>
           <div className="grid grid-cols-2 gap-2">
-            <label className="text-[11px] font-semibold uppercase tracking-[0.1em] text-mt-faint">Category
+            {!usingDbCategories && <label className="text-[11px] font-semibold uppercase tracking-[0.1em] text-mt-faint">Category
               <select value={f.cat} onChange={(e) => set({ cat: e.target.value, sub: null })} className="mt-1 w-full rounded-lg px-2 h-9 border border-mt-input-border bg-mt-surface text-mt-ink text-[13px] normal-case tracking-normal font-normal">
                 <option value="All">Any</option>
                 {catChips.map((c) => <option key={c.id} value={c.id}>{c.label} ({catCounts.get(c.id) || 0})</option>)}
               </select>
-            </label>
+            </label>}
             <label className="text-[11px] font-semibold uppercase tracking-[0.1em] text-mt-faint">Region
               <select value={f.region || ''} onChange={(e) => set({ region: e.target.value || null })} className="mt-1 w-full rounded-lg px-2 h-9 border border-mt-input-border bg-mt-surface text-mt-ink text-[13px] normal-case tracking-normal font-normal">
                 <option value="">Anywhere</option>
@@ -727,7 +772,7 @@ export default function TemplatesPage() {
               const on = f.group === g.id;
               const n = g.id ? groupCounts.get(g.id) || 0 : null;
               return (
-                <button key={g.label} role="tab" aria-selected={on} onClick={() => set({ group: g.id, kind: null })} className={`shrink-0 relative px-3.5 pb-3 pt-1 text-[14px] font-semibold transition-colors ${on ? 'text-mt-ink' : 'text-mt-muted hover:text-mt-ink'}`}>
+                <button key={g.label} role="tab" aria-selected={on} onClick={() => set({ group: g.id, kind: null, ...(usingDbCategories && f.cat !== 'All' && g.id && groupOfSlug(catById.get(f.cat)?.slug) !== g.id ? { cat: 'All', sub: null } : {}) })} className={`shrink-0 relative px-3.5 pb-3 pt-1 text-[14px] font-semibold transition-colors ${on ? 'text-mt-ink' : 'text-mt-muted hover:text-mt-ink'}`}>
                   {g.label}{n !== null && <span className="ml-1.5 text-[11px] font-normal text-mt-faint">{n.toLocaleString()}</span>}
                   {on && <span className="absolute left-2 right-2 -bottom-px h-[3px] rounded-full bg-mt-ink" />}
                 </button>
