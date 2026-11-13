@@ -815,18 +815,54 @@ scenarios.push({
 scenarios.push({
   name: 'team-kit-bulk',
   async run(t) {
-    await t.page.goto(t.BASE + '/patterns?tab=kits', { waitUntil: 'domcontentloaded' });
-    await t.page.getByRole('tab', { name: 'Apparel & team kits' }).waitFor({ timeout: 30000 });
-    await t.page.getByText('Players (4)').waitFor({ timeout: 30000 });
-    await t.shot('kits');
-    const [svgDl] = await Promise.all([t.page.waitForEvent('download', { timeout: 60000 }), t.page.getByRole('button', { name: 'SVG', exact: true }).first().click()]);
+    await t.page.goto(t.BASE + '/custom-jersey-designer', { waitUntil: 'domcontentloaded' });
+    await t.page.getByRole('button', { name: 'Design: Red hoops' }).click({ timeout: 30000 });
+    await t.page.getByRole('button', { name: 'Sash', exact: true }).click();
+    await t.shot('jersey-design');
+    await t.page.getByRole('button', { name: /Players$/ }).first().click();
+    await t.page.getByRole('button', { name: /Print files/ }).first().click();
+    await t.page.getByLabel('Print summary').waitFor({ timeout: 30000 });
+    t.check('summary counts 4 garments', /4\s*garments/.test(await t.page.getByLabel('Print summary').innerText()));
+    await t.page.getByRole('button', { name: /Download print PDF/ }).waitFor({ timeout: 30000 });
+    await t.page.waitForFunction(() => { const b = [...document.querySelectorAll('button')].find((x) => /Download print PDF/.test(x.textContent || '')); return b && !b.disabled; }, null, { timeout: 60000 });
+    await t.shot('jersey-print');
     const fs = await import('node:fs');
-    const svg = fs.readFileSync(await svgDl.path(), 'utf8');
-    t.check('player SVG has pieces and pattern paths', (svg.match(/<path /g) || []).length > 100, svgDl.suggestedFilename());
-    const [pdfDl] = await Promise.all([t.page.waitForEvent('download', { timeout: 90000 }), t.page.getByRole('button', { name: /Vector PDF/ }).first().click()]);
+    const [pdfDl] = await Promise.all([t.page.waitForEvent('download', { timeout: 120000 }), t.page.getByRole('button', { name: /Download print PDF/ }).click()]);
     const pdf = fs.readFileSync(await pdfDl.path());
-    t.check('player PDF is a PDF', pdf.subarray(0, 4).toString() === '%PDF' && pdf.length > 3000, `${pdf.length} bytes`);
-    t.check('player PDF has no pictures (all vector)', !/\/Subtype\s*\/Image/.test(pdf.toString('latin1')));
+    const txt = pdf.toString('latin1');
+    t.check('one print PDF for the team', pdf.subarray(0, 4).toString() === '%PDF' && pdf.length > 5000, `${pdfDl.suggestedFilename()} ${pdf.length} bytes`);
+    t.check('print PDF is all vector', !/\/Subtype\s*\/Image/.test(txt));
+    // Only two players selected → still one file.
+    await t.page.getByLabel('Print row 3').uncheck();
+    await t.page.getByLabel('Print row 4').uncheck();
+    t.check('summary follows the selection', /2\s*garments/.test(await t.page.getByLabel('Print summary').innerText()));
+    const [svgDl] = await Promise.all([t.page.waitForEvent('download', { timeout: 60000 }), t.page.getByRole('button', { name: /Print SVG/ }).click()]);
+    const svg = fs.readFileSync(await svgDl.path(), 'utf8');
+    t.check('print SVG labels each piece by player', /1\. ARUN #07/.test(svg) && /2\. KUMAR #10/.test(svg) && !/DAVID/.test(svg), svgDl.suggestedFilename());
+  },
+});
+
+// Polo designer: sizes and quantities → one print PDF; wall poster + wallpaper strips.
+scenarios.push({
+  name: 'polo-and-wall',
+  async run(t) {
+    await t.page.goto(t.BASE + '/polo-shirt-designer', { waitUntil: 'domcontentloaded' });
+    await t.page.getByRole('button', { name: /Sizes & quantities/ }).first().click({ timeout: 30000 });
+    await t.page.getByLabel('Quantity row 1').fill('2');
+    await t.page.getByRole('button', { name: /Print files/ }).first().click();
+    await t.page.getByLabel('Print summary').waitFor({ timeout: 30000 });
+    t.check('polo summary counts quantities (2+8+6+2)', /18\s*garments/.test(await t.page.getByLabel('Print summary').innerText()));
+    await t.shot('polo');
+    await t.page.goto(t.BASE + '/wall-designer', { waitUntil: 'domcontentloaded' });
+    await t.page.getByRole('button', { name: /^A1/ }).click({ timeout: 30000 });
+    const href = await t.page.getByRole('link', { name: /Design this poster/ }).getAttribute('href');
+    t.check('A1 poster opens at 594 × 841 mm', /w=2245\.039/.test(href || '') && /h=3178\.583/.test(href || ''), href);
+    await t.page.getByRole('tab', { name: /Wall pattern/ }).click();
+    const fs = await import('node:fs');
+    const [dl] = await Promise.all([t.page.waitForEvent('download', { timeout: 90000 }), t.page.getByRole('button', { name: /Print strips/ }).click()]);
+    const b = fs.readFileSync(await dl.path());
+    t.check('wallpaper strips PDF', b.subarray(0, 4).toString() === '%PDF' && b.length > 3000, dl.suggestedFilename());
+    await t.shot('wall');
   },
 });
 

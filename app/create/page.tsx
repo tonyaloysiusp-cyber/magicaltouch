@@ -9,7 +9,7 @@ import { Footer } from '@/components/home/Footer';
 import { AppHeader } from '@/components/AppHeader';
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Lock, Unlock, Search, Wand2, ArrowRightLeft, ChevronDown, Check, Ruler, ArrowRight, X, ImagePlus } from 'lucide-react';
+import { Lock, Unlock, Search, Wand2, ArrowRightLeft, ChevronDown, Check, Ruler, ArrowRight, X } from 'lucide-react';
 import Link from 'next/link';
 import { supabase, getSessionUser } from '@/lib/supabase';
 import { DocUnit } from '@/lib/editor/types';
@@ -24,6 +24,8 @@ import { GOALS, GoalId, matchTemplates, presetById, templateImage } from '@/lib/
 import { PageGlyph } from '@/components/create/PageGlyph';
 import { GoalIcon } from '@/components/create/GoalIcon';
 import { DesignWizard } from '@/components/create/DesignWizard';
+import { TOOLS, rememberTool } from '@/lib/toolsCatalog';
+import { ToolIcon } from '@/components/tools/ToolsDirectory';
 
 type Background = 'transparent' | 'white' | 'custom';
 type Tab = 'popular' | string; // 'popular' or a SIZE_GROUPS id
@@ -217,17 +219,21 @@ export default function CreateDesignPage() {
               </button>
             </div>
 
-            {/* Start from a photo: the photo tools sit right here with "new design" */}
-            <div className="mt-4 flex flex-wrap gap-2" aria-label="Start from a photo">
-              {[
-                ['/photo-studio', 'Edit a photo', 'Retouch, filters, crop'],
-                ['/remove-background', 'Remove background', 'One or many photos'],
-              ].map(([href, label, sub]) => (
-                <Link key={href} href={href} className="inline-flex items-center gap-2.5 h-12 pl-3 pr-4 rounded-2xl border border-mt-border bg-mt-surface hover:-translate-y-0.5 transition-transform">
-                  <ImagePlus size={17} className="text-[#7565C2]" />
-                  <span className="text-left leading-tight"><span className="block text-[13px] font-semibold">{label}</span><span className="block text-[11px] text-mt-muted">{sub}</span></span>
-                </Link>
-              ))}
+            {/* Every tool, right here: a blank design (sizes below) or a dedicated tool */}
+            <div className="mt-6" aria-label="Start with a tool">
+              <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-mt-muted">Start with a tool</p>
+              <div className="mt-2 -mx-4 px-4 sm:mx-0 sm:px-0 flex sm:grid sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-7 gap-2 overflow-x-auto sm:overflow-visible mt-scroll pb-1">
+                <a href="#sizes" className="shrink-0 w-[150px] sm:w-auto flex items-center gap-2.5 rounded-2xl border-2 border-[#3B82C4] bg-mt-surface p-2.5 hover:-translate-y-0.5 transition-transform">
+                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[#3B82C4] text-white"><Ruler size={17} /></span>
+                  <span className="min-w-0 leading-tight"><span className="block text-[13px] font-semibold">Blank design</span><span className="block text-[11px] text-mt-muted truncate">Choose a size below</span></span>
+                </a>
+                {TOOLS.filter((t) => t.id !== 'editor').map((t) => (
+                  <Link key={t.id} href={t.href} onClick={() => rememberTool(t.id)} className="shrink-0 w-[150px] sm:w-auto flex items-center gap-2.5 rounded-2xl border border-mt-border bg-mt-surface p-2.5 hover:-translate-y-0.5 hover:border-mt-ink/30 transition-transform">
+                    <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl text-white" style={{ background: t.tint }}><ToolIcon name={t.icon} size={17} /></span>
+                    <span className="min-w-0 leading-tight"><span className="block text-[13px] font-semibold truncate">{t.title}</span><span className="block text-[11px] text-mt-muted truncate">{t.hint}</span></span>
+                  </Link>
+                ))}
+              </div>
             </div>
 
             {/* Goals */}
@@ -258,7 +264,7 @@ export default function CreateDesignPage() {
           </div>
         </section>
 
-        <div className="mt-container py-8 grid lg:grid-cols-[1fr_340px] 2xl:grid-cols-[1fr_400px] gap-8 2xl:gap-10 items-start">
+        <div id="sizes" className="scroll-mt-20 mt-container py-8 grid lg:grid-cols-[1fr_340px] 2xl:grid-cols-[1fr_400px] gap-8 2xl:gap-10 items-start">
           <div className="min-w-0 flex flex-col gap-6">
             {/* Size tabs */}
             {!q && !goalDef && (

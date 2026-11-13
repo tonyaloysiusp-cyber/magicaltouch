@@ -6,7 +6,7 @@ export const metadata: Metadata = {
   title: 'Free Online Photo Editor — Photo Studio',
   description: DESC,
   alternates: { canonical: '/photo-studio' },
-  openGraph: { type: 'website', url: `${SITE_URL}/photo-studio`, title: 'Free Online Photo Editor — Photo Studio', description: DESC, siteName: SITE_NAME, images: [`${SITE_URL}/api/og`] },
+  openGraph: { type: 'website', url: `${SITE_URL}/photo-studio`, title: 'Free Online Photo Editor — Photo Studio', description: DESC, siteName: SITE_NAME, images: [{ url: `${SITE_URL}/tools/thumbs/photo-studio.webp`, width: 960, height: 540 }] },
 };
 
 const LD = {

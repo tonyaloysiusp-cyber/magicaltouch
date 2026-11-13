@@ -9,8 +9,7 @@ const TITLE = 'Print Size & Bleed Calculator — A4 Size in Pixels, DPI';
 const DESC = 'A4 size in pixels, inches and mm at 300 DPI, plus every paper, visiting card and poster size, with 3 mm bleed and safe area. Find how big your photo can print, then design at that size.';
 export const metadata: Metadata = {
   title: fitTitle(TITLE), description: fitDescription(DESC), alternates: { canonical: `${SITE_URL}${PATH}` },
-  keywords: ['a4 size in pixels', 'print size calculator', 'bleed calculator', 'dpi calculator', 'visiting card size', 'business card size in pixels', 'poster size in pixels'],
-  openGraph: { type: 'website', url: `${SITE_URL}${PATH}`, title: TITLE, description: DESC, siteName: SITE_NAME, images: [`${SITE_URL}/api/og`] },
+  openGraph: { type: 'website', url: `${SITE_URL}${PATH}`, title: TITLE, description: DESC, siteName: SITE_NAME, images: [{ url: `${SITE_URL}/tools/thumbs/print-size.webp`, width: 960, height: 540 }] },
 };
 const FAQ: [string, string][] = [
   ['What is A4 size in pixels?', 'A4 is 210 × 297 mm: 2480 × 3508 pixels at 300 DPI, 1240 × 1754 at 150 DPI and 794 × 1123 at 96 DPI. With 3 mm bleed it is 2551 × 3579 pixels at 300 DPI.'],
@@ -27,7 +26,7 @@ const STEPS: [string, string][] = [
 const POPULAR = ['a4', 'a5', 'a3', 'a6', 'dl', 'letter', 'bc-in', 'bc-uk', 'card57', 'poster1824', 'rollup'];
 export default function Page() {
   return (
-    <ToolPage path={PATH} name="Print Size Calculator" eyebrow="Print sizes · Bleed · DPI" h1="Print size & bleed calculator" intro="Every paper, card and poster size in mm, inches and pixels at any DPI — with bleed and safe area — so your files print sharp and nothing gets cut off." description={DESC} steps={STEPS} faq={FAQ} related={RELATED_TOOLS}
+    <ToolPage image="/tools/thumbs/print-size.webp" path={PATH} name="Print Size Calculator" eyebrow="Print sizes · Bleed · DPI" h1="Print size & bleed calculator" intro="Every paper, card and poster size in mm, inches and pixels at any DPI — with bleed and safe area — so your files print sharp and nothing gets cut off." description={DESC} steps={STEPS} faq={FAQ} related={RELATED_TOOLS}
       extra={(
         <section className="mt-16" aria-labelledby="table">
           <h2 id="table" className="text-2xl font-semibold">Popular print sizes in pixels</h2>

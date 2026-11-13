@@ -16,12 +16,29 @@ import { sheetPlacements, motifPath, layout } from './patterns.ts';
 import type { PatternSettings } from './patterns.ts';
 import { pathBox } from './pathFit.ts';
 
-export type KitStyle = 'tshirt' | 'football' | 'cricket' | 'basketball';
+export type KitStyle = 'tshirt' | 'football' | 'cricket' | 'basketball' | 'polo';
 export const KIT_STYLES: { id: KitStyle; label: string; product: string }[] = [
   { id: 'football', label: 'Football jersey', product: 'jersey' },
-  { id: 'tshirt', label: 'T-shirt', product: 'jersey' },
-  { id: 'cricket', label: 'Cricket / polo shirt', product: 'polo' },
+  { id: 'cricket', label: 'Cricket jersey', product: 'polo' },
   { id: 'basketball', label: 'Basketball vest', product: 'vest' },
+  { id: 'tshirt', label: 'Round-neck T-shirt', product: 'jersey' },
+  { id: 'polo', label: 'Polo T-shirt', product: 'polo' },
+];
+
+/** Which designer a style belongs to (each has its own page). */
+export type GarmentKind = 'jersey' | 'polo' | 'tshirt';
+export const GARMENT_STYLES: Record<GarmentKind, KitStyle[]> = {
+  jersey: ['football', 'cricket', 'basketball'],
+  polo: ['polo'],
+  tshirt: ['tshirt'],
+};
+
+/** Body graphics drawn in the accent colours (on the front and back pieces). */
+export type KitGraphic = 'plain' | 'sash' | 'hoops' | 'stripes' | 'pinstripes' | 'side-panels' | 'chevron' | 'yoke' | 'split' | 'band';
+export const KIT_GRAPHICS: { id: KitGraphic; label: string }[] = [
+  { id: 'plain', label: 'Plain' }, { id: 'sash', label: 'Sash' }, { id: 'hoops', label: 'Hoops' },
+  { id: 'stripes', label: 'Stripes' }, { id: 'pinstripes', label: 'Pinstripes' }, { id: 'side-panels', label: 'Side panels' },
+  { id: 'chevron', label: 'Chevron' }, { id: 'yoke', label: 'Shoulder yoke' }, { id: 'split', label: 'Half & half' }, { id: 'band', label: 'Chest band' },
 ];
 
 export interface KitDesign {
@@ -37,15 +54,26 @@ export interface KitDesign {
   frontNumber: boolean;
   teamLogo?: string | null; sponsorLogo?: string | null; // data URLs
   teamName: string;
+  graphic?: KitGraphic; accent?: string; accent2?: string; cuffs?: boolean;
+  frontText?: string; frontTextColor?: string; frontTextMm?: number; frontTextTopMm?: number;
+  personalise?: boolean; // names and numbers per player (off: sizes and quantities only)
 }
 
 export const DEFAULT_KIT: KitDesign = {
   style: 'football', body: '#1E3A5F', sleeve: '#1E3A5F', collar: '#C9A86A', patternOn: 'body', patternOpacity: 0.35, repeatMm: 70,
   font: 'Oswald', fontWeight: 700, nameColor: '#FFFFFF', numberColor: '#FFFFFF', outlineColor: '#C9A86A', outlineMm: 2,
   nameMm: 55, numberMm: 230, nameTopMm: 95, numberTopMm: 175, frontNumber: true, teamLogo: null, sponsorLogo: null, teamName: 'My Team',
+  graphic: 'plain', accent: '#C9A86A', accent2: '#FFFFFF', cuffs: true, frontText: '', frontTextColor: '#FFFFFF', frontTextMm: 60, frontTextTopMm: 300, personalise: true,
 };
 
-export interface Player { name: string; number: string; size: string }
+/** Starting design for each designer. */
+export function kitFor(kind: GarmentKind): KitDesign {
+  if (kind === 'polo') return { ...DEFAULT_KIT, style: 'polo', body: '#FFFFFF', sleeve: '#FFFFFF', collar: '#1E3A5F', accent: '#1E3A5F', graphic: 'band', patternOn: 'none', nameColor: '#1E3A5F', numberColor: '#1E3A5F', outlineMm: 0, frontNumber: false, personalise: false, frontText: '', teamName: 'My Company' };
+  if (kind === 'tshirt') return { ...DEFAULT_KIT, style: 'tshirt', body: '#111827', sleeve: '#111827', collar: '#111827', accent: '#F59E0B', graphic: 'plain', patternOn: 'none', frontNumber: false, personalise: false, frontText: 'MAGICAL', frontTextColor: '#F59E0B', teamName: 'My T-shirt' };
+  return { ...DEFAULT_KIT };
+}
+
+export interface Player { name: string; number: string; size: string; qty?: number }
 export interface RosterIssue { row: number; level: 'error' | 'warning'; message: string }
 
 const SIZE_IDS = new Map(SIZES.map((s) => [s.label.toLowerCase().replace(/ .*/, ''), s.id] as [string, string]).concat(SIZES.map((s) => [s.id, s.id] as [string, string])));
@@ -76,11 +104,16 @@ export function parseRoster(text: string): Player[] {
   return rows.map((r) => ({ name: (r[iName] || '').slice(0, 20), number: (r[iNum] || '').replace(/[^0-9]/g, '').slice(0, 3), size: iSize >= 0 ? (r[iSize] || '') : '' }));
 }
 
-export function checkRoster(players: Player[]): RosterIssue[] {
+export function checkRoster(players: Player[], personalise = true): RosterIssue[] {
   const out: RosterIssue[] = [];
   const seen = new Map<string, number>();
   players.forEach((p, i) => {
     const row = i + 1;
+    if (!personalise) {
+      if (!sizeId(p.size)) out.push({ row, level: 'error', message: `Size “${p.size || '—'}” is not one of ${SIZES.map((s) => s.label.replace(/ .*/, '')).join(', ')}` });
+      if (!(Number(p.qty) >= 1)) out.push({ row, level: 'error', message: 'Quantity must be 1 or more' });
+      return;
+    }
     if (!p.name.trim()) out.push({ row, level: 'error', message: 'Name is missing' });
     if (!p.number.trim()) out.push({ row, level: 'error', message: 'Number is missing' });
     else if (!/^\d{1,3}$/.test(p.number)) out.push({ row, level: 'error', message: 'Number must be 1–3 digits' });
@@ -136,6 +169,50 @@ function patternPaths(p: PatternSettings, w: number, h: number, mmPerTile: numbe
 }
 
 let clipSeq = 0;
+
+/** Accent graphics for a body piece, in piece units (drawn over the bleed too; clipped by the caller). */
+export function graphicMarkup(kit: KitDesign, w: number, h: number, b: number, back: boolean): string {
+  const g = kit.graphic || 'plain';
+  const a = kit.accent || '#C9A86A', a2 = kit.accent2 || '#FFFFFF';
+  const R = (x: number, y: number, rw: number, rh: number, f = a) => `<rect x="${r2(x)}" y="${r2(y)}" width="${r2(rw)}" height="${r2(rh)}" fill="${f}"/>`;
+  const X0 = -b - 2, XW = w + 2 * b + 4;
+  switch (g) {
+    case 'sash': {
+      const bw = w * 0.24, ang = back ? 38 : -38;
+      return `<g transform="rotate(${ang} ${r2(w / 2)} ${r2(h * 0.48)})">${R(-w, h * 0.48 - bw / 2 - 10, 3 * w, 10, a2)}${R(-w, h * 0.48 - bw / 2, 3 * w, bw)}${R(-w, h * 0.48 + bw / 2, 3 * w, 10, a2)}</g>`;
+    }
+    case 'hoops': {
+      const hb = h / 10; let o = '';
+      for (let y = h * 0.16; y < h + b; y += hb * 2) o += R(X0, y, XW, hb);
+      return o;
+    }
+    case 'stripes': {
+      const sw = w / 9; let o = '';
+      for (let x = sw * 0.5; x < w + b; x += sw * 2) o += R(x, -b - 2, sw, h + 2 * b + 4);
+      return o;
+    }
+    case 'pinstripes': {
+      let o = '';
+      for (let x = 20; x < w + b; x += 40) o += R(x, -b - 2, 5, h + 2 * b + 4);
+      return o;
+    }
+    case 'side-panels':
+      return R(X0, -b - 2, w * 0.13 + b + 2, h + 2 * b + 4) + R(w * 0.87, -b - 2, w * 0.13 + b + 2, h + 2 * b + 4) + R(w * 0.13, -b - 2, 7, h + 2 * b + 4, a2) + R(w * 0.87 - 7, -b - 2, 7, h + 2 * b + 4, a2);
+    case 'chevron': {
+      const y = h * 0.27, d = h * 0.15, bw = h * 0.075;
+      const band = (y0: number, t: number, f: string) => `<path d="M${r2(X0)} ${r2(y0)}L${r2(w / 2)} ${r2(y0 + d)}L${r2(X0 + XW)} ${r2(y0)}L${r2(X0 + XW)} ${r2(y0 + t)}L${r2(w / 2)} ${r2(y0 + d + t)}L${r2(X0)} ${r2(y0 + t)}Z" fill="${f}"/>`;
+      return band(y, bw, a) + band(y + bw + 12, 12, a2);
+    }
+    case 'yoke':
+      return R(X0, -b - 2, XW, h * 0.24 + b + 2) + R(X0, h * 0.24, XW, 9, a2);
+    case 'split':
+      return back ? R(X0, -b - 2, w / 2 + b + 2, h + 2 * b + 4) : R(w / 2, -b - 2, w / 2 + b + 2, h + 2 * b + 4);
+    case 'band':
+      return R(X0, h * 0.30 - 14, XW, 8, a2) + R(X0, h * 0.30, XW, h * 0.085) + R(X0, h * 0.30 + h * 0.085 + 6, XW, 8, a2);
+    default: return '';
+  }
+}
+
 /** One garment piece in its own local units (size-M millimetres), decorated for one player. */
 export function pieceMarkup(piece: Piece, kit: KitDesign, pat: PatternSettings, player: Player | null, glyphs: Glyphs, k: number, bleed: number): string {
   const r = role(piece.id);
@@ -146,10 +223,15 @@ export function pieceMarkup(piece: Piece, kit: KitDesign, pat: PatternSettings, 
   const clip = `<clipPath id="${id}"><path d="${piece.d}" transform="translate(${r2(piece.w / 2)} ${r2(piece.h / 2)}) scale(${r2(sx * 1000) / 1000} ${r2(sy * 1000) / 1000}) translate(${r2(-piece.w / 2)} ${r2(-piece.h / 2)})"/></clipPath>`;
   const out: string[] = [clip];
   out.push(`<path d="${piece.d}" fill="${fill}" stroke="${fill}" stroke-width="${r2(2 * b)}" stroke-linejoin="round"/>`);
-  const wantPattern = kit.patternOn === 'all' || (kit.patternOn === 'body' && r === 'body') || (kit.patternOn === 'sleeves' && r === 'sleeve');
-  if (wantPattern) out.push(`<g clip-path="url(#${id})" opacity="${kit.patternOpacity}"><g transform="translate(${r2(-b)} ${r2(-b)})">${patternPaths(pat, piece.w + 2 * b, piece.h + 2 * b, kit.repeatMm, k)}</g></g>`);
   const w = piece.w;
-  if (piece.id === 'back' && player) {
+  const deco: string[] = [];
+  if (r === 'body') deco.push(graphicMarkup(kit, w, piece.h, b, piece.id === 'back'));
+  if (r === 'sleeve' && kit.cuffs && kit.graphic && kit.graphic !== 'plain') deco.push(`<rect x="${r2(-b - 2)}" y="${r2(piece.h - 34)}" width="${r2(w + 2 * b + 4)}" height="${r2(34 + b + 2)}" fill="${kit.accent || kit.collar}"/><rect x="${r2(-b - 2)}" y="${r2(piece.h - 46)}" width="${r2(w + 2 * b + 4)}" height="7" fill="${kit.accent2 || '#FFFFFF'}"/>`);
+  const wantPattern = kit.patternOn === 'all' || (kit.patternOn === 'body' && r === 'body') || (kit.patternOn === 'sleeves' && r === 'sleeve');
+  if (wantPattern) deco.push(`<g opacity="${kit.patternOpacity}"><g transform="translate(${r2(-b)} ${r2(-b)})">${patternPaths(pat, piece.w + 2 * b, piece.h + 2 * b, kit.repeatMm, k)}</g></g>`);
+  if (deco.some(Boolean)) out.push(`<g clip-path="url(#${id})">${deco.join('')}</g>`);
+  const personal = kit.personalise !== false;
+  if (piece.id === 'back' && player && personal) {
     out.push(textMarkup(player.name.toUpperCase(), glyphs, kit, kit.nameColor, w / 2, kit.nameTopMm + kit.nameMm / 2, kit.nameMm, w * 0.78, k));
     out.push(textMarkup(player.number, glyphs, kit, kit.numberColor, w / 2, kit.numberTopMm + kit.numberMm / 2, kit.numberMm, w * 0.7, k));
   }
@@ -157,7 +239,8 @@ export function pieceMarkup(piece: Piece, kit: KitDesign, pat: PatternSettings, 
     const logo = (href: string, x: number, y: number, bw: number, bh: number) => `<image href="${href}" x="${r2(x)}" y="${r2(y)}" width="${r2(bw)}" height="${r2(bh)}" preserveAspectRatio="xMidYMid meet"/>`;
     if (kit.teamLogo) out.push(logo(kit.teamLogo, w * 0.62, 125, 85, 85));
     if (kit.sponsorLogo) out.push(logo(kit.sponsorLogo, w * 0.2, 260, w * 0.6, 120));
-    if (kit.frontNumber && player) out.push(textMarkup(player.number, glyphs, kit, kit.numberColor, w * 0.3, 168, 80, 110, k));
+    if (kit.frontText && kit.frontText.trim()) { const fh = kit.frontTextMm || 60; out.push(textMarkup(kit.frontText.trim(), glyphs, { ...kit, outlineMm: 0 }, kit.frontTextColor || '#FFFFFF', w / 2, (kit.frontTextTopMm || 300) + fh / 2, fh, w * 0.72, k)); }
+    if (kit.frontNumber && player && personal) out.push(textMarkup(player.number, glyphs, kit, kit.numberColor, w * 0.3, 168, 80, 110, k));
   }
   return out.join('');
 }
@@ -176,6 +259,51 @@ export function kitPreviewSvg(kit: KitDesign, pat: PatternSettings, player: Play
   });
   const lab = `<text x="${front.w / 2}" y="-14" text-anchor="middle" font-size="22" fill="#888" font-family="sans-serif">FRONT</text><text x="${front.w + gap + back.w / 2}" y="-14" text-anchor="middle" font-size="22" fill="#888" font-family="sans-serif">BACK</text>`;
   return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="-20 -50 ${W + 40} ${H + 70}">${lab}${body}</svg>`;
+}
+
+/**
+ * Realistic front and back view of the finished garment (sleeves attached,
+ * collar, soft shading) for the on-screen preview. Same artwork as the print
+ * pieces; only the sleeves are folded the way they hang when worn.
+ */
+export function kitMockupSvg(kit: KitDesign, pat: PatternSettings, player: Player | null, glyphs: Glyphs, view: 'both' | 'front' | 'back' = 'both'): string {
+  const product = kitProduct(kit);
+  const k = SIZES.find((s) => s.id === sizeId(player?.size || 'M'))?.k || 1;
+  const front = product.pieces.find((p) => p.id === 'front')!, back = product.pieces.find((p) => p.id === 'back')!;
+  const sleeve = product.pieces.find((p) => p.id === 'sleeve-l');
+  const W = front.w;
+  const sid = `mk${++clipSeq}`;
+  // Folded sleeve outline (left side, in body units) and how the sleeve piece sits in it.
+  const sleevePoly = 'M60 30L-142 150L-62 278L30 262Z';
+  const sleeveAt = 'translate(-100 212) rotate(57.4) translate(-220 -228)';
+  const sleeves = (_isBack: boolean) => {
+    if (!sleeve) return '';
+    const one = `<g clip-path="url(#${sid}-sl)"><path d="${sleevePoly}" fill="${kit.sleeve}"/><g transform="${sleeveAt}">${pieceMarkup(sleeve, kit, pat, player, glyphs, k, 0)}</g><path d="${sleevePoly}" fill="url(#${sid}-sh)" opacity="0.5"/></g>`;
+    return `${one}<g transform="translate(${W} 0) scale(-1 1)">${one}</g>`;
+  };
+  const neck = (p: Piece) => p.d.match(/^M[^L]*?(?=L)/)?.[0] || '';
+  const view1 = (piece: Piece, isBack: boolean) => {
+    const inner = isBack ? "" : `<path d="${neck(piece)}Z" fill="${shade(kit.body, -0.45)}"/>`;
+    const collar = product.id === 'polo'
+      ? `<path d="M250 80L250 232L310 232L310 80Z" fill="${kit.collar}" opacity="${isBack ? 0 : 1}"/><path d="${isBack ? 'M185 -6C215 26 345 26 375 -6L372 -26C340 -2 220 -2 188 -26Z' : 'M190 -4L252 84L226 104L160 26ZM370 -4L308 84L334 104L400 26Z'}" fill="${kit.collar}" stroke="${shade(kit.collar, -0.25)}" stroke-width="2"/>`
+      : `<path d="${neck(piece)}" fill="none" stroke="${kit.collar}" stroke-width="${product.id === 'vest' ? 14 : 20}" stroke-linecap="round"/>`;
+    const arm = product.id === 'vest' ? `<path d="M95 0C95 120 65 185 0 225M465 0C465 120 495 185 560 225" fill="none" stroke="${kit.collar}" stroke-width="12" stroke-linecap="round"/>` : '';
+    return `${sleeves(isBack)}${inner}<g>${pieceMarkup(piece, kit, pat, player, glyphs, k, 0)}</g><path d="${piece.d}" fill="url(#${sid}-sh)" opacity="0.55"/>${arm}${collar}<path d="${piece.d}" fill="none" stroke="#000" stroke-opacity="0.12" stroke-width="2"/>`;
+  };
+  const defs = `<defs><clipPath id="${sid}-sl"><path d="${sleevePoly}"/></clipPath><linearGradient id="${sid}-sh" x1="0" x2="1" y1="0" y2="0"><stop offset="0" stop-color="#000" stop-opacity="0.22"/><stop offset="0.18" stop-color="#000" stop-opacity="0"/><stop offset="0.5" stop-color="#fff" stop-opacity="0.10"/><stop offset="0.82" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity="0.22"/></linearGradient></defs>`;
+  const pad = sleeve ? 170 : 30, gap = 120, H = Math.max(front.h, back.h);
+  const views: [Piece, boolean, string][] = view === 'front' ? [[front, false, 'FRONT']] : view === 'back' ? [[back, true, 'BACK']] : [[front, false, 'FRONT'], [back, true, 'BACK']];
+  const cell = W + 2 * pad;
+  const body = views.map(([pc, isB, lab], i) => `<g transform="translate(${pad + i * (cell + gap)} 40)">${view1(pc, isB)}<text x="${W / 2}" y="${H + 60}" text-anchor="middle" font-size="24" letter-spacing="4" fill="#8A8F98" font-family="Arial, sans-serif">${lab}</text></g>`).join('');
+  const TW = views.length * cell + (views.length - 1) * gap;
+  return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${TW} ${H + 120}">${defs}${body}</svg>`;
+}
+
+/** Lighter (amt > 0) or darker (amt < 0) version of a hex colour. */
+export function shade(hex: string, amt: number): string {
+  const h = hex.replace('#', '').padEnd(6, '0');
+  const c = [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16) || 0).map((v) => Math.round(amt < 0 ? v * (1 + amt) : v + (255 - v) * amt));
+  return '#' + c.map((v) => Math.max(0, Math.min(255, v)).toString(16).padStart(2, '0')).join('');
 }
 
 /**
@@ -199,11 +327,79 @@ export function playerPrintSvg(kit: KitDesign, pat: PatternSettings, player: Pla
   return { svg, width: W, height, placed };
 }
 
+export interface SheetOptions { rollW: number; bleed: number; gap?: number; pageMm?: number; cutLines: boolean; group?: 'player' | 'fabric'; mirror?: boolean; px?: boolean }
+export interface SheetPage { svg: string; width: number; height: number; pieces: number }
+
+/** The garments to print: one per player, or (not personalised) one per quantity of each size. */
+export function printList(players: Player[], kit: KitDesign): Player[] {
+  if (kit.personalise !== false) return players;
+  const out: Player[] = [];
+  for (const p of players) for (let i = 0; i < Math.max(0, Math.min(500, Math.round(Number(p.qty) || 0))); i++) out.push({ name: '', number: '', size: p.size });
+  return out;
+}
+
+/**
+ * Every selected player's pieces nested together on the roll — one print
+ * file for the whole order. Pieces keep their player's size, name and number
+ * and get a small label (player · size · piece) in the gap above them. When
+ * the run is longer than `pageMm`, it continues on the next PDF page.
+ */
+export function rosterSheets(kit: KitDesign, pat: PatternSettings, players: Player[], glyphs: Glyphs, o: SheetOptions): { pages: SheetPage[]; totalMm: number; tooWide: number } {
+  const product = kitProduct(kit);
+  const gap = o.gap ?? 15, bleed = o.bleed, rollW = o.rollW, pageMax = Math.max(500, o.pageMm || 5000);
+  type It = { piece: Piece; w: number; h: number; k: number; copy: number; player: Player; idx: number; rot?: boolean; tooWide?: boolean };
+  const items: It[] = [];
+  players.forEach((pl, idx) => {
+    const k = SIZES.find((s) => s.id === sizeId(pl.size))?.k || 1;
+    for (const pc of product.pieces) for (let c = 0; c < pc.qty; c++) items.push({ piece: pc, w: pc.w * k, h: pc.h * k, k, copy: c, player: pl, idx });
+  });
+  const room = rollW - 2 * gap - 2 * bleed;
+  for (const it of items) if (it.w > room) { if (it.h <= room) { const t = it.w; it.w = it.h; it.h = t; it.rot = true; } else it.tooWide = true; }
+  if (o.group === 'fabric') items.sort((a, b) => b.h - a.h || b.w - a.w);
+  else items.sort((a, b) => a.idx - b.idx || b.h - a.h || b.w - a.w);
+  const LAB = 9; // label line above each piece
+  const pages: { placed: (Placed & { player: Player; idx: number })[]; height: number }[] = [];
+  let cur: (Placed & { player: Player; idx: number })[] = [];
+  let x = gap, y = gap, rowH = 0, lastIdx = -1;
+  const close = () => { pages.push({ placed: cur, height: Math.ceil(y + rowH + gap) }); cur = []; x = gap; y = gap; rowH = 0; };
+  for (const it of items) {
+    const Wd = it.w + 2 * bleed, Hd = it.h + 2 * bleed + LAB;
+    const newRow = (x + Wd + gap > rollW && x > gap) || (o.group !== 'fabric' && lastIdx >= 0 && it.idx !== lastIdx && x > gap);
+    if (newRow) { x = gap; y += rowH + gap; rowH = 0; }
+    if (y + Hd + gap > pageMax && cur.length) close();
+    cur.push({ piece: it.piece, x: x + bleed, y: y + LAB + bleed, w: it.w, h: it.h, k: it.k, copy: it.copy, rot: it.rot, tooWide: it.tooWide, player: it.player, idx: it.idx });
+    x += Wd + gap; rowH = Math.max(rowH, Hd); lastIdx = it.idx;
+  }
+  if (cur.length) close();
+  const personal = kit.personalise !== false;
+  const out: SheetPage[] = pages.map((pg, n) => {
+    const H = pg.height + 14;
+    const flip = o.mirror ? ` transform="translate(${rollW} 0) scale(-1 1)"` : '';
+    const parts = pg.placed.map((pl) => `<g transform="${pieceTransform(pl)}">${pieceMarkup(pl.piece, kit, pat, pl.player, glyphs, pl.k, bleed)}</g>`).join('');
+    const cuts = o.cutLines ? `<g id="cut-lines" fill="none" stroke="#EC008C" stroke-width="0.5"${flip}>${pg.placed.map((pl) => `<path d="${pl.piece.d}" transform="${pieceTransform(pl)}" vector-effect="non-scaling-stroke"/>`).join('')}</g>` : '';
+    const sz = (pl: Player) => (SIZES.find((s) => s.id === sizeId(pl.size))?.label || pl.size).replace(/ .*/, '');
+    const labels = `<g id="labels" font-family="Arial, Helvetica, sans-serif" font-size="6.5" fill="#444">${pg.placed.map((pl) => {
+      const who = personal ? `${pl.idx + 1}. ${pl.player.name.toUpperCase()} #${pl.player.number}` : `${pl.idx + 1}.`;
+      const lx = o.mirror ? rollW - pl.x - pl.w : pl.x;
+      return `<text x="${r2(lx - bleed)}" y="${r2(pl.y - bleed - 2.5)}">${esc(`${who} · ${sz(pl.player)} · ${pl.piece.label}${pl.piece.qty > 1 ? ` ${pl.copy + 1}` : ''}${pl.rot ? ' · turned' : ''}${pl.tooWide ? ' · WIDER THAN ROLL' : ''}`)}</text>`;
+    }).join('')}</g>`;
+    const foot = `<text x="${gap}" y="${H - 5}" font-family="Arial, Helvetica, sans-serif" font-size="7" fill="#666">${esc(`${kit.teamName} · ${product.label} · ${players.length} garments · page ${n + 1} of ${pages.length} · roll ${rollW} mm · bleed ${bleed} mm${o.mirror ? ' · mirrored' : ''} · print at 100%`)}</text>`;
+    const inner = `<g id="print"${flip}>${parts}</g>${cuts}${labels}${foot}`;
+    const unit = o.px ? 96 / 25.4 : 1;
+    const svg = o.px
+      ? `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${r2(rollW * unit)}" height="${r2(H * unit)}" viewBox="0 0 ${r2(rollW * unit)} ${r2(H * unit)}"><g transform="scale(${unit})">${inner}</g></svg>`
+      : `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${rollW}mm" height="${H}mm" viewBox="0 0 ${rollW} ${H}">${inner}</svg>`;
+    return { svg, width: rollW, height: H, pieces: pg.placed.length };
+  });
+  return { pages: out, totalMm: out.reduce((a, p) => a + p.height, 0), tooWide: items.filter((i) => i.tooWide).length };
+}
+
 /** Every distinct string that needs a letter outline for this roster. */
 export function glyphTexts(players: Player[], kit: KitDesign): string[] {
   const s = new Set<string>();
   for (const p of players) { if (p.name.trim()) s.add(p.name.toUpperCase()); if (p.number) s.add(p.number); }
-  if (kit.frontNumber) for (const p of players) if (p.number) s.add(p.number);
+  if (kit.personalise === false) s.clear();
+  if (kit.frontText && kit.frontText.trim()) s.add(kit.frontText.trim());
   return [...s];
 }
 

@@ -9,8 +9,7 @@ const TITLE = 'Passport & Visa Photo Maker — All Countries, Exact KB & Pixels'
 const DESC = 'Free passport, visa and exam photo maker: white background, exact size for India, US, UK, Canada, Schengen, UAE, China and 40+ countries, online-upload files at the right pixels and KB (DS-160 600×600 under 240 KB, e-Visa, OCI, UPSC), plus 4×6 or A4 print sheets.';
 export const metadata: Metadata = {
   title: fitTitle(TITLE), description: fitDescription(DESC), alternates: { canonical: `${SITE_URL}${PATH}` },
-  keywords: ['passport size photo maker', 'passport photo online', 'visa photo maker', 'passport size photo 35x45', '2x2 photo maker', 'DS-160 photo 600x600', 'photo resize to 50 kb', 'photo under 240 kb', 'UPSC photo resize', 'OCI photo', 'India e-visa photo', 'passport photo white background', 'passport photo sheet 4x6', 'UK passport photo online'],
-  openGraph: { type: 'website', url: `${SITE_URL}${PATH}`, title: TITLE, description: DESC, siteName: SITE_NAME, images: [`${SITE_URL}/api/og`] },
+  openGraph: { type: 'website', url: `${SITE_URL}${PATH}`, title: TITLE, description: DESC, siteName: SITE_NAME, images: [{ url: `${SITE_URL}/tools/thumbs/passport.webp`, width: 960, height: 540 }] },
 };
 
 const FAQ: [string, string][] = [
@@ -32,7 +31,7 @@ const STEPS: [string, string][] = [
 
 export default function Page() {
   return (
-    <ToolPage path={PATH} name="Passport Photo Maker" eyebrow="Passport & visa photos" h1="Passport size photo maker" intro="Pick the country and what the photo is for — passport, visa, ID or exam form. Get a clean white background, the head sized to the official range, and a file at the exact pixels and KB the portal accepts, or a print sheet. Free and private." description={DESC} steps={STEPS} faq={FAQ} related={RELATED_TOOLS}
+    <ToolPage image="/tools/thumbs/passport.webp" path={PATH} name="Passport Photo Maker" eyebrow="Passport & visa photos" h1="Passport size photo maker" intro="Pick the country and what the photo is for — passport, visa, ID or exam form. Get a clean white background, the head sized to the official range, and a file at the exact pixels and KB the portal accepts, or a print sheet. Free and private." description={DESC} steps={STEPS} faq={FAQ} related={RELATED_TOOLS}
       extra={(
         <section className="mt-16" aria-labelledby="sizes">
           <h2 id="sizes" className="text-2xl font-semibold">Passport, visa and exam photo sizes by country</h2>

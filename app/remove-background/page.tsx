@@ -13,9 +13,8 @@ const URL = `${SITE_URL}/remove-background`;
 export const metadata: Metadata = {
   title: fitTitle(`${TITLE}`),
   description: fitDescription(DESC),
-  keywords: ['remove background', 'background remover', 'free background remover', 'remove bg', 'transparent background', 'bulk background removal', 'remove background from image', 'png maker', 'magical touch design'],
   alternates: { canonical: URL },
-  openGraph: { type: 'website', url: URL, title: TITLE, description: DESC, siteName: SITE_NAME, images: [`${SITE_URL}/api/og`] },
+  openGraph: { type: 'website', url: URL, title: TITLE, description: DESC, siteName: SITE_NAME, images: [{ url: `${SITE_URL}/tools/thumbs/remove-background.webp`, width: 960, height: 540 }] },
   twitter: { card: 'summary_large_image', title: TITLE, description: DESC },
 };
 

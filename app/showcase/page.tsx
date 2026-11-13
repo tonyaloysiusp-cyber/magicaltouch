@@ -10,7 +10,7 @@ export const revalidate = 600;
 
 export const metadata: Metadata = {
   title: fitTitle('Showcase — Posters, Videos & Free Template Designs'),
-  description: fitDescription('Posters, videos and design ideas from Magical Touch Design — the free online design tool with thousands of editable templates. #magicaltouchdesign #graphicdesign #onlinedesigntool'),
+  description: fitDescription('Posters, videos and design ideas from Magical Touch Design — the free online design tool with thousands of editable templates.'),
   alternates: { canonical: `${SITE_URL}/showcase` },
   openGraph: { type: 'website', url: `${SITE_URL}/showcase`, title: `Showcase | ${SITE_NAME}`, siteName: SITE_NAME, images: [`${SITE_URL}/api/og`] },
 };

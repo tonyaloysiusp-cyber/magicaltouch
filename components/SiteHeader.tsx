@@ -29,49 +29,46 @@ const TABS: { id: SiteTab; label: string; href: string }[] = [
 // The "Tools" menu: every tool from the shared list, grouped, plus All tools.
 const MENU = TOOL_CATEGORIES.map((c) => ({ ...c, tools: CATALOG.filter((t) => t.category === c.id) }));
 
+// "Tools" opens the Tools page on click or tap. With a mouse, hovering also
+// shows a quick menu of the tools by group (never on touch screens).
 function ToolsMenu({ active }: { active: boolean }) {
   const [open, setOpen] = useState(false);
-  const box = useRef<HTMLDivElement>(null);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     if (!open) return;
-    const away = (e: PointerEvent) => box.current && !box.current.contains(e.target as Node) && setOpen(false);
     const key = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false);
-    document.addEventListener('pointerdown', away);
     window.addEventListener('keydown', key);
-    return () => { document.removeEventListener('pointerdown', away); window.removeEventListener('keydown', key); };
+    return () => window.removeEventListener('keydown', key);
   }, [open]);
+  const enter = (e: React.PointerEvent) => { if (e.pointerType !== 'mouse') return; if (timer.current) clearTimeout(timer.current); timer.current = setTimeout(() => setOpen(true), 120); };
+  const leave = () => { if (timer.current) clearTimeout(timer.current); setOpen(false); };
   return (
-    <div ref={box} className="relative" onMouseLeave={() => setOpen(false)}>
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        onMouseEnter={() => setOpen(true)}
-        aria-expanded={open}
-        aria-haspopup="menu"
+    <div className="relative" onPointerEnter={enter} onPointerLeave={leave}>
+      <Link
+        href="/tools"
+        onClick={() => setOpen(false)}
+        aria-current={active ? 'page' : undefined}
         className={`relative text-sm font-medium px-3 py-2 rounded-full transition-colors inline-flex items-center gap-1 ${active || open ? 'text-mt-ink bg-mt-surface2' : 'text-mt-muted hover:text-mt-ink'}`}
       >
         Tools <ChevronDown size={14} className={`transition-transform ${open ? 'rotate-180' : ''}`} aria-hidden />
-      </button>
+      </Link>
       {open && (
-        <div role="menu" className="absolute left-1/2 -translate-x-1/2 top-full pt-2 w-[560px] max-w-[92vw]">
+        <div role="menu" className="absolute left-1/2 -translate-x-1/2 top-full pt-2 w-[620px] max-w-[92vw]">
           <div className="rounded-2xl border border-mt-border bg-mt-surface shadow-[0_18px_40px_-12px_rgba(9,9,11,0.25)] p-3">
-            <div className="grid grid-cols-2 gap-x-2 gap-y-3">
+            <div className="grid grid-cols-3 gap-x-2 gap-y-3">
               {MENU.map((g) => (
                 <div key={g.id}>
-                  <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-mt-faint">{g.label}</p>
+                  <p className="px-2.5 pb-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-mt-faint">{g.label}</p>
                   {g.tools.map((t) => (
-                    <Link key={t.href} role="menuitem" href={t.href} onClick={() => { rememberTool(t.id); setOpen(false); }} className="flex items-start gap-3 rounded-xl px-3 py-2 hover:bg-mt-surface2">
-                      <span className="mt-0.5 w-8 h-8 shrink-0 rounded-lg text-white inline-flex items-center justify-center" style={{ background: t.tint }}><ToolIcon name={t.icon} size={16} /></span>
-                      <span className="min-w-0">
-                        <span className="block text-[14px] font-semibold text-mt-ink">{t.title}{t.isNew && <span className="ml-1.5 align-middle rounded-full bg-mt-surface2 px-1.5 py-px text-[10px] font-semibold text-mt-muted">New</span>}</span>
-                        <span className="block text-[12px] text-mt-muted">{t.hint}</span>
-                      </span>
+                    <Link key={t.href} role="menuitem" href={t.href} onClick={() => { rememberTool(t.id); setOpen(false); }} className="flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 hover:bg-mt-surface2">
+                      <span className="w-6 h-6 shrink-0 rounded-md text-white inline-flex items-center justify-center" style={{ background: t.tint }}><ToolIcon name={t.icon} size={13} /></span>
+                      <span className="text-[13px] font-medium text-mt-ink truncate">{t.title}</span>
                     </Link>
                   ))}
                 </div>
               ))}
             </div>
-            <Link role="menuitem" href="/tools" onClick={() => setOpen(false)} className="mt-2 flex items-center justify-center gap-2 rounded-xl border border-mt-border px-3 py-2.5 text-[14px] font-semibold hover:bg-mt-surface2"><LayoutGrid size={16} /> All tools — search and browse</Link>
+            <Link role="menuitem" href="/tools" onClick={() => setOpen(false)} className="mt-2 flex items-center justify-center gap-2 rounded-xl border border-mt-border px-3 py-2 text-[13.5px] font-semibold hover:bg-mt-surface2"><LayoutGrid size={15} /> All tools</Link>
           </div>
         </div>
       )}
@@ -198,18 +195,13 @@ export function SiteHeader({
         <div id="site-menu" className="lg:hidden border-t border-mt-border bg-mt-bg h-[calc(100dvh-4rem)] overflow-y-auto">
           <div className="mt-container py-4 flex flex-col">
             <button onClick={create} className="py-3 text-left text-[17px] font-medium text-mt-ink border-b border-mt-border">Create a design</button>
+            <Link href="/tools" onClick={() => setOpen(false)} aria-current={active === 'tools' ? 'page' : undefined} className={`py-3 flex items-center justify-between text-[17px] font-medium border-b border-mt-border ${active === 'tools' ? 'text-mt-ink' : 'text-mt-muted'}`}>Tools <span className="text-[13px] text-mt-faint">{CATALOG.length} free tools</span></Link>
+            <Link href="/photo-studio" onClick={() => setOpen(false)} className="py-3 text-[17px] font-medium text-mt-muted border-b border-mt-border">Photo Studio</Link>
             {TABS.map((t) => (
               <Link key={t.id} href={t.href} onClick={() => setOpen(false)} aria-current={active === t.id ? 'page' : undefined} className={`py-3 text-[17px] font-medium border-b border-mt-border ${active === t.id ? 'text-mt-ink' : 'text-mt-muted'}`}>
                 {t.label}
               </Link>
             ))}
-            <p className="pt-5 pb-1 text-[12px] font-semibold uppercase tracking-wide text-mt-faint">Free tools</p>
-            {CATALOG.map((t) => (
-              <Link key={t.href} href={t.href} onClick={() => { rememberTool(t.id); setOpen(false); }} className="py-3 flex items-center gap-3 text-[17px] font-medium text-mt-ink border-b border-mt-border">
-                <span className="text-mt-muted"><ToolIcon name={t.icon} size={17} /></span> {t.title}
-              </Link>
-            ))}
-            <Link href="/tools" onClick={() => setOpen(false)} className="py-3 flex items-center gap-3 text-[17px] font-semibold text-mt-ink border-b border-mt-border"><span className="text-mt-muted"><LayoutGrid size={17} /></span> All tools</Link>
             <Link href="/contact" onClick={() => setOpen(false)} className="py-3 text-[17px] font-medium text-mt-muted border-b border-mt-border">Contact</Link>
             <div className="mt-5 grid gap-2 sm:grid-cols-2">
               <Link href={loggedIn ? '/dashboard' : '/login'} onClick={() => setOpen(false)} className="h-12 inline-flex items-center justify-center rounded-full border border-mt-border text-[15px] font-semibold text-mt-ink">

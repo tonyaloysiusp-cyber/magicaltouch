@@ -8,13 +8,14 @@ import { SITE_URL, SITE_NAME, fitTitle, fitDescription } from '@/lib/seo';
 
 // One place for every creative tool: standalone tools and what the editor
 // can do. (Landing pages for “flyer maker” etc. live on /free-design-tools.)
-const TITLE = 'Creative Tools — Vector, Photo, Pattern & Colour';
-const DESC = 'Free design tools in one place: image to vector, pattern maker, colour palettes, passport photo maker, rangoli maker, gradient backgrounds, print size calculator, photo editor and background remover.';
+const TITLE = 'Free Online Design Tools — Jersey, T-shirt, Pattern, Photo & Vector';
+const DESC = 'Every free Magical Touch Design tool in one place: jersey, polo and T-shirt designers with print-ready PDFs, wall posters and wallpaper, pattern maker, image to vector, background remover, photo editor, passport photos and colour palettes.';
 const URL = `${SITE_URL}/tools`;
 
 export const metadata: Metadata = {
   title: fitTitle(TITLE), description: fitDescription(DESC), alternates: { canonical: URL },
   openGraph: { type: 'website', url: URL, title: TITLE, description: DESC, siteName: SITE_NAME, images: [`${SITE_URL}/api/og`] },
+  twitter: { card: 'summary_large_image', title: TITLE, description: DESC },
 };
 
 const EDITOR: { icon: any; title: string; body: string }[] = [

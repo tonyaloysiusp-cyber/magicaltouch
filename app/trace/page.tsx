@@ -9,7 +9,7 @@ const URL = `${SITE_URL}/trace`;
 
 export const metadata: Metadata = {
   title: fitTitle(TITLE), description: fitDescription(DESC), alternates: { canonical: URL },
-  openGraph: { type: 'website', url: URL, title: TITLE, description: DESC, siteName: SITE_NAME, images: [`${SITE_URL}/api/og`] },
+  openGraph: { type: 'website', url: URL, title: TITLE, description: DESC, siteName: SITE_NAME, images: [{ url: `${SITE_URL}/tools/thumbs/trace.webp`, width: 960, height: 540 }] },
 };
 
 const FAQ: [string, string][] = [

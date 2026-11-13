@@ -10,7 +10,7 @@ export const revalidate = 3600;
 export const dynamicParams = true;
 export const preferredRegion = 'bom1';
 
-const MIN_INDEX = 6; // fewer templates than this: page works but stays out of Google
+const MIN_INDEX = 12; // fewer templates than this: page works but stays out of Google
 
 const clean = (s: string) => decodeURIComponent(s).toLowerCase().replace(/[^a-z0-9]/g, '');
 

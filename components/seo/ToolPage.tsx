@@ -11,10 +11,14 @@ import { SITE_URL, SITE_NAME } from '@/lib/seo';
 export interface ToolPageProps {
   path: string; name: string; eyebrow: string; h1: string; intro: string; description: string;
   steps: [string, string][]; faq: [string, string][]; related: { href: string; label: string }[];
-  extra?: ReactNode; children: ReactNode;
+  extra?: ReactNode; children: ReactNode; image?: string;
 }
 
 export const RELATED_TOOLS: { href: string; label: string }[] = [
+  { href: '/custom-jersey-designer', label: 'Custom jersey designer' },
+  { href: '/polo-shirt-designer', label: 'Polo T-shirt designer' },
+  { href: '/custom-t-shirt-designer', label: 'Custom T-shirt designer' },
+  { href: '/wall-designer', label: 'Wall poster & wallpaper designer' },
   { href: '/trace', label: 'Image to vector (Image Trace)' },
   { href: '/patterns', label: 'Seamless pattern maker' },
   { href: '/colours', label: 'Colour palette generator' },
@@ -30,7 +34,7 @@ export const RELATED_TOOLS: { href: string; label: string }[] = [
 export function ToolPage(p: ToolPageProps) {
   const url = `${SITE_URL}${p.path}`;
   const ld = [
-    { '@context': 'https://schema.org', '@type': 'SoftwareApplication', name: `${p.name} — ${SITE_NAME}`, applicationCategory: 'DesignApplication', operatingSystem: 'Any (web browser)', url, description: p.description, offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' }, publisher: { '@type': 'Organization', name: SITE_NAME, url: SITE_URL } },
+    { '@context': 'https://schema.org', '@type': 'WebApplication', name: `${p.name} — ${SITE_NAME}`, applicationCategory: 'DesignApplication', operatingSystem: 'Any (web browser)', browserRequirements: 'Requires JavaScript and a modern browser', isAccessibleForFree: true, url, description: p.description, ...(p.image ? { image: `${SITE_URL}${p.image}`, screenshot: `${SITE_URL}${p.image}` } : {}), offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' }, publisher: { '@type': 'Organization', name: SITE_NAME, url: SITE_URL } },
     { '@context': 'https://schema.org', '@type': 'HowTo', name: p.h1, step: p.steps.map(([name, text], i) => ({ '@type': 'HowToStep', position: i + 1, name, text })) },
     { '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: p.faq.map(([q, a]) => ({ '@type': 'Question', name: q, acceptedAnswer: { '@type': 'Answer', text: a } })) },
     { '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: [{ '@type': 'ListItem', position: 1, name: 'Home', item: SITE_URL }, { '@type': 'ListItem', position: 2, name: 'Tools', item: `${SITE_URL}/tools` }, { '@type': 'ListItem', position: 3, name: p.name, item: url }] },

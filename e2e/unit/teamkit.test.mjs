@@ -53,3 +53,32 @@ test('letters fit the height, or the width when long', () => {
   const a = placedText(box, 0, 0, 40, 1000); assert.ok(Math.abs(pathBox(box).h * a.s - 40) < 0.01);
   const b = placedText(long, 0, 0, 40, 300); assert.ok(Math.abs(pathBox(long).w * b.s - 300) < 0.01);
 });
+
+test('one print file for the whole roster: every piece, grouped by player, split into pages', async () => {
+  const { rosterSheets, printList, kitFor, kitMockupSvg, graphicMarkup } = await import('../../lib/teamKit.ts');
+  const glyphs = { ARUN: box, '7': box, JOHN: box, '23': box, KUMAR: box, '10': box };
+  const roster = [{ name: 'Arun', number: '7', size: 'S' }, { name: 'John', number: '23', size: 'XL' }, { name: 'Kumar', number: '10', size: 'M' }];
+  const r = rosterSheets(DEFAULT_KIT, pat, roster, glyphs, { rollW: 1600, bleed: 10, cutLines: true, pageMm: 5000 });
+  assert.equal(r.pages.length, 1);
+  assert.equal(r.pages[0].pieces, 15, '5 jersey pieces × 3 players');
+  assert.match(r.pages[0].svg, /width="1600mm"/);
+  assert.match(r.pages[0].svg, /1\. ARUN #7 · S · Back/);
+  assert.match(r.pages[0].svg, /2\. JOHN #23 · XL · Front/);
+  assert.match(r.pages[0].svg, /3 garments · page 1 of 1/);
+  const small = rosterSheets(DEFAULT_KIT, pat, roster, glyphs, { rollW: 1600, bleed: 10, cutLines: true, pageMm: 1000 });
+  assert.ok(small.pages.length > 1, 'long runs continue on more pages');
+  assert.ok(small.pages.every((p) => p.height <= 1000 + 14));
+  assert.equal(small.pages.reduce((a, p) => a + p.pieces, 0), 15);
+  // Not personalised: sizes × quantities, no names.
+  const tee = kitFor('tshirt');
+  const list = printList([{ name: '', number: '', size: 'M', qty: 3 }, { name: '', number: '', size: 'L', qty: 2 }], tee);
+  assert.equal(list.length, 5);
+  assert.deepEqual(checkRoster([{ name: '', number: '', size: 'M', qty: 3 }], false), []);
+  assert.ok(checkRoster([{ name: '', number: '', size: 'M', qty: 0 }], false).length === 1);
+  const t = rosterSheets(tee, pat, list, { MAGICAL: box }, { rollW: 1600, bleed: 10, cutLines: false });
+  assert.equal(t.pages.reduce((a, p) => a + p.pieces, 0), 25);
+  assert.ok(!/#undefined/.test(t.pages[0].svg));
+  // Graphics and mockup render without errors.
+  for (const g of ['sash', 'hoops', 'stripes', 'pinstripes', 'side-panels', 'chevron', 'yoke', 'split', 'band']) assert.ok(graphicMarkup({ ...DEFAULT_KIT, graphic: g }, 560, 740, 10, false).length > 20, g);
+  assert.match(kitMockupSvg({ ...DEFAULT_KIT, graphic: 'sash' }, pat, roster[0], glyphs), /FRONT[\s\S]*BACK/);
+});

@@ -6,10 +6,10 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ArrowUpRight, Blend, Clock, Crop, Eraser, Flower2, Grid3x3, LayoutTemplate, Palette, PenTool, Ruler, ScanFace, Search, Shirt, Sparkles, Star, X } from 'lucide-react';
+import { ArrowUpRight, Blend, Clock, Crop, Eraser, Flower2, Grid3x3, LayoutTemplate, Palette, PenTool, Ruler, ScanFace, Search, Shirt, Sparkles, Star, X, Frame } from 'lucide-react';
 import { RECOMMENDED, TOOLS, TOOL_CATEGORIES, ToolCategory, ToolEntry, readRecent, rememberTool, searchTools } from '@/lib/toolsCatalog';
 
-const ICONS: Record<string, typeof Sparkles> = { LayoutTemplate, Crop, Eraser, PenTool, Grid3x3, Palette, ScanFace, Flower2, Blend, Ruler, Shirt };
+const ICONS: Record<string, typeof Sparkles> = { LayoutTemplate, Crop, Eraser, PenTool, Grid3x3, Palette, ScanFace, Flower2, Blend, Ruler, Shirt, Frame };
 
 export function ToolIcon({ name, size = 22 }: { name: string; size?: number }) {
   const I = ICONS[name] || Sparkles;

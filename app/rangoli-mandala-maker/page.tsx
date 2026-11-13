@@ -8,8 +8,7 @@ const TITLE = 'Rangoli Design Maker & Mandala Generator — Free Online';
 const DESC = 'Create rangoli designs and mandalas online free in a few guided steps: pick a Diwali, floral or geometric starting design, choose 4- to 24-fold symmetry, add petals, dots, lines and borders, recolour, and download SVG, vector PDF, PNG or JPEG.';
 export const metadata: Metadata = {
   title: fitTitle(TITLE), description: fitDescription(DESC), alternates: { canonical: `${SITE_URL}${PATH}` },
-  keywords: ['rangoli design maker', 'rangoli designs', 'mandala maker', 'mandala generator', 'diwali rangoli', 'kolam design', 'mandala art online'],
-  openGraph: { type: 'website', url: `${SITE_URL}${PATH}`, title: TITLE, description: DESC, siteName: SITE_NAME, images: [`${SITE_URL}/api/og`] },
+  openGraph: { type: 'website', url: `${SITE_URL}${PATH}`, title: TITLE, description: DESC, siteName: SITE_NAME, images: [{ url: `${SITE_URL}/tools/thumbs/rangoli.webp`, width: 960, height: 540 }] },
 };
 const FAQ: [string, string][] = [
   ['How do I make a rangoli design online?', 'Follow the seven steps: choose rangoli, Diwali, floral or mandala, pick one of the starting designs, set the symmetry, add petals, dots, lines or a border, choose a palette and download. You can also draw — every stroke repeats around the centre.'],
@@ -26,7 +25,7 @@ const STEPS: [string, string][] = [
 ];
 export default function Page() {
   return (
-    <ToolPage path={PATH} name="Rangoli & Mandala Maker" eyebrow="Rangoli · Mandala · Kolam" h1="Rangoli design maker & mandala generator" intro="Draw once and watch it bloom around the centre. Make Diwali rangolis, kolams and mandala art in minutes — then download a crisp vector or use it in a greeting." description={DESC} steps={STEPS} faq={FAQ} related={RELATED_TOOLS}>
+    <ToolPage image="/tools/thumbs/rangoli.webp" path={PATH} name="Rangoli & Mandala Maker" eyebrow="Rangoli · Mandala · Kolam" h1="Rangoli design maker & mandala generator" intro="Draw once and watch it bloom around the centre. Make Diwali rangolis, kolams and mandala art in minutes — then download a crisp vector or use it in a greeting." description={DESC} steps={STEPS} faq={FAQ} related={RELATED_TOOLS}>
       <MandalaMaker />
     </ToolPage>
   );

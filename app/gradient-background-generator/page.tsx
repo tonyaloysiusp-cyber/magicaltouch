@@ -8,8 +8,7 @@ const TITLE = 'Gradient Background Generator — Mesh Gradients, Free';
 const DESC = 'Make beautiful mesh gradient backgrounds free: drag colour spots, add grain, pick presets, then download a 4K wallpaper, Instagram or YouTube size PNG, a vector SVG or copy the CSS.';
 export const metadata: Metadata = {
   title: fitTitle(TITLE), description: fitDescription(DESC), alternates: { canonical: `${SITE_URL}${PATH}` },
-  keywords: ['gradient background generator', 'mesh gradient generator', 'gradient wallpaper', 'css gradient generator', 'aesthetic background maker', 'grainy gradient'],
-  openGraph: { type: 'website', url: `${SITE_URL}${PATH}`, title: TITLE, description: DESC, siteName: SITE_NAME, images: [`${SITE_URL}/api/og`] },
+  openGraph: { type: 'website', url: `${SITE_URL}${PATH}`, title: TITLE, description: DESC, siteName: SITE_NAME, images: [{ url: `${SITE_URL}/tools/thumbs/gradients.webp`, width: 960, height: 540 }] },
 };
 const FAQ: [string, string][] = [
   ['What is a mesh gradient?', 'A soft blend of several colour spots instead of a straight line between two colours — the smooth, glowing backgrounds used by modern brands and apps.'],
@@ -25,7 +24,7 @@ const STEPS: [string, string][] = [
 ];
 export default function Page() {
   return (
-    <ToolPage path={PATH} name="Gradient Background Generator" eyebrow="Mesh gradients" h1="Gradient background generator" intro="Soft, glowing mesh gradients for wallpapers, posts, slides and websites. Drag the colours, add grain and download in seconds." description={DESC} steps={STEPS} faq={FAQ} related={RELATED_TOOLS}>
+    <ToolPage image="/tools/thumbs/gradients.webp" path={PATH} name="Gradient Background Generator" eyebrow="Mesh gradients" h1="Gradient background generator" intro="Soft, glowing mesh gradients for wallpapers, posts, slides and websites. Drag the colours, add grain and download in seconds." description={DESC} steps={STEPS} faq={FAQ} related={RELATED_TOOLS}>
       <GradientMaker />
     </ToolPage>
   );
