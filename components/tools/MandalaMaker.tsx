@@ -161,9 +161,9 @@ export function MandalaMaker() {
         <button type="button" onClick={toEditor} disabled={!!busy} className="h-9 px-4 rounded-full bg-mt-primary text-mt-onprimary text-[13px] font-semibold inline-flex items-center gap-1.5 disabled:opacity-60"><Wand2 size={14} /> Use in a design</button>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[250px_minmax(0,1fr)_280px] lg:items-start">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px] xl:grid-cols-[250px_minmax(0,1fr)_280px] lg:items-start">
         {/* Left: start and add */}
-        <aside className={`${panel} lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto order-2 lg:order-none`}>
+        <aside className={`${panel} xl:sticky xl:top-20 xl:max-h-[calc(100vh-6rem)] xl:overflow-y-auto order-2 lg:order-3 xl:order-none lg:col-span-2 xl:col-span-1 lg:grid lg:grid-cols-3 lg:gap-4 lg:space-y-0 xl:block xl:space-y-4`}>
           <div className="flex flex-wrap gap-1">{KINDS.map((k) => <button key={k.id} type="button" aria-pressed={kind === k.id} title={k.hint} onClick={() => { setKind(k.id); change(preset(k.id, 0, sym)); setSel(null); }} className={pill(kind === k.id) + ' h-8 text-[12px]'}>{k.label}</button>)}</div>
           <section className="space-y-2">
             <H>Start from</H>
@@ -196,7 +196,7 @@ export function MandalaMaker() {
         </aside>
 
         {/* Canvas */}
-        <div className="min-w-0 order-1 lg:order-none">
+        <div className="min-w-0 order-1 xl:order-none">
           <div className="relative mx-auto w-full max-w-[720px] aspect-square rounded-3xl overflow-hidden border border-mt-border touch-none select-none shadow-sm" style={{ background: m.background }}>
             <svg ref={svgRef} viewBox="0 0 1000 1000" className={`absolute inset-0 h-full w-full ${drawMode ? 'cursor-crosshair' : 'cursor-pointer'} [&_.mt-sel]:[filter:drop-shadow(0_0_6px_#3B82C4)]`} onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerLeave={up} role="img" aria-label="Rangoli canvas">
               <g transform={`translate(500 500) scale(${zoom})`}>
@@ -209,7 +209,7 @@ export function MandalaMaker() {
         </div>
 
         {/* Right: colours and layers */}
-        <aside className={`${panel} lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto order-3 lg:order-none`}>
+        <aside className={`${panel} lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto order-3 lg:order-2 xl:order-none`}>
           <section className="space-y-2">
             <H>Palette</H>
             <div className="grid grid-cols-2 gap-1.5">

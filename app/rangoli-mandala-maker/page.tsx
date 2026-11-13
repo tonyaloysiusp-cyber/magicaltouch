@@ -11,7 +11,7 @@ export const metadata: Metadata = {
   openGraph: { type: 'website', url: `${SITE_URL}${PATH}`, title: TITLE, description: DESC, siteName: SITE_NAME, images: [{ url: `${SITE_URL}/tools/thumbs/rangoli.webp`, width: 960, height: 540 }] },
 };
 const FAQ: [string, string][] = [
-  ['How do I make a rangoli design online?', 'Follow the seven steps: choose rangoli, Diwali, floral or mandala, pick one of the starting designs, set the symmetry, add petals, dots, lines or a border, choose a palette and download. You can also draw — every stroke repeats around the centre.'],
+  ['How do I make a rangoli design online?', 'Everything is on one screen: pick rangoli, Diwali, floral or mandala and a starting design, set the symmetry in the toolbar, add petals, dots, lines or a border, click any part to change it, choose a palette and download. Switch to Draw and every stroke repeats around the centre.'],
   ['Can I make a mandala for colouring?', 'Yes. Pick “Mandala” and the “Ink on paper” palette, set rings to “Outline only” under More settings, and download a vector PDF to print and colour.'],
   ['Is the download a vector?', 'Yes — the SVG and the PDF are clean vectors you can scale to any size, cut on a plotter or edit in Illustrator, Inkscape or our editor. PNG and JPEG are also available.'],
   ['Can I undo, rotate or duplicate parts?', 'Yes. Every change can be undone and redone; each layer can be rotated, resized, recoloured with a gradient, duplicated, hidden or deleted.'],

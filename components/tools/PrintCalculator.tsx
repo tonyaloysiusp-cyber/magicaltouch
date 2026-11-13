@@ -78,9 +78,9 @@ export function PrintCalculator() {
         </div>
         <section className="rounded-3xl border border-mt-border bg-mt-surface p-5">
           <h2 className="text-lg font-semibold">How big can my photo print?</h2>
-          <div className="mt-3 flex flex-wrap items-end gap-3">
-            <label className="text-[12px] text-mt-muted">Photo width (px)<input type="number" min={1} value={photo.w} onChange={(e) => setPhoto({ ...photo, w: Number(e.target.value) || 0 })} className={`${field} w-36`} /></label>
-            <label className="text-[12px] text-mt-muted">Photo height (px)<input type="number" min={1} value={photo.h} onChange={(e) => setPhoto({ ...photo, h: Number(e.target.value) || 0 })} className={`${field} w-36`} /></label>
+          <div className="mt-3 grid grid-cols-2 gap-3 max-w-md">
+            <label className="block text-[12px] text-mt-muted">Photo width (px)<input type="number" min={1} value={photo.w} onChange={(e) => setPhoto({ ...photo, w: Number(e.target.value) || 0 })} className={field} /></label>
+            <label className="block text-[12px] text-mt-muted">Photo height (px)<input type="number" min={1} value={photo.h} onChange={(e) => setPhoto({ ...photo, h: Number(e.target.value) || 0 })} className={field} /></label>
           </div>
           <ul className="mt-3 grid gap-2 sm:grid-cols-3 text-[14px]">
             {[300, 200, 150].map((d) => <li key={d} className="rounded-xl bg-mt-bg px-3 py-2"><span className="text-mt-muted">{d === 300 ? 'Sharp print' : d === 200 ? 'Good print' : 'Poster / far away'} ({d} DPI)</span><br /><b className="tabular-nums">{maxPrintMm(photo.w, d)} × {maxPrintMm(photo.h, d)} mm</b></li>)}

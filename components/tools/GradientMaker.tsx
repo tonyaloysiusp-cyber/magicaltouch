@@ -110,7 +110,7 @@ export function GradientMaker() {
             <button type="button" onClick={() => save(new Blob([gradientSvg(g, S.w, S.h)], { type: 'image/svg+xml' }), `gradient-${S.w}x${S.h}.svg`)} className={chip}><Download size={14} /> SVG</button>
             <button type="button" onClick={() => navigator.clipboard?.writeText(css).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500); })} className={chip}>{copied ? <Check size={14} /> : <Copy size={14} />} {copied ? 'Copied' : 'Copy CSS'}</button>
           </div>
-          <pre className="text-[11.5px] leading-relaxed bg-mt-bg rounded-xl p-3 overflow-x-auto text-mt-muted"><code>{css}</code></pre>
+          <details className="text-[12.5px]"><summary className="cursor-pointer text-mt-muted font-semibold">Show the CSS code (for websites)</summary><pre className="mt-2 text-[11.5px] leading-relaxed bg-mt-bg rounded-xl p-3 overflow-x-auto text-mt-muted"><code>{css}</code></pre></details>
         </div>
       </div>
     </div>

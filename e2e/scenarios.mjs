@@ -819,8 +819,8 @@ scenarios.push({
     await t.page.getByRole('button', { name: 'Design: Red hoops' }).click({ timeout: 30000 });
     await t.page.getByRole('button', { name: 'Sash', exact: true }).click();
     await t.shot('jersey-design');
-    await t.page.getByRole('button', { name: /Players$/ }).first().click();
-    await t.page.getByRole('button', { name: /Print files/ }).first().click();
+    await t.page.getByRole('tab', { name: /Players & sizes/ }).click();
+    await t.page.getByRole('tab', { name: /Print files/ }).click();
     await t.page.getByLabel('Print summary').waitFor({ timeout: 30000 });
     t.check('summary counts 4 garments', /4\s*garments/.test(await t.page.getByLabel('Print summary').innerText()));
     await t.page.getByRole('button', { name: /Download print PDF/ }).waitFor({ timeout: 30000 });
@@ -847,9 +847,9 @@ scenarios.push({
   name: 'polo-and-wall',
   async run(t) {
     await t.page.goto(t.BASE + '/polo-shirt-designer', { waitUntil: 'domcontentloaded' });
-    await t.page.getByRole('button', { name: /Sizes & quantities/ }).first().click({ timeout: 30000 });
+    await t.page.getByRole('tab', { name: /Sizes & quantities/ }).click({ timeout: 30000 });
     await t.page.getByLabel('Quantity row 1').fill('2');
-    await t.page.getByRole('button', { name: /Print files/ }).first().click();
+    await t.page.getByRole('tab', { name: /Print files/ }).click();
     await t.page.getByLabel('Print summary').waitFor({ timeout: 30000 });
     t.check('polo summary counts quantities (2+8+6+2)', /18\s*garments/.test(await t.page.getByLabel('Print summary').innerText()));
     await t.shot('polo');
@@ -929,5 +929,42 @@ scenarios.push({
     await t.page.getByRole('button', { name: 'Apply' }).first().click();
     await t.page.waitForTimeout(600);
     await t.shot('colours');
+  },
+});
+
+// Jersey editor: click the shirt to edit, save a project, leave prompt.
+scenarios.push({
+  name: 'jersey-click-edit',
+  async run(t) {
+    await t.page.goto(t.BASE + '/custom-jersey-designer', { waitUntil: 'domcontentloaded' });
+    await t.page.locator('[data-el="number"]').first().waitFor({ timeout: 30000 });
+    await t.page.locator('[data-el="number"]').first().click();
+    const insp = t.page.getByRole('region', { name: /Edit Back number/ });
+    await insp.waitFor({ timeout: 10000 });
+    await insp.getByLabel('Number').fill('99');
+    await t.page.waitForTimeout(800);
+    t.check('number edited from the shirt', /99/.test(await t.page.getByLabel('Preview player').innerText()));
+    // Drag the chest logo placeholder.
+    const logo = t.page.locator('[data-el="teamLogo"]').first();
+    const b = await logo.boundingBox();
+    await t.page.mouse.move(b.x + b.width / 2, b.y + b.height / 2); await t.page.mouse.down(); await t.page.mouse.move(b.x + b.width / 2 - 60, b.y + b.height / 2 + 20, { steps: 6 }); await t.page.mouse.up();
+    const b2 = await t.page.locator('[data-el="teamLogo"]').first().boundingBox();
+    t.check('logo moved by dragging', Math.abs(b2.x - b.x) > 20, `${Math.round(b.x)} → ${Math.round(b2.x)}`);
+    t.check('unsaved changes shown', await t.page.getByText('Unsaved changes').isVisible());
+    // Leaving asks first.
+    await t.page.getByRole('link', { name: /Back to/ }).click();
+    await t.page.getByRole('dialog').waitFor({ timeout: 5000 });
+    t.check('leave prompt appears', await t.page.getByRole('button', { name: 'Save & leave' }).isVisible());
+    await t.page.getByRole('button', { name: 'Stay here' }).click();
+    await t.page.getByRole('button', { name: 'Save', exact: true }).click();
+    await t.page.getByRole('button', { name: /Projects/ }).click();
+    t.check('saved project listed', await t.page.getByRole('dialog').getByText('My Team').first().isVisible());
+    await t.shot('jersey-projects');
+    // .mtdt file download.
+    await t.page.getByRole('button', { name: 'Close' }).click();
+    const fs = await import('node:fs');
+    const [dl] = await Promise.all([t.page.waitForEvent('download', { timeout: 30000 }), t.page.getByRole('button', { name: /Save file/ }).click()]);
+    const bytes = fs.readFileSync(await dl.path());
+    t.check('.mtdt file starts with MTDT', bytes.subarray(0, 4).toString() === 'MTDT' && /\.mtdt$/.test(dl.suggestedFilename()), dl.suggestedFilename());
   },
 });
