@@ -1,261 +1,37 @@
 [
  {
-  "name": "ipad-home",
-  "device": "iPad Pro 11 landscape",
-  "url": "/",
-  "wait": 8000,
-  "steps": [
-   {
-    "js": "window.scrollTo(0, 260)",
-    "wait": 1200
-   },
-   {
-    "js": "window.scrollTo(0, 900)",
-    "wait": 1200
-   }
-  ]
- },
- {
-  "name": "ipad-tools",
-  "device": "iPad Pro 11 landscape",
-  "url": "/tools",
-  "wait": 8000,
-  "steps": [
-   {
-    "js": "window.scrollTo(0, 260)",
-    "wait": 1200
-   },
-   {
-    "js": "window.scrollTo(0, 900)",
-    "wait": 1200
-   }
-  ]
- },
- {
-  "name": "ipad-jersey",
-  "device": "iPad Pro 11 landscape",
-  "url": "/custom-jersey-designer",
-  "wait": 8000,
-  "steps": [
-   {
-    "js": "window.scrollTo(0, 260)",
-    "wait": 1200
-   },
-   {
-    "js": "window.scrollTo(0, 900)",
-    "wait": 1200
-   }
-  ]
- },
- {
-  "name": "ipad-polo",
-  "device": "iPad Pro 11 landscape",
-  "url": "/polo-shirt-designer",
-  "wait": 8000,
-  "steps": [
-   {
-    "js": "window.scrollTo(0, 260)",
-    "wait": 1200
-   },
-   {
-    "js": "window.scrollTo(0, 900)",
-    "wait": 1200
-   }
-  ]
- },
- {
-  "name": "ipad-wall",
-  "device": "iPad Pro 11 landscape",
-  "url": "/wall-designer",
-  "wait": 8000,
-  "steps": [
-   {
-    "js": "window.scrollTo(0, 260)",
-    "wait": 1200
-   },
-   {
-    "js": "window.scrollTo(0, 900)",
-    "wait": 1200
-   }
-  ]
- },
- {
-  "name": "ipad-patterns",
-  "device": "iPad Pro 11 landscape",
-  "url": "/patterns",
-  "wait": 8000,
-  "steps": [
-   {
-    "js": "window.scrollTo(0, 260)",
-    "wait": 1200
-   },
-   {
-    "js": "window.scrollTo(0, 900)",
-    "wait": 1200
-   }
-  ]
- },
- {
-  "name": "ipad-colours",
-  "device": "iPad Pro 11 landscape",
-  "url": "/colours",
-  "wait": 8000,
-  "steps": [
-   {
-    "js": "window.scrollTo(0, 260)",
-    "wait": 1200
-   },
-   {
-    "js": "window.scrollTo(0, 900)",
-    "wait": 1200
-   }
-  ]
- },
- {
-  "name": "ipad-rangoli",
-  "device": "iPad Pro 11 landscape",
+  "name": "tool-rangoli",
+  "device": "desktop",
   "url": "/rangoli-mandala-maker",
   "wait": 8000,
   "steps": [
    {
-    "js": "window.scrollTo(0, 260)",
-    "wait": 1200
-   },
-   {
-    "js": "window.scrollTo(0, 900)",
-    "wait": 1200
+    "js": "(()=>{const el=document.querySelector('[role=radiogroup][aria-label=Tool]'); el && window.scrollTo(0, el.getBoundingClientRect().top+scrollY-80);})()",
+    "wait": 1500
    }
   ]
  },
  {
-  "name": "ipad-trace",
-  "device": "iPad Pro 11 landscape",
-  "url": "/trace",
+  "name": "tool-colours",
+  "device": "desktop",
+  "url": "/colours",
   "wait": 8000,
   "steps": [
    {
-    "js": "window.scrollTo(0, 260)",
-    "wait": 1200
-   },
-   {
-    "js": "window.scrollTo(0, 900)",
-    "wait": 1200
+    "js": "(()=>{const el=document.getElementById('palette-generator'); el && window.scrollTo(0, el.getBoundingClientRect().top+scrollY-80);})()",
+    "wait": 1500
    }
   ]
  },
  {
-  "name": "ipad-rmbg",
-  "device": "iPad Pro 11 landscape",
-  "url": "/remove-background",
-  "wait": 8000,
-  "steps": [
-   {
-    "js": "window.scrollTo(0, 260)",
-    "wait": 1200
-   },
-   {
-    "js": "window.scrollTo(0, 900)",
-    "wait": 1200
-   }
-  ]
- },
- {
-  "name": "ipad-passport",
-  "device": "iPad Pro 11 landscape",
-  "url": "/passport-photo-maker",
-  "wait": 8000,
-  "steps": [
-   {
-    "js": "window.scrollTo(0, 260)",
-    "wait": 1200
-   },
-   {
-    "js": "window.scrollTo(0, 900)",
-    "wait": 1200
-   }
-  ]
- },
- {
-  "name": "ipad-gradients",
-  "device": "iPad Pro 11 landscape",
-  "url": "/gradient-background-generator",
-  "wait": 8000,
-  "steps": [
-   {
-    "js": "window.scrollTo(0, 260)",
-    "wait": 1200
-   },
-   {
-    "js": "window.scrollTo(0, 900)",
-    "wait": 1200
-   }
-  ]
- },
- {
-  "name": "ipad-printsize",
-  "device": "iPad Pro 11 landscape",
-  "url": "/print-size-calculator",
-  "wait": 8000,
-  "steps": [
-   {
-    "js": "window.scrollTo(0, 260)",
-    "wait": 1200
-   },
-   {
-    "js": "window.scrollTo(0, 900)",
-    "wait": 1200
-   }
-  ]
- },
- {
-  "name": "ipad-tsearch",
-  "device": "iPad Pro 11 landscape",
-  "url": "/templates?q=jersey%20template",
-  "wait": 8000,
-  "steps": [
-   {
-    "js": "window.scrollTo(0, 260)",
-    "wait": 1200
-   },
-   {
-    "js": "window.scrollTo(0, 900)",
-    "wait": 1200
-   }
-  ]
- },
- {
-  "name": "ipad-jersey-edit",
-  "device": "iPad Pro 11 landscape",
+  "name": "tool-jersey",
+  "device": "desktop",
   "url": "/custom-jersey-designer",
   "wait": 9000,
   "steps": [
    {
-    "js": "(()=>{const el=document.querySelector('[data-el=number]'); el && el.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,clientX:10,clientY:10})); const s=document.querySelector('nav[aria-label=Sections]'); s && window.scrollTo(0, s.getBoundingClientRect().top+scrollY-70);})()",
-    "wait": 2000
-   }
-  ]
- },
- {
-  "name": "phone-rangoli",
-  "device": "iPhone 13",
-  "url": "/rangoli-mandala-maker",
-  "wait": 8000,
-  "steps": [
-   {
-    "js": "window.scrollTo(0, 300)",
-    "wait": 1200
-   }
-  ]
- },
- {
-  "name": "phone-colours",
-  "device": "iPhone 13",
-  "url": "/colours",
-  "wait": 8000,
-  "steps": [
-   {
-    "js": "window.scrollTo(0, 300)",
-    "wait": 1200
+    "js": "(()=>{const el=document.querySelector('nav[aria-label=Sections]'); el && window.scrollTo(0, el.getBoundingClientRect().top+scrollY-140);})()",
+    "wait": 1500
    }
   ]
  }
