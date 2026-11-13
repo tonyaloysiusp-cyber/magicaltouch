@@ -11,10 +11,12 @@ import { supabase, getSessionUser } from '@/lib/supabase';
 import { BrandLogo } from '@/components/BrandLogo';
 import { AppTheme } from '@/hooks/useAppTheme';
 import { NETWORKS, parseSocial, SocialLinks } from '@/lib/social';
+import { TOOLS as CATALOG } from '@/lib/toolsCatalog';
 
 const EMAIL = 'hellomagicaltouch.design@gmail.com';
 
 const CATEGORIES = ['Social Media Posts', 'Flyers', 'Posters', 'Invitations', 'Greeting Cards', 'Business Cards', 'Presentations', 'Menus', 'Certificates', 'Resumes & CVs'];
+
 const TOOLS: [string, string][] = [
   ['free-flyer-maker', 'Flyer maker'],
   ['free-poster-maker', 'Poster maker'],
@@ -128,7 +130,7 @@ export function Footer({ theme }: { theme: AppTheme }) {
           </div>
         </div>
 
-        <div className="mt-12 grid gap-8 border-t border-mt-border pt-8 md:grid-cols-2">
+        <div className="mt-12 grid gap-8 border-t border-mt-border pt-8 md:grid-cols-2 xl:grid-cols-3">
           <nav aria-label="Popular template categories">
             <p className={head}>Popular templates</p>
             <ul className="mt-3 flex flex-wrap gap-2">
@@ -151,7 +153,18 @@ export function Footer({ theme }: { theme: AppTheme }) {
                   </Link>
                 </li>
               ))}
-              <li><Link href="/free-design-tools" className="inline-flex rounded-full px-3 py-1.5 text-[13px] font-semibold text-mt-ink underline underline-offset-2">All tools →</Link></li>
+              <li><Link href="/free-design-tools" className="inline-flex rounded-full px-3 py-1.5 text-[13px] font-semibold text-mt-ink underline underline-offset-2">All makers →</Link></li>
+            </ul>
+          </nav>
+          <nav aria-label="Creative tools">
+            <p className={head}>Creative tools</p>
+            <ul className="mt-3 flex flex-wrap gap-2">
+              {CATALOG.filter((t) => t.id !== 'editor').map((t) => (
+                <li key={t.id}>
+                  <Link href={t.href} className="inline-flex rounded-full border border-mt-border px-3 py-1.5 text-[13px] text-mt-muted hover:text-mt-ink hover:border-mt-ink/30 transition-colors">{t.title}</Link>
+                </li>
+              ))}
+              <li><Link href="/tools" className="inline-flex rounded-full px-3 py-1.5 text-[13px] font-semibold text-mt-ink underline underline-offset-2">All tools →</Link></li>
             </ul>
           </nav>
         </div>
