@@ -11,7 +11,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Download, ExternalLink, Loader2, RectangleVertical, RectangleHorizontal } from 'lucide-react';
 import { DEFAULT_PATTERN, PALETTES, PatternSettings, svgDataUrl } from '@/lib/patterns';
-import { DEFAULT_WALL, POSTER_SIZES, WALL_ROLLS, WallJob, posterEditorUrl, wallStrips, wallSvg } from '@/lib/wall';
+import { DEFAULT_WALL, POSTER_SIZES, WALL_ROLLS, WallJob, posterEditorUrl, wallStrips, wallSvg, rollEstimate, type RoomWall, type RollSpec } from '@/lib/wall';
 import { textOutline } from '@/lib/patternText';
 
 function save(blob: Blob, name: string) {
@@ -61,6 +61,15 @@ export function WallDesigner({ initial = 'poster' }: { initial?: 'poster' | 'pat
   const [patName, setPatName] = useState(PRESETS[0].name);
   const [mine, setMine] = useState<{ name: string; p: PatternSettings }[]>([]);
   const [glyph, setGlyph] = useState<string | null>(null);
+  // Room & rolls calculator (millimetres inside; shown in the chosen unit).
+  const UNITS = { mm: 1, cm: 10, m: 1000, in: 25.4, ft: 304.8 } as const;
+  const [unit, setUnit] = useState<keyof typeof UNITS>('cm');
+  const [room, setRoom] = useState<RoomWall[]>([{ name: 'Wall 1', widthMm: 3000, heightMm: 2400, openings: [] }]);
+  const [roll, setRoll] = useState<RollSpec>({ rollWidthMm: 530, rollLengthMm: 10050, repeatMm: 0, match: 'straight', trimMm: 100, extraPct: 10 });
+  const est = useMemo(() => rollEstimate(room, roll), [room, roll]);
+  const toU = (mm: number) => Math.round((mm / UNITS[unit]) * 100) / 100;
+  const fromU = (v: number) => Math.max(0, v * UNITS[unit]);
+  const editWall = (i: number, o: Partial<RoomWall>) => setRoom((r) => r.map((w, k) => (k === i ? { ...w, ...o } : w)));
   const [busy, setBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const sw = (o: Partial<WallJob>) => setWall((w) => ({ ...w, ...o }));
@@ -179,6 +188,54 @@ export function WallDesigner({ initial = 'poster' }: { initial?: 'poster' | 'pat
               <button type="button" onClick={() => save(new Blob([preview], { type: 'image/svg+xml' }), `wall-${wall.widthMm}x${wall.heightMm}.svg`)} className={btn}><Download size={14} /> Whole wall · SVG</button>
             </div>
             {msg && <p role="status" className="text-[13px] font-medium">{msg}</p>}
+
+            {/* Room & rolls calculator */}
+            <section aria-labelledby="rolls-title" className="rounded-3xl border border-mt-border bg-mt-surface p-5 space-y-4">
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 id="rolls-title" className="text-lg font-semibold mr-auto">Room & rolls calculator</h3>
+                <label className="text-[12.5px] text-mt-muted inline-flex items-center gap-1.5">Units<select value={unit} onChange={(e) => setUnit(e.target.value as keyof typeof UNITS)} className="h-9 rounded-full border border-mt-border bg-mt-bg px-2 text-[13px]">{Object.keys(UNITS).map((u) => <option key={u} value={u}>{u}</option>)}</select></label>
+                <button type="button" onClick={() => setRoom((r) => [...r, { name: `Wall ${r.length + 1}`, widthMm: 3000, heightMm: r[0]?.heightMm || 2400, openings: [] }])} className={btn}>+ Add wall</button>
+                <button type="button" onClick={() => setRoom([{ name: 'Pattern wall', widthMm: wall.widthMm, heightMm: wall.heightMm, openings: [] }])} className={btn}>Use the wall above</button>
+              </div>
+              <div className="space-y-3">
+                {room.map((w, i) => (
+                  <div key={i} className="rounded-2xl border border-mt-border p-3 space-y-2">
+                    <div className="grid grid-cols-2 sm:grid-cols-[1fr_120px_120px_auto] gap-2 items-end">
+                      <label className="block text-[12px] text-mt-muted col-span-2 sm:col-span-1">Name<input value={w.name} onChange={(e) => editWall(i, { name: e.target.value })} className={field} /></label>
+                      <label className="block text-[12px] text-mt-muted">Width ({unit})<input type="number" min={0} step="any" value={toU(w.widthMm)} onChange={(e) => editWall(i, { widthMm: fromU(Number(e.target.value) || 0) })} className={field} aria-label={`Wall ${i + 1} width`} /></label>
+                      <label className="block text-[12px] text-mt-muted">Height ({unit})<input type="number" min={0} step="any" value={toU(w.heightMm)} onChange={(e) => editWall(i, { heightMm: fromU(Number(e.target.value) || 0) })} className={field} aria-label={`Wall ${i + 1} height`} /></label>
+                      <div className="flex gap-1.5 col-span-2 sm:col-span-1">
+                        <button type="button" onClick={() => editWall(i, { openings: [...w.openings, { kind: 'door', widthMm: 900, heightMm: 2100 }] })} className={btn}>+ Door</button>
+                        <button type="button" onClick={() => editWall(i, { openings: [...w.openings, { kind: 'window', widthMm: 1200, heightMm: 1200 }] })} className={btn}>+ Window</button>
+                        {room.length > 1 && <button type="button" onClick={() => setRoom((r) => r.filter((_, k) => k !== i))} aria-label={`Remove ${w.name}`} className="h-10 w-10 grid place-items-center rounded-full border border-mt-border">×</button>}
+                      </div>
+                    </div>
+                    {w.openings.map((o, j) => (
+                      <div key={j} className="ml-3 grid grid-cols-[90px_1fr_1fr_auto] gap-2 items-end">
+                        <span className="pb-2.5 text-[12.5px] font-semibold capitalize">{o.kind}</span>
+                        <label className="block text-[12px] text-mt-muted">Width ({unit})<input type="number" min={0} step="any" value={toU(o.widthMm)} onChange={(e) => editWall(i, { openings: w.openings.map((x, k) => (k === j ? { ...x, widthMm: fromU(Number(e.target.value) || 0) } : x)) })} className={field} /></label>
+                        <label className="block text-[12px] text-mt-muted">Height ({unit})<input type="number" min={0} step="any" value={toU(o.heightMm)} onChange={(e) => editWall(i, { openings: w.openings.map((x, k) => (k === j ? { ...x, heightMm: fromU(Number(e.target.value) || 0) } : x)) })} className={field} /></label>
+                        <button type="button" onClick={() => editWall(i, { openings: w.openings.filter((_, k) => k !== j) })} aria-label={`Remove ${o.kind}`} className="h-10 w-10 grid place-items-center rounded-full border border-mt-border">×</button>
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+                <label className="block text-[12px] text-mt-muted">Roll width ({unit})<input type="number" min={1} step="any" value={toU(roll.rollWidthMm)} onChange={(e) => setRoll({ ...roll, rollWidthMm: Math.max(1, fromU(Number(e.target.value) || 0)) })} className={field} aria-label="Roll width" /></label>
+                <label className="block text-[12px] text-mt-muted">Roll length ({unit})<input type="number" min={1} step="any" value={toU(roll.rollLengthMm)} onChange={(e) => setRoll({ ...roll, rollLengthMm: Math.max(1, fromU(Number(e.target.value) || 0)) })} className={field} aria-label="Roll length" /></label>
+                <label className="block text-[12px] text-mt-muted">Pattern repeat ({unit})<input type="number" min={0} step="any" value={toU(roll.repeatMm)} onChange={(e) => setRoll({ ...roll, repeatMm: fromU(Number(e.target.value) || 0) })} className={field} aria-label="Pattern repeat" /></label>
+                <label className="block text-[12px] text-mt-muted">Match<select value={roll.match} onChange={(e) => setRoll({ ...roll, match: e.target.value as RollSpec['match'] })} className={field}><option value="straight">Straight</option><option value="half-drop">Half-drop</option><option value="free">Free match</option></select></label>
+                <label className="block text-[12px] text-mt-muted">Trim per drop ({unit})<input type="number" min={0} step="any" value={toU(roll.trimMm)} onChange={(e) => setRoll({ ...roll, trimMm: fromU(Number(e.target.value) || 0) })} className={field} /></label>
+                <label className="block text-[12px] text-mt-muted">Extra (%)<input type="number" min={0} max={50} value={roll.extraPct} onChange={(e) => setRoll({ ...roll, extraPct: Math.max(0, Math.min(50, Number(e.target.value) || 0)) })} className={field} /></label>
+              </div>
+              <div className="rounded-2xl bg-mt-bg p-4" aria-live="polite" aria-label="Roll estimate">
+                <p className="text-[15px]"><b className="text-2xl">{est.rollsWithExtra}</b> rolls <span className="text-mt-muted text-[13px]">({est.rolls} + {roll.extraPct}% extra) · {est.drops} drops · {est.dropsPerRoll} drops per roll · {est.netAreaM2.toFixed(2)} m² to cover ({est.areaM2.toFixed(2)} m² of wall)</span></p>
+                {est.note && <p className="mt-1 text-[13px] text-rose-600">{est.note}</p>}
+                <ul className="mt-2 grid gap-1 text-[12.5px] text-mt-muted sm:grid-cols-2">{est.walls.map((w, i) => <li key={i}>{w.name}: {w.drops} drops of {toU(w.dropMm)} {unit}</li>)}</ul>
+                <p className="mt-2 text-[11.5px] text-mt-faint">Estimate for standard hanging: full-height drops per wall; a door or window saves only the drops it fully covers. Check the roll label (width, length, repeat and match) and order from one batch.</p>
+              </div>
+            </section>
           </div>
         </div>
       )}

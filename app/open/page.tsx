@@ -10,7 +10,7 @@
 
 import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { readMtd, base64ToBytes, type OpenedMtd } from '@/lib/mtd/format';
+import { readMtd, base64ToBytes, type OpenedMtd, toolUrlFor } from '@/lib/mtd/format';
 import { rememberRecent } from '@/lib/mtd/recent';
 import { putHandoff, newLocalKey, editorUrlForLocal } from '@/lib/mtd/handoff';
 import { supabase } from '@/lib/supabase';
@@ -35,6 +35,8 @@ const readPending = () => idb<{ data: string; at: number }>('readonly', (s) => s
 const clearPending = () => idb('readwrite', (s) => { s.delete('file'); });
 
 function urlFor(opened: OpenedMtd, key: string) {
+  const tool = toolUrlFor(opened, key);
+  if (tool) return tool;
   return opened.document.editor === 'photo-studio'
     ? `/photo-studio?localDoc=${encodeURIComponent(key)}`
     : editorUrlForLocal(key, opened.document.width, opened.document.height);

@@ -117,3 +117,17 @@ test('pattern variation (size / rotation jitter, alternate) stays seamless and v
   // Same seed → same result (seamless and repeatable).
   assert.deepEqual(layout({ ...DEFAULT_PATTERN, repeat: 'grid', sizeJitter: 0.8, rotJitter: 90 }), layout({ ...DEFAULT_PATTERN, repeat: 'grid', sizeJitter: 0.8, rotJitter: 90 }));
 });
+
+test('wallpaper rolls: drops, repeat matching, doors and extra allowance', async () => {
+  const { rollEstimate } = await import('../../lib/wall.ts');
+  const spec = { rollWidthMm: 530, rollLengthMm: 10050, repeatMm: 640, match: 'straight', trimMm: 100, extraPct: 10 };
+  // 4 m wall, 2.5 m high: ceil(4000/530) = 8 drops; drop = ceil(2600/640)*640 = 3200; 3 drops per roll → 3 rolls (+10% → 4).
+  const e = rollEstimate([{ name: 'A', widthMm: 4000, heightMm: 2500, openings: [] }], spec);
+  assert.equal(e.drops, 8); assert.equal(e.walls[0].dropMm, 3200); assert.equal(e.dropsPerRoll, 3); assert.equal(e.rolls, 3); assert.equal(e.rollsWithExtra, 4);
+  // A full-height 900 mm door saves one drop; a window (not full height) saves none.
+  const d = rollEstimate([{ name: 'A', widthMm: 4000, heightMm: 2500, openings: [{ kind: 'door', widthMm: 900, heightMm: 2400 }, { kind: 'window', widthMm: 1200, heightMm: 1200 }] }], spec);
+  assert.equal(d.drops, 7);
+  assert.ok(Math.abs(d.netAreaM2 - (10 - 2.16 - 1.44)) < 1e-9);
+  const h = rollEstimate([{ name: 'A', widthMm: 1000, heightMm: 2500, openings: [] }], { ...spec, match: 'half-drop' });
+  assert.equal(h.walls[0].dropMm, 3520);
+});

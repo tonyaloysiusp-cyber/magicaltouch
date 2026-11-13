@@ -53,9 +53,9 @@ function ToolsMenu({ active }: { active: boolean }) {
         Tools <ChevronDown size={14} className={`transition-transform ${open ? 'rotate-180' : ''}`} aria-hidden />
       </Link>
       {open && (
-        <div role="menu" className="absolute left-1/2 -translate-x-1/2 top-full pt-2 w-[620px] max-w-[92vw]">
+        <div role="menu" className="absolute left-1/2 -translate-x-1/2 top-full pt-2 w-[860px] max-w-[94vw]">
           <div className="rounded-2xl border border-mt-border bg-mt-surface shadow-[0_18px_40px_-12px_rgba(9,9,11,0.25)] p-3">
-            <div className="grid grid-cols-3 gap-x-2 gap-y-3">
+            <div className="grid grid-cols-4 gap-x-2 gap-y-3">
               {MENU.map((g) => (
                 <div key={g.id}>
                   <p className="px-2.5 pb-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-mt-faint">{g.label}</p>

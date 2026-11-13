@@ -862,6 +862,13 @@ scenarios.push({
     const [dl] = await Promise.all([t.page.waitForEvent('download', { timeout: 90000 }), t.page.getByRole('button', { name: /Print strips/ }).click()]);
     const b = fs.readFileSync(await dl.path());
     t.check('wallpaper strips PDF', b.subarray(0, 4).toString() === '%PDF' && b.length > 3000, dl.suggestedFilename());
+    // Rolls: 300 × 240 cm wall, 53 cm × 10.05 m rolls → 6 drops, 4 per roll → 2 rolls, +10 % → 3.
+    const est = await t.page.getByLabel('Roll estimate').innerText();
+    t.check('roll estimate for a 3 m wall', /^3\s*rolls/.test(est.trim()) && /6 drops/.test(est), est.slice(0, 120));
+    await t.page.getByRole('button', { name: '+ Door' }).click();
+    await t.page.getByLabel('Wall 1 width').fill('400');
+    const est2 = await t.page.getByLabel('Roll estimate').innerText();
+    t.check('door (not full height) keeps 8 drops on a 4 m wall', /8 drops/.test(est2), est2.slice(0, 120));
     await t.shot('wall');
   },
 });
@@ -894,7 +901,6 @@ scenarios.push({
     const box = await t.page.getByRole('img', { name: 'Rangoli canvas' }).boundingBox();
     await t.page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
     await t.shot('rangoli');
-    await t.page.getByText('Download', { exact: true }).click();
     const [dl] = await Promise.all([t.page.waitForEvent('download', { timeout: 60000 }), t.page.getByRole('button', { name: /Vector PDF/ }).click()]);
     const fs = await import('node:fs');
     const b = fs.readFileSync(await dl.path());
@@ -935,6 +941,8 @@ scenarios.push({
 // Jersey editor: click the shirt to edit, save a project, leave prompt.
 scenarios.push({
   name: 'jersey-click-edit',
+  // The test browser downloads files instead of showing the system save dialog.
+  init: () => { try { delete Window.prototype.showSaveFilePicker; delete window.showSaveFilePicker; } catch {} },
   async run(t) {
     await t.page.goto(t.BASE + '/custom-jersey-designer', { waitUntil: 'domcontentloaded' });
     await t.page.locator('[data-el="number"]').first().waitFor({ timeout: 30000 });
@@ -960,11 +968,56 @@ scenarios.push({
     await t.page.getByRole('button', { name: /Projects/ }).click();
     t.check('saved project listed', await t.page.getByRole('dialog').getByText('My Team').first().isVisible());
     await t.shot('jersey-projects');
-    // .mtdt file download.
+    // .mtd project file (download fallback in the test browser), then reopen it.
     await t.page.getByRole('button', { name: 'Close' }).click();
     const fs = await import('node:fs');
     const [dl] = await Promise.all([t.page.waitForEvent('download', { timeout: 30000 }), t.page.getByRole('button', { name: /Save file/ }).click()]);
     const bytes = fs.readFileSync(await dl.path());
-    t.check('.mtdt file starts with MTDT', bytes.subarray(0, 4).toString() === 'MTDT' && /\.mtdt$/.test(dl.suggestedFilename()), dl.suggestedFilename());
+    t.check('.mtd project file saved', /\.mtd(\.svg)?$/.test(dl.suggestedFilename()) && bytes.length > 1000, `${dl.suggestedFilename()} ${bytes.length} bytes`);
+    await t.page.getByRole('button', { name: 'New' }).click();
+    await t.page.locator('input[type=file][accept*=".mtd"]').setInputFiles(await dl.path());
+    await t.page.getByText(/Opened “My Team”/).waitFor({ timeout: 15000 });
+    t.check('reopened project keeps the edited number', /99/.test(await t.page.getByLabel('Preview player').innerText()));
+  },
+});
+
+// Print Layout: business cards many-up (front + back) and a saddle-stitch booklet, both vector.
+scenarios.push({
+  name: 'print-layout',
+  async run(t) {
+    const fs = await import('node:fs');
+    const { PDFDocument, rgb, StandardFonts } = await import('pdf-lib');
+    const MM = 72 / 25.4;
+    const card = await PDFDocument.create(); const font = await card.embedFont(StandardFonts.Helvetica);
+    for (const label of ['FRONT', 'BACK']) { const p = card.addPage([91 * MM, 61 * MM]); p.drawRectangle({ x: 0, y: 0, width: 91 * MM, height: 61 * MM, color: rgb(0.1, 0.2, 0.4) }); p.drawText(label, { x: 20, y: 70, size: 24, font, color: rgb(1, 1, 1) }); }
+    fs.writeFileSync('e2e-out/card.pdf', await card.save());
+    const book = await PDFDocument.create(); const f2 = await book.embedFont(StandardFonts.Helvetica);
+    for (let i = 1; i <= 6; i++) book.addPage([148 * MM, 210 * MM]).drawText(`Page ${i}`, { x: 60, y: 300, size: 30, font: f2 });
+    fs.writeFileSync('e2e-out/book.pdf', await book.save());
+
+    await t.page.goto(t.BASE + '/print-layout', { waitUntil: 'domcontentloaded' });
+    await t.page.locator('input[type=file][accept*="pdf"]').setInputFiles('e2e-out/card.pdf');
+    await t.page.getByText(/per sheet/).first().waitFor({ timeout: 20000 });
+    const summary = await t.page.getByText(/per sheet \(/).innerText();
+    t.check('85 × 55 card read from the PDF (91 × 61 with bleed)', /85 × 55 mm/.test(summary), summary);
+    const n = Number((summary.match(/(\d+) per sheet/) || [])[1]);
+    t.check('several cards per A4', n >= 8, summary);
+    await t.shot('nup');
+    const [dl] = await Promise.all([t.page.waitForEvent('download', { timeout: 60000 }), t.page.getByRole('button', { name: /Download print PDF/ }).click()]);
+    const out = await PDFDocument.load(fs.readFileSync(await dl.path()));
+    const sz = out.getPage(0).getSize();
+    t.check('sheet is A4 at real size', Math.abs(sz.width - 210 * MM) < 0.5 && Math.abs(sz.height - 297 * MM) < 0.5, `${sz.width} × ${sz.height}`);
+    t.check('front and back pages', out.getPageCount() === 2, String(out.getPageCount()));
+    t.check('vector, no pictures', !/\/Subtype\s*\/Image/.test(fs.readFileSync(await dl.path()).toString('latin1')));
+
+    await t.page.locator('input[type=file][accept*="pdf"]').setInputFiles('e2e-out/book.pdf');
+    await t.page.getByLabel('Booklet sheets').waitFor({ timeout: 20000 });
+    const order = await t.page.getByLabel('Booklet sheets').innerText();
+    t.check('6 pages → 8 with blanks; sheet 1 front = blank + 1', /6 pages → 8/.test(await t.page.getByText(/Sheet order/).innerText()) && /Sheet 1\s*Front\s*blank\s*1/i.test(order.replace(/\n/g, ' ')), order.slice(0, 120));
+    const [db] = await Promise.all([t.page.waitForEvent('download', { timeout: 60000 }), t.page.getByRole('button', { name: /Download booklet PDF/ }).click()]);
+    const bk = await PDFDocument.load(fs.readFileSync(await db.path()));
+    const bs = bk.getPage(0).getSize();
+    t.check('booklet: 2 sheets × 2 sides, A4-landscape spreads', bk.getPageCount() === 4 && Math.abs(bs.width - 296 * MM) < 1 && Math.abs(bs.height - 210 * MM) < 1, `${bk.getPageCount()} pages ${bs.width}×${bs.height}`);
+    await t.shot('booklet');
   },
 });

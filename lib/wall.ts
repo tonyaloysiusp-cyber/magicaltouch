@@ -88,3 +88,44 @@ export function posterEditorUrl(wMm: number, hMm: number, o: { landscape?: boole
   q.set('newTab', `poster-${Math.round(w)}x${Math.round(h)}-${Date.now().toString(36)}`);
   return `/editor?${q.toString()}`;
 }
+
+// ---------------------------------------------------------------- rolls
+
+export interface Opening { kind: 'door' | 'window' | 'other'; widthMm: number; heightMm: number }
+export interface RoomWall { name: string; widthMm: number; heightMm: number; openings: Opening[] }
+export interface RollSpec { rollWidthMm: number; rollLengthMm: number; repeatMm: number; match: 'straight' | 'half-drop' | 'free'; trimMm: number; extraPct: number }
+export interface WallCount { name: string; drops: number; dropMm: number; areaM2: number; netAreaM2: number }
+export interface RollEstimate { walls: WallCount[]; drops: number; dropsPerRoll: number; rolls: number; rollsWithExtra: number; areaM2: number; netAreaM2: number; note: string | null }
+
+/**
+ * Rolls of wallpaper for a room. Each wall needs ceil(width ÷ roll width)
+ * full-height drops; a door or window removes only the drops it fully
+ * spans across its width (partial drops above/below are still needed).
+ * A drop is the wall height + trim, rounded up to the pattern repeat
+ * (half-drop patterns need an extra half repeat to match).
+ */
+export function rollEstimate(walls: RoomWall[], r: RollSpec): RollEstimate {
+  const rep = Math.max(0, r.repeatMm);
+  const out: WallCount[] = [];
+  let maxDrop = 0;
+  for (const w of walls) {
+    const base = w.heightMm + r.trimMm;
+    let drop = rep > 0 && r.match !== 'free' ? Math.ceil(base / rep) * rep : base;
+    if (rep > 0 && r.match === 'half-drop') drop += rep / 2;
+    maxDrop = Math.max(maxDrop, drop);
+    const full = Math.ceil(Math.max(0, w.widthMm) / r.rollWidthMm);
+    // Openings save the drops they cover completely (over 90 % of the height), counted across their width.
+    const saved = w.openings.reduce((s, o) => s + (o.heightMm >= w.heightMm * 0.9 ? Math.floor(o.widthMm / r.rollWidthMm) : 0), 0);
+    const openArea = w.openings.reduce((s, o) => s + o.widthMm * o.heightMm, 0) / 1e6;
+    out.push({ name: w.name, drops: Math.max(0, full - saved), dropMm: drop, areaM2: (w.widthMm * w.heightMm) / 1e6, netAreaM2: Math.max(0, (w.widthMm * w.heightMm) / 1e6 - openArea) });
+  }
+  const drops = out.reduce((s, w) => s + w.drops, 0);
+  const dropsPerRoll = maxDrop > 0 ? Math.floor(r.rollLengthMm / maxDrop) : 0;
+  const rolls = dropsPerRoll > 0 ? Math.ceil(drops / dropsPerRoll) : 0;
+  return {
+    walls: out, drops, dropsPerRoll, rolls,
+    rollsWithExtra: Math.ceil(rolls * (1 + Math.max(0, r.extraPct) / 100)),
+    areaM2: out.reduce((s, w) => s + w.areaM2, 0), netAreaM2: out.reduce((s, w) => s + w.netAreaM2, 0),
+    note: dropsPerRoll === 0 ? 'The wall is taller than one roll — choose longer rolls or print panels instead.' : null,
+  };
+}

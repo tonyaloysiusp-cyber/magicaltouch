@@ -17,7 +17,7 @@ import {
   GARMENT_STYLES, GarmentKind, Glyphs, KIT_GRAPHICS, KIT_STYLES, KitDesign, KitGraphic, Player, checkRoster, glyphTexts, kitFor,
   kitMockupSvg, kitPreviewSvg, parseRoster, playerPrintSvg, printList, rosterSheets, safeFile, sizeId, frontLayout, kitProduct,
 } from '@/lib/teamKit';
-import { decodeMtdt, encodeMtdt, mtdtFileName, MTDT_EXT } from '@/lib/mtdt';
+import { openToolFile, saveToolProject, takeToolHandoff, TOOL_FILE_ACCEPT } from '@/lib/mtd/toolProject';
 import { LeaveGuard } from './LeaveGuard';
 import { PATTERN_FONTS, textOutline } from '@/lib/patternText';
 import { supabase } from '@/lib/supabase';
@@ -136,6 +136,9 @@ export function GarmentDesigner({ kind }: { kind: GarmentKind }) {
     if (draft?.motif && draft.motif !== 'image') list.push({ name: 'Latest from Pattern Studio', p: { ...DEFAULT_PATTERN, ...draft } });
     for (const s of load<any[]>('mt:patterns', [])) if (s?.p?.motif && s.p.motif !== 'image') list.push({ name: s.name || 'My pattern', p: { ...DEFAULT_PATTERN, ...s.p } });
     setMine(list.slice(0, 12));
+    // A project opened from the Dashboard / Open page.
+    const handed = takeToolHandoff(kind);
+    if (handed) { apply(handed.data, null); fileHandle.current = handed.handle || null; }
     // Colours sent from the Colour Explorer (?colors=hex,hex,…).
     try {
       const q = new URLSearchParams(window.location.search).get('colors');
@@ -159,7 +162,7 @@ export function GarmentDesigner({ kind }: { kind: GarmentKind }) {
   }, [KEY, kit, players, pat, patColor, patName, projectId]);
   useEffect(() => { if (live.current) setDirty(true); }, [kit, players, pat, patColor, patName]);
 
-  // ---------- projects (saved in this browser, or as a .mtdt file) ----------
+  // ---------- projects (saved in this browser, or as a .mtd file on the device) ----------
   const readProjects = (): SavedProject[] => { try { return (JSON.parse(localStorage.getItem(PROJECTS) || '[]') as SavedProject[]).filter((x) => x && x.data); } catch { return []; } };
   const apply = (d: any, id: string | null) => {
     setKit({ ...kitFor(kind), ...d.kit, style: GARMENT_STYLES[kind].includes(d.kit?.style) ? d.kit.style : kitFor(kind).style });
@@ -185,17 +188,23 @@ export function GarmentDesigner({ kind }: { kind: GarmentKind }) {
     flash(`Saved “${kit.teamName}”. Open it any time from Projects.`);
     return true;
   };
+  // Save to this device as a Magical Touch project (.mtd) — the same file
+  // format as the design editor; saving again writes to the same file when the browser allows it.
+  const fileHandle = useRef<any | null>(null);
   const saveFile = async () => {
-    const bytes = await encodeMtdt({ kind, name: kit.teamName, savedAt: new Date().toISOString(), app: 'magicaltouchdesign.com', data: { kit, players, pat: { ...pat, image: undefined }, patColor, patName } });
-    save(new Blob([bytes as BlobPart], { type: 'application/octet-stream' }), mtdtFileName(kit.teamName));
-    setDirty(false);
+    try {
+      const ref = await saveToolProject({ kind, name: kit.teamName, data: { kit, players, pat: { ...pat, image: undefined }, patColor, patName }, previewSvg: kitMockupSvg(kit, pattern, player, glyphs, 'front'), handle: fileHandle.current });
+      if (!ref) return;
+      fileHandle.current = ref.handle;
+      setDirty(false);
+      flash(`Saved to your device as “${ref.fileName}”. Open it again from here or your Dashboard.`);
+    } catch { flash('The file could not be saved.'); }
   };
   const openFile = async (f: File) => {
     try {
-      const p = await decodeMtdt<any>(new Uint8Array(await f.arrayBuffer()));
-      if (p.kind === 'pattern') { flash('That is a pattern file — open it in Pattern Design.'); return; }
-      if (p.kind !== kind) { flash(`That file is a ${p.kind === 'tshirt' ? 'T-shirt' : p.kind} design — open it in that designer.`); return; }
-      apply(p.data, null); flash(`Opened “${p.name}”.`);
+      const p = await openToolFile(f);
+      if (p.kind !== kind) { flash(`That file is a ${p.kind === 'tshirt' ? 'T-shirt' : p.kind} project — open it in that tool.`); return; }
+      apply(p.data, null); fileHandle.current = null; flash(`Opened “${p.name}”.`);
     } catch (e: any) { flash(e?.message || 'Could not open that file.'); }
   };
   const newDesign = () => { apply({ kit: kitFor(kind), players: copy.sample, pat: { ...DEFAULT_PATTERN, ...PATTERNS[0].p }, patColor: '#FFFFFF', patName: PATTERNS[0].name }, null); setStep('design'); };
@@ -419,9 +428,9 @@ export function GarmentDesigner({ kind }: { kind: GarmentKind }) {
         <button type="button" onClick={newDesign} className={btn}><Plus size={14} /> New</button>
         <button type="button" onClick={() => setProjects(readProjects().filter((x) => x.kind === kind))} className={btn}><FolderOpen size={14} /> Projects</button>
         <button type="button" onClick={() => fileRef.current?.click()} className={btn}><FileUp size={14} /> Open file</button>
-        <button type="button" onClick={saveFile} className={btn} title={`Download a ${MTDT_EXT} project file`}><Download size={14} /> Save file</button>
+        <button type="button" onClick={saveFile} className={btn} title="Save a Magical Touch project file (.mtd) on this device"><Download size={14} /> Save file</button>
         <button type="button" onClick={saveProject} className="h-10 px-4 rounded-full bg-mt-primary text-mt-onprimary text-[13.5px] font-semibold inline-flex items-center gap-1.5"><Save size={14} /> Save</button>
-        <input ref={fileRef} type="file" accept={`${MTDT_EXT},application/octet-stream`} hidden onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) openFile(f); }} />
+        <input ref={fileRef} type="file" accept={TOOL_FILE_ACCEPT} hidden onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) openFile(f); }} />
       </div>
 
       {projects && (

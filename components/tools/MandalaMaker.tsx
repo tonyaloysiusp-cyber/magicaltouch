@@ -148,16 +148,6 @@ export function MandalaMaker() {
         <button type="button" onClick={() => setZoom((z) => Math.min(3, Math.round((z + 0.25) * 100) / 100))} className={icon} aria-label="Zoom in"><ZoomIn size={15} /></button>
         <label className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold"><input type="checkbox" checked={guides} onChange={(e) => setGuides(e.target.checked)} className="h-4 w-4 accent-[#3B82C4]" /> Guides</label>
         <span className="ml-auto" />
-        <details className="relative">
-          <summary className="list-none h-9 px-4 rounded-full border border-mt-border text-[13px] font-semibold inline-flex items-center gap-1.5 cursor-pointer"><Download size={14} /> Download</summary>
-          <div className="absolute right-0 top-11 z-20 w-60 rounded-2xl border border-mt-border bg-mt-surface p-2 shadow-xl space-y-1">
-            <button type="button" onClick={pdf} disabled={!!busy} className="w-full text-left rounded-lg px-3 py-2 text-[13px] hover:bg-mt-surface2">{busy === 'pdf' ? 'Making…' : 'Vector PDF (print)'}</button>
-            <button type="button" onClick={() => save(new Blob([svg], { type: 'image/svg+xml' }), 'rangoli.svg')} className="w-full text-left rounded-lg px-3 py-2 text-[13px] hover:bg-mt-surface2">SVG (vector)</button>
-            <button type="button" onClick={async () => save(await svgToImage(svg, 2400, 'image/png'), 'rangoli.png')} className="w-full text-left rounded-lg px-3 py-2 text-[13px] hover:bg-mt-surface2">PNG · 2400 px</button>
-            <button type="button" onClick={async () => save(await svgToImage(mandalaSvg(m), 2400, 'image/jpeg', m.background), 'rangoli.jpg')} className="w-full text-left rounded-lg px-3 py-2 text-[13px] hover:bg-mt-surface2">JPEG · 2400 px</button>
-            <label className="flex items-center gap-2 px-3 py-2 text-[12.5px] text-mt-muted"><input type="checkbox" checked={transparent} onChange={(e) => setTransparent(e.target.checked)} className="h-4 w-4 accent-[#3B82C4]" /> Transparent background</label>
-          </div>
-        </details>
         <button type="button" onClick={toEditor} disabled={!!busy} className="h-9 px-4 rounded-full bg-mt-primary text-mt-onprimary text-[13px] font-semibold inline-flex items-center gap-1.5 disabled:opacity-60"><Wand2 size={14} /> Use in a design</button>
       </div>
 
@@ -221,6 +211,16 @@ export function MandalaMaker() {
               ))}
             </div>
             <label className="flex items-center justify-between text-[12.5px]">Floor colour<input type="color" value={m.background} onChange={(e) => change({ ...m, background: e.target.value })} className="h-8 w-10 rounded-md border border-mt-border bg-transparent" /></label>
+          </section>
+          <section className="space-y-2">
+            <H>Download</H>
+            <div className="grid grid-cols-2 gap-1.5">
+              <button type="button" onClick={pdf} disabled={!!busy} className={`${chip} justify-center`}><Download size={13} /> {busy === 'pdf' ? 'Making…' : 'Vector PDF'}</button>
+              <button type="button" onClick={() => save(new Blob([svg], { type: 'image/svg+xml' }), 'rangoli.svg')} className={`${chip} justify-center`}><Download size={13} /> SVG</button>
+              <button type="button" onClick={async () => save(await svgToImage(svg, 2400, 'image/png'), 'rangoli.png')} className={`${chip} justify-center`}><Download size={13} /> PNG</button>
+              <button type="button" onClick={async () => save(await svgToImage(mandalaSvg(m), 2400, 'image/jpeg', m.background), 'rangoli.jpg')} className={`${chip} justify-center`}><Download size={13} /> JPEG</button>
+            </div>
+            <label className="flex items-center gap-2 text-[12.5px]"><input type="checkbox" checked={transparent} onChange={(e) => setTransparent(e.target.checked)} className="h-4 w-4 accent-[#3B82C4]" /> Transparent background</label>
           </section>
           <section className="space-y-2">
             <H>Layers</H>

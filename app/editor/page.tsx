@@ -126,7 +126,7 @@ import { PhotoStudio, PhotoStudioHandle } from '@/components/photoStudio/PhotoSt
 import { PhotoAdjustments, DEFAULT_ADJUSTMENTS } from '@/lib/editor/photoFilters';
 import { imageSourceDataURL } from '@/lib/editor/imageQuality';
 import { prepareImageDataUrl } from '@/lib/editor/imagePrep';
-import { buildMtd, readMtd, MtdError, fileNameFor, nameFromFileName, preferredMtdExt, setPreferredMtdExt } from '@/lib/mtd/format';
+import { buildMtd, readMtd, MtdError, fileNameFor, nameFromFileName, preferredMtdExt, setPreferredMtdExt, toolUrlFor } from '@/lib/mtd/format';
 import type { MtdExt } from '@/lib/mtd/format';
 import { saveMtdFile, pickMtdFile, canWriteSilently, LocalFileRef } from '@/lib/mtd/fileAccess';
 import { putHandoff, peekHandoff, takeHandoff, newLocalKey, isLocalTabId, ExternalTarget, isCloudTarget } from '@/lib/mtd/handoff';
@@ -5933,6 +5933,13 @@ function EditorContent() {
     if (!picked) return;
     try {
       const opened = await readMtd(picked.file);
+      if (opened.tool) {
+        // Jersey / polo / T-shirt / pattern projects open in their own tool.
+        const k = newLocalKey();
+        putHandoff(k, { opened, file: { handle: picked.handle, fileName: picked.file.name } });
+        router.push(toolUrlFor(opened, k)!);
+        return;
+      }
       if (opened.document.editor === 'photo-studio') {
         setLocalNotice('This project was made in Photo Studio. Open it from the dashboard instead.');
         return;

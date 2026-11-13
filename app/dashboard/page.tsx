@@ -8,7 +8,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Fraunces, Inter } from 'next/font/google';
 import { MoreVertical, Pencil, Copy, Download, Trash2, Plus, Sparkles, ArrowRight, Sun, Moon, FolderOpen, HardDrive, X } from 'lucide-react';
-import { readMtd, MtdError } from '@/lib/mtd/format';
+import { readMtd, MtdError, toolUrlFor } from '@/lib/mtd/format';
 import { pickMtdFile, reopenFromHandle, LocalFileRef } from '@/lib/mtd/fileAccess';
 import { listRecent, rememberRecent, forgetRecent, RecentLocalFile } from '@/lib/mtd/recent';
 import { putHandoff, newLocalKey, editorUrlForLocal } from '@/lib/mtd/handoff';
@@ -225,9 +225,9 @@ export default function DashboardPage() {
         handle,
       });
       router.push(
-        opened.document.editor === 'photo-studio'
+        toolUrlFor(opened, key) || (opened.document.editor === 'photo-studio'
           ? `/photo-studio?localDoc=${encodeURIComponent(key)}`
-          : editorUrlForLocal(key, opened.document.width, opened.document.height),
+          : editorUrlForLocal(key, opened.document.width, opened.document.height)),
       );
     } catch (err) {
       alert(err instanceof MtdError ? err.message : 'This file could not be opened.');

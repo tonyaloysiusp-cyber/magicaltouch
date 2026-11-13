@@ -18,6 +18,10 @@
 //                are never packaged, for licensing reasons)
 //     thumbnail: small JPEG preview,
 //     template:  { id, version } when started from a template
+//     tool:      for projects made in a dedicated tool (jersey, polo,
+//                T-shirt, pattern, wall): { kind, version, data } with every
+//                setting, player, size, logo and colour, so the project
+//                reopens in that tool exactly as it was saved
 //   })
 //
 // Images are de-duplicated by content hash, so the same photo used five
@@ -44,11 +48,22 @@ const IMAGE_KEYS = new Set(['src', '__originalSrc', 'source']);
 
 export class MtdError extends Error {}
 
+/** Projects made in a dedicated tool rather than the design editor. */
+export type ToolKind = 'jersey' | 'polo' | 'tshirt' | 'pattern' | 'wall';
+export const TOOL_KINDS: ToolKind[] = ['jersey', 'polo', 'tshirt', 'pattern', 'wall'];
+export const TOOL_PATHS: Record<ToolKind, string> = { jersey: '/custom-jersey-designer', polo: '/polo-shirt-designer', tshirt: '/custom-t-shirt-designer', pattern: '/patterns', wall: '/wall-designer' };
+export interface MtdTool { kind: ToolKind; version: number; data: any }
+export const isToolKind = (v: unknown): v is ToolKind => typeof v === 'string' && (TOOL_KINDS as string[]).includes(v);
+/** Where an opened project belongs (tool projects open in their tool). */
+export function toolUrlFor(opened: { tool?: MtdTool | null }, key: string): string | null {
+  return opened.tool ? `${TOOL_PATHS[opened.tool.kind]}?localDoc=${encodeURIComponent(key)}` : null;
+}
+
 export interface MtdDocumentInfo {
   name: string;
   width: number;
   height: number;
-  editor: 'design' | 'photo-studio';
+  editor: 'design' | 'photo-studio' | ToolKind;
   createdAt?: string;
   savedAt?: string;
 }
@@ -69,6 +84,7 @@ export interface MtdFile {
   fonts: string[];
   thumbnail: string | null;
   template?: { id: string; version?: string } | null;
+  tool?: MtdTool | null;
 }
 
 export interface OpenedMtd {
@@ -78,6 +94,7 @@ export interface OpenedMtd {
   thumbnail: string | null;
   template: MtdFile['template'];
   missingAssets: string[];
+  tool?: MtdTool | null;
 }
 
 // ---------- helpers ----------
@@ -150,6 +167,7 @@ export interface BuildOptions {
   document: MtdDocumentInfo;
   thumbnail?: string | null;
   template?: MtdFile['template'];
+  tool?: MtdTool | null;
 }
 
 export interface BuildResult {
@@ -204,6 +222,7 @@ export async function buildMtd(opts: BuildOptions): Promise<BuildResult> {
     fonts: Array.from(fonts).sort(),
     thumbnail: opts.thumbnail ?? null,
     template: opts.template ?? null,
+    ...(opts.tool ? { tool: opts.tool } : {}),
   };
   const blob = await gzip(JSON.stringify(file));
   const bytes = new Uint8Array(await new Blob([blob]).arrayBuffer());
@@ -316,6 +335,8 @@ export async function readMtd(file: Blob): Promise<OpenedMtd> {
     throw new MtdError('This project was saved with a newer version of Magical Touch Design. Please refresh the page and try again.');
   }
   const doc = parsed.document || {};
+  const tool: MtdTool | null = parsed.tool && isToolKind(parsed.tool.kind) && parsed.tool.data && typeof parsed.tool.data === 'object' ? { kind: parsed.tool.kind, version: Number(parsed.tool.version) || 1, data: parsed.tool.data } : null;
+  if (tool && (!parsed.canvas || !Array.isArray(parsed.canvas.objects))) parsed.canvas = { version: '5.1.0', objects: [] };
   if (!parsed.canvas || typeof parsed.canvas !== 'object' || !Array.isArray(parsed.canvas.objects)) {
     throw new MtdError('This project file is damaged: its design data is missing.');
   }
@@ -343,7 +364,7 @@ export async function readMtd(file: Blob): Promise<OpenedMtd> {
       name: String(doc.name || 'Untitled Design').slice(0, 200),
       width,
       height,
-      editor: doc.editor === 'photo-studio' ? 'photo-studio' : 'design',
+      editor: tool ? tool.kind : doc.editor === 'photo-studio' ? 'photo-studio' : 'design',
       createdAt: doc.createdAt,
       savedAt: doc.savedAt,
     },
@@ -352,6 +373,7 @@ export async function readMtd(file: Blob): Promise<OpenedMtd> {
     thumbnail: typeof parsed.thumbnail === 'string' && parsed.thumbnail.startsWith('data:image/') ? parsed.thumbnail : null,
     template: parsed.template ?? null,
     missingAssets: Array.from(missing),
+    tool,
   };
 }
 

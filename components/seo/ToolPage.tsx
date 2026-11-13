@@ -20,6 +20,7 @@ export const RELATED_TOOLS: { href: string; label: string }[] = [
   { href: '/polo-shirt-designer', label: 'Polo T-shirt designer' },
   { href: '/custom-t-shirt-designer', label: 'Custom T-shirt designer' },
   { href: '/wall-designer', label: 'Wall poster & wallpaper designer' },
+  { href: '/print-layout', label: 'Print layout: business cards many-up & booklets' },
   { href: '/trace', label: 'Image to vector (Image Trace)' },
   { href: '/patterns', label: 'Seamless pattern maker' },
   { href: '/colours', label: 'Colour palette generator' },
