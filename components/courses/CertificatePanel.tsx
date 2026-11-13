@@ -72,7 +72,7 @@ export function CertificatePanel({
     setDl(true);
     setErr(null);
     try {
-      window.location.href = await downloadCertificate(row.certificate_path);
+      await downloadCertificate(row.certificate_path, `${(course.certificate_title || course.title).replace(/[^\w\- ]+/g, '').trim()} - ${row.certificate_code || 'certificate'}.pdf`);
     } catch (e: any) {
       setErr(e?.message || 'Could not download the certificate.');
     }

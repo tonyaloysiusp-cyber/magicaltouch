@@ -173,8 +173,8 @@ export function LessonView({ course, lesson, prerequisite }: { course: CourseWit
   const tick = (id: string) => setTicks((t) => { const n = { ...t, [id]: !t[id] }; persist(n, triedTool); return n; });
   const markTried = () => { setTriedTool(true); persist(ticks, true); };
   const needTool = !!lesson.try_href;
-  // Intermediate and Pro lessons: a screenshot of the edited design is proof.
-  const needProof = needsEvidence(course.level);
+  // One screenshot of the finished design, on the course's final lesson only.
+  const needProof = needsEvidence(course.level, idx, course.lessons.length);
   const [hasProof, setHasProof] = useState(false);
   const tasksDone = tasks.filter((t) => ticks[t.id]).length + (needTool && triedTool ? 1 : 0) + (needProof && hasProof ? 1 : 0);
   const tasksTotal = tasks.length + (needTool ? 1 : 0) + (needProof ? 1 : 0);

@@ -11,8 +11,11 @@ const BUCKET = 'design-assets';
 export const evidenceFolder = (userId: string, courseId: string) => `${userId}/course-evidence/${courseId}`;
 export const evidencePath = (userId: string, courseId: string, lessonId: string) => `${evidenceFolder(userId, courseId)}/${lessonId}.webp`;
 
-/** Intermediate and Pro courses need a screenshot for every lesson. */
-export const needsEvidence = (level: CourseLevel | string) => level === 'Intermediate' || level === 'Pro';
+/**
+ * One screenshot per course: only the final lesson asks for it (the
+ * finished design is the proof). Earlier lessons never ask.
+ */
+export const needsEvidence = (_level: CourseLevel | string, lessonIndex: number, lessonCount: number) => lessonCount > 0 && lessonIndex === lessonCount - 1;
 
 export async function compressScreenshot(file: File): Promise<Blob> {
   const img = await createImageBitmap(file);

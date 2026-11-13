@@ -85,8 +85,21 @@ export async function requestCertificate(row: CourseProgress, name: string) {
   return data as CourseProgress;
 }
 
-export async function downloadCertificate(path: string) {
-  const { data, error } = await supabase.storage.from('certificates').createSignedUrl(path, 120, { download: true });
-  if (error || !data?.signedUrl) throw new Error(error?.message || 'Could not prepare the download.');
-  return data.signedUrl;
+/**
+ * Downloads the learner's released certificate as a real file. The PDF is
+ * fetched first and checked, so an empty or missing file shows a clear
+ * message instead of a blank download.
+ */
+export async function downloadCertificate(path: string, fileName?: string): Promise<void> {
+  const { data, error } = await supabase.storage.from('certificates').download(path);
+  if (error || !data) throw new Error('Your certificate file could not be found. Please contact us and we will send it again.');
+  const head = new Uint8Array(await data.slice(0, 5).arrayBuffer());
+  const isPdf = String.fromCharCode(...head) === '%PDF-';
+  if (data.size < 2000 || !isPdf) throw new Error('Your certificate file is being prepared again by our team. Please try again later, or contact us.');
+  const url = URL.createObjectURL(new Blob([data], { type: 'application/pdf' }));
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = fileName || path.split('/').pop() || 'certificate.pdf';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 30000);
 }

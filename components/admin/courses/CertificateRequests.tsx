@@ -68,6 +68,7 @@ async function notify(progressId: string, event: 'released' | 'rejected') {
 
 export function CertificateRequests({ onCount }: { onCount?: (n: number) => void }) {
   const [rows, setRows] = useState<Row[] | null>(null);
+  const [pdfSizes, setPdfSizes] = useState<Record<string, number>>({});
   const [lessonIds, setLessonIds] = useState<Record<string, string[]>>({});
   const [emails, setEmails] = useState<Record<string, { email: string; name: string }>>({});
   const [masters, setMasters] = useState<Master[]>([]);
@@ -100,6 +101,15 @@ export function CertificateRequests({ onCount }: { onCount?: (n: number) => void
     ((us as any[]) || []).forEach((u) => (em[u.user_id] = { email: u.email, name: u.name }));
     setEmails(em);
     setRows((r as Row[]) || []);
+    // Flag released certificates whose stored PDF is missing or empty.
+    const rel = ((r as Row[]) || []).filter((x) => x.certificate_path);
+    const sizes: Record<string, number> = {};
+    await Promise.all(rel.map(async (x) => {
+      const p = x.certificate_path!, dir = p.slice(0, p.lastIndexOf('/')), file = p.slice(p.lastIndexOf('/') + 1);
+      const { data } = await supabase.storage.from('certificates').list(dir, { search: file, limit: 5 });
+      sizes[x.id] = Number((data || []).find((f: any) => f.name === file)?.metadata?.size || 0);
+    }));
+    setPdfSizes(sizes);
     onCount?.(((r as Row[]) || []).filter((x) => x.status === 'pending').length);
     const ms = ((m as Master[]) || []).sort((a, b) => Number((b.tags || []).includes('secure')) - Number((a.tags || []).includes('secure')));
     setMasters(ms);
@@ -191,6 +201,7 @@ export function CertificateRequests({ onCount }: { onCount?: (n: number) => void
         if (e2) throw e2;
       }
       const { blob } = await packageCertificates(master.canvas_json, [issue], 'pdf');
+      if (blob.size < 2000) throw new Error('The PDF came out empty, so it was not released. Try again.');
       const path = `${r.user_id}/${issue.code}.pdf`;
       const up = await supabase.storage.from('certificates').upload(path, blob, { contentType: 'application/pdf', upsert: true });
       if (up.error) throw new Error(up.error.message);
@@ -210,6 +221,7 @@ export function CertificateRequests({ onCount }: { onCount?: (n: number) => void
       const master = masters.find((m) => m.id === issue.template_id) || masters.find((m) => m.id === masterId);
       if (!master) throw new Error('Choose a certificate design first.');
       const { blob } = await packageCertificates(master.canvas_json, [issue], 'pdf');
+      if (blob.size < 2000) throw new Error('The PDF came out empty, so the old file was kept. Try again.');
       const path = r.certificate_path || `${r.user_id}/${issue.code}.pdf`;
       const up = await supabase.storage.from('certificates').upload(path, blob, { contentType: 'application/pdf', upsert: true });
       if (up.error) throw new Error(up.error.message);
@@ -322,7 +334,8 @@ export function CertificateRequests({ onCount }: { onCount?: (n: number) => void
               {filterOf(r) === 'released' && (
                 <div className="mt-5 flex flex-wrap gap-2">
                   <button onClick={() => openPdf(r)} className={`${btn} border border-mt-border`}><Download size={14} /> PDF</button>
-                  <button disabled={b} onClick={() => remake(r)} className={`${btn} border border-mt-border`}>{b ? <Loader2 size={14} className="animate-spin" /> : <Award size={14} />} Remake PDF</button>
+                  <button disabled={b} onClick={() => remake(r)} className={`${btn} border ${r.certificate_path && pdfSizes[r.id] !== undefined && pdfSizes[r.id] < 2000 ? 'border-rose-500 text-rose-600' : 'border-mt-border'}`}>{b ? <Loader2 size={14} className="animate-spin" /> : <Award size={14} />} Remake PDF</button>
+                  {r.certificate_path && pdfSizes[r.id] !== undefined && pdfSizes[r.id] < 2000 && <span className="text-[12px] font-semibold text-rose-600">The stored PDF is empty — press Remake PDF so the learner can download it.</span>}
                   {r.certificate_code && <a href={verifyUrl(r.certificate_code)} target="_blank" rel="noreferrer" className={`${btn} border border-mt-border`}><ExternalLink size={14} /> Verify page</a>}
                 </div>
               )}

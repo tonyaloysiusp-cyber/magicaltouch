@@ -72,7 +72,9 @@ export async function packageCertificates(
   for (let i = 0; i < certs.length; i++) {
     const c = certs[i];
     const img = await renderIssuedCertificate(masterJson, c);
-    if (img) {
+    // Never hand back an empty or partial file: stop with a clear reason.
+    if (!img || !img.url || img.url.length < 1000) throw new Error(`The certificate for ${c.recipient} (${c.code}) could not be drawn — check that the design's images and fonts load, then try again.`);
+    {
       const w = pxToMm(img.width), h = pxToMm(img.height);
       const orientation = w >= h ? 'landscape' : 'portrait';
       if (mode === 'pdf') {
@@ -92,7 +94,10 @@ export async function packageCertificates(
   const stamp = new Date().toISOString().slice(0, 10);
   if (mode === 'pdf') {
     doc?.setProperties({ title: `Certificates ${stamp}`, author: 'Magical Touch Design' });
-    return { blob: doc ? doc.output('blob') : new Blob(), fileName: `Certificates ${stamp} (${certs.length}).pdf` };
+    if (!doc) throw new Error('No certificate could be drawn.');
+    const blob: Blob = doc.output('blob');
+    if (blob.size < 2000) throw new Error('The certificate PDF came out empty — nothing was saved.');
+    return { blob, fileName: `Certificates ${stamp} (${certs.length}).pdf` };
   }
   return { blob: buildZip(zipParts), fileName: `Certificates ${stamp} (${certs.length}).zip` };
 }

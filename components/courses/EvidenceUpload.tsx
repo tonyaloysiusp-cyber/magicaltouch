@@ -41,8 +41,8 @@ export function EvidenceUpload({ userId, courseId, lessonId, locked, onChange }:
         <span className="h-20 w-28 rounded-lg bg-mt-surface2 grid place-items-center text-mt-faint"><Camera size={22} aria-hidden /></span>
       )}
       <div className="flex-1 min-w-[180px]">
-        <p className="text-[14px] font-medium inline-flex items-center gap-1.5">{url ? <><CheckCircle2 size={16} className="text-emerald-600" aria-hidden /> Screenshot uploaded</> : 'Upload a screenshot of your design'}</p>
-        <p className="text-[12px] text-mt-muted">Open any template, make the changes from this lesson, then take a screenshot. It is shrunk to a small copy only our team sees.</p>
+        <p className="text-[14px] font-medium inline-flex items-center gap-1.5">{url ? <><CheckCircle2 size={16} className="text-emerald-600" aria-hidden /> Screenshot uploaded</> : 'Final step: upload one screenshot of your finished design'}</p>
+        <p className="text-[12px] text-mt-muted">One screenshot for the whole course — this is the only upload. It is shrunk to a small copy only our team sees when checking your certificate.</p>
         {msg && <p role="status" className="text-[12px] mt-1 text-mt-muted">{msg}</p>}
       </div>
       {!locked && (
