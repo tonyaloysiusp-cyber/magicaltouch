@@ -166,7 +166,7 @@ export function HeroTour() {
           <aside className="hidden sm:block border-l border-mt-border p-3 text-[11px]">
             <p className="font-semibold text-mt-ink">{s.label}</p>
             <ul className="mt-3 space-y-2 text-mt-muted">
-              {(s.id === 'templates' ? ['5,000+ designs', 'Print & digital', 'Matching sets'] :
+              {(s.id === 'templates' ? ['16,000+ designs', 'Print & digital', 'Matching sets'] :
                 s.id === 'text' ? ['Fonts & effects', 'Curved text', 'Replace photos'] :
                 s.id === 'brand' ? ['Logo', 'Brand colours', 'Brand fonts'] :
                 s.id === 'translate' ? ['37 languages', 'Right-to-left', 'One undo step'] :

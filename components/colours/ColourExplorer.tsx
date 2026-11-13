@@ -36,13 +36,13 @@ function Swatch({ hex, onCopy, copied }: { hex: string; onCopy: (t: string) => v
         <span className="absolute right-2 top-2 opacity-70">{copied === hex ? <Check size={15} /> : <Copy size={15} />}</span>
         <span className="absolute left-3 bottom-2 text-[15px] font-semibold tracking-wide">{hex}</span>
       </button>
-      <dl className="px-2.5 py-2 text-[11px] text-mt-muted space-y-0.5 tabular-nums">
+      <div className="px-2.5 py-2 text-[11px] text-mt-muted space-y-0.5 tabular-nums">
         {rows.slice(1).map(([k, v]) => (
           <button key={k} type="button" onClick={() => onCopy(v)} className="flex w-full justify-between gap-2 rounded px-0.5 hover:bg-mt-surface2" title={`Copy ${k}`}>
-            <dt>{k}</dt><dd className="text-mt-ink truncate">{copied === v ? 'Copied' : v.replace(/^rgb\(|^hsl\(|\)$/g, '')}</dd>
+            <span>{k}</span><span className="text-mt-ink truncate">{copied === v ? 'Copied' : v.replace(/^rgb\(|^hsl\(|\)$/g, '')}</span>
           </button>
         ))}
-      </dl>
+      </div>
     </li>
   );
 }

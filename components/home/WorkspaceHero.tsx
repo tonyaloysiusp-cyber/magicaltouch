@@ -28,9 +28,11 @@ export function WorkspaceHero() {
         @keyframes mth-draw { from { stroke-dashoffset: 120 } to { stroke-dashoffset: 0 } }
         .mth-float { animation: mth-float 7s ease-in-out infinite; }
         .mth-rise { animation: mth-rise .9s cubic-bezier(.2,.7,.2,1) both; }
+        @keyframes mth-lift { from { transform: translate3d(0,18px,0) } to { transform: none } }
+        .mth-lift { animation: mth-lift .9s cubic-bezier(.2,.7,.2,1) both; }
         .mth-pan { animation: mth-pan 22s ease-in-out infinite alternate; }
         .mth-draw path { stroke-dasharray: 120; animation: mth-draw 2.4s ease-out .6s both; }
-        @media (prefers-reduced-motion: reduce) { .mth-float, .mth-rise, .mth-pan, .mth-draw path { animation: none !important } }
+        @media (prefers-reduced-motion: reduce) { .mth-float, .mth-rise, .mth-pan, .mth-lift, .mth-draw path { animation: none !important } }
       `}</style>
 
       {/* fine architectural grid */}
@@ -38,7 +40,8 @@ export function WorkspaceHero() {
 
       <div className="relative mt-container pt-12 pb-16 sm:pt-20 sm:pb-24 grid gap-14 lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)] lg:items-center">
         {/* Copy */}
-        <div className="mth-rise">
+        {/* The headline is painted at once (no fade-in), so it counts as loaded straight away. */}
+        <div className="mth-lift">
           <p className="inline-flex items-center gap-2 rounded-full border border-mt-border bg-mt-surface/80 backdrop-blur px-3.5 py-1.5 text-[12px] font-semibold tracking-wide text-mt-muted">
             <span className="h-1.5 w-1.5 rounded-full mt-spectrum" aria-hidden /> The design studio for growing brands
           </p>
