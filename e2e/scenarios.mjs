@@ -796,6 +796,9 @@ scenarios.push({
     await t.page.waitForTimeout(1500);
     const info = await t.eval(() => { const g = window.__fabricCanvas.getObjects().find((o) => o.name === 'Pattern'); return g ? { n: g.getObjects().reduce((s, o) => s + (o.type === 'group' ? o.getObjects().length : 1), 0), clip: !!g.clipPath } : null; });
     t.check('pattern added as a vector group', !!info && info.n > 10, JSON.stringify(info));
+    await t.eval(() => { window.__fabricCanvas.discardActiveObject(); window.__fabricCanvas.requestRenderAll(); });
+    await t.page.keyboard.press('Escape');
+    await t.page.waitForTimeout(600);
     await t.shot('pattern-layer');
     const svg = await exportAs(t, 'svg');
     const text = svg.bytes.toString('utf8');

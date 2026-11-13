@@ -21,7 +21,7 @@ try { results = JSON.parse(read('results.json') || '[]'); } catch {}
 const failed = results.filter((r) => r.error || (r.checks || []).some((c) => !c.ok));
 console.log(`\n== Browser scenarios: ${results.length - failed.length}/${results.length} passed`);
 failed.forEach((r) => {
-  console.log(`  FAIL ${r.name}${r.error ? ` — ${String(r.error).slice(0, 200)}` : ''}`);
+  console.log(`  FAIL ${r.name}${r.error ? ` — ${String(r.error).slice(0, 900).replace(/\n/g, ' | ')}` : ''}`);
   (r.checks || []).filter((c) => !c.ok).slice(0, 5).forEach((c) => console.log(`       ✗ ${c.name}${c.detail ? `: ${c.detail}` : ''}`));
 });
 if (results.length === 0 && !failedSteps.length) { console.log('  (no scenario results)'); bad++; }
