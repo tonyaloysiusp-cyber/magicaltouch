@@ -70,3 +70,15 @@ test('PNG images are placed; SVG pictures are drawn as vectors', () => {
   assert.equal(st.images, 1);
   assert.ok(pdf.log.some((l) => l[0] === 'setFillColor' && l[1] === 255 && l[2] === 0));
 });
+
+test('rangoli presets (rings, dots, lines, scalloped borders, gradients) convert to vector PDF', async () => {
+  const { preset, mandalaSvg, KINDS } = await import('../../lib/mandala.ts');
+  for (const k of KINDS) {
+    const m = preset(k.id, 2, 8);
+    if (k.id === 'rangoli') m.layers[1].gradient = ['#FF0000', '#0000FF'];
+    const pdf = fakePdf();
+    const st = renderSvgToPdf(pdf, mandalaSvg(m, { size: 200 }), { scale: 0.2 });
+    assert.ok(st.paths > (k.id === 'custom' ? 0 : 20), `${k.id}: ${st.paths}`);
+    assert.equal(count(pdf.log, 'saveGraphicsState'), count(pdf.log, 'restoreGraphicsState'));
+  }
+});
