@@ -15,5 +15,6 @@ if [ $status = ok ]; then
   (npx next start -p 3000 > e2e-out/server.txt 2>&1 &)
   for i in $(seq 1 60); do curl -s -o /dev/null http://localhost:3000 && break; sleep 1; done
   step scenarios node e2e/run.mjs || true
+  step seo node e2e/seo-audit.mjs || true
 fi
 echo "{\"sha\":\"$GITHUB_SHA\",\"ref\":\"$GITHUB_REF_NAME\",\"status\":\"$status\"}" > e2e-out/meta.json
