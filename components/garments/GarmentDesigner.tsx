@@ -228,6 +228,16 @@ export function GarmentDesigner({ kind }: { kind: GarmentKind }) {
   const player = personal ? players[Math.min(sel, players.length - 1)] || null : { name: '', number: '', size: players[0]?.size || 'M' };
   const preview = useMemo(() => (view === 'garment' ? kitMockupSvg(kit, pattern, player, glyphs, side, { selected: selEl }) : kitPreviewSvg(kit, pattern, player, glyphs)), [view, side, kit, pattern, player, glyphs, selEl]);
 
+  // Picker thumbnails only change with the style / colours they show.
+  const starterThumbs = useMemo(() => Object.fromEntries(STARTERS.map((st) => [st.name, svgDataUrl(kitMockupSvg({ ...kitFor(kind), style: kit.style, ...st.o, personalise: false, frontText: '', teamLogo: null, sponsorLogo: null, patternOn: 'none' }, DEFAULT_PATTERN, null, {}, 'front'))])), [kind, kit.style]);
+  const swatchCache = useRef(new Map<string, string>());
+  const swatchThumb = (name: string, p: PatternSettings) => {
+    const key = `${name}|${kit.body}|${patColor}|${p.motif}|${p.seed}`;
+    let v = swatchCache.current.get(key);
+    if (!v) { v = svgDataUrl(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120"><rect width="120" height="120" fill="${kit.body}"/>${patternSwatch({ ...p, colors: [patColor] })}</svg>`); swatchCache.current.set(key, v); }
+    return v;
+  };
+
   // ---------- click and drag on the shirt ----------
   const frontW = kitProduct(kit).pieces.find((x) => x.id === 'front')?.w || 560;
   const onDown = (e: React.PointerEvent<HTMLDivElement>) => {
@@ -509,7 +519,7 @@ export function GarmentDesigner({ kind }: { kind: GarmentKind }) {
               <div className="grid grid-cols-4 gap-2">
                 {STARTERS.map((s) => (
                   <button key={s.name} type="button" title={s.name} aria-label={`Design: ${s.name}`} onClick={() => set(s.o)} className="group rounded-xl border border-mt-border p-1 hover:border-mt-ink/40">
-                    <img alt="" className="w-full aspect-square object-contain" src={svgDataUrl(kitMockupSvg({ ...kit, ...s.o, personalise: false, frontText: '', teamLogo: null, sponsorLogo: null, patternOn: 'none' }, pattern, null, {}, 'front'))} />
+                    <img alt="" className="w-full aspect-square object-contain" src={starterThumbs[s.name]} />
                   </button>
                 ))}
               </div>
@@ -531,7 +541,7 @@ export function GarmentDesigner({ kind }: { kind: GarmentKind }) {
                   {[...PATTERNS.map((x) => ({ name: x.name, p: { ...DEFAULT_PATTERN, ...x.p } })), ...mine].map((x) => (
                     <button key={x.name} type="button" title={x.name} aria-label={`Pattern: ${x.name}`} aria-pressed={patName === x.name} onClick={() => { setPat(x.p); setPatName(x.name); }}
                       className={`rounded-xl border p-1 ${patName === x.name ? 'border-mt-ink ring-2 ring-mt-ink/15' : 'border-mt-border hover:border-mt-ink/40'}`}>
-                      <img alt="" className="w-full aspect-square rounded-lg" style={{ background: kit.body }} src={svgDataUrl(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120"><rect width="120" height="120" fill="${kit.body}"/>${patternSwatch({ ...x.p, colors: [patColor] })}</svg>`)} />
+                      <img alt="" className="w-full aspect-square rounded-lg" style={{ background: kit.body }} src={swatchThumb(x.name, x.p)} />
                     </button>
                   ))}
                 </div>

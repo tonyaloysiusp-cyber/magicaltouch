@@ -288,16 +288,16 @@ export default function TemplatesPage() {
   const catById = useMemo(() => new Map(categories.map((c) => [c.id, c])), [categories]);
   const parentOf = useCallback((id: string | null | undefined) => (id ? catById.get(id)?.parentId ?? null : null), [catById]);
 
-  // Everything about a template the filters look at, worked out once.
-  const meta = useMemo(() => {
-    const m = new Map<Template, Meta>();
-    templates.forEach((t) => {
+  // Everything about a template the filters look at, worked out once — in
+  // small slices between frames, so the page stays responsive while 16,000+
+  // templates are indexed (the first few hundred show straight away).
+  const buildMeta = useCallback((t: Template): Meta => {
       const subCat = t.categoryId ? catById.get(t.categoryId) : undefined;
       const src = { name: t.name, category: t.category, sub: subCat?.parentId ? subCat.name : null, width: t.width, height: t.height, tags: t.tags, occasion: t.occasion, industry: t.industry, searchKeywords: t.searchKeywords };
       const types = typesOf(src);
       const topic = topicText(src);
       const root = subCat ? (subCat.parentId ? catById.get(subCat.parentId) || null : subCat) : null;
-      m.set(t, {
+      return {
         root,
         occName: subCat?.parentId ? subCat.name : null,
         styles: stylesOf(t),
@@ -318,10 +318,22 @@ export default function TemplatesPage() {
           keywords: t.searchKeywords, tags: t.tags, description: t.description,
           extra: types.flatMap((id) => { const ty = TYPE_BY_ID.get(id); return ty ? [ty.one, ty.label] : []; }),
         }),
-      });
-    });
-    return m;
-  }, [templates, catById]);
+      };
+  }, [catById]);
+  const [meta, setMeta] = useState<Map<Template, Meta>>(() => new Map());
+  useEffect(() => {
+    let alive = true, i = 0, first = true;
+    const m = new Map<Template, Meta>();
+    const step = () => {
+      if (!alive) return;
+      const t0 = performance.now();
+      while (i < templates.length && performance.now() - t0 < 30) { const t = templates[i++]; m.set(t, buildMeta(t)); }
+      if (i >= templates.length || (first && i >= 400)) { setMeta(new Map(m)); first = false; }
+      if (i < templates.length) setTimeout(step, 0);
+    };
+    step();
+    return () => { alive = false; };
+  }, [templates, buildMeta]);
 
   const newest = useMemo(() => templates.reduce((mx, t) => Math.max(mx, time(t)), 0), [templates]);
   const parsed = useMemo(() => parseQuery(f.q), [f.q]);
@@ -331,7 +343,7 @@ export default function TemplatesPage() {
   const scores = useMemo(() => {
     const m = new Map<Template, number>();
     if (!f.q.trim() || !sq.terms.length) return m;
-    templates.forEach((t) => { const sc = scoreDoc(meta.get(t)!.doc, sq); if (sc) m.set(t, sc); });
+    templates.forEach((t) => { const x = meta.get(t); if (!x) return; const sc = scoreDoc(x.doc, sq); if (sc) m.set(t, sc); });
     return m;
   }, [templates, meta, sq, f.q]);
 
@@ -893,7 +905,8 @@ export default function TemplatesPage() {
                 <button onClick={() => setShown((n) => n + STEP * 2)} className="h-10 px-5 rounded-full border border-mt-border text-sm font-semibold text-mt-ink hover:bg-mt-surface2">Show more templates</button>
               </div>
             )}
-            {filtered.length === 0 && (
+            {filtered.length === 0 && meta.size < templates.length && <p className="py-20 text-center text-mt-muted" role="status">Loading templates…</p>}
+            {filtered.length === 0 && meta.size >= templates.length && (
               <div className="text-center py-20">
                 <p className="text-lg font-[family-name:var(--font-display)]">No templates match these filters.</p>
                 <p className="mt-2 text-sm text-mt-muted">Remove a filter or try a different search.</p>
