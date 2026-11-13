@@ -1,3 +1,4 @@
+import { BackChip } from '@/components/tools/BackChip';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { SeoShell, Crumbs } from '@/components/seo/SeoShell';
@@ -38,7 +39,7 @@ export default function PatternsPage() {
     <SeoShell active="tools">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(ld) }} />
       <div className="mt-container py-6 sm:py-10">
-        <Crumbs items={[{ href: '/', label: 'Home' }, { href: '/free-design-tools', label: 'Free tools' }, { label: 'Pattern Studio' }]} />
+        <div className="flex flex-wrap items-center justify-between gap-3"><Crumbs items={[{ href: '/', label: 'Home' }, { href: '/free-design-tools', label: 'Free tools' }, { label: 'Pattern Studio' }]} /><BackChip /></div>
         <header className="mt-4 max-w-3xl">
           <p className="text-[12px] font-semibold uppercase tracking-[0.2em] text-[#3B82C4]">Pattern Studio</p>
           <h1 className="mt-2 text-3xl sm:text-5xl font-semibold tracking-tight">Seamless patterns, made in minutes</h1>

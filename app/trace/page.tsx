@@ -1,3 +1,4 @@
+import { BackChip } from '@/components/tools/BackChip';
 import type { Metadata } from 'next';
 import { SeoShell, Crumbs } from '@/components/seo/SeoShell';
 import { SITE_URL, SITE_NAME, fitTitle, fitDescription } from '@/lib/seo';
@@ -29,7 +30,7 @@ export default function TracePage() {
     <SeoShell active="tools">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(ld) }} />
       <div className="mt-container py-6 sm:py-10">
-        <Crumbs items={[{ href: '/', label: 'Home' }, { href: '/tools', label: 'Tools' }, { label: 'Image Trace' }]} />
+        <div className="flex flex-wrap items-center justify-between gap-3"><Crumbs items={[{ href: '/', label: 'Home' }, { href: '/tools', label: 'Tools' }, { label: 'Image Trace' }]} /><BackChip /></div>
         <header className="mt-4 max-w-3xl">
           <p className="text-[12px] font-semibold uppercase tracking-[0.2em] text-[#3B82C4]">Image Trace</p>
           <h1 className="mt-2 text-3xl sm:text-5xl font-semibold tracking-tight">Turn any picture into vectors</h1>

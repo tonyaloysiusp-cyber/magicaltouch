@@ -1,3 +1,4 @@
+import { BackChip } from '@/components/tools/BackChip';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { SeoShell, Crumbs } from '@/components/seo/SeoShell';
@@ -36,7 +37,7 @@ export default function RemoveBackgroundPage() {
     <SeoShell>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(ld) }} />
       <div className="mt-container py-6 sm:py-10">
-        <Crumbs items={[{ href: '/', label: 'Home' }, { label: 'Free background remover' }]} />
+        <div className="flex flex-wrap items-center justify-between gap-3"><Crumbs items={[{ href: '/', label: 'Home' }, { label: 'Free background remover' }]} /><BackChip /></div>
         <div className="mt-5 max-w-3xl">
           <h1 className="text-3xl sm:text-5xl font-semibold tracking-tight leading-tight">Remove backgrounds <span className="mt-spectrum-text">free</span> — one photo or a whole folder</h1>
           <p className="mt-3 text-[16px] text-mt-muted">Transparent PNG, white or any colour background. Runs on your device — your photos are never uploaded. No sign-up, no watermark.</p>

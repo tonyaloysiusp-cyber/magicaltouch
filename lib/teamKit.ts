@@ -34,11 +34,12 @@ export const GARMENT_STYLES: Record<GarmentKind, KitStyle[]> = {
 };
 
 /** Body graphics drawn in the accent colours (on the front and back pieces). */
-export type KitGraphic = 'plain' | 'sash' | 'hoops' | 'stripes' | 'pinstripes' | 'side-panels' | 'chevron' | 'yoke' | 'split' | 'band';
+export type KitGraphic = 'plain' | 'sash' | 'hoops' | 'stripes' | 'pinstripes' | 'side-panels' | 'chevron' | 'yoke' | 'split' | 'band' | 'diagonal' | 'halftone' | 'double-sash' | 'centre-stripe';
 export const KIT_GRAPHICS: { id: KitGraphic; label: string }[] = [
   { id: 'plain', label: 'Plain' }, { id: 'sash', label: 'Sash' }, { id: 'hoops', label: 'Hoops' },
   { id: 'stripes', label: 'Stripes' }, { id: 'pinstripes', label: 'Pinstripes' }, { id: 'side-panels', label: 'Side panels' },
   { id: 'chevron', label: 'Chevron' }, { id: 'yoke', label: 'Shoulder yoke' }, { id: 'split', label: 'Half & half' }, { id: 'band', label: 'Chest band' },
+  { id: 'diagonal', label: 'Diagonal stripes' }, { id: 'halftone', label: 'Halftone fade' }, { id: 'double-sash', label: 'Double sash' }, { id: 'centre-stripe', label: 'Centre stripe' },
 ];
 
 export interface KitDesign {
@@ -57,19 +58,23 @@ export interface KitDesign {
   graphic?: KitGraphic; accent?: string; accent2?: string; cuffs?: boolean;
   frontText?: string; frontTextColor?: string; frontTextMm?: number; frontTextTopMm?: number;
   personalise?: boolean; // names and numbers per player (off: sizes and quantities only)
+  // Positions on the front piece (size-M mm); unset = the standard place.
+  teamLogoX?: number; teamLogoY?: number; teamLogoMm?: number;
+  sponsorX?: number; sponsorY?: number; sponsorMm?: number;
+  frontNumX?: number; frontNumY?: number; frontNumMm?: number; frontTextX?: number;
 }
 
 export const DEFAULT_KIT: KitDesign = {
   style: 'football', body: '#1E3A5F', sleeve: '#1E3A5F', collar: '#C9A86A', patternOn: 'body', patternOpacity: 0.35, repeatMm: 70,
   font: 'Oswald', fontWeight: 700, nameColor: '#FFFFFF', numberColor: '#FFFFFF', outlineColor: '#C9A86A', outlineMm: 2,
   nameMm: 55, numberMm: 230, nameTopMm: 95, numberTopMm: 175, frontNumber: true, teamLogo: null, sponsorLogo: null, teamName: 'My Team',
-  graphic: 'plain', accent: '#C9A86A', accent2: '#FFFFFF', cuffs: true, frontText: '', frontTextColor: '#FFFFFF', frontTextMm: 60, frontTextTopMm: 300, personalise: true,
+  graphic: 'plain', accent: '#C9A86A', accent2: '#FFFFFF', cuffs: true, frontText: '', frontTextColor: '#FFFFFF', frontTextMm: 60, frontTextTopMm: 420, personalise: true,
 };
 
 /** Starting design for each designer. */
 export function kitFor(kind: GarmentKind): KitDesign {
   if (kind === 'polo') return { ...DEFAULT_KIT, style: 'polo', body: '#FFFFFF', sleeve: '#FFFFFF', collar: '#1E3A5F', accent: '#1E3A5F', graphic: 'band', patternOn: 'none', nameColor: '#1E3A5F', numberColor: '#1E3A5F', outlineMm: 0, frontNumber: false, personalise: false, frontText: '', teamName: 'My Company' };
-  if (kind === 'tshirt') return { ...DEFAULT_KIT, style: 'tshirt', body: '#111827', sleeve: '#111827', collar: '#111827', accent: '#F59E0B', graphic: 'plain', patternOn: 'none', frontNumber: false, personalise: false, frontText: 'MAGICAL', frontTextColor: '#F59E0B', teamName: 'My T-shirt' };
+  if (kind === 'tshirt') return { ...DEFAULT_KIT, style: 'tshirt', body: '#111827', sleeve: '#111827', collar: '#111827', accent: '#F59E0B', graphic: 'plain', patternOn: 'none', frontNumber: false, personalise: false, frontText: 'MAGICAL', frontTextColor: '#F59E0B', frontTextTopMm: 300, teamName: 'My T-shirt' };
   return { ...DEFAULT_KIT };
 }
 
@@ -209,8 +214,46 @@ export function graphicMarkup(kit: KitDesign, w: number, h: number, b: number, b
       return back ? R(X0, -b - 2, w / 2 + b + 2, h + 2 * b + 4) : R(w / 2, -b - 2, w / 2 + b + 2, h + 2 * b + 4);
     case 'band':
       return R(X0, h * 0.30 - 14, XW, 8, a2) + R(X0, h * 0.30, XW, h * 0.085) + R(X0, h * 0.30 + h * 0.085 + 6, XW, 8, a2);
+    case 'diagonal': {
+      let o = ''; const sw = 34;
+      for (let x = -h; x < w + h; x += sw * 2.6) o += `<rect x="${r2(x)}" y="${r2(-h)}" width="${sw}" height="${r2(3 * h)}" fill="${a}" transform="rotate(${back ? 30 : -30} ${r2(x)} ${r2(h / 2)})"/>`;
+      return o;
+    }
+    case 'halftone': {
+      // Dots that grow towards the hem — real circles, so they print as vectors.
+      let o = ''; const step = 26;
+      for (let y = h * 0.35; y < h + b + step; y += step) {
+        const t = Math.min(1, (y - h * 0.35) / (h * 0.65));
+        const rr = 1.5 + t * (step * 0.55);
+        const off = (Math.round(y / step) % 2) * (step / 2);
+        for (let x = -b - step + off; x < w + b + step; x += step) o += `<circle cx="${r2(x)}" cy="${r2(y)}" r="${r2(rr)}"/>`;
+      }
+      return `<g fill="${a}">${o}</g>`;
+    }
+    case 'double-sash': {
+      const bw = w * 0.11, ang = back ? 38 : -38, cy = h * 0.48;
+      return `<g transform="rotate(${ang} ${r2(w / 2)} ${r2(cy)})">${R(-w, cy - bw - 14, 3 * w, bw)}${R(-w, cy - 7, 3 * w, 14, a2)}${R(-w, cy + 14, 3 * w, bw)}</g>`;
+    }
+    case 'centre-stripe':
+      return R(w / 2 - w * 0.09, -b - 2, w * 0.18, h + 2 * b + 4) + R(w / 2 - w * 0.09 - 12, -b - 2, 7, h + 2 * b + 4, a2) + R(w / 2 + w * 0.09 + 5, -b - 2, 7, h + 2 * b + 4, a2);
     default: return '';
   }
+}
+
+export interface Box { x: number; y: number; w: number; h: number }
+/** Where each front / back element sits (size-M mm, piece units) — also the click targets in the editor. */
+export function frontLayout(kit: KitDesign, w: number): { teamLogo: Box; sponsor: Box; frontText: Box; frontNum: Box } {
+  const lm = kit.teamLogoMm ?? 85, sw = kit.sponsorMm ?? w * 0.6, sh = sw * 0.36;
+  const fh = kit.frontTextMm || 60, fw = w * 0.72, nh = kit.frontNumMm ?? 80, nw = nh * 1.4;
+  return {
+    teamLogo: { x: (kit.teamLogoX ?? w * 0.62 + lm / 2) - lm / 2, y: kit.teamLogoY ?? 125, w: lm, h: lm },
+    sponsor: { x: (kit.sponsorX ?? w / 2) - sw / 2, y: kit.sponsorY ?? 260, w: sw, h: sh },
+    frontText: { x: (kit.frontTextX ?? w / 2) - fw / 2, y: kit.frontTextTopMm || 300, w: fw, h: fh },
+    frontNum: { x: (kit.frontNumX ?? w * 0.3) - nw / 2, y: (kit.frontNumY ?? 168) - nh / 2, w: nw, h: nh },
+  };
+}
+export function backLayout(kit: KitDesign, w: number): { name: Box; number: Box } {
+  return { name: { x: w * 0.11, y: kit.nameTopMm, w: w * 0.78, h: kit.nameMm }, number: { x: w * 0.15, y: kit.numberTopMm, w: w * 0.7, h: kit.numberMm } };
 }
 
 /** One garment piece in its own local units (size-M millimetres), decorated for one player. */
@@ -237,10 +280,11 @@ export function pieceMarkup(piece: Piece, kit: KitDesign, pat: PatternSettings, 
   }
   if (piece.id === 'front') {
     const logo = (href: string, x: number, y: number, bw: number, bh: number) => `<image href="${href}" x="${r2(x)}" y="${r2(y)}" width="${r2(bw)}" height="${r2(bh)}" preserveAspectRatio="xMidYMid meet"/>`;
-    if (kit.teamLogo) out.push(logo(kit.teamLogo, w * 0.62, 125, 85, 85));
-    if (kit.sponsorLogo) out.push(logo(kit.sponsorLogo, w * 0.2, 260, w * 0.6, 120));
-    if (kit.frontText && kit.frontText.trim()) { const fh = kit.frontTextMm || 60; out.push(textMarkup(kit.frontText.trim(), glyphs, { ...kit, outlineMm: 0 }, kit.frontTextColor || '#FFFFFF', w / 2, (kit.frontTextTopMm || 300) + fh / 2, fh, w * 0.72, k)); }
-    if (kit.frontNumber && player && personal) out.push(textMarkup(player.number, glyphs, kit, kit.numberColor, w * 0.3, 168, 80, 110, k));
+    const L = frontLayout(kit, w);
+    if (kit.teamLogo) out.push(logo(kit.teamLogo, L.teamLogo.x, L.teamLogo.y, L.teamLogo.w, L.teamLogo.h));
+    if (kit.sponsorLogo) out.push(logo(kit.sponsorLogo, L.sponsor.x, L.sponsor.y, L.sponsor.w, L.sponsor.h));
+    if (kit.frontText && kit.frontText.trim()) out.push(textMarkup(kit.frontText.trim(), glyphs, { ...kit, outlineMm: 0 }, kit.frontTextColor || '#FFFFFF', L.frontText.x + L.frontText.w / 2, L.frontText.y + L.frontText.h / 2, L.frontText.h, L.frontText.w, k));
+    if (kit.frontNumber && player && personal) out.push(textMarkup(player.number, glyphs, kit, kit.numberColor, L.frontNum.x + L.frontNum.w / 2, L.frontNum.y + L.frontNum.h / 2, L.frontNum.h, L.frontNum.w, k));
   }
   return out.join('');
 }
@@ -266,7 +310,7 @@ export function kitPreviewSvg(kit: KitDesign, pat: PatternSettings, player: Play
  * collar, soft shading) for the on-screen preview. Same artwork as the print
  * pieces; only the sleeves are folded the way they hang when worn.
  */
-export function kitMockupSvg(kit: KitDesign, pat: PatternSettings, player: Player | null, glyphs: Glyphs, view: 'both' | 'front' | 'back' = 'both'): string {
+export function kitMockupSvg(kit: KitDesign, pat: PatternSettings, player: Player | null, glyphs: Glyphs, view: 'both' | 'front' | 'back' = 'both', edit?: { selected?: string | null }): string {
   const product = kitProduct(kit);
   const k = SIZES.find((s) => s.id === sizeId(player?.size || 'M'))?.k || 1;
   const front = product.pieces.find((p) => p.id === 'front')!, back = product.pieces.find((p) => p.id === 'back')!;
@@ -278,17 +322,37 @@ export function kitMockupSvg(kit: KitDesign, pat: PatternSettings, player: Playe
   const sleeveAt = 'translate(-100 212) rotate(57.4) translate(-220 -228)';
   const sleeves = (_isBack: boolean) => {
     if (!sleeve) return '';
-    const one = `<g clip-path="url(#${sid}-sl)"><path d="${sleevePoly}" fill="${kit.sleeve}"/><g transform="${sleeveAt}">${pieceMarkup(sleeve, kit, pat, player, glyphs, k, 0)}</g><path d="${sleevePoly}" fill="url(#${sid}-sh)" opacity="0.5"/></g><path d="${sleevePoly}" fill="none" stroke="#000" stroke-opacity="0.12" stroke-width="2"/>`;
+    const one = `<g clip-path="url(#${sid}-sl)"><path d="${sleevePoly}" fill="${kit.sleeve}"/><g transform="${sleeveAt}">${pieceMarkup(sleeve, kit, pat, player, glyphs, k, 0)}</g><path d="${sleevePoly}" fill="url(#${sid}-sh)" opacity="0.5"/></g><path d="${sleevePoly}" fill="none" stroke="#000" stroke-opacity="0.12" stroke-width="2"/>${edit ? `<path class="mt-part" data-el="sleeve" d="${sleevePoly}" fill="transparent" stroke="${edit.selected === 'sleeve' ? '#3B82C4' : 'transparent'}" stroke-width="4"/>` : ''}`;
     return `${one}<g transform="translate(${W} 0) scale(-1 1)">${one}</g>`;
   };
   const neck = (p: Piece) => p.d.match(/^M[^L]*?(?=L)/)?.[0] || '';
+  // Editor click targets: every part of the shirt and every element on it.
+  const hits = (piece: Piece, isBack: boolean) => {
+    const sel = edit?.selected || null;
+    const box = (el: string, b: Box, label?: string, empty?: boolean) => {
+      const on = sel === el;
+      const ph = empty ? `<rect x="${r2(b.x)}" y="${r2(b.y)}" width="${r2(b.w)}" height="${r2(b.h)}" rx="8" fill="#3B82C4" fill-opacity="0.08" stroke="#3B82C4" stroke-opacity="0.7" stroke-width="2" stroke-dasharray="7 6" pointer-events="none"/><text x="${r2(b.x + b.w / 2)}" y="${r2(b.y + b.h / 2)}" text-anchor="middle" dominant-baseline="central" font-family="Arial, sans-serif" font-size="${r2(Math.min(26, b.h * 0.4))}" font-weight="700" fill="#3B82C4" pointer-events="none">${esc(label || '+')}</text>` : '';
+      return `${ph}<rect class="mt-hit" data-el="${el}" x="${r2(b.x - 6)}" y="${r2(b.y - 6)}" width="${r2(b.w + 12)}" height="${r2(b.h + 12)}" rx="8" fill="transparent" stroke="${on ? '#3B82C4' : 'transparent'}" stroke-width="3" stroke-dasharray="${on ? '0' : '8 6'}"/>${on ? [[b.x - 6, b.y - 6], [b.x + b.w + 6, b.y - 6], [b.x - 6, b.y + b.h + 6], [b.x + b.w + 6, b.y + b.h + 6]].map(([x, y]) => `<rect x="${r2(x - 6)}" y="${r2(y - 6)}" width="12" height="12" fill="#fff" stroke="#3B82C4" stroke-width="3" pointer-events="none"/>`).join('') : ''}`;
+    };
+    const part = (el: string, d: string) => `<path class="mt-part" data-el="${el}" d="${d}" fill="transparent" stroke="${sel === el ? '#3B82C4' : 'transparent'}" stroke-width="4"/>`;
+    let o = part('body', piece.d) + `<path class="mt-part" data-el="collar" d="${neck(piece)}" fill="none" stroke="${sel === 'collar' ? '#3B82C4' : 'transparent'}" stroke-width="34" stroke-opacity="${sel === 'collar' ? 0.35 : 1}" pointer-events="stroke"/>`;
+    const personal = kit.personalise !== false;
+    if (isBack) {
+      if (personal) { const B = backLayout(kit, piece.w); o += box('name', B.name) + box('number', B.number); }
+    } else {
+      const L = frontLayout(kit, piece.w);
+      o += box('teamLogo', L.teamLogo, '+ Logo', !kit.teamLogo) + box('sponsor', L.sponsor, '+ Sponsor / print', !kit.sponsorLogo) + box('frontText', L.frontText, '+ Text', !(kit.frontText || '').trim());
+      if (kit.frontNumber && personal) o += box('frontNum', L.frontNum);
+    }
+    return o;
+  };
   const view1 = (piece: Piece, isBack: boolean) => {
     const inner = isBack ? "" : `<path d="${neck(piece)}Z" fill="${shade(kit.body, -0.45)}"/>`;
     const collar = product.id === 'polo'
       ? `<path d="M250 80L250 232L310 232L310 80Z" fill="${kit.collar}" opacity="${isBack ? 0 : 1}"/><path d="${isBack ? 'M185 -6C215 26 345 26 375 -6L372 -26C340 -2 220 -2 188 -26Z' : 'M196 -8C230 -30 330 -30 364 -8L362 4C330 -14 230 -14 198 4ZM198 -6L279 4L247 104L172 30ZM362 -6L281 4L313 104L388 30Z'}" fill="${kit.collar}" stroke="${shade(kit.collar, -0.25)}" stroke-width="2"/>`
       : `<path d="${neck(piece)}" fill="none" stroke="${kit.collar}" stroke-width="${product.id === 'vest' ? 14 : 20}" stroke-linecap="round"/>`;
     const arm = product.id === 'vest' ? `<path d="M95 0C95 120 65 185 0 225M465 0C465 120 495 185 560 225" fill="none" stroke="${kit.collar}" stroke-width="12" stroke-linecap="round"/>` : '';
-    return `${sleeves(isBack)}${inner}<g>${pieceMarkup(piece, kit, pat, player, glyphs, k, 0)}</g><path d="${piece.d}" fill="url(#${sid}-sh)" opacity="0.55"/>${arm}${collar}<path d="${piece.d}" fill="none" stroke="#000" stroke-opacity="0.12" stroke-width="2"/>`;
+    return `${sleeves(isBack)}${inner}<g>${pieceMarkup(piece, kit, pat, player, glyphs, k, 0)}</g><path d="${piece.d}" fill="url(#${sid}-sh)" opacity="0.55"/>${arm}${collar}<path d="${piece.d}" fill="none" stroke="#000" stroke-opacity="0.12" stroke-width="2"/>${edit ? hits(piece, isBack) : ''}`;
   };
   const defs = `<defs><clipPath id="${sid}-sl"><path d="${sleevePoly}"/></clipPath><linearGradient id="${sid}-sh" x1="0" x2="1" y1="0" y2="0"><stop offset="0" stop-color="#000" stop-opacity="0.22"/><stop offset="0.18" stop-color="#000" stop-opacity="0"/><stop offset="0.5" stop-color="#fff" stop-opacity="0.10"/><stop offset="0.82" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity="0.22"/></linearGradient></defs>`;
   const pad = sleeve ? 170 : 30, gap = 120, H = Math.max(front.h, back.h);

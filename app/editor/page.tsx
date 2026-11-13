@@ -1,5 +1,6 @@
 'use client';
 
+import { previousStep } from '@/lib/toolsCatalog';
 import { blockBrowserShortcut } from '@/lib/editor/browserKeys';
 import { ThemeSwitch } from '@/components/ThemeSwitch';
 import { useEffect, useRef, useState, useCallback, Suspense } from 'react';
@@ -480,8 +481,11 @@ function EditorContent() {
   // Back to templates returns to the same filtered view (e.g. Business cards).
   const [galleryUrl, setGalleryUrl] = useState('/templates');
   useEffect(() => { try { const u = sessionStorage.getItem('mt:galleryUrl'); if (u && u.startsWith('/templates')) setGalleryUrl(u); } catch { /* private mode */ } }, []);
-  const backHref = cameFrom === 'brand' ? '/admin/brand' : wantsTemplateEdit ? '/admin/library' : cameFromTemplate ? galleryUrl : '/dashboard';
-  const backLabel = cameFrom === 'brand' ? 'Back to Brand workspace' : wantsTemplateEdit ? 'Back to Template Manager' : cameFromTemplate ? 'Back to templates' : 'Back to dashboard';
+  // Opened from a tool (Pattern Design, Jersey Designer…)? Back returns there.
+  const [prevTool, setPrevTool] = useState<{ path: string; title: string } | null>(null);
+  useEffect(() => { const p = previousStep('/editor'); if (p && !p.path.startsWith('/editor') && p.path !== '/dashboard' && !p.path.startsWith('/templates')) setPrevTool(p); }, []);
+  const backHref = cameFrom === 'brand' ? '/admin/brand' : wantsTemplateEdit ? '/admin/library' : cameFromTemplate ? galleryUrl : prevTool ? prevTool.path : '/dashboard';
+  const backLabel = cameFrom === 'brand' ? 'Back to Brand workspace' : wantsTemplateEdit ? 'Back to Template Manager' : cameFromTemplate ? 'Back to templates' : prevTool ? `Back to ${prevTool.title}` : 'Back to dashboard';
   const [templateEdit, setTemplateEdit] = useState<TemplateRecord | null>(null);
   // Admin design studio (the Studio panel) — the database checks admin rights too.
   const [isAdminUser, setIsAdminUser] = useState(false);
@@ -6152,7 +6156,7 @@ function EditorContent() {
     }
     if (remaining.length === 0) {
       clearTabSession();
-      router.push('/dashboard');
+      router.push(backHref);
       return;
     }
     const idx = tabList.findIndex((t) => t.id === id);
@@ -7098,7 +7102,7 @@ function EditorContent() {
         { label: 'Document & Print Setup (size, bleed, margins, marks)', onClick: () => togglePanel('artboards') },
         { divider: true },
         { label: 'Close Design', onClick: () => closeTab(activeTabId) },
-        { label: 'Back to Dashboard', onClick: () => router.push('/dashboard') },
+        { label: backLabel, onClick: () => router.push(backHref) },
       ],
     },
     {

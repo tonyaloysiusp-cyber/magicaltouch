@@ -10,18 +10,24 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { AlertTriangle, ArrowLeft, ArrowRight, Check, CheckCircle2, Download, FileArchive, FileUp, Layers, Loader2, Plus, Printer, Shirt, Trash2, Upload, X } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Download, FileArchive, FileUp, FolderOpen, Layers, Loader2, MousePointerClick, Plus, Printer, RotateCcw, Save, Shirt, Trash2, Upload, X } from 'lucide-react';
 import { DEFAULT_PATTERN, PatternSettings, svgDataUrl, sheetPlacements, motifPath, layout } from '@/lib/patterns';
 import { SIZES, ROLLS } from '@/lib/garments';
 import {
   GARMENT_STYLES, GarmentKind, Glyphs, KIT_GRAPHICS, KIT_STYLES, KitDesign, KitGraphic, Player, checkRoster, glyphTexts, kitFor,
-  kitMockupSvg, kitPreviewSvg, parseRoster, playerPrintSvg, printList, rosterSheets, safeFile, sizeId,
+  kitMockupSvg, kitPreviewSvg, parseRoster, playerPrintSvg, printList, rosterSheets, safeFile, sizeId, frontLayout, kitProduct,
 } from '@/lib/teamKit';
+import { decodeMtdt, encodeMtdt, mtdtFileName, MTDT_EXT } from '@/lib/mtdt';
+import { LeaveGuard } from './LeaveGuard';
 import { PATTERN_FONTS, textOutline } from '@/lib/patternText';
 import { supabase } from '@/lib/supabase';
 import { putHandoff, newLocalKey, editorUrlForLocal } from '@/lib/mtd/handoff';
 
 type Step = 'design' | 'logos' | 'letters' | 'players' | 'print';
+type El = 'body' | 'sleeve' | 'collar' | 'name' | 'number' | 'teamLogo' | 'sponsor' | 'frontText' | 'frontNum';
+const DRAG: El[] = ['name', 'number', 'teamLogo', 'sponsor', 'frontText', 'frontNum'];
+const PROJECTS = 'mt:textile-projects';
+interface SavedProject { id: string; kind: GarmentKind; name: string; updated: string; data: any }
 
 const COPY: Record<GarmentKind, { noun: string; players: string; sample: Player[] }> = {
   jersey: { noun: 'jersey', players: 'Players', sample: [{ name: 'Arun', number: '07', size: 'S' }, { name: 'Kumar', number: '10', size: 'M' }, { name: 'David', number: '11', size: 'L' }, { name: 'John', number: '23', size: 'XL' }] },
@@ -38,6 +44,10 @@ const STARTERS: { name: string; o: Partial<KitDesign> }[] = [
   { name: 'Sky stripes', o: { body: '#E0F2FE', sleeve: '#0284C7', collar: '#0C4A6E', accent: '#0284C7', accent2: '#FFFFFF', graphic: 'stripes', nameColor: '#0C4A6E', numberColor: '#0C4A6E', outlineColor: '#FFFFFF' } },
   { name: 'Purple yoke', o: { body: '#4C1D95', sleeve: '#4C1D95', collar: '#FDE68A', accent: '#FDE68A', accent2: '#A78BFA', graphic: 'yoke', nameColor: '#FDE68A', numberColor: '#FFFFFF', outlineColor: '#4C1D95' } },
   { name: 'Half & half', o: { body: '#DC2626', sleeve: '#DC2626', collar: '#111111', accent: '#111111', accent2: '#FFFFFF', graphic: 'split', nameColor: '#FFFFFF', numberColor: '#FFFFFF', outlineColor: '#111111' } },
+  { name: 'Gold halftone', o: { body: '#111827', sleeve: '#111827', collar: '#D4A017', accent: '#D4A017', accent2: '#FFFFFF', graphic: 'halftone', nameColor: '#FFFFFF', numberColor: '#D4A017', outlineColor: '#111827' } },
+  { name: 'Maroon double sash', o: { body: '#7F1D1D', sleeve: '#7F1D1D', collar: '#FBBF24', accent: '#FBBF24', accent2: '#FFFFFF', graphic: 'double-sash', nameColor: '#FFFFFF', numberColor: '#FFFFFF', outlineColor: '#FBBF24' } },
+  { name: 'Blue diagonal', o: { body: '#1D4ED8', sleeve: '#1E3A8A', collar: '#FFFFFF', accent: '#3B82F6', accent2: '#FFFFFF', graphic: 'diagonal', nameColor: '#FFFFFF', numberColor: '#FFFFFF', outlineColor: '#1E3A8A' } },
+  { name: 'Centre stripe', o: { body: '#FFFFFF', sleeve: '#16A34A', collar: '#16A34A', accent: '#16A34A', accent2: '#111827', graphic: 'centre-stripe', nameColor: '#111827', numberColor: '#16A34A', outlineColor: '#FFFFFF' } },
   { name: 'Classic white', o: { body: '#FFFFFF', sleeve: '#FFFFFF', collar: '#1E3A5F', accent: '#1E3A5F', accent2: '#C9A86A', graphic: 'band', nameColor: '#1E3A5F', numberColor: '#1E3A5F', outlineColor: '#FFFFFF' } },
 ];
 
@@ -71,6 +81,7 @@ async function readLogo(f: File): Promise<string> {
     return c.toDataURL('image/png');
   } finally { URL.revokeObjectURL(url); }
 }
+const DEFAULT_KIT_POS = { nameTopMm: 95, numberTopMm: 175 };
 const load = <T,>(k: string, d: T): T => { try { const v = localStorage.getItem(k); return v ? (JSON.parse(v) as T) : d; } catch { return d; } };
 const sizeLabel = (s: string) => (SIZES.find((x) => x.id === sizeId(s))?.label || s).replace(/ .*/, '');
 
@@ -98,6 +109,15 @@ export function GarmentDesigner({ kind }: { kind: GarmentKind }) {
   const [pageMm, setPageMm] = useState(5000);
   const [group, setGroup] = useState<'player' | 'fabric'>('player');
   const [mirror, setMirror] = useState(false);
+  const [selEl, setSelEl] = useState<El | null>(null);
+  const [projectId, setProjectId] = useState<string | null>(null);
+  const [projects, setProjects] = useState<SavedProject[] | null>(null);
+  const [delAsk, setDelAsk] = useState<string | null>(null);
+  const live = useRef(false);
+  const [dirty, setDirty] = useState(false);
+  const settle = () => { live.current = false; setDirty(false); setTimeout(() => { live.current = true; }, 400); };
+  const drag = useRef<{ el: El; x: number; y: number; scale: number; k: KitDesign } | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
   const [chosen, setChosen] = useState<boolean[]>([]);
   const csvRef = useRef<HTMLInputElement>(null);
   const cache = useRef(new Map<string, string | null>());
@@ -109,14 +129,67 @@ export function GarmentDesigner({ kind }: { kind: GarmentKind }) {
     const v = load<any>(KEY, null);
     if (v?.kit) { setKit({ ...kitFor(kind), ...v.kit, style: GARMENT_STYLES[kind].includes(v.kit.style) ? v.kit.style : kitFor(kind).style }); if (Array.isArray(v.players) && v.players.length) setPlayers(v.players); }
     if (v?.pat) { setPat({ ...DEFAULT_PATTERN, ...v.pat }); setPatColor(v.patColor || '#FFFFFF'); setPatName(v.patName || 'Pattern'); }
+    if (v?.projectId) setProjectId(v.projectId);
     const list: { name: string; p: PatternSettings }[] = [];
     const draft = load<any>('mt:pattern-draft', null);
     if (draft?.motif && draft.motif !== 'image') list.push({ name: 'Latest from Pattern Studio', p: { ...DEFAULT_PATTERN, ...draft } });
     for (const s of load<any[]>('mt:patterns', [])) if (s?.p?.motif && s.p.motif !== 'image') list.push({ name: s.name || 'My pattern', p: { ...DEFAULT_PATTERN, ...s.p } });
     setMine(list.slice(0, 12));
+    settle();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  useEffect(() => { try { localStorage.setItem(KEY, JSON.stringify({ kit: { ...kit, teamLogo: null, sponsorLogo: null }, players, pat: { ...pat, image: undefined }, patColor, patName })); } catch { /* full or private */ } }, [KEY, kit, players, pat, patColor, patName]);
+  // Work in progress is kept automatically (with logos when there is room).
+  const snapshot = () => ({ kit, players, pat: { ...pat, image: undefined }, patColor, patName, projectId });
+  useEffect(() => {
+    const snap = snapshot();
+    try { localStorage.setItem(KEY, JSON.stringify(snap)); } catch {
+      try { localStorage.setItem(KEY, JSON.stringify({ ...snap, kit: { ...kit, teamLogo: null, sponsorLogo: null } })); } catch { /* full or private */ }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [KEY, kit, players, pat, patColor, patName, projectId]);
+  useEffect(() => { if (live.current) setDirty(true); }, [kit, players, pat, patColor, patName]);
+
+  // ---------- projects (saved in this browser, or as a .mtdt file) ----------
+  const readProjects = (): SavedProject[] => { try { return (JSON.parse(localStorage.getItem(PROJECTS) || '[]') as SavedProject[]).filter((x) => x && x.data); } catch { return []; } };
+  const apply = (d: any, id: string | null) => {
+    setKit({ ...kitFor(kind), ...d.kit, style: GARMENT_STYLES[kind].includes(d.kit?.style) ? d.kit.style : kitFor(kind).style });
+    if (Array.isArray(d.players)) setPlayers(d.players);
+    if (d.pat) setPat({ ...DEFAULT_PATTERN, ...d.pat });
+    if (d.patColor) setPatColor(d.patColor);
+    if (d.patName) setPatName(d.patName);
+    setProjectId(id); setSel(0); setSelEl(null);
+    settle();
+  };
+  const saveProject = (): boolean => {
+    const id = projectId || `p${Date.now().toString(36)}`;
+    const data = { kit, players, pat: { ...pat, image: undefined }, patColor, patName };
+    const list = readProjects().filter((x) => x.id !== id);
+    list.unshift({ id, kind, name: kit.teamName || copy.noun, updated: new Date().toISOString(), data });
+    try { localStorage.setItem(PROJECTS, JSON.stringify(list.slice(0, 40))); }
+    catch {
+      try { list[0] = { ...list[0], data: { ...data, kit: { ...kit, teamLogo: null, sponsorLogo: null } } }; localStorage.setItem(PROJECTS, JSON.stringify(list.slice(0, 40))); flash('Saved without logos (browser storage is full) — use “Save file” to keep logos.'); }
+      catch { flash('Could not save in this browser. Use “Save file” instead.'); return false; }
+    }
+    setProjectId(id);
+    setDirty(false);
+    flash(`Saved “${kit.teamName}”. Open it any time from Projects.`);
+    return true;
+  };
+  const saveFile = async () => {
+    const bytes = await encodeMtdt({ kind, name: kit.teamName, savedAt: new Date().toISOString(), app: 'magicaltouchdesign.com', data: { kit, players, pat: { ...pat, image: undefined }, patColor, patName } });
+    save(new Blob([bytes as BlobPart], { type: 'application/octet-stream' }), mtdtFileName(kit.teamName));
+    setDirty(false);
+  };
+  const openFile = async (f: File) => {
+    try {
+      const p = await decodeMtdt<any>(new Uint8Array(await f.arrayBuffer()));
+      if (p.kind === 'pattern') { flash('That is a pattern file — open it in Pattern Design.'); return; }
+      if (p.kind !== kind) { flash(`That file is a ${p.kind === 'tshirt' ? 'T-shirt' : p.kind} design — open it in that designer.`); return; }
+      apply(p.data, null); flash(`Opened “${p.name}”.`);
+    } catch (e: any) { flash(e?.message || 'Could not open that file.'); }
+  };
+  const newDesign = () => { apply({ kit: kitFor(kind), players: copy.sample, pat: { ...DEFAULT_PATTERN, ...PATTERNS[0].p }, patColor: '#FFFFFF', patName: PATTERNS[0].name }, null); setStep('design'); };
+
 
   const pattern = useMemo<PatternSettings>(() => ({ ...pat, colors: [patColor] }), [pat, patColor]);
 
@@ -143,7 +216,45 @@ export function GarmentDesigner({ kind }: { kind: GarmentKind }) {
   const issues = useMemo(() => checkRoster(players, personal), [players, personal]);
   const errors = issues.filter((i) => i.level === 'error');
   const player = personal ? players[Math.min(sel, players.length - 1)] || null : { name: '', number: '', size: players[0]?.size || 'M' };
-  const preview = useMemo(() => (view === 'garment' ? kitMockupSvg(kit, pattern, player, glyphs, side) : kitPreviewSvg(kit, pattern, player, glyphs)), [view, side, kit, pattern, player, glyphs]);
+  const preview = useMemo(() => (view === 'garment' ? kitMockupSvg(kit, pattern, player, glyphs, side, { selected: selEl }) : kitPreviewSvg(kit, pattern, player, glyphs)), [view, side, kit, pattern, player, glyphs, selEl]);
+
+  // ---------- click and drag on the shirt ----------
+  const frontW = kitProduct(kit).pieces.find((x) => x.id === 'front')?.w || 560;
+  const onDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    const t = (e.target as Element).closest('[data-el]');
+    const el = (t?.getAttribute('data-el') || null) as El | null;
+    if (!el) { setSelEl(null); return; }
+    setSelEl(el);
+    if (!DRAG.includes(el)) return;
+    const svg = e.currentTarget.querySelector('svg');
+    const m = svg?.getScreenCTM();
+    if (!m) return;
+    drag.current = { el, x: e.clientX, y: e.clientY, scale: m.a, k: kit };
+    e.currentTarget.setPointerCapture(e.pointerId);
+  };
+  const onMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    const d = drag.current; if (!d) return;
+    const dx = (e.clientX - d.x) / d.scale, dy = (e.clientY - d.y) / d.scale;
+    if (Math.abs(dx) + Math.abs(dy) < 2) return;
+    const L = frontLayout(d.k, frontW), c = (v: number, a: number, b: number) => Math.round(Math.max(a, Math.min(b, v)));
+    const k0 = d.k;
+    switch (d.el) {
+      case 'name': set({ nameTopMm: c(k0.nameTopMm + dy, 20, 320) }); break;
+      case 'number': set({ numberTopMm: c(k0.numberTopMm + dy, 60, 480) }); break;
+      case 'teamLogo': set({ teamLogoX: c(L.teamLogo.x + L.teamLogo.w / 2 + dx, 0, frontW), teamLogoY: c(L.teamLogo.y + dy, 20, 650) }); break;
+      case 'sponsor': set({ sponsorX: c(L.sponsor.x + L.sponsor.w / 2 + dx, 0, frontW), sponsorY: c(L.sponsor.y + dy, 20, 650) }); break;
+      case 'frontText': set({ frontTextX: c(L.frontText.x + L.frontText.w / 2 + dx, 0, frontW), frontTextTopMm: c(L.frontText.y + dy, 20, 680) }); break;
+      case 'frontNum': set({ frontNumX: c(L.frontNum.x + L.frontNum.w / 2 + dx, 0, frontW), frontNumY: c(L.frontNum.y + L.frontNum.h / 2 + dy, 40, 650) }); break;
+    }
+  };
+  const onUp = () => { drag.current = null; };
+  useEffect(() => { if (selEl && window.innerWidth < 1024) setTimeout(() => document.getElementById('garment-inspector')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60); }, [selEl]);
+  useEffect(() => {
+    if (!selEl) return;
+    const k = (e: KeyboardEvent) => { if (e.key === 'Escape') setSelEl(null); };
+    window.addEventListener('keydown', k);
+    return () => window.removeEventListener('keydown', k);
+  }, [selEl]);
   const flash = (m: string) => { setMsg(m); setTimeout(() => setMsg(null), 7000); };
   const ready = !making && texts.every((s) => glyphs[s]);
 
@@ -272,31 +383,115 @@ export function GarmentDesigner({ kind }: { kind: GarmentKind }) {
   const steps: { id: Step; label: string }[] = [
     { id: 'design', label: 'Design' }, { id: 'logos', label: 'Logos & text' },
     { id: 'letters', label: personal ? 'Names & numbers' : 'Lettering' },
-    { id: 'players', label: personal ? copy.players : 'Sizes & quantities' }, { id: 'print', label: 'Print files' },
+    { id: 'players', label: personal ? `${copy.players} & sizes` : 'Sizes & quantities' }, { id: 'print', label: 'Print files' },
   ];
-  const at = steps.findIndex((s) => s.id === step);
   const styles = GARMENT_STYLES[kind];
   const totalQty = personal ? players.length : players.reduce((a, p) => a + (Number(p.qty) || 0), 0);
 
   return (
     <div className="space-y-5">
-      {/* Step bar */}
-      <nav aria-label="Steps" className="overflow-x-auto">
-        <ol className="flex min-w-max gap-1 rounded-2xl border border-mt-border bg-mt-surface p-1">
-          {steps.map((s, i) => (
-            <li key={s.id}>
-              <button type="button" onClick={() => setStep(s.id)} aria-current={step === s.id ? 'step' : undefined}
-                className={`h-10 pl-2 pr-4 rounded-xl inline-flex items-center gap-2 text-[13.5px] font-semibold ${step === s.id ? 'bg-mt-primary text-mt-onprimary' : 'text-mt-muted hover:text-mt-ink'}`}>
-                <span className={`grid h-6 w-6 place-items-center rounded-full text-[12px] ${step === s.id ? 'bg-white/20' : i < at ? 'bg-emerald-600 text-white' : 'bg-mt-surface2'}`}>{i < at ? <Check size={13} /> : i + 1}</span>{s.label}
-              </button>
-            </li>
+      <LeaveGuard dirty={dirty} onSave={saveProject} what={copy.noun} />
+      {/* Project bar */}
+      <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-mt-border bg-mt-surface p-2">
+        <Shirt size={18} className="ml-2 text-mt-muted" aria-hidden />
+        <input value={kit.teamName} maxLength={40} onChange={(e) => set({ teamName: e.target.value })} aria-label="Project name" className="h-10 min-w-0 flex-1 basis-40 rounded-xl bg-transparent px-2 text-[15px] font-semibold focus:outline-none focus:bg-mt-bg" />
+        <span className={`text-[12px] ${dirty ? 'text-amber-600 dark:text-amber-400' : 'text-mt-faint'}`}>{dirty ? 'Unsaved changes' : projectId ? 'Saved' : ''}</span>
+        <button type="button" onClick={newDesign} className={btn}><Plus size={14} /> New</button>
+        <button type="button" onClick={() => setProjects(readProjects().filter((x) => x.kind === kind))} className={btn}><FolderOpen size={14} /> Projects</button>
+        <button type="button" onClick={() => fileRef.current?.click()} className={btn}><FileUp size={14} /> Open file</button>
+        <button type="button" onClick={saveFile} className={btn} title={`Download a ${MTDT_EXT} project file`}><Download size={14} /> Save file</button>
+        <button type="button" onClick={saveProject} className="h-10 px-4 rounded-full bg-mt-primary text-mt-onprimary text-[13.5px] font-semibold inline-flex items-center gap-1.5"><Save size={14} /> Save</button>
+        <input ref={fileRef} type="file" accept={`${MTDT_EXT},application/octet-stream`} hidden onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) openFile(f); }} />
+      </div>
+
+      {projects && (
+        <div className="fixed inset-0 z-[80] grid place-items-center bg-black/40 p-4" role="dialog" aria-modal="true" aria-labelledby="proj-title" onClick={(e) => { if (e.target === e.currentTarget) setProjects(null); }}>
+          <div className="w-full max-w-2xl max-h-[85vh] overflow-y-auto rounded-3xl border border-mt-border bg-mt-surface p-5 shadow-2xl">
+            <div className="flex items-center gap-2"><h2 id="proj-title" className="text-lg font-semibold mr-auto">Your {copy.noun} projects</h2><button type="button" onClick={() => setProjects(null)} aria-label="Close" className="h-9 w-9 grid place-items-center rounded-full hover:bg-mt-bg"><X size={16} /></button></div>
+            {projects.length === 0 ? <p className="mt-4 text-[14px] text-mt-muted">Nothing saved yet. Press <b>Save</b> to keep this design — then open it here to change names, sizes or the artwork.</p> : (
+              <ul className="mt-4 grid gap-3 sm:grid-cols-2">
+                {projects.map((pr) => (
+                  <li key={pr.id} className="flex gap-3 rounded-2xl border border-mt-border p-2.5">
+                    <img alt="" className="h-20 w-24 shrink-0 rounded-xl bg-mt-bg object-contain" src={svgDataUrl(kitMockupSvg({ ...kitFor(kind), ...pr.data.kit }, { ...DEFAULT_PATTERN, ...pr.data.pat, colors: [pr.data.patColor || '#FFFFFF'] }, null, {}, 'front'))} />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-[14px] font-semibold">{pr.name}</p>
+                      <p className="text-[12px] text-mt-muted">{new Date(pr.updated).toLocaleString()} · {(pr.data.players || []).length} rows</p>
+                      <div className="mt-2 flex gap-1.5">
+                        <button type="button" onClick={() => { apply(pr.data, pr.id); setProjects(null); flash(`Opened “${pr.name}”.`); }} className="h-8 px-3 rounded-full bg-mt-primary text-mt-onprimary text-[12.5px] font-semibold">Open</button>
+                        {delAsk === pr.id
+                          ? <button type="button" onClick={() => { const l = readProjects().filter((x) => x.id !== pr.id); try { localStorage.setItem(PROJECTS, JSON.stringify(l)); } catch { /* ignore */ } setProjects(l.filter((x) => x.kind === kind)); setDelAsk(null); if (projectId === pr.id) setProjectId(null); }} className="h-8 px-3 rounded-full bg-rose-600 text-white text-[12.5px] font-semibold">Delete for good</button>
+                          : <button type="button" onClick={() => setDelAsk(pr.id)} className="h-8 px-3 rounded-full border border-mt-border text-[12.5px] font-semibold">Delete</button>}
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Sections */}
+      <nav aria-label="Sections" className="overflow-x-auto">
+        <div role="tablist" className="flex min-w-max gap-1 rounded-2xl border border-mt-border bg-mt-surface p-1">
+          {steps.map((x) => (
+            <button key={x.id} type="button" role="tab" aria-selected={step === x.id} onClick={() => { setStep(x.id); setSelEl(null); }}
+              className={`h-10 px-4 rounded-xl text-[13.5px] font-semibold ${step === x.id ? 'bg-mt-primary text-mt-onprimary' : 'text-mt-muted hover:text-mt-ink'}`}>{x.label}</button>
           ))}
-        </ol>
+        </div>
       </nav>
 
       <div className="grid gap-5 lg:grid-cols-[360px_minmax(0,1fr)] lg:items-start">
         {/* Controls for the current step */}
         <aside className="rounded-3xl border border-mt-border bg-mt-surface p-5 space-y-5 lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto">
+          {selEl && (() => {
+            const T: Record<El, string> = { body: 'Body', sleeve: 'Sleeves', collar: 'Collar & trim', name: 'Player name', number: 'Back number', teamLogo: 'Chest logo', sponsor: 'Sponsor / front print', frontText: 'Front text', frontNum: 'Front number' };
+            const pl = personal ? players[Math.min(sel, players.length - 1)] : null;
+            const upload = (k: 'teamLogo' | 'sponsorLogo') => <label className={`${btn} cursor-pointer w-full`}><Upload size={14} /> {kit[k] ? 'Replace image' : 'Add image'}<input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" hidden onChange={async (e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) set({ [k]: await readLogo(f) } as any); }} /></label>;
+            return (
+              <section id="garment-inspector" className="-m-1 scroll-mt-20 rounded-2xl border-2 border-[#3B82C4] bg-[#3B82C4]/[0.04] p-4 space-y-3" aria-label={`Edit ${T[selEl]}`}>
+                <div className="flex items-center gap-2"><h3 className="text-[15px] font-semibold mr-auto">{T[selEl]}</h3><button type="button" onClick={() => setSelEl(null)} className="h-8 px-3 rounded-full bg-mt-primary text-mt-onprimary text-[12.5px] font-semibold">Done</button></div>
+                {selEl === 'body' && <>
+                  <div className="grid grid-cols-5 gap-2">{colour('Body', 'body')}{colour('Accent', 'accent')}{colour('Trim', 'accent2')}</div>
+                  <div className="flex flex-wrap gap-1.5">{KIT_GRAPHICS.map((g) => <button key={g.id} type="button" onClick={() => set({ graphic: g.id as KitGraphic })} className={chip((kit.graphic || 'plain') === g.id)}>{g.label}</button>)}</div>
+                  <button type="button" onClick={() => { setStep('design'); setSelEl(null); }} className="text-[12.5px] font-semibold underline underline-offset-2">Pattern and more design options →</button>
+                </>}
+                {selEl === 'sleeve' && <>
+                  <div className="grid grid-cols-5 gap-2">{colour('Sleeves', 'sleeve')}{colour('Cuffs', 'accent')}{colour('Trim', 'accent2')}</div>
+                  <label className="flex items-center gap-2 text-[13px]"><input type="checkbox" checked={!!kit.cuffs} onChange={(e) => set({ cuffs: e.target.checked, graphic: e.target.checked && (kit.graphic || 'plain') === 'plain' ? 'band' : kit.graphic })} className="h-4 w-4 accent-[#3B82C4]" /> Accent cuffs</label>
+                  <select value={kit.patternOn} onChange={(e) => set({ patternOn: e.target.value as KitDesign['patternOn'] })} className={field} aria-label="Pattern"><option value="none">No pattern</option><option value="body">Pattern on the body only</option><option value="sleeves">Pattern on the sleeves only</option><option value="all">Pattern everywhere</option></select>
+                </>}
+                {selEl === 'collar' && <div className="grid grid-cols-5 gap-2">{colour('Collar', 'collar')}{colour('Trim', 'accent2')}</div>}
+                {(selEl === 'name' || selEl === 'number' || selEl === 'frontNum') && <>
+                  {pl && <div className="grid grid-cols-[1fr_90px] gap-2">
+                    <label className="text-[12px] text-mt-muted">Name (row {sel + 1})<input value={pl.name} maxLength={20} onChange={(e) => editRow(sel, { name: e.target.value })} className={field} /></label>
+                    <label className="text-[12px] text-mt-muted">Number<input value={pl.number} inputMode="numeric" maxLength={3} onChange={(e) => editRow(sel, { number: e.target.value.replace(/\D/g, '') })} className={field} /></label>
+                  </div>}
+                  <select value={kit.font} onChange={(e) => { const f = PATTERN_FONTS.find((x) => x.family === e.target.value); set({ font: e.target.value, fontWeight: f && !f.weights.includes(kit.fontWeight) ? f.weights[f.weights.length - 1] : kit.fontWeight }); }} className={field} aria-label="Font">
+                    {[...new Set(PATTERN_FONTS.map((f) => f.category))].map((c) => <optgroup key={c} label={c}>{PATTERN_FONTS.filter((f) => f.category === c).map((f) => <option key={f.family} value={f.family}>{f.family}</option>)}</optgroup>)}
+                  </select>
+                  <div className="grid grid-cols-5 gap-2">{selEl === 'name' ? colour('Colour', 'nameColor') : colour('Colour', 'numberColor')}{colour('Outline', 'outlineColor')}</div>
+                  {slider('Outline', kit.outlineMm, 0, 6, 0.5, 'outlineMm')}
+                  {selEl === 'name' && slider('Height', kit.nameMm, 25, 90, 1, 'nameMm')}
+                  {selEl === 'number' && slider('Height', kit.numberMm, 120, 320, 5, 'numberMm')}
+                  {selEl === 'frontNum' && <>{slider('Height', kit.frontNumMm ?? 80, 40, 160, 1, 'frontNumMm')}<button type="button" onClick={() => { set({ frontNumber: false }); setSelEl(null); }} className={`${btn} w-full`}><Trash2 size={14} /> Remove front number</button></>}
+                  {personal && <p className="text-[11.5px] text-mt-muted">Change everyone’s names in <button type="button" className="underline" onClick={() => { setStep('players'); setSelEl(null); }}>{copy.players} & sizes</button>.</p>}
+                </>}
+                {selEl === 'frontText' && <>
+                  <input value={kit.frontText || ''} maxLength={24} placeholder="Type front text" onChange={(e) => set({ frontText: e.target.value })} className={field} aria-label="Front text" autoFocus />
+                  <div className="grid grid-cols-5 gap-2">{colour('Colour', 'frontTextColor')}</div>
+                  {slider('Height', kit.frontTextMm || 60, 20, 160, 1, 'frontTextMm')}
+                  {!!kit.frontText && <button type="button" onClick={() => set({ frontText: '' })} className={`${btn} w-full`}><Trash2 size={14} /> Remove text</button>}
+                </>}
+                {selEl === 'teamLogo' && <>{upload('teamLogo')}{slider('Size', kit.teamLogoMm ?? 85, 40, 200, 1, 'teamLogoMm')}{kit.teamLogo && <button type="button" onClick={() => set({ teamLogo: null })} className={`${btn} w-full`}><Trash2 size={14} /> Remove logo</button>}</>}
+                {selEl === 'sponsor' && <>{upload('sponsorLogo')}{slider('Width', Math.round(kit.sponsorMm ?? frontW * 0.6), 100, Math.round(frontW * 0.95), 1, 'sponsorMm')}{kit.sponsorLogo && <button type="button" onClick={() => set({ sponsorLogo: null })} className={`${btn} w-full`}><Trash2 size={14} /> Remove image</button>}</>}
+                {DRAG.includes(selEl) && <button type="button" onClick={() => {
+                  const reset: Record<string, Partial<KitDesign>> = { name: { nameTopMm: DEFAULT_KIT_POS.nameTopMm }, number: { numberTopMm: DEFAULT_KIT_POS.numberTopMm }, teamLogo: { teamLogoX: undefined, teamLogoY: undefined, teamLogoMm: undefined }, sponsor: { sponsorX: undefined, sponsorY: undefined, sponsorMm: undefined }, frontText: { frontTextX: undefined, frontTextTopMm: kitFor(kind).frontTextTopMm }, frontNum: { frontNumX: undefined, frontNumY: undefined, frontNumMm: undefined } };
+                  set(reset[selEl] || {});
+                }} className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-mt-muted hover:text-mt-ink"><RotateCcw size={13} /> Reset position and size</button>}
+              </section>
+            );
+          })()}
           {step === 'design' && <>
             {styles.length > 1 && <section className="space-y-2"><H>Style</H><div className="flex flex-wrap gap-1.5">{styles.map((id) => <button key={id} type="button" aria-pressed={kit.style === id} onClick={() => set({ style: id })} className={chip(kit.style === id)}>{KIT_STYLES.find((s) => s.id === id)?.label}</button>)}</div></section>}
             <section className="space-y-2">
@@ -452,10 +647,6 @@ export function GarmentDesigner({ kind }: { kind: GarmentKind }) {
 
           {msg && <p role="status" className="text-[13px] font-medium">{msg}</p>}
 
-          <div className="flex items-center gap-2 border-t border-mt-border pt-4">
-            <button type="button" onClick={() => setStep(steps[Math.max(0, at - 1)].id)} disabled={at === 0} className={btn}><ArrowLeft size={14} /> Back</button>
-            {at < steps.length - 1 && <button type="button" onClick={() => setStep(steps[at + 1].id)} className={`${primary} ml-auto h-10`}>Next: {steps[at + 1].label} <ArrowRight size={14} /></button>}
-          </div>
         </aside>
 
         {/* Preview and the list (preview first on phones) */}
@@ -474,7 +665,14 @@ export function GarmentDesigner({ kind }: { kind: GarmentKind }) {
               <button type="button" onClick={editInEditor} disabled={!!busy} className="h-9 px-3 rounded-full border border-mt-border text-[12.5px] font-semibold inline-flex items-center gap-1.5" title="Open the artwork in the design editor">{busy === 'editor' ? <Loader2 size={13} className="animate-spin" /> : <Shirt size={13} />} Edit in editor</button>
             </div>
             <div className="rounded-2xl bg-gradient-to-b from-white to-[#EEF1F5] dark:from-[#1b1f27] dark:to-[#12151b] p-3 sm:p-6">
-              <img src={svgDataUrl(preview)} alt={`${copy.noun} preview`} className="mx-auto w-full max-h-[600px] object-contain" />
+              {view === 'garment' ? (
+                <div role="application" aria-label={`${copy.noun} — click a part to edit it, drag names, numbers, logos and text to move them`}
+                  className="garment-edit mx-auto w-full select-none [&_svg]:mx-auto [&_svg]:block [&_svg]:w-full [&_svg]:h-auto [&_svg]:max-h-[600px] [&_.mt-hit]:cursor-move [&_.mt-part]:cursor-pointer [&_.mt-part:hover]:stroke-[#3B82C4]/60 [&_.mt-hit:hover]:stroke-[#3B82C4]"
+                  style={{ touchAction: selEl && DRAG.includes(selEl) ? 'none' : 'pan-y' }}
+                  onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp}
+                  dangerouslySetInnerHTML={{ __html: preview }} />
+              ) : <img src={svgDataUrl(preview)} alt={`${copy.noun} print pieces`} className="mx-auto w-full max-h-[600px] object-contain" />}
+              {view === 'garment' && !selEl && <p className="mt-2 text-center text-[12px] text-mt-muted inline-flex w-full items-center justify-center gap-1.5"><MousePointerClick size={13} /> Click any part of the shirt to edit it · drag names, numbers, logos and text to move them</p>}
             </div>
           </div>
 

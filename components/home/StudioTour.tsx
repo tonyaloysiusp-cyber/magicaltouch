@@ -16,12 +16,18 @@ import type { ReactNode } from 'react';
 import Link from 'next/link';
 import {
   ArrowRight, Brush, Check, ChevronRight, Contrast, Crop, Droplet, Eraser, Image as ImageIcon, Layers, Menu as MenuIcon, MousePointer2,
-  Palette, Pipette, Sparkles, Sun, SunMoon, Thermometer, Type, Wand2,
+  Palette, Pipette, Sparkles, Sun, SunMoon, Thermometer, Type, Wand2, Shirt, LayoutGrid,
 } from 'lucide-react';
+import { DEFAULT_KIT, kitMockupSvg } from '@/lib/teamKit';
+import { DEFAULT_PATTERN, svgDataUrl } from '@/lib/patterns';
+import { TOOLS as CATALOG } from '@/lib/toolsCatalog';
+import { ToolIcon } from '@/components/tools/ToolsDirectory';
 import { Reveal } from './Reveal';
 
-type TabId = 'menus' | 'brand' | 'photo' | 'mockups' | 'ai';
+type TabId = 'menus' | 'brand' | 'photo' | 'mockups' | 'ai' | 'apparel' | 'tools';
 const TABS: { id: TabId; label: string; icon: ReactNode; title: string; body: string; points: string[]; cta: [string, string] }[] = [
+  { id: 'apparel', label: 'Jersey & T-shirts', icon: <Shirt size={16} />, title: 'Team jerseys, polos and T-shirts', body: 'Design a kit once, add every player’s name, number and size, and download one print-ready vector PDF with the whole team nested on your roll.', points: ['Football, cricket, basketball, polo and T-shirt styles', 'Click the shirt to edit names, numbers, logos and text', 'One print file — pieces, bleed, cut lines and labels'], cta: ['Design a jersey', '/custom-jersey-designer'] },
+  { id: 'tools', label: 'Creative tools', icon: <LayoutGrid size={16} />, title: 'Every tool works together', body: 'Make a pattern, use it on a jersey or a wallpaper, trace a logo to vector, remove a background — each tool opens the next and brings your work with it.', points: ['Pattern Design → jersey, T-shirt, wallpaper or design', 'Image Trace, Background Remover and Photo Studio', 'Wall posters at real print sizes'], cta: ['See all tools', '/tools'] },
   { id: 'menus', label: 'Pro menus', icon: <MenuIcon size={16} />, title: 'Pro tools when you want them', body: 'Switch the editor to Pro for a full menu bar — the same File, Edit, Object, Type, Select and View menus designers know, with keyboard shortcuts.', points: ['Version history, preflight and print setup', 'Rulers, guides, grid and snapping', 'Group, align, lock and arrange layers'], cta: ['Open the editor', '/create'] },
   { id: 'brand', label: 'Brand kit', icon: <Palette size={16} />, title: 'Your brand, on every design', body: 'Save your logo, colours and fonts once. Apply them to any template in one tap — every post, flyer and card stays on-brand.', points: ['Logo, colour palette and heading / body fonts', 'One tap to restyle a whole template', 'Several brands for agencies and side projects'], cta: ['Set up your brand', '/create'] },
   { id: 'photo', label: 'Photo Studio', icon: <ImageIcon size={16} />, title: 'A photo editor in your browser', body: 'Enhance, retouch and crop photos with layers, brushes and real adjustments — then drop them straight into your design.', points: ['Auto enhance, filters and fine adjustments', 'Background removal, healing, dodge & burn', 'Layers, selections and print-ready export'], cta: ['Open Photo Studio', '/photo-studio'] },
@@ -29,7 +35,7 @@ const TABS: { id: TabId; label: string; icon: ReactNode; title: string; body: st
 const CYCLE = 9000;
 
 export function StudioTour() {
-  const [tab, setTab] = useState<TabId>('menus');
+  const [tab, setTab] = useState<TabId>('apparel');
   const [t, setT] = useState(0); // ms into the current tab
   const [auto, setAuto] = useState(true);
   const [reduced, setReduced] = useState(false);
@@ -46,7 +52,7 @@ export function StudioTour() {
   }, []);
 
   const clock = useRef(0);
-  const tabRef = useRef<TabId>('menus');
+  const tabRef = useRef<TabId>('apparel');
   useEffect(() => {
     if (reduced) return;
     let raf = 0, last = performance.now();
@@ -111,6 +117,8 @@ export function StudioTour() {
               {tab === 'photo' && <PhotoDemo t={t} />}
               {tab === 'mockups' && <MockupsDemo t={t} />}
               {tab === 'ai' && <AiDemo t={t} />}
+              {tab === 'apparel' && <ApparelDemo t={t} />}
+              {tab === 'tools' && <ToolsDemo t={t} />}
             </Window>
           </div>
         </div>
@@ -323,6 +331,44 @@ function AiDemo({ t }: { t: number }) {
         </div>
         <span className="absolute -bottom-2 left-2 rounded-full bg-mt-primary px-2.5 py-1 text-[10px] font-semibold text-mt-onprimary shadow" style={{ opacity: at(t, 3200) }}>✓ Fully editable</span>
       </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------- apparel
+
+const DEMO_KITS = [
+  { body: '#1E3A5F', sleeve: '#1E3A5F', collar: '#C9A86A', accent: '#C9A86A', accent2: '#FFFFFF', graphic: 'sash' as const, name: 'ARUN', number: '7' },
+  { body: '#FFFFFF', sleeve: '#B91C1C', collar: '#B91C1C', accent: '#B91C1C', accent2: '#FFFFFF', graphic: 'hoops' as const, name: 'MAYA', number: '10', nameColor: '#111111', numberColor: '#111111', outlineColor: '#FFFFFF' },
+  { body: '#0F766E', sleeve: '#0F766E', collar: '#FACC15', accent: '#FACC15', accent2: '#FFFFFF', graphic: 'chevron' as const, name: 'OMAR', number: '23', numberColor: '#FACC15', outlineColor: '#0B3B36' },
+];
+function ApparelDemo({ t }: { t: number }) {
+  const i = Math.min(DEMO_KITS.length - 1, Math.floor((t / CYCLE) * DEMO_KITS.length));
+  const k = DEMO_KITS[i];
+  const svg = kitMockupSvg({ ...DEFAULT_KIT, ...k, font: 'Arial Black', patternOn: 'body', patternOpacity: 0.18 }, { ...DEFAULT_PATTERN, motif: 'diamond', repeat: 'brick', scale: 0.35, colors: ['#FFFFFF'] }, { name: k.name, number: k.number, size: 'M' }, {});
+  return (
+    <div className="p-4 sm:p-6 bg-gradient-to-b from-white to-[#EEF1F5] dark:from-[#1b1f27] dark:to-[#12151b]">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img key={i} src={svgDataUrl(svg)} alt="" className="mt-howto-pop w-full aspect-[16/9] object-contain" />
+      <div className="mt-3 flex flex-wrap justify-center gap-2 text-[12px]">
+        {DEMO_KITS.map((x, j) => <span key={j} className={`rounded-full border px-3 py-1 font-semibold ${j === i ? 'border-mt-ink bg-mt-ink text-mt-bg' : 'border-mt-border text-mt-muted'}`}>{x.name} #{x.number}</span>)}
+        <span className="rounded-full border border-[#3B82C4] px-3 py-1 font-semibold text-[#3B82C4]">→ one print PDF</span>
+      </div>
+    </div>
+  );
+}
+
+function ToolsDemo({ t }: { t: number }) {
+  const list = CATALOG.filter((x) => x.id !== 'editor').slice(0, 12);
+  const on = Math.floor((t / CYCLE) * list.length) % list.length;
+  return (
+    <div className="p-4 sm:p-6 grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+      {list.map((x, j) => (
+        <div key={x.id} className={`flex items-center gap-2.5 rounded-xl border p-2.5 transition-all duration-300 ${j === on ? 'border-[#3B82C4] bg-mt-surface shadow-md -translate-y-0.5' : 'border-mt-border bg-mt-surface/70'}`}>
+          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-white" style={{ background: x.tint }}><ToolIcon name={x.icon} size={15} /></span>
+          <span className="min-w-0 text-[12.5px] font-semibold leading-tight">{x.title}</span>
+        </div>
+      ))}
     </div>
   );
 }

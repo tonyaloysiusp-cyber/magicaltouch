@@ -6,6 +6,7 @@
 // open it in the editor as editable shapes, and keep a library of patterns.
 // All work happens in the browser.
 
+import { decodeMtdt, encodeMtdt, isMtdt, mtdtFileName } from '@/lib/mtdt';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Copy, Download, FileJson, FileUp, Grid3x3, ImagePlus, Pencil, RotateCcw, Save, Search, Shuffle, Sparkles, Trash2, Type, Wand2 } from 'lucide-react';
@@ -127,19 +128,31 @@ export function PatternStudio() {
     setBusy(null);
   };
 
-  const exportJson = () => save(new Blob([JSON.stringify({ format: 'mt-pattern', version: 1, pattern: p.motif === 'image' ? p : { ...p, image: undefined } }, null, 1)], { type: 'application/json' }), 'pattern.mtpattern.json');
-  const importJson = (f?: File | null) => {
+  // Projects are .mtdt files (Magical Touch Design Textile), not JSON.
+  const exportJson = async () => {
+    const name = `${MOTIFS.find((m) => m.id === p.motif)?.label || 'Custom'} pattern`;
+    const bytes = await encodeMtdt({ kind: 'pattern', name, savedAt: new Date().toISOString(), app: 'magicaltouchdesign.com', data: { pattern: p } });
+    save(new Blob([bytes as BlobPart], { type: 'application/octet-stream' }), mtdtFileName(name));
+  };
+  const importJson = async (f?: File | null) => {
     if (!f) return;
-    f.text().then((t) => {
-      try {
-        const j = JSON.parse(t);
-        const q = j.format === 'mt-pattern' || j.format === 'mt-sublimation-job' ? j.pattern : j.motif ? j : null;
+    try {
+      const bytes = new Uint8Array(await f.arrayBuffer());
+      let q: any = null;
+      if (isMtdt(bytes)) {
+        const pr = await decodeMtdt<any>(bytes);
+        if (pr.kind !== 'pattern') { flash(`That is a ${pr.kind === 'tshirt' ? 'T-shirt' : pr.kind} project — open it in that designer.`); return; }
+        q = pr.data?.pattern;
+      } else {
+        // Older pattern files (.mtpattern.json / my-patterns.json) still open.
+        const j = JSON.parse(new TextDecoder().decode(bytes));
         if (j.format === 'mt-patterns') { importLibrary(f); return; }
-        if (!q || typeof q.motif !== 'string') throw new Error('bad');
-        setP({ ...DEFAULT_PATTERN, ...q });
-        flash('Pattern opened.');
-      } catch { flash('That file is not a Magical Touch pattern project.'); }
-    });
+        q = j.format === 'mt-pattern' || j.format === 'mt-sublimation-job' ? j.pattern : j.motif ? j : null;
+      }
+      if (!q || typeof q.motif !== 'string') throw new Error('bad');
+      setP({ ...DEFAULT_PATTERN, ...q });
+      flash('Pattern opened.');
+    } catch { flash('That file is not a Magical Touch pattern project.'); }
   };
 
   const store = (next: Saved[]) => { setSaved(next); keep(STORE, next); };
@@ -334,9 +347,9 @@ export function PatternStudio() {
             <button type="button" onClick={() => exportPdf()} disabled={!!busy} title="Vector PDF, ready for print" className="h-9 px-3.5 rounded-full border border-mt-border text-[13px] font-semibold inline-flex items-center gap-1.5 disabled:opacity-60"><Download size={14} /> {busy === 'pdf' ? 'Making…' : 'PDF vector'}</button>
             <button type="button" onClick={() => exportSvg('tile')} title="One seamless tile, for fills and swatches" className="h-9 px-3.5 rounded-full border border-mt-border text-[13px] font-semibold inline-flex items-center gap-1.5"><Download size={14} /> Seamless tile SVG</button>
             <button type="button" onClick={exportPng} disabled={!!busy} className="h-9 px-3.5 rounded-full border border-mt-border text-[13px] font-semibold inline-flex items-center gap-1.5 disabled:opacity-60"><Download size={14} /> {busy === 'png' ? 'Making…' : 'PNG'}</button>
-            <button type="button" onClick={exportJson} title="Save this pattern as a project file you can open again later" className="h-9 px-3.5 rounded-full border border-mt-border text-[13px] font-semibold inline-flex items-center gap-1.5"><FileJson size={14} /> Save project</button>
+            <button type="button" onClick={exportJson} title="Save this pattern as a project file you can open again later" className="h-9 px-3.5 rounded-full border border-mt-border text-[13px] font-semibold inline-flex items-center gap-1.5"><Download size={14} /> Save project (.mtdt)</button>
             <button type="button" onClick={() => patRef.current?.click()} title="Open a saved pattern project" className="h-9 px-3.5 rounded-full border border-mt-border text-[13px] font-semibold inline-flex items-center gap-1.5"><FileUp size={14} /> Open project</button>
-            <input ref={patRef} type="file" accept="application/json,.json" hidden onChange={(e) => { importJson(e.target.files?.[0]); e.target.value = ''; }} />
+            <input ref={patRef} type="file" accept=".mtdt,application/octet-stream,application/json,.json" hidden onChange={(e) => { importJson(e.target.files?.[0]); e.target.value = ''; }} />
             <label className="ml-auto inline-flex items-center gap-2 text-[13px] cursor-pointer select-none"><input type="checkbox" checked={transparent} onChange={(e) => setTransparent(e.target.checked)} className="h-4 w-4 accent-[#3B82C4]" /> Transparent background</label>
           </div>
           {msg && <p role="status" className="mt-3 text-[13px] text-mt-muted">{msg}</p>}

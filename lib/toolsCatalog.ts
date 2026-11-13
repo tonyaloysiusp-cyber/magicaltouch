@@ -60,3 +60,40 @@ export function readRecent(): string[] {
 export function rememberTool(id: string): void {
   try { localStorage.setItem(RECENT_KEY, JSON.stringify([id, ...readRecent().filter((x) => x !== id)].slice(0, 6))); } catch { /* private mode */ }
 }
+
+// ---------------------------------------------------------------- trail
+// The tools a visitor moved through in this tab, so "Back" returns to the
+// tool they came from (Pattern → Wall → Back = Pattern), not the home page.
+const TRAIL = 'mt:trail';
+export interface TrailStep { path: string; title: string }
+function readTrail(): TrailStep[] { try { return JSON.parse(sessionStorage.getItem(TRAIL) || '[]'); } catch { return []; } }
+export function pageTitleFor(pathWithQuery: string): string | null {
+  const path = pathWithQuery.split('?')[0];
+  if (path.startsWith('/editor')) return 'Design editor';
+  if (path === '/tools') return 'All tools';
+  if (path === '/create') return 'Create';
+  if (path.startsWith('/templates')) return 'Templates';
+  if (path === '/dashboard') return 'Dashboard';
+  return toolForPath(path)?.title || null;
+}
+/** Record the current page (tools, editor, templates, dashboard) in the tab's trail. */
+export function recordTrail(pathWithQuery: string): void {
+  const title = pageTitleFor(pathWithQuery);
+  if (!title) return;
+  try {
+    const t = readTrail();
+    const base = pathWithQuery.split('?')[0];
+    // Going back to the previous page pops the trail instead of growing it.
+    if (t.length >= 2 && t[t.length - 2].path.split('?')[0] === base) t.pop();
+    else if (t.length && t[t.length - 1].path.split('?')[0] === base) t[t.length - 1] = { path: pathWithQuery, title };
+    else t.push({ path: pathWithQuery, title });
+    sessionStorage.setItem(TRAIL, JSON.stringify(t.slice(-20)));
+  } catch { /* private mode */ }
+}
+/** Where "Back" should go from this page: the previous page in the trail. */
+export function previousStep(currentPath: string): TrailStep | null {
+  const t = readTrail();
+  const base = currentPath.split('?')[0];
+  for (let i = t.length - 1; i >= 0; i--) if (t[i].path.split('?')[0] !== base) return t[i];
+  return null;
+}
