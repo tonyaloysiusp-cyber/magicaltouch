@@ -53,7 +53,7 @@ const TEXT_EFFECTS: { id: TextEffect; label: string; css: CSSProperties }[] = [
 ];
 type Mode = 'simple' | 'pro';
 type RetouchKind = 'heal' | BrushKind | 'paint' | 'erase';
-const RETOUCH: { id: RetouchKind; label: string; hint: string; pro?: boolean }[] = [
+const RETOUCH: { id: RetouchKind; label: string; hint: string; pro?: boolean; face?: boolean }[] = [
   { id: 'paint', label: 'Paint', hint: 'Paint with a colour on the selected layer.', pro: true },
   { id: 'erase', label: 'Eraser', hint: 'Erase the selected layer to see-through.', pro: true },
   { id: 'heal', label: 'Heal', hint: 'Paint over spots, blemishes or small objects to remove them.' },
@@ -62,7 +62,14 @@ const RETOUCH: { id: RetouchKind; label: string; hint: string; pro?: boolean }[]
   { id: 'dodge', label: 'Dodge', hint: 'Lighten where you paint (eyes, faces, highlights).', pro: true },
   { id: 'burn', label: 'Burn', hint: 'Darken where you paint (edges, shadows, depth).', pro: true },
   { id: 'sharpen', label: 'Sharpen', hint: 'Crisp up details where you paint (eyes, text, textures).', pro: true },
+  { id: 'bloat', label: 'Enlarge eyes', hint: 'Click (or brush gently) on an eye to make it bigger. Size the brush to the eye; click again for more.', face: true },
+  { id: 'pinch', label: 'Slim nose', hint: 'Click on the nose (or any feature) to make it smaller and slimmer. Click again for more.', face: true },
+  { id: 'push', label: 'Reshape', hint: 'Drag to push features — lift eyebrows, shape the jaw, tidy the hairline.', face: true },
+  { id: 'recolour', label: 'Hair colour', hint: 'Choose a colour, then paint over the hair. Light and shade stay natural.', face: true },
+  { id: 'whiten', label: 'Whiten', hint: 'Paint over teeth or the whites of the eyes to brighten them.', face: true },
 ];
+// Hair colour presets (the brush keeps each strand's light and shade).
+const HAIR = [['Black', '#1B1B1B'], ['Dark brown', '#3B2416'], ['Chestnut', '#6B3A22'], ['Auburn', '#8E3B1F'], ['Copper', '#B5562A'], ['Honey blonde', '#C9A063'], ['Platinum', '#E2DCCF'], ['Ash grey', '#9A9A9A'], ['Burgundy', '#6E1630'], ['Rose pink', '#D9668A'], ['Violet', '#6A3FA0'], ['Ocean blue', '#2C5EA8']] as const;
 const SIMPLE_LIGHT: SliderDef[] = [
   { key: 'exposure', label: 'Brightness', min: -100, max: 100 },
   { key: 'contrast', label: 'Contrast', min: -100, max: 100 },
@@ -809,10 +816,11 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
   const [healPts, setHealPts] = useState<{ x: number; y: number }[]>([]);
   const [retouch, setRetouch] = useState<RetouchKind>('heal');
   const [brushStrength, setBrushStrength] = useState(50);
+  const [hairColour, setHairColour] = useState('#8E3B1F');
   const [brushHardness, setBrushHardness] = useState(30);
   const strokeRef = useRef<{ work: ImageData; stroke: ReturnType<typeof createStroke>; pts: { x: number; y: number }[]; radius: number } | null>(null);
   const brushCursor = useRef<HTMLDivElement>(null);
-  const brushOpts = (radius: number) => ({ radius, strength: brushStrength / 100, hardness: brushHardness / 100 });
+  const brushOpts = (radius: number) => ({ radius, strength: brushStrength / 100, hardness: brushHardness / 100, color: [parseInt(hairColour.slice(1, 3), 16), parseInt(hairColour.slice(3, 5), 16), parseInt(hairColour.slice(5, 7), 16)] as [number, number, number] });
   const [paintColor, setPaintColor] = useState('#E11D48');
   const isPaint = retouch === 'paint' || retouch === 'erase';
   const strokeLike = retouch === 'heal' || isPaint;
@@ -1858,12 +1866,26 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
         const cur = RETOUCH.find((k) => k.id === retouch) || RETOUCH[0];
         return (
           <>
-            <Section title="Brush">
+            <Section title="Skin & retouch">
               <div className="flex flex-wrap gap-1.5">
-                {kinds.map((k) => (
+                {kinds.filter((k) => !k.face).map((k) => (
                   <button key={k.id} className={chip(retouch === k.id)} onClick={() => setRetouch(k.id)}>{k.label}</button>
                 ))}
               </div>
+            </Section>
+            <Section title="Face & hair">
+              <div className="flex flex-wrap gap-1.5">
+                {kinds.filter((k) => k.face).map((k) => (
+                  <button key={k.id} className={chip(retouch === k.id)} onClick={() => { setRetouch(k.id); if (k.id === 'bloat' || k.id === 'pinch') setBrushStrength(40); }}>{k.label}</button>
+                ))}
+              </div>
+              {retouch === 'heal' && <p className="text-[12px] text-mt-muted">Pimples and spots: choose <b>Heal</b>, size the brush just bigger than the spot and tap it. Use <b>Soften</b> to smooth skin.</p>}
+              {retouch === 'recolour' && (
+                <div className="grid grid-cols-6 gap-1.5" role="radiogroup" aria-label="Hair colour">
+                  {HAIR.map(([n, c]) => <button key={c} role="radio" aria-checked={hairColour === c} aria-label={n} title={n} onClick={() => setHairColour(c)} className={cx('h-8 rounded-lg border shadow-sm', hairColour === c ? 'ring-2 ring-offset-2 ring-[#3B82C4] border-transparent' : 'border-mt-border')} style={{ background: c }} />)}
+                  <label className="h-8 rounded-lg border border-dashed border-mt-border grid place-items-center cursor-pointer text-[10px] text-mt-muted" title="Any colour" style={{ background: hairColour }}><input type="color" className="sr-only" value={hairColour} onChange={(e) => setHairColour(e.target.value)} aria-label="Any hair colour" /></label>
+                </div>
+              )}
               <p className="text-[12px] text-mt-muted">{cur.hint}</p>
               {retouch === 'paint' && (
                 <div className="flex flex-wrap items-center gap-2">
