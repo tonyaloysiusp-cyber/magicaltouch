@@ -4,7 +4,7 @@
 // Colours (harmonies, mood palettes) and Image Trace (photo → vectors).
 // The same engines as the standalone pages (/patterns, /colours, /trace).
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { ArrowUpRight, ImagePlus, PaintBucket, PenTool, Shapes, Wand2 } from 'lucide-react';
 import { DEFAULT_PATTERN, MOTIFS, MOTIF_CATEGORIES, PALETTES, PatternSettings, REPEATS, layout, motifPath, sheetSvg, svgDataUrl, tileSvg } from '@/lib/patterns';
@@ -104,6 +104,8 @@ export function ColoursPanel({ onApply, onFill, onBackground, documentColors }: 
   const [base, setBase] = useState(documentColors.find((c) => /^#[0-9a-f]{6}$/i.test(c) && c.toUpperCase() !== '#FFFFFF') || '#3B82C4');
   const [kind, setKind] = useState<Harmony>('analogous');
   const pal = useMemo(() => harmony(base, kind), [base, kind]);
+  const [mine, setMine] = useState<string[][]>([]);
+  useEffect(() => { try { const v = JSON.parse(localStorage.getItem('mt:palettes') || '[]'); if (Array.isArray(v)) setMine(v.filter((x) => Array.isArray(x)).slice(0, 12)); } catch { /* ignore */ } }, []);
   const Row = ({ colors, label }: { colors: string[]; label: string }) => (
     <div className="rounded-xl border border-mt-border overflow-hidden">
       <div className="flex h-10">{colors.map((c, i) => <button key={c + i} type="button" title={`${c} — tap to colour the selection`} onClick={() => onFill(c)} className="flex-1" style={{ background: c }} aria-label={`Use ${c}`} />)}</div>
@@ -131,6 +133,12 @@ export function ColoursPanel({ onApply, onFill, onBackground, documentColors }: 
         <div>
           <p className={sec}>In this design</p>
           <div className="mt-2 flex flex-wrap gap-1.5">{documentColors.slice(0, 16).map((c) => <button key={c} type="button" onClick={() => setBase(c.toUpperCase())} className="h-7 w-7 rounded-md ring-1 ring-black/10" style={{ background: c }} title={`Build palettes from ${c}`} aria-label={c} />)}</div>
+        </div>
+      )}
+      {mine.length > 0 && (
+        <div className="space-y-2">
+          <p className={sec}>Your saved palettes</p>
+          {mine.map((m, i) => <Row key={i} colors={m} label={`Saved palette ${i + 1}`} />)}
         </div>
       )}
       <div className="space-y-2">

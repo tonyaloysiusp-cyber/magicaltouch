@@ -124,3 +124,108 @@ export const MOOD_PALETTES: { mood: Mood; name: string; colors: string[] }[] = [
   { mood: 'luxury', name: 'Black & gold', colors: ['#0E0E10', '#C9A86A', '#E8D7AE', '#2A2620', '#F7F2E8'] },
   { mood: 'luxury', name: 'Champagne', colors: ['#F3E9DA', '#D9C19A', '#A6874E', '#3E3427', '#FFFFFF'] },
 ];
+
+// ---------------------------------------------------------------- collections
+// Named palettes by theme. "Skin tones" are shades for illustration and
+// portraits in designs — a drawing aid, not about any person.
+export type Collection = 'warm' | 'cool' | 'pastel' | 'vintage' | 'luxury' | 'corporate' | 'festival' | 'nature' | 'gradient' | 'skin';
+export const COLLECTIONS: { id: Collection; label: string }[] = [
+  { id: 'warm', label: 'Warm' }, { id: 'cool', label: 'Cool' }, { id: 'pastel', label: 'Pastel' }, { id: 'vintage', label: 'Vintage' },
+  { id: 'luxury', label: 'Luxury' }, { id: 'corporate', label: 'Corporate' }, { id: 'festival', label: 'Festival' }, { id: 'nature', label: 'Nature' },
+  { id: 'gradient', label: 'Gradient' }, { id: 'skin', label: 'Skin tones (illustration)' },
+];
+export const PALETTES: { c: Collection; name: string; colors: string[] }[] = [
+  ...MOOD_PALETTES.filter((p) => ['warm', 'cool', 'pastel', 'luxury'].includes(p.mood)).map((p) => ({ c: p.mood as Collection, name: p.name, colors: p.colors })),
+  { c: 'warm', name: 'Terracotta sunset', colors: ['#8C3B2B', '#C8653F', '#E8A15C', '#F4D29C', '#FFF4E3'] },
+  { c: 'cool', name: 'Nordic fjord', colors: ['#14213D', '#2E4A6B', '#6C8EAD', '#B8CCE0', '#F1F5F9'] },
+  { c: 'pastel', name: 'Cotton candy', colors: ['#FFD6E8', '#FFE9C7', '#D8F3DC', '#CDE7FF', '#E9DCFF'] },
+  { c: 'vintage', name: 'Old postcard', colors: ['#C9A66B', '#8A6E4B', '#D9C3A0', '#5B7065', '#EFE6D6'] },
+  { c: 'vintage', name: 'Retro diner', colors: ['#D8483B', '#F2B544', '#2E8C83', '#F5E9D3', '#2B2B2B'] },
+  { c: 'vintage', name: 'Faded film', colors: ['#7E9C9F', '#D5B48C', '#B86F52', '#E8DCC8', '#3D3A36'] },
+  { c: 'luxury', name: 'Emerald velvet', colors: ['#0B3D2E', '#14614A', '#C9A86A', '#EFE3C2', '#101010'] },
+  { c: 'luxury', name: 'Royal plum', colors: ['#2E1A3B', '#5B2C6F', '#B48EAD', '#E6D5B8', '#C9A86A'] },
+  { c: 'corporate', name: 'Trust blue', colors: ['#0B2545', '#13315C', '#3B82C4', '#8DA9C4', '#EEF4ED'] },
+  { c: 'corporate', name: 'Slate & teal', colors: ['#1F2933', '#3E4C59', '#0E9AA7', '#9AA5B1', '#F5F7FA'] },
+  { c: 'corporate', name: 'Clean finance', colors: ['#102A43', '#243B53', '#2BB673', '#D9E2EC', '#FFFFFF'] },
+  { c: 'festival', name: 'Diwali glow', colors: ['#7A0C2E', '#D9480F', '#F5A623', '#FFD86B', '#2B0F3A'] },
+  { c: 'festival', name: 'Holi colours', colors: ['#FF3E9A', '#FFB400', '#00C2A8', '#5B5BFF', '#FF6B35'] },
+  { c: 'festival', name: 'Eid evening', colors: ['#0B3D2E', '#127A5C', '#D4AF37', '#F3E7C9', '#1B1F3B'] },
+  { c: 'festival', name: 'Christmas', colors: ['#7F1D1D', '#B91C1C', '#166534', '#D4AF37', '#FAF7F0'] },
+  { c: 'festival', name: 'Onam pookalam', colors: ['#F59E0B', '#EA580C', '#FDE68A', '#16A34A', '#FFF7E6'] },
+  { c: 'nature', name: 'Forest floor', colors: ['#283618', '#606C38', '#DDA15E', '#BC6C25', '#FEFAE0'] },
+  { c: 'nature', name: 'Ocean reef', colors: ['#03045E', '#0077B6', '#00B4D8', '#90E0EF', '#CAF0F8'] },
+  { c: 'nature', name: 'Desert bloom', colors: ['#9B2226', '#CA6702', '#EE9B00', '#E9D8A6', '#94D2BD'] },
+  { c: 'gradient', name: 'Sunrise', colors: ['#FF5F6D', '#FF9966', '#FFC371'] },
+  { c: 'gradient', name: 'Aurora', colors: ['#00C9A7', '#4D8AF0', '#8E5CF7'] },
+  { c: 'gradient', name: 'Peach to lilac', colors: ['#FFB199', '#FF8E9E', '#C79BFF'] },
+  { c: 'gradient', name: 'Deep sea', colors: ['#0F2027', '#203A43', '#2C5364'] },
+  { c: 'skin', name: 'Light shades', colors: ['#FBE3D4', '#F5D0B5', '#EDBB99', '#E3A982', '#D9966E'] },
+  { c: 'skin', name: 'Medium shades', colors: ['#D49A6A', '#C68650', '#B57440', '#A0643A', '#8D5524'] },
+  { c: 'skin', name: 'Deep shades', colors: ['#7A4A2A', '#6B3E22', '#5A321B', '#4A2914', '#3B200F'] },
+];
+
+// ---------------------------------------------------------------- contrast
+/** WCAG grades for text on a background. */
+export function contrastGrades(fg: string, bg: string) {
+  const r = contrast(fg, bg);
+  return { ratio: r, aaNormal: r >= 4.5, aaLarge: r >= 3, aaaNormal: r >= 7, aaaLarge: r >= 4.5 };
+}
+
+// ---------------------------------------------------------------- gradients
+export interface GradientStop { color: string; at: number } // at 0–100
+export function gradientCss(stops: GradientStop[], angle: number, kind: 'linear' | 'radial' = 'linear'): string {
+  const s = [...stops].sort((a, b) => a.at - b.at).map((x) => `${x.color} ${Math.round(x.at)}%`).join(', ');
+  return kind === 'radial' ? `radial-gradient(circle, ${s})` : `linear-gradient(${Math.round(angle)}deg, ${s})`;
+}
+export function gradientSvg(stops: GradientStop[], angle: number, w: number, h: number, kind: 'linear' | 'radial' = 'linear'): string {
+  const st = [...stops].sort((a, b) => a.at - b.at).map((x) => `<stop offset="${x.at}%" stop-color="${x.color}"/>`).join('');
+  // CSS angle: 0deg = to top, clockwise.
+  const a = ((angle - 90) * Math.PI) / 180, cx = 0.5, cy = 0.5;
+  const dx = Math.cos(a) / 2, dy = Math.sin(a) / 2;
+  const def = kind === 'radial'
+    ? `<radialGradient id="g" cx="50%" cy="50%" r="70%">${st}</radialGradient>`
+    : `<linearGradient id="g" x1="${(cx - dx).toFixed(4)}" y1="${(cy - dy).toFixed(4)}" x2="${(cx + dx).toFixed(4)}" y2="${(cy + dy).toFixed(4)}">${st}</linearGradient>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"><defs>${def}</defs><rect width="${w}" height="${h}" fill="url(#g)"/></svg>`;
+}
+
+// ---------------------------------------------------------------- export
+export function paletteCss(colors: string[], name = 'palette'): string {
+  const key = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'palette';
+  return `:root {\n${colors.map((c, i) => `  --${key}-${i + 1}: ${c};`).join('\n')}\n}\n`;
+}
+export function paletteJson(colors: string[], name = 'Palette'): string {
+  return JSON.stringify({ name, colors: colors.map((hex) => { const rgb = hexToRgb(hex); return { hex, rgb, cmyk: rgbToCmyk(rgb), hsl: rgbToHsl(rgb).map((v) => Math.round(v)) }; }) }, null, 2);
+}
+/** GIMP / Inkscape / Krita palette (.gpl). */
+export function paletteGpl(colors: string[], name = 'Palette'): string {
+  return `GIMP Palette\nName: ${name}\nColumns: ${colors.length}\n#\n${colors.map((c) => { const [r, g, b] = hexToRgb(c); return `${String(r).padStart(3)} ${String(g).padStart(3)} ${String(b).padStart(3)}\t${c}`; }).join('\n')}\n`;
+}
+/** Adobe Swatch Exchange (.ase) for Illustrator, Photoshop and InDesign. */
+export function paletteAse(colors: string[], name = 'Palette'): Uint8Array {
+  const parts: number[] = [];
+  const u16 = (n: number) => parts.push((n >> 8) & 255, n & 255);
+  const u32 = (n: number) => parts.push((n >>> 24) & 255, (n >>> 16) & 255, (n >>> 8) & 255, n & 255);
+  const f32 = (f: number) => { const b = new DataView(new ArrayBuffer(4)); b.setFloat32(0, f); for (let i = 0; i < 4; i++) parts.push(b.getUint8(i)); };
+  const str = (s: string) => { const t = s + '\0'; u16(t.length); for (const ch of t) u16(ch.charCodeAt(0)); };
+  const strLen = (s: string) => 2 + (s.length + 1) * 2;
+  parts.push(0x41, 0x53, 0x45, 0x46); u16(1); u16(0); u32(colors.length + 2);
+  u16(0xc001); u32(strLen(name)); str(name); // group start
+  for (const c of colors) {
+    const [r, g, b] = hexToRgb(c);
+    u16(0x0001); u32(strLen(c) + 4 + 12 + 2);
+    str(c); parts.push(0x52, 0x47, 0x42, 0x20); f32(r / 255); f32(g / 255); f32(b / 255); u16(2); // 2 = normal
+  }
+  u16(0xc002); u32(0); // group end
+  return new Uint8Array(parts);
+}
+
+// ---------------------------------------------------------------- wheel
+/** Point on a colour wheel (radius 1, hue 0 at the top, clockwise) ↔ hue and saturation. */
+export function wheelToHs(x: number, y: number): { h: number; s: number } {
+  const h = ((Math.atan2(x, -y) * 180) / Math.PI + 360) % 360;
+  return { h, s: Math.min(1, Math.hypot(x, y)) * 100 };
+}
+export function hsToWheel(h: number, s: number): { x: number; y: number } {
+  const a = (h * Math.PI) / 180, r = Math.min(100, s) / 100;
+  return { x: Math.sin(a) * r, y: -Math.cos(a) * r };
+}
