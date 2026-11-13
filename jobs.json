@@ -1,141 +1,112 @@
 [
  {
-  "name": "tool-editor",
+  "name": "tool-jersey",
   "device": "desktop",
-  "url": "/editor?w=1080&h=1350&template=",
-  "wait": 14000,
+  "url": "/custom-jersey-designer",
+  "wait": 9000,
+  "steps": [
+   {
+    "js": "(() => { const el = document.querySelector('nav[aria-label=Steps]'); if (el) window.scrollTo(0, el.getBoundingClientRect().top + scrollY - 80); })()",
+    "wait": 2500
+   }
+  ]
+ },
+ {
+  "name": "tool-polo",
+  "device": "desktop",
+  "url": "/polo-shirt-designer",
+  "wait": 9000,
+  "steps": [
+   {
+    "js": "(() => { const el = document.querySelector('nav[aria-label=Steps]'); if (el) window.scrollTo(0, el.getBoundingClientRect().top + scrollY - 80); })()",
+    "wait": 2500
+   }
+  ]
+ },
+ {
+  "name": "tool-tshirt",
+  "device": "desktop",
+  "url": "/custom-t-shirt-designer",
+  "wait": 9000,
+  "steps": [
+   {
+    "js": "(() => { const el = document.querySelector('nav[aria-label=Steps]'); if (el) window.scrollTo(0, el.getBoundingClientRect().top + scrollY - 80); })()",
+    "wait": 2500
+   }
+  ]
+ },
+ {
+  "name": "tool-wall",
+  "device": "desktop",
+  "url": "/wall-designer",
+  "wait": 8000,
+  "steps": [
+   {
+    "js": "(() => { const el = document.querySelector('[role=tablist]'); if (el) window.scrollTo(0, el.getBoundingClientRect().top + scrollY - 80); })()",
+    "wait": 1500
+   }
+  ]
+ },
+ {
+  "name": "check-wallpattern",
+  "device": "desktop",
+  "url": "/wall-designer?type=pattern",
+  "wait": 8000,
+  "steps": [
+   {
+    "js": "(() => { const el = document.querySelector('[role=tablist]'); if (el) window.scrollTo(0, el.getBoundingClientRect().top + scrollY - 80); })()",
+    "wait": 2000
+   }
+  ]
+ },
+ {
+  "name": "check-jersey-print",
+  "device": "desktop",
+  "url": "/custom-jersey-designer",
+  "wait": 9000,
+  "steps": [
+   {
+    "js": "(() => { const el = document.querySelector('nav[aria-label=Steps]'); if (el) window.scrollTo(0, el.getBoundingClientRect().top + scrollY - 80); })()",
+    "wait": 800
+   },
+   {
+    "text": "Print files",
+    "wait": 3000
+   }
+  ]
+ },
+ {
+  "name": "check-jersey-mobile",
+  "device": "iPhone 13",
+  "url": "/custom-jersey-designer",
+  "wait": 9000,
+  "steps": [
+   {
+    "js": "(() => { const el = document.querySelector('nav[aria-label=Steps]'); if (el) window.scrollTo(0, el.getBoundingClientRect().top + scrollY - 80); })()",
+    "wait": 2000
+   }
+  ]
+ },
+ {
+  "name": "check-create",
+  "device": "desktop",
+  "url": "/create",
+  "wait": 9000,
+  "mock": "admin",
   "steps": [
    {
     "wait": 500
    }
-  ],
-  "mock": "admin"
- },
- {
-  "name": "tool-photo-studio",
-  "device": "desktop",
-  "url": "/photo-studio",
-  "wait": 8000,
-  "steps": [
-   {
-    "js": "(() => { const el = document.querySelector('aside'); if (el) window.scrollTo(0, el.getBoundingClientRect().top + scrollY - 90); })()",
-    "wait": 1500
-   }
   ]
  },
  {
-  "name": "tool-remove-background",
+  "name": "check-tools",
   "device": "desktop",
-  "url": "/remove-background",
-  "wait": 9000,
+  "url": "/tools",
+  "wait": 7000,
   "steps": [
    {
-    "js": "(() => { const el = document.querySelector('aside'); if (el) window.scrollTo(0, el.getBoundingClientRect().top + scrollY - 90); })()",
-    "wait": 1500
-   }
-  ]
- },
- {
-  "name": "tool-trace",
-  "device": "desktop",
-  "url": "/trace",
-  "wait": 12000,
-  "steps": [
-   {
-    "js": "(() => { const el = document.querySelector('aside'); if (el) window.scrollTo(0, el.getBoundingClientRect().top + scrollY - 90); })()",
-    "wait": 1500
-   }
-  ]
- },
- {
-  "name": "tool-patterns",
-  "device": "desktop",
-  "url": "/patterns",
-  "wait": 9000,
-  "steps": [
-   {
-    "js": "(() => { const el = document.querySelector('aside'); if (el) window.scrollTo(0, el.getBoundingClientRect().top + scrollY - 90); })()",
-    "wait": 1500
-   }
-  ]
- },
- {
-  "name": "tool-colours",
-  "device": "desktop",
-  "url": "/colours",
-  "wait": 9000,
-  "steps": [
-   {
-    "js": "(() => { const el = document.querySelector('aside'); if (el) window.scrollTo(0, el.getBoundingClientRect().top + scrollY - 90); })()",
-    "wait": 1500
-   }
-  ]
- },
- {
-  "name": "tool-passport",
-  "device": "desktop",
-  "url": "/passport-photo-maker",
-  "wait": 9000,
-  "steps": [
-   {
-    "js": "(() => { const el = document.querySelector('aside'); if (el) window.scrollTo(0, el.getBoundingClientRect().top + scrollY - 90); })()",
-    "wait": 1500
-   }
-  ]
- },
- {
-  "name": "tool-rangoli",
-  "device": "desktop",
-  "url": "/rangoli-mandala-maker",
-  "wait": 9000,
-  "steps": [
-   {
-    "text": "Diwali rangoli",
-    "wait": 800
-   },
-   {
-    "click": "button[aria-label='Starting design 2']",
-    "wait": 1000
-   },
-   {
-    "js": "(() => { const el = document.querySelector('aside'); if (el) window.scrollTo(0, el.getBoundingClientRect().top + scrollY - 90); })()",
-    "wait": 1500
-   }
-  ]
- },
- {
-  "name": "tool-gradients",
-  "device": "desktop",
-  "url": "/gradient-background-generator",
-  "wait": 9000,
-  "steps": [
-   {
-    "js": "(() => { const el = document.querySelector('aside'); if (el) window.scrollTo(0, el.getBoundingClientRect().top + scrollY - 90); })()",
-    "wait": 1500
-   }
-  ]
- },
- {
-  "name": "tool-print-size",
-  "device": "desktop",
-  "url": "/print-size-calculator",
-  "wait": 9000,
-  "steps": [
-   {
-    "js": "(() => { const el = document.querySelector('aside'); if (el) window.scrollTo(0, el.getBoundingClientRect().top + scrollY - 90); })()",
-    "wait": 1500
-   }
-  ]
- },
- {
-  "name": "tool-jersey",
-  "device": "desktop",
-  "url": "/custom-jersey-designer",
-  "wait": 12000,
-  "steps": [
-   {
-    "js": "(() => { const el = document.querySelector('aside'); if (el) window.scrollTo(0, el.getBoundingClientRect().top + scrollY - 90); })()",
-    "wait": 1500
+    "wait": 500
    }
   ]
  }
