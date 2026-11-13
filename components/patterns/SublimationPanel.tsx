@@ -91,7 +91,6 @@ export function SublimationPanel({ p, job, setJob }: { p: PatternSettings; job: 
   const dlPiecesPdf = async () => {
     setBusy('pdf');
     try {
-      const { jsPDF } = await import('jspdf');
       // One page per different piece (and size); the label says how many to print.
       const seen = new Map<string, { pl: (typeof print.placed)[number]; n: number }>();
       for (const pl of print.placed) {
@@ -99,25 +98,21 @@ export function SublimationPanel({ p, job, setJob }: { p: PatternSettings; job: 
         const s = seen.get(key);
         if (s) s.n++; else seen.set(key, { pl, n: 1 });
       }
+      // Vector pages: each piece at real size with its pattern as paths.
+      const { jsPDF } = await import('jspdf');
+      const { renderSvgToPdf } = await import('@/lib/svgToPdf');
       let pdf: any = null;
-      let lowest = dpi;
       for (const { pl, n } of seen.values()) {
         const ps = pieceSvg(pl, { ...common, bleed: job.bleed, cutLines: job.cutLines });
-        let d = dpi;
-        while (mmPx(ps.w, d) * mmPx(ps.h, d) > 16_000_000 && d > 60) d -= 10;
-        lowest = Math.min(lowest, d);
-        const c = await svgCanvas(ps.svg, mmPx(ps.w, d), mmPx(ps.h, d));
         const fmt: [number, number] = [ps.w, ps.h + 12];
         const orient = fmt[0] > fmt[1] ? 'landscape' : 'portrait';
         if (!pdf) pdf = new jsPDF({ unit: 'mm', format: fmt, orientation: orient, compress: true });
         else pdf.addPage(fmt, orient);
-        pdf.addImage(c.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, ps.w, ps.h, undefined, 'FAST');
+        renderSvgToPdf(pdf, ps.svg, { scale: 1 });
         pdf.setFontSize(9); pdf.setTextColor(60);
-        pdf.text(`${job.name} · ${product.label} · ${pl.piece.label} · size ${pl.size || size.label} · print ${n}× · ${Math.round(pl.w)}×${Math.round(pl.h)} mm + ${job.bleed} mm bleed · ${d} DPI`, 4, ps.h + 7);
-        c.width = c.height = 0;
+        pdf.text(`${job.name} · ${product.label} · ${pl.piece.label} · size ${pl.size || size.label} · print ${n}× · ${Math.round(pl.w)}×${Math.round(pl.h)} mm + ${job.bleed} mm bleed · vector`, 4, ps.h + 7);
       }
       if (pdf) save(pdf.output('blob'), `${base}-pieces.pdf`);
-      if (lowest < dpi) flash(`Large pieces were made at ${lowest} DPI to fit browser limits. The SVG print file has no resolution limit.`);
     } catch { flash('The PDF could not be made in this browser.'); }
     setBusy(null);
   };
@@ -194,7 +189,7 @@ export function SublimationPanel({ p, job, setJob }: { p: PatternSettings; job: 
       <div className="mt-4 flex flex-wrap items-center gap-2">
         <span className="text-[12px] text-mt-muted mr-1">Print file</span>
         <button type="button" onClick={() => dlSvg(print.svg, `${base}-print.svg`)} title="Vector, real size in millimetres — opens in Illustrator, CorelDRAW, Inkscape and most RIP software" className={btn}><Download size={14} /> SVG vector</button>
-        <button type="button" onClick={dlPiecesPdf} disabled={!!busy} title="One page per piece at real size with bleed" className={btn}><Download size={14} /> {busy === 'pdf' ? 'Making…' : 'PDF per piece'}</button>
+        <button type="button" onClick={dlPiecesPdf} disabled={!!busy} title="One vector page per piece at real size with bleed" className={btn}><Download size={14} /> {busy === 'pdf' ? 'Making…' : 'Vector PDF per piece'}</button>
         <button type="button" onClick={dlPng} disabled={!!busy} className={btn}><Download size={14} /> {busy === 'png' ? 'Making…' : `PNG ${dpi} DPI`}</button>
         <select value={dpi} onChange={(e) => setDpi(Number(e.target.value))} aria-label="PNG and PDF resolution" className="h-9 rounded-full border border-mt-border bg-mt-bg px-2 text-[13px]">{[100, 150, 200, 300].map((d) => <option key={d} value={d}>{d} DPI</option>)}</select>
       </div>

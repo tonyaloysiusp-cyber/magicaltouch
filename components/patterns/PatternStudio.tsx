@@ -16,6 +16,8 @@ import { supabase } from '@/lib/supabase';
 import { PATTERN_FONTS, textOutline } from '@/lib/patternText';
 import { WEIGHT_NAMES } from '@/lib/editor/googleFonts';
 import { DEFAULT_JOB, SublimationJob, SublimationPanel } from './SublimationPanel';
+import { TeamKitPanel } from './TeamKitPanel';
+import { SurfacesPanel } from './SurfacesPanel';
 
 const STORE = 'mt:patterns';
 const DRAFT = 'mt:pattern-draft';
@@ -65,6 +67,9 @@ function Slider({ label, value, min, max, step = 1, onChange, fmt }: { label: st
 
 export function PatternStudio() {
   const router = useRouter();
+  const [ws, setWs] = useState<'patterns' | 'kits' | 'surfaces'>('patterns');
+  useEffect(() => { try { const t = new URLSearchParams(window.location.search).get('tab'); if (t === 'kits' || t === 'surfaces') setWs(t); } catch { /* ignore */ } }, []);
+  const pickWs = (t: 'patterns' | 'kits' | 'surfaces') => { setWs(t); try { const u = new URL(window.location.href); if (t === 'patterns') u.searchParams.delete('tab'); else u.searchParams.set('tab', t); window.history.replaceState(null, '', u.toString()); } catch { /* ignore */ } };
   const [p, setP] = useState<PatternSettings>(DEFAULT_PATTERN);
   const [saved, setSaved] = useState<Saved[]>([]);
   const [showTile, setShowTile] = useState(false);
@@ -197,7 +202,15 @@ export function PatternStudio() {
     r.readAsDataURL(f);
   };
 
+  const tabs = [{ id: 'patterns' as const, label: 'Pattern design' }, { id: 'kits' as const, label: 'Apparel & team kits' }, { id: 'surfaces' as const, label: 'Wall & vehicle graphics' }];
   return (
+    <>
+    <div role="tablist" aria-label="Pattern Studio workspaces" className="mb-5 flex flex-wrap gap-1 rounded-2xl border border-mt-border bg-mt-surface p-1 w-fit">
+      {tabs.map((t) => <button key={t.id} type="button" role="tab" aria-selected={ws === t.id} onClick={() => pickWs(t.id)} className={`h-9 px-4 rounded-xl text-[13.5px] font-semibold ${ws === t.id ? 'bg-mt-primary text-mt-onprimary' : 'text-mt-muted hover:text-mt-ink'}`}>{t.label}</button>)}
+    </div>
+    {ws === 'kits' && <TeamKitPanel pattern={p} />}
+    {ws === 'surfaces' && <SurfacesPanel pattern={p} />}
+    {ws === 'patterns' && (
     <div className="grid gap-6 lg:grid-cols-[340px_minmax(0,1fr)] lg:items-start">
       {/* Controls */}
       <aside className="rounded-3xl border border-mt-border bg-mt-surface p-5 space-y-6 lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto">
@@ -409,6 +422,8 @@ export function PatternStudio() {
         <p className="text-[12px] text-mt-faint inline-flex items-center gap-1.5"><Sparkles size={12} /> Every motif here is original to Magical Touch Design — free to use in your own work.</p>
       </div>
     </div>
+    )}
+    </>
   );
 }
 

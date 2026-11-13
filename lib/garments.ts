@@ -30,6 +30,14 @@ export const PRODUCTS: Product[] = [
     ],
   },
   {
+    id: 'vest', label: 'Basketball vest (sleeveless)', note: 'Sleeveless basketball / running vest with deep armholes.',
+    pieces: [
+      { id: 'front', label: 'Front', w: 560, h: 760, qty: 1, d: 'M165 0C185 95 375 95 395 0L465 0C465 120 495 185 560 225L550 760L10 760L0 225C65 185 95 120 95 0Z' },
+      { id: 'back', label: 'Back', w: 560, h: 770, qty: 1, d: 'M165 0C190 40 370 40 395 0L465 0C465 120 495 185 560 225L550 770L10 770L0 225C65 185 95 120 95 0Z' },
+      { id: 'binding', label: 'Neck & armhole binding', w: 900, h: 40, qty: 1, d: 'M0 0H900V40H0Z' },
+    ],
+  },
+  {
     id: 'shorts', label: 'Sports shorts', note: 'Elastic waist sports shorts, two-panel legs.',
     pieces: [
       { id: 'front-l', label: 'Front left', w: 330, h: 520, qty: 1, d: 'M40 0L310 0L330 520L0 520L0 330C25 320 40 300 40 260Z' },
@@ -118,6 +126,15 @@ export function pieceTransform(pl: Placed): string {
   return pl.piece.mirror ? `translate(${r1(pl.x + pl.w)} ${r1(pl.y)}) scale(${-pl.k} ${pl.k})` : `translate(${r1(pl.x)} ${r1(pl.y)}) scale(${pl.k})`;
 }
 
+
+let bleedSeq = 0;
+/** Pattern over the piece plus bleed: an undistorted pattern-filled box clipped to the outline grown by the bleed. */
+function bleedFill(pl: Placed, transform: string, bleed: number, fill: string): string {
+  const p = pl.piece, b = bleed / pl.k, id = `bl${++bleedSeq}`;
+  const sx = (p.w + 2 * b) / p.w, sy = (p.h + 2 * b) / p.h;
+  return `<g transform="${transform}"><clipPath id="${id}"><path d="${p.d}" transform="translate(${r1(p.w / 2)} ${r1(p.h / 2)}) scale(${Math.round(sx * 10000) / 10000} ${Math.round(sy * 10000) / 10000}) translate(${r1(-p.w / 2)} ${r1(-p.h / 2)})"/></clipPath><rect x="${r1(-b - 1)}" y="${r1(-b - 1)}" width="${r1(p.w + 2 * b + 2)}" height="${r1(p.h + 2 * b + 2)}" fill="${fill}" clip-path="url(#${id})"/></g>`;
+}
+
 /**
  * Print layout SVG in millimetres: every piece filled with the pattern
  * (pattern extends `bleed` mm past the cut line), cut lines on their own
@@ -131,7 +148,7 @@ export function printLayoutSvg(opts: { product: Product; sizeK: number; sizeLabe
   const body: string[] = [];
   placed.forEach((pl) => {
     const sw = (2 * bleed) / pl.k; // stroke in piece units = bleed on both sides
-    body.push(`<g id="piece-${pl.piece.id}${pl.copy ? `-${pl.copy + 1}` : ''}"><path d="${pl.piece.d}" transform="${pieceTransform(pl)}" fill="${opts.background}" stroke="${opts.background}" stroke-width="${r1(sw)}" stroke-linejoin="round"/><path d="${pl.piece.d}" transform="${pieceTransform(pl)}" fill="url(#${patId(pl.k)})" stroke="url(#${patId(pl.k)})" stroke-width="${r1(sw)}" stroke-linejoin="round"/></g>`);
+    body.push(`<g id="piece-${pl.piece.id}${pl.copy ? `-${pl.copy + 1}` : ''}"><path d="${pl.piece.d}" transform="${pieceTransform(pl)}" fill="${opts.background}" stroke="${opts.background}" stroke-width="${r1(sw)}" stroke-linejoin="round"/>${bleedFill(pl, pieceTransform(pl), bleed, `url(#${patId(pl.k)})`)}</g>`);
   });
   const cuts = opts.cutLines ? `<g id="cut-lines" fill="none" stroke="#EC008C" stroke-width="0.4">${placed.map((pl) => `<path d="${pl.piece.d}" transform="${pieceTransform(pl)}" vector-effect="non-scaling-stroke"/>`).join('')}</g>` : '';
   const labels = `<g id="labels" font-family="Arial, Helvetica, sans-serif" font-size="9" fill="#555">${placed.map((pl) => `<text x="${r1(opts.mirror ? rollW - pl.x - pl.w : pl.x)}" y="${r1(pl.y - bleed - 3)}">${esc(`${pl.piece.label}${pl.piece.qty > 1 ? ` (${pl.copy + 1})` : ''} · ${pl.size || opts.sizeLabel} · ${Math.round(pl.rot ? pl.h : pl.w)}×${Math.round(pl.rot ? pl.w : pl.h)} mm${pl.rot ? ' · turned 90°' : ''}${pl.tooWide ? ' · WIDER THAN ROLL' : ''}`)}</text>`).join('')}</g>`;
@@ -144,7 +161,7 @@ export function pieceSvg(pl: Placed, opts: { bleed: number; tileInner: string; t
   const W = pl.w + 2 * opts.bleed, H = pl.h + 2 * opts.bleed;
   const local: Placed = { ...pl, x: opts.bleed, y: opts.bleed };
   const sw = (2 * opts.bleed) / pl.k;
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${r1(W)}mm" height="${r1(H)}mm" viewBox="0 0 ${r1(W)} ${r1(H)}"><defs>${patternDefs([pl.k], opts)}</defs><path d="${pl.piece.d}" transform="${pieceTransform(local)}" fill="${opts.background}" stroke="${opts.background}" stroke-width="${r1(sw)}" stroke-linejoin="round"/><path d="${pl.piece.d}" transform="${pieceTransform(local)}" fill="url(#${patId(pl.k)})" stroke="url(#${patId(pl.k)})" stroke-width="${r1(sw)}" stroke-linejoin="round"/>${opts.cutLines ? `<path d="${pl.piece.d}" transform="${pieceTransform(local)}" fill="none" stroke="#EC008C" stroke-width="0.35" vector-effect="non-scaling-stroke"/>` : ''}</svg>`;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${r1(W)}mm" height="${r1(H)}mm" viewBox="0 0 ${r1(W)} ${r1(H)}"><defs>${patternDefs([pl.k], opts)}</defs><path d="${pl.piece.d}" transform="${pieceTransform(local)}" fill="${opts.background}" stroke="${opts.background}" stroke-width="${r1(sw)}" stroke-linejoin="round"/>${bleedFill(local, pieceTransform(local), opts.bleed, `url(#${patId(pl.k)})`)}${opts.cutLines ? `<path d="${pl.piece.d}" transform="${pieceTransform(local)}" fill="none" stroke="#EC008C" stroke-width="0.35" vector-effect="non-scaling-stroke"/>` : ''}</svg>`;
   return { svg, w: W, h: H };
 }
 

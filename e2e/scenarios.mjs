@@ -808,6 +808,25 @@ scenarios.push({
   },
 });
 
+// Pattern Studio team kits: roster → per-player vector PDF and SVG.
+scenarios.push({
+  name: 'team-kit-bulk',
+  async run(t) {
+    await t.page.goto(t.BASE + '/patterns?tab=kits', { waitUntil: 'domcontentloaded' });
+    await t.page.getByRole('tab', { name: 'Apparel & team kits' }).waitFor({ timeout: 30000 });
+    await t.page.getByText('Players (4)').waitFor({ timeout: 30000 });
+    await t.shot('kits');
+    const [svgDl] = await Promise.all([t.page.waitForEvent('download', { timeout: 60000 }), t.page.getByRole('button', { name: 'SVG', exact: true }).first().click()]);
+    const fs = await import('node:fs');
+    const svg = fs.readFileSync(await svgDl.path(), 'utf8');
+    t.check('player SVG has pieces and pattern paths', (svg.match(/<path /g) || []).length > 100, svgDl.suggestedFilename());
+    const [pdfDl] = await Promise.all([t.page.waitForEvent('download', { timeout: 90000 }), t.page.getByRole('button', { name: /Vector PDF/ }).first().click()]);
+    const pdf = fs.readFileSync(await pdfDl.path());
+    t.check('player PDF is a PDF', pdf.subarray(0, 4).toString() === '%PDF' && pdf.length > 3000, `${pdf.length} bytes`);
+    t.check('player PDF has no pictures (all vector)', !/\/Subtype\s*\/Image/.test(pdf.toString('latin1')));
+  },
+});
+
 // Creative tools inside the editor: Patterns, Colours and Image Trace panels.
 scenarios.push({
   name: 'editor-creative-tools',
