@@ -57,7 +57,7 @@ for (const u of list) {
     else if (p.title.length > 65) add('title too long (>65)', u, `${p.title.length}: ${p.title}`);
     else if (p.title.length < 25) add('title too short (<25)', u, p.title);
     if (!p.description) add('missing meta description', u);
-    else if (p.description.length > 165) add('description too long (>165)', u, String(p.description.length));
+    else if (p.description.length > 165) add('description too long (>165)', u, `${p.description.length}: ${p.description}`);
     else if (p.description.length < 70) add('description too short (<70)', u, p.description);
     if (!p.canonical) add('missing canonical', u);
     else if (new URL(p.canonical, SITE).pathname.replace(/\/$/, '') !== path.replace(/\/$/, '')) add('canonical points elsewhere', u, p.canonical);

@@ -34,7 +34,7 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   const pageTitle = fitTitle(title);
   const full = templateDescription(t);
   // Search results show ~160 characters: end on a full sentence.
-  const description = full.length <= 160 ? full : (full.slice(0, 160).match(/^.*[.!?](?=\s)/)?.[0] || `${full.slice(0, 157)}…`);
+  const description = fitDescription(full);
   const url = `${SITE_URL}/templates/${t.slug}`;
   const image = abs(t.preview || t.thumbnail) || `${SITE_URL}/api/og`;
   return {

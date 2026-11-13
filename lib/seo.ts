@@ -164,7 +164,11 @@ export function templateSubtitle(t: Pick<SeoTemplate, 'name' | 'category' | 'wid
 }
 
 export function templateDescription(t: SeoTemplate) {
-  if (t.description && t.description.length >= 60) return t.description.slice(0, 320);
+  if (t.description && t.description.length >= 60) {
+    const d = t.description.trim();
+    // Short, generic lines ("A flyer template, free to personalise…") get the template's name, so each page is unique.
+    return d.length < 110 && !d.toLowerCase().includes(t.name.toLowerCase().slice(0, 14)) ? `${t.name}: ${d.charAt(0).toLowerCase()}${d.slice(1)}`.slice(0, 320) : d.slice(0, 320);
+  }
   const kw = (t.search_keywords || '').split(',').map((s) => s.trim()).filter(Boolean).slice(0, 4).join(', ');
   return `Free ${t.name} template — ${formatLabel(t.width, t.height)}, ${sizeLabel(t.width, t.height)}. Edit the text, colours and photos online and download as PDF, PNG or JPG.${kw ? ` Great for ${kw}.` : ''}`.slice(0, 300);
 }

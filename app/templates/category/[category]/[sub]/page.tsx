@@ -19,7 +19,7 @@ export async function generateMetadata({ params }: { params: { category: string;
   if (!s) return { title: 'Templates', robots: { index: false } };
   const full = subFull({ name: s.parent, slug: s.parentSlug }, s.name);
   const title = `${s.count}+ Free ${full} Templates – Edit Online`;
-  const description = `${s.count} free, editable ${full.toLowerCase()} templates. Personalise the words, colours and photos online and download print-ready PDF, PNG or JPG.`;
+  const description = `${s.count} free, editable ${full.toLowerCase()} templates. Personalise the words, colours and photos online and download print-ready PDF, PNG or JPG.`.slice(0, 400);
   const url = `${SITE_URL}/templates/category/${s.parentSlug}/${s.slug}`;
   return { title: fitTitle(`${title}`), description, alternates: { canonical: url }, openGraph: { type: 'website', url, title, description, siteName: SITE_NAME, images: [`${SITE_URL}/api/og`] } };
 }

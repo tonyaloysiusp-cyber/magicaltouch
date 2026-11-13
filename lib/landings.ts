@@ -937,7 +937,7 @@ export const ALT_LANDINGS: Landing[] = [
     slug: 'free-design-templates',
     thing: 'design',
     h1: 'Free design templates',
-    title: '1,000+ Free Design Templates — Editable Online, No Watermark',
+    title: 'Free Design Templates — Edit Online, No Watermark, No Sign-up',
     description: '1,000+ free design templates: flyers, posters, invitations, resumes, menus, certificates and social posts. Edit online and download free.',
     intro: ['Every template on Magical Touch is free to edit and download — no premium badges, no watermark. Browse by category or search for what you need.'],
     terms: ['poster', 'flyer', 'invitation', 'card', 'post'],
