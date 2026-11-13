@@ -65,9 +65,9 @@ function Slider({ label, value, min, max, step = 1, onChange, fmt }: { label: st
   );
 }
 
-export function PatternStudio() {
+export function PatternStudio({ initialTab }: { initialTab?: 'patterns' | 'kits' | 'surfaces' } = {}) {
   const router = useRouter();
-  const [ws, setWs] = useState<'patterns' | 'kits' | 'surfaces'>('patterns');
+  const [ws, setWs] = useState<'patterns' | 'kits' | 'surfaces'>(initialTab || 'patterns');
   useEffect(() => { try { const t = new URLSearchParams(window.location.search).get('tab'); if (t === 'kits' || t === 'surfaces') setWs(t); } catch { /* ignore */ } }, []);
   const pickWs = (t: 'patterns' | 'kits' | 'surfaces') => { setWs(t); try { const u = new URL(window.location.href); if (t === 'patterns') u.searchParams.delete('tab'); else u.searchParams.set('tab', t); window.history.replaceState(null, '', u.toString()); } catch { /* ignore */ } };
   const [p, setP] = useState<PatternSettings>(DEFAULT_PATTERN);

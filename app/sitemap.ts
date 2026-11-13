@@ -38,7 +38,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   pages.push({ url: `${SITE_URL}/trace`, lastModified: now, changeFrequency: 'monthly', priority: 0.85 });
   pages.push({ url: `${SITE_URL}/patterns`, lastModified: now, changeFrequency: 'monthly', priority: 0.85 });
   pages.push({ url: `${SITE_URL}/colours`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 });
-  for (const t of ['passport-photo-maker', 'rangoli-mandala-maker', 'gradient-background-generator', 'print-size-calculator']) pages.push({ url: `${SITE_URL}/${t}`, lastModified: now, changeFrequency: 'monthly', priority: 0.85 });
+  for (const t of ['passport-photo-maker', 'rangoli-mandala-maker', 'gradient-background-generator', 'print-size-calculator', 'custom-jersey-designer']) pages.push({ url: `${SITE_URL}/${t}`, lastModified: now, changeFrequency: 'monthly', priority: 0.85 });
   pages.push({ url: `${SITE_URL}/showcase`, lastModified: now, changeFrequency: 'daily', priority: 0.8 });
   (await getActivePosts()).forEach((p) => pages.push({ url: `${SITE_URL}/showcase/${p.slug}`, lastModified: new Date(p.updated_at), changeFrequency: 'weekly', priority: 0.85 }));
   const templates = await getAllPublishedTemplates();

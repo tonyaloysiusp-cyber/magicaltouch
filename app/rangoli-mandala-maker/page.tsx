@@ -5,23 +5,24 @@ import { SITE_URL, SITE_NAME, fitTitle, fitDescription } from '@/lib/seo';
 
 const PATH = '/rangoli-mandala-maker';
 const TITLE = 'Rangoli Design Maker & Mandala Generator — Free Online';
-const DESC = 'Create rangoli designs and mandalas online free: draw once and it repeats around the centre, add rings of flowers, petals and dots, or get a ready Diwali rangoli. Download SVG, PNG or PDF.';
+const DESC = 'Create rangoli designs and mandalas online free in a few guided steps: pick a Diwali, floral or geometric starting design, choose 4- to 24-fold symmetry, add petals, dots, lines and borders, recolour, and download SVG, vector PDF, PNG or JPEG.';
 export const metadata: Metadata = {
   title: fitTitle(TITLE), description: fitDescription(DESC), alternates: { canonical: `${SITE_URL}${PATH}` },
   keywords: ['rangoli design maker', 'rangoli designs', 'mandala maker', 'mandala generator', 'diwali rangoli', 'kolam design', 'mandala art online'],
   openGraph: { type: 'website', url: `${SITE_URL}${PATH}`, title: TITLE, description: DESC, siteName: SITE_NAME, images: [`${SITE_URL}/api/og`] },
 };
 const FAQ: [string, string][] = [
-  ['How do I make a rangoli design online?', 'Press “Surprise me” for a ready design, or draw on the canvas — every stroke repeats around the centre. Add rings of petals, flowers and dots, choose the floor colour, then download.'],
-  ['Can I make a mandala for colouring?', 'Yes. Turn on “Outline only” for rings, draw in black on white and download a PDF or PNG to print and colour.'],
-  ['Is the download a vector?', 'Yes — the SVG is a clean vector you can scale to any size, cut on a plotter or edit in Illustrator, Inkscape or our editor.'],
+  ['How do I make a rangoli design online?', 'Follow the seven steps: choose rangoli, Diwali, floral or mandala, pick one of the starting designs, set the symmetry, add petals, dots, lines or a border, choose a palette and download. You can also draw — every stroke repeats around the centre.'],
+  ['Can I make a mandala for colouring?', 'Yes. Pick “Mandala” and the “Ink on paper” palette, set rings to “Outline only” under More settings, and download a vector PDF to print and colour.'],
+  ['Is the download a vector?', 'Yes — the SVG and the PDF are clean vectors you can scale to any size, cut on a plotter or edit in Illustrator, Inkscape or our editor. PNG and JPEG are also available.'],
+  ['Can I undo, rotate or duplicate parts?', 'Yes. Every change can be undone and redone; each layer can be rotated, resized, recoloured with a gradient, duplicated, hidden or deleted.'],
   ['Can I use it for Diwali, Pongal or Onam posts?', 'Yes. Use “Use in a design” to open your rangoli in the editor, add greetings and your logo, and share it as a post or print it.'],
 ];
 const STEPS: [string, string][] = [
-  ['Start', 'Press “Surprise me” for a ready rangoli, or start from a blank floor.'],
-  ['Draw with symmetry', 'Choose 4 to 24 repeats and mirror — draw once, it repeats around the centre.'],
-  ['Add rings', 'Petals, flowers, paisley, lotus and dots, sized and spaced as you like.'],
-  ['Download or design', 'SVG, PNG or PDF — or open it in the editor to add text.'],
+  ['Choose what to make', 'Rangoli, Diwali rangoli, floral rangoli, mandala, geometric mandala or your own symmetry.'],
+  ['Pick a starting design', 'Six ready designs for each kind — or press “Surprise me”.'],
+  ['Set symmetry and add elements', '4- to 24-fold (or custom); petals, flowers, dots, lines and decorative borders.'],
+  ['Colour, fine-tune and download', 'Ready palettes and gradients, layer editing, then SVG, vector PDF, PNG or JPEG.'],
 ];
 export default function Page() {
   return (
