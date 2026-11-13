@@ -1,79 +1,142 @@
 [
  {
-  "name": "rang",
+  "name": "tool-editor",
   "device": "desktop",
-  "url": "/rangoli-mandala-maker",
-  "wait": 6000,
-  "steps": [
-   {
-    "text": "Surprise me",
-    "exact": false,
-    "wait": 1200
-   }
-  ]
- },
- {
-  "name": "grad",
-  "device": "desktop",
-  "url": "/gradient-background-generator",
-  "wait": 6000
- },
- {
-  "name": "print",
-  "device": "desktop",
-  "url": "/print-size-calculator",
-  "wait": 6000
- },
- {
-  "name": "pass",
-  "device": "desktop",
-  "url": "/passport-photo-maker",
-  "wait": 6000
- },
- {
-  "name": "trace",
-  "device": "desktop",
-  "url": "/trace",
-  "wait": 12000
- },
- {
-  "name": "fx",
-  "device": "desktop",
-  "url": "/editor?w=1080&h=1080",
-  "mock": "admin",
+  "url": "/editor?w=1080&h=1350&template=",
   "wait": 14000,
   "steps": [
    {
-    "rail": "Text",
-    "wait": 1200
-   },
+    "wait": 500
+   }
+  ],
+  "mock": "admin"
+ },
+ {
+  "name": "tool-photo-studio",
+  "device": "desktop",
+  "url": "/photo-studio",
+  "wait": 8000,
+  "steps": [
    {
-    "click": "aside button:has-text('Add a heading')",
-    "wait": 1200
-   },
-   {
-    "click": "button:has-text('Effects')",
-    "wait": 1200
-   },
-   {
-    "click": "[role=dialog] button[title='Gold']",
-    "wait": 1500
-   },
-   {
-    "click": "[role=dialog] button[title='Neon']",
-    "wait": 1500
-   },
-   {
-    "click": "[role=dialog] button[title='Retro']",
+    "js": "(() => { const el = document.querySelector('aside'); if (el) window.scrollTo(0, el.getBoundingClientRect().top + scrollY - 90); })()",
     "wait": 1500
    }
   ]
  },
  {
-  "name": "toolsm",
-  "device": "iPhone 13",
-  "url": "/tools",
-  "wait": 5000,
-  "full": true
+  "name": "tool-remove-background",
+  "device": "desktop",
+  "url": "/remove-background",
+  "wait": 9000,
+  "steps": [
+   {
+    "js": "(() => { const el = document.querySelector('aside'); if (el) window.scrollTo(0, el.getBoundingClientRect().top + scrollY - 90); })()",
+    "wait": 1500
+   }
+  ]
+ },
+ {
+  "name": "tool-trace",
+  "device": "desktop",
+  "url": "/trace",
+  "wait": 12000,
+  "steps": [
+   {
+    "js": "(() => { const el = document.querySelector('aside'); if (el) window.scrollTo(0, el.getBoundingClientRect().top + scrollY - 90); })()",
+    "wait": 1500
+   }
+  ]
+ },
+ {
+  "name": "tool-patterns",
+  "device": "desktop",
+  "url": "/patterns",
+  "wait": 9000,
+  "steps": [
+   {
+    "js": "(() => { const el = document.querySelector('aside'); if (el) window.scrollTo(0, el.getBoundingClientRect().top + scrollY - 90); })()",
+    "wait": 1500
+   }
+  ]
+ },
+ {
+  "name": "tool-colours",
+  "device": "desktop",
+  "url": "/colours",
+  "wait": 9000,
+  "steps": [
+   {
+    "js": "(() => { const el = document.querySelector('aside'); if (el) window.scrollTo(0, el.getBoundingClientRect().top + scrollY - 90); })()",
+    "wait": 1500
+   }
+  ]
+ },
+ {
+  "name": "tool-passport",
+  "device": "desktop",
+  "url": "/passport-photo-maker",
+  "wait": 9000,
+  "steps": [
+   {
+    "js": "(() => { const el = document.querySelector('aside'); if (el) window.scrollTo(0, el.getBoundingClientRect().top + scrollY - 90); })()",
+    "wait": 1500
+   }
+  ]
+ },
+ {
+  "name": "tool-rangoli",
+  "device": "desktop",
+  "url": "/rangoli-mandala-maker",
+  "wait": 9000,
+  "steps": [
+   {
+    "text": "Diwali rangoli",
+    "wait": 800
+   },
+   {
+    "click": "button[aria-label='Starting design 2']",
+    "wait": 1000
+   },
+   {
+    "js": "(() => { const el = document.querySelector('aside'); if (el) window.scrollTo(0, el.getBoundingClientRect().top + scrollY - 90); })()",
+    "wait": 1500
+   }
+  ]
+ },
+ {
+  "name": "tool-gradients",
+  "device": "desktop",
+  "url": "/gradient-background-generator",
+  "wait": 9000,
+  "steps": [
+   {
+    "js": "(() => { const el = document.querySelector('aside'); if (el) window.scrollTo(0, el.getBoundingClientRect().top + scrollY - 90); })()",
+    "wait": 1500
+   }
+  ]
+ },
+ {
+  "name": "tool-print-size",
+  "device": "desktop",
+  "url": "/print-size-calculator",
+  "wait": 9000,
+  "steps": [
+   {
+    "js": "(() => { const el = document.querySelector('aside'); if (el) window.scrollTo(0, el.getBoundingClientRect().top + scrollY - 90); })()",
+    "wait": 1500
+   }
+  ]
+ },
+ {
+  "name": "tool-jersey",
+  "device": "desktop",
+  "url": "/custom-jersey-designer",
+  "wait": 12000,
+  "steps": [
+   {
+    "js": "(() => { const el = document.querySelector('aside'); if (el) window.scrollTo(0, el.getBoundingClientRect().top + scrollY - 90); })()",
+    "wait": 1500
+   }
+  ]
  }
 ]
