@@ -45,3 +45,21 @@ test('colour wheel maths round-trips', () => {
     assert.ok(Math.abs(b.h - h) < 1e-6 && Math.abs(b.s - s) < 1e-6, `${h},${s}`);
   }
 });
+
+test('palette generator keeps locked colours, names colours, extracts from pixels', async () => {
+  const { generatePalette, colourName, extractPalette, paletteRoles, normHex } = await import('../../lib/colour.ts');
+  for (const m of ['auto', 'analogous', 'complementary', 'triadic', 'monochrome', 'pastel', 'vibrant', 'earthy', 'dark']) {
+    const p = generatePalette(m, [null, '#E0201B', null, null, null], 42);
+    assert.equal(p.length, 5, m);
+    assert.equal(p[1], '#E0201B', m);
+    assert.ok(p.every((c) => normHex(c)), m);
+  }
+  assert.notDeepEqual(generatePalette('auto', [], 1), generatePalette('auto', [], 2));
+  assert.equal(colourName('#008081'), 'Teal');
+  const px = new Uint8ClampedArray(4 * 200);
+  for (let i = 0; i < 200; i++) { const red = i < 100; px.set(red ? [220, 20, 30, 255] : [20, 40, 200, 255], i * 4); }
+  const ex = extractPalette(px, 2);
+  assert.equal(ex.length, 2);
+  const r = paletteRoles(['#111111', '#FFFFFF', '#E0201B', '#1F6FEB', '#888888']);
+  assert.equal(r.dark, '#111111'); assert.equal(r.light, '#FFFFFF');
+});

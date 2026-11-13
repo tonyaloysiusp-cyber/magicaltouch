@@ -8,6 +8,7 @@
 // editor, in Pattern Studio or to find templates in those colours.
 // Every number is calculated, not guessed.
 
+import { PaletteGenerator } from './PaletteGenerator';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { Check, Copy, Download, Grid3x3, Heart, PenSquare, Plus, Search, Trash2, X } from 'lucide-react';
@@ -134,6 +135,7 @@ export function ColourExplorer() {
 
   return (
     <div className="space-y-12">
+      <PaletteGenerator onSave={savePalette} onEditor={toEditor} onPattern={toPattern} onTemplates={findTemplates} exportMenu={(c) => <ExportMenu cols={c} />} />
       {/* Picker + harmony */}
       <section className="rounded-3xl border border-mt-border bg-mt-surface p-5 sm:p-7">
         <div className="grid gap-6 md:grid-cols-[220px_minmax(0,1fr)]">

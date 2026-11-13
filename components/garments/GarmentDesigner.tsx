@@ -81,6 +81,7 @@ async function readLogo(f: File): Promise<string> {
     return c.toDataURL('image/png');
   } finally { URL.revokeObjectURL(url); }
 }
+const lum = (h: string) => { const n = parseInt(h.slice(1), 16); return 0.2126 * (n >> 16) + 0.7152 * ((n >> 8) & 255) + 0.0722 * (n & 255); };
 const DEFAULT_KIT_POS = { nameTopMm: 95, numberTopMm: 175 };
 const load = <T,>(k: string, d: T): T => { try { const v = localStorage.getItem(k); return v ? (JSON.parse(v) as T) : d; } catch { return d; } };
 const sizeLabel = (s: string) => (SIZES.find((x) => x.id === sizeId(s))?.label || s).replace(/ .*/, '');
@@ -135,6 +136,15 @@ export function GarmentDesigner({ kind }: { kind: GarmentKind }) {
     if (draft?.motif && draft.motif !== 'image') list.push({ name: 'Latest from Pattern Studio', p: { ...DEFAULT_PATTERN, ...draft } });
     for (const s of load<any[]>('mt:patterns', [])) if (s?.p?.motif && s.p.motif !== 'image') list.push({ name: s.name || 'My pattern', p: { ...DEFAULT_PATTERN, ...s.p } });
     setMine(list.slice(0, 12));
+    // Colours sent from the Colour Explorer (?colors=hex,hex,…).
+    try {
+      const q = new URLSearchParams(window.location.search).get('colors');
+      const c = (q || '').split(',').map((x) => '#' + x.replace(/[^0-9a-f]/gi, '').slice(0, 6)).filter((x) => x.length === 7);
+      if (c.length >= 3) {
+        const byL = [...c].sort((a, b) => lum(a) - lum(b));
+        setKit((k) => ({ ...k, body: c[2] || byL[1], sleeve: byL[0], collar: c[3] || byL[byL.length - 2], accent: c[3] || c[1], accent2: byL[byL.length - 1] }));
+      }
+    } catch { /* ignore */ }
     settle();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

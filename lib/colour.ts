@@ -229,3 +229,89 @@ export function hsToWheel(h: number, s: number): { x: number; y: number } {
   const a = (h * Math.PI) / 180, r = Math.min(100, s) / 100;
   return { x: Math.sin(a) * r, y: -Math.cos(a) * r };
 }
+
+// ---------------------------------------------------------------- generator
+
+export type GenMode = 'auto' | 'analogous' | 'complementary' | 'triadic' | 'monochrome' | 'pastel' | 'vibrant' | 'earthy' | 'dark';
+export const GEN_MODES: { id: GenMode; label: string }[] = [
+  { id: 'auto', label: 'Smart mix' }, { id: 'analogous', label: 'Analogous' }, { id: 'complementary', label: 'Complementary' },
+  { id: 'triadic', label: 'Triadic' }, { id: 'monochrome', label: 'Monochrome' }, { id: 'pastel', label: 'Pastel' },
+  { id: 'vibrant', label: 'Vibrant' }, { id: 'earthy', label: 'Earthy' }, { id: 'dark', label: 'Dark mode' },
+];
+
+function rnd(seed: number) { let s = seed >>> 0 || 1; return () => { s ^= s << 13; s ^= s >>> 17; s ^= s << 5; return ((s >>> 0) % 100000) / 100000; }; }
+
+/**
+ * A balanced palette (dark → light) for a mode. Locked entries stay as they
+ * are and steer the hue; the rest are generated around them.
+ */
+export function generatePalette(mode: GenMode, locked: (string | null)[], seed: number, count = 5): string[] {
+  const R = rnd(seed);
+  const anchor = locked.find(Boolean);
+  const h0 = anchor ? rgbToHsl(hexToRgb(anchor))[0] : Math.floor(R() * 360);
+  const pickMode = mode === 'auto' ? (['analogous', 'complementary', 'triadic', 'split'] as const)[Math.floor(R() * 4)] : mode;
+  const hues: number[] = [];
+  for (let i = 0; i < count; i++) {
+    let h = h0;
+    if (pickMode === 'analogous' || mode === 'earthy') h = h0 + (i - 2) * (18 + R() * 10);
+    else if (pickMode === 'complementary') h = i % 2 ? h0 + 180 + (R() - 0.5) * 20 : h0 + (R() - 0.5) * 20;
+    else if (pickMode === 'triadic') h = h0 + (i % 3) * 120 + (R() - 0.5) * 12;
+    else if (pickMode === 'split') h = h0 + [0, 150, 210, 0, 180][i % 5] + (R() - 0.5) * 10;
+    else if (pickMode === 'monochrome') h = h0 + (R() - 0.5) * 8;
+    else h = h0 + (i - 2) * (25 + R() * 25);
+    hues.push(((h % 360) + 360) % 360);
+  }
+  const L = mode === 'dark' ? [8, 14, 24, 55, 78] : mode === 'pastel' ? [62, 74, 82, 89, 95] : [16 + R() * 6, 34 + R() * 8, 52 + R() * 8, 72 + R() * 8, 92 + R() * 4];
+  const S = (i: number) => mode === 'pastel' ? 45 + R() * 25 : mode === 'vibrant' ? 78 + R() * 20 : mode === 'earthy' ? 22 + R() * 25 : mode === 'monochrome' ? 35 + R() * 30 : mode === 'dark' ? (i < 3 ? 18 + R() * 15 : 70 + R() * 25) : (i === 0 || i === 4 ? 20 + R() * 25 : 50 + R() * 35);
+  const earthyHue = (h: number) => (mode === 'earthy' ? 20 + ((h - 20 + 360) % 360) * 0.18 : h);
+  const out: string[] = [];
+  for (let i = 0; i < count; i++) out.push(locked[i] || hsl(earthyHue(hues[i]), Math.round(S(i)), Math.round(L[Math.min(i, L.length - 1)])));
+  return out;
+}
+
+const NAMES: [string, string][] = [
+  ['Black', '#000000'], ['Charcoal', '#36454F'], ['Graphite', '#474A51'], ['Slate', '#708090'], ['Silver', '#C0C0C0'], ['Snow', '#FFFAFA'], ['White', '#FFFFFF'], ['Ivory', '#FFFFF0'], ['Cream', '#FFFDD0'], ['Beige', '#F5F5DC'],
+  ['Sand', '#C2B280'], ['Tan', '#D2B48C'], ['Camel', '#C19A6B'], ['Coffee', '#6F4E37'], ['Chocolate', '#7B3F00'], ['Brown', '#964B00'], ['Rust', '#B7410E'], ['Terracotta', '#E2725B'], ['Burnt orange', '#CC5500'], ['Orange', '#FF8C00'],
+  ['Peach', '#FFCBA4'], ['Apricot', '#FBCEB1'], ['Coral', '#FF7F50'], ['Salmon', '#FA8072'], ['Tomato', '#FF6347'], ['Red', '#E0201B'], ['Crimson', '#DC143C'], ['Ruby', '#9B111E'], ['Maroon', '#800000'], ['Burgundy', '#800020'],
+  ['Wine', '#722F37'], ['Rose', '#FF66CC'], ['Pink', '#FFC0CB'], ['Blush', '#DE5D83'], ['Hot pink', '#FF69B4'], ['Magenta', '#FF00FF'], ['Fuchsia', '#C154C1'], ['Plum', '#8E4585'], ['Mauve', '#E0B0FF'], ['Lavender', '#B57EDC'],
+  ['Lilac', '#C8A2C8'], ['Violet', '#7F00FF'], ['Purple', '#6A0DAD'], ['Indigo', '#4B0082'], ['Navy', '#000080'], ['Midnight', '#191970'], ['Royal blue', '#4169E1'], ['Cobalt', '#0047AB'], ['Blue', '#1F6FEB'], ['Azure', '#007FFF'],
+  ['Sky', '#87CEEB'], ['Baby blue', '#89CFF0'], ['Steel blue', '#4682B4'], ['Denim', '#1560BD'], ['Teal', '#008080'], ['Turquoise', '#40E0D0'], ['Aqua', '#00FFFF'], ['Mint', '#98FF98'], ['Seafoam', '#93E9BE'], ['Jade', '#00A86B'],
+  ['Emerald', '#50C878'], ['Green', '#228B22'], ['Forest', '#014421'], ['Olive', '#808000'], ['Moss', '#8A9A5B'], ['Sage', '#B2AC88'], ['Lime', '#BFFF00'], ['Chartreuse', '#7FFF00'], ['Pistachio', '#93C572'], ['Khaki', '#C3B091'],
+  ['Mustard', '#FFDB58'], ['Gold', '#D4AF37'], ['Yellow', '#FFD500'], ['Lemon', '#FFF44F'], ['Butter', '#FFFAA0'], ['Amber', '#FFBF00'], ['Honey', '#EBA937'], ['Bronze', '#CD7F32'], ['Copper', '#B87333'], ['Champagne', '#F7E7CE'],
+];
+/** Nearest everyday name for a colour ("Teal", "Coral"…). */
+export function colourName(hex: string): string {
+  let best = NAMES[0][0], d = Infinity;
+  for (const [n, h] of NAMES) { const e = deltaE(hex, h); if (e < d) { d = e; best = n; } }
+  return best;
+}
+
+/** Main colours of an image (k-means on its pixels), dark → light. */
+export function extractPalette(pixels: Uint8ClampedArray, k = 5): string[] {
+  const pts: RGB[] = [];
+  for (let i = 0; i < pixels.length; i += 4) if (pixels[i + 3] > 200) pts.push([pixels[i], pixels[i + 1], pixels[i + 2]]);
+  if (!pts.length) return [];
+  let cs: RGB[] = Array.from({ length: k }, (_, i) => pts[Math.floor(((i + 0.5) / k) * pts.length)]);
+  // Spread the starting centres by brightness.
+  const byL = [...pts].sort((a, b) => a[0] + a[1] + a[2] - (b[0] + b[1] + b[2]));
+  cs = Array.from({ length: k }, (_, i) => byL[Math.floor(((i + 0.5) / k) * byL.length)]);
+  for (let it = 0; it < 10; it++) {
+    const sum = cs.map(() => [0, 0, 0, 0]);
+    for (const p of pts) {
+      let bi = 0, bd = Infinity;
+      for (let j = 0; j < cs.length; j++) { const c = cs[j]; const d = (p[0] - c[0]) ** 2 + (p[1] - c[1]) ** 2 + (p[2] - c[2]) ** 2; if (d < bd) { bd = d; bi = j; } }
+      const s = sum[bi]; s[0] += p[0]; s[1] += p[1]; s[2] += p[2]; s[3]++;
+    }
+    cs = cs.map((c, j) => (sum[j][3] ? [sum[j][0] / sum[j][3], sum[j][1] / sum[j][3], sum[j][2] / sum[j][3]] as RGB : c));
+  }
+  return [...new Set(cs.map(rgbToHex))].sort((a, b) => luminance(a) - luminance(b));
+}
+
+/** Roles for previews: darkest, lightest, the two most colourful, and the rest. */
+export function paletteRoles(cols: string[]): { dark: string; light: string; primary: string; accent: string; mid: string } {
+  const by = [...cols].sort((a, b) => luminance(a) - luminance(b));
+  const dark = by[0], light = by[by.length - 1];
+  const sat = (h: string) => { const [, s, l] = rgbToHsl(hexToRgb(h)); return s * (1 - Math.abs(l - 50) / 60); };
+  const rest = cols.filter((c) => c !== dark && c !== light).sort((a, b) => sat(b) - sat(a));
+  return { dark, light, primary: rest[0] || dark, accent: rest[1] || rest[0] || light, mid: rest[2] || rest[1] || dark };
+}
