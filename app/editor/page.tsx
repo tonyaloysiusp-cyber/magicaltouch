@@ -125,7 +125,8 @@ import { PhotoStudio, PhotoStudioHandle } from '@/components/photoStudio/PhotoSt
 import { PhotoAdjustments, DEFAULT_ADJUSTMENTS } from '@/lib/editor/photoFilters';
 import { imageSourceDataURL } from '@/lib/editor/imageQuality';
 import { prepareImageDataUrl } from '@/lib/editor/imagePrep';
-import { buildMtd, readMtd, MtdError, fileNameFor, nameFromFileName } from '@/lib/mtd/format';
+import { buildMtd, readMtd, MtdError, fileNameFor, nameFromFileName, preferredMtdExt, setPreferredMtdExt } from '@/lib/mtd/format';
+import type { MtdExt } from '@/lib/mtd/format';
 import { saveMtdFile, pickMtdFile, canWriteSilently, LocalFileRef } from '@/lib/mtd/fileAccess';
 import { putHandoff, peekHandoff, takeHandoff, newLocalKey, isLocalTabId, ExternalTarget, isCloudTarget } from '@/lib/mtd/handoff';
 import { HAS_CLOUD_DRIVES, providerById, popupIfNeeded, CloudProviderId } from '@/lib/storage/providers';
@@ -250,6 +251,8 @@ function EditorContent() {
   // save was in flight, with no signal at all for autosave or
   // connectivity loss.
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'unsaved' | 'error' | 'offline'>('idle');
+  const [mtdExt, setMtdExt] = useState<MtdExt>('.mtd.svg');
+  useEffect(() => { setMtdExt(preferredMtdExt()); }, []);
   const dirtyRef = useRef(false);
   // Tabs whose document lives in a .mtd file on the customer's computer,
   // keyed by tab id: where the file is (a writable handle on Chrome/Edge,
@@ -7081,6 +7084,7 @@ function EditorContent() {
         { label: 'Save', shortcut: 'Ctrl/Cmd+S', onClick: saveDesign },
         { label: 'Save As...', shortcut: 'Ctrl/Cmd+Shift+S', onClick: saveDesignAs },
         { label: 'Save a Copy to Device (.mtd)...', onClick: saveCopyToComputer },
+        { label: `Project file type: ${mtdExt === '.mtd' ? '.mtd ✓ (MTD icon)' : '.mtd.svg ✓ (preview icon)'} — switch`, onClick: () => { const v = mtdExt === '.mtd' ? '.mtd.svg' : '.mtd'; setPreferredMtdExt(v); setMtdExt(v); setLocalNotice(v === '.mtd' ? 'New saves use .mtd — install this site as an app (address-bar install button) so .mtd files show the Magical Touch icon and open with a double-click.' : 'New saves use .mtd.svg — the file icon is a preview of your design and it opens in any browser.'); } },
         { label: 'Version History...', onClick: () => setShowVersionHistory(true), disabled: isLocalTabId(activeTabId) },
         { divider: true },
         { label: 'Export...', onClick: () => setShowExportDialog(true) },

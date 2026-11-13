@@ -63,7 +63,9 @@ export async function saveMtdFile(blob: Blob, suggestedName: string, existing?: 
 
   if (supportsSaveInPlace()) {
     try {
-      const handle = await (window as any).showSaveFilePicker({ suggestedName, types: pickerTypes });
+      // A plain ".mtd" save offers only the project type, so the browser keeps the extension.
+      const types = /\.mtd$/i.test(suggestedName) ? [{ description: 'Magical Touch Design project', accept: { [MTD_MIME]: [MTD_EXTENSION] } }] : pickerTypes;
+      const handle = await (window as any).showSaveFilePicker({ suggestedName, types });
       await writeToHandle(handle, blob);
       return { handle, fileName: handle.name || suggestedName };
     } catch (err) {

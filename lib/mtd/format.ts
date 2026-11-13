@@ -355,9 +355,25 @@ export async function readMtd(file: Blob): Promise<OpenedMtd> {
   };
 }
 
-export function fileNameFor(name: string): string {
+// Project file type. ".mtd" shows the Magical Touch MTD icon on Windows,
+// Mac and ChromeOS once the site is installed as an app (the installed app
+// registers the type and its icon). ".mtd.svg" shows a preview of the design
+// as the icon with nothing installed, but Windows gives it the icon of
+// whichever app opens SVG files (often Illustrator). Both open here.
+export const MTD_EXT_KEY = 'mt:mtd-ext';
+export type MtdExt = '.mtd' | '.mtd.svg';
+export function preferredMtdExt(): MtdExt {
+  try {
+    const v = localStorage.getItem(MTD_EXT_KEY);
+    if (v === '.mtd' || v === '.mtd.svg') return v;
+    return /Windows|CrOS/i.test(navigator.userAgent) ? '.mtd' : '.mtd.svg';
+  } catch { return MTD_OPEN_EXTENSION as MtdExt; }
+}
+export function setPreferredMtdExt(v: MtdExt): void { try { localStorage.setItem(MTD_EXT_KEY, v); } catch { /* ignore */ } }
+
+export function fileNameFor(name: string, ext?: MtdExt): string {
   const safe = (name || 'Untitled Design').replace(/[\\/:*?"<>|]+/g, '-').trim().replace(/\.mtd(\.html|\.svg)?$/i, '') || 'Untitled Design';
-  return safe + MTD_OPEN_EXTENSION;
+  return safe + (ext || (typeof window === 'undefined' ? MTD_OPEN_EXTENSION : preferredMtdExt()));
 }
 
 export function nameFromFileName(fileName: string): string {
