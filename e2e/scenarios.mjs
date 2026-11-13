@@ -830,6 +830,40 @@ scenarios.push({
   },
 });
 
+// Colour Explorer: Adobe swatch export and gradient CSS.
+scenarios.push({
+  name: 'colour-explorer',
+  async run(t) {
+    await t.page.goto(t.BASE + '/colours', { waitUntil: 'domcontentloaded' });
+    await t.page.getByRole('heading', { name: 'Contrast checker' }).waitFor({ timeout: 30000 });
+    await t.page.locator('summary', { hasText: 'Export' }).first().click();
+    const [dl] = await Promise.all([t.page.waitForEvent('download', { timeout: 30000 }), t.page.getByRole('button', { name: 'Adobe swatches (.ase)' }).first().click()]);
+    const fs = await import('node:fs');
+    const b = fs.readFileSync(await dl.path());
+    t.check('ASE file starts with ASEF', b.subarray(0, 4).toString() === 'ASEF', dl.suggestedFilename());
+    t.check('contrast grades shown', await t.page.getByText(/AA normal text/).first().isVisible());
+    await t.shot('colours');
+  },
+});
+
+// Rangoli: guided start, then a vector PDF without pictures.
+scenarios.push({
+  name: 'rangoli-guided',
+  async run(t) {
+    await t.page.goto(t.BASE + '/rangoli-mandala-maker', { waitUntil: 'domcontentloaded' });
+    await t.page.getByRole('button', { name: /Diwali rangoli/ }).click();
+    await t.page.getByRole('button', { name: 'Starting design 3' }).click();
+    await t.page.getByRole('button', { name: '12-fold' }).click();
+    await t.page.locator('aside section > button[aria-expanded]').nth(6).click();
+    await t.shot('rangoli');
+    const [dl] = await Promise.all([t.page.waitForEvent('download', { timeout: 60000 }), t.page.getByRole('button', { name: /Vector PDF/ }).click()]);
+    const fs = await import('node:fs');
+    const b = fs.readFileSync(await dl.path());
+    t.check('rangoli PDF is a PDF', b.subarray(0, 4).toString() === '%PDF' && b.length > 2000, `${b.length} bytes`);
+    t.check('rangoli PDF is vector (no pictures)', !/\/Subtype\s*\/Image/.test(b.toString('latin1')));
+  },
+});
+
 // Creative tools inside the editor: Patterns, Colours and Image Trace panels.
 scenarios.push({
   name: 'editor-creative-tools',
