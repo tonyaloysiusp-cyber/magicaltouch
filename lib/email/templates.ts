@@ -57,13 +57,13 @@ const section = (inner: string) =>
   `<tr><td class="pad" style="padding:32px 32px 8px;font:16px/1.7 Arial,Helvetica,sans-serif;color:#1f2937;">${inner}</td></tr>`;
 
 export const button = (label: string, url: string, primary = true) => `
-  <table role="presentation" cellpadding="0" cellspacing="0" style="margin:8px auto;"><tr><td align="center" style="border-radius:10px;background:${primary ? '#0B0B0D' : '#ffffff'};border:2px solid #0B0B0D;">
+  <table role="presentation" cellpadding="0" cellspacing="0" style="margin:8px auto;"><tr><td${primary ? ' class="btn"' : ''} align="center" style="border-radius:10px;background:${primary ? '#0B0B0D' : '#ffffff'};border:2px solid #0B0B0D;">
     <a href="${url}" style="display:inline-block;padding:14px 28px;font:600 15px/1 Arial,Helvetica,sans-serif;letter-spacing:.5px;color:${primary ? '#ffffff' : '#0B0B0D'};text-decoration:none;">${esc(label)}</a>
   </td></tr></table>`;
 
 export const officialNotice = () => `
   <tr><td class="pad" style="padding:0 32px 24px;">
-    <div style="background:#f3f4f6;border-left:4px solid #35C2F1;border-radius:8px;padding:18px 20px;font:14px/1.6 Arial,Helvetica,sans-serif;color:#374151;">
+    <div class="note" style="background:#f3f4f6;border-left:4px solid #35C2F1;border-radius:8px;padding:18px 20px;font:14px/1.6 Arial,Helvetica,sans-serif;color:#374151;">
       <p style="margin:0 0 8px;font-weight:700;color:#0B0B0D;">A quick note about our official email</p>
       <p style="margin:0 0 8px;">${C.companyName} is currently an early-stage business, and our official customer communication is handled through our single official email address: <a href="mailto:${C.officialEmail}" style="color:#0B0B0D;font-weight:700;">${C.officialEmail}</a></p>
       <p style="margin:0 0 8px;">If you receive a message claiming to be from ${C.companyName}, please verify that it was sent from this exact address before interacting with links or providing information.</p>
@@ -77,7 +77,7 @@ export const signature = () =>
 const signatureText = () => `${C.signOff}\n${C.teamName}`;
 
 const footer = (unsubscribeUrl?: string) => `
-  <tr><td style="padding:24px 32px 32px;border-top:1px solid #ece9f5;text-align:center;font:13px/1.6 Arial,Helvetica,sans-serif;color:#6b6580;">
+  <tr><td class="foot" style="padding:24px 32px 32px;border-top:1px solid #ece9f5;text-align:center;font:13px/1.6 Arial,Helvetica,sans-serif;color:#6b6580;">
     <p style="margin:0;font-weight:700;color:#0B0B0D;">${C.companyName}</p>
     <p style="margin:4px 0;">Official email: <a href="mailto:${C.officialEmail}" style="color:#0B0B0D;">${C.officialEmail}</a></p>
     <p style="margin:4px 0;font-style:italic;">${C.tagline}</p>
@@ -92,11 +92,11 @@ const footer = (unsubscribeUrl?: string) => `
   </td></tr>`;
 
 export const layout = (preheader: string, body: string, unsubscribeUrl?: string) => `<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light dark"><meta name="supported-color-schemes" content="light dark">
 <title>${C.companyName}</title>
-<style>@media (max-width:620px){.card{width:100%!important;border-radius:0!important}.pad{padding-left:20px!important;padding-right:20px!important}.feat{display:block!important;width:100%!important}}</style>
+<style>@media (max-width:620px){.card{width:100%!important;border-radius:0!important}.pad{padding-left:20px!important;padding-right:20px!important}.feat{display:block!important;width:100%!important}}@media (prefers-color-scheme:dark){body,.bg{background:#111114!important}.card{background:#1b1b20!important}.pad,.pad p,.pad td{color:#e5e7eb!important}.note{background:#24242b!important;color:#d1d5db!important}.note p,.note a{color:#e5e7eb!important}.foot,.foot p,.foot a{color:#a1a1aa!important}.btn{background:#ffffff!important;border-color:#ffffff!important}.btn a{color:#0B0B0D!important}}</style>
 </head>
-<body style="margin:0;padding:0;background:#f3f4f6;">
+<body class="bg" style="margin:0;padding:0;background:#f3f4f6;">
 <div style="display:none;max-height:0;overflow:hidden;opacity:0;">${esc(preheader)}</div>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f3f4f6;padding:24px 0;"><tr><td align="center">
 <table role="presentation" class="card" width="600" cellpadding="0" cellspacing="0" style="width:600px;max-width:600px;background:#ffffff;border-radius:16px;overflow:hidden;">
