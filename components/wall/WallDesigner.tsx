@@ -21,14 +21,14 @@ function save(blob: Blob, name: string) {
 const load = <T,>(k: string, d: T): T => { try { const v = localStorage.getItem(k); return v ? (JSON.parse(v) as T) : d; } catch { return d; } };
 
 const PRESETS: { name: string; p: Partial<PatternSettings> }[] = [
-  { name: 'Botanical', p: { motif: 'monstera', repeat: 'half-drop', scale: 0.6, rotation: 20, colors: PALETTES[1].colors, background: PALETTES[1].background } },
+  { name: 'Ogee', p: { motif: 'ogee', repeat: 'grid', scale: 0.95, colors: ['#C9A86A'], background: '#1E3A5F' } },
+  { name: 'Botanical', p: { motif: 'monstera', repeat: 'half-drop', scale: 0.85, rotation: 20, colors: PALETTES[1].colors, background: PALETTES[1].background } },
   { name: 'Stars', p: { motif: 'star5', repeat: 'half-drop', scale: 0.4, colors: PALETTES[4].colors, background: PALETTES[4].background } },
   { name: 'Moroccan', p: { motif: 'moroccan', repeat: 'grid', scale: 0.9, colors: PALETTES[0].colors, background: PALETTES[0].background } },
   { name: 'Blossom', p: { motif: 'cherry-blossom', repeat: 'random', density: 10, scale: 0.4, colors: PALETTES[3].colors, background: PALETTES[3].background } },
   { name: 'Geometric', p: { motif: 'hexagon-ring', repeat: 'brick', scale: 0.7, colors: PALETTES[6].colors, background: PALETTES[6].background } },
   { name: 'Clouds', p: { motif: 'cloud', repeat: 'half-drop', scale: 0.5, colors: ['#BFDBFE', '#93C5FD', '#FFFFFF'], background: '#EFF6FF' } },
   { name: 'Leaves', p: { motif: 'leaf', repeat: 'half-drop', scale: 0.5, rotation: 30, colors: PALETTES[2].colors, background: PALETTES[2].background } },
-  { name: 'Ogee', p: { motif: 'ogee', repeat: 'grid', scale: 0.95, colors: ['#C9A86A'], background: '#1E3A5F' } },
 ];
 
 /** A wall to scale (3 m × 2.4 m) with a sofa and the poster at eye level. */
@@ -168,8 +168,8 @@ export function WallDesigner({ initial = 'poster' }: { initial?: 'poster' | 'pat
           </aside>
           <div className="min-w-0 space-y-3">
             <div className="rounded-3xl border border-mt-border bg-mt-surface2/50 p-4">
-              <div className="relative">
-                <img src={svgDataUrl(preview)} alt="Wall preview" className="w-full max-h-[520px] object-contain" />
+              <div className="relative mx-auto w-fit max-w-full">
+                <img src={svgDataUrl(preview)} alt="Wall preview" className="block max-w-full max-h-[520px] w-auto h-auto" />
                 <div className="pointer-events-none absolute inset-0 flex">{strips.map((s, i) => <span key={i} className="h-full border-r border-dashed border-[#EC008C]/70" style={{ width: `${(Math.min(s.widthMm, wall.widthMm - s.x) - (i < strips.length - 1 ? wall.overlapMm : 0)) / wall.widthMm * 100}%` }} />)}</div>
               </div>
               <p className="mt-2 text-[12.5px] text-mt-muted">{strips.length} strip{strips.length === 1 ? '' : 's'} of {wall.rollMm} mm · {((strips.length * wall.heightMm) / 1000).toFixed(2)} m of material · wall {(wall.widthMm * wall.heightMm / 1e6).toFixed(2)} m²</p>

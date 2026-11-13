@@ -458,8 +458,8 @@ export function GarmentDesigner({ kind }: { kind: GarmentKind }) {
           </div>
         </aside>
 
-        {/* Preview and the list */}
-        <div className="min-w-0 space-y-5">
+        {/* Preview and the list (preview first on phones) */}
+        <div className="min-w-0 space-y-5 order-first lg:order-none">
           <div className="rounded-3xl border border-mt-border bg-mt-surface2/50 p-4">
             <div className="flex flex-wrap items-center gap-2 mb-3">
               <div role="tablist" aria-label="Preview" className="inline-flex rounded-full border border-mt-border bg-mt-surface p-0.5">

@@ -278,14 +278,14 @@ export function kitMockupSvg(kit: KitDesign, pat: PatternSettings, player: Playe
   const sleeveAt = 'translate(-100 212) rotate(57.4) translate(-220 -228)';
   const sleeves = (_isBack: boolean) => {
     if (!sleeve) return '';
-    const one = `<g clip-path="url(#${sid}-sl)"><path d="${sleevePoly}" fill="${kit.sleeve}"/><g transform="${sleeveAt}">${pieceMarkup(sleeve, kit, pat, player, glyphs, k, 0)}</g><path d="${sleevePoly}" fill="url(#${sid}-sh)" opacity="0.5"/></g>`;
+    const one = `<g clip-path="url(#${sid}-sl)"><path d="${sleevePoly}" fill="${kit.sleeve}"/><g transform="${sleeveAt}">${pieceMarkup(sleeve, kit, pat, player, glyphs, k, 0)}</g><path d="${sleevePoly}" fill="url(#${sid}-sh)" opacity="0.5"/></g><path d="${sleevePoly}" fill="none" stroke="#000" stroke-opacity="0.12" stroke-width="2"/>`;
     return `${one}<g transform="translate(${W} 0) scale(-1 1)">${one}</g>`;
   };
   const neck = (p: Piece) => p.d.match(/^M[^L]*?(?=L)/)?.[0] || '';
   const view1 = (piece: Piece, isBack: boolean) => {
     const inner = isBack ? "" : `<path d="${neck(piece)}Z" fill="${shade(kit.body, -0.45)}"/>`;
     const collar = product.id === 'polo'
-      ? `<path d="M250 80L250 232L310 232L310 80Z" fill="${kit.collar}" opacity="${isBack ? 0 : 1}"/><path d="${isBack ? 'M185 -6C215 26 345 26 375 -6L372 -26C340 -2 220 -2 188 -26Z' : 'M190 -4L252 84L226 104L160 26ZM370 -4L308 84L334 104L400 26Z'}" fill="${kit.collar}" stroke="${shade(kit.collar, -0.25)}" stroke-width="2"/>`
+      ? `<path d="M250 80L250 232L310 232L310 80Z" fill="${kit.collar}" opacity="${isBack ? 0 : 1}"/><path d="${isBack ? 'M185 -6C215 26 345 26 375 -6L372 -26C340 -2 220 -2 188 -26Z' : 'M196 -8C230 -30 330 -30 364 -8L362 4C330 -14 230 -14 198 4ZM198 -6L279 4L247 104L172 30ZM362 -6L281 4L313 104L388 30Z'}" fill="${kit.collar}" stroke="${shade(kit.collar, -0.25)}" stroke-width="2"/>`
       : `<path d="${neck(piece)}" fill="none" stroke="${kit.collar}" stroke-width="${product.id === 'vest' ? 14 : 20}" stroke-linecap="round"/>`;
     const arm = product.id === 'vest' ? `<path d="M95 0C95 120 65 185 0 225M465 0C465 120 495 185 560 225" fill="none" stroke="${kit.collar}" stroke-width="12" stroke-linecap="round"/>` : '';
     return `${sleeves(isBack)}${inner}<g>${pieceMarkup(piece, kit, pat, player, glyphs, k, 0)}</g><path d="${piece.d}" fill="url(#${sid}-sh)" opacity="0.55"/>${arm}${collar}<path d="${piece.d}" fill="none" stroke="#000" stroke-opacity="0.12" stroke-width="2"/>`;

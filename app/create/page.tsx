@@ -230,7 +230,7 @@ export default function CreateDesignPage() {
                 {TOOLS.filter((t) => t.id !== 'editor').map((t) => (
                   <Link key={t.id} href={t.href} onClick={() => rememberTool(t.id)} className="shrink-0 w-[150px] sm:w-auto flex items-center gap-2.5 rounded-2xl border border-mt-border bg-mt-surface p-2.5 hover:-translate-y-0.5 hover:border-mt-ink/30 transition-transform">
                     <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl text-white" style={{ background: t.tint }}><ToolIcon name={t.icon} size={17} /></span>
-                    <span className="min-w-0 leading-tight"><span className="block text-[13px] font-semibold truncate">{t.title}</span><span className="block text-[11px] text-mt-muted truncate">{t.hint}</span></span>
+                    <span className="min-w-0 leading-tight"><span className="block text-[13px] font-semibold leading-snug">{t.title}</span><span className="block text-[11px] text-mt-muted truncate">{t.hint}</span></span>
                   </Link>
                 ))}
               </div>
