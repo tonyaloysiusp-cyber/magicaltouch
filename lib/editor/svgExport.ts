@@ -9,8 +9,12 @@
 // import, etc.), not a polygon approximation or an embedded bitmap.
 //
 // Honest limitations (documented, not hidden):
-// - Pattern and picture fills (page backgrounds) are written as real SVG
-//   <pattern> elements with the tile embedded.
+// - Pattern fills and pictures that are themselves SVG (Pattern Studio
+//   tiles, traced art, icons placed as SVG) are unpacked into real vector
+//   elements — never an embedded picture of a vector.
+// - Groups (traced art, pattern layers, icon sets) are written with all
+//   their children.
+// - Links use xlink:href so Illustrator, CorelDRAW and Inkscape read them.
 // - A clipPath chained onto another clipped object (clip-of-a-clip) only
 //   emits the outermost clip; nested clipping is not implemented.
 // - Raster <image> content is legitimately embedded as-is (a photo IS a
@@ -31,6 +35,42 @@ function escapeXml(s: string): string {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
+}
+
+let inlineCounter = 0;
+
+/** An SVG given as a data URL → its inner markup and box, with ids made unique. */
+export function parseSvgDataUrl(href: string): { inner: string; vb: [number, number, number, number] } | null {
+  if (!href || !/^data:image\/svg\+xml/i.test(href)) return null;
+  let text = '';
+  try {
+    const comma = href.indexOf(',');
+    const meta = href.slice(0, comma), body = href.slice(comma + 1);
+    text = /;base64/i.test(meta) ? (typeof atob === 'function' ? decodeURIComponent(escape(atob(body))) : Buffer.from(body, 'base64').toString('utf8')) : decodeURIComponent(body);
+  } catch { return null; }
+  const open = text.match(/<svg\b[^>]*>/i);
+  if (!open) return null;
+  const tag = open[0];
+  const num = (a: string) => { const m = tag.match(new RegExp(`\\s${a}="([\\d.]+)`)); return m ? Number(m[1]) : NaN; };
+  const vbm = tag.match(/viewBox="([^"]+)"/i);
+  let vb: [number, number, number, number];
+  if (vbm) { const n = vbm[1].trim().split(/[\s,]+/).map(Number); vb = [n[0] || 0, n[1] || 0, n[2] || 1, n[3] || 1]; }
+  else { const w = num('width'), h = num('height'); if (!(w > 0 && h > 0)) return null; vb = [0, 0, w, h]; }
+  let inner = text.slice(text.indexOf(tag) + tag.length, text.lastIndexOf('</svg>'));
+  const pfx = `i${++inlineCounter}-`;
+  inner = inner
+    .replace(/\sid="([^"]+)"/g, (_m, id) => ` id="${pfx}${id}"`)
+    .replace(/url\(#([^)]+)\)/g, (_m, id) => `url(#${pfx}${id})`)
+    .replace(/(\s(?:xlink:)?href)="#([^"]+)"/g, (_m, a, id) => `${a}="#${pfx}${id}"`);
+  return { inner, vb };
+}
+
+/** Markup that draws an SVG data URL as vectors inside a w × h box at (x, y). */
+function inlineSvgBox(href: string, x: number, y: number, w: number, h: number): string | null {
+  const s = parseSvgDataUrl(href);
+  if (!s) return null;
+  const [vx, vy, vw, vh] = s.vb;
+  return `<g transform="translate(${x},${y}) scale(${w / vw},${h / vh}) translate(${-vx},${-vy})">${s.inner}</g>`;
 }
 
 function matrixAttr(m: number[]): string {
@@ -103,7 +143,8 @@ function paintToSvgAttr(defs: string[], paint: any, obj?: any): string | null {
     const noRepeat = paint.repeat === 'no-repeat';
     // A no-repeat picture is drawn once; give the tile a huge size so it never repeats.
     const pw = noRepeat ? tw * 1000 : tw, ph = noRepeat ? th * 1000 : th;
-    defs.push(`<pattern id="${id}" patternUnits="userSpaceOnUse" width="${pw}" height="${ph}"${t}><image href="${escapeXml(href)}" width="${tw}" height="${th}" preserveAspectRatio="none" /></pattern>`);
+    const vec = inlineSvgBox(href, 0, 0, tw, th);
+    defs.push(`<pattern id="${id}" patternUnits="userSpaceOnUse" width="${pw}" height="${ph}"${t}>${vec || `<image href="${escapeXml(href)}" width="${tw}" height="${th}" preserveAspectRatio="none" />`}</pattern>`);
     return `url(#${id})`;
   }
   return null;
@@ -126,14 +167,15 @@ const BLEND_MODE_CSS: Record<string, string> = {
 // Builds a real <clipPath> def for an object's Fabric clipPath (rect or
 // path only — see file header) and returns the attribute referencing it,
 // or null if there's nothing to clip / the clip type isn't supported.
-function buildClipPathAttr(defs: string[], obj: any): string | null {
+function buildClipPathAttr(defs: string[], obj: any, outer?: number[], F?: any): string | null {
   const clip = obj.clipPath;
   if (!clip) return null;
   const id = `clip-${++clipIdCounter}`;
   // The clip lives in the SAME local coordinate space as the object it's
   // attached to (Fabric's absolutePositioned=false convention), so its
   // own transform relative to the object is what we need here.
-  const clipMatrix = clip.calcOwnMatrix ? clip.calcOwnMatrix() : [1, 0, 0, 1, clip.left || 0, clip.top || 0];
+  const own = clip.calcOwnMatrix ? clip.calcOwnMatrix() : [1, 0, 0, 1, clip.left || 0, clip.top || 0];
+  const clipMatrix = clip.absolutePositioned ? own : outer && F?.util?.multiplyTransformMatrices ? F.util.multiplyTransformMatrices(outer, own) : own;
   let inner = '';
   if (clip.type === 'rect') {
     const w = clip.width || 0;
@@ -150,6 +192,16 @@ function buildClipPathAttr(defs: string[], obj: any): string | null {
 }
 
 function objectToSvgElement(defs: string[], obj: any, F: any): string {
+  if (obj.visible === false) return '';
+  if ((obj.type === 'group' || obj.type === 'activeSelection') && typeof obj.getObjects === 'function') {
+    // Children carry their full (group-included) transform, so they are
+    // written in page space; the group adds only opacity and its clip.
+    const kids = obj.getObjects().map((c: any) => objectToSvgElement(defs, c, F)).join('');
+    if (!kids) return '';
+    const op = typeof obj.opacity === 'number' && obj.opacity < 1 ? ` opacity="${obj.opacity}"` : '';
+    const clip = buildClipPathAttr(defs, obj, obj.calcTransformMatrix(), F);
+    return `<g${op}${clip ? ` ${clip}` : ''}>${kids}</g>`;
+  }
   const matrix = obj.calcTransformMatrix();
   const opacity = typeof obj.opacity === 'number' ? obj.opacity : 1;
   const fillAttr = paintToSvgAttr(defs, obj.fill, obj);
@@ -229,11 +281,27 @@ function objectToSvgElement(defs: string[], obj: any, F: any): string {
       .join('');
     inner = `<text font-family="${escapeXml(obj.fontFamily || 'sans-serif')}" font-size="${fontSize}" font-weight="${weight}" font-style="${style}" text-anchor="${anchor}"${paintAttrs}>${tspans}</text>`;
   } else if (obj.type === 'image') {
+    // An SVG picture (pattern layer, icon, traced art saved as SVG) stays vector.
+    const orig: string = obj._originalElement?.src || obj._element?.src || obj.src || '';
+    const noFilters = !obj.filters || !obj.filters.length;
+    if (noFilters && /^data:image\/svg\+xml/i.test(orig)) {
+      const nw = obj._originalElement?.naturalWidth || obj._originalElement?.width || w;
+      const nh = obj._originalElement?.naturalHeight || obj._originalElement?.height || h;
+      const cx = obj.cropX || 0, cy = obj.cropY || 0;
+      const vec = inlineSvgBox(orig, -w / 2 - cx, -h / 2 - cy, nw, nh);
+      if (vec) {
+        const cropped = cx || cy || Math.abs(nw - w) > 0.5 || Math.abs(nh - h) > 0.5;
+        let cropAttr = '';
+        if (cropped) { const id = `crop-${++clipIdCounter}`; defs.push(`<clipPath id="${id}"><rect x="${-w / 2}" y="${-h / 2}" width="${w}" height="${h}" /></clipPath>`); cropAttr = ` clip-path="url(#${id})"`; }
+        inner = `<g${opacity < 1 ? ` opacity="${opacity}"` : ''}${cropAttr}>${clipAttr ? `<g ${clipAttr}>${vec}</g>` : vec}</g>`;
+        return `<g transform="${matrixAttr(matrix)}">${inner}</g>`;
+      }
+    }
     const src = obj.toDataURL ? obj.toDataURL({ format: 'png' }) : obj._element?.src;
     if (!src) return '';
     inner = `<image x="${-w / 2}" y="${-h / 2}" width="${w}" height="${h}" href="${src}"${opacity < 1 ? ` opacity="${opacity}"` : ''}${clipAttr ? ` ${clipAttr}` : ''} preserveAspectRatio="none" />`;
   } else {
-    return ''; // group/activeSelection and anything else unsupported — skipped, not faked
+    return ''; // anything else unsupported — skipped, not faked
   }
 
   return `<g transform="${matrixAttr(matrix)}">${inner}</g>`;
@@ -263,14 +331,19 @@ export function exportArtboardToSVG(canvas: any, F: any, artboard: RectLike & { 
 
   const body = objects.map((obj) => objectToSvgElement(defs, obj, F)).join('');
 
-  return (
+  return withXlink(
     `<?xml version="1.0" encoding="UTF-8"?>\n` +
-    `<svg xmlns="http://www.w3.org/2000/svg" width="${artboard.width}" height="${artboard.height}" viewBox="0 0 ${artboard.width} ${artboard.height}">\n` +
+    `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${artboard.width}" height="${artboard.height}" viewBox="0 0 ${artboard.width} ${artboard.height}">\n` +
     (defs.length ? `<defs>${defs.join('')}</defs>\n` : '') +
     (bg ? `<rect x="0" y="0" width="${artboard.width}" height="${artboard.height}" fill="${bg}" />\n` : '') +
     `<g transform="translate(${-artboard.x},${-artboard.y})">${body}</g>\n` +
     `</svg>`
   );
+}
+
+/** SVG 1.1 links (xlink:href) — what Illustrator, CorelDRAW and older Inkscape read. */
+export function withXlink(svg: string): string {
+  return svg.replace(/(<(?:use|image|textPath)\b[^>]*?)\shref="/g, '$1 xlink:href="');
 }
 
 function isPaintable(value: any): value is string {

@@ -129,7 +129,7 @@ export function PatternStudio() {
     setBusy(null);
   };
 
-  const exportJson = () => save(new Blob([JSON.stringify({ format: 'mt-pattern', version: 1, pattern: p.motif === 'image' ? p : { ...p, image: undefined } }, null, 1)], { type: 'application/json' }), 'pattern.json');
+  const exportJson = () => save(new Blob([JSON.stringify({ format: 'mt-pattern', version: 1, pattern: p.motif === 'image' ? p : { ...p, image: undefined } }, null, 1)], { type: 'application/json' }), 'pattern.mtpattern.json');
   const importJson = (f?: File | null) => {
     if (!f) return;
     f.text().then((t) => {
@@ -141,7 +141,7 @@ export function PatternStudio() {
         setP({ ...DEFAULT_PATTERN, ...q });
         if (j.format === 'mt-sublimation-job' && j.job) setJob({ ...DEFAULT_JOB, ...j.job });
         flash('Pattern opened.');
-      } catch { flash('That file is not a Magical Touch pattern (JSON).'); }
+      } catch { flash('That file is not a Magical Touch pattern project.'); }
     });
   };
 
@@ -337,8 +337,8 @@ export function PatternStudio() {
             <button type="button" onClick={() => exportPdf()} disabled={!!busy} title="Vector PDF, ready for print" className="h-9 px-3.5 rounded-full border border-mt-border text-[13px] font-semibold inline-flex items-center gap-1.5 disabled:opacity-60"><Download size={14} /> {busy === 'pdf' ? 'Making…' : 'PDF vector'}</button>
             <button type="button" onClick={() => exportSvg('tile')} title="One seamless tile, for fills and swatches" className="h-9 px-3.5 rounded-full border border-mt-border text-[13px] font-semibold inline-flex items-center gap-1.5"><Download size={14} /> Seamless tile SVG</button>
             <button type="button" onClick={exportPng} disabled={!!busy} className="h-9 px-3.5 rounded-full border border-mt-border text-[13px] font-semibold inline-flex items-center gap-1.5 disabled:opacity-60"><Download size={14} /> {busy === 'png' ? 'Making…' : 'PNG'}</button>
-            <button type="button" onClick={exportJson} title="Pattern settings — open it again here later" className="h-9 px-3.5 rounded-full border border-mt-border text-[13px] font-semibold inline-flex items-center gap-1.5"><FileJson size={14} /> JSON</button>
-            <button type="button" onClick={() => patRef.current?.click()} title="Open a pattern or sublimation job (.json)" className="h-9 px-3.5 rounded-full border border-mt-border text-[13px] font-semibold inline-flex items-center gap-1.5"><FileUp size={14} /> Open JSON</button>
+            <button type="button" onClick={exportJson} title="Save this pattern as a project file you can open again later" className="h-9 px-3.5 rounded-full border border-mt-border text-[13px] font-semibold inline-flex items-center gap-1.5"><FileJson size={14} /> Save project</button>
+            <button type="button" onClick={() => patRef.current?.click()} title="Open a saved pattern project" className="h-9 px-3.5 rounded-full border border-mt-border text-[13px] font-semibold inline-flex items-center gap-1.5"><FileUp size={14} /> Open project</button>
             <input ref={patRef} type="file" accept="application/json,.json" hidden onChange={(e) => { importJson(e.target.files?.[0]); e.target.value = ''; }} />
             <label className="ml-auto inline-flex items-center gap-2 text-[13px] cursor-pointer select-none"><input type="checkbox" checked={transparent} onChange={(e) => setTransparent(e.target.checked)} className="h-4 w-4 accent-[#3B82C4]" /> Transparent background</label>
           </div>

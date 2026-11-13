@@ -175,7 +175,7 @@ function motifMarkup(p: PatternSettings, color: string): string {
     return `<text x="0" y="0" font-family="'${esc(p.font || 'Georgia')}', Georgia, serif" font-size="${Math.min(80, fs)}" font-weight="${p.fontWeight || 600}"${p.italic ? ' font-style="italic"' : ''} text-anchor="middle" dominant-baseline="central" fill="${fill}"${stroke}>${t}</text>`;
   }
   if (p.motif === 'image' && p.image && /^data:image\/(png|jpe?g|webp|svg\+xml);/i.test(p.image)) {
-    return `<image href="${p.image}" x="-50" y="-50" width="100" height="100" preserveAspectRatio="xMidYMid meet"/>`;
+    return `<image xlink:href="${p.image}" x="-50" y="-50" width="100" height="100" preserveAspectRatio="xMidYMid meet"/>`;
   }
   const m = MOTIFS.find((x) => x.id === p.motif) || MOTIFS[0];
   return `<path d="${m.d}" fill="${fill}" fill-rule="evenodd"${stroke}/>`;
@@ -197,10 +197,10 @@ export function tileSvg(p: PatternSettings, opts: { background?: boolean } = {})
   const colors = p.colors.length ? p.colors : ['#111'];
   const defs = colors.map((c, i) => `<g id="m${i}">${motifMarkup(p, c)}</g>`).join('');
   const uses = places
-    .map((q) => `<use href="#m${q.c % colors.length}" transform="translate(${r2(q.x)} ${r2(q.y)}) rotate(${r2(q.r)}) scale(${r2(k * q.s * q.fx)} ${r2(k * q.s * q.fy)})"/>`)
+    .map((q) => `<use xlink:href="#m${q.c % colors.length}" transform="translate(${r2(q.x)} ${r2(q.y)}) rotate(${r2(q.r)}) scale(${r2(k * q.s * q.fx)} ${r2(k * q.s * q.fy)})"/>`)
     .join('');
   const bg = opts.background === false ? '' : `<rect width="${r2(w)}" height="${r2(h)}" fill="${p.background}"/>`;
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${r2(w)}" height="${r2(h)}" viewBox="0 0 ${r2(w)} ${r2(h)}"><defs>${defs}</defs>${bg}<g opacity="${r2(p.opacity)}">${uses}</g></svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${r2(w)}" height="${r2(h)}" viewBox="0 0 ${r2(w)} ${r2(h)}"><defs>${defs}</defs>${bg}<g opacity="${r2(p.opacity)}">${uses}</g></svg>`;
 }
 
 /** A sheet of any size filled with the repeating tile (vector). */
@@ -208,7 +208,7 @@ export function sheetSvg(p: PatternSettings, width: number, height: number, opts
   const { w, h } = layout(p);
   const inner = tileSvg(p, { background: false }).replace(/^<svg[^>]*>/, '').replace(/<\/svg>$/, '');
   const bg = opts.transparent ? '' : `<rect width="${width}" height="${height}" fill="${p.background}"/>`;
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"><defs><pattern id="mtp" width="${r2(w)}" height="${r2(h)}" patternUnits="userSpaceOnUse">${inner}</pattern></defs>${bg}<rect width="${width}" height="${height}" fill="url(#mtp)"/></svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"><defs><pattern id="mtp" width="${r2(w)}" height="${r2(h)}" patternUnits="userSpaceOnUse">${inner}</pattern></defs>${bg}<rect width="${width}" height="${height}" fill="url(#mtp)"/></svg>`;
 }
 
 export interface SheetPlace { x: number; y: number; angle: number; sx: number; sy: number; color: string }
@@ -257,7 +257,7 @@ export function expandedSvg(p: PatternSettings, width: number, height: number, o
     .map((q) => `<path d="${d}" fill-rule="evenodd"${stroke(q.color)} transform="translate(${q.x} ${q.y}) rotate(${q.angle}) scale(${q.sx} ${q.sy})"/>`)
     .join('');
   const bg = opts.transparent ? '' : `<rect id="background" width="${width}" height="${height}" fill="${p.background}"/>`;
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">${bg}<defs><clipPath id="page"><rect width="${width}" height="${height}"/></clipPath></defs><g id="pattern" clip-path="url(#page)" opacity="${r2(p.opacity)}">${body}</g></svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">${bg}<defs><clipPath id="page"><rect width="${width}" height="${height}"/></clipPath></defs><g id="pattern" clip-path="url(#page)" opacity="${r2(p.opacity)}">${body}</g></svg>`;
 }
 
 export const svgDataUrl = (svg: string) => `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;

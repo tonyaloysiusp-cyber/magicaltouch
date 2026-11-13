@@ -439,7 +439,28 @@ function drawShadowPicture(pdf: any, F: any, obj: any, ctx: VectorCtx) {
 // ---------------------------------------------------------------- entry
 
 export async function renderVector(pdf: any, F: any, obj: any, ctx: VectorCtx): Promise<boolean> {
-  if (obj.clipPath) return false;
+  if (obj.clipPath) {
+    // Shape clips (a pattern layer kept inside the page or a shape) stay
+    // vector: the clip outline becomes a PDF clipping path.
+    const clip = obj.clipPath;
+    const cc = !clip.inverted && clip.type !== 'group' ? localCommands(clip) : null;
+    if (!cc || !F?.util?.multiplyTransformMatrices) return false;
+    const own = clip.calcTransformMatrix();
+    const m = clip.absolutePositioned ? own : F.util.multiplyTransformMatrices(obj.calcTransformMatrix(), own);
+    pdf.saveGraphicsState();
+    let ok = false;
+    try {
+      emit(pdf, cc.cmds, m, ctx);
+      pdf.clip();
+      pdf.discardPath();
+      obj.clipPath = null;
+      ok = await renderVector(pdf, F, obj, ctx);
+    } finally {
+      obj.clipPath = clip;
+      pdf.restoreGraphicsState();
+    }
+    return ok;
+  }
   if (obj.globalCompositeOperation && obj.globalCompositeOperation !== 'source-over') return false;
   if (obj.type === 'group') {
     if (!obj._objects) return false;

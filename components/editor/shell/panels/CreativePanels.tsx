@@ -7,7 +7,7 @@
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { ArrowUpRight, ImagePlus, PaintBucket, PenTool, Shapes, Wand2 } from 'lucide-react';
-import { DEFAULT_PATTERN, MOTIFS, MOTIF_CATEGORIES, PALETTES, PatternSettings, REPEATS, layout, sheetSvg, svgDataUrl, tileSvg } from '@/lib/patterns';
+import { DEFAULT_PATTERN, MOTIFS, MOTIF_CATEGORIES, PALETTES, PatternSettings, REPEATS, layout, motifPath, sheetSvg, svgDataUrl, tileSvg } from '@/lib/patterns';
 import { HARMONIES, Harmony, MOOD_PALETTES, harmony, normHex, readableOn } from '@/lib/colour';
 import { PRESETS, TraceOptions, DEFAULT_TRACE } from '@/lib/trace';
 
@@ -25,10 +25,11 @@ function Range({ label, value, min, max, step = 1, onChange }: { label: string; 
 }
 
 // ------------------------------------------------------------------ Patterns
-export function PatternsPanel({ onBackground, onFillSelection, onAddImage, hasSelection }: {
+export function PatternsPanel({ onBackground, onFillSelection, onAddImage, onAddVector, hasSelection }: {
   onBackground: (tileUrl: string) => void;
   onFillSelection: (tileUrl: string) => void;
   onAddImage: (svgUrl: string) => void;
+  onAddVector?: (p: PatternSettings, mode: 'layer' | 'fill') => void;
   hasSelection: boolean;
 }) {
   const [p, setP] = useState<PatternSettings>({ ...DEFAULT_PATTERN, tile: 90 });
@@ -84,8 +85,8 @@ export function PatternsPanel({ onBackground, onFillSelection, onAddImage, hasSe
       <div className="space-y-2">
         <button type="button" className={primary} onClick={() => onBackground(url)}><PaintBucket size={15} /> Set as page background</button>
         <div className="grid grid-cols-2 gap-1.5">
-          <button type="button" className={btn} disabled={!hasSelection} title={hasSelection ? 'Fill the selected shape or text' : 'Select a shape first'} onClick={() => onFillSelection(url)}><Shapes size={14} /> Fill selection</button>
-          <button type="button" className={btn} onClick={() => onAddImage(svgDataUrl(sheetSvg(p, 1000, 1000)))}><ImagePlus size={14} /> Add as layer</button>
+          <button type="button" className={btn} disabled={!hasSelection} title={hasSelection ? 'Fill the selected shape with vector motifs' : 'Select a shape first'} onClick={() => (onAddVector && motifPath(p) ? onAddVector(p, 'fill') : onFillSelection(url))}><Shapes size={14} /> Fill selection</button>
+          <button type="button" className={btn} title="Add the pattern as an editable vector layer" onClick={() => (onAddVector && motifPath(p) ? onAddVector(p, 'layer') : onAddImage(svgDataUrl(sheetSvg(p, 1000, 1000))))}><ImagePlus size={14} /> Add as layer</button>
         </div>
         <Link href="/patterns" target="_blank" className="flex items-center justify-center gap-1 text-[12px] text-mt-muted hover:text-mt-ink">More in Pattern Studio <ArrowUpRight size={12} /></Link>
       </div>

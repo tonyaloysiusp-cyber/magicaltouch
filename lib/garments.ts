@@ -135,7 +135,7 @@ export function printLayoutSvg(opts: { product: Product; sizeK: number; sizeLabe
   });
   const cuts = opts.cutLines ? `<g id="cut-lines" fill="none" stroke="#EC008C" stroke-width="0.4">${placed.map((pl) => `<path d="${pl.piece.d}" transform="${pieceTransform(pl)}" vector-effect="non-scaling-stroke"/>`).join('')}</g>` : '';
   const labels = `<g id="labels" font-family="Arial, Helvetica, sans-serif" font-size="9" fill="#555">${placed.map((pl) => `<text x="${r1(opts.mirror ? rollW - pl.x - pl.w : pl.x)}" y="${r1(pl.y - bleed - 3)}">${esc(`${pl.piece.label}${pl.piece.qty > 1 ? ` (${pl.copy + 1})` : ''} · ${pl.size || opts.sizeLabel} · ${Math.round(pl.rot ? pl.h : pl.w)}×${Math.round(pl.rot ? pl.w : pl.h)} mm${pl.rot ? ' · turned 90°' : ''}${pl.tooWide ? ' · WIDER THAN ROLL' : ''}`)}</text>`).join('')}</g>`;
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${rollW}mm" height="${height}mm" viewBox="0 0 ${rollW} ${height}"><title>${esc(opts.name)} — ${esc(product.label)} ${esc(opts.sizeLabel)} print layout</title><defs>${defs.join('')}</defs><g id="print"${flip}>${body.join('')}</g>${cuts.replace('<g id="cut-lines"', `<g id="cut-lines"${flip}`)}${labels}</svg>`;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${rollW}mm" height="${height}mm" viewBox="0 0 ${rollW} ${height}"><title>${esc(opts.name)} — ${esc(product.label)} ${esc(opts.sizeLabel)} print layout</title><defs>${defs.join('')}</defs><g id="print"${flip}>${body.join('')}</g>${cuts.replace('<g id="cut-lines"', `<g id="cut-lines"${flip}`)}${labels}</svg>`;
   return { svg, height, placed };
 }
 
@@ -144,7 +144,7 @@ export function pieceSvg(pl: Placed, opts: { bleed: number; tileInner: string; t
   const W = pl.w + 2 * opts.bleed, H = pl.h + 2 * opts.bleed;
   const local: Placed = { ...pl, x: opts.bleed, y: opts.bleed };
   const sw = (2 * opts.bleed) / pl.k;
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${r1(W)}mm" height="${r1(H)}mm" viewBox="0 0 ${r1(W)} ${r1(H)}"><defs>${patternDefs([pl.k], opts)}</defs><path d="${pl.piece.d}" transform="${pieceTransform(local)}" fill="${opts.background}" stroke="${opts.background}" stroke-width="${r1(sw)}" stroke-linejoin="round"/><path d="${pl.piece.d}" transform="${pieceTransform(local)}" fill="url(#${patId(pl.k)})" stroke="url(#${patId(pl.k)})" stroke-width="${r1(sw)}" stroke-linejoin="round"/>${opts.cutLines ? `<path d="${pl.piece.d}" transform="${pieceTransform(local)}" fill="none" stroke="#EC008C" stroke-width="0.35" vector-effect="non-scaling-stroke"/>` : ''}</svg>`;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${r1(W)}mm" height="${r1(H)}mm" viewBox="0 0 ${r1(W)} ${r1(H)}"><defs>${patternDefs([pl.k], opts)}</defs><path d="${pl.piece.d}" transform="${pieceTransform(local)}" fill="${opts.background}" stroke="${opts.background}" stroke-width="${r1(sw)}" stroke-linejoin="round"/><path d="${pl.piece.d}" transform="${pieceTransform(local)}" fill="url(#${patId(pl.k)})" stroke="url(#${patId(pl.k)})" stroke-width="${r1(sw)}" stroke-linejoin="round"/>${opts.cutLines ? `<path d="${pl.piece.d}" transform="${pieceTransform(local)}" fill="none" stroke="#EC008C" stroke-width="0.35" vector-effect="non-scaling-stroke"/>` : ''}</svg>`;
   return { svg, w: W, h: H };
 }
 
@@ -189,7 +189,7 @@ export function markupSvg(opts: { product: Product; sizeLabel: string; sizeK: nu
   const sizes = Object.entries(opts.sizeRun).filter(([, n]) => n > 0);
   const sizeRows = sizes.length ? sizes.map(([s, n], i) => `<text x="${sx}" y="${r1(bgY + 26 + i * 5)}" font-size="3.6">${esc(s)}</text><text x="${sx + 40}" y="${r1(bgY + 26 + i * 5)}" font-size="3.6">${n} pcs</text>`).join('') : `<text x="${sx}" y="${r1(bgY + 26)}" font-size="3.6" fill="#666">Size ${esc(opts.sizeLabel)}</text>`;
   const s = (opts.repeatMm / opts.tileW) * 0.5;
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}mm" height="${H}mm" viewBox="0 0 ${W} ${H}" font-family="Arial, Helvetica, sans-serif" fill="#111">
+  return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${W}mm" height="${H}mm" viewBox="0 0 ${W} ${H}" font-family="Arial, Helvetica, sans-serif" fill="#111">
 <defs><pattern id="mk" patternUnits="userSpaceOnUse" width="${r1(opts.tileW * s)}" height="${r1(opts.tileH * s)}"><g transform="scale(${s})">${opts.tileInner}</g></pattern>
 <pattern id="sw" patternUnits="userSpaceOnUse" width="${r1(opts.tileW * s)}" height="${r1(opts.tileH * s)}"><rect width="100%" height="100%" fill="${opts.background}"/><g transform="scale(${s})">${opts.tileInner}</g></pattern></defs>
 <rect width="${W}" height="${H}" fill="#fff"/>

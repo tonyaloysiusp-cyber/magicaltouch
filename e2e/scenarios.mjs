@@ -433,7 +433,7 @@ scenarios.push(
   },
 );
 
-const FORMAT_LABEL = { png: 'PNG', jpg: 'JPG', webp: 'WebP', pdf: 'PDF (vector)', tiff: 'TIFF', video: 'Animated video (MP4)' };
+const FORMAT_LABEL = { png: 'PNG', jpg: 'JPG', webp: 'WebP', pdf: 'PDF (vector)', svg: 'SVG (vector)', tiff: 'TIFF', video: 'Animated video (MP4)' };
 async function pickFormat(t, format) {
   await t.page.locator('[role=dialog][aria-label="Download your design"] button', { hasText: FORMAT_LABEL[format] || format }).first().click();
 }
@@ -784,6 +784,27 @@ scenarios.push({
     t.check('PNG shows the pattern (more than 2 colours)', stats.colours > 2, JSON.stringify(stats));
     const pdf = await exportAs(t, 'pdf');
     t.check('PDF embeds the pattern as an image', /\/Subtype\s*\/Image/.test(pdf.bytes.toString('latin1')), `${pdf.bytes.length} bytes`);
+  },
+});
+
+// Pattern layers stay vector in SVG and PDF exports (no embedded pictures).
+scenarios.push({
+  name: 'pattern-vector-export',
+  async run(t) {
+    await t.editor('w=500&h=500&panel=patterns');
+    await t.page.getByRole('button', { name: /Add as layer/ }).click();
+    await t.page.waitForTimeout(1500);
+    const info = await t.eval(() => { const g = window.__fabricCanvas.getObjects().find((o) => o.name === 'Pattern'); return g ? { n: g.getObjects().reduce((s, o) => s + (o.type === 'group' ? o.getObjects().length : 1), 0), clip: !!g.clipPath } : null; });
+    t.check('pattern added as a vector group', !!info && info.n > 10, JSON.stringify(info));
+    await t.shot('pattern-layer');
+    const svg = await exportAs(t, 'svg');
+    const text = svg.bytes.toString('utf8');
+    t.check('SVG downloaded', svg.name.endsWith('.svg'), svg.name);
+    t.check('SVG has vector paths', (text.match(/<path /g) || []).length > 10, `${(text.match(/<path /g) || []).length} paths`);
+    t.check('SVG has no embedded pictures', !/<image\b/.test(text));
+    const pdf = await exportAs(t, 'pdf');
+    const raw = pdf.bytes.toString('latin1');
+    t.check('PDF has no pictures for the pattern', !/\/Subtype\s*\/Image/.test(raw), `${pdf.bytes.length} bytes`);
   },
 });
 

@@ -6926,6 +6926,28 @@ function EditorContent() {
       return;
     }
 
+    // SVG: real vectors, one file per page.
+    if (settings.format === 'svg') {
+      try {
+        const F = (window as any).fabric || (await import('fabric')).fabric;
+        for (const ab of list) {
+          const svg = exportArtboardToSVG(canvas, F, ab);
+          const url = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }));
+          const base = (designNameRef.current || 'design').replace(/[^\w\- ]+/g, '').trim() || 'design';
+          downloadFile(url, `${base}${list.length > 1 ? ` - ${ab.name || ab.id}` : ''}.svg`);
+          setTimeout(() => URL.revokeObjectURL(url), 60000);
+        }
+        setLocalNotice(list.length > 1 ? `${list.length} SVG files downloaded.` : 'SVG downloaded — open it in Illustrator, Inkscape or Figma to edit the vectors.');
+        setShowExportDialog(false);
+      } catch (e) {
+        console.error('SVG export failed', e);
+        setLocalNotice('The SVG could not be made. Try again.');
+      } finally {
+        setExporting(false);
+      }
+      return;
+    }
+
     try {
       if (settings.format === 'tiff') {
         await exportPrintFiles(list, settings);
@@ -7495,6 +7517,42 @@ function EditorContent() {
       pushHistory();
     }, null, 'anonymous');
   };
+  // Pattern Studio → a real vector layer (one path per motif, grouped), so
+  // SVG and PDF exports keep every motif as a vector.
+  const addPatternVector = async (pat: PatternSettings, mode: 'layer' | 'fill') => {
+    const F = (window as any).fabric;
+    const c = fabricCanvasRef.current;
+    if (!F || !c) return;
+    const target = mode === 'fill' ? c.getActiveObject() : null;
+    if (mode === 'fill' && (!target || target.type === 'image')) return setLocalNotice('Select a shape or text first, then fill it with the pattern.');
+    try {
+      const page = getActiveArtboardRect();
+      const box = target ? target.getBoundingRect(true, true) : { left: page.x, top: page.y, width: page.width, height: page.height };
+      const w = Math.max(20, Math.round(box.width)), h = Math.max(20, Math.round(box.height));
+      const doc = await patternFabricJson(pat, w, h, { transparent: mode === 'fill' });
+      const objs: any[] = await new Promise((resolve) => F.util.enlivenObjects(doc.objects, (list: any[]) => resolve(list), 'fabric'));
+      const group = new F.Group(objs, { name: mode === 'fill' ? 'Pattern fill' : 'Pattern', subTargetCheck: true, originX: 'left', originY: 'top' });
+      group.set({ left: box.left + (group.left || 0), top: box.top + (group.top || 0) });
+      // Keep the pattern inside the page (or the selected shape).
+      if (target) {
+        const clip = await new Promise<any>((resolve) => target.clone((cl: any) => resolve(cl)));
+        clip.set({ absolutePositioned: true, fill: '#000', stroke: null, opacity: 1 });
+        group.clipPath = clip;
+      } else {
+        group.clipPath = new F.Rect({ left: page.x, top: page.y, width: page.width, height: page.height, absolutePositioned: true });
+      }
+      (group as any).__artboardId = target ? (target as any).__artboardId : page.id;
+      if (target) c.insertAt(group, c.getObjects().indexOf(target) + 1, false);
+      else c.add(group);
+      c.setActiveObject(group);
+      c.requestRenderAll();
+      pushHistory();
+      setLocalNotice(mode === 'fill' ? 'Pattern added over the shape as vectors. Ungroup to edit each motif.' : 'Pattern added as a vector layer. Ungroup to recolour or move each motif.');
+    } catch (e) {
+      console.error('Pattern layer failed', e);
+      setLocalNotice('The pattern could not be added. Try again.');
+    }
+  };
   const traceSelected = async (opts: TraceOptions, replace: boolean) => {
     const F = (window as any).fabric;
     const c = fabricCanvasRef.current;
@@ -7632,6 +7690,7 @@ function EditorContent() {
           onBackground={(url) => features.setPageBackground({ pattern: url })}
           onFillSelection={fillSelectionWithPattern}
           onAddImage={(url) => placeImageUrl(url)}
+          onAddVector={(pat, mode) => addPatternVector(pat, mode)}
         />
       ),
     },

@@ -202,7 +202,7 @@ export function SublimationPanel({ p, job, setJob }: { p: PatternSettings; job: 
         <span className="text-[12px] text-mt-muted mr-1">Markup</span>
         <button type="button" onClick={() => dlSvg(markup, `${base}-markup.svg`)} className={btn}><Download size={14} /> Tech sheet SVG</button>
         <button type="button" onClick={dlMarkupPdf} disabled={!!busy} className={btn}><Download size={14} /> {busy === 'markup' ? 'Making…' : 'Tech sheet PDF'}</button>
-        <button type="button" onClick={dlJson} className={btn}><FileJson size={14} /> Job JSON</button>
+        <button type="button" onClick={dlJson} className={btn}><FileJson size={14} /> Save job file</button>
       </div>
       <details className="mt-3 text-[12.5px] text-mt-muted">
         <summary className="cursor-pointer font-medium text-mt-ink">See the markup sheet</summary>

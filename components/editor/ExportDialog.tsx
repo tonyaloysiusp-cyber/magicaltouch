@@ -10,7 +10,7 @@ import { PX_PER_INCH } from '@/lib/editor/units';
 import { cx } from './shell/ui';
 
 export type ExportRangeMode = 'current' | 'range' | 'selected' | 'all';
-export type ExportFormat = 'png' | 'jpg' | 'webp' | 'pdf' | 'tiff' | 'video';
+export type ExportFormat = 'png' | 'jpg' | 'webp' | 'pdf' | 'svg' | 'tiff' | 'video';
 export type ExportColour = 'rgb' | 'cmyk';
 
 export interface ExportSettings {
@@ -34,13 +34,14 @@ export interface ExportSettings {
   videoStyle?: 'glide' | 'pop' | 'fade';
 }
 
-type Choice = 'png' | 'jpg' | 'webp' | 'pdf' | 'pdf-print' | 'tiff' | 'video';
+type Choice = 'png' | 'jpg' | 'webp' | 'pdf' | 'pdf-print' | 'svg' | 'tiff' | 'video';
 
 const CHOICES: { id: Choice; label: string; hint: string; icon: React.ReactNode }[] = [
   { id: 'png', label: 'PNG', hint: 'Sharp graphics and text. Can be transparent.', icon: <ImageIcon size={18} /> },
   { id: 'jpg', label: 'JPG', hint: 'Small files, great for photos and sharing.', icon: <FileImage size={18} /> },
   { id: 'pdf', label: 'PDF (vector)', hint: 'Sharp text and shapes at any size. For sending and printing.', icon: <FileText size={18} /> },
   { id: 'pdf-print', label: 'PDF for print shops', hint: 'Vector CMYK (FOGRA39), with bleed and crop marks.', icon: <Printer size={18} /> },
+  { id: 'svg', label: 'SVG (vector)', hint: 'Editable vectors for Illustrator, Inkscape, CorelDRAW and Figma.', icon: <FileText size={18} /> },
   { id: 'tiff', label: 'TIFF', hint: 'Lossless, for print shops. RGB or CMYK.', icon: <FileImage size={18} /> },
   { id: 'webp', label: 'WebP', hint: 'Small, high-quality pictures for websites.', icon: <FileImage size={18} /> },
   { id: 'video', label: 'Animated video (MP4)', hint: 'Your design comes to life — for Reels, Stories and posts.', icon: <Film size={18} /> },
@@ -108,7 +109,7 @@ export function ExportDialog({ artboards, activeArtboardId, exporting, onClose, 
   const cmyk = cmykPossible && colour === 'cmyk';
   // A CMYK PDF is made from a full-resolution picture of each page, so it
   // needs a resolution like the picture formats do.
-  const isRaster = format !== 'pdf' && format !== 'video';
+  const isRaster = format !== 'pdf' && format !== 'video' && format !== 'svg';
   const includeMarks = printPreset || marks;
   const includeBleed = printPreset || bleed || marks;
 
