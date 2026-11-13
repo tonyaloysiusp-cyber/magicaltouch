@@ -53,6 +53,8 @@ import { HelpPanel } from '@/components/editor/shell/panels/HelpPanel';
 import { AdjustPanel } from '@/components/editor/shell/panels/AdjustPanel';
 import { QrPanel } from '@/components/editor/shell/panels/QrPanel';
 import { PatternsPanel, ColoursPanel, TracePanel } from '@/components/editor/shell/panels/CreativePanels';
+import { patternFabricJson } from '@/lib/patternVector';
+import type { PatternSettings } from '@/lib/patterns';
 import { Grid3x3 as PatternIcon, SwatchBook as ColoursIcon, PenTool as TraceIcon } from 'lucide-react';
 import { trace as traceImage, type TraceOptions } from '@/lib/trace';
 import { traceLayerObjects } from '@/lib/traceVector';
