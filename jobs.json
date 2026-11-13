@@ -1,112 +1,261 @@
 [
  {
-  "name": "tool-jersey",
-  "device": "desktop",
+  "name": "ipad-home",
+  "device": "iPad Pro 11 landscape",
+  "url": "/",
+  "wait": 8000,
+  "steps": [
+   {
+    "js": "window.scrollTo(0, 260)",
+    "wait": 1200
+   },
+   {
+    "js": "window.scrollTo(0, 900)",
+    "wait": 1200
+   }
+  ]
+ },
+ {
+  "name": "ipad-tools",
+  "device": "iPad Pro 11 landscape",
+  "url": "/tools",
+  "wait": 8000,
+  "steps": [
+   {
+    "js": "window.scrollTo(0, 260)",
+    "wait": 1200
+   },
+   {
+    "js": "window.scrollTo(0, 900)",
+    "wait": 1200
+   }
+  ]
+ },
+ {
+  "name": "ipad-jersey",
+  "device": "iPad Pro 11 landscape",
   "url": "/custom-jersey-designer",
-  "wait": 9000,
+  "wait": 8000,
   "steps": [
    {
-    "js": "(() => { const el = document.querySelector('nav[aria-label=Steps]'); if (el) window.scrollTo(0, el.getBoundingClientRect().top + scrollY - 80); })()",
-    "wait": 2500
+    "js": "window.scrollTo(0, 260)",
+    "wait": 1200
+   },
+   {
+    "js": "window.scrollTo(0, 900)",
+    "wait": 1200
    }
   ]
  },
  {
-  "name": "tool-polo",
-  "device": "desktop",
+  "name": "ipad-polo",
+  "device": "iPad Pro 11 landscape",
   "url": "/polo-shirt-designer",
-  "wait": 9000,
+  "wait": 8000,
   "steps": [
    {
-    "js": "(() => { const el = document.querySelector('nav[aria-label=Steps]'); if (el) window.scrollTo(0, el.getBoundingClientRect().top + scrollY - 80); })()",
-    "wait": 2500
+    "js": "window.scrollTo(0, 260)",
+    "wait": 1200
+   },
+   {
+    "js": "window.scrollTo(0, 900)",
+    "wait": 1200
    }
   ]
  },
  {
-  "name": "tool-tshirt",
-  "device": "desktop",
-  "url": "/custom-t-shirt-designer",
-  "wait": 9000,
-  "steps": [
-   {
-    "js": "(() => { const el = document.querySelector('nav[aria-label=Steps]'); if (el) window.scrollTo(0, el.getBoundingClientRect().top + scrollY - 80); })()",
-    "wait": 2500
-   }
-  ]
- },
- {
-  "name": "tool-wall",
-  "device": "desktop",
+  "name": "ipad-wall",
+  "device": "iPad Pro 11 landscape",
   "url": "/wall-designer",
   "wait": 8000,
   "steps": [
    {
-    "js": "(() => { const el = document.querySelector('[role=tablist]'); if (el) window.scrollTo(0, el.getBoundingClientRect().top + scrollY - 80); })()",
-    "wait": 1500
+    "js": "window.scrollTo(0, 260)",
+    "wait": 1200
+   },
+   {
+    "js": "window.scrollTo(0, 900)",
+    "wait": 1200
    }
   ]
  },
  {
-  "name": "check-wallpattern",
-  "device": "desktop",
-  "url": "/wall-designer?type=pattern",
+  "name": "ipad-patterns",
+  "device": "iPad Pro 11 landscape",
+  "url": "/patterns",
   "wait": 8000,
   "steps": [
    {
-    "js": "(() => { const el = document.querySelector('[role=tablist]'); if (el) window.scrollTo(0, el.getBoundingClientRect().top + scrollY - 80); })()",
-    "wait": 2000
-   }
-  ]
- },
- {
-  "name": "check-jersey-print",
-  "device": "desktop",
-  "url": "/custom-jersey-designer",
-  "wait": 9000,
-  "steps": [
-   {
-    "js": "(() => { const el = document.querySelector('nav[aria-label=Steps]'); if (el) window.scrollTo(0, el.getBoundingClientRect().top + scrollY - 80); })()",
-    "wait": 800
+    "js": "window.scrollTo(0, 260)",
+    "wait": 1200
    },
    {
-    "text": "Print files",
-    "wait": 3000
+    "js": "window.scrollTo(0, 900)",
+    "wait": 1200
    }
   ]
  },
  {
-  "name": "check-jersey-mobile",
-  "device": "iPhone 13",
+  "name": "ipad-colours",
+  "device": "iPad Pro 11 landscape",
+  "url": "/colours",
+  "wait": 8000,
+  "steps": [
+   {
+    "js": "window.scrollTo(0, 260)",
+    "wait": 1200
+   },
+   {
+    "js": "window.scrollTo(0, 900)",
+    "wait": 1200
+   }
+  ]
+ },
+ {
+  "name": "ipad-rangoli",
+  "device": "iPad Pro 11 landscape",
+  "url": "/rangoli-mandala-maker",
+  "wait": 8000,
+  "steps": [
+   {
+    "js": "window.scrollTo(0, 260)",
+    "wait": 1200
+   },
+   {
+    "js": "window.scrollTo(0, 900)",
+    "wait": 1200
+   }
+  ]
+ },
+ {
+  "name": "ipad-trace",
+  "device": "iPad Pro 11 landscape",
+  "url": "/trace",
+  "wait": 8000,
+  "steps": [
+   {
+    "js": "window.scrollTo(0, 260)",
+    "wait": 1200
+   },
+   {
+    "js": "window.scrollTo(0, 900)",
+    "wait": 1200
+   }
+  ]
+ },
+ {
+  "name": "ipad-rmbg",
+  "device": "iPad Pro 11 landscape",
+  "url": "/remove-background",
+  "wait": 8000,
+  "steps": [
+   {
+    "js": "window.scrollTo(0, 260)",
+    "wait": 1200
+   },
+   {
+    "js": "window.scrollTo(0, 900)",
+    "wait": 1200
+   }
+  ]
+ },
+ {
+  "name": "ipad-passport",
+  "device": "iPad Pro 11 landscape",
+  "url": "/passport-photo-maker",
+  "wait": 8000,
+  "steps": [
+   {
+    "js": "window.scrollTo(0, 260)",
+    "wait": 1200
+   },
+   {
+    "js": "window.scrollTo(0, 900)",
+    "wait": 1200
+   }
+  ]
+ },
+ {
+  "name": "ipad-gradients",
+  "device": "iPad Pro 11 landscape",
+  "url": "/gradient-background-generator",
+  "wait": 8000,
+  "steps": [
+   {
+    "js": "window.scrollTo(0, 260)",
+    "wait": 1200
+   },
+   {
+    "js": "window.scrollTo(0, 900)",
+    "wait": 1200
+   }
+  ]
+ },
+ {
+  "name": "ipad-printsize",
+  "device": "iPad Pro 11 landscape",
+  "url": "/print-size-calculator",
+  "wait": 8000,
+  "steps": [
+   {
+    "js": "window.scrollTo(0, 260)",
+    "wait": 1200
+   },
+   {
+    "js": "window.scrollTo(0, 900)",
+    "wait": 1200
+   }
+  ]
+ },
+ {
+  "name": "ipad-tsearch",
+  "device": "iPad Pro 11 landscape",
+  "url": "/templates?q=jersey%20template",
+  "wait": 8000,
+  "steps": [
+   {
+    "js": "window.scrollTo(0, 260)",
+    "wait": 1200
+   },
+   {
+    "js": "window.scrollTo(0, 900)",
+    "wait": 1200
+   }
+  ]
+ },
+ {
+  "name": "ipad-jersey-edit",
+  "device": "iPad Pro 11 landscape",
   "url": "/custom-jersey-designer",
   "wait": 9000,
   "steps": [
    {
-    "js": "(() => { const el = document.querySelector('nav[aria-label=Steps]'); if (el) window.scrollTo(0, el.getBoundingClientRect().top + scrollY - 80); })()",
+    "js": "(()=>{const el=document.querySelector('[data-el=number]'); el && el.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,clientX:10,clientY:10})); const s=document.querySelector('nav[aria-label=Sections]'); s && window.scrollTo(0, s.getBoundingClientRect().top+scrollY-70);})()",
     "wait": 2000
    }
   ]
  },
  {
-  "name": "check-create",
-  "device": "desktop",
-  "url": "/create",
-  "wait": 9000,
-  "mock": "admin",
+  "name": "phone-rangoli",
+  "device": "iPhone 13",
+  "url": "/rangoli-mandala-maker",
+  "wait": 8000,
   "steps": [
    {
-    "wait": 500
+    "js": "window.scrollTo(0, 300)",
+    "wait": 1200
    }
   ]
  },
  {
-  "name": "check-tools",
-  "device": "desktop",
-  "url": "/tools",
-  "wait": 7000,
+  "name": "phone-colours",
+  "device": "iPhone 13",
+  "url": "/colours",
+  "wait": 8000,
   "steps": [
    {
-    "wait": 500
+    "js": "window.scrollTo(0, 300)",
+    "wait": 1200
    }
   ]
  }
