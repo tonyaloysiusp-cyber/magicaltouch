@@ -23,6 +23,7 @@ import { AdminShell } from '@/components/admin/AdminShell';
 import { supabase, getSessionUser } from '@/lib/supabase';
 import { getOrCreateProfile } from '@/lib/profile';
 import { categorySlug } from '@/lib/templates/review';
+import { refreshPublicLists } from '@/lib/siteRefresh';
 import {
   BIN_TAG, Cat, CatNode, binTags, buildTree, canMoveUnder, copyName, flatten, inBin, rootName, sizeLabel, unbin, uniqueSlug, withDescendants,
 } from '@/lib/templates/manage';
@@ -177,6 +178,7 @@ export default function TemplateManager() {
 
   // ---------- audit log ----------
   const log = async (entries: { id?: string; slug?: string | null; name?: string; action: string; detail?: string }[]) => {
+    refreshPublicLists();
     if (!entries.length) return;
     let list: any[] = [];
     try { list = JSON.parse((await readSetting('template_review_log')) || '[]'); } catch { list = []; }

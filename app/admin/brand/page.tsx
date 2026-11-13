@@ -7,6 +7,7 @@
 // and they never appear in the public template catalogue.
 // Also: brand colours with print values, and an e-mail signature maker.
 
+import { refreshPublicLists } from '@/lib/siteRefresh';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -71,6 +72,7 @@ export default function BrandWorkspacePage() {
   const groups = groupRows(live);
   const setArchived = async (row: BrandRow, on: boolean) => {
     const tags = on ? [...row.tags.filter((t) => t !== ARCHIVED), ARCHIVED] : row.tags.filter((t) => t !== ARCHIVED);
+    refreshPublicLists();
     const { error } = await supabase.from('templates').update({ tags }).eq('id', row.id);
     if (!error) setRows((list) => list.map((r) => (r.id === row.id ? { ...r, tags } : r)));
   };
@@ -185,6 +187,7 @@ function BrandTile({ row, onArchive, onRestore }: { row: BrandRow; onArchive?: (
     setEditing(false);
     if (!clean || `${prefix}${clean}` === row.name) return setName(row.name.replace(/^MT Brand · /, ''));
     setSaving(true);
+    refreshPublicLists();
     const { error } = await supabase.from('templates').update({ name: `${prefix}${clean}` }).eq('id', row.id);
     setSaving(false);
     if (error) setName(row.name.replace(/^MT Brand · /, ''));

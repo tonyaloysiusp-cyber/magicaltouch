@@ -8,6 +8,7 @@
 // their transparency). The design looks the same; only the file gets smaller.
 // New saves are shrunk automatically, so this is mainly for older templates.
 
+import { refreshPublicLists } from '@/lib/siteRefresh';
 import { useEffect, useState } from 'react';
 import { CheckCircle2, Loader2, Minimize2, RefreshCw } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
@@ -44,6 +45,7 @@ export function TemplateSizes() {
     const res = await shrinkDesignImages(json, level);
     if (!res.count) { setDone((d) => ({ ...d, [r.id]: 'Already as small as it can be' })); return 0; }
     const after = designBytes(json);
+    refreshPublicLists();
     const { error: e2 } = await supabase.from('templates').update({ canvas_json: json, updated_at: new Date().toISOString() }).eq('id', r.id);
     if (e2) { setDone((d) => ({ ...d, [r.id]: e2.message })); return 0; }
     setDone((d) => ({ ...d, [r.id]: `${kb(before)} → ${kb(after)}` }));

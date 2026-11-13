@@ -5,6 +5,7 @@
 // search words and hashtags. Empty hashtags = automatic ones are used.
 // Saving updates the public template page within the hour.
 
+import { refreshPublicLists } from '@/lib/siteRefresh';
 import { useEffect, useMemo, useState } from 'react';
 import { Check, ExternalLink, Loader2, Search, X } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
@@ -47,6 +48,7 @@ export function TemplateGoogle() {
     if (!open) return;
     setBusy(true);
     const patch = { search_keywords: (open.search_keywords || '').split(',').map((s) => s.trim()).filter(Boolean).join(', '), hashtags: (open.hashtags || []).map((h) => h.replace(/^#/, '').toLowerCase()).filter(Boolean), description: (open.description || '').trim() };
+    refreshPublicLists();
     const { error } = await supabase.from('templates').update(patch).eq('id', open.id);
     setBusy(false);
     if (error) return setMsg(error.message);

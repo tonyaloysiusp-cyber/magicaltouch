@@ -6,6 +6,7 @@
 // template from the gallery (its page redirects to the category) and
 // Restore brings it back. Every change is written to an audit log.
 
+import { refreshPublicLists } from '@/lib/siteRefresh';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -138,6 +139,7 @@ export default function TemplateReview() {
           patch.status = 'published';
           if (t.slug && redirects[t.slug]) { delete redirects[t.slug]; changedRedirects = true; }
         }
+        refreshPublicLists();
         const { error } = await supabase.from('templates').update(patch).eq('id', t.id);
         if (error) throw error;
       }

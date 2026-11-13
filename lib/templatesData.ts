@@ -1,4 +1,5 @@
 import { collapseFamilies } from '@/lib/templateFamilies';
+import { refreshPublicLists } from './siteRefresh';
 // ---------------------------------------------------------------------
 // lib/templatesData.ts
 // Shared template catalog — used by both the /templates page and the
@@ -362,14 +363,14 @@ export async function createCategory(name: string, parentId: string | null): Pro
 }
 
 export async function renameCategory(id: string, name: string): Promise<boolean> {
-  const { error } = await supabase.from('template_categories').update({ name: name.trim() }).eq('id', id);
+  const { error } = await supabase.from('template_categories').update({ name: name.trim() }).eq('id', id); refreshPublicLists();
   if (error) console.error('Failed to rename category:', error);
   return !error;
 }
 
 // Templates in a deleted category keep working; they just lose the link.
 export async function deleteCategory(id: string): Promise<boolean> {
-  const { error } = await supabase.from('template_categories').delete().eq('id', id);
+  const { error } = await supabase.from('template_categories').delete().eq('id', id); refreshPublicLists();
   if (error) console.error('Failed to delete category:', error);
   return !error;
 }
@@ -388,6 +389,7 @@ export async function createTemplate(t: TemplateInput, userId: string): Promise<
     console.error('Failed to create template:', error);
     return null;
   }
+  refreshPublicLists();
   return rowToTemplate(data as TemplateRow);
 }
 
@@ -400,13 +402,14 @@ export async function updateTemplate(id: string, t: TemplateInput): Promise<bool
     console.error('Failed to update template:', error);
     return false;
   }
+  refreshPublicLists();
   return true;
 }
 
 // Deleting a template never touches customer designs made from it --
 // those are independent copies.
 export async function deleteTemplate(id: string): Promise<boolean> {
-  const { error } = await supabase.from('templates').delete().eq('id', id);
+  const { error } = await supabase.from('templates').delete().eq('id', id); refreshPublicLists();
   if (error) {
     console.error('Failed to delete template:', error);
     return false;
@@ -433,7 +436,7 @@ export async function setTemplateContent(
   }
   // .select() returns the changed row: an empty answer means nothing was
   // saved (e.g. the session expired), which before looked like success.
-  const { data, error } = await supabase.from('templates').update(update).eq('id', id).select('id');
+  const { data, error } = await supabase.from('templates').update(update).eq('id', id).select('id'); refreshPublicLists();
   if (error) console.error('Failed to set template content:', error);
   else if (!data?.length) console.error('Template content not saved: no row updated (signed out or not an admin?)');
   return !error && !!data?.length;
@@ -444,7 +447,7 @@ export async function replaceThumbnail(id: string, version: string, file: File):
   try {
     const media = await uploadTemplateImages(id, version, url);
     if (!media) return null;
-    const { error } = await supabase.from('templates').update({ thumbnail: media.thumbnail, preview: media.preview }).eq('id', id);
+    const { error } = await supabase.from('templates').update({ thumbnail: media.thumbnail, preview: media.preview }).eq('id', id); refreshPublicLists();
     return error ? null : media.thumbnail;
   } finally {
     URL.revokeObjectURL(url);
@@ -512,7 +515,7 @@ export async function createVersion(t: Template, userId: string, notes: string |
   const current = t.currentVersion || '1.0';
   if (!(await snapshot(t.id, current, userId, notes))) return null;
   const next = nextVersion(current);
-  const { error } = await supabase.from('templates').update({ current_version: next }).eq('id', t.id);
+  const { error } = await supabase.from('templates').update({ current_version: next }).eq('id', t.id); refreshPublicLists();
   return error ? null : next;
 }
 
@@ -527,7 +530,7 @@ export async function setTemplateStatus(t: Template, status: TemplateStatus, use
   }
   const update: Record<string, unknown> = { status, updated_at: new Date().toISOString() };
   if (status === 'published') update.published_at = new Date().toISOString();
-  const { error } = await supabase.from('templates').update(update).eq('id', t.id);
+  const { error } = await supabase.from('templates').update(update).eq('id', t.id); refreshPublicLists();
   if (error) {
     console.error('Failed to change template status:', error);
     return 'Could not change the status.';
@@ -622,7 +625,7 @@ export async function generateStarterTemplates(userId: string): Promise<{ create
 
       let id: string;
       if (existing) {
-        const { error } = await supabase.from('templates').update(payload).eq('id', existing.id);
+        const { error } = await supabase.from('templates').update(payload).eq('id', existing.id); refreshPublicLists();
         if (error) throw error;
         id = existing.id;
         updated++;
@@ -656,6 +659,7 @@ export async function reorderTemplates(orderedIds: string[]): Promise<boolean> {
     orderedIds.map((id, index) => supabase.from('templates').update({ sort_order: index }).eq('id', id))
   );
   const failed = results.find((r) => r.error);
+  refreshPublicLists();
   if (failed?.error) {
     console.error('Failed to reorder templates:', failed.error);
     return false;

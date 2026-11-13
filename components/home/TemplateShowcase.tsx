@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { TemplateThumb } from '@/components/templates/TemplateThumb';
 import { ArrowRight, ArrowUpRight, Crown } from 'lucide-react';
 import { Template, TemplateCategory, fetchCategories, expandList, rowToTemplate } from '@/lib/templatesData';
 import { countLabel, useCountStyle } from '@/lib/templateCount';
@@ -55,7 +56,14 @@ export function TemplateShowcase() {
     fetchCategories().then(setCategories);
   }, []);
 
-  const catName = (t: Template) => categories.find((c) => c.id === t.categoryId)?.name || t.category;
+  // Tiles and filters use the main design-type category (occasion
+  // sub-categories such as "Festivals" roll up into their parent).
+  const rootOf = (t: Template) => {
+    const c = categories.find((x) => x.id === t.categoryId);
+    if (!c) return null;
+    return c.parentId ? categories.find((x) => x.id === c.parentId) || c : c;
+  };
+  const catName = (t: Template) => rootOf(t)?.name || t.category;
 
   const tiles = useMemo(() => {
     const by: Record<string, Template[]> = {};
@@ -66,7 +74,8 @@ export function TemplateShowcase() {
     return Object.entries(by)
       .sort(([a], [b]) => (CATEGORY_ORDER.indexOf(a) + 100) % 100 - (CATEGORY_ORDER.indexOf(b) + 100) % 100)
       .map(([name, list]) => {
-        const ids = Array.from(new Set(list.map((t) => t.categoryId || t.category)));
+        const root = rootOf(list[0]);
+        const ids = root ? [root.id, ...categories.filter((c) => c.parentId === root.id).map((c) => c.id)] : Array.from(new Set(list.map((t) => t.categoryId || t.category)));
         const n = ids.reduce((s, id) => s + (counts[id as string] || 0), 0);
         return { name, count: n || list.length, covers: list.slice(0, 3) };
       });
@@ -118,12 +127,13 @@ export function TemplateShowcase() {
               >
                 <div className="relative h-28 [perspective:600px]">
                   {c.covers.map((t, k) => (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
+                    <TemplateThumb
                       key={t.id}
-                      src={t.thumbnail!}
+                      src={t.thumbnail}
                       alt=""
-                      loading="lazy"
+                      label={c.name}
+                      color1={t.colors?.[0]}
+                      color2={t.colors?.[1]}
                       className="absolute top-1 h-24 w-auto max-w-[70%] rounded-lg shadow-lg object-cover ring-1 ring-black/5 transition-transform duration-500"
                       style={{
                         left: `${10 + k * 22}%`,
@@ -165,8 +175,7 @@ export function TemplateShowcase() {
               className="group block break-inside-avoid rounded-xl overflow-hidden border border-mt-border bg-mt-surface shadow-sm mt-card-hover"
             >
               <div className="relative overflow-hidden" style={{ aspectRatio: `${t.width} / ${Math.min(t.height, t.width * 2.1)}` }}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={t.thumbnail!} alt={t.name} loading="lazy" className="w-full h-full object-cover group-hover:scale-[1.04] transition-transform duration-500" />
+                <TemplateThumb src={t.thumbnail} alt={t.name} color1={t.colors?.[0]} color2={t.colors?.[1]} className="w-full h-full object-cover group-hover:scale-[1.04] transition-transform duration-500" />
                 {t.isFree === false && (
                   <span className="absolute top-2 left-2 inline-flex items-center gap-1 text-[10px] font-semibold uppercase text-[#09090B] bg-mt-creative px-2 py-0.5 rounded-full">
                     <Crown size={10} /> Premium
@@ -194,8 +203,7 @@ export function TemplateShowcase() {
         <div className="flex gap-4 w-max animate-mt-marquee hover:[animation-play-state:paused]">
           {[...strip, ...strip].map((t, i) => (
             <Link key={`${t.id}-${i}`} href={`/templates?template=${t.id}`} className="shrink-0">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={t.thumbnail!} alt={t.name} loading="lazy" className="h-40 w-auto rounded-xl shadow-md ring-1 ring-black/5 hover:-translate-y-1 transition-transform" />
+              <TemplateThumb src={t.thumbnail} alt={t.name} color1={t.colors?.[0]} color2={t.colors?.[1]} className="h-40 w-auto min-w-[100px] rounded-xl shadow-md ring-1 ring-black/5 hover:-translate-y-1 transition-transform" />
             </Link>
           ))}
         </div>
