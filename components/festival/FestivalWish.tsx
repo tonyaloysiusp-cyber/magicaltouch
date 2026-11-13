@@ -15,7 +15,7 @@ const key = (d: string) => `mt:wish:${d}`;
 
 type P = { x: number; y: number; vx: number; vy: number; life: number; max: number; size: number; color: string; kind: string; rot: number; vr: number };
 
-function runEffect(canvas: HTMLCanvasElement, effect: WishEffect, seconds: number, onEnd: () => void) {
+function runEffect(canvas: HTMLCanvasElement, effect: WishEffect, seconds: number, onEnd: () => void, emojis: string[] = []) {
   const ctx = canvas.getContext('2d')!;
   const dpr = Math.min(2, window.devicePixelRatio || 1);
   const resize = () => { canvas.width = innerWidth * dpr; canvas.height = innerHeight * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0); };
@@ -39,8 +39,14 @@ function runEffect(canvas: HTMLCanvasElement, effect: WishEffect, seconds: numbe
     const spawning = t < seconds - 1.2;
     ctx.clearRect(0, 0, W(), H());
     // spawn
-    if (spawning && now - last > (effect === 'fireworks' ? 420 : 70)) {
+    // The festival's own emojis drift across now and then.
+    if (spawning && emojis.length && Math.random() < 0.035) ps.push({ x: rnd(0, W()), y: H() + 30, vx: rnd(-0.3, 0.3), vy: -rnd(0.9, 1.7), life: 0, max: 900, size: rnd(22, 34), color: pick(emojis), kind: 'emoji', rot: rnd(-0.3, 0.3), vr: rnd(-0.005, 0.005) });
+    if (spawning && now - last > (effect === 'fireworks' ? 420 : effect === 'diyas' || effect === 'moon' ? 260 : 70)) {
       last = now;
+      if (effect === 'diyas') ps.push({ x: rnd(W() * 0.04, W() * 0.96), y: H() + 20, vx: rnd(-0.15, 0.15), vy: -rnd(0.6, 1.2), life: 0, max: 900, size: rnd(12, 20), color: pick(['#FFB347', '#FFD27A', '#FF9F43']), kind: 'diya', rot: rnd(0, 6), vr: rnd(0.02, 0.05) });
+      else if (effect === 'flowers') ps.push({ x: rnd(0, W()), y: -20, vx: rnd(-0.5, 0.5), vy: rnd(0.8, 1.6), life: 0, max: 900, size: rnd(9, 15), color: pick(['#F59E0B', '#F2708F', '#FDE047', '#FB7185', '#FFFFFF']), kind: 'flower', rot: rnd(0, 6), vr: rnd(-0.03, 0.03) });
+      else if (effect === 'moon') { if (!ps.some((q) => q.kind === 'moon')) ps.push({ x: W() * 0.82, y: H() * 0.18, vx: 0, vy: 0, life: 0, max: seconds * 60, size: Math.min(70, W() * 0.08), color: '#FFE9A8', kind: 'moon', rot: 0, vr: 0 }); ps.push({ x: rnd(0, W()), y: rnd(0, H() * 0.75), vx: 0, vy: 0, life: 0, max: rnd(60, 120), size: rnd(5, 10), color: pick(['#FFFFFF', '#FFE9A8']), kind: 'star', rot: 0, vr: 0 }); }
+      else
       if (effect === 'fireworks') ps.push({ x: rnd(W() * 0.12, W() * 0.88), y: H() + 10, vx: rnd(-0.6, 0.6), vy: -rnd(9, 12.5), life: 0, max: rnd(42, 58), size: 2.4, color: '#FFE08A', kind: 'rocket', rot: 0, vr: 0 });
       else if (effect === 'snow') for (let i = 0; i < 3; i++) ps.push({ x: rnd(0, W()), y: -10, vx: rnd(-0.4, 0.4), vy: rnd(0.8, 1.8), life: 0, max: 900, size: rnd(2, 5), color: '#FFFFFF', kind: 'snow', rot: rnd(0, 6), vr: rnd(0.01, 0.03) });
       else if (effect === 'lanterns') ps.push({ x: rnd(W() * 0.05, W() * 0.95), y: H() + 20, vx: rnd(-0.2, 0.2), vy: -rnd(0.8, 1.6), life: 0, max: 900, size: rnd(14, 24), color: pick(['#FFD27A', '#FFB86B', '#F6E7B0']), kind: 'lantern', rot: rnd(0, 6), vr: rnd(0.01, 0.03) });
@@ -56,10 +62,10 @@ function runEffect(canvas: HTMLCanvasElement, effect: WishEffect, seconds: numbe
       p.x += p.vx; p.y += p.vy; p.rot += p.vr;
       if (p.kind === 'spark') { p.vy += 0.045; p.vx *= 0.985; p.vy *= 0.985; }
       if (p.kind === 'puff') { p.vx *= 0.96; p.vy *= 0.96; p.size *= 1.01; }
-      if (p.kind === 'snow' || p.kind === 'leaf' || p.kind === 'lantern') p.x += Math.sin(p.rot) * 0.6;
+      if (p.kind === 'snow' || p.kind === 'leaf' || p.kind === 'lantern' || p.kind === 'flower' || p.kind === 'diya' || p.kind === 'emoji') p.x += Math.sin(p.rot) * 0.6;
       if (p.kind === 'rocket' && (p.life >= p.max || p.vy > -1)) { burst(p.x, p.y); ps.splice(i, 1); continue; }
       if (p.kind === 'rocket') p.vy += 0.12;
-      const fade = p.kind === 'spark' || p.kind === 'puff' || p.kind === 'star' ? 1 - p.life / p.max : t > seconds - 1.2 ? Math.max(0, (seconds - t) / 1.2) : 1;
+      const fade = p.kind === 'moon' ? Math.min(1, p.life / 30, (p.max - p.life) / 40) : p.kind === 'spark' || p.kind === 'puff' || p.kind === 'star' ? 1 - p.life / p.max : t > seconds - 1.2 ? Math.max(0, (seconds - t) / 1.2) : 1;
       if (p.life > p.max || p.y > H() + 40 || p.y < -60 || fade <= 0) { ps.splice(i, 1); continue; }
       ctx.save();
       ctx.globalAlpha = Math.max(0, Math.min(1, fade));
@@ -74,6 +80,10 @@ function runEffect(canvas: HTMLCanvasElement, effect: WishEffect, seconds: numbe
         case 'heart': ctx.rotate(p.rot); ctx.beginPath(); const s = p.size; ctx.moveTo(0, s * 0.3); ctx.bezierCurveTo(-s, -s * 0.4, -s * 0.4, -s, 0, -s * 0.4); ctx.bezierCurveTo(s * 0.4, -s, s, -s * 0.4, 0, s * 0.3); ctx.fill(); break;
         case 'leaf': ctx.rotate(p.rot); ctx.beginPath(); ctx.ellipse(0, 0, p.size, p.size * 0.45, 0, 0, 6.29); ctx.fill(); break;
         case 'star': { ctx.globalAlpha *= Math.sin((p.life / p.max) * Math.PI); ctx.beginPath(); for (let k = 0; k < 8; k++) { const r = k % 2 ? p.size * 0.25 : p.size; const a = (k / 8) * 6.283; ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r); } ctx.fill(); break; }
+        case 'emoji': ctx.rotate(p.rot); ctx.font = `${p.size}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(p.color, 0, 0); break;
+        case 'diya': { const fl = p.size * (0.55 + Math.sin(p.rot) * 0.08); ctx.shadowColor = '#FFB347'; ctx.shadowBlur = 20; ctx.fillStyle = '#FFE08A'; ctx.beginPath(); ctx.ellipse(0, -p.size * 0.35, fl * 0.32, fl * 0.6, 0, 0, 6.29); ctx.fill(); ctx.shadowBlur = 0; ctx.fillStyle = '#B45309'; ctx.beginPath(); ctx.ellipse(0, p.size * 0.15, p.size * 0.7, p.size * 0.3, 0, 0, Math.PI); ctx.fill(); break; }
+        case 'flower': { ctx.rotate(p.rot); for (let k = 0; k < 5; k++) { ctx.rotate(1.2566); ctx.beginPath(); ctx.ellipse(0, -p.size * 0.5, p.size * 0.28, p.size * 0.5, 0, 0, 6.29); ctx.fill(); } ctx.fillStyle = '#FDE68A'; ctx.beginPath(); ctx.arc(0, 0, p.size * 0.22, 0, 6.29); ctx.fill(); break; }
+        case 'moon': { ctx.shadowColor = '#FFE9A8'; ctx.shadowBlur = 30; ctx.beginPath(); ctx.arc(0, 0, p.size, 0, 6.29); ctx.fill(); ctx.globalCompositeOperation = 'destination-out'; ctx.shadowBlur = 0; ctx.beginPath(); ctx.arc(p.size * 0.42, -p.size * 0.18, p.size * 0.88, 0, 6.29); ctx.fill(); ctx.globalCompositeOperation = 'source-over'; break; }
         default: ctx.rotate(p.rot); ctx.fillRect(-p.size / 2, -p.size / 4, p.size, p.size / 2);
       }
       ctx.restore();
@@ -117,7 +127,9 @@ export function FestivalWish() {
 
   useEffect(() => {
     if (!playing || !wish || !canvasRef.current) return;
-    return runEffect(canvasRef.current, wish.effect, 8, () => setPlaying(false));
+    // Split "🪔 🪷 🎆" into single emojis (space separated).
+    const emojis = (wish.emoji || '').split(/\s+/).filter(Boolean);
+    return runEffect(canvasRef.current, wish.effect, 8, () => setPlaying(false), emojis);
   }, [playing, wish]);
 
   if (!wish) return null;
@@ -129,15 +141,16 @@ export function FestivalWish() {
       {card && (
         <div role="status" className="fixed z-[61] left-1/2 -translate-x-1/2 bottom-4 sm:bottom-6 w-[calc(100%-24px)] max-w-[460px] rounded-2xl p-[1.5px] shadow-2xl" style={{ background: 'linear-gradient(90deg,#F2708F,#A69BD3,#35C2F1,#5DCCB8,#8CC84B,#DDE23B)', animation: 'mtWishIn .6s cubic-bezier(.2,.9,.3,1.2)' }}>
           <style>{`@keyframes mtWishIn{from{opacity:0;transform:translate(-50%,24px) scale(.96)}to{opacity:1;transform:translate(-50%,0) scale(1)}}`}</style>
-          <div className="rounded-[15px] bg-[#0E1020] text-white px-4 py-3.5 flex items-center gap-3">
-            <span className="text-[34px] leading-none select-none" aria-hidden>{wish.emoji}</span>
+          {/* Uses the site's light / dark theme colours, so it reads well in both. */}
+          <div className="rounded-[15px] bg-mt-surface text-mt-ink px-4 py-3.5 flex items-center gap-3">
+            <span className="text-[28px] leading-none select-none whitespace-nowrap" aria-hidden>{wish.emoji}</span>
             <div className="flex-1 min-w-0">
               <p className="font-semibold text-[16px] leading-tight">{wish.title}</p>
-              <p className="text-[12.5px] text-white/75 mt-0.5 leading-snug">{wish.message}</p>
+              <p className="text-[12.5px] text-mt-muted mt-0.5 leading-snug">{wish.message}</p>
             </div>
             <div className="flex flex-col items-end gap-1.5 shrink-0">
-              <button type="button" onClick={close} aria-label="Close" className="p-1 rounded-full text-white/60 hover:text-white hover:bg-white/10"><X size={16} /></button>
-              {!playing && <button type="button" onClick={() => setPlaying(true)} className="text-[11px] font-semibold text-[#8CCBFF] hover:underline">Celebrate ✨</button>}
+              <button type="button" onClick={close} aria-label="Close" className="p-1 rounded-full text-mt-muted hover:text-mt-ink hover:bg-mt-surface2"><X size={16} /></button>
+              {!playing && <button type="button" onClick={() => setPlaying(true)} className="text-[11px] font-semibold text-[#3B82C4] hover:underline">Celebrate ✨</button>}
             </div>
           </div>
         </div>
