@@ -1,0 +1,18 @@
+name: lockfix
+on: { push: { branches: [lockfix] } }
+permissions: { contents: write }
+jobs:
+  lock:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: nov-updates, path: site }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: cd site && npm install --package-lock-only --no-audit --no-fund
+      - run: |
+          mkdir out && cp site/package-lock.json out/
+          cd out && git init -q && git checkout -q -b lockfix-out
+          git config user.email ci@example.com && git config user.name ci
+          git add package-lock.json && git commit -qm lock
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" lockfix-out
