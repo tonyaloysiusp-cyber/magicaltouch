@@ -889,9 +889,12 @@ scenarios.push({
     await t.page.goto(t.BASE + '/rangoli-mandala-maker', { waitUntil: 'domcontentloaded' });
     await t.page.getByRole('button', { name: /Diwali rangoli/ }).click();
     await t.page.getByRole('button', { name: 'Starting design 3' }).click();
-    await t.page.getByRole('button', { name: '12-fold' }).click();
-    await t.page.locator('aside section > button[aria-expanded]').nth(6).click();
+    await t.page.getByLabel('Symmetry').selectOption('12');
+    // Select mode: click the canvas centre → a layer gets selected.
+    const box = await t.page.getByRole('img', { name: 'Rangoli canvas' }).boundingBox();
+    await t.page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
     await t.shot('rangoli');
+    await t.page.getByText('Download', { exact: true }).click();
     const [dl] = await Promise.all([t.page.waitForEvent('download', { timeout: 60000 }), t.page.getByRole('button', { name: /Vector PDF/ }).click()]);
     const fs = await import('node:fs');
     const b = fs.readFileSync(await dl.path());

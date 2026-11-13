@@ -22,7 +22,7 @@ async function pipe(bytes: Uint8Array, stream: { readable: ReadableStream; writa
 
 export async function encodeMtdt<T>(p: MtdtProject<T>): Promise<Uint8Array> {
   const text = new TextEncoder().encode(JSON.stringify(p));
-  let body = text, flags = 0;
+  let body: Uint8Array = text, flags = 0;
   if (typeof CompressionStream !== 'undefined') {
     try { body = await pipe(text, new CompressionStream('deflate')); flags = 1; } catch { body = text; flags = 0; }
   }

@@ -1,22 +1,22 @@
 'use client';
 
-// Rangoli & Mandala Maker — a guided, beginner-friendly flow on top of the
-// same drawing engine (lib/mandala):
-//  1 what to make → 2 a starting design → 3 symmetry → 4 elements →
-//  5 colours → 6 edit (layers, undo/redo, zoom) → 7 export.
-// Draw on the canvas at any time: every stroke repeats around the centre.
-// Advanced settings sit under "More settings".
+// Rangoli & Mandala Maker — one creative workspace (no steps):
+//  · toolbar: Select / Draw, symmetry, mirror, colour, brush, undo/redo,
+//    zoom, guides, downloads and "use in a design"
+//  · left: starting designs and elements to add
+//  · centre: the canvas (click a layer to select it, or draw — every stroke
+//    repeats around the centre)
+//  · right: palettes, layers and the selected layer's settings.
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowDown, ArrowUp, Check, ChevronDown, Copy, Download, Eraser, Eye, EyeOff, Paintbrush, Redo2, RotateCw, Shuffle, Trash2, Undo2, Wand2, ZoomIn, ZoomOut } from 'lucide-react';
+import { ArrowDown, ArrowUp, Copy, Download, Eraser, Eye, EyeOff, MousePointer2, Paintbrush, Redo2, RotateCw, Shuffle, Trash2, Undo2, Wand2, ZoomIn, ZoomOut } from 'lucide-react';
 import { KINDS, MKind, MANDALA_PALETTES, MLayer, Mandala, Pt, RANGOLI_COLOURS, layerLabel, layerSvg, mandalaSvg, preset, recolour, surprise, withSymmetry } from '@/lib/mandala';
 import { PATTERN_MOTIFS } from '@/lib/patternMotifs';
 import { putHandoff, newLocalKey, editorUrlForLocal } from '@/lib/mtd/handoff';
 import { supabase } from '@/lib/supabase';
 
 const STORE = 'mt:mandala';
-const SYMS = [4, 6, 8, 12, 16, 24];
 const ELEMENTS: { id: string; label: string; motif?: string; make: (sym: number, color: string, r: number) => MLayer }[] = [
   { id: 'petals', label: 'Petals', motif: 'petal', make: (n, c, r) => ({ kind: 'ring', motif: 'petal', count: n, radius: r, size: 80, rotate: 0, color: c, outline: false }) },
   { id: 'flowers', label: 'Flowers', motif: 'flower6', make: (n, c, r) => ({ kind: 'ring', motif: 'flower6', count: n, radius: r, size: 70, rotate: 0, color: c, outline: false }) },
@@ -44,26 +44,12 @@ async function svgToImage(svg: string, size: number, type: 'image/png' | 'image/
   } finally { URL.revokeObjectURL(url); }
 }
 
-function Step({ n, title, open, done, onOpen, children }: { n: number; title: string; open: boolean; done?: boolean; onOpen: () => void; children: React.ReactNode }) {
-  return (
-    <section className="border-b border-mt-border last:border-0">
-      <button type="button" onClick={onOpen} aria-expanded={open} className="w-full flex items-center gap-3 py-3 text-left">
-        <span className={`grid h-7 w-7 shrink-0 place-items-center rounded-full text-[12px] font-bold ${open ? 'bg-mt-primary text-mt-onprimary' : done ? 'bg-emerald-600 text-white' : 'bg-mt-surface2 text-mt-muted'}`}>{done && !open ? <Check size={14} /> : n}</span>
-        <span className="flex-1 text-[14px] font-semibold">{title}</span>
-        <ChevronDown size={16} className={`text-mt-muted transition-transform ${open ? 'rotate-180' : ''}`} />
-      </button>
-      {open && <div className="pb-4 space-y-3">{children}</div>}
-    </section>
-  );
-}
-
 export function MandalaMaker() {
   const router = useRouter();
   const [m, setM] = useState<Mandala>(() => preset('rangoli', 0));
   const [past, setPast] = useState<Mandala[]>([]);
   const [future, setFuture] = useState<Mandala[]>([]);
   const [kind, setKind] = useState<MKind>('rangoli');
-  const [step, setStep] = useState(1);
   const [sym, setSym] = useState(8);
   const [mirror, setMirror] = useState(true);
   const [color, setColor] = useState(RANGOLI_COLOURS[2]);
@@ -73,12 +59,12 @@ export function MandalaMaker() {
   const [zoom, setZoom] = useState(1);
   const [guides, setGuides] = useState(true);
   const [transparent, setTransparent] = useState(false);
-  const [drawMode, setDrawMode] = useState(true);
+  const [drawMode, setDrawMode] = useState(false);
   const [live, setLive] = useState<Pt[] | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
 
-  useEffect(() => { try { const v = localStorage.getItem(STORE); if (v) { const j = JSON.parse(v); if (j?.layers) { setM(j); setStep(4); } } } catch { /* ignore */ } }, []);
+  useEffect(() => { try { const v = localStorage.getItem(STORE); if (v) { const j = JSON.parse(v); if (j?.layers) setM(j); } } catch { /* ignore */ } }, []);
   useEffect(() => { try { localStorage.setItem(STORE, JSON.stringify(m)); } catch { /* ignore */ } }, [m]);
 
   // Every change goes through here, so Undo / Redo cover everything.
@@ -93,12 +79,15 @@ export function MandalaMaker() {
     const b = svgRef.current!.getBoundingClientRect();
     return [(((e.clientX - b.left) / b.width) * 1000 - 500) / zoom, (((e.clientY - b.top) / b.height) * 1000 - 500) / zoom];
   };
-  const down = (e: React.PointerEvent) => { if (!drawMode) return; (e.target as Element).setPointerCapture?.(e.pointerId); setLive([toLocal(e)]); };
+  const down = (e: React.PointerEvent) => {
+    if (!drawMode) { const g = (e.target as Element).closest('[data-layer]'); setSel(g ? Number(g.getAttribute('data-layer')) : null); return; }
+    (e.target as Element).setPointerCapture?.(e.pointerId); setLive([toLocal(e)]);
+  };
   const move = (e: React.PointerEvent) => { if (!live) return; const p = toLocal(e); const l = live[live.length - 1]; if (Math.hypot(p[0] - l[0], p[1] - l[1]) > 4) setLive([...live, p]); };
   const up = () => { if (live && live.length) push({ kind: 'stroke', pts: live, color, width, sym, mirror }); setLive(null); };
 
   const svg = useMemo(() => mandalaSvg(m, { transparent }), [m, transparent]);
-  const body = useMemo(() => m.layers.map(layerSvg).join(''), [m.layers]);
+  const body = useMemo(() => m.layers.map((l, i) => `<g data-layer="${i}"${sel === i ? ' class="mt-sel"' : ''}>${layerSvg(l)}</g>`).join(''), [m.layers, sel]);
   const liveLayer = live ? layerSvg({ kind: 'stroke', pts: live, color, width, sym, mirror }) : '';
   const thumbs = useMemo(() => Array.from({ length: 6 }, (_, i) => preset(kind, i, sym)), [kind, sym]);
   const L = sel !== null ? m.layers[sel] : null;
@@ -131,80 +120,121 @@ export function MandalaMaker() {
   const pill = (on: boolean) => `h-9 px-3 rounded-full border text-[13px] font-semibold ${on ? 'border-mt-ink bg-mt-ink text-mt-bg' : 'border-mt-border hover:border-mt-ink/40'}`;
   const slider = (label: string, v: number, min: number, max: number, on: (n: number) => void, step = 1) => <label className="block"><span className="flex justify-between text-[12px] text-mt-muted"><span>{label}</span><span className="text-mt-ink tabular-nums">{v}</span></span><input type="range" min={min} max={max} step={step} value={v} onChange={(e) => on(Number(e.target.value))} className="mt-1 w-full accent-[#3B82C4]" /></label>;
 
+  const panel = 'rounded-3xl border border-mt-border bg-mt-surface p-4 space-y-4';
+  const H = ({ children }: { children: React.ReactNode }) => <h3 className="text-[11.5px] font-semibold uppercase tracking-[0.12em] text-mt-muted">{children}</h3>;
+  const icon = 'h-9 w-9 grid place-items-center rounded-full hover:bg-mt-surface2 disabled:opacity-40';
   return (
-    <div className="grid gap-6 lg:grid-cols-[340px_minmax(0,1fr)] lg:items-start">
-      <aside className="rounded-3xl border border-mt-border bg-mt-surface px-4 py-1 lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto">
-        <Step n={1} title="What do you want to make?" open={step === 1} done={step > 1} onOpen={() => setStep(1)}>
-          <div className="grid grid-cols-2 gap-2">
-            {KINDS.map((k) => (
-              <button key={k.id} type="button" aria-pressed={kind === k.id} onClick={() => { setKind(k.id); change(preset(k.id, 0, sym)); setStep(2); }} className={`rounded-2xl border p-3 text-left ${kind === k.id ? 'border-mt-ink bg-mt-surface2' : 'border-mt-border hover:border-mt-ink/40'}`}>
-                <span className="block text-[13.5px] font-semibold">{k.label}</span><span className="block text-[11.5px] text-mt-muted">{k.hint}</span>
-              </button>
-            ))}
+    <div className="space-y-4">
+      {/* Toolbar */}
+      <div className="flex flex-wrap items-center gap-1.5 rounded-2xl border border-mt-border bg-mt-surface p-1.5">
+        <div className="inline-flex rounded-full border border-mt-border p-0.5" role="radiogroup" aria-label="Tool">
+          <button type="button" role="radio" aria-checked={!drawMode} onClick={() => setDrawMode(false)} className={`h-8 px-3 rounded-full text-[12.5px] font-semibold inline-flex items-center gap-1.5 ${!drawMode ? 'bg-mt-ink text-mt-bg' : 'text-mt-muted'}`}><MousePointer2 size={13} /> Select</button>
+          <button type="button" role="radio" aria-checked={drawMode} onClick={() => setDrawMode(true)} className={`h-8 px-3 rounded-full text-[12.5px] font-semibold inline-flex items-center gap-1.5 ${drawMode ? 'bg-mt-ink text-mt-bg' : 'text-mt-muted'}`}><Paintbrush size={13} /> Draw</button>
+        </div>
+        <span className="mx-1 h-6 w-px bg-mt-border" />
+        <label className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold">Symmetry
+          <select value={sym} onChange={(e) => { const n = Number(e.target.value); setSym(n); change((x) => withSymmetry(x, n)); }} className="h-8 rounded-full border border-mt-border bg-mt-bg px-2 text-[12.5px]">{Array.from({ length: 34 }, (_, i) => i + 3).map((n) => <option key={n} value={n}>{n}-fold</option>)}</select>
+        </label>
+        <label className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold"><input type="checkbox" checked={mirror} onChange={(e) => setMirror(e.target.checked)} className="h-4 w-4 accent-[#3B82C4]" /> Mirror</label>
+        {drawMode && <label className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold">Brush<input type="range" min={2} max={40} value={width} onChange={(e) => setWidth(Number(e.target.value))} className="w-20 accent-[#3B82C4]" aria-label="Brush width" /></label>}
+        <span className="inline-flex items-center gap-1">{RANGOLI_COLOURS.slice(0, 8).map((c) => <button key={c} type="button" aria-label={`Colour ${c}`} aria-pressed={color === c} onClick={() => { setColor(c); if (sel !== null) editLayer(sel, { color: c }); }} className={`h-6 w-6 rounded-full ring-1 ring-black/15 ${color === c ? 'ring-2 ring-[#3B82C4] ring-offset-1 ring-offset-mt-surface' : ''}`} style={{ background: c }} />)}
+          <label className="h-6 w-6 rounded-full overflow-hidden relative ring-1 ring-black/15 cursor-pointer" style={{ background: 'conic-gradient(#F2708F,#F7C948,#8CC84B,#35C2F1,#A69BD3,#F2708F)' }}><input type="color" value={color} onChange={(e) => { setColor(e.target.value); if (sel !== null) editLayer(sel, { color: e.target.value }); }} className="absolute inset-0 opacity-0" aria-label="Any colour" /></label></span>
+        <span className="mx-1 h-6 w-px bg-mt-border" />
+        <button type="button" onClick={undo} disabled={!past.length} className={icon} aria-label="Undo" title="Undo"><Undo2 size={15} /></button>
+        <button type="button" onClick={redo} disabled={!future.length} className={icon} aria-label="Redo" title="Redo"><Redo2 size={15} /></button>
+        <button type="button" onClick={() => change((x) => ({ ...x, layers: x.layers.map((l) => ({ ...l, turn: ((l.turn || 0) + 360 / Math.max(1, sym) / 2) % 360 })) }))} className={icon} aria-label="Rotate the whole design" title="Rotate the whole design"><RotateCw size={15} /></button>
+        <button type="button" onClick={() => setZoom((z) => Math.max(0.5, Math.round((z - 0.25) * 100) / 100))} className={icon} aria-label="Zoom out"><ZoomOut size={15} /></button>
+        <span className="w-10 text-center text-[12px] tabular-nums">{Math.round(zoom * 100)}%</span>
+        <button type="button" onClick={() => setZoom((z) => Math.min(3, Math.round((z + 0.25) * 100) / 100))} className={icon} aria-label="Zoom in"><ZoomIn size={15} /></button>
+        <label className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold"><input type="checkbox" checked={guides} onChange={(e) => setGuides(e.target.checked)} className="h-4 w-4 accent-[#3B82C4]" /> Guides</label>
+        <span className="ml-auto" />
+        <details className="relative">
+          <summary className="list-none h-9 px-4 rounded-full border border-mt-border text-[13px] font-semibold inline-flex items-center gap-1.5 cursor-pointer"><Download size={14} /> Download</summary>
+          <div className="absolute right-0 top-11 z-20 w-60 rounded-2xl border border-mt-border bg-mt-surface p-2 shadow-xl space-y-1">
+            <button type="button" onClick={pdf} disabled={!!busy} className="w-full text-left rounded-lg px-3 py-2 text-[13px] hover:bg-mt-surface2">{busy === 'pdf' ? 'Making…' : 'Vector PDF (print)'}</button>
+            <button type="button" onClick={() => save(new Blob([svg], { type: 'image/svg+xml' }), 'rangoli.svg')} className="w-full text-left rounded-lg px-3 py-2 text-[13px] hover:bg-mt-surface2">SVG (vector)</button>
+            <button type="button" onClick={async () => save(await svgToImage(svg, 2400, 'image/png'), 'rangoli.png')} className="w-full text-left rounded-lg px-3 py-2 text-[13px] hover:bg-mt-surface2">PNG · 2400 px</button>
+            <button type="button" onClick={async () => save(await svgToImage(mandalaSvg(m), 2400, 'image/jpeg', m.background), 'rangoli.jpg')} className="w-full text-left rounded-lg px-3 py-2 text-[13px] hover:bg-mt-surface2">JPEG · 2400 px</button>
+            <label className="flex items-center gap-2 px-3 py-2 text-[12.5px] text-mt-muted"><input type="checkbox" checked={transparent} onChange={(e) => setTransparent(e.target.checked)} className="h-4 w-4 accent-[#3B82C4]" /> Transparent background</label>
           </div>
-        </Step>
-        <Step n={2} title="Pick a starting design" open={step === 2} done={step > 2} onOpen={() => setStep(2)}>
-          <div className="grid grid-cols-3 gap-2">
-            {thumbs.map((t, i) => (
-              <button key={i} type="button" onClick={() => { change(t); setStep(3); }} className="aspect-square rounded-xl overflow-hidden border border-mt-border hover:ring-2 hover:ring-[#3B82C4]" aria-label={`Starting design ${i + 1}`}>
-                <img src={`data:image/svg+xml;charset=utf-8,${encodeURIComponent(mandalaSvg(t, { size: 200 }))}`} alt="" className="h-full w-full" />
-              </button>
-            ))}
-          </div>
-          <button type="button" onClick={() => { change(surprise(Math.floor(Math.random() * 1e6))); setStep(3); }} className={`${chip} w-full justify-center`}><Shuffle size={14} /> Surprise me</button>
-        </Step>
-        <Step n={3} title="Choose the symmetry" open={step === 3} done={step > 3} onOpen={() => setStep(3)}>
-          <div className="flex flex-wrap gap-1.5">{SYMS.map((n) => <button key={n} type="button" aria-pressed={sym === n} onClick={() => { setSym(n); change((x) => withSymmetry(x, n)); }} className={pill(sym === n)}>{n}-fold</button>)}</div>
-          {slider('Custom symmetry', sym, 3, 36, (n) => { setSym(n); change((x) => withSymmetry(x, n)); })}
-          <label className="flex items-center justify-between text-[13px]"><span>Mirror drawn strokes</span><input type="checkbox" checked={mirror} onChange={(e) => setMirror(e.target.checked)} className="h-4 w-4 accent-[#3B82C4]" /></label>
-          <button type="button" onClick={() => setStep(4)} className={`${chip} w-full justify-center`}>Next: add elements</button>
-        </Step>
-        <Step n={4} title="Add elements" open={step === 4} done={step > 4} onOpen={() => setStep(4)}>
-          {slider('Distance from the centre', radius, 0, 470, setRadius, 5)}
-          <div className="grid grid-cols-2 gap-2">
-            {ELEMENTS.map((el) => {
-              const mo = el.motif ? PATTERN_MOTIFS.find((x) => x.id === el.motif) : null;
-              return (
-                <button key={el.id} type="button" onClick={() => push(el.make(sym, color, radius))} className="flex items-center gap-2 rounded-xl border border-mt-border px-2.5 py-2 text-left text-[13px] font-medium hover:border-mt-ink/40">
-                  <span className="grid h-7 w-7 place-items-center rounded-lg bg-mt-surface2">{mo ? <svg viewBox="-55 -55 110 110" className="h-4 w-4"><path d={mo.d} fill="currentColor" fillRule="evenodd" /></svg> : el.id === 'dots' ? '•••' : el.id === 'lines' ? '✳' : '◯'}</span>{el.label}
+        </details>
+        <button type="button" onClick={toEditor} disabled={!!busy} className="h-9 px-4 rounded-full bg-mt-primary text-mt-onprimary text-[13px] font-semibold inline-flex items-center gap-1.5 disabled:opacity-60"><Wand2 size={14} /> Use in a design</button>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-[250px_minmax(0,1fr)_280px] lg:items-start">
+        {/* Left: start and add */}
+        <aside className={`${panel} lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto order-2 lg:order-none`}>
+          <div className="flex flex-wrap gap-1">{KINDS.map((k) => <button key={k.id} type="button" aria-pressed={kind === k.id} title={k.hint} onClick={() => { setKind(k.id); change(preset(k.id, 0, sym)); setSel(null); }} className={pill(kind === k.id) + ' h-8 text-[12px]'}>{k.label}</button>)}</div>
+          <section className="space-y-2">
+            <H>Start from</H>
+            <div className="grid grid-cols-3 gap-1.5">
+              {thumbs.map((t, i) => (
+                <button key={i} type="button" onClick={() => { change(t); setSel(null); }} className="aspect-square rounded-xl overflow-hidden border border-mt-border hover:ring-2 hover:ring-[#3B82C4]" aria-label={`Starting design ${i + 1}`}>
+                  <img src={`data:image/svg+xml;charset=utf-8,${encodeURIComponent(mandalaSvg(t, { size: 200 }))}`} alt="" className="h-full w-full" />
                 </button>
-              );
-            })}
+              ))}
+            </div>
+            <div className="grid grid-cols-2 gap-1.5">
+              <button type="button" onClick={() => { change(surprise(Math.floor(Math.random() * 1e6))); setSel(null); }} className={`${chip} justify-center`}><Shuffle size={13} /> Surprise</button>
+              <button type="button" onClick={() => { change({ ...m, layers: [] }); setSel(null); }} className={`${chip} justify-center`}><Eraser size={13} /> Blank</button>
+            </div>
+          </section>
+          <section className="space-y-2">
+            <H>Add elements</H>
+            {slider('Distance from centre', radius, 0, 470, setRadius, 5)}
+            <div className="grid grid-cols-2 gap-1.5">
+              {ELEMENTS.map((el) => {
+                const mo = el.motif ? PATTERN_MOTIFS.find((x) => x.id === el.motif) : null;
+                return (
+                  <button key={el.id} type="button" onClick={() => push(el.make(sym, color, radius))} className="flex items-center gap-2 rounded-xl border border-mt-border px-2 py-1.5 text-left text-[12.5px] font-medium hover:border-mt-ink/40">
+                    <span className="grid h-6 w-6 shrink-0 place-items-center rounded-md bg-mt-surface2">{mo ? <svg viewBox="-55 -55 110 110" className="h-3.5 w-3.5"><path d={mo.d} fill="currentColor" fillRule="evenodd" /></svg> : el.id === 'dots' ? '•' : el.id === 'lines' ? '✳' : '◯'}</span><span className="truncate">{el.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+        </aside>
+
+        {/* Canvas */}
+        <div className="min-w-0 order-1 lg:order-none">
+          <div className="relative mx-auto w-full max-w-[720px] aspect-square rounded-3xl overflow-hidden border border-mt-border touch-none select-none shadow-sm" style={{ background: m.background }}>
+            <svg ref={svgRef} viewBox="0 0 1000 1000" className={`absolute inset-0 h-full w-full ${drawMode ? 'cursor-crosshair' : 'cursor-pointer'} [&_.mt-sel]:[filter:drop-shadow(0_0_6px_#3B82C4)]`} onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerLeave={up} role="img" aria-label="Rangoli canvas">
+              <g transform={`translate(500 500) scale(${zoom})`}>
+                {guides && <g opacity="0.25" stroke="#94A3B8" fill="none" strokeWidth={1 / zoom} pointerEvents="none">{[100, 200, 300, 400].map((r) => <circle key={r} r={r} />)}{Array.from({ length: Math.max(1, sym) }, (_, k) => <line key={k} x1="0" y1="0" x2={Math.sin((k / sym) * Math.PI * 2) * 480} y2={-Math.cos((k / sym) * Math.PI * 2) * 480} />)}</g>}
+                <g dangerouslySetInnerHTML={{ __html: body + liveLayer }} />
+              </g>
+            </svg>
           </div>
-          <div className="rounded-xl bg-mt-bg p-3 space-y-2">
-            <label className="flex items-center justify-between text-[13px] font-medium"><span className="inline-flex items-center gap-1.5"><Paintbrush size={14} /> Draw curves on the canvas</span><input type="checkbox" checked={drawMode} onChange={(e) => setDrawMode(e.target.checked)} className="h-4 w-4 accent-[#3B82C4]" /></label>
-            {drawMode && slider('Line width', width, 2, 40, setWidth)}
-          </div>
-          <button type="button" onClick={() => setStep(5)} className={`${chip} w-full justify-center`}>Next: colours</button>
-        </Step>
-        <Step n={5} title="Colours" open={step === 5} done={step > 5} onOpen={() => setStep(5)}>
-          <p className="text-[12px] text-mt-muted">Ready palettes recolour the whole design:</p>
-          <div className="space-y-1.5">
-            {MANDALA_PALETTES.map((p) => (
-              <button key={p.name} type="button" onClick={() => change((x) => recolour(x, p))} className="w-full flex items-center gap-2 rounded-xl border border-mt-border p-1.5 hover:border-mt-ink/40">
-                <span className="h-7 w-7 rounded-lg ring-1 ring-black/10" style={{ background: p.background }} />
-                <span className="flex flex-1 h-7 overflow-hidden rounded-lg">{p.colors.map((c, i) => <span key={c + i} className="flex-1" style={{ background: c }} />)}</span>
-                <span className="w-20 text-left text-[12px] font-medium">{p.name}</span>
-              </button>
-            ))}
-          </div>
-          <p className="text-[12px] text-mt-muted">Colour for new elements and drawing:</p>
-          <div className="flex flex-wrap gap-1.5">{RANGOLI_COLOURS.map((c) => <button key={c} type="button" aria-label={`Colour ${c}`} aria-pressed={color === c} onClick={() => setColor(c)} className={`h-7 w-7 rounded-full ring-1 ring-black/15 ${color === c ? 'ring-2 ring-[#3B82C4] ring-offset-2 ring-offset-mt-surface' : ''}`} style={{ background: c }} />)}
-            <label className="h-7 w-7 rounded-full overflow-hidden relative ring-1 ring-black/15 cursor-pointer" style={{ background: 'conic-gradient(#F2708F,#F7C948,#8CC84B,#35C2F1,#A69BD3,#F2708F)' }}><input type="color" value={color} onChange={(e) => setColor(e.target.value)} className="absolute inset-0 opacity-0" aria-label="Any colour (HEX)" /></label>
-          </div>
-          <label className="flex items-center justify-between text-[13px]">Floor colour<input type="color" value={m.background} onChange={(e) => change({ ...m, background: e.target.value })} className="h-8 w-10 rounded-md border border-mt-border bg-transparent" /></label>
-          <button type="button" onClick={() => setStep(6)} className={`${chip} w-full justify-center`}>Next: edit layers</button>
-        </Step>
-        <Step n={6} title="Edit and fine-tune" open={step === 6} done={step > 6} onOpen={() => setStep(6)}>
-          <ul className="space-y-1 max-h-56 overflow-y-auto" aria-label="Layers (top is drawn last)">
-            {m.layers.map((l, i) => ({ l, i })).reverse().map(({ l, i }) => (
-              <li key={i} className={`flex items-center gap-1.5 rounded-lg border px-2 py-1 text-[12.5px] ${sel === i ? 'border-mt-ink bg-mt-surface2' : 'border-mt-border'}`}>
-                <span className="h-4 w-4 rounded-full ring-1 ring-black/10 shrink-0" style={{ background: l.color }} />
-                <button type="button" onClick={() => setSel(i)} className="flex-1 text-left truncate">{layerLabel(l)}</button>
-                <button type="button" onClick={() => editLayer(i, { hidden: !l.hidden })} aria-label={l.hidden ? 'Show layer' : 'Hide layer'} className="p-1">{l.hidden ? <EyeOff size={13} /> : <Eye size={13} />}</button>
-              </li>
-            ))}
-          </ul>
+          <p className="mt-2 text-center text-[12px] text-mt-muted">{drawMode ? 'Draw anywhere — every stroke repeats around the centre.' : 'Click a part of the design to select its layer.'} Saved on this device automatically.</p>
+        </div>
+
+        {/* Right: colours and layers */}
+        <aside className={`${panel} lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto order-3 lg:order-none`}>
+          <section className="space-y-2">
+            <H>Palette</H>
+            <div className="grid grid-cols-2 gap-1.5">
+              {MANDALA_PALETTES.map((p) => (
+                <button key={p.name} type="button" title={p.name} onClick={() => change((x) => recolour(x, p))} className="rounded-xl border border-mt-border p-1 hover:border-mt-ink/40">
+                  <span className="flex h-6 overflow-hidden rounded-md ring-1 ring-black/5" style={{ background: p.background }}>{p.colors.map((c, i) => <span key={c + i} className="flex-1 m-0.5 rounded-sm" style={{ background: c }} />)}</span>
+                  <span className="mt-0.5 block truncate text-[11px] font-medium">{p.name}</span>
+                </button>
+              ))}
+            </div>
+            <label className="flex items-center justify-between text-[12.5px]">Floor colour<input type="color" value={m.background} onChange={(e) => change({ ...m, background: e.target.value })} className="h-8 w-10 rounded-md border border-mt-border bg-transparent" /></label>
+          </section>
+          <section className="space-y-2">
+            <H>Layers</H>
+            <ul className="space-y-1 max-h-48 overflow-y-auto" aria-label="Layers (top is drawn last)">
+              {m.layers.map((l, i) => ({ l, i })).reverse().map(({ l, i }) => (
+                <li key={i} className={`flex items-center gap-1.5 rounded-lg border px-2 py-1 text-[12.5px] ${sel === i ? 'border-mt-ink bg-mt-surface2' : 'border-mt-border'}`}>
+                  <span className="h-4 w-4 rounded-full ring-1 ring-black/10 shrink-0" style={{ background: l.color }} />
+                  <button type="button" onClick={() => setSel(i)} className="flex-1 text-left truncate">{layerLabel(l)}</button>
+                  <button type="button" onClick={() => editLayer(i, { hidden: !l.hidden })} aria-label={l.hidden ? 'Show layer' : 'Hide layer'} className="p-1">{l.hidden ? <EyeOff size={13} /> : <Eye size={13} />}</button>
+                </li>
+              ))}
+              {!m.layers.length && <li className="text-[12px] text-mt-muted">No layers yet — add elements or draw.</li>}
+            </ul>
+          </section>
           {L && sel !== null ? (
             <div className="rounded-xl bg-mt-bg p-3 space-y-2">
               <div className="flex flex-wrap gap-1.5">
@@ -237,42 +267,8 @@ export function MandalaMaker() {
                 {L.kind === 'border' && slider('Scallops / dots', L.count, 6, 120, (n) => editLayer(sel, { count: n }))}
               </details>
             </div>
-          ) : <p className="text-[12px] text-mt-muted">Choose a layer above to change it.</p>}
-          <button type="button" onClick={() => setStep(7)} className={`${chip} w-full justify-center`}>Next: download</button>
-        </Step>
-        <Step n={7} title="Download" open={step === 7} onOpen={() => setStep(7)}>
-          <div className="grid grid-cols-2 gap-2">
-            <button type="button" onClick={() => save(new Blob([svg], { type: 'image/svg+xml' }), 'rangoli.svg')} className={chip}><Download size={14} /> SVG</button>
-            <button type="button" onClick={pdf} disabled={!!busy} className={chip}><Download size={14} /> {busy === 'pdf' ? 'Making…' : 'Vector PDF'}</button>
-            <button type="button" onClick={async () => save(await svgToImage(svg, 2400, 'image/png'), 'rangoli.png')} className={chip}><Download size={14} /> PNG</button>
-            <button type="button" onClick={async () => save(await svgToImage(mandalaSvg(m), 2400, 'image/jpeg', m.background), 'rangoli.jpg')} className={chip}><Download size={14} /> JPEG</button>
-          </div>
-          <label className="flex items-center gap-2 text-[13px]"><input type="checkbox" checked={transparent} onChange={(e) => setTransparent(e.target.checked)} className="h-4 w-4 accent-[#3B82C4]" /> Transparent background (SVG, PDF, PNG)</label>
-          <button type="button" onClick={toEditor} disabled={!!busy} className="w-full h-10 rounded-full bg-mt-primary text-mt-onprimary text-[13.5px] font-semibold inline-flex items-center justify-center gap-1.5 disabled:opacity-60"><Wand2 size={14} /> Use in a design (editor)</button>
-        </Step>
-      </aside>
-
-      <div className="min-w-0 space-y-3">
-        <div className="relative mx-auto w-full max-w-[680px] aspect-square rounded-3xl overflow-hidden border border-mt-border touch-none select-none" style={{ background: m.background }}>
-          <svg ref={svgRef} viewBox="0 0 1000 1000" className={`absolute inset-0 h-full w-full ${drawMode ? 'cursor-crosshair' : ''}`} onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerLeave={up} role="img" aria-label="Rangoli canvas — draw here">
-            <g transform={`translate(500 500) scale(${zoom})`}>
-              {guides && <g opacity="0.25" stroke="#94A3B8" fill="none" strokeWidth={1 / zoom}>{[100, 200, 300, 400].map((r) => <circle key={r} r={r} />)}{Array.from({ length: Math.max(1, sym) }, (_, k) => <line key={k} x1="0" y1="0" x2={Math.sin((k / sym) * Math.PI * 2) * 480} y2={-Math.cos((k / sym) * Math.PI * 2) * 480} />)}</g>}
-              <g dangerouslySetInnerHTML={{ __html: body + liveLayer }} />
-            </g>
-          </svg>
-        </div>
-        <div className="flex flex-wrap items-center justify-center gap-2">
-          <button type="button" onClick={undo} disabled={!past.length} className={chip}><Undo2 size={14} /> Undo</button>
-          <button type="button" onClick={redo} disabled={!future.length} className={chip}><Redo2 size={14} /> Redo</button>
-          <button type="button" onClick={() => { change({ ...m, layers: [] }); setSel(null); }} className={chip}><Eraser size={14} /> Clear</button>
-          <button type="button" onClick={() => change((x) => ({ ...x, layers: x.layers.map((l) => ({ ...l, turn: ((l.turn || 0) + 360 / Math.max(1, sym) / 2) % 360 })) }))} className={chip} title="Rotate the whole design"><RotateCw size={14} /> Rotate</button>
-          <span className="mx-1 h-6 w-px bg-mt-border" />
-          <button type="button" onClick={() => setZoom((z) => Math.max(0.5, Math.round((z - 0.25) * 100) / 100))} className={chip} aria-label="Zoom out"><ZoomOut size={14} /></button>
-          <span className="w-12 text-center text-[12.5px] tabular-nums">{Math.round(zoom * 100)}%</span>
-          <button type="button" onClick={() => setZoom((z) => Math.min(3, Math.round((z + 0.25) * 100) / 100))} className={chip} aria-label="Zoom in"><ZoomIn size={14} /></button>
-          <label className="inline-flex items-center gap-1.5 text-[13px] ml-1"><input type="checkbox" checked={guides} onChange={(e) => setGuides(e.target.checked)} className="h-4 w-4 accent-[#3B82C4]" /> Guides</label>
-        </div>
-        <p className="text-center text-[12.5px] text-mt-muted">{drawMode ? 'Draw on the canvas with your mouse, finger or stylus — every stroke repeats around the centre.' : 'Drawing is off — turn it on in step 4.'} Your design is kept on this device.</p>
+          ) : <p className="text-[12px] text-mt-muted">Select a layer (here or on the canvas) to change its colour, size, distance and shape.</p>}
+        </aside>
       </div>
     </div>
   );
