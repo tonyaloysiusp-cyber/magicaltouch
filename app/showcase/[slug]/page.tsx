@@ -22,7 +22,7 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   const img = postImage(p) || `${SITE_URL}/api/og`;
   const desc = `${p.description} ${hashtagText(p.hashtags)}`.slice(0, 300);
   return {
-    title: fitTitle(`${p.title}${p.video_url ? ' — Video' : ''}`),
+    title: fitTitle(`${p.title}${p.kind === 'video' || p.video_url ? ' — Video' : ''}`),
     description: fitDescription(`${p.title}: ${p.description}`),
     keywords: [...p.hashtags, 'magical touch design', 'free templates', 'online design tool'],
     alternates: { canonical: url },

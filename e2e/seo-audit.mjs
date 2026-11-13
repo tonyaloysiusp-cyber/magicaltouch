@@ -10,7 +10,7 @@ const add = (kind, url, detail = '') => { (out.issues[kind] ||= []).push(detail 
 const local = (u) => u.replace(/^https?:\/\/(www\.)?magicaltouchdesign\.com/, BASE);
 const strip = (s) => s.replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').replace(/&#x27;|&#39;/g, "'").replace(/&quot;/g, '"').replace(/\s+/g, ' ').trim();
 const attr = (tag, name) => (tag.match(new RegExp(`${name}="([^"]*)"`, 'i')) || [])[1];
-const meta = (html, key) => { const m = html.match(new RegExp(`<meta[^>]+(?:name|property)="${key}"[^>]*>`, 'i')); return m ? attr(m[0], 'content') : undefined; };
+const meta = (html, key) => { const m = html.match(new RegExp(`<meta[^>]+(?:name|property)="${key}"[^>]*>`, 'i')); return m ? strip(attr(m[0], 'content') || '') : undefined; };
 
 const sm = await (await fetch(`${BASE}/sitemap.xml`)).text();
 const urls = [...sm.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1]);
