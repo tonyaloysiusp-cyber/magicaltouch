@@ -8122,10 +8122,11 @@ function EditorContent() {
           </div>
         </div>
       )}
-      {localNotice && (
-        <div role="status" className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[125] max-w-md w-[calc(100%-2rem)] bg-[#09090B] text-white text-sm rounded-2xl shadow-xl px-4 py-3 flex items-start gap-3">
+      {localNotice && !showExportDialog && (
+        // Never blocks what is underneath: only the close button takes clicks.
+        <div role="status" className="pointer-events-none fixed bottom-24 left-1/2 -translate-x-1/2 z-[125] max-w-md w-[calc(100%-2rem)] bg-[#09090B] text-white text-sm rounded-2xl shadow-xl px-4 py-3 flex items-start gap-3">
           <span className="flex-1">{localNotice}</span>
-          <button onClick={() => setLocalNotice(null)} className="text-white/60 hover:text-white shrink-0" aria-label="Dismiss">✕</button>
+          <button onClick={() => setLocalNotice(null)} className="pointer-events-auto text-white/60 hover:text-white shrink-0" aria-label="Dismiss">✕</button>
         </div>
       )}
 
