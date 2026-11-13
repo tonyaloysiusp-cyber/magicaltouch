@@ -51,6 +51,9 @@ export interface PatternSettings {
   stroke: boolean;
   strokeWidth: number;
   opacity: number;          // 0–1
+  sizeJitter?: number;      // 0–1: motifs vary in size
+  rotJitter?: number;       // 0–180°: motifs turn at random
+  alternate?: 'none' | 'rotate' | 'flip'; // every other motif turned 180° or mirrored
 }
 
 export const DEFAULT_PATTERN: PatternSettings = {
@@ -86,7 +89,43 @@ export function rng(seed: number) {
 interface Place { x: number; y: number; r: number; s: number; fx: number; fy: number; c: number }
 
 /** Tile size and motif placements for the settings. */
+/**
+ * The repeat tile. With variation on (size / rotation jitter, alternating
+ * motifs) small tiles are grown into a 4 × 4 super-tile first so the
+ * variety does not repeat every motif — and it stays seamless, because
+ * every copy of a motif across a tile edge gets the same variation.
+ */
 export function layout(p: PatternSettings): { w: number; h: number; places: Place[] } {
+  const L = baseLayout(p);
+  const sj = Math.max(0, Math.min(1, p.sizeJitter || 0)), rj = Math.max(0, Math.min(180, p.rotJitter || 0)), alt = p.alternate && p.alternate !== 'none' ? p.alternate : null;
+  if (!sj && !rj && !alt) return L;
+  let { w, h, places } = L;
+  const n = places.length < 6 && !['radial', 'kaleidoscope'].includes(p.repeat) ? 4 : 1;
+  if (n > 1) {
+    const out: Place[] = [];
+    for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) for (const q of places) out.push({ ...q, x: q.x + i * w, y: q.y + j * h });
+    places = out; w *= n; h *= n;
+  }
+  const hash = (a: number, b: number) => { let x = (Math.imul(a | 0, 73856093) ^ Math.imul(b | 0, 19349663) ^ Math.imul(p.seed | 0, 83492791)) >>> 0; x ^= x >>> 13; x = Math.imul(x, 0x5bd1e995) >>> 0; x ^= x >>> 15; return (x % 100000) / 100000; };
+  const mod = (v: number, m: number) => ((v % m) + m) % m;
+  const cellW = w / Math.max(1, Math.round(Math.sqrt(places.length)));
+  return {
+    w, h,
+    places: places.map((q) => {
+      const kx = Math.round(mod(q.x, w) * 2), ky = Math.round(mod(q.y, h) * 2);
+      const a = hash(kx, ky), b = hash(ky + 7, kx + 3);
+      const parity = (Math.floor(mod(q.x, w) / cellW) + Math.floor(mod(q.y, h) / (h / Math.max(1, Math.round(h / cellW))))) % 2;
+      return {
+        ...q,
+        s: q.s * (1 + (a - 0.5) * 1.2 * sj),
+        r: q.r + (b - 0.5) * 2 * rj + (alt === 'rotate' && parity ? 180 : 0),
+        fx: q.fx * (alt === 'flip' && parity ? -1 : 1),
+      };
+    }),
+  };
+}
+
+function baseLayout(p: PatternSettings): { w: number; h: number; places: Place[] } {
   const cell = Math.max(24, p.tile);
   const cw = cell * (1 + p.spacingX);
   const ch = cell * (1 + p.spacingY);

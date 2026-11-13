@@ -212,7 +212,7 @@ export function PatternStudio() {
       {/* Controls */}
       <aside className="rounded-3xl border border-mt-border bg-mt-surface p-5 space-y-6 lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto">
         <section>
-          <h2 className="text-[13px] font-semibold uppercase tracking-wide text-mt-muted">1 · Motif</h2>
+          <h2 className="text-[13px] font-semibold uppercase tracking-wide text-mt-muted">Motif</h2>
           <div className="mt-3 relative">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-mt-muted" />
             <input value={mq} onChange={(e) => setMq(e.target.value)} placeholder={`Search ${MOTIFS.length} shapes`} aria-label="Search shapes" className="w-full h-9 rounded-xl border border-mt-border bg-mt-bg pl-8 pr-3 text-[13px]" />
@@ -259,7 +259,7 @@ export function PatternStudio() {
         </section>
 
         <section>
-          <h2 className="text-[13px] font-semibold uppercase tracking-wide text-mt-muted">2 · Repeat</h2>
+          <h2 className="text-[13px] font-semibold uppercase tracking-wide text-mt-muted">Repeat</h2>
           <div className="mt-3 grid grid-cols-2 gap-2">
             {REPEATS.map((r) => (
               <button key={r.id} type="button" onClick={() => set({ repeat: r.id })} aria-pressed={p.repeat === r.id} title={r.hint}
@@ -270,7 +270,7 @@ export function PatternStudio() {
         </section>
 
         <section className="space-y-3">
-          <h2 className="text-[13px] font-semibold uppercase tracking-wide text-mt-muted">3 · Adjust</h2>
+          <h2 className="text-[13px] font-semibold uppercase tracking-wide text-mt-muted">Adjust</h2>
           <Slider label="Tile size" value={p.tile} min={40} max={320} onChange={(v) => set({ tile: v })} fmt={(v) => `${v}px`} />
           <Slider label="Motif scale" value={p.scale} min={0.1} max={1.5} step={0.01} onChange={(v) => set({ scale: v })} fmt={(v) => `${Math.round(v * 100)}%`} />
           <Slider label="Rotation" value={p.rotation} min={0} max={360} onChange={(v) => set({ rotation: v })} fmt={(v) => `${v}°`} />
@@ -289,8 +289,19 @@ export function PatternStudio() {
           {p.stroke && <Slider label="Line width" value={p.strokeWidth} min={1} max={10} step={0.5} onChange={(v) => set({ strokeWidth: v })} fmt={(v) => `${v}px`} />}
         </section>
 
+        <section className="space-y-3">
+          <h2 className="text-[13px] font-semibold uppercase tracking-wide text-mt-muted">Variation</h2>
+          <Slider label="Size variation" value={p.sizeJitter || 0} min={0} max={1} step={0.01} onChange={(v) => set({ sizeJitter: v })} fmt={(v) => `${Math.round(v * 100)}%`} />
+          <Slider label="Random rotation" value={p.rotJitter || 0} min={0} max={180} onChange={(v) => set({ rotJitter: v })} fmt={(v) => `±${v}°`} />
+          <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label="Alternate motifs">
+            {([['none', 'Same way'], ['rotate', 'Alternate turn'], ['flip', 'Alternate mirror']] as const).map(([id, l]) => <button key={id} type="button" role="radio" aria-checked={(p.alternate || 'none') === id} onClick={() => set({ alternate: id })} className={`h-8 px-3 rounded-full border text-[12.5px] font-semibold ${(p.alternate || 'none') === id ? 'border-mt-ink bg-mt-ink text-mt-bg' : 'border-mt-border'}`}>{l}</button>)}
+          </div>
+          {((p.sizeJitter || 0) > 0 || (p.rotJitter || 0) > 0) && <button type="button" onClick={() => set({ seed: Math.floor(Math.random() * 1e6) })} className="h-9 w-full rounded-xl border border-mt-border text-[13px] font-medium inline-flex items-center justify-center gap-2"><Shuffle size={14} /> New variation</button>}
+          <p className="text-[11.5px] text-mt-muted">Variation stays seamless — the tile simply gets bigger so the pattern doesn’t look stamped.</p>
+        </section>
+
         <section>
-          <h2 className="text-[13px] font-semibold uppercase tracking-wide text-mt-muted">4 · Colour</h2>
+          <h2 className="text-[13px] font-semibold uppercase tracking-wide text-mt-muted">Colour</h2>
           <div className="mt-3 flex flex-wrap gap-2">
             {PALETTES.map((pal) => (
               <button key={pal.name} type="button" title={pal.name} aria-label={`Palette ${pal.name}`} onClick={() => set({ colors: pal.colors, background: pal.background })}

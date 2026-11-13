@@ -22,6 +22,8 @@ import { PageHero } from '@/components/PageHero';
 import { useAppTheme } from '@/hooks/useAppTheme';
 import { loadSearchKeywords, reportSearch, SearchKeyword } from '@/lib/searchKeywords';
 import { countLabel } from '@/lib/templateCountLabel';
+import { searchTools } from '@/lib/toolsCatalog';
+import { ToolIcon } from '@/components/tools/ToolsDirectory';
 import { buildDoc, parseSearch, scoreDoc, looseScore, vocabulary, SearchDoc, relatedSearches } from '@/lib/templateSearch';
 import { autoHashtags } from '@/lib/templateHashtags';
 
@@ -813,6 +815,22 @@ export default function TemplatesPage() {
               </select>
             </div>
           </div>
+
+          {/* Matching tools (e.g. “background removal”, “jersey template”) */}
+          {f.q.trim().length > 1 && (() => {
+            const tl = searchTools(f.q).filter((t) => t.id !== 'editor').slice(0, 3);
+            if (!tl.length) return null;
+            return (
+              <div className="mt-5 grid gap-2 sm:grid-cols-3" aria-label="Matching tools">
+                {tl.map((t) => (
+                  <Link key={t.id} href={t.href} className="flex items-center gap-3 rounded-2xl border border-[#3B82C4]/40 bg-[#3B82C4]/[0.05] p-3 hover:border-[#3B82C4]">
+                    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl text-white" style={{ background: t.tint }}><ToolIcon name={t.icon} size={18} /></span>
+                    <span className="min-w-0"><span className="block text-[14px] font-semibold">{t.title} <span className="ml-1 rounded-full bg-mt-surface2 px-1.5 py-0.5 text-[10.5px] font-semibold text-mt-muted">Tool</span></span><span className="block truncate text-[12px] text-mt-muted">{t.hint}</span></span>
+                  </Link>
+                ))}
+              </div>
+            );
+          })()}
 
           {/* Results header */}
           <div className="mt-5">

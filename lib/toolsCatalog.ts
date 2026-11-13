@@ -39,17 +39,29 @@ export function toolForPath(path: string): ToolEntry | undefined {
   return TOOLS.find((t) => path === t.href || (t.id === 'editor' && path.startsWith('/editor')));
 }
 
-/** Tools that match a search (title, hint, body, keywords). */
+// Words people type that don't pick a tool by themselves.
+const GENERIC = new Set(['design', 'designs', 'designer', 'template', 'templates', 'maker', 'make', 'create', 'creator', 'online', 'free', 'tool', 'tools', 'app', 'editor', 'generator', 'custom', 'my', 'a', 'an', 'the', 'for', 'to', 'of', 'and', 'with', 'in', 'how', 'best']);
+const SYNONYMS: Record<string, string> = { jc: 'jersey', jursey: 'jersey', jercy: 'jersey', jersy: 'jersey', kit: 'jersey', kits: 'jersey', bg: 'background', removal: 'remove', remover: 'remove', erase: 'remove', tee: 't-shirt', tees: 't-shirt', tshirt: 't-shirt', tshirts: 't-shirt', color: 'colour', colors: 'colour', colours: 'colour', palette: 'colour', vectorize: 'vector', vectorise: 'vector', svg: 'vector', wallpapers: 'wallpaper', posters: 'poster', patterns: 'pattern', mandala: 'rangoli', kolam: 'rangoli', id: 'passport', visa: 'passport', retouch: 'photo', dpi: 'print' };
+const norm = (w: string) => SYNONYMS[w] || w.replace(/(ing|ers|er|es|s)$/, (m) => (w.length - m.length >= 4 ? '' : m));
+
+/** Tools that match a search (title, hint, body, keywords) — forgiving: synonyms, plurals and generic words. */
 export function searchTools(q: string, list: ToolEntry[] = TOOLS): ToolEntry[] {
-  const words = q.toLowerCase().split(/\s+/).filter(Boolean);
-  if (!words.length) return list;
+  const raw = q.toLowerCase().replace(/t[\s-]?shirts?/g, 't-shirt').split(/[^a-z0-9-]+/).filter(Boolean);
+  if (!raw.length) return list;
+  const words = raw.map(norm);
+  const key = words.filter((w) => !GENERIC.has(w));
+  const need = key.length ? key : words;
   return list
     .map((t) => {
-      const hay = `${t.title} ${t.hint} ${t.body} ${t.keywords.join(' ')}`.toLowerCase();
-      const score = words.reduce((s, w) => s + (hay.includes(w) ? (t.title.toLowerCase().includes(w) ? 3 : 1) : -100), 0);
-      return { t, score };
+      const hay = `${t.title} ${t.hint} ${t.body} ${t.keywords.join(' ')} ${t.id}`.toLowerCase();
+      const title = `${t.title} ${t.keywords.join(' ')}`.toLowerCase();
+      let score = 0, hits = 0;
+      for (const w of need) { if (hay.includes(w)) { hits++; score += title.includes(w) ? 3 : 1; } }
+      for (const w of words) if (GENERIC.has(w) && hay.includes(w)) score += 0.2;
+      score += 1 / t.title.split(/\s+/).length; // the more specific tool first
+      return { t, full: hits === need.length, score: hits === need.length ? score + 2 : hits ? score - 1.5 : 0 };
     })
-    .filter((x) => x.score > 0)
+    .filter((x, _, all) => x.score > 0 && (x.full || !all.some((y) => y.full)))
     .sort((a, b) => b.score - a.score)
     .map((x) => x.t);
 }

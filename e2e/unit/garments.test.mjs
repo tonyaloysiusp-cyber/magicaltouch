@@ -104,3 +104,16 @@ test('letter outlines are fitted into the motif box and used as the motif path',
   assert.ok(tileSvg(q).includes(f));
   assert.equal(motifPath({ ...q, textPath: undefined }), null);
 });
+
+test('pattern variation (size / rotation jitter, alternate) stays seamless and varied', async () => {
+  const { layout, DEFAULT_PATTERN } = await import('../../lib/patterns.ts');
+  const plain = layout({ ...DEFAULT_PATTERN, repeat: 'grid' });
+  assert.equal(plain.places.length, 1);
+  const v = layout({ ...DEFAULT_PATTERN, repeat: 'grid', sizeJitter: 0.8, rotJitter: 90, alternate: 'rotate' });
+  assert.equal(v.places.length, 16);
+  assert.equal(v.w, plain.w * 4);
+  const sizes = new Set(v.places.map((q) => q.s.toFixed(3)));
+  assert.ok(sizes.size > 5, 'sizes vary');
+  // Same seed → same result (seamless and repeatable).
+  assert.deepEqual(layout({ ...DEFAULT_PATTERN, repeat: 'grid', sizeJitter: 0.8, rotJitter: 90 }), layout({ ...DEFAULT_PATTERN, repeat: 'grid', sizeJitter: 0.8, rotJitter: 90 }));
+});

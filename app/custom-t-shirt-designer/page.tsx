@@ -6,7 +6,7 @@ import { SITE_URL, SITE_NAME, fitTitle, fitDescription } from '@/lib/seo';
 // Custom T-shirt designer: an all-over printed round-neck T-shirt, by size
 // and quantity or personalised, with one print-ready PDF.
 const PATH = '/custom-t-shirt-designer';
-const TITLE = 'Custom T-shirt Designer — All-Over Print T-shirts with Print-Ready PDF';
+const TITLE = 'T-shirt Designer & T-shirt Design Templates — Free, Print-Ready';
 const DESC = 'Design custom round-neck T-shirts online: colours, stripes, bands and patterns, front text and logos, sizes and quantities or names, then download one print-ready vector PDF for sublimation or all-over printing.';
 export const metadata: Metadata = {
   title: fitTitle(TITLE), description: fitDescription(DESC), alternates: { canonical: `${SITE_URL}${PATH}` },
