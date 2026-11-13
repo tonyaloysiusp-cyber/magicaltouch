@@ -1,3 +1,4 @@
+import { ToolVisitTracker } from '@/components/tools/ToolVisitTracker';
 import { Poppins } from 'next/font/google';
 import './globals.css';
 import { ChunkRecovery } from '@/components/ChunkRecovery';
@@ -104,6 +105,7 @@ export default async function RootLayout({
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: withCount(JSON.stringify(orgLd), label) }} />
         <ChunkRecovery />
         <VisitCounter />
+        <ToolVisitTracker />
         <TemplateCountProvider value={count} style={countStyle}>{children}</TemplateCountProvider>
       </body>
     </html>

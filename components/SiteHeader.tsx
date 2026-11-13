@@ -5,10 +5,12 @@
 // same behaviour everywhere; on phones and tablets the tabs move into a
 // menu so nothing is ever cut off.
 
+import { TOOLS as CATALOG, TOOL_CATEGORIES, rememberTool } from '@/lib/toolsCatalog';
+import { ToolIcon } from '@/components/tools/ToolsDirectory';
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ChevronDown, Eraser, Flower2, Grid3x3, ImagePlus, LayoutGrid, Menu, Palette, PenTool, Plus, Ruler, ScanFace, X } from 'lucide-react';
+import { ChevronDown, ImagePlus, LayoutGrid, Menu, Plus, X } from 'lucide-react';
 import { ThemeSwitch } from '@/components/ThemeSwitch';
 import { ProfileMenu } from '@/components/ProfileMenu';
 import { BrandLogo } from '@/components/BrandLogo';
@@ -24,18 +26,8 @@ const TABS: { id: SiteTab; label: string; href: string }[] = [
   { id: 'about', label: 'About', href: '/about' },
 ];
 
-// The "Tools" menu: the free tools people look for by name.
-const TOOLS = [
-  { href: '/trace', label: 'Image Trace', hint: 'Turn pictures into vectors', icon: <PenTool size={17} /> },
-  { href: '/patterns', label: 'Pattern Studio', hint: 'Seamless repeat patterns', icon: <Grid3x3 size={17} /> },
-  { href: '/colours', label: 'Colour Explorer', hint: 'Palettes and harmonies', icon: <Palette size={17} /> },
-  { href: '/remove-background', label: 'Remove background', hint: 'One photo or many at once', icon: <Eraser size={17} /> },
-  { href: '/photo-studio', label: 'Photo Studio', hint: 'Edit, retouch and crop a photo', icon: <ImagePlus size={17} /> },
-  { href: '/passport-photo-maker', label: 'Passport photo maker', hint: 'White background, any country size', icon: <ScanFace size={17} /> },
-  { href: '/rangoli-mandala-maker', label: 'Rangoli & mandala maker', hint: 'Draw with symmetry', icon: <Flower2 size={17} /> },
-  { href: '/print-size-calculator', label: 'Print size calculator', hint: 'Pixels, DPI and bleed', icon: <Ruler size={17} /> },
-  { href: '/tools', label: 'All tools', hint: 'Every creative tool in one place', icon: <LayoutGrid size={17} /> },
-];
+// The "Tools" menu: every tool from the shared list, grouped, plus All tools.
+const MENU = TOOL_CATEGORIES.map((c) => ({ ...c, tools: CATALOG.filter((t) => t.category === c.id) }));
 
 function ToolsMenu({ active }: { active: boolean }) {
   const [open, setOpen] = useState(false);
@@ -61,17 +53,25 @@ function ToolsMenu({ active }: { active: boolean }) {
         Tools <ChevronDown size={14} className={`transition-transform ${open ? 'rotate-180' : ''}`} aria-hidden />
       </button>
       {open && (
-        <div role="menu" className="absolute left-1/2 -translate-x-1/2 top-full pt-2 w-[300px]">
-          <div className="rounded-2xl border border-mt-border bg-mt-surface shadow-[0_18px_40px_-12px_rgba(9,9,11,0.25)] p-2">
-            {TOOLS.map((t) => (
-              <Link key={t.href} role="menuitem" href={t.href} onClick={() => setOpen(false)} className="flex items-start gap-3 rounded-xl px-3 py-2.5 hover:bg-mt-surface2">
-                <span className="mt-0.5 w-8 h-8 shrink-0 rounded-lg bg-mt-surface2 text-mt-ink inline-flex items-center justify-center">{t.icon}</span>
-                <span>
-                  <span className="block text-[14px] font-semibold text-mt-ink">{t.label}</span>
-                  <span className="block text-[12px] text-mt-muted">{t.hint}</span>
-                </span>
-              </Link>
-            ))}
+        <div role="menu" className="absolute left-1/2 -translate-x-1/2 top-full pt-2 w-[560px] max-w-[92vw]">
+          <div className="rounded-2xl border border-mt-border bg-mt-surface shadow-[0_18px_40px_-12px_rgba(9,9,11,0.25)] p-3">
+            <div className="grid grid-cols-2 gap-x-2 gap-y-3">
+              {MENU.map((g) => (
+                <div key={g.id}>
+                  <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-mt-faint">{g.label}</p>
+                  {g.tools.map((t) => (
+                    <Link key={t.href} role="menuitem" href={t.href} onClick={() => { rememberTool(t.id); setOpen(false); }} className="flex items-start gap-3 rounded-xl px-3 py-2 hover:bg-mt-surface2">
+                      <span className="mt-0.5 w-8 h-8 shrink-0 rounded-lg text-white inline-flex items-center justify-center" style={{ background: t.tint }}><ToolIcon name={t.icon} size={16} /></span>
+                      <span className="min-w-0">
+                        <span className="block text-[14px] font-semibold text-mt-ink">{t.title}{t.isNew && <span className="ml-1.5 align-middle rounded-full bg-mt-surface2 px-1.5 py-px text-[10px] font-semibold text-mt-muted">New</span>}</span>
+                        <span className="block text-[12px] text-mt-muted">{t.hint}</span>
+                      </span>
+                    </Link>
+                  ))}
+                </div>
+              ))}
+            </div>
+            <Link role="menuitem" href="/tools" onClick={() => setOpen(false)} className="mt-2 flex items-center justify-center gap-2 rounded-xl border border-mt-border px-3 py-2.5 text-[14px] font-semibold hover:bg-mt-surface2"><LayoutGrid size={16} /> All tools — search and browse</Link>
           </div>
         </div>
       )}
@@ -204,11 +204,12 @@ export function SiteHeader({
               </Link>
             ))}
             <p className="pt-5 pb-1 text-[12px] font-semibold uppercase tracking-wide text-mt-faint">Free tools</p>
-            {TOOLS.map((t) => (
-              <Link key={t.href} href={t.href} onClick={() => setOpen(false)} className="py-3 flex items-center gap-3 text-[17px] font-medium text-mt-ink border-b border-mt-border">
-                <span className="text-mt-muted">{t.icon}</span> {t.label}
+            {CATALOG.map((t) => (
+              <Link key={t.href} href={t.href} onClick={() => { rememberTool(t.id); setOpen(false); }} className="py-3 flex items-center gap-3 text-[17px] font-medium text-mt-ink border-b border-mt-border">
+                <span className="text-mt-muted"><ToolIcon name={t.icon} size={17} /></span> {t.title}
               </Link>
             ))}
+            <Link href="/tools" onClick={() => setOpen(false)} className="py-3 flex items-center gap-3 text-[17px] font-semibold text-mt-ink border-b border-mt-border"><span className="text-mt-muted"><LayoutGrid size={17} /></span> All tools</Link>
             <Link href="/contact" onClick={() => setOpen(false)} className="py-3 text-[17px] font-medium text-mt-muted border-b border-mt-border">Contact</Link>
             <div className="mt-5 grid gap-2 sm:grid-cols-2">
               <Link href={loggedIn ? '/dashboard' : '/login'} onClick={() => setOpen(false)} className="h-12 inline-flex items-center justify-center rounded-full border border-mt-border text-[15px] font-semibold text-mt-ink">

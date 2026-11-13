@@ -1,7 +1,9 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { ArrowUpRight, Blend, Brush, Crop, Eraser, FileDown, Flower2, Grid3x3, Languages, Layers, LayoutTemplate, Maximize2, Palette, PenTool, QrCode, Ruler, ScanFace, Shapes, Sparkles, SwatchBook, Type, Wand2 } from 'lucide-react';
+import { Brush, FileDown, Languages, Layers, Maximize2, PenTool, QrCode, Shapes, Sparkles, SwatchBook, Type, Wand2 } from 'lucide-react';
 import { SeoShell, Crumbs } from '@/components/seo/SeoShell';
+import { ToolsDirectory } from '@/components/tools/ToolsDirectory';
+import { TOOLS } from '@/lib/toolsCatalog';
 import { SITE_URL, SITE_NAME, fitTitle, fitDescription } from '@/lib/seo';
 
 // One place for every creative tool: standalone tools and what the editor
@@ -15,21 +17,6 @@ export const metadata: Metadata = {
   openGraph: { type: 'website', url: URL, title: TITLE, description: DESC, siteName: SITE_NAME, images: [`${SITE_URL}/api/og`] },
 };
 
-type Tool = { href: string; title: string; body: string; icon: any; tag?: string; tint: string };
-const STUDIOS: Tool[] = [
-  // (each standalone tool is also a panel inside the editor: /editor?panel=…)
-  { href: '/create', title: 'Design Editor', body: 'Pages, layers, text effects, shapes, photos, brand kit and print-ready export — for print and digital.', icon: LayoutTemplate, tag: 'Core', tint: '#3B82C4' },
-  { href: '/trace', title: 'Image Trace', body: 'Photos, sketches and logos into vectors: black & white, line drawing, or 3–32 colours.', icon: PenTool, tag: 'New', tint: '#1E3A5F' },
-  { href: '/patterns', title: 'Pattern Studio', body: 'Seamless repeats — grid, brick, half-drop, mirror, radial, kaleidoscope — with product mockups.', icon: Grid3x3, tag: 'New', tint: '#C9A86A' },
-  { href: '/colours', title: 'Colour Explorer', body: 'Harmonies with HEX, RGB and CMYK, contrast checks, mood palettes and templates by colour.', icon: Palette, tag: 'New', tint: '#F2708F' },
-  { href: '/photo-studio', title: 'Photo Studio', body: 'Adjust, retouch, selections, layers, live text effects, looks and filters, crop and export.', icon: Crop, tint: '#5DCCB8' },
-  { href: '/remove-background', title: 'Background Remover', body: 'One photo or sixty at once, with Restore and Erase brushes. Runs on your device.', icon: Eraser, tint: '#8CC84B' },
-  { href: '/passport-photo-maker', title: 'Passport Photo Maker', body: 'White background and the exact size for India, UK, US, Schengen or UAE — print six on a 4×6 sheet.', icon: ScanFace, tag: 'New', tint: '#0EA5E9' },
-  { href: '/rangoli-mandala-maker', title: 'Rangoli & Mandala Maker', body: 'Draw once and it repeats around the centre. Rings of petals and dots, or a ready Diwali rangoli.', icon: Flower2, tag: 'New', tint: '#E11D48' },
-  { href: '/gradient-background-generator', title: 'Gradient Backgrounds', body: 'Mesh gradients with grain — 4K wallpapers, posts and slides, SVG or CSS.', icon: Blend, tag: 'New', tint: '#A69BD3' },
-  { href: '/print-size-calculator', title: 'Print Size Calculator', body: 'Any paper or card size in pixels, inches and mm at any DPI, with bleed and safe area.', icon: Ruler, tag: 'New', tint: '#B45309' },
-];
-const PANEL: Record<string, string> = { '/trace': 'Trace panel', '/patterns': 'Patterns panel', '/colours': 'Colours panel', '/remove-background': 'Remove BG on any photo', '/photo-studio': 'Edit photo on any picture' };
 const EDITOR: { icon: any; title: string; body: string }[] = [
   { icon: PenTool, title: 'Pen & edit points', body: 'Draw Bézier paths, then move anchors and handles.' },
   { icon: Shapes, title: 'Pathfinder & shape builder', body: 'Unite, subtract, intersect and exclude shapes.' },
@@ -46,7 +33,7 @@ const EDITOR: { icon: any; title: string; body: string }[] = [
 ];
 
 export default function ToolsPage() {
-  const ld = { '@context': 'https://schema.org', '@type': 'ItemList', itemListElement: STUDIOS.map((t, i) => ({ '@type': 'ListItem', position: i + 1, name: t.title, url: `${SITE_URL}${t.href}` })) };
+  const ld = { '@context': 'https://schema.org', '@type': 'ItemList', itemListElement: TOOLS.map((t, i) => ({ '@type': 'ListItem', position: i + 1, name: t.title, description: t.body, url: `${SITE_URL}${t.href}` })) };
   return (
     <SeoShell active="tools">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(ld) }} />
@@ -58,23 +45,7 @@ export default function ToolsPage() {
           <p className="mt-3 text-lg text-mt-muted leading-relaxed">Professional vector, photo, pattern and colour tools — free, in your browser, and connected to the same editor.</p>
         </header>
 
-        <ul className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {STUDIOS.map((t) => (
-            <li key={t.href}>
-              <Link href={t.href} className="group relative block h-full overflow-hidden rounded-3xl border border-mt-border bg-mt-surface p-6 transition-[transform,box-shadow] hover:-translate-y-1 hover:shadow-[0_24px_50px_-28px_rgba(9,9,11,0.45)]">
-                <span aria-hidden className="absolute -right-10 -top-10 h-32 w-32 rounded-full opacity-15 blur-2xl" style={{ background: t.tint }} />
-                <div className="flex items-center justify-between">
-                  <span className="grid h-12 w-12 place-items-center rounded-2xl text-white" style={{ background: t.tint }}><t.icon size={22} aria-hidden /></span>
-                  {t.tag && <span className="rounded-full border border-mt-border px-2.5 py-0.5 text-[11px] font-semibold text-mt-muted">{t.tag}</span>}
-                </div>
-                <h2 className="mt-5 text-xl font-semibold">{t.title}</h2>
-                <p className="mt-2 text-[14px] text-mt-muted leading-relaxed">{t.body}</p>
-                <span className="mt-5 inline-flex items-center gap-1 text-[14px] font-semibold">Open <ArrowUpRight size={15} className="transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" /></span>
-                {PANEL[t.href] && <span className="mt-1 block text-[12px] text-mt-muted">Also inside the editor → {PANEL[t.href]}</span>}
-              </Link>
-            </li>
-          ))}
-        </ul>
+        <ToolsDirectory />
 
         <section className="mt-16" aria-labelledby="editor-tools">
           <div className="flex flex-wrap items-end justify-between gap-4">
