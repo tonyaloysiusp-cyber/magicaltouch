@@ -16,5 +16,6 @@ if [ $status = ok ]; then
   for i in $(seq 1 60); do curl -s -o /dev/null http://localhost:3000 && break; sleep 1; done
   step scenarios node e2e/run.mjs || true
   step seo node e2e/seo-audit.mjs || true
+  echo "===SEO==="; cat e2e-out/seo-summary.txt 2>/dev/null || tail -n 30 e2e-out/seo.txt
 fi
 echo "{\"sha\":\"$GITHUB_SHA\",\"ref\":\"$GITHUB_REF_NAME\",\"status\":\"$status\"}" > e2e-out/meta.json
