@@ -46,7 +46,7 @@ export interface TextShapeLike { d: string; width: number; ascender: number; des
 /** Sync text shaper (fonts are loaded before rendering in the browser). */
 export type Shaper = (font: string, weight: number, italic: boolean, text: string, size: number, spacing: number) => TextShapeLike | null;
 export interface Vars { name?: string; number?: string; size?: string; team?: string }
-export interface RenderOpts { textMode?: 'outline' | 'live'; shaper?: Shaper | null; vars?: Vars; uid?: string }
+export interface RenderOpts { textMode?: 'outline' | 'live'; shaper?: Shaper | null; vars?: Vars; uid?: string; /** Garment grade of this size (1 = M): names and numbers are kept at their real size instead of growing with the garment. */ fixK?: number }
 
 const r3 = (n: number) => Math.round(n * 1000) / 1000;
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' } as any)[c]);
@@ -224,7 +224,9 @@ export function getShaper(): Shaper | null { return defaultShaper; }
 export function renderArt(els: ArtEl[], pre: Mat, o: RenderOpts = {}): string {
   const uid = o.uid || `a${++seq}`;
   if (o.shaper === undefined) o = { ...o, shaper: defaultShaper };
-  return els.filter((e) => !e.hidden).map((el, i) => {
+  return els.filter((e) => !e.hidden).map((el0, i) => {
+    // Names and numbers keep their height on every size; their position still follows the garment.
+    const el = o.fixK && o.fixK !== 1 && el0.kind === 'text' && /\{(NAME|NUMBER)\}/i.test(el0.text) ? { ...el0, m: mulM(el0.m, [1 / o.fixK, 0, 0, 1 / o.fixK, 0, 0]) } : el0;
     const m = mulM(pre, el.m);
     const op = el.opacity != null && el.opacity < 1 ? ` opacity="${r3(el.opacity)}"` : '';
     // Shadow: a solid copy offset on the board (drawn first); outer outline: the shape stroked wider, behind.

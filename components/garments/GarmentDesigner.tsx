@@ -788,6 +788,7 @@ export function GarmentDesigner({ kind: initialKind = 'jersey' }: { kind?: Garme
                 <button type="button" aria-pressed={group === 'fabric'} onClick={() => setGroup('fabric')} className={chip(group === 'fabric')}>Save fabric</button>
               </div>
               <label className="flex items-center gap-2 text-[13px]"><input type="checkbox" checked={mirror} onChange={(e) => setMirror(e.target.checked)} className="h-4 w-4 accent-[#3B82C4]" /> Mirror for transfer paper</label>
+              {personal && <label className="flex items-center gap-2 text-[13px]"><input type="checkbox" checked={kit.letterGrade !== 'scale'} onChange={(e) => set({ letterGrade: e.target.checked ? 'fixed' : 'scale' })} className="h-4 w-4 accent-[#3B82C4]" /> Names &amp; numbers the same height on every size</label>}
               <p className="pt-1 text-[12px] font-semibold text-mt-muted">Text in the print files</p>
               <div className="grid grid-cols-2 gap-1.5" role="radiogroup" aria-label="Text in the print files">
                 <button type="button" role="radio" aria-checked={textMode === 'live'} onClick={() => setTextMode('live')} className={chip(textMode === 'live')}>Live text (retypeable)</button>

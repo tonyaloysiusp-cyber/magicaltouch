@@ -59,6 +59,8 @@ export interface KitDesign {
   teamLogo?: string | null; sponsorLogo?: string | null; // data URLs
   teamName: string;
   graphic?: KitGraphic; accent?: string; accent2?: string; cuffs?: boolean;
+  /** Names and numbers: same height on every size (default) or grown with the garment. */
+  letterGrade?: 'fixed' | 'scale';
   frontText?: string; frontTextColor?: string; frontTextMm?: number; frontTextTopMm?: number;
   personalise?: boolean; // names and numbers per player (off: sizes and quantities only)
   /** Extra sizes defined by measurement (flat chest width in cm); scaled from the size-M block. */
@@ -313,6 +315,7 @@ export function pieceMarkup(piece: Piece, kit: KitDesign, pat: PatternSettings, 
   const r = role(piece.id);
   const fill = r === 'body' ? kit.body : r === 'sleeve' ? kit.sleeve : kit.collar;
   const b = bleed / k; // bleed in local units
+  const lk = kit.letterGrade === 'scale' ? 1 : k; // lettering height divisor: real size on every garment
   const id = `pc${++clipSeq}`;
   const sx = (piece.w + 2 * b) / piece.w, sy = (piece.h + 2 * b) / piece.h;
   const clip = `<clipPath id="${id}"><path d="${piece.d}" transform="translate(${r2(piece.w / 2)} ${r2(piece.h / 2)}) scale(${r2(sx * 1000) / 1000} ${r2(sy * 1000) / 1000}) translate(${r2(-piece.w / 2)} ${r2(-piece.h / 2)})"/></clipPath>`;
@@ -326,14 +329,14 @@ export function pieceMarkup(piece: Piece, kit: KitDesign, pat: PatternSettings, 
   const wantPattern = kit.patternOn === 'all' || (kit.patternOn === 'body' && r === 'body') || (kit.patternOn === 'sleeves' && r === 'sleeve');
   if (wantPattern) deco.push(`<g opacity="${kit.patternOpacity}"><g transform="translate(${r2(-b)} ${r2(-b)})">${patternPaths(pat, piece.w + 2 * b, piece.h + 2 * b, kit.repeatMm, k)}</g></g>`);
   // Print-studio artwork: the board clipped to this piece (plus bleed).
-  if (kit.art?.length) deco.push(pieceArt(kit.art, boardLayout(kitProduct(kit)), piece.id, { textMode, vars: { name: player?.name ?? 'NAME', number: player?.number ?? '10', size: player?.size ?? 'M', team: kit.teamName }, uid: id }));
+  if (kit.art?.length) deco.push(pieceArt(kit.art, boardLayout(kitProduct(kit)), piece.id, { textMode, vars: { name: player?.name ?? 'NAME', number: player?.number ?? '10', size: player?.size ?? 'M', team: kit.teamName }, uid: id, fixK: lk }));
   if (deco.some(Boolean)) out.push(`<g clip-path="url(#${id})">${deco.join('')}</g>`);
   const personal = kit.personalise !== false && !studio;
   // Print-studio lettering replaces the standard name / number (never both at once).
   const std = stdLettering(kit);
   if (piece.id === 'back' && player && personal) {
-    if (std.name) out.push(textMarkup(player.name.toUpperCase(), glyphs, kit, kit.nameColor, w / 2, kit.nameTopMm + kit.nameMm / 2, kit.nameMm, w * 0.78, k, textMode === 'live'));
-    if (std.number) out.push(textMarkup(player.number, glyphs, kit, kit.numberColor, w / 2, kit.numberTopMm + kit.numberMm / 2, kit.numberMm, w * 0.7, k, textMode === 'live'));
+    if (std.name) out.push(textMarkup(player.name.toUpperCase(), glyphs, kit, kit.nameColor, w / 2, kit.nameTopMm + kit.nameMm / 2, kit.nameMm / lk, w * 0.78, k, textMode === 'live'));
+    if (std.number) out.push(textMarkup(player.number, glyphs, kit, kit.numberColor, w / 2, kit.numberTopMm + kit.numberMm / 2, kit.numberMm / lk, w * 0.7, k, textMode === 'live'));
   }
   if (piece.id === 'front' && !studio) {
     const logo = (href: string, x: number, y: number, bw: number, bh: number) => `<image href="${href}" x="${r2(x)}" y="${r2(y)}" width="${r2(bw)}" height="${r2(bh)}" preserveAspectRatio="xMidYMid meet"/>`;
@@ -341,7 +344,7 @@ export function pieceMarkup(piece: Piece, kit: KitDesign, pat: PatternSettings, 
     if (kit.teamLogo) out.push(logo(kit.teamLogo, L.teamLogo.x, L.teamLogo.y, L.teamLogo.w, L.teamLogo.h));
     if (kit.sponsorLogo) out.push(logo(kit.sponsorLogo, L.sponsor.x, L.sponsor.y, L.sponsor.w, L.sponsor.h));
     if (kit.frontText && kit.frontText.trim()) out.push(textMarkup(kit.frontText.trim(), glyphs, { ...kit, outlineMm: 0 }, kit.frontTextColor || '#FFFFFF', L.frontText.x + L.frontText.w / 2, L.frontText.y + L.frontText.h / 2, L.frontText.h, L.frontText.w, k, textMode === 'live'));
-    if (kit.frontNumber && player && personal && std.number) out.push(textMarkup(player.number, glyphs, kit, kit.numberColor, L.frontNum.x + L.frontNum.w / 2, L.frontNum.y + L.frontNum.h / 2, L.frontNum.h, L.frontNum.w, k, textMode === 'live'));
+    if (kit.frontNumber && player && personal && std.number) out.push(textMarkup(player.number, glyphs, kit, kit.numberColor, L.frontNum.x + L.frontNum.w / 2, L.frontNum.y + L.frontNum.h / 2, L.frontNum.h / lk, L.frontNum.w, k, textMode === 'live'));
   }
   return out.join('');
 }

@@ -78,3 +78,13 @@ test('curved text, groups with clipping masks, double outline, shadow, dashes', 
   const d = renderArt([{ id: 'd', kind: 'rect', w: 10, h: 10, stroke: '#000', strokeW: 1, dash: [3, 2], m: [1, 0, 0, 1, 0, 0] }], [1, 0, 0, 1, 0, 0]);
   assert.match(d, /stroke-dasharray="3 2"/);
 });
+
+test('names and numbers keep their real size on every garment size', async () => {
+  const { renderArt } = await import('../../lib/textile/art.ts');
+  const I = [1, 0, 0, 1, 0, 0];
+  const t = (text) => ({ id: 'x', kind: 'text', text, font: 'Oswald', weight: 700, size: 40, fill: '#fff', m: [1, 0, 0, 1, 100, 50] });
+  const name = renderArt([t('{NAME}')], I, { fixK: 1.25, shaper: null, vars: { name: 'ARUN' } });
+  const plain = renderArt([t('CLUB')], I, { fixK: 1.25, shaper: null });
+  assert.match(name, /matrix\(0\.8 0 0 0\.8 100 50\)/);
+  assert.match(plain, /matrix\(1 0 0 1 100 50\)/);
+});
