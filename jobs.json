@@ -1,191 +1,51 @@
 [
  {
-  "name": "p2-desktop-studio",
+  "name": "p3-sheet",
   "device": "desktop",
   "url": "/textile-designer?garment=jersey",
   "wait": 10000,
   "steps": [
    {
-    "text": "Edit print file",
-    "wait": 6000
-   },
-   {
-    "text": "Layouts",
-    "exact": true,
-    "wait": 1500
-   },
-   {
-    "text": "+ Sash",
+    "js": "(()=>{const b=[...document.querySelectorAll('[role=tab]')].find(x=>x.textContent.includes('Print files')); b&&b.click();})()",
     "wait": 2500
    },
    {
-    "text": "+ Name & number on the back",
-    "wait": 4000
-   },
-   {
-    "text": "Sleeves",
+    "text": "Save fabric",
     "exact": true,
     "wait": 1500
    },
    {
-    "text": "All pieces",
+    "text": "Edit production sheet",
+    "wait": 3000
+   },
+   {
+    "click": "[aria-label^='Piece 3.']",
+    "wait": 800
+   },
+   {
+    "text": "Lock",
     "exact": true,
-    "wait": 2000
+    "wait": 1500
    }
   ]
  },
  {
-  "name": "p2-laptop-studio",
-  "device": "laptop",
-  "url": "/textile-designer?garment=jersey",
-  "wait": 10000,
-  "steps": [
-   {
-    "text": "Edit print file",
-    "wait": 6000
-   },
-   {
-    "text": "Layouts",
-    "exact": true,
-    "wait": 1500
-   },
-   {
-    "text": "+ Sash",
-    "wait": 2500
-   },
-   {
-    "text": "+ Name & number on the back",
-    "wait": 4000
-   },
-   {
-    "text": "Sleeves",
-    "exact": true,
-    "wait": 1500
-   },
-   {
-    "text": "All pieces",
-    "exact": true,
-    "wait": 2000
-   }
-  ]
- },
- {
-  "name": "p2-ipad-studio",
-  "device": "ipad",
-  "url": "/textile-designer?garment=jersey",
-  "wait": 10000,
-  "steps": [
-   {
-    "text": "Edit print file",
-    "wait": 6000
-   },
-   {
-    "text": "Layouts",
-    "exact": true,
-    "wait": 1500
-   },
-   {
-    "text": "+ Sash",
-    "wait": 2500
-   },
-   {
-    "text": "+ Name & number on the back",
-    "wait": 4000
-   },
-   {
-    "text": "Sleeves",
-    "exact": true,
-    "wait": 1500
-   },
-   {
-    "text": "All pieces",
-    "exact": true,
-    "wait": 2000
-   }
-  ]
- },
- {
-  "name": "p2-iphone13-studio",
-  "device": "iPhone 13",
-  "url": "/textile-designer?garment=jersey",
-  "wait": 10000,
-  "steps": [
-   {
-    "text": "Edit print file",
-    "wait": 6000
-   },
-   {
-    "text": "Layouts",
-    "exact": true,
-    "wait": 1500
-   },
-   {
-    "text": "+ Sash",
-    "wait": 2500
-   },
-   {
-    "text": "+ Name & number on the back",
-    "wait": 4000
-   },
-   {
-    "text": "Sleeves",
-    "exact": true,
-    "wait": 1500
-   },
-   {
-    "text": "All pieces",
-    "exact": true,
-    "wait": 2000
-   }
-  ]
- },
- {
-  "name": "p2-desktop-menu",
+  "name": "p3-print",
   "device": "desktop",
   "url": "/textile-designer?garment=jersey",
   "wait": 10000,
   "steps": [
    {
-    "text": "Edit print file",
-    "wait": 6000
-   },
-   {
-    "text": "Layouts",
-    "exact": true,
-    "wait": 1500
-   },
-   {
-    "text": "+ Sash",
+    "js": "(()=>{const b=[...document.querySelectorAll('[role=tab]')].find(x=>x.textContent.includes('Print files')); b&&b.click();})()",
     "wait": 2500
    },
    {
-    "text": "+ Name & number on the back",
-    "wait": 4000
-   },
-   {
-    "text": "Sleeves",
+    "text": "Save fabric",
     "exact": true,
     "wait": 1500
    },
    {
-    "text": "All pieces",
-    "exact": true,
-    "wait": 2000
-   },
-   {
-    "key": "r",
-    "wait": 500
-   },
-   {
-    "tap": [
-     620,
-     420
-    ],
-    "wait": 300
-   },
-   {
-    "text": "Object",
-    "exact": true,
+    "text": "Panel settings \u2014 bleed, seam allowance, safe area",
     "wait": 1500
    }
   ]
