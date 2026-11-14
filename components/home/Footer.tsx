@@ -124,6 +124,7 @@ export function Footer({ theme }: { theme: AppTheme }) {
                 <li><Link href="/about" className={link}>About us</Link></li>
                 <li><Link href="/contact" className={link}>Contact us</Link></li>
                 <li><Link href="/privacy" className={link}>Privacy Policy</Link></li>
+                <li><Link href="/storage" className={link}>On-device storage</Link></li>
                 <li><Link href="/terms" className={link}>Terms of Service</Link></li>
               </ul>
             </nav>

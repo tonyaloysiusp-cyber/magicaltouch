@@ -50,7 +50,7 @@ export function GradientMaker() {
   const png = async () => { setBusy(true); try { save(await svgToPng(gradientSvg(g, S.w, S.h), S.w, S.h), `gradient-${S.w}x${S.h}.png`); } finally { setBusy(false); } };
   const toEditor = async () => {
     const { data } = await supabase.auth.getSession();
-    if (!data.session) { router.push('/login?next=' + encodeURIComponent('/gradient-background-generator')); return; }
+    if (!data.session) { router.push('/login?next=' + encodeURIComponent('/colours#gradients')); return; }
     setBusy(true);
     const blob = await svgToPng(gradientSvg(g, S.w, S.h), S.w, S.h);
     const src: string = await new Promise((res) => { const r = new FileReader(); r.onload = () => res(String(r.result)); r.readAsDataURL(blob); });

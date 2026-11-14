@@ -51,7 +51,7 @@ export class MtdError extends Error {}
 /** Projects made in a dedicated tool rather than the design editor. */
 export type ToolKind = 'jersey' | 'polo' | 'tshirt' | 'pattern' | 'wall';
 export const TOOL_KINDS: ToolKind[] = ['jersey', 'polo', 'tshirt', 'pattern', 'wall'];
-export const TOOL_PATHS: Record<ToolKind, string> = { jersey: '/custom-jersey-designer', polo: '/polo-shirt-designer', tshirt: '/custom-t-shirt-designer', pattern: '/patterns', wall: '/wall-designer' };
+export const TOOL_PATHS: Record<ToolKind, string> = { jersey: '/textile-designer', polo: '/textile-designer', tshirt: '/textile-designer', pattern: '/patterns', wall: '/wallpaper-designer' };
 export interface MtdTool { kind: ToolKind; version: number; data: any }
 export const isToolKind = (v: unknown): v is ToolKind => typeof v === 'string' && (TOOL_KINDS as string[]).includes(v);
 /** Where an opened project belongs (tool projects open in their tool). */

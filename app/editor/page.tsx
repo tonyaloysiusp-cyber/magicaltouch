@@ -5339,14 +5339,17 @@ function EditorContent() {
     }
     // A design that has never been saved anywhere: the customer decides
     // where it lives before anything is stored. Autosave waits for that.
-    if (!idToUse && !opts?.skipChooser) {
-      if (silent) {
-        setSaveStatus('unsaved');
-      } else {
-        setSaveChooser({ mode: 'first', busy: null, error: null });
-      }
+    // Customer designs are kept on the customer's own device only (owner's
+    // rule: no copies on the website's storage or any cloud). A new design —
+    // or one saved to the account by an earlier version — is saved as a
+    // Magical Touch file on this device; autosave keeps the on-device
+    // recovery draft meanwhile.
+    if (DEVICE_ONLY_SAVES) {
+      if (silent) { setSaveStatus('unsaved'); return; }
+      await saveOnDevice();
       return;
     }
+    if (!idToUse && !opts?.skipChooser) return;
     // setSaving before the (possibly ~2s) auto-apply wait below so the
     // button reads "Saving..." the whole time instead of looking stuck.
     setSaving(true);
@@ -5570,10 +5573,7 @@ function EditorContent() {
     onSave: async () => {
       if (templateEditRef.current) return saveToTemplateRef.current();
       if (certEditRef.current) return saveCertificateDesignRef.current();
-      if (!designIdRef.current && !isLocalTabId(activeTabIdRef.current)) {
-        setSaveChooser({ mode: 'first', busy: null, error: null });
-        return false;
-      }
+      if (!isLocalTabId(activeTabIdRef.current)) { await saveOnDevice(); return !dirtyRef.current; }
       await saveDesign();
       return !dirtyRef.current;
     },
@@ -5717,6 +5717,11 @@ function EditorContent() {
   // only writes when the browser already has permission to write to the
   // same file (Chrome/Edge); otherwise the tab simply stays "unsaved"
   // until the customer saves -- it never falls back to the server.
+  // Save to the customer's device (File System Access where the browser allows, otherwise a download).
+  const saveOnDevice = async () => {
+    if (!isLocalTabId(activeTabIdRef.current)) reassignActiveTab(newLocalKey());
+    return saveToComputer({ saveAs: true });
+  };
   const saveToComputer = async (opts: { silent?: boolean; saveAs?: boolean } = {}) => {
     const tabId = activeTabIdRef.current;
     const stored = localFilesRef.current.get(tabId);
@@ -6049,9 +6054,9 @@ function EditorContent() {
     });
 
   const saveDesignAs = () => {
-    // "Save As" always asks where the copy should live (spec step 12:
-    // a Drive project can become a local file, and vice versa).
-    setSaveChooser({ mode: 'saveAs', busy: null, error: null });
+    // "Save As" writes a new Magical Touch file on this device.
+    if (!isLocalTabId(activeTabIdRef.current)) reassignActiveTab(newLocalKey());
+    saveToComputer({ saveAs: true });
   };
 
   // Freezes the tab currently on screen into tabSnapshotsRef so it can be
@@ -6197,10 +6202,10 @@ function EditorContent() {
 
   const handleCloseConfirmSave = () => {
     if (!closeConfirm) return;
-    if (!designIdRef.current && !isLocalTabId(activeTabIdRef.current)) {
-      // Never saved yet: ask where to keep it; the tab stays open.
+    if (!isLocalTabId(activeTabIdRef.current)) {
+      // Not on this device yet: save it here first; the tab stays open.
       setCloseConfirm(null);
-      setSaveChooser({ mode: 'first', busy: null, error: null });
+      saveOnDevice();
       return;
     }
     const id = closeConfirm.id;
@@ -8470,6 +8475,9 @@ function EditorContent() {
     </>
   );
 }
+
+// Owner's rule: customer designs are saved only on their own device.
+const DEVICE_ONLY_SAVES: boolean = true;
 
 export default function EditorPage() {
   return (

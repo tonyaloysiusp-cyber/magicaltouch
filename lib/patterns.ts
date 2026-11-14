@@ -300,3 +300,15 @@ export function expandedSvg(p: PatternSettings, width: number, height: number, o
 }
 
 export const svgDataUrl = (svg: string) => `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+
+/**
+ * One motif as SVG markup at a placement (tile units). Shape and letter
+ * motifs are paths; an image motif (e.g. a rangoli saved from Pattern
+ * Design) is placed as an image in the motif's −50…50 box. Used by the
+ * textile and wallpaper tools so every motif type works there too.
+ */
+export function placedMotif(p: PatternSettings, d: string, q: { x: number; y: number; angle: number; sx: number; sy: number; color: string }, outer = ''): string {
+  const t = `${outer}translate(${q.x} ${q.y}) rotate(${q.angle}) scale(${q.sx} ${q.sy})`;
+  if (p.motif === 'image' && p.image) return `<image href="${p.image}" x="-50" y="-50" width="100" height="100" preserveAspectRatio="xMidYMid meet" transform="${t}"/>`;
+  return `<path d="${d}" fill="${q.color}" fill-rule="evenodd" transform="${t}"/>`;
+}

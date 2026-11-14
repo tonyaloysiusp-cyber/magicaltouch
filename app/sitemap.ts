@@ -14,7 +14,7 @@ const PAGES_UPDATED = new Date('2026-11-13T00:00:00Z');
 const LEGAL_UPDATED = new Date('2026-06-01T00:00:00Z');
 
 // Standalone tools (one strong landing page each).
-const TOOL_PAGES = ['custom-jersey-designer', 'polo-shirt-designer', 'custom-t-shirt-designer', 'wall-designer', 'remove-background', 'trace', 'patterns', 'colours', 'passport-photo-maker', 'rangoli-mandala-maker', 'gradient-background-generator', 'print-size-calculator', 'print-layout', 'photo-studio'];
+const TOOL_PAGES = ['create', 'photo-studio', 'trace', 'patterns', 'textile-designer', 'wallpaper-designer', 'print-size-calculator', 'print-layout', 'remove-background', 'passport-photo-maker', 'colours'];
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();

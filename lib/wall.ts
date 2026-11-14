@@ -3,7 +3,7 @@
 // pattern and optional lettering, split into numbered print strips for the
 // chosen roll width with overlap and alignment marks.
 
-import { sheetPlacements, motifPath, layout } from './patterns.ts';
+import { sheetPlacements, motifPath, layout, placedMotif } from './patterns.ts';
 import type { PatternSettings } from './patterns.ts';
 import { pathBox } from './pathFit.ts';
 
@@ -14,10 +14,10 @@ const SVG = (w: number, h: number, body: string) => `<svg xmlns="http://www.w3.o
 /** Every motif of the pattern over a w × h mm area, as paths. */
 export function patternArea(p: PatternSettings, w: number, h: number, repeatMm: number): string {
   const d = motifPath(p);
-  if (!d) return '';
+  if (!d && !(p.motif === 'image' && p.image)) return '';
   const s = repeatMm / layout(p).w;
   return sheetPlacements(p, w / s, h / s)
-    .map((q) => `<path d="${d}" fill="${q.color}" fill-rule="evenodd" transform="scale(${r2(s * 10000) / 10000}) translate(${q.x} ${q.y}) rotate(${q.angle}) scale(${q.sx} ${q.sy})"/>`)
+    .map((q) => placedMotif(p, d, q, `scale(${r2(s * 10000) / 10000}) `))
     .join('');
 }
 

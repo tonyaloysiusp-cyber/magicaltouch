@@ -52,14 +52,15 @@ export async function openToolFile(file: File): Promise<ToolProject> {
 }
 
 /** A project handed over by the Dashboard / Open page (?localDoc=…), for this tool. */
-export function takeToolHandoff(kind: ToolKind): ToolProject | null {
+export function takeToolHandoff(kind: ToolKind | ToolKind[]): ToolProject | null {
+  const kinds = Array.isArray(kind) ? kind : [kind];
   try {
     const key = new URLSearchParams(window.location.search).get('localDoc');
     if (!key) return null;
     const h = takeHandoff(key);
-    if (!h?.opened?.tool || h.opened.tool.kind !== kind) return null;
+    if (!h?.opened?.tool || !kinds.includes(h.opened.tool.kind)) return null;
     const u = new URL(window.location.href); u.searchParams.delete('localDoc'); window.history.replaceState(null, '', u.toString());
-    return { kind, name: h.opened.document.name, data: h.opened.tool.data, fileName: (h.file as any)?.fileName, handle: (h.file as any)?.handle || null };
+    return { kind: h.opened.tool.kind, name: h.opened.document.name, data: h.opened.tool.data, fileName: (h.file as any)?.fileName, handle: (h.file as any)?.handle || null };
   } catch { return null; }
 }
 

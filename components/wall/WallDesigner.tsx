@@ -7,12 +7,13 @@
 //  • Wall pattern: wallpaper or a wall sticker of any size filled with a
 //    pattern and optional lettering, split into numbered print strips.
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { Download, ExternalLink, Loader2, RectangleVertical, RectangleHorizontal } from 'lucide-react';
 import { DEFAULT_PATTERN, PALETTES, PatternSettings, svgDataUrl } from '@/lib/patterns';
 import { DEFAULT_WALL, POSTER_SIZES, WALL_ROLLS, WallJob, posterEditorUrl, wallStrips, wallSvg, rollEstimate, type RoomWall, type RollSpec } from '@/lib/wall';
 import { textOutline } from '@/lib/patternText';
+import { listAssets, migrateLegacyPatterns, onAssetsChanged } from '@/lib/assets/library';
 
 function save(blob: Blob, name: string) {
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name;
@@ -41,7 +42,7 @@ function wallMockup(wMm: number, hMm: number): string {
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}"><rect width="${W}" height="${floor}" fill="#EEE8DE"/><rect y="${floor}" width="${W}" height="${H - floor}" fill="#C8B8A2"/>${person}${sofa}${plant}<rect x="${px + 14}" y="${py + 18}" width="${wMm}" height="${hMm}" fill="#000" opacity="0.12"/><rect x="${px}" y="${py}" width="${wMm}" height="${hMm}" fill="#fff" stroke="#1F2937" stroke-width="16"/><rect x="${px + 40}" y="${py + 40}" width="${wMm - 80}" height="${hMm - 80}" fill="#3B82C4" opacity="0.10"/><text x="${W / 2}" y="${py + hMm / 2}" text-anchor="middle" dominant-baseline="central" font-size="${Math.max(40, Math.min(110, wMm / 7))}" fill="#3B82C4" font-family="Arial" font-weight="700">${Math.round(wMm)} × ${Math.round(hMm)} mm</text></svg>`;
 }
 
-export function WallDesigner({ initial = 'poster' }: { initial?: 'poster' | 'pattern' }) {
+export function WallDesigner({ initial = 'poster', wallpaperOnly = false }: { initial?: 'poster' | 'pattern'; wallpaperOnly?: boolean }) {
   const [mode, setMode] = useState<'poster' | 'pattern'>(initial);
   useEffect(() => { try { const t = new URLSearchParams(window.location.search).get('type'); if (t === 'pattern' || t === 'poster') setMode(t); } catch { /* ignore */ } }, []);
   const pick = (m: 'poster' | 'pattern') => { setMode(m); try { const u = new URL(window.location.href); u.searchParams.set('type', m); window.history.replaceState(null, '', u.toString()); } catch { /* ignore */ } };
@@ -72,13 +73,44 @@ export function WallDesigner({ initial = 'poster' }: { initial?: 'poster' | 'pat
   const editWall = (i: number, o: Partial<RoomWall>) => setRoom((r) => r.map((w, k) => (k === i ? { ...w, ...o } : w)));
   const [busy, setBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
-  const sw = (o: Partial<WallJob>) => setWall((w) => ({ ...w, ...o }));
+  // Returning to the tool restores where you left off (kept on this device only).
+  const restored = useRef(false);
   useEffect(() => {
-    const list: { name: string; p: PatternSettings }[] = [];
-    const d = load<any>('mt:pattern-draft', null);
-    if (d?.motif && d.motif !== 'image') list.push({ name: 'Latest from Pattern Studio', p: { ...DEFAULT_PATTERN, ...d } });
-    for (const s of load<any[]>('mt:patterns', [])) if (s?.p?.motif && s.p.motif !== 'image') list.push({ name: s.name || 'My pattern', p: { ...DEFAULT_PATTERN, ...s.p } });
-    setMine(list.slice(0, 8));
+    try {
+      const v = JSON.parse(localStorage.getItem('mt:wall') || 'null');
+      if (v?.wall) setWall({ ...DEFAULT_WALL, ...v.wall });
+      if (v?.pat) { setPat({ ...DEFAULT_PATTERN, ...v.pat }); setPatName(v.patName || 'Pattern'); }
+      if (v?.unit) setUnit(v.unit);
+      if (Array.isArray(v?.room) && v.room.length) setRoom(v.room);
+      if (v?.roll) setRoll((r) => ({ ...r, ...v.roll }));
+    } catch { /* nothing saved */ }
+    restored.current = true;
+  }, []);
+  useEffect(() => {
+    if (!restored.current) return;
+    const snap = { wall, pat, patName, unit, room, roll };
+    try { localStorage.setItem('mt:wall', JSON.stringify(snap)); } catch { try { localStorage.setItem('mt:wall', JSON.stringify({ ...snap, pat: { ...pat, image: undefined } })); } catch { /* full */ } }
+  }, [wall, pat, patName, unit, room, roll]);
+  const sw = (o: Partial<WallJob>) => setWall((w) => ({ ...w, ...o }));
+  // My patterns from the shared on-device library (the same assets Pattern Design and the Textile Designer use).
+  useEffect(() => {
+    let live = true;
+    const loadLib = async () => {
+      const list: { name: string; p: PatternSettings; id?: string }[] = [];
+      const d = load<any>('mt:pattern-draft', null);
+      if (d?.motif && d.motif !== 'image') list.push({ name: 'Latest from Pattern Studio', p: { ...DEFAULT_PATTERN, ...d } });
+      try { await migrateLegacyPatterns(); for (const a of await listAssets('pattern')) list.push({ id: a.id, name: a.name, p: { ...DEFAULT_PATTERN, ...a.data } }); } catch { /* no on-device storage */ }
+      if (!live) return;
+      setMine(list);
+      try {
+        const want = new URLSearchParams(window.location.search).get('pattern');
+        const hit = want && list.find((x) => x.id === want);
+        if (hit) { setPat(hit.p); setPatName(hit.name); const u = new URL(window.location.href); u.searchParams.delete('pattern'); window.history.replaceState(null, '', u.toString()); }
+      } catch { /* ignore */ }
+    };
+    loadLib();
+    const off = onAssetsChanged(loadLib);
+    return () => { live = false; off(); };
   }, []);
   useEffect(() => { sw({ background: pat.background }); }, [pat.background]);
   useEffect(() => {
@@ -90,6 +122,32 @@ export function WallDesigner({ initial = 'poster' }: { initial?: 'poster' | 'pat
   const preview = useMemo(() => (mode === 'pattern' ? wallSvg(wall, pat, glyph) : ''), [mode, wall, pat, glyph]);
   const strips = useMemo(() => (mode === 'pattern' ? wallStrips(wall, pat, glyph) : []), [mode, wall, pat, glyph]);
   const flash = (m: string) => { setMsg(m); setTimeout(() => setMsg(null), 6000); };
+  const panelsZip = async () => {
+    setBusy('zip');
+    try {
+      const [{ buildZip }, { svgToPdfBlob }] = await Promise.all([import('@/lib/editor/zip'), import('@/lib/svgToPdf')]);
+      const enc = new TextEncoder(); const parts: { name: string; data: Uint8Array }[] = [];
+      for (let i = 0; i < strips.length; i++) {
+        const st = strips[i]; const n = String(i + 1).padStart(2, '0');
+        parts.push({ name: `SVG/strip-${n}.svg`, data: enc.encode(st.svg) });
+        parts.push({ name: `PDF/strip-${n}.pdf`, data: new Uint8Array(await (await svgToPdfBlob(st.svg, st.widthMm, st.heightMm)).arrayBuffer()) });
+      }
+      save(buildZip(parts), `wall-${wall.widthMm}x${wall.heightMm}-${strips.length}-panels.zip`);
+    } catch { flash('The panels could not be made in this browser.'); }
+    setBusy(null);
+  };
+  const png = async () => {
+    setBusy('png');
+    try {
+      const img = new Image(); img.src = svgDataUrl(preview); await img.decode();
+      const k = 4000 / Math.max(img.naturalWidth, img.naturalHeight);
+      const c = document.createElement('canvas'); c.width = Math.round(img.naturalWidth * k); c.height = Math.round(img.naturalHeight * k);
+      c.getContext('2d')!.drawImage(img, 0, 0, c.width, c.height);
+      const b: Blob = await new Promise((r) => c.toBlob((x) => r(x!), 'image/png'));
+      save(b, `wall-${wall.widthMm}x${wall.heightMm}-preview.png`);
+    } catch { flash('The PNG could not be made.'); }
+    setBusy(null);
+  };
   const pdf = async () => {
     setBusy('pdf');
     try { const { svgToPdfBlob } = await import('@/lib/svgToPdf'); save(await svgToPdfBlob('', 0, 0, strips.map((s) => ({ svg: s.svg, widthMm: s.widthMm, heightMm: s.heightMm }))), `wall-pattern-${wall.widthMm}x${wall.heightMm}-${strips.length}-strips.pdf`); }
@@ -105,9 +163,9 @@ export function WallDesigner({ initial = 'poster' }: { initial?: 'poster' | 'pat
 
   return (
     <div className="space-y-5">
-      <div role="tablist" aria-label="Wall design type" className="flex w-fit gap-1 rounded-2xl border border-mt-border bg-mt-surface p-1">
+      {!wallpaperOnly && <div role="tablist" aria-label="Wall design type" className="flex w-fit gap-1 rounded-2xl border border-mt-border bg-mt-surface p-1">
         {(['poster', 'pattern'] as const).map((m) => <button key={m} type="button" role="tab" aria-selected={mode === m} onClick={() => pick(m)} className={`h-10 px-5 rounded-xl text-[14px] font-semibold ${mode === m ? 'bg-mt-primary text-mt-onprimary' : 'text-mt-muted hover:text-mt-ink'}`}>{m === 'poster' ? 'Wall poster' : 'Wall pattern & wallpaper'}</button>)}
-      </div>
+      </div>}
 
       {mode === 'poster' ? (
         <div className="grid gap-5 lg:grid-cols-[360px_minmax(0,1fr)] lg:items-start">
@@ -186,7 +244,18 @@ export function WallDesigner({ initial = 'poster' }: { initial?: 'poster' | 'pat
             <div className="flex flex-wrap gap-2">
               <button type="button" disabled={!!busy} onClick={pdf} className={primary}>{busy ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />} Print strips · vector PDF</button>
               <button type="button" onClick={() => save(new Blob([preview], { type: 'image/svg+xml' }), `wall-${wall.widthMm}x${wall.heightMm}.svg`)} className={btn}><Download size={14} /> Whole wall · SVG</button>
+              <button type="button" disabled={!!busy} onClick={panelsZip} className={btn}><Download size={14} /> Numbered panels · ZIP</button>
+              <button type="button" disabled={!!busy} onClick={png} className={btn}><Download size={14} /> Preview · PNG</button>
             </div>
+            {/* Installation sequence */}
+            <section aria-label="Installation sequence" className="rounded-2xl border border-mt-border bg-mt-surface p-4">
+              <h3 className="text-[14px] font-semibold">Installation sequence</h3>
+              <ol className="mt-2 list-decimal pl-5 space-y-1 text-[13px] text-mt-muted">
+                <li>Mark a vertical (plumb) line {Math.round(Math.max(50, wall.rollMm - wall.overlapMm))} mm from the left corner — strip 1 hangs against it.</li>
+                {strips.map((st, i) => <li key={i}>Strip {i + 1}: {Math.round(st.widthMm)} × {Math.round(st.heightMm)} mm (wall position {Math.round(st.x)}–{Math.round(Math.min(wall.widthMm, st.x + st.widthMm))} mm){i > 0 ? `, overlapping strip ${i} by ${wall.overlapMm} mm — line up the alignment marks` : ''}.</li>)}
+                <li>Trim the top and bottom at the ceiling and skirting; the number under each strip is cut off with the trim.</li>
+              </ol>
+            </section>
             {msg && <p role="status" className="text-[13px] font-medium">{msg}</p>}
 
             {/* Room & rolls calculator */}

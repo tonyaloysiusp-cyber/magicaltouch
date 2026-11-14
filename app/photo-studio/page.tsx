@@ -4,7 +4,7 @@ import { ThemeSwitch } from '@/components/ThemeSwitch';
 import { useRef, useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Upload, FileImage, Save, ChevronDown, HardDrive, Cloud, Loader2 } from 'lucide-react';
+import { ArrowLeft, Upload, FileImage, Save, ChevronDown, HardDrive, Loader2 } from 'lucide-react';
 import { supabase, getSessionUser } from '@/lib/supabase';
 import { MAX_DESIGNS, getDesignCount } from '@/lib/profile';
 import { DocUnit } from '@/lib/editor/types';
@@ -305,7 +305,9 @@ function PhotoStudioContent() {
     }
   };
 
-  const handleSave = async (): Promise<boolean> => {
+  // Owner's rule: projects are saved on the customer's own device only.
+  const handleSave = async (): Promise<boolean> => { await saveToComputer(); return true; };
+  const handleSaveAccount = async (): Promise<boolean> => {
     setSaving(true);
     setSaveStatus('idle');
     try {
@@ -563,10 +565,6 @@ function PhotoStudioContent() {
                       <button onClick={() => { setSaveMenu(false); saveToComputer(); }} className="w-full text-left rounded-xl px-3 py-2.5 hover:bg-mt-surface2 flex gap-3">
                         <HardDrive size={17} className="mt-0.5 shrink-0" />
                         <span><span className="block text-[13px] font-semibold">This device</span><span className="block text-[11px] text-mt-muted">A .mtd project file you keep. Nothing is uploaded.</span></span>
-                      </button>
-                      <button onClick={() => { setSaveMenu(false); handleSave(); }} className="w-full text-left rounded-xl px-3 py-2.5 hover:bg-mt-surface2 flex gap-3">
-                        <Cloud size={17} className="mt-0.5 shrink-0" />
-                        <span><span className="block text-[13px] font-semibold">My Magical Touch account</span><span className="block text-[11px] text-mt-muted">Open it from any device. The photo lives only inside this design file.</span></span>
                       </button>
                     </div>
                   )}

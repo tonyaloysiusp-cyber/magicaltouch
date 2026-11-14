@@ -10,6 +10,8 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { putAsset } from '@/lib/assets/library';
+import { DEFAULT_PATTERN, type PatternSettings } from '@/lib/patterns';
 import { ArrowDown, ArrowUp, Copy, Download, Eraser, Eye, EyeOff, MousePointer2, Paintbrush, Redo2, RotateCw, Shuffle, Trash2, Undo2, Wand2, ZoomIn, ZoomOut } from 'lucide-react';
 import { KINDS, MKind, MANDALA_PALETTES, MLayer, Mandala, Pt, RANGOLI_COLOURS, layerLabel, layerSvg, mandalaSvg, preset, recolour, surprise, withSymmetry } from '@/lib/mandala';
 import { PATTERN_MOTIFS } from '@/lib/patternMotifs';
@@ -94,7 +96,7 @@ export function MandalaMaker() {
 
   const toEditor = async () => {
     const { data } = await supabase.auth.getSession();
-    if (!data.session) { router.push('/login?next=' + encodeURIComponent('/rangoli-mandala-maker')); return; }
+    if (!data.session) { router.push('/login?next=' + encodeURIComponent('/patterns?mode=rangoli')); return; }
     setBusy('editor');
     const size = 1080;
     const mod: any = await import('fabric');
@@ -120,6 +122,19 @@ export function MandalaMaker() {
   const pill = (on: boolean) => `h-9 px-3 rounded-full border text-[13px] font-semibold ${on ? 'border-mt-ink bg-mt-ink text-mt-bg' : 'border-mt-border hover:border-mt-ink/40'}`;
   const slider = (label: string, v: number, min: number, max: number, on: (n: number) => void, step = 1) => <label className="block"><span className="flex justify-between text-[12px] text-mt-muted"><span>{label}</span><span className="text-mt-ink tabular-nums">{v}</span></span><input type="range" min={min} max={max} step={step} value={v} onChange={(e) => on(Number(e.target.value))} className="mt-1 w-full accent-[#3B82C4]" /></label>;
 
+  // Save this rangoli to the shared on-device library as a repeat pattern
+  // (half-drop, the rangoli as the motif), so the Textile and Wallpaper
+  // designers can use the exact same design.
+  const [libMsg, setLibMsg] = useState<string | null>(null);
+  const saveToLibrary = async () => {
+    try {
+      const art = mandalaSvg({ ...m, background: 'transparent' } as any, { size: 600 });
+      const image = `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(art)))}`;
+      const p = { ...DEFAULT_PATTERN, motif: 'image', image, repeat: 'half-drop', scale: 0.9, background: m.background, colors: [m.layers[0]?.color || '#C2185B'] } as PatternSettings;
+      const a = await putAsset({ kind: 'pattern', name: `${KINDS.find((k) => k.id === kind)?.label || 'Rangoli'} pattern`, data: p, thumb: `data:image/svg+xml;charset=utf-8,${encodeURIComponent(mandalaSvg(m, { size: 200 }))}`, source: 'rangoli' });
+      setLibMsg(`Saved “${a.name}” to My patterns.`);
+    } catch (e: any) { setLibMsg(e?.message || 'Could not save on this device.'); }
+  };
   const panel = 'rounded-3xl border border-mt-border bg-mt-surface p-4 space-y-4';
   const H = ({ children }: { children: React.ReactNode }) => <h3 className="text-[11.5px] font-semibold uppercase tracking-[0.12em] text-mt-muted">{children}</h3>;
   const icon = 'h-9 w-9 grid place-items-center rounded-full hover:bg-mt-surface2 disabled:opacity-40';
@@ -221,6 +236,12 @@ export function MandalaMaker() {
               <button type="button" onClick={async () => save(await svgToImage(mandalaSvg(m), 2400, 'image/jpeg', m.background), 'rangoli.jpg')} className={`${chip} justify-center`}><Download size={13} /> JPEG</button>
             </div>
             <label className="flex items-center gap-2 text-[12.5px]"><input type="checkbox" checked={transparent} onChange={(e) => setTransparent(e.target.checked)} className="h-4 w-4 accent-[#3B82C4]" /> Transparent background</label>
+          </section>
+          <section className="space-y-2">
+            <H>Use it elsewhere</H>
+            <button type="button" onClick={saveToLibrary} className={`${chip} w-full justify-center`}>Save to My patterns</button>
+            <p className="text-[11.5px] text-mt-muted">Saved as a repeat pattern (this rangoli as the motif) — it appears in the Textile and Wallpaper designers. Stays on this device.</p>
+            {libMsg && <p role="status" className="text-[12px] font-medium">{libMsg}</p>}
           </section>
           <section className="space-y-2">
             <H>Layers</H>

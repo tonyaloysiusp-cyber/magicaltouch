@@ -82,3 +82,12 @@ test('one print file for the whole roster: every piece, grouped by player, split
   for (const g of ['sash', 'hoops', 'stripes', 'pinstripes', 'side-panels', 'chevron', 'yoke', 'split', 'band']) assert.ok(graphicMarkup({ ...DEFAULT_KIT, graphic: g }, 560, 740, 10, false).length > 20, g);
   assert.match(kitMockupSvg({ ...DEFAULT_KIT, graphic: 'sash' }, pat, roster[0], glyphs), /FRONT[\s\S]*BACK/);
 });
+
+test('V-neck front and garmentOf', async () => {
+  const { kitProduct, garmentOf } = await import('../../lib/teamKit.ts');
+  const v = kitProduct({ ...DEFAULT_KIT, neck: 'v' }).pieces.find((p) => p.id === 'front');
+  assert.match(v.d, /^M190 0L280 175L370 0L/);
+  const r = kitProduct(DEFAULT_KIT).pieces.find((p) => p.id === 'front');
+  assert.match(r.d, /^M190 0C/);
+  assert.equal(garmentOf('polo'), 'polo'); assert.equal(garmentOf('basketball'), 'jersey');
+});

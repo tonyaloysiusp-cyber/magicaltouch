@@ -14,11 +14,12 @@ import { AlertTriangle, CheckCircle2, Download, FileArchive, FileUp, FolderOpen,
 import { DEFAULT_PATTERN, PatternSettings, svgDataUrl, sheetPlacements, motifPath, layout } from '@/lib/patterns';
 import { SIZES, ROLLS } from '@/lib/garments';
 import {
-  GARMENT_STYLES, GarmentKind, Glyphs, KIT_GRAPHICS, KIT_STYLES, KitDesign, KitGraphic, Player, checkRoster, glyphTexts, kitFor,
+  garmentOf, GARMENT_STYLES, GarmentKind, Glyphs, KIT_GRAPHICS, KIT_STYLES, KitDesign, KitGraphic, Player, checkRoster, glyphTexts, kitFor,
   kitMockupSvg, kitPreviewSvg, parseRoster, playerPrintSvg, printList, rosterSheets, safeFile, sizeId, frontLayout, kitProduct,
 } from '@/lib/teamKit';
 import { openToolFile, saveToolProject, takeToolHandoff, TOOL_FILE_ACCEPT } from '@/lib/mtd/toolProject';
 import { LeaveGuard } from './LeaveGuard';
+import { listAssets, migrateLegacyPatterns, onAssetsChanged } from '@/lib/assets/library';
 import { PATTERN_FONTS, textOutline } from '@/lib/patternText';
 import { supabase } from '@/lib/supabase';
 import { putHandoff, newLocalKey, editorUrlForLocal } from '@/lib/mtd/handoff';
@@ -86,17 +87,27 @@ const DEFAULT_KIT_POS = { nameTopMm: 95, numberTopMm: 175 };
 const load = <T,>(k: string, d: T): T => { try { const v = localStorage.getItem(k); return v ? (JSON.parse(v) as T) : d; } catch { return d; } };
 const sizeLabel = (s: string) => (SIZES.find((x) => x.id === sizeId(s))?.label || s).replace(/ .*/, '');
 
-export function GarmentDesigner({ kind }: { kind: GarmentKind }) {
-  const copy = COPY[kind];
-  const KEY = `mt:garment:${kind}`;
+// One Textile Designer for jerseys, polo T-shirts and T-shirts. The garment
+// type is just a setting: switching it keeps every colour, pattern, logo,
+// text, player, size and quantity.
+const TEXTILE_KEY = 'mt:textile';
+const TEXTILE_KINDS: GarmentKind[] = ['jersey', 'polo', 'tshirt'];
+export function GarmentDesigner({ kind: initialKind = 'jersey' }: { kind?: GarmentKind }) {
+  const KEY = TEXTILE_KEY;
   const router = useRouter();
   const [step, setStep] = useState<Step>('design');
-  const [kit, setKit] = useState<KitDesign>(() => kitFor(kind));
-  const [players, setPlayers] = useState<Player[]>(copy.sample);
+  const [kit, setKit] = useState<KitDesign>(() => kitFor(initialKind));
+  const kind = garmentOf(kit.style);
+  const copy = COPY[kind];
+  const [players, setPlayers] = useState<Player[]>(COPY[initialKind].sample);
   const [pat, setPat] = useState<PatternSettings>({ ...DEFAULT_PATTERN, ...PATTERNS[0].p });
   const [patColor, setPatColor] = useState('#FFFFFF');
   const [patName, setPatName] = useState(PATTERNS[0].name);
-  const [mine, setMine] = useState<{ name: string; p: PatternSettings }[]>([]);
+  const [mine, setMine] = useState<{ id?: string; name: string; p: PatternSettings; at?: string }[]>([]);
+  // The chosen My-patterns asset (stable id) and whether its own colours are used.
+  const [patAssetId, setPatAssetId] = useState<string | null>(null);
+  const [patAssetAt, setPatAssetAt] = useState<string | null>(null);
+  const [patOwn, setPatOwn] = useState(false);
   const [sel, setSel] = useState(0);
   const [view, setView] = useState<'garment' | 'flat'>('garment');
   const [side, setSide] = useState<'both' | 'front' | 'back'>('both');
@@ -127,17 +138,16 @@ export function GarmentDesigner({ kind }: { kind: GarmentKind }) {
 
   // Restore this designer's last work, and the patterns saved in Pattern Studio.
   useEffect(() => {
-    const v = load<any>(KEY, null);
-    if (v?.kit) { setKit({ ...kitFor(kind), ...v.kit, style: GARMENT_STYLES[kind].includes(v.kit.style) ? v.kit.style : kitFor(kind).style }); if (Array.isArray(v.players) && v.players.length) setPlayers(v.players); }
+    // ?garment=polo|tshirt|jersey picks the garment; your last design is kept.
+    const want = new URLSearchParams(window.location.search).get('garment') as GarmentKind | null;
+    const v = load<any>(KEY, null) || load<any>(`mt:garment:${want || initialKind}`, null);
+    if (v?.kit) { setKit({ ...kitFor(garmentOf(v.kit.style || 'football')), ...v.kit }); if (Array.isArray(v.players) && v.players.length) setPlayers(v.players); }
     if (v?.pat) { setPat({ ...DEFAULT_PATTERN, ...v.pat }); setPatColor(v.patColor || '#FFFFFF'); setPatName(v.patName || 'Pattern'); }
     if (v?.projectId) setProjectId(v.projectId);
-    const list: { name: string; p: PatternSettings }[] = [];
-    const draft = load<any>('mt:pattern-draft', null);
-    if (draft?.motif && draft.motif !== 'image') list.push({ name: 'Latest from Pattern Studio', p: { ...DEFAULT_PATTERN, ...draft } });
-    for (const s of load<any[]>('mt:patterns', [])) if (s?.p?.motif && s.p.motif !== 'image') list.push({ name: s.name || 'My pattern', p: { ...DEFAULT_PATTERN, ...s.p } });
-    setMine(list.slice(0, 12));
+    if (v?.patAssetId) { setPatAssetId(v.patAssetId); setPatAssetAt(v.patAssetAt || null); setPatOwn(!!v.patOwn); }
     // A project opened from the Dashboard / Open page.
-    const handed = takeToolHandoff(kind);
+    if (want && TEXTILE_KINDS.includes(want) && (!v?.kit || garmentOf(v.kit.style) !== want)) { setKit((k) => ({ ...k, style: GARMENT_STYLES[want][0], ...(v?.kit ? {} : kitFor(want)) })); if (!v?.kit) setPlayers(COPY[want].sample); }
+    const handed = takeToolHandoff(TEXTILE_KINDS);
     if (handed) { apply(handed.data, null); fileHandle.current = handed.handle || null; }
     // Colours sent from the Colour Explorer (?colors=hex,hex,…).
     try {
@@ -151,31 +161,56 @@ export function GarmentDesigner({ kind }: { kind: GarmentKind }) {
     settle();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+  // My patterns from the shared on-device library (same assets as Pattern Design and the Wallpaper Designer).
+  useEffect(() => {
+    let live = true;
+    const loadLib = async () => {
+      const list: { id?: string; name: string; p: PatternSettings; at?: string }[] = [];
+      const draft = load<any>('mt:pattern-draft', null);
+      if (draft?.motif && draft.motif !== 'image') list.push({ name: 'Latest from Pattern Studio', p: { ...DEFAULT_PATTERN, ...draft } });
+      try { await migrateLegacyPatterns(); for (const a of await listAssets('pattern')) list.push({ id: a.id, name: a.name, p: { ...DEFAULT_PATTERN, ...a.data }, at: a.updatedAt }); } catch { /* no on-device storage */ }
+      if (live) setMine(list);
+      // ?pattern=<id> (from Pattern Design): apply that exact pattern.
+      try {
+        const want = new URLSearchParams(window.location.search).get('pattern');
+        const hit = want && list.find((x) => x.id === want);
+        if (hit && live) { setPat(hit.p); setPatName(hit.name); setPatAssetId(hit.id!); setPatAssetAt(hit.at || null); setPatOwn(true); setKit((k) => (k.patternOn === 'none' ? { ...k, patternOn: 'body' } : k)); const u = new URL(window.location.href); u.searchParams.delete('pattern'); window.history.replaceState(null, '', u.toString()); }
+      } catch { /* ignore */ }
+    };
+    loadLib();
+    const off = onAssetsChanged(loadLib);
+    return () => { live = false; off(); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const linked = patAssetId ? mine.find((x) => x.id === patAssetId) : undefined;
+  const linkedNewer = !!(linked && linked.at && patAssetAt && linked.at > patAssetAt);
+
   // Work in progress is kept automatically (with logos when there is room).
-  const snapshot = () => ({ kit, players, pat: { ...pat, image: undefined }, patColor, patName, projectId });
+  const snapshot = () => ({ kit, players, pat: { ...pat, image: undefined }, patColor, patName, projectId, patAssetId, patAssetAt, patOwn });
   useEffect(() => {
     const snap = snapshot();
     try { localStorage.setItem(KEY, JSON.stringify(snap)); } catch {
       try { localStorage.setItem(KEY, JSON.stringify({ ...snap, kit: { ...kit, teamLogo: null, sponsorLogo: null } })); } catch { /* full or private */ }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [KEY, kit, players, pat, patColor, patName, projectId]);
+  }, [KEY, kit, players, pat, patColor, patName, projectId, patAssetId, patOwn]);
   useEffect(() => { if (live.current) setDirty(true); }, [kit, players, pat, patColor, patName]);
 
   // ---------- projects (saved in this browser, or as a .mtd file on the device) ----------
   const readProjects = (): SavedProject[] => { try { return (JSON.parse(localStorage.getItem(PROJECTS) || '[]') as SavedProject[]).filter((x) => x && x.data); } catch { return []; } };
   const apply = (d: any, id: string | null) => {
-    setKit({ ...kitFor(kind), ...d.kit, style: GARMENT_STYLES[kind].includes(d.kit?.style) ? d.kit.style : kitFor(kind).style });
+    setKit({ ...kitFor(garmentOf(d.kit?.style || 'football')), ...d.kit });
     if (Array.isArray(d.players)) setPlayers(d.players);
     if (d.pat) setPat({ ...DEFAULT_PATTERN, ...d.pat });
     if (d.patColor) setPatColor(d.patColor);
     if (d.patName) setPatName(d.patName);
+    setPatAssetId(d.patAssetId || null); setPatAssetAt(d.patAssetAt || null); setPatOwn(!!d.patOwn);
     setProjectId(id); setSel(0); setSelEl(null);
     settle();
   };
   const saveProject = (): boolean => {
     const id = projectId || `p${Date.now().toString(36)}`;
-    const data = { kit, players, pat: { ...pat, image: undefined }, patColor, patName };
+    const data = { kit, players, pat: { ...pat, image: undefined }, patColor, patName, patAssetId, patAssetAt, patOwn };
     const list = readProjects().filter((x) => x.id !== id);
     list.unshift({ id, kind, name: kit.teamName || copy.noun, updated: new Date().toISOString(), data });
     try { localStorage.setItem(PROJECTS, JSON.stringify(list.slice(0, 40))); }
@@ -193,7 +228,7 @@ export function GarmentDesigner({ kind }: { kind: GarmentKind }) {
   const fileHandle = useRef<any | null>(null);
   const saveFile = async () => {
     try {
-      const ref = await saveToolProject({ kind, name: kit.teamName, data: { kit, players, pat: { ...pat, image: undefined }, patColor, patName }, previewSvg: kitMockupSvg(kit, pattern, player, glyphs, 'front'), handle: fileHandle.current });
+      const ref = await saveToolProject({ kind, name: kit.teamName, data: { kit, players, pat: { ...pat, image: undefined }, patColor, patName, patAssetId, patAssetAt, patOwn }, previewSvg: kitMockupSvg(kit, pattern, player, glyphs, 'front'), handle: fileHandle.current });
       if (!ref) return;
       fileHandle.current = ref.handle;
       setDirty(false);
@@ -203,14 +238,14 @@ export function GarmentDesigner({ kind }: { kind: GarmentKind }) {
   const openFile = async (f: File) => {
     try {
       const p = await openToolFile(f);
-      if (p.kind !== kind) { flash(`That file is a ${p.kind === 'tshirt' ? 'T-shirt' : p.kind} project — open it in that tool.`); return; }
+      if (!TEXTILE_KINDS.includes(p.kind as GarmentKind)) { flash('That file is not a textile project — open it in its own tool.'); return; }
       apply(p.data, null); fileHandle.current = null; flash(`Opened “${p.name}”.`);
     } catch (e: any) { flash(e?.message || 'Could not open that file.'); }
   };
   const newDesign = () => { apply({ kit: kitFor(kind), players: copy.sample, pat: { ...DEFAULT_PATTERN, ...PATTERNS[0].p }, patColor: '#FFFFFF', patName: PATTERNS[0].name }, null); setStep('design'); };
 
 
-  const pattern = useMemo<PatternSettings>(() => ({ ...pat, colors: [patColor] }), [pat, patColor]);
+  const pattern = useMemo<PatternSettings>(() => (patOwn ? pat : { ...pat, colors: [patColor] }), [pat, patColor, patOwn]);
 
   // Letter outlines for names, numbers and the front text, in the chosen font.
   const texts = useMemo(() => glyphTexts(players, kit), [players, kit]);
@@ -240,10 +275,10 @@ export function GarmentDesigner({ kind }: { kind: GarmentKind }) {
   // Picker thumbnails only change with the style / colours they show.
   const starterThumbs = useMemo(() => Object.fromEntries(STARTERS.map((st) => [st.name, svgDataUrl(kitMockupSvg({ ...kitFor(kind), style: kit.style, ...st.o, personalise: false, frontText: '', teamLogo: null, sponsorLogo: null, patternOn: 'none' }, DEFAULT_PATTERN, null, {}, 'front'))])), [kind, kit.style]);
   const swatchCache = useRef(new Map<string, string>());
-  const swatchThumb = (name: string, p: PatternSettings) => {
-    const key = `${name}|${kit.body}|${patColor}|${p.motif}|${p.seed}`;
+  const swatchThumb = (name: string, p: PatternSettings, own = false) => {
+    const key = `${name}|${own ? p.background : kit.body}|${own ? '' : patColor}|${p.motif}|${p.seed}`;
     let v = swatchCache.current.get(key);
-    if (!v) { v = svgDataUrl(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120"><rect width="120" height="120" fill="${kit.body}"/>${patternSwatch({ ...p, colors: [patColor] })}</svg>`); swatchCache.current.set(key, v); }
+    if (!v) { v = svgDataUrl(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120"><rect width="120" height="120" fill="${own ? p.background : kit.body}"/>${patternSwatch(own ? p : { ...p, colors: [patColor] })}</svg>`); swatchCache.current.set(key, v); }
     return v;
   };
 
@@ -414,7 +449,6 @@ export function GarmentDesigner({ kind }: { kind: GarmentKind }) {
     { id: 'letters', label: personal ? 'Names & numbers' : 'Lettering' },
     { id: 'players', label: personal ? `${copy.players} & sizes` : 'Sizes & quantities' }, { id: 'print', label: 'Print files' },
   ];
-  const styles = GARMENT_STYLES[kind];
   const totalQty = personal ? players.length : players.reduce((a, p) => a + (Number(p.qty) || 0), 0);
 
   return (
@@ -426,7 +460,7 @@ export function GarmentDesigner({ kind }: { kind: GarmentKind }) {
         <input value={kit.teamName} maxLength={40} onChange={(e) => set({ teamName: e.target.value })} aria-label="Project name" className="h-10 min-w-0 flex-1 basis-40 rounded-xl bg-transparent px-2 text-[15px] font-semibold focus:outline-none focus:bg-mt-bg" />
         <span className={`text-[12px] ${dirty ? 'text-amber-600 dark:text-amber-400' : 'text-mt-faint'}`}>{dirty ? 'Unsaved changes' : projectId ? 'Saved' : ''}</span>
         <button type="button" onClick={newDesign} className={btn}><Plus size={14} /> New</button>
-        <button type="button" onClick={() => setProjects(readProjects().filter((x) => x.kind === kind))} className={btn}><FolderOpen size={14} /> Projects</button>
+        <button type="button" onClick={() => setProjects(readProjects().filter((x) => TEXTILE_KINDS.includes(x.kind)))} className={btn}><FolderOpen size={14} /> Projects</button>
         <button type="button" onClick={() => fileRef.current?.click()} className={btn}><FileUp size={14} /> Open file</button>
         <button type="button" onClick={saveFile} className={btn} title="Save a Magical Touch project file (.mtd) on this device"><Download size={14} /> Save file</button>
         <button type="button" onClick={saveProject} className="h-10 px-4 rounded-full bg-mt-primary text-mt-onprimary text-[13.5px] font-semibold inline-flex items-center gap-1.5"><Save size={14} /> Save</button>
@@ -441,14 +475,14 @@ export function GarmentDesigner({ kind }: { kind: GarmentKind }) {
               <ul className="mt-4 grid gap-3 sm:grid-cols-2">
                 {projects.map((pr) => (
                   <li key={pr.id} className="flex gap-3 rounded-2xl border border-mt-border p-2.5">
-                    <img alt="" className="h-20 w-24 shrink-0 rounded-xl bg-mt-bg object-contain" src={svgDataUrl(kitMockupSvg({ ...kitFor(kind), ...pr.data.kit }, { ...DEFAULT_PATTERN, ...pr.data.pat, colors: [pr.data.patColor || '#FFFFFF'] }, null, {}, 'front'))} />
+                    <img alt="" className="h-20 w-24 shrink-0 rounded-xl bg-mt-bg object-contain" src={svgDataUrl(kitMockupSvg({ ...kitFor(pr.kind), ...pr.data.kit }, { ...DEFAULT_PATTERN, ...pr.data.pat, colors: [pr.data.patColor || '#FFFFFF'] }, null, {}, 'front'))} />
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-[14px] font-semibold">{pr.name}</p>
                       <p className="text-[12px] text-mt-muted">{new Date(pr.updated).toLocaleString()} · {(pr.data.players || []).length} rows</p>
                       <div className="mt-2 flex gap-1.5">
                         <button type="button" onClick={() => { apply(pr.data, pr.id); setProjects(null); flash(`Opened “${pr.name}”.`); }} className="h-8 px-3 rounded-full bg-mt-primary text-mt-onprimary text-[12.5px] font-semibold">Open</button>
                         {delAsk === pr.id
-                          ? <button type="button" onClick={() => { const l = readProjects().filter((x) => x.id !== pr.id); try { localStorage.setItem(PROJECTS, JSON.stringify(l)); } catch { /* ignore */ } setProjects(l.filter((x) => x.kind === kind)); setDelAsk(null); if (projectId === pr.id) setProjectId(null); }} className="h-8 px-3 rounded-full bg-rose-600 text-white text-[12.5px] font-semibold">Delete for good</button>
+                          ? <button type="button" onClick={() => { const l = readProjects().filter((x) => x.id !== pr.id); try { localStorage.setItem(PROJECTS, JSON.stringify(l)); } catch { /* ignore */ } setProjects(l.filter((x) => TEXTILE_KINDS.includes(x.kind))); setDelAsk(null); if (projectId === pr.id) setProjectId(null); }} className="h-8 px-3 rounded-full bg-rose-600 text-white text-[12.5px] font-semibold">Delete for good</button>
                           : <button type="button" onClick={() => setDelAsk(pr.id)} className="h-8 px-3 rounded-full border border-mt-border text-[12.5px] font-semibold">Delete</button>}
                       </div>
                     </div>
@@ -522,7 +556,15 @@ export function GarmentDesigner({ kind }: { kind: GarmentKind }) {
             );
           })()}
           {step === 'design' && <>
-            {styles.length > 1 && <section className="space-y-2"><H>Style</H><div className="flex flex-wrap gap-1.5">{styles.map((id) => <button key={id} type="button" aria-pressed={kit.style === id} onClick={() => set({ style: id })} className={chip(kit.style === id)}>{KIT_STYLES.find((s) => s.id === id)?.label}</button>)}</div></section>}
+            <section className="space-y-2" aria-label="Garment">
+              <H>Garment</H>
+              <div className="grid grid-cols-3 gap-1.5" role="radiogroup" aria-label="Garment type">
+                {([['jersey', 'Jersey'], ['polo', 'Polo T-shirt'], ['tshirt', 'T-shirt']] as const).map(([g, l]) => <button key={g} type="button" role="radio" aria-checked={kind === g} onClick={() => { if (kind !== g) set({ style: GARMENT_STYLES[g][0] }); }} className={chip(kind === g) + ' justify-center px-2'}>{l}</button>)}
+              </div>
+              {kind === 'jersey' && <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label="Jersey style">{GARMENT_STYLES.jersey.map((id) => <button key={id} type="button" role="radio" aria-checked={kit.style === id} onClick={() => set({ style: id })} className={chip(kit.style === id)}>{KIT_STYLES.find((x) => x.id === id)?.label}</button>)}</div>}
+              {(kit.style === 'football' || kit.style === 'basketball' || kit.style === 'tshirt') && <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label="Neck">{([['round', 'Round neck'], ['v', 'V-neck']] as const).map(([n, l]) => <button key={n} type="button" role="radio" aria-checked={(kit.neck || 'round') === n} onClick={() => set({ neck: n })} className={chip((kit.neck || 'round') === n)}>{l}</button>)}</div>}
+              <p className="text-[11.5px] text-mt-muted">Changing the garment keeps your colours, pattern, logos, text, players and sizes.</p>
+            </section>
             <section className="space-y-2">
               <H>Start from a design</H>
               <div className="grid grid-cols-4 gap-2">
@@ -548,14 +590,18 @@ export function GarmentDesigner({ kind }: { kind: GarmentKind }) {
               {kit.patternOn !== 'none' && <>
                 <div className="grid grid-cols-4 gap-2">
                   {[...PATTERNS.map((x) => ({ name: x.name, p: { ...DEFAULT_PATTERN, ...x.p } })), ...mine].map((x) => (
-                    <button key={x.name} type="button" title={x.name} aria-label={`Pattern: ${x.name}`} aria-pressed={patName === x.name} onClick={() => { setPat(x.p); setPatName(x.name); }}
-                      className={`rounded-xl border p-1 ${patName === x.name ? 'border-mt-ink ring-2 ring-mt-ink/15' : 'border-mt-border hover:border-mt-ink/40'}`}>
-                      <img alt="" className="w-full aspect-square rounded-lg" style={{ background: kit.body }} src={swatchThumb(x.name, x.p)} />
+                    <button key={(x as any).id || x.name} type="button" title={x.name} aria-label={`Pattern: ${x.name}`} aria-pressed={(x as any).id ? patAssetId === (x as any).id : !patAssetId && patName === x.name}
+                      onClick={() => { const id = (x as any).id || null; setPat(x.p); setPatName(x.name); setPatAssetId(id); setPatAssetAt((x as any).at || null); setPatOwn(!!id); }}
+                      className={`rounded-xl border p-1 ${((x as any).id ? patAssetId === (x as any).id : !patAssetId && patName === x.name) ? 'border-mt-ink ring-2 ring-mt-ink/15' : 'border-mt-border hover:border-mt-ink/40'}`}>
+                      <img alt="" className="w-full aspect-square rounded-lg" style={{ background: kit.body }} src={(x as any).id ? swatchThumb(`${(x as any).id}|${(x as any).at}|own`, x.p, true) : swatchThumb(x.name, x.p)} />
                     </button>
                   ))}
                 </div>
+                {linked && <p className="text-[12px] text-mt-muted">From My patterns: <b className="text-mt-ink">{linked.name}</b> · <a href={`/patterns?asset=${linked.id}`} className="underline">edit in Pattern Design</a></p>}
+                {linkedNewer && <button type="button" onClick={() => { setPat(linked!.p); setPatAssetAt(linked!.at || null); }} className="w-full rounded-xl border border-[#3B82C4] bg-[#3B82C4]/5 px-3 py-2 text-left text-[12.5px] font-semibold">This pattern was changed in Pattern Design — use the new version</button>}
+                <label className="flex items-center gap-2 text-[13px]"><input type="checkbox" checked={patOwn} onChange={(e) => setPatOwn(e.target.checked)} className="h-4 w-4 accent-[#3B82C4]" /> Use the pattern’s own colours</label>
                 <div className="flex items-center gap-3">
-                  <label className="text-[12px] text-mt-muted flex items-center gap-2">Colour<input type="color" value={patColor} onChange={(e) => setPatColor(e.target.value)} className="h-8 w-10 rounded-md border border-mt-border bg-transparent" /></label>
+                  {!patOwn && <label className="text-[12px] text-mt-muted flex items-center gap-2">Colour<input type="color" value={patColor} onChange={(e) => setPatColor(e.target.value)} className="h-8 w-10 rounded-md border border-mt-border bg-transparent" /></label>}
                   <Link href="/patterns" className="ml-auto text-[12.5px] font-semibold underline underline-offset-2">Design your own pattern →</Link>
                 </div>
                 <label className="block"><span className="flex justify-between text-[12px] text-mt-muted"><span>Strength</span><span className="text-mt-ink tabular-nums">{Math.round(kit.patternOpacity * 100)}%</span></span><input type="range" min={5} max={100} step={5} value={Math.round(kit.patternOpacity * 100)} onChange={(e) => set({ patternOpacity: Number(e.target.value) / 100 })} className="mt-1 w-full accent-[#3B82C4]" /></label>

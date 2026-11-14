@@ -15,10 +15,10 @@ import { DEFAULT_PATTERN, MOTIFS, MOTIF_CATEGORIES, PALETTES, PatternSettings, R
 import { patternFabricJson, patternPdf } from '@/lib/patternVector';
 import { putHandoff, newLocalKey, editorUrlForLocal } from '@/lib/mtd/handoff';
 import { supabase } from '@/lib/supabase';
+import { deleteAsset, getAsset, listAssets, migrateLegacyPatterns, putAsset } from '@/lib/assets/library';
 import { PATTERN_FONTS, textOutline } from '@/lib/patternText';
 import { WEIGHT_NAMES } from '@/lib/editor/googleFonts';
 
-const STORE = 'mt:patterns';
 const DRAFT = 'mt:pattern-draft';
 type Saved = { id: string; name: string; at: number; p: PatternSettings };
 
@@ -66,9 +66,11 @@ function Slider({ label, value, min, max, step = 1, onChange, fmt }: { label: st
 export function PatternStudio() {
   const router = useRouter();
   // Old links to the garment and wall workspaces now open their own tools.
-  useEffect(() => { try { const t = new URLSearchParams(window.location.search).get('tab'); if (t === 'kits') router.replace('/custom-jersey-designer'); if (t === 'surfaces') router.replace('/wall-designer?type=pattern'); } catch { /* ignore */ } }, [router]);
+  useEffect(() => { try { const t = new URLSearchParams(window.location.search).get('tab'); if (t === 'kits') router.replace('/textile-designer'); if (t === 'surfaces') router.replace('/wallpaper-designer'); } catch { /* ignore */ } }, [router]);
   const [p, setP] = useState<PatternSettings>(DEFAULT_PATTERN);
   const [saved, setSaved] = useState<Saved[]>([]);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [delAsk, setDelAsk] = useState<string | null>(null);
   const [showTile, setShowTile] = useState(false);
   const [size, setSize] = useState(0);
   const [busy, setBusy] = useState<string | null>(null);
@@ -86,7 +88,8 @@ export function PatternStudio() {
     // A pattern project opened from the Dashboard comes first; otherwise the last pattern on this device.
     const handed = takeToolHandoff('pattern');
     setP({ ...DEFAULT_PATTERN, ...(handed?.data?.pattern || load<Partial<PatternSettings>>(DRAFT, {})) });
-    setSaved(load<Saved[]>(STORE, []));
+    migrateLegacyPatterns().finally(() => refreshSaved());
+    try { const id = new URLSearchParams(window.location.search).get('asset'); if (id) getAsset(id).then((a) => { if (a?.kind === 'pattern') { setP({ ...DEFAULT_PATTERN, ...a.data }); setEditingId(a.id); } }); } catch { /* ignore */ }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   useEffect(() => { keep(DRAFT, p.motif === 'image' ? { ...p, image: undefined, motif: 'sparkle' } : p); }, [p]);
@@ -166,24 +169,36 @@ export function PatternStudio() {
     } catch { flash('That file is not a Magical Touch pattern project.'); }
   };
 
-  const store = (next: Saved[]) => { setSaved(next); keep(STORE, next); };
-  const savePattern = () => {
-    const name = `${MOTIFS.find((m) => m.id === p.motif)?.label || 'Custom'} · ${REPEATS.find((r) => r.id === p.repeat)?.label}`;
-    store([{ id: String(Date.now()), name, at: Date.now(), p: { ...p } }, ...saved].slice(0, 60));
-    flash('Saved to My patterns (on this device).');
+  // My patterns live in the shared on-device library (IndexedDB) with stable
+  // ids, so the Textile and Wallpaper designers use the exact same pattern,
+  // and saving an opened pattern updates it everywhere.
+  const refreshSaved = () => listAssets('pattern').then((l) => setSaved(l.map((x) => ({ id: x.id, name: x.name, at: Date.parse(x.updatedAt) || 0, p: { ...DEFAULT_PATTERN, ...x.data } })))).catch(() => flash('On-device storage is not available in this browser, so patterns cannot be kept.'));
+  const patternName = () => `${MOTIFS.find((m) => m.id === p.motif)?.label || 'Custom'} · ${REPEATS.find((r) => r.id === p.repeat)?.label}`;
+  const thumbOf = (q: PatternSettings) => { try { return svgDataUrl(sheetSvg(q, 240, 240)); } catch { return null; } };
+  const savePattern = async (asNew = false) => {
+    try {
+      const cur = !asNew && editingId ? saved.find((x) => x.id === editingId) : undefined;
+      const a = await putAsset({ id: cur?.id, kind: 'pattern', name: cur?.name || patternName(), data: { ...p, image: p.motif === 'image' ? p.image : undefined }, thumb: thumbOf(p), source: 'pattern' });
+      setEditingId(a.id);
+      await refreshSaved();
+      flash(cur ? `Saved changes to “${a.name}” — the Textile and Wallpaper designers use the new version.` : `Saved “${a.name}” to My patterns on this device.`);
+    } catch (e: any) { flash(e?.message || 'Could not save on this device — storage may be full.'); }
   };
-  const removeSaved = (id: string) => store(saved.filter((s) => s.id !== id));
-  const duplicateSaved = (s: Saved) => store([{ ...s, id: String(Date.now()), name: `${s.name} (copy)`, at: Date.now() }, ...saved].slice(0, 60));
-  const renameSaved = (id: string, name: string) => { store(saved.map((s) => (s.id === id ? { ...s, name: name.trim() || s.name } : s))); setRenaming(null); };
+  const removeSaved = async (id: string) => { try { await deleteAsset(id); if (editingId === id) setEditingId(null); setDelAsk(null); await refreshSaved(); } catch { flash('Could not delete it.'); } };
+  const duplicateSaved = async (x: Saved) => { await putAsset({ kind: 'pattern', name: `${x.name} (copy)`, data: x.p, thumb: thumbOf(x.p), source: 'pattern' }).catch(() => null); await refreshSaved(); };
+  const renameSaved = async (id: string, name: string) => {
+    const x = saved.find((y) => y.id === id); setRenaming(null);
+    if (x && name.trim() && name.trim() !== x.name) { await putAsset({ id, kind: 'pattern', name: name.trim(), data: x.p, thumb: thumbOf(x.p), source: 'pattern' }).catch(() => null); await refreshSaved(); }
+  };
   const exportLibrary = () => save(new Blob([JSON.stringify({ format: 'mt-patterns', version: 1, patterns: saved }, null, 1)], { type: 'application/json' }), 'my-patterns.json');
   const importLibrary = (f?: File | null) => {
     if (!f) return;
-    f.text().then((t) => {
+    f.text().then(async (t) => {
       try {
         const j = JSON.parse(t);
         const list: Saved[] = (j.patterns || []).filter((x: any) => x && x.p && typeof x.p.motif === 'string');
-        const ids = new Set(saved.map((x) => x.id));
-        store([...list.filter((x) => !ids.has(x.id)), ...saved].slice(0, 60));
+        for (const x of list) await putAsset({ kind: 'pattern', name: x.name, data: x.p, thumb: thumbOf(x.p), source: 'pattern' });
+        await refreshSaved();
         flash(`Added ${list.length} pattern${list.length === 1 ? '' : 's'}.`);
       } catch { flash('That file is not a My patterns backup.'); }
     });
@@ -361,7 +376,8 @@ export function PatternStudio() {
               </select>
             </label>
             <button type="button" onClick={openInEditor} disabled={!!busy} className="h-10 px-4 rounded-full bg-mt-primary text-mt-onprimary text-[14px] font-semibold inline-flex items-center gap-2 disabled:opacity-60"><Wand2 size={15} /> {busy === 'editor' ? 'Opening…' : 'Edit in a design'}</button>
-            <button type="button" onClick={savePattern} className="h-10 px-4 rounded-full border border-mt-border text-[14px] font-semibold inline-flex items-center gap-2"><Save size={15} /> Save</button>
+            <button type="button" onClick={() => savePattern()} className="h-10 px-4 rounded-full border border-mt-border text-[14px] font-semibold inline-flex items-center gap-2"><Save size={15} /> {editingId ? 'Save changes' : 'Save'}</button>
+            {editingId && <button type="button" onClick={() => savePattern(true)} className="h-10 px-4 rounded-full border border-mt-border text-[14px] font-semibold inline-flex items-center gap-2">Save as new</button>}
           </div>
           <div className="mt-4 flex flex-wrap items-center gap-2">
             <span className="text-[12px] text-mt-muted mr-1">Download</span>
@@ -379,9 +395,9 @@ export function PatternStudio() {
 
         <section aria-labelledby="use-title" className="rounded-3xl border border-mt-border bg-mt-surface p-5">
           <h2 id="use-title" className="text-lg font-semibold">Use this pattern on</h2>
-          <p className="mt-1 text-[13.5px] text-mt-muted">Your latest pattern appears in each tool’s pattern picker as “Latest from Pattern Studio”. Save it to My patterns to keep it there.</p>
+          <p className="mt-1 text-[13.5px] text-mt-muted">Save it to My patterns first — it then appears in each tool’s pattern picker, and edits you save here update it there.</p>
           <div className="mt-3 flex flex-wrap gap-2">
-            {[['/custom-jersey-designer', 'Jersey'], ['/polo-shirt-designer', 'Polo T-shirt'], ['/custom-t-shirt-designer', 'T-shirt'], ['/wall-designer?type=pattern', 'Wallpaper'], ['/editor?w=1080&h=1080&panel=patterns', 'A design']].map(([href, label]) => (
+            {[[`/textile-designer?garment=jersey${editingId ? `&pattern=${editingId}` : ''}`, 'Jersey'], [`/textile-designer?garment=polo${editingId ? `&pattern=${editingId}` : ''}`, 'Polo T-shirt'], [`/textile-designer?garment=tshirt${editingId ? `&pattern=${editingId}` : ''}`, 'T-shirt'], [`/wallpaper-designer${editingId ? `?pattern=${editingId}` : ''}`, 'Wallpaper'], ['/editor?w=1080&h=1080&panel=patterns', 'A design']].map(([href, label]) => (
               <a key={href} href={href} className="h-9 px-4 rounded-full border border-mt-border text-[13px] font-semibold inline-flex items-center hover:border-mt-ink/40">{label} →</a>
             ))}
           </div>
@@ -411,20 +427,20 @@ export function PatternStudio() {
         <section aria-labelledby="saved-title" className="rounded-3xl border border-mt-border bg-mt-surface p-5">
           <div className="flex flex-wrap items-center gap-2">
             <h2 id="saved-title" className="text-lg font-semibold mr-auto">My patterns <span className="text-[13px] font-medium text-mt-faint">{saved.length}</span></h2>
-            <button type="button" onClick={savePattern} className="h-9 px-3.5 rounded-full border border-mt-border text-[13px] font-semibold inline-flex items-center gap-1.5"><Save size={14} /> Save current</button>
+            <button type="button" onClick={() => savePattern()} className="h-9 px-3.5 rounded-full border border-mt-border text-[13px] font-semibold inline-flex items-center gap-1.5"><Save size={14} /> {editingId ? 'Save changes' : 'Save current'}</button>
             <button type="button" onClick={exportLibrary} disabled={!saved.length} className="h-9 px-3.5 rounded-full border border-mt-border text-[13px] font-semibold inline-flex items-center gap-1.5 disabled:opacity-50"><Download size={14} /> Back up</button>
             <button type="button" onClick={() => libRef.current?.click()} className="h-9 px-3.5 rounded-full border border-mt-border text-[13px] font-semibold inline-flex items-center gap-1.5"><FileUp size={14} /> Restore</button>
             <input ref={libRef} type="file" accept="application/json,.json" hidden onChange={(e) => { importLibrary(e.target.files?.[0]); e.target.value = ''; }} />
           </div>
           {saved.length === 0 ? (
-            <p className="mt-3 text-[13px] text-mt-muted">Press Save to keep a pattern here. Saved patterns stay on this device; use Back up to move them to another one.</p>
+            <p className="mt-3 text-[13px] text-mt-muted">Press Save to keep a pattern here. Saved patterns stay on this device (nothing is uploaded) and appear in the Textile and Wallpaper designers; use Back up to move them to another device.</p>
           ) : (
             <ul className="mt-4 grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-4">
               {saved.map((s) => {
                 const L = layout(s.p);
                 return (
                   <li key={s.id} className="rounded-2xl border border-mt-border overflow-hidden bg-mt-bg">
-                    <button type="button" onClick={() => { setP(s.p); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="block w-full aspect-[4/3]" title={`Open ${s.name}`} aria-label={`Open ${s.name}`}
+                    <button type="button" onClick={() => { setP(s.p); setEditingId(s.id); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="block w-full aspect-[4/3]" title={`Open ${s.name}`} aria-label={`Open ${s.name}`}
                       style={{ backgroundImage: `url("${svgDataUrl(tileSvg(s.p))}")`, backgroundSize: `${L.w / 2}px ${L.h / 2}px`, backgroundColor: s.p.background }} />
                     <div className="p-2.5">
                       {renaming === s.id ? (
@@ -437,7 +453,9 @@ export function PatternStudio() {
                         <button type="button" onClick={() => duplicateSaved(s)} title="Duplicate" aria-label={`Duplicate ${s.name}`} className="h-7 w-7 grid place-items-center rounded-md hover:bg-mt-surface2"><Copy size={13} /></button>
                         <button type="button" onClick={() => exportSvg('paths', s.p)} title="Download SVG" className="h-7 px-1.5 rounded-md text-[11px] font-semibold hover:bg-mt-surface2">SVG</button>
                         <button type="button" onClick={() => exportPdf(s.p)} title="Download PDF" className="h-7 px-1.5 rounded-md text-[11px] font-semibold hover:bg-mt-surface2">PDF</button>
-                        <button type="button" onClick={() => removeSaved(s.id)} title="Delete" aria-label={`Delete ${s.name}`} className="ml-auto h-7 w-7 grid place-items-center rounded-md hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950/40"><Trash2 size={13} /></button>
+                        {delAsk === s.id
+                          ? <button type="button" onClick={() => removeSaved(s.id)} className="ml-auto h-7 px-2 rounded-md bg-rose-600 text-white text-[11px] font-semibold">Delete for good</button>
+                          : <button type="button" onClick={() => setDelAsk(s.id)} title="Delete" aria-label={`Delete ${s.name}`} className="ml-auto h-7 w-7 grid place-items-center rounded-md hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950/40"><Trash2 size={13} /></button>}
                       </div>
                     </div>
                   </li>

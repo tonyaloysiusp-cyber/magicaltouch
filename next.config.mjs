@@ -23,6 +23,13 @@ const nextConfig = {
       features: '/#features',
       pricing: '/about',
       'pattern-studio': '/patterns',
+      // Tools combined (14 Nov 2026): the old addresses open the combined workspace.
+      'custom-jersey-designer': '/textile-designer?garment=jersey',
+      'polo-shirt-designer': '/textile-designer?garment=polo',
+      'custom-t-shirt-designer': '/textile-designer?garment=tshirt',
+      'wall-designer': '/wallpaper-designer',
+      'rangoli-mandala-maker': '/patterns?mode=rangoli',
+      'gradient-background-generator': '/colours#gradients',
     };
     // Template categories were reorganised by design type (12 Nov 2026):
     // old category pages go to the matching new one.

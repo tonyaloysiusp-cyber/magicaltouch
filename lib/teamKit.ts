@@ -12,7 +12,7 @@
 
 import { PRODUCTS, SIZES, layoutPieces, pieceTransform } from './garments.ts';
 import type { Product, Piece, Placed } from './garments.ts';
-import { sheetPlacements, motifPath, layout } from './patterns.ts';
+import { sheetPlacements, motifPath, layout, placedMotif } from './patterns.ts';
 import type { PatternSettings } from './patterns.ts';
 import { pathBox } from './pathFit.ts';
 
@@ -58,6 +58,7 @@ export interface KitDesign {
   graphic?: KitGraphic; accent?: string; accent2?: string; cuffs?: boolean;
   frontText?: string; frontTextColor?: string; frontTextMm?: number; frontTextTopMm?: number;
   personalise?: boolean; // names and numbers per player (off: sizes and quantities only)
+  neck?: 'round' | 'v';
   // Positions on the front piece (size-M mm); unset = the standard place.
   teamLogoX?: number; teamLogoY?: number; teamLogoMm?: number;
   sponsorX?: number; sponsorY?: number; sponsorMm?: number;
@@ -132,7 +133,23 @@ export function checkRoster(players: Player[], personalise = true): RosterIssue[
 
 export function kitProduct(kit: KitDesign): Product {
   const id = KIT_STYLES.find((s) => s.id === kit.style)?.product || 'jersey';
-  return PRODUCTS.find((p) => p.id === id)!;
+  const base = PRODUCTS.find((p) => p.id === id)!;
+  // V-neck: the jersey / vest front neckline becomes a V (same shoulder points), and the collar band gets longer.
+  if (kit.neck === 'v' && (id === 'jersey' || id === 'vest')) {
+    return {
+      ...base,
+      pieces: base.pieces.map((pc) => {
+        if (pc.id === 'front') return { ...pc, d: pc.d.replace(/^M(\d+) 0C[^L]*?(\d+) 0L/, (_m, a, b) => `M${a} 0L${(Number(a) + Number(b)) / 2} ${id === 'vest' ? 210 : 175}L${b} 0L`) };
+        if (pc.id === 'collar') return { ...pc, label: 'V-neck collar band', w: Math.round(pc.w * 1.12), d: `M0 0H${Math.round(pc.w * 1.12)}V45H0Z` };
+        return pc;
+      }),
+    };
+  }
+  return base;
+}
+/** Which designer section a style belongs to. */
+export function garmentOf(style: KitStyle): GarmentKind {
+  return (Object.keys(GARMENT_STYLES) as GarmentKind[]).find((k) => GARMENT_STYLES[k].includes(style)) || 'jersey';
 }
 
 const r2 = (n: number) => Math.round(n * 100) / 100;
@@ -166,11 +183,11 @@ function textMarkup(text: string, glyphs: Glyphs, kit: KitDesign, color: string,
 
 function patternPaths(p: PatternSettings, w: number, h: number, mmPerTile: number, k: number): string {
   const d = motifPath(p);
-  if (!d) return '';
+  if (!d && !(p.motif === 'image' && p.image)) return '';
   const { w: tw } = layout(p);
   const s = mmPerTile / tw / k; // tile units → local piece units
   const places = sheetPlacements(p, w / s, h / s);
-  return places.map((q) => `<path d="${d}" fill="${q.color}" fill-rule="evenodd" transform="scale(${r2(s * 10000) / 10000}) translate(${q.x} ${q.y}) rotate(${q.angle}) scale(${q.sx} ${q.sy})"/>`).join('');
+  return places.map((q) => placedMotif(p, d, q, `scale(${r2(s * 10000) / 10000}) `)).join('');
 }
 
 let clipSeq = 0;
@@ -325,7 +342,7 @@ export function kitMockupSvg(kit: KitDesign, pat: PatternSettings, player: Playe
     const one = `<g clip-path="url(#${sid}-sl)"><path d="${sleevePoly}" fill="${kit.sleeve}"/><g transform="${sleeveAt}">${pieceMarkup(sleeve, kit, pat, player, glyphs, k, 0)}</g><path d="${sleevePoly}" fill="url(#${sid}-sh)" opacity="0.5"/></g><path d="${sleevePoly}" fill="none" stroke="#000" stroke-opacity="0.12" stroke-width="2"/>${edit ? `<path class="mt-part" data-el="sleeve" d="${sleevePoly}" fill="transparent" stroke="${edit.selected === 'sleeve' ? '#3B82C4' : 'transparent'}" stroke-width="4"/>` : ''}`;
     return `${one}<g transform="translate(${W} 0) scale(-1 1)">${one}</g>`;
   };
-  const neck = (p: Piece) => p.d.match(/^M[^L]*?(?=L)/)?.[0] || '';
+  const neck = (p: Piece) => p.d.match(/^M[\d.]+ 0L[\d.]+ [\d.]+L[\d.]+ 0/)?.[0] || p.d.match(/^M[^L]*?(?=L)/)?.[0] || '';
   // Editor click targets: every part of the shirt and every element on it.
   const hits = (piece: Piece, isBack: boolean) => {
     const sel = edit?.selected || null;

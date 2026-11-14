@@ -3,12 +3,12 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { SeoShell, Crumbs } from '@/components/seo/SeoShell';
 import { SITE_URL, SITE_NAME, fitTitle, fitDescription } from '@/lib/seo';
-import { PatternStudio } from '@/components/patterns/PatternStudio';
+import { PatternWorkspace } from '@/components/patterns/PatternWorkspace';
 
 // Pattern Studio: a real seamless-repeat generator (grid, brick, half-drop,
 // mirror, rotational, radial, kaleidoscope, geometric, organic, random).
-const TITLE = 'Free Pattern Maker — Seamless Repeat Patterns Online';
-const DESC = 'Free seamless pattern maker with 130+ vector shapes: grid, brick, half-drop, mirror and kaleidoscope repeats. Preview on fabric, download vector SVG, PDF or PNG with a transparent background.';
+const TITLE = 'Pattern Maker — Seamless Patterns, Rangoli & Mandala Designs';
+const DESC = 'Free pattern maker: seamless grid, brick, half-drop, mirror and kaleidoscope repeats from 130+ vector shapes, plus rangoli and mandala designs. Download vector SVG, PDF or PNG.';
 const URL = `${SITE_URL}/patterns`;
 
 export const metadata: Metadata = {
@@ -20,6 +20,8 @@ export const metadata: Metadata = {
 };
 
 const FAQ: [string, string][] = [
+  ['Can I make a rangoli or mandala here?', 'Yes — choose “Rangoli & Mandala”. Draw once and it repeats around the centre, add rings of petals and dots, set the symmetry, start from a Diwali rangoli, and download it as vector SVG, PDF, PNG or JPEG.'],
+  ['Can I use my pattern on a jersey or wallpaper?', 'Save it to My patterns: it then appears in the Textile Designer and the Wallpaper Designer. Edit it here later and they offer the new version. Everything stays on your device.'],
   ['Are the patterns really seamless?', 'Yes. Every repeat is built as a tile whose edges join exactly with the next tile. Turn on “Show tile edges” to see where one tile meets the next.'],
   ['What is a half-drop repeat?', 'Every other column is moved down by half a tile. It hides the straight lines of a plain grid and is popular for wallpaper and fabric.'],
   ['Can I use my own artwork?', 'Yes. Upload a PNG, JPG, WebP or SVG drawing or logo, or type up to three letters, and it becomes the motif.'],
@@ -39,14 +41,14 @@ export default function PatternsPage() {
     <SeoShell active="tools">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(ld) }} />
       <div className="mt-container py-6 sm:py-10">
-        <div className="flex flex-wrap items-center justify-between gap-3"><Crumbs items={[{ href: '/', label: 'Home' }, { href: '/free-design-tools', label: 'Free tools' }, { label: 'Pattern Studio' }]} /><BackChip /></div>
+        <div className="flex flex-wrap items-center justify-between gap-3"><Crumbs items={[{ href: '/', label: 'Home' }, { href: '/free-design-tools', label: 'Free tools' }, { label: 'Pattern Design' }]} /><BackChip /></div>
         <header className="mt-4 max-w-3xl">
           <p className="text-[12px] font-semibold uppercase tracking-[0.2em] text-[#3B82C4]">Pattern Studio</p>
-          <h1 className="mt-2 text-3xl sm:text-5xl font-semibold tracking-tight">Seamless patterns, made in minutes</h1>
+          <h1 className="mt-2 text-3xl sm:text-5xl font-semibold tracking-tight">Pattern Design — seamless patterns, rangoli & mandala</h1>
           <p className="mt-3 text-lg text-mt-muted leading-relaxed">Pick from 130+ vector shapes, choose how it repeats, then tune size, spacing, rotation and colour. See it on fabric and packaging, and download vector SVG, PDF or PNG.</p>
           <a href="/editor?w=1080&h=1080&panel=patterns" className="mt-4 inline-flex h-10 items-center gap-2 rounded-full border border-mt-border px-4 text-[14px] font-semibold hover:border-mt-ink/40">Use it inside the design editor (Patterns panel) →</a>
         </header>
-        <div className="mt-8"><PatternStudio /></div>
+        <div className="mt-8"><PatternWorkspace /></div>
 
         <section className="mt-16 grid gap-8 lg:grid-cols-2" aria-labelledby="faq">
           <div>

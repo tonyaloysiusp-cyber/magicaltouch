@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import { SeoShell, Crumbs } from '@/components/seo/SeoShell';
 import { SITE_URL, SITE_NAME, fitTitle, fitDescription } from '@/lib/seo';
 import { ColourExplorer } from '@/components/colours/ColourExplorer';
+import { GradientMaker } from '@/components/tools/GradientMaker';
 
 const TITLE = 'Colour Palette Generator — Colour Wheel, Contrast & Gradients';
 const DESC = 'Free colour palette generator with a colour wheel: complementary, analogous, triadic, split and tetradic harmonies with HEX, RGB, HSL and CMYK, a WCAG contrast checker, gradient builder and palettes you can export for Adobe (.ase), CSS or Inkscape.';
@@ -41,6 +42,12 @@ export default function ColoursPage() {
           <a href="/editor?w=1080&h=1080&panel=colours" className="mt-4 inline-flex h-10 items-center gap-2 rounded-full border border-mt-border px-4 text-[14px] font-semibold hover:border-mt-ink/40">Use it inside the design editor (Colours panel) →</a>
         </header>
         <div className="mt-8"><ColourExplorer /></div>
+        {/* Gradient backgrounds are an option here (and in the editor's Background panel), not a separate tool. */}
+        <section id="gradients" aria-labelledby="gradients-h" className="mt-14 scroll-mt-24">
+          <h2 id="gradients-h" className="text-2xl font-semibold tracking-tight">Gradient backgrounds</h2>
+          <p className="mt-2 max-w-3xl text-mt-muted">Mesh gradients with grain — drag the colour spots, pick a preset, then download a 4K PNG, a vector SVG or copy the CSS.</p>
+          <div className="mt-5"><GradientMaker /></div>
+        </section>
         <section aria-labelledby="faq" className="mt-16 max-w-3xl">
           <h2 id="faq" className="text-2xl font-semibold tracking-tight">Questions</h2>
           <div className="mt-4 divide-y divide-mt-border rounded-2xl border border-mt-border">

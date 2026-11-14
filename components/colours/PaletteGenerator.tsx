@@ -124,7 +124,7 @@ export function PaletteGenerator({ onSave, onEditor, onPattern, onTemplates, exp
           <p className="text-[12px] font-semibold uppercase tracking-[0.12em] text-mt-muted">Use this palette</p>
           <button type="button" onClick={() => { onSave(cols); setSaved(true); }} className={`${btn} w-full justify-center`}>{saved ? <Check size={15} /> : <Save size={15} />} {saved ? 'Saved' : 'Save palette'}</button>
           <button type="button" onClick={() => onEditor(cols)} className="h-10 w-full rounded-full bg-mt-primary text-mt-onprimary text-[13.5px] font-semibold inline-flex items-center justify-center gap-1.5"><Wand2 size={15} /> Use in a design</button>
-          <a href={`/custom-jersey-designer?colors=${cols.map((c) => c.slice(1)).join(',')}`} className={`${btn} w-full justify-center`}><Shirt size={15} /> Use on a jersey</a>
+          <a href={`/textile-designer?garment=jersey&colors=${cols.map((c) => c.slice(1)).join(',')}`} className={`${btn} w-full justify-center`}><Shirt size={15} /> Use on a jersey</a>
           <button type="button" onClick={() => onPattern(cols)} className={`${btn} w-full justify-center`}>Use in a pattern</button>
           <button type="button" onClick={() => onTemplates(cols)} className={`${btn} w-full justify-center`}>Templates in these colours</button>
           <button type="button" onClick={() => copy(cols.join(', '))} className={`${btn} w-full justify-center`}>{copied === cols.join(', ') ? <Check size={15} /> : <Copy size={15} />} Copy all HEX</button>

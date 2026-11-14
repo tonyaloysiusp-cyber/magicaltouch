@@ -221,7 +221,7 @@ export function ColourExplorer() {
           <code className="flex-1 min-w-0 truncate rounded-xl bg-mt-bg px-3 py-2 text-[12.5px]">background: {css};</code>
           <button type="button" onClick={() => copy(`background: ${css};`)} className="h-10 px-4 rounded-full border border-mt-border text-[14px] font-semibold inline-flex items-center gap-2">{copied === `background: ${css};` ? <Check size={15} /> : <Copy size={15} />} Copy CSS</button>
           <button type="button" onClick={() => save(new Blob([gradientSvg(stops, angle, 3840, 2160, gKind)], { type: 'image/svg+xml' }), 'gradient-3840x2160.svg')} className="h-10 px-4 rounded-full border border-mt-border text-[14px] font-semibold inline-flex items-center gap-2"><Download size={15} /> SVG (4K)</button>
-          <Link href="/gradient-background-generator" className="h-10 px-4 rounded-full border border-mt-border text-[14px] font-semibold inline-flex items-center">Mesh gradients →</Link>
+          <Link href="/colours#gradients" className="h-10 px-4 rounded-full border border-mt-border text-[14px] font-semibold inline-flex items-center">Mesh gradients →</Link>
         </div>
       </section>
 

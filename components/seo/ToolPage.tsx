@@ -16,20 +16,17 @@ export interface ToolPageProps {
 }
 
 export const RELATED_TOOLS: { href: string; label: string }[] = [
-  { href: '/custom-jersey-designer', label: 'Custom jersey designer' },
-  { href: '/polo-shirt-designer', label: 'Polo T-shirt designer' },
-  { href: '/custom-t-shirt-designer', label: 'Custom T-shirt designer' },
-  { href: '/wall-designer', label: 'Wall poster & wallpaper designer' },
-  { href: '/print-layout', label: 'Print layout: business cards many-up & booklets' },
+  { href: '/create', label: 'Design editor' },
+  { href: '/photo-studio', label: 'Photo editor' },
   { href: '/trace', label: 'Image to vector (Image Trace)' },
-  { href: '/patterns', label: 'Seamless pattern maker' },
-  { href: '/colours', label: 'Colour palette generator' },
+  { href: '/patterns', label: 'Pattern maker, rangoli & mandala' },
+  { href: '/textile-designer', label: 'Textile designer: jerseys, polo & T-shirts' },
+  { href: '/wallpaper-designer', label: 'Wallpaper & wall sticker designer' },
+  { href: '/print-size-calculator', label: 'Print size & binding calculator' },
+  { href: '/print-layout', label: 'Print layout & imposition' },
   { href: '/remove-background', label: 'Background remover' },
   { href: '/passport-photo-maker', label: 'Passport size photo maker' },
-  { href: '/rangoli-mandala-maker', label: 'Rangoli & mandala maker' },
-  { href: '/gradient-background-generator', label: 'Gradient background generator' },
-  { href: '/print-size-calculator', label: 'Print size & bleed calculator' },
-  { href: '/photo-studio', label: 'Photo editor' },
+  { href: '/colours', label: 'Colour palettes & gradients' },
   { href: '/templates', label: 'Free templates' },
 ];
 

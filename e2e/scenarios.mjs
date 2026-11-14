@@ -815,7 +815,7 @@ scenarios.push({
 scenarios.push({
   name: 'team-kit-bulk',
   async run(t) {
-    await t.page.goto(t.BASE + '/custom-jersey-designer', { waitUntil: 'domcontentloaded' });
+    await t.page.goto(t.BASE + '/textile-designer?garment=jersey', { waitUntil: 'domcontentloaded' });
     await t.page.getByRole('button', { name: 'Design: Red hoops' }).click({ timeout: 30000 });
     await t.page.getByRole('button', { name: 'Sash', exact: true }).click();
     await t.shot('jersey-design');
@@ -846,18 +846,16 @@ scenarios.push({
 scenarios.push({
   name: 'polo-and-wall',
   async run(t) {
-    await t.page.goto(t.BASE + '/polo-shirt-designer', { waitUntil: 'domcontentloaded' });
+    await t.page.goto(t.BASE + '/textile-designer?garment=polo', { waitUntil: 'domcontentloaded' });
     await t.page.getByRole('tab', { name: /Sizes & quantities/ }).click({ timeout: 30000 });
     await t.page.getByLabel('Quantity row 1').fill('2');
     await t.page.getByRole('tab', { name: /Print files/ }).click();
     await t.page.getByLabel('Print summary').waitFor({ timeout: 30000 });
     t.check('polo summary counts quantities (2+8+6+2)', /18\s*garments/.test(await t.page.getByLabel('Print summary').innerText()));
     await t.shot('polo');
-    await t.page.goto(t.BASE + '/wall-designer', { waitUntil: 'domcontentloaded' });
-    await t.page.getByRole('button', { name: /^A1/ }).click({ timeout: 30000 });
-    const href = await t.page.getByRole('link', { name: /Design this poster/ }).getAttribute('href');
-    t.check('A1 poster opens at 594 × 841 mm', /w=2245\.039/.test(href || '') && /h=3178\.583/.test(href || ''), href);
-    await t.page.getByRole('tab', { name: /Wall pattern/ }).click();
+    await t.page.goto(t.BASE + '/wallpaper-designer', { waitUntil: 'domcontentloaded' });
+    t.check('no wall poster mode any more', (await t.page.getByRole('button', { name: /Design this poster/ }).count()) === 0);
+    await t.page.getByRole('button', { name: /Print strips/ }).waitFor({ timeout: 30000 });
     const fs = await import('node:fs');
     const [dl] = await Promise.all([t.page.waitForEvent('download', { timeout: 90000 }), t.page.getByRole('button', { name: /Print strips/ }).click()]);
     const b = fs.readFileSync(await dl.path());
@@ -870,6 +868,50 @@ scenarios.push({
     const est2 = await t.page.getByLabel('Roll estimate').innerText();
     t.check('door (not full height) keeps 8 drops on a 4 m wall', /8 drops/.test(est2), est2.slice(0, 120));
     await t.shot('wall');
+    // Wall stickers: artwork → contour cut sheet PDF.
+    await t.page.getByRole('tab', { name: 'Wall stickers' }).click();
+    await t.page.setInputFiles('input[type=file][accept*="image/png"]', PHOTO);
+    await t.page.getByLabel('Sticker summary').waitFor({ timeout: 30000 });
+    const sum = await t.page.getByLabel('Sticker summary').innerText();
+    t.check('stickers laid out on the sheet with a cut path', /\d+ stickers/.test(sum) && /cut path/.test(sum), sum);
+    const [sdl] = await Promise.all([t.page.waitForEvent('download', { timeout: 90000 }), t.page.getByRole('button', { name: /Sticker sheet · PDF/ }).click()]);
+    const sb = fs.readFileSync(await sdl.path());
+    t.check('sticker sheet PDF', sb.subarray(0, 4).toString() === '%PDF' && sb.length > 3000, sdl.suggestedFilename());
+    await t.shot('stickers');
+  },
+});
+
+// One pattern, every tool: saved in Pattern Design → Textile Designer →
+// switch garment → Wallpaper → back to Textile (state restored).
+scenarios.push({
+  name: 'pattern-continuity',
+  async run(t) {
+    await t.page.goto(t.BASE + '/patterns', { waitUntil: 'domcontentloaded' });
+    await t.page.getByRole('button', { name: 'Save', exact: true }).first().click({ timeout: 30000 });
+    await t.page.getByText(/Saved “.+” to My patterns/).waitFor({ timeout: 15000 });
+    const name = (await t.page.getByText(/Saved “.+” to My patterns/).innerText()).match(/“(.+)”/)[1];
+    const href = await t.page.getByRole('link', { name: 'Jersey →' }).getAttribute('href');
+    t.check('pattern saved with a stable id', /pattern=pattern_/.test(href || ''), href);
+    await t.page.goto(t.BASE + href, { waitUntil: 'domcontentloaded' });
+    const linked = t.page.getByText(/From My patterns:/);
+    await linked.waitFor({ timeout: 30000 });
+    t.check('textile uses the saved pattern', (await linked.innerText()).includes(name), name);
+    await t.page.getByRole('radio', { name: 'Polo T-shirt' }).click();
+    await t.page.waitForTimeout(500);
+    t.check('pattern kept after switching to polo', await t.page.getByText(/From My patterns:/).isVisible());
+    await t.page.getByRole('radio', { name: 'T-shirt', exact: true }).click();
+    await t.page.waitForTimeout(500);
+    t.check('pattern kept after switching to T-shirt', await t.page.getByText(/From My patterns:/).isVisible());
+    const id = href.match(/pattern=([^&]+)/)[1];
+    await t.page.goto(t.BASE + '/wallpaper-designer?pattern=' + id, { waitUntil: 'domcontentloaded' });
+    const btn = t.page.getByRole('button', { name: `Pattern: ${name}` }).first();
+    await btn.waitFor({ timeout: 30000 });
+    await t.page.waitForTimeout(800);
+    t.check('wallpaper picks the same pattern', (await btn.getAttribute('aria-pressed')) === 'true');
+    await t.page.goto(t.BASE + '/textile-designer', { waitUntil: 'domcontentloaded' });
+    await t.page.getByText(/From My patterns:/).waitFor({ timeout: 30000 });
+    t.check('textile restored with the pattern (T-shirt)', (await t.page.getByRole('radio', { name: 'T-shirt', exact: true }).getAttribute('aria-checked')) === 'true');
+    await t.shot('continuity');
   },
 });
 
@@ -893,7 +935,7 @@ scenarios.push({
 scenarios.push({
   name: 'rangoli-guided',
   async run(t) {
-    await t.page.goto(t.BASE + '/rangoli-mandala-maker', { waitUntil: 'domcontentloaded' });
+    await t.page.goto(t.BASE + '/patterns?mode=rangoli', { waitUntil: 'domcontentloaded' });
     await t.page.getByRole('button', { name: /Diwali rangoli/ }).click();
     await t.page.getByRole('button', { name: 'Starting design 3' }).click();
     await t.page.getByLabel('Symmetry').selectOption('12');
@@ -944,7 +986,7 @@ scenarios.push({
   // The test browser downloads files instead of showing the system save dialog.
   init: () => { try { delete Window.prototype.showSaveFilePicker; delete window.showSaveFilePicker; } catch {} },
   async run(t) {
-    await t.page.goto(t.BASE + '/custom-jersey-designer', { waitUntil: 'domcontentloaded' });
+    await t.page.goto(t.BASE + '/textile-designer?garment=jersey', { waitUntil: 'domcontentloaded' });
     await t.page.locator('[data-el="number"]').first().waitFor({ timeout: 30000 });
     await t.page.locator('[data-el="number"]').first().click();
     const insp = t.page.getByRole('region', { name: /Edit Back number/ });
