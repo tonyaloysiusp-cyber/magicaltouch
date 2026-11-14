@@ -1,38 +1,241 @@
 [
  {
-  "name": "tool-rangoli",
+  "name": "audit-desktop-workspace",
   "device": "desktop",
-  "url": "/rangoli-mandala-maker",
-  "wait": 8000,
+  "url": "/textile-designer?garment=jersey",
+  "wait": 10000,
   "steps": [
    {
-    "js": "(()=>{const el=document.querySelector('[role=radiogroup][aria-label=Tool]'); el && window.scrollTo(0, el.getBoundingClientRect().top+scrollY-80);})()",
+    "js": "(()=>{const el=document.querySelector('[role=tablist]'); el && window.scrollTo(0, el.getBoundingClientRect().top+scrollY-140);})()",
     "wait": 1500
+   },
+   {
+    "js": "(()=>{const b=[...document.querySelectorAll('[role=tab]')].find(x=>x.textContent.includes(\"Logos & text\")); b&&b.click();})()",
+    "wait": 2500
+   },
+   {
+    "js": "(()=>{const b=[...document.querySelectorAll('[role=tab]')].find(x=>x.textContent.includes(\"Names & numbers\")); b&&b.click();})()",
+    "wait": 2500
+   },
+   {
+    "js": "(()=>{const b=[...document.querySelectorAll('[role=tab]')].find(x=>x.textContent.includes(\"Players & sizes\")); b&&b.click();})()",
+    "wait": 2500
+   },
+   {
+    "js": "(()=>{const b=[...document.querySelectorAll('[role=tab]')].find(x=>x.textContent.includes(\"Print files\")); b&&b.click();})()",
+    "wait": 2500
    }
   ]
  },
  {
-  "name": "tool-colours",
+  "name": "audit-desktop-studio",
   "device": "desktop",
-  "url": "/colours",
-  "wait": 8000,
+  "url": "/textile-designer?garment=jersey",
+  "wait": 10000,
   "steps": [
    {
-    "js": "(()=>{const el=document.getElementById('palette-generator'); el && window.scrollTo(0, el.getBoundingClientRect().top+scrollY-80);})()",
+    "text": "Edit print file",
+    "wait": 6000
+   },
+   {
+    "text": "Layouts",
+    "exact": true,
     "wait": 1500
+   },
+   {
+    "text": "+ Sash",
+    "wait": 2500
+   },
+   {
+    "text": "+ Name & number on the back",
+    "wait": 4000
+   },
+   {
+    "text": "Back",
+    "exact": true,
+    "wait": 2500
    }
   ]
  },
  {
-  "name": "tool-jersey",
-  "device": "desktop",
-  "url": "/custom-jersey-designer",
-  "wait": 9000,
+  "name": "audit-laptop-workspace",
+  "device": "laptop",
+  "url": "/textile-designer?garment=jersey",
+  "wait": 10000,
   "steps": [
    {
-    "js": "(()=>{const el=document.querySelector('nav[aria-label=Sections]'); el && window.scrollTo(0, el.getBoundingClientRect().top+scrollY-140);})()",
+    "js": "(()=>{const el=document.querySelector('[role=tablist]'); el && window.scrollTo(0, el.getBoundingClientRect().top+scrollY-140);})()",
     "wait": 1500
+   },
+   {
+    "js": "(()=>{const b=[...document.querySelectorAll('[role=tab]')].find(x=>x.textContent.includes(\"Logos & text\")); b&&b.click();})()",
+    "wait": 2500
+   },
+   {
+    "js": "(()=>{const b=[...document.querySelectorAll('[role=tab]')].find(x=>x.textContent.includes(\"Names & numbers\")); b&&b.click();})()",
+    "wait": 2500
+   },
+   {
+    "js": "(()=>{const b=[...document.querySelectorAll('[role=tab]')].find(x=>x.textContent.includes(\"Players & sizes\")); b&&b.click();})()",
+    "wait": 2500
+   },
+   {
+    "js": "(()=>{const b=[...document.querySelectorAll('[role=tab]')].find(x=>x.textContent.includes(\"Print files\")); b&&b.click();})()",
+    "wait": 2500
    }
   ]
+ },
+ {
+  "name": "audit-laptop-studio",
+  "device": "laptop",
+  "url": "/textile-designer?garment=jersey",
+  "wait": 10000,
+  "steps": [
+   {
+    "text": "Edit print file",
+    "wait": 6000
+   },
+   {
+    "text": "Layouts",
+    "exact": true,
+    "wait": 1500
+   },
+   {
+    "text": "+ Sash",
+    "wait": 2500
+   },
+   {
+    "text": "+ Name & number on the back",
+    "wait": 4000
+   },
+   {
+    "text": "Back",
+    "exact": true,
+    "wait": 2500
+   }
+  ]
+ },
+ {
+  "name": "audit-ipad-workspace",
+  "device": "ipad",
+  "url": "/textile-designer?garment=jersey",
+  "wait": 10000,
+  "steps": [
+   {
+    "js": "(()=>{const el=document.querySelector('[role=tablist]'); el && window.scrollTo(0, el.getBoundingClientRect().top+scrollY-140);})()",
+    "wait": 1500
+   },
+   {
+    "js": "(()=>{const b=[...document.querySelectorAll('[role=tab]')].find(x=>x.textContent.includes(\"Logos & text\")); b&&b.click();})()",
+    "wait": 2500
+   },
+   {
+    "js": "(()=>{const b=[...document.querySelectorAll('[role=tab]')].find(x=>x.textContent.includes(\"Names & numbers\")); b&&b.click();})()",
+    "wait": 2500
+   },
+   {
+    "js": "(()=>{const b=[...document.querySelectorAll('[role=tab]')].find(x=>x.textContent.includes(\"Players & sizes\")); b&&b.click();})()",
+    "wait": 2500
+   },
+   {
+    "js": "(()=>{const b=[...document.querySelectorAll('[role=tab]')].find(x=>x.textContent.includes(\"Print files\")); b&&b.click();})()",
+    "wait": 2500
+   }
+  ]
+ },
+ {
+  "name": "audit-ipad-studio",
+  "device": "ipad",
+  "url": "/textile-designer?garment=jersey",
+  "wait": 10000,
+  "steps": [
+   {
+    "text": "Edit print file",
+    "wait": 6000
+   },
+   {
+    "text": "Layouts",
+    "exact": true,
+    "wait": 1500
+   },
+   {
+    "text": "+ Sash",
+    "wait": 2500
+   },
+   {
+    "text": "+ Name & number on the back",
+    "wait": 4000
+   },
+   {
+    "text": "Back",
+    "exact": true,
+    "wait": 2500
+   }
+  ]
+ },
+ {
+  "name": "audit-iphone13-workspace",
+  "device": "iPhone 13",
+  "url": "/textile-designer?garment=jersey",
+  "wait": 10000,
+  "steps": [
+   {
+    "js": "(()=>{const el=document.querySelector('[role=tablist]'); el && window.scrollTo(0, el.getBoundingClientRect().top+scrollY-140);})()",
+    "wait": 1500
+   },
+   {
+    "js": "(()=>{const b=[...document.querySelectorAll('[role=tab]')].find(x=>x.textContent.includes(\"Logos & text\")); b&&b.click();})()",
+    "wait": 2500
+   },
+   {
+    "js": "(()=>{const b=[...document.querySelectorAll('[role=tab]')].find(x=>x.textContent.includes(\"Names & numbers\")); b&&b.click();})()",
+    "wait": 2500
+   },
+   {
+    "js": "(()=>{const b=[...document.querySelectorAll('[role=tab]')].find(x=>x.textContent.includes(\"Players & sizes\")); b&&b.click();})()",
+    "wait": 2500
+   },
+   {
+    "js": "(()=>{const b=[...document.querySelectorAll('[role=tab]')].find(x=>x.textContent.includes(\"Print files\")); b&&b.click();})()",
+    "wait": 2500
+   }
+  ]
+ },
+ {
+  "name": "audit-iphone13-studio",
+  "device": "iPhone 13",
+  "url": "/textile-designer?garment=jersey",
+  "wait": 10000,
+  "steps": [
+   {
+    "text": "Edit print file",
+    "wait": 6000
+   },
+   {
+    "text": "Layouts",
+    "exact": true,
+    "wait": 1500
+   },
+   {
+    "text": "+ Sash",
+    "wait": 2500
+   },
+   {
+    "text": "+ Name & number on the back",
+    "wait": 4000
+   },
+   {
+    "text": "Back",
+    "exact": true,
+    "wait": 2500
+   }
+  ]
+ },
+ {
+  "name": "audit-desktop-full",
+  "device": "desktop",
+  "url": "/textile-designer?garment=polo",
+  "wait": 10000,
+  "full": true
  }
 ]

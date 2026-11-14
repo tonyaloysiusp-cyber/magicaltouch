@@ -5,7 +5,7 @@ const out = 'shots'; fs.mkdirSync(out, { recursive: true });
 const browser = await chromium.launch();
 const jobs = JSON.parse(fs.readFileSync('jobs.json', 'utf8'));
 for (const j of jobs) {
-  const ctx = await browser.newContext(j.device === 'desktop' ? { viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2 } : j.device === 'ipad' ? { ...devices['iPad Pro 11 landscape'] } : { ...devices[j.device || 'iPhone 13'] });
+  const ctx = await browser.newContext(j.device === 'desktop' ? { viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2 } : j.device === 'laptop' ? { viewport: { width: 1280, height: 800 }, deviceScaleFactor: 1 } : j.device === 'ipad' ? { ...devices['iPad Pro 11 landscape'] } : { ...devices[j.device || 'iPhone 13'] });
   await ctx.addInitScript(() => { try { localStorage.setItem('mt:onboarded', '1'); } catch {} });
   if (j.mock === 'admin') {
     const ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
