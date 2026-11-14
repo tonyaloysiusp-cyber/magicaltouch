@@ -10,7 +10,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { AlertTriangle, CheckCircle2, Download, FileArchive, FileUp, FolderOpen, Layers, Loader2, MousePointerClick, Plus, Printer, RotateCcw, Save, Shirt, Trash2, Upload, X } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Download, FileArchive, FileUp, FolderOpen, Layers, Loader2, MousePointerClick, Plus, Printer, Redo2, RotateCcw, Save, Shirt, Trash2, Undo2, Upload, X, ZoomIn, ZoomOut } from 'lucide-react';
 import { DEFAULT_PATTERN, PatternSettings, svgDataUrl, sheetPlacements, motifPath, layout } from '@/lib/patterns';
 import { SIZES, ROLLS } from '@/lib/garments';
 import {
@@ -197,6 +197,38 @@ export function GarmentDesigner({ kind: initialKind = 'jersey' }: { kind?: Garme
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [KEY, kit, players, pat, patColor, patName, projectId, patAssetId, patOwn]);
   useEffect(() => { if (live.current) setDirty(true); }, [kit, players, pat, patColor, patName]);
+
+  // Undo / redo for every design change (kit, players, pattern).
+  type Snap = { kit: KitDesign; players: Player[]; pat: PatternSettings; patColor: string; patName: string; patAssetId: string | null; patAssetAt: string | null; patOwn: boolean };
+  const hist = useRef<{ past: Snap[]; future: Snap[]; cur: Snap | null; applying: boolean }>({ past: [], future: [], cur: null, applying: false });
+  const [, setHistTick] = useState(0);
+  useEffect(() => {
+    const snap: Snap = { kit, players, pat, patColor, patName, patAssetId, patAssetAt, patOwn };
+    const h = hist.current;
+    if (h.applying) { h.applying = false; h.cur = snap; return; }
+    if (!live.current) { h.cur = snap; h.past = []; h.future = []; setHistTick((x) => x + 1); return; }
+    const t = setTimeout(() => {
+      if (h.cur) { h.past.push(h.cur); if (h.past.length > 60) h.past.shift(); }
+      h.future = []; h.cur = snap; setHistTick((x) => x + 1);
+    }, 350);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [kit, players, pat, patColor, patName, patAssetId, patOwn]);
+  const applySnap = (x: Snap) => { hist.current.applying = true; setKit(x.kit); setPlayers(x.players); setPat(x.pat); setPatColor(x.patColor); setPatName(x.patName); setPatAssetId(x.patAssetId); setPatAssetAt(x.patAssetAt); setPatOwn(x.patOwn); setHistTick((n) => n + 1); };
+  const undo = () => { const h = hist.current; const x = h.past.pop(); if (!x || !h.cur) return; h.future.push(h.cur); applySnap(x); };
+  const redo = () => { const h = hist.current; const x = h.future.pop(); if (!x || !h.cur) return; h.past.push(h.cur); applySnap(x); };
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const el = e.target as HTMLElement | null;
+      if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable)) return;
+      if (!(e.ctrlKey || e.metaKey) || e.key.toLowerCase() !== 'z' && e.key.toLowerCase() !== 'y') return;
+      e.preventDefault();
+      if (e.key.toLowerCase() === 'y' || e.shiftKey) redo(); else undo();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  });
+  const [zoom, setZoom] = useState(1);
 
   // ---------- projects (saved in this browser, or as a .mtd file on the device) ----------
   const readProjects = (): SavedProject[] => { try { return (JSON.parse(localStorage.getItem(PROJECTS) || '[]') as SavedProject[]).filter((x) => x && x.data); } catch { return []; } };
@@ -461,6 +493,10 @@ export function GarmentDesigner({ kind: initialKind = 'jersey' }: { kind?: Garme
         <Shirt size={18} className="ml-2 text-mt-muted" aria-hidden />
         <input value={kit.teamName} maxLength={40} onChange={(e) => set({ teamName: e.target.value })} aria-label="Project name" className="h-10 min-w-0 flex-1 basis-40 rounded-xl bg-transparent px-2 text-[15px] font-semibold focus:outline-none focus:bg-mt-bg" />
         <span className={`text-[12px] ${dirty ? 'text-amber-600 dark:text-amber-400' : 'text-mt-faint'}`}>{dirty ? 'Unsaved changes' : projectId ? 'Saved' : ''}</span>
+        <span className="inline-flex rounded-full border border-mt-border">
+          <button type="button" onClick={undo} disabled={!hist.current.past.length} aria-label="Undo" title="Undo (Ctrl+Z)" className="h-10 w-10 inline-flex items-center justify-center rounded-l-full hover:bg-mt-surface2 disabled:opacity-40"><Undo2 size={16} /></button>
+          <button type="button" onClick={redo} disabled={!hist.current.future.length} aria-label="Redo" title="Redo (Ctrl+Shift+Z)" className="h-10 w-10 inline-flex items-center justify-center rounded-r-full border-l border-mt-border hover:bg-mt-surface2 disabled:opacity-40"><Redo2 size={16} /></button>
+        </span>
         <button type="button" onClick={newDesign} className={btn}><Plus size={14} /> New</button>
         <button type="button" onClick={() => setProjects(readProjects().filter((x) => TEXTILE_KINDS.includes(x.kind)))} className={btn}><FolderOpen size={14} /> Projects</button>
         <button type="button" onClick={() => fileRef.current?.click()} className={btn}><FileUp size={14} /> Open file</button>
@@ -753,26 +789,34 @@ export function GarmentDesigner({ kind: initialKind = 'jersey' }: { kind?: Garme
         <div className="min-w-0 space-y-5 order-first lg:order-none">
           <div className="rounded-3xl border border-mt-border bg-mt-surface2/50 p-4">
             <div className="flex flex-wrap items-center gap-2 mb-3">
-              <div role="tablist" aria-label="Preview" className="inline-flex rounded-full border border-mt-border bg-mt-surface p-0.5">
-                {(['garment', 'flat'] as const).map((v) => <button key={v} type="button" role="tab" aria-selected={view === v} onClick={() => setView(v)} className={`h-8 px-3 rounded-full text-[12.5px] font-semibold ${view === v ? 'bg-mt-ink text-mt-bg' : 'text-mt-muted'}`}>{v === 'garment' ? 'Garment' : 'Print pieces'}</button>)}
-              </div>
-              {view === 'garment' && <div className="inline-flex rounded-full border border-mt-border bg-mt-surface p-0.5">
-                {(['both', 'front', 'back'] as const).map((v) => <button key={v} type="button" aria-pressed={side === v} onClick={() => setSide(v)} className={`h-8 px-3 rounded-full text-[12.5px] font-semibold capitalize ${side === v ? 'bg-mt-ink text-mt-bg' : 'text-mt-muted'}`}>{v === 'both' ? 'Front & back' : v}</button>)}
-              </div>}
+              <span className="inline-flex items-center rounded-full border border-mt-border bg-mt-surface p-0.5" aria-label="Zoom">
+                <button type="button" onClick={() => setZoom((z) => Math.max(0.5, Math.round((z - 0.25) * 100) / 100))} aria-label="Zoom out" className="h-8 w-8 inline-flex items-center justify-center rounded-full hover:bg-mt-surface2"><ZoomOut size={14} /></button>
+                <button type="button" onClick={() => setZoom(1)} aria-label="Fit" className="h-8 px-2 text-[12px] font-semibold tabular-nums">{Math.round(zoom * 100)}%</button>
+                <button type="button" onClick={() => setZoom((z) => Math.min(3, Math.round((z + 0.25) * 100) / 100))} aria-label="Zoom in" className="h-8 w-8 inline-flex items-center justify-center rounded-full hover:bg-mt-surface2"><ZoomIn size={14} /></button>
+              </span>
               {personal && players.length > 0 && <select value={Math.min(sel, players.length - 1)} onChange={(e) => setSel(Number(e.target.value))} aria-label="Preview player" className="h-9 rounded-full border border-mt-border bg-mt-surface px-3 text-[12.5px] font-semibold">{players.map((p, i) => <option key={i} value={i}>{p.name || `Row ${i + 1}`} · #{p.number || '—'} · {sizeLabel(p.size)}</option>)}</select>}
               <span className="ml-auto" />
               <button type="button" onClick={dlPreview} className="h-9 px-3 rounded-full border border-mt-border text-[12.5px] font-semibold inline-flex items-center gap-1.5"><Download size={13} /> Preview</button>
               <button type="button" onClick={editInEditor} disabled={!!busy} className="h-9 px-3 rounded-full border border-mt-border text-[12.5px] font-semibold inline-flex items-center gap-1.5" title="Open the artwork in the design editor">{busy === 'editor' ? <Loader2 size={13} className="animate-spin" /> : <Shirt size={13} />} Edit in editor</button>
             </div>
-            <div className="rounded-2xl bg-gradient-to-b from-white to-[#EEF1F5] dark:from-[#1b1f27] dark:to-[#12151b] p-3 sm:p-6">
+            <div className="rounded-2xl bg-gradient-to-b from-white to-[#EEF1F5] dark:from-[#1b1f27] dark:to-[#12151b] p-3 sm:p-6 overflow-auto max-h-[78vh]">
+              <div style={{ width: `${zoom * 100}%` }} className="mx-auto">
               {view === 'garment' ? (
                 <div role="application" aria-label={`${copy.noun} — click a part to edit it, drag names, numbers, logos and text to move them`}
-                  className="garment-edit mx-auto w-full select-none [&_svg]:mx-auto [&_svg]:block [&_svg]:w-full [&_svg]:h-auto [&_svg]:max-h-[600px] [&_.mt-hit]:cursor-move [&_.mt-part]:cursor-pointer [&_.mt-part:hover]:stroke-[#3B82C4]/60 [&_.mt-hit:hover]:stroke-[#3B82C4]"
+                  className={`garment-edit mx-auto w-full select-none [&_svg]:mx-auto [&_svg]:block [&_svg]:w-full [&_svg]:h-auto ${zoom > 1 ? '[&_svg]:max-h-none' : '[&_svg]:max-h-[600px]'} [&_.mt-hit]:cursor-move [&_.mt-part]:cursor-pointer [&_.mt-part:hover]:stroke-[#3B82C4]/60 [&_.mt-hit:hover]:stroke-[#3B82C4]`}
                   style={{ touchAction: selEl && DRAG.includes(selEl) ? 'none' : 'pan-y' }}
                   onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp}
                   dangerouslySetInnerHTML={{ __html: preview }} />
-              ) : <img src={svgDataUrl(preview)} alt={`${copy.noun} print pieces`} className="mx-auto w-full max-h-[600px] object-contain" />}
+              ) : <img src={svgDataUrl(preview)} alt={`${copy.noun} print pieces`} className={`mx-auto w-full ${zoom > 1 ? '' : 'max-h-[600px]'} object-contain`} />}
+              </div>
               {view === 'garment' && !selEl && <p className="mt-2 text-center text-[12px] text-mt-muted inline-flex w-full items-center justify-center gap-1.5"><MousePointerClick size={13} /> Click any part of the shirt to edit it · drag names, numbers, logos and text to move them</p>}
+            </div>
+            {/* View bar */}
+            <div role="tablist" aria-label="View" className="mt-3 mx-auto flex w-fit flex-wrap justify-center gap-1 rounded-full border border-mt-border bg-mt-surface p-0.5">
+              {([['front', 'Front'], ['back', 'Back'], ['both', 'Front & back'], ['flat', 'Print pieces · sleeves & collar']] as const).map(([v, l]) => {
+                const on = v === 'flat' ? view === 'flat' : view === 'garment' && side === v;
+                return <button key={v} type="button" role="tab" aria-selected={on} onClick={() => { if (v === 'flat') setView('flat'); else { setView('garment'); setSide(v); } }} className={`h-8 px-3 rounded-full text-[12.5px] font-semibold ${on ? 'bg-mt-ink text-mt-bg' : 'text-mt-muted hover:text-mt-ink'}`}>{l}</button>;
+              })}
             </div>
           </div>
 

@@ -881,6 +881,49 @@ scenarios.push({
   },
 });
 
+// Imposition studio: sample document → analysis → n-up with preview → undo/redo → booklet with creep → export.
+scenarios.push({
+  name: 'imposition-studio',
+  async run(t) {
+    const fs = await import('node:fs');
+    const { PDFDocument } = await import('pdf-lib');
+    await t.page.goto(t.BASE + '/print-layout', { waitUntil: 'domcontentloaded' });
+    await t.page.getByRole('button', { name: 'Create sample document' }).first().click({ timeout: 30000 });
+    await t.page.getByRole('button', { name: /Create and open/ }).click();
+    await t.page.getByText(/8 pages analysed/).waitFor({ timeout: 60000 });
+    const info = await t.page.getByRole('region', { name: /Analysis of sample/ }).innerText();
+    t.check('analysis shows trim and bleed boxes', /148 × 210/.test(info) && /154 × 216/.test(info), info.slice(0, 200));
+    await t.page.getByRole('button', { name: 'N-up pages', exact: true }).click();
+    await t.page.getByRole('button', { name: '4-up' }).click();
+    t.check('preview shown before applying', await t.page.getByText('Preview — not applied yet').isVisible());
+    await t.page.getByRole('button', { name: 'Apply' }).click();
+    await t.page.getByText(/N-up pages — done\. 2 sheets/).waitFor({ timeout: 10000 });
+    await t.page.getByRole('button', { name: 'Undo' }).click();
+    await t.page.waitForTimeout(300);
+    t.check('undo returns to 8 pages', /8 sheets/.test(await t.page.locator('body').innerText()));
+    await t.page.getByRole('button', { name: 'Redo' }).click();
+    await t.page.waitForTimeout(300);
+    t.check('redo brings the 2 sheets back', /· 2 sheets/.test(await t.page.locator('body').innerText()));
+    await t.shot('studio-nup');
+    await t.page.getByRole('button', { name: 'Undo' }).click();
+    await t.page.getByRole('button', { name: 'Stick on text and numbers', exact: true }).click();
+    await t.page.getByRole('button', { name: 'Apply' }).click();
+    await t.page.getByRole('button', { name: 'Create booklet', exact: true }).click();
+    await t.page.getByLabel('Creep for the innermost sheet (mm)').fill('0.4');
+    await t.page.getByRole('button', { name: 'Apply' }).click();
+    await t.page.getByText(/Create booklet — done\. 4 sheets/).waitFor({ timeout: 10000 });
+    await t.page.getByRole('button', { name: 'Automation sequences', exact: true }).click();
+    t.check('steps recorded for automation', /Stick on text and numbers[\s\S]*Create booklet/.test(await t.page.getByLabel('Steps applied').innerText()));
+    await t.page.locator('summary', { hasText: 'Export' }).click();
+    const [dl] = await Promise.all([t.page.waitForEvent('download', { timeout: 60000 }), t.page.getByRole('button', { name: /Editable PDF · layers/ }).click()]);
+    const bytes = fs.readFileSync(await dl.path());
+    const out = await PDFDocument.load(bytes);
+    t.check('booklet PDF: 4 sides at A5 spread', out.getPageCount() === 4 && Math.abs(out.getPage(0).getWidth() - 296 * 72 / 25.4) < 1, `${out.getPageCount()} pages, ${out.getPage(0).getWidth()}`);
+    t.check('pages stay vectors', !/\/Subtype\s*\/Image/.test(bytes.toString('latin1')));
+    await t.shot('studio-booklet');
+  },
+});
+
 // Print Size & Binding Calculator: spine from caliper, cover spread, editor link with fold guides.
 scenarios.push({
   name: 'binding-calculator',
@@ -1072,7 +1115,8 @@ scenarios.push({
     fs.writeFileSync('e2e-out/book.pdf', await book.save());
 
     await t.page.goto(t.BASE + '/print-layout', { waitUntil: 'domcontentloaded' });
-    await t.page.locator('input[type=file][accept*="pdf"]').setInputFiles('e2e-out/card.pdf');
+    await t.page.getByRole('tab', { name: /Quick layout/ }).click({ timeout: 30000 });
+    await t.page.locator('input[type=file][accept*="image/png"]').setInputFiles('e2e-out/card.pdf');
     await t.page.getByText(/per sheet/).first().waitFor({ timeout: 20000 });
     const summary = await t.page.getByText(/per sheet \(/).innerText();
     t.check('85 × 55 card read from the PDF (91 × 61 with bleed)', /85 × 55 mm/.test(summary), summary);
@@ -1086,7 +1130,7 @@ scenarios.push({
     t.check('front and back pages', out.getPageCount() === 2, String(out.getPageCount()));
     t.check('vector, no pictures', !/\/Subtype\s*\/Image/.test(fs.readFileSync(await dl.path()).toString('latin1')));
 
-    await t.page.locator('input[type=file][accept*="pdf"]').setInputFiles('e2e-out/book.pdf');
+    await t.page.locator('input[type=file][accept*="image/png"]').setInputFiles('e2e-out/book.pdf');
     await t.page.getByLabel('Booklet sheets').waitFor({ timeout: 20000 });
     const order = await t.page.getByLabel('Booklet sheets').innerText();
     t.check('6 pages → 8 with blanks; sheet 1 front = blank + 1', /6 pages → 8/.test(await t.page.getByText(/Sheet order/).innerText()) && /Sheet 1\s*Front\s*blank\s*1/i.test(order.replace(/\n/g, ' ')), order.slice(0, 120));

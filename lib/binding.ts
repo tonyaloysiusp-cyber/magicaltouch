@@ -112,12 +112,12 @@ export function calculateBook(s: BookSpec): BookResult {
       widthMm: r2(2 * W + spineMm + 2 * bleed), heightMm: r2(H + 2 * bleed), bleed, safe,
       trim: { x: bleed, y: bleed, w: r2(2 * W + spineMm), h: H },
       panels: [{ name: 'Back cover', x: x0, w: W, kind: 'back' }, { name: 'Spine', x: r2(x0 + W), w: r2(spineMm), kind: 'spine' }, { name: 'Front cover', x: r2(x0 + W + spineMm), w: W, kind: 'front' }],
-      folds: [
+      folds: ([
         { x: r2(x0 + W - hinge), kind: 'hinge', label: 'Hinge score' },
         { x: r2(x0 + W), kind: 'spine', label: 'Spine fold' },
         { x: r2(x0 + W + spineMm), kind: 'spine', label: 'Spine fold' },
         { x: r2(x0 + W + spineMm + hinge), kind: 'hinge', label: 'Hinge score' },
-      ].filter((f) => hinge > 0 || f.kind === 'spine'),
+      ] as Fold[]).filter((f) => hinge > 0 || f.kind === 'spine'),
     };
   } else if (s.binding === 'saddle') {
     const self = s.selfCover !== false;

@@ -12,7 +12,7 @@ let pdfjsLibPromise: Promise<any> | null = null;
 
 // Loaded lazily (not at module scope) since pdf.js only runs in the
 // browser and this file is imported from the editor's client bundle.
-async function getPdfjs(): Promise<any> {
+export async function getPdfjs(): Promise<any> {
   if (!pdfjsLibPromise) {
     pdfjsLibPromise = import('pdfjs-dist').then((mod) => {
       // The worker file is copied into public/ at build time (see
