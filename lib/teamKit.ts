@@ -58,6 +58,10 @@ export interface KitDesign {
   graphic?: KitGraphic; accent?: string; accent2?: string; cuffs?: boolean;
   frontText?: string; frontTextColor?: string; frontTextMm?: number; frontTextTopMm?: number;
   personalise?: boolean; // names and numbers per player (off: sizes and quantities only)
+  /** Extra sizes defined by measurement (flat chest width in cm); scaled from the size-M block. */
+  customSizes?: CustomSize[];
+  /** Polo placket: number of buttons (0 = hidden placket) and their colour. */
+  placketButtons?: number; buttonColor?: string;
   neck?: 'round' | 'v';
   // Positions on the front piece (size-M mm); unset = the standard place.
   teamLogoX?: number; teamLogoY?: number; teamLogoMm?: number;
@@ -80,10 +84,25 @@ export function kitFor(kind: GarmentKind): KitDesign {
 }
 
 export interface Player { name: string; number: string; size: string; qty?: number }
+export interface CustomSize { label: string; chestCm: number }
 export interface RosterIssue { row: number; level: 'error' | 'warning'; message: string }
 
 const SIZE_IDS = new Map(SIZES.map((s) => [s.label.toLowerCase().replace(/ .*/, ''), s.id] as [string, string]).concat(SIZES.map((s) => [s.id, s.id] as [string, string])));
 export const sizeId = (s: string) => SIZE_IDS.get(s.trim().toLowerCase().replace(/ .*/, '')) || null;
+/** The size-M block's flat chest width and body length (cm) for this garment. */
+export function blockMeasure(kit: KitDesign): { chestCm: number; lengthCm: number } {
+  const f = kitProduct(kit).pieces.find((p) => p.id === 'front');
+  return { chestCm: Math.round((f?.w || 560) / 10 * 10) / 10, lengthCm: Math.round((f?.h || 740) / 10 * 10) / 10 };
+}
+/** A standard size (XS–3XL…) or one of the kit's custom measured sizes. */
+export function sizeInfo(kit: KitDesign | null | undefined, s: string): { id: string; label: string; k: number } | null {
+  const id = sizeId(s || '');
+  if (id) { const z = SIZES.find((x) => x.id === id)!; return { id, label: z.label.replace(/ .*/, ''), k: z.k }; }
+  const c = kit?.customSizes?.find((x) => x.label.trim().toLowerCase() === (s || '').trim().toLowerCase());
+  if (c && c.chestCm > 0) return { id: `custom:${c.label}`, label: c.label, k: c.chestCm / blockMeasure(kit!).chestCm };
+  return null;
+}
+const sizeNames = (kit?: KitDesign | null) => [...SIZES.map((s) => s.label.replace(/ .*/, '')), ...(kit?.customSizes || []).map((c) => c.label)].join(', ');
 
 /** Reads "name, number, size" lines or CSV (with or without a header row). */
 export function parseRoster(text: string): Player[] {
@@ -110,20 +129,20 @@ export function parseRoster(text: string): Player[] {
   return rows.map((r) => ({ name: (r[iName] || '').slice(0, 20), number: (r[iNum] || '').replace(/[^0-9]/g, '').slice(0, 3), size: iSize >= 0 ? (r[iSize] || '') : '' }));
 }
 
-export function checkRoster(players: Player[], personalise = true): RosterIssue[] {
+export function checkRoster(players: Player[], personalise = true, kit?: KitDesign | null): RosterIssue[] {
   const out: RosterIssue[] = [];
   const seen = new Map<string, number>();
   players.forEach((p, i) => {
     const row = i + 1;
     if (!personalise) {
-      if (!sizeId(p.size)) out.push({ row, level: 'error', message: `Size “${p.size || '—'}” is not one of ${SIZES.map((s) => s.label.replace(/ .*/, '')).join(', ')}` });
+      if (!sizeInfo(kit, p.size)) out.push({ row, level: 'error', message: `Size “${p.size || '—'}” is not one of ${sizeNames(kit)}` });
       if (!(Number(p.qty) >= 1)) out.push({ row, level: 'error', message: 'Quantity must be 1 or more' });
       return;
     }
     if (!p.name.trim()) out.push({ row, level: 'error', message: 'Name is missing' });
     if (!p.number.trim()) out.push({ row, level: 'error', message: 'Number is missing' });
     else if (!/^\d{1,3}$/.test(p.number)) out.push({ row, level: 'error', message: 'Number must be 1–3 digits' });
-    if (!sizeId(p.size)) out.push({ row, level: 'error', message: `Size “${p.size || '—'}” is not one of ${SIZES.map((s) => s.label.replace(/ .*/, '')).join(', ')}` });
+    if (!sizeInfo(kit, p.size)) out.push({ row, level: 'error', message: `Size “${p.size || '—'}” is not one of ${sizeNames(kit)}` });
     if (p.number && seen.has(p.number)) out.push({ row, level: 'warning', message: `Number ${p.number} is also on row ${seen.get(p.number)}` });
     if (p.number) seen.set(p.number, row);
     if (p.name.length > 14) out.push({ row, level: 'warning', message: 'Long name — letters will be narrower' });
@@ -309,7 +328,7 @@ export function pieceMarkup(piece: Piece, kit: KitDesign, pat: PatternSettings, 
 /** Front and back (plus sleeves) side by side, for the on-screen preview. */
 export function kitPreviewSvg(kit: KitDesign, pat: PatternSettings, player: Player | null, glyphs: Glyphs): string {
   const product = kitProduct(kit);
-  const k = SIZES.find((s) => s.id === sizeId(player?.size || 'M'))?.k || 1;
+  const k = sizeInfo(kit, player?.size || 'M')?.k || 1;
   const front = product.pieces.find((p) => p.id === 'front')!, back = product.pieces.find((p) => p.id === 'back')!;
   const sleeves = product.pieces.filter((p) => p.id.startsWith('sleeve'));
   const gap = 60, W = front.w + back.w + gap, sh = sleeves.length ? sleeves[0].h + 40 : 0, H = Math.max(front.h, back.h) + sh;
@@ -329,7 +348,7 @@ export function kitPreviewSvg(kit: KitDesign, pat: PatternSettings, player: Play
  */
 export function kitMockupSvg(kit: KitDesign, pat: PatternSettings, player: Player | null, glyphs: Glyphs, view: 'both' | 'front' | 'back' = 'both', edit?: { selected?: string | null }): string {
   const product = kitProduct(kit);
-  const k = SIZES.find((s) => s.id === sizeId(player?.size || 'M'))?.k || 1;
+  const k = sizeInfo(kit, player?.size || 'M')?.k || 1;
   const front = product.pieces.find((p) => p.id === 'front')!, back = product.pieces.find((p) => p.id === 'back')!;
   const sleeve = product.pieces.find((p) => p.id === 'sleeve-l');
   const W = front.w;
@@ -366,7 +385,7 @@ export function kitMockupSvg(kit: KitDesign, pat: PatternSettings, player: Playe
   const view1 = (piece: Piece, isBack: boolean) => {
     const inner = isBack ? "" : `<path d="${neck(piece)}Z" fill="${shade(kit.body, -0.45)}"/>`;
     const collar = product.id === 'polo'
-      ? `<path d="M250 80L250 232L310 232L310 80Z" fill="${kit.collar}" opacity="${isBack ? 0 : 1}"/><path d="${isBack ? 'M185 -6C215 26 345 26 375 -6L372 -26C340 -2 220 -2 188 -26Z' : 'M196 -8C230 -30 330 -30 364 -8L362 4C330 -14 230 -14 198 4ZM198 -6L279 4L247 104L172 30ZM362 -6L281 4L313 104L388 30Z'}" fill="${kit.collar}" stroke="${shade(kit.collar, -0.25)}" stroke-width="2"/>`
+      ? `<path d="M250 80L250 232L310 232L310 80Z" fill="${kit.collar}" opacity="${isBack ? 0 : 1}"/>${isBack ? '' : placketButtons(kit)}<path d="${isBack ? 'M185 -6C215 26 345 26 375 -6L372 -26C340 -2 220 -2 188 -26Z' : 'M196 -8C230 -30 330 -30 364 -8L362 4C330 -14 230 -14 198 4ZM198 -6L279 4L247 104L172 30ZM362 -6L281 4L313 104L388 30Z'}" fill="${kit.collar}" stroke="${shade(kit.collar, -0.25)}" stroke-width="2"/>`
       : `<path d="${neck(piece)}" fill="none" stroke="${kit.collar}" stroke-width="${product.id === 'vest' ? 14 : 20}" stroke-linecap="round"/>`;
     const arm = product.id === 'vest' ? `<path d="M95 0C95 120 65 185 0 225M465 0C465 120 495 185 560 225" fill="none" stroke="${kit.collar}" stroke-width="12" stroke-linecap="round"/>` : '';
     return `${sleeves(isBack)}${inner}<g>${pieceMarkup(piece, kit, pat, player, glyphs, k, 0)}</g><path d="${piece.d}" fill="url(#${sid}-sh)" opacity="0.55"/>${arm}${collar}<path d="${piece.d}" fill="none" stroke="#000" stroke-opacity="0.12" stroke-width="2"/>${edit ? hits(piece, isBack) : ''}`;
@@ -378,6 +397,14 @@ export function kitMockupSvg(kit: KitDesign, pat: PatternSettings, player: Playe
   const body = views.map(([pc, isB, lab], i) => `<g transform="translate(${pad + i * (cell + gap)} 40)">${view1(pc, isB)}<text x="${W / 2}" y="${H + 60}" text-anchor="middle" font-size="24" letter-spacing="4" fill="#8A8F98" font-family="Arial, sans-serif">${lab}</text></g>`).join('');
   const TW = views.length * cell + (views.length - 1) * gap;
   return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${TW} ${H + 120}">${defs}${body}</svg>`;
+}
+
+/** Buttons on the polo placket (front view). */
+function placketButtons(kit: KitDesign): string {
+  const n = Math.max(0, Math.min(4, Math.round(kit.placketButtons ?? 3)));
+  if (!n) return '';
+  const c = kit.buttonColor || shade(kit.collar, 0.55);
+  return Array.from({ length: n }, (_, i) => { const y = 110 + (i * 100) / Math.max(1, n - 1 || 1); return `<circle cx="280" cy="${n === 1 ? 150 : Math.round(y)}" r="7" fill="${c}" stroke="${shade(c, -0.35)}" stroke-width="1.5"/><circle cx="278" cy="${n === 1 ? 148 : Math.round(y) - 2}" r="1.6" fill="${shade(c, -0.4)}"/><circle cx="282" cy="${n === 1 ? 152 : Math.round(y) + 2}" r="1.6" fill="${shade(c, -0.4)}"/>`; }).join('');
 }
 
 /** Lighter (amt > 0) or darker (amt < 0) version of a hex colour. */
@@ -394,7 +421,7 @@ export function shade(hex: string, amt: number): string {
  */
 export function playerPrintSvg(kit: KitDesign, pat: PatternSettings, player: Player, glyphs: Glyphs, opts: { rollW: number; bleed: number; cutLines: boolean; px?: boolean }): { svg: string; width: number; height: number; placed: Placed[] } {
   const product = kitProduct(kit);
-  const sz = SIZES.find((s) => s.id === sizeId(player.size)) || SIZES[3];
+  const sz = sizeInfo(kit, player.size) || { k: 1, label: player.size || 'M' };
   const { placed, height } = layoutPieces(product, sz.k, opts.rollW, opts.bleed);
   const parts = placed.map((pl) => `<g transform="${pieceTransform(pl)}">${pieceMarkup(pl.piece, kit, pat, player, glyphs, pl.k, opts.bleed)}</g>`).join('');
   const cuts = opts.cutLines ? `<g id="cut-lines" fill="none" stroke="#EC008C" stroke-width="0.5">${placed.map((pl) => `<path d="${pl.piece.d}" transform="${pieceTransform(pl)}" vector-effect="non-scaling-stroke"/>`).join('')}</g>` : '';
@@ -431,7 +458,7 @@ export function rosterSheets(kit: KitDesign, pat: PatternSettings, players: Play
   type It = { piece: Piece; w: number; h: number; k: number; copy: number; player: Player; idx: number; rot?: boolean; tooWide?: boolean };
   const items: It[] = [];
   players.forEach((pl, idx) => {
-    const k = SIZES.find((s) => s.id === sizeId(pl.size))?.k || 1;
+    const k = sizeInfo(kit, pl.size)?.k || 1;
     for (const pc of product.pieces) for (let c = 0; c < pc.qty; c++) items.push({ piece: pc, w: pc.w * k, h: pc.h * k, k, copy: c, player: pl, idx });
   });
   const room = rollW - 2 * gap - 2 * bleed;
@@ -458,7 +485,7 @@ export function rosterSheets(kit: KitDesign, pat: PatternSettings, players: Play
     const flip = o.mirror ? ` transform="translate(${rollW} 0) scale(-1 1)"` : '';
     const parts = pg.placed.map((pl) => `<g transform="${pieceTransform(pl)}">${pieceMarkup(pl.piece, kit, pat, pl.player, glyphs, pl.k, bleed)}</g>`).join('');
     const cuts = o.cutLines ? `<g id="cut-lines" fill="none" stroke="#EC008C" stroke-width="0.5"${flip}>${pg.placed.map((pl) => `<path d="${pl.piece.d}" transform="${pieceTransform(pl)}" vector-effect="non-scaling-stroke"/>`).join('')}</g>` : '';
-    const sz = (pl: Player) => (SIZES.find((s) => s.id === sizeId(pl.size))?.label || pl.size).replace(/ .*/, '');
+    const sz = (pl: Player) => sizeInfo(kit, pl.size)?.label || pl.size;
     const labels = `<g id="labels" font-family="Arial, Helvetica, sans-serif" font-size="6.5" fill="#444">${pg.placed.map((pl) => {
       const who = personal ? `${pl.idx + 1}. ${pl.player.name.toUpperCase()} #${pl.player.number}` : `${pl.idx + 1}.`;
       const lx = o.mirror ? rollW - pl.x - pl.w : pl.x;

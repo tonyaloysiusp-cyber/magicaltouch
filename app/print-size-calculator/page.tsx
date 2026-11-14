@@ -1,17 +1,21 @@
 import type { Metadata } from 'next';
 import { ToolPage, RELATED_TOOLS } from '@/components/seo/ToolPage';
-import { PrintCalculator } from '@/components/tools/PrintCalculator';
+import { PrintSizeWorkspace } from '@/components/tools/PrintSizeWorkspace';
 import { SITE_URL, SITE_NAME, fitTitle, fitDescription } from '@/lib/seo';
 import { PAPER_SIZES, pxFor, inFor } from '@/lib/printSizes';
 
 const PATH = '/print-size-calculator';
-const TITLE = 'Print Size & Bleed Calculator — A4 Size in Pixels, DPI';
-const DESC = 'A4 size in pixels, inches and mm at 300 DPI, plus every paper, visiting card and poster size, with 3 mm bleed and safe area. Find how big your photo can print, then design at that size.';
+const TITLE = 'Print Size & Binding Calculator — Spine Width, Cover Size, DPI';
+const DESC = 'Work out the spine width and full cover size for perfect bound, saddle-stitched and hardcover books from your page count and paper, with folds, bleed and crop marks — plus A, B and SRA paper sizes in pixels at any DPI.';
 export const metadata: Metadata = {
   title: fitTitle(TITLE), description: fitDescription(DESC), alternates: { canonical: `${SITE_URL}${PATH}` },
   openGraph: { type: 'website', url: `${SITE_URL}${PATH}`, title: TITLE, description: DESC, siteName: SITE_NAME, images: [{ url: `${SITE_URL}/tools/thumbs/print-size.webp`, width: 960, height: 540 }] },
 };
 const FAQ: [string, string][] = [
+  ['How do I calculate the spine width of a book?', 'Spine width = number of leaves × paper thickness (caliper). A 200-page book printed on both sides has 100 leaves; on 100 µm paper the spine is 10 mm. Enter the caliper from your paper’s data sheet for an exact result — paper weight (gsm) alone only gives an estimate, which the calculator labels as such.'],
+  ['How big is a perfect bound cover?', 'Back cover + spine + front cover, plus bleed on every side. An A4 book with a 10 mm spine and 3 mm bleed has a flat cover of 436 × 303 mm. Hinge scores are usually a few millimetres from each side of the spine.'],
+  ['How is a hardcover case sized?', 'Two boards (page size plus the squares), two joints, the spine board (book block + both boards) and a turn-in all round. Enter your binder’s board thickness, squares, joint and turn-in.'],
+  ['What is creep in saddle stitching?', 'Inner sheets of a stapled booklet stick out further at the fore-edge than the outer ones. The calculator shows how far to shift each sheet’s pages toward the spine.'],
   ['What is A4 size in pixels?', 'A4 is 210 × 297 mm: 2480 × 3508 pixels at 300 DPI, 1240 × 1754 at 150 DPI and 794 × 1123 at 96 DPI. With 3 mm bleed it is 2551 × 3579 pixels at 300 DPI.'],
   ['What is bleed in printing?', 'Bleed is extra artwork (usually 3 mm, or 0.125 in) beyond the edge of the page, so there is no white line when the printer trims the paper. Keep text inside the safe area, about 5 mm in from the edge.'],
   ['What is the visiting card size in India?', '3.5 × 2 inches (88.9 × 50.8 mm) — 1050 × 600 pixels at 300 DPI. In the UK and Europe business cards are 85 × 55 mm.'],
@@ -26,7 +30,7 @@ const STEPS: [string, string][] = [
 const POPULAR = ['a4', 'a5', 'a3', 'a6', 'dl', 'letter', 'bc-in', 'bc-uk', 'card57', 'poster1824', 'rollup'];
 export default function Page() {
   return (
-    <ToolPage image="/tools/thumbs/print-size.webp" path={PATH} name="Print Size Calculator" eyebrow="Print sizes · Bleed · DPI" h1="Print size & bleed calculator" intro="Every paper, card and poster size in mm, inches and pixels at any DPI — with bleed and safe area — so your files print sharp and nothing gets cut off." description={DESC} steps={STEPS} faq={FAQ} related={RELATED_TOOLS}
+    <ToolPage image="/tools/thumbs/print-size.webp" path={PATH} name="Print Size & Binding Calculator" eyebrow="Spine · Cover spread · Paper sizes · DPI" h1="Print size & binding calculator" intro="Spine width and the exact cover or hardcover case for your book — with folds, scores, bleed and crop marks — and every A, B, SRA and card size in pixels at any DPI." description={DESC} steps={STEPS} faq={FAQ} related={RELATED_TOOLS}
       extra={(
         <section className="mt-16" aria-labelledby="table">
           <h2 id="table" className="text-2xl font-semibold">Popular print sizes in pixels</h2>
@@ -40,7 +44,7 @@ export default function Page() {
           </div>
         </section>
       )}>
-      <PrintCalculator />
+      <PrintSizeWorkspace />
     </ToolPage>
   );
 }

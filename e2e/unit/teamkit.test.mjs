@@ -91,3 +91,16 @@ test('V-neck front and garmentOf', async () => {
   assert.match(r.d, /^M190 0C/);
   assert.equal(garmentOf('polo'), 'polo'); assert.equal(garmentOf('basketball'), 'jersey');
 });
+
+test('custom measured sizes scale from the size-M block and validate', async () => {
+  const { kitFor, sizeInfo, blockMeasure, checkRoster } = await import('../../lib/teamKit.ts');
+  const kit = { ...kitFor('polo'), customSizes: [{ label: '5XL', chestCm: 84 }] };
+  const b = blockMeasure(kit);
+  const s = sizeInfo(kit, '5xl');
+  assert.ok(s && Math.abs(s.k - 84 / b.chestCm) < 1e-9);
+  assert.equal(sizeInfo(kit, 'M').k, 1);
+  assert.equal(sizeInfo(kit, 'nope'), null);
+  const issues = checkRoster([{ name: '', number: '', size: '5XL', qty: 2 }], false, kit);
+  assert.equal(issues.length, 0);
+  assert.ok(checkRoster([{ name: '', number: '', size: '6XL', qty: 2 }], false, kit)[0].message.includes('5XL'));
+});

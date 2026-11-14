@@ -33,7 +33,7 @@ export function dilate(mask: Uint8Array, w: number, h: number, r: number): Uint8
 export function contourFromRgba(rgba: Uint8ClampedArray, w: number, h: number, offsetPx: number, opts: { threshold?: number; smooth?: number } = {}): { d: string; pad: number; w: number; h: number; loops: number } {
   const pad = Math.ceil(offsetPx) + 2, W = w + 2 * pad, H = h + 2 * pad;
   const thr = opts.threshold ?? 40;
-  let m = new Uint8Array(W * H);
+  let m: Uint8Array = new Uint8Array(W * H);
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (rgba[(y * w + x) * 4 + 3] > thr) m[(y + pad) * W + x + pad] = 1;
   m = dilate(m, W, H, offsetPx);
   const loops = outlines(m, W, H).filter((l) => area(l) > 0 && Math.abs(area(l)) > 4); // outer edges only (no holes)

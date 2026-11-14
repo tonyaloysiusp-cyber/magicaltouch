@@ -985,6 +985,7 @@ function EditorContent() {
   });
 
   const {
+    addGuidesAt,
     guidesLocked,
     setGuidesLocked,
     startGuideFromRuler,
@@ -997,6 +998,27 @@ function EditorContent() {
     activeToolRef,
     onGuideChange: pushHistory,
   });
+
+  // ?guidesV=x,x&guidesH=y,y (page pixels from the trim's top-left) — fold,
+  // spine and hinge lines from the Print Size & Binding Calculator.
+  const urlGuidesRef = useRef<{ v: string | null; h: string | null }>({ v: searchParams.get('guidesV'), h: searchParams.get('guidesH') });
+  useEffect(() => {
+    const g = urlGuidesRef.current;
+    if (!g.v && !g.h) return;
+    let tries = 0;
+    const timer = setInterval(() => {
+      const c: any = fabricCanvasRef.current;
+      const ab = c?.getObjects().find((o: any) => o.__isArtboard);
+      if (!ab) { if (++tries > 150) clearInterval(timer); return; }
+      clearInterval(timer);
+      urlGuidesRef.current = { v: null, h: null };
+      if (c.getObjects().some((o: any) => o.__isGuide)) return;
+      const nums = (x: string | null) => (x || '').split(',').map(Number).filter((n) => Number.isFinite(n));
+      addGuidesAt([...nums(g.v).map((n) => ({ axis: 'v' as const, pos: (ab.left || 0) + n })), ...nums(g.h).map((n) => ({ axis: 'h' as const, pos: (ab.top || 0) + n }))]);
+    }, 200);
+    return () => clearInterval(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     setGuidesVisible(showGuides);

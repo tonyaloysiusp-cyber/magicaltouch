@@ -14,8 +14,8 @@ import { AlertTriangle, CheckCircle2, Download, FileArchive, FileUp, FolderOpen,
 import { DEFAULT_PATTERN, PatternSettings, svgDataUrl, sheetPlacements, motifPath, layout } from '@/lib/patterns';
 import { SIZES, ROLLS } from '@/lib/garments';
 import {
-  garmentOf, GARMENT_STYLES, GarmentKind, Glyphs, KIT_GRAPHICS, KIT_STYLES, KitDesign, KitGraphic, Player, checkRoster, glyphTexts, kitFor,
-  kitMockupSvg, kitPreviewSvg, parseRoster, playerPrintSvg, printList, rosterSheets, safeFile, sizeId, frontLayout, kitProduct,
+  garmentOf, GARMENT_STYLES, GarmentKind, Glyphs, sizeInfo, blockMeasure, KIT_GRAPHICS, KIT_STYLES, KitDesign, KitGraphic, Player, checkRoster, glyphTexts, kitFor,
+  kitMockupSvg, kitPreviewSvg, parseRoster, playerPrintSvg, printList, rosterSheets, safeFile, frontLayout, kitProduct,
 } from '@/lib/teamKit';
 import { openToolFile, saveToolProject, takeToolHandoff, TOOL_FILE_ACCEPT } from '@/lib/mtd/toolProject';
 import { LeaveGuard } from './LeaveGuard';
@@ -85,7 +85,6 @@ async function readLogo(f: File): Promise<string> {
 const lum = (h: string) => { const n = parseInt(h.slice(1), 16); return 0.2126 * (n >> 16) + 0.7152 * ((n >> 8) & 255) + 0.0722 * (n & 255); };
 const DEFAULT_KIT_POS = { nameTopMm: 95, numberTopMm: 175 };
 const load = <T,>(k: string, d: T): T => { try { const v = localStorage.getItem(k); return v ? (JSON.parse(v) as T) : d; } catch { return d; } };
-const sizeLabel = (s: string) => (SIZES.find((x) => x.id === sizeId(s))?.label || s).replace(/ .*/, '');
 
 // One Textile Designer for jerseys, polo T-shirts and T-shirts. The garment
 // type is just a setting: switching it keeps every colour, pattern, logo,
@@ -134,6 +133,9 @@ export function GarmentDesigner({ kind: initialKind = 'jersey' }: { kind?: Garme
   const csvRef = useRef<HTMLInputElement>(null);
   const cache = useRef(new Map<string, string | null>());
   const set = (o: Partial<KitDesign>) => setKit((k) => ({ ...k, ...o }));
+  // Standard sizes plus the kit's own measured sizes.
+  const sizeLabel = (x: string) => sizeInfo(kit, x)?.label || x;
+  const sizeOptions = [...SIZES.map((z) => ({ v: z.label.replace(/ .*/, ''), l: z.label })), ...(kit.customSizes || []).filter((c) => c.label.trim()).map((c) => ({ v: c.label, l: `${c.label} (custom)` }))];
   const personal = kit.personalise !== false;
 
   // Restore this designer's last work, and the patterns saved in Pattern Studio.
@@ -267,7 +269,7 @@ export function GarmentDesigner({ kind: initialKind = 'jersey' }: { kind?: Garme
     return () => { live = false; clearTimeout(t); };
   }, [texts, kit.font, kit.fontWeight]);
 
-  const issues = useMemo(() => checkRoster(players, personal), [players, personal]);
+  const issues = useMemo(() => checkRoster(players, personal, kit), [players, personal, kit]);
   const errors = issues.filter((i) => i.level === 'error');
   const player = personal ? players[Math.min(sel, players.length - 1)] || null : { name: '', number: '', size: players[0]?.size || 'M' };
   const preview = useMemo(() => (view === 'garment' ? kitMockupSvg(kit, pattern, player, glyphs, side, { selected: selEl }) : kitPreviewSvg(kit, pattern, player, glyphs)), [view, side, kit, pattern, player, glyphs, selEl]);
@@ -407,7 +409,7 @@ export function GarmentDesigner({ kind: initialKind = 'jersey' }: { kind?: Garme
 
   const importText = (t: string) => {
     if (!personal) {
-      const rows = t.replace(/\r/g, '').split('\n').map((l) => l.split(/[,;\t]/).map((c) => c.trim())).filter((r) => r[0] && sizeId(r[0]) !== null).map((r) => ({ name: '', number: '', size: r[0], qty: Math.max(1, Number(r[1]) || 1) }));
+      const rows = t.replace(/\r/g, '').split('\n').map((l) => l.split(/[,;\t]/).map((c) => c.trim())).filter((r) => r[0] && sizeInfo(kit, r[0]) !== null).map((r) => ({ name: '', number: '', size: r[0], qty: Math.max(1, Number(r[1]) || 1) }));
       if (!rows.length) { flash('No rows found. Use one size per line: size, quantity.'); return; }
       setPlayers(rows); setPaste(null); flash(`${rows.length} sizes imported.`); return;
     }
@@ -563,6 +565,10 @@ export function GarmentDesigner({ kind: initialKind = 'jersey' }: { kind?: Garme
               </div>
               {kind === 'jersey' && <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label="Jersey style">{GARMENT_STYLES.jersey.map((id) => <button key={id} type="button" role="radio" aria-checked={kit.style === id} onClick={() => set({ style: id })} className={chip(kit.style === id)}>{KIT_STYLES.find((x) => x.id === id)?.label}</button>)}</div>}
               {(kit.style === 'football' || kit.style === 'basketball' || kit.style === 'tshirt') && <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label="Neck">{([['round', 'Round neck'], ['v', 'V-neck']] as const).map(([n, l]) => <button key={n} type="button" role="radio" aria-checked={(kit.neck || 'round') === n} onClick={() => set({ neck: n })} className={chip((kit.neck || 'round') === n)}>{l}</button>)}</div>}
+              {(kit.style === 'polo' || kit.style === 'cricket') && <div className="grid grid-cols-[1fr_auto] items-end gap-2">
+                <label className="block text-[12px] text-mt-muted">Button placket<select value={kit.placketButtons ?? 3} onChange={(e) => set({ placketButtons: Number(e.target.value) })} aria-label="Placket buttons" className={field}><option value={2}>2 buttons</option><option value={3}>3 buttons</option><option value={4}>4 buttons</option><option value={0}>No buttons (concealed)</option></select></label>
+                <label className="block text-[12px] text-mt-muted">Buttons<input type="color" value={kit.buttonColor || '#FFFFFF'} onChange={(e) => set({ buttonColor: e.target.value })} aria-label="Button colour" className="mt-1 h-10 w-14 rounded-xl border border-mt-border bg-mt-bg" /></label>
+              </div>}
               <p className="text-[11.5px] text-mt-muted">Changing the garment keeps your colours, pattern, logos, text, players and sizes.</p>
             </section>
             <section className="space-y-2">
@@ -683,6 +689,25 @@ export function GarmentDesigner({ kind: initialKind = 'jersey' }: { kind?: Garme
             <section className="rounded-2xl bg-mt-bg p-3 text-[13px]">
               <b>{totalQty}</b> {personal ? 'players' : 'garments'} · {[...new Set(players.map((p) => sizeLabel(p.size)))].filter(Boolean).join(', ') || '—'}
             </section>
+            <details className="rounded-2xl border border-mt-border p-3">
+              <summary className="cursor-pointer text-[13px] font-semibold">Size chart &amp; custom sizes</summary>
+              {(() => { const b = blockMeasure(kit); return <>
+                <p className="mt-2 text-[12px] text-mt-muted">Flat measurements of this garment’s pattern pieces (chest across the front, body length). Check them against your factory’s size chart before production.</p>
+                <table className="mt-2 w-full text-[12.5px] tabular-nums" aria-label="Size chart"><thead><tr className="text-left text-mt-muted"><th className="py-1">Size</th><th className="py-1 text-right">Chest (cm)</th><th className="py-1 text-right">Length (cm)</th></tr></thead>
+                  <tbody>{SIZES.map((z) => <tr key={z.id} className="border-t border-mt-border"><td className="py-1">{z.label}</td><td className="py-1 text-right">{(b.chestCm * z.k).toFixed(1)}</td><td className="py-1 text-right">{(b.lengthCm * z.k).toFixed(1)}</td></tr>)}
+                    {(kit.customSizes || []).map((c, ci) => { const k = c.chestCm / b.chestCm; return <tr key={'c' + ci} className="border-t border-mt-border"><td className="py-1">{c.label || '—'} <span className="text-mt-faint">custom</span></td><td className="py-1 text-right">{c.chestCm.toFixed(1)}</td><td className="py-1 text-right">{(b.lengthCm * k).toFixed(1)}</td></tr>; })}</tbody></table>
+                <p className="mt-3 text-[12px] font-semibold">Custom sizes (by chest measurement)</p>
+                {(kit.customSizes || []).map((c, ci) => (
+                  <div key={ci} className="mt-1.5 grid grid-cols-[1fr_96px_36px] gap-1.5">
+                    <input value={c.label} onChange={(e) => set({ customSizes: (kit.customSizes || []).map((x, j) => (j === ci ? { ...x, label: e.target.value.slice(0, 12) } : x)) })} aria-label={`Custom size ${ci + 1} name`} placeholder="e.g. 4XL" className={`${field} mt-0 h-9`} />
+                    <input type="number" min={20} max={120} step={0.5} value={c.chestCm} onChange={(e) => set({ customSizes: (kit.customSizes || []).map((x, j) => (j === ci ? { ...x, chestCm: Math.max(20, Math.min(120, Number(e.target.value) || 20)) } : x)) })} aria-label={`Custom size ${ci + 1} chest cm`} className={`${field} mt-0 h-9`} />
+                    <button type="button" onClick={() => set({ customSizes: (kit.customSizes || []).filter((_, j) => j !== ci) })} aria-label={`Remove custom size ${ci + 1}`} className="h-9 rounded-xl border border-mt-border text-[13px]">×</button>
+                  </div>
+                ))}
+                <button type="button" onClick={() => set({ customSizes: [...(kit.customSizes || []), { label: `Custom ${(kit.customSizes || []).length + 1}`, chestCm: Math.round(b.chestCm * 1.3) }] })} className={`${btn} mt-2`}><Plus size={14} /> Add custom size</button>
+                <p className="mt-1 text-[11.5px] text-mt-faint">A custom size scales every piece from the size-M block so the chest matches; use the name in the size column.</p>
+              </>; })()}
+            </details>
             {issues.length ? (
               <ul className="rounded-2xl bg-mt-bg p-3 space-y-1 text-[12.5px]" aria-label="Problems in the list">
                 {issues.slice(0, 10).map((x, k) => <li key={k} className={`flex items-start gap-1.5 ${x.level === 'error' ? 'text-rose-600' : 'text-amber-700 dark:text-amber-400'}`}><AlertTriangle size={13} className="mt-0.5 shrink-0" /> Row {x.row}: {x.message}</li>)}
@@ -780,7 +805,7 @@ export function GarmentDesigner({ kind: initialKind = 'jersey' }: { kind?: Garme
                             <td className="p-1.5">{ro ? p.name : <input value={p.name} maxLength={20} onChange={(e) => editRow(i, { name: e.target.value })} className={`${field} mt-0 h-9 ${bad.some((b) => /Name/.test(b.message)) ? 'border-rose-500' : ''}`} aria-label={`Name row ${i + 1}`} />}</td>
                             <td className="p-1.5">{ro ? p.number : <input value={p.number} inputMode="numeric" maxLength={3} onChange={(e) => editRow(i, { number: e.target.value.replace(/\D/g, '') })} className={`${field} mt-0 h-9 ${bad.some((b) => /Number/.test(b.message) && b.level === 'error') ? 'border-rose-500' : ''}`} aria-label={`Number row ${i + 1}`} />}</td>
                           </>}
-                          <td className="p-1.5">{ro ? sizeLabel(p.size) : <select value={sizeId(p.size) ? sizeLabel(p.size) : p.size} onChange={(e) => editRow(i, { size: e.target.value })} className={`${field} mt-0 h-9 ${bad.some((b) => /Size/.test(b.message)) ? 'border-rose-500' : ''}`} aria-label={`Size row ${i + 1}`}>{!sizeId(p.size) && <option value={p.size}>{p.size || 'Choose'}</option>}{SIZES.map((s) => <option key={s.id} value={s.label.replace(/ .*/, '')}>{s.label}</option>)}</select>}</td>
+                          <td className="p-1.5">{ro ? sizeLabel(p.size) : <select value={sizeInfo(kit, p.size) ? sizeLabel(p.size) : p.size} onChange={(e) => editRow(i, { size: e.target.value })} className={`${field} mt-0 h-9 ${bad.some((b) => /Size/.test(b.message)) ? 'border-rose-500' : ''}`} aria-label={`Size row ${i + 1}`}>{!sizeInfo(kit, p.size) && <option value={p.size}>{p.size || 'Choose'}</option>}{sizeOptions.map((o) => <option key={o.v} value={o.v}>{o.l}</option>)}</select>}</td>
                           {!personal && <td className="p-1.5">{ro ? p.qty : <input type="number" min={1} max={500} value={p.qty ?? 1} onChange={(e) => editRow(i, { qty: Math.max(0, Math.min(500, Number(e.target.value) || 0)) })} className={`${field} mt-0 h-9 ${bad.some((b) => /Quantity/.test(b.message)) ? 'border-rose-500' : ''}`} aria-label={`Quantity row ${i + 1}`} />}</td>}
                           <td className="p-1.5 text-right">{!ro && <button type="button" onClick={(e) => { e.stopPropagation(); setPlayers((ps) => ps.filter((_, k) => k !== i)); setSel(0); }} aria-label={`Remove row ${i + 1}`} className="inline-grid h-8 w-8 place-items-center rounded-full hover:bg-mt-bg"><Trash2 size={14} /></button>}</td>
                         </tr>

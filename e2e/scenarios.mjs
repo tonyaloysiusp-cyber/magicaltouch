@@ -881,6 +881,40 @@ scenarios.push({
   },
 });
 
+// Print Size & Binding Calculator: spine from caliper, cover spread, editor link with fold guides.
+scenarios.push({
+  name: 'binding-calculator',
+  async run(t) {
+    await t.page.goto(t.BASE + '/print-size-calculator', { waitUntil: 'domcontentloaded' });
+    await t.page.getByLabel('Number of pages').fill('200', { timeout: 30000 });
+    await t.page.getByLabel('Paper weight (gsm)').fill('80');
+    const summary = t.page.getByLabel('Binding summary');
+    t.check('estimate is labelled as an estimate', /Estimate:/.test(await summary.innerText()));
+    await t.page.getByLabel('Caliper (µm) — from data sheet').fill('100');
+    await t.page.waitForTimeout(300);
+    const txt = await summary.innerText();
+    t.check('A4 200 pp on 100 µm → 10 mm spine', /10 mm/.test(txt) && /436 × 303/.test(txt), txt.slice(0, 160));
+    t.check('exact once caliper entered', /Exact:/.test(txt));
+    const href = await t.page.getByRole('link', { name: /Open cover in Design Editor/ }).getAttribute('href');
+    t.check('editor link carries fold guides and bleed', /guidesV=/.test(href || '') && /bleedT=/.test(href || ''), href);
+    await t.page.getByRole('radio', { name: 'Hardcover' }).click();
+    await t.page.waitForTimeout(300);
+    t.check('hardcover shows boards', /Boards \d/.test(await t.page.locator('body').innerText()));
+    await t.page.getByRole('radio', { name: 'Saddle stitch' }).click();
+    await t.page.waitForTimeout(300);
+    t.check('saddle stitch shows creep', /Creep per sheet/i.test(await t.page.locator('body').innerText()));
+    const [dl] = await Promise.all([t.page.waitForEvent('download', { timeout: 60000 }), t.page.getByRole('button', { name: /Template · PDF/ }).click()]);
+    const fs = await import('node:fs');
+    const b = fs.readFileSync(await dl.path());
+    t.check('cover template PDF', b.subarray(0, 4).toString() === '%PDF', dl.suggestedFilename());
+    await t.shot('binding');
+    await t.page.goto(t.BASE + href, { waitUntil: 'domcontentloaded' });
+    await t.page.waitForFunction(() => window.__fabricCanvas && window.__fabricCanvas.getObjects().some((o) => o.__isGuide), null, { timeout: 60000 }).catch(() => {});
+    const n = await t.page.evaluate(() => (window.__fabricCanvas ? window.__fabricCanvas.getObjects().filter((o) => o.__isGuide).length : 0));
+    t.check('editor opens the cover with spine and hinge guides', n >= 4, `${n} guides`);
+  },
+});
+
 // One pattern, every tool: saved in Pattern Design → Textile Designer →
 // switch garment → Wallpaper → back to Textile (state restored).
 scenarios.push({

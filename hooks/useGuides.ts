@@ -132,6 +132,29 @@ export function useGuides({ fabricCanvasRef, activeToolRef, onGuideChange }: Arg
     [fabricCanvasRef, applyGuideInteractivity, onGuideChange]
   );
 
+  // Adds guides at exact world positions (e.g. spine and hinge lines handed
+  // over by the Print Size & Binding Calculator).
+  const addGuidesAt = useCallback(
+    (list: { axis: 'v' | 'h'; pos: number }[]) => {
+      const canvas = fabricCanvasRef.current;
+      if (!canvas || !list.length) return;
+      import('fabric').then((mod) => {
+        const F: any = mod.fabric;
+        list.forEach(({ axis, pos }) => {
+          const line = axis === 'h' ? new F.Line([-GUIDE_SPAN, pos, GUIDE_SPAN, pos], guideLineOpts(axis)) : new F.Line([pos, -GUIDE_SPAN, pos, GUIDE_SPAN], guideLineOpts(axis));
+          line.__isGuide = true;
+          line.__guideAxis = axis;
+          canvas.add(line);
+          canvas.bringToFront(line);
+        });
+        applyGuideInteractivity();
+        canvas.requestRenderAll();
+        onGuideChange();
+      });
+    },
+    [fabricCanvasRef, applyGuideInteractivity, onGuideChange]
+  );
+
   const clearGuides = useCallback(() => {
     const canvas = fabricCanvasRef.current;
     if (!canvas) return;
@@ -166,6 +189,7 @@ export function useGuides({ fabricCanvasRef, activeToolRef, onGuideChange }: Arg
   );
 
   return {
+    addGuidesAt,
     guidesLocked,
     setGuidesLocked,
     startGuideFromRuler,
