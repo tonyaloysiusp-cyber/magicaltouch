@@ -632,6 +632,24 @@ export function GarmentDesigner({ kind: initialKind = 'jersey' }: { kind?: Garme
               </div>
               {kind === 'jersey' && <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label="Jersey style">{GARMENT_STYLES.jersey.map((id) => <button key={id} type="button" role="radio" aria-checked={kit.style === id} onClick={() => set({ style: id })} className={chip(kit.style === id)}>{KIT_STYLES.find((x) => x.id === id)?.label}</button>)}</div>}
               {(kit.style === 'football' || kit.style === 'basketball' || kit.style === 'tshirt') && <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label="Neck">{([['round', 'Round neck'], ['v', 'V-neck']] as const).map(([n, l]) => <button key={n} type="button" role="radio" aria-checked={(kit.neck || 'round') === n} onClick={() => set({ neck: n })} className={chip((kit.neck || 'round') === n)}>{l}</button>)}</div>}
+              {kit.style !== 'basketball' && !kit.factoryPieces && <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label="Sleeves">{([['short', 'Short sleeves'], ['long', 'Long sleeves']] as const).map(([n, l]) => <button key={n} type="button" role="radio" aria-checked={(kit.sleeves || 'short') === n} onClick={() => set({ sleeves: n, sheetLayout: undefined })} className={chip((kit.sleeves || 'short') === n)}>{l}</button>)}</div>}
+              <div className="rounded-2xl border border-mt-border p-3 text-[12.5px] space-y-1.5" aria-label="Pattern pieces">
+                <p><b>Pattern pieces:</b> {kit.factoryPieces ? `${kit.factoryName || 'factory pattern'} — ${kit.factoryPieces.length} pieces imported` : `standard template (${kitProduct(kit).label}) — check against your factory’s patterns before production`}</p>
+                <div className="flex flex-wrap gap-1.5">
+                  <label className={`${btn} cursor-pointer`}>Import factory pattern (SVG)<input type="file" accept=".svg,image/svg+xml" hidden onChange={async (e) => {
+                    const f = e.target.files?.[0]; e.target.value = ''; if (!f) return;
+                    try {
+                      const { parseFactorySvg } = await import('@/lib/textile/factory');
+                      const r = parseFactorySvg(await f.text());
+                      if (!r.pieces.some((p) => p.id === 'front') || !r.pieces.some((p) => p.id === 'back')) { flash(`Found ${r.pieces.length} pieces, but none named “front” and “back”. Name them in your CAD file and import again.`); return; }
+                      set({ factoryPieces: r.pieces, factoryName: f.name.replace(/\.svg$/i, ''), sheetLayout: undefined });
+                      flash(`Imported ${r.pieces.length} pieces: ${r.pieces.map((p) => `${p.label} ${Math.round(p.w)}×${Math.round(p.h)} mm`).join(', ')}.${r.warnings.length ? ' ' + r.warnings.join(' ') : ''}`);
+                    } catch (err: any) { flash(err?.message || 'That SVG could not be read.'); }
+                  }} /></label>
+                  {kit.factoryPieces && <button type="button" onClick={() => set({ factoryPieces: undefined, factoryName: undefined, sheetLayout: undefined })} className={btn}>Back to the standard template</button>}
+                </div>
+                <p className="text-[11.5px] text-mt-faint">One closed outline per piece at size M, named front, back, sleeve left / right, collar… (layer or object names). Sizes are graded from it with the grading table.</p>
+              </div>
               {(kit.style === 'polo' || kit.style === 'cricket') && <div className="grid grid-cols-[1fr_auto] items-end gap-2">
                 <label className="block text-[12px] text-mt-muted">Button placket<select value={kit.placketButtons ?? 3} onChange={(e) => set({ placketButtons: Number(e.target.value) })} aria-label="Placket buttons" className={field}><option value={2}>2 buttons</option><option value={3}>3 buttons</option><option value={4}>4 buttons</option><option value={0}>No buttons (concealed)</option></select></label>
                 <label className="block text-[12px] text-mt-muted">Buttons<input type="color" value={kit.buttonColor || '#FFFFFF'} onChange={(e) => set({ buttonColor: e.target.value })} aria-label="Button colour" className="mt-1 h-10 w-14 rounded-xl border border-mt-border bg-mt-bg" /></label>

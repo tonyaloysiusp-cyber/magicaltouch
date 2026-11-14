@@ -946,6 +946,30 @@ scenarios.push({
   },
 });
 
+// Garment engineering: long sleeves, factory pattern import, back to the standard template.
+scenarios.push({
+  name: 'garment-engineering',
+  async run(t) {
+    await t.page.goto(t.BASE + '/textile-designer?garment=jersey', { waitUntil: 'domcontentloaded' });
+    const box = t.page.getByLabel('Pattern pieces');
+    await box.waitFor({ timeout: 30000 });
+    t.check('standard template is labelled', /standard template/.test(await box.innerText()));
+    await t.page.getByRole('radio', { name: 'Long sleeves' }).click();
+    t.check('long sleeves change the pieces', /long sleeves/i.test(await box.innerText()), (await box.innerText()).slice(0, 120));
+    const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="200cm" height="100cm" viewBox="0 0 2000 1000"><path id="front" d="M100 100H680V900H100Z"/><path id="back" d="M800 100H1380V920H800Z"/><polygon id="sleeve left" points="1500,100 1900,100 1850,400 1550,400"/><polygon id="sleeve right" points="1500,500 1900,500 1850,800 1550,800"/></svg>';
+    await t.page.setInputFiles('input[accept=".svg,image/svg+xml"]', { name: 'acme-jersey.svg', mimeType: 'image/svg+xml', buffer: Buffer.from(svg) });
+    await t.page.getByText(/Imported 4 pieces/).waitFor({ timeout: 15000 });
+    t.check('factory pattern replaces the template', /acme-jersey — 4 pieces imported/.test(await box.innerText()), (await box.innerText()).slice(0, 120));
+    await t.page.getByRole('tab', { name: /Print files/ }).click();
+    const sum = await t.page.getByLabel('Print summary').innerText();
+    t.check('factory pieces nest without overlaps', /No overlapping pieces/.test(sum), sum.slice(0, 160));
+    await t.shot('factory-pattern');
+    await t.page.getByRole('tab', { name: /Design/ }).first().click();
+    await t.page.getByRole('button', { name: 'Back to the standard template' }).click();
+    t.check('back to the standard template', /standard template/.test(await t.page.getByLabel('Pattern pieces').innerText()));
+  },
+});
+
 // Production sheet: Save fabric nesting edited by hand — move onto another piece (not ready), undo, lock, re-nest, export.
 scenarios.push({
   name: 'production-sheet',

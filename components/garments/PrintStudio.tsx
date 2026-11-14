@@ -1040,7 +1040,7 @@ export function PrintStudio({ kit, pattern, glyphs, players, libraryPatterns, on
           <button type="button" onClick={() => fit('all')} aria-label="Fit" className="h-7 w-7 rounded-full inline-flex items-center justify-center text-mt-muted hover:bg-mt-surface2"><Maximize2 size={13} /></button>
         </div>
         <div aria-label="Status" className="ml-auto flex flex-wrap items-center gap-x-3 text-[11.5px] text-mt-muted tabular-nums">
-          <span title="Document">{narrow ? `${Math.round(board.w)} × ${Math.round(board.h)} mm · M` : `${product.label} · ${Math.round(board.w)} × ${Math.round(board.h)} mm · standard template, size M`}</span>
+          <span title="Document">{narrow ? `${Math.round(board.w)} × ${Math.round(board.h)} mm · M` : `${product.label} · ${Math.round(board.w)} × ${Math.round(board.h)} mm · ${kit.factoryPieces ? 'factory pattern' : 'standard template'}, size M`}</span>
           <span>{selBox ? `Selection ${r1(selBox.w)} × ${r1(selBox.h)} mm @ ${r1(selBox.x)}, ${r1(selBox.y)}` : 'No selection'}</span>
           <span>{pointer ? `X ${r1(pointer.x)} · Y ${r1(pointer.y)} mm` : '—'}</span>
           <span>{zoomPct}%</span>

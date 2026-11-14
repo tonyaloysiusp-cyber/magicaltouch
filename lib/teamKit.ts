@@ -67,6 +67,11 @@ export interface KitDesign {
   gradeCm?: Record<string, { chest: number; length: number }>;
   /** Per-panel production settings (mm): bleed beyond the cut line, seam allowance outside the stitch line, safe area inside it. */
   panels?: Partial<Record<PanelRole, PanelSpec>>;
+  /** Sleeve length (jersey, T-shirt, cricket shirt). */
+  sleeves?: 'short' | 'long';
+  /** A factory's own pattern pieces (imported SVG, mm, size M) replacing the standard template. */
+  factoryPieces?: Piece[];
+  factoryName?: string;
   frontText?: string; frontTextColor?: string; frontTextMm?: number; frontTextTopMm?: number;
   personalise?: boolean; // names and numbers per player (off: sizes and quantities only)
   /** Extra sizes defined by measurement (flat chest width in cm); scaled from the size-M block. */
@@ -176,9 +181,14 @@ export function checkRoster(players: Player[], personalise = true, kit?: KitDesi
   return out;
 }
 
+export const LONG_SLEEVE: Piece = { id: 'sleeve-l', label: 'Long sleeve left', w: 440, h: 600, qty: 1, d: 'M0 110C80 22 160 0 220 0C280 0 360 22 440 110L335 600L105 600Z' };
 export function kitProduct(kit: KitDesign): Product {
   const id = KIT_STYLES.find((s) => s.id === kit.style)?.product || 'jersey';
-  const base = PRODUCTS.find((p) => p.id === id)!;
+  const std = PRODUCTS.find((p) => p.id === id)!;
+  // A factory's own pieces (front and back required) replace the standard template.
+  if (kit.factoryPieces?.some((p) => p.id === 'front') && kit.factoryPieces.some((p) => p.id === 'back')) return { id: std.id, label: `${kit.factoryName || 'Factory pattern'} (imported)`, note: 'Pieces imported from the factory’s own pattern file.', pieces: kit.factoryPieces };
+  const long = kit.sleeves === 'long' && std.pieces.some((p) => p.id === 'sleeve-l');
+  const base = long ? { ...std, label: `${std.label}, long sleeves`, pieces: std.pieces.map((p) => (p.id === 'sleeve-l' ? LONG_SLEEVE : p.id === 'sleeve-r' ? { ...LONG_SLEEVE, id: 'sleeve-r', label: 'Long sleeve right', mirror: true } : p)) } : std;
   // V-neck: the jersey / vest front neckline becomes a V (same shoulder points), and the collar band gets longer.
   if (kit.neck === 'v' && (id === 'jersey' || id === 'vest')) {
     return {
@@ -403,8 +413,9 @@ export function kitMockupSvg(kit: KitDesign, pat: PatternSettings, player: Playe
   const W = front.w;
   const sid = `mk${++clipSeq}`;
   // Folded sleeve outline (left side, in body units) and how the sleeve piece sits in it.
-  const sleevePoly = 'M60 30L-142 150L-62 278L30 262Z';
-  const sleeveAt = 'translate(-100 212) rotate(57.4) translate(-220 -228)';
+  const longSl = (sleeve?.h || 0) > 400;
+  const sleevePoly = longSl ? 'M60 30L-70 110L-175 690L-85 705L30 262Z' : 'M60 30L-142 150L-62 278L30 262Z';
+  const sleeveAt = longSl ? 'translate(-5 70) rotate(11) scale(0.42 1.05) translate(-220 0)' : 'translate(-100 212) rotate(57.4) translate(-220 -228)';
   const sleeves = (_isBack: boolean) => {
     if (!sleeve) return '';
     const oneOf = (pc: Piece) => `<g clip-path="url(#${sid}-sl)"><path d="${sleevePoly}" fill="${kit.sleeve}"/><g transform="${sleeveAt}">${pieceMarkup(pc, kit, pat, player, glyphs, k, 0)}</g><path d="${sleevePoly}" fill="url(#${sid}-sh)" opacity="0.5"/></g><path d="${sleevePoly}" fill="none" stroke="#000" stroke-opacity="0.12" stroke-width="2"/>${edit ? `<path class="mt-part" data-el="sleeve" d="${sleevePoly}" fill="transparent" stroke="${edit.selected === 'sleeve' ? '#3B82C4' : 'transparent'}" stroke-width="4"/>` : ''}`;
