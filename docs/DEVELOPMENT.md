@@ -42,6 +42,13 @@ Old addresses redirect permanently (`next.config.mjs`): `/custom-jersey-designer
 - `/storage` shows space used/quota, persistence ("Keep my library safe"), library backup/restore (JSON), delete with confirmation, work in progress and recent files.
 - Saving design files: device only (File System Access API or download). `DEVICE_ONLY_SAVES` in the editor; Photo Studio saves `.mtd` to the device; cloud providers are hidden.
 
+### Textile print studio (14 Nov, evening)
+- **Edit print file** opens `components/garments/PrintStudio.tsx`: the flat pieces (front, back, sleeves, collar) at real size, size M, mm. Top toolbar (save, undo/redo, zoom, preview player), left panel (text, player name/number, size label, 130+ vector shapes, logos/pictures, patterns from the library, ready layouts), right panel (fill: solid / linear / radial / pattern; outline; size, position, rotation, flip, opacity in mm; layers with hide/lock/order), bottom view bar (front, back, sleeves, all).
+- Model: `lib/textile/art.ts` — elements on a board with affine matrices (one element may cross pieces); each piece's art = board clipped to the piece; mirrored pieces get pre-mirrored art so they print right-reading. `{NAME}`, `{NUMBER}`, `{SIZE}`, `{TEAM}` are filled per garment from the roster; one master design. `studioOnly` hides the quick graphic, logos and standard name/number.
+- Save writes `kit.art`; the mockup is preview only and redraws from it.
+- Text is exact: `lib/fontOutline.ts` reads the real TTF (the editor's Google fonts via `/api/font-file`) with opentype.js — glyph curves and kerning. The old canvas-trace of letters is only a fallback if the font file can't be loaded.
+- Print files: **Live text** (SVG `<text>`; PDF with the TTF embedded by jsPDF, retypeable in Illustrator/Acrobat) or **Outlines** (exact font curves). `lib/svgToPdf.ts` now draws linear/radial gradients as fine vector bands clipped to the shape (with stop transparency) instead of a flat first colour.
+
 ## Project files
 - **`.mtd`** (`lib/mtd/format.ts`) is the single project format. It is gzip JSON wrapped in a self-opening SVG (`Name.mtd.svg`) or plain `.mtd`. It holds:
   - the editor canvas (vectors, text, masks, artboards)
