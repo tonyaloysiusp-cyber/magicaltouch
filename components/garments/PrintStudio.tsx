@@ -416,6 +416,7 @@ export function PrintStudio({ kit, pattern, glyphs, players, libraryPatterns, on
     const id = uid();
     setArt((a) => [...a, { ...(el as any), id }]);
     if (select) selectIds([id]);
+    if (narrow) setShowLeft(false); // on small screens the drawer gets out of the way once something is added
     return id;
   };
   const defaultFill = () => kit.accent || '#C9A86A';
@@ -462,6 +463,7 @@ export function PrintStudio({ kit, pattern, glyphs, players, libraryPatterns, on
     if (id === 'sleeve-text') for (const bp of board.pieces.filter((p) => p.piece.id.startsWith('sleeve'))) els.push({ kind: 'text', text: '{TEAM}', upper: true, font: kit.font || 'Oswald', weight: kit.fontWeight || 700, size: 26, fill: kit.nameColor, align: 'center', m: T(bp.x + bp.piece.w / 2, bp.y + bp.piece.h * 0.55), name: 'Sleeve text' } as any);
     const ids = els.map(() => uid());
     setArt((a) => [...a, ...els.map((e, i) => ({ ...(e as any), id: ids[i] }))]);
+    if (narrow) setShowLeft(false);
   };
 
   // ---------------------------------------------------------------- object operations
@@ -1030,7 +1032,7 @@ export function PrintStudio({ kit, pattern, glyphs, players, libraryPatterns, on
           <button type="button" onClick={() => fit('all')} aria-label="Fit" className="h-7 w-7 rounded-full inline-flex items-center justify-center text-mt-muted hover:bg-mt-surface2"><Maximize2 size={13} /></button>
         </div>
         <div aria-label="Status" className="ml-auto flex flex-wrap items-center gap-x-3 text-[11.5px] text-mt-muted tabular-nums">
-          <span title="Document">{product.label} · {Math.round(board.w)} × {Math.round(board.h)} mm · standard template, size M</span>
+          <span title="Document">{narrow ? `${Math.round(board.w)} × ${Math.round(board.h)} mm · M` : `${product.label} · ${Math.round(board.w)} × ${Math.round(board.h)} mm · standard template, size M`}</span>
           <span>{selBox ? `Selection ${r1(selBox.w)} × ${r1(selBox.h)} mm @ ${r1(selBox.x)}, ${r1(selBox.y)}` : 'No selection'}</span>
           <span>{pointer ? `X ${r1(pointer.x)} · Y ${r1(pointer.y)} mm` : '—'}</span>
           <span>{zoomPct}%</span>
