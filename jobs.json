@@ -1,34 +1,6 @@
 [
  {
-  "name": "audit-desktop-workspace",
-  "device": "desktop",
-  "url": "/textile-designer?garment=jersey",
-  "wait": 10000,
-  "steps": [
-   {
-    "js": "(()=>{const el=document.querySelector('[role=tablist]'); el && window.scrollTo(0, el.getBoundingClientRect().top+scrollY-140);})()",
-    "wait": 1500
-   },
-   {
-    "js": "(()=>{const b=[...document.querySelectorAll('[role=tab]')].find(x=>x.textContent.includes(\"Logos & text\")); b&&b.click();})()",
-    "wait": 2500
-   },
-   {
-    "js": "(()=>{const b=[...document.querySelectorAll('[role=tab]')].find(x=>x.textContent.includes(\"Names & numbers\")); b&&b.click();})()",
-    "wait": 2500
-   },
-   {
-    "js": "(()=>{const b=[...document.querySelectorAll('[role=tab]')].find(x=>x.textContent.includes(\"Players & sizes\")); b&&b.click();})()",
-    "wait": 2500
-   },
-   {
-    "js": "(()=>{const b=[...document.querySelectorAll('[role=tab]')].find(x=>x.textContent.includes(\"Print files\")); b&&b.click();})()",
-    "wait": 2500
-   }
-  ]
- },
- {
-  "name": "audit-desktop-studio",
+  "name": "p2-desktop-studio",
   "device": "desktop",
   "url": "/textile-designer?garment=jersey",
   "wait": 10000,
@@ -51,42 +23,19 @@
     "wait": 4000
    },
    {
-    "text": "Back",
+    "text": "Sleeves",
     "exact": true,
-    "wait": 2500
-   }
-  ]
- },
- {
-  "name": "audit-laptop-workspace",
-  "device": "laptop",
-  "url": "/textile-designer?garment=jersey",
-  "wait": 10000,
-  "steps": [
-   {
-    "js": "(()=>{const el=document.querySelector('[role=tablist]'); el && window.scrollTo(0, el.getBoundingClientRect().top+scrollY-140);})()",
     "wait": 1500
    },
    {
-    "js": "(()=>{const b=[...document.querySelectorAll('[role=tab]')].find(x=>x.textContent.includes(\"Logos & text\")); b&&b.click();})()",
-    "wait": 2500
-   },
-   {
-    "js": "(()=>{const b=[...document.querySelectorAll('[role=tab]')].find(x=>x.textContent.includes(\"Names & numbers\")); b&&b.click();})()",
-    "wait": 2500
-   },
-   {
-    "js": "(()=>{const b=[...document.querySelectorAll('[role=tab]')].find(x=>x.textContent.includes(\"Players & sizes\")); b&&b.click();})()",
-    "wait": 2500
-   },
-   {
-    "js": "(()=>{const b=[...document.querySelectorAll('[role=tab]')].find(x=>x.textContent.includes(\"Print files\")); b&&b.click();})()",
-    "wait": 2500
+    "text": "All pieces",
+    "exact": true,
+    "wait": 2000
    }
   ]
  },
  {
-  "name": "audit-laptop-studio",
+  "name": "p2-laptop-studio",
   "device": "laptop",
   "url": "/textile-designer?garment=jersey",
   "wait": 10000,
@@ -109,42 +58,19 @@
     "wait": 4000
    },
    {
-    "text": "Back",
+    "text": "Sleeves",
     "exact": true,
-    "wait": 2500
-   }
-  ]
- },
- {
-  "name": "audit-ipad-workspace",
-  "device": "ipad",
-  "url": "/textile-designer?garment=jersey",
-  "wait": 10000,
-  "steps": [
-   {
-    "js": "(()=>{const el=document.querySelector('[role=tablist]'); el && window.scrollTo(0, el.getBoundingClientRect().top+scrollY-140);})()",
     "wait": 1500
    },
    {
-    "js": "(()=>{const b=[...document.querySelectorAll('[role=tab]')].find(x=>x.textContent.includes(\"Logos & text\")); b&&b.click();})()",
-    "wait": 2500
-   },
-   {
-    "js": "(()=>{const b=[...document.querySelectorAll('[role=tab]')].find(x=>x.textContent.includes(\"Names & numbers\")); b&&b.click();})()",
-    "wait": 2500
-   },
-   {
-    "js": "(()=>{const b=[...document.querySelectorAll('[role=tab]')].find(x=>x.textContent.includes(\"Players & sizes\")); b&&b.click();})()",
-    "wait": 2500
-   },
-   {
-    "js": "(()=>{const b=[...document.querySelectorAll('[role=tab]')].find(x=>x.textContent.includes(\"Print files\")); b&&b.click();})()",
-    "wait": 2500
+    "text": "All pieces",
+    "exact": true,
+    "wait": 2000
    }
   ]
  },
  {
-  "name": "audit-ipad-studio",
+  "name": "p2-ipad-studio",
   "device": "ipad",
   "url": "/textile-designer?garment=jersey",
   "wait": 10000,
@@ -167,42 +93,19 @@
     "wait": 4000
    },
    {
-    "text": "Back",
+    "text": "Sleeves",
     "exact": true,
-    "wait": 2500
-   }
-  ]
- },
- {
-  "name": "audit-iphone13-workspace",
-  "device": "iPhone 13",
-  "url": "/textile-designer?garment=jersey",
-  "wait": 10000,
-  "steps": [
-   {
-    "js": "(()=>{const el=document.querySelector('[role=tablist]'); el && window.scrollTo(0, el.getBoundingClientRect().top+scrollY-140);})()",
     "wait": 1500
    },
    {
-    "js": "(()=>{const b=[...document.querySelectorAll('[role=tab]')].find(x=>x.textContent.includes(\"Logos & text\")); b&&b.click();})()",
-    "wait": 2500
-   },
-   {
-    "js": "(()=>{const b=[...document.querySelectorAll('[role=tab]')].find(x=>x.textContent.includes(\"Names & numbers\")); b&&b.click();})()",
-    "wait": 2500
-   },
-   {
-    "js": "(()=>{const b=[...document.querySelectorAll('[role=tab]')].find(x=>x.textContent.includes(\"Players & sizes\")); b&&b.click();})()",
-    "wait": 2500
-   },
-   {
-    "js": "(()=>{const b=[...document.querySelectorAll('[role=tab]')].find(x=>x.textContent.includes(\"Print files\")); b&&b.click();})()",
-    "wait": 2500
+    "text": "All pieces",
+    "exact": true,
+    "wait": 2000
    }
   ]
  },
  {
-  "name": "audit-iphone13-studio",
+  "name": "p2-iphone13-studio",
   "device": "iPhone 13",
   "url": "/textile-designer?garment=jersey",
   "wait": 10000,
@@ -225,17 +128,66 @@
     "wait": 4000
    },
    {
-    "text": "Back",
+    "text": "Sleeves",
     "exact": true,
-    "wait": 2500
+    "wait": 1500
+   },
+   {
+    "text": "All pieces",
+    "exact": true,
+    "wait": 2000
    }
   ]
  },
  {
-  "name": "audit-desktop-full",
+  "name": "p2-desktop-menu",
   "device": "desktop",
-  "url": "/textile-designer?garment=polo",
+  "url": "/textile-designer?garment=jersey",
   "wait": 10000,
-  "full": true
+  "steps": [
+   {
+    "text": "Edit print file",
+    "wait": 6000
+   },
+   {
+    "text": "Layouts",
+    "exact": true,
+    "wait": 1500
+   },
+   {
+    "text": "+ Sash",
+    "wait": 2500
+   },
+   {
+    "text": "+ Name & number on the back",
+    "wait": 4000
+   },
+   {
+    "text": "Sleeves",
+    "exact": true,
+    "wait": 1500
+   },
+   {
+    "text": "All pieces",
+    "exact": true,
+    "wait": 2000
+   },
+   {
+    "key": "r",
+    "wait": 500
+   },
+   {
+    "tap": [
+     620,
+     420
+    ],
+    "wait": 300
+   },
+   {
+    "text": "Object",
+    "exact": true,
+    "wait": 1500
+   }
+  ]
  }
 ]
