@@ -99,6 +99,15 @@ export interface PhotoStudioHandle {
   redo: () => void;
   /** The current state was saved: no longer counts as unsaved changes. */
   markSaved: () => void;
+  /** Every layer (pixels, names, visibility, opacity, blend, adjustments, live text) — saved in the .mtd so it reopens unflattened. */
+  getProject: () => PhotoProject | null;
+}
+
+/** Layered Photo Studio document, as stored in a .mtd (canvas.photoStudio). */
+export interface PhotoProject {
+  version: 1;
+  width: number; height: number; dpi: number; active: number; adjust: Adjust;
+  layers: { id: string; name: string; visible: boolean; opacity: number; blend: Layer['blend']; adjust?: Adjust; png: string; full?: string; fx?: number; fy?: number; text?: TextSpec }[];
 }
 
 export interface PhotoStudioProps {
@@ -113,6 +122,8 @@ export interface PhotoStudioProps {
   onHistoryChange?: (canUndo: boolean, canRedo: boolean) => void;
   headerLeft?: ReactNode;
   headerRight?: ReactNode;
+  /** Reopen a layered project instead of a single flattened picture. */
+  project?: PhotoProject | null;
 }
 
 const PREVIEW_MAX = 2200;
@@ -417,11 +428,17 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
   useEffect(() => {
     let cancelled = false;
     setError(null);
-    loadSource(source)
-      .then((c) => {
+    const proj = props.project && Array.isArray(props.project.layers) && props.project.layers.length ? props.project : null;
+    const toCanvas = async (url: string) => { const c = await loadSource(url); return c; };
+    const open = proj
+      ? Promise.all(proj.layers.map(async (l) => makeLayer(await toCanvas(l.png), l.name, { id: l.id, visible: l.visible !== false, opacity: l.opacity ?? 1, blend: l.blend || 'normal', adjust: l.adjust, text: l.text, fx: l.fx, fy: l.fy, full: l.full ? await toCanvas(l.full) : undefined })))
+          .then((ls) => ({ layers: ls, active: Math.min(proj.active || 0, ls.length - 1), adjust: proj.adjust || NO_ADJUST, dpi: proj.dpi || props.dpi || 300 }))
+      : loadSource(source).then((c) => ({ layers: [makeLayer(c, 'Background')], active: 0, adjust: NO_ADJUST, dpi: props.dpi || 300 }));
+    open
+      .then((o) => {
         if (cancelled) return;
         firstPreviewRef.current = null;
-        setHistory({ list: [{ layers: [makeLayer(c, 'Background')], active: 0, adjust: NO_ADJUST, dpi: props.dpi || 300, label: 'Open' }], index: 0 });
+        setHistory({ list: [{ ...o, label: 'Open' }], index: 0 });
         setSel(null);
         setZoom(1);
         setPan({ x: 0, y: 0 });
@@ -736,6 +753,14 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
     undo,
     redo,
     markSaved: () => setSavedSnap(history.list[history.index] || null),
+    getProject: () => {
+      if (!snap || !layers) return null;
+      const w = layers[0].canvas.width, h = layers[0].canvas.height;
+      return {
+        version: 1, width: w, height: h, dpi, active: snap.active, adjust: snap.adjust,
+        layers: layers.map((l) => ({ id: l.id, name: l.name, visible: l.visible, opacity: l.opacity, blend: l.blend, adjust: l.adjust, png: l.canvas.toDataURL('image/png'), full: l.full && l.full !== l.canvas ? l.full.toDataURL('image/png') : undefined, fx: l.fx, fy: l.fy, text: l.text })),
+      };
+    },
   }));
 
   // keyboard

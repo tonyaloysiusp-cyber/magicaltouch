@@ -453,6 +453,44 @@ async function exportAs(t, format) {
   return { name: dl.suggestedFilename(), bytes: fs.readFileSync(path) };
 }
 
+// PDFs: our own export reopens as the original design; a foreign PDF imports as editable layers.
+scenarios.push({
+  name: 'pdf-roundtrip-and-vector-import',
+  async run(t) {
+    const fs = await import('node:fs');
+    const { PDFDocument, PDFName, rgb, StandardFonts } = await import('pdf-lib');
+    await t.editor('w=600&h=400');
+    await rail(t, 'Text');
+    await t.page.locator('aside button[title="Add “Magical”"]').click();
+    await t.page.waitForTimeout(600);
+    const out = await exportAs(t, 'pdf');
+    fs.writeFileSync('e2e-out/roundtrip.pdf', out.bytes);
+    const loaded = await PDFDocument.load(out.bytes);
+    t.check('exported PDF carries the editable design', !!loaded.catalog.get(PDFName.of('Names')));
+    // A PDF from elsewhere: a coloured shape and real text.
+    const ext = await PDFDocument.create(); const font = await ext.embedFont(StandardFonts.Helvetica);
+    const pg = ext.addPage([300, 200]);
+    pg.drawRectangle({ x: 20, y: 20, width: 120, height: 80, color: rgb(0.9, 0.2, 0.3) });
+    pg.drawText('Hello vectors', { x: 30, y: 140, size: 24, font, color: rgb(0.1, 0.2, 0.6) });
+    fs.writeFileSync('e2e-out/foreign.pdf', await ext.save());
+    const input = t.page.locator('input[type=file][accept="image/*,.pdf,application/pdf"]');
+    await input.setInputFiles('e2e-out/foreign.pdf');
+    await t.page.getByText('Editable layers').waitFor({ timeout: 20000 });
+    await t.page.getByRole('button', { name: 'Import', exact: true }).click();
+    await t.page.waitForFunction(() => window.__fabricCanvas.getObjects().some((o) => (o.text || '').includes('Hello vectors')), null, { timeout: 30000 });
+    const got = await t.eval(() => { const os = window.__fabricCanvas.getObjects(); const tx = os.find((o) => (o.text || '').includes('Hello vectors')); const sh = os.find((o) => o.name === 'PDF shape'); return { textType: tx && tx.type, textFill: tx && tx.fill, shape: !!sh, shapeFill: sh && sh.fill }; });
+    const near = (hex, rgbv) => { const m = /^#?([0-9a-f]{6})$/i.exec(String(hex || '')); if (!m) return false; const n = parseInt(m[1], 16); return Math.abs(((n >> 16) & 255) - rgbv[0]) < 4 && Math.abs(((n >> 8) & 255) - rgbv[1]) < 4 && Math.abs((n & 255) - rgbv[2]) < 4; };
+    t.check('foreign PDF text is editable text in its colour', got.textType === 'i-text' && near(got.textFill, [26, 51, 153]), JSON.stringify(got));
+    t.check('foreign PDF shape is a vector path with its colour', got.shape && near(got.shapeFill, [230, 51, 77]), JSON.stringify(got));
+    await t.shot('pdf-vector-import');
+    // Our own PDF: offer the original design.
+    await input.setInputFiles('e2e-out/roundtrip.pdf');
+    await t.page.getByRole('button', { name: 'Open the original design' }).click({ timeout: 20000 });
+    await t.page.waitForFunction(() => window.__fabricCanvas.getObjects().some((o) => /Magical/.test(o.text || '')) && !window.__fabricCanvas.getObjects().some((o) => (o.text || '').includes('Hello vectors')), null, { timeout: 30000 });
+    t.check('own PDF reopened as the original editable design', true);
+  },
+});
+
 scenarios.push(
   {
     name: 'workflow-instagram',

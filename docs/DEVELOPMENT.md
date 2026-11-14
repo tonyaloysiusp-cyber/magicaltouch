@@ -1,7 +1,7 @@
 # Magical Touch Creative Studio — development summary
 
 Read this first in every new session. It records what exists, what was
-verified, and what is still missing. Keep it current. Last update: 13 Nov 2026.
+verified, and what is still missing. Keep it current. Last update: 14 Nov 2026.
 
 ## How to run
 - `npm install && npm run dev` (Next.js 14, App Router). Production: `npm run build && npx next start`.
@@ -18,26 +18,29 @@ verified, and what is still missing. Keep it current. Last update: 13 Nov 2026.
 - Library files import siblings with `.ts`. Type-only imports must use `import type`, because tests run with Node strip-types.
 - Supabase project `rqkjogzljsbufbrdlbfr` provides auth, Postgres (RLS and admin RPCs) and storage.
 
-## Studios (parent categories) → tools
+## Tools (order from the 14 Nov brief)
 The single source of truth is `lib/toolsCatalog.ts`. It drives the header menu, `/tools`, `/create`, the footer and the tool search.
 
-| Studio | Tools (route) |
-|---|---|
-| Graphic Design & Publishing | Design editor (`/editor`, sizes via `/create`), templates (`/templates`) |
-| Apparel & Textile | Jersey (`/custom-jersey-designer`), Polo (`/polo-shirt-designer`), T-shirt (`/custom-t-shirt-designer`) |
-| Wallpaper & Wall Design | Wall poster + wallpaper strips + room/rolls calculator (`/wall-designer`) |
-| Photo & ID | Photo Studio (`/photo-studio`), Background remover (`/remove-background`), Passport/visa/ID photos (`/passport-photo-maker`) |
-| Vector & Illustration | Image Trace (`/trace`). Pen, direct selection and Shape Builder live in the editor |
-| Patterns & Colour | Pattern Design (`/patterns`), Rangoli/Mandala (`/rangoli-mandala-maker`), Colour Explorer (`/colours`), Gradients (`/gradient-background-generator`) |
-| Print & Production | Print size calculator (`/print-size-calculator`), Print Layout: many-up and booklet (`/print-layout`) |
-| Creative & AI | AI Studio (`/ai-studio`). The mockup generator was retired (`/mockups` redirects) |
+| # | Tool | Route |
+|---|---|---|
+| 1 | Design Editor | `/create` → `/editor` |
+| 2 | Photo Studio | `/photo-studio` |
+| 3 | Image Trace | `/trace` |
+| 4 | Pattern Design (Repeat pattern + Rangoli & Mandala mode) | `/patterns`, `/patterns?mode=rangoli` |
+| 5 | Textile Designer (jersey V/round neck, polo with placket buttons, T-shirt) | `/textile-designer?garment=jersey\|polo\|tshirt` |
+| 6 | Wallpaper & Wall Sticker Designer | `/wallpaper-designer`, `?mode=sticker` |
+| 7 | Print Size & Binding Calculator | `/print-size-calculator` (book tab + the original size tab) |
+| 8 | Print Layout: Imposition studio + quick layout | `/print-layout` |
+| – | Background remover, Passport photos, Colour Explorer (+ gradient backgrounds) | `/remove-background`, `/passport-photo-maker`, `/colours#gradients` |
 
-Tools link to each other:
-- Pattern → jersey/polo/T-shirt/wallpaper/editor, through "Latest from Pattern Studio" in the pickers.
-- Colours → jersey (`?colors=`), pattern and editor.
-- Garments → editor ("Edit in editor").
-- "Back to …" (`components/tools/BackChip.tsx` and the `lib/toolsCatalog.ts` trail) returns to the previous tool. The editor's Back does the same.
-- A "Save before you leave?" guard (`components/garments/LeaveGuard.tsx`) protects garment work.
+Old addresses redirect permanently (`next.config.mjs`): `/custom-jersey-designer`, `/polo-shirt-designer`, `/custom-t-shirt-designer` → Textile Designer; `/wall-designer` → `/wallpaper-designer`; `/rangoli-mandala-maker` → `/patterns?mode=rangoli`; `/gradient-background-generator` → `/colours#gradients`. AI Studio is out of the navigation (admin-only page kept). The wall *poster* mode is not offered any more (owner's instruction); the WallDesigner component still has it behind `wallpaperOnly={false}`.
+
+### Design continuity (local only)
+- `lib/assets/library.ts`: IndexedDB `mt-local-library` — assets with stable ids (`pattern | palette | gradient | logo | image | svg | text-style`) and per-tool states. Writes resolve only after the transaction completes. Changes broadcast on `BroadcastChannel('mt-assets')` and the `mt-assets` window event.
+- Patterns saved in Pattern Design (or a rangoli via "Use it elsewhere") are the same asset in the Textile and Wallpaper pickers. `?pattern=<id>` opens a tool with that asset; projects keep a copy plus the id, and offer "use the new version" when the asset changed.
+- The Textile Designer keeps one state for all garments (`mt:textile`), so switching jersey ↔ polo ↔ T-shirt never loses the pattern or design. The Wallpaper designer restores its last state (`mt:wall`). The binding calculator keeps its inputs (`mt:binding`).
+- `/storage` shows space used/quota, persistence ("Keep my library safe"), library backup/restore (JSON), delete with confirmation, work in progress and recent files.
+- Saving design files: device only (File System Access API or download). `DEVICE_ONLY_SAVES` in the editor; Photo Studio saves `.mtd` to the device; cloud providers are hidden.
 
 ## Project files
 - **`.mtd`** (`lib/mtd/format.ts`) is the single project format. It is gzip JSON wrapped in a self-opening SVG (`Name.mtd.svg`) or plain `.mtd`. It holds:
@@ -50,12 +53,13 @@ Tools link to each other:
   - `saveToolProject` uses the File System Access API with a download fallback, and writes the IndexedDB recent list.
   - `openToolFile` reads `.mtd`, and also migrates older `.mtdt` files (`lib/mtdt.ts`).
   - `takeToolHandoff` receives files opened from the Dashboard, Open page or editor; `toolUrlFor` routes them to their tool.
-- **Saved in the browser:**
+- **Saved on the device:**
   - editor drafts in IndexedDB (`lib/editor/draftStore.ts`)
   - the recent local files list in IndexedDB (`lib/mtd/recent.ts`)
-  - garment projects in localStorage (`mt:textile-projects`), with autosave per tool (`mt:garment:<kind>`)
-  - patterns in localStorage (`mt:patterns`, `mt:pattern-draft`)
-- Nothing is uploaded unless the user saves to their account or cloud.
+  - the shared asset library and tool states in IndexedDB (`lib/assets/library.ts`); old `mt:patterns` are migrated once
+  - textile projects in localStorage (`mt:textile-projects`), autosave `mt:textile`
+- Photo Studio `.mtd` files keep every layer (`canvas.photoStudio`: pixels, names, visibility, opacity, blend, adjustments, live text) next to the flattened picture, so they reopen unflattened.
+- Nothing is uploaded. Two older cloud designs (one user) remain in Supabase untouched; re-saving them goes to the device.
 
 ## PDF and export
 - **Editor:**
@@ -65,7 +69,11 @@ Tools link to each other:
   - **Press CMYK PDF/TIFF** (`lib/export/printFiles.ts`) is DeviceCMYK *raster* pages with a FOGRA39 output intent. It is not vector and not verified PDF/X, so never claim PDF/X compliance.
 - **Tools:**
   - SVG→PDF converter (`lib/svgToPdf.ts`) for garments, roster print sheets, wallpaper strips and rangoli. All vector.
-  - `/print-layout` uses **pdf-lib** to place the customer's own PDF pages as vectors (many-up with bleed, crop marks and a mirrored back; saddle-stitch booklets).
+  - `/print-layout` **Imposition studio** (`lib/impose/model.ts`, `lib/impose/pdf.ts`, `components/tools/ImpositionStudio.tsx`): PDF analysis (trim/bleed/media/crop/art boxes, rotation, fonts and embedding, images, colour spaces, mixed sizes, blank pages, likely marks); commands — booklet (+creep), n-up 2/4/6/8/9/16/custom with duplex long/short, step & repeat, join two pages, tile, manual imposition (new sheet, place page, drag/nudge/rotate), reverse, shuffle even/odd, shuffle for imposing (cut & stack), insert blank/insert pages/delete/duplicate/move/rotate, define bleeds, adjust page sizes, trim & shift, creep, info/modify (set trim box), stick on text & numbers, stick on PDF pages, masking tape, peel off, sample document, automation sequences, undo/redo, repeat last (remembered). Export: print-ready vector, editable with optional-content layers, front only, back only, flattened (pdf.js raster at 150/200/300 dpi). Quick layout (the earlier many-up/booklet tool) is kept as a tab.
+- **PDF import into the editor** (`lib/editor/pdfVectorImport.ts`): pages become separate editable layers — vector paths (fill, stroke, dash, caps, joins, opacity), linear/radial gradients, clipping masks, pictures and editable text (fonts substituted where not available, reported). "One flattened picture per page" is an explicit choice, never automatic. Not kept (reported): soft masks, blend modes, mesh gradients, tiling patterns, image stencil masks, nested clip intersections.
+- **Our PDFs reopen exactly**: every editor PDF export attaches the `.mtd` project (`lib/editor/pdfProject.ts`, embedded file `magical-touch-design.mtd`); importing such a PDF offers "Open the original design".
+- **Binding calculator** (`lib/binding.ts`): spine from caliper (entered, or estimated from gsm × bulk profile and labelled "Estimate"), perfect binding (hinge scores, glue allowance), saddle stitch (multiple of 4, sheets, creep per sheet), hardcover (boards, squares, joints, turn-ins, endpapers). Outputs: cover template SVG/PDF with bleed, safe area, folds/scores, crop marks; plain-text spec; "Open cover in Design Editor" with fold guides (`?guidesV=`/`guidesH=` in the editor).
+- **Wall stickers** (`lib/sticker.ts`, `components/wall/StickerDesigner.tsx`): contour cut path from the artwork's alpha (white border offset or cut-inside bleed), sheet layout via `nUpPlan`, registration marks, magenta 0.25 pt cut line on its own layer, PDF/SVG.
 
 ## Verified by tests (CI, 13 Nov 2026)
 - 40 browser scenarios and 110+ unit tests. They cover:

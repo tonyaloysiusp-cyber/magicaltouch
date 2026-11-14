@@ -10,7 +10,7 @@ import { MAX_DESIGNS, getDesignCount } from '@/lib/profile';
 import { DocUnit } from '@/lib/editor/types';
 import { physicalUnitToPx, pxToPhysicalUnit, useDisplayUnit } from '@/lib/editor/units';
 import { buildPhotoDesignJson } from '@/lib/editor/buildPhotoDesignPayload';
-import { PhotoStudio, PhotoStudioHandle } from '@/components/photoStudio/PhotoStudio';
+import { PhotoStudio, PhotoStudioHandle, type PhotoProject } from '@/components/photoStudio/PhotoStudio';
 import { BrandLogo } from '@/components/BrandLogo';
 import { AppHeader } from '@/components/AppHeader';
 import { PageHero } from '@/components/PageHero';
@@ -58,21 +58,19 @@ function blankCanvasDataUrl(w: number, h: number): string {
   return canvas.toDataURL('image/png');
 }
 
-// Reopening a saved design here means pulling the flattened composite back
-// out of Main-Design-compatible canvas_json (see buildPhotoDesignPayload.ts)
-// -- its single image object's src, plus the artboard's own DPI setting,
-// which isn't stored as a top-level column anywhere. Reopening always
-// starts a fresh, flattened editing session on that composite; the
-// original layers/masks/adjustments that produced it were never kept
-// (buildPhotoDesignJson flattens on every save), so this is exactly as
-// non-destructive as the save that created it -- not a new limitation.
-function extractPhotoSource(canvasJson: any): { src: string; dpi: number } | null {
+// Reopening a saved project: a .mtd from Photo Studio keeps every layer
+// (canvas.photoStudio) next to the flattened picture the Design editor and
+// previews use, so it reopens unflattened. Older files (and designs saved to
+// an account before Nov 2026) only have the flattened picture.
+function extractPhotoSource(canvasJson: any): { src: string; dpi: number; project?: PhotoProject | null } | null {
   const objects: any[] = canvasJson?.objects || [];
   const imageObj = objects.find((o) => o?.type === 'image' && typeof o.src === 'string');
   if (!imageObj) return null;
   const artboardObj = objects.find((o) => o?.__isArtboard);
   const dpi = artboardObj?.__print?.dpi || 300;
-  return { src: imageObj.src, dpi };
+  // Saved since Nov 2026: every layer, unflattened (the flat picture stays for the Design editor and previews).
+  const project = canvasJson?.photoStudio && Array.isArray(canvasJson.photoStudio.layers) ? (canvasJson.photoStudio as PhotoProject) : null;
+  return { src: imageObj.src, dpi, project };
 }
 
 function PhotoStudioContent() {
@@ -146,7 +144,7 @@ function PhotoStudioContent() {
     if (localKey) {
       const handoff = takeHandoff(localKey);
       const source = handoff ? extractPhotoSource(handoff.opened.canvas) : null;
-      if (handoff && source) startWithSource(source.src, handoff.opened.document.width, handoff.opened.document.height, source.dpi, handoff.opened.document.name);
+      if (handoff && source) startWithSource(source.src, handoff.opened.document.width, handoff.opened.document.height, source.dpi, handoff.opened.document.name, source.project);
       else setLoadError('That file could not be opened here. Please open it again from your dashboard.');
       setLoadingDesign(false);
       return;
@@ -196,7 +194,9 @@ function PhotoStudioContent() {
     setHeightPx(Math.round(physicalUnitToPx(p.h, p.unit, p.dpi)));
   };
 
-  const startWithSource = (dataUrl: string, w: number, h: number, dpi: number, name: string) => {
+  const [project, setProject] = useState<PhotoProject | null>(null);
+  const startWithSource = (dataUrl: string, w: number, h: number, dpi: number, name: string, proj: PhotoProject | null = null) => {
+    setProject(proj);
     setSourceDataUrl(dataUrl);
     setDocWidth(w);
     setDocHeight(h);
@@ -260,6 +260,8 @@ function PhotoStudioContent() {
           },
           { type: 'image', left: 0, top: 0, width: size.w, height: size.h, scaleX: 1, scaleY: 1, src: result.dataUrl, name: docName || 'Photo', __uid: `obj_${Date.now()}` },
         ],
+        // Every layer, so the photo reopens in Photo Studio unflattened (the Design editor uses the picture above).
+        photoStudio: photoEditorRef.current?.getProject() || undefined,
       };
       const thumbBlob = await encodeImage(result.dataUrl, 400).catch(() => null);
       const thumbnail = thumbBlob
@@ -299,7 +301,7 @@ function PhotoStudioContent() {
         alert('This project has no photo Photo Studio can open. Open it in the Design editor instead.');
         return;
       }
-      startWithSource(source.src, opened.document.width, opened.document.height, source.dpi, opened.document.name);
+      startWithSource(source.src, opened.document.width, opened.document.height, source.dpi, opened.document.name, source.project);
     } catch (err) {
       alert(err instanceof MtdError ? err.message : 'This file could not be opened.');
     }
@@ -527,6 +529,7 @@ function PhotoStudioContent() {
           <PhotoStudio
             ref={photoEditorRef}
             source={sourceDataUrl}
+            project={project}
             dpi={docDpi}
             name={docName}
             onDpiChange={setDocDpi}

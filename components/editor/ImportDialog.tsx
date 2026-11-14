@@ -2,11 +2,13 @@
 
 import { useEffect, useState } from 'react';
 import { getPdfPageCount, parsePageRange } from '@/lib/editor/pdfImport';
+import { readProjectFromPdf } from '@/lib/editor/pdfProject';
 
 interface ImportDialogProps {
   file: File;
   onCancel: () => void;
-  onConfirm: (pageNumbers: number[]) => void;
+  onConfirm: (pageNumbers: number[], mode: 'vector' | 'flat') => void;
+  onOpenProject?: () => void;
   importing: boolean;
 }
 
@@ -14,10 +16,14 @@ interface ImportDialogProps {
 // being placed on the canvas, same as the existing single-image upload)
 // — lets the user pick which page(s) of a multi-page PDF to bring in,
 // instead of always importing every page.
-export function ImportDialog({ file, onCancel, onConfirm, importing }: ImportDialogProps) {
+export function ImportDialog({ file, onCancel, onConfirm, onOpenProject, importing }: ImportDialogProps) {
   const [pageCount, setPageCount] = useState<number | null>(null);
   const [rangeInput, setRangeInput] = useState('all');
   const [error, setError] = useState<string | null>(null);
+  // Never flattened unless the customer chooses it.
+  const [mode, setMode] = useState<'vector' | 'flat'>('vector');
+  const [hasProject, setHasProject] = useState(false);
+  useEffect(() => { let live = true; file.arrayBuffer().then((b) => readProjectFromPdf(new Uint8Array(b))).then((p) => { if (live) setHasProject(!!p); }).catch(() => {}); return () => { live = false; }; }, [file]);
 
   useEffect(() => {
     let cancelled = false;
@@ -42,7 +48,7 @@ export function ImportDialog({ file, onCancel, onConfirm, importing }: ImportDia
       return;
     }
     setError(null);
-    onConfirm(pages);
+    onConfirm(pages, mode);
   };
 
   return (
@@ -53,6 +59,13 @@ export function ImportDialog({ file, onCancel, onConfirm, importing }: ImportDia
           {file.name}
         </p>
 
+        {hasProject && onOpenProject && (
+          <div className="mb-3 rounded-lg border border-emerald-300 bg-emerald-50 p-3 text-[12.5px] text-emerald-900 dark:bg-emerald-900/20 dark:text-emerald-100">
+            <p className="font-semibold">This PDF was made in Magical Touch.</p>
+            <p className="mt-0.5">It contains the original design — open it to get back every layer, text, colour and effect exactly as you left them.</p>
+            <button type="button" onClick={onOpenProject} disabled={importing} className="mt-2 rounded-full bg-emerald-700 px-3 py-1.5 text-[12.5px] font-semibold text-white">Open the original design</button>
+          </div>
+        )}
         {error && <p className="text-xs text-red-500 mb-3">{error}</p>}
 
         {pageCount === null && !error ? (
@@ -71,9 +84,16 @@ export function ImportDialog({ file, onCancel, onConfirm, importing }: ImportDia
               className="text-sm border rounded px-3 py-2"
               autoFocus
             />
-            <p className="text-[11px] text-mt-faint">
-              Each imported page is placed as its own editable image layer on the current artboard.
-            </p>
+            <fieldset className="mt-2 space-y-1.5" aria-label="How to import">
+              <label className="flex items-start gap-2 rounded-lg border border-mt-border p-2 text-[12.5px] cursor-pointer">
+                <input type="radio" name="pdfmode" checked={mode === 'vector'} onChange={() => setMode('vector')} className="mt-0.5" />
+                <span><b>Editable layers</b> — every shape, text and picture becomes its own layer. Vectors stay vectors; text stays editable (fonts you don’t have are replaced, and you’ll be told which).</span>
+              </label>
+              <label className="flex items-start gap-2 rounded-lg border border-mt-border p-2 text-[12.5px] cursor-pointer">
+                <input type="radio" name="pdfmode" checked={mode === 'flat'} onChange={() => setMode('flat')} className="mt-0.5" />
+                <span><b>One flattened picture per page</b> — looks exactly like the PDF, but text and shapes can no longer be edited. Use it when the page only needs to be placed, not changed.</span>
+              </label>
+            </fieldset>
           </div>
         ) : null}
 

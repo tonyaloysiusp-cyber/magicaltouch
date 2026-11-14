@@ -70,6 +70,7 @@ import { useDisplayUnit, formatUnit } from '@/lib/editor/units';
 import { allFontFacesCSS, ensureFontLoaded, ensureFontsLoadedForCanvasJSON, validateAllFonts, refreshTextMetrics } from '@/lib/editor/googleFonts';
 import { getAbsolutePolygonPoints, multiPolygonToPathD } from '@/lib/editor/geometry';
 import { exportCanvasToPDF, exportArtboardsToPDF, toPt } from '@/lib/editor/pdfExport';
+import { savePdfWithProject, readProjectFromPdf } from '@/lib/editor/pdfProject';
 import { installPremiumText } from '@/lib/textfx/fabricPremium';
 import { exportArtboardToSVG } from '@/lib/editor/svgExport';
 import { computeSnap, computeGuideSnap, computeGridSnap, computeSpacingSnap, computeEdgeSnap, allXAnchors, allYAnchors, GuideLine, SpacingMark } from '@/lib/editor/snapping';
@@ -3863,14 +3864,40 @@ function EditorContent() {
     }
   };
 
-  const confirmPdfImport = async (pageNumbers: number[]) => {
+  const confirmPdfImport = async (pageNumbers: number[], mode: 'vector' | 'flat' = 'vector') => {
     if (!importFile) return;
     setImportingPdf(true);
     try {
-      const { renderPdfPages } = await import('@/lib/editor/pdfImport');
-      const rendered = await renderPdfPages(importFile, pageNumbers);
-      for (let i = 0; i < rendered.length; i++) {
-        await insertImageDataUrl(rendered[i].dataUrl, i);
+      if (mode === 'flat') {
+        const { renderPdfPages } = await import('@/lib/editor/pdfImport');
+        const rendered = await renderPdfPages(importFile, pageNumbers);
+        for (let i = 0; i < rendered.length; i++) {
+          await insertImageDataUrl(rendered[i].dataUrl, i);
+        }
+        setLocalNotice(`Imported ${rendered.length} page${rendered.length === 1 ? '' : 's'} as flattened pictures (not editable as text or vectors).`);
+      } else {
+        const [{ importPdfPageAsVectors }, mod] = await Promise.all([import('@/lib/editor/pdfVectorImport'), import('fabric')]);
+        const F = mod.fabric;
+        const canvas = fabricCanvasRef.current;
+        const bytes = new Uint8Array(await importFile.arrayBuffer());
+        const ab = getActiveArtboardRect();
+        const warnings = new Set<string>();
+        let total = 0;
+        const added: any[] = [];
+        for (let i = 0; i < pageNumbers.length; i++) {
+          const res = await importPdfPageAsVectors(F, bytes, pageNumbers[i], { fit: { x: ab.x + i * 24, y: ab.y + i * 24, w: ab.width, h: ab.height } });
+          res.warnings.forEach((w) => warnings.add(w));
+          res.objects.forEach((o: any, k: number) => { o.__id = `pdf_${Date.now()}_${i}_${k}`; canvas.add(o); added.push(o); });
+          total += res.objects.length;
+        }
+        if (added.length) {
+          canvas.discardActiveObject();
+          const selection = new F.ActiveSelection(added, { canvas });
+          canvas.setActiveObject(selection);
+          pushHistory();
+        }
+        const w = [...warnings];
+        setLocalNotice(`Imported ${total} editable layer${total === 1 ? '' : 's'} (vectors, text and pictures).${w.length ? ' Note: ' + w.join(' ') : ''}`);
       }
       fabricCanvasRef.current?.requestRenderAll();
     } catch (err) {
@@ -3879,6 +3906,23 @@ function EditorContent() {
     } finally {
       setImportingPdf(false);
       setImportFile(null);
+    }
+  };
+
+  // A PDF exported by this editor carries its project: open it as the original, fully editable design.
+  const openProjectFromPdf = async (pdfFile: File) => {
+    try {
+      const proj = await readProjectFromPdf(new Uint8Array(await pdfFile.arrayBuffer()));
+      if (!proj) { setLocalNotice('This PDF does not contain a Magical Touch design.'); return; }
+      const mtdFile = new File([proj as BlobPart], pdfFile.name.replace(/\.pdf$/i, '') + '.mtd', { type: 'application/gzip' });
+      const opened = await readMtd(mtdFile);
+      const key = newLocalKey();
+      putHandoff(key, { opened, file: { handle: null, fileName: mtdFile.name } });
+      setImportFile(null);
+      activateTab({ id: key, designId: null, name: opened.document.name, width: opened.document.width, height: opened.document.height, dirty: false }, { isNew: true });
+      setLocalNotice('Opened the original design from the PDF — every layer is editable. Saving creates a .mtd file on your device.');
+    } catch (err) {
+      setLocalNotice(err instanceof MtdError ? err.message : 'The design inside this PDF could not be opened.');
     }
   };
 
@@ -5735,6 +5779,11 @@ function EditorContent() {
     });
   };
 
+  // The editable project attached inside every exported PDF, so the PDF reopens with every layer editable.
+  const projectForPdf = async (): Promise<Blob | null> => {
+    try { return (await buildCurrentMtd()).blob; } catch { return null; }
+  };
+
   // Save for a tab whose master copy is a .mtd file. Autosave (silent)
   // only writes when the browser already has permission to write to the
   // same file (Chrome/Edge); otherwise the tab simply stays "unsaved"
@@ -6508,7 +6557,7 @@ function EditorContent() {
         format: [toPt(rect.width), toPt(rect.height)],
       });
       await exportArtboardsToPDF(pdf, canvas, F, [{ id: ab.id, x: rect.x, y: rect.y, width: rect.width, height: rect.height }]);
-      pdf.save(`${designName || 'design'} - ${ab.name}${scope !== 'artboard' ? ` (${scope})` : ''}.pdf`);
+      await savePdfWithProject(pdf, `${designName || 'design'} - ${ab.name}${scope !== 'artboard' ? ` (${scope})` : ''}.pdf`, await projectForPdf());
       } finally {
         removeTemporaryMarks(marks);
         suppressHistoryRef.current = false;
@@ -6750,7 +6799,7 @@ function EditorContent() {
       });
       if (artboards.length) await exportArtboardsToPDF(pdf, fabricCanvasRef.current, mod.fabric, list);
       else await exportCanvasToPDF(pdf, fabricCanvasRef.current, mod.fabric);
-      pdf.save(`${designName || 'design'}.pdf`);
+      await savePdfWithProject(pdf, `${designName || 'design'}.pdf`, await projectForPdf());
     } catch (err) {
       console.error('PDF export failed:', err);
       setLocalNotice('Failed to export PDF. Please try again.');
@@ -6806,7 +6855,7 @@ function EditorContent() {
       }
 
       const rangeLabel = lo === hi ? `page ${lo}` : `pages ${lo}-${hi}`;
-      pdf.save(`${designName || 'design'} (${rangeLabel}).pdf`);
+      await savePdfWithProject(pdf, `${designName || 'design'} (${rangeLabel}).pdf`, await projectForPdf());
     } catch (err) {
       console.error('PDF range export failed:', err);
       setLocalNotice('Failed to export PDF. Please try again.');
@@ -7033,7 +7082,7 @@ function EditorContent() {
         }
 
         const rangeLabel = pages.length === 1 ? pages[0].ab.name : `${pages.length} pages`;
-        pdf.save(`${designName || 'design'} (${rangeLabel})${settings.colour === 'cmyk' ? ' CMYK' : ''}.pdf`);
+        await savePdfWithProject(pdf, `${designName || 'design'} (${rangeLabel})${settings.colour === 'cmyk' ? ' CMYK' : ''}.pdf`, await projectForPdf());
       } else {
         const files: { name: string; blob: Blob }[] = [];
         let reducedDpi = 0;
@@ -8197,6 +8246,7 @@ function EditorContent() {
           importing={importingPdf}
           onCancel={() => setImportFile(null)}
           onConfirm={confirmPdfImport}
+          onOpenProject={() => importFile && openProjectFromPdf(importFile)}
         />
       )}
       <input ref={importInputRef} type="file" accept="image/*,.pdf,application/pdf" onChange={handleImportFileSelected} className="hidden" />
