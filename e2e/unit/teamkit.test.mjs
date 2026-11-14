@@ -69,6 +69,16 @@ test('one print file for the whole roster: every piece, grouped by player, split
   assert.ok(small.pages.length > 1, 'long runs continue on more pages');
   assert.ok(small.pages.every((p) => p.height <= 1000 + 14));
   assert.equal(small.pages.reduce((a, p) => a + p.pieces, 0), 15);
+  // Save fabric: compact nesting is shorter than player rows, never overlaps, and reports true fabric use.
+  const big = Array.from({ length: 12 }, (_, i) => ({ name: 'Arun', number: '7', size: ['S', 'M', 'XL'][i % 3] }));
+  const rows = rosterSheets(DEFAULT_KIT, pat, big, glyphs, { rollW: 1600, bleed: 10, cutLines: true, pageMm: 5000 });
+  const fab = rosterSheets(DEFAULT_KIT, pat, big, glyphs, { rollW: 1600, bleed: 10, cutLines: true, pageMm: 5000, group: 'fabric' });
+  assert.equal(fab.pages.reduce((a, p) => a + p.pieces, 0), 60);
+  assert.equal(fab.overlaps, 0);
+  assert.equal(rows.overlaps, 0);
+  assert.ok(fab.totalMm < rows.totalMm, `nested ${fab.totalMm} < rows ${rows.totalMm}`);
+  assert.ok(fab.utilisation > rows.utilisation && fab.utilisation < 1, `use ${fab.utilisation}`);
+  assert.ok(fab.pages.every((p) => p.height <= 5000 + 14));
   // Not personalised: sizes × quantities, no names.
   const tee = kitFor('tshirt');
   const list = printList([{ name: '', number: '', size: 'M', qty: 3 }, { name: '', number: '', size: 'L', qty: 2 }], tee);

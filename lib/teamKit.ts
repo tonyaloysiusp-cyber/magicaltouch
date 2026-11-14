@@ -16,6 +16,8 @@ import { sheetPlacements, motifPath, layout, placedMotif } from './patterns.ts';
 import type { PatternSettings } from './patterns.ts';
 import { pathBox } from './pathFit.ts';
 import { boardLayout, pieceArt, type ArtEl } from './textile/art.ts';
+import { nest, findOverlaps, polyArea } from './textile/nest.ts';
+import { normalize, flatten } from './textile/vector.ts';
 
 export type KitStyle = 'tshirt' | 'football' | 'cricket' | 'basketball' | 'polo';
 export const KIT_STYLES: { id: KitStyle; label: string; product: string }[] = [
@@ -473,7 +475,18 @@ export function printList(players: Player[], kit: KitDesign): Player[] {
  * and get a small label (player · size · piece) in the gap above them. When
  * the run is longer than `pageMm`, it continues on the next PDF page.
  */
-export function rosterSheets(kit: KitDesign, pat: PatternSettings, players: Player[], glyphs: Glyphs, o: SheetOptions): { pages: SheetPage[]; totalMm: number; tooWide: number } {
+/** True area of a piece outline (mm² at size M). */
+const areaCache = new Map<string, number>();
+export function pieceArea(piece: Piece): number {
+  const hit = areaCache.get(piece.d); if (hit != null) return hit;
+  let a = 0;
+  try { for (const r of flatten(normalize(piece.d), 0.5)) a += polyArea(r.pts); } catch { a = piece.w * piece.h; }
+  if (!(a > 0)) a = piece.w * piece.h;
+  areaCache.set(piece.d, a);
+  return a;
+}
+
+export function rosterSheets(kit: KitDesign, pat: PatternSettings, players: Player[], glyphs: Glyphs, o: SheetOptions): { pages: SheetPage[]; totalMm: number; tooWide: number; utilisation: number; overlaps: number } {
   const product = kitProduct(kit);
   const gap = o.gap ?? 15, bleed = o.bleed, rollW = o.rollW, pageMax = Math.max(500, o.pageMm || 5000);
   type It = { piece: Piece; w: number; h: number; k: number; copy: number; player: Player; idx: number; rot?: boolean; tooWide?: boolean };
@@ -491,7 +504,23 @@ export function rosterSheets(kit: KitDesign, pat: PatternSettings, players: Play
   let cur: (Placed & { player: Player; idx: number })[] = [];
   let x = gap, y = gap, rowH = 0, lastIdx = -1;
   const close = () => { pages.push({ placed: cur, height: Math.ceil(y + rowH + gap) }); cur = []; x = gap; y = gap; rowH = 0; };
-  for (const it of items) {
+  if (o.group === 'fabric') {
+    // Save fabric: compact nesting (MaxRects, pieces may turn 90°), split into pages at piece boundaries.
+    const res = nest(items.map((it, i) => ({ id: String(i), w: it.piece.w * it.k + 2 * bleed + LAB, h: it.piece.h * it.k + 2 * bleed + LAB, canRotate: !it.tooWide })), { rollW, gap });
+    const byY = res.placed.slice().sort((a, b) => a.y - b.y || a.x - b.x);
+    let start = 0, bottom = 0, list: (Placed & { player: Player; idx: number })[] = [];
+    const flush = () => { if (list.length) pages.push({ placed: list, height: Math.ceil(bottom - start + gap) }); list = []; };
+    for (const p of byY) {
+      const it = items[Number(p.id)];
+      if (list.length && p.y + p.h - start > pageMax - gap) { flush(); start = p.y - gap; bottom = 0; }
+      // The box has a label line above the piece either way round (its extra width stays as gap).
+      const w = p.rot ? it.piece.h * it.k : it.piece.w * it.k, h = p.rot ? it.piece.w * it.k : it.piece.h * it.k;
+      const lx = p.x, ly = p.y - start + LAB;
+      list.push({ piece: it.piece, x: lx + bleed, y: ly + bleed, w, h, k: it.k, copy: it.copy, rot: p.rot || undefined, tooWide: res.tooWide.includes(p.id) || undefined, player: it.player, idx: it.idx });
+      bottom = Math.max(bottom, p.y + p.h);
+    }
+    flush();
+  } else for (const it of items) {
     const Wd = it.w + 2 * bleed, Hd = it.h + 2 * bleed + LAB;
     const newRow = (x + Wd + gap > rollW && x > gap) || (o.group !== 'fabric' && lastIdx >= 0 && it.idx !== lastIdx && x > gap);
     if (newRow) { x = gap; y += rowH + gap; rowH = 0; }
@@ -520,7 +549,11 @@ export function rosterSheets(kit: KitDesign, pat: PatternSettings, players: Play
       : `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${rollW}mm" height="${H}mm" viewBox="0 0 ${rollW} ${H}">${inner}</svg>`;
     return { svg, width: rollW, height: H, pieces: pg.placed.length };
   });
-  return { pages: out, totalMm: out.reduce((a, p) => a + p.height, 0), tooWide: items.filter((i) => i.tooWide).length };
+  // Fabric use from the true piece shapes; overlaps are checked on the final layout (a sheet with any is not ready).
+  const totalMm = out.reduce((a, p) => a + p.height, 0);
+  const used = items.reduce((s, it) => s + pieceArea(it.piece) * it.k * it.k, 0);
+  const overlaps = pages.reduce((n, pg) => n + findOverlaps(pg.placed.map((pl, i) => ({ id: String(i), x: pl.x - bleed, y: pl.y - bleed, w: pl.w + 2 * bleed, h: pl.h + 2 * bleed })), 0).length, 0);
+  return { pages: out, totalMm, tooWide: items.filter((i) => i.tooWide).length, utilisation: totalMm ? Math.min(1, used / (rollW * totalMm)) : 0, overlaps };
 }
 
 /** Every distinct string that needs a letter outline for this roster. */

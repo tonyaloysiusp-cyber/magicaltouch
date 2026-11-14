@@ -376,7 +376,7 @@ export function GarmentDesigner({ kind: initialKind = 'jersey' }: { kind?: Garme
   const plan = useMemo(() => {
     if (step !== 'print' || !list.length) return null;
     const r = rosterSheets(kit, pattern, list, {}, sheetOpts);
-    return { pages: r.pages.length, metres: r.totalMm / 1000, pieces: r.pages.reduce((a, p) => a + p.pieces, 0), tooWide: r.tooWide };
+    return { pages: r.pages.length, metres: r.totalMm / 1000, pieces: r.pages.reduce((a, p) => a + p.pieces, 0), tooWide: r.tooWide, use: r.utilisation, overlaps: r.overlaps };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, list, kit, pattern, rollW, bleed, pageMm, group, mirror]);
 
@@ -392,6 +392,7 @@ export function GarmentDesigner({ kind: initialKind = 'jersey' }: { kind?: Garme
       const { svgToPdfBlob } = await import('@/lib/svgToPdf');
       await artReady();
       const r = rosterSheets(kit, pattern, list, glyphs, sheetOpts);
+      if (r.overlaps) { flash(`${r.overlaps} pieces overlap on the sheet — not exported. Try the other layout or a wider roll.`); setBusy(null); return; }
       save(await svgToPdfBlob('', 0, 0, r.pages.map((p) => ({ svg: p.svg, widthMm: p.width, heightMm: p.height })), pdfFonts), `${fileBase}-print-${list.length}.pdf`);
       flash(`Print PDF ready: ${list.length} garments on ${r.pages.length} page${r.pages.length > 1 ? 's' : ''}, ${(r.totalMm / 1000).toFixed(2)} m of ${rollW} mm roll.`);
     } catch { flash('The PDF could not be made in this browser.'); }
@@ -798,6 +799,8 @@ export function GarmentDesigner({ kind: initialKind = 'jersey' }: { kind?: Garme
               <section className="rounded-2xl bg-mt-bg p-3 text-[13px] space-y-0.5" aria-label="Print summary">
                 <p><b>{list.length}</b> garments · <b>{plan.pieces}</b> pieces</p>
                 <p><b>{plan.metres.toFixed(2)} m</b> of {rollW} mm roll · {plan.pages} PDF page{plan.pages > 1 ? 's' : ''}</p>
+                <p>Fabric use <b>{Math.round(plan.use * 100)}%</b> (true piece shapes){group === 'player' ? ' — “Save fabric” nests pieces tighter' : ''}</p>
+                {plan.overlaps > 0 ? <p className="text-rose-600">{plan.overlaps} pieces overlap — this layout is not ready to print.</p> : <p className="text-emerald-700 dark:text-emerald-400">No overlapping pieces.</p>}
                 {plan.tooWide > 0 && <p className="text-rose-600">{plan.tooWide} piece(s) are wider than this roll — choose a wider roll.</p>}
               </section>
             )}

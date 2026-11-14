@@ -922,10 +922,10 @@ scenarios.push({
     await studio.getByRole('button', { name: 'Object', exact: true }).click();
     await studio.getByRole('menuitem', { name: /^Group/ }).click();
     await t.page.waitForTimeout(600);
-    t.check('select all + group makes one layer', /Layers \(1\)/.test(await layers.innerText()), (await layers.innerText()).slice(0, 80));
+    t.check('select all + group makes one layer', /Layers \(1\)/i.test(await layers.innerText()), (await layers.innerText()).slice(0, 80));
     await studio.getByRole('button', { name: 'Ungroup', exact: true }).click();
     await t.page.waitForTimeout(600);
-    t.check('ungroup restores the layers', /Player number/.test(await layers.innerText()) && !/Layers \(1\)/.test(await layers.innerText()));
+    t.check('ungroup restores the layers', /Player number/.test(await layers.innerText()) && !/Layers \(1\)/i.test(await layers.innerText()));
     await t.shot('print-studio');
     await studio.getByRole('button', { name: /^Save/ }).click();
     await studio.getByRole('button', { name: 'Close print studio' }).click();
