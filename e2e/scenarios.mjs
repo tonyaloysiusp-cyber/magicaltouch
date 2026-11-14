@@ -1001,6 +1001,9 @@ scenarios.push({
 scenarios.push({
   name: 'pattern-continuity',
   async run(t) {
+    // Leaving the textile page with unsaved work shows the leave prompt: accept it, and retry an aborted navigation.
+    t.page.on('dialog', (d) => d.accept().catch(() => {}));
+    const go = async (u) => { try { await t.page.goto(t.BASE + u, { waitUntil: 'domcontentloaded' }); } catch { await t.page.waitForTimeout(1000); await t.page.goto(t.BASE + u, { waitUntil: 'domcontentloaded' }); } };
     await t.page.goto(t.BASE + '/patterns', { waitUntil: 'domcontentloaded' });
     await t.page.getByRole('button', { name: 'Save', exact: true }).first().click({ timeout: 30000 });
     await t.page.getByText(/Saved “.+” to My patterns/).waitFor({ timeout: 15000 });
