@@ -61,6 +61,8 @@ export interface KitDesign {
   graphic?: KitGraphic; accent?: string; accent2?: string; cuffs?: boolean;
   /** Names and numbers: same height on every size (default) or grown with the garment. */
   letterGrade?: 'fixed' | 'scale';
+  /** Hand-edited production sheet (Save fabric), saved with the project. */
+  sheetLayout?: SheetLayout;
   frontText?: string; frontTextColor?: string; frontTextMm?: number; frontTextTopMm?: number;
   personalise?: boolean; // names and numbers per player (off: sizes and quantities only)
   /** Extra sizes defined by measurement (flat chest width in cm); scaled from the size-M block. */
@@ -461,7 +463,55 @@ export function playerPrintSvg(kit: KitDesign, pat: PatternSettings, player: Pla
   return { svg, width: W, height, placed };
 }
 
-export interface SheetOptions { rollW: number; bleed: number; gap?: number; pageMm?: number; cutLines: boolean; group?: 'player' | 'fabric'; mirror?: boolean; px?: boolean; textMode?: TextMode }
+export interface SheetOptions { rollW: number; bleed: number; gap?: number; pageMm?: number; cutLines: boolean; group?: 'player' | 'fabric'; mirror?: boolean; px?: boolean; textMode?: TextMode; /** Hand-edited nesting (Save fabric): positions on the roll by piece key. */ layout?: SheetLayout; /** Registration marks at the corners of each page. */ marks?: boolean }
+/** A piece's place on the roll (box top-left in mm, box = label line + bleed + piece). `locked` pieces stay when re-nesting. */
+export type SheetLayout = Record<string, { x: number; y: number; rot: boolean; locked?: boolean }>;
+export interface SheetBox { key: string; x: number; y: number; w: number; h: number; rot: boolean; locked: boolean; idx: number; label: string; piece: Piece; k: number; copy: number; player: Player; tooWide: boolean }
+const SHEET_LAB = 9; // label line above each piece
+
+/**
+ * Save-fabric nesting for a whole order, on one continuous roll. Pieces in
+ * `layout` keep their place (hand-moved or locked); the rest are nested
+ * around them. Overlaps and pieces off the roll are reported — such a layout
+ * is never ready to print.
+ */
+export function fabricLayout(kit: KitDesign, players: Player[], o: { rollW: number; bleed: number; gap?: number; layout?: SheetLayout }): { boxes: SheetBox[]; length: number; utilisation: number; overlaps: [string, string][]; offRoll: string[] } {
+  const product = kitProduct(kit);
+  const gap = o.gap ?? 15, bleed = o.bleed, rollW = o.rollW, L = o.layout || {};
+  const personal = kit.personalise !== false;
+  const its: { key: string; piece: Piece; k: number; copy: number; player: Player; idx: number; w: number; h: number }[] = [];
+  players.forEach((pl, idx) => {
+    const k = sizeInfo(kit, pl.size)?.k || 1;
+    for (const pc of product.pieces) for (let c = 0; c < pc.qty; c++) its.push({ key: `${idx}|${pc.id}|${c}`, piece: pc, k, copy: c, player: pl, idx, w: pc.w * k + 2 * bleed + SHEET_LAB, h: pc.h * k + 2 * bleed + SHEET_LAB });
+  });
+  const res = nest(its.map((it) => {
+    const f = L[it.key];
+    const tooWide = Math.min(it.w, it.h) > rollW - 2 * gap;
+    return { id: it.key, w: it.w, h: it.h, area: pieceArea(it.piece) * it.k * it.k, canRotate: !tooWide, fixed: f ? { x: f.x, y: f.y, rot: !!f.rot } : undefined };
+  }), { rollW, gap });
+  const byKey = new Map(its.map((it) => [it.key, it]));
+  const sz = (pl: Player) => sizeInfo(kit, pl.size)?.label || pl.size;
+  const boxes: SheetBox[] = res.placed.map((p) => {
+    const it = byKey.get(p.id)!;
+    const who = personal ? `${it.idx + 1}. ${(it.player.name || '').toUpperCase()} #${it.player.number}` : `${it.idx + 1}.`;
+    return { key: p.id, x: p.x, y: p.y, w: p.w, h: p.h, rot: p.rot, locked: !!L[p.id]?.locked, idx: it.idx, piece: it.piece, k: it.k, copy: it.copy, player: it.player, tooWide: res.tooWide.includes(p.id), label: `${who} · ${sz(it.player)} · ${it.piece.label}${it.piece.qty > 1 ? ` ${it.copy + 1}` : ''}` };
+  });
+  const offRoll = boxes.filter((b) => b.x < -1e-6 || b.x + b.w > rollW + 1e-6 || b.y < -1e-6).map((b) => b.key);
+  const length = Math.ceil(Math.max(gap, ...boxes.map((b) => b.y + b.h)) + gap);
+  const area = its.reduce((s0, it) => s0 + pieceArea(it.piece) * it.k * it.k, 0);
+  return { boxes, length, utilisation: length ? Math.min(1, area / (rollW * length)) : 0, overlaps: findOverlaps(boxes.map((b) => ({ id: b.key, x: b.x, y: b.y, w: b.w, h: b.h })), 0), offRoll };
+}
+/** The layout as it stands (every piece fixed), to start hand-editing from. */
+export function layoutOf(boxes: SheetBox[]): SheetLayout {
+  const out: SheetLayout = {};
+  for (const b of boxes) out[b.key] = { x: b.x, y: b.y, rot: b.rot, ...(b.locked ? { locked: true } : {}) };
+  return out;
+}
+/** Where the piece itself sits inside its box (for drawing and printing). */
+export function boxPlaced(b: SheetBox, bleed: number, dy = 0): Placed {
+  const w = b.rot ? b.piece.h * b.k : b.piece.w * b.k, h = b.rot ? b.piece.w * b.k : b.piece.h * b.k;
+  return { piece: b.piece, x: b.x + bleed, y: b.y - dy + SHEET_LAB + bleed, w, h, k: b.k, copy: b.copy, rot: b.rot || undefined, tooWide: b.tooWide || undefined };
+}
 export interface SheetPage { svg: string; width: number; height: number; pieces: number }
 
 /** The garments to print: one per player, or (not personalised) one per quantity of each size. */
@@ -502,25 +552,23 @@ export function rosterSheets(kit: KitDesign, pat: PatternSettings, players: Play
   for (const it of items) if (it.w > room) { if (it.h <= room) { const t = it.w; it.w = it.h; it.h = t; it.rot = true; } else it.tooWide = true; }
   if (o.group === 'fabric') items.sort((a, b) => b.h - a.h || b.w - a.w);
   else items.sort((a, b) => a.idx - b.idx || b.h - a.h || b.w - a.w);
-  const LAB = 9; // label line above each piece
+  const LAB = SHEET_LAB;
+  let fabricProblems = 0;
   const pages: { placed: (Placed & { player: Player; idx: number })[]; height: number }[] = [];
   let cur: (Placed & { player: Player; idx: number })[] = [];
   let x = gap, y = gap, rowH = 0, lastIdx = -1;
   const close = () => { pages.push({ placed: cur, height: Math.ceil(y + rowH + gap) }); cur = []; x = gap; y = gap; rowH = 0; };
   if (o.group === 'fabric') {
-    // Save fabric: compact nesting (MaxRects, pieces may turn 90°), split into pages at piece boundaries.
-    const res = nest(items.map((it, i) => ({ id: String(i), w: it.piece.w * it.k + 2 * bleed + LAB, h: it.piece.h * it.k + 2 * bleed + LAB, canRotate: !it.tooWide })), { rollW, gap });
-    const byY = res.placed.slice().sort((a, b) => a.y - b.y || a.x - b.x);
+    // Save fabric: compact nesting on one roll (hand edits kept), split into pages at piece boundaries.
+    const fl = fabricLayout(kit, players, { rollW, bleed, gap, layout: o.layout });
+    fabricProblems = fl.overlaps.length + fl.offRoll.length;
+    const byY = fl.boxes.slice().sort((a, b) => a.y - b.y || a.x - b.x);
     let start = 0, bottom = 0, list: (Placed & { player: Player; idx: number })[] = [];
     const flush = () => { if (list.length) pages.push({ placed: list, height: Math.ceil(bottom - start + gap) }); list = []; };
-    for (const p of byY) {
-      const it = items[Number(p.id)];
-      if (list.length && p.y + p.h - start > pageMax - gap) { flush(); start = p.y - gap; bottom = 0; }
-      // The box has a label line above the piece either way round (its extra width stays as gap).
-      const w = p.rot ? it.piece.h * it.k : it.piece.w * it.k, h = p.rot ? it.piece.w * it.k : it.piece.h * it.k;
-      const lx = p.x, ly = p.y - start + LAB;
-      list.push({ piece: it.piece, x: lx + bleed, y: ly + bleed, w, h, k: it.k, copy: it.copy, rot: p.rot || undefined, tooWide: res.tooWide.includes(p.id) || undefined, player: it.player, idx: it.idx });
-      bottom = Math.max(bottom, p.y + p.h);
+    for (const b of byY) {
+      if (list.length && b.y + b.h - start > pageMax - gap) { flush(); start = b.y - gap; bottom = 0; }
+      list.push({ ...boxPlaced(b, bleed, start), player: b.player, idx: b.idx });
+      bottom = Math.max(bottom, b.y + b.h);
     }
     flush();
   } else for (const it of items) {
@@ -545,7 +593,10 @@ export function rosterSheets(kit: KitDesign, pat: PatternSettings, players: Play
       return `<text x="${r2(lx - bleed)}" y="${r2(pl.y - bleed - 2.5)}">${esc(`${who} · ${sz(pl.player)} · ${pl.piece.label}${pl.piece.qty > 1 ? ` ${pl.copy + 1}` : ''}${pl.rot ? ' · turned' : ''}${pl.tooWide ? ' · WIDER THAN ROLL' : ''}`)}</text>`;
     }).join('')}</g>`;
     const foot = `<text x="${gap}" y="${H - 5}" font-family="Arial, Helvetica, sans-serif" font-size="7" fill="#666">${esc(`${kit.teamName} · ${product.label} · ${players.length} garments · page ${n + 1} of ${pages.length} · roll ${rollW} mm · bleed ${bleed} mm${o.mirror ? ' · mirrored' : ''} · print at 100%`)}</text>`;
-    const inner = `<g id="print"${flip}>${parts}</g>${cuts}${labels}${foot}`;
+    // Registration targets in the corners (for aligning the print with a cutter or press).
+    const target = (x: number, y: number) => `<circle cx="${x}" cy="${y}" r="3.5" fill="none" stroke="#000" stroke-width="0.3"/><path d="M${x - 5} ${y}H${x + 5}M${x} ${y - 5}V${y + 5}" stroke="#000" stroke-width="0.3"/>`;
+    const marks = o.marks ? `<g id="registration">${target(6, 6)}${target(rollW - 6, 6)}${target(6, H - 6)}${target(rollW - 6, H - 6)}</g>` : '';
+    const inner = `<g id="print"${flip}>${parts}</g>${cuts}${labels}${foot}${marks}`;
     const unit = o.px ? 96 / 25.4 : 1;
     const svg = o.px
       ? `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${r2(rollW * unit)}" height="${r2(H * unit)}" viewBox="0 0 ${r2(rollW * unit)} ${r2(H * unit)}"><g transform="scale(${unit})">${inner}</g></svg>`
@@ -555,7 +606,7 @@ export function rosterSheets(kit: KitDesign, pat: PatternSettings, players: Play
   // Fabric use from the true piece shapes; overlaps are checked on the final layout (a sheet with any is not ready).
   const totalMm = out.reduce((a, p) => a + p.height, 0);
   const used = items.reduce((s, it) => s + pieceArea(it.piece) * it.k * it.k, 0);
-  const overlaps = pages.reduce((n, pg) => n + findOverlaps(pg.placed.map((pl, i) => ({ id: String(i), x: pl.x - bleed, y: pl.y - bleed, w: pl.w + 2 * bleed, h: pl.h + 2 * bleed })), 0).length, 0);
+  const overlaps = o.group === 'fabric' ? fabricProblems : pages.reduce((n, pg) => n + findOverlaps(pg.placed.map((pl, i) => ({ id: String(i), x: pl.x - bleed, y: pl.y - bleed, w: pl.w + 2 * bleed, h: pl.h + 2 * bleed })), 0).length, 0);
   return { pages: out, totalMm, tooWide: items.filter((i) => i.tooWide).length, utilisation: totalMm ? Math.min(1, used / (rollW * totalMm)) : 0, overlaps };
 }
 

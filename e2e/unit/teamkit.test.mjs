@@ -114,3 +114,33 @@ test('custom measured sizes scale from the size-M block and validate', async () 
   assert.equal(issues.length, 0);
   assert.ok(checkRoster([{ name: '', number: '', size: '6XL', qty: 2 }], false, kit)[0].message.includes('5XL'));
 });
+
+test('production sheet: hand moves stay, overlaps and off-roll pieces are reported, locked pieces survive a re-nest', async () => {
+  const { fabricLayout, layoutOf, rosterSheets } = await import('../../lib/teamKit.ts');
+  const roster = [{ name: 'Arun', number: '7', size: 'S' }, { name: 'John', number: '23', size: 'XL' }];
+  const o = { rollW: 1600, bleed: 10 };
+  const a = fabricLayout(DEFAULT_KIT, roster, o);
+  assert.equal(a.boxes.length, 10);
+  assert.deepEqual(a.overlaps, []);
+  const L = layoutOf(a.boxes);
+  const [k0, k1] = a.boxes.map((b) => b.key);
+  // Move one piece onto another: kept where it was put, and reported.
+  L[k1] = { ...L[k1], x: L[k0].x + 5, y: L[k0].y + 5 };
+  const b = fabricLayout(DEFAULT_KIT, roster, { ...o, layout: L });
+  const moved = b.boxes.find((x) => x.key === k1);
+  assert.deepEqual([moved.x, moved.y], [L[k0].x + 5, L[k0].y + 5]);
+  assert.ok(b.overlaps.some((p) => p.includes(k1)));
+  const sheet = rosterSheets(DEFAULT_KIT, pat, roster, {}, { ...o, cutLines: true, group: 'fabric', layout: L });
+  assert.ok(sheet.overlaps > 0, 'an overlapping sheet is never reported ready');
+  // Off the roll.
+  const off = fabricLayout(DEFAULT_KIT, roster, { ...o, layout: { [k0]: { x: 1500, y: 20, rot: false } } });
+  assert.ok(off.offRoll.includes(k0));
+  // Re-nest keeping only a locked piece at a chosen place.
+  const c = fabricLayout(DEFAULT_KIT, roster, { ...o, layout: { [k0]: { x: 600, y: 400, rot: true, locked: true } } });
+  const locked = c.boxes.find((x) => x.key === k0);
+  assert.deepEqual([locked.x, locked.y, locked.rot, locked.locked], [600, 400, true, true]);
+  assert.deepEqual(c.overlaps, []);
+  assert.deepEqual(c.offRoll, []);
+  const marks = rosterSheets(DEFAULT_KIT, pat, roster, {}, { ...o, cutLines: true, group: 'fabric', marks: true });
+  assert.match(marks.pages[0].svg, /id="registration"/);
+});

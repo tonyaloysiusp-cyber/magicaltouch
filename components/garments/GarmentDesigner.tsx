@@ -20,6 +20,7 @@ import {
 import { openToolFile, saveToolProject, takeToolHandoff, TOOL_FILE_ACCEPT } from '@/lib/mtd/toolProject';
 import { LeaveGuard } from './LeaveGuard';
 import { PrintStudio } from './PrintStudio';
+import { ProductionSheet } from './ProductionSheet';
 import { ensureFonts } from '@/lib/textile/fonts';
 import { artFonts } from '@/lib/textile/art';
 import { listAssets, migrateLegacyPatterns, onAssetsChanged } from '@/lib/assets/library';
@@ -123,6 +124,8 @@ export function GarmentDesigner({ kind: initialKind = 'jersey' }: { kind?: Garme
   const [pageMm, setPageMm] = useState(5000);
   const [group, setGroup] = useState<'player' | 'fabric'>('player');
   const [mirror, setMirror] = useState(false);
+  const [marks, setMarks] = useState(false);
+  const [sheetOpen, setSheetOpen] = useState(false);
   // Text in print files: live (retypeable, fonts embedded in the PDF) or exact outlines from the font file.
   const [textMode, setTextMode] = useState<'live' | 'outline'>('live');
   const [selEl, setSelEl] = useState<El | null>(null);
@@ -372,13 +375,16 @@ export function GarmentDesigner({ kind: initialKind = 'jersey' }: { kind?: Garme
   useEffect(() => { setChosen((c) => players.map((_, i) => c[i] ?? true)); }, [players]);
   const picked = useMemo(() => players.filter((_, i) => chosen[i] !== false), [players, chosen]);
   const list = useMemo(() => printList(picked, kit), [picked, kit]);
-  const sheetOpts = { rollW, bleed, cutLines: true, pageMm, group, mirror, textMode };
+  const sheetOpts = { rollW, bleed, cutLines: true, pageMm, group, mirror, textMode, marks, layout: group === 'fabric' ? kit.sheetLayout : undefined };
+  // A hand-edited sheet belongs to one roll width and bleed: changing either starts from the automatic layout again.
+  const rollKey = useRef(`${rollW}|${bleed}`);
+  useEffect(() => { const k = `${rollW}|${bleed}`; if (rollKey.current !== k) { rollKey.current = k; setKit((v) => (v.sheetLayout ? { ...v, sheetLayout: undefined } : v)); } }, [rollW, bleed]);
   const plan = useMemo(() => {
     if (step !== 'print' || !list.length) return null;
     const r = rosterSheets(kit, pattern, list, {}, sheetOpts);
     return { pages: r.pages.length, metres: r.totalMm / 1000, pieces: r.pages.reduce((a, p) => a + p.pieces, 0), tooWide: r.tooWide, use: r.utilisation, overlaps: r.overlaps };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step, list, kit, pattern, rollW, bleed, pageMm, group, mirror]);
+  }, [step, list, kit, pattern, rollW, bleed, pageMm, group, mirror, marks]);
 
   const fileBase = `${safeFile(kit.teamName)}-${copy.noun.replace(/\s+/g, '-')}`;
   // Fonts the print files need: for outlines the art's font files must be loaded; for live text the PDF embeds them.
@@ -507,6 +513,7 @@ export function GarmentDesigner({ kind: initialKind = 'jersey' }: { kind?: Garme
   return (
     <div className="space-y-5">
       <LeaveGuard dirty={dirty} onSave={saveProject} what={copy.noun} />
+      {sheetOpen && <ProductionSheet kit={kit} players={list} rollW={rollW} bleed={bleed} layout={kit.sheetLayout} onChange={(l) => setKit((k) => ({ ...k, sheetLayout: l }))} onClose={() => setSheetOpen(false)} />}
       {studioOpen && <PrintStudio kit={kit} pattern={pattern} glyphs={glyphs} players={personal ? players : players.map((p) => ({ ...p, name: '', number: '' }))}
         libraryPatterns={mine.filter((x) => x.id).map((x) => ({ id: x.id!, kind: 'pattern' as const, name: x.name, data: x.p, createdAt: x.at || '', updatedAt: x.at || '' }))}
         onSave={(art, studioOnly) => setKit((k) => ({ ...k, art, studioOnly }))} onClose={() => setStudioOpen(false)} />}
@@ -787,6 +794,8 @@ export function GarmentDesigner({ kind: initialKind = 'jersey' }: { kind?: Garme
                 <button type="button" aria-pressed={group === 'player'} onClick={() => setGroup('player')} className={chip(group === 'player')}>{personal ? 'Keep each player together' : 'Keep each garment together'}</button>
                 <button type="button" aria-pressed={group === 'fabric'} onClick={() => setGroup('fabric')} className={chip(group === 'fabric')}>Save fabric</button>
               </div>
+              {group === 'fabric' && <button type="button" onClick={() => setSheetOpen(true)} disabled={!list.length} className={`${btn} w-full`}>Edit production sheet{kit.sheetLayout ? ' (edited by hand)' : ''}</button>}
+              <label className="flex items-center gap-2 text-[13px]"><input type="checkbox" checked={marks} onChange={(e) => setMarks(e.target.checked)} className="h-4 w-4 accent-[#3B82C4]" /> Registration marks in the corners</label>
               <label className="flex items-center gap-2 text-[13px]"><input type="checkbox" checked={mirror} onChange={(e) => setMirror(e.target.checked)} className="h-4 w-4 accent-[#3B82C4]" /> Mirror for transfer paper</label>
               {personal && <label className="flex items-center gap-2 text-[13px]"><input type="checkbox" checked={kit.letterGrade !== 'scale'} onChange={(e) => set({ letterGrade: e.target.checked ? 'fixed' : 'scale' })} className="h-4 w-4 accent-[#3B82C4]" /> Names &amp; numbers the same height on every size</label>}
               <p className="pt-1 text-[12px] font-semibold text-mt-muted">Text in the print files</p>

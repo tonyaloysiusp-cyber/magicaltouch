@@ -946,6 +946,41 @@ scenarios.push({
   },
 });
 
+// Production sheet: Save fabric nesting edited by hand — move onto another piece (not ready), undo, lock, re-nest, export.
+scenarios.push({
+  name: 'production-sheet',
+  async run(t) {
+    await t.page.goto(t.BASE + '/textile-designer?garment=jersey', { waitUntil: 'domcontentloaded' });
+    await t.page.getByRole('tab', { name: /Print files/ }).click({ timeout: 30000 });
+    await t.page.getByRole('button', { name: 'Save fabric' }).click();
+    await t.page.getByRole('button', { name: /Edit production sheet/ }).click();
+    const sheet = t.page.getByRole('dialog', { name: 'Production sheet' });
+    const status = sheet.getByLabel('Sheet status');
+    await status.waitFor({ timeout: 20000 });
+    t.check('automatic nesting is ready (no overlaps)', /Ready to print/.test(await status.innerText()), (await status.innerText()).slice(0, 120));
+    const pieces = sheet.getByRole('button', { name: /^Piece / });
+    const a = await pieces.nth(0).locator('rect').boundingBox();
+    const b = await pieces.nth(1).locator('rect').boundingBox();
+    await t.page.mouse.move(b.x + 20, b.y + 20);
+    await t.page.mouse.down();
+    await t.page.mouse.move(a.x + 40, a.y + 40, { steps: 8 });
+    await t.page.mouse.up();
+    await t.page.waitForTimeout(300);
+    t.check('a piece dropped on another makes the sheet not ready', /Not ready — \d+ overlap/.test(await status.innerText()), (await status.innerText()).slice(0, 120));
+    await sheet.getByRole('button', { name: 'Undo' }).click();
+    t.check('undo restores a ready sheet', /Ready to print/.test(await status.innerText()));
+    await pieces.nth(2).locator('path').click();
+    await sheet.getByRole('button', { name: /^Lock$/ }).click();
+    await sheet.getByRole('button', { name: /Re-nest/ }).click();
+    const st = await status.innerText();
+    t.check('lock + re-nest keeps one locked piece and stays ready', /1 locked/.test(st) && /Ready to print/.test(st), st.slice(0, 160));
+    await t.shot('production-sheet');
+    await sheet.getByRole('button', { name: 'Done' }).click();
+    t.check('summary confirms no overlapping pieces', /No overlapping pieces/.test(await t.page.getByLabel('Print summary').innerText()));
+    t.check('print step says the sheet was edited by hand', await t.page.getByRole('button', { name: /edited by hand/ }).isVisible());
+  },
+});
+
 // Polo designer: sizes and quantities → one print PDF; wall poster + wallpaper strips.
 scenarios.push({
   name: 'polo-and-wall',
