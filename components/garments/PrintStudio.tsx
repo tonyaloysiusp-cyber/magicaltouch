@@ -178,10 +178,11 @@ export function PrintStudio({ kit, pattern, glyphs, players, libraryPatterns, on
       return new Fb.Gradient({ type: f.type, gradientUnits: 'percentage', coords, colorStops: f.stops.map(([offset, color]) => ({ offset, color })) });
     }
     // Pattern fill: one seamless tile as a repeating picture on screen (the print file draws the vector motifs).
-    const tile = tileSvg({ ...f.pattern, background: f.bg !== undefined ? (f.bg || 'transparent') : f.pattern.background });
+    const pf = f as Extract<Fill, { type: 'pattern' }>;
+    const tile = tileSvg({ ...pf.pattern, background: pf.bg !== undefined ? (pf.bg || 'transparent') : pf.pattern.background });
     const img: HTMLImageElement = await new Promise((res) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => res(i); i.src = svgUrl(tile); });
-    const { w: tw } = patLayout(f.pattern);
-    const s = f.tileMm / tw;
+    const { w: tw } = patLayout(pf.pattern);
+    const s = pf.tileMm / tw;
     return new Fb.Pattern({ source: img, repeat: 'repeat', patternTransform: [s, 0, 0, s, 0, 0], offsetX: obj ? -obj.width / 2 : 0, offsetY: 0 });
   }, []);
 
@@ -479,7 +480,7 @@ export function PrintStudio({ kit, pattern, glyphs, players, libraryPatterns, on
                 {fillKind === 'solid' && <label className="flex items-center gap-2 text-[12px]"><input type="color" value={f as string} onChange={(e) => update(selected.id, { fill: e.target.value } as any)} aria-label="Fill colour" className="h-9 w-12 rounded border border-mt-border" /><input value={f as string} onChange={(e) => /^#[0-9a-f]{6}$/i.test(e.target.value) && update(selected.id, { fill: e.target.value } as any)} aria-label="Fill HEX" className="h-9 w-24 rounded-lg border border-mt-border bg-mt-bg px-2 font-mono text-[12px]" /></label>}
                 {(fillKind === 'linear' || fillKind === 'radial') && f && typeof f === 'object' && 'stops' in f && <div className="space-y-1.5">
                   {f.stops.map(([o, c], i) => <div key={i} className="flex items-center gap-1.5"><input type="color" value={c.slice(0, 7)} onChange={(e) => update(selected.id, { fill: { ...f, stops: f.stops.map((st, j) => (j === i ? [st[0], e.target.value] : st)) } } as any)} aria-label={`Gradient colour ${i + 1}`} className="h-8 w-10 rounded border border-mt-border" /><input type="range" min={0} max={100} value={Math.round(o * 100)} onChange={(e) => update(selected.id, { fill: { ...f, stops: f.stops.map((st, j) => (j === i ? [Number(e.target.value) / 100, st[1]] : st)) } } as any)} aria-label={`Gradient stop ${i + 1} position`} className="flex-1" />{f.stops.length > 2 && <button type="button" onClick={() => update(selected.id, { fill: { ...f, stops: f.stops.filter((_, j) => j !== i) } } as any)} aria-label="Remove colour stop" className="text-[12px] px-1">×</button>}</div>)}
-                  <div className="flex items-center gap-2"><button type="button" onClick={() => update(selected.id, { fill: { ...f, stops: [...f.stops, [1, '#000000']].sort((a, b) => a[0] - b[0]) as any } } as any)} className="h-8 px-2.5 rounded-lg border border-mt-border text-[12px]">+ Colour</button>{fillKind === 'linear' && num('Angle °', f.angle ?? 90, (n) => update(selected.id, { fill: { ...f, angle: n } } as any))}</div>
+                  <div className="flex items-center gap-2"><button type="button" onClick={() => update(selected.id, { fill: { ...f, stops: ([...f.stops, [1, '#000000']] as [number, string][]).sort((a, b) => a[0] - b[0]) } } as any)} className="h-8 px-2.5 rounded-lg border border-mt-border text-[12px]">+ Colour</button>{fillKind === 'linear' && num('Angle °', f.angle ?? 90, (n) => update(selected.id, { fill: { ...f, angle: n } } as any))}</div>
                 </div>}
                 {fillKind === 'pattern' && f && typeof f === 'object' && f.type === 'pattern' && <div className="space-y-1.5">
                   <label className={lbl}>Pattern<select value={f.assetId || '__current'} onChange={(e) => { const a = libraryPatterns.find((x) => x.id === e.target.value); update(selected.id, { fill: { ...f, pattern: a ? a.data : pattern, assetId: a?.id || null, name: a?.name || 'Current pattern' } } as any); }} aria-label="Pattern" className={field}><option value="__current">The garment’s current pattern</option>{libraryPatterns.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}</select></label>

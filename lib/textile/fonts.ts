@@ -2,8 +2,7 @@
 // artwork and registers a synchronous shaper, so the (pure) renderers in
 // art.ts / teamKit.ts draw exact outlines from the font's own curves.
 
-import type { Font } from 'opentype.js';
-import { loadFont, resolveFace, textShape } from '../fontOutline.ts';
+import { loadFont, resolveFace, textShape, type Font } from '../fontOutline.ts';
 import { setShaper, type Shaper } from './art.ts';
 
 const ready = new Map<string, Font>();

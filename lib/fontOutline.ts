@@ -6,7 +6,12 @@
 // instead of a traced picture of the text. Used for names, numbers and text
 // on garments, pattern letters and the print files ("outlined text").
 
-import type { Font } from 'opentype.js';
+// Minimal shape of an opentype.js Font (the package has no type declarations).
+export interface Font {
+  unitsPerEm: number; ascender: number; descender: number; tables: any;
+  stringToGlyphs(s: string): { advanceWidth?: number; getPath(x: number, y: number, size: number): { toPathData(d?: number): string } }[];
+  getKerningValue(a: any, b: any): number;
+}
 import { googleFontByName } from './editor/googleFonts.ts';
 
 const fonts = new Map<string, Promise<Font>>();

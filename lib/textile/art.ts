@@ -148,7 +148,7 @@ function elementBody(el: ArtEl, o: RenderOpts, id: string): string {
   // Pattern fill: tiles clipped to the shape (vectors all the way).
   const cid = `${id}-c`;
   const clipBody = textLive ? '' : shape;
-  const tiles = patternTiles(f, { x: box.x - 1, y: box.y - 1, w: box.w + 2, h: box.h + 2 });
+  const tiles = patternTiles(f as Extract<Fill, { type: 'pattern' }>, { x: box.x - 1, y: box.y - 1, w: box.w + 2, h: box.h + 2 });
   return `<defs><clipPath id="${cid}" clip-rule="${rule}">${clipBody}</clipPath></defs><g clip-path="url(#${cid})">${tiles}</g>${strokeAttr ? `<g fill="none"${strokeAttr}>${body}</g>` : ''}`;
 }
 
