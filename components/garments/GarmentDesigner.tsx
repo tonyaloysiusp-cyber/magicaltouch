@@ -10,7 +10,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { AlertTriangle, CheckCircle2, Download, FileArchive, FileUp, FolderOpen, Layers, Loader2, MousePointerClick, Plus, Printer, Redo2, RotateCcw, Save, Shirt, Trash2, Undo2, Upload, X, ZoomIn, ZoomOut } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, PenTool, Download, FileArchive, FileUp, FolderOpen, Layers, Loader2, MousePointerClick, Plus, Printer, Redo2, RotateCcw, Save, Shirt, Trash2, Undo2, Upload, X, ZoomIn, ZoomOut } from 'lucide-react';
 import { DEFAULT_PATTERN, PatternSettings, svgDataUrl, sheetPlacements, motifPath, layout } from '@/lib/patterns';
 import { SIZES, ROLLS } from '@/lib/garments';
 import {
@@ -19,6 +19,9 @@ import {
 } from '@/lib/teamKit';
 import { openToolFile, saveToolProject, takeToolHandoff, TOOL_FILE_ACCEPT } from '@/lib/mtd/toolProject';
 import { LeaveGuard } from './LeaveGuard';
+import { PrintStudio } from './PrintStudio';
+import { ensureFonts } from '@/lib/textile/fonts';
+import { artFonts } from '@/lib/textile/art';
 import { listAssets, migrateLegacyPatterns, onAssetsChanged } from '@/lib/assets/library';
 import { PATTERN_FONTS, textOutline } from '@/lib/patternText';
 import { supabase } from '@/lib/supabase';
@@ -120,6 +123,8 @@ export function GarmentDesigner({ kind: initialKind = 'jersey' }: { kind?: Garme
   const [pageMm, setPageMm] = useState(5000);
   const [group, setGroup] = useState<'player' | 'fabric'>('player');
   const [mirror, setMirror] = useState(false);
+  // Text in print files: live (retypeable, fonts embedded in the PDF) or exact outlines from the font file.
+  const [textMode, setTextMode] = useState<'live' | 'outline'>('live');
   const [selEl, setSelEl] = useState<El | null>(null);
   const [projectId, setProjectId] = useState<string | null>(null);
   const [projects, setProjects] = useState<SavedProject[] | null>(null);
@@ -219,6 +224,7 @@ export function GarmentDesigner({ kind: initialKind = 'jersey' }: { kind?: Garme
   const redo = () => { const h = hist.current; const x = h.future.pop(); if (!x || !h.cur) return; h.past.push(h.cur); applySnap(x); };
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if (studioOpen) return; // the print studio has its own undo
       const el = e.target as HTMLElement | null;
       if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable)) return;
       if (!(e.ctrlKey || e.metaKey) || e.key.toLowerCase() !== 'z' && e.key.toLowerCase() !== 'y') return;
@@ -304,7 +310,13 @@ export function GarmentDesigner({ kind: initialKind = 'jersey' }: { kind?: Garme
   const issues = useMemo(() => checkRoster(players, personal, kit), [players, personal, kit]);
   const errors = issues.filter((i) => i.level === 'error');
   const player = personal ? players[Math.min(sel, players.length - 1)] || null : { name: '', number: '', size: players[0]?.size || 'M' };
-  const preview = useMemo(() => (view === 'garment' ? kitMockupSvg(kit, pattern, player, glyphs, side, { selected: selEl }) : kitPreviewSvg(kit, pattern, player, glyphs)), [view, side, kit, pattern, player, glyphs, selEl]);
+  // Print-studio artwork: load its fonts (exact outlines come from the font files), then redraw.
+  const [studioOpen, setStudioOpen] = useState(false);
+  const [artFontTick, setArtFontTick] = useState(0);
+  useEffect(() => { if (!kit.art?.length) return; let live = true; ensureFonts(artFonts(kit.art)).then(() => { if (live) setArtFontTick((t) => t + 1); }); return () => { live = false; }; }, [kit.art]);
+  const preview = useMemo(() => (view === 'garment' ? kitMockupSvg(kit, pattern, player, glyphs, side, { selected: selEl }) : kitPreviewSvg(kit, pattern, player, glyphs)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [view, side, kit, pattern, player, glyphs, selEl, artFontTick]);
 
   // Picker thumbnails only change with the style / colours they show.
   const starterThumbs = useMemo(() => Object.fromEntries(STARTERS.map((st) => [st.name, svgDataUrl(kitMockupSvg({ ...kitFor(kind), style: kit.style, ...st.o, personalise: false, frontText: '', teamLogo: null, sponsorLogo: null, patternOn: 'none' }, DEFAULT_PATTERN, null, {}, 'front'))])), [kind, kit.style]);
@@ -360,7 +372,7 @@ export function GarmentDesigner({ kind: initialKind = 'jersey' }: { kind?: Garme
   useEffect(() => { setChosen((c) => players.map((_, i) => c[i] ?? true)); }, [players]);
   const picked = useMemo(() => players.filter((_, i) => chosen[i] !== false), [players, chosen]);
   const list = useMemo(() => printList(picked, kit), [picked, kit]);
-  const sheetOpts = { rollW, bleed, cutLines: true, pageMm, group, mirror };
+  const sheetOpts = { rollW, bleed, cutLines: true, pageMm, group, mirror, textMode };
   const plan = useMemo(() => {
     if (step !== 'print' || !list.length) return null;
     const r = rosterSheets(kit, pattern, list, {}, sheetOpts);
@@ -369,14 +381,18 @@ export function GarmentDesigner({ kind: initialKind = 'jersey' }: { kind?: Garme
   }, [step, list, kit, pattern, rollW, bleed, pageMm, group, mirror]);
 
   const fileBase = `${safeFile(kit.teamName)}-${copy.noun.replace(/\s+/g, '-')}`;
+  // Fonts the print files need: for outlines the art's font files must be loaded; for live text the PDF embeds them.
+  const artReady = async () => { if (kit.art?.length) await ensureFonts(artFonts(kit.art)); };
+  const pdfFonts = { loadFont: textMode === 'live' ? async (family: string, weight: number, italic: boolean) => { try { const { fontBytes } = await import('@/lib/fontOutline'); return await fontBytes(family, weight, italic); } catch { return null; } } : undefined };
   const dlSheetPdf = async () => {
     if (errors.length) { setStep('players'); flash('Fix the rows marked in red first.'); return; }
     if (!list.length) { flash('Choose at least one row to print.'); return; }
     setBusy('sheet');
     try {
       const { svgToPdfBlob } = await import('@/lib/svgToPdf');
+      await artReady();
       const r = rosterSheets(kit, pattern, list, glyphs, sheetOpts);
-      save(await svgToPdfBlob('', 0, 0, r.pages.map((p) => ({ svg: p.svg, widthMm: p.width, heightMm: p.height }))), `${fileBase}-print-${list.length}.pdf`);
+      save(await svgToPdfBlob('', 0, 0, r.pages.map((p) => ({ svg: p.svg, widthMm: p.width, heightMm: p.height })), pdfFonts), `${fileBase}-print-${list.length}.pdf`);
       flash(`Print PDF ready: ${list.length} garments on ${r.pages.length} page${r.pages.length > 1 ? 's' : ''}, ${(r.totalMm / 1000).toFixed(2)} m of ${rollW} mm roll.`);
     } catch { flash('The PDF could not be made in this browser.'); }
     setBusy(null);
@@ -385,6 +401,7 @@ export function GarmentDesigner({ kind: initialKind = 'jersey' }: { kind?: Garme
     if (errors.length) { setStep('players'); flash('Fix the rows marked in red first.'); return; }
     setBusy('sheet-svg');
     try {
+      await artReady();
       const r = rosterSheets(kit, pattern, list, glyphs, sheetOpts);
       if (r.pages.length === 1) save(new Blob([r.pages[0].svg], { type: 'image/svg+xml' }), `${fileBase}-print-${list.length}.svg`);
       else {
@@ -403,11 +420,12 @@ export function GarmentDesigner({ kind: initialKind = 'jersey' }: { kind?: Garme
       const [{ svgToPdfBlob }, { buildZip }] = await Promise.all([import('@/lib/svgToPdf'), import('@/lib/editor/zip')]);
       const parts: { name: string; data: Uint8Array }[] = [];
       const enc = new TextEncoder();
+      await artReady();
       for (let i = 0; i < picked.length; i++) {
         const p = personal ? picked[i] : { ...picked[i], name: '', number: '' };
-        const f = playerPrintSvg(kit, pattern, p, glyphs, { rollW, bleed, cutLines: true });
+        const f = playerPrintSvg(kit, pattern, p, glyphs, { rollW, bleed, cutLines: true, textMode });
         parts.push({ name: `SVG/${base(picked[i], i)}.svg`, data: enc.encode(f.svg) });
-        parts.push({ name: `PDF/${base(picked[i], i)}.pdf`, data: new Uint8Array(await (await svgToPdfBlob(f.svg, f.width, f.height)).arrayBuffer()) });
+        parts.push({ name: `PDF/${base(picked[i], i)}.pdf`, data: new Uint8Array(await (await svgToPdfBlob(f.svg, f.width, f.height, undefined, pdfFonts)).arrayBuffer()) });
       }
       const csv = personal ? 'Row,Name,Number,Size\n' + picked.map((p, i) => `${i + 1},"${p.name.replace(/"/g, '""')}",${p.number},${sizeLabel(p.size)}`).join('\n') : 'Size,Quantity\n' + picked.map((p) => `${sizeLabel(p.size)},${p.qty || 0}`).join('\n');
       parts.push({ name: personal ? 'roster.csv' : 'sizes.csv', data: enc.encode(csv) });
@@ -488,6 +506,9 @@ export function GarmentDesigner({ kind: initialKind = 'jersey' }: { kind?: Garme
   return (
     <div className="space-y-5">
       <LeaveGuard dirty={dirty} onSave={saveProject} what={copy.noun} />
+      {studioOpen && <PrintStudio kit={kit} pattern={pattern} glyphs={glyphs} players={personal ? players : players.map((p) => ({ ...p, name: '', number: '' }))}
+        libraryPatterns={mine.filter((x) => x.id).map((x) => ({ id: x.id!, kind: 'pattern' as const, name: x.name, data: x.p, createdAt: x.at || '', updatedAt: x.at || '' }))}
+        onSave={(art, studioOnly) => setKit((k) => ({ ...k, art, studioOnly }))} onClose={() => setStudioOpen(false)} />}
       {/* Project bar */}
       <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-mt-border bg-mt-surface p-2">
         <Shirt size={18} className="ml-2 text-mt-muted" aria-hidden />
@@ -497,6 +518,7 @@ export function GarmentDesigner({ kind: initialKind = 'jersey' }: { kind?: Garme
           <button type="button" onClick={undo} disabled={!hist.current.past.length} aria-label="Undo" title="Undo (Ctrl+Z)" className="h-10 w-10 inline-flex items-center justify-center rounded-l-full hover:bg-mt-surface2 disabled:opacity-40"><Undo2 size={16} /></button>
           <button type="button" onClick={redo} disabled={!hist.current.future.length} aria-label="Redo" title="Redo (Ctrl+Shift+Z)" className="h-10 w-10 inline-flex items-center justify-center rounded-r-full border-l border-mt-border hover:bg-mt-surface2 disabled:opacity-40"><Redo2 size={16} /></button>
         </span>
+        <button type="button" onClick={() => setStudioOpen(true)} className="h-10 px-4 rounded-full bg-mt-ink text-mt-bg text-[13.5px] font-semibold inline-flex items-center gap-1.5" title="Design directly on the flat print pieces"><PenTool size={14} /> Edit print file</button>
         <button type="button" onClick={newDesign} className={btn}><Plus size={14} /> New</button>
         <button type="button" onClick={() => setProjects(readProjects().filter((x) => TEXTILE_KINDS.includes(x.kind)))} className={btn}><FolderOpen size={14} /> Projects</button>
         <button type="button" onClick={() => fileRef.current?.click()} className={btn}><FileUp size={14} /> Open file</button>
@@ -765,6 +787,12 @@ export function GarmentDesigner({ kind: initialKind = 'jersey' }: { kind?: Garme
                 <button type="button" aria-pressed={group === 'fabric'} onClick={() => setGroup('fabric')} className={chip(group === 'fabric')}>Save fabric</button>
               </div>
               <label className="flex items-center gap-2 text-[13px]"><input type="checkbox" checked={mirror} onChange={(e) => setMirror(e.target.checked)} className="h-4 w-4 accent-[#3B82C4]" /> Mirror for transfer paper</label>
+              <p className="pt-1 text-[12px] font-semibold text-mt-muted">Text in the print files</p>
+              <div className="grid grid-cols-2 gap-1.5" role="radiogroup" aria-label="Text in the print files">
+                <button type="button" role="radio" aria-checked={textMode === 'live'} onClick={() => setTextMode('live')} className={chip(textMode === 'live')}>Live text (retypeable)</button>
+                <button type="button" role="radio" aria-checked={textMode === 'outline'} onClick={() => setTextMode('outline')} className={chip(textMode === 'outline')}>Outlines (exact shapes)</button>
+              </div>
+              <p className="text-[11.5px] text-mt-muted">{textMode === 'live' ? 'Names, numbers and text stay real text in the font you chose — retype them in Illustrator or Acrobat. The PDF carries the font; an SVG needs the font installed.' : 'Every letter becomes the font’s own exact curve — prints identically everywhere, no font needed, but it can’t be retyped.'}</p>
             </section>
             {plan && (
               <section className="rounded-2xl bg-mt-bg p-3 text-[13px] space-y-0.5" aria-label="Print summary">

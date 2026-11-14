@@ -7,7 +7,9 @@
 // ellipse, line, polyline, polygon, image (PNG/JPEG data URLs; SVG data URLs
 // are drawn as vectors), simple text, transforms, opacity, fill-rule,
 // stroke width/caps/joins, clip-path and userSpaceOnUse <pattern> fills
-// (tiled as vectors). Gradients fall back to their first colour.
+// (tiled as vectors), linear and radial gradients (drawn as fine vector
+// bands clipped to the shape, with stop transparency), and live text in the
+// real font (embedded TTF, retypeable) when the fonts are supplied.
 // No browser APIs: it runs in tests too.
 
 export type Mat = [number, number, number, number, number, number];
@@ -163,7 +165,7 @@ function styleOf(n: Node): Record<string, string> {
   return o;
 }
 
-interface Ctx { m: Mat; fill: string; stroke: string; sw: number; op: number; fop: number; sop: number; rule: string; join: string; cap: string; font: number; anchor: string }
+interface Ctx { m: Mat; fill: string; stroke: string; sw: number; op: number; fop: number; sop: number; rule: string; join: string; cap: string; font: number; anchor: string; family?: string; weight?: string; style?: string; spacing?: number; paintOrder?: string }
 
 // ---------------------------------------------------------------- render
 
@@ -175,6 +177,9 @@ export interface PdfLike {
   saveGraphicsState(): any; restoreGraphicsState(): any; setGState?(g: any): any; GState?: any;
   addImage?(data: string, fmt: string, x: number, y: number, w: number, h: number, alias?: string, compression?: string, rotation?: number): any;
   text?(t: string, x: number, y: number, opts?: any): any; setFontSize?(n: number): any; setTextColor?(r: number, g: number, b: number): any;
+  setFont?(name: string, style?: string): any;
+  /** Live-text fonts registered by the caller: face key ("Family|700|0") → jsPDF font name. */
+  __faces?: Map<string, string>;
 }
 
 export interface RenderStats { paths: number; images: number; skipped: string[] }
@@ -216,6 +221,11 @@ function inherit(n: Node, c: Ctx): Ctx {
   if (g('stroke-linecap') !== undefined) o.cap = g('stroke-linecap')!;
   if (g('font-size') !== undefined) o.font = parseFloat(g('font-size')!) || o.font;
   if (g('text-anchor') !== undefined) o.anchor = g('text-anchor')!;
+  if (g('font-family') !== undefined) o.family = g('font-family')!;
+  if (g('font-weight') !== undefined) o.weight = g('font-weight')!;
+  if (g('font-style') !== undefined) o.style = g('font-style')!;
+  if (g('letter-spacing') !== undefined) o.spacing = parseFloat(g('letter-spacing')!) || 0;
+  if (g('paint-order') !== undefined) o.paintOrder = g('paint-order')!;
   o.op = c.op; // group opacity is applied with a graphics state, not multiplied in
   return o;
 }
@@ -316,6 +326,8 @@ function paintShape(pdf: PdfLike, segs: Seg[], c: Ctx, defs: Map<string, Node>, 
       } else stats.skipped.push('pattern too dense');
       pdf.restoreGraphicsState();
     }
+  } else if (gradientOf(c.fill, defs)) {
+    paintGradient(pdf, segs, c, gradientOf(c.fill, defs)!, defs);
   } else if (fill && fill.a * c.fop > 0) {
     withOpacity(pdf, fill.a * c.fop, () => {
       pdf.setFillColor(fill.r, fill.g, fill.b);
@@ -334,6 +346,82 @@ function paintShape(pdf: PdfLike, segs: Seg[], c: Ctx, defs: Map<string, Node>, 
     });
   }
   stats.paths++;
+}
+
+// ---------------------------------------------------------------- gradients
+interface Grad { kind: 'linear' | 'radial'; units: 'user' | 'box'; a: Record<string, string>; stops: { o: number; r: number; g: number; b: number; a: number }[]; tr: Mat }
+function gradientOf(fill: string, defs: Map<string, Node>): Grad | null {
+  const id = fill?.match(/^\s*url\(#([^)]+)\)/)?.[1];
+  let n = id ? defs.get(id) : null;
+  if (!n || (n.tag !== 'linearGradient' && n.tag !== 'radialGradient')) return null;
+  const kind = n.tag === 'linearGradient' ? 'linear' : 'radial';
+  // Stops may come from a referenced gradient (xlink:href).
+  let stopsNode: Node | null | undefined = n;
+  for (let i = 0; i < 4 && stopsNode && !stopsNode.kids.some((k) => k.tag === 'stop'); i++) stopsNode = defs.get((stopsNode.a['xlink:href'] || stopsNode.a.href || '').replace(/^#/, ''));
+  const stops = (stopsNode?.kids || []).filter((k) => k.tag === 'stop').map((k) => {
+    const col = parseColour(styleOf(k)['stop-color'] || k.a['stop-color'] || '#000') as any || { r: 0, g: 0, b: 0, a: 1 };
+    const so = parseFloat(styleOf(k)['stop-opacity'] ?? k.a['stop-opacity'] ?? '1');
+    const off = String(k.a.offset || '0');
+    return { o: Math.max(0, Math.min(1, off.endsWith('%') ? parseFloat(off) / 100 : parseFloat(off) || 0)), r: col.r, g: col.g, b: col.b, a: (col.a ?? 1) * (isNaN(so) ? 1 : so) };
+  }).sort((p, q) => p.o - q.o);
+  if (!stops.length) return null;
+  return { kind, units: n.a.gradientUnits === 'userSpaceOnUse' ? 'user' : 'box', a: n.a, stops, tr: parseTransform(n.a.gradientTransform) };
+}
+function stopAt(g: Grad, t: number) {
+  const s = g.stops; t = Math.max(0, Math.min(1, t));
+  if (t <= s[0].o) return s[0];
+  for (let i = 1; i < s.length; i++) if (t <= s[i].o) { const a = s[i - 1], b = s[i], k = (t - a.o) / Math.max(1e-9, b.o - a.o); return { o: t, r: a.r + (b.r - a.r) * k, g: a.g + (b.g - a.g) * k, b: a.b + (b.b - a.b) * k, a: a.a + (b.a - a.a) * k }; }
+  return s[s.length - 1];
+}
+/** Vector gradient: the shape is clipped and filled with many thin bands of interpolated colour. */
+function paintGradient(pdf: PdfLike, segs: Seg[], c: Ctx, g: Grad, _defs: Map<string, Node>) {
+  const [bx0, by0, bx1, by1] = bbox(segs);
+  const bw = bx1 - bx0 || 1, bh = by1 - by0 || 1;
+  const num = (k: string, d: number) => { const v = g.a[k]; if (v === undefined) return d; return String(v).endsWith('%') ? parseFloat(v) / 100 : parseFloat(v); };
+  // Gradient space → shape user space.
+  let gm: Mat = g.units === 'box' ? [bw, 0, 0, bh, bx0, by0] : [1, 0, 0, 1, 0, 0];
+  gm = mul(gm, g.tr);
+  const full = mul(c.m, gm);
+  pdf.saveGraphicsState();
+  emit(pdf, segs, c.m);
+  c.rule === 'evenodd' && pdf.clipEvenOdd ? pdf.clipEvenOdd() : pdf.clip();
+  pdf.discardPath();
+  // Shape box in gradient space (to know how far the bands must reach).
+  const inv = invert(gm);
+  const corners = [ap(inv, bx0, by0), ap(inv, bx1, by0), ap(inv, bx0, by1), ap(inv, bx1, by1)];
+  const band = (poly: [number, number][], col: { r: number; g: number; b: number; a: number }) => {
+    if (col.a * c.fop <= 0.001) return;
+    withOpacity(pdf, col.a * c.fop, () => {
+      pdf.setFillColor(Math.round(col.r), Math.round(col.g), Math.round(col.b));
+      const q = poly.map(([x, y]) => ap(full, x, y));
+      pdf.moveTo(q[0][0], q[0][1]); for (let i = 1; i < q.length; i++) pdf.lineTo(q[i][0], q[i][1]); pdf.close(); pdf.fill();
+    });
+  };
+  const det = Math.sqrt(Math.abs(full[0] * full[3] - full[1] * full[2]));
+  if (g.kind === 'linear') {
+    const x1 = num('x1', 0), y1 = num('y1', 0), x2 = num('x2', g.units === 'box' ? 1 : 0), y2 = num('y2', 0);
+    const dx = x2 - x1, dy = y2 - y1, L = Math.hypot(dx, dy) || 1;
+    const ux = dx / L, uy = dy / L, vx = -uy, vy = ux;
+    const ts = corners.map(([x, y]) => ((x - x1) * ux + (y - y1) * uy) / L);
+    const ss = corners.map(([x, y]) => (x - x1) * vx + (y - y1) * vy);
+    const t0 = Math.min(0, ...ts), t1 = Math.max(1, ...ts), s0 = Math.min(...ss) - 1, s1 = Math.max(...ss) + 1;
+    const steps = Math.max(32, Math.min(400, Math.round(L * det * (t1 - t0) / 0.6)));
+    const pt = (t: number, s: number): [number, number] => [x1 + ux * t * L + vx * s, y1 + uy * t * L + vy * s];
+    for (let i = 0; i < steps; i++) {
+      const ta = t0 + ((t1 - t0) * i) / steps, tb = t0 + ((t1 - t0) * (i + 1)) / steps + (t1 - t0) / steps * 0.25; // slight overlap: no hairline gaps
+      band([pt(ta, s0), pt(tb, s0), pt(tb, s1), pt(ta, s1)], stopAt(g, (ta + tb) / 2));
+    }
+  } else {
+    const cx = num('cx', g.units === 'box' ? 0.5 : 0), cy = num('cy', g.units === 'box' ? 0.5 : 0), r = num('r', g.units === 'box' ? 0.5 : 0) || 1e-6;
+    const far = Math.max(...corners.map(([x, y]) => Math.hypot(x - cx, y - cy)));
+    const outer = Math.max(far, r);
+    // Outside the gradient's radius: the last colour; then rings inward.
+    const steps = Math.max(32, Math.min(300, Math.round(r * det / 0.5)));
+    const circle = (rad: number): [number, number][] => Array.from({ length: 72 }, (_, k) => [cx + Math.cos((k / 72) * 2 * Math.PI) * rad, cy + Math.sin((k / 72) * 2 * Math.PI) * rad] as [number, number]);
+    band(circle(outer * 1.05 + 1), stopAt(g, 1));
+    for (let i = steps; i >= 1; i--) band(circle((r * i) / steps), stopAt(g, (i - 0.5) / steps));
+  }
+  pdf.restoreGraphicsState();
 }
 
 export function invert(m: Mat): Mat {
@@ -399,28 +487,89 @@ function drawImage(pdf: PdfLike, n: Node, c: Ctx, stats: RenderStats, depth: num
   stats.images++;
 }
 
+/** Face key for a text node's font: "Family|weight|italic". */
+export function faceKey(family: string | undefined, weight: string | undefined, style: string | undefined): string {
+  const fam = (family || '').split(',')[0].trim().replace(/^['"]|['"]$/g, '');
+  const w = weight === 'bold' ? 700 : weight === 'normal' || !weight ? 400 : parseInt(weight, 10) || 400;
+  return `${fam}|${w}|${style === 'italic' ? 1 : 0}`;
+}
+
 function drawText(pdf: PdfLike, n: Node, c: Ctx, stats: RenderStats) {
   if (!pdf.text) return;
-  const t = (n.text + n.kids.map((k) => k.text).join('')).trim();
-  if (!t) return;
+  const raw = n.text + n.kids.map((k) => k.text).join('');
+  const t = n.a['xml:space'] === 'preserve' ? raw : raw.trim();
+  if (!t.trim()) return;
   const col = parseColour(c.fill);
+  const stroke = parseColour(c.stroke);
   const det = Math.sqrt(Math.abs(c.m[0] * c.m[3] - c.m[1] * c.m[2]));
+  const sxk = Math.hypot(c.m[0], c.m[1]), syk = Math.hypot(c.m[2], c.m[3]);
   const p = ap(c.m, numA(n, 'x'), numA(n, 'y'));
-  if (col && col !== 'pattern') pdf.setTextColor?.(col.r, col.g, col.b);
-  // font size in points from user units: 1 mm = 2.835 pt when scale maps to mm.
-  pdf.setFontSize?.(Math.max(1, c.font * det * 2.835));
-  pdf.text(t, p[0], p[1], { align: c.anchor === 'middle' ? 'center' : c.anchor === 'end' ? 'right' : 'left', baseline: attr(n, 'dominant-baseline') === 'central' ? 'middle' : 'alphabetic' });
+  const face = pdf.__faces?.get(faceKey(c.family, c.weight, c.style));
+  if (face) pdf.setFont?.(face, 'normal');
+  // Font size in points from user units (1 mm = 2.835 pt when the page is in mm).
+  pdf.setFontSize?.(Math.max(1, c.font * syk * 2.835));
+  const angle = -(Math.atan2(c.m[1], c.m[0]) * 180) / Math.PI;
+  const opts: any = { align: c.anchor === 'middle' ? 'center' : c.anchor === 'end' ? 'right' : 'left', baseline: attr(n, 'dominant-baseline') === 'central' ? 'middle' : 'alphabetic' };
+  if (Math.abs(angle) > 0.01) opts.angle = angle;
+  if (c.spacing) opts.charSpace = c.spacing * sxk;
+  if (Math.abs(sxk / (syk || 1) - 1) > 0.002) opts.horizontalScale = sxk / (syk || 1);
+  const hasStroke = stroke && stroke !== 'pattern' && c.sw > 0;
+  if (hasStroke) {
+    // Outline under the fill (paint-order: stroke), like the screen.
+    (pdf as any).setLineWidth(c.sw * det * (c.paintOrder?.includes('stroke') ? 1 : 1));
+    (pdf as any).setDrawColor(stroke.r, stroke.g, stroke.b);
+    (pdf as any).setLineJoin?.('round');
+    pdf.text(t, p[0], p[1], { ...opts, renderingMode: 'stroke' });
+  }
+  if (col && col !== 'pattern') {
+    pdf.setTextColor?.(col.r, col.g, col.b);
+    withOpacity(pdf, (col.a ?? 1) * c.fop, () => pdf.text!(t, p[0], p[1], { ...opts, renderingMode: 'fill' }));
+  }
   stats.paths++;
 }
 
+/** Fonts used by live <text> in these SVGs (face keys). */
+export function textFaces(svgs: string[]): string[] {
+  const out = new Set<string>();
+  const visit = (n: Node, c: { family?: string; weight?: string; style?: string }) => {
+    const g = (k: string) => attr(n, k);
+    const cc = { family: g('font-family') ?? c.family, weight: g('font-weight') ?? c.weight, style: g('font-style') ?? c.style };
+    if (n.tag === 'text' && (n.text + n.kids.map((k) => k.text).join('')).trim()) out.add(faceKey(cc.family, cc.weight, cc.style));
+    n.kids.forEach((k) => visit(k, cc));
+  };
+  for (const s of svgs) visit(parseXml(s), {});
+  return [...out];
+}
+
 /** A complete vector PDF of an SVG whose size is given in millimetres. */
-export async function svgToPdfBlob(svg: string, widthMm: number, heightMm: number, pages?: { svg: string; widthMm: number; heightMm: number }[]): Promise<Blob> {
+export async function svgToPdfBlob(svg: string, widthMm: number, heightMm: number, pages?: { svg: string; widthMm: number; heightMm: number }[], o: { loadFont?: (family: string, weight: number, italic: boolean) => Promise<ArrayBuffer | null> } = {}): Promise<Blob> {
   const { jsPDF } = await import('jspdf');
   const list = pages && pages.length ? pages : [{ svg, widthMm, heightMm }];
   let pdf: any = null;
+  const faces = new Map<string, string>();
   for (const pg of list) {
     const orient = pg.widthMm > pg.heightMm ? 'landscape' : 'portrait';
-    if (!pdf) pdf = new jsPDF({ unit: 'mm', format: [pg.widthMm, pg.heightMm], orientation: orient, compress: true });
+    if (!pdf) {
+      pdf = new jsPDF({ unit: 'mm', format: [pg.widthMm, pg.heightMm], orientation: orient, compress: true });
+      // Live text: embed the real fonts (subset by jsPDF) so the text stays text — retypeable in Illustrator / Acrobat.
+      if (o.loadFont) {
+        for (const key of textFaces(list.map((l) => l.svg))) {
+          const [fam, w, it] = key.split('|');
+          if (!fam || /^(sans-serif|serif|monospace|arial|helvetica)$/i.test(fam)) continue;
+          try {
+            const buf = await o.loadFont(fam, Number(w), it === '1');
+            if (!buf) continue;
+            let bin = ''; const u8 = new Uint8Array(buf);
+            for (let i = 0; i < u8.length; i += 0x8000) bin += String.fromCharCode.apply(null, Array.from(u8.subarray(i, i + 0x8000)));
+            const name = `${fam.replace(/[^A-Za-z0-9]+/g, '')}-${w}${it === '1' ? 'i' : ''}`;
+            pdf.addFileToVFS(`${name}.ttf`, btoa(bin));
+            pdf.addFont(`${name}.ttf`, name, 'normal');
+            faces.set(key, name);
+          } catch { /* that face falls back to the built-in font */ }
+        }
+        pdf.__faces = faces;
+      }
+    }
     else pdf.addPage([pg.widthMm, pg.heightMm], orient);
     const root = parseXml(pg.svg).kids.find((k) => k.tag === 'svg');
     const vb = (root?.a.viewBox || '').split(/[\s,]+/).map(Number);

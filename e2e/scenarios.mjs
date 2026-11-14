@@ -880,6 +880,45 @@ scenarios.push({
   },
 });
 
+// Textile print studio: design on the flat print pieces → save → mockup updates → print files with live or outlined text.
+scenarios.push({
+  name: 'textile-print-studio',
+  async run(t) {
+    const fs = await import('node:fs');
+    await t.page.goto(t.BASE + '/textile-designer?garment=jersey', { waitUntil: 'domcontentloaded' });
+    await t.page.getByRole('button', { name: /Edit print file/ }).click({ timeout: 30000 });
+    const studio = t.page.getByRole('dialog', { name: 'Print studio' });
+    await studio.waitFor({ timeout: 20000 });
+    await studio.getByRole('button', { name: /Player number/ }).click();
+    await studio.getByRole('tab', { name: 'Layouts' }).click();
+    await studio.getByRole('button', { name: '+ Sash' }).click();
+    const layers = studio.getByRole('region', { name: 'Layers' }).or(studio.getByLabel('Layers'));
+    await t.page.waitForTimeout(800);
+    const ltxt = await layers.innerText();
+    t.check('layers list the added artwork', /Player number/.test(ltxt) && /Sash/.test(ltxt), ltxt.slice(0, 120));
+    await layers.getByRole('button', { name: /Player number/ }).click();
+    await studio.getByLabel('Fill HEX').fill('#ffcc00');
+    await t.page.waitForTimeout(600);
+    await t.shot('print-studio');
+    await studio.getByRole('button', { name: /^Save/ }).click();
+    await studio.getByRole('button', { name: 'Close print studio' }).click();
+    await t.page.waitForFunction(() => /#ffcc00/i.test(document.querySelector('.garment-edit')?.innerHTML || ''), null, { timeout: 30000 });
+    t.check('mockup shows the print-file artwork after saving', true);
+    await t.page.getByRole('tab', { name: /Print files/ }).click();
+    await t.page.waitForFunction(() => { const b = [...document.querySelectorAll('button')].find((x) => /Download print PDF/.test(x.textContent || '')); return b && !b.disabled; }, null, { timeout: 90000 });
+    const [pdfDl] = await Promise.all([t.page.waitForEvent('download', { timeout: 120000 }), t.page.getByRole('button', { name: /Download print PDF/ }).click()]);
+    const pdf = fs.readFileSync(await pdfDl.path()).toString('latin1');
+    t.check('live-text PDF embeds the real font', /\/FontFile2/.test(pdf) && /Oswald/i.test(pdf));
+    const [svgLive] = await Promise.all([t.page.waitForEvent('download', { timeout: 60000 }), t.page.getByRole('button', { name: /Print SVG/ }).click()]);
+    const live = fs.readFileSync(await svgLive.path(), 'utf8');
+    t.check('live SVG keeps numbers as retypeable text', />07<\/text>/.test(live), svgLive.suggestedFilename());
+    await t.page.getByRole('radio', { name: 'Outlines (exact shapes)' }).click();
+    const [svgOut] = await Promise.all([t.page.waitForEvent('download', { timeout: 60000 }), t.page.getByRole('button', { name: /Print SVG/ }).click()]);
+    const out = fs.readFileSync(await svgOut.path(), 'utf8');
+    t.check('outlined SVG draws numbers from the font curves', !/>07<\/text>/.test(out) && /fill="#ffcc00"/i.test(out));
+  },
+});
+
 // Polo designer: sizes and quantities → one print PDF; wall poster + wallpaper strips.
 scenarios.push({
   name: 'polo-and-wall',
