@@ -1019,7 +1019,7 @@ scenarios.push({
     t.check('pattern kept after switching to T-shirt', await t.page.getByText(/From My patterns:/).isVisible());
     const id = href.match(/pattern=([^&]+)/)[1];
     // The textile page holds unsaved work (it asks before leaving), so the other tools open in a second tab of the same browser.
-    const tab = await tab.context().newPage();
+    const tab = await t.page.context().newPage();
     await tab.goto(t.BASE + '/wallpaper-designer?pattern=' + id, { waitUntil: 'domcontentloaded' });
     const btn = tab.getByRole('button', { name: `Pattern: ${name}` }).first();
     await btn.waitFor({ timeout: 30000 });
