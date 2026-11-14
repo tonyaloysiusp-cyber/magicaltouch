@@ -19,7 +19,7 @@ export async function attachProject(pdfBytes: ArrayBuffer | Uint8Array, mtd: Blo
       creationDate: new Date(),
       modificationDate: new Date(),
     });
-    return await doc.save();
+    return await doc.save({ useObjectStreams: false }); // plain cross-reference table, like the original — friendlier to older RIPs
   } catch {
     return src;
   }

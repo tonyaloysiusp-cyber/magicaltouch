@@ -1001,9 +1001,6 @@ scenarios.push({
 scenarios.push({
   name: 'pattern-continuity',
   async run(t) {
-    // Leaving the textile page with unsaved work shows the leave prompt: accept it, and retry an aborted navigation.
-    t.page.on('dialog', (d) => d.accept().catch(() => {}));
-    const go = async (u) => { try { await t.page.goto(t.BASE + u, { waitUntil: 'domcontentloaded' }); } catch { await t.page.waitForTimeout(1000); await t.page.goto(t.BASE + u, { waitUntil: 'domcontentloaded' }); } };
     await t.page.goto(t.BASE + '/patterns', { waitUntil: 'domcontentloaded' });
     await t.page.getByRole('button', { name: 'Save', exact: true }).first().click({ timeout: 30000 });
     await t.page.getByText(/Saved “.+” to My patterns/).waitFor({ timeout: 15000 });
@@ -1021,14 +1018,16 @@ scenarios.push({
     await t.page.waitForTimeout(500);
     t.check('pattern kept after switching to T-shirt', await t.page.getByText(/From My patterns:/).isVisible());
     const id = href.match(/pattern=([^&]+)/)[1];
-    await t.page.goto(t.BASE + '/wallpaper-designer?pattern=' + id, { waitUntil: 'domcontentloaded' });
-    const btn = t.page.getByRole('button', { name: `Pattern: ${name}` }).first();
+    // The textile page holds unsaved work (it asks before leaving), so the other tools open in a second tab of the same browser.
+    const tab = await tab.context().newPage();
+    await tab.goto(t.BASE + '/wallpaper-designer?pattern=' + id, { waitUntil: 'domcontentloaded' });
+    const btn = tab.getByRole('button', { name: `Pattern: ${name}` }).first();
     await btn.waitFor({ timeout: 30000 });
-    await t.page.waitForTimeout(800);
+    await tab.waitForTimeout(800);
     t.check('wallpaper picks the same pattern', (await btn.getAttribute('aria-pressed')) === 'true');
-    await t.page.goto(t.BASE + '/textile-designer', { waitUntil: 'domcontentloaded' });
-    await t.page.getByText(/From My patterns:/).waitFor({ timeout: 30000 });
-    t.check('textile restored with the pattern (T-shirt)', (await t.page.getByRole('radio', { name: 'T-shirt', exact: true }).getAttribute('aria-checked')) === 'true');
+    await tab.goto(t.BASE + '/textile-designer', { waitUntil: 'domcontentloaded' });
+    await tab.getByText(/From My patterns:/).waitFor({ timeout: 30000 });
+    t.check('textile restored with the pattern (T-shirt)', (await tab.getByRole('radio', { name: 'T-shirt', exact: true }).getAttribute('aria-checked')) === 'true');
     await t.shot('continuity');
   },
 });
