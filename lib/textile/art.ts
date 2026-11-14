@@ -46,7 +46,7 @@ export interface TextShapeLike { d: string; width: number; ascender: number; des
 /** Sync text shaper (fonts are loaded before rendering in the browser). */
 export type Shaper = (font: string, weight: number, italic: boolean, text: string, size: number, spacing: number) => TextShapeLike | null;
 export interface Vars { name?: string; number?: string; size?: string; team?: string }
-export interface RenderOpts { textMode?: 'outline' | 'live'; shaper?: Shaper | null; vars?: Vars; uid?: string; /** Garment grade of this size (1 = M): names and numbers are kept at their real size instead of growing with the garment. */ fixK?: number }
+export interface RenderOpts { textMode?: 'outline' | 'live'; shaper?: Shaper | null; vars?: Vars; uid?: string; /** Garment grade of this size (1 = M): names and numbers are kept at their real size instead of growing with the garment. */ fixK?: number; /** Length grade ÷ width grade: elements keep their proportions on a piece graded more in length than width. */ aspect?: number }
 
 const r3 = (n: number) => Math.round(n * 1000) / 1000;
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' } as any)[c]);
@@ -169,9 +169,9 @@ function elementBody(el: ArtEl, o: RenderOpts, id: string): string {
     if (el.clip && kids.length > 1) {
       const [mask, ...rest] = kids;
       const cid = `${id}-m`;
-      return `<defs><clipPath id="${cid}"><g transform="${matStr(mask.m)}">${shapeOnly(mask, o)}</g></clipPath></defs><g clip-path="url(#${cid})">${renderArt(rest, [1, 0, 0, 1, 0, 0], { ...o, uid: `${id}g` })}</g>`;
+      return `<defs><clipPath id="${cid}"><g transform="${matStr(mask.m)}">${shapeOnly(mask, o)}</g></clipPath></defs><g clip-path="url(#${cid})">${renderArt(rest, [1, 0, 0, 1, 0, 0], { ...o, aspect: undefined, uid: `${id}g` })}</g>`;
     }
-    return renderArt(kids, [1, 0, 0, 1, 0, 0], { ...o, uid: `${id}g` });
+    return renderArt(kids, [1, 0, 0, 1, 0, 0], { ...o, aspect: undefined, uid: `${id}g` });
   }
   if (el.kind === 'image') return `<image href="${el.src}" x="${r3(-el.w / 2)}" y="${r3(-el.h / 2)}" width="${r3(el.w)}" height="${r3(el.h)}" preserveAspectRatio="none"/>`;
   let shape = '', box = { x: 0, y: 0, w: 0, h: 0 }, rule = 'nonzero', textLive = '';
@@ -226,7 +226,8 @@ export function renderArt(els: ArtEl[], pre: Mat, o: RenderOpts = {}): string {
   if (o.shaper === undefined) o = { ...o, shaper: defaultShaper };
   return els.filter((e) => !e.hidden).map((el0, i) => {
     // Names and numbers keep their height on every size; their position still follows the garment.
-    const el = o.fixK && o.fixK !== 1 && el0.kind === 'text' && /\{(NAME|NUMBER)\}/i.test(el0.text) ? { ...el0, m: mulM(el0.m, [1 / o.fixK, 0, 0, 1 / o.fixK, 0, 0]) } : el0;
+    let el = o.aspect && Math.abs(o.aspect - 1) > 1e-6 ? { ...el0, m: mulM(el0.m, [1, 0, 0, 1 / o.aspect, 0, 0]) } as ArtEl : el0;
+    if (o.fixK && o.fixK !== 1 && el0.kind === 'text' && /\{(NAME|NUMBER)\}/i.test(el0.text)) el = { ...el, m: mulM(el.m, [1 / o.fixK, 0, 0, 1 / o.fixK, 0, 0]) } as ArtEl;
     const m = mulM(pre, el.m);
     const op = el.opacity != null && el.opacity < 1 ? ` opacity="${r3(el.opacity)}"` : '';
     // Shadow: a solid copy offset on the board (drawn first); outer outline: the shape stroked wider, behind.

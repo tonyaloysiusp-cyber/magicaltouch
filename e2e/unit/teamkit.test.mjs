@@ -144,3 +144,44 @@ test('production sheet: hand moves stay, overlaps and off-roll pieces are report
   const marks = rosterSheets(DEFAULT_KIT, pat, roster, {}, { ...o, cutLines: true, group: 'fabric', marks: true });
   assert.match(marks.pages[0].svg, /id="registration"/);
 });
+
+test('grading table: width and length grade separately, collar keeps its height, artwork keeps its proportions', async () => {
+  const { sizeInfo, pieceGrade, rosterSheets, blockMeasure, fabricLayout } = await import('../../lib/teamKit.ts');
+  const b = blockMeasure(DEFAULT_KIT);
+  const kit = { ...DEFAULT_KIT, gradeCm: { xl: { chest: b.chestCm + 6, length: b.lengthCm + 10 } } };
+  const z = sizeInfo(kit, 'XL');
+  assert.ok(Math.abs(z.k - (b.chestCm + 6) / b.chestCm) < 1e-9 && Math.abs(z.ky - (b.lengthCm + 10) / b.lengthCm) < 1e-9);
+  assert.equal(sizeInfo(DEFAULT_KIT, 'XL').ky, sizeInfo(DEFAULT_KIT, 'XL').k, 'no table: standard proportional grade');
+  const front = (await import('../../lib/garments.ts')).PRODUCTS.find((p) => p.id === 'jersey')?.pieces.find((p) => p.id === 'front') || { id: 'front', w: 560, h: 740 };
+  const g = pieceGrade(kit, front, 'XL');
+  assert.ok(g.ky > g.k);
+  assert.equal(pieceGrade(kit, { id: 'collar' }, 'XL').ky, g.k);
+  // Front piece on the sheet: width = chest grade, height = length grade (mm).
+  const fl = fabricLayout(kit, [{ name: 'A', number: '1', size: 'XL' }], { rollW: 1600, bleed: 0, gap: 10 });
+  const fb = fl.boxes.find((x) => x.key.endsWith('|front|0'));
+  const fw = fb.rot ? fb.h : fb.w, fh = fb.rot ? fb.w : fb.h;
+  assert.ok(Math.abs(fw - 9 - (b.chestCm + 6) * 10) < 1.5, `front width ${fw - 9}`);
+  assert.ok(Math.abs(fh - 9 - (b.lengthCm + 10) * 10) < 1.5, `front length ${fh - 9}`);
+  const sheet = rosterSheets(kit, pat, [{ name: 'A', number: '1', size: 'XL' }], { A: box, '1': box }, { rollW: 1600, bleed: 10, cutLines: true });
+  assert.match(sheet.pages[0].svg, /scale\(1\.\d+ 1\.\d+\)/, 'pieces scaled separately in width and length');
+  assert.match(sheet.pages[0].svg, /scale\(1 0\.9\d+\) /, 'artwork counter-scaled to keep proportions');
+});
+
+test('per-panel bleed, seam allowance and safe area', async () => {
+  const { fabricLayout, rosterSheets, panelSpec } = await import('../../lib/teamKit.ts');
+  const kit = { ...DEFAULT_KIT, panels: { body: { seam: 10, safe: 15 }, trim: { bleed: 3 } } };
+  const roster = [{ name: 'A', number: '1', size: 'M' }];
+  const plain = fabricLayout(DEFAULT_KIT, roster, { rollW: 1600, bleed: 10 });
+  const seamed = fabricLayout(kit, roster, { rollW: 1600, bleed: 10 });
+  const dims = (L, id) => { const b = L.boxes.find((x) => x.key.endsWith(`|${id}|0`)); return Math.min(b.w, b.h); };
+  assert.equal(Math.round(dims(seamed, 'front') - dims(plain, 'front')), 20, 'front box grows by 2 × seam');
+  assert.equal(Math.round(dims(plain, 'collar') - dims(seamed, 'collar')), 14, 'collar bleed 3 instead of 10');
+  assert.deepEqual(panelSpec(kit, { id: 'sleeve-l' }, 10), { bleed: 10, seam: 0, safe: 0 });
+  const sheet = rosterSheets(kit, pat, roster, { A: box, '1': box }, { rollW: 1600, bleed: 10, cutLines: true, guides: true });
+  const svg = sheet.pages[0].svg;
+  const cuts = svg.slice(svg.indexOf('id="cut-lines"'));
+  assert.match(cuts, /<path d="M[-\d.]+ [-\d.]+L/, 'body cut line is the grown outline (polygon)');
+  assert.match(svg, /id="proof-guides"/);
+  assert.match(svg, /stroke="#06B6D4"/, 'safe area drawn');
+  assert.equal(sheet.overlaps, 0);
+});

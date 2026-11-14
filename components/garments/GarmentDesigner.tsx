@@ -125,6 +125,7 @@ export function GarmentDesigner({ kind: initialKind = 'jersey' }: { kind?: Garme
   const [group, setGroup] = useState<'player' | 'fabric'>('player');
   const [mirror, setMirror] = useState(false);
   const [marks, setMarks] = useState(false);
+  const [guides, setGuides] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
   // Text in print files: live (retypeable, fonts embedded in the PDF) or exact outlines from the font file.
   const [textMode, setTextMode] = useState<'live' | 'outline'>('live');
@@ -375,7 +376,7 @@ export function GarmentDesigner({ kind: initialKind = 'jersey' }: { kind?: Garme
   useEffect(() => { setChosen((c) => players.map((_, i) => c[i] ?? true)); }, [players]);
   const picked = useMemo(() => players.filter((_, i) => chosen[i] !== false), [players, chosen]);
   const list = useMemo(() => printList(picked, kit), [picked, kit]);
-  const sheetOpts = { rollW, bleed, cutLines: true, pageMm, group, mirror, textMode, marks, layout: group === 'fabric' ? kit.sheetLayout : undefined };
+  const sheetOpts = { rollW, bleed, cutLines: true, pageMm, group, mirror, textMode, marks, guides, layout: group === 'fabric' ? kit.sheetLayout : undefined };
   // A hand-edited sheet belongs to one roll width and bleed: changing either starts from the automatic layout again.
   const rollKey = useRef(`${rollW}|${bleed}`);
   useEffect(() => { const k = `${rollW}|${bleed}`; if (rollKey.current !== k) { rollKey.current = k; setKit((v) => (v.sheetLayout ? { ...v, sheetLayout: undefined } : v)); } }, [rollW, bleed]);
@@ -384,7 +385,7 @@ export function GarmentDesigner({ kind: initialKind = 'jersey' }: { kind?: Garme
     const r = rosterSheets(kit, pattern, list, {}, sheetOpts);
     return { pages: r.pages.length, metres: r.totalMm / 1000, pieces: r.pages.reduce((a, p) => a + p.pieces, 0), tooWide: r.tooWide, use: r.utilisation, overlaps: r.overlaps };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step, list, kit, pattern, rollW, bleed, pageMm, group, mirror, marks]);
+  }, [step, list, kit, pattern, rollW, bleed, pageMm, group, mirror, marks, guides]);
 
   const fileBase = `${safeFile(kit.teamName)}-${copy.noun.replace(/\s+/g, '-')}`;
   // Fonts the print files need: for outlines the art's font files must be loaded; for live text the PDF embeds them.
@@ -758,20 +759,29 @@ export function GarmentDesigner({ kind: initialKind = 'jersey' }: { kind?: Garme
             <details className="rounded-2xl border border-mt-border p-3">
               <summary className="cursor-pointer text-[13px] font-semibold">Size chart &amp; custom sizes</summary>
               {(() => { const b = blockMeasure(kit); return <>
-                <p className="mt-2 text-[12px] text-mt-muted">Flat measurements of this garment’s pattern pieces (chest across the front, body length). Check them against your factory’s size chart before production.</p>
+                <p className="mt-2 text-[12px] text-mt-muted">Grading table: flat chest (across the front) and body length of every size. Change any value to grade width and length separately — artwork keeps its proportions, the collar keeps its height. Check against your factory’s size chart before production.</p>
                 <table className="mt-2 w-full text-[12.5px] tabular-nums" aria-label="Size chart"><thead><tr className="text-left text-mt-muted"><th className="py-1">Size</th><th className="py-1 text-right">Chest (cm)</th><th className="py-1 text-right">Length (cm)</th></tr></thead>
-                  <tbody>{SIZES.map((z) => <tr key={z.id} className="border-t border-mt-border"><td className="py-1">{z.label}</td><td className="py-1 text-right">{(b.chestCm * z.k).toFixed(1)}</td><td className="py-1 text-right">{(b.lengthCm * z.k).toFixed(1)}</td></tr>)}
-                    {(kit.customSizes || []).map((c, ci) => { const k = c.chestCm / b.chestCm; return <tr key={'c' + ci} className="border-t border-mt-border"><td className="py-1">{c.label || '—'} <span className="text-mt-faint">custom</span></td><td className="py-1 text-right">{c.chestCm.toFixed(1)}</td><td className="py-1 text-right">{(b.lengthCm * k).toFixed(1)}</td></tr>; })}</tbody></table>
-                <p className="mt-3 text-[12px] font-semibold">Custom sizes (by chest measurement)</p>
+                  <tbody>{SIZES.map((z) => {
+                    const g = kit.gradeCm?.[z.id];
+                    const ch = g ? g.chest : Math.round(b.chestCm * z.k * 10) / 10, ln = g ? g.length : Math.round(b.lengthCm * z.k * 10) / 10;
+                    const put = (o: Partial<{ chest: number; length: number }>) => set({ gradeCm: { ...(kit.gradeCm || {}), [z.id]: { chest: ch, length: ln, ...o } } });
+                    return <tr key={z.id} className="border-t border-mt-border"><td className="py-1">{z.label}{g ? <span className="ml-1 text-[11px] text-mt-faint">edited</span> : null}</td>
+                      <td className="py-1 text-right"><input type="number" min={20} max={120} step={0.5} value={ch} onChange={(e) => put({ chest: Math.max(20, Math.min(120, Number(e.target.value) || 20)) })} aria-label={`${z.label} chest cm`} className="h-8 w-20 rounded-lg border border-mt-border bg-mt-bg px-2 text-right" /></td>
+                      <td className="py-1 text-right"><input type="number" min={20} max={150} step={0.5} value={ln} onChange={(e) => put({ length: Math.max(20, Math.min(150, Number(e.target.value) || 20)) })} aria-label={`${z.label} length cm`} className="h-8 w-20 rounded-lg border border-mt-border bg-mt-bg px-2 text-right" /></td></tr>;
+                  })}
+                    {(kit.customSizes || []).map((c, ci) => { const k = c.chestCm / b.chestCm; return <tr key={'c' + ci} className="border-t border-mt-border"><td className="py-1">{c.label || '—'} <span className="text-mt-faint">custom</span></td><td className="py-1 text-right">{c.chestCm.toFixed(1)}</td><td className="py-1 text-right">{(c.lengthCm || b.lengthCm * k).toFixed(1)}</td></tr>; })}</tbody></table>
+                {kit.gradeCm && Object.keys(kit.gradeCm).length > 0 && <button type="button" onClick={() => set({ gradeCm: undefined })} className={`${btn} mt-2`}>Back to the standard grade</button>}
+                <p className="mt-3 text-[12px] font-semibold">Custom sizes (chest, and length if it differs)</p>
                 {(kit.customSizes || []).map((c, ci) => (
-                  <div key={ci} className="mt-1.5 grid grid-cols-[1fr_96px_36px] gap-1.5">
+                  <div key={ci} className="mt-1.5 grid grid-cols-[1fr_80px_80px_36px] gap-1.5">
                     <input value={c.label} onChange={(e) => set({ customSizes: (kit.customSizes || []).map((x, j) => (j === ci ? { ...x, label: e.target.value.slice(0, 12) } : x)) })} aria-label={`Custom size ${ci + 1} name`} placeholder="e.g. 4XL" className={`${field} mt-0 h-9`} />
                     <input type="number" min={20} max={120} step={0.5} value={c.chestCm} onChange={(e) => set({ customSizes: (kit.customSizes || []).map((x, j) => (j === ci ? { ...x, chestCm: Math.max(20, Math.min(120, Number(e.target.value) || 20)) } : x)) })} aria-label={`Custom size ${ci + 1} chest cm`} className={`${field} mt-0 h-9`} />
+                    <input type="number" min={0} max={150} step={0.5} value={c.lengthCm ?? ''} placeholder="length" onChange={(e) => { const v = Number(e.target.value); set({ customSizes: (kit.customSizes || []).map((x, j) => (j === ci ? { ...x, lengthCm: v > 0 ? Math.min(150, v) : undefined } : x)) }); }} aria-label={`Custom size ${ci + 1} length cm`} className={`${field} mt-0 h-9`} />
                     <button type="button" onClick={() => set({ customSizes: (kit.customSizes || []).filter((_, j) => j !== ci) })} aria-label={`Remove custom size ${ci + 1}`} className="h-9 rounded-xl border border-mt-border text-[13px]">×</button>
                   </div>
                 ))}
                 <button type="button" onClick={() => set({ customSizes: [...(kit.customSizes || []), { label: `Custom ${(kit.customSizes || []).length + 1}`, chestCm: Math.round(b.chestCm * 1.3) }] })} className={`${btn} mt-2`}><Plus size={14} /> Add custom size</button>
-                <p className="mt-1 text-[11.5px] text-mt-faint">A custom size scales every piece from the size-M block so the chest matches; use the name in the size column.</p>
+                <p className="mt-1 text-[11.5px] text-mt-faint">A custom size grades the size-M block to the chest (and the length, when given); use the name in the size column.</p>
               </>; })()}
             </details>
             {issues.length ? (
@@ -796,6 +806,19 @@ export function GarmentDesigner({ kind: initialKind = 'jersey' }: { kind?: Garme
               </div>
               {group === 'fabric' && <button type="button" onClick={() => setSheetOpen(true)} disabled={!list.length} className={`${btn} w-full`}>Edit production sheet{kit.sheetLayout ? ' (edited by hand)' : ''}</button>}
               <label className="flex items-center gap-2 text-[13px]"><input type="checkbox" checked={marks} onChange={(e) => setMarks(e.target.checked)} className="h-4 w-4 accent-[#3B82C4]" /> Registration marks in the corners</label>
+              <details className="rounded-2xl border border-mt-border p-3" aria-label="Panel settings">
+                <summary className="cursor-pointer text-[13px] font-semibold">Panel settings — bleed, seam allowance, safe area</summary>
+                <table className="mt-2 w-full text-[12.5px]"><thead><tr className="text-left text-mt-muted"><th className="py-1">Panel</th><th className="py-1">Bleed</th><th className="py-1">Seam</th><th className="py-1">Safe</th></tr></thead>
+                  <tbody>{([['body', 'Front & back'], ['sleeve', 'Sleeves'], ['trim', 'Collar & trims']] as const).map(([r, l]) => {
+                    const pv = kit.panels?.[r] || {};
+                    const put = (o: Partial<{ bleed: number; seam: number; safe: number }>) => set({ panels: { ...(kit.panels || {}), [r]: { ...pv, ...o } } });
+                    const cell = (key: 'bleed' | 'seam' | 'safe', def: number) => <td className="py-1 pr-1"><input type="number" min={0} max={40} step={0.5} value={pv[key] ?? def} onChange={(e) => put({ [key]: Math.max(0, Math.min(40, Number(e.target.value) || 0)) })} aria-label={`${l} ${key} mm`} className="h-8 w-full rounded-lg border border-mt-border bg-mt-bg px-2" /></td>;
+                    return <tr key={r} className="border-t border-mt-border"><td className="py-1 pr-2">{l}</td>{cell('bleed', bleed)}{cell('seam', 0)}{cell('safe', 0)}</tr>;
+                  })}</tbody></table>
+                <p className="mt-1.5 text-[11.5px] text-mt-muted">mm. The cut line (magenta) sits a seam allowance outside the stitch line; the print runs a bleed beyond the cut. Keep important artwork inside the safe area.</p>
+                {kit.panels && <button type="button" onClick={() => set({ panels: undefined })} className={`${btn} mt-2`}>Use the order’s bleed everywhere</button>}
+                <label className="mt-2 flex items-center gap-2 text-[13px]"><input type="checkbox" checked={guides} onChange={(e) => setGuides(e.target.checked)} className="h-4 w-4 accent-[#3B82C4]" /> Show stitch line &amp; safe area in the files (proof only)</label>
+              </details>
               <label className="flex items-center gap-2 text-[13px]"><input type="checkbox" checked={mirror} onChange={(e) => setMirror(e.target.checked)} className="h-4 w-4 accent-[#3B82C4]" /> Mirror for transfer paper</label>
               {personal && <label className="flex items-center gap-2 text-[13px]"><input type="checkbox" checked={kit.letterGrade !== 'scale'} onChange={(e) => set({ letterGrade: e.target.checked ? 'fixed' : 'scale' })} className="h-4 w-4 accent-[#3B82C4]" /> Names &amp; numbers the same height on every size</label>}
               <p className="pt-1 text-[12px] font-semibold text-mt-muted">Text in the print files</p>

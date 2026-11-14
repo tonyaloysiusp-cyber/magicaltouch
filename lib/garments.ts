@@ -74,19 +74,19 @@ export const SIZES: { id: string; label: string; k: number }[] = [
 
 export const ROLLS = [610, 914, 1118, 1600, 1620];
 
-export interface Placed { piece: Piece; x: number; y: number; w: number; h: number; k: number; copy: number; size?: string; rot?: boolean; tooWide?: boolean }
+export interface Placed { piece: Piece; x: number; y: number; w: number; h: number; k: number; /** Length grade (piece height), when it differs from the width grade `k`. */ ky?: number; copy: number; size?: string; rot?: boolean; tooWide?: boolean }
 export interface RunLine { label: string; k: number; qty: number }
 
 /**
  * Shelf-packs pieces (plus bleed) across a roll width (mm). With a size run
  * every garment of every size is laid out — one print file for the order.
  */
-export function layoutPieces(product: Product, sizeK: number, rollW: number, bleed = 10, gap = 15, run?: RunLine[]): { placed: Placed[]; height: number } {
-  const items: { piece: Piece; w: number; h: number; copy: number; k: number; size?: string; rot?: boolean; tooWide?: boolean }[] = [];
+export function layoutPieces(product: Product, sizeK: number, rollW: number, bleed = 10, gap = 15, run?: RunLine[], kyOf?: (p: Piece) => number): { placed: Placed[]; height: number } {
+  const items: { piece: Piece; w: number; h: number; copy: number; k: number; ky?: number; size?: string; rot?: boolean; tooWide?: boolean }[] = [];
   const lines: RunLine[] = run && run.some((r) => r.qty > 0) ? run.filter((r) => r.qty > 0) : [{ label: '', k: sizeK, qty: 1 }];
   for (const ln of lines) {
     const k = product.id === 'flag' ? 1 : ln.k;
-    for (let g = 0; g < ln.qty; g++) for (const p of product.pieces) for (let c = 0; c < p.qty; c++) items.push({ piece: p, w: p.w * k, h: p.h * k, copy: c, k, size: ln.label || undefined });
+    for (let g = 0; g < ln.qty; g++) for (const p of product.pieces) for (let c = 0; c < p.qty; c++) { const ky = kyOf && !run ? kyOf(p) : k; items.push({ piece: p, w: p.w * k, h: p.h * ky, copy: c, k, ky: ky !== k ? ky : undefined, size: ln.label || undefined }); }
   }
   // A piece wider than the roll is turned 90°; if it still does not fit it is flagged.
   const room = rollW - 2 * gap - 2 * bleed;
@@ -101,7 +101,7 @@ export function layoutPieces(product: Product, sizeK: number, rollW: number, ble
   for (const it of items) {
     const W = it.w + 2 * bleed, H = it.h + 2 * bleed;
     if (x + W + gap > rollW && x > gap) { x = gap; y += rowH + gap; rowH = 0; }
-    placed.push({ piece: it.piece, x: x + bleed, y: y + bleed, w: it.w, h: it.h, k: it.k, copy: it.copy, size: it.size, rot: it.rot, tooWide: it.tooWide });
+    placed.push({ piece: it.piece, x: x + bleed, y: y + bleed, w: it.w, h: it.h, k: it.k, ky: it.ky, copy: it.copy, size: it.size, rot: it.rot, tooWide: it.tooWide });
     x += W + gap; rowH = Math.max(rowH, H);
   }
   return { placed, height: Math.ceil(y + rowH + gap) };
@@ -122,8 +122,9 @@ function patternDefs(ks: number[], o: { tileInner: string; tileW: number; tileH:
 
 /** Transform that draws a piece path at its place (scaled, mirrored if needed). */
 export function pieceTransform(pl: Placed): string {
-  if (pl.rot) return `translate(${r1(pl.x + pl.w)} ${r1(pl.y)}) rotate(90)${pl.piece.mirror ? ` translate(${r1(pl.h)} 0) scale(${-pl.k} ${pl.k})` : ` scale(${pl.k})`}`;
-  return pl.piece.mirror ? `translate(${r1(pl.x + pl.w)} ${r1(pl.y)}) scale(${-pl.k} ${pl.k})` : `translate(${r1(pl.x)} ${r1(pl.y)}) scale(${pl.k})`;
+  const k = pl.k, ky = pl.ky ?? pl.k;
+  if (pl.rot) return `translate(${r1(pl.x + pl.w)} ${r1(pl.y)}) rotate(90)${pl.piece.mirror ? ` translate(${r1(pl.h)} 0) scale(${-k} ${ky})` : ` scale(${k} ${ky})`}`;
+  return pl.piece.mirror ? `translate(${r1(pl.x + pl.w)} ${r1(pl.y)}) scale(${-k} ${ky})` : `translate(${r1(pl.x)} ${r1(pl.y)}) scale(${k}${ky !== k ? ` ${ky}` : ''})`;
 }
 
 

@@ -978,6 +978,17 @@ scenarios.push({
     await sheet.getByRole('button', { name: 'Done' }).click();
     t.check('summary confirms no overlapping pieces', /No overlapping pieces/.test(await t.page.getByLabel('Print summary').innerText()));
     t.check('print step says the sheet was edited by hand', await t.page.getByRole('button', { name: /edited by hand/ }).isVisible());
+    // Grading table: XL length graded on its own.
+    await t.page.getByRole('tab', { name: /Players|Sizes/ }).first().click();
+    await t.page.getByText('Size chart & custom sizes').click();
+    await t.page.getByLabel('XL length cm', { exact: true }).fill('90');
+    t.check('grading table edits one size', /edited/.test(await t.page.getByRole('table', { name: 'Size chart' }).innerText()));
+    // Panel settings: a seam allowance on the body re-nests without overlaps.
+    await t.page.getByRole('tab', { name: /Print files/ }).click();
+    await t.page.getByText(/Panel settings — bleed/).click();
+    await t.page.getByLabel('Front & back seam mm').fill('10');
+    await t.page.waitForTimeout(500);
+    t.check('seam allowance keeps the sheet free of overlaps', /No overlapping pieces/.test(await t.page.getByLabel('Print summary').innerText()), (await t.page.getByLabel('Print summary').innerText()).slice(0, 160));
   },
 });
 

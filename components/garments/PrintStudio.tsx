@@ -19,8 +19,8 @@ import {
 } from 'lucide-react';
 import { boardLayout, layoutText, mulM, artFonts, type ArtEl, type Board, type Fill, type Mat } from '@/lib/textile/art';
 import { ensureFonts, shaper } from '@/lib/textile/fonts';
-import { normalize, segsToD, transformSegs, bbox as segBox, flatten, regionOf, booleanOp, polysToD, centred, nodes as pathNodes, moveNode, insertNode, deleteNode, setNodeType, penPath, polygonPath, starPath, type BoolOp, type Seg } from '@/lib/textile/vector';
-import { kitProduct, pieceMarkup, stdLettering, type KitDesign, type Player, type Glyphs } from '@/lib/teamKit';
+import { normalize, segsToD, transformSegs, bbox as segBox, flatten, regionOf, booleanOp, polysToD, centred, nodes as pathNodes, moveNode, insertNode, deleteNode, setNodeType, penPath, polygonPath, starPath, offsetPath, type BoolOp, type Seg } from '@/lib/textile/vector';
+import { kitProduct, pieceMarkup, stdLettering, panelSpec, type KitDesign, type Player, type Glyphs } from '@/lib/teamKit';
 import { MOTIFS, tileSvg, layout as patLayout, type PatternSettings } from '@/lib/patterns';
 import { MOTIF_CATEGORIES } from '@/lib/patternMotifs';
 import { PATTERN_FONTS } from '@/lib/patternText';
@@ -261,6 +261,14 @@ export function PrintStudio({ kit, pattern, glyphs, players, libraryPatterns, on
       img.__bg = true; bgs.push(img);
       const outline = new Fb.Path(p.d, { left: bp.x, top: bp.y, fill: '', stroke: '#64748B', strokeWidth: 1.2, strokeDashArray: [6, 4], selectable: false, evented: false, objectCaching: false, flipX: !!p.mirror });
       outline.__bg = true; bgs.push(outline);
+      // Safe area (Panel settings in Print files): keep important artwork inside the cyan line.
+      const safe = panelSpec(kit, p, 10).safe;
+      if (safe > 0) {
+        const sd = offsetPath(p.d, -safe);
+        const sb = segBox(normalize(sd)), ob = segBox(normalize(p.d));
+        const so = new Fb.Path(sd, { left: bp.x + (p.mirror ? ob.x + ob.w - (sb.x + sb.w) : sb.x - ob.x), top: bp.y + (sb.y - ob.y), fill: '', stroke: '#06B6D4', strokeWidth: 1, strokeDashArray: [3, 3], selectable: false, evented: false, objectCaching: false, flipX: !!p.mirror });
+        so.__bg = true; bgs.push(so);
+      }
       const lab = new Fb.Text(`${p.label} · ${p.w} × ${p.h} mm`, { left: bp.x, top: bp.y - 26, fontSize: 18, fill: '#475569', fontFamily: 'Arial', selectable: false, evented: false });
       lab.__bg = true; bgs.push(lab);
     }

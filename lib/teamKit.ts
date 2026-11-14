@@ -17,7 +17,7 @@ import type { PatternSettings } from './patterns.ts';
 import { pathBox } from './pathFit.ts';
 import { boardLayout, pieceArt, type ArtEl } from './textile/art.ts';
 import { nest, findOverlaps, polyArea } from './textile/nest.ts';
-import { normalize, flatten } from './textile/vector.ts';
+import { normalize, flatten, offsetPath } from './textile/vector.ts';
 
 export type KitStyle = 'tshirt' | 'football' | 'cricket' | 'basketball' | 'polo';
 export const KIT_STYLES: { id: KitStyle; label: string; product: string }[] = [
@@ -63,6 +63,10 @@ export interface KitDesign {
   letterGrade?: 'fixed' | 'scale';
   /** Hand-edited production sheet (Save fabric), saved with the project. */
   sheetLayout?: SheetLayout;
+  /** Grading table: flat chest width and body length (cm) per standard size, overriding the standard proportional grade. */
+  gradeCm?: Record<string, { chest: number; length: number }>;
+  /** Per-panel production settings (mm): bleed beyond the cut line, seam allowance outside the stitch line, safe area inside it. */
+  panels?: Partial<Record<PanelRole, PanelSpec>>;
   frontText?: string; frontTextColor?: string; frontTextMm?: number; frontTextTopMm?: number;
   personalise?: boolean; // names and numbers per player (off: sizes and quantities only)
   /** Extra sizes defined by measurement (flat chest width in cm); scaled from the size-M block. */
@@ -95,7 +99,7 @@ export function kitFor(kind: GarmentKind): KitDesign {
 }
 
 export interface Player { name: string; number: string; size: string; qty?: number }
-export interface CustomSize { label: string; chestCm: number }
+export interface CustomSize { label: string; chestCm: number; /** Body length (cm); without it the length grades with the chest. */ lengthCm?: number }
 export interface RosterIssue { row: number; level: 'error' | 'warning'; message: string }
 
 const SIZE_IDS = new Map(SIZES.map((s) => [s.label.toLowerCase().replace(/ .*/, ''), s.id] as [string, string]).concat(SIZES.map((s) => [s.id, s.id] as [string, string])));
@@ -106,12 +110,23 @@ export function blockMeasure(kit: KitDesign): { chestCm: number; lengthCm: numbe
   return { chestCm: Math.round((f?.w || 560) / 10 * 10) / 10, lengthCm: Math.round((f?.h || 740) / 10 * 10) / 10 };
 }
 /** A standard size (XS–3XL…) or one of the kit's custom measured sizes. */
-export function sizeInfo(kit: KitDesign | null | undefined, s: string): { id: string; label: string; k: number } | null {
+export function sizeInfo(kit: KitDesign | null | undefined, s: string): { id: string; label: string; k: number; ky: number } | null {
   const id = sizeId(s || '');
-  if (id) { const z = SIZES.find((x) => x.id === id)!; return { id, label: z.label.replace(/ .*/, ''), k: z.k }; }
+  if (id) {
+    const z = SIZES.find((x) => x.id === id)!;
+    const g = kit?.gradeCm?.[id];
+    if (g && g.chest > 0 && g.length > 0) { const b = blockMeasure(kit!); return { id, label: z.label.replace(/ .*/, ''), k: g.chest / b.chestCm, ky: g.length / b.lengthCm }; }
+    return { id, label: z.label.replace(/ .*/, ''), k: z.k, ky: z.k };
+  }
   const c = kit?.customSizes?.find((x) => x.label.trim().toLowerCase() === (s || '').trim().toLowerCase());
-  if (c && c.chestCm > 0) return { id: `custom:${c.label}`, label: c.label, k: c.chestCm / blockMeasure(kit!).chestCm };
+  if (c && c.chestCm > 0) { const b = blockMeasure(kit!); const k = c.chestCm / b.chestCm; return { id: `custom:${c.label}`, label: c.label, k, ky: c.lengthCm && c.lengthCm > 0 ? c.lengthCm / b.lengthCm : k }; }
   return null;
+}
+/** Width and length grade of one piece in a size: the collar band only follows the width (its height stays). */
+export function pieceGrade(kit: KitDesign, piece: Piece, size: string): { k: number; ky: number } {
+  const z = sizeInfo(kit, size);
+  const k = z?.k || 1, ky = z?.ky || k;
+  return { k, ky: role(piece.id) === 'trim' ? k : ky };
 }
 const sizeNames = (kit?: KitDesign | null) => [...SIZES.map((s) => s.label.replace(/ .*/, '')), ...(kit?.customSizes || []).map((c) => c.label)].join(', ');
 
@@ -313,40 +328,48 @@ export function stdLettering(kit: KitDesign): { name: boolean; number: boolean }
   walk(kit.art || []);
   return { name: !texts.some((t) => /\{NAME\}/i.test(t)), number: !texts.some((t) => /\{NUMBER\}/i.test(t)) };
 }
-export function pieceMarkup(piece: Piece, kit: KitDesign, pat: PatternSettings, player: Player | null, glyphs: Glyphs, k: number, bleed: number, textMode: TextMode = 'outline'): string {
+export function pieceMarkup(piece: Piece, kit: KitDesign, pat: PatternSettings, player: Player | null, glyphs: Glyphs, k: number, bleed: number, textMode: TextMode = 'outline', ky: number = k): string {
   const r = role(piece.id);
   const fill = r === 'body' ? kit.body : r === 'sleeve' ? kit.sleeve : kit.collar;
-  const b = bleed / k; // bleed in local units
+  // Printed margin outside the stitch line: seam allowance + bleed (per panel); previews (bleed 0) have none.
+  const sp = bleed > 0 ? panelSpec(kit, piece, bleed) : { bleed: 0, seam: 0, safe: 0 };
+  const M = sp.seam + sp.bleed;
+  const b = M / k; // margin in local units (across)
+  const by = M / ky; // … and along the length
+  const grown = sp.seam > 0 ? offsetPath(piece.d, M / ((k + ky) / 2)) : null; // true offset when there is a seam allowance
+  // Graded length ≠ width: artwork keeps its proportions (it is not stretched with the piece); its position follows the grade.
+  const ay = ky / k;
+  const keep = (cx: number, cy: number, inner: string) => (Math.abs(ay - 1) < 1e-6 || !inner ? inner : `<g transform="translate(${r2(cx)} ${r2(cy)}) scale(1 ${r2(1000 / ay) / 1000}) translate(${r2(-cx)} ${r2(-cy)})">${inner}</g>`);
   const lk = kit.letterGrade === 'scale' ? 1 : k; // lettering height divisor: real size on every garment
   const id = `pc${++clipSeq}`;
-  const sx = (piece.w + 2 * b) / piece.w, sy = (piece.h + 2 * b) / piece.h;
-  const clip = `<clipPath id="${id}"><path d="${piece.d}" transform="translate(${r2(piece.w / 2)} ${r2(piece.h / 2)}) scale(${r2(sx * 1000) / 1000} ${r2(sy * 1000) / 1000}) translate(${r2(-piece.w / 2)} ${r2(-piece.h / 2)})"/></clipPath>`;
+  const sx = (piece.w + 2 * b) / piece.w, sy = (piece.h + 2 * by) / piece.h;
+  const clip = grown ? `<clipPath id="${id}"><path d="${grown}"/></clipPath>` : `<clipPath id="${id}"><path d="${piece.d}" transform="translate(${r2(piece.w / 2)} ${r2(piece.h / 2)}) scale(${r2(sx * 1000) / 1000} ${r2(sy * 1000) / 1000}) translate(${r2(-piece.w / 2)} ${r2(-piece.h / 2)})"/></clipPath>`;
   const out: string[] = [clip];
-  out.push(`<path d="${piece.d}" fill="${fill}" stroke="${fill}" stroke-width="${r2(2 * b)}" stroke-linejoin="round"/>`);
+  out.push(grown ? `<path d="${grown}" fill="${fill}"/>` : `<path d="${piece.d}" fill="${fill}" stroke="${fill}" stroke-width="${r2(2 * Math.max(b, by))}" stroke-linejoin="round"/>`);
   const w = piece.w;
   const deco: string[] = [];
   const studio = !!kit.studioOnly;
   if (r === 'body' && !studio) deco.push(graphicMarkup(kit, w, piece.h, b, piece.id === 'back'));
   if (r === 'sleeve' && kit.cuffs && kit.graphic && kit.graphic !== 'plain') deco.push(`<rect x="${r2(-b - 2)}" y="${r2(piece.h - 34)}" width="${r2(w + 2 * b + 4)}" height="${r2(34 + b + 2)}" fill="${kit.accent || kit.collar}"/><rect x="${r2(-b - 2)}" y="${r2(piece.h - 46)}" width="${r2(w + 2 * b + 4)}" height="7" fill="${kit.accent2 || '#FFFFFF'}"/>`);
   const wantPattern = kit.patternOn === 'all' || (kit.patternOn === 'body' && r === 'body') || (kit.patternOn === 'sleeves' && r === 'sleeve');
-  if (wantPattern) deco.push(`<g opacity="${kit.patternOpacity}"><g transform="translate(${r2(-b)} ${r2(-b)})">${patternPaths(pat, piece.w + 2 * b, piece.h + 2 * b, kit.repeatMm, k)}</g></g>`);
+  if (wantPattern) deco.push(`<g opacity="${kit.patternOpacity}"><g transform="translate(${r2(-b)} ${r2(-by)})${Math.abs(ay - 1) < 1e-6 ? '' : ` scale(1 ${r2(1000 / ay) / 1000})`}">${patternPaths(pat, piece.w + 2 * b, (piece.h + 2 * by) * ay, kit.repeatMm, k)}</g></g>`);
   // Print-studio artwork: the board clipped to this piece (plus bleed).
-  if (kit.art?.length) deco.push(pieceArt(kit.art, boardLayout(kitProduct(kit)), piece.id, { textMode, vars: { name: player?.name ?? 'NAME', number: player?.number ?? '10', size: player?.size ?? 'M', team: kit.teamName }, uid: id, fixK: lk }));
+  if (kit.art?.length) deco.push(pieceArt(kit.art, boardLayout(kitProduct(kit)), piece.id, { textMode, vars: { name: player?.name ?? 'NAME', number: player?.number ?? '10', size: player?.size ?? 'M', team: kit.teamName }, uid: id, fixK: lk, aspect: ay }));
   if (deco.some(Boolean)) out.push(`<g clip-path="url(#${id})">${deco.join('')}</g>`);
   const personal = kit.personalise !== false && !studio;
   // Print-studio lettering replaces the standard name / number (never both at once).
   const std = stdLettering(kit);
   if (piece.id === 'back' && player && personal) {
-    if (std.name) out.push(textMarkup(player.name.toUpperCase(), glyphs, kit, kit.nameColor, w / 2, kit.nameTopMm + kit.nameMm / 2, kit.nameMm / lk, w * 0.78, k, textMode === 'live'));
-    if (std.number) out.push(textMarkup(player.number, glyphs, kit, kit.numberColor, w / 2, kit.numberTopMm + kit.numberMm / 2, kit.numberMm / lk, w * 0.7, k, textMode === 'live'));
+    if (std.name) out.push(keep(w / 2, kit.nameTopMm + kit.nameMm / 2, textMarkup(player.name.toUpperCase(), glyphs, kit, kit.nameColor, w / 2, kit.nameTopMm + kit.nameMm / 2, kit.nameMm / lk, w * 0.78, k, textMode === 'live')));
+    if (std.number) out.push(keep(w / 2, kit.numberTopMm + kit.numberMm / 2, textMarkup(player.number, glyphs, kit, kit.numberColor, w / 2, kit.numberTopMm + kit.numberMm / 2, kit.numberMm / lk, w * 0.7, k, textMode === 'live')));
   }
   if (piece.id === 'front' && !studio) {
-    const logo = (href: string, x: number, y: number, bw: number, bh: number) => `<image href="${href}" x="${r2(x)}" y="${r2(y)}" width="${r2(bw)}" height="${r2(bh)}" preserveAspectRatio="xMidYMid meet"/>`;
+    const logo = (href: string, x: number, y: number, bw: number, bh: number) => keep(x + bw / 2, y + bh / 2, `<image href="${href}" x="${r2(x)}" y="${r2(y)}" width="${r2(bw)}" height="${r2(bh)}" preserveAspectRatio="xMidYMid meet"/>`);
     const L = frontLayout(kit, w);
     if (kit.teamLogo) out.push(logo(kit.teamLogo, L.teamLogo.x, L.teamLogo.y, L.teamLogo.w, L.teamLogo.h));
     if (kit.sponsorLogo) out.push(logo(kit.sponsorLogo, L.sponsor.x, L.sponsor.y, L.sponsor.w, L.sponsor.h));
-    if (kit.frontText && kit.frontText.trim()) out.push(textMarkup(kit.frontText.trim(), glyphs, { ...kit, outlineMm: 0 }, kit.frontTextColor || '#FFFFFF', L.frontText.x + L.frontText.w / 2, L.frontText.y + L.frontText.h / 2, L.frontText.h, L.frontText.w, k, textMode === 'live'));
-    if (kit.frontNumber && player && personal && std.number) out.push(textMarkup(player.number, glyphs, kit, kit.numberColor, L.frontNum.x + L.frontNum.w / 2, L.frontNum.y + L.frontNum.h / 2, L.frontNum.h / lk, L.frontNum.w, k, textMode === 'live'));
+    if (kit.frontText && kit.frontText.trim()) out.push(keep(L.frontText.x + L.frontText.w / 2, L.frontText.y + L.frontText.h / 2, textMarkup(kit.frontText.trim(), glyphs, { ...kit, outlineMm: 0 }, kit.frontTextColor || '#FFFFFF', L.frontText.x + L.frontText.w / 2, L.frontText.y + L.frontText.h / 2, L.frontText.h, L.frontText.w, k, textMode === 'live')));
+    if (kit.frontNumber && player && personal && std.number) out.push(keep(L.frontNum.x + L.frontNum.w / 2, L.frontNum.y + L.frontNum.h / 2, textMarkup(player.number, glyphs, kit, kit.numberColor, L.frontNum.x + L.frontNum.w / 2, L.frontNum.y + L.frontNum.h / 2, L.frontNum.h / lk, L.frontNum.w, k, textMode === 'live')));
   }
   return out.join('');
 }
@@ -450,9 +473,10 @@ export function shade(hex: string, amt: number): string {
 export function playerPrintSvg(kit: KitDesign, pat: PatternSettings, player: Player, glyphs: Glyphs, opts: { rollW: number; bleed: number; cutLines: boolean; px?: boolean; textMode?: TextMode }): { svg: string; width: number; height: number; placed: Placed[] } {
   const product = kitProduct(kit);
   const sz = sizeInfo(kit, player.size) || { k: 1, label: player.size || 'M' };
-  const { placed, height } = layoutPieces(product, sz.k, opts.rollW, opts.bleed);
-  const parts = placed.map((pl) => `<g transform="${pieceTransform(pl)}">${pieceMarkup(pl.piece, kit, pat, player, glyphs, pl.k, opts.bleed, opts.textMode)}</g>`).join('');
-  const cuts = opts.cutLines ? `<g id="cut-lines" fill="none" stroke="#EC008C" stroke-width="0.5">${placed.map((pl) => `<path d="${pl.piece.d}" transform="${pieceTransform(pl)}" vector-effect="non-scaling-stroke"/>`).join('')}</g>` : '';
+  const margin = Math.max(opts.bleed, ...product.pieces.map((pc) => panelMargin(kit, pc, opts.bleed)));
+  const { placed, height } = layoutPieces(product, sz.k, opts.rollW, margin, 15, undefined, (pc) => pieceGrade(kit, pc, player.size).ky);
+  const parts = placed.map((pl) => `<g transform="${pieceTransform(pl)}">${pieceMarkup(pl.piece, kit, pat, player, glyphs, pl.k, opts.bleed, opts.textMode, pl.ky)}</g>`).join('');
+  const cuts = opts.cutLines ? `<g id="cut-lines" fill="none" stroke="#EC008C" stroke-width="0.5">${placed.map((pl) => `<path d="${cutPath(kit, pl, opts.bleed)}" transform="${pieceTransform(pl)}" vector-effect="non-scaling-stroke"/>`).join('')}</g>` : '';
   const label = `<text x="15" y="${height - 4}" font-family="sans-serif" font-size="7" fill="#666">${esc(`${kit.teamName} · ${player.name} #${player.number} · size ${sz.label} · ${product.label} · ${opts.rollW} mm roll · bleed ${opts.bleed} mm`)}</text>`;
   const W = opts.rollW;
   const unit = opts.px ? 96 / 25.4 : 1;
@@ -463,10 +487,19 @@ export function playerPrintSvg(kit: KitDesign, pat: PatternSettings, player: Pla
   return { svg, width: W, height, placed };
 }
 
-export interface SheetOptions { rollW: number; bleed: number; gap?: number; pageMm?: number; cutLines: boolean; group?: 'player' | 'fabric'; mirror?: boolean; px?: boolean; textMode?: TextMode; /** Hand-edited nesting (Save fabric): positions on the roll by piece key. */ layout?: SheetLayout; /** Registration marks at the corners of each page. */ marks?: boolean }
+export interface SheetOptions { rollW: number; bleed: number; gap?: number; pageMm?: number; cutLines: boolean; group?: 'player' | 'fabric'; mirror?: boolean; px?: boolean; textMode?: TextMode; /** Hand-edited nesting (Save fabric): positions on the roll by piece key. */ layout?: SheetLayout; /** Registration marks at the corners of each page. */ marks?: boolean; /** Proof guides: stitch line (dashed) and safe area. Not for production prints. */ guides?: boolean }
 /** A piece's place on the roll (box top-left in mm, box = label line + bleed + piece). `locked` pieces stay when re-nesting. */
+export type PanelRole = 'body' | 'sleeve' | 'trim';
+export interface PanelSpec { bleed?: number; seam?: number; safe?: number }
+/** Bleed, seam allowance and safe area for one piece (mm), with the order's bleed as the default. */
+export function panelSpec(kit: KitDesign, piece: Piece, bleed: number): { bleed: number; seam: number; safe: number } {
+  const p = kit.panels?.[role(piece.id) as PanelRole];
+  return { bleed: Math.max(0, p?.bleed ?? bleed), seam: Math.max(0, p?.seam ?? 0), safe: Math.max(0, p?.safe ?? 0) };
+}
+/** Printed margin outside the stitch line: seam allowance + bleed. */
+export const panelMargin = (kit: KitDesign, piece: Piece, bleed: number) => { const s = panelSpec(kit, piece, bleed); return s.seam + s.bleed; };
 export type SheetLayout = Record<string, { x: number; y: number; rot: boolean; locked?: boolean }>;
-export interface SheetBox { key: string; x: number; y: number; w: number; h: number; rot: boolean; locked: boolean; idx: number; label: string; piece: Piece; k: number; copy: number; player: Player; tooWide: boolean }
+export interface SheetBox { key: string; x: number; y: number; w: number; h: number; rot: boolean; locked: boolean; idx: number; label: string; piece: Piece; k: number; ky: number; copy: number; player: Player; tooWide: boolean; /** Printed margin (seam + bleed, mm). */ m: number }
 const SHEET_LAB = 9; // label line above each piece
 
 /**
@@ -479,26 +512,25 @@ export function fabricLayout(kit: KitDesign, players: Player[], o: { rollW: numb
   const product = kitProduct(kit);
   const gap = o.gap ?? 15, bleed = o.bleed, rollW = o.rollW, L = o.layout || {};
   const personal = kit.personalise !== false;
-  const its: { key: string; piece: Piece; k: number; copy: number; player: Player; idx: number; w: number; h: number }[] = [];
+  const its: { key: string; piece: Piece; k: number; ky: number; copy: number; player: Player; idx: number; w: number; h: number; m: number }[] = [];
   players.forEach((pl, idx) => {
-    const k = sizeInfo(kit, pl.size)?.k || 1;
-    for (const pc of product.pieces) for (let c = 0; c < pc.qty; c++) its.push({ key: `${idx}|${pc.id}|${c}`, piece: pc, k, copy: c, player: pl, idx, w: pc.w * k + 2 * bleed + SHEET_LAB, h: pc.h * k + 2 * bleed + SHEET_LAB });
+    for (const pc of product.pieces) { const { k, ky } = pieceGrade(kit, pc, pl.size); const m = panelMargin(kit, pc, bleed); for (let c = 0; c < pc.qty; c++) its.push({ key: `${idx}|${pc.id}|${c}`, piece: pc, k, ky, copy: c, player: pl, idx, m, w: pc.w * k + 2 * m + SHEET_LAB, h: pc.h * ky + 2 * m + SHEET_LAB }); }
   });
   const res = nest(its.map((it) => {
     const f = L[it.key];
     const tooWide = Math.min(it.w, it.h) > rollW - 2 * gap;
-    return { id: it.key, w: it.w, h: it.h, area: pieceArea(it.piece) * it.k * it.k, canRotate: !tooWide, fixed: f ? { x: f.x, y: f.y, rot: !!f.rot } : undefined };
+    return { id: it.key, w: it.w, h: it.h, area: pieceArea(it.piece) * it.k * it.ky, canRotate: !tooWide, fixed: f ? { x: f.x, y: f.y, rot: !!f.rot } : undefined };
   }), { rollW, gap });
   const byKey = new Map(its.map((it) => [it.key, it]));
   const sz = (pl: Player) => sizeInfo(kit, pl.size)?.label || pl.size;
   const boxes: SheetBox[] = res.placed.map((p) => {
     const it = byKey.get(p.id)!;
     const who = personal ? `${it.idx + 1}. ${(it.player.name || '').toUpperCase()} #${it.player.number}` : `${it.idx + 1}.`;
-    return { key: p.id, x: p.x, y: p.y, w: p.w, h: p.h, rot: p.rot, locked: !!L[p.id]?.locked, idx: it.idx, piece: it.piece, k: it.k, copy: it.copy, player: it.player, tooWide: res.tooWide.includes(p.id), label: `${who} · ${sz(it.player)} · ${it.piece.label}${it.piece.qty > 1 ? ` ${it.copy + 1}` : ''}` };
+    return { key: p.id, x: p.x, y: p.y, w: p.w, h: p.h, rot: p.rot, locked: !!L[p.id]?.locked, idx: it.idx, piece: it.piece, k: it.k, ky: it.ky, m: it.m, copy: it.copy, player: it.player, tooWide: res.tooWide.includes(p.id), label: `${who} · ${sz(it.player)} · ${it.piece.label}${it.piece.qty > 1 ? ` ${it.copy + 1}` : ''}` };
   });
   const offRoll = boxes.filter((b) => b.x < -1e-6 || b.x + b.w > rollW + 1e-6 || b.y < -1e-6).map((b) => b.key);
   const length = Math.ceil(Math.max(gap, ...boxes.map((b) => b.y + b.h)) + gap);
-  const area = its.reduce((s0, it) => s0 + pieceArea(it.piece) * it.k * it.k, 0);
+  const area = its.reduce((s0, it) => s0 + pieceArea(it.piece) * it.k * it.ky, 0);
   return { boxes, length, utilisation: length ? Math.min(1, area / (rollW * length)) : 0, overlaps: findOverlaps(boxes.map((b) => ({ id: b.key, x: b.x, y: b.y, w: b.w, h: b.h })), 0), offRoll };
 }
 /** The layout as it stands (every piece fixed), to start hand-editing from. */
@@ -508,11 +540,22 @@ export function layoutOf(boxes: SheetBox[]): SheetLayout {
   return out;
 }
 /** Where the piece itself sits inside its box (for drawing and printing). */
-export function boxPlaced(b: SheetBox, bleed: number, dy = 0): Placed {
-  const w = b.rot ? b.piece.h * b.k : b.piece.w * b.k, h = b.rot ? b.piece.w * b.k : b.piece.h * b.k;
-  return { piece: b.piece, x: b.x + bleed, y: b.y - dy + SHEET_LAB + bleed, w, h, k: b.k, copy: b.copy, rot: b.rot || undefined, tooWide: b.tooWide || undefined };
+export function boxPlaced(b: SheetBox, _bleed?: number, dy = 0): Placed & { m: number } {
+  const w = b.rot ? b.piece.h * b.ky : b.piece.w * b.k, h = b.rot ? b.piece.w * b.k : b.piece.h * b.ky;
+  return { m: b.m, piece: b.piece, x: b.x + b.m, y: b.y - dy + SHEET_LAB + b.m, w, h, k: b.k, ky: b.ky !== b.k ? b.ky : undefined, copy: b.copy, rot: b.rot || undefined, tooWide: b.tooWide || undefined };
 }
 export interface SheetPage { svg: string; width: number; height: number; pieces: number }
+
+/** The cut line of a placed piece: its outline grown by the seam allowance (local units). */
+function cutPath(kit: KitDesign, pl: Placed, bleed: number): string {
+  const s = panelSpec(kit, pl.piece, bleed).seam;
+  return s > 0 ? offsetPath(pl.piece.d, s / ((pl.k + (pl.ky ?? pl.k)) / 2)) : pl.piece.d;
+}
+/** Proof guides: stitch line (when there is a seam allowance) and safe area. */
+function guidePaths(kit: KitDesign, pl: Placed, bleed: number): string {
+  const sp = panelSpec(kit, pl.piece, bleed), g = (pl.k + (pl.ky ?? pl.k)) / 2, t = pieceTransform(pl);
+  return `${sp.seam > 0 ? `<path d="${pl.piece.d}" transform="${t}" stroke="#2563EB" stroke-dasharray="3 2" vector-effect="non-scaling-stroke"/>` : ''}${sp.safe > 0 ? `<path d="${offsetPath(pl.piece.d, -sp.safe / g)}" transform="${t}" stroke="#06B6D4" stroke-dasharray="1.5 1.5" vector-effect="non-scaling-stroke"/>` : ''}`;
+}
 
 /** The garments to print: one per player, or (not personalised) one per quantity of each size. */
 export function printList(players: Player[], kit: KitDesign): Player[] {
@@ -542,20 +585,19 @@ export function pieceArea(piece: Piece): number {
 export function rosterSheets(kit: KitDesign, pat: PatternSettings, players: Player[], glyphs: Glyphs, o: SheetOptions): { pages: SheetPage[]; totalMm: number; tooWide: number; utilisation: number; overlaps: number } {
   const product = kitProduct(kit);
   const gap = o.gap ?? 15, bleed = o.bleed, rollW = o.rollW, pageMax = Math.max(500, o.pageMm || 5000);
-  type It = { piece: Piece; w: number; h: number; k: number; copy: number; player: Player; idx: number; rot?: boolean; tooWide?: boolean };
+  type It = { piece: Piece; w: number; h: number; k: number; ky: number; m: number; copy: number; player: Player; idx: number; rot?: boolean; tooWide?: boolean };
   const items: It[] = [];
   players.forEach((pl, idx) => {
-    const k = sizeInfo(kit, pl.size)?.k || 1;
-    for (const pc of product.pieces) for (let c = 0; c < pc.qty; c++) items.push({ piece: pc, w: pc.w * k, h: pc.h * k, k, copy: c, player: pl, idx });
+    for (const pc of product.pieces) { const { k, ky } = pieceGrade(kit, pc, pl.size); const m = panelMargin(kit, pc, bleed); for (let c = 0; c < pc.qty; c++) items.push({ piece: pc, w: pc.w * k, h: pc.h * ky, k, ky, m, copy: c, player: pl, idx }); }
   });
-  const room = rollW - 2 * gap - 2 * bleed;
-  for (const it of items) if (it.w > room) { if (it.h <= room) { const t = it.w; it.w = it.h; it.h = t; it.rot = true; } else it.tooWide = true; }
+  for (const it of items) if (it.w > rollW - 2 * gap - 2 * it.m) { if (it.h <= rollW - 2 * gap - 2 * it.m) { const t = it.w; it.w = it.h; it.h = t; it.rot = true; } else it.tooWide = true; }
   if (o.group === 'fabric') items.sort((a, b) => b.h - a.h || b.w - a.w);
   else items.sort((a, b) => a.idx - b.idx || b.h - a.h || b.w - a.w);
   const LAB = SHEET_LAB;
   let fabricProblems = 0;
-  const pages: { placed: (Placed & { player: Player; idx: number })[]; height: number }[] = [];
-  let cur: (Placed & { player: Player; idx: number })[] = [];
+  type Pl = Placed & { player: Player; idx: number; m: number };
+  const pages: { placed: Pl[]; height: number }[] = [];
+  let cur: Pl[] = [];
   let x = gap, y = gap, rowH = 0, lastIdx = -1;
   const close = () => { pages.push({ placed: cur, height: Math.ceil(y + rowH + gap) }); cur = []; x = gap; y = gap; rowH = 0; };
   if (o.group === 'fabric') {
@@ -563,7 +605,7 @@ export function rosterSheets(kit: KitDesign, pat: PatternSettings, players: Play
     const fl = fabricLayout(kit, players, { rollW, bleed, gap, layout: o.layout });
     fabricProblems = fl.overlaps.length + fl.offRoll.length;
     const byY = fl.boxes.slice().sort((a, b) => a.y - b.y || a.x - b.x);
-    let start = 0, bottom = 0, list: (Placed & { player: Player; idx: number })[] = [];
+    let start = 0, bottom = 0, list: Pl[] = [];
     const flush = () => { if (list.length) pages.push({ placed: list, height: Math.ceil(bottom - start + gap) }); list = []; };
     for (const b of byY) {
       if (list.length && b.y + b.h - start > pageMax - gap) { flush(); start = b.y - gap; bottom = 0; }
@@ -572,11 +614,11 @@ export function rosterSheets(kit: KitDesign, pat: PatternSettings, players: Play
     }
     flush();
   } else for (const it of items) {
-    const Wd = it.w + 2 * bleed, Hd = it.h + 2 * bleed + LAB;
+    const Wd = it.w + 2 * it.m, Hd = it.h + 2 * it.m + LAB;
     const newRow = (x + Wd + gap > rollW && x > gap) || (lastIdx >= 0 && it.idx !== lastIdx && x > gap);
     if (newRow) { x = gap; y += rowH + gap; rowH = 0; }
     if (y + Hd + gap > pageMax && cur.length) close();
-    cur.push({ piece: it.piece, x: x + bleed, y: y + LAB + bleed, w: it.w, h: it.h, k: it.k, copy: it.copy, rot: it.rot, tooWide: it.tooWide, player: it.player, idx: it.idx });
+    cur.push({ m: it.m, piece: it.piece, x: x + it.m, y: y + LAB + it.m, w: it.w, h: it.h, k: it.k, ky: it.ky !== it.k ? it.ky : undefined, copy: it.copy, rot: it.rot, tooWide: it.tooWide, player: it.player, idx: it.idx });
     x += Wd + gap; rowH = Math.max(rowH, Hd); lastIdx = it.idx;
   }
   if (cur.length) close();
@@ -584,19 +626,20 @@ export function rosterSheets(kit: KitDesign, pat: PatternSettings, players: Play
   const out: SheetPage[] = pages.map((pg, n) => {
     const H = pg.height + 14;
     const flip = o.mirror ? ` transform="translate(${rollW} 0) scale(-1 1)"` : '';
-    const parts = pg.placed.map((pl) => `<g transform="${pieceTransform(pl)}">${pieceMarkup(pl.piece, kit, pat, pl.player, glyphs, pl.k, bleed, o.textMode)}</g>`).join('');
-    const cuts = o.cutLines ? `<g id="cut-lines" fill="none" stroke="#EC008C" stroke-width="0.5"${flip}>${pg.placed.map((pl) => `<path d="${pl.piece.d}" transform="${pieceTransform(pl)}" vector-effect="non-scaling-stroke"/>`).join('')}</g>` : '';
+    const parts = pg.placed.map((pl) => `<g transform="${pieceTransform(pl)}">${pieceMarkup(pl.piece, kit, pat, pl.player, glyphs, pl.k, bleed, o.textMode, pl.ky)}</g>`).join('');
+    const cuts = o.cutLines ? `<g id="cut-lines" fill="none" stroke="#EC008C" stroke-width="0.5"${flip}>${pg.placed.map((pl) => `<path d="${cutPath(kit, pl, bleed)}" transform="${pieceTransform(pl)}" vector-effect="non-scaling-stroke"/>`).join('')}</g>` : '';
+    const guides = o.guides ? `<g id="proof-guides" fill="none" stroke-width="0.35"${flip}>${pg.placed.map((pl) => guidePaths(kit, pl, bleed)).join('')}</g>` : '';
     const sz = (pl: Player) => sizeInfo(kit, pl.size)?.label || pl.size;
     const labels = `<g id="labels" font-family="Arial, Helvetica, sans-serif" font-size="6.5" fill="#444">${pg.placed.map((pl) => {
       const who = personal ? `${pl.idx + 1}. ${pl.player.name.toUpperCase()} #${pl.player.number}` : `${pl.idx + 1}.`;
       const lx = o.mirror ? rollW - pl.x - pl.w : pl.x;
-      return `<text x="${r2(lx - bleed)}" y="${r2(pl.y - bleed - 2.5)}">${esc(`${who} · ${sz(pl.player)} · ${pl.piece.label}${pl.piece.qty > 1 ? ` ${pl.copy + 1}` : ''}${pl.rot ? ' · turned' : ''}${pl.tooWide ? ' · WIDER THAN ROLL' : ''}`)}</text>`;
+      return `<text x="${r2(lx - pl.m)}" y="${r2(pl.y - pl.m - 2.5)}">${esc(`${who} · ${sz(pl.player)} · ${pl.piece.label}${pl.piece.qty > 1 ? ` ${pl.copy + 1}` : ''}${pl.rot ? ' · turned' : ''}${pl.tooWide ? ' · WIDER THAN ROLL' : ''}`)}</text>`;
     }).join('')}</g>`;
     const foot = `<text x="${gap}" y="${H - 5}" font-family="Arial, Helvetica, sans-serif" font-size="7" fill="#666">${esc(`${kit.teamName} · ${product.label} · ${players.length} garments · page ${n + 1} of ${pages.length} · roll ${rollW} mm · bleed ${bleed} mm${o.mirror ? ' · mirrored' : ''} · print at 100%`)}</text>`;
     // Registration targets in the corners (for aligning the print with a cutter or press).
     const target = (x: number, y: number) => `<circle cx="${x}" cy="${y}" r="3.5" fill="none" stroke="#000" stroke-width="0.3"/><path d="M${x - 5} ${y}H${x + 5}M${x} ${y - 5}V${y + 5}" stroke="#000" stroke-width="0.3"/>`;
     const marks = o.marks ? `<g id="registration">${target(6, 6)}${target(rollW - 6, 6)}${target(6, H - 6)}${target(rollW - 6, H - 6)}</g>` : '';
-    const inner = `<g id="print"${flip}>${parts}</g>${cuts}${labels}${foot}${marks}`;
+    const inner = `<g id="print"${flip}>${parts}</g>${guides}${cuts}${labels}${foot}${marks}`;
     const unit = o.px ? 96 / 25.4 : 1;
     const svg = o.px
       ? `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${r2(rollW * unit)}" height="${r2(H * unit)}" viewBox="0 0 ${r2(rollW * unit)} ${r2(H * unit)}"><g transform="scale(${unit})">${inner}</g></svg>`
@@ -605,8 +648,8 @@ export function rosterSheets(kit: KitDesign, pat: PatternSettings, players: Play
   });
   // Fabric use from the true piece shapes; overlaps are checked on the final layout (a sheet with any is not ready).
   const totalMm = out.reduce((a, p) => a + p.height, 0);
-  const used = items.reduce((s, it) => s + pieceArea(it.piece) * it.k * it.k, 0);
-  const overlaps = o.group === 'fabric' ? fabricProblems : pages.reduce((n, pg) => n + findOverlaps(pg.placed.map((pl, i) => ({ id: String(i), x: pl.x - bleed, y: pl.y - bleed, w: pl.w + 2 * bleed, h: pl.h + 2 * bleed })), 0).length, 0);
+  const used = items.reduce((s, it) => s + pieceArea(it.piece) * it.k * it.ky, 0);
+  const overlaps = o.group === 'fabric' ? fabricProblems : pages.reduce((n, pg) => n + findOverlaps(pg.placed.map((pl, i) => ({ id: String(i), x: pl.x - pl.m, y: pl.y - pl.m, w: pl.w + 2 * pl.m, h: pl.h + 2 * pl.m })), 0).length, 0);
   return { pages: out, totalMm, tooWide: items.filter((i) => i.tooWide).length, utilisation: totalMm ? Math.min(1, used / (rollW * totalMm)) : 0, overlaps };
 }
 

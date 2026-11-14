@@ -212,3 +212,42 @@ export function penPath(pts: { x: number; y: number; hx?: number; hy?: number }[
   if (closed && pts.length > 2) { seg(pts[pts.length - 1], pts[0]); segs.push(['Z']); }
   return segsToD(segs);
 }
+
+// ---------------------------------------------------------------- offset (seam allowance, bleed, safe area)
+const offCache = new Map<string, string>();
+/**
+ * The outline grown (dist > 0) or shrunk (dist < 0) by `dist`, as a closed
+ * polygon path. Corners are mitred, very sharp ones bevelled. Used for seam
+ * allowance and bleed (outward) and the safe area (inward).
+ */
+export function offsetPath(d: string, dist: number, tol = 0.4): string {
+  if (!dist) return d;
+  const key = `${d}|${dist}|${tol}`;
+  const hit = offCache.get(key); if (hit != null) return hit;
+  const out = flatten(normalize(d), tol).filter((r) => r.pts.length > 2).map((r) => {
+    const ring = offsetRing(r.pts, dist);
+    return ring.length > 2 ? `M${ring.map(([x, y]) => `${Math.round(x * 100) / 100} ${Math.round(y * 100) / 100}`).join('L')}Z` : '';
+  }).join('');
+  if (offCache.size > 500) offCache.clear();
+  offCache.set(key, out);
+  return out;
+}
+export function offsetRing(pts0: Ring, dist: number): Ring {
+  const pts: Ring = [];
+  for (const p of pts0) { const q = pts[pts.length - 1]; if (!q || Math.hypot(p[0] - q[0], p[1] - q[1]) > 1e-6) pts.push(p); }
+  if (pts.length > 2 && Math.hypot(pts[0][0] - pts[pts.length - 1][0], pts[0][1] - pts[pts.length - 1][1]) < 1e-6) pts.pop();
+  const n = pts.length; if (n < 3) return pts;
+  let area = 0; for (let i = 0; i < n; i++) { const a = pts[i], b = pts[(i + 1) % n]; area += a[0] * b[1] - b[0] * a[1]; }
+  const sgn = area > 0 ? 1 : -1; // (dy, -dx) points outward when the signed area is positive
+  const nrm = (a: [number, number], b: [number, number]): [number, number] => { const dx = b[0] - a[0], dy = b[1] - a[1], l = Math.hypot(dx, dy) || 1; return [(sgn * dy) / l, (-sgn * dx) / l]; };
+  const out: Ring = [];
+  for (let i = 0; i < n; i++) {
+    const p = pts[i], n1 = nrm(pts[(i - 1 + n) % n], p), n2 = nrm(p, pts[(i + 1) % n]);
+    const mx = n1[0] + n2[0], my = n1[1] + n2[1], ml = Math.hypot(mx, my);
+    const cos = ml / 2; // cos of half the turn
+    if (ml < 1e-9 || cos < 0.5) { out.push([p[0] + n1[0] * dist, p[1] + n1[1] * dist], [p[0] + n2[0] * dist, p[1] + n2[1] * dist]); continue; }
+    const s = dist / cos;
+    out.push([p[0] + (mx / ml) * s, p[1] + (my / ml) * s]);
+  }
+  return out;
+}

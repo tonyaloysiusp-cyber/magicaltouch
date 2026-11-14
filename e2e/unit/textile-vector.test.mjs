@@ -48,3 +48,18 @@ test('booleans: union, subtract, intersect; letter holes kept', { skip: !hasClip
   const o = await regionOf(normalize('M0 0H100V100H0Z M25 25V75H75V25Z'), 'nonzero');
   assert.equal(o.length, 1); assert.equal(o[0].length, 2);
 });
+
+test('offset: seam allowance grows the outline, safe area shrinks it', async () => {
+  const { offsetPath } = await import('../../lib/textile/vector.ts');
+  const sq = 'M0 0L100 0L100 100L0 100Z';
+  const grow = bbox(normalize(offsetPath(sq, 10)));
+  assert.deepEqual([grow.x, grow.y, grow.w, grow.h].map((v) => Math.round(v)), [-10, -10, 120, 120]);
+  const shrink = bbox(normalize(offsetPath(sq, -10)));
+  assert.deepEqual([shrink.x, shrink.w].map((v) => Math.round(v)), [10, 80]);
+  // Same result whichever way the outline runs.
+  const rev = bbox(normalize(offsetPath('M0 0L0 100L100 100L100 0Z', 10)));
+  assert.equal(Math.round(rev.w), 120);
+  // A circle grows evenly.
+  const c = bbox(normalize(offsetPath('M-50 0A50 50 0 1 0 50 0A50 50 0 1 0 -50 0Z', 5)));
+  assert.ok(Math.abs(c.w - 110) < 1, `circle ${c.w}`);
+});
