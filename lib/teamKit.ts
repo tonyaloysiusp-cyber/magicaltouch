@@ -7,14 +7,15 @@
 //
 // Everything is drawn as plain vectors in millimetres: piece outlines,
 // every pattern motif as its own path (clipped to the piece plus bleed),
-// names and numbers as letter outlines (traced from the chosen font in the
-// browser and passed in as `glyphs`). Logos stay pictures, as supplied.
+// names and numbers as letter outlines (the chosen font's own curves, read
+// from the font file in the browser and passed in as `glyphs`). Logos stay pictures, as supplied.
 
 import { PRODUCTS, SIZES, layoutPieces, pieceTransform } from './garments.ts';
 import type { Product, Piece, Placed } from './garments.ts';
 import { sheetPlacements, motifPath, layout, placedMotif } from './patterns.ts';
 import type { PatternSettings } from './patterns.ts';
 import { pathBox } from './pathFit.ts';
+import { boardLayout, pieceArt, type ArtEl } from './textile/art.ts';
 
 export type KitStyle = 'tshirt' | 'football' | 'cricket' | 'basketball' | 'polo';
 export const KIT_STYLES: { id: KitStyle; label: string; product: string }[] = [
@@ -63,6 +64,10 @@ export interface KitDesign {
   /** Polo placket: number of buttons (0 = hidden placket) and their colour. */
   placketButtons?: number; buttonColor?: string;
   neck?: 'round' | 'v';
+  /** Free artwork drawn on the flat print pieces in the print studio (board coordinates, size-M mm). */
+  art?: ArtEl[];
+  /** Hide the quick graphic / logos / standard name & number places when the print studio artwork replaces them. */
+  studioOnly?: boolean;
   // Positions on the front piece (size-M mm); unset = the standard place.
   teamLogoX?: number; teamLogoY?: number; teamLogoMm?: number;
   sponsorX?: number; sponsorY?: number; sponsorMm?: number;
@@ -187,16 +192,17 @@ export function placedText(d: string, cx: number, cy: number, h: number, maxW: n
   return { s, t: `translate(${r2(cx)} ${r2(cy)}) scale(${s}) translate(${r2(-(b.x + b.w / 2))} ${r2(-(b.y + b.h / 2))})` };
 }
 
-function textMarkup(text: string, glyphs: Glyphs, kit: KitDesign, color: string, cx: number, cy: number, h: number, maxW: number, k: number): string {
+function textMarkup(text: string, glyphs: Glyphs, kit: KitDesign, color: string, cx: number, cy: number, h: number, maxW: number, k: number, live = false): string {
   if (!text) return '';
-  const d = glyphs[text];
+  const d = live ? null : glyphs[text];
   const ow = (kit.outlineMm * 2) / k;
   if (d) {
     const { t, s } = placedText(d, cx, cy, h, maxW);
     // Outline first (thick stroke underneath), then the fill.
-    return `${kit.outlineMm > 0 ? `<path d="${d}" transform="${t}" fill="${kit.outlineColor}" stroke="${kit.outlineColor}" stroke-width="${r2(ow / s)}" stroke-linejoin="round" fill-rule="evenodd"/>` : ''}<path d="${d}" transform="${t}" fill="${color}" fill-rule="evenodd"/>`;
+    // Exact font outlines: nonzero winding, as the font defines its letters (connected script letters may overlap).
+    return `${kit.outlineMm > 0 ? `<path d="${d}" transform="${t}" fill="${kit.outlineColor}" stroke="${kit.outlineColor}" stroke-width="${r2(ow / s)}" stroke-linejoin="round"/>` : ''}<path d="${d}" transform="${t}" fill="${color}"/>`;
   }
-  // Fallback while outlines are being made: live text in the chosen font.
+  // Live (retypeable) text in the chosen font — also the fallback while outlines are being made.
   return `<text x="${r2(cx)}" y="${r2(cy)}" font-family="'${esc(kit.font)}', sans-serif" font-weight="${kit.fontWeight}" font-size="${r2(h * 1.35)}" text-anchor="middle" dominant-baseline="central" fill="${color}"${kit.outlineMm > 0 ? ` stroke="${kit.outlineColor}" stroke-width="${r2(ow)}" paint-order="stroke"` : ''}>${esc(text)}</text>`;
 }
 
@@ -293,7 +299,8 @@ export function backLayout(kit: KitDesign, w: number): { name: Box; number: Box 
 }
 
 /** One garment piece in its own local units (size-M millimetres), decorated for one player. */
-export function pieceMarkup(piece: Piece, kit: KitDesign, pat: PatternSettings, player: Player | null, glyphs: Glyphs, k: number, bleed: number): string {
+export type TextMode = 'outline' | 'live';
+export function pieceMarkup(piece: Piece, kit: KitDesign, pat: PatternSettings, player: Player | null, glyphs: Glyphs, k: number, bleed: number, textMode: TextMode = 'outline'): string {
   const r = role(piece.id);
   const fill = r === 'body' ? kit.body : r === 'sleeve' ? kit.sleeve : kit.collar;
   const b = bleed / k; // bleed in local units
@@ -304,23 +311,26 @@ export function pieceMarkup(piece: Piece, kit: KitDesign, pat: PatternSettings, 
   out.push(`<path d="${piece.d}" fill="${fill}" stroke="${fill}" stroke-width="${r2(2 * b)}" stroke-linejoin="round"/>`);
   const w = piece.w;
   const deco: string[] = [];
-  if (r === 'body') deco.push(graphicMarkup(kit, w, piece.h, b, piece.id === 'back'));
+  const studio = !!kit.studioOnly;
+  if (r === 'body' && !studio) deco.push(graphicMarkup(kit, w, piece.h, b, piece.id === 'back'));
   if (r === 'sleeve' && kit.cuffs && kit.graphic && kit.graphic !== 'plain') deco.push(`<rect x="${r2(-b - 2)}" y="${r2(piece.h - 34)}" width="${r2(w + 2 * b + 4)}" height="${r2(34 + b + 2)}" fill="${kit.accent || kit.collar}"/><rect x="${r2(-b - 2)}" y="${r2(piece.h - 46)}" width="${r2(w + 2 * b + 4)}" height="7" fill="${kit.accent2 || '#FFFFFF'}"/>`);
   const wantPattern = kit.patternOn === 'all' || (kit.patternOn === 'body' && r === 'body') || (kit.patternOn === 'sleeves' && r === 'sleeve');
   if (wantPattern) deco.push(`<g opacity="${kit.patternOpacity}"><g transform="translate(${r2(-b)} ${r2(-b)})">${patternPaths(pat, piece.w + 2 * b, piece.h + 2 * b, kit.repeatMm, k)}</g></g>`);
+  // Print-studio artwork: the board clipped to this piece (plus bleed).
+  if (kit.art?.length) deco.push(pieceArt(kit.art, boardLayout(kitProduct(kit)), piece.id, { textMode, vars: { name: player?.name ?? 'NAME', number: player?.number ?? '10', size: player?.size ?? 'M', team: kit.teamName }, uid: id }));
   if (deco.some(Boolean)) out.push(`<g clip-path="url(#${id})">${deco.join('')}</g>`);
-  const personal = kit.personalise !== false;
+  const personal = kit.personalise !== false && !studio;
   if (piece.id === 'back' && player && personal) {
-    out.push(textMarkup(player.name.toUpperCase(), glyphs, kit, kit.nameColor, w / 2, kit.nameTopMm + kit.nameMm / 2, kit.nameMm, w * 0.78, k));
-    out.push(textMarkup(player.number, glyphs, kit, kit.numberColor, w / 2, kit.numberTopMm + kit.numberMm / 2, kit.numberMm, w * 0.7, k));
+    out.push(textMarkup(player.name.toUpperCase(), glyphs, kit, kit.nameColor, w / 2, kit.nameTopMm + kit.nameMm / 2, kit.nameMm, w * 0.78, k, textMode === 'live'));
+    out.push(textMarkup(player.number, glyphs, kit, kit.numberColor, w / 2, kit.numberTopMm + kit.numberMm / 2, kit.numberMm, w * 0.7, k, textMode === 'live'));
   }
-  if (piece.id === 'front') {
+  if (piece.id === 'front' && !studio) {
     const logo = (href: string, x: number, y: number, bw: number, bh: number) => `<image href="${href}" x="${r2(x)}" y="${r2(y)}" width="${r2(bw)}" height="${r2(bh)}" preserveAspectRatio="xMidYMid meet"/>`;
     const L = frontLayout(kit, w);
     if (kit.teamLogo) out.push(logo(kit.teamLogo, L.teamLogo.x, L.teamLogo.y, L.teamLogo.w, L.teamLogo.h));
     if (kit.sponsorLogo) out.push(logo(kit.sponsorLogo, L.sponsor.x, L.sponsor.y, L.sponsor.w, L.sponsor.h));
-    if (kit.frontText && kit.frontText.trim()) out.push(textMarkup(kit.frontText.trim(), glyphs, { ...kit, outlineMm: 0 }, kit.frontTextColor || '#FFFFFF', L.frontText.x + L.frontText.w / 2, L.frontText.y + L.frontText.h / 2, L.frontText.h, L.frontText.w, k));
-    if (kit.frontNumber && player && personal) out.push(textMarkup(player.number, glyphs, kit, kit.numberColor, L.frontNum.x + L.frontNum.w / 2, L.frontNum.y + L.frontNum.h / 2, L.frontNum.h, L.frontNum.w, k));
+    if (kit.frontText && kit.frontText.trim()) out.push(textMarkup(kit.frontText.trim(), glyphs, { ...kit, outlineMm: 0 }, kit.frontTextColor || '#FFFFFF', L.frontText.x + L.frontText.w / 2, L.frontText.y + L.frontText.h / 2, L.frontText.h, L.frontText.w, k, textMode === 'live'));
+    if (kit.frontNumber && player && personal) out.push(textMarkup(player.number, glyphs, kit, kit.numberColor, L.frontNum.x + L.frontNum.w / 2, L.frontNum.y + L.frontNum.h / 2, L.frontNum.h, L.frontNum.w, k, textMode === 'live'));
   }
   return out.join('');
 }
@@ -358,8 +368,10 @@ export function kitMockupSvg(kit: KitDesign, pat: PatternSettings, player: Playe
   const sleeveAt = 'translate(-100 212) rotate(57.4) translate(-220 -228)';
   const sleeves = (_isBack: boolean) => {
     if (!sleeve) return '';
-    const one = `<g clip-path="url(#${sid}-sl)"><path d="${sleevePoly}" fill="${kit.sleeve}"/><g transform="${sleeveAt}">${pieceMarkup(sleeve, kit, pat, player, glyphs, k, 0)}</g><path d="${sleevePoly}" fill="url(#${sid}-sh)" opacity="0.5"/></g><path d="${sleevePoly}" fill="none" stroke="#000" stroke-opacity="0.12" stroke-width="2"/>${edit ? `<path class="mt-part" data-el="sleeve" d="${sleevePoly}" fill="transparent" stroke="${edit.selected === 'sleeve' ? '#3B82C4' : 'transparent'}" stroke-width="4"/>` : ''}`;
-    return `${one}<g transform="translate(${W} 0) scale(-1 1)">${one}</g>`;
+    const oneOf = (pc: Piece) => `<g clip-path="url(#${sid}-sl)"><path d="${sleevePoly}" fill="${kit.sleeve}"/><g transform="${sleeveAt}">${pieceMarkup(pc, kit, pat, player, glyphs, k, 0)}</g><path d="${sleevePoly}" fill="url(#${sid}-sh)" opacity="0.5"/></g><path d="${sleevePoly}" fill="none" stroke="#000" stroke-opacity="0.12" stroke-width="2"/>${edit ? `<path class="mt-part" data-el="sleeve" d="${sleevePoly}" fill="transparent" stroke="${edit.selected === 'sleeve' ? '#3B82C4' : 'transparent'}" stroke-width="4"/>` : ''}`;
+    // The right sleeve is its own piece (its print art is pre-mirrored, so mirroring it here reads right).
+    const right = product.pieces.find((p) => p.id === 'sleeve-r') || sleeve;
+    return `${oneOf(sleeve)}<g transform="translate(${W} 0) scale(-1 1)">${oneOf(right)}</g>`;
   };
   const neck = (p: Piece) => p.d.match(/^M[\d.]+ 0L[\d.]+ [\d.]+L[\d.]+ 0/)?.[0] || p.d.match(/^M[^L]*?(?=L)/)?.[0] || '';
   // Editor click targets: every part of the shirt and every element on it.
@@ -419,11 +431,11 @@ export function shade(hex: string, amt: number): string {
  * bleed, laid out on the roll, in millimetres (or pixels at 96 DPI with
  * `px: true`, which the PDF writer reads).
  */
-export function playerPrintSvg(kit: KitDesign, pat: PatternSettings, player: Player, glyphs: Glyphs, opts: { rollW: number; bleed: number; cutLines: boolean; px?: boolean }): { svg: string; width: number; height: number; placed: Placed[] } {
+export function playerPrintSvg(kit: KitDesign, pat: PatternSettings, player: Player, glyphs: Glyphs, opts: { rollW: number; bleed: number; cutLines: boolean; px?: boolean; textMode?: TextMode }): { svg: string; width: number; height: number; placed: Placed[] } {
   const product = kitProduct(kit);
   const sz = sizeInfo(kit, player.size) || { k: 1, label: player.size || 'M' };
   const { placed, height } = layoutPieces(product, sz.k, opts.rollW, opts.bleed);
-  const parts = placed.map((pl) => `<g transform="${pieceTransform(pl)}">${pieceMarkup(pl.piece, kit, pat, player, glyphs, pl.k, opts.bleed)}</g>`).join('');
+  const parts = placed.map((pl) => `<g transform="${pieceTransform(pl)}">${pieceMarkup(pl.piece, kit, pat, player, glyphs, pl.k, opts.bleed, opts.textMode)}</g>`).join('');
   const cuts = opts.cutLines ? `<g id="cut-lines" fill="none" stroke="#EC008C" stroke-width="0.5">${placed.map((pl) => `<path d="${pl.piece.d}" transform="${pieceTransform(pl)}" vector-effect="non-scaling-stroke"/>`).join('')}</g>` : '';
   const label = `<text x="15" y="${height - 4}" font-family="sans-serif" font-size="7" fill="#666">${esc(`${kit.teamName} · ${player.name} #${player.number} · size ${sz.label} · ${product.label} · ${opts.rollW} mm roll · bleed ${opts.bleed} mm`)}</text>`;
   const W = opts.rollW;
@@ -435,7 +447,7 @@ export function playerPrintSvg(kit: KitDesign, pat: PatternSettings, player: Pla
   return { svg, width: W, height, placed };
 }
 
-export interface SheetOptions { rollW: number; bleed: number; gap?: number; pageMm?: number; cutLines: boolean; group?: 'player' | 'fabric'; mirror?: boolean; px?: boolean }
+export interface SheetOptions { rollW: number; bleed: number; gap?: number; pageMm?: number; cutLines: boolean; group?: 'player' | 'fabric'; mirror?: boolean; px?: boolean; textMode?: TextMode }
 export interface SheetPage { svg: string; width: number; height: number; pieces: number }
 
 /** The garments to print: one per player, or (not personalised) one per quantity of each size. */
@@ -483,7 +495,7 @@ export function rosterSheets(kit: KitDesign, pat: PatternSettings, players: Play
   const out: SheetPage[] = pages.map((pg, n) => {
     const H = pg.height + 14;
     const flip = o.mirror ? ` transform="translate(${rollW} 0) scale(-1 1)"` : '';
-    const parts = pg.placed.map((pl) => `<g transform="${pieceTransform(pl)}">${pieceMarkup(pl.piece, kit, pat, pl.player, glyphs, pl.k, bleed)}</g>`).join('');
+    const parts = pg.placed.map((pl) => `<g transform="${pieceTransform(pl)}">${pieceMarkup(pl.piece, kit, pat, pl.player, glyphs, pl.k, bleed, o.textMode)}</g>`).join('');
     const cuts = o.cutLines ? `<g id="cut-lines" fill="none" stroke="#EC008C" stroke-width="0.5"${flip}>${pg.placed.map((pl) => `<path d="${pl.piece.d}" transform="${pieceTransform(pl)}" vector-effect="non-scaling-stroke"/>`).join('')}</g>` : '';
     const sz = (pl: Player) => sizeInfo(kit, pl.size)?.label || pl.size;
     const labels = `<g id="labels" font-family="Arial, Helvetica, sans-serif" font-size="6.5" fill="#444">${pg.placed.map((pl) => {

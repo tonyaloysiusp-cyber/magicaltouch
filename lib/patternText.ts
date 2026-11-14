@@ -1,13 +1,15 @@
-// Pattern Studio letters → vector outlines.
-// Any Google font from the editor's list is loaded through the site's own
-// font proxy, the word is drawn large on a canvas and traced into a smooth
-// outline, then fitted into the motif box (-50…50) like every other shape.
+// Pattern Studio / garment letters → vector outlines.
+// Any Google font from the editor's list is read from its real font file
+// (lib/fontOutline.ts, opentype.js) so every letter is the font's own curve
+// with its kerning. Only if the font file can't be read is the word drawn on
+// a canvas and traced as a fallback.
 // The result is real path data, so SVG, PDF, the editor and the garment
 // print files all get vectors — no font needed on the printer's computer.
 
 import { GOOGLE_FONTS, googleFontByName } from './editor/googleFonts.ts';
 import { trace } from './trace.ts';
 import { fitPath, pathBox } from './pathFit.ts';
+import { exactTextOutline } from './fontOutline.ts';
 
 export { fitPath, pathBox };
 
@@ -44,6 +46,8 @@ export function loadFace(family: string, weight: number, italic: boolean): Promi
 export async function textOutline(text: string, opts: { family: string; weight: number; italic: boolean; spacing?: number }): Promise<string | null> {
   const t = text.trim().slice(0, 12);
   if (!t) return null;
+  const exact = await exactTextOutline(t, { family: opts.family, weight: opts.weight, italic: opts.italic, spacing: opts.spacing, size: 320 });
+  if (exact) return fitPath(exact, pathBox(exact));
   const alias = await loadFace(opts.family, opts.weight, opts.italic);
   const fs = 320;
   const c = document.createElement('canvas');
