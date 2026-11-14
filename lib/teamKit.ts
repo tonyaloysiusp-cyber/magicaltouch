@@ -525,7 +525,7 @@ export function rosterSheets(kit: KitDesign, pat: PatternSettings, players: Play
     flush();
   } else for (const it of items) {
     const Wd = it.w + 2 * bleed, Hd = it.h + 2 * bleed + LAB;
-    const newRow = (x + Wd + gap > rollW && x > gap) || (o.group !== 'fabric' && lastIdx >= 0 && it.idx !== lastIdx && x > gap);
+    const newRow = (x + Wd + gap > rollW && x > gap) || (lastIdx >= 0 && it.idx !== lastIdx && x > gap);
     if (newRow) { x = gap; y += rowH + gap; rowH = 0; }
     if (y + Hd + gap > pageMax && cur.length) close();
     cur.push({ piece: it.piece, x: x + bleed, y: y + LAB + bleed, w: it.w, h: it.h, k: it.k, copy: it.copy, rot: it.rot, tooWide: it.tooWide, player: it.player, idx: it.idx });
