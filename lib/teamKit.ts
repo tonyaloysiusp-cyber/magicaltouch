@@ -300,6 +300,13 @@ export function backLayout(kit: KitDesign, w: number): { name: Box; number: Box 
 
 /** One garment piece in its own local units (size-M millimetres), decorated for one player. */
 export type TextMode = 'outline' | 'live';
+/** Whether the standard name / number are drawn: not when the print-studio artwork has its own {NAME} / {NUMBER} (hidden layers count, so hiding one does not bring the standard one back). */
+export function stdLettering(kit: KitDesign): { name: boolean; number: boolean } {
+  const texts: string[] = [];
+  const walk = (l: ArtEl[]) => l.forEach((e: any) => { if (e.kind === 'text') texts.push(String(e.text)); else if (e.kind === 'group') walk(e.els); });
+  walk(kit.art || []);
+  return { name: !texts.some((t) => /\{NAME\}/i.test(t)), number: !texts.some((t) => /\{NUMBER\}/i.test(t)) };
+}
 export function pieceMarkup(piece: Piece, kit: KitDesign, pat: PatternSettings, player: Player | null, glyphs: Glyphs, k: number, bleed: number, textMode: TextMode = 'outline'): string {
   const r = role(piece.id);
   const fill = r === 'body' ? kit.body : r === 'sleeve' ? kit.sleeve : kit.collar;
@@ -320,9 +327,11 @@ export function pieceMarkup(piece: Piece, kit: KitDesign, pat: PatternSettings, 
   if (kit.art?.length) deco.push(pieceArt(kit.art, boardLayout(kitProduct(kit)), piece.id, { textMode, vars: { name: player?.name ?? 'NAME', number: player?.number ?? '10', size: player?.size ?? 'M', team: kit.teamName }, uid: id }));
   if (deco.some(Boolean)) out.push(`<g clip-path="url(#${id})">${deco.join('')}</g>`);
   const personal = kit.personalise !== false && !studio;
+  // Print-studio lettering replaces the standard name / number (never both at once).
+  const std = stdLettering(kit);
   if (piece.id === 'back' && player && personal) {
-    out.push(textMarkup(player.name.toUpperCase(), glyphs, kit, kit.nameColor, w / 2, kit.nameTopMm + kit.nameMm / 2, kit.nameMm, w * 0.78, k, textMode === 'live'));
-    out.push(textMarkup(player.number, glyphs, kit, kit.numberColor, w / 2, kit.numberTopMm + kit.numberMm / 2, kit.numberMm, w * 0.7, k, textMode === 'live'));
+    if (std.name) out.push(textMarkup(player.name.toUpperCase(), glyphs, kit, kit.nameColor, w / 2, kit.nameTopMm + kit.nameMm / 2, kit.nameMm, w * 0.78, k, textMode === 'live'));
+    if (std.number) out.push(textMarkup(player.number, glyphs, kit, kit.numberColor, w / 2, kit.numberTopMm + kit.numberMm / 2, kit.numberMm, w * 0.7, k, textMode === 'live'));
   }
   if (piece.id === 'front' && !studio) {
     const logo = (href: string, x: number, y: number, bw: number, bh: number) => `<image href="${href}" x="${r2(x)}" y="${r2(y)}" width="${r2(bw)}" height="${r2(bh)}" preserveAspectRatio="xMidYMid meet"/>`;
@@ -330,7 +339,7 @@ export function pieceMarkup(piece: Piece, kit: KitDesign, pat: PatternSettings, 
     if (kit.teamLogo) out.push(logo(kit.teamLogo, L.teamLogo.x, L.teamLogo.y, L.teamLogo.w, L.teamLogo.h));
     if (kit.sponsorLogo) out.push(logo(kit.sponsorLogo, L.sponsor.x, L.sponsor.y, L.sponsor.w, L.sponsor.h));
     if (kit.frontText && kit.frontText.trim()) out.push(textMarkup(kit.frontText.trim(), glyphs, { ...kit, outlineMm: 0 }, kit.frontTextColor || '#FFFFFF', L.frontText.x + L.frontText.w / 2, L.frontText.y + L.frontText.h / 2, L.frontText.h, L.frontText.w, k, textMode === 'live'));
-    if (kit.frontNumber && player && personal) out.push(textMarkup(player.number, glyphs, kit, kit.numberColor, L.frontNum.x + L.frontNum.w / 2, L.frontNum.y + L.frontNum.h / 2, L.frontNum.h, L.frontNum.w, k, textMode === 'live'));
+    if (kit.frontNumber && player && personal && std.number) out.push(textMarkup(player.number, glyphs, kit, kit.numberColor, L.frontNum.x + L.frontNum.w / 2, L.frontNum.y + L.frontNum.h / 2, L.frontNum.h, L.frontNum.w, k, textMode === 'live'));
   }
   return out.join('');
 }
@@ -386,11 +395,11 @@ export function kitMockupSvg(kit: KitDesign, pat: PatternSettings, player: Playe
     let o = part('body', piece.d) + `<path class="mt-part" data-el="collar" d="${neck(piece)}" fill="none" stroke="${sel === 'collar' ? '#3B82C4' : 'transparent'}" stroke-width="34" stroke-opacity="${sel === 'collar' ? 0.35 : 1}" pointer-events="stroke"/>`;
     const personal = kit.personalise !== false;
     if (isBack) {
-      if (personal) { const B = backLayout(kit, piece.w); o += box('name', B.name) + box('number', B.number); }
+      if (personal) { const B = backLayout(kit, piece.w); const sl = stdLettering(kit); o += (sl.name ? box('name', B.name) : '') + (sl.number ? box('number', B.number) : ''); }
     } else {
       const L = frontLayout(kit, piece.w);
       o += box('teamLogo', L.teamLogo, '+ Logo', !kit.teamLogo) + box('sponsor', L.sponsor, '+ Sponsor / print', !kit.sponsorLogo) + box('frontText', L.frontText, '+ Text', !(kit.frontText || '').trim());
-      if (kit.frontNumber && personal) o += box('frontNum', L.frontNum);
+      if (kit.frontNumber && personal && stdLettering(kit).number) o += box('frontNum', L.frontNum);
     }
     return o;
   };

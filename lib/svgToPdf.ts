@@ -165,7 +165,7 @@ function styleOf(n: Node): Record<string, string> {
   return o;
 }
 
-interface Ctx { m: Mat; fill: string; stroke: string; sw: number; op: number; fop: number; sop: number; rule: string; join: string; cap: string; font: number; anchor: string; family?: string; weight?: string; style?: string; spacing?: number; paintOrder?: string }
+interface Ctx { m: Mat; fill: string; stroke: string; sw: number; op: number; fop: number; sop: number; rule: string; join: string; cap: string; font: number; anchor: string; family?: string; weight?: string; style?: string; spacing?: number; paintOrder?: string; dash?: number[] }
 
 // ---------------------------------------------------------------- render
 
@@ -226,6 +226,7 @@ function inherit(n: Node, c: Ctx): Ctx {
   if (g('font-style') !== undefined) o.style = g('font-style')!;
   if (g('letter-spacing') !== undefined) o.spacing = parseFloat(g('letter-spacing')!) || 0;
   if (g('paint-order') !== undefined) o.paintOrder = g('paint-order')!;
+  if (g('stroke-dasharray') !== undefined) { const v = g('stroke-dasharray')!; o.dash = v === 'none' ? undefined : v.split(/[\s,]+/).map(Number).filter((x) => x > 0); }
   o.op = c.op; // group opacity is applied with a graphics state, not multiplied in
   return o;
 }
@@ -341,8 +342,10 @@ function paintShape(pdf: PdfLike, segs: Seg[], c: Ctx, defs: Map<string, Node>, 
       pdf.setLineWidth(c.sw * det);
       pdf.setLineJoin?.(c.join === 'round' ? 'round' : c.join === 'bevel' ? 'bevel' : 'miter');
       pdf.setLineCap?.(c.cap === 'round' ? 'round' : c.cap === 'square' ? 'square' : 'butt');
+      if (c.dash && c.dash.length) (pdf as any).setLineDashPattern?.(c.dash.map((v) => v * det), 0);
       emit(pdf, segs, c.m);
       pdf.stroke();
+      if (c.dash && c.dash.length) (pdf as any).setLineDashPattern?.([], 0);
     });
   }
   stats.paths++;

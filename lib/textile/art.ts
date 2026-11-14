@@ -23,13 +23,23 @@ export type Fill =
   | { type: 'linear' | 'radial'; stops: [number, string][]; angle?: number }
   | { type: 'pattern'; pattern: PatternSettings; tileMm: number; assetId?: string | null; name?: string; bg?: string | null };
 
-interface Base { id: string; name?: string; hidden?: boolean; locked?: boolean; opacity?: number; m: Mat }
+interface Base {
+  id: string; name?: string; hidden?: boolean; locked?: boolean; opacity?: number; m: Mat;
+  /** Dashed outline (mm lengths). */
+  dash?: number[] | null;
+  /** Second, outer outline behind the first (the classic double outline on numbers). */
+  stroke2?: { color: string; width: number } | null;
+  /** Hard drop shadow (offset in mm on the board, solid colour — prints as a vector copy). */
+  shadow?: { dx: number; dy: number; color: string } | null;
+}
 export type ArtEl = Base & (
   | { kind: 'rect'; w: number; h: number; rx?: number; fill?: Fill | null; stroke?: string | null; strokeW?: number }
   | { kind: 'ellipse'; rx: number; ry: number; fill?: Fill | null; stroke?: string | null; strokeW?: number }
   | { kind: 'path'; d: string; w: number; h: number; fill?: Fill | null; stroke?: string | null; strokeW?: number; rule?: 'nonzero' | 'evenodd' }
   | { kind: 'image'; src: string; w: number; h: number }
-  | { kind: 'text'; text: string; font: string; weight: number; italic?: boolean; size: number; fill?: Fill | null; stroke?: string | null; strokeW?: number; spacing?: number; align?: 'left' | 'center' | 'right'; lineHeight?: number; upper?: boolean; fitW?: number }
+  | { kind: 'text'; text: string; font: string; weight: number; italic?: boolean; size: number; fill?: Fill | null; stroke?: string | null; strokeW?: number; spacing?: number; align?: 'left' | 'center' | 'right'; lineHeight?: number; upper?: boolean; fitW?: number; arc?: number }
+  /** Group: children are placed in the group's space. With `clip`, the first child is a clipping mask for the rest. */
+  | { kind: 'group'; els: ArtEl[]; clip?: boolean }
 );
 
 export interface TextShapeLike { d: string; width: number; ascender: number; descender: number; capHeight: number }
@@ -68,29 +78,57 @@ export function fillVars(text: string, v: Vars = {}, upper = false): string {
   return upper ? t.toUpperCase() : t;
 }
 
-export interface TextLayout { lines: { text: string; x: number; baseline: number; width: number }[]; w: number; h: number; d: string; sx: number }
-/** Lays out a text element centred on its origin. Outline path `d` is in local units (already squeezed by `sx` when it must fit `fitW`). */
+export interface TextPart { d: string; m: Mat }
+export interface TextLayout { lines: { text: string; x: number; baseline: number; width: number; chars?: { ch: string; m: Mat }[] }[]; w: number; h: number; parts: TextPart[]; d: string; sx: number }
+const matT = (m: Mat) => `matrix(${m.map(r3).join(' ')})`;
+const rotDeg = (deg: number): Mat => { const a = (deg * Math.PI) / 180, c = Math.cos(a), s2 = Math.sin(a); return [c, s2, -s2, c, 0, 0]; };
+/** Lays out a text element centred on its origin. Outline parts are in local units (before the `sx` squeeze used when it must fit `fitW`). */
 export function layoutText(el: Extract<ArtEl, { kind: 'text' }>, o: RenderOpts): TextLayout {
   const raw = fillVars(el.text, o.vars, !!el.upper);
+  const shape = (t: string) => (o.shaper ? o.shaper(el.font, el.weight, !!el.italic, t, el.size, el.spacing || 0) : null);
+  const arc = el.arc && Math.abs(el.arc) >= 1 ? Math.max(-300, Math.min(300, el.arc)) : 0;
+  if (arc) {
+    // Curved text: one line, every letter on a circle, upright to the curve.
+    const t = raw.replace(/\n/g, ' ');
+    const full = shape(t);
+    const W = full?.width ?? t.length * el.size * 0.55;
+    const cap = full?.capHeight ?? el.size * 0.7;
+    const R = W / ((Math.abs(arc) * Math.PI) / 180);
+    const sgn = Math.sign(arc);
+    const chars: { ch: string; m: Mat }[] = [];
+    const parts: TextPart[] = [];
+    const sag = R * (1 - Math.cos(((Math.abs(arc) / 2) * Math.PI) / 180));
+    [...t].forEach((ch, i) => {
+      const x0 = i ? (shape(t.slice(0, i))?.width ?? i * el.size * 0.55) : 0;
+      const cw = (shape(ch)?.width ?? el.size * 0.55);
+      const th = (x0 + cw / 2 - W / 2) / R;
+      const px = R * Math.sin(th), py = sgn * R * (1 - Math.cos(th)) - sgn * sag / 2;
+      const m = mulM(mulM(translateM(px, py), rotDeg((sgn * th * 180) / Math.PI)), translateM(-cw / 2, cap / 2));
+      chars.push({ ch, m });
+      const g = shape(ch);
+      if (g?.d && ch.trim()) parts.push({ d: g.d, m });
+    });
+    return { lines: [{ text: t, x: -W / 2, baseline: cap / 2, width: W, chars }], w: 2 * R * Math.sin(Math.min(Math.PI / 2, ((Math.abs(arc) / 2) * Math.PI) / 180)) + cap, h: sag + cap, parts, d: parts.map((p) => `<path d="${p.d}" transform="${matT(p.m)}"/>`).join(''), sx: 1 };
+  }
   const lines = raw.split('\n');
   const lh = el.size * (el.lineHeight || 1.15);
-  const shapes = lines.map((t) => (o.shaper ? o.shaper(el.font, el.weight, !!el.italic, t, el.size, el.spacing || 0) : null));
+  const shapes = lines.map((t) => shape(t));
   const widths = lines.map((t, i) => shapes[i]?.width ?? t.length * el.size * 0.55);
   const cap = shapes.find(Boolean)?.capHeight ?? el.size * 0.7;
   const w = Math.max(1, ...widths);
   const h = (lines.length - 1) * lh + cap;
   const sx = el.fitW && w > el.fitW ? el.fitW / w : 1;
   const out: TextLayout['lines'] = [];
-  const parts: string[] = [];
+  const parts: TextPart[] = [];
   lines.forEach((t, i) => {
     const lw = widths[i];
     const x = el.align === 'left' ? -w / 2 : el.align === 'right' ? w / 2 - lw : -lw / 2;
     const baseline = -h / 2 + cap + i * lh;
     out.push({ text: t, x, baseline, width: lw });
-    const s = shapes[i];
-    if (s?.d) parts.push(`<path d="${s.d}" transform="translate(${r3(x)} ${r3(baseline)})"/>`);
+    const s2 = shapes[i];
+    if (s2?.d) parts.push({ d: s2.d, m: translateM(x, baseline) });
   });
-  return { lines: out, w: w * sx, h, d: parts.join(''), sx };
+  return { lines: out, w: w * sx, h, parts, d: parts.map((p) => `<path d="${p.d}" transform="translate(${r3(p.m[4])} ${r3(p.m[5])})"/>`).join(''), sx };
 }
 
 function gradDef(id: string, f: Extract<Fill, { type: 'linear' | 'radial' }>): string {
@@ -113,8 +151,28 @@ function patternTiles(f: Extract<Fill, { type: 'pattern' }>, box: { x: number; y
   return `${bg ? `<rect x="${r3(box.x)}" y="${r3(box.y)}" width="${r3(box.w)}" height="${r3(box.h)}" fill="${bg}"/>` : ''}<g transform="translate(${r3(box.x)} ${r3(box.y)}) scale(${r3(s)})">${places.map((q) => placedMotif(p, d, q)).join('')}</g>`;
 }
 
+/** Geometry only (for clipping masks and outer outlines / shadows): the element's shape, no paint. */
+function shapeOnly(el: ArtEl, o: RenderOpts): string {
+  if (el.kind === 'rect') return `<rect x="${r3(-el.w / 2)}" y="${r3(-el.h / 2)}" width="${r3(el.w)}" height="${r3(el.h)}"${el.rx ? ` rx="${r3(el.rx)}"` : ''}/>`;
+  if (el.kind === 'ellipse') return `<ellipse cx="0" cy="0" rx="${r3(el.rx)}" ry="${r3(el.ry)}"/>`;
+  if (el.kind === 'path') return `<path d="${el.d}"/>`;
+  if (el.kind === 'image') return `<rect x="${r3(-el.w / 2)}" y="${r3(-el.h / 2)}" width="${r3(el.w)}" height="${r3(el.h)}"/>`;
+  if (el.kind === 'text') { const L = layoutText(el, o); return L.sx !== 1 ? `<g transform="scale(${r3(L.sx)} 1)">${L.d}</g>` : L.d; }
+  if (el.kind === 'group') return el.els.filter((e) => !e.hidden).map((c) => `<g transform="${matStr(c.m)}">${shapeOnly(c, o)}</g>`).join('');
+  return '';
+}
+
 /** One element in local coordinates (no matrix) — shape with its fill. */
 function elementBody(el: ArtEl, o: RenderOpts, id: string): string {
+  if (el.kind === 'group') {
+    const kids = el.els.filter((e) => !e.hidden);
+    if (el.clip && kids.length > 1) {
+      const [mask, ...rest] = kids;
+      const cid = `${id}-m`;
+      return `<defs><clipPath id="${cid}"><g transform="${matStr(mask.m)}">${shapeOnly(mask, o)}</g></clipPath></defs><g clip-path="url(#${cid})">${renderArt(rest, [1, 0, 0, 1, 0, 0], { ...o, uid: `${id}g` })}</g>`;
+    }
+    return renderArt(kids, [1, 0, 0, 1, 0, 0], { ...o, uid: `${id}g` });
+  }
   if (el.kind === 'image') return `<image href="${el.src}" x="${r3(-el.w / 2)}" y="${r3(-el.h / 2)}" width="${r3(el.w)}" height="${r3(el.h)}" preserveAspectRatio="none"/>`;
   let shape = '', box = { x: 0, y: 0, w: 0, h: 0 }, rule = 'nonzero', textLive = '';
   if (el.kind === 'rect') { shape = `<rect x="${r3(-el.w / 2)}" y="${r3(-el.h / 2)}" width="${r3(el.w)}" height="${r3(el.h)}"${el.rx ? ` rx="${r3(el.rx)}"` : ''}/>`; box = { x: -el.w / 2, y: -el.h / 2, w: el.w, h: el.h }; }
@@ -129,12 +187,16 @@ function elementBody(el: ArtEl, o: RenderOpts, id: string): string {
     if ((o.textMode === 'live' && !patterned) || !L.d) {
       const fam = `'${el.font.replace(/'/g, '')}', sans-serif`;
       const ls = el.spacing ? ` letter-spacing="${r3(el.spacing * el.size)}"` : '';
-      textLive = `<g${squeeze}>${L.lines.map((ln) => `<text x="${r3(ln.x)}" y="${r3(ln.baseline)}" font-family="${esc(fam)}" font-size="${r3(el.size)}" font-weight="${el.weight}"${el.italic ? ' font-style="italic"' : ''}${ls} xml:space="preserve">${esc(ln.text)}</text>`).join('')}</g>`;
+      const attrs = `font-family="${esc(fam)}" font-size="${r3(el.size)}" font-weight="${el.weight}"${el.italic ? ' font-style="italic"' : ''}`;
+      textLive = `<g${squeeze}>${L.lines.map((ln) => ln.chars
+        ? ln.chars.filter((c) => c.ch.trim()).map((c) => `<text transform="${matT(c.m)}" x="0" y="0" ${attrs}>${esc(c.ch)}</text>`).join('')
+        : `<text x="${r3(ln.x)}" y="${r3(ln.baseline)}" ${attrs}${ls} xml:space="preserve">${esc(ln.text)}</text>`).join('')}</g>`;
     } else shape = `<g${squeeze}>${L.d}</g>`;
   }
   const f = (el as any).fill as Fill | null | undefined;
   const stroke = (el as any).stroke as string | null | undefined, sw = (el as any).strokeW as number | undefined;
-  const strokeAttr = stroke && sw ? ` stroke="${stroke}" stroke-width="${r3(sw)}" stroke-linejoin="round" paint-order="stroke"` : '';
+  const dash = el.dash && el.dash.length ? ` stroke-dasharray="${el.dash.map(r3).join(' ')}"` : '';
+  const strokeAttr = stroke && sw ? ` stroke="${stroke}" stroke-width="${r3(sw)}" stroke-linejoin="round" paint-order="stroke"${dash}` : '';
   const body = textLive || shape;
   if (!f) return `<g fill="none"${strokeAttr}>${body}</g>`;
   if (typeof f === 'string') return `<g fill="${f}" fill-rule="${rule}"${strokeAttr}>${body}</g>`;
@@ -164,7 +226,11 @@ export function renderArt(els: ArtEl[], pre: Mat, o: RenderOpts = {}): string {
   if (o.shaper === undefined) o = { ...o, shaper: defaultShaper };
   return els.filter((e) => !e.hidden).map((el, i) => {
     const m = mulM(pre, el.m);
-    return `<g transform="${matStr(m)}"${el.opacity != null && el.opacity < 1 ? ` opacity="${r3(el.opacity)}"` : ''}>${elementBody(el, o, `${uid}-${i}`)}</g>`;
+    const op = el.opacity != null && el.opacity < 1 ? ` opacity="${r3(el.opacity)}"` : '';
+    // Shadow: a solid copy offset on the board (drawn first); outer outline: the shape stroked wider, behind.
+    const sh = el.shadow && (el.shadow.dx || el.shadow.dy) ? `<g transform="${matStr(mulM(mulM(pre, translateM(el.shadow.dx, el.shadow.dy)), el.m))}" fill="${el.shadow.color}"${(el as any).strokeW ? ` stroke="${el.shadow.color}" stroke-width="${r3((el as any).strokeW + (el.stroke2 ? 2 * el.stroke2.width : 0))}" stroke-linejoin="round"` : ''}>${shapeOnly(el, o)}</g>` : '';
+    const s2 = el.stroke2 && el.stroke2.width > 0 ? `<g transform="${matStr(m)}" fill="${el.stroke2.color}" stroke="${el.stroke2.color}" stroke-width="${r3(((el as any).stroke && (el as any).strokeW ? (el as any).strokeW : 0) + 2 * el.stroke2.width)}" stroke-linejoin="round">${shapeOnly(el, o)}</g>` : '';
+    return `<g${op}>${sh}${s2}<g transform="${matStr(m)}">${elementBody(el, o, `${uid}-${i}`)}</g></g>`;
   }).join('');
 }
 
@@ -179,7 +245,8 @@ export function pieceArt(els: ArtEl[], board: Board, pieceId: string, o: RenderO
 /** Every distinct font face the artwork uses (to load before rendering). */
 export function artFonts(els: ArtEl[]): { font: string; weight: number; italic: boolean }[] {
   const seen = new Map<string, { font: string; weight: number; italic: boolean }>();
-  for (const e of els) if (e.kind === 'text') seen.set(`${e.font}|${e.weight}|${e.italic ? 1 : 0}`, { font: e.font, weight: e.weight, italic: !!e.italic });
+  const walk = (list: ArtEl[]) => { for (const e of list) { if (e.kind === 'text') seen.set(`${e.font}|${e.weight}|${e.italic ? 1 : 0}`, { font: e.font, weight: e.weight, italic: !!e.italic }); else if (e.kind === 'group') walk(e.els); } };
+  walk(els);
   return [...seen.values()];
 }
 /** Every text string the artwork produces for these garments (for outline caching). */

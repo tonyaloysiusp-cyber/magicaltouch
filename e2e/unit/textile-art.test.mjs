@@ -59,3 +59,22 @@ test('teamKit draws studio art on the print pieces and the print file', () => {
   assert.match(live.svg, />23<\/text>/);
   setShaper(null);
 });
+
+test('curved text, groups with clipping masks, double outline, shadow, dashes', () => {
+  const t = { id: 'c', kind: 'text', text: 'CLUB', font: 'Oswald', weight: 700, size: 40, fill: '#000', arc: 90, m: [1, 0, 0, 1, 0, 0] };
+  const L = layoutText(t, { shaper });
+  assert.equal(L.lines[0].chars.length, 4);
+  assert.notEqual(L.lines[0].chars[0].m[1], 0, 'first letter is turned');
+  const live = renderArt([t], [1, 0, 0, 1, 0, 0], { shaper, textMode: 'live' });
+  assert.equal((live.match(/<text /g) || []).length, 4);
+  const g = { id: 'g', kind: 'group', clip: true, m: [1, 0, 0, 1, 100, 100], els: [
+    { id: 'mask', kind: 'ellipse', rx: 50, ry: 50, m: [1, 0, 0, 1, 0, 0] },
+    { id: 'r', kind: 'rect', w: 300, h: 300, fill: '#f00', m: [1, 0, 0, 1, 0, 0] } ] };
+  const gs = renderArt([g], [1, 0, 0, 1, 0, 0], { shaper });
+  assert.match(gs, /<clipPath id="[^"]+-m"><g transform="matrix\(1 0 0 1 0 0\)"><ellipse/);
+  const n = renderArt([{ id: 'n', kind: 'text', text: '9', font: 'Oswald', weight: 700, size: 200, fill: '#fff', stroke: '#000', strokeW: 4, stroke2: { color: '#ffcc00', width: 3 }, shadow: { dx: 4, dy: 4, color: '#333333' }, dash: null, m: [1, 0, 0, 1, 0, 0] }], [1, 0, 0, 1, 0, 0], { shaper });
+  assert.match(n, /stroke="#ffcc00" stroke-width="10"/);
+  assert.match(n, /matrix\(1 0 0 1 4 4\)" fill="#333333"/);
+  const d = renderArt([{ id: 'd', kind: 'rect', w: 10, h: 10, stroke: '#000', strokeW: 1, dash: [3, 2], m: [1, 0, 0, 1, 0, 0] }], [1, 0, 0, 1, 0, 0]);
+  assert.match(d, /stroke-dasharray="3 2"/);
+});
