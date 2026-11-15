@@ -1003,7 +1003,7 @@ scenarios.push({
     await rep.click({ timeout: 30000 });
     t.check('diamond repeat selected', (await rep.getAttribute('aria-pressed')) === 'true');
     const views = t.page.getByRole('radiogroup', { name: 'Repeat view' });
-    for (const [label, size] of [['1 tile', /^contain$/], ['3 × 3', /^33\.3+\d*% auto$/], ['5 × 5', /^20% auto$/]]) {
+    for (const [label, size] of [['1 tile', /^contain$/], ['3 × 3', /^33\.3+\d*%( auto)?$/], ['5 × 5', /^20%( auto)?$/]]) {
       await views.getByRole('radio', { name: label }).click();
       const bs = await t.page.getByRole('img', { name: 'Pattern preview' }).evaluate((el) => el.style.backgroundSize);
       t.check(`repeat view ${label}`, size.test(bs), bs);
