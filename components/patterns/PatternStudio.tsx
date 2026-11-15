@@ -114,7 +114,13 @@ export function PatternStudio() {
   const tile = useMemo(() => tileSvg(p), [p]);
   const { w: tw, h: th } = useMemo(() => layout(p), [p]);
   const tileUrl = useMemo(() => svgDataUrl(tile), [tile]);
-  const bg = { backgroundImage: `url("${tileUrl}")`, backgroundSize: `${tw}px ${th}px`, backgroundColor: p.background };
+  // Repeat check: one tile, 2 × 2, 3 × 3, 5 × 5 — or the real size.
+  const [repView, setRepView] = useState<0 | 1 | 2 | 3 | 5>(0);
+  const bg = repView === 0
+    ? { backgroundImage: `url("${tileUrl}")`, backgroundSize: `${tw}px ${th}px`, backgroundColor: p.background }
+    : repView === 1
+      ? { backgroundImage: `url("${tileUrl}")`, backgroundSize: 'contain', backgroundRepeat: 'no-repeat', backgroundPosition: 'center', backgroundColor: 'transparent' }
+      : { backgroundImage: `url("${tileUrl}")`, backgroundSize: `${100 / repView}% auto`, backgroundRepeat: 'repeat', backgroundPosition: '0 0', backgroundColor: p.background };
   const radial = p.repeat === 'radial' || p.repeat === 'kaleidoscope';
   const scattered = p.repeat === 'random' || p.repeat === 'organic';
 
@@ -351,7 +357,7 @@ export function PatternStudio() {
           </div>
         </section>
 
-        <button type="button" onClick={() => setP(DEFAULT_PATTERN)} className="text-[13px] text-mt-muted inline-flex items-center gap-1.5 hover:text-mt-ink"><RotateCcw size={13} /> Start again</button>
+        <button type="button" onClick={() => { if (window.confirm('Start from the default pattern? Patterns you saved in My patterns are not changed.')) { setP(DEFAULT_PATTERN); setEditingId(null); } }} className="text-[13px] text-mt-muted inline-flex items-center gap-1.5 hover:text-mt-ink"><RotateCcw size={13} /> Start from default (new pattern)</button>
       </aside>
 
       {/* Preview, export, mockups */}
@@ -363,6 +369,9 @@ export function PatternStudio() {
           )}
           <div className="absolute left-3 top-3 flex gap-2">
             <button type="button" onClick={() => setShowTile((v) => !v)} aria-pressed={showTile} className="h-9 px-3 rounded-full bg-white/90 text-[#0B0B0F] text-[12px] font-semibold inline-flex items-center gap-1.5 shadow backdrop-blur"><Grid3x3 size={14} /> {showTile ? 'Hide tile edges' : 'Show tile edges'}</button>
+          </div>
+          <div className="absolute left-3 bottom-3 flex gap-1 rounded-full bg-white/90 p-1 shadow" role="radiogroup" aria-label="Repeat view">
+            {([[0, 'Actual size'], [1, '1 tile'], [2, '2 × 2'], [3, '3 × 3'], [5, '5 × 5']] as const).map(([v, l]) => <button key={v} type="button" role="radio" aria-checked={repView === v} onClick={() => setRepView(v)} className={`h-7 px-2.5 rounded-full text-[11.5px] font-semibold ${repView === v ? 'bg-[#0B0B0F] text-white' : 'text-[#0B0B0F]'}`}>{l}</button>)}
           </div>
           <span className="absolute right-3 top-3 rounded-full bg-black/60 px-2.5 py-1 text-[11px] font-semibold text-white">Tile {Math.round(tw)} × {Math.round(th)} px · seamless</span>
         </div>

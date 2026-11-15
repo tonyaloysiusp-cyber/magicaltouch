@@ -8,12 +8,13 @@
 
 import { PATTERN_MOTIFS, MOTIF_CATEGORIES } from './patternMotifs.ts';
 
-export type RepeatType = 'grid' | 'brick' | 'half-drop' | 'mirror' | 'rotational' | 'radial' | 'kaleidoscope' | 'geometric' | 'organic' | 'random';
+export type RepeatType = 'grid' | 'brick' | 'half-drop' | 'diamond' | 'mirror' | 'rotational' | 'radial' | 'kaleidoscope' | 'geometric' | 'organic' | 'random';
 
 export const REPEATS: { id: RepeatType; label: string; hint: string }[] = [
   { id: 'grid', label: 'Grid', hint: 'Straight rows and columns' },
   { id: 'brick', label: 'Brick', hint: 'Every other row shifted by half' },
   { id: 'half-drop', label: 'Half-drop', hint: 'Every other column dropped by half' },
+  { id: 'diamond', label: 'Diamond', hint: 'Motifs on a diamond lattice, turned 45°' },
   { id: 'mirror', label: 'Mirror', hint: 'Flipped left–right and up–down' },
   { id: 'rotational', label: 'Rotational', hint: 'Turned 90° in each quarter' },
   { id: 'radial', label: 'Radial', hint: 'A ring of motifs around a centre' },
@@ -137,6 +138,11 @@ function baseLayout(p: PatternSettings): { w: number; h: number; places: Place[]
     case 'brick': {
       const off = cw * p.offset;
       return { w: cw, h: ch * 2, places: [P(cw / 2, ch / 2, {}, 0), ...wrapX([P(cw / 2 + off, ch * 1.5, {}, 1)], cw)] };
+    }
+    case 'diamond': {
+      // Diamond lattice: one motif at the centre of the tile and one at its corners, each turned 45°.
+      const r = (base.r || 0) + 45;
+      return { w: cw, h: ch, places: [P(cw / 2, ch / 2, { r }, 0), P(0, 0, { r }, 1), P(cw, 0, { r }, 1), P(0, ch, { r }, 1), P(cw, ch, { r }, 1)] };
     }
     case 'half-drop': {
       const off = ch * p.offset;

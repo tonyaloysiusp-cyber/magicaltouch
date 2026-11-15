@@ -411,12 +411,12 @@ scenarios.push(
       const at = await toScreen(t, 400, 340);
       await t.page.mouse.click(at.x, at.y);
       await t.page.waitForTimeout(600);
-      const panelOpen = await t.page.getByLabel('Shear X', { exact: true }).count();
+      const panelOpen = await t.page.getByLabel(/^Shear X/).count();
       if (!panelOpen) { const b = t.page.getByRole('button', { name: /Properties/ }).first(); if (await b.count()) await b.click(); await t.page.waitForTimeout(400); }
       const seen = await t.eval(() => ({ active: window.__fabricCanvas.getActiveObject()?.type || null, mode: localStorage.getItem('mt:editorMode'), w: innerWidth, labels: [...document.querySelectorAll('label')].map((l) => l.textContent.trim().slice(0, 18)).filter(Boolean).slice(0, 60) }));
-      t.check('properties panel shows transform fields', (await t.page.getByLabel('Shear X', { exact: true }).count()) > 0, JSON.stringify(seen));
-      if (!(await t.page.getByLabel('Shear X', { exact: true }).count())) return;
-      const set = async (label, v) => { const f = t.page.getByLabel(label, { exact: true }).first(); await f.fill(String(v)); await f.press('Enter'); await t.page.waitForTimeout(250); };
+      t.check('properties panel shows transform fields', (await t.page.getByLabel(/^Shear X/).count()) > 0, JSON.stringify(seen));
+      if (!(await t.page.getByLabel(/^Shear X/).count())) return;
+      const set = async (label, v) => { const f = t.page.getByLabel(new RegExp('^' + label)).first(); await f.fill(String(v)); await f.press('Enter'); await t.page.waitForTimeout(250); };
       await set('Shear X', 15);
       await set('H scale', 150);
       await t.page.getByLabel('Text direction').selectOption('rtl');
@@ -991,6 +991,23 @@ scenarios.push({
     const [svgOut] = await Promise.all([t.page.waitForEvent('download', { timeout: 60000 }), t.page.getByRole('button', { name: /Print SVG/ }).click()]);
     const out = fs.readFileSync(await svgOut.path(), 'utf8');
     t.check('outlined SVG draws numbers from the font curves', !/>07<\/text>/.test(out) && /fill="#ffcc00"/i.test(out));
+  },
+});
+
+// Pattern Design: diamond repeat and the repeat views (1 tile, 2 × 2, 3 × 3, 5 × 5).
+scenarios.push({
+  name: 'pattern-repeat-views',
+  async run(t) {
+    await t.page.goto(t.BASE + '/patterns', { waitUntil: 'domcontentloaded' });
+    await t.page.getByRole('button', { name: 'Diamond', exact: true }).click({ timeout: 30000 });
+    t.check('diamond repeat selected', (await t.page.getByRole('button', { name: 'Diamond', exact: true }).getAttribute('aria-pressed')) === 'true');
+    const views = t.page.getByRole('radiogroup', { name: 'Repeat view' });
+    for (const [label, size] of [['1 tile', /^contain$/], ['3 × 3', /^33\.3+\d*% auto$/], ['5 × 5', /^20% auto$/]]) {
+      await views.getByRole('radio', { name: label }).click();
+      const bs = await t.page.getByRole('img', { name: 'Pattern preview' }).evaluate((el) => el.style.backgroundSize);
+      t.check(`repeat view ${label}`, size.test(bs), bs);
+    }
+    await t.shot('diamond-5x5');
   },
 });
 
