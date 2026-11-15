@@ -42,6 +42,9 @@ export const PRESETS: { id: string; label: string; hint: string; o: Partial<Trac
   { id: 'c16', label: '16 colours', hint: 'Illustrations', o: { mode: 'colour', colors: 16, smooth: 0.9, despeckle: 1 } },
   { id: 'photo', label: 'High fidelity photo', hint: '32 colours, fine detail', o: { mode: 'colour', colors: 32, smooth: 0.7, noise: 6, despeckle: 1, detail: 1200 } },
   { id: 'gray', label: 'Shades of grey', hint: '5 grey tones', o: { mode: 'gray', colors: 5, despeckle: 1 } },
+  { id: 'technical', label: 'Technical drawing', hint: 'Straight lines and crisp corners from plans and diagrams', o: { mode: 'line', colors: 2, ignoreWhite: true, curves: false, corner: 25, smooth: 0.45, noise: 6, despeckle: 1, detail: 1600 } },
+  { id: 'sketch', label: 'Sketch', hint: 'Pencil and pen sketches — soft strokes, stray marks removed', o: { mode: 'line', colors: 2, ignoreWhite: true, smooth: 1.3, corner: 80, noise: 30, despeckle: 3, detail: 1200 } },
+  { id: 'lowphoto', label: 'Low fidelity photo', hint: '8 flat colours, poster look', o: { mode: 'colour', colors: 8, smooth: 1.6, noise: 40, despeckle: 2, detail: 700 } },
 ];
 
 export interface Px { data: Uint8ClampedArray | number[]; width: number; height: number }
