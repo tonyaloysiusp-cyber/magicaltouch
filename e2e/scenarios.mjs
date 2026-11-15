@@ -413,6 +413,9 @@ scenarios.push(
       await t.page.waitForTimeout(600);
       const panelOpen = await t.page.getByLabel('Shear X', { exact: true }).count();
       if (!panelOpen) { const b = t.page.getByRole('button', { name: /Properties/ }).first(); if (await b.count()) await b.click(); await t.page.waitForTimeout(400); }
+      const seen = await t.eval(() => ({ active: window.__fabricCanvas.getActiveObject()?.type || null, mode: localStorage.getItem('mt:editorMode'), w: innerWidth, labels: [...document.querySelectorAll('label')].map((l) => l.textContent.trim().slice(0, 18)).filter(Boolean).slice(0, 60) }));
+      t.check('properties panel shows transform fields', (await t.page.getByLabel('Shear X', { exact: true }).count()) > 0, JSON.stringify(seen));
+      if (!(await t.page.getByLabel('Shear X', { exact: true }).count())) return;
       const set = async (label, v) => { const f = t.page.getByLabel(label, { exact: true }).first(); await f.fill(String(v)); await f.press('Enter'); await t.page.waitForTimeout(250); };
       await set('Shear X', 15);
       await set('H scale', 150);
