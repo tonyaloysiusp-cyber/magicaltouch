@@ -428,6 +428,74 @@ scenarios.push(
     },
   },
   {
+    name: 'gradient-on-canvas',
+    async run(t) {
+      await t.editor('w=1080&h=1080');
+      await t.eval(() => {
+        const F = window.fabric, c = window.__fabricCanvas;
+        const r = new F.Rect({ left: 200, top: 200, width: 600, height: 400, fill: new F.Gradient({ type: 'linear', gradientUnits: 'percentage', coords: { x1: 0, y1: 0.5, x2: 1, y2: 0.5 }, colorStops: [{ offset: 0, color: '#F2708F' }, { offset: 1, color: '#3B82C4' }] }) });
+        c.add(r); c.setActiveObject(r); c.requestRenderAll();
+      });
+      await t.page.waitForTimeout(600);
+      const end = t.page.getByRole('slider', { name: 'Gradient end' });
+      t.check('gradient handles appear on the selected object', (await end.count()) === 1 && (await t.page.getByRole('slider', { name: 'Gradient start' }).count()) === 1);
+      if (!(await end.count())) return;
+      const want = await toScreen(t, 500, 600); // end handle should sit at (800, 400) → drag it to the bottom centre
+      const box = await end.boundingBox();
+      const exp = await toScreen(t, 800, 400);
+      t.check('end handle sits on the gradient end', Math.abs(box.x + box.width / 2 - exp.x) < 4 && Math.abs(box.y + box.height / 2 - exp.y) < 4, JSON.stringify({ box, exp }));
+      await t.page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+      await t.page.mouse.down();
+      await t.page.mouse.move(want.x, want.y, { steps: 6 });
+      await t.page.mouse.up();
+      await t.page.waitForTimeout(300);
+      const k = await t.eval(() => window.__fabricCanvas.getActiveObject().fill.coords);
+      t.check('dragging the handle changes the gradient direction', Math.abs(k.x2 - 0.5) < 0.03 && Math.abs(k.y2 - 1) < 0.03, JSON.stringify(k));
+      await t.page.keyboard.press(`${MOD}+z`);
+      await t.page.waitForTimeout(600);
+      const k2 = await t.eval(() => window.__fabricCanvas.getObjects().find((o) => o.type === 'rect' && o.fill && o.fill.coords)?.fill.coords);
+      t.check('undo restores the gradient', k2 && Math.abs(k2.x2 - 1) < 0.03 && Math.abs(k2.y2 - 0.5) < 0.03, JSON.stringify(k2));
+      await t.shot('gradient-handles');
+    },
+  },
+  {
+    name: 'custom-tool-keys',
+    init: () => { try { localStorage.setItem('mt:editorMode', 'pro'); } catch {} },
+    async run(t) {
+      await t.editor('w=1080&h=1080');
+      await t.page.keyboard.press('?');
+      await t.page.waitForTimeout(400);
+      const box = t.page.getByLabel('Key for Rectangle tool');
+      t.check('tool keys can be customised', (await box.count()) === 1);
+      if (!(await box.count())) return;
+      await box.click();
+      await t.page.keyboard.press('r');
+      await t.page.waitForTimeout(200);
+      t.check('new key shown', (await box.inputValue()) === 'R');
+      await t.page.getByLabel('Key for Ellipse tool').click();
+      await t.page.keyboard.press('r');
+      t.check('a used key moves to the new tool', (await t.page.getByLabel('Key for Rectangle tool').inputValue()) === '—' && (await t.page.getByLabel('Key for Ellipse tool').inputValue()) === 'R');
+      await t.page.getByLabel('Key for Rectangle tool').click();
+      await t.page.keyboard.press('Shift+R');
+      await t.page.keyboard.press('Escape');
+      await t.page.keyboard.press('Escape');
+      await t.page.waitForTimeout(300);
+      const canvas = await canvasBox(t);
+      await t.page.mouse.click(canvas.x + 20, canvas.y + 20);
+      await t.page.keyboard.press('r');
+      await t.page.waitForTimeout(300);
+      t.check('pressing the new key picks the tool', (await t.page.locator('button[aria-pressed="true"][aria-label^="Ellipse"]').count()) === 1);
+      await t.page.keyboard.press('Shift+R');
+      await t.page.waitForTimeout(300);
+      t.check('Shift combination works', (await t.page.locator('button[aria-pressed="true"][aria-label^="Rectangle"]').count()) === 1);
+      await t.page.keyboard.press('m');
+      await t.page.waitForTimeout(300);
+      t.check('the old key no longer picks the rectangle', (await t.page.locator('button[aria-pressed="true"][aria-label^="Rectangle"]').count()) === 1, 'm is unassigned so the tool stays');
+      const saved = await t.eval(() => JSON.parse(localStorage.getItem('mt:toolKeys') || '{}'));
+      t.check('keys kept on this device', saved.rect === 'shift+r' && saved.ellipse === 'r', JSON.stringify(saved));
+    },
+  },
+  {
     name: 'resize-copy',
     async run(t) {
       await t.editor('w=1080&h=1080');

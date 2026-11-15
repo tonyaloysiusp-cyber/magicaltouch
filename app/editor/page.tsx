@@ -114,6 +114,8 @@ import { useWindowPanels } from '@/components/editor/WindowPanels';
 import { AlignPanel } from '@/components/editor/AlignPanel';
 import { BackBar } from '@/components/BackBar';
 import { Rulers } from '@/components/editor/Rulers';
+import { GradientHandles } from '@/components/editor/GradientHandles';
+import { loadToolKeys, toolForKey } from '@/lib/editor/toolKeys';
 import { GridOverlay } from '@/components/editor/GridOverlay';
 import { TabBar, EditorTabInfo } from '@/components/editor/TabBar';
 import { OpenDesignDialog, OpenableDesign } from '@/components/editor/OpenDesignDialog';
@@ -2935,6 +2937,13 @@ function EditorContent() {
     setActiveTool(t as ToolMode);
   };
   const chooseToolRef = useRef(chooseTool);
+  const toolKeysRef = useRef<Record<string, string>>({});
+  useEffect(() => {
+    const load = () => { toolKeysRef.current = loadToolKeys(); };
+    load();
+    window.addEventListener('mt:toolKeys', load);
+    return () => window.removeEventListener('mt:toolKeys', load);
+  }, []);
   chooseToolRef.current = chooseTool;
   const [shapeBuilderOpen, setShapeBuilderOpen] = useState(false);
 
@@ -5230,25 +5239,10 @@ function EditorContent() {
       // still had raster selection tools — those moved to the Photo
       // Editor workspace, so M/L are repurposed here for Illustrator's own
       // Rectangle/Ellipse tools rather than left silently dead.
-      if (canUseToolShortcuts && !isMeta && !e.shiftKey) {
-        if (e.key.toLowerCase() === 'v') { e.preventDefault(); chooseToolRef.current('select'); return; }
-        if (e.key.toLowerCase() === 'a') { e.preventDefault(); chooseToolRef.current('direct'); return; }
-        if (e.key.toLowerCase() === 'p') { e.preventDefault(); chooseToolRef.current('pen'); return; }
-        if (e.key.toLowerCase() === 'h') { e.preventDefault(); chooseToolRef.current('pan'); return; }
-        if (e.key.toLowerCase() === 't') { e.preventDefault(); chooseToolRef.current('text'); return; }
-        if (e.key.toLowerCase() === 'b') { e.preventDefault(); chooseToolRef.current('brush'); return; }
-        if (e.key.toLowerCase() === 'e') { e.preventDefault(); chooseToolRef.current('eraser'); return; }
-        if (e.key.toLowerCase() === 'n') { e.preventDefault(); chooseToolRef.current('pencil'); return; }
-        if (e.key.toLowerCase() === 'm') { e.preventDefault(); chooseToolRef.current('rect'); return; }
-        if (e.key.toLowerCase() === 'l') { e.preventDefault(); chooseToolRef.current('ellipse'); return; }
-        if (e.key === '\\') { e.preventDefault(); chooseToolRef.current('line'); return; }
-      }
-
-      if (canUseToolShortcuts && !isMeta && e.shiftKey) {
-        if (e.key.toLowerCase() === 'o') { e.preventDefault(); chooseToolRef.current('artboard'); return; }
-        if (e.key.toLowerCase() === 't') { e.preventDefault(); chooseToolRef.current('triangle'); return; }
-        if (e.key.toLowerCase() === 's') { e.preventDefault(); chooseToolRef.current('star'); return; }
-        if (e.key.toLowerCase() === 'g') { e.preventDefault(); chooseToolRef.current('polygon'); return; }
+      // Single-key tool shortcuts — the user can change them (Keyboard shortcuts → Customise tool keys).
+      if (canUseToolShortcuts && !isMeta && !e.altKey) {
+        const tool = toolForKey(toolKeysRef.current, e.key, e.shiftKey);
+        if (tool) { e.preventDefault(); chooseToolRef.current(tool as any); return; }
       }
 
       if (canUseToolShortcuts && activeToolRef.current === 'pen') {
@@ -8407,6 +8401,7 @@ function EditorContent() {
               originX={getActiveArtboardRect().x}
               originY={getActiveArtboardRect().y}
             />
+            <GradientHandles fabricCanvasRef={fabricCanvasRef} ready={canvasReady} enabled={activeTool === 'select' && !drawing} />
           </div>
           {canvasReady && activeTool === 'select' && !drawing && (
             <div className={cx('absolute inset-x-2 z-20 pointer-events-none flex justify-center', compact ? 'bottom-2' : pro && showRulers ? 'top-8' : 'top-3')}>

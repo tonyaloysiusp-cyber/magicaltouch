@@ -3,7 +3,8 @@
 // Pro tool strip. The tool in use is always clearly marked (blue fill and
 // a bar on its edge), and every tool says what it does and its shortcut.
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { loadToolKeys, showCombo } from '@/lib/editor/toolKeys';
 import {
   MousePointer2,
   Spline,
@@ -78,15 +79,29 @@ interface Props {
   canShapeBuild: boolean;
 }
 
+// The user's own tool keys (Keyboard shortcuts → Customise tool keys), for the tooltips.
+function useToolKeys() {
+  const [keys, setKeys] = useState<Record<string, string> | null>(null);
+  useEffect(() => {
+    const load = () => setKeys(loadToolKeys());
+    load();
+    window.addEventListener('mt:toolKeys', load);
+    return () => window.removeEventListener('mt:toolKeys', load);
+  }, []);
+  return keys;
+}
+
 function Btn({ id, active, onClick }: { id: StripTool; active: boolean; onClick: () => void }) {
   const info = TOOL_INFO[id];
+  const keys = useToolKeys();
+  const shown = keys && id in keys ? (keys[id] ? showCombo(keys[id]) : '') : info.key;
   return (
     <button
       type="button"
       onClick={onClick}
       aria-pressed={active}
       aria-label={`${info.label}${info.key ? ` (${info.key})` : ''}`}
-      title={`${info.label}${info.key ? ` — ${info.key}` : ''}\n${info.hint}`}
+      title={`${info.label}${shown ? ` — ${shown}` : ''}\n${info.hint}`}
       className={cx(
         'relative w-11 h-11 rounded-xl inline-flex items-center justify-center border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8CCBFF]',
         active ? 'bg-[#3B82C4] border-[#3B82C4] text-white shadow-[0_6px_16px_-6px_rgba(59,130,196,0.7)]' : 'border-transparent text-mt-muted hover:text-mt-ink hover:bg-mt-surface2'
