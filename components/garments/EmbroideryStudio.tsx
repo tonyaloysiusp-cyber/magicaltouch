@@ -139,8 +139,8 @@ export function EmbroideryStudio({ design, pieces, colours, onSave, onClose, fil
   const close = () => { if (dirty && !window.confirm('Save the embroidery before closing?\n\nOK = save and close · Cancel = keep editing')) return; if (dirty) doSave(); onClose(); };
   const dl = (kind: 'dst' | 'exp' | 'png' | 'svg') => {
     if (!summary.stitches) { flash('Add something to stitch first.'); return; }
-    if (kind === 'dst') save(new Blob([toDst(st, fileBase.slice(0, 16).toUpperCase())], { type: 'application/octet-stream' }), `${fileBase}.dst`);
-    if (kind === 'exp') save(new Blob([toExp(st)], { type: 'application/octet-stream' }), `${fileBase}.exp`);
+    if (kind === 'dst') save(new Blob([toDst(st, fileBase.slice(0, 16).toUpperCase()) as unknown as BlobPart], { type: 'application/octet-stream' }), `${fileBase}.dst`);
+    if (kind === 'exp') save(new Blob([toExp(st) as unknown as BlobPart], { type: 'application/octet-stream' }), `${fileBase}.exp`);
     if (kind === 'svg') { const p = previewSvg(objects, st, { background: colours.body }); save(new Blob([p.svg], { type: 'image/svg+xml' }), `${fileBase}-stitch-preview.svg`); }
     if (kind === 'png') {
       setBusy('png');
