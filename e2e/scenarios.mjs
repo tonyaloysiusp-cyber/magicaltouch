@@ -764,6 +764,51 @@ scenarios.push({
   },
 });
 
+// Photo Studio face tools: with landmarks given (the real face finder downloads a model), eyes,
+// mouth and shape edits preview on a close-up and apply to the photo as one history step.
+scenarios.push({
+  name: 'photo-studio-face',
+  async run(t) {
+    const { readFileSync } = await import('node:fs');
+    const src = readFileSync('lib/photo/face.ts', 'utf8');
+    const arr = (n) => JSON.parse('[' + src.match(new RegExp(`export const ${n} = \\[([^\\]]*)\\]`))[1] + ']');
+    const ring = (cx, cy, rx, ry, n, a0 = 0) => Array.from({ length: n }, (_, i) => ({ x: cx + rx * Math.cos(a0 + (i / n) * 2 * Math.PI), y: cy + ry * Math.sin(a0 + (i / n) * 2 * Math.PI) }));
+    const lm = Array.from({ length: 478 }, () => ({ x: 0.5, y: 0.45 }));
+    const put = (ids, pts) => ids.forEach((id, i) => (lm[id] = pts[i]));
+    put(arr('FACE_OVAL'), ring(0.5, 0.45, 0.18, 0.25, 36, -Math.PI / 2));
+    put(arr('EYE_R'), ring(0.43, 0.38, 0.04, 0.015, 16)); put(arr('EYE_L'), ring(0.57, 0.38, 0.04, 0.015, 16));
+    put(arr('LIPS_OUTER'), ring(0.5, 0.58, 0.06, 0.025, 20)); put(arr('LIPS_INNER'), ring(0.5, 0.58, 0.04, 0.01, 20));
+    put([468, 469, 470, 471, 472], [[0.43, 0.38], [0.44, 0.38], [0.43, 0.37], [0.42, 0.38], [0.43, 0.39]].map(([x, y]) => ({ x, y })));
+    put([473, 474, 475, 476, 477], [[0.57, 0.38], [0.58, 0.38], [0.57, 0.37], [0.56, 0.38], [0.57, 0.39]].map(([x, y]) => ({ x, y })));
+    lm[1] = { x: 0.5, y: 0.48 }; lm[129] = { x: 0.48, y: 0.47 }; lm[358] = { x: 0.52, y: 0.47 };
+    await t.page.addInitScript((pts) => { window.__mtFaceLandmarks = pts; try { localStorage.setItem('mt:photoMode', 'pro'); } catch {} }, lm);
+    await t.page.goto(`${t.BASE}/photo-studio`);
+    await t.page.locator('input[type=file]').first().setInputFiles('public/templates/photos/mt-38.jpg');
+    await t.page.waitForSelector('[aria-label="Tools"]', { timeout: 60000 });
+    await t.page.waitForTimeout(1200);
+    const big = () => t.eval(() => { const c = [...document.querySelectorAll('canvas')].sort((a, b) => b.width * b.height - a.width * a.height)[0]; const x = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let s = 0; for (let i = 0; i < x.length; i += 400) s += x[i] + x[i + 1] * 3 + x[i + 2] * 7; return s; });
+    const find = t.page.getByRole('button', { name: 'Find face', exact: true }).first();
+    await find.scrollIntoViewIfNeeded();
+    await find.click();
+    await t.page.waitForTimeout(800);
+    t.check('face found', (await t.page.getByText('Face found.').count()) > 0);
+    t.check('face preview shown', (await t.page.getByLabel('Face preview').count()) > 0);
+    for (const label of ['Brighten eye whites', 'Iris clarity', 'Dark circles', 'Whiten teeth', 'Lip colour', 'Lip saturation', 'Eye size', 'Slim face', 'Slim jaw', 'Slim nose', 'Chin height']) t.check(`face slider ${label}`, (await t.page.getByRole('slider', { name: label, exact: true }).count()) > 0);
+    t.check('face preset groups', (await t.page.getByRole('group', { name: 'Female portrait face presets' }).getByRole('button').count()) === 4 && (await t.page.getByRole('group', { name: 'Male portrait face presets' }).getByRole('button').count()) === 3);
+    const before = await big();
+    await t.page.getByRole('button', { name: 'Soft glam', exact: true }).click();
+    await t.page.waitForTimeout(600);
+    t.check('preview does not touch the photo yet', (await big()) === before);
+    await t.shot('face-preview');
+    await t.page.getByRole('button', { name: 'Apply face edits' }).click();
+    await t.page.waitForTimeout(2500);
+    const after = await big();
+    t.check('face edits change the photo', after !== before, `${before} → ${after}`);
+    t.check('face edit recorded in history', (await t.page.getByText('Face retouch').count()) >= 1);
+    await t.shot('face-applied');
+  },
+});
+
 // Studio boards: shaped photo frames (heart, hexagon, blob) load and stay replaceable frames.
 scenarios.push({
   name: 'studio-boards-load',

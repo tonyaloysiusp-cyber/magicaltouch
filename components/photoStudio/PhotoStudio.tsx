@@ -36,6 +36,7 @@ import { GOOGLE_FONTS, allFontFacesCSS, ensureFontLoaded } from '@/lib/editor/go
 import { renderTextSpec, textLayerAt, TextSpec } from '@/lib/photo/textLayer';
 import { isPremium, PREMIUM_LOOKS } from '@/lib/textfx/premium';
 import { LookGallery } from '@/components/textfx/LookGallery';
+import { FaceTools } from './FaceTools';
 
 type Tool = 'adjust' | 'color' | 'looks' | 'crop' | 'bg' | 'retouch' | 'resize' | 'export' | 'move' | 'select' | 'filter' | 'hand' | 'zoom' | 'eyedropper' | 'text' | 'gradient' | 'shape' | 'bucket' | 'pen';
 // Tools that work directly on the picture (the rest are panels).
@@ -1774,6 +1775,9 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
               {PORTRAIT_SLIDERS.map((d) => (
                 <Range key={d.key} def={d} value={(adjust[d.key] as number) ?? (d.key === 'skinTexture' ? 60 : 0)} onChange={(v) => setOne(d.key, v)} onCommit={commitLive} />
               ))}
+            </Section>
+            <Section title="Face — eyes, teeth, lips, shape">
+              <FaceTools target={target} busy={!!busy} onApply={(label, fn) => run(label, fn)} />
             </Section>
             <Section title="Black & white">
               <div className="flex gap-2">
