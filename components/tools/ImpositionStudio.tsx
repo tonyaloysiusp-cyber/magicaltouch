@@ -163,6 +163,7 @@ export function ImpositionStudio() {
   const [lastDup, setLastDup] = useState<{ dx: number; dy: number; deg: number; times: number } | null>(null);
   const [drag, setDrag] = useState<{ grp: string; dx: number; dy: number; sx: number; sy: number; k: number } | null>(null);
   const [preview, setPreview] = useState(true);
+  useEffect(() => { setPreview(true); }, [tool]); // a new command is previewed again
   const [last, setLast] = useState<Command | null>(null);
   const [seqs, setSeqs] = useState<{ name: string; cmds: Command[] }[]>([]);
   const [seqName, setSeqName] = useState('');
@@ -206,6 +207,7 @@ export function ImpositionStudio() {
       const next = run(doc, cmd, srcInfos);
       commit(next, [cmd]);
       setLast(cmd); try { localStorage.setItem(LAST_KEY, JSON.stringify(cmd)); } catch { /* full */ }
+      if (!c) setPreview(false); // the applied result is shown as it is, ready to arrange by hand
       setMsg(`${COMMAND_LABEL[cmd.type]} — done. ${next.sheets.length} sheet${next.sheets.length === 1 ? '' : 's'}.`); setErr(null);
     } catch (e: any) { setErr(e?.message || 'That command could not be applied.'); }
   };
