@@ -483,6 +483,54 @@ scenarios.push(
     },
   },
   {
+    name: 'panel-dock',
+    init: () => { try { localStorage.setItem('mt:editorMode', 'pro'); if (!sessionStorage.getItem('dockInit')) { localStorage.removeItem('mt:dockLayout'); sessionStorage.setItem('dockInit', '1'); } } catch {} },
+    async run(t) {
+      await t.editor('w=1080&h=1080');
+      const dock = t.page.getByLabel('Panel dock');
+      t.check('panel dock shown', (await dock.count()) === 1);
+      if (!(await dock.count())) return;
+      const order = () => dock.locator('section').evaluateAll((els) => els.map((e) => e.getAttribute('aria-label')));
+      const o0 = await order();
+      const last = dock.locator('section').last();
+      await last.getByRole('button', { name: 'Move panel up' }).click();
+      const o1 = await order();
+      t.check('a panel moves up', o1[o1.length - 2] === o0[o0.length - 1] && o1.length === o0.length, JSON.stringify({ o0, o1 }));
+      await dock.getByRole('button', { name: /Dock left/ }).click();
+      await t.page.waitForTimeout(300);
+      const dx = (await dock.boundingBox()).x, cx = (await canvasBox(t)).x;
+      t.check('dock moves to the left of the canvas', dx < cx, JSON.stringify({ dx, cx }));
+      const saved = await t.eval(() => JSON.parse(localStorage.getItem('mt:dockLayout') || 'null'));
+      t.check('layout kept on this device', saved && saved.side === 'left', JSON.stringify(saved));
+      await t.page.reload();
+      await t.page.waitForSelector('canvas.upper-canvas', { timeout: 60000 });
+      await t.page.waitForTimeout(800);
+      t.check('layout remembered after reload', JSON.stringify(await order()) === JSON.stringify(o1));
+      await t.page.getByLabel('Panel dock').getByRole('button', { name: 'Reset panels' }).click();
+      t.check('reset restores the order', JSON.stringify(await order()) === JSON.stringify(o0));
+    },
+  },
+  {
+    name: 'text-indents',
+    init: () => { try { localStorage.setItem('mt:editorMode', 'pro'); } catch {} },
+    async run(t) {
+      await t.editor('w=1080&h=1080');
+      await t.eval(() => { const c = window.__fabricCanvas; const tb = new window.fabric.Textbox('Indents move every line of this paragraph in from the edges of the text box', { left: 200, top: 300, width: 500, fontSize: 40, fontFamily: 'Arial' }); c.add(tb); c.setActiveObject(tb); c.requestRenderAll(); });
+      await t.page.waitForTimeout(600);
+      const field = t.page.getByLabel(/^Indent left/).first();
+      t.check('indent fields in the properties panel', (await field.count()) === 1 && (await t.page.getByLabel(/^Indent right/).count()) >= 1);
+      const before = await t.eval(() => { const o = window.__fabricCanvas.getActiveObject(); return { lines: o._textLines.length, left: o._getLineLeftOffset(0) }; });
+      if (await field.count()) { await field.fill('100'); await field.press('Enter'); } else await t.eval(() => window.__fabricCanvas.getActiveObject().set({ indentLeft: 100 }));
+      await t.page.waitForTimeout(400);
+      const after = await t.eval(() => { const o = window.__fabricCanvas.getActiveObject(); const w = Math.max(...o._textLines.map((_, i) => o.getLineWidth(i))); return { lines: o._textLines.length, left: o._getLineLeftOffset(0), ind: o.indentLeft, widest: w, width: o.width }; });
+      t.check('left indent shifts the lines', Math.abs(after.left - before.left - 100) < 0.5, JSON.stringify({ before, after }));
+      t.check('text rewraps inside the indent', after.lines >= before.lines && after.widest <= after.width - 100 + 1, JSON.stringify(after));
+      const json = await t.eval(() => JSON.stringify(window.__fabricCanvas.getActiveObject().toObject(['indentLeft'])));
+      t.check('indent saved with the design', JSON.parse(json).indentLeft === 100);
+      await t.shot('indents');
+    },
+  },
+  {
     name: 'custom-tool-keys',
     init: () => { try { localStorage.setItem('mt:editorMode', 'pro'); } catch {} },
     async run(t) {
@@ -886,7 +934,8 @@ scenarios.push({
     t.check('face found', (await t.page.getByText('Face found.').count()) > 0);
     t.check('face preview shown', (await t.page.getByLabel('Face preview').count()) > 0);
     for (const label of ['Brighten eye whites', 'Iris clarity', 'Dark circles', 'Whiten teeth', 'Lip colour', 'Lip saturation', 'Eye size', 'Slim face', 'Slim jaw', 'Slim nose', 'Chin height']) t.check(`face slider ${label}`, (await t.page.getByRole('slider', { name: label, exact: true }).count()) > 0);
-    t.check('face preset groups', (await t.page.getByRole('group', { name: 'Female portrait face presets' }).getByRole('button').count()) === 4 && (await t.page.getByRole('group', { name: 'Male portrait face presets' }).getByRole('button').count()) === 3);
+    const fg = await t.page.getByRole('group', { name: 'Female portrait face presets' }).first().getByRole('button').count(), mg = await t.page.getByRole('group', { name: 'Male portrait face presets' }).first().getByRole('button').count();
+    t.check('face preset groups', fg === 4 && mg === 3, `${fg} / ${mg}`);
     const before = await big();
     await t.page.getByRole('button', { name: 'Soft glam', exact: true }).click();
     await t.page.waitForTimeout(600);

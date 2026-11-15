@@ -5,8 +5,8 @@
 // and export as real vectors (SVG, PDF and editable shapes in the editor).
 
 export interface Motif { id: string; label: string; d: string; cat: MotifCategory }
-export type MotifCategory = 'Basic' | 'Geometric' | 'Stars & bursts' | 'Floral' | 'Nature' | 'Celebration' | 'Ornament' | 'Lines & marks';
-export const MOTIF_CATEGORIES: MotifCategory[] = ['Basic', 'Geometric', 'Stars & bursts', 'Floral', 'Nature', 'Celebration', 'Ornament', 'Lines & marks'];
+export type MotifCategory = 'Basic' | 'Geometric' | 'Stars & bursts' | 'Floral' | 'Nature' | 'Celebration' | 'Ornament' | 'Lines & marks' | 'Tile & textile' | 'Sport';
+export const MOTIF_CATEGORIES: MotifCategory[] = ['Basic', 'Geometric', 'Stars & bursts', 'Floral', 'Nature', 'Celebration', 'Ornament', 'Lines & marks', 'Tile & textile', 'Sport'];
 
 const f = (n: number) => String(Math.round(n * 10) / 10);
 const pt = (x: number, y: number) => `${f(x)} ${f(y)}`;
@@ -107,7 +107,7 @@ add('Geometric', [
   ['square-ring', 'Square frame', rect(-42, -42, 84, 84) + rect(-26, -26, 52, 52)],
   ['diamond-ring', 'Diamond frame', 'M0-50L44 0L0 50L-44 0Z' + 'M0-28L24 0L0 28L-24 0Z'],
   ['concentric', 'Concentric circles', ringPath(48, 38) + ringPath(28, 18) + circle(0, 0, 8)],
-  ['target', 'Target', ringPath(46, 32) + circle(0, 0, 18)],
+  ['bullseye', 'Bullseye', ringPath(46, 32) + circle(0, 0, 18)],
   ['gear', 'Gear', gear(10)],
   ['cog-small', 'Cog', gear(6, 48, 34, 16)],
   ['pinwheel', 'Pinwheel', around(4, (a) => rotPoly([[0, 0], [0, -48], [30, -18]], a))],
@@ -232,6 +232,33 @@ add('Lines & marks', [
   ['brush-dot', 'Brush mark', 'M-44 8C-40-14-6-22 22-14C44-8 50 10 36 18C14 30-24 30-40 22C-46 18-46 12-44 8Z'],
   ['tick', 'Tick', poly([[-44, 4], [-30, -10], [-10, 10], [30, -30], [44, -16], [-10, 38]])],
   ['spiral', 'Spiral', 'M2 0A2 2 0 0 0-2 0A6 6 0 0 0 10 0A10 10 0 0 0-10 0A14 14 0 0 0 18 0A18 18 0 0 0-18 0A22 22 0 0 0 26 0A26 26 0 0 0-26 0A30 30 0 0 0 34 0A34 34 0 0 0-34 0A38 38 0 0 0 42 0H48A44 44 0 0 1-40 0A32 32 0 0 1 30 0A28 28 0 0 1-22 0A20 20 0 0 1 14 0A12 12 0 0 1-6 0A4 4 0 0 1 2 0Z'],
+]);
+
+add('Tile & textile', [
+  ['ogee-double', 'Double ogee', 'M0-50C14-34 30-24 30 0C30 24 14 34 0 50C-14 34-30 24-30 0C-30-24-14-34 0-50Z' + 'M0-30C8-20 14-12 14 0C14 12 8 20 0 30C-8 20-14 12-14 0C-14-12-8-20 0-30Z'],
+  ['quatrefoil', 'Quatrefoil', around(4, (a) => circle(...rotP(0, -22, a), 24))],
+  ['trellis', 'Trellis', poly([[0, -48], [48, 0], [0, 48], [-48, 0]]) + poly([[0, -36], [36, 0], [0, 36], [-36, 0]])],
+  ['moroccan-star', 'Moroccan star tile', 'M0-48C10-38 26-38 30-30C38-26 38-10 48 0C38 10 38 26 30 30C26 38 10 38 0 48C-10 38-26 38-30 30C-38 26-38 10-48 0C-38-10-38-26-30-30C-26-38-10-38 0-48Z' + star(8, 22, 12)],
+  ['herringbone', 'Herringbone', [0, 1, 2, 3].map((k) => rotPoly([[-40, -4], [-4, -40], [6, -30], [-30, 6]], 0).replace(/(-?\d+\.?\d*) (-?\d+\.?\d*)/g, (_m, x, y) => `${f(Number(x) + k * 22 - 22)} ${f(Number(y) + k * 22 - 22)}`)).join('')],
+  ['fish-scale', 'Fish scale', 'M-48 10A24 24 0 0 1 0 10A24 24 0 0 1 48 10V20A24 24 0 0 0 0 20A24 24 0 0 0-48 20Z' + 'M-24-20A24 24 0 0 1 24-20V-10A24 24 0 0 0-24-10Z'],
+  ['argyle', 'Argyle', poly([[0, -48], [30, 0], [0, 48], [-30, 0]]) + rect(-48, -2, 96, 4) + rect(-2, -48, 4, 96)],
+  ['plaid', 'Plaid cross', rect(-48, -14, 96, 28) + rect(-14, -48, 28, 96) + rect(-48, 24, 96, 6) + rect(24, -48, 6, 96)],
+  ['basket', 'Basket weave', rect(-46, -46, 44, 20) + rect(-46, -22, 44, 20) + rect(2, -46, 20, 44) + rect(26, -46, 20, 44) + rect(-46, 2, 20, 44) + rect(-22, 2, 20, 44) + rect(2, 2, 44, 20) + rect(2, 26, 44, 20)],
+  ['hex-tile', 'Hex tile', polygon(6, 48, 0) + polygon(6, 38, 0)],
+  ['brick', 'Brick', rect(-48, -46, 46, 20) + rect(2, -46, 46, 20) + rect(-24, -22, 46, 20) + rect(-48, 2, 46, 20) + rect(2, 2, 46, 20) + rect(-24, 26, 46, 20)],
+]);
+
+add('Sport', [
+  ['ball', 'Ball', circle(0, 0, 46) + polygon(5, 16) + around(5, (a) => rotPoly([[-4, -18], [4, -18], [6, -42], [-6, -42]], a))],
+  ['bolt', 'Lightning bolt', poly([[8, -50], [-28, 6], [-4, 6], [-14, 50], [26, -10], [2, -10]])],
+  ['speed', 'Speed lines', rect(-48, -30, 70, 8) + rect(-30, -10, 78, 8) + rect(-48, 10, 60, 8) + rect(-20, 30, 50, 8)],
+  ['crown', 'Crown', poly([[-44, 30], [-44, -24], [-22, 0], [0, -36], [22, 0], [44, -24], [44, 30]]) + rect(-44, 34, 88, 10)],
+  ['shield', 'Shield', 'M0-48L40-36V0C40 24 22 40 0 48C-22 40-40 24-40 0V-36Z' + 'M0-36L28-28V0C28 16 16 28 0 34C-16 28-28 16-28 0V-28Z'],
+  ['laurel', 'Laurel', [-1, 1].map((sd) => Array.from({ length: 6 }, (_, k) => { const a = (-60 + k * 22) * Math.PI / 180, cx = sd * 30 * Math.cos(a), cy = 30 * Math.sin(a) + 6; return ellipse(cx, cy, 9, 4); }).join('')).join('')],
+  ['stripe-diag', 'Sash', poly([[-48, 22], [22, -48], [48, -48], [48, -22], [-22, 48], [-48, 48]])],
+  ['number-frame', 'Number frame', rrect(-36, -46, 72, 92, 10) + rrect(-28, -38, 56, 76, 6)],
+  ['flame', 'Flame', 'M0-50C10-30 34-20 30 10C28 34 14 48 0 48C-14 48-28 34-30 10C-32-6-20-14-14-26C-12-10-4-6 0-14C6-24 2-38 0-50Z'],
+  ['sport-target', 'Target rings', circle(0, 0, 46) + circle(0, 0, 34) + circle(0, 0, 22) + circle(0, 0, 10)],
 ]);
 
 export const PATTERN_MOTIFS: Motif[] = ALL;

@@ -22,6 +22,7 @@
 //   bar here.
 // ---------------------------------------------------------------------
 
+import { indentShift } from './textIndent.ts';
 import { frameOutlineD, imagePageScale } from './frames.ts';
 
 interface RectLike {
@@ -274,7 +275,8 @@ function objectToSvgElement(defs: string[], obj: any, F: any): string {
     // textAlign:'justify' canvas rendering, which — unlike the usual CSS
     // convention — stretches every line, including the last).
     const anchor = obj.textAlign === 'center' ? 'middle' : obj.textAlign === 'right' ? 'end' : 'start';
-    const xAt = obj.textAlign === 'center' ? 0 : obj.textAlign === 'right' ? w / 2 : -w / 2;
+    const indL = obj.type === 'textbox' ? Math.max(0, Number(obj.indentLeft) || 0) : 0, indR = obj.type === 'textbox' ? Math.max(0, Number(obj.indentRight) || 0) : 0;
+    const xAt = (obj.textAlign === 'center' ? 0 : obj.textAlign === 'right' ? w / 2 : -w / 2) + indentShift(obj.textAlign || 'left', indL, indR);
     const weight = obj.fontWeight === 'bold' || (typeof obj.fontWeight === 'number' && obj.fontWeight >= 600) ? 'bold' : 'normal';
     const style = obj.fontStyle === 'italic' ? 'italic' : 'normal';
     const isJustify = obj.textAlign === 'justify';
@@ -287,7 +289,7 @@ function objectToSvgElement(defs: string[], obj: any, F: any): string {
         // inter-glyph gap, not only the word-space gaps Fabric itself
         // stretches, so letter spacing within words is very slightly
         // affected too — a real justify, not pixel-identical to Fabric's.
-        const stretch = isJustify && line.includes(' ') ? ` textLength="${w}" lengthAdjust="spacing"` : '';
+        const stretch = isJustify && line.includes(' ') ? ` textLength="${w - indL - indR}" lengthAdjust="spacing"` : '';
         return `<tspan x="${xAt}" y="${y}"${stretch}>${escapeXml(line)}</tspan>`;
       })
       .join('');

@@ -4,6 +4,7 @@ import { previousStep } from '@/lib/toolsCatalog';
 import { blockBrowserShortcut } from '@/lib/editor/browserKeys';
 import { ThemeSwitch } from '@/components/ThemeSwitch';
 import { useEffect, useRef, useState, useCallback, Suspense } from 'react';
+import type { ReactNode } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { BrandLogo } from '@/components/BrandLogo';
 import Link from 'next/link';
@@ -143,6 +144,7 @@ import { missingFontsIn, fontRequiredMessage } from '@/lib/editor/missingFonts';
 import { PERSIST_PROPS, cloneWithProps, isHelperObject, isArtwork, applyStoredLocks, lockProps, reviveTextPaths } from '@/lib/editor/persist';
 import { ensureImageFilters, reviveImageAdjust } from '@/lib/editor/imageAdjust';
 import { installParagraphSpacing } from '@/lib/editor/paragraphSpacing';
+import { installTextIndent } from '@/lib/editor/textIndent';
 import { installTextFrames, isFrame, flowStory, syncStories, flowWhileEditing, resizeFrameFromScale, reflowAllStories, drawFrameOverlays, createStory, makeTextFrame, splitIntoColumns, addLinkedFrame, unlinkFrame, nextFrameBox, storyFrames, SAMPLE_ARTICLE } from '@/lib/editor/textFrames';
 import { installFrameBorder, setFrameBorder as setFrameBorderOn, drawCropOverlay, isFramed, fillFrame, cropHandleAt, dragCropHandle, keepCovering, CROP_CURSORS, CropHandle } from '@/lib/editor/frames';
 import { BrushSettings, DEFAULT_BRUSH, StrokePoint, strokePathD, createStrokeObject, eraseWithStroke } from '@/lib/editor/brush';
@@ -164,6 +166,9 @@ const isOpenVectorPath = (o: any): boolean =>
 // Custom object properties that survive saves and undo (one shared list,
 // see lib/editor/persist.ts).
 const SAVE_JSON_PROPS = PERSIST_PROPS;
+
+type DockLayout = { order: ('properties' | 'artboards' | 'align' | 'layers')[]; side: 'left' | 'right'; width: number };
+const DEFAULT_DOCK: DockLayout = { order: ['properties', 'artboards', 'align', 'layers'], side: 'right', width: 288 };
 
 function EditorContent() {
   const searchParams = useSearchParams();
@@ -352,6 +357,10 @@ function EditorContent() {
   // ensurePhotoEditsApplied below.
   const pendingPhotoApplyResolveRef = useRef<(() => void) | null>(null);
   const { isOpen: isPanelOpen, toggle: togglePanel } = useWindowPanels(['properties', 'layers', 'artboards']);
+  // Panel dock layout (order, side, width) — kept on this device.
+  const [dockLayout, setDockLayout] = useState<DockLayout>(DEFAULT_DOCK);
+  useEffect(() => { try { const v = JSON.parse(localStorage.getItem('mt:dockLayout') || 'null'); if (v && Array.isArray(v.order)) setDockLayout({ ...DEFAULT_DOCK, ...v, order: [...v.order.filter((x: string) => DEFAULT_DOCK.order.includes(x as any)), ...DEFAULT_DOCK.order.filter((x) => !v.order.includes(x))] }); } catch { /* ignore */ } }, []);
+  const saveDockLayout = (d: DockLayout) => { setDockLayout(d); try { localStorage.setItem('mt:dockLayout', JSON.stringify(d)); } catch { /* ignore */ } };
 
   const [artboards, setArtboards] = useState<ArtboardMeta[]>([]);
   // Always-current copy for code that runs from long-lived callbacks
@@ -1435,6 +1444,7 @@ function EditorContent() {
       // known before anything is loaded.
       ensureImageFilters(F);
       installParagraphSpacing(F);
+      installTextIndent(F);
       installTextFrames(F);
       const canvas = new F.Canvas(canvasRef.current, {
         width: initialW,
@@ -7934,6 +7944,66 @@ function EditorContent() {
   // for that stretch too.
   const hideWorkspaceSwitcherForPhotoFirst = photoOnlySession || (photoFirstSession && !hasOpenedPhotoEditorOnceRef.current);
 
+  // Right-hand panel dock: panels can be reordered, the dock moved to the
+  // left or right and made wider or narrower (remembered on this device).
+  const dockPanels: { id: 'properties' | 'artboards' | 'align' | 'layers'; label: string; el: ReactNode }[] = [
+    { id: 'properties', label: 'Properties', el: <div className="border-b border-mt-border">{propertiesPanelEl}</div> },
+    { id: 'artboards', label: 'Artboards', el: artboardsPanelEl },
+    { id: 'align', label: 'Align', el: (
+      <div className="border-b border-mt-border">
+        <AlignPanel
+          alignObject={alignObject}
+          distribute={distributeObjects}
+          hasSelection={hasSelection}
+          selectionCount={selected?.type === 'activeSelection' ? selected.getObjects().length : selected ? 1 : 0}
+        />
+      </div>
+    ) },
+    { id: 'layers', label: 'Layers', el: layersPanelEl },
+  ];
+  const orderedDock = [...dockPanels].sort((a, b) => dockLayout.order.indexOf(a.id) - dockLayout.order.indexOf(b.id)).filter((x) => isPanelOpen(x.id));
+  const movePanel = (id: string, dir: -1 | 1) => {
+    const vis = orderedDock.map((x) => x.id), i = vis.indexOf(id as any), j = i + dir;
+    if (i < 0 || j < 0 || j >= vis.length) return;
+    const order = [...dockLayout.order];
+    const a = order.indexOf(vis[i]), b = order.indexOf(vis[j]);
+    [order[a], order[b]] = [order[b], order[a]];
+    saveDockLayout({ ...dockLayout, order });
+  };
+  const dockSide = dockLayout.side;
+  const dockEl = (
+    <div className={cx('relative shrink-0 bg-mt-surface border-mt-border flex flex-col overflow-y-auto mt-scroll', dockSide === 'right' ? 'border-l' : 'border-r')} style={{ width: dockLayout.width }} aria-label="Panel dock">
+      <div
+        role="separator"
+        aria-orientation="vertical"
+        aria-label="Resize panels"
+        title="Drag to make the panels wider or narrower"
+        className={cx('absolute top-0 bottom-0 w-1.5 cursor-col-resize hover:bg-[#3B82C4]/30 z-10', dockSide === 'right' ? 'left-0' : 'right-0')}
+        onPointerDown={(e) => {
+          e.preventDefault();
+          const x0 = e.clientX, w0 = dockLayout.width, base = dockLayout;
+          let w = w0;
+          const mv = (ev: PointerEvent) => { w = Math.max(240, Math.min(480, w0 + (dockSide === 'right' ? x0 - ev.clientX : ev.clientX - x0))); setDockLayout({ ...base, width: w }); };
+          const upFn = () => { window.removeEventListener('pointermove', mv); window.removeEventListener('pointerup', upFn); saveDockLayout({ ...base, width: w }); };
+          window.addEventListener('pointermove', mv); window.addEventListener('pointerup', upFn);
+        }}
+      />
+      <div className="flex items-center justify-end gap-1 px-2 py-1 border-b border-mt-border text-[11px] text-mt-faint">
+        <button type="button" className="px-1.5 py-0.5 rounded hover:bg-mt-surface2 hover:text-mt-ink" onClick={() => saveDockLayout({ ...dockLayout, side: dockSide === 'right' ? 'left' : 'right' })} title="Move the panels to the other side">{dockSide === 'right' ? '⇤ Dock left' : 'Dock right ⇥'}</button>
+        <button type="button" className="px-1.5 py-0.5 rounded hover:bg-mt-surface2 hover:text-mt-ink" onClick={() => saveDockLayout(DEFAULT_DOCK)} title="Panel order, side and width back to normal">Reset panels</button>
+      </div>
+      {orderedDock.map((x, i) => (
+        <section key={x.id} aria-label={`${x.label} panel`}>
+          <div className="flex items-center justify-end gap-0.5 px-2 pt-1 -mb-1 text-mt-faint">
+            <button type="button" aria-label="Move panel up" title={`Move ${x.label} up`} disabled={i === 0} className="h-5 w-5 rounded text-[11px] hover:bg-mt-surface2 hover:text-mt-ink disabled:opacity-30" onClick={() => movePanel(x.id, -1)}>▲</button>
+            <button type="button" aria-label="Move panel down" title={`Move ${x.label} down`} disabled={i === orderedDock.length - 1} className="h-5 w-5 rounded text-[11px] hover:bg-mt-surface2 hover:text-mt-ink disabled:opacity-30" onClick={() => movePanel(x.id, 1)}>▼</button>
+          </div>
+          {x.el}
+        </section>
+      ))}
+    </div>
+  );
+
   return (
     <>
       {/* Next.js hoists <style> tags found anywhere in the tree into the
@@ -8373,6 +8443,7 @@ function EditorContent() {
           />
         )}
 
+        {pro && !compact && dockSide === 'left' && dockEl}
         <div className="flex-1 min-w-0 overflow-hidden relative" style={{ background: pasteboardBgFor(theme) }}>
           {pro && (
             <Rulers
@@ -8480,25 +8551,7 @@ function EditorContent() {
         </div>
         {contextMenu && <ContextMenu x={contextMenu.x} y={contextMenu.y} items={contextMenuItems()} onClose={() => setContextMenu(null)} />}
 
-        {pro && !compact && (
-          <div className="w-72 shrink-0 bg-mt-surface border-l border-mt-border flex flex-col overflow-y-auto mt-scroll">
-            {isPanelOpen('properties') && (
-              <div className="border-b border-mt-border">{propertiesPanelEl}</div>
-            )}
-            {isPanelOpen('artboards') && artboardsPanelEl}
-            {isPanelOpen('align') && (
-              <div className="border-b border-mt-border">
-                <AlignPanel
-                  alignObject={alignObject}
-                  distribute={distributeObjects}
-                  hasSelection={hasSelection}
-                  selectionCount={selected?.type === 'activeSelection' ? selected.getObjects().length : selected ? 1 : 0}
-                />
-              </div>
-            )}
-            {isPanelOpen('layers') && layersPanelEl}
-          </div>
-        )}
+        {pro && !compact && dockSide === 'right' && dockEl}
       </div>
 
       {photoEditSession && (

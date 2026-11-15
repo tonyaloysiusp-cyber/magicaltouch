@@ -56,6 +56,11 @@ Old addresses redirect permanently (`next.config.mjs`): `/custom-jersey-designer
 - Text is exact: `lib/fontOutline.ts` reads the real TTF (the editor's Google fonts via `/api/font-file`) with opentype.js — glyph curves and kerning. The old canvas-trace of letters is only a fallback if the font file can't be loaded.
 - Print files: **Live text** (SVG `<text>`; PDF with the TTF embedded by jsPDF, retypeable in Illustrator/Acrobat) or **Outlines** (exact font curves). `lib/svgToPdf.ts` now draws linear/radial gradients as fine vector bands clipped to the shape (with stop transparency) instead of a flat first colour.
 
+### 15 Nov — suite upgrade (ULTIMATE brief)
+- **Photo Studio face tools** (`lib/photo/face.ts`, `components/photoStudio/FaceTools.tsx`): MediaPipe Face Landmarker runs in the browser (code from jsDelivr, model from Google's model storage on first use; the photo never leaves the device). Eye whites, iris clarity, red eye, dark circles, teeth whitening, lip colour / saturation, eye size, slim face / jaw / nose, chin height — all capped. Close-up preview; nothing changes until "Apply face edits" (one history step). Test hook: `window.__mtFaceLandmarks` (0–1 units).
+- **Editor:** gradient handles on the canvas (`components/editor/GradientHandles.tsx`, `lib/editor/gradientHandles.ts`; percentage gradients only, Shift snaps 15°); customisable single-key tool shortcuts (`lib/editor/toolKeys.ts`, Keyboard shortcuts panel, localStorage `mt:toolKeys`; Ctrl/Cmd shortcuts fixed); Pen tool Curvature mode (`lib/editor/curvature.ts`, `~` switches, Alt-click = corner); panel dock reorder / dock left-right / resize (`mt:dockLayout`); text box left / right indents (`lib/editor/textIndent.ts`, wrap via Textbox reserved space, used by cursor, PDF and SVG export).
+- **Pattern Design:** edit single motifs in the tile (`PatternSettings.edits`, keyed by position inside the tile so edge copies follow); new Tile & textile and Sport motif libraries.
+
 ## Project files
 - **`.mtd`** (`lib/mtd/format.ts`) is the single project format. It is gzip JSON wrapped in a self-opening SVG (`Name.mtd.svg`) or plain `.mtd`. It holds:
   - the editor canvas (vectors, text, masks, artboards)
@@ -114,7 +119,7 @@ Old addresses redirect permanently (`next.config.mjs`): `/custom-jersey-designer
   - No hoodie or uniform blocks.
   - Garment blocks are generic standard shapes, not supplied factory specifications. Garments must be checked against the factory's own pattern before production.
 - **Wallpaper:** the rolls calculator is an estimate. Wallpaper print strips cover one wall at a time.
-- **Photo:** face tools are manual brushes; there is no automatic face detection. Before/after compare is not built.
+- **Photo:** face detection needs the browser to download the face finder once (internet); one face per photo; no first-line text indent in the editor (left / right indents only).
 - **Creative:** the mockup studio was retired (not realistic enough); brand guidelines documents do not exist yet.
 - **Dashboard:** the brief's full list (My Assets, My Patterns, Export history) is not all present yet.
 - **Speed (mobile Lighthouse):** `/templates` scores about 59 (2.4 s blocking time) and the jersey designer about 65.

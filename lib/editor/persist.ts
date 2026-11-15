@@ -52,6 +52,8 @@ export const PERSIST_PROPS = [
   '__styleSig',
   // Space between paragraphs (lib/editor/paragraphSpacing.ts)
   'paragraphSpacing',
+  'indentLeft',
+  'indentRight',
   // Colours before a brand/palette change (lib/editor/brandKit.ts)
   '__origColors',
   // Text box behaviour (auto-fit)
