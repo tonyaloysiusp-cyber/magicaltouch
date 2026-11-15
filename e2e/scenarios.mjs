@@ -712,6 +712,36 @@ scenarios.push({
   },
 });
 
+// Folding calculator: tri-fold and accordion, a PDF check, the technical report.
+scenarios.push({
+  name: 'folding-calculator',
+  async run(t) {
+    await t.page.goto(t.BASE + '/print-size-calculator?tab=fold', { waitUntil: 'domcontentloaded' });
+    const res = t.page.getByLabel('Folding result');
+    await res.waitFor({ timeout: 30000 });
+    t.check('A4 tri-fold folds to 99.3 × 210 mm with a shorter tuck-in panel', /→\s*99\.3 × 210 mm folded/.test(await res.innerText()), (await res.innerText()).slice(0, 160));
+    await t.page.getByLabel('Fold type').selectOption('accordion');
+    await t.page.getByLabel('Number of panels').fill('6');
+    t.check('6-panel accordion = 49.5 mm panels', /49\.5 × 210 mm folded/.test(await res.innerText()), (await res.innerText()).slice(0, 160));
+    t.check('flat layout shows folds', /Fold 5/.test(await t.page.getByLabel('Flat layout').innerHTML()));
+    await t.page.getByLabel('Fold type').selectOption('tri');
+    const { PDFDocument } = await import('pdf-lib');
+    const doc = await PDFDocument.create(); const k = 72 / 25.4;
+    for (let i = 0; i < 2; i++) { const p = doc.addPage([303 * k, 216 * k]); p.setTrimBox(3 * k, 3 * k, 297 * k, 210 * k); }
+    const fs = await import('node:fs'); const path = (await import('node:path')).join(process.cwd(), 'e2e-out', 'trifold.pdf');
+    fs.writeFileSync(path, await doc.save());
+    await t.page.locator('input[type=file][accept*="pdf"]').setInputFiles(path);
+    const chk = t.page.getByLabel('PDF check');
+    await chk.waitFor({ timeout: 15000 });
+    t.check('matching PDF is accepted', /suitable for this fold/.test(await chk.innerText()) && !/not suitable/.test(await chk.innerText()), (await chk.innerText()).slice(0, 200));
+    const [dl] = await Promise.all([t.page.waitForEvent('download', { timeout: 30000 }), t.page.getByRole('button', { name: /Technical folding report/ }).click()]);
+    const pdf = fs.readFileSync(await dl.path());
+    const back = await PDFDocument.load(pdf);
+    t.check('technical report PDF with summary + outside + inside', back.getPageCount() === 3, String(back.getPageCount()));
+    await t.shot('folding');
+  },
+});
+
 // Photo Studio: detail and lens tools and the portrait presets work on the real image.
 scenarios.push({
   name: 'photo-studio-portrait',
@@ -724,8 +754,8 @@ scenarios.push({
     const big = () => t.eval(() => { const c = [...document.querySelectorAll('canvas')].sort((a, b) => b.width * b.height - a.width * a.height)[0]; const x = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let s = 0; for (let i = 0; i < x.length; i += 400) s += x[i] + x[i + 1] * 3 + x[i + 2] * 7; return s; });
     const before = await big();
     for (const label of ['Dehaze', 'Noise reduction', 'Texture', 'Distortion', 'Chromatic aberration', 'Skin smoothing', 'Even skin tone']) t.check(`slider ${label}`, (await t.page.getByText(label, { exact: true }).count()) > 0);
-    t.check('female and male preset groups', (await t.page.getByRole('group', { name: 'Female portrait presets' }).getByRole('button').count()) === 7 && (await t.page.getByRole('group', { name: 'Male portrait presets' }).getByRole('button').count()) === 7);
-    await t.page.getByRole('button', { name: 'Natural beauty', exact: true }).click();
+    t.check('female and male preset groups', (await t.page.getByRole('group', { name: 'Female portrait presets' }).first().getByRole('button').count()) === 7 && (await t.page.getByRole('group', { name: 'Male portrait presets' }).first().getByRole('button').count()) === 7);
+    await t.page.getByRole('button', { name: 'Natural beauty', exact: true }).first().click();
     await t.page.waitForTimeout(2500);
     const after = await big();
     t.check('portrait preset changes the actual pixels', after !== before, `${before} → ${after}`);

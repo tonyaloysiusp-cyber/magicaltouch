@@ -1,0 +1,50 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { calculateFold, foldDiagramSvg, checkPdfForFold, FOLDS } from '../../lib/fold.ts';
+
+const base = { w: 297, h: 210, caliper: 0.1, bleed: 3, safe: 5 };
+test('every fold type gives panels that add up to the sheet, ordered folds and a folded size', () => {
+  for (const f of FOLDS) {
+    const r = calculateFold({ ...base, w: f.id === 'map' || f.id === 'accordion' || f.id === 'roll' ? 600 : 297, type: f.id, panels: 6 });
+    const total = r.panels.reduce((a, p) => a + p.w, 0);
+    assert.ok(Math.abs(total - r.flat.w) < 0.5, `${f.id} panels add up (${total})`);
+    assert.ok(r.folds.length >= 1 && r.folds.every((x) => x.order >= 1), `${f.id} folds ordered`);
+    assert.ok(r.sequence.length >= 1 && r.folded.w > 0 && r.folded.h > 0);
+    assert.deepEqual(r.errors, [], `${f.id}: ${r.errors.join(' ')}`);
+  }
+});
+
+test('tri-fold: tuck-in panel shorter by the allowance, folded size of one panel', () => {
+  const r = calculateFold({ ...base, type: 'tri' });
+  assert.equal(r.allowance, 1);
+  assert.ok(r.panels[0].w < r.panels[1].w && Math.abs(r.panels[1].w - r.panels[0].w - 1) < 0.2, JSON.stringify(r.panels.map((p) => p.w)));
+  assert.equal(r.folded.h, 210);
+  assert.ok(Math.abs(r.folded.w - 99.3) < 0.2);
+  assert.equal(r.panels[2].outside, 'Front cover');
+});
+
+test('roll fold: each inner panel shorter; gate fold flaps meet short of the middle', () => {
+  const r = calculateFold({ ...base, w: 500, type: 'roll', panels: 5, caliper: 0.15 });
+  const w = r.panels.map((p) => p.w);
+  for (let i = 1; i < w.length; i++) assert.ok(w[i] > w[i - 1], 'widths grow towards the cover');
+  const g = calculateFold({ ...base, type: 'gate' });
+  assert.ok(g.panels[0].w + g.panels[2].w < g.panels[1].w);
+});
+
+test('cross and map folds halve the height; custom widths are checked', () => {
+  assert.equal(calculateFold({ ...base, type: 'cross' }).folded.h, 105);
+  assert.equal(calculateFold({ ...base, w: 600, type: 'map', panels: 6 }).folded.h, 105);
+  const bad = calculateFold({ ...base, type: 'z', widths: [100, 100, 50] });
+  assert.ok(bad.errors.some((e) => /add up/.test(e)));
+  const narrow = calculateFold({ ...base, w: 150, type: 'accordion', panels: 8 });
+  assert.ok(narrow.errors.some((e) => /30 mm/.test(e)));
+});
+
+test('diagram and PDF check', () => {
+  const r = calculateFold({ ...base, type: 'tri' });
+  const svg = foldDiagramSvg(r, 'outside', 3, 5);
+  assert.match(svg, /Front cover/); assert.match(svg, /stroke-dasharray/);
+  assert.ok(checkPdfForFold({ pages: [{ w: 303, h: 216, trim: { w: 297, h: 210 } }, { w: 303, h: 216, trim: { w: 297, h: 210 } }] }, r, 3).ok);
+  const wrong = checkPdfForFold({ pages: [{ w: 210, h: 297 }] }, r, 3);
+  assert.ok(!wrong.ok && wrong.issues.some((s) => /2 flat pages/.test(s)) && wrong.issues.some((s) => /turned 90/.test(s)));
+});
