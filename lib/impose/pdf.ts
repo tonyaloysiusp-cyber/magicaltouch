@@ -234,3 +234,28 @@ export async function samplePdf(o: { pages: number; w: number; h: number; bleed:
   }
   return doc.save();
 }
+
+/**
+ * Re-reads a written PDF and checks it against the layout: page count, page
+ * sizes, and that TrimBox / BleedBox sit inside the MediaBox. Nothing is
+ * reported as ready unless these pass.
+ */
+export async function verifyImposedPdf(bytes: Uint8Array, doc: { sheets: { w: number; h: number; trim: { x: number; y: number; w: number; h: number } }[] }): Promise<{ ok: boolean; problems: string[]; summary: string }> {
+  const { PDFDocument } = await import('pdf-lib');
+  const problems: string[] = [];
+  const pdf = await PDFDocument.load(bytes, { ignoreEncryption: true });
+  const pages = pdf.getPages(), pt = 72 / 25.4;
+  if (pages.length !== doc.sheets.length) problems.push(`The PDF has ${pages.length} pages, the layout ${doc.sheets.length} sheets.`);
+  pages.forEach((p, i) => {
+    const s = doc.sheets[i]; if (!s) return;
+    const m = p.getMediaBox(), t = p.getTrimBox(), b = p.getBleedBox();
+    if (Math.abs(m.width - s.w * pt) > 0.6 || Math.abs(m.height - s.h * pt) > 0.6) problems.push(`Sheet ${i + 1}: page is ${Math.round(m.width / pt)} × ${Math.round(m.height / pt)} mm, expected ${Math.round(s.w)} × ${Math.round(s.h)} mm.`);
+    const inside = (a: { x: number; y: number; width: number; height: number }) => a.x >= m.x - 0.01 && a.y >= m.y - 0.01 && a.x + a.width <= m.x + m.width + 0.01 && a.y + a.height <= m.y + m.height + 0.01;
+    if (!inside(t)) problems.push(`Sheet ${i + 1}: TrimBox is outside the MediaBox.`);
+    if (!inside(b)) problems.push(`Sheet ${i + 1}: BleedBox is outside the MediaBox.`);
+    if (t.x < b.x - 0.01 || t.y < b.y - 0.01 || t.x + t.width > b.x + b.width + 0.01 || t.y + t.height > b.y + b.height + 0.01) problems.push(`Sheet ${i + 1}: TrimBox is not inside the BleedBox.`);
+  });
+  const first = pages[0];
+  const summary = first ? `${pages.length} page${pages.length === 1 ? '' : 's'}, ${Math.round(first.getWidth() / pt)} × ${Math.round(first.getHeight() / pt)} mm, boxes checked` : 'no pages';
+  return { ok: !problems.length, problems, summary };
+}

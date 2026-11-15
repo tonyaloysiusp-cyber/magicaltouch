@@ -412,7 +412,7 @@ function finishSheet(w: number, h: number, items: Item[], trims: Box[], o: { ble
   if (o.marks.bleedMarks) for (const t of trims) for (const [x, y, dx, dy] of [[t.x - o.bleed, t.y - o.bleed, -1, -1], [t.x + t.w + o.bleed, t.y - o.bleed, 1, -1], [t.x - o.bleed, t.y + t.h + o.bleed, -1, 1], [t.x + t.w + o.bleed, t.y + t.h + o.bleed, 1, 1]] as const) {
     const art = trims.map((u) => ({ x: u.x - o.bleed, y: u.y - o.bleed, w: u.w + 2 * o.bleed, h: u.h + 2 * o.bleed }));
     const segs: Item[] = [{ k: 'line', x1: x, y1: y, x2: x + dx * 2, y2: y, width: 0.1, color: o.marks.color || '#000000', m: I, grp: g, tag: 'mark' }, { k: 'line', x1: x, y1: y, x2: x, y2: y + dy * 2, width: 0.1, color: o.marks.color || '#000000', m: I, grp: g, tag: 'mark' }];
-    marks.push(...segs.filter((ln) => !art.some((b) => segHitsBox(ln, b))));
+    marks.push(...segs.filter((ln) => !art.some((b) => segHitsBox(ln as any, b))));
   }
   if (o.marks.centre && trims.length) {
     const x0 = Math.min(...trims.map((t) => t.x)) - o.bleed, y0 = Math.min(...trims.map((t) => t.y)) - o.bleed;
@@ -525,7 +525,7 @@ export function runAll(doc: Doc, cmds: Command[], sources: Source[] = []): Doc {
 // ---------------------------------------------------------------- manual imposition canvas
 
 /** Does a horizontal / vertical mark line cross the inside of a box? */
-function segHitsBox(ln: Extract<Item, { k: 'line' }>, b: Box): boolean {
+function segHitsBox(ln: any, b: Box): boolean {
   const e = 0.01, x0 = Math.min(ln.x1, ln.x2), x1 = Math.max(ln.x1, ln.x2), y0 = Math.min(ln.y1, ln.y2), y1 = Math.max(ln.y1, ln.y2);
   return x1 > b.x + e && x0 < b.x + b.w - e && y1 > b.y + e && y0 < b.y + b.h - e;
 }

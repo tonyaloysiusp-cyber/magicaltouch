@@ -259,16 +259,19 @@ export function ImpositionStudio() {
     if (!doc.sheets.length) return;
     setBusy(v); setErr(null);
     try {
-      const { buildPdf } = await import('@/lib/impose/pdf');
+      const { buildPdf, verifyImposedPdf } = await import('@/lib/impose/pdf');
       const base = (sources[0]?.name || 'layout').replace(/\.pdf$/i, '');
       const out = await buildPdf(doc, sources.map((s) => s.bytes), { variant: v === 'flat' ? 'print' : v, title: `${base} — imposed` });
+      // Verify before delivering: page count, sizes and boxes.
+      const ver = await verifyImposedPdf(out.bytes, doc);
+      if (!ver.ok) { setErr(`Not saved — the PDF failed its check: ${ver.problems.slice(0, 3).join(' ')}`); setBusy(null); return; }
       if (v === 'flat') {
         const { flattenPdf } = await import('@/lib/impose/raster');
         save(await flattenPdf(out.bytes, Number(params.flatDpi?.dpi || 300), (i, n) => setMsg(`Flattening sheet ${i} of ${n}…`)), `${base}-imposed-flattened.pdf`);
         setMsg('Flattened PDF saved — every sheet is now one picture; text can no longer be edited.');
       } else {
         save(out.bytes, `${base}-imposed${v === 'print' ? '' : `-${v}`}.pdf`);
-        setMsg(v === 'editable' ? (out.layers ? 'Editable PDF saved — artwork, stick-ons, masking tape and printer marks are on separate layers.' : 'Saved, but layers could not be added in this browser.') : 'Print-ready PDF saved — pages stay vectors, fonts untouched. Print at 100 %.');
+        setMsg(v === 'editable' ? (out.layers ? `Editable PDF saved — artwork, stick-ons, masking tape and printer marks are on separate layers. Checked: ${ver.summary}.` : 'Saved, but layers could not be added in this browser.') : 'Print-ready PDF saved — pages stay vectors, fonts untouched. Print at 100 %.' + ` Checked: ${ver.summary}.`);
       }
     } catch (e: any) { setErr(e?.message || 'The PDF could not be made.'); }
     setBusy(null);
