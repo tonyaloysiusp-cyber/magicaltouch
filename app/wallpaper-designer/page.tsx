@@ -1,9 +1,13 @@
 import type { Metadata } from 'next';
+import { redirect } from 'next/navigation';
 import { ToolPage, RELATED_TOOLS } from '@/components/seo/ToolPage';
 import { WallWorkspace } from '@/components/wall/WallWorkspace';
 import { SITE_URL, SITE_NAME, fitTitle, fitDescription } from '@/lib/seo';
 
-// Wallpaper & Wall Sticker Designer (replaces the Wall Poster & Wallpaper tool).
+// Wallpaper & Wall Sticker Designer — retired from the product (brief of 15 Nov):
+// it is no longer linked or listed, and a plain visit goes to Pattern Design.
+// The page still opens when it carries a project (?localDoc= from the Dashboard,
+// ?pattern=…), so wallpaper projects people saved keep opening; no data is lost.
 const PATH = '/wallpaper-designer';
 const TITLE = 'Wallpaper & Wall Sticker Designer — Print Strips and Cut Lines';
 const DESC = 'Design custom wallpaper from seamless patterns, split into numbered print strips with an installation order, or make wall stickers with contour cut lines and print-and-cut sheets. Vector PDF, SVG and PNG — all on your device.';
@@ -11,6 +15,7 @@ export const metadata: Metadata = {
   title: fitTitle(TITLE), description: fitDescription(DESC), alternates: { canonical: `${SITE_URL}${PATH}` },
   openGraph: { type: 'website', url: `${SITE_URL}${PATH}`, title: TITLE, description: DESC, siteName: SITE_NAME, images: [{ url: `${SITE_URL}/tools/thumbs/wall.webp`, width: 960, height: 540 }] },
   twitter: { card: 'summary_large_image', title: TITLE, description: DESC },
+  robots: { index: false, follow: false },
 };
 const FAQ: [string, string][] = [
   ['How does the wallpaper print file work?', 'Enter your wall’s width and height and the roll or panel width. The design is split into numbered strips with an overlap and alignment marks, listed in installation order. Download one PDF with every strip, a ZIP of separate numbered panels (PDF and SVG), or a full-wall PNG.'],
@@ -26,7 +31,8 @@ const STEPS: [string, string][] = [
   ['Pick the design', 'A pattern from your library, or your own artwork.'],
   ['Download for print', 'Numbered wallpaper strips, or a sticker sheet with cut lines.'],
 ];
-export default function Page() {
+export default function Page({ searchParams }: { searchParams?: Record<string, string | string[] | undefined> }) {
+  if (!searchParams || !Object.keys(searchParams).length) redirect('/patterns');
   return (
     <ToolPage image="/tools/thumbs/wall.webp" path={PATH} name="Wallpaper & Wall Sticker Designer" eyebrow="Wallpaper · Wall stickers · Print strips" h1="Wallpaper & wall sticker designer" intro="Cover a wall with your own pattern in ready-to-hang numbered strips, or make wall stickers with cut lines on print-and-cut sheets." description={DESC} steps={STEPS} faq={FAQ} related={RELATED_TOOLS}>
       <WallWorkspace />

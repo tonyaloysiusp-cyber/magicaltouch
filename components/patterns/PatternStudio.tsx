@@ -66,7 +66,7 @@ function Slider({ label, value, min, max, step = 1, onChange, fmt }: { label: st
 export function PatternStudio() {
   const router = useRouter();
   // Old links to the garment and wall workspaces now open their own tools.
-  useEffect(() => { try { const t = new URLSearchParams(window.location.search).get('tab'); if (t === 'kits') router.replace('/textile-designer'); if (t === 'surfaces') router.replace('/wallpaper-designer'); } catch { /* ignore */ } }, [router]);
+  useEffect(() => { try { const t = new URLSearchParams(window.location.search).get('tab'); if (t === 'kits') router.replace('/textile-designer'); } catch { /* ignore */ } }, [router]);
   const [p, setP] = useState<PatternSettings>(DEFAULT_PATTERN);
   const [saved, setSaved] = useState<Saved[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -397,7 +397,7 @@ export function PatternStudio() {
           <h2 id="use-title" className="text-lg font-semibold">Use this pattern on</h2>
           <p className="mt-1 text-[13.5px] text-mt-muted">Save it to My patterns first — it then appears in each tool’s pattern picker, and edits you save here update it there.</p>
           <div className="mt-3 flex flex-wrap gap-2">
-            {[[`/textile-designer?garment=jersey${editingId ? `&pattern=${editingId}` : ''}`, 'Jersey'], [`/textile-designer?garment=polo${editingId ? `&pattern=${editingId}` : ''}`, 'Polo T-shirt'], [`/textile-designer?garment=tshirt${editingId ? `&pattern=${editingId}` : ''}`, 'T-shirt'], [`/wallpaper-designer${editingId ? `?pattern=${editingId}` : ''}`, 'Wallpaper'], ['/editor?w=1080&h=1080&panel=patterns', 'A design']].map(([href, label]) => (
+            {[[`/textile-designer?garment=jersey${editingId ? `&pattern=${editingId}` : ''}`, 'Jersey'], [`/textile-designer?garment=polo${editingId ? `&pattern=${editingId}` : ''}`, 'Polo T-shirt'], [`/textile-designer?garment=tshirt${editingId ? `&pattern=${editingId}` : ''}`, 'T-shirt'], ['/editor?w=1080&h=1080&panel=patterns', 'A design']].map(([href, label]) => (
               <a key={href} href={href} className="h-9 px-4 rounded-full border border-mt-border text-[13px] font-semibold inline-flex items-center hover:border-mt-ink/40">{label} →</a>
             ))}
           </div>

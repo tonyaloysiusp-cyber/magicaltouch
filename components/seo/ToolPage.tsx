@@ -21,7 +21,6 @@ export const RELATED_TOOLS: { href: string; label: string }[] = [
   { href: '/trace', label: 'Image to vector (Image Trace)' },
   { href: '/patterns', label: 'Pattern maker, rangoli & mandala' },
   { href: '/textile-designer', label: 'Textile designer: jerseys, polo & T-shirts' },
-  { href: '/wallpaper-designer', label: 'Wallpaper & wall sticker designer' },
   { href: '/print-size-calculator', label: 'Print size & binding calculator' },
   { href: '/print-layout', label: 'Print layout & imposition' },
   { href: '/remove-background', label: 'Background remover' },

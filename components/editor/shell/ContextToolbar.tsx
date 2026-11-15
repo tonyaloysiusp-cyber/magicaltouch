@@ -30,7 +30,6 @@ import {
   Ungroup,
   Droplet,
   Square as SquareRound,
-  SquareDashed,
   Spline,
   FlipHorizontal2,
   FlipVertical2,
@@ -759,7 +758,7 @@ function ContextToolbarInner({
             width={240}
             trigger={({ toggle, open }) => (
               <IconButton label="Frame border" onClick={toggle} active={open}>
-                <SquareDashed size={16} />
+                <SquareRound size={16} strokeDasharray="3 2" />
               </IconButton>
             )}
           >
