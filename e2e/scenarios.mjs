@@ -934,7 +934,7 @@ scenarios.push({
     t.check('face found', (await t.page.getByText('Face found.').count()) > 0);
     t.check('face preview shown', (await t.page.getByLabel('Face preview').count()) > 0);
     for (const label of ['Brighten eye whites', 'Iris clarity', 'Dark circles', 'Whiten teeth', 'Lip colour', 'Lip saturation', 'Eye size', 'Slim face', 'Slim jaw', 'Slim nose', 'Chin height']) t.check(`face slider ${label}`, (await t.page.getByRole('slider', { name: label, exact: true }).count()) > 0);
-    const fg = await t.page.getByRole('group', { name: 'Female portrait face presets' }).first().getByRole('button').count(), mg = await t.page.getByRole('group', { name: 'Male portrait face presets' }).first().getByRole('button').count();
+    const fg = await t.page.getByRole('group', { name: 'Female portrait face presets' }).first().getByRole('button').count(), mg = await t.page.getByRole('group', { name: 'Male portrait face presets', exact: true }).first().getByRole('button').count();
     t.check('face preset groups', fg === 4 && mg === 3, `${fg} / ${mg}`);
     const before = await big();
     await t.page.getByRole('button', { name: 'Soft glam', exact: true }).click();
