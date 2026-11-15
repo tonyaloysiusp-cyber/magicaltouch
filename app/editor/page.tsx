@@ -100,6 +100,7 @@ import { DesignLayersPanel } from '@/components/editor/DesignLayersPanel';
 import { ArtboardsPanel } from '@/components/editor/ArtboardsPanel';
 import { ExportDialog, ExportSettings } from '@/components/editor/ExportDialog';
 import { TranslateDialog, TranslateScope } from '@/components/editor/TranslateDialog';
+import { TextWriter, scriptLang, type TextWriterResult } from '@/components/editor/TextWriter';
 import { DesignLimitDialog } from '@/components/DesignLimitDialog';
 import { ProfileMenu } from '@/components/ProfileMenu';
 import { MAX_DESIGNS, getDesignCount } from '@/lib/profile';
@@ -309,6 +310,7 @@ function EditorContent() {
   }, []);
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [showTranslate, setShowTranslate] = useState(false);
+  const [showWriter, setShowWriter] = useState(false);
   const [showDesignLimitDialog, setShowDesignLimitDialog] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
@@ -7199,6 +7201,7 @@ function EditorContent() {
         { label: 'Duplicate', shortcut: 'Ctrl/Cmd+D', onClick: duplicateSelected, disabled: !hasSelection },
         { label: 'Delete', shortcut: 'Delete', onClick: deleteSelected, disabled: !hasSelection },
         { divider: true },
+        { label: 'Text writer — type, Tanglish, translate…', onClick: () => setShowWriter(true) },
         { label: 'Translate design…', onClick: () => setShowTranslate(true) },
         { divider: true },
         { label: 'Preferences...', onClick: () => setShowPreferences(true) },
@@ -7320,6 +7323,7 @@ function EditorContent() {
     setShapeParams: features.setShapeParams,
     setTextFx: features.setTextFx,
     translate: () => setShowTranslate(true),
+    writeText: () => setShowWriter(true),
     setOpacity: features.setOpacity,
     flip: features.flip,
     replaceImage: () => replaceInputRef.current?.click(),
@@ -8126,6 +8130,41 @@ function EditorContent() {
 
       {(pro || tabs.length > 1) && <TabBar tabs={tabs} activeTabId={activeTabId} onSwitch={switchTab} onClose={closeTab} onAdd={() => setShowOpenDialog(true)} />}
 
+      {showWriter && (() => {
+        const obj: any = fabricCanvasRef.current?.getActiveObject();
+        const isText = !!obj && /text/i.test(obj.type || '');
+        const fit = async (o: any, r: TextWriterResult) => {
+          const code = scriptLang(r.text);
+          if (code) {
+            const { pickFontFor, fontStyleKind } = await import('@/lib/i18n/languages');
+            const f = pickFontFor(code, o.fontFamily || 'Arial', fontStyleKind(undefined, o.fontFamily || 'Arial'), Number(o.fontWeight) || 400);
+            if (f) o.set('fontFamily', f);
+          }
+          o.set({ direction: r.direction, ...(r.direction === 'rtl' && (o.textAlign === 'left' || !o.textAlign) ? { textAlign: 'right' } : {}) });
+          await ensureFontLoaded(o.fontFamily || 'Arial');
+          refreshTextMetrics(fabricCanvasRef.current);
+          o.setCoords?.();
+          fabricCanvasRef.current.fire('object:modified', { target: o });
+          fabricCanvasRef.current.requestRenderAll();
+        };
+        return (
+          <TextWriter
+            initial={isText ? String(obj.text || '') : ''}
+            hasText={isText}
+            onClose={() => setShowWriter(false)}
+            onReplace={(r) => { const o: any = fabricCanvasRef.current?.getActiveObject(); if (!o || !/text/i.test(o.type || '')) return; o.set('text', r.text); fit(o, r); }}
+            onInsert={(r) => {
+              const ab = getActiveArtboardRect();
+              import('fabric').then((mod) => {
+                const t = new mod.fabric.Textbox(r.text, { left: ab.x + ab.width / 2 - 200, top: ab.y + ab.height / 2 - 30, width: 400, fontSize: 48, fill: '#1A1A1A', fontFamily: 'Arial' });
+                fabricCanvasRef.current.add(t);
+                fabricCanvasRef.current.setActiveObject(t);
+                fit(t, r);
+              });
+            }}
+          />
+        );
+      })()}
       {showTranslate && (
         <TranslateDialog
           onClose={() => setShowTranslate(false)}

@@ -55,6 +55,7 @@ import {
   Sun,
   Wand2,
   Languages,
+  Type,
   PenTool,
 } from 'lucide-react';
 import { FontPicker } from '../FontPicker';
@@ -82,6 +83,7 @@ export interface ToolbarActions {
   setShapeParams: (p: any, record?: boolean) => void;
   setTextFx: (fx: TextFx, record?: boolean) => void;
   translate?: () => void;
+  writeText?: () => void;
   setOpacity: (v: number, record?: boolean) => void;
   flip: (axis: 'x' | 'y') => void;
   replaceImage: () => void;
@@ -669,6 +671,7 @@ function ContextToolbarInner({
         >
           <TextEffectsEditor value={fx} onChange={(v, commit) => a.setTextFx(v, commit)} />
         </Popover>
+        {a.writeText && <ToolButton label="Write" hint="Text writer: type in any language, Tanglish → Tamil, translate this text, copy / paste" icon={<Type size={16} />} onClick={a.writeText} />}
         {a.translate && <ToolButton label="Translate" hint="Change the words to another language" icon={<Languages size={16} />} onClick={a.translate} />}
         {common(sel)}
       </>

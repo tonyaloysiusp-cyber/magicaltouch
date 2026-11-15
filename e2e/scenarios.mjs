@@ -946,6 +946,44 @@ scenarios.push({
   },
 });
 
+// Text writer: Tanglish → Tamil with accept / keep, replace the selected text, insert a new one, back to the original.
+scenarios.push({
+  name: 'text-writer-tamil',
+  async run(t) {
+    await t.editor();
+    await t.eval(async () => { const c = window.__fabricCanvas; const F = window.fabric || (await import('fabric')).fabric; const tb = new F.Textbox('Hello team', { left: 200, top: 200, width: 500, fontSize: 60, fontFamily: 'Arial' }); c.add(tb); c.setActiveObject(tb); c.requestRenderAll(); }).catch(() => {});
+    await t.page.waitForTimeout(500);
+    const hasText = await t.eval(() => !!window.__fabricCanvas.getActiveObject());
+    if (!hasText) { await t.page.keyboard.press('t'); }
+    await t.page.getByRole('button', { name: 'Write', exact: true }).first().click({ timeout: 10000 });
+    const w = t.page.getByRole('dialog', { name: 'Text writer' });
+    t.check('writer opens with the selected text', (await w.getByLabel('Text', { exact: true }).inputValue()) === 'Hello team');
+    await w.getByLabel(/Tanglish/).check();
+    await w.getByLabel('Text', { exact: true }).fill('Vanakkam, eppadi irukkinga?');
+    const sug = await w.getByLabel('Tamil suggestion').innerText();
+    t.check('Tanglish suggestion in Tamil', sug.includes('வணக்கம், எப்படி இருக்கீங்க?'), sug.slice(0, 80));
+    await w.getByRole('button', { name: 'Use the Tamil' }).click();
+    t.check('accepted text is editable Tamil', (await w.getByLabel('Text', { exact: true }).inputValue()) === 'வணக்கம், எப்படி இருக்கீங்க?');
+    await w.getByRole('button', { name: 'Replace selected text' }).click();
+    await t.page.waitForTimeout(1500);
+    const o = await t.eval(() => { const a = window.__fabricCanvas.getActiveObject(); return { text: a.text, font: a.fontFamily }; });
+    t.check('selected text replaced on the design', o.text === 'வணக்கம், எப்படி இருக்கீங்க?', JSON.stringify(o));
+    t.check('a font with Tamil letters is used', /Tamil|Catamaran|Kavivanar/.test(o.font), o.font);
+    await t.page.getByRole('button', { name: 'Write', exact: true }).first().click();
+    await w.getByLabel('Text', { exact: true }).fill('مرحبا بكم');
+    t.check('Arabic detected as right to left', /right to left/.test(await w.getByLabel('Text direction').innerText()));
+    await w.getByRole('button', { name: 'Back to the original' }).click();
+    t.check('original text one click away', (await w.getByLabel('Text', { exact: true }).inputValue()) === 'வணக்கம், எப்படி இருக்கீங்க?');
+    await w.getByLabel('Text', { exact: true }).fill('مرحبا بكم');
+    const before = await t.eval(() => window.__fabricCanvas.getObjects().length);
+    await w.getByRole('button', { name: 'Insert as new text' }).click();
+    await t.page.waitForTimeout(1200);
+    const after = await t.eval(() => { const a = window.__fabricCanvas.getActiveObject(); return { n: window.__fabricCanvas.getObjects().length, dir: a.direction, align: a.textAlign, text: a.text }; });
+    t.check('inserted as a new right-to-left text', after.n === before + 1 && after.dir === 'rtl' && after.align === 'right' && after.text === 'مرحبا بكم', JSON.stringify(after));
+    await t.shot('text-writer');
+  },
+});
+
 // Jersey creator: vector graphic generators and ready designs in the print studio; measurements per size.
 scenarios.push({
   name: 'jersey-creator',
@@ -981,6 +1019,20 @@ scenarios.push({
     await t.page.getByRole('radio', { name: 'in' }).click();
     t.check('measurements in inches', /″/.test(await mt.innerText()));
     t.check('standard template marked unverified', /unverified/.test(await t.page.getByLabel('Garment measurements').innerText()));
+    // Cost from your own price table, and the branded production specification.
+    await t.page.getByRole('tab', { name: /Print files/ }).click();
+    await t.page.getByText(/^Cost & price/).click();
+    t.check('no invented prices', /Add your fabric price per m² and printing price per m²/.test(await t.page.getByLabel('Cost result').innerText()));
+    await t.page.getByLabel('Fabric 1 price / m²').fill('12');
+    await t.page.getByLabel('Printing 1 price / m² printed').fill('6');
+    await t.page.getByLabel('Cost per garment').fill('5');
+    await t.page.getByLabel('Margin percent').fill('40');
+    const cost = await t.page.getByLabel('Cost result').innerText();
+    t.check('price per garment computed', /per garment/.test(cost) && !/Add your/.test(cost), cost.slice(0, 200));
+    const fs = await import('node:fs');
+    const [dl] = await Promise.all([t.page.waitForEvent('download', { timeout: 30000 }), t.page.getByRole('button', { name: /Production specification/ }).click()]);
+    const pdf = fs.readFileSync(await dl.path());
+    t.check('production specification PDF', pdf.slice(0, 4).toString() === '%PDF' && pdf.length > 3000 && /production-spec\.pdf$/.test(dl.suggestedFilename()), `${dl.suggestedFilename()} ${pdf.length}`);
   },
 });
 

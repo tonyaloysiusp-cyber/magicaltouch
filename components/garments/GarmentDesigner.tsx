@@ -23,6 +23,7 @@ import { PrintStudio } from './PrintStudio';
 import { ProductionSheet } from './ProductionSheet';
 import { ensureFonts } from '@/lib/textile/fonts';
 import { measureGarment, fmtLen, type Unit } from '@/lib/textile/measure';
+import { costOrder, loadPrices, savePrices, type PriceTable } from '@/lib/textile/pricing';
 import { artFonts } from '@/lib/textile/art';
 import { listAssets, migrateLegacyPatterns, onAssetsChanged } from '@/lib/assets/library';
 import { PATTERN_FONTS, textOutline } from '@/lib/patternText';
@@ -406,7 +407,36 @@ export function GarmentDesigner({ kind: initialKind = 'jersey' }: { kind?: Garme
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, list, kit, pattern, rollW, bleed, pageMm, group, mirror, marks, guides]);
 
+  // Costing from your own price table (saved on this device) and the real roll metres.
+  const [prices, setPricesState] = useState<PriceTable>(() => (typeof window === 'undefined' ? loadPrices() : loadPrices()));
+  const setPrices = (t: PriceTable) => { setPricesState(t); savePrices(t); };
+  const [fabricIdx, setFabricIdx] = useState(0);
+  const [methodIdx, setMethodIdx] = useState(0);
+  const costing = useMemo(() => (plan ? costOrder(prices, { garments: list.length, rollW, rollMm: plan.metres * 1000, fabric: fabricIdx, method: methodIdx }) : null), [plan, prices, list.length, rollW, fabricIdx, methodIdx]);
   const fileBase = `${safeFile(kit.teamName)}-${copy.noun.replace(/\s+/g, '-')}`;
+  const dlSpec = async () => {
+    if (!plan) return;
+    setBusy('spec');
+    try {
+      const { specSheetPages } = await import('@/lib/textile/specSheet');
+      const { svgToPdfBlob } = await import('@/lib/svgToPdf');
+      const counts = new Map<string, number>();
+      for (const p of list) counts.set(p.size, (counts.get(p.size) || 0) + 1);
+      const sizes = [...counts.entries()].map(([size, count]) => { const z = sizeInfo(kit, size); return { size: z?.label || size, count, measures: measureGarment(kitProduct(kit).pieces, z?.k || 1, z?.ky || z?.k || 1) }; });
+      const panels = ([['body', 'Front & back'], ['sleeve', 'Sleeves'], ['trim', 'Collar & trims']] as const).map(([r, l]) => ({ panel: l, bleed: kit.panels?.[r]?.bleed ?? bleed, seam: kit.panels?.[r]?.seam ?? 0, safe: kit.panels?.[r]?.safe ?? 0 }));
+      const pages = specSheetPages({
+        project: kit.teamName || copy.noun, garment: kitProduct(kit).label, date: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }),
+        template: kit.factoryPieces ? `Factory pattern: ${kit.factoryName || 'imported'}` : 'Standard template — measurements unverified, confirm with your factory',
+        sizes, panels,
+        print: { rollW, lengthMm: plan.metres * 1000, pages: plan.pages, use: plan.use, overlaps: plan.overlaps, textMode: textMode === 'live' ? 'Live text (fonts embedded)' : 'Outlines', layout: group === 'fabric' ? `Save fabric${kit.sheetLayout ? ' (edited by hand)' : ''}` : 'Each player together', mirror },
+        cost: costing && costing.total > 0 ? { prices, result: costing, fabric: prices.fabrics[fabricIdx]?.name || '', method: prices.methods[methodIdx]?.name || '' } : null,
+        notes: [kit.letterGrade === 'scale' ? 'Names and numbers grow with the size.' : 'Names and numbers keep the same height on every size.', 'Print files are separate: this document is for information only.'],
+      });
+      save(await svgToPdfBlob('', 0, 0, pages.map((svg) => ({ svg, widthMm: 210, heightMm: 297 }))), `${fileBase}-production-spec.pdf`);
+      flash(`Production specification ready (${pages.length} page${pages.length > 1 ? 's' : ''}).`);
+    } catch { flash('The specification PDF could not be made in this browser.'); }
+    setBusy(null);
+  };
   // Fonts the print files need: for outlines the art's font files must be loaded; for live text the PDF embeds them.
   const artReady = async () => { if (kit.art?.length) await ensureFonts(artFonts(kit.art)); };
   const pdfFonts = { loadFont: textMode === 'live' ? async (family: string, weight: number, italic: boolean) => { try { const { fontBytes } = await import('@/lib/fontOutline'); return await fontBytes(family, weight, italic); } catch { return null; } } : undefined };
@@ -895,6 +925,30 @@ export function GarmentDesigner({ kind: initialKind = 'jersey' }: { kind?: Garme
               <button type="button" onClick={dlSheetSvg} disabled={!!busy || !ready || !list.length} className={btn}>{busy === 'sheet-svg' ? <Loader2 size={14} className="animate-spin" /> : <Layers size={14} />} Print SVG</button>
               <button type="button" onClick={dlEach} disabled={!!busy || !ready || !picked.length} className={btn}>{busy === 'zip' ? <Loader2 size={14} className="animate-spin" /> : <FileArchive size={14} />} Each separately</button>
             </div>
+            <details className="rounded-2xl border border-mt-border p-3" aria-label="Cost and price">
+              <summary className="cursor-pointer text-[13px] font-semibold">Cost &amp; price{costing && costing.total > 0 ? ` — ${prices.currency} ${costing.perGarment.toFixed(2)} per garment` : ''}</summary>
+              <p className="mt-1 text-[11.5px] text-mt-muted">Your own prices (kept on this device). Fabric and printing use the real roll metres of this order.</p>
+              <div className="mt-2 grid grid-cols-2 gap-1.5 text-[12px]">
+                <label className="block">Currency<input value={prices.currency} onChange={(e) => setPrices({ ...prices, currency: e.target.value.slice(0, 6) })} aria-label="Currency" className={`${field} mt-0.5 h-8`} /></label>
+                <label className="block">Fabric<select value={fabricIdx} onChange={(e) => setFabricIdx(Number(e.target.value))} aria-label="Fabric" className={`${field} mt-0.5 h-8`}>{prices.fabrics.map((f, i) => <option key={i} value={i}>{f.name}</option>)}</select></label>
+              </div>
+              {([['fabrics', 'Fabric', 'perM2', '/ m²'], ['methods', 'Printing', 'perM2', '/ m² printed']] as const).map(([key, title, fld, unitLbl]) => <div key={key} className="mt-2"><p className="text-[11.5px] font-semibold">{title}</p>{(prices[key] as any[]).map((row: any, i: number) => <div key={i} className="mt-1 grid grid-cols-[1fr_76px_28px] gap-1"><input value={row.name} onChange={(e) => setPrices({ ...prices, [key]: (prices[key] as any[]).map((x, j) => (j === i ? { ...x, name: e.target.value } : x)) } as any)} aria-label={`${title} ${i + 1} name`} className={`${field} mt-0 h-8`} /><input type="number" min={0} step={0.01} value={row[fld]} onChange={(e) => setPrices({ ...prices, [key]: (prices[key] as any[]).map((x, j) => (j === i ? { ...x, [fld]: Math.max(0, Number(e.target.value) || 0) } : x)) } as any)} aria-label={`${title} ${i + 1} price ${unitLbl}`} title={unitLbl} className={`${field} mt-0 h-8`} /><button type="button" onClick={() => (prices[key] as any[]).length > 1 && setPrices({ ...prices, [key]: (prices[key] as any[]).filter((_, j) => j !== i) } as any)} aria-label={`Remove ${title.toLowerCase()} ${i + 1}`} className="text-[13px]">×</button></div>)}<button type="button" onClick={() => setPrices({ ...prices, [key]: [...(prices[key] as any[]), key === 'fabrics' ? { name: 'Fabric', perM2: 0 } : { name: 'Method', perM2: 0, setup: 0 }] } as any)} className="mt-1 text-[12px] text-mt-primary">+ add</button></div>)}
+              <label className="mt-2 block text-[12px]">Printing method<select value={methodIdx} onChange={(e) => setMethodIdx(Number(e.target.value))} aria-label="Printing method" className={`${field} mt-0.5 h-8`}>{prices.methods.map((f, i) => <option key={i} value={i}>{f.name}</option>)}</select></label>
+              <div className="mt-2 grid grid-cols-3 gap-1.5 text-[12px]">
+                <label className="block">Set-up<input type="number" min={0} step={0.01} value={prices.methods[methodIdx]?.setup ?? 0} onChange={(e) => setPrices({ ...prices, methods: prices.methods.map((x, j) => (j === methodIdx ? { ...x, setup: Math.max(0, Number(e.target.value) || 0) } : x)) })} aria-label="Set-up cost" className={`${field} mt-0.5 h-8`} /></label>
+                <label className="block">Per garment<input type="number" min={0} step={0.01} value={prices.perGarment.reduce((a, x) => a + x.amount, 0)} onChange={(e) => setPrices({ ...prices, perGarment: [{ name: 'Cutting, sewing & packing', amount: Math.max(0, Number(e.target.value) || 0) }] })} aria-label="Cost per garment" className={`${field} mt-0.5 h-8`} /></label>
+                <label className="block">Margin %<input type="number" min={0} step={1} value={prices.margin} onChange={(e) => setPrices({ ...prices, margin: Math.max(0, Number(e.target.value) || 0) })} aria-label="Margin percent" className={`${field} mt-0.5 h-8`} /></label>
+                <label className="block">Tax %<input type="number" min={0} step={0.5} value={prices.tax} onChange={(e) => setPrices({ ...prices, tax: Math.max(0, Number(e.target.value) || 0) })} aria-label="Tax percent" className={`${field} mt-0.5 h-8`} /></label>
+                <label className="block">m / hour<input type="number" min={0} step={0.5} value={prices.metresPerHour} onChange={(e) => setPrices({ ...prices, metresPerHour: Math.max(0, Number(e.target.value) || 0) })} aria-label="Metres printed per hour" className={`${field} mt-0.5 h-8`} /></label>
+                <label className="block">Min / garment<input type="number" min={0} step={1} value={prices.minutesPerGarment} onChange={(e) => setPrices({ ...prices, minutesPerGarment: Math.max(0, Number(e.target.value) || 0) })} aria-label="Sewing minutes per garment" className={`${field} mt-0.5 h-8`} /></label>
+              </div>
+              {costing && <div className="mt-2 rounded-xl bg-mt-bg p-2 text-[12.5px] tabular-nums" aria-label="Cost result">
+                <p>{costing.m2} m² · fabric {prices.currency} {costing.fabric.toFixed(2)} · printing {costing.print.toFixed(2)}{costing.setup ? ` · set-up ${costing.setup.toFixed(2)}` : ''} · garments {costing.garmentCosts.toFixed(2)}</p>
+                <p>Cost <b>{costing.cost.toFixed(2)}</b> · price <b>{costing.price.toFixed(2)}</b>{costing.tax ? ` + tax ${costing.tax.toFixed(2)}` : ''} = <b>{prices.currency} {costing.total.toFixed(2)}</b> · <b>{costing.perGarment.toFixed(2)}</b> per garment{costing.hours != null ? ` · about ${costing.hours} h` : ''}</p>
+                {costing.missing.length > 0 && <p className="text-amber-700 dark:text-amber-400">Add your {costing.missing.join(' and ')} to get a price.</p>}
+              </div>}
+            </details>
+            <button type="button" onClick={dlSpec} disabled={!!busy || !plan} className={`${btn} w-full justify-center`}>{busy === 'spec' ? <Loader2 size={14} className="animate-spin" /> : <FileArchive size={14} />} Production specification (PDF)</button>
             <p className="text-[11.5px] text-mt-faint">Real-size vector pieces with {bleed} mm bleed, magenta cut lines and a label on every piece. Piece shapes are standard blocks — check them against your own patterns before a full run.</p>
           </>}
 
