@@ -406,8 +406,13 @@ scenarios.push(
     init: () => { try { localStorage.setItem('mt:editorMode', 'pro'); } catch {} },
     async run(t) {
       await t.editor('w=1080&h=1080');
-      await t.eval(() => { const c = window.__fabricCanvas; const tb = new window.fabric.Textbox('Shear me', { left: 200, top: 300, width: 500, fontSize: 80, fontFamily: 'Arial' }); c.add(tb); c.setActiveObject(tb); c.fire('selection:created', { selected: [tb] }); c.requestRenderAll(); });
+      await t.eval(() => { const c = window.__fabricCanvas; const tb = new window.fabric.Textbox('Shear me', { left: 200, top: 300, width: 500, fontSize: 80, fontFamily: 'Arial' }); c.add(tb); c.requestRenderAll(); });
+      await t.page.waitForTimeout(400);
+      const at = await toScreen(t, 400, 340);
+      await t.page.mouse.click(at.x, at.y);
       await t.page.waitForTimeout(600);
+      const panelOpen = await t.page.getByLabel('Shear X', { exact: true }).count();
+      if (!panelOpen) { const b = t.page.getByRole('button', { name: /Properties/ }).first(); if (await b.count()) await b.click(); await t.page.waitForTimeout(400); }
       const set = async (label, v) => { const f = t.page.getByLabel(label, { exact: true }).first(); await f.fill(String(v)); await f.press('Enter'); await t.page.waitForTimeout(250); };
       await set('Shear X', 15);
       await set('H scale', 150);
