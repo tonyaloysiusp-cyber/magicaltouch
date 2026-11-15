@@ -15,12 +15,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlignCenterHorizontal, AlignCenterVertical, AlignEndHorizontal, AlignEndVertical, AlignStartHorizontal, AlignStartVertical, ArrowDown, ArrowUp, Circle, Copy, Eye, EyeOff, Hand, Hash, Image as ImageIcon,
-  LayoutTemplate, Lock, Maximize2, MousePointer2, Palette, PanelLeft, PanelRight, PenTool, Pencil, Pipette, Redo2, Ruler, Save, Shapes, Slash, Spline, Square, Star, Trash2, Triangle, Type, Undo2, Unlock, X, ZoomIn, ZoomOut, Brush, Hexagon,
+  LayoutTemplate, Lock, Maximize2, MousePointer2, Palette, PanelLeft, PanelRight, PenTool, Pencil, Pipette, Redo2, Ruler, Save, Shapes, Slash, Spline, Square, Star, Trash2, Triangle, Type, Undo2, Unlock, X, ZoomIn, ZoomOut, Brush, Hexagon, Sparkles, Dices,
 } from 'lucide-react';
 import { boardLayout, layoutText, mulM, artFonts, type ArtEl, type Board, type Fill, type Mat } from '@/lib/textile/art';
 import { ensureFonts, shaper } from '@/lib/textile/fonts';
 import { normalize, segsToD, transformSegs, bbox as segBox, flatten, regionOf, booleanOp, polysToD, centred, nodes as pathNodes, moveNode, insertNode, deleteNode, setNodeType, penPath, polygonPath, starPath, offsetPath, type BoolOp, type Seg } from '@/lib/textile/vector';
 import { kitProduct, pieceMarkup, stdLettering, panelSpec, type KitDesign, type Player, type Glyphs } from '@/lib/teamKit';
+import { GENERATORS, DESIGNS, generate, genDefaults, roleColour, pathBytes, type GenKind, type GenParams, type GenSpec, type Box as GenBox } from '@/lib/textile/generators';
 import { MOTIFS, tileSvg, layout as patLayout, type PatternSettings } from '@/lib/patterns';
 import { MOTIF_CATEGORIES } from '@/lib/patternMotifs';
 import { PATTERN_FONTS } from '@/lib/patternText';
@@ -72,7 +73,8 @@ export function PrintStudio({ kit, pattern, glyphs, players, libraryPatterns, on
   const [studioOnly, setStudioOnly] = useState<boolean>(!!kit.studioOnly);
   const [selIds, setSelIds] = useState<string[]>([]);
   const [tool, setToolState] = useState<Tool>('select');
-  const [tab, setTab] = useState<'text' | 'shapes' | 'images' | 'patterns' | 'templates'>('text');
+  const [tab, setTab] = useState<'text' | 'shapes' | 'images' | 'patterns' | 'templates' | 'creator'>('text');
+  const [genPieces, setGenPieces] = useState<'body' | 'front' | 'back' | 'sleeves' | 'all'>('body');
   const [shapeCat, setShapeCat] = useState<string>('Basic');
   const [previewIdx, setPreviewIdx] = useState(0);
   const [zoomPct, setZoomPct] = useState(100);
@@ -449,6 +451,34 @@ export function PrintStudio({ kit, pattern, glyphs, players, libraryPatterns, on
     const bp = board.pieces.find((q) => q.piece.id === 'front')!;
     add({ kind: 'rect', w: bp.piece.w + 20, h: bp.piece.h + 20, fill: { type: 'pattern', pattern: p, tileMm: 70, assetId, name }, opacity: 1, m: T(bp.x + bp.piece.w / 2, bp.y + bp.piece.h / 2), name: `Pattern · ${name}` } as any);
   };
+  // ---------------------------------------------------------------- creator (generators)
+  const kitColours = () => ({ body: kit.body, accent: kit.accent || '#C9A86A', accent2: kit.accent2 || '#FFFFFF' });
+  const piecesFor = (which: 'body' | 'front' | 'back' | 'sleeves' | 'all'): string[] => board.pieces.map((p) => p.piece.id).filter((id) => which === 'all' ? true : which === 'body' ? id === 'front' || id === 'back' : which === 'sleeves' ? id.startsWith('sleeve') : id === which);
+  const boxesFor = (ids: string[]): GenBox[] => board.pieces.filter((p) => ids.includes(p.piece.id)).map((p) => ({ x: p.x - 12, y: p.y - 12, w: p.piece.w + 24, h: p.piece.h + 24 }));
+  const addGen = (kind: GenKind, colors?: string[], over: Partial<GenParams> = {}, which: 'body' | 'front' | 'back' | 'sleeves' | 'all' = genPieces, select = true) => {
+    const c = kitColours();
+    const params = { ...genDefaults(kind, colors || [c.accent, c.accent2], Math.floor(Math.random() * 1e6)), ...over };
+    const ids = piecesFor(which);
+    if (!ids.length) { flash('This garment has no such pieces.'); return; }
+    const id = uid();
+    const el = generate({ kind, params, pieces: ids }, boxesFor(ids), I, id);
+    setArt((a) => [...a, el]);
+    if (select) selectIds([id]);
+    if (pathBytes(el) > 1_200_000) flash('A detailed graphic — the print file will be large. Raise the size or lower the amount to lighten it.');
+  };
+  const applyDesign = (id: string) => {
+    const d = DESIGNS.find((x) => x.id === id); if (!d) return;
+    const c = kitColours();
+    for (const L of d.layers) addGen(L.kind, L.colors.map((r) => roleColour(r, c)), L.params || {}, L.pieces, false);
+    flash(`${d.label} added — every layer is editable: select it to change colours, amount, size, angle or get a new variation.`);
+  };
+  const regen = (el: ArtEl, patch: Partial<GenParams> = {}, pieces?: string[]) => {
+    const g = (el as any).gen as GenSpec | undefined; if (!g) return;
+    const spec: GenSpec = { kind: g.kind, params: { ...g.params, ...patch }, pieces: pieces || g.pieces };
+    const fresh = generate(spec, boxesFor(spec.pieces), el.m, el.id);
+    setArt((a) => a.map((e) => (e.id === el.id ? { ...fresh, name: el.name || fresh.name, opacity: el.opacity, hidden: el.hidden, locked: el.locked } as ArtEl : e)));
+  };
+
   const template = (id: string) => {
     const els: Omit<ArtEl, 'id'>[] = [];
     const A = defaultFill(), B = kit.accent2 || '#FFFFFF';
@@ -874,11 +904,12 @@ export function PrintStudio({ kit, pattern, glyphs, players, libraryPatterns, on
           {tabBtn('images', <ImageIcon size={15} />, 'Logos')}
           {tabBtn('patterns', <Palette size={15} />, 'Pattern')}
           {tabBtn('templates', <LayoutTemplate size={15} />, 'Layouts')}
+          {tabBtn('creator', <Sparkles size={15} />, 'Creator')}
         </div>
 
         {/* Add drawer */}
         {showLeft && <aside className={`${narrow ? 'absolute left-[44px] top-0 bottom-0 z-30 shadow-xl' : ''} w-[250px] shrink-0 overflow-y-auto border-r border-mt-border bg-mt-surface p-3 space-y-2`} aria-label="Add to the print file">
-          <div className="flex items-center justify-between"><p className={h4}>{{ text: 'Text', shapes: 'Shapes', images: 'Logos & pictures', patterns: 'Patterns', templates: 'Layouts' }[tab]}</p>{narrow && <button type="button" onClick={() => setShowLeft(false)} aria-label="Close panel" className="p-1"><X size={14} /></button>}</div>
+          <div className="flex items-center justify-between"><p className={h4}>{{ text: 'Text', shapes: 'Shapes', images: 'Logos & pictures', patterns: 'Patterns', templates: 'Layouts', creator: 'Creator' }[tab]}</p>{narrow && <button type="button" onClick={() => setShowLeft(false)} aria-label="Close panel" className="p-1"><X size={14} /></button>}</div>
           {tab === 'text' && <>
             <p className="text-[12px] text-mt-muted">Text is drawn from the font file itself — exact letters, live or outlined in the print file.</p>
             <button type="button" onClick={() => addText('TEAM NAME', { size: 70, upper: true })} className="w-full rounded-lg border border-mt-border p-2 text-left text-[13px] font-semibold hover:bg-mt-surface2">+ Add text</button>
@@ -915,6 +946,15 @@ export function PrintStudio({ kit, pattern, glyphs, players, libraryPatterns, on
             <button type="button" onClick={() => addPatternPanel(pattern, 'Current pattern')} className="w-full rounded-lg border border-mt-border p-2 text-left text-[13px] hover:bg-mt-surface2">+ The garment’s current pattern</button>
             {libraryPatterns.map((a) => <button key={a.id} type="button" onClick={() => addPatternPanel(a.data, a.name, a.id)} className="w-full flex items-center gap-2 rounded-lg border border-mt-border p-1.5 text-left text-[12.5px] hover:bg-mt-surface2">{a.thumb ? <img src={a.thumb} alt="" className="h-9 w-9 rounded object-cover" /> : <span className="h-9 w-9 rounded bg-mt-surface2" />}<span className="truncate">{a.name}</span></button>)}
             {!libraryPatterns.length && <p className="text-[11.5px] text-mt-faint">Patterns you save in Pattern Design appear here.</p>}
+          </>}
+          {tab === 'creator' && <>
+            <p className="text-[12px] text-mt-muted">Sublimation graphics drawn as vectors — every result is editable: colours, amount, size, angle, a new variation, or point by point after Ungroup.</p>
+            <label className={lbl}>Put it on<select value={genPieces} onChange={(e) => setGenPieces(e.target.value as any)} aria-label="Generator pieces" className={field}><option value="body">Front & back</option><option value="front">Front</option><option value="back">Back</option><option value="sleeves">Sleeves</option><option value="all">All pieces</option></select></label>
+            <p className={`pt-1 ${h4}`}>Graphics</p>
+            <div className="grid grid-cols-2 gap-1.5">{GENERATORS.map((g) => <button key={g.kind} type="button" onClick={() => addGen(g.kind)} title={g.hint} aria-label={`Generate ${g.label}`} className="rounded-lg border border-mt-border p-2 text-left text-[12px] hover:bg-mt-surface2"><b className="block text-[12.5px]">{g.label}</b><span className="text-mt-muted">{g.hint}</span></button>)}</div>
+            <p className={`pt-2 ${h4}`}>Ready designs</p>
+            <p className="text-[11.5px] text-mt-muted">Original designs in the garment’s colours, built from the graphics above.</p>
+            <div className="grid grid-cols-2 gap-1.5">{DESIGNS.map((d) => <button key={d.id} type="button" onClick={() => applyDesign(d.id)} aria-label={`Design ${d.label}`} className="rounded-lg border border-mt-border p-2 text-left text-[12.5px] font-semibold hover:bg-mt-surface2">{d.label}<span className="block text-[11px] font-normal text-mt-muted">{d.layers.map((L) => GENERATORS.find((g) => g.kind === L.kind)?.label).join(' + ')}</span></button>)}</div>
           </>}
           {tab === 'templates' && <>
             <p className="text-[12px] text-mt-muted">Ready layouts made of editable shapes — change, move or delete any part.</p>
@@ -956,6 +996,21 @@ export function PrintStudio({ kit, pattern, glyphs, players, libraryPatterns, on
                 <p className={h4}>Points</p>
                 <div className="grid grid-cols-3 gap-1.5"><button type="button" disabled={nodeSel?.kind !== 'anchor'} onClick={() => nodeOp('smooth')} className="h-8 rounded-lg border border-mt-border text-[12px] disabled:opacity-40">Smooth</button><button type="button" disabled={nodeSel?.kind !== 'anchor'} onClick={() => nodeOp('corner')} className="h-8 rounded-lg border border-mt-border text-[12px] disabled:opacity-40">Corner</button><button type="button" disabled={nodeSel?.kind !== 'anchor'} onClick={() => nodeOp('delete')} className="h-8 rounded-lg border border-mt-border text-[12px] disabled:opacity-40">Delete</button></div>
               </section>}
+              {selected.kind === 'group' && (selected as any).gen && (() => {
+                const g = (selected as any).gen as GenSpec; const P = g.params;
+                const slider = (label: string, key: keyof GenParams, min: number, max: number, step: number, fmt = (v: number) => String(Math.round(v * 100) / 100)) => <label className={lbl}>{label} <span className="tabular-nums text-mt-ink">{fmt(P[key] as number)}</span><input type="range" min={min} max={max} step={step} value={P[key] as number} onChange={(e) => regen(selected, { [key]: Number(e.target.value) } as any)} aria-label={`${label} of the graphic`} className="mt-1 w-full" /></label>;
+                return <section className="space-y-2" aria-label="Graphic settings">
+                  <p className={h4}>{GENERATORS.find((x) => x.kind === g.kind)?.label} — settings</p>
+                  <button type="button" onClick={() => regen(selected, { seed: Math.floor(Math.random() * 1e6) })} className="h-9 w-full rounded-lg bg-mt-ink text-mt-bg text-[12.5px] font-semibold inline-flex items-center justify-center gap-1.5"><Dices size={14} /> New variation</button>
+                  {slider('Amount', 'density', 0.05, 1, 0.05, (v) => `${Math.round(v * 100)}%`)}
+                  {slider('Size (mm)', 'scale', g.kind === 'halftone' || g.kind === 'pixels' ? 4 : 6, g.kind === 'cuts' ? 400 : 200, 1)}
+                  {slider('Angle', 'angle', -180, 180, 5, (v) => `${v}°`)}
+                  {slider('Roughness', 'rough', 0, 1, 0.05, (v) => `${Math.round(v * 100)}%`)}
+                  <label className={lbl}>Where<select value={P.zone} onChange={(e) => regen(selected, { zone: e.target.value as any })} aria-label="Where the graphic sits" className={field}>{([['all', 'Whole piece'], ['top', 'Top'], ['bottom', 'Bottom'], ['left', 'Left'], ['right', 'Right'], ['band', 'Chest band'], ['diagonal', 'Diagonal']] as const).map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></label>
+                  <label className={lbl}>On<select value={JSON.stringify(g.pieces)} onChange={(e) => regen(selected, {}, JSON.parse(e.target.value))} aria-label="Pieces the graphic covers" className={field}>{(['body', 'front', 'back', 'sleeves', 'all'] as const).map((w) => <option key={w} value={JSON.stringify(piecesFor(w))}>{{ body: 'Front & back', front: 'Front', back: 'Back', sleeves: 'Sleeves', all: 'All pieces' }[w]}</option>)}</select></label>
+                  <div><p className={lbl}>Colours</p><div className="mt-1 flex flex-wrap items-center gap-1.5">{P.colors.map((c, i) => <span key={i} className="inline-flex items-center"><input type="color" value={c.slice(0, 7)} onChange={(e) => regen(selected, { colors: P.colors.map((x, j) => (j === i ? e.target.value.toUpperCase() : x)) })} aria-label={`Graphic colour ${i + 1}`} className="h-8 w-9 rounded border border-mt-border" />{P.colors.length > 1 && <button type="button" onClick={() => regen(selected, { colors: P.colors.filter((_, j) => j !== i) })} aria-label={`Remove colour ${i + 1}`} className="px-1 text-[12px]">×</button>}</span>)}{P.colors.length < 5 && <button type="button" onClick={() => regen(selected, { colors: [...P.colors, '#FFFFFF'] })} className="h-8 px-2 rounded-lg border border-mt-border text-[12px]">+ Colour</button>}</div></div>
+                </section>;
+              })()}
               {selected.kind === 'group' && <section className="space-y-1.5"><p className="text-[12px] text-mt-muted">{selected.clip ? 'Clipping mask: the first shape clips the others.' : `Group of ${selected.els.length}.`}</p><button type="button" onClick={ungroup} className="h-8 w-full rounded-lg border border-mt-border text-[12px]">{selected.clip ? 'Release mask' : 'Ungroup'}</button></section>}
               {selected.kind === 'text' && <section className="space-y-2" aria-label="Text">
                 <label className={lbl}>Text<textarea value={selected.text} onChange={(e) => update(selected.id, { text: e.target.value } as any)} rows={2} aria-label="Text content" className="mt-1 w-full rounded-lg border border-mt-border bg-mt-bg p-2 text-[13px]" /></label>

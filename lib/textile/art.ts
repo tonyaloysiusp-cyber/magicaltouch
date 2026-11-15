@@ -31,6 +31,8 @@ interface Base {
   stroke2?: { color: string; width: number } | null;
   /** Hard drop shadow (offset in mm on the board, solid colour — prints as a vector copy). */
   shadow?: { dx: number; dy: number; color: string } | null;
+  /** Made by a generator (lib/textile/generators.ts): its settings, so it can be regenerated or varied. */
+  gen?: { kind: string; params: any; pieces: string[] } | null;
 }
 export type ArtEl = Base & (
   | { kind: 'rect'; w: number; h: number; rx?: number; fill?: Fill | null; stroke?: string | null; strokeW?: number }

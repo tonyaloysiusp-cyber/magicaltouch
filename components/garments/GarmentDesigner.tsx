@@ -14,7 +14,7 @@ import { AlertTriangle, CheckCircle2, PenTool, Download, FileArchive, FileUp, Fo
 import { DEFAULT_PATTERN, PatternSettings, svgDataUrl, sheetPlacements, motifPath, layout } from '@/lib/patterns';
 import { SIZES, ROLLS } from '@/lib/garments';
 import {
-  garmentOf, GARMENT_STYLES, GarmentKind, Glyphs, sizeInfo, blockMeasure, KIT_GRAPHICS, KIT_STYLES, KitDesign, KitGraphic, Player, checkRoster, glyphTexts, kitFor,
+  garmentOf, GARMENT_STYLES, GarmentKind, Glyphs, sizeInfo, sizeId, blockMeasure, KIT_GRAPHICS, KIT_STYLES, KitDesign, KitGraphic, Player, checkRoster, glyphTexts, kitFor,
   kitMockupSvg, kitPreviewSvg, parseRoster, playerPrintSvg, printList, rosterSheets, safeFile, frontLayout, kitProduct,
 } from '@/lib/teamKit';
 import { openToolFile, saveToolProject, takeToolHandoff, TOOL_FILE_ACCEPT } from '@/lib/mtd/toolProject';
@@ -22,6 +22,7 @@ import { LeaveGuard } from './LeaveGuard';
 import { PrintStudio } from './PrintStudio';
 import { ProductionSheet } from './ProductionSheet';
 import { ensureFonts } from '@/lib/textile/fonts';
+import { measureGarment, fmtLen, type Unit } from '@/lib/textile/measure';
 import { artFonts } from '@/lib/textile/art';
 import { listAssets, migrateLegacyPatterns, onAssetsChanged } from '@/lib/assets/library';
 import { PATTERN_FONTS, textOutline } from '@/lib/patternText';
@@ -287,6 +288,24 @@ export function GarmentDesigner({ kind: initialKind = 'jersey' }: { kind?: Garme
     } catch (e: any) { flash(e?.message || 'Could not open that file.'); }
   };
   const newDesign = () => { apply({ kit: kitFor(kind), players: copy.sample, pat: { ...DEFAULT_PATTERN, ...PATTERNS[0].p }, patColor: '#FFFFFF', patName: PATTERNS[0].name }, null); setStep('design'); };
+  // New design keeps the production set-up (size chart, panels, factory pattern, sleeves, lettering rule) and starts a fresh artwork and roster.
+  const newKeepSetup = () => {
+    const keep = { gradeCm: kit.gradeCm, panels: kit.panels, factoryPieces: kit.factoryPieces, factoryName: kit.factoryName, sleeves: kit.sleeves, letterGrade: kit.letterGrade, customSizes: kit.customSizes, style: kit.style, neck: kit.neck };
+    apply({ kit: { ...kitFor(kind), ...keep }, players: copy.sample, pat: { ...DEFAULT_PATTERN, ...PATTERNS[0].p }, patColor: '#FFFFFF', patName: PATTERNS[0].name }, null); setStep('design');
+  };
+  const [newAsk, setNewAsk] = useState(false);
+  const [savedAsk, setSavedAsk] = useState(false);
+  const saveAs = () => {
+    const name = window.prompt('Name of the copy', `${kit.teamName || copy.noun} copy`);
+    if (name == null) return;
+    const id = `p${Date.now().toString(36)}`;
+    const data = { kit: { ...kit, teamName: name.trim() || kit.teamName }, players, pat: { ...pat, image: undefined }, patColor, patName, patAssetId, patAssetAt, patOwn };
+    const list = readProjects();
+    list.unshift({ id, kind, name: data.kit.teamName, updated: new Date().toISOString(), data });
+    try { localStorage.setItem(PROJECTS, JSON.stringify(list.slice(0, 40))); } catch { flash('Could not save the copy in this browser. Use “Save file” instead.'); return; }
+    set({ teamName: data.kit.teamName }); setProjectId(id); setDirty(false);
+    flash(`Saved a copy as “${data.kit.teamName}”. The original is unchanged.`);
+  };
 
 
   const pattern = useMemo<PatternSettings>(() => (patOwn ? pat : { ...pat, colors: [patColor] }), [pat, patColor, patOwn]);
@@ -528,14 +547,29 @@ export function GarmentDesigner({ kind: initialKind = 'jersey' }: { kind?: Garme
           <button type="button" onClick={redo} disabled={!hist.current.future.length} aria-label="Redo" title="Redo (Ctrl+Shift+Z)" className="h-10 w-10 inline-flex items-center justify-center rounded-r-full border-l border-mt-border hover:bg-mt-surface2 disabled:opacity-40"><Redo2 size={16} /></button>
         </span>
         <button type="button" onClick={() => setStudioOpen(true)} className="h-10 px-4 rounded-full bg-mt-ink text-mt-bg text-[13.5px] font-semibold inline-flex items-center gap-1.5" title="Design directly on the flat print pieces"><PenTool size={14} /> Edit print file</button>
-        <button type="button" onClick={newDesign} className={btn}><Plus size={14} /> New</button>
+        <button type="button" onClick={() => setNewAsk(true)} className={btn}><Plus size={14} /> New</button>
+        <button type="button" onClick={saveAs} className={btn} title="Save a copy under a new name; the original stays as it is"><Save size={14} /> Save as</button>
         <button type="button" onClick={() => setProjects(readProjects().filter((x) => TEXTILE_KINDS.includes(x.kind)))} className={btn}><FolderOpen size={14} /> Projects</button>
         <button type="button" onClick={() => fileRef.current?.click()} className={btn}><FileUp size={14} /> Open file</button>
         <button type="button" onClick={saveFile} className={btn} title="Save a Magical Touch project file (.mtd) on this device"><Download size={14} /> Save file</button>
-        <button type="button" onClick={saveProject} className="h-10 px-4 rounded-full bg-mt-primary text-mt-onprimary text-[13.5px] font-semibold inline-flex items-center gap-1.5"><Save size={14} /> Save</button>
+        <button type="button" onClick={() => { if (saveProject()) setSavedAsk(true); }} className="h-10 px-4 rounded-full bg-mt-primary text-mt-onprimary text-[13.5px] font-semibold inline-flex items-center gap-1.5"><Save size={14} /> Save</button>
         <input ref={fileRef} type="file" accept={TOOL_FILE_ACCEPT} hidden onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) openFile(f); }} />
       </div>
 
+      {(newAsk || savedAsk) && (
+        <div className="fixed inset-0 z-[70] grid place-items-center bg-black/40 p-4" onClick={() => { setNewAsk(false); setSavedAsk(false); }}>
+          <div role="dialog" aria-label={savedAsk ? 'Saved' : 'New design'} className="w-full max-w-md rounded-2xl bg-mt-surface p-5 space-y-2" onClick={(e) => e.stopPropagation()}>
+            <h2 className="text-lg font-semibold">{savedAsk ? `Saved “${kit.teamName}”` : 'Start something new'}</h2>
+            {!savedAsk && dirty && <p className="text-[12.5px] text-amber-700 dark:text-amber-400">This design has unsaved changes. Save it first, or they are lost. Saved projects are never changed by starting a new one.</p>}
+            {savedAsk && <button type="button" onClick={() => setSavedAsk(false)} className={`${btn} w-full justify-center`}>Continue editing</button>}
+            <button type="button" onClick={() => { setNewAsk(false); setSavedAsk(false); saveAs(); }} className={`${btn} w-full justify-center`}>Save as a copy…</button>
+            <button type="button" onClick={() => { setNewAsk(false); setSavedAsk(false); newKeepSetup(); }} className={`${btn} w-full justify-center`}>New design — keep my production set-up</button>
+            <button type="button" onClick={() => { setNewAsk(false); setSavedAsk(false); newDesign(); }} className={`${btn} w-full justify-center`}>Start from default</button>
+            <button type="button" onClick={() => { if (!dirty || window.confirm('Reset this workspace to the defaults? Your saved projects are not touched.')) { setNewAsk(false); setSavedAsk(false); newDesign(); flash('Workspace reset to the defaults. Your saved projects are unchanged.'); } }} className={`${btn} w-full justify-center text-rose-600`}>Reset workspace</button>
+            <p className="text-[11.5px] text-mt-faint">Projects stay in this browser and in files you save; nothing here deletes them.</p>
+          </div>
+        </div>
+      )}
       {projects && (
         <div className="fixed inset-0 z-[80] grid place-items-center bg-black/40 p-4" role="dialog" aria-modal="true" aria-labelledby="proj-title" onClick={(e) => { if (e.target === e.currentTarget) setProjects(null); }}>
           <div className="w-full max-w-2xl max-h-[85vh] overflow-y-auto rounded-3xl border border-mt-border bg-mt-surface p-5 shadow-2xl">
@@ -789,6 +823,7 @@ export function GarmentDesigner({ kind: initialKind = 'jersey' }: { kind?: Garme
                   })}
                     {(kit.customSizes || []).map((c, ci) => { const k = c.chestCm / b.chestCm; return <tr key={'c' + ci} className="border-t border-mt-border"><td className="py-1">{c.label || '—'} <span className="text-mt-faint">custom</span></td><td className="py-1 text-right">{c.chestCm.toFixed(1)}</td><td className="py-1 text-right">{(c.lengthCm || b.lengthCm * k).toFixed(1)}</td></tr>; })}</tbody></table>
                 {kit.gradeCm && Object.keys(kit.gradeCm).length > 0 && <button type="button" onClick={() => set({ gradeCm: undefined })} className={`${btn} mt-2`}>Back to the standard grade</button>}
+                <MeasureTable kit={kit} />
                 <p className="mt-3 text-[12px] font-semibold">Custom sizes (chest, and length if it differs)</p>
                 {(kit.customSizes || []).map((c, ci) => (
                   <div key={ci} className="mt-1.5 grid grid-cols-[1fr_80px_80px_36px] gap-1.5">
@@ -955,4 +990,24 @@ function patternSwatch(p: PatternSettings): string {
   const { w } = layout(p);
   const s = 60 / w;
   return `<g transform="scale(${s})">${sheetPlacements(p, 120 / s, 120 / s).map((q) => `<path d="${d}" fill="${q.color}" fill-rule="evenodd" transform="translate(${q.x} ${q.y}) rotate(${q.angle}) scale(${q.sx} ${q.sy})"/>`).join('')}</g>`;
+}
+
+/** Garment measurements per size, measured from the pattern pieces (mm / cm / inches), with where they come from. */
+function MeasureTable({ kit }: { kit: KitDesign }) {
+  const [size, setSize] = useState('M');
+  const [unit, setUnit] = useState<Unit>('cm');
+  const z = sizeInfo(kit, size);
+  const rows = measureGarment(kitProduct(kit).pieces, z?.k || 1, z?.ky || z?.k || 1);
+  const sizes = [...SIZES.map((x) => x.label.replace(/ .*/, '')), ...(kit.customSizes || []).map((c) => c.label).filter(Boolean)];
+  const source = kit.factoryPieces ? `Measured from your factory pattern (${kit.factoryName || 'imported'})` : 'Standard template — unverified: confirm against your factory’s size chart before production';
+  const sid = sizeId(size);
+  const graded = kit.gradeCm && sid && kit.gradeCm[sid] ? 'graded with your size chart' : 'graded with the standard grade';
+  return <div className="mt-3" aria-label="Garment measurements">
+    <div className="flex flex-wrap items-center gap-2"><p className="text-[12px] font-semibold">Measurements</p>
+      <select value={size} onChange={(e) => setSize(e.target.value)} aria-label="Measurement size" className="h-8 rounded-lg border border-mt-border bg-mt-bg px-2 text-[12px]">{sizes.map((x) => <option key={x}>{x}</option>)}</select>
+      <span className="inline-flex rounded-lg border border-mt-border text-[12px]" role="radiogroup" aria-label="Units">{(['mm', 'cm', 'in'] as const).map((u) => <button key={u} type="button" role="radio" aria-checked={unit === u} onClick={() => setUnit(u)} className={`h-8 px-2.5 ${unit === u ? 'bg-mt-ink text-mt-bg rounded-lg' : ''}`}>{u}</button>)}</span>
+    </div>
+    <p className={`mt-1 text-[11.5px] ${kit.factoryPieces ? 'text-emerald-700 dark:text-emerald-400' : 'text-amber-700 dark:text-amber-400'}`}>{source}; {graded}.</p>
+    <table className="mt-1 w-full text-[12.5px] tabular-nums" aria-label="Measurement table"><tbody>{rows.map((r) => <tr key={r.key} className="border-t border-mt-border" title={r.how}><td className="py-1 pr-2">{r.label}</td><td className="py-1 text-right">{fmtLen(r.mm, unit)}</td></tr>)}</tbody></table>
+  </div>;
 }

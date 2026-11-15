@@ -38,3 +38,14 @@ test('factory pieces replace the template; long sleeves', () => {
   // Without front and back the import is not used.
   assert.doesNotMatch(kitProduct({ ...DEFAULT_KIT, factoryPieces: r.pieces.slice(2) }).label, /imported/);
 });
+
+test('garment measurements come from the pieces and follow the grade', async () => {
+  const { measureGarment, fmtLen } = await import('../../lib/textile/measure.ts');
+  const jersey = kitProduct(DEFAULT_KIT).pieces;
+  const m = Object.fromEntries(measureGarment(jersey).map((x) => [x.key, x.mm]));
+  assert.ok(Math.abs(m.chest - 560) < 1 && m.length === 740 && Math.abs(m.neckW - 179.4) < 1 && Math.abs(m.neckF - 56) < 1 && m.sleeveL === 230);
+  const xl = Object.fromEntries(measureGarment(jersey, 1.1, 1.05).map((x) => [x.key, x.mm]));
+  assert.ok(Math.abs(xl.chest - 616) < 1.5 && Math.abs(xl.length - 777) < 1);
+  assert.equal(fmtLen(254, 'in'), '10.00″');
+  assert.equal(fmtLen(254, 'cm'), '25.4 cm');
+});

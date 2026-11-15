@@ -946,6 +946,44 @@ scenarios.push({
   },
 });
 
+// Jersey creator: vector graphic generators and ready designs in the print studio; measurements per size.
+scenarios.push({
+  name: 'jersey-creator',
+  async run(t) {
+    await t.page.goto(t.BASE + '/textile-designer?garment=jersey', { waitUntil: 'domcontentloaded' });
+    await t.page.getByRole('button', { name: /Edit print file/ }).click({ timeout: 30000 });
+    const studio = t.page.getByRole('dialog', { name: 'Print studio' });
+    await studio.getByRole('tab', { name: 'Creator' }).click();
+    await studio.getByRole('button', { name: 'Generate Brush strokes' }).click();
+    const layers = studio.getByLabel('Layers');
+    await t.page.waitForTimeout(800);
+    t.check('generator adds an editable vector graphic', /Brush strokes/.test(await layers.innerText()));
+    const settings = studio.getByLabel('Graphic settings');
+    t.check('graphic settings shown', await settings.isVisible());
+    await settings.getByRole('button', { name: /New variation/ }).click();
+    await settings.getByLabel('Amount of the graphic').fill('0.8');
+    await settings.getByLabel('Where the graphic sits').selectOption('bottom');
+    await t.page.waitForTimeout(600);
+    t.check('settings change the graphic', /Brush strokes/.test(await layers.innerText()));
+    await studio.getByRole('button', { name: 'Design Inferno' }).click();
+    await t.page.waitForTimeout(1200);
+    t.check('ready design adds its layers', /Flames/.test(await layers.innerText()));
+    await t.shot('jersey-creator');
+    await studio.getByRole('button', { name: /^Save/ }).click();
+    await studio.getByRole('button', { name: 'Close print studio' }).click();
+    const front = await t.page.locator('svg').filter({ has: t.page.locator('path') }).first().innerHTML();
+    t.check('mockup shows the generated vectors', front.length > 20000, String(front.length));
+    // Measurements from the pattern pieces.
+    await t.page.getByRole('tab', { name: /Players|Sizes/ }).first().click();
+    await t.page.getByText('Size chart & custom sizes').click();
+    const mt = t.page.getByRole('table', { name: 'Measurement table' });
+    t.check('measurements listed', /Chest width/.test(await mt.innerText()) && /Sleeve opening/.test(await mt.innerText()));
+    await t.page.getByRole('radio', { name: 'in' }).click();
+    t.check('measurements in inches', /″/.test(await mt.innerText()));
+    t.check('standard template marked unverified', /unverified/.test(await t.page.getByLabel('Garment measurements').innerText()));
+  },
+});
+
 // Garment engineering: long sleeves, factory pattern import, back to the standard template.
 scenarios.push({
   name: 'garment-engineering',
@@ -1260,6 +1298,8 @@ scenarios.push({
     t.check('leave prompt appears', await t.page.getByRole('button', { name: 'Save & leave' }).isVisible());
     await t.page.getByRole('button', { name: 'Stay here' }).click();
     await t.page.getByRole('button', { name: 'Save', exact: true }).click();
+    t.check('after saving: continue, save as, new or default', await t.page.getByRole('dialog', { name: 'Saved' }).isVisible());
+    await t.page.getByRole('button', { name: 'Continue editing' }).click();
     await t.page.getByRole('button', { name: /Projects/ }).click();
     t.check('saved project listed', await t.page.getByRole('dialog').getByText('My Team').first().isVisible());
     await t.shot('jersey-projects');
@@ -1269,7 +1309,9 @@ scenarios.push({
     const [dl] = await Promise.all([t.page.waitForEvent('download', { timeout: 30000 }), t.page.getByRole('button', { name: /Save file/ }).click()]);
     const bytes = fs.readFileSync(await dl.path());
     t.check('.mtd project file saved', /\.mtd(\.svg)?$/.test(dl.suggestedFilename()) && bytes.length > 1000, `${dl.suggestedFilename()} ${bytes.length} bytes`);
-    await t.page.getByRole('button', { name: 'New' }).click();
+    await t.page.getByRole('button', { name: 'New', exact: true }).click();
+    await t.page.getByRole('button', { name: 'Start from default' }).click();
+    t.check('start from default clears the design', !/99/.test(await t.page.getByLabel('Preview player').innerText()));
     await t.page.locator('input[type=file][accept*=".mtd"]').setInputFiles(await dl.path());
     await t.page.getByText(/Opened “My Team”/).waitFor({ timeout: 15000 });
     t.check('reopened project keeps the edited number', /99/.test(await t.page.getByLabel('Preview player').innerText()));
