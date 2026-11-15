@@ -876,6 +876,7 @@ function EditorContent() {
 
   const {
     draftRef: penDraftRef,
+    setMode: setPenModeRaw,
     clearDraft: clearPenDraft,
     finishPath: finishPenPath,
     removeLastAnchor: removeLastPenAnchor,
@@ -2936,6 +2937,12 @@ function EditorContent() {
     if (pencilOn) setVectorPencil(false);
     setActiveTool(t as ToolMode);
   };
+  // Pen tool mode: classic Pen, or Curvature (smooth through clicked points).
+  const [penMode, setPenModeState] = useState<'pen' | 'curvature'>('pen');
+  const penModeRef = useRef(penMode);
+  const setPenMode = (m: 'pen' | 'curvature') => { penModeRef.current = m; setPenModeState(m); setPenModeRaw(m); };
+  const setPenModeRef = useRef(setPenMode);
+  setPenModeRef.current = setPenMode;
   const chooseToolRef = useRef(chooseTool);
   const toolKeysRef = useRef<Record<string, string>>({});
   useEffect(() => {
@@ -5246,6 +5253,7 @@ function EditorContent() {
       }
 
       if (canUseToolShortcuts && activeToolRef.current === 'pen') {
+        if (e.key === '~') { e.preventDefault(); setPenModeRef.current(penModeRef.current === 'curvature' ? 'pen' : 'curvature'); return; }
         if (e.key === 'Enter') { e.preventDefault(); finishPenPath(false); return; }
         if (e.key === 'Escape') { e.preventDefault(); clearPenDraft(); return; }
         if ((e.key === 'Backspace' || e.key === 'Delete') && penDraftRef.current.anchors.length) { e.preventDefault(); removeLastPenAnchor(); return; }
@@ -8403,6 +8411,16 @@ function EditorContent() {
             />
             <GradientHandles fabricCanvasRef={fabricCanvasRef} ready={canvasReady} enabled={activeTool === 'select' && !drawing} />
           </div>
+          {canvasReady && activeTool === 'pen' && (
+            <div className={cx('absolute inset-x-2 z-20 pointer-events-none flex justify-center', compact ? 'bottom-2' : pro && showRulers ? 'top-8' : 'top-3')}>
+              <div className="pointer-events-auto flex items-center gap-1 rounded-full border border-mt-border bg-mt-surface/95 p-1 shadow" role="radiogroup" aria-label="Pen mode">
+                {([['pen', 'Pen', 'Click for corners, drag for curve handles'], ['curvature', 'Curvature', 'Just click — the curve flows through every point · Alt-click for a corner · ~ switches']] as const).map(([m, l, hint]) => (
+                  <button key={m} type="button" role="radio" aria-checked={penMode === m} title={hint} onClick={() => setPenMode(m)} className={cx('h-7 px-3 rounded-full text-[12px] font-semibold', penMode === m ? 'bg-[#3B82C4] text-white' : 'text-mt-muted hover:text-mt-ink')}>{l}</button>
+                ))}
+                <span className="hidden sm:inline px-2 text-[11px] text-mt-muted">{penMode === 'curvature' ? 'Click points · Alt-click = corner · Enter finishes' : 'Click = corner · drag = curve · Enter finishes'}</span>
+              </div>
+            </div>
+          )}
           {canvasReady && activeTool === 'select' && !drawing && (
             <div className={cx('absolute inset-x-2 z-20 pointer-events-none flex justify-center', compact ? 'bottom-2' : pro && showRulers ? 'top-8' : 'top-3')}>
               <ContextToolbar

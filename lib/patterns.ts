@@ -55,7 +55,14 @@ export interface PatternSettings {
   sizeJitter?: number;      // 0–1: motifs vary in size
   rotJitter?: number;       // 0–180°: motifs turn at random
   alternate?: 'none' | 'rotate' | 'flip'; // every other motif turned 180° or mirrored
+  /** Hand edits of single motifs in the tile, keyed by motifKey(); kept seamless (edge copies follow). */
+  edits?: Record<string, MotifEdit>;
 }
+
+/** A hand edit of one motif: move (share of the cell), turn (°), size (×), colour index, hidden. */
+export interface MotifEdit { dx?: number; dy?: number; r?: number; s?: number; c?: number; hide?: boolean }
+/** Key of a motif: its place inside the tile (copies across the tile edges share it, so edits stay seamless). */
+export const motifKey = (q: { x: number; y: number }, w: number, h: number) => { const m = (v: number, n: number) => ((Math.round(v) % Math.round(n)) + Math.round(n)) % Math.round(n); return `${m(q.x, w)}:${m(q.y, h)}`; };
 
 export const DEFAULT_PATTERN: PatternSettings = {
   motif: 'sparkle', repeat: 'half-drop', tile: 120, scale: 0.55, rotation: 0, spacingX: 0, spacingY: 0, offset: 0.5,
@@ -96,7 +103,22 @@ interface Place { x: number; y: number; r: number; s: number; fx: number; fy: nu
  * variety does not repeat every motif — and it stays seamless, because
  * every copy of a motif across a tile edge gets the same variation.
  */
-export function layout(p: PatternSettings): { w: number; h: number; places: Place[] } {
+export function layout(p: PatternSettings): { w: number; h: number; places: (Place & { key: string })[] } {
+  const L = variedLayout(p);
+  const cell = Math.max(24, p.tile), E = p.edits || {};
+  const places = L.places.map((q) => ({ ...q, key: motifKey(q, L.w, L.h) }));
+  if (!Object.keys(E).length) return { ...L, places };
+  return {
+    w: L.w, h: L.h,
+    places: places.filter((q) => !E[q.key]?.hide).map((q) => {
+      const e = E[q.key];
+      if (!e) return q;
+      return { ...q, x: q.x + (e.dx || 0) * cell, y: q.y + (e.dy || 0) * cell, r: q.r + (e.r || 0), s: q.s * (e.s || 1), c: e.c ?? q.c };
+    }),
+  };
+}
+
+function variedLayout(p: PatternSettings): { w: number; h: number; places: Place[] } {
   const L = baseLayout(p);
   const sj = Math.max(0, Math.min(1, p.sizeJitter || 0)), rj = Math.max(0, Math.min(180, p.rotJitter || 0)), alt = p.alternate && p.alternate !== 'none' ? p.alternate : null;
   if (!sj && !rj && !alt) return L;

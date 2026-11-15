@@ -3,6 +3,7 @@
 import { useCallback, useRef } from 'react';
 import { ANCHOR_HIT_RADIUS, PenAnchor } from '@/lib/editor/types';
 import { buildPathD, snapAngleTo45 } from '@/lib/editor/geometry';
+import { curvatureHandles } from '@/lib/editor/curvature';
 
 interface Args {
   fabricCanvasRef: React.MutableRefObject<any>;
@@ -17,10 +18,19 @@ interface Args {
 // The in-progress path is drawn as an overlay on top of the canvas
 // (drawOverlay, called from the canvas's after:render), not as canvas
 // objects — so drawing never touches undo history, saving or layers.
+//
+// Curvature mode (Illustrator's Curvature tool): just click points and the
+// curve flows smoothly through all of them; Alt-click places a sharp corner.
+export type PenMode = 'pen' | 'curvature';
+type DraftAnchor = PenAnchor & { corner?: boolean };
+
 export function usePenTool({ fabricCanvasRef, onPathFinished }: Args) {
+  const modeRef = useRef<PenMode>('pen');
+  const setMode = useCallback((m: PenMode) => { modeRef.current = m; fabricCanvasRef.current?.requestRenderAll(); }, [fabricCanvasRef]);
+  const shaped = (anchors: DraftAnchor[], closed: boolean) => (modeRef.current === 'curvature' ? curvatureHandles(anchors, closed) : anchors);
   const lastClickRef = useRef<{ t: number; x: number; y: number } | null>(null);
   const draftRef = useRef<{
-    anchors: PenAnchor[];
+    anchors: DraftAnchor[];
     mouseDownPoint: { x: number; y: number } | null;
     hover: { x: number; y: number } | null;
   }>({ anchors: [], mouseDownPoint: null, hover: null });
@@ -44,7 +54,7 @@ export function usePenTool({ fabricCanvasRef, onPathFinished }: Args) {
         clearDraft();
         return;
       }
-      const d = buildPathD(draft.anchors, null, closed);
+      const d = buildPathD(shaped(draft.anchors, closed), null, closed);
       const pathObj: any = new F.Path(d, {
         fill: closed ? '#8CCBFF' : '',
         stroke: '#09090B',
@@ -106,7 +116,7 @@ export function usePenTool({ fabricCanvasRef, onPathFinished }: Args) {
 
       const lastAnchor = draft.anchors[draft.anchors.length - 1];
       const placed = lastAnchor && opt.e.shiftKey ? snapAngleTo45(lastAnchor, pointer) : pointer;
-      draft.anchors.push({ x: placed.x, y: placed.y });
+      draft.anchors.push(modeRef.current === 'curvature' && opt.e.altKey ? { x: placed.x, y: placed.y, corner: true } : { x: placed.x, y: placed.y });
       draft.mouseDownPoint = { x: placed.x, y: placed.y };
       render();
     },
@@ -127,7 +137,11 @@ export function usePenTool({ fabricCanvasRef, onPathFinished }: Args) {
       }
       const lastIndex = draft.anchors.length - 1;
       const pressed = (opt.e.buttons & 1) === 1 || opt.e.type === 'touchmove' || opt.e.pointerType === 'touch' || opt.e.pointerType === 'pen';
-      if (pressed && draft.mouseDownPoint) {
+      if (pressed && draft.mouseDownPoint && modeRef.current === 'curvature') {
+        // Curvature mode: dragging just after a click moves the new point.
+        const anchor = draft.anchors[lastIndex];
+        anchor.x = pointer.x; anchor.y = pointer.y;
+      } else if (pressed && draft.mouseDownPoint) {
         const anchor = draft.anchors[lastIndex];
         const dragPoint = opt.e.shiftKey ? snapAngleTo45(anchor, pointer) : pointer;
         // Ignore tiny jitters so a tap stays a sharp corner.
@@ -159,7 +173,9 @@ export function usePenTool({ fabricCanvasRef, onPathFinished }: Args) {
     ctx.setLineDash([]);
     if (draft.anchors.length) {
       const rubber = draft.mouseDownPoint ? null : draft.hover;
-      const d = buildPathD(draft.anchors, rubber, false);
+      const curv = modeRef.current === 'curvature';
+      // Curvature preview: the curve as it would be with the next click at the pointer.
+      const d = curv ? buildPathD(curvatureHandles(rubber ? [...draft.anchors, { x: rubber.x, y: rubber.y }] : draft.anchors, false), null, false) : buildPathD(draft.anchors, rubber, false);
       try {
         const path = new Path2D(d);
         ctx.save();
@@ -174,7 +190,7 @@ export function usePenTool({ fabricCanvasRef, onPathFinished }: Args) {
       }
       // Handles of the last point
       const last = draft.anchors[draft.anchors.length - 1];
-      [last.handleIn, last.handleOut].forEach((h) => {
+      (curv ? [] : [last.handleIn, last.handleOut]).forEach((h) => {
         if (!h) return;
         const a = toScreen(last);
         const b = toScreen(h);
@@ -193,6 +209,12 @@ export function usePenTool({ fabricCanvasRef, onPathFinished }: Args) {
       draft.anchors.forEach((p, i) => {
         const s = toScreen(p);
         const size = i === 0 ? 9 : 7;
+        if (curv && !p.corner) {
+          // Smooth points are round, corners square (as in Illustrator).
+          ctx.fillStyle = '#FFFFFF'; ctx.strokeStyle = '#3B82C4'; ctx.lineWidth = 1.5;
+          ctx.beginPath(); ctx.arc(s.x, s.y, size / 2, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+          return;
+        }
         ctx.fillStyle = '#FFFFFF';
         ctx.strokeStyle = '#3B82C4';
         ctx.lineWidth = 1.5;
@@ -214,5 +236,5 @@ export function usePenTool({ fabricCanvasRef, onPathFinished }: Args) {
     ctx.restore();
   }, []);
 
-  return { draftRef, clearDraft, finishPath, removeLastAnchor, handleMouseDown, handleMouseMove, handleMouseUp, drawOverlay };
+  return { draftRef, modeRef, setMode, clearDraft, finishPath, removeLastAnchor, handleMouseDown, handleMouseMove, handleMouseUp, drawOverlay };
 }

@@ -459,6 +459,30 @@ scenarios.push(
     },
   },
   {
+    name: 'pen-curvature',
+    init: () => { try { localStorage.setItem('mt:editorMode', 'pro'); } catch {} },
+    async run(t) {
+      await t.editor('w=1080&h=1080');
+      const canvas = await canvasBox(t);
+      await t.page.mouse.click(canvas.x + 10, canvas.y + 10);
+      await t.page.keyboard.press('p');
+      await t.page.waitForTimeout(300);
+      const modes = t.page.getByRole('radiogroup', { name: 'Pen mode' });
+      t.check('pen mode switch shown', (await modes.count()) === 1);
+      await modes.getByRole('radio', { name: 'Curvature' }).click();
+      for (const [x, y] of [[200, 600], [400, 300], [600, 600], [800, 300]]) { const p = await toScreen(t, x, y); await t.page.mouse.click(p.x, p.y); await t.page.waitForTimeout(150); }
+      await t.page.keyboard.press('Enter');
+      await t.page.waitForTimeout(400);
+      const r = await t.eval(() => { const o = window.__fabricCanvas.getObjects().filter((x) => x.type === 'path').pop(); return o ? { cmds: o.path.map((c) => c[0]).join(''), mid: o.path[2] } : null; });
+      t.check('curvature path made of curves through the points', r && r.cmds === 'MCCC', JSON.stringify(r));
+      t.check('smooth through the middle point (real handles)', r && Math.abs(r.mid[3] - r.mid[5]) > 5, JSON.stringify(r?.mid));
+      await t.page.keyboard.press('~');
+      await t.page.waitForTimeout(200);
+      t.check('~ switches back to Pen', (await modes.getByRole('radio', { name: 'Pen', exact: true }).getAttribute('aria-checked')) === 'true');
+      await t.shot('curvature');
+    },
+  },
+  {
     name: 'custom-tool-keys',
     init: () => { try { localStorage.setItem('mt:editorMode', 'pro'); } catch {} },
     async run(t) {
@@ -1160,6 +1184,32 @@ scenarios.push({
 });
 
 // Pattern Design: diamond repeat and the repeat views (1 tile, 2 × 2, 3 × 3, 5 × 5).
+scenarios.push({
+  name: 'pattern-motif-edit',
+  async run(t) {
+    await t.page.goto(t.BASE + '/patterns', { waitUntil: 'domcontentloaded' });
+    const box = t.page.getByRole('group', { name: 'Edit single motifs' });
+    await box.getByRole('button', { name: 'Edit motifs' }).click({ timeout: 30000 });
+    const prev = () => t.page.getByRole('img', { name: 'Pattern preview' }).evaluate((el) => el.style.backgroundImage);
+    const before = await prev();
+    const motifs = box.getByRole('button', { name: /^Motif \d+/ });
+    t.check('motifs of the tile are listed', (await motifs.count()) >= 2, String(await motifs.count()));
+    await motifs.first().click();
+    const turn = box.getByRole('slider', { name: 'Turn (°)' });
+    await turn.fill('90');
+    await t.page.waitForTimeout(300);
+    t.check('turning one motif changes the pattern', (await prev()) !== before);
+    t.check('edit counted', (await box.getByText('1 motif edited.').count()) === 1);
+    t.check('edited motif marked', (await box.getByRole('button', { name: /\(edited\)/ }).count()) === 1);
+    await box.getByRole('checkbox', { name: 'Hide this motif' }).check();
+    await t.page.waitForTimeout(200);
+    await t.shot('motif-edit');
+    await box.getByRole('button', { name: 'Reset all motifs' }).click();
+    await t.page.waitForTimeout(300);
+    t.check('reset restores the pattern', (await prev()) === before);
+  },
+});
+
 scenarios.push({
   name: 'pattern-repeat-views',
   async run(t) {

@@ -6,6 +6,7 @@
 // open it in the editor as editable shapes, and keep a library of patterns.
 // All work happens in the browser.
 
+import { MotifEditor } from './MotifEditor';
 import { isMtdt } from '@/lib/mtdt';
 import { openToolFile, saveToolProject, takeToolHandoff, TOOL_FILE_ACCEPT } from '@/lib/mtd/toolProject';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -375,6 +376,8 @@ export function PatternStudio() {
           </div>
           <span className="absolute right-3 top-3 rounded-full bg-black/60 px-2.5 py-1 text-[11px] font-semibold text-white">Tile {Math.round(tw)} × {Math.round(th)} px · seamless</span>
         </div>
+
+        <MotifEditor p={p} onChange={(edits) => set({ edits })} />
 
         <div className="rounded-3xl border border-mt-border bg-mt-surface p-5">
           <div className="flex flex-wrap items-end gap-3">
