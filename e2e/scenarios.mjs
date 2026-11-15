@@ -999,8 +999,9 @@ scenarios.push({
   name: 'pattern-repeat-views',
   async run(t) {
     await t.page.goto(t.BASE + '/patterns', { waitUntil: 'domcontentloaded' });
-    await t.page.getByRole('button', { name: 'Diamond', exact: true }).click({ timeout: 30000 });
-    t.check('diamond repeat selected', (await t.page.getByRole('button', { name: 'Diamond', exact: true }).getAttribute('aria-pressed')) === 'true');
+    const rep = t.page.locator('button[title="Motifs on a diamond lattice, turned 45°"]');
+    await rep.click({ timeout: 30000 });
+    t.check('diamond repeat selected', (await rep.getAttribute('aria-pressed')) === 'true');
     const views = t.page.getByRole('radiogroup', { name: 'Repeat view' });
     for (const [label, size] of [['1 tile', /^contain$/], ['3 × 3', /^33\.3+\d*% auto$/], ['5 × 5', /^20% auto$/]]) {
       await views.getByRole('radio', { name: label }).click();
