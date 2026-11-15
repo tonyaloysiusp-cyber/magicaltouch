@@ -29,6 +29,18 @@ export interface Adjust {
   curve: Curves; // tone curves, points 0..255
   hsl: number[]; // 8 colour ranges × [hue, saturation, luminance], each -100..100
   grade: number[]; // colour grading: [shadow hue, shadow amount, mid hue, mid amount, highlight hue, highlight amount]
+  // ---- Detail and lens (optional in saved projects; 0 = off)
+  texture?: number;    // -100..100 fine detail (smaller than clarity)
+  dehaze?: number;     // -100..100 remove (or add) haze
+  noiseLum?: number;   // 0..100 luminance noise reduction
+  noiseColor?: number; // 0..100 colour noise reduction
+  distortion?: number; // -100..100 lens distortion correction (− barrel, + pincushion)
+  chroma?: number;     // -100..100 lateral chromatic aberration correction (red / cyan fringes)
+  // ---- Portrait (skin found on the device, no upload)
+  skinSmooth?: number;  // 0..100
+  skinTexture?: number; // 0..100 how much pore detail is kept (default 60)
+  skinTone?: number;    // 0..100 evens out redness and blotches
+  skinGlow?: number;    // 0..100 soft light on the skin
 }
 
 export type CurvePts = [number, number][];
@@ -53,6 +65,8 @@ export const NO_ADJUST: Adjust = {
   curve: { all: IDENTITY_CURVE, r: IDENTITY_CURVE, g: IDENTITY_CURVE, b: IDENTITY_CURVE },
   hsl: new Array(24).fill(0),
   grade: [220, 0, 40, 0, 40, 0],
+  texture: 0, dehaze: 0, noiseLum: 0, noiseColor: 0, distortion: 0, chroma: 0,
+  skinSmooth: 0, skinTexture: 60, skinTone: 0, skinGlow: 0,
 };
 
 const NEUTRAL_JSON = JSON.stringify(NO_ADJUST);
@@ -155,12 +169,21 @@ export const COLOR_SLIDERS: SliderDef[] = [
   { key: 'saturation', label: 'Saturation', min: -100, max: 100 },
 ];
 export const DETAIL_SLIDERS: SliderDef[] = [
+  { key: 'texture', label: 'Texture', min: -100, max: 100 },
   { key: 'clarity', label: 'Clarity', min: -100, max: 100 },
+  { key: 'dehaze', label: 'Dehaze', min: -100, max: 100 },
+  { key: 'noiseLum', label: 'Noise reduction', min: 0, max: 100 },
+  { key: 'noiseColor', label: 'Colour noise reduction', min: 0, max: 100 },
   { key: 'sharpen', label: 'Sharpen', min: 0, max: 100 },
   { key: 'blur', label: 'Soften / blur', min: 0, max: 100 },
   { key: 'vignette', label: 'Vignette', min: -100, max: 100 },
   { key: 'grain', label: 'Film grain', min: 0, max: 100 },
   { key: 'fade', label: 'Fade', min: 0, max: 100 },
+];
+
+export const LENS_SLIDERS: SliderDef[] = [
+  { key: 'distortion', label: 'Distortion', min: -100, max: 100 },
+  { key: 'chroma', label: 'Chromatic aberration', min: -100, max: 100 },
 ];
 
 export interface Look { id: string; name: string; adjust: Partial<Adjust> }
@@ -249,9 +272,24 @@ export function applyAdjust(src: ImageData, a: Adjust, owner: object = src): Ima
   const long = Math.max(w, h);
   let px: Uint8ClampedArray = src.data as Uint8ClampedArray;
 
+  // Lens corrections (geometry first): radial distortion and lateral chromatic aberration.
+  const dist = (a.distortion || 0) / 100, ca = (a.chroma || 0) / 100;
+  if (dist || ca) px = cached(owner, `lens${dist}|${ca}`, () => lensCorrect(px, w, h, dist, ca));
+  // Dehaze: dark-channel haze estimate removed (or added) before the tone curves.
+  const dh = (a.dehaze || 0) / 100;
+  if (dh) { const base = px; px = cached(owner, `dehaze${dh}|${dist}|${ca}`, () => dehazePx(base, w, h, dh)); }
+  // Noise reduction: luminance smoothed where it is flat (edges kept), colour noise blurred in chroma only.
+  const nl = (a.noiseLum || 0) / 100, nc = (a.noiseColor || 0) / 100;
+  if (nl || nc) { const base = px; px = cached(owner, `nr${nl}|${nc}|${dh}|${dist}|${ca}`, () => denoisePx(base, w, h, nl, nc)); }
+
+  // Portrait retouch on the skin only.
+  const sk = [(a.skinSmooth || 0) / 100, (a.skinTexture ?? 60) / 100, (a.skinTone || 0) / 100, (a.skinGlow || 0) / 100];
+  if (sk[0] || sk[2] || sk[3]) { const base = px; px = cached(owner, `skin${sk.join('|')}|${nl}|${nc}|${dh}|${dist}|${ca}`, () => retouchSkin(base, w, h, sk[0], sk[1], sk[2], sk[3])); }
+
   if (a.blur > 0) {
     const r = (a.blur / 100) * 0.012 * long + 0.5;
-    px = cached(owner, `blur${r.toFixed(1)}`, () => blurRGBA(src.data, w, h, r));
+    const base = px;
+    px = cached(owner, `blur${r.toFixed(1)}|${dh}|${nl}|${nc}|${dist}|${ca}`, () => blurRGBA(base, w, h, r));
   }
 
   // Per-channel tone curves: white balance → exposure → levels → contrast → fade.
@@ -333,7 +371,8 @@ export function applyAdjust(src: ImageData, a: Adjust, owner: object = src): Ima
 
   // Local contrast and sharpening use blurred lightness of the source.
   let lum: Float32Array | null = null;
-  const needLum = a.clarity !== 0 || a.sharpen > 0;
+  const tex = (a.texture || 0) / 100;
+  const needLum = a.clarity !== 0 || a.sharpen > 0 || tex !== 0;
   if (needLum) {
     lum = cached(owner, 'lum', () => {
       const l = new Float32Array(n);
@@ -344,6 +383,7 @@ export function applyAdjust(src: ImageData, a: Adjust, owner: object = src): Ima
   }
   const clarityBlur = a.clarity !== 0 ? cached(owner, `cl${long}`, () => blurChannel(lum!, w, h, Math.max(2, long * 0.015))) : null;
   const sharpBlur = a.sharpen > 0 ? cached(owner, `sh${long}`, () => blurChannel(lum!, w, h, Math.max(1, long / 1800))) : null;
+  const texBlur = tex !== 0 ? cached(owner, `tx${long}`, () => blurChannel(lum!, w, h, Math.max(1, long * 0.004))) : null;
   const clar = (a.clarity / 100) * 0.9;
   const sharp = (a.sharpen / 100) * 1.6;
 
@@ -375,6 +415,11 @@ export function applyAdjust(src: ImageData, a: Adjust, owner: object = src): Ima
     }
     if (sharpBlur) {
       const d = (lum![i] - sharpBlur[i]) * sharp;
+      r += d; g += d; b += d;
+    }
+    if (texBlur) {
+      // Fine detail (skin pores, fabric, foliage): boosted or smoothed, larger shapes untouched.
+      const d = (lum![i] - texBlur[i]) * tex * 0.9;
       r += d; g += d; b += d;
     }
     if (hasHsl) {
@@ -461,3 +506,154 @@ export function renderAdjusted(base: HTMLCanvasElement, a: Adjust): HTMLCanvasEl
   out.getContext('2d')!.putImageData(res, 0, 0);
   return out;
 }
+
+// ---------------------------------------------------------------- lens, haze, noise
+
+function sampleBilinear(px: Uint8ClampedArray, w: number, h: number, x: number, y: number, c: number): number {
+  const x0 = Math.max(0, Math.min(w - 1, Math.floor(x))), y0 = Math.max(0, Math.min(h - 1, Math.floor(y)));
+  const x1 = Math.min(w - 1, x0 + 1), y1 = Math.min(h - 1, y0 + 1), fx = Math.max(0, Math.min(1, x - x0)), fy = Math.max(0, Math.min(1, y - y0));
+  const a = px[(y0 * w + x0) * 4 + c], b = px[(y0 * w + x1) * 4 + c], d = px[(y1 * w + x0) * 4 + c], e = px[(y1 * w + x1) * 4 + c];
+  return a + (b - a) * fx + (d - a) * fy + (a - b - d + e) * fx * fy;
+}
+/** Radial distortion (r' = r·(1 + k·r²)) and lateral chromatic aberration (red and blue scaled apart). */
+export function lensCorrect(px: Uint8ClampedArray, w: number, h: number, dist: number, ca: number): Uint8ClampedArray {
+  const out = new Uint8ClampedArray(px.length);
+  const cx = w / 2, cy = h / 2, R = Math.hypot(cx, cy);
+  const k = -dist * 0.18;           // + pulls the corners in (fixes pincushion), − pushes them out (fixes barrel)
+  const sR = 1 + ca * 0.004, sB = 1 - ca * 0.004;
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const dx = (x - cx) / R, dy = (y - cy) / R, r2 = dx * dx + dy * dy;
+    const f = 1 + k * r2;
+    const i = (y * w + x) * 4;
+    out[i] = sampleBilinear(px, w, h, cx + dx * f * sR * R, cy + dy * f * sR * R, 0);
+    out[i + 1] = sampleBilinear(px, w, h, cx + dx * f * R, cy + dy * f * R, 1);
+    out[i + 2] = sampleBilinear(px, w, h, cx + dx * f * sB * R, cy + dy * f * sB * R, 2);
+    out[i + 3] = sampleBilinear(px, w, h, cx + dx * f * R, cy + dy * f * R, 3);
+  }
+  return out;
+}
+/** Dark-channel dehaze (He et al.): t = 1 − ω·dark/A, J = (I − A)/t + A. Negative strength adds haze. */
+export function dehazePx(px: Uint8ClampedArray, w: number, h: number, strength: number): Uint8ClampedArray {
+  const n = w * h, out = new Uint8ClampedArray(px.length);
+  const dark = new Float32Array(n);
+  for (let i = 0; i < n; i++) dark[i] = Math.min(px[i * 4], px[i * 4 + 1], px[i * 4 + 2]);
+  const dk = blurChannel(dark, w, h, Math.max(2, Math.max(w, h) * 0.01));
+  // Atmospheric light: mean colour of the haziest 0.2 % of pixels.
+  const idx = Array.from({ length: n }, (_, i) => i).sort((a, b) => dk[b] - dk[a]).slice(0, Math.max(1, Math.round(n * 0.002)));
+  const A = [0, 1, 2].map((c) => Math.max(1, idx.reduce((s, i) => s + px[i * 4 + c], 0) / idx.length));
+  const Am = (A[0] + A[1] + A[2]) / 3;
+  for (let i = 0; i < n; i++) {
+    const p = i * 4;
+    if (strength > 0) {
+      const t = Math.max(0.15, 1 - 0.95 * strength * (dk[i] / Am));
+      for (let c = 0; c < 3; c++) out[p + c] = (px[p + c] - A[c]) / t + A[c];
+    } else {
+      const t = 1 + strength * 0.6; // add haze: blend toward the air light
+      for (let c = 0; c < 3; c++) out[p + c] = px[p + c] * t + A[c] * (1 - t);
+    }
+    out[p + 3] = px[p + 3];
+  }
+  return out;
+}
+/** Luminance noise smoothed where the image is flat; colour noise blurred in the chroma channels only. */
+export function denoisePx(px: Uint8ClampedArray, w: number, h: number, lumAmt: number, colAmt: number): Uint8ClampedArray {
+  const n = w * h, long = Math.max(w, h), out = new Uint8ClampedArray(px.length);
+  const Y = new Float32Array(n), Cb = new Float32Array(n), Cr = new Float32Array(n);
+  for (let i = 0; i < n; i++) { const r = px[i * 4], g = px[i * 4 + 1], b = px[i * 4 + 2]; Y[i] = 0.299 * r + 0.587 * g + 0.114 * b; Cb[i] = b - Y[i]; Cr[i] = r - Y[i]; }
+  const Yb = lumAmt ? blurChannel(Y, w, h, Math.max(1, long / 900 + lumAmt * 1.5)) : Y;
+  const Cbb = colAmt ? blurChannel(Cb, w, h, Math.max(1, long / 300 * (0.3 + colAmt))) : Cb;
+  const Crb = colAmt ? blurChannel(Cr, w, h, Math.max(1, long / 300 * (0.3 + colAmt))) : Cr;
+  const edge = 20 + lumAmt * 70; // differences above this are edges and are kept
+  for (let i = 0; i < n; i++) {
+    const d = Math.abs(Y[i] - Yb[i]);
+    const wY = lumAmt * Math.max(0, 1 - d / edge); // flat areas smoothed, edges kept
+    const y = Y[i] + (Yb[i] - Y[i]) * wY;
+    const cb = Cb[i] + (Cbb[i] - Cb[i]) * colAmt, cr = Cr[i] + (Crb[i] - Cr[i]) * colAmt;
+    const r = y + cr, b = y + cb, g = (y - 0.299 * r - 0.114 * b) / 0.587;
+    const p = i * 4; out[p] = r; out[p + 1] = g; out[p + 2] = b; out[p + 3] = px[p + 3];
+  }
+  return out;
+}
+
+// ---------------------------------------------------------------- portrait
+
+/** Soft skin mask 0..1 from colour (YCbCr skin range), smoothed so it has no hard edges. */
+export function skinMask(px: Uint8ClampedArray, w: number, h: number): Float32Array {
+  const n = w * h, m = new Float32Array(n);
+  const ss = (a: number, b: number, x: number) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+  for (let i = 0; i < n; i++) {
+    const r = px[i * 4], g = px[i * 4 + 1], b = px[i * 4 + 2];
+    const y = 0.299 * r + 0.587 * g + 0.114 * b, cb = 128 - 0.168736 * r - 0.331264 * g + 0.5 * b, cr = 128 + 0.5 * r - 0.418688 * g - 0.081312 * b;
+    m[i] = ss(70, 82, cb) * (1 - ss(124, 134, cb)) * ss(130, 140, cr) * (1 - ss(170, 182, cr)) * ss(35, 60, y);
+  }
+  return blurChannel(m, w, h, Math.max(1, Math.max(w, h) / 400));
+}
+
+/**
+ * Skin retouch: frequency separation on the skin only — the colour-and-shading
+ * layer is smoothed, a chosen share of the fine pore texture is put back, edges
+ * (eyes, lips, hair) are protected; then tone evening (redness pulled toward the
+ * average skin tone) and a gentle glow. Amounts are capped so faces stay natural.
+ */
+export function retouchSkin(px: Uint8ClampedArray, w: number, h: number, smooth: number, keep: number, tone: number, glow: number): Uint8ClampedArray {
+  const n = w * h, long = Math.max(w, h), out = new Uint8ClampedArray(px.length);
+  const mask = skinMask(px, w, h);
+  const chans = [0, 1, 2].map((c) => { const a = new Float32Array(n); for (let i = 0; i < n; i++) a[i] = px[i * 4 + c]; return a; });
+  const low = chans.map((ch) => blurChannel(ch, w, h, Math.max(1.5, long * 0.006 * (0.5 + smooth))));
+  const mid = chans.map((ch) => blurChannel(ch, w, h, Math.max(1, long * 0.0012)));
+  // Average skin colour (for tone evening).
+  let sw = 0; const avg = [0, 0, 0];
+  for (let i = 0; i < n; i++) if (mask[i] > 0.5) { sw++; for (let c = 0; c < 3; c++) avg[c] += chans[c][i]; }
+  if (sw) for (let c = 0; c < 3; c++) avg[c] /= sw;
+  const capS = Math.min(0.85, smooth), capT = Math.min(0.7, tone), capG = Math.min(0.6, glow);
+  for (let i = 0; i < n; i++) {
+    const p = i * 4, mk = mask[i];
+    let r = chans[0][i], g = chans[1][i], b = chans[2][i];
+    if (mk > 0.01) {
+      // Protect edges: big differences from the smooth layer are features, not blemishes.
+      const diff = Math.abs(r - low[0][i]) + Math.abs(g - low[1][i]) + Math.abs(b - low[2][i]);
+      const protect = Math.max(0, 1 - diff / 140);
+      const k = capS * mk * protect;
+      if (k > 0) {
+        const tex = [r - mid[0][i], g - mid[1][i], b - mid[2][i]]; // fine pores
+        r = r + (low[0][i] + tex[0] * keep - r) * k; g = g + (low[1][i] + tex[1] * keep - g) * k; b = b + (low[2][i] + tex[2] * keep - b) * k;
+      }
+      if (capT > 0 && sw) {
+        // Keep this pixel's brightness, pull its colour toward the average skin colour.
+        const L = 0.299 * r + 0.587 * g + 0.114 * b, La = 0.299 * avg[0] + 0.587 * avg[1] + 0.114 * avg[2] || 1;
+        const t = capT * mk * 0.6;
+        r += (avg[0] * (L / La) - r) * t; g += (avg[1] * (L / La) - g) * t; b += (avg[2] * (L / La) - b) * t;
+      }
+      if (capG > 0) {
+        const t = capG * mk * 0.35;
+        r = r + (255 - r) * (low[0][i] / 255) * t; g = g + (255 - g) * (low[1][i] / 255) * t; b = b + (255 - b) * (low[2][i] / 255) * t;
+      }
+    }
+    out[p] = r; out[p + 1] = g; out[p + 2] = b; out[p + 3] = px[p + 3];
+  }
+  return out;
+}
+
+export const PORTRAIT_SLIDERS: SliderDef[] = [
+  { key: 'skinSmooth', label: 'Skin smoothing', min: 0, max: 100 },
+  { key: 'skinTexture', label: 'Keep skin texture', min: 0, max: 100 },
+  { key: 'skinTone', label: 'Even skin tone', min: 0, max: 100 },
+  { key: 'skinGlow', label: 'Skin glow', min: 0, max: 100 },
+];
+/** Portrait presets — chosen by the user (never by guessing gender), all adjustable, none extreme. */
+export const PORTRAIT_PRESETS: { group: 'Female portrait' | 'Male portrait'; id: string; name: string; adjust: Partial<Adjust> }[] = [
+  { group: 'Female portrait', id: 'f-natural', name: 'Natural beauty', adjust: { skinSmooth: 35, skinTexture: 60, skinTone: 30, skinGlow: 15 } },
+  { group: 'Female portrait', id: 'f-soft', name: 'Soft skin', adjust: { skinSmooth: 55, skinTexture: 45, skinTone: 40, skinGlow: 20 } },
+  { group: 'Female portrait', id: 'f-studio', name: 'Studio beauty', adjust: { skinSmooth: 50, skinTexture: 50, skinTone: 45, skinGlow: 25, exposure: 5, clarity: -5 } },
+  { group: 'Female portrait', id: 'f-glamour', name: 'Glamour', adjust: { skinSmooth: 65, skinTexture: 35, skinTone: 50, skinGlow: 35, vibrance: 10, contrast: 8 } },
+  { group: 'Female portrait', id: 'f-wedding', name: 'Wedding portrait', adjust: { skinSmooth: 45, skinTexture: 55, skinTone: 40, skinGlow: 30, fade: 6, temperature: 6 } },
+  { group: 'Female portrait', id: 'f-makeup', name: 'Professional makeup', adjust: { skinSmooth: 50, skinTexture: 50, skinTone: 55, skinGlow: 20, contrast: 6, vibrance: 6 } },
+  { group: 'Female portrait', id: 'f-glow', name: 'Natural glow', adjust: { skinSmooth: 30, skinTexture: 65, skinTone: 25, skinGlow: 40 } },
+  { group: 'Male portrait', id: 'm-natural', name: 'Natural male retouch', adjust: { skinSmooth: 20, skinTexture: 80, skinTone: 25 } },
+  { group: 'Male portrait', id: 'm-headshot', name: 'Professional headshot', adjust: { skinSmooth: 30, skinTexture: 70, skinTone: 30, skinGlow: 5, clarity: 8 } },
+  { group: 'Male portrait', id: 'm-business', name: 'Business portrait', adjust: { skinSmooth: 25, skinTexture: 75, skinTone: 30, contrast: 6, saturation: -5 } },
+  { group: 'Male portrait', id: 'm-clean', name: 'Clean skin', adjust: { skinSmooth: 40, skinTexture: 65, skinTone: 35 } },
+  { group: 'Male portrait', id: 'm-beard', name: 'Beard enhancement', adjust: { skinSmooth: 10, skinTexture: 90, skinTone: 15, texture: 25, clarity: 12 } },
+  { group: 'Male portrait', id: 'm-studio', name: 'Studio portrait', adjust: { skinSmooth: 30, skinTexture: 70, skinTone: 30, skinGlow: 10, contrast: 8 } },
+  { group: 'Male portrait', id: 'm-cinematic', name: 'Cinematic portrait', adjust: { skinSmooth: 25, skinTexture: 70, skinTone: 20, contrast: 12, fade: 5, grade: [195, 25, 40, 0, 35, 20] } },
+];

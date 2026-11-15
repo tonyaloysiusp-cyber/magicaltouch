@@ -22,7 +22,7 @@ import {
   Move, BoxSelect, Blend as BlendIcon, Hand, ZoomIn, Pipette, Type as TypeIcon, Eraser, Droplet, Sun, Circle, ArrowLeftRight, Square, PaintBucket,
   Lasso as LassoIcon, PenTool, CircleDashed, Layers as LayersIcon, Trash2, FlipHorizontal, Copy as CopyIcon,
 } from 'lucide-react';
-import { Adjust, NO_ADJUST, LIGHT_SLIDERS, COLOR_SLIDERS, DETAIL_SLIDERS, LOOKS, SliderDef, applyAdjust, renderAdjusted, isNeutral, autoEnhance, HSL_RANGES, CurvePts, curveLut } from '@/lib/photo/adjust';
+import { Adjust, NO_ADJUST, LIGHT_SLIDERS, COLOR_SLIDERS, DETAIL_SLIDERS, LENS_SLIDERS, PORTRAIT_SLIDERS, PORTRAIT_PRESETS, LOOKS, SliderDef, applyAdjust, renderAdjusted, isNeutral, autoEnhance, HSL_RANGES, CurvePts, curveLut } from '@/lib/photo/adjust';
 import { BrushKind, createStroke, replayStroke } from '@/lib/photo/brushes';
 import { CropBox, PhysUnit, cropTo, flip, fmtNum, fromPx, inscribedRect, makeCanvas, resample, rotate90, spotHeal, toPx, fillBackground, hasTransparency } from '@/lib/photo/ops';
 import { ColourMode, FORMAT_INFO, PhotoFormat, downloadBlob, exportPhoto, extFor } from '@/lib/photo/exportPhoto';
@@ -1734,7 +1734,7 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
         );
       case 'adjust': {
         const groups = pro
-          ? [{ t: 'Light', s: LIGHT_SLIDERS }, { t: 'Colour', s: COLOR_SLIDERS }, { t: 'Detail & effects', s: DETAIL_SLIDERS }]
+          ? [{ t: 'Light', s: LIGHT_SLIDERS }, { t: 'Colour', s: COLOR_SLIDERS }, { t: 'Detail & effects', s: DETAIL_SLIDERS }, { t: 'Lens corrections', s: LENS_SLIDERS }]
           : [{ t: 'Light', s: SIMPLE_LIGHT }, { t: 'Colour', s: SIMPLE_COLOR }, { t: 'Detail', s: SIMPLE_DETAIL }];
         return (
           <>
@@ -1755,10 +1755,26 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
             {groups.map(({ t, s: list }) => (
               <Section key={t} title={t} action={<button className="text-[11px] text-mt-faint hover:text-mt-ink" onClick={() => { const a = { ...adjust }; list.forEach((d) => ((a as any)[d.key] = 0)); setAdjust(a); commitAdjust(a, `Reset ${t}`); }}>Reset</button>}>
                 {list.map((d) => (
-                  <Range key={d.key} def={d} value={adjust[d.key] as number} onChange={(v) => setOne(d.key, v)} onCommit={commitLive} />
+                  <Range key={d.key} def={d} value={(adjust[d.key] as number) ?? 0} onChange={(v) => setOne(d.key, v)} onCommit={commitLive} />
                 ))}
               </Section>
             ))}
+            <Section title="Portrait retouch" action={<button className="text-[11px] text-mt-faint hover:text-mt-ink" onClick={() => { const a = { ...adjust, skinSmooth: 0, skinTexture: 60, skinTone: 0, skinGlow: 0 }; setAdjust(a); commitAdjust(a, 'Reset portrait'); }}>Reset</button>}>
+              <p className="text-[11.5px] text-mt-muted">Works on the skin only (found on this device — nothing is uploaded). Pick a preset, then fine-tune; texture is kept so faces stay natural.</p>
+              {(['Female portrait', 'Male portrait'] as const).map((g) => (
+                <div key={g} role="group" aria-label={`${g} presets`}>
+                  <p className="mt-1 text-[11px] font-semibold uppercase tracking-wide text-mt-faint">{g}</p>
+                  <div className="mt-1 flex flex-wrap gap-1.5">
+                    {PORTRAIT_PRESETS.filter((x) => x.group === g).map((x) => (
+                      <button key={x.id} type="button" className={chip(false)} onClick={() => { const a = { ...adjust, skinSmooth: 0, skinTexture: 60, skinTone: 0, skinGlow: 0, ...x.adjust } as Adjust; setAdjust(a); commitAdjust(a, x.name); }}>{x.name}</button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+              {PORTRAIT_SLIDERS.map((d) => (
+                <Range key={d.key} def={d} value={(adjust[d.key] as number) ?? (d.key === 'skinTexture' ? 60 : 0)} onChange={(v) => setOne(d.key, v)} onCommit={commitLive} />
+              ))}
+            </Section>
             <Section title="Black & white">
               <div className="flex gap-2">
                 <button className={chip(!adjust.mono)} onClick={() => { const a = { ...adjust, mono: 0 }; setAdjust(a); commitAdjust(a); }}>Colour</button>

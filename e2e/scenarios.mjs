@@ -712,6 +712,28 @@ scenarios.push({
   },
 });
 
+// Photo Studio: detail and lens tools and the portrait presets work on the real image.
+scenarios.push({
+  name: 'photo-studio-portrait',
+  async run(t) {
+    await t.page.addInitScript(() => { try { localStorage.setItem('mt:photoMode', 'pro'); } catch {} });
+    await t.page.goto(`${t.BASE}/photo-studio`);
+    await t.page.locator('input[type=file]').first().setInputFiles('public/templates/photos/mt-38.jpg');
+    await t.page.waitForSelector('[aria-label="Tools"]', { timeout: 60000 });
+    await t.page.waitForTimeout(1200);
+    const big = () => t.eval(() => { const c = [...document.querySelectorAll('canvas')].sort((a, b) => b.width * b.height - a.width * a.height)[0]; const x = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let s = 0; for (let i = 0; i < x.length; i += 400) s += x[i] + x[i + 1] * 3 + x[i + 2] * 7; return s; });
+    const before = await big();
+    for (const label of ['Dehaze', 'Noise reduction', 'Texture', 'Distortion', 'Chromatic aberration', 'Skin smoothing', 'Even skin tone']) t.check(`slider ${label}`, (await t.page.getByText(label, { exact: true }).count()) > 0);
+    t.check('female and male preset groups', (await t.page.getByRole('group', { name: 'Female portrait presets' }).getByRole('button').count()) === 7 && (await t.page.getByRole('group', { name: 'Male portrait presets' }).getByRole('button').count()) === 7);
+    await t.page.getByRole('button', { name: 'Natural beauty', exact: true }).click();
+    await t.page.waitForTimeout(2500);
+    const after = await big();
+    t.check('portrait preset changes the actual pixels', after !== before, `${before} → ${after}`);
+    t.check('preset recorded in history', (await t.page.getByText('Natural beauty').count()) >= 2);
+    await t.shot('portrait');
+  },
+});
+
 // Studio boards: shaped photo frames (heart, hexagon, blob) load and stay replaceable frames.
 scenarios.push({
   name: 'studio-boards-load',
