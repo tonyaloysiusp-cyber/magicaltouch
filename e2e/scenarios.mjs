@@ -380,6 +380,28 @@ scenarios.push(
     },
   },
   {
+    name: 'brush-library',
+    async run(t) {
+      await t.editor('w=1080&h=1080');
+      await rail(t, 'Draw');
+      const lib = t.page.getByRole('radiogroup', { name: 'Brush library' });
+      t.check('14 brushes in the library', (await lib.getByRole('radio').count()) === 14);
+      const made = [];
+      for (const [label, preset, y] of [['Calligraphy', 'calligraphy', 200], ['Soft round', 'soft', 330], ['Dry brush', 'dry', 460], ['Dashed', 'dashed', 590], ['Pattern', 'pattern', 720]]) {
+        await lib.getByRole('radio', { name: label }).click();
+        const a = await toScreen(t, 150, y);
+        await drag(t, a, { x: a.x + 320, y: a.y + 40 }, 20);
+        await t.page.waitForTimeout(250);
+        made.push(await t.eval((p) => { const o = window.__fabricCanvas.getObjects().filter((x) => x.__brush).pop(); return o ? { p: o.__brush.preset, type: o.type } : null; }, preset));
+      }
+      t.check('each preset draws its own stroke', made.map((m) => m && m.p).join() === 'calligraphy,soft,dry,dashed,pattern', JSON.stringify(made));
+      t.check('soft brush is a layered vector group', made[1] && made[1].type === 'group');
+      t.check('calligraphy is a single vector path', made[0] && made[0].type === 'path');
+      await t.page.getByLabel('Nib angle').count().then((n) => t.check('calligraphy controls hidden for other brushes', n === 0));
+      await t.shot('brushes');
+    },
+  },
+  {
     name: 'resize-copy',
     async run(t) {
       await t.editor('w=1080&h=1080');

@@ -22,6 +22,8 @@
 //   bar here.
 // ---------------------------------------------------------------------
 
+import { frameOutlineD, imagePageScale } from './frames.ts';
+
 interface RectLike {
   x: number;
   y: number;
@@ -191,6 +193,16 @@ function buildClipPathAttr(defs: string[], obj: any, outer?: number[], F?: any):
   return `clip-path="url(#${id})"`;
 }
 
+// A photo frame's border: a vector outline along the frame shape (see lib/editor/frames.ts).
+function frameBorderSvg(obj: any): string {
+  const b = obj.frameBorder;
+  if (!b || !(b.width > 0)) return '';
+  const o = frameOutlineD(obj);
+  if (!o) return '';
+  const s = imagePageScale(obj) * ((Math.hypot(o.m[0], o.m[1]) + Math.hypot(o.m[2], o.m[3])) / 2 || 1);
+  return `<g transform="${matrixAttr(o.m)}"><path d="${o.d}" fill="none" stroke="${b.color}" stroke-width="${Math.round((b.width / s) * 1000) / 1000}" stroke-linejoin="round"/></g>`;
+}
+
 function objectToSvgElement(defs: string[], obj: any, F: any): string {
   if (obj.visible === false) return '';
   if ((obj.type === 'group' || obj.type === 'activeSelection') && typeof obj.getObjects === 'function') {
@@ -294,12 +306,14 @@ function objectToSvgElement(defs: string[], obj: any, F: any): string {
         let cropAttr = '';
         if (cropped) { const id = `crop-${++clipIdCounter}`; defs.push(`<clipPath id="${id}"><rect x="${-w / 2}" y="${-h / 2}" width="${w}" height="${h}" /></clipPath>`); cropAttr = ` clip-path="url(#${id})"`; }
         inner = `<g${opacity < 1 ? ` opacity="${opacity}"` : ''}${cropAttr}>${clipAttr ? `<g ${clipAttr}>${vec}</g>` : vec}</g>`;
+        inner += frameBorderSvg(obj);
         return `<g transform="${matrixAttr(matrix)}">${inner}</g>`;
       }
     }
     const src = obj.toDataURL ? obj.toDataURL({ format: 'png' }) : obj._element?.src;
     if (!src) return '';
     inner = `<image x="${-w / 2}" y="${-h / 2}" width="${w}" height="${h}" href="${src}"${opacity < 1 ? ` opacity="${opacity}"` : ''}${clipAttr ? ` ${clipAttr}` : ''} preserveAspectRatio="none" />`;
+    inner += frameBorderSvg(obj);
   } else {
     return ''; // anything else unsupported — skipped, not faked
   }

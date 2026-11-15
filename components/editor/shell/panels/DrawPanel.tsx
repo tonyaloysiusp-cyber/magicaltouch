@@ -1,7 +1,7 @@
 'use client';
 
 import { Brush, Highlighter, Pencil, Eraser, PenTool, MousePointer2, Spline, Check } from 'lucide-react';
-import { BrushKind, BrushSettings, BRUSH_KINDS } from '@/lib/editor/brush';
+import { BrushKind, BrushSettings, BRUSH_KINDS, BRUSH_PRESETS } from '@/lib/editor/brush';
 import { DEFAULT_SWATCHES } from '../ColorPicker';
 import { PanelSection, Slider, cx } from '../ui';
 
@@ -62,6 +62,20 @@ export function DrawPanel({
             : 'Pick a tool and draw straight onto your page.'}
         </p>
       </PanelSection>
+      <PanelSection title="Brush library">
+        <div className="grid grid-cols-2 gap-1.5" role="radiogroup" aria-label="Brush library">
+          {BRUSH_PRESETS.map((p) => {
+            const on = drawing && settings.kind === p.kind && (p.kind !== 'brush' || (settings.preset || 'basic') === p.id);
+            return (
+              <button key={p.id} type="button" role="radio" aria-checked={on} title={p.hint}
+                onClick={() => { onChange({ ...settings, kind: p.kind, preset: p.id, thinning: undefined, taper: undefined, stabilize: undefined, angle: undefined, roundness: undefined, spacing: undefined, hardness: undefined, caps: undefined, ...p.s }); onStart(p.kind); }}
+                className={cx('rounded-xl border px-2 py-1.5 text-left text-[11.5px] font-medium', on ? 'mt-active-blue text-mt-ink' : 'border-mt-border text-mt-muted hover:text-mt-ink hover:bg-mt-surface2')}>
+                {p.label}
+              </button>
+            );
+          })}
+        </div>
+      </PanelSection>
       {settings.kind !== 'eraser' && (
         <PanelSection title="Colour">
           <div className="grid grid-cols-10 gap-1.5">
@@ -89,6 +103,21 @@ export function DrawPanel({
             <Slider label="Opacity" value={Math.round(settings.opacity * 100)} min={5} max={100} onChange={(v) => onChange({ ...settings, opacity: v / 100 })} suffix="%" />
           )}
           <Slider label="Smoothing" value={Math.round(settings.smoothing * 100)} min={0} max={100} onChange={(v) => onChange({ ...settings, smoothing: v / 100 })} suffix="%" />
+          {settings.kind === 'brush' && (() => {
+            const p = settings.preset || 'basic';
+            return <>
+              <Slider label="Stabiliser" value={Math.round((settings.stabilize ?? 0.5) * 100)} min={0} max={95} onChange={(v) => onChange({ ...settings, stabilize: v / 100 })} suffix="%" />
+              {!['calligraphy', 'texture', 'pattern'].includes(p) && <Slider label="Pressure / speed thinning" value={Math.round((settings.thinning ?? 0.6) * 100)} min={-90} max={95} onChange={(v) => onChange({ ...settings, thinning: v / 100 })} suffix="%" />}
+              {!['calligraphy', 'texture', 'pattern', 'dashed'].includes(p) && <Slider label="Taper" value={Math.round((settings.taper ?? 2) * 10)} min={0} max={60} onChange={(v) => onChange({ ...settings, taper: v / 10 })} suffix="" />}
+              {p === 'soft' && <Slider label="Hardness" value={Math.round((settings.hardness ?? 0.3) * 100)} min={0} max={100} onChange={(v) => onChange({ ...settings, hardness: v / 100 })} suffix="%" />}
+              {p === 'calligraphy' && <>
+                <Slider label="Nib angle" value={Math.round(settings.angle ?? 40)} min={-90} max={90} onChange={(v) => onChange({ ...settings, angle: v })} suffix="°" />
+                <Slider label="Nib roundness" value={Math.round((settings.roundness ?? 0.18) * 100)} min={5} max={100} onChange={(v) => onChange({ ...settings, roundness: v / 100 })} suffix="%" />
+              </>}
+              {['dashed', 'pattern', 'texture'].includes(p) && <Slider label="Spacing" value={Math.round((settings.spacing ?? 1) * 10)} min={2} max={60} onChange={(v) => onChange({ ...settings, spacing: v / 10 })} suffix="" />}
+              <label className="flex items-center justify-between text-xs text-mt-muted">Line ends<select value={settings.caps || 'round'} onChange={(e) => onChange({ ...settings, caps: e.target.value as any })} aria-label="Line ends" className="h-8 rounded-lg border border-mt-border bg-mt-bg px-2 text-mt-ink"><option value="round">Round</option><option value="flat">Flat</option></select></label>
+            </>;
+          })()}
         </div>
       </PanelSection>
       {drawing && (

@@ -30,6 +30,7 @@ import {
   Ungroup,
   Droplet,
   Square as SquareRound,
+  SquareDashed,
   Spline,
   FlipHorizontal2,
   FlipVertical2,
@@ -80,6 +81,7 @@ export interface ToolbarActions {
   setStroke: (p: { stroke?: string | null; strokeWidth?: number; dash?: 'solid' | 'dashed' | 'dotted' }) => void;
   setShadow: (s: { color: string; blur: number; x: number; y: number } | null, record?: boolean) => void;
   setCornerRadius: (r: number, record?: boolean) => void;
+  setFrameBorder?: (b: { width: number; color: string } | null, record?: boolean) => void;
   setShapeParams: (p: any, record?: boolean) => void;
   setTextFx: (fx: TextFx, record?: boolean) => void;
   translate?: () => void;
@@ -752,6 +754,22 @@ function ContextToolbarInner({
           </div>
         </Popover>
         {shadowPopover(sel)}
+        {framed && a.setFrameBorder && (
+          <Popover
+            width={240}
+            trigger={({ toggle, open }) => (
+              <IconButton label="Frame border" onClick={toggle} active={open}>
+                <SquareDashed size={16} />
+              </IconButton>
+            )}
+          >
+            <div className="flex flex-col gap-2" aria-label="Frame border">
+              <Slider label="Border thickness" value={Math.round(sel.frameBorder?.width || 0)} min={0} max={80} onChange={(v) => a.setFrameBorder!({ width: v, color: sel.frameBorder?.color || '#FFFFFF' }, false)} onCommit={(v) => a.setFrameBorder!({ width: v, color: sel.frameBorder?.color || '#FFFFFF' })} />
+              <label className="flex items-center justify-between text-xs">Border colour<input type="color" value={(sel.frameBorder?.color || '#FFFFFF').slice(0, 7)} onChange={(e) => a.setFrameBorder!({ width: sel.frameBorder?.width || 6, color: e.target.value })} aria-label="Frame border colour" className="h-8 w-12 rounded border border-mt-border" /></label>
+              {sel.frameBorder && <button type="button" onClick={() => a.setFrameBorder!(null)} className="h-8 rounded-lg border border-mt-border text-xs">No border</button>}
+            </div>
+          </Popover>
+        )}
         {framed && sel.clipPath?.type === 'rect' && (
           <Popover
             width={240}

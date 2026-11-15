@@ -142,7 +142,7 @@ import { PERSIST_PROPS, cloneWithProps, isHelperObject, isArtwork, applyStoredLo
 import { ensureImageFilters, reviveImageAdjust } from '@/lib/editor/imageAdjust';
 import { installParagraphSpacing } from '@/lib/editor/paragraphSpacing';
 import { installTextFrames, isFrame, flowStory, syncStories, flowWhileEditing, resizeFrameFromScale, reflowAllStories, drawFrameOverlays, createStory, makeTextFrame, splitIntoColumns, addLinkedFrame, unlinkFrame, nextFrameBox, storyFrames, SAMPLE_ARTICLE } from '@/lib/editor/textFrames';
-import { drawCropOverlay, isFramed, fillFrame, cropHandleAt, dragCropHandle, keepCovering, CROP_CURSORS, CropHandle } from '@/lib/editor/frames';
+import { installFrameBorder, setFrameBorder as setFrameBorderOn, drawCropOverlay, isFramed, fillFrame, cropHandleAt, dragCropHandle, keepCovering, CROP_CURSORS, CropHandle } from '@/lib/editor/frames';
 import { BrushSettings, DEFAULT_BRUSH, StrokePoint, strokePathD, createStrokeObject, eraseWithStroke } from '@/lib/editor/brush';
 import { useEditorFeatures, TextPreset, clearCharStyle } from '@/hooks/useEditorFeatures';
 import { planResize } from '@/lib/editor/smartResize';
@@ -1424,6 +1424,7 @@ function EditorContent() {
       const F: any = mod.fabric;
       // Professional text looks are drawn live; install before any design loads.
       installPremiumText(F);
+      installFrameBorder(F);
       const initialW = viewportRef.current?.clientWidth || 900;
       const initialH = viewportRef.current?.clientHeight || 600;
 
@@ -7320,6 +7321,11 @@ function EditorContent() {
     setStroke: features.setStroke,
     setShadow: features.setShadow,
     setCornerRadius: features.setCornerRadius,
+    setFrameBorder: (b: { width: number; color: string } | null, record = true) => {
+      const c = fabricCanvasRef.current; const o: any = c?.getActiveObject(); if (!o || !isFramed(o)) return;
+      setFrameBorderOn(o, b); c.requestRenderAll();
+      if (record) c.fire('object:modified', { target: o });
+    },
     setShapeParams: features.setShapeParams,
     setTextFx: features.setTextFx,
     translate: () => setShowTranslate(true),

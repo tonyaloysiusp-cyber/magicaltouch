@@ -459,6 +459,18 @@ export async function renderVector(pdf: any, F: any, obj: any, ctx: VectorCtx): 
       obj.clipPath = clip;
       pdf.restoreGraphicsState();
     }
+    // Photo frame border: the frame outline stroked as a vector, on top of the photo.
+    const fb = obj.frameBorder, bc = fb && fb.width > 0 ? parseColor(F, fb.color) : null;
+    if (ok && bc) {
+      pdf.saveGraphicsState();
+      try {
+        pdf.setDrawColor(bc.r, bc.g, bc.b);
+        pdf.setLineWidth(Math.max(toPt(fb.width), 0.01));
+        try { pdf.setLineJoin(1); } catch { /* older jsPDF */ }
+        emit(pdf, cc.cmds, m, ctx);
+        pdf.stroke();
+      } finally { pdf.restoreGraphicsState(); }
+    }
     return ok;
   }
   if (obj.globalCompositeOperation && obj.globalCompositeOperation !== 'source-over') return false;

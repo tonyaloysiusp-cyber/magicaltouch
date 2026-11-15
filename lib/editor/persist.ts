@@ -10,6 +10,7 @@ export const PERSIST_PROPS = [
   'visible',
   'isVectorPath',
   'clipPath',
+  'frameBorder',
   '__id',
   '__uid',
   '__lockRatio',

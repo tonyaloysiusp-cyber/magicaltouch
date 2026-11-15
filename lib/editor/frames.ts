@@ -9,7 +9,7 @@
 //
 // An empty frame shows a placeholder picture until a photo is dropped in.
 
-import { ShapeKind, shapePathD } from './shapePaths';
+import { shapePathD, type ShapeKind } from './shapePaths.ts';
 
 export type FrameKind = ShapeKind | 'custom';
 
@@ -654,4 +654,66 @@ export function drawCropOverlay(ctx: CanvasRenderingContext2D, vt: number[], geo
     ctx.stroke();
   }
   ctx.restore();
+}
+
+
+// --- frame border ----------------------------------------------------------
+// A border drawn along the frame's shape (its clipPath), centred on the edge,
+// in page pixels whatever the photo's zoom. Saved with the image
+// (`frameBorder`), drawn on the canvas here and written by the SVG / PDF
+// exporters as a real vector outline.
+
+export interface FrameBorder { width: number; color: string }
+
+/** The frame outline as SVG path data in the image's local space (null when the clip isn't a rect or path). */
+export function frameOutlineD(img: any): { d: string; m: number[] } | null {
+  const clip = img?.clipPath;
+  if (!clip || clip.absolutePositioned) return null;
+  const m = clip.calcOwnMatrix ? clip.calcOwnMatrix() : [1, 0, 0, 1, clip.left || 0, clip.top || 0];
+  if (clip.type === 'rect') {
+    const w = clip.width || 0, h = clip.height || 0, r = Math.min(clip.rx || 0, w / 2, h / 2);
+    const d = r > 0
+      ? `M${-w / 2 + r} ${-h / 2}H${w / 2 - r}A${r} ${r} 0 0 1 ${w / 2} ${-h / 2 + r}V${h / 2 - r}A${r} ${r} 0 0 1 ${w / 2 - r} ${h / 2}H${-w / 2 + r}A${r} ${r} 0 0 1 ${-w / 2} ${h / 2 - r}V${-h / 2 + r}A${r} ${r} 0 0 1 ${-w / 2 + r} ${-h / 2}Z`
+      : `M${-w / 2} ${-h / 2}H${w / 2}V${h / 2}H${-w / 2}Z`;
+    return { d, m };
+  }
+  if (clip.type === 'path' && Array.isArray(clip.path)) {
+    const ox = clip.pathOffset?.x || 0, oy = clip.pathOffset?.y || 0;
+    const d = clip.path.map((c: any[]) => c[0] + c.slice(1).map((v: number, i: number) => (c[0] === 'A' || c[0] === 'a' ? (i >= 5 ? (i === 5 ? v - ox : v - oy) : v) : i % 2 === 0 ? v - ox : v - oy)).join(' ')).join('');
+    return { d, m };
+  }
+  return null;
+}
+
+/** Scale of the image on the page (border widths are page pixels). */
+export const imagePageScale = (img: any) => { const m = img.calcTransformMatrix(); return (Math.hypot(m[0], m[1]) + Math.hypot(m[2], m[3])) / 2 || 1; };
+
+export function setFrameBorder(img: any, b: FrameBorder | null) {
+  img.frameBorder = b && b.width > 0 ? { width: b.width, color: b.color } : null;
+  img.dirty = true;
+}
+
+let borderInstalled = false;
+export function installFrameBorder(F: any) {
+  if (borderInstalled || !F?.Image) return;
+  borderInstalled = true;
+  const orig = F.Image.prototype.render;
+  F.Image.prototype.render = function (ctx: CanvasRenderingContext2D) {
+    orig.call(this, ctx);
+    const b = this.frameBorder;
+    if (!b || !(b.width > 0) || this.visible === false) return;
+    const o = frameOutlineD(this);
+    if (!o || typeof Path2D === 'undefined') return;
+    ctx.save();
+    const m = this.calcTransformMatrix();
+    ctx.transform(m[0], m[1], m[2], m[3], m[4], m[5]);
+    ctx.transform(o.m[0], o.m[1], o.m[2], o.m[3], o.m[4], o.m[5]);
+    const s = imagePageScale(this) * ((Math.hypot(o.m[0], o.m[1]) + Math.hypot(o.m[2], o.m[3])) / 2 || 1);
+    ctx.lineWidth = b.width / s;
+    ctx.strokeStyle = b.color;
+    ctx.lineJoin = 'round';
+    ctx.globalAlpha *= this.opacity ?? 1;
+    ctx.stroke(new Path2D(o.d));
+    ctx.restore();
+  };
 }
