@@ -389,6 +389,10 @@ export function PropertiesPanel(p: Props) {
             onCommit={(n) => p.applyExactSize(null, unitToPx(n, unit))}
           />
         </div>
+        <div className="grid grid-cols-2 gap-2">
+          <NumField label="Shear X" value={Math.round((selected.skewX || 0) * 10) / 10} suffix="°" min={-80} max={80} disabled={locked} onCommit={(n) => a.applyProp({ skewX: Math.max(-80, Math.min(80, n)) })} title="Shear (slant) horizontally" />
+          <NumField label="Shear Y" value={Math.round((selected.skewY || 0) * 10) / 10} suffix="°" min={-80} max={80} disabled={locked} onCommit={(n) => a.applyProp({ skewY: Math.max(-80, Math.min(80, n)) })} title="Shear (slant) vertically" />
+        </div>
         <div className="grid grid-cols-[1fr_auto] gap-2">
           <NumField label={<RotateCw size={12} />} value={Math.round((selected.angle || 0) * 10) / 10} suffix="°" disabled={locked} onCommit={(n) => a.applyProp({ angle: ((n % 360) + 360) % 360 })} title="Rotation" />
           <div className="flex gap-1.5 w-[84px]">
@@ -652,7 +656,14 @@ function TextSection({ p, colorProps }: { p: Props; colorProps: any }) {
           <NumField label="Line" value={Math.round((sel.lineHeight ?? 1.16) * 100) / 100} step={0.05} min={0.3} max={10} disabled={locked} title="Line spacing (1 = the font’s own spacing)" onCommit={(n) => a.applyProp({ lineHeight: n })} />
           <NumField label="Paragraph" value={Math.round((sel.paragraphSpacing || 0) * 100) / 100} step={0.1} min={0} max={10} suffix="em" disabled={locked} title="Extra space before each paragraph (1 em = the text size)" onCommit={(n) => a.applyProp({ paragraphSpacing: n })} />
           <NumField label="Baseline" value={baseline.mixed ? undefined : baseline.value ?? 0} mixed={baseline.mixed} min={-500} max={500} disabled={locked} title="Raise or lower letters" onCommit={(n) => a.applyCharProp({ deltaY: n })} />
+          <NumField label="H scale" value={Math.round((Math.abs(sel.scaleX || 1) / Math.abs(sel.scaleY || 1)) * 100)} min={10} max={1000} suffix="%" disabled={locked} title="Horizontal scale: letters wider or narrower, same height" onCommit={(n) => a.applyProp({ scaleX: Math.sign(sel.scaleX || 1) * Math.abs(sel.scaleY || 1) * (n / 100) })} />
+          <NumField label="V scale" value={Math.round((Math.abs(sel.scaleY || 1) / Math.abs(sel.scaleX || 1)) * 100)} min={10} max={1000} suffix="%" disabled={locked} title="Vertical scale: letters taller or shorter, same width" onCommit={(n) => a.applyProp({ scaleY: Math.sign(sel.scaleY || 1) * Math.abs(sel.scaleX || 1) * (n / 100) })} />
         </div>
+        <label className="flex items-center justify-between text-[12px] text-mt-muted">Direction
+          <select value={sel.direction || 'ltr'} disabled={locked} onChange={(e) => a.applyProp({ direction: e.target.value, ...(e.target.value === 'rtl' && (sel.textAlign || 'left') === 'left' ? { textAlign: 'right' } : {}) })} aria-label="Text direction" className="h-8 rounded-lg border border-mt-input-border bg-mt-surface px-2 text-[12.5px] text-mt-ink">
+            <option value="ltr">Left to right</option><option value="rtl">Right to left (Arabic, Urdu, Hebrew)</option>
+          </select>
+        </label>
       </Section>
       {sel.type === 'textbox' && !sel.path && (
         <Section title="Text frame">

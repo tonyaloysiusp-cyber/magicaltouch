@@ -402,6 +402,24 @@ scenarios.push(
     },
   },
   {
+    name: 'pro-text-transform',
+    init: () => { try { localStorage.setItem('mt:editorMode', 'pro'); } catch {} },
+    async run(t) {
+      await t.editor('w=1080&h=1080');
+      await t.eval(() => { const c = window.__fabricCanvas; const tb = new window.fabric.Textbox('Shear me', { left: 200, top: 300, width: 500, fontSize: 80, fontFamily: 'Arial' }); c.add(tb); c.setActiveObject(tb); c.fire('selection:created', { selected: [tb] }); c.requestRenderAll(); });
+      await t.page.waitForTimeout(600);
+      const set = async (label, v) => { const f = t.page.getByLabel(label, { exact: true }).first(); await f.fill(String(v)); await f.press('Enter'); await t.page.waitForTimeout(250); };
+      await set('Shear X', 15);
+      await set('H scale', 150);
+      await t.page.getByLabel('Text direction').selectOption('rtl');
+      await t.page.waitForTimeout(300);
+      const o = await t.eval(() => { const a = window.__fabricCanvas.getActiveObject(); return { skewX: a.skewX, ratio: Math.round((a.scaleX / a.scaleY) * 100), dir: a.direction, align: a.textAlign }; });
+      t.check('shear applied', Math.round(o.skewX) === 15, JSON.stringify(o));
+      t.check('horizontal scale applied (height kept)', o.ratio === 150, JSON.stringify(o));
+      t.check('right-to-left direction applied', o.dir === 'rtl' && o.align === 'right', JSON.stringify(o));
+    },
+  },
+  {
     name: 'resize-copy',
     async run(t) {
       await t.editor('w=1080&h=1080');
