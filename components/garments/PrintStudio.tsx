@@ -64,9 +64,12 @@ export interface PrintStudioProps {
   libraryPatterns: Asset[];
   onSave: (art: ArtEl[], studioOnly: boolean) => void;
   onClose: () => void;
+  /** Textile Studio: any garment (no team names, numbers or jersey layouts). */
+  garment?: boolean;
+  title?: string;
 }
 
-export function PrintStudio({ kit, pattern, glyphs, players, libraryPatterns, onSave, onClose }: PrintStudioProps) {
+export function PrintStudio({ kit, pattern, glyphs, players, libraryPatterns, onSave, onClose, garment, title }: PrintStudioProps) {
   const product = useMemo(() => kitProduct(kit), [kit]);
   const board: Board = useMemo(() => boardLayout(product), [product]);
   const [art, setArtState] = useState<ArtEl[]>(() => JSON.parse(JSON.stringify(kit.art || [])));
@@ -862,10 +865,10 @@ export function PrintStudio({ kit, pattern, glyphs, players, libraryPatterns, on
   const activeTool = TOOLS.find((x) => x.id === tool)!;
 
   return (
-    <div ref={shell} className="fixed inset-0 z-[80] flex flex-col bg-mt-bg" role="dialog" aria-label="Print studio" onClick={() => menu && setMenu(null)}>
+    <div ref={shell} className="fixed inset-0 z-[80] flex flex-col bg-mt-bg" role="dialog" aria-label={title || 'Print studio'} onClick={() => menu && setMenu(null)}>
       {/* Menu bar + toolbar */}
       <div className="flex flex-wrap items-center gap-1.5 border-b border-mt-border bg-mt-surface px-2 py-1.5">
-        <p className="text-[13.5px] font-semibold px-1">Print studio</p>
+        <p className="text-[13.5px] font-semibold px-1">{title || 'Print studio'}</p>
         <nav aria-label="Menu" className="flex items-center" onClick={(e) => e.stopPropagation()}>
           {menus.map((m) => (
             <div key={m.id} className="relative">
@@ -903,7 +906,7 @@ export function PrintStudio({ kit, pattern, glyphs, players, libraryPatterns, on
           {tabBtn('shapes', <Shapes size={15} />, 'Shapes')}
           {tabBtn('images', <ImageIcon size={15} />, 'Logos')}
           {tabBtn('patterns', <Palette size={15} />, 'Pattern')}
-          {tabBtn('templates', <LayoutTemplate size={15} />, 'Layouts')}
+          {!garment && tabBtn('templates', <LayoutTemplate size={15} />, 'Layouts')}
           {tabBtn('creator', <Sparkles size={15} />, 'Creator')}
         </div>
 
@@ -912,13 +915,13 @@ export function PrintStudio({ kit, pattern, glyphs, players, libraryPatterns, on
           <div className="flex items-center justify-between"><p className={h4}>{{ text: 'Text', shapes: 'Shapes', images: 'Logos & pictures', patterns: 'Patterns', templates: 'Layouts', creator: 'Creator' }[tab]}</p>{narrow && <button type="button" onClick={() => setShowLeft(false)} aria-label="Close panel" className="p-1"><X size={14} /></button>}</div>
           {tab === 'text' && <>
             <p className="text-[12px] text-mt-muted">Text is drawn from the font file itself — exact letters, live or outlined in the print file.</p>
-            <button type="button" onClick={() => addText('TEAM NAME', { size: 70, upper: true })} className="w-full rounded-lg border border-mt-border p-2 text-left text-[13px] font-semibold hover:bg-mt-surface2">+ Add text</button>
+            <button type="button" onClick={() => addText(garment ? 'Your text' : 'TEAM NAME', { size: 70, upper: !garment })} className="w-full rounded-lg border border-mt-border p-2 text-left text-[13px] font-semibold hover:bg-mt-surface2">+ Add text</button>
             <button type="button" onClick={() => addText('CLUB', { size: 60, upper: true, arc: 70, name: 'Curved text' })} className="w-full rounded-lg border border-mt-border p-2 text-left text-[13px] hover:bg-mt-surface2">+ Curved text</button>
-            <button type="button" onClick={() => { const b = board.pieces.find((p) => p.piece.id === 'back'); addText('{NAME}', { upper: true, size: 62, fitW: b ? b.piece.w * 0.78 : undefined, name: 'Player name', fill: kit.nameColor }, 'back'); }} className="w-full rounded-lg border border-mt-border p-2 text-left text-[13px] hover:bg-mt-surface2"><b>+ Player name</b> <span className="text-mt-muted">— filled from the list</span></button>
-            <button type="button" onClick={() => { const b = board.pieces.find((p) => p.piece.id === 'back'); addText('{NUMBER}', { size: 280, fitW: b ? b.piece.w * 0.7 : undefined, name: 'Player number', fill: kit.numberColor }, 'back'); }} className="w-full rounded-lg border border-mt-border p-2 text-left text-[13px] hover:bg-mt-surface2"><b>+ Player number</b> <span className="text-mt-muted">— filled from the list</span></button>
-            <button type="button" onClick={() => addText('{TEAM}', { size: 40, upper: true, name: 'Team name' })} className="w-full rounded-lg border border-mt-border p-2 text-left text-[13px] hover:bg-mt-surface2">+ Team name</button>
-            <button type="button" onClick={() => addText('{SIZE}', { size: 20, name: 'Size label', fill: '#000000' })} className="w-full rounded-lg border border-mt-border p-2 text-left text-[13px] hover:bg-mt-surface2">+ Size label</button>
-            <p className="pt-1 text-[11.5px] text-mt-muted">Type <code>{'{NAME}'}</code>, <code>{'{NUMBER}'}</code>, <code>{'{SIZE}'}</code> or <code>{'{TEAM}'}</code> in any text. The master design stays one; every garment gets its own.</p>
+            {!garment && <button type="button" onClick={() => { const b = board.pieces.find((p) => p.piece.id === 'back'); addText('{NAME}', { upper: true, size: 62, fitW: b ? b.piece.w * 0.78 : undefined, name: 'Player name', fill: kit.nameColor }, 'back'); }} className="w-full rounded-lg border border-mt-border p-2 text-left text-[13px] hover:bg-mt-surface2"><b>+ Player name</b> <span className="text-mt-muted">— filled from the list</span></button>}
+            {!garment && <button type="button" onClick={() => { const b = board.pieces.find((p) => p.piece.id === 'back'); addText('{NUMBER}', { size: 280, fitW: b ? b.piece.w * 0.7 : undefined, name: 'Player number', fill: kit.numberColor }, 'back'); }} className="w-full rounded-lg border border-mt-border p-2 text-left text-[13px] hover:bg-mt-surface2"><b>+ Player number</b> <span className="text-mt-muted">— filled from the list</span></button>}
+            {!garment && <button type="button" onClick={() => addText('{TEAM}', { size: 40, upper: true, name: 'Team name' })} className="w-full rounded-lg border border-mt-border p-2 text-left text-[13px] hover:bg-mt-surface2">+ Team name</button>}
+            {!garment && <button type="button" onClick={() => addText('{SIZE}', { size: 20, name: 'Size label', fill: '#000000' })} className="w-full rounded-lg border border-mt-border p-2 text-left text-[13px] hover:bg-mt-surface2">+ Size label</button>}
+            {!garment && <p className="pt-1 text-[11.5px] text-mt-muted">Type <code>{'{NAME}'}</code>, <code>{'{NUMBER}'}</code>, <code>{'{SIZE}'}</code> or <code>{'{TEAM}'}</code> in any text. The master design stays one; every garment gets its own.</p>}
           </>}
           {tab === 'shapes' && <>
             <div className="grid grid-cols-4 gap-1.5">

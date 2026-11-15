@@ -4,7 +4,7 @@
 // layout nests them on a roll with bleed, and the markup sheet draws them
 // as labelled line drawings (a simple tech pack).
 
-export interface Piece { id: string; label: string; w: number; h: number; d: string; mirror?: boolean; qty: number }
+export interface Piece { id: string; label: string; w: number; h: number; d: string; mirror?: boolean; qty: number; /** Colour / panel role when the id doesn't say it (drafted garments). */ role?: 'body' | 'sleeve' | 'trim' }
 export interface Product { id: string; label: string; pieces: Piece[]; note: string }
 
 export const PRODUCTS: Product[] = [

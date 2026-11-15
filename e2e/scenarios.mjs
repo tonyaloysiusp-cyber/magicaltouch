@@ -904,6 +904,58 @@ scenarios.push({
   },
 });
 
+// Textile Studio: a kurta drafted from typed measurements, print PDF + tech pack, the design
+// workspace opens for the drafted pieces, and an embroidery motif becomes a DST machine file.
+scenarios.push({
+  name: 'textile-studio',
+  async run(t) {
+    const fs = await import('node:fs');
+    const { PDFDocument } = await import('pdf-lib');
+    await t.page.addInitScript(() => { try { if (!sessionStorage.getItem('tsInit')) { localStorage.removeItem('mt:textile-studio'); localStorage.removeItem('mt:textile-measures'); sessionStorage.setItem('tsInit', '1'); } } catch {} });
+    await t.page.goto(`${t.BASE}/textile-studio`, { waitUntil: 'domcontentloaded' });
+    const studio = t.page.getByLabel('Textile Studio');
+    await studio.getByRole('radio', { name: /Kurta/ }).click({ timeout: 30000 });
+    t.check('no pieces before the measurements', (await studio.getByRole('alert').count()) === 1);
+    const M = { 'Bust / chest (round)': 92, 'Waist (round)': 78, 'Hip / seat (round)': 100, 'Shoulder (across the back, point to point)': 38, 'Kurta length (shoulder to hem)': 105, 'Shoulder to waist': 40, 'Armhole (round)': 44, 'Front neck depth': 18, 'Back neck depth': 6, 'Sleeve length (shoulder down)': 48, 'Upper arm (round)': 30, 'Sleeve opening (round)': 24 };
+    for (const [k, v] of Object.entries(M)) await studio.getByLabel(k, { exact: true }).fill(String(v));
+    await studio.getByRole('button', { name: 'V-neck' }).click();
+    await t.page.waitForTimeout(400);
+    const pieces = studio.getByRole('img', { name: 'Garment pieces' });
+    t.check('pieces drafted from the measurements', (await pieces.count()) === 1 && /Kurta \/ kameez \(v neck, elbow sleeves\)/.test(await studio.innerText()));
+    await t.shot('textile-kurta');
+    const [pdf] = await Promise.all([t.page.waitForEvent('download', { timeout: 60000 }), studio.getByRole('button', { name: /Print PDF/ }).click()]);
+    const doc = await PDFDocument.load(fs.readFileSync(await pdf.path()));
+    const sz = doc.getPage(0).getSize();
+    t.check('print PDF at real roll width (1600 mm)', Math.abs(sz.width / 72 * 25.4 - 1600) < 2, JSON.stringify(sz));
+    const [tp] = await Promise.all([t.page.waitForEvent('download', { timeout: 60000 }), studio.getByRole('button', { name: /Tech pack/ }).click()]);
+    const tdoc = await PDFDocument.load(fs.readFileSync(await tp.path()));
+    t.check('tech pack PDF (A4)', tdoc.getPageCount() >= 1 && Math.round(tdoc.getPage(0).getSize().width / 72 * 25.4) === 210);
+    await studio.getByRole('button', { name: /Open the design workspace/ }).click();
+    const ws = t.page.getByRole('dialog', { name: /Design workspace/ });
+    await ws.waitFor({ timeout: 20000 });
+    t.check('design workspace opens on the drafted pieces', (await ws.count()) === 1 && (await ws.getByRole('button', { name: /Player name/ }).count()) === 0);
+    await t.page.keyboard.press('Escape');
+    await ws.getByRole('button', { name: 'File' }).click();
+    await ws.getByRole('menuitem', { name: /Close/ }).click();
+    await studio.getByRole('button', { name: /^Embroidery/ }).click();
+    const emb = t.page.getByRole('dialog', { name: 'Embroidery workspace' });
+    await emb.waitFor({ timeout: 10000 });
+    await emb.getByRole('button', { name: /^Add / }).first().click();
+    await t.page.waitForTimeout(800);
+    const stats = await emb.innerText();
+    t.check('motif turned into stitches', /[1-9][\d,]* stitches/.test(stats), stats.slice(0, 160));
+    await emb.getByRole('radio', { name: 'Satin' }).click();
+    await t.page.waitForTimeout(500);
+    const [dst] = await Promise.all([t.page.waitForEvent('download', { timeout: 30000 }), emb.getByRole('button', { name: /DST/ }).click()]);
+    const bytes = fs.readFileSync(await dst.path());
+    t.check('DST machine file', dst.suggestedFilename().endsWith('.dst') && bytes.subarray(0, 3).toString() === 'LA:' && bytes.length > 600 && bytes[bytes.length - 1] === 0xF3, `${bytes.length}`);
+    await t.shot('embroidery');
+    await emb.getByRole('button', { name: 'Save' }).click();
+    await emb.getByRole('button', { name: 'Close embroidery' }).click();
+    t.check('embroidery saved to the project', /stitches, 1 colours?\./.test(await studio.innerText()));
+  },
+});
+
 // Photo Studio face tools: with landmarks given (the real face finder downloads a model), eyes,
 // mouth and shape edits preview on a close-up and apply to the photo as one history step.
 scenarios.push({

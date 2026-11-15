@@ -72,6 +72,8 @@ export interface KitDesign {
   /** A factory's own pattern pieces (imported SVG, mm, size M) replacing the standard template. */
   factoryPieces?: Piece[];
   factoryName?: string;
+  /** Any other garment (drafted from measurements in the Textile Studio): its pieces replace the template entirely. */
+  customProduct?: Product;
   frontText?: string; frontTextColor?: string; frontTextMm?: number; frontTextTopMm?: number;
   personalise?: boolean; // names and numbers per player (off: sizes and quantities only)
   /** Extra sizes defined by measurement (flat chest width in cm); scaled from the size-M block. */
@@ -131,7 +133,7 @@ export function sizeInfo(kit: KitDesign | null | undefined, s: string): { id: st
 export function pieceGrade(kit: KitDesign, piece: Piece, size: string): { k: number; ky: number } {
   const z = sizeInfo(kit, size);
   const k = z?.k || 1, ky = z?.ky || k;
-  return { k, ky: role(piece.id) === 'trim' ? k : ky };
+  return { k, ky: role(piece.id, piece) === 'trim' ? k : ky };
 }
 const sizeNames = (kit?: KitDesign | null) => [...SIZES.map((s) => s.label.replace(/ .*/, '')), ...(kit?.customSizes || []).map((c) => c.label)].join(', ');
 
@@ -184,6 +186,7 @@ export function checkRoster(players: Player[], personalise = true, kit?: KitDesi
 export const LONG_SLEEVE: Piece = { id: 'sleeve-l', label: 'Long sleeve left', w: 440, h: 600, qty: 1, d: 'M0 110C80 22 160 0 220 0C280 0 360 22 440 110L335 600L105 600Z' };
 export function kitProduct(kit: KitDesign): Product {
   const id = KIT_STYLES.find((s) => s.id === kit.style)?.product || 'jersey';
+  if (kit.customProduct?.pieces?.length) return kit.customProduct;
   const std = PRODUCTS.find((p) => p.id === id)!;
   // A factory's own pieces (front and back required) replace the standard template.
   if (kit.factoryPieces?.some((p) => p.id === 'front') && kit.factoryPieces.some((p) => p.id === 'back')) return { id: std.id, label: `${kit.factoryName || 'Factory pattern'} (imported)`, note: 'Pieces imported from the factory’s own pattern file.', pieces: kit.factoryPieces };
@@ -209,7 +212,7 @@ export function garmentOf(style: KitStyle): GarmentKind {
 
 const r2 = (n: number) => Math.round(n * 100) / 100;
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-const role = (id: string) => (id === 'front' || id === 'back' ? 'body' : id.startsWith('sleeve') ? 'sleeve' : 'trim');
+const role = (id: string, pc?: Piece) => pc?.role || (id === 'front' || id === 'back' ? 'body' : id.startsWith('sleeve') ? 'sleeve' : 'trim');
 
 /** Glyph outlines keyed by text: path in the -50…50 box (from lib/patternText). */
 export type Glyphs = Record<string, string | null | undefined>;
@@ -339,7 +342,7 @@ export function stdLettering(kit: KitDesign): { name: boolean; number: boolean }
   return { name: !texts.some((t) => /\{NAME\}/i.test(t)), number: !texts.some((t) => /\{NUMBER\}/i.test(t)) };
 }
 export function pieceMarkup(piece: Piece, kit: KitDesign, pat: PatternSettings, player: Player | null, glyphs: Glyphs, k: number, bleed: number, textMode: TextMode = 'outline', ky: number = k): string {
-  const r = role(piece.id);
+  const r = role(piece.id, piece);
   const fill = r === 'body' ? kit.body : r === 'sleeve' ? kit.sleeve : kit.collar;
   // Printed margin outside the stitch line: seam allowance + bleed (per panel); previews (bleed 0) have none.
   const sp = bleed > 0 ? panelSpec(kit, piece, bleed) : { bleed: 0, seam: 0, safe: 0 };
@@ -504,7 +507,7 @@ export type PanelRole = 'body' | 'sleeve' | 'trim';
 export interface PanelSpec { bleed?: number; seam?: number; safe?: number }
 /** Bleed, seam allowance and safe area for one piece (mm), with the order's bleed as the default. */
 export function panelSpec(kit: KitDesign, piece: Piece, bleed: number): { bleed: number; seam: number; safe: number } {
-  const p = kit.panels?.[role(piece.id) as PanelRole];
+  const p = kit.panels?.[role(piece.id, piece) as PanelRole];
   return { bleed: Math.max(0, p?.bleed ?? bleed), seam: Math.max(0, p?.seam ?? 0), safe: Math.max(0, p?.safe ?? 0) };
 }
 /** Printed margin outside the stitch line: seam allowance + bleed. */
