@@ -971,7 +971,7 @@ scenarios.push({
     await t.shot('jersey-creator');
     await studio.getByRole('button', { name: /^Save/ }).click();
     await studio.getByRole('button', { name: 'Close print studio' }).click();
-    const front = await t.page.locator('svg').filter({ has: t.page.locator('path') }).first().innerHTML();
+    const front = await t.page.getByRole('application').first().innerHTML();
     t.check('mockup shows the generated vectors', front.length > 20000, String(front.length));
     // Measurements from the pattern pieces.
     await t.page.getByRole('tab', { name: /Players|Sizes/ }).first().click();
