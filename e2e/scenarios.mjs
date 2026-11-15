@@ -1312,6 +1312,48 @@ scenarios.push({
   },
 });
 
+// Imposition canvas: select a placed page, set X, duplicate by a distance, Ctrl+D repeats, lock, delete; mark style.
+scenarios.push({
+  name: 'imposition-canvas',
+  async run(t) {
+    await t.page.goto(t.BASE + '/print-layout', { waitUntil: 'domcontentloaded' });
+    await t.page.getByRole('button', { name: 'Create sample document' }).first().click({ timeout: 30000 });
+    await t.page.getByRole('button', { name: /Create and open/ }).click();
+    await t.page.getByText(/8 pages analysed/).waitFor({ timeout: 60000 });
+    await t.page.getByRole('button', { name: 'N-up pages', exact: true }).click();
+    await t.page.getByRole('button', { name: '4-up' }).click();
+    await t.page.getByLabel('Crop marks').check().catch(() => {});
+    t.check('crop mark style controls', (await t.page.getByLabel('Crop mark style', { exact: true }).count()) === 1);
+    await t.page.getByRole('button', { name: 'Apply' }).click();
+    await t.page.getByText(/N-up pages — done/).waitFor({ timeout: 10000 });
+    const groups = () => t.page.locator('[role=img][aria-label^="Sheet"] [data-grp]').evaluateAll((els) => new Set(els.map((e) => e.getAttribute('data-grp'))).size);
+    const n0 = await groups();
+    await t.page.locator('[role=img][aria-label^="Sheet"] [data-grp]').first().click();
+    const panel = t.page.getByRole('region', { name: 'Placed page', exact: true });
+    await panel.waitFor({ timeout: 10000 });
+    await panel.getByLabel('Duplicate distance across').fill('0');
+    await panel.getByLabel('Duplicate distance up').fill('-5');
+    await panel.getByRole('button', { name: 'Duplicate', exact: true }).click();
+    await t.page.waitForTimeout(300);
+    await t.page.keyboard.press('Control+d');
+    await t.page.waitForTimeout(300);
+    t.check('duplicate + Ctrl+D add two placed pages', (await groups()) === n0 + 2, `${n0} → ${await groups()}`);
+    await panel.getByLabel('Placed page X').fill('20');
+    await panel.getByLabel('Placed page X').press('Enter');
+    await t.page.waitForTimeout(300);
+    t.check('numeric X position applied', /at 20,/.test(await t.page.getByText(/^Selected:/).innerText()), await t.page.getByText(/^Selected:/).innerText());
+    await panel.getByRole('button', { name: 'Lock' }).click();
+    await t.page.keyboard.press('Delete');
+    await t.page.waitForTimeout(300);
+    t.check('locked page is not deleted', (await groups()) === n0 + 2);
+    await panel.getByRole('button', { name: 'Unlock' }).click();
+    await panel.getByRole('button', { name: 'Delete' }).click();
+    await t.page.waitForTimeout(300);
+    t.check('delete removes the placed page', (await groups()) === n0 + 1);
+    await t.shot('canvas');
+  },
+});
+
 // Print Size & Binding Calculator: spine from caliper, cover spread, editor link with fold guides.
 scenarios.push({
   name: 'binding-calculator',

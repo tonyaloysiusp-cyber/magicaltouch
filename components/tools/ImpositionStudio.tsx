@@ -77,7 +77,7 @@ const DEFAULTS: Record<string, any> = {
 const SEL_TOOLS = new Set<Tool>(['deletePages', 'duplicatePages', 'movePages', 'rotatePages', 'defineBleeds', 'adjustSize', 'trimShift', 'stickText', 'stickPdf', 'maskTape', 'peelOff', 'setTrimBox']);
 const SHEET_CHOICES = PAPER_SIZES.filter((p) => ['A sizes', 'B sizes', 'SRA press sheets', 'US sizes'].includes(p.group));
 const sheetDims = (p: any) => { const z = SHEET_CHOICES.find((x) => x.id === p.sheet); const w = z ? z.w : p.w, h = z ? z.h : p.h; return p.landscape ? { w: h, h: w } : { w, h }; };
-const marksOf = (p: any): MarkOpts => ({ crop: !!p.crop, registration: !!p.registration, fold: !!p.fold, info: !!p.info });
+const marksOf = (p: any): MarkOpts => ({ crop: !!p.crop, registration: !!p.registration, fold: !!p.fold, info: !!p.info, len: Number(p.markLen) || 5, weight: Number(p.markWeight) || 0.25, offset: p.markOffset === undefined || p.markOffset === '' ? undefined : Number(p.markOffset), color: p.markColor || '#000000', centre: !!p.centre, bleedMarks: !!p.bleedMarks });
 
 function save(bytes: Uint8Array | Blob, name: string, type = 'application/pdf') {
   const blob = bytes instanceof Blob ? bytes : new Blob([bytes as BlobPart], { type });
@@ -159,6 +159,8 @@ export function ImpositionStudio() {
   const [zoom, setZoom] = useState(1);
   const [showBoxes, setShowBoxes] = useState(true);
   const [selGrp, setSelGrp] = useState<string | null>(null);
+  const [dup, setDup] = useState<{ dx: number; dy: number; deg: number; times: number }>({ dx: 100, dy: 0, deg: 0, times: 1 });
+  const [lastDup, setLastDup] = useState<{ dx: number; dy: number; deg: number; times: number } | null>(null);
   const [drag, setDrag] = useState<{ grp: string; dx: number; dy: number; sx: number; sy: number; k: number } | null>(null);
   const [preview, setPreview] = useState(true);
   const [last, setLast] = useState<Command | null>(null);
@@ -214,6 +216,8 @@ export function ImpositionStudio() {
       const el = e.target as HTMLElement | null;
       if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT')) return;
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); if (e.shiftKey) redo(); else undo(); }
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'd' && selGrp) { e.preventDefault(); duplicateSel(lastDup ? { ...lastDup, times: 1 } : { ...dup, times: 1 }); return; }
+      if ((e.key === 'Delete' || e.key === 'Backspace') && selGrp && !selLocked) { e.preventDefault(); apply({ type: 'deleteGroup', sheet: cur, grp: selGrp }); setSelGrp(null); return; }
       if (selGrp && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
         e.preventDefault(); const d = e.shiftKey ? 10 : 1;
         apply({ type: 'moveGroup', sheet: cur, grp: selGrp, dx: e.key === 'ArrowLeft' ? -d : e.key === 'ArrowRight' ? d : 0, dy: e.key === 'ArrowDown' ? -d : e.key === 'ArrowUp' ? d : 0 });
@@ -279,6 +283,7 @@ export function ImpositionStudio() {
     if (!g) { setSelGrp(null); return; }
     if (draft) { setMsg('This is a preview of the command — apply it, or switch off “Preview”, to move pages by hand.'); return; }
     const grp = g.getAttribute('data-grp')!; setSelGrp(grp);
+    if (sheet?.items.some((i) => i.grp === grp && i.locked)) { setMsg('This page is locked — unlock it to move it.'); return; }
     const svg = svgBox.current?.querySelector('svg'); if (!svg || !sheet) return;
     const k = (sheet.w + 24) / svg.getBoundingClientRect().width; // mm per screen pixel
     setDrag({ grp, dx: 0, dy: 0, sx: e.clientX, sy: e.clientY, k });
@@ -288,6 +293,15 @@ export function ImpositionStudio() {
   const onUp = () => { if (!drag) return; const d = drag; setDrag(null); if (Math.abs(d.dx) + Math.abs(d.dy) > 0.2) apply({ type: 'moveGroup', sheet: cur, grp: d.grp, dx: Math.round(d.dx * 10) / 10, dy: Math.round(d.dy * 10) / 10 }); };
 
   const svg = useMemo(() => (sheet ? sheetSvg(sheet, sources.map((s) => s.thumbs), { sel: selGrp, drag: drag ? { grp: drag.grp, dx: drag.dx, dy: drag.dy } : null, showBoxes }) : ''), [sheet, sources, selGrp, drag, showBoxes]);
+  const pageGroups = useMemo(() => (sheet ? [...new Set(sheet.items.filter((i) => i.k === 'page').map((i) => i.grp))] : []), [sheet]);
+  const selLocked = !!(sheet && selGrp && sheet.items.some((i) => i.grp === selGrp && i.locked));
+  // Duplicate the selection by a distance / angle; the newest copy becomes the selection, so Ctrl+D steps on from it.
+  const duplicateSel = (o: { dx: number; dy: number; deg: number; times: number }) => {
+    if (!selGrp) return;
+    const ids = Array.from({ length: o.times }, (_, k) => `d${Date.now().toString(36)}${k}`);
+    apply({ type: 'duplicateGroup', sheet: cur, grp: selGrp, dx: o.dx, dy: o.dy, deg: o.deg || undefined, times: o.times, newGrp: ids });
+    setLastDup(o); setSelGrp(ids[ids.length - 1]);
+  };
   const selBounds = useMemo(() => (sheet && selGrp ? (() => { const its = sheet.items.filter((i) => i.grp === selGrp); return its.length ? groupBounds(its) : null; })() : null), [sheet, selGrp]);
 
   // ---------- UI helpers
@@ -301,7 +315,11 @@ export function ImpositionStudio() {
     {P.sheet !== 'spread' && tool !== 'booklet' && check('Landscape', 'landscape')}
   </>;
   const anchors: [Anchor, string][] = [['tl', 'Top left'], ['t', 'Top centre'], ['tr', 'Top right'], ['l', 'Left'], ['c', 'Centre'], ['r', 'Right'], ['bl', 'Bottom left'], ['b', 'Bottom centre'], ['br', 'Bottom right']];
-  const marksF = (fold = false) => <div className="flex flex-wrap gap-x-4 gap-y-1">{check('Crop marks', 'crop')}{fold ? check('Fold marks', 'fold') : check('Registration marks', 'registration')}{check('Sheet info', 'info')}</div>;
+  const marksF = (fold = false) => <div className="space-y-1.5">
+    <div className="flex flex-wrap gap-x-4 gap-y-1">{check('Crop marks', 'crop')}{fold ? check('Fold marks', 'fold') : check('Registration marks', 'registration')}{check('Centre marks', 'centre')}{check('Bleed indicators', 'bleedMarks')}{check('Sheet info', 'info')}</div>
+    {P.crop && <div className="grid grid-cols-4 gap-1.5" aria-label="Crop mark style">{num('Length (mm)', 'markLen', { min: 1, step: 0.5 })}{num('Weight (mm)', 'markWeight', { min: 0.05, step: 0.05 })}{num('Offset (mm)', 'markOffset', { min: 0, step: 0.5 })}<label className="block text-[11.5px] text-mt-muted">Colour<input type="color" value={P.markColor || '#000000'} onChange={(e) => setP({ markColor: e.target.value })} aria-label="Mark colour" className="mt-1 h-9 w-full rounded-lg border border-mt-border" /></label></div>}
+    {P.crop && <p className="text-[11px] text-mt-faint">Marks start outside the bleed (offset is never less than the bleed) and are left out where they would cross another page.</p>}
+  </div>;
   const edgesF = (title: string) => <><p className="text-[11.5px] text-mt-muted">{title}</p><div className="grid grid-cols-4 gap-1.5">{num('Top', 't', { min: 0 })}{num('Right', 'r', { min: 0 })}{num('Bottom', 'b', { min: 0 })}{num('Left', 'l', { min: 0 })}</div></>;
   const srcOpts = sources.map((s, i) => [String(i), s.name] as [string, string]);
   const fitAuto = () => {
@@ -415,6 +433,29 @@ export function ImpositionStudio() {
             <button type="button" onClick={() => apply({ type: 'moveGroup', sheet: cur, grp: selGrp, dx: 0, dy: 0, deg: 90 })} className="h-7 px-2.5 rounded-full border border-mt-border">Rotate 90°</button>
             <button type="button" onClick={() => setSelGrp(null)} className="h-7 px-2.5 rounded-full border border-mt-border">Deselect</button>
           </div>}
+          {selGrp && selBounds && <section aria-label="Placed page" className="mt-2 rounded-2xl border border-mt-border bg-mt-surface p-3 space-y-2 text-[12px]">
+            <div className="grid grid-cols-4 gap-1.5">
+              <label className="block text-mt-muted">X (mm)<input key={`x${r1(selBounds.x)}`} type="number" step={0.1} defaultValue={r1(selBounds.x)} onBlur={(e) => apply({ type: 'placeGroupAt', sheet: cur, grp: selGrp, x: Number(e.target.value) })} onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()} aria-label="Placed page X" className={field} /></label>
+              <label className="block text-mt-muted">Y (mm)<input key={`y${r1(selBounds.y)}`} type="number" step={0.1} defaultValue={r1(selBounds.y)} onBlur={(e) => apply({ type: 'placeGroupAt', sheet: cur, grp: selGrp, y: Number(e.target.value) })} onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()} aria-label="Placed page Y" className={field} /></label>
+              <label className="block text-mt-muted">Rotate (°)<input type="number" step={1} defaultValue={0} onKeyDown={(e) => { if (e.key === 'Enter') { const v = Number((e.target as HTMLInputElement).value) || 0; if (v) apply({ type: 'transformGroup', sheet: cur, grp: selGrp, dx: 0, dy: 0, deg: v }); (e.target as HTMLInputElement).value = '0'; } }} aria-label="Rotate placed page by degrees" className={field} /></label>
+              <label className="block text-mt-muted">Scale (%)<input type="number" step={1} defaultValue={100} onKeyDown={(e) => { if (e.key === 'Enter') { const v = Number((e.target as HTMLInputElement).value) || 100; if (v !== 100) apply({ type: 'transformGroup', sheet: cur, grp: selGrp, dx: 0, dy: 0, scale: v / 100 }); (e.target as HTMLInputElement).value = '100'; } }} aria-label="Scale placed page percent" className={field} /></label>
+            </div>
+            <div className="flex flex-wrap items-end gap-1.5" aria-label="Duplicate">
+              <label className="block text-mt-muted">Across (mm)<input type="number" step={0.5} value={dup.dx} onChange={(e) => setDup({ ...dup, dx: Number(e.target.value) || 0 })} aria-label="Duplicate distance across" className={`${field} w-24`} /></label>
+              <label className="block text-mt-muted">Up (mm)<input type="number" step={0.5} value={dup.dy} onChange={(e) => setDup({ ...dup, dy: Number(e.target.value) || 0 })} aria-label="Duplicate distance up" className={`${field} w-24`} /></label>
+              <label className="block text-mt-muted">Angle (°)<input type="number" step={1} value={dup.deg} onChange={(e) => setDup({ ...dup, deg: Number(e.target.value) || 0 })} aria-label="Duplicate angle" className={`${field} w-20`} /></label>
+              <label className="block text-mt-muted">Copies<input type="number" min={1} max={50} value={dup.times} onChange={(e) => setDup({ ...dup, times: Math.max(1, Math.min(50, Number(e.target.value) || 1)) })} aria-label="Number of copies" className={`${field} w-20`} /></label>
+              <button type="button" onClick={() => duplicateSel(dup)} className="h-9 px-3 rounded-full bg-mt-ink text-mt-bg font-semibold">Duplicate</button>
+              <button type="button" onClick={() => lastDup && duplicateSel({ ...lastDup, times: 1 })} disabled={!lastDup} title="Repeat the last duplicate from the new copy (Ctrl+D)" className="h-9 px-3 rounded-full border border-mt-border disabled:opacity-40">Repeat (Ctrl+D)</button>
+            </div>
+            <div className="flex flex-wrap gap-1.5" aria-label="Align to the sheet">
+              {([['left', 'Left'], ['hcenter', 'Centre'], ['right', 'Right'], ['top', 'Top'], ['vcenter', 'Middle'], ['bottom', 'Bottom']] as const).map(([how, l]) => <button key={how} type="button" onClick={() => apply({ type: 'alignGroup', sheet: cur, grp: selGrp, how })} className="h-7 px-2.5 rounded-full border border-mt-border">{l}</button>)}
+              <button type="button" onClick={() => apply({ type: 'distributeGroups', sheet: cur, grps: pageGroups, axis: 'h' })} disabled={pageGroups.length < 3} className="h-7 px-2.5 rounded-full border border-mt-border disabled:opacity-40">Distribute ↔</button>
+              <button type="button" onClick={() => apply({ type: 'distributeGroups', sheet: cur, grps: pageGroups, axis: 'v' })} disabled={pageGroups.length < 3} className="h-7 px-2.5 rounded-full border border-mt-border disabled:opacity-40">Distribute ↕</button>
+              <button type="button" onClick={() => apply({ type: 'lockGroup', sheet: cur, grp: selGrp, locked: !selLocked })} className="h-7 px-2.5 rounded-full border border-mt-border">{selLocked ? 'Unlock' : 'Lock'}</button>
+              <button type="button" onClick={() => { apply({ type: 'deleteGroup', sheet: cur, grp: selGrp }); if (!selLocked) setSelGrp(null); }} className="h-7 px-2.5 rounded-full border border-rose-300 text-rose-700">Delete</button>
+            </div>
+          </section>}
         </div>
 
         {/* Settings / info */}

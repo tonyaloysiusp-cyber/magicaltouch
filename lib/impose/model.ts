@@ -10,11 +10,11 @@ export interface Box { x: number; y: number; w: number; h: number }
 export interface Edges { t: number; r: number; b: number; l: number }
 export interface M { a: number; b: number; c: number; d: number; e: number; f: number }
 
-export type Item =
+export type Item = (
   | { k: 'page'; src: number; page: number; avail: Box; srcTrim: Box; clip: Box; m: M; grp: string; tag?: string }
   | { k: 'text'; text: string; size: number; color: string; m: M; grp: string; tag?: string; align?: 'l' | 'c' | 'r' }
   | { k: 'rect'; w: number; h: number; color: string; m: M; grp: string; tag?: string }
-  | { k: 'line'; x1: number; y1: number; x2: number; y2: number; width: number; color: string; m: M; grp: string; tag?: string };
+  | { k: 'line'; x1: number; y1: number; x2: number; y2: number; width: number; color: string; m: M; grp: string; tag?: string }) & { locked?: boolean };
 
 export interface Sheet { id: string; w: number; h: number; trim: Box; bleed: Edges; items: Item[]; side?: 'front' | 'back'; label?: string }
 export interface Doc { sheets: Sheet[] }
@@ -82,7 +82,13 @@ export function clipLocal(it: Extract<Item, { k: 'page' }>): Box { return { x: i
 // ------------------------------------------------------------------ commands
 export type Sel = 'all' | 'odd' | 'even' | number[]; // 0-based sheet indices
 export type Anchor = 'tl' | 't' | 'tr' | 'l' | 'c' | 'r' | 'bl' | 'b' | 'br';
-export type MarkOpts = { crop?: boolean; fold?: boolean; registration?: boolean; info?: boolean };
+export type MarkOpts = {
+  crop?: boolean; fold?: boolean; registration?: boolean; info?: boolean;
+  /** Crop mark style and size (mm): length, line weight, offset from the trim (never inside the bleed), colour. */
+  len?: number; weight?: number; offset?: number; color?: string;
+  /** Centre marks on each edge of the imposed area, and bleed indicators at the bleed corners. */
+  centre?: boolean; bleedMarks?: boolean;
+};
 
 export type Command =
   | { type: 'reverse' }
@@ -110,7 +116,15 @@ export type Command =
   | { type: 'newSheet'; at: number; w: number; h: number }
   | { type: 'placePage'; sheet: number; src: number; page: number; x: number; y: number; deg: 0 | 90 | 180 | 270; scale: number; bleed: number }
   | { type: 'moveGroup'; sheet: number; grp: string; dx: number; dy: number; deg?: 0 | 90 | 180 | 270 }
-  | { type: 'setTrimBox'; sel: Sel; trim: Box };
+  | { type: 'setTrimBox'; sel: Sel; trim: Box }
+  // Manual imposition canvas: free transforms of placed pages (Illustrator-style).
+  | { type: 'transformGroup'; sheet: number; grp: string; dx: number; dy: number; deg?: number; scale?: number }
+  | { type: 'duplicateGroup'; sheet: number; grp: string; dx: number; dy: number; deg?: number; times?: number; newGrp?: string[] }
+  | { type: 'deleteGroup'; sheet: number; grp: string }
+  | { type: 'lockGroup'; sheet: number; grp: string; locked: boolean }
+  | { type: 'alignGroup'; sheet: number; grp: string; how: 'left' | 'hcenter' | 'right' | 'top' | 'vcenter' | 'bottom' }
+  | { type: 'placeGroupAt'; sheet: number; grp: string; x?: number; y?: number }
+  | { type: 'distributeGroups'; sheet: number; grps: string[]; axis: 'h' | 'v' };
 
 export const COMMAND_LABEL: Record<Command['type'], string> = {
   reverse: 'Reverse page order', shuffleEvenOdd: 'Shuffle even/odd pages', shuffleForImposing: 'Shuffle pages for imposing (cut & stack)',
@@ -118,6 +132,7 @@ export const COMMAND_LABEL: Record<Command['type'], string> = {
   rotatePages: 'Rotate pages', defineBleeds: 'Define bleeds', adjustSize: 'Adjust page sizes', trimShift: 'Trim and shift', creep: 'Creep pages for binding',
   stickText: 'Stick on text and numbers', stickPdf: 'Stick on PDF pages', maskTape: 'Stick on masking tape', peelOff: 'Peel off',
   nUp: 'N-up pages', stepRepeat: 'Step and repeat', booklet: 'Create booklet', joinPages: 'Join two pages', tile: 'Tile pages',
+  transformGroup: 'Move / rotate / scale placed page', duplicateGroup: 'Duplicate placed page', deleteGroup: 'Delete placed page', lockGroup: 'Lock placed page', alignGroup: 'Align placed page', placeGroupAt: 'Position placed page', distributeGroups: 'Distribute placed pages',
   newSheet: 'New sheet (manual imposition)', placePage: 'Place page (manual imposition)', moveGroup: 'Move placed page (manual imposition)', setTrimBox: 'Info / modify: set trim box',
 };
 
@@ -154,13 +169,14 @@ function placeSheet(s: Sheet, m: M, bleed: number | null, grp = uid()): Item[] {
     return n;
   });
 }
-function cropMarkLines(trim: Box, bleed: number, grp: string): Item[] {
-  const o = bleed + 2, L = 5, out: Item[] = [];
+function cropMarkLines(trim: Box, bleed: number, grp: string, mo: MarkOpts = {}): Item[] {
+  const o = Math.max(bleed, mo.offset ?? bleed + 2), L = Math.max(1, mo.len ?? 5), out: Item[] = [];
+  const width = Math.max(0.05, mo.weight ?? 0.25), color = mo.color || '#000000';
   const xs = [trim.x, trim.x + trim.w], ys = [trim.y, trim.y + trim.h];
   for (const x of xs) for (const y of ys) {
     const dx = x === trim.x ? -1 : 1, dy = y === trim.y ? -1 : 1;
-    out.push({ k: 'line', x1: x + dx * o, y1: y, x2: x + dx * (o + L), y2: y, width: 0.25, color: '#000000', m: I, grp, tag: 'mark' });
-    out.push({ k: 'line', x1: x, y1: y + dy * o, x2: x, y2: y + dy * (o + L), width: 0.25, color: '#000000', m: I, grp, tag: 'mark' });
+    out.push({ k: 'line', x1: x + dx * o, y1: y, x2: x + dx * (o + L), y2: y, width, color, m: I, grp, tag: 'mark' });
+    out.push({ k: 'line', x1: x, y1: y + dy * o, x2: x, y2: y + dy * (o + L), width, color, m: I, grp, tag: 'mark' });
   }
   return out;
 }
@@ -339,6 +355,8 @@ export function run(doc: Doc, cmd: Command, sources: Source[] = []): Doc {
       const items = placeSheet(st, mul(tr(cmd.x, cmd.y), mul(rm, sc(cmd.scale))), cmd.bleed);
       return { sheets: S.map((s, i) => (i === cmd.sheet ? { ...s, items: [...s.items, ...items] } : s)) };
     }
+    case 'transformGroup': case 'duplicateGroup': case 'deleteGroup': case 'lockGroup': case 'alignGroup': case 'placeGroupAt': case 'distributeGroups':
+      return { sheets: S.map((s, i) => (i === cmd.sheet ? canvasOp(s, cmd) : s)) };
     case 'moveGroup': return { sheets: S.map((s, i) => {
       if (i !== cmd.sheet) return s;
       const its = s.items.filter((it) => it.grp === cmd.grp); if (!its.length) return s;
@@ -386,7 +404,24 @@ function cellOrigin(cols: number, rows: number, cw: number, ch: number, gap: num
 function finishSheet(w: number, h: number, items: Item[], trims: Box[], o: { bleed: number; marks: MarkOpts; side?: 'front' | 'back'; label: string; folds?: number[] }): Sheet {
   const g = uid('m');
   const marks: Item[] = [];
-  if (o.marks.crop) for (const t of trims) marks.push(...cropMarkLines(t, o.bleed, g));
+  if (o.marks.crop) {
+    // A mark never runs over another piece's artwork (trim + bleed): those segments are left out.
+    const art = trims.map((t) => ({ x: t.x - o.bleed, y: t.y - o.bleed, w: t.w + 2 * o.bleed, h: t.h + 2 * o.bleed }));
+    for (const t of trims) marks.push(...cropMarkLines(t, o.bleed, g, o.marks).filter((ln) => ln.k !== 'line' || !art.some((b) => segHitsBox(ln, b))));
+  }
+  if (o.marks.bleedMarks) for (const t of trims) for (const [x, y, dx, dy] of [[t.x - o.bleed, t.y - o.bleed, -1, -1], [t.x + t.w + o.bleed, t.y - o.bleed, 1, -1], [t.x - o.bleed, t.y + t.h + o.bleed, -1, 1], [t.x + t.w + o.bleed, t.y + t.h + o.bleed, 1, 1]] as const) {
+    const art = trims.map((u) => ({ x: u.x - o.bleed, y: u.y - o.bleed, w: u.w + 2 * o.bleed, h: u.h + 2 * o.bleed }));
+    const segs: Item[] = [{ k: 'line', x1: x, y1: y, x2: x + dx * 2, y2: y, width: 0.1, color: o.marks.color || '#000000', m: I, grp: g, tag: 'mark' }, { k: 'line', x1: x, y1: y, x2: x, y2: y + dy * 2, width: 0.1, color: o.marks.color || '#000000', m: I, grp: g, tag: 'mark' }];
+    marks.push(...segs.filter((ln) => !art.some((b) => segHitsBox(ln, b))));
+  }
+  if (o.marks.centre && trims.length) {
+    const x0 = Math.min(...trims.map((t) => t.x)) - o.bleed, y0 = Math.min(...trims.map((t) => t.y)) - o.bleed;
+    const x1 = Math.max(...trims.map((t) => t.x + t.w)) + o.bleed, y1 = Math.max(...trims.map((t) => t.y + t.h)) + o.bleed;
+    const cxm = (x0 + x1) / 2, cym = (y0 + y1) / 2, L = o.marks.len ?? 5, wgt = o.marks.weight ?? 0.25, col = o.marks.color || '#000000';
+    marks.push(
+      { k: 'line', x1: cxm, y1: y0 - 2, x2: cxm, y2: y0 - 2 - L, width: wgt, color: col, m: I, grp: g, tag: 'mark' }, { k: 'line', x1: cxm, y1: y1 + 2, x2: cxm, y2: y1 + 2 + L, width: wgt, color: col, m: I, grp: g, tag: 'mark' },
+      { k: 'line', x1: x0 - 2, y1: cym, x2: x0 - 2 - L, y2: cym, width: wgt, color: col, m: I, grp: g, tag: 'mark' }, { k: 'line', x1: x1 + 2, y1: cym, x2: x1 + 2 + L, y2: cym, width: wgt, color: col, m: I, grp: g, tag: 'mark' });
+  }
   if (o.marks.registration) marks.push(...regMarks(w, h, g));
   if (o.marks.fold && o.folds) for (const x of o.folds) { marks.push({ k: 'line', x1: x, y1: 0, x2: x, y2: 6, width: 0.25, color: '#000000', m: I, grp: g, tag: 'mark' }, { k: 'line', x1: x, y1: h - 6, x2: x, y2: h, width: 0.25, color: '#000000', m: I, grp: g, tag: 'mark' }); }
   if (o.marks.info) marks.push({ k: 'text', text: o.label, size: 6, color: '#000000', m: tr(4, 2), grp: g, tag: 'mark' });
@@ -486,3 +521,64 @@ function booklet(doc: Doc, c: Extract<Command, { type: 'booklet' }>): Doc {
 
 /** Run a list of commands (automation sequence). */
 export function runAll(doc: Doc, cmds: Command[], sources: Source[] = []): Doc { return cmds.reduce((d, c) => run(d, c, sources), doc); }
+
+// ---------------------------------------------------------------- manual imposition canvas
+
+/** Does a horizontal / vertical mark line cross the inside of a box? */
+function segHitsBox(ln: Extract<Item, { k: 'line' }>, b: Box): boolean {
+  const e = 0.01, x0 = Math.min(ln.x1, ln.x2), x1 = Math.max(ln.x1, ln.x2), y0 = Math.min(ln.y1, ln.y2), y1 = Math.max(ln.y1, ln.y2);
+  return x1 > b.x + e && x0 < b.x + b.w - e && y1 > b.y + e && y0 < b.y + b.h - e;
+}
+
+type CanvasCmd = Extract<Command, { type: 'transformGroup' | 'duplicateGroup' | 'deleteGroup' | 'lockGroup' | 'alignGroup' | 'placeGroupAt' | 'distributeGroups' }>;
+function canvasOp(s: Sheet, cmd: CanvasCmd): Sheet {
+  const of = (g: string) => s.items.filter((it) => it.grp === g);
+  const around = (its: Item[], deg: number, scale: number): M => {
+    const bb = groupBounds(its), cx = bb.x + bb.w / 2, cy = bb.y + bb.h / 2;
+    return mul(tr(cx, cy), mul(rot(-deg), mul(sc(scale), tr(-cx, -cy))));
+  };
+  const locked = (g: string) => of(g).some((it: any) => it.locked);
+  switch (cmd.type) {
+    case 'transformGroup': {
+      const its = of(cmd.grp); if (!its.length || locked(cmd.grp)) return s;
+      const m = mul(tr(cmd.dx, cmd.dy), around(its, cmd.deg || 0, cmd.scale || 1));
+      return { ...s, items: s.items.map((it) => (it.grp === cmd.grp ? { ...it, m: mul(m, it.m) } : it)) };
+    }
+    case 'duplicateGroup': {
+      const its = of(cmd.grp); if (!its.length) return s;
+      const out: Item[] = [];
+      let src = its;
+      for (let k = 0; k < Math.max(1, cmd.times || 1); k++) {
+        const g = cmd.newGrp?.[k] || uid('g');
+        const m = mul(tr(cmd.dx, cmd.dy), around(src, cmd.deg || 0, 1));
+        const copy = src.map((it) => ({ ...it, grp: g, m: mul(m, it.m), locked: undefined } as Item));
+        out.push(...copy); src = copy;
+      }
+      return { ...s, items: [...s.items, ...out] };
+    }
+    case 'deleteGroup': return locked(cmd.grp) ? s : { ...s, items: s.items.filter((it) => it.grp !== cmd.grp) };
+    case 'lockGroup': return { ...s, items: s.items.map((it) => (it.grp === cmd.grp ? ({ ...it, locked: cmd.locked || undefined } as Item) : it)) };
+    case 'alignGroup': case 'placeGroupAt': {
+      const its = of(cmd.grp); if (!its.length || locked(cmd.grp)) return s;
+      const bb = groupBounds(its), t = s.trim;
+      let dx = 0, dy = 0;
+      if (cmd.type === 'placeGroupAt') { if (cmd.x != null) dx = cmd.x - bb.x; if (cmd.y != null) dy = cmd.y - bb.y; }
+      else {
+        if (cmd.how === 'left') dx = t.x - bb.x; if (cmd.how === 'right') dx = t.x + t.w - (bb.x + bb.w); if (cmd.how === 'hcenter') dx = t.x + t.w / 2 - (bb.x + bb.w / 2);
+        if (cmd.how === 'bottom') dy = t.y - bb.y; if (cmd.how === 'top') dy = t.y + t.h - (bb.y + bb.h); if (cmd.how === 'vcenter') dy = t.y + t.h / 2 - (bb.y + bb.h / 2);
+      }
+      const m = tr(dx, dy);
+      return { ...s, items: s.items.map((it) => (it.grp === cmd.grp ? { ...it, m: mul(m, it.m) } : it)) };
+    }
+    case 'distributeGroups': {
+      const gs = cmd.grps.filter((g) => of(g).length && !locked(g)); if (gs.length < 3) return s;
+      const bx = gs.map((g) => ({ g, b: groupBounds(of(g)) })).sort((p, q) => (cmd.axis === 'h' ? p.b.x - q.b.x : p.b.y - q.b.y));
+      const first = bx[0].b, last = bx[bx.length - 1].b;
+      const span = cmd.axis === 'h' ? last.x + last.w - first.x : last.y + last.h - first.y;
+      const total = bx.reduce((a, q) => a + (cmd.axis === 'h' ? q.b.w : q.b.h), 0), gap = (span - total) / (bx.length - 1);
+      let pos = cmd.axis === 'h' ? first.x : first.y; const moves = new Map<string, M>();
+      for (const q of bx) { const cur = cmd.axis === 'h' ? q.b.x : q.b.y; moves.set(q.g, cmd.axis === 'h' ? tr(pos - cur, 0) : tr(0, pos - cur)); pos += (cmd.axis === 'h' ? q.b.w : q.b.h) + gap; }
+      return { ...s, items: s.items.map((it) => (moves.has(it.grp) ? { ...it, m: mul(moves.get(it.grp)!, it.m) } : it)) };
+    }
+  }
+}
