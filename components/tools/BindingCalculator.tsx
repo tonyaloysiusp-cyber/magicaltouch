@@ -9,6 +9,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { Download, ExternalLink, FileText, Loader2 } from 'lucide-react';
 import { PAPER_PROFILES, calculateBook, coverEditorUrl, coverTemplateSvg, specText, type BookSpec } from '@/lib/binding';
 import { PAPER_SIZES } from '@/lib/printSizes';
+import { PressExport } from './PressExport';
+import type { PressJob } from '@/lib/print/pressSheet';
 
 const KEY = 'mt:binding';
 const DEFAULT: BookSpec = { trimW: 210, trimH: 297, pages: 120, sides: 'double', paperGsm: 100, paperProfile: 'uncoated', paperCaliperUm: null, coverGsm: 300, coverProfile: 'board', coverCaliperUm: null, coverMaterial: 'Gloss laminated board', finish: 'matt', binding: 'perfect', bleed: 3, safe: 5, insertLeaves: 0, insertCaliperUm: null, hingeScore: 6, glueAllowance: 0, selfCover: true, boardMm: 2.5, squareMm: 3, jointMm: 7, turnInMm: 15, endpaperGsm: 140, endpaperCaliperUm: null };
@@ -29,6 +31,13 @@ export function BindingCalculator() {
   const r = useMemo(() => calculateBook(s), [s]);
   const svg = useMemo(() => coverTemplateSvg(r), [r]);
   const name = `${s.binding}-${s.trimW}x${s.trimH}-${r.pagesUsed}pp`;
+  const pressJob = useMemo<PressJob>(() => {
+    const c = r.cover, tx = c.trim.x;
+    const spine = c.panels.find((p) => p.kind === 'spine');
+    const folds = c.folds.map((f) => ({ x: Math.round((f.x - tx) * 100) / 100, label: spine && Math.abs(f.x - spine.x) < 0.05 ? `SPINE ${spine.w} mm` : undefined }));
+    const title = s.binding === 'hardcover' ? 'Hardcover case wrap' : s.binding === 'saddle' ? 'Saddle-stitch cover' : s.binding === 'perfect' ? 'Perfect binding cover' : 'Cover';
+    return { name, title: `${title} ${s.trimW} × ${s.trimH}`, trimW: c.trim.w, trimH: c.trim.h, bleed: c.bleed, safe: c.safe, folds, panels: c.panels.map((p) => ({ x: Math.round((p.x - tx) * 100) / 100, w: p.w, name: p.name.toUpperCase() })) };
+  }, [r, s.binding, s.trimW, s.trimH, name]);
 
   const pdf = async () => {
     setBusy(true); setErr(null);
@@ -133,6 +142,7 @@ export function BindingCalculator() {
           </div>
           {err && <p role="alert" className="mt-2 text-center text-[13px] text-rose-600">{err}</p>}
         </section>
+        <PressExport job={pressJob} fileBase={name} />
 
         <section className="rounded-3xl border border-mt-border bg-mt-surface p-5 grid gap-4 md:grid-cols-2">
           <div>

@@ -1,0 +1,89 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { layoutPress, suggestSheet, maxUp, templateSvg, pressPdf, verifyPressPdf, DEFAULT_PRESS, SHEETS } from '../../lib/print/pressSheet.ts';
+import { readySize, changedFrom, READY_SIZE_NAMES } from '../../lib/textile/sizes.ts';
+import { KURTA_FIELDS, CHUDIDAR_FIELDS, TEE_FIELDS, missing, outOfRange, conflicts } from '../../lib/textile/draft.ts';
+
+// A4 perfect-binding cover: 210 + 8.4 spine + 210 wide, 297 high, 3 mm bleed.
+const cover = { name: 'Book', title: 'Perfect binding cover', trimW: 428.4, trimH: 297, bleed: 3, safe: 5,
+  folds: [{ x: 210, label: 'SPINE 8.4 mm' }, { x: 218.4 }], panels: [{ x: 0, w: 210, name: 'BACK' }, { x: 210, w: 8.4, name: 'SPINE' }, { x: 218.4, w: 210, name: 'FRONT' }] };
+const trifold = { name: 'Leaflet', title: 'Tri-fold', trimW: 297, trimH: 210, bleed: 3, folds: [{ x: 99 }, { x: 198 }] };
+const A = (id) => SHEETS.find((s) => s.id === id);
+
+test('A4 tri-fold does not fit A4 at actual size, fits A3, and Fit to print scales it into the printable area', () => {
+  const onA4 = layoutPress(trifold, { ...DEFAULT_PRESS, sheet: A('a4'), rotate: true });
+  assert.equal(onA4.fits, false);
+  assert.match(onA4.warnings[0], /needs a sheet of at least/);
+  const onA3 = layoutPress(trifold, { ...DEFAULT_PRESS, sheet: A('a3'), rotate: true });
+  assert.equal(onA3.fits, true); assert.equal(onA3.scale, 1);
+  const fit = layoutPress(trifold, { ...DEFAULT_PRESS, sheet: { ...A('a4'), w: 297, h: 210, name: 'A4 landscape' }, mode: 'fit' });
+  assert.ok(fit.scale < 1 && fit.scale > 0.8, `scale ${fit.scale}`);
+  // Everything (marks too) stays inside the 3 mm printer margin.
+  for (const l of fit.lines) for (const x of [l.x1, l.x2]) assert.ok(x >= 3 - 0.01 && x <= 297 - 3 + 0.01);
+  assert.match(fit.warnings[0], /Fit to print/);
+  // Fold marks scaled with the job.
+  const folds = fit.lines.filter((l) => l.kind === 'fold');
+  assert.ok(Math.abs(folds[0].x1 - (fit.items[0].x + 99 * fit.scale)) < 0.02);
+});
+
+test('cover suggests 33 × 48 / SRA3-class sheet and puts fold marks at the spine edges with the spine label', () => {
+  const s = suggestSheet(cover, DEFAULT_PRESS);
+  assert.ok(s && s.w * s.h >= 320 * 450 - 1, s?.name);
+  const l = layoutPress(cover, { ...DEFAULT_PRESS, sheet: A('33x48'), rotate: true });
+  assert.equal(l.fits, true);
+  const l2 = layoutPress(cover, { ...DEFAULT_PRESS, sheet: { w: 480, h: 330, name: '48 × 33' } });
+  assert.equal(l2.fits, true);
+  const folds = l2.lines.filter((x) => x.kind === 'fold');
+  assert.equal(folds.length, 4);
+  assert.ok(l2.labels.some((t) => t.text === 'SPINE 8.4 mm'));
+  assert.ok(l2.labels.some((t) => /ACTUAL SIZE/.test(t.text)));
+});
+
+test('all four crop-mark types stay outside the bleed and type 1 marks every cut line', async () => {
+  const card = { name: 'Cards', title: 'Business card', trimW: 85, trimH: 55, bleed: 3, folds: [] };
+  for (const markType of [1, 2, 3, 4]) {
+    const o = { ...DEFAULT_PRESS, sheet: A('a4'), cols: 2, rows: 4, gap: 6, markType };
+    const l = layoutPress(card, o);
+    assert.equal(l.items.length, 8);
+    assert.ok(l.fits, `type ${markType} fits`);
+    const pdf = await pressPdf(card, l, null);
+    const v = await verifyPressPdf(pdf, l);
+    assert.deepEqual(v.issues, [], `type ${markType}`);
+    if (markType === 4) assert.ok(l.circles.length > 0);
+    if (markType === 1) assert.equal(l.lines.filter((x) => x.kind === 'cut').length, 4 * 2 + 8 * 2);
+  }
+  const up = maxUp(card, { ...DEFAULT_PRESS, sheet: A('sra3'), gap: 6 });
+  assert.ok(up.cols * up.rows >= 12);
+  assert.match(templateSvg(card, layoutPress(card, { ...DEFAULT_PRESS, sheet: A('a4') }), DEFAULT_PRESS), /<svg/);
+});
+
+test('working template has the instruction box; print PDF has trim and bleed boxes and embeds a PNG', async () => {
+  const l = layoutPress(cover, { ...DEFAULT_PRESS, sheet: { w: 480, h: 330, name: '48 × 33' } });
+  const svg = templateSvg(cover, l, DEFAULT_PRESS);
+  assert.match(svg, /working file, not ready to print/);
+  // 1 × 1 red PNG
+  const png = Uint8Array.from(Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==', 'base64'));
+  const pdf = await pressPdf(cover, l, { kind: 'png', bytes: png });
+  const v = await verifyPressPdf(pdf, l);
+  assert.deepEqual(v.issues, []);
+  assert.ok(!/working file/.test(Buffer.from(pdf).toString('latin1')));
+});
+
+test('ready-made sizes: every size drafts cleanly and grades up; changes are detected', () => {
+  const F = { kurta: KURTA_FIELDS, chudidar: CHUDIDAR_FIELDS, tee: TEE_FIELDS };
+  for (const t of ['kurta', 'chudidar', 'tee']) {
+    let prev = null;
+    for (const s of READY_SIZE_NAMES) {
+      const m = readySize(t, s);
+      const req = F[t].filter((f) => !f.style);
+      assert.deepEqual(missing(req, m).map((f) => f.key), [], `${t} ${s} missing`);
+      assert.deepEqual(outOfRange(F[t], m).map((f) => f.key), [], `${t} ${s} range`);
+      assert.deepEqual(conflicts(t, m), [], `${t} ${s} conflicts`);
+      const key = t === 'tee' ? 'chest' : 'hip';
+      if (prev) assert.ok(m[key] > prev[key]);
+      prev = m;
+    }
+  }
+  const m = { ...readySize('kurta', 'M'), hip: 105 };
+  assert.deepEqual(changedFrom('kurta', 'M', m), ['hip']);
+});

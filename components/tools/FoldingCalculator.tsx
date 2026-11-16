@@ -11,6 +11,7 @@ import { FOLDS, calculateFold, foldDiagramSvg, checkPdfForFold, type FoldType, t
 import { PAPER_SIZES } from '@/lib/printSizes';
 import { PAPER_PROFILES, estimateCaliper } from '@/lib/binding';
 import { PrintSpecPanel } from './PrintSpecPanel';
+import { PressExport } from './PressExport';
 
 const field = 'mt-1 h-10 w-full rounded-xl border border-mt-border bg-mt-bg px-3 text-[13.5px]';
 const lbl = 'block text-[12px] text-mt-muted';
@@ -35,6 +36,7 @@ export function FoldingCalculator() {
   const caliper = estimateCaliper(gsm, profile) / 1000;
   const r = useMemo(() => calculateFold({ type, w: W, h: H, panels, caliper, bleed, safe, widths: custom || undefined, dirs }), [type, W, H, panels, caliper, bleed, safe, custom, dirs]);
   const svg = useMemo(() => foldDiagramSvg(r, side, bleed, safe), [r, side, bleed, safe]);
+  const pressJob = useMemo(() => ({ name: `${type}-fold-${r.flat.w}x${r.flat.h}`, title: `${FOLDS.find((f) => f.id === type)?.label || 'Folded'} leaflet`, trimW: r.flat.w, trimH: r.flat.h, bleed, safe, folds: r.folds.map((f) => ({ x: f.x, y: f.y })), panels: r.panels.map((p, i) => ({ x: p.x, w: p.w, name: `PANEL ${i + 1}` })) }), [r, type, bleed, safe]);
   const def = FOLDS.find((f) => f.id === type)!;
 
   const inspect = async (f: File) => {
@@ -151,6 +153,7 @@ export function FoldingCalculator() {
       </div>
       <div className="lg:col-span-2">
         <PrintSpecPanel fold={r} bleed={bleed} safe={safe} paperLabel={sizeId === 'custom' ? `${W} × ${H} mm` : `${(size?.label || '').split(' (')[0]} ${landscape ? 'landscape' : 'portrait'}`} stockHint={`${gsm} gsm ${(PAPER_PROFILES.find((p) => p.id === profile)?.label || '').split(' (')[0].toLowerCase()}`} />
+        <PressExport job={pressJob} fileBase={pressJob.name} allowRepeat />
       </div>
     </div>
   );

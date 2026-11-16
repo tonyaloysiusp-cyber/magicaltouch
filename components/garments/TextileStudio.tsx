@@ -25,6 +25,7 @@ import { openToolFile, saveToolProject, takeToolHandoff, TOOL_FILE_ACCEPT } from
 import { PrintStudio } from './PrintStudio';
 import { EmbroideryStudio, type EmbroideryDesign } from './EmbroideryStudio';
 import { SizeChart } from './SizeChart';
+import { READY_SIZE_NAMES, changedFrom, hasReadySizes, readySize, type ReadySize } from '@/lib/textile/sizes';
 import type { Asset } from '@/lib/assets/library';
 
 export interface TextileProject {
@@ -50,11 +51,16 @@ export interface TextileProject {
   useChart?: Partial<Record<GarmentType, boolean>>;
   /** Seam allowance (mm) for the cutting pattern. */
   seam?: number;
+  /** The ready-made size the measurements started from (null = own measurements). */
+  readySize?: Partial<Record<GarmentType, ReadySize | null>>;
 }
 
 export const NEW_PROJECT: TextileProject = {
   name: 'My textile design', type: 'kurta', tshirtNeck: 'round', sleeves: 'short', neck: 'round', sleeve: 'elbow',
-  measures: {}, colours: { body: '#F5E6D3', sleeve: '#F5E6D3', trim: '#7A1F3D' }, art: [], sizeQty: { m: 1 }, qty: 1,
+  // Ready-made size M preloaded, like a shop size; change any value afterwards.
+  measures: { kurta: readySize('kurta', 'M'), chudidar: readySize('chudidar', 'M'), tee: readySize('tee', 'M') },
+  readySize: { kurta: 'M', chudidar: 'M', tee: 'M' },
+  colours: { body: '#F5E6D3', sleeve: '#F5E6D3', trim: '#7A1F3D' }, art: [], sizeQty: { m: 1 }, qty: 1,
   rollW: 1600, bleed: 10, textMode: 'outline', embroidery: null, teePolo: false, chart: {}, useChart: {}, seam: 10,
 };
 
@@ -187,7 +193,7 @@ export function TextileStudio({ mode = 'pro', pick, embedded, onForeign, openReq
       const ms = JSON.parse(localStorage.getItem(MEASURE_KEY) || 'null');
       const handed = takeToolHandoff('textile');
       if (handed?.data?.project) { setP({ ...NEW_PROJECT, ...handed.data.project }); handle.current = handed.handle || null; }
-      else setP({ ...NEW_PROJECT, ...(d || {}), measures: { ...(ms || {}), ...(d?.measures || {}) } });
+      else setP({ ...NEW_PROJECT, ...(d || {}), measures: { ...NEW_PROJECT.measures, ...(ms || {}), ...(d?.measures || {}) }, readySize: { ...NEW_PROJECT.readySize, ...(d?.readySize || (ms ? { kurta: null, chudidar: null, tee: null } : {})) } });
     } catch { /* ignore */ }
     setLoaded(true);
     listAssets('pattern').then(setLib).catch(() => {});
@@ -243,6 +249,7 @@ export function TextileStudio({ mode = 'pro', pick, embedded, onForeign, openReq
   const garmentLabel = product?.label || GARMENTS.find((g) => g.id === p.type)!.label;
   const fields = FIELDS[p.type];
   const m = p.measures[p.type] || {};
+  const changed = hasReadySizes(p.type) ? changedFrom(p.type, p.readySize?.[p.type], m) : [];
   const pieceMeasures = useMemo(() => (product && standard(p.type) ? measureGarment(product.pieces) : []), [product, p.type]);
 
   const ready = async () => { if (p.art.length) await ensureFonts(artFonts(p.art)); };
@@ -438,14 +445,25 @@ export function TextileStudio({ mode = 'pro', pick, embedded, onForeign, openReq
                 <button type="button" role="radio" aria-checked={chartOn(p)} className={chip(chartOn(p))} onClick={() => { const cur = p.chart?.[p.type]; set({ useChart: { ...p.useChart, [p.type]: true }, chart: { ...p.chart, [p.type]: cur && cur.length ? cur : [{ name: 'M', qty: 1, m: { ...(p.measures[p.type] || {}) } }] } }); }}>Size chart (several sizes)</button>
               </div>
             )}
+            {fields && chartOn(p) && hasReadySizes(p.type) && <button type="button" onClick={() => set({ chart: { ...p.chart, [p.type]: READY_SIZE_NAMES.map((n) => ({ name: n, qty: n === 'M' ? 1 : 0, m: readySize(p.type as any, n) })) } })} className="h-8 px-3 rounded-full border border-mt-border text-[12.5px] font-semibold">Load standard ready-made chart (XS–XXXL)</button>}
             {fields && chartOn(p) && <SizeChart fields={fields} rows={p.chart?.[p.type] || []} onChange={(rows) => set({ chart: { ...p.chart, [p.type]: rows } })} unit={units} styleDefaults={STYLE_DEFAULTS[p.type] || {}} pro={pro} />}
+            {fields && !chartOn(p) && hasReadySizes(p.type) && (
+              <div role="radiogroup" aria-label="Ready-made size" className="space-y-1">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="text-[12.5px] text-mt-muted w-16">Size</span>
+                  {READY_SIZE_NAMES.map((n) => <button key={n} type="button" role="radio" aria-checked={p.readySize?.[p.type] === n} className={chip(p.readySize?.[p.type] === n)} onClick={() => set({ measures: { ...p.measures, [p.type]: readySize(p.type as any, n) }, readySize: { ...p.readySize, [p.type]: n } })}>{n}</button>)}
+                  <button type="button" role="radio" aria-checked={!p.readySize?.[p.type]} className={chip(!p.readySize?.[p.type])} onClick={() => set({ readySize: { ...p.readySize, [p.type]: null } })}>Own measurements</button>
+                </div>
+                <p className="text-[11.5px] text-mt-muted">{p.readySize?.[p.type] ? `Standard ready-made size ${p.readySize[p.type]} (typical market chart — check against your brand). Change any value below, e.g. hip or waist; changed values are marked.` : 'Type the customer’s own measurements below.'}</p>
+              </div>
+            )}
             {fields && !chartOn(p) && (
               <div role="group" aria-label="Measurements">
                 <p className="text-[12.5px] text-mt-muted">{p.type === 'kurta' || p.type === 'chudidar' || p.type === 'tee' ? `Measurements in ${units === 'in' ? 'inches' : units} — taken on the person, saved on this device only.` : `Size in ${units === 'in' ? 'inches' : units}.`}</p>
                 <div className="mt-1 grid grid-cols-2 gap-x-3 gap-y-2">
                   {fields.filter((f) => pro || !f.style).map((f) => (
                     <label key={f.key} className={lbl}>{f.label}{f.style && <span className="text-mt-faint"> · style</span>}
-                      <input inputMode="decimal" value={show(m[f.key])} placeholder={f.style ? show(STYLE_DEFAULTS[p.type]?.[f.key]) : units} onChange={(e) => setMeasure(f.key, e.target.value)} aria-label={f.label} className={field} />
+                      <input inputMode="decimal" value={show(m[f.key])} placeholder={f.style ? show(STYLE_DEFAULTS[p.type]?.[f.key]) : units} onChange={(e) => setMeasure(f.key, e.target.value)} aria-label={f.label} className={`${field} ${changed.includes(f.key) ? 'border-amber-500 ring-1 ring-amber-400/50' : ''}`} title={changed.includes(f.key) && p.readySize?.[p.type] ? `Changed from size ${p.readySize[p.type]} (${show(readySize(p.type as any, p.readySize[p.type]!)[f.key])})` : undefined} />
                     </label>
                   ))}
                 </div>
