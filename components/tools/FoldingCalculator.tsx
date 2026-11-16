@@ -10,6 +10,7 @@ import { Download, FileSearch, Loader2 } from 'lucide-react';
 import { FOLDS, calculateFold, foldDiagramSvg, checkPdfForFold, type FoldType, type PdfInspect } from '@/lib/fold';
 import { PAPER_SIZES } from '@/lib/printSizes';
 import { PAPER_PROFILES, estimateCaliper } from '@/lib/binding';
+import { PrintSpecPanel } from './PrintSpecPanel';
 
 const field = 'mt-1 h-10 w-full rounded-xl border border-mt-border bg-mt-bg px-3 text-[13.5px]';
 const lbl = 'block text-[12px] text-mt-muted';
@@ -145,6 +146,9 @@ export function FoldingCalculator() {
           <p className="font-semibold">{pdf.name}: {pdf.res.pages} page{pdf.res.pages === 1 ? '' : 's'}, {pdf.res.orientation} — {pdf.res.ok ? 'suitable for this fold' : 'not suitable as it is'}</p>
           <ul className="mt-1 list-disc pl-5">{pdf.res.sizes.map((p, i) => <li key={i}>Page {i + 1}: {p.w} × {p.h} mm{p.trim ? ` · trim ${p.trim.w} × ${p.trim.h} mm · bleed ≈ ${p.bleed} mm` : ' · no trim box'}</li>)}{pdf.res.issues.map((s2) => <li key={s2} className="text-rose-700 dark:text-rose-300">{s2}</li>)}</ul>
         </section>}
+      </div>
+      <div className="lg:col-span-2">
+        <PrintSpecPanel fold={r} bleed={bleed} safe={safe} paperLabel={sizeId === 'custom' ? `${W} × ${H} mm` : `${(size?.label || '').split(' (')[0]} ${landscape ? 'landscape' : 'portrait'}`} stockHint={`${gsm} gsm ${(PAPER_PROFILES.find((p) => p.id === profile)?.label || '').split(' (')[0].toLowerCase()}`} />
       </div>
     </div>
   );

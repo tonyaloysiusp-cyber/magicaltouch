@@ -991,6 +991,38 @@ scenarios.push({
   },
 });
 
+// Printing layout & specification PDF: built from the folding settings, the job details and a
+// supplied PDF that is really read (page count, boxes) — 3 A4 landscape pages.
+scenarios.push({
+  name: 'print-specification',
+  async run(t) {
+    const fs = await import('node:fs');
+    const { PDFDocument } = await import('pdf-lib');
+    await t.page.goto(`${t.BASE}/print-size-calculator?tab=fold`, { waitUntil: 'domcontentloaded' });
+    await t.page.getByLabel('Fold type').selectOption('accordion', { timeout: 30000 });
+    await t.page.getByLabel('Number of panels').fill('4');
+    const spec = t.page.getByRole('region', { name: 'Printing layout and specification' });
+    await spec.getByLabel('Client / company').fill('Test Client');
+    await spec.getByLabel('Project name').fill('Leaflet job');
+    await spec.getByLabel('Panel 1 contents').fill('Front cover — logo');
+    t.check('page contents for every panel (8)', (await spec.getByLabel(/^Panel \d+ contents$/).count()) === 8);
+    const k = 72 / 25.4, doc = await PDFDocument.create();
+    for (let i = 0; i < 2; i++) { const p = doc.addPage([303 * k, 216 * k]); p.setTrimBox(3 * k, 3 * k, 297 * k, 210 * k); p.setBleedBox(0, 0, 303 * k, 216 * k); }
+    const path = (await import('node:path')).join(process.cwd(), 'e2e-out', 'leaflet_PRESS.pdf');
+    fs.writeFileSync(path, await doc.save());
+    await spec.locator('input[type=file]').setInputFiles(path);
+    await t.page.waitForTimeout(800);
+    const listed = await spec.getByRole('group', { name: 'Supplied files' }).innerText();
+    t.check('supplied PDF read: pages, trim, bleed, ready', /2 pages/.test(listed) && /trim 297 × 210 mm/.test(listed) && /3 mm bleed/.test(listed) && /ready/.test(listed), listed.slice(0, 300));
+    const [dl] = await Promise.all([t.page.waitForEvent('download', { timeout: 60000 }), spec.getByRole('button', { name: /Printing layout & specification \(PDF\)/ }).click()]);
+    const out = await PDFDocument.load(fs.readFileSync(await dl.path()));
+    const sz = out.getPage(0).getSize();
+    t.check('specification PDF: 3 A4 landscape pages', out.getPageCount() === 3 && Math.round(sz.width / k) === 297 && Math.round(sz.height / k) === 210, `${out.getPageCount()} ${JSON.stringify(sz)}`);
+    t.check('file named after the project', dl.suggestedFilename() === 'Leaflet_job_LAYOUT_SPECIFICATION.pdf', dl.suggestedFilename());
+    await t.shot('print-spec');
+  },
+});
+
 // Photo Studio face tools: with landmarks given (the real face finder downloads a model), eyes,
 // mouth and shape edits preview on a close-up and apply to the photo as one history step.
 scenarios.push({

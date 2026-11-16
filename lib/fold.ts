@@ -31,7 +31,7 @@ export interface FoldResult {
   panels: FoldPanel[]; folds: FoldLine[]; sequence: string[]; notes: string[]; errors: string[]; allowance: number; pages: number;
 }
 
-const r1 = (n: number) => Math.round(n * 10) / 10;
+const r1 = (n: number) => Math.round(n * 100) / 100; // 0.01 mm (74.25 mm panels stay exact)
 
 export function calculateFold(s: FoldSpec): FoldResult {
   const errors: string[] = [], notes: string[] = [];

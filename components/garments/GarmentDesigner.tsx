@@ -104,6 +104,9 @@ export function GarmentDesigner({ kind: initialKind = 'jersey', mode = 'pro', pi
   const router = useRouter();
   const [step, setStep] = useState<Step>('design');
   const [embOpen, setEmbOpen] = useState(false);
+  const [kit, setKit] = useState<KitDesign>(() => kitFor(initialKind));
+  const kind = garmentOf(kit.style);
+  const copy = COPY[kind];
   // The Textile Design Studio's product picker (jersey round / V-neck, polo, T-shirt) switches the garment here.
   useEffect(() => {
     if (!pick) return;
@@ -113,9 +116,6 @@ export function GarmentDesigner({ kind: initialKind = 'jersey', mode = 'pro', pi
     });
   }, [pick?.n]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { onKind?.(garmentOf(kit.style), kit.neck); }, [kit.style, kit.neck]); // eslint-disable-line react-hooks/exhaustive-deps
-  const [kit, setKit] = useState<KitDesign>(() => kitFor(initialKind));
-  const kind = garmentOf(kit.style);
-  const copy = COPY[kind];
   const [players, setPlayers] = useState<Player[]>(COPY[initialKind].sample);
   const [pat, setPat] = useState<PatternSettings>({ ...DEFAULT_PATTERN, ...PATTERNS[0].p });
   const [patColor, setPatColor] = useState('#FFFFFF');
