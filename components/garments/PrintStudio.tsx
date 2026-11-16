@@ -23,6 +23,7 @@ import { normalize, segsToD, transformSegs, bbox as segBox, flatten, regionOf, b
 import { kitProduct, pieceMarkup, stdLettering, panelSpec, type KitDesign, type Player, type Glyphs } from '@/lib/teamKit';
 import { GENERATORS, DESIGNS, generate, genDefaults, roleColour, pathBytes, type GenKind, type GenParams, type GenSpec, type Box as GenBox } from '@/lib/textile/generators';
 import { MOTIFS, tileSvg, layout as patLayout, type PatternSettings } from '@/lib/patterns';
+import { flower, paisley, mandala, damask, border as floralBorder, neckline as floralNeckline, vine as floralVine, DEFAULT_FLOWER, DEFAULT_ROLE_COLOURS, ROLE_LABEL, type FlowerSpec, type Part as FloralPart, type Role as FloralRole, type BorderMotif, type NeckShape, type PetalShape, type CentreStyle, type LeafShape } from '@/lib/textile/floral';
 import { MOTIF_CATEGORIES } from '@/lib/patternMotifs';
 import { PATTERN_FONTS } from '@/lib/patternText';
 import type { Asset } from '@/lib/assets/library';
@@ -78,6 +79,9 @@ export function PrintStudio({ kit, pattern, glyphs, players, libraryPatterns, on
   const [tool, setToolState] = useState<Tool>('select');
   const [tab, setTab] = useState<'text' | 'shapes' | 'images' | 'patterns' | 'templates' | 'creator'>('text');
   const [genPieces, setGenPieces] = useState<'body' | 'front' | 'back' | 'sleeves' | 'all'>('body');
+  const [fl, setFl] = useState<FlowerSpec>(DEFAULT_FLOWER);
+  const [flCols, setFlCols] = useState<Record<FloralRole, string>>(DEFAULT_ROLE_COLOURS);
+  const [orn, setOrn] = useState<{ border: BorderMotif; neck: NeckShape; size: number }>({ border: 'floral', neck: 'round', size: 30 });
   const [shapeCat, setShapeCat] = useState<string>('Basic');
   const [previewIdx, setPreviewIdx] = useState(0);
   const [zoomPct, setZoomPct] = useState(100);
@@ -441,6 +445,14 @@ export function PrintStudio({ kit, pattern, glyphs, players, libraryPatterns, on
     const [x, y] = at || centreOf();
     add({ kind: 'path', d, w: 100, h: 100, rule: 'evenodd', fill: defaultFill(), m: [k, 0, 0, k, x, y], name: label } as any);
   };
+  // Floral and ornament parts become one editable group (ungroup to edit each part point by point).
+  const addParts = (parts: FloralPart[], name: string, at?: [number, number]) => {
+    const [x, y] = at || centreOf();
+    const els = parts.filter((pt) => pt.d).map((pt) => { const b = segBox(normalize(pt.d)); return { id: uid(), kind: 'path', d: pt.d, w: Math.max(1, b.w), h: Math.max(1, b.h), rule: 'nonzero', fill: flCols[pt.role], m: [1, 0, 0, 1, 0, 0], name: pt.name } as any; });
+    if (!els.length) return;
+    add({ kind: 'group', name, els, m: T(x, y) } as any);
+  };
+  const neckAt = (): [number, number] => { const bp = board.pieces.find((p) => p.piece.id === 'front') || board.pieces[0]; return [bp.x + bp.piece.w / 2, bp.y + Math.min(60, bp.piece.h * 0.08)]; };
   const addImage = async (f: File) => {
     const url: string = await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result)); r.onerror = () => rej(r.error); r.readAsDataURL(f); });
     const img = new Image(); img.src = url; await img.decode().catch(() => {});
@@ -955,6 +967,42 @@ export function PrintStudio({ kit, pattern, glyphs, players, libraryPatterns, on
             <label className={lbl}>Put it on<select value={genPieces} onChange={(e) => setGenPieces(e.target.value as any)} aria-label="Generator pieces" className={field}><option value="body">Front & back</option><option value="front">Front</option><option value="back">Back</option><option value="sleeves">Sleeves</option><option value="all">All pieces</option></select></label>
             <p className={`pt-1 ${h4}`}>Graphics</p>
             <div className="grid grid-cols-2 gap-1.5">{GENERATORS.map((g) => <button key={g.kind} type="button" onClick={() => addGen(g.kind)} title={g.hint} aria-label={`Generate ${g.label}`} className="rounded-lg border border-mt-border p-2 text-left text-[12px] hover:bg-mt-surface2"><b className="block text-[12.5px]">{g.label}</b><span className="text-mt-muted">{g.hint}</span></button>)}</div>
+            <section aria-label="Flowers and ornaments" className="space-y-2 pt-2">
+              <p className={h4}>Flower builder</p>
+              <div className="grid grid-cols-2 gap-1.5">
+                <label className={lbl}>Petals<input type="number" min={3} max={36} value={fl.petals} onChange={(e) => setFl({ ...fl, petals: Math.max(3, Math.min(36, Number(e.target.value) || 3)) })} aria-label="Petal count" className={field} /></label>
+                <label className={lbl}>Petal shape<select value={fl.shape} onChange={(e) => setFl({ ...fl, shape: e.target.value as PetalShape })} aria-label="Petal shape" className={field}>{(['round', 'pointed', 'heart', 'teardrop', 'spatula', 'lotus'] as PetalShape[]).map((x) => <option key={x}>{x}</option>)}</select></label>
+                <label className={lbl}>Length (mm)<input type="number" min={5} max={300} value={fl.length} onChange={(e) => setFl({ ...fl, length: Math.max(5, Number(e.target.value) || 5) })} aria-label="Petal length" className={field} /></label>
+                <label className={lbl}>Width (mm)<input type="number" min={2} max={200} value={fl.width} onChange={(e) => setFl({ ...fl, width: Math.max(2, Number(e.target.value) || 2) })} aria-label="Petal width" className={field} /></label>
+                <label className={lbl}>Layers<input type="number" min={1} max={3} value={fl.layers} onChange={(e) => setFl({ ...fl, layers: Math.max(1, Math.min(3, Number(e.target.value) || 1)) })} aria-label="Petal layers" className={field} /></label>
+                <label className={lbl}>Twist (°)<input type="number" min={-90} max={90} value={fl.twist} onChange={(e) => setFl({ ...fl, twist: Number(e.target.value) || 0 })} aria-label="Petal twist" className={field} /></label>
+                <label className={lbl}>Centre<select value={fl.centre} onChange={(e) => setFl({ ...fl, centre: e.target.value as CentreStyle })} aria-label="Flower centre" className={field}>{(['disc', 'dots', 'star', 'spiral', 'none'] as CentreStyle[]).map((x) => <option key={x}>{x}</option>)}</select></label>
+                <label className={lbl}>Centre size<input type="number" min={0} max={100} value={fl.centreSize} onChange={(e) => setFl({ ...fl, centreSize: Math.max(0, Number(e.target.value) || 0) })} aria-label="Centre size" className={field} /></label>
+                <label className={lbl}>Leaves<input type="number" min={0} max={8} value={fl.leaves} onChange={(e) => setFl({ ...fl, leaves: Math.max(0, Math.min(8, Number(e.target.value) || 0)) })} aria-label="Leaf count" className={field} /></label>
+                <label className={lbl}>Leaf shape<select value={fl.leafShape} onChange={(e) => setFl({ ...fl, leafShape: e.target.value as LeafShape })} aria-label="Leaf shape" className={field}>{(['oval', 'pointed', 'serrated', 'fern'] as LeafShape[]).map((x) => <option key={x}>{x}</option>)}</select></label>
+              </div>
+              <label className="flex items-center gap-2 text-[12px]"><input type="checkbox" checked={fl.stem} onChange={(e) => setFl({ ...fl, stem: e.target.checked })} /> Stem</label>
+              <div className="flex flex-wrap gap-1.5">{(Object.keys(ROLE_LABEL) as FloralRole[]).map((r) => <label key={r} className="flex items-center gap-1 text-[11px] text-mt-muted"><input type="color" value={flCols[r]} onChange={(e) => setFlCols({ ...flCols, [r]: e.target.value })} aria-label={`${ROLE_LABEL[r]} colour`} className="h-6 w-7 rounded border border-mt-border" />{ROLE_LABEL[r]}</label>)}</div>
+              <button type="button" onClick={() => addParts(flower(fl), 'Flower')} className="w-full rounded-lg border border-mt-border p-2 text-[12.5px] font-semibold hover:bg-mt-surface2">+ Add flower</button>
+              <p className={h4}>Ornaments</p>
+              <div className="grid grid-cols-3 gap-1.5">
+                <button type="button" onClick={() => addParts(paisley(orn.size * 3), 'Paisley')} className="rounded-lg border border-mt-border p-2 text-[12px] hover:bg-mt-surface2">Paisley</button>
+                <button type="button" onClick={() => addParts(mandala(orn.size * 5, 3, 12), 'Mandala')} className="rounded-lg border border-mt-border p-2 text-[12px] hover:bg-mt-surface2">Mandala</button>
+                <button type="button" onClick={() => addParts(damask(orn.size * 4), 'Damask')} className="rounded-lg border border-mt-border p-2 text-[12px] hover:bg-mt-surface2">Damask</button>
+              </div>
+              <label className={lbl}>Motif size (mm)<input type="number" min={5} max={150} value={orn.size} onChange={(e) => setOrn({ ...orn, size: Math.max(5, Number(e.target.value) || 5) })} aria-label="Ornament size" className={field} /></label>
+              <div className="grid grid-cols-2 gap-1.5">
+                <label className={lbl}>Border<select value={orn.border} onChange={(e) => setOrn({ ...orn, border: e.target.value as BorderMotif })} aria-label="Border motif" className={field}>{(['floral', 'leaf', 'paisley', 'geometric'] as BorderMotif[]).map((x) => <option key={x}>{x}</option>)}</select></label>
+                <button type="button" onClick={() => { const bp = board.pieces.find((p) => p.piece.id === 'front') || board.pieces[0]; addParts(floralBorder(bp.piece.w, orn.size * 1.4, orn.border), 'Border', [bp.x + bp.piece.w / 2, bp.y + bp.piece.h - orn.size * 1.2]); }} className="mt-5 rounded-lg border border-mt-border p-2 text-[12px] hover:bg-mt-surface2">+ Hem border</button>
+                <label className={lbl}>Neckline<select value={orn.neck} onChange={(e) => setOrn({ ...orn, neck: e.target.value as NeckShape })} aria-label="Neckline shape" className={field}>{(['round', 'u', 'v', 'boat'] as NeckShape[]).map((x) => <option key={x}>{x}</option>)}</select></label>
+                <button type="button" onClick={() => addParts(floralNeckline(orn.size * 6, orn.size * 4.5, orn.neck, orn.size), 'Neckline design', neckAt())} className="mt-5 rounded-lg border border-mt-border p-2 text-[12px] hover:bg-mt-surface2">+ Neckline</button>
+              </div>
+              <div className="grid grid-cols-2 gap-1.5">
+                <button type="button" onClick={() => { const bp = board.pieces.find((p) => p.piece.id.startsWith('sleeve')) || board.pieces[0]; addParts(floralBorder(bp.piece.w * 0.9, orn.size, orn.border), 'Sleeve / cuff border', [bp.x + bp.piece.w / 2, bp.y + bp.piece.h - orn.size]); }} className="rounded-lg border border-mt-border p-2 text-[12px] hover:bg-mt-surface2">+ Sleeve / cuff</button>
+                <button type="button" onClick={() => { const bp = board.pieces.find((p) => p.piece.id === 'front') || board.pieces[0]; addParts(floralVine(bp.piece.w * 0.9, orn.size, 10, 4), 'Vine'); }} className="rounded-lg border border-mt-border p-2 text-[12px] hover:bg-mt-surface2">+ Vine</button>
+              </div>
+              <p className="text-[11px] text-mt-faint">Each is a group of clean vector paths: recolour, resize, rotate, repeat, or Ungroup to edit point by point.</p>
+            </section>
             <p className={`pt-2 ${h4}`}>Ready designs</p>
             <p className="text-[11.5px] text-mt-muted">Original designs in the garment’s colours, built from the graphics above.</p>
             <div className="grid grid-cols-2 gap-1.5">{DESIGNS.map((d) => <button key={d.id} type="button" onClick={() => applyDesign(d.id)} aria-label={`Design ${d.label}`} className="rounded-lg border border-mt-border p-2 text-left text-[12.5px] font-semibold hover:bg-mt-surface2">{d.label}<span className="block text-[11px] font-normal text-mt-muted">{d.layers.map((L) => GENERATORS.find((g) => g.kind === L.kind)?.label).join(' + ')}</span></button>)}</div>

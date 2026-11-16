@@ -1485,6 +1485,15 @@ scenarios.push({
     await studio.getByRole('button', { name: 'Design Inferno' }).click();
     await t.page.waitForTimeout(1200);
     t.check('ready design adds its layers', /Flames/.test(await layers.innerText()));
+    const flowers = studio.getByRole('region', { name: 'Flowers and ornaments' });
+    await flowers.getByLabel('Petal count').fill('9');
+    await flowers.getByLabel('Petal shape').selectOption('lotus');
+    await flowers.getByRole('button', { name: '+ Add flower' }).click();
+    await flowers.getByRole('button', { name: 'Paisley' }).click();
+    await flowers.getByRole('button', { name: '+ Neckline' }).click();
+    await t.page.waitForTimeout(800);
+    const lt = await layers.innerText();
+    t.check('flower builder and ornaments add editable groups', /Flower/.test(lt) && /Paisley/.test(lt) && /Neckline design/.test(lt), lt.slice(0, 300));
     await t.shot('jersey-creator');
     await studio.getByRole('button', { name: /^Save/ }).click();
     await studio.getByRole('button', { name: 'Close print studio' }).click();

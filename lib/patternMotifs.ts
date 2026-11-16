@@ -5,8 +5,10 @@
 // and export as real vectors (SVG, PDF and editable shapes in the editor).
 
 export interface Motif { id: string; label: string; d: string; cat: MotifCategory }
-export type MotifCategory = 'Basic' | 'Geometric' | 'Stars & bursts' | 'Floral' | 'Nature' | 'Celebration' | 'Ornament' | 'Lines & marks' | 'Tile & textile' | 'Sport';
-export const MOTIF_CATEGORIES: MotifCategory[] = ['Basic', 'Geometric', 'Stars & bursts', 'Floral', 'Nature', 'Celebration', 'Ornament', 'Lines & marks', 'Tile & textile', 'Sport'];
+import { paisley, mandala, damask, flower as floralFlower, DEFAULT_FLOWER } from './textile/floral.ts';
+
+export type MotifCategory = 'Basic' | 'Geometric' | 'Stars & bursts' | 'Floral' | 'Nature' | 'Celebration' | 'Ornament' | 'Lines & marks' | 'Tile & textile' | 'Sport' | 'Traditional';
+export const MOTIF_CATEGORIES: MotifCategory[] = ['Basic', 'Geometric', 'Stars & bursts', 'Floral', 'Nature', 'Celebration', 'Ornament', 'Lines & marks', 'Tile & textile', 'Sport', 'Traditional'];
 
 const f = (n: number) => String(Math.round(n * 10) / 10);
 const pt = (x: number, y: number) => `${f(x)} ${f(y)}`;
@@ -259,6 +261,21 @@ add('Sport', [
   ['number-frame', 'Number frame', rrect(-36, -46, 72, 92, 10) + rrect(-28, -38, 56, 76, 6)],
   ['flame', 'Flame', 'M0-50C10-30 34-20 30 10C28 34 14 48 0 48C-14 48-28 34-30 10C-32-6-20-14-14-26C-12-10-4-6 0-14C6-24 2-38 0-50Z'],
   ['sport-target', 'Target rings', circle(0, 0, 46) + circle(0, 0, 34) + circle(0, 0, 22) + circle(0, 0, 10)],
+]);
+
+// Traditional Indian and textile ornaments, built by the floral engine (one path each).
+const J = (parts: { d: string }[]) => parts.map((x) => x.d).join('');
+add('Traditional', [
+  ['paisley-mango', 'Paisley (mango)', J(paisley(88))],
+  ['mandala-12', 'Mandala', J(mandala(92, 3, 12))],
+  ['mandala-8', 'Mandala (8)', J(mandala(92, 2, 8))],
+  ['damask-scroll', 'Damask scroll', J(damask(90))],
+  ['lotus-flower', 'Lotus', J(floralFlower({ ...DEFAULT_FLOWER, petals: 8, shape: 'lotus', length: 42, width: 26, layers: 2, centre: 'disc', centreSize: 9, leaves: 0, stem: false }))],
+  ['marigold', 'Marigold', J(floralFlower({ ...DEFAULT_FLOWER, petals: 16, shape: 'round', length: 40, width: 14, layers: 3, centre: 'dots', centreSize: 10, leaves: 0, stem: false }))],
+  ['jasmine', 'Jasmine', J(floralFlower({ ...DEFAULT_FLOWER, petals: 5, shape: 'pointed', length: 44, width: 22, layers: 1, centre: 'disc', centreSize: 6, leaves: 0, stem: false }))],
+  ['rose-bud', 'Bud & leaves', J(floralFlower({ ...DEFAULT_FLOWER, petals: 3, shape: 'teardrop', length: 26, width: 20, layers: 2, centre: 'none', centreSize: 0, leaves: 2, leafShape: 'pointed', stem: true }, [0, -30], 1))],
+  ['kolam-star', 'Kolam star', J(floralFlower({ ...DEFAULT_FLOWER, petals: 8, shape: 'heart', length: 44, width: 22, layers: 1, centre: 'star', centreSize: 12, leaves: 0, stem: false }))],
+  ['buta', 'Buta', J(paisley(70, [0, 0], Math.PI / 6))],
 ]);
 
 export const PATTERN_MOTIFS: Motif[] = ALL;
