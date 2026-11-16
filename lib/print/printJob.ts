@@ -26,8 +26,8 @@ export interface PrintJobInfo {
   values?: [string, string][];
 }
 
-const b64 = (s: string) => (typeof btoa === 'function' ? btoa(unescape(encodeURIComponent(s))) : Buffer.from(s, 'utf8').toString('base64'));
-const unb64 = (s: string) => (typeof atob === 'function' ? decodeURIComponent(escape(atob(s))) : Buffer.from(s, 'base64').toString('utf8'));
+const b64 = (s: string) => (typeof btoa === 'function' ? btoa(unescape(encodeURIComponent(s))) : (globalThis as any).Buffer.from(s, 'utf8').toString('base64'));
+const unb64 = (s: string) => (typeof atob === 'function' ? decodeURIComponent(escape(atob(s))) : (globalThis as any).Buffer.from(s, 'base64').toString('utf8'));
 
 export function encodePrintJob(j: PrintJobInfo): string {
   return b64(JSON.stringify(j)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
@@ -46,7 +46,7 @@ const r2 = (n: number) => Math.round(n * 100) / 100;
 /** Folds of a side: the second side of a sheet is seen from the back, so vertical folds mirror. */
 export function sideFolds(j: PrintJobInfo, side: number): PrintJobFold[] {
   if (side === 0) return j.folds;
-  return j.folds.map((f) => ({ ...f, x: f.x != null ? r2(j.trimW - f.x) : undefined, dir: f.dir ? (f.dir === 'valley' ? 'mountain' : 'valley') : undefined })).sort((a, b) => (a.x ?? 0) - (b.x ?? 0));
+  return j.folds.map((f): PrintJobFold => ({ ...f, x: f.x != null ? r2(j.trimW - f.x) : undefined, dir: f.dir ? (f.dir === 'valley' ? 'mountain' : 'valley') : undefined })).sort((a, b) => (a.x ?? 0) - (b.x ?? 0));
 }
 export function sidePanels(j: PrintJobInfo, side: number): { x: number; w: number; name: string }[] {
   if (side === 0) return j.panels.map((p) => ({ x: p.x, w: p.w, name: p.name }));
