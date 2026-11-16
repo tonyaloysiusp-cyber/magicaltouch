@@ -870,7 +870,7 @@ scenarios.push({
     for (let i = 0; i < 2; i++) { const p = doc.addPage([303 * k, 216 * k]); p.setTrimBox(3 * k, 3 * k, 297 * k, 210 * k); }
     const fs = await import('node:fs'); const path = (await import('node:path')).join(process.cwd(), 'e2e-out', 'trifold.pdf');
     fs.writeFileSync(path, await doc.save());
-    await t.page.locator('input[type=file][accept*="pdf"]').first().setInputFiles(path);
+    await t.page.locator('input[type=file][accept*="pdf"]:not([aria-label="Artwork for print file"])').first().setInputFiles(path);
     const chk = t.page.getByLabel('PDF check');
     await chk.waitFor({ timeout: 15000 });
     t.check('matching PDF is accepted', /suitable for this fold/.test(await chk.innerText()) && !/not suitable/.test(await chk.innerText()), (await chk.innerText()).slice(0, 200));

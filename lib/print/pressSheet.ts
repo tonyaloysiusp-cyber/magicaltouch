@@ -323,7 +323,8 @@ export async function pressPdf(job: PressJob, l: PressLayout, art: Artwork): Pro
   page.setTrimBox(bx0 * MM, Y(by0 + bh), bw * MM, bh * MM);
   page.setBleedBox((bx0 - b) * MM, Y(by0 + bh + b), (bw + 2 * b) * MM, (bh + 2 * b) * MM);
   page.setCropBox(0, 0, l.sheet.w * MM, l.sheet.h * MM);
-  return doc.save();
+  // Plain (uncompressed) object table: the widest RIP / preflight compatibility.
+  return doc.save({ useObjectStreams: false });
 }
 
 /** Reads a press PDF back and checks it (dimensions, page count, boxes) before it is offered. */
