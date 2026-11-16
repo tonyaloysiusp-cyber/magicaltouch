@@ -88,6 +88,10 @@ export type MarkOpts = {
   len?: number; weight?: number; offset?: number; color?: string;
   /** Centre marks on each edge of the imposed area, and bleed indicators at the bleed corners. */
   centre?: boolean; bleedMarks?: boolean;
+  /** standard = lines on the trim lines; corner = L brackets at the offset corner; double = Japanese style, marks at the trim and at the bleed. */
+  style?: 'standard' | 'corner' | 'double';
+  /** Registration target size (mm), trim guides (dashed trim lines in the margin), die-cut guide (magenta cut path on the trim, corner radius in mm). */
+  regSize?: number; trimGuides?: boolean; dieCut?: boolean; dieRadius?: number;
 };
 
 export type Command =
@@ -173,20 +177,33 @@ function cropMarkLines(trim: Box, bleed: number, grp: string, mo: MarkOpts = {})
   const o = Math.max(bleed, mo.offset ?? bleed + 2), L = Math.max(1, mo.len ?? 5), out: Item[] = [];
   const width = Math.max(0.05, mo.weight ?? 0.25), color = mo.color || '#000000';
   const xs = [trim.x, trim.x + trim.w], ys = [trim.y, trim.y + trim.h];
+  const line = (x1: number, y1: number, x2: number, y2: number) => out.push({ k: 'line', x1, y1, x2, y2, width, color, m: I, grp, tag: 'mark' });
   for (const x of xs) for (const y of ys) {
     const dx = x === trim.x ? -1 : 1, dy = y === trim.y ? -1 : 1;
-    out.push({ k: 'line', x1: x + dx * o, y1: y, x2: x + dx * (o + L), y2: y, width, color, m: I, grp, tag: 'mark' });
-    out.push({ k: 'line', x1: x, y1: y + dy * o, x2: x, y2: y + dy * (o + L), width, color, m: I, grp, tag: 'mark' });
+    if (mo.style === 'corner') {
+      // L bracket at the offset corner, outside the bleed.
+      line(x + dx * o, y + dy * o, x + dx * (o + L), y + dy * o);
+      line(x + dx * o, y + dy * o, x + dx * o, y + dy * (o + L));
+      continue;
+    }
+    line(x + dx * o, y, x + dx * (o + L), y);
+    line(x, y + dy * o, x, y + dy * (o + L));
+    if (mo.style === 'double' && bleed > 0) {
+      // Japanese (double) marks: a second pair on the bleed lines.
+      line(x + dx * o, y + dy * bleed, x + dx * (o + L), y + dy * bleed);
+      line(x + dx * bleed, y + dy * o, x + dx * bleed, y + dy * (o + L));
+    }
   }
   return out;
 }
-function regMarks(w: number, h: number, grp: string): Item[] {
+function regMarks(w: number, h: number, grp: string, size = 4): Item[] {
   const out: Item[] = [];
+  const r = Math.max(1, size);
   const at = (cx: number, cy: number) => {
-    out.push({ k: 'line', x1: cx - 4, y1: cy, x2: cx + 4, y2: cy, width: 0.2, color: '#000000', m: I, grp, tag: 'mark' });
-    out.push({ k: 'line', x1: cx, y1: cy - 4, x2: cx, y2: cy + 4, width: 0.2, color: '#000000', m: I, grp, tag: 'mark' });
+    out.push({ k: 'line', x1: cx - r, y1: cy, x2: cx + r, y2: cy, width: 0.2, color: '#000000', m: I, grp, tag: 'mark' });
+    out.push({ k: 'line', x1: cx, y1: cy - r, x2: cx, y2: cy + r, width: 0.2, color: '#000000', m: I, grp, tag: 'mark' });
   };
-  at(w / 2, 4); at(w / 2, h - 4); at(4, h / 2); at(w - 4, h / 2);
+  at(w / 2, r); at(w / 2, h - r); at(r, h / 2); at(w - r, h / 2);
   return out;
 }
 
@@ -422,7 +439,29 @@ function finishSheet(w: number, h: number, items: Item[], trims: Box[], o: { ble
       { k: 'line', x1: cxm, y1: y0 - 2, x2: cxm, y2: y0 - 2 - L, width: wgt, color: col, m: I, grp: g, tag: 'mark' }, { k: 'line', x1: cxm, y1: y1 + 2, x2: cxm, y2: y1 + 2 + L, width: wgt, color: col, m: I, grp: g, tag: 'mark' },
       { k: 'line', x1: x0 - 2, y1: cym, x2: x0 - 2 - L, y2: cym, width: wgt, color: col, m: I, grp: g, tag: 'mark' }, { k: 'line', x1: x1 + 2, y1: cym, x2: x1 + 2 + L, y2: cym, width: wgt, color: col, m: I, grp: g, tag: 'mark' });
   }
-  if (o.marks.registration) marks.push(...regMarks(w, h, g));
+  if (o.marks.registration) marks.push(...regMarks(w, h, g, o.marks.regSize ?? 4));
+  if (o.marks.trimGuides && trims.length) {
+    // Dashed trim lines in the margin only (never across artwork).
+    const art = trims.map((t) => ({ x: t.x - o.bleed, y: t.y - o.bleed, w: t.w + 2 * o.bleed, h: t.h + 2 * o.bleed }));
+    const col = o.marks.color || '#000000';
+    for (const t of trims) {
+      const segs: Item[] = [];
+      for (const y of [t.y, t.y + t.h]) { segs.push({ k: 'line', x1: 0, y1: y, x2: t.x - o.bleed, y2: y, width: 0.1, color: col, m: I, grp: g, tag: 'mark' }, { k: 'line', x1: t.x + t.w + o.bleed, y1: y, x2: w, y2: y, width: 0.1, color: col, m: I, grp: g, tag: 'mark' }); }
+      for (const x of [t.x, t.x + t.w]) { segs.push({ k: 'line', x1: x, y1: 0, x2: x, y2: t.y - o.bleed, width: 0.1, color: col, m: I, grp: g, tag: 'mark' }, { k: 'line', x1: x, y1: t.y + t.h + o.bleed, x2: x, y2: h, width: 0.1, color: col, m: I, grp: g, tag: 'mark' }); }
+      marks.push(...segs.filter((ln: any) => Math.hypot(ln.x2 - ln.x1, ln.y2 - ln.y1) > 0.5 && !art.some((b) => segHitsBox(ln, b))));
+    }
+  }
+  if (o.marks.dieCut) {
+    // Die-cut guide: magenta cut path on the trim (for the die maker; switch it off for the print run).
+    const r = Math.max(0, o.marks.dieRadius ?? 0);
+    for (const t of trims) {
+      const rr = Math.min(r, t.w / 2, t.h / 2), pts: [number, number][] = [];
+      const corner = (cx: number, cy: number, a0: number) => { for (let i = 0; i <= 8; i++) { const a = a0 + (i / 8) * (Math.PI / 2); pts.push([cx + rr * Math.cos(a), cy + rr * Math.sin(a)]); } };
+      if (rr > 0) { corner(t.x + t.w - rr, t.y + rr, -Math.PI / 2); corner(t.x + t.w - rr, t.y + t.h - rr, 0); corner(t.x + rr, t.y + t.h - rr, Math.PI / 2); corner(t.x + rr, t.y + rr, Math.PI); }
+      else pts.push([t.x, t.y], [t.x + t.w, t.y], [t.x + t.w, t.y + t.h], [t.x, t.y + t.h]);
+      pts.forEach((p, i) => { const q = pts[(i + 1) % pts.length]; marks.push({ k: 'line', x1: p[0], y1: p[1], x2: q[0], y2: q[1], width: 0.25, color: '#EC008C', m: I, grp: g, tag: 'die' }); });
+    }
+  }
   if (o.marks.fold && o.folds) for (const x of o.folds) { marks.push({ k: 'line', x1: x, y1: 0, x2: x, y2: 6, width: 0.25, color: '#000000', m: I, grp: g, tag: 'mark' }, { k: 'line', x1: x, y1: h - 6, x2: x, y2: h, width: 0.25, color: '#000000', m: I, grp: g, tag: 'mark' }); }
   if (o.marks.info) marks.push({ k: 'text', text: o.label, size: 6, color: '#000000', m: tr(4, 2), grp: g, tag: 'mark' });
   return { id: uid('s'), w, h, trim: { x: 0, y: 0, w, h }, bleed: { ...noEdges }, items: [...items, ...marks], side: o.side, label: o.label };

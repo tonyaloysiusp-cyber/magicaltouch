@@ -24,6 +24,7 @@ export function FoldingCalculator() {
   const [gsm, setGsm] = useState(150), [profile, setProfile] = useState('matt');
   const [bleed, setBleed] = useState(3), [safe, setSafe] = useState(5);
   const [custom, setCustom] = useState<number[] | null>(null);
+  const [dirs, setDirs] = useState<('valley' | 'mountain')[]>([]);
   const [side, setSide] = useState<'outside' | 'inside'>('outside');
   const [angle, setAngle] = useState(60);
   const [busy, setBusy] = useState<string | null>(null);
@@ -32,7 +33,7 @@ export function FoldingCalculator() {
   const W = sizeId === 'custom' ? cw : size ? (landscape ? Math.max(size.w, size.h) : Math.min(size.w, size.h)) : 297;
   const H = sizeId === 'custom' ? ch : size ? (landscape ? Math.min(size.w, size.h) : Math.max(size.w, size.h)) : 210;
   const caliper = estimateCaliper(gsm, profile) / 1000;
-  const r = useMemo(() => calculateFold({ type, w: W, h: H, panels, caliper, bleed, safe, widths: custom || undefined }), [type, W, H, panels, caliper, bleed, safe, custom]);
+  const r = useMemo(() => calculateFold({ type, w: W, h: H, panels, caliper, bleed, safe, widths: custom || undefined, dirs }), [type, W, H, panels, caliper, bleed, safe, custom, dirs]);
   const svg = useMemo(() => foldDiagramSvg(r, side, bleed, safe), [r, side, bleed, safe]);
   const def = FOLDS.find((f) => f.id === type)!;
 
@@ -106,6 +107,7 @@ export function FoldingCalculator() {
           <label className={lbl}>Bleed (mm)<input type="number" min={0} max={10} step={0.5} value={bleed} onChange={(e) => setBleed(Number(e.target.value) || 0)} aria-label="Bleed mm" className={field} /></label>
           <label className={lbl}>Safe margin (mm)<input type="number" min={0} max={20} step={0.5} value={safe} onChange={(e) => setSafe(Number(e.target.value) || 0)} aria-label="Safe margin mm" className={field} /></label>
         </div>
+        {type === 'custom' && <div role="group" aria-label="Fold directions"><p className="text-[12px] font-semibold">Fold directions</p><div className="mt-1 flex flex-wrap gap-1.5">{r.folds.filter((f) => f.x != null).map((f, i) => <button key={i} type="button" onClick={() => setDirs(r.folds.map((g, j) => (j === i ? (g.dir === 'valley' ? 'mountain' : 'valley') : g.dir)))} className="h-8 px-2.5 rounded-full border border-mt-border text-[12px]">{f.label}: {f.dir}</button>)}</div></div>}
         <div>
           <div className="flex items-center justify-between"><p className="text-[12px] font-semibold">Panel widths (mm)</p><button type="button" onClick={() => setCustom(custom ? null : r.panels.map((p) => p.w))} className="text-[12px] text-mt-primary">{custom ? 'Back to calculated' : 'Adjust by hand'}</button></div>
           <div className="mt-1 grid grid-cols-3 gap-1.5">{r.panels.map((p, i) => <label key={i} className="text-[11px] text-mt-muted">Panel {p.n}<input type="number" step={0.5} value={custom ? custom[i] : p.w} disabled={!custom} onChange={(e) => custom && setCustom(custom.map((v, j) => (j === i ? Number(e.target.value) || 0 : v)))} aria-label={`Panel ${p.n} width`} className="mt-0.5 h-9 w-full rounded-lg border border-mt-border bg-mt-bg px-2 text-[13px] disabled:opacity-70" /></label>)}</div>

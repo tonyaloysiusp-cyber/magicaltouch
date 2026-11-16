@@ -62,3 +62,19 @@ test('crop marks: style controls, never over neighbouring artwork, centre marks'
   assert.equal(hits.length, 0);
   assert.ok(marks.filter((m) => Math.abs(Math.hypot(m.x2 - m.x1, m.y2 - m.y1) - 8) < 0.01).length >= 8, 'outer marks kept, plus centre marks');
 });
+
+test('mark styles, trim guides and die-cut guide: marks stay off the artwork; the die line sits on the trim', () => {
+  for (const style of ['standard', 'corner', 'double']) {
+    let d = docFromSources(sources);
+    d = run(d, { type: 'stepRepeat', sheetW: 320, sheetH: 450, cols: 2, rows: 3, gap: 8, bleed: 3, marks: { crop: true, style, trimGuides: true, dieCut: true, dieRadius: 4, registration: true, regSize: 5 }, duplex: 'none' }, sources);
+    const sh = d.sheets[0];
+    const art = [];
+    for (const it of sh.items.filter((i) => i.k === 'page')) { const b = groupBounds([it]); art.push(b); }
+    const marks = sh.items.filter((i) => i.tag === 'mark' && i.k === 'line');
+    const die = sh.items.filter((i) => i.tag === 'die');
+    assert.ok(marks.length > 0, style);
+    assert.ok(die.length >= 6 * 4, `${style}: a die line around every piece`);
+    const inside = (x, y, b) => x > b.x + 0.01 && x < b.x + b.w - 0.01 && y > b.y + 0.01 && y < b.y + b.h - 0.01;
+    for (const m of marks) for (let t = 0.05; t < 1; t += 0.1) { const x = m.x1 + (m.x2 - m.x1) * t, y = m.y1 + (m.y2 - m.y1) * t; assert.ok(!art.some((b) => inside(x, y, b)), `${style}: mark crosses artwork at ${x},${y}`); }
+  }
+});

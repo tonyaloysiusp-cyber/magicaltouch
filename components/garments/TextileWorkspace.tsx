@@ -24,7 +24,7 @@ type Product = { id: TeamPick | GarmentType; label: string; hint: string; family
 const PRODUCTS: Product[] = [
   { id: 'jersey', label: 'Jersey · round neck', hint: 'Football, cricket, basketball', family: 'team' },
   { id: 'jersey-v', label: 'Jersey · V-neck', hint: 'Names, numbers, rosters', family: 'team' },
-  { id: 'polo', label: 'Polo T-shirt', hint: 'Collar and placket', family: 'team' },
+  { id: 'polo', label: 'Polo', hint: 'Polo T-shirt: collar and placket', family: 'team' },
   { id: 'tshirt', label: 'T-shirt', hint: 'Round or V-neck', family: 'team' },
   { id: 'kurta', label: 'Kurta / kameez', hint: 'From your measurements', family: 'made' },
   { id: 'chudidar', label: 'Chudidar', hint: 'From your measurements', family: 'made' },
@@ -117,7 +117,7 @@ export function TextileWorkspace({ initial }: { initial?: Product['id'] }) {
 
       <div role="radiogroup" aria-label="Product" className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         {PRODUCTS.map((p) => (
-          <button key={p.id} type="button" role="radio" aria-checked={ws.product === p.id} onClick={() => choose(p.id)}
+          <button key={p.id} type="button" role="radio" aria-label={`Product: ${p.label}`} aria-checked={ws.product === p.id} onClick={() => choose(p.id)}
             className={`rounded-2xl border p-3 text-left ${ws.product === p.id ? 'border-[#7A1F3D] ring-2 ring-[#7A1F3D]/25 bg-[#7A1F3D]/5' : 'border-mt-border hover:bg-mt-surface2'}`}>
             <p className="text-[13.5px] font-semibold">{p.label}</p>
             <p className="text-[11.5px] text-mt-muted">{p.hint}</p>

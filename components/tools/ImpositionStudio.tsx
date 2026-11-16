@@ -77,7 +77,7 @@ const DEFAULTS: Record<string, any> = {
 const SEL_TOOLS = new Set<Tool>(['deletePages', 'duplicatePages', 'movePages', 'rotatePages', 'defineBleeds', 'adjustSize', 'trimShift', 'stickText', 'stickPdf', 'maskTape', 'peelOff', 'setTrimBox']);
 const SHEET_CHOICES = PAPER_SIZES.filter((p) => ['A sizes', 'B sizes', 'SRA press sheets', 'US sizes'].includes(p.group));
 const sheetDims = (p: any) => { const z = SHEET_CHOICES.find((x) => x.id === p.sheet); const w = z ? z.w : p.w, h = z ? z.h : p.h; return p.landscape ? { w: h, h: w } : { w, h }; };
-const marksOf = (p: any): MarkOpts => ({ crop: !!p.crop, registration: !!p.registration, fold: !!p.fold, info: !!p.info, len: Number(p.markLen) || 5, weight: Number(p.markWeight) || 0.25, offset: p.markOffset === undefined || p.markOffset === '' ? undefined : Number(p.markOffset), color: p.markColor || '#000000', centre: !!p.centre, bleedMarks: !!p.bleedMarks });
+const marksOf = (p: any): MarkOpts => ({ crop: !!p.crop, registration: !!p.registration, fold: !!p.fold, info: !!p.info, len: Number(p.markLen) || 5, weight: Number(p.markWeight) || 0.25, offset: p.markOffset === undefined || p.markOffset === '' ? undefined : Number(p.markOffset), color: p.markColor || '#000000', centre: !!p.centre, bleedMarks: !!p.bleedMarks, style: p.markStyle || 'standard', regSize: Number(p.regSize) || 4, trimGuides: !!p.trimGuides, dieCut: !!p.dieCut, dieRadius: Number(p.dieRadius) || 0 });
 
 function save(bytes: Uint8Array | Blob, name: string, type = 'application/pdf') {
   const blob = bytes instanceof Blob ? bytes : new Blob([bytes as BlobPart], { type });
@@ -321,7 +321,10 @@ export function ImpositionStudio() {
   </>;
   const anchors: [Anchor, string][] = [['tl', 'Top left'], ['t', 'Top centre'], ['tr', 'Top right'], ['l', 'Left'], ['c', 'Centre'], ['r', 'Right'], ['bl', 'Bottom left'], ['b', 'Bottom centre'], ['br', 'Bottom right']];
   const marksF = (fold = false) => <div className="space-y-1.5">
-    <div className="flex flex-wrap gap-x-4 gap-y-1">{check('Crop marks', 'crop')}{fold ? check('Fold marks', 'fold') : check('Registration marks', 'registration')}{check('Centre marks', 'centre')}{check('Bleed indicators', 'bleedMarks')}{check('Sheet info', 'info')}</div>
+    <div className="flex flex-wrap gap-x-4 gap-y-1">{check('Crop marks', 'crop')}{fold ? check('Fold marks', 'fold') : check('Registration marks', 'registration')}{check('Centre marks', 'centre')}{check('Bleed indicators', 'bleedMarks')}{check('Trim guides', 'trimGuides')}{check('Die-cut guide', 'dieCut')}{check('Sheet info', 'info')}{fold && check('Registration marks', 'registration')}</div>
+    {P.crop && selF('Crop mark style', 'markStyle', [['standard', 'Standard (on the trim lines)'], ['corner', 'Corner brackets'], ['double', 'Double / Japanese (trim + bleed)']])}
+    {P.registration && num('Registration mark size (mm)', 'regSize', { min: 1, step: 0.5 })}
+    {P.dieCut && <div className="grid grid-cols-2 gap-1.5">{num('Die corner radius (mm)', 'dieRadius', { min: 0, step: 0.5 })}<p className="text-[11px] text-amber-700 dark:text-amber-400 self-end">Magenta cut path on the trim, for the die maker — switch it off for the print run.</p></div>}
     {P.crop && <div className="grid grid-cols-4 gap-1.5" aria-label="Crop mark style">{num('Length (mm)', 'markLen', { min: 1, step: 0.5 })}{num('Weight (mm)', 'markWeight', { min: 0.05, step: 0.05 })}{num('Offset (mm)', 'markOffset', { min: 0, step: 0.5 })}<label className="block text-[11.5px] text-mt-muted">Colour<input type="color" value={P.markColor || '#000000'} onChange={(e) => setP({ markColor: e.target.value })} aria-label="Mark colour" className="mt-1 h-9 w-full rounded-lg border border-mt-border" /></label></div>}
     {P.crop && <p className="text-[11px] text-mt-faint">Marks start outside the bleed (offset is never less than the bleed) and are left out where they would cross another page.</p>}
   </div>;

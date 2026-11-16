@@ -60,7 +60,7 @@ export function BindingCalculator() {
         <section className="space-y-2">
           <h3 className={h3}>Binding</h3>
           <div className="grid grid-cols-3 gap-1.5" role="radiogroup" aria-label="Binding">
-            {([['perfect', 'Perfect bound'], ['saddle', 'Saddle stitch'], ['hardcover', 'Hardcover']] as const).map(([b, l]) => <button key={b} type="button" role="radio" aria-checked={s.binding === b} onClick={() => set({ binding: b })} className={chip(s.binding === b)}>{l}</button>)}
+            {([['perfect', 'Perfect / softcover'], ['saddle', 'Saddle stitch'], ['hardcover', 'Hardcover / case'], ['wire', 'Wire-O'], ['spiral', 'Spiral (coil)'], ['comb', 'Comb']] as const).map(([b, l]) => <button key={b} type="button" role="radio" aria-checked={s.binding === b} onClick={() => set({ binding: b })} className={chip(s.binding === b)}>{l}</button>)}
           </div>
         </section>
         <section className="space-y-2">
@@ -101,6 +101,8 @@ export function BindingCalculator() {
             {num('Endpaper weight (gsm)', s.endpaperGsm, (n) => set({ endpaperGsm: n || 1 }), { min: 1 })}
             {num('Endpaper caliper (µm)', s.endpaperCaliperUm, (n) => set({ endpaperCaliperUm: n }), { optional: true, placeholder: 'estimated' })}
           </div>}
+          {(s.binding === 'wire' || s.binding === 'spiral' || s.binding === 'comb') && <div className="grid grid-cols-2 gap-2">{num('Punch margin (mm)', s.punchMargin ?? 10, (n) => set({ punchMargin: n ?? 0 }))}</div>}
+          {(s.binding === 'perfect' || s.binding === 'hardcover') && <div className="grid grid-cols-2 gap-2">{sel('Signatures (pages each)', String(s.signaturePages || 0), (v) => set({ signaturePages: Number(v) || 0 }), [['0', 'Not planned'], ['8', '8 pages'], ['16', '16 pages'], ['32', '32 pages']])}</div>}
           {s.binding !== 'hardcover' && <div className="grid grid-cols-2 gap-2">{num('Bleed (mm)', s.bleed, (n) => set({ bleed: n ?? 0 }))}{num('Safe area (mm)', s.safe, (n) => set({ safe: n ?? 0 }))}</div>}
         </section>
       </aside>
@@ -108,13 +110,16 @@ export function BindingCalculator() {
       <div className="space-y-4">
         <section className="rounded-3xl border border-mt-border bg-mt-surface p-5" aria-label="Binding summary">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {[[`${r.spineMm} mm`, s.binding === 'saddle' ? 'Folded thickness' : s.binding === 'hardcover' ? 'Spine (case)' : 'Spine width'], [`${r.cover.widthMm} × ${r.cover.heightMm}`, s.binding === 'hardcover' ? 'Case wrap (mm)' : 'Cover flat, with bleed (mm)'], [String(r.pagesUsed), `Pages${r.blanksAdded ? ` (+${r.blanksAdded} blank)` : ''}`], [r.sheets ? `${r.sheets} sheets` : `${r.leaves} leaves`, `Book block ${r.blockMm} mm`]].map(([v, l]) => (
+            {[[`${r.spineMm} mm`, s.binding === 'saddle' ? 'Folded thickness' : s.binding === 'hardcover' ? 'Spine (case)' : (s.binding === 'wire' || s.binding === 'spiral' || s.binding === 'comb') ? 'Book thickness' : 'Spine width'], [`${r.cover.widthMm} × ${r.cover.heightMm}`, s.binding === 'hardcover' ? 'Case wrap (mm)' : 'Cover flat, with bleed (mm)'], [String(r.pagesUsed), `Pages${r.blanksAdded ? ` (+${r.blanksAdded} blank)` : ''}`], [r.sheets ? `${r.sheets} sheets` : `${r.leaves} leaves`, `Book block ${r.blockMm} mm`]].map(([v, l]) => (
               <div key={l} className="rounded-2xl bg-mt-surface2/60 p-3"><p className="text-xl font-semibold tabular-nums">{v}</p><p className="text-[12px] text-mt-muted">{l}</p></div>
             ))}
           </div>
           <p className={`mt-3 text-[13px] ${r.caliperSource.text === 'estimated' ? 'text-amber-700 dark:text-amber-400' : 'text-emerald-700 dark:text-emerald-400'}`}>
             {r.caliperSource.text === 'estimated' ? `Estimate: paper caliper ${r.textCaliperUm} µm worked out from ${s.paperGsm} gsm. Enter the caliper from your paper’s data sheet (or ask your printer) for an exact spine.` : `Exact: spine from your paper caliper of ${r.textCaliperUm} µm.`}
           </p>
+          {r.mechanical && <p className="mt-1 text-[13px]">Binding element ≈ <b>{r.mechanical.elementMm} mm</b> (theoretical: book block + 2 mm) · punch margin {r.mechanical.punchMargin} mm · {r.mechanical.covers} separate covers. Confirm the element size and hole pitch on your binder’s chart.</p>}
+          {r.signatures && <p className="mt-1 text-[13px]">{r.signatures.count} signatures of {r.signatures.per} pages = {r.signatures.sheets} printed sheets (4 pages per sheet side pair){r.signatures.blanks ? `, ${r.signatures.blanks} blank pages` : ''}.</p>}
+          <p className="mt-1 text-[11.5px] text-mt-muted">Theoretical calculation from paper thickness and page count — your printer’s or binder’s own specification always wins.</p>
           {r.warnings.map((w) => <p key={w} role="alert" className="mt-1 text-[13px] text-rose-600">{w}</p>)}
         </section>
 

@@ -859,7 +859,7 @@ scenarios.push({
     await t.page.goto(t.BASE + '/print-size-calculator?tab=fold', { waitUntil: 'domcontentloaded' });
     const res = t.page.getByLabel('Folding result');
     await res.waitFor({ timeout: 30000 });
-    t.check('A4 tri-fold folds to 99.3 × 210 mm with a shorter tuck-in panel', /→\s*99\.3 × 210 mm folded/.test(await res.innerText()), (await res.innerText()).slice(0, 160));
+    t.check('A4 tri-fold folds to 99.3 × 210 mm with a shorter tuck-in panel', /→\s*99\.33? × 210 mm folded/.test(await res.innerText()), (await res.innerText()).slice(0, 160));
     await t.page.getByLabel('Fold type').selectOption('accordion');
     await t.page.getByLabel('Number of panels').fill('6');
     t.check('6-panel accordion = 49.5 mm panels', /49\.5 × 210 mm folded/.test(await res.innerText()), (await res.innerText()).slice(0, 160));
@@ -870,7 +870,7 @@ scenarios.push({
     for (let i = 0; i < 2; i++) { const p = doc.addPage([303 * k, 216 * k]); p.setTrimBox(3 * k, 3 * k, 297 * k, 210 * k); }
     const fs = await import('node:fs'); const path = (await import('node:path')).join(process.cwd(), 'e2e-out', 'trifold.pdf');
     fs.writeFileSync(path, await doc.save());
-    await t.page.locator('input[type=file][accept*="pdf"]').setInputFiles(path);
+    await t.page.locator('input[type=file][accept*="pdf"]').first().setInputFiles(path);
     const chk = t.page.getByLabel('PDF check');
     await chk.waitFor({ timeout: 15000 });
     t.check('matching PDF is accepted', /suitable for this fold/.test(await chk.innerText()) && !/not suitable/.test(await chk.innerText()), (await chk.innerText()).slice(0, 200));
@@ -966,7 +966,7 @@ scenarios.push({
     await t.page.getByLabel('Textile Design Studio').waitFor({ timeout: 30000 });
     t.check('old route redirects to /textile-studio', /\/textile-studio/.test(t.page.url()), t.page.url());
     const polo = t.page.getByRole('radiogroup', { name: 'Product' }).getByRole('radio', { name: /Polo/ });
-    t.check('polo picked from the old address', (await polo.getAttribute('aria-checked')) === 'true');
+    t.check('polo picked from the old address', (await polo.getAttribute('aria-checked')) === 'true', `${t.page.url()} checked=${await polo.getAttribute('aria-checked')}`);
     const name = t.page.getByLabel('Project name').first();
     await name.fill('Merge check');
     const editPrint = () => t.page.getByRole('button', { name: /Edit print file/ }).count();

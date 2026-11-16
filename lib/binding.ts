@@ -8,7 +8,9 @@
 // that kind of paper, and every result says so. Board thicknesses, hinge
 // and turn-in sizes are editable defaults, listed in `assumptions`.
 
-export type Binding = 'perfect' | 'saddle' | 'hardcover';
+export type Binding = 'perfect' | 'saddle' | 'hardcover' | 'wire' | 'spiral' | 'comb';
+/** Mechanical bindings: loose leaves punched along the spine edge, held by a wire, coil or comb. */
+export const MECHANICAL: Binding[] = ['wire', 'spiral', 'comb'];
 export type Sides = 'double' | 'single';
 
 /** Typical bulk (µm of thickness per gsm) by paper family. Mills vary; these
@@ -39,6 +41,10 @@ export interface BookSpec {
   // Hardcover (case binding)
   boardMm?: number; squareMm?: number; jointMm?: number; turnInMm?: number;
   endpaperGsm?: number; endpaperCaliperUm?: number | null;
+  // Wire / spiral / comb
+  punchMargin?: number;
+  // Book production: pages per signature (folded section) for sewn or bound books.
+  signaturePages?: number;
 }
 
 export interface Panel { name: string; x: number; w: number; kind: 'back' | 'spine' | 'front' | 'turn-in' | 'joint' | 'board' }
@@ -59,6 +65,8 @@ export interface BookResult {
   blockMm: number; spineMm: number;
   cover: CoverLayout;
   creep?: { totalMm: number; shiftsMm: number[] };
+  signatures?: { per: number; count: number; sheets: number; blanks: number };
+  mechanical?: { elementMm: number; punchMargin: number; covers: number };
   hardcover?: { boardW: number; boardH: number; spineBoardW: number; endpaper: { w: number; h: number; count: number } };
   assumptions: string[]; warnings: string[];
 }
@@ -142,6 +150,24 @@ export function calculateBook(s: BookSpec): BookResult {
       panels: [{ name: self ? 'Back page' : 'Back cover', x: x0, w: W, kind: 'back' }, { name: self ? 'Front page' : 'Front cover', x: x0 + W, w: W, kind: 'front' }],
       folds: [{ x: x0 + W, kind: 'spine', label: 'Centre fold (staples)' }],
     };
+  } else if (MECHANICAL.includes(s.binding)) {
+    // Wire-O, spiral (coil) or comb: separate front and back covers, no spine on the cover.
+    const covers = 2;
+    blockMm = (leaves * tc + insertLeaves * insertUm + covers * cc) / 1000;
+    spineMm = blockMm;
+    const punch = Math.max(0, s.punchMargin ?? 10);
+    const elementMm = r2(blockMm + 2);
+    out.mechanical = { elementMm, punchMargin: punch, covers };
+    assumptions.push(`Binding element: about ${elementMm} mm (book block ${r2(blockMm)} mm + 2 mm to turn the pages) — pick the next size up on your binder's ${s.binding === 'comb' ? 'comb' : s.binding === 'spiral' ? 'coil' : 'wire'} chart.`);
+    assumptions.push(`Punch margin ${punch} mm on the binding edge — keep text at least ${punch + (s.safe ?? 5)} mm from it; confirm the hole pitch with your binder.`);
+    if (s.sides === 'double' && pages % 2) warnings.push('An odd number of pages leaves a blank back on the last leaf.');
+    const x0 = bleed;
+    out.cover = {
+      widthMm: r2(W + 2 * bleed), heightMm: r2(H + 2 * bleed), bleed, safe,
+      trim: { x: bleed, y: bleed, w: W, h: H },
+      panels: [{ name: 'Front cover (back cover: a second sheet, same size)', x: x0, w: W, kind: 'front' }],
+      folds: [],
+    };
   } else {
     // Hardcover / case binding.
     const board = s.boardMm ?? 2.5, square = s.squareMm ?? 3, joint = s.jointMm ?? 7, turn = s.turnInMm ?? 15;
@@ -171,6 +197,13 @@ export function calculateBook(s: BookSpec): BookResult {
     });
     out.cover = { widthMm: r2(caseW), heightMm: r2(caseH), bleed: 0, safe, trim: { x: 0, y: 0, w: r2(caseW), h: r2(caseH) }, panels, folds };
     if (blockMm < 5) warnings.push('A very thin book block for case binding — check your binder’s minimum.');
+  }
+  // Signatures (folded sections) for bound books.
+  if ((s.binding === 'perfect' || s.binding === 'hardcover') && s.signaturePages && s.signaturePages >= 4) {
+    const per = Math.round(s.signaturePages / 4) * 4;
+    const count = Math.ceil(pages / per), blanks = count * per - pages;
+    out.signatures = { per, count, sheets: (count * per) / 4, blanks };
+    if (blanks) warnings.push(`${count} signatures of ${per} pages leave ${blanks} blank page${blanks === 1 ? '' : 's'} — or add a smaller signature at the end.`);
   }
   out.blockMm = r2(blockMm);
   out.spineMm = r2(spineMm);

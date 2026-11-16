@@ -8,22 +8,24 @@
 // thickness and a working allowance per nesting level (industry practice is
 // 1–3 mm; we use max(1 mm, 2 × caliper) per level).
 
-export type FoldType = 'half' | 'tri' | 'z' | 'accordion' | 'gate' | 'double-gate' | 'roll' | 'parallel' | 'cross' | 'map';
+export type FoldType = 'half' | 'tri' | 'z' | 'accordion' | 'concertina' | 'gate' | 'double-gate' | 'roll' | 'parallel' | 'cross' | 'map' | 'custom';
 
 export const FOLDS: { id: FoldType; label: string; hint: string; panels: number | 'n'; minPanels?: number }[] = [
   { id: 'half', label: 'Half fold (bi-fold)', hint: 'One fold in the middle: 4 pages', panels: 2 },
   { id: 'tri', label: 'Tri-fold (letter / roll)', hint: 'Two folds rolled inward; the tuck-in panel is shorter', panels: 3 },
   { id: 'z', label: 'Z-fold', hint: 'Two folds in opposite directions, equal panels', panels: 3 },
   { id: 'accordion', label: 'Accordion', hint: 'Zig-zag folds, equal panels', panels: 'n', minPanels: 4 },
+  { id: 'concertina', label: 'Concertina (zig-zag, multi-fold)', hint: 'Zig-zag folds; any number of panels from 3', panels: 'n', minPanels: 3 },
   { id: 'gate', label: 'Gate fold', hint: 'Two outer panels fold to meet in the middle', panels: 3 },
   { id: 'double-gate', label: 'Double gate fold', hint: 'Gate fold, then folded again in the middle', panels: 4 },
   { id: 'roll', label: 'Roll fold', hint: 'Panels roll inward one after another; each inner panel shorter', panels: 'n', minPanels: 4 },
   { id: 'parallel', label: 'Double parallel', hint: 'Folded in half, then in half again (parallel)', panels: 4 },
   { id: 'cross', label: 'Cross fold (French)', hint: 'Folded in half, then in half the other way', panels: 2 },
   { id: 'map', label: 'Map fold', hint: 'Accordion across, then folded in half down', panels: 'n', minPanels: 4 },
+  { id: 'custom', label: 'Custom folding', hint: 'Your own panel count, widths and fold directions', panels: 'n', minPanels: 2 },
 ];
 
-export interface FoldSpec { type: FoldType; w: number; h: number; panels?: number; caliper: number; bleed: number; safe: number; widths?: number[] }
+export interface FoldSpec { type: FoldType; w: number; h: number; panels?: number; caliper: number; bleed: number; safe: number; widths?: number[]; dirs?: ('valley' | 'mountain')[] }
 export interface FoldPanel { n: number; x: number; w: number; outside: string; inside: string }
 export interface FoldLine { x?: number; y?: number; dir: 'valley' | 'mountain'; order: number; label: string }
 export interface FoldResult {
@@ -42,7 +44,7 @@ export function calculateFold(s: FoldSpec): FoldResult {
   let widths: number[] = [];
   const eq = (k: number) => Array.from({ length: k }, () => W / k);
   switch (s.type) {
-    case 'half': case 'z': case 'accordion': case 'parallel': case 'cross': case 'map': widths = eq(n); break;
+    case 'half': case 'z': case 'accordion': case 'concertina': case 'parallel': case 'cross': case 'map': case 'custom': widths = eq(n); break;
     case 'tri': { // outside: [inside flap (tuck-in) | back | front]; flap shorter by the allowance
       const big = (W + allowance) / 3; widths = [W - 2 * big, big, big]; break;
     }
@@ -91,7 +93,7 @@ export function calculateFold(s: FoldSpec): FoldResult {
       folds[0].dir = 'mountain'; folds[0].order = 1; folds[1].order = 2;
       sequence.push(`Mountain fold at ${panels[1].x} mm.`, `Valley fold at ${panels[2].x} mm — the sheet zig-zags like a Z.`);
       break;
-    case 'accordion': case 'map':
+    case 'accordion': case 'concertina': case 'map':
       name('o', panels.map((_, i) => (i === 0 ? 'Front cover' : i === panels.length - 1 ? 'Back' : `Panel ${i + 1}`)));
       name('i', panels.map((_, i) => `Inside ${i + 1}`));
       folds.forEach((f, i) => { f.dir = i % 2 ? 'valley' : 'mountain'; f.order = i + 1; });
@@ -122,6 +124,13 @@ export function calculateFold(s: FoldSpec): FoldResult {
       name('o', ['Back', 'Inside 2', 'Inside 3', 'Front cover']); name('i', ['Inside 1', 'Inside 4', 'Inside 5', 'Inside 6']);
       folds[1].order = 1; folds[0].order = 2; folds[2].order = 2;
       sequence.push(`Fold in half at ${panels[2].x} mm.`, 'Fold in half again in the same direction.');
+      break;
+    case 'custom':
+      name('o', panels.map((_, i) => (i === 0 ? 'Front cover' : i === panels.length - 1 ? 'Back' : `Panel ${i + 1}`)));
+      name('i', panels.map((_, i) => `Inside ${i + 1}`));
+      folds.forEach((f, i) => { f.dir = s.dirs?.[i] || (i % 2 ? 'valley' : 'mountain'); f.order = i + 1; });
+      sequence.push(...folds.map((f) => `${f.dir === 'mountain' ? 'Mountain' : 'Valley'} fold at ${f.x} mm.`));
+      notes.push('Custom folding: confirm the fold order and directions with a folded dummy.');
       break;
     case 'cross':
       name('o', ['Back', 'Front cover']); name('i', ['Inside left', 'Inside right']);

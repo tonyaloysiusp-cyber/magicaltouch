@@ -71,3 +71,20 @@ test('printing layout & specification: built from the calculation, branded, 3 pa
   assert.match(all, /PDF proof approval/);
   assert.doesNotMatch(all, /Fortys/);
 });
+
+test('concertina and custom folds; mechanical bindings and signatures', async () => {
+  const { calculateFold } = await import('../../lib/fold.ts');
+  const c = calculateFold({ type: 'concertina', w: 297, h: 210, panels: 4, caliper: 0.1, bleed: 3, safe: 5 });
+  assert.deepEqual(c.panels.map((p) => p.w), [74.25, 74.25, 74.25, 74.25]);
+  const u = calculateFold({ type: 'custom', w: 300, h: 100, panels: 3, caliper: 0.1, bleed: 3, safe: 5, widths: [90, 100, 110], dirs: ['valley', 'valley'] });
+  assert.deepEqual(u.panels.map((p) => p.w), [90, 100, 110]);
+  assert.ok(u.folds.every((f) => f.dir === 'valley'));
+  const { calculateBook } = await import('../../lib/binding.ts');
+  const w = calculateBook({ trimW: 210, trimH: 297, pages: 100, sides: 'double', paperGsm: 100, paperProfile: 'uncoated', paperCaliperUm: 100, coverGsm: 300, coverProfile: 'board', coverCaliperUm: 300, binding: 'wire', punchMargin: 10 });
+  assert.equal(w.leaves, 50);
+  assert.equal(w.blockMm, 5.6); // 50 × 0.1 + 2 × 0.3
+  assert.equal(w.mechanical.elementMm, 7.6);
+  assert.equal(w.cover.widthMm, 216);
+  const p = calculateBook({ trimW: 148, trimH: 210, pages: 120, sides: 'double', paperGsm: 80, paperProfile: 'uncoated', paperCaliperUm: 100, coverGsm: 300, coverProfile: 'board', coverCaliperUm: 300, binding: 'perfect', signaturePages: 16 });
+  assert.deepEqual(p.signatures, { per: 16, count: 8, sheets: 32, blanks: 8 });
+});
