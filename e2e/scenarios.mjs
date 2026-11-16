@@ -1023,6 +1023,36 @@ scenarios.push({
   },
 });
 
+// Textile sizes: a manufacturer size chart (CSV) drafts every size from its own measurements;
+// the print PDF lays out each size separately; the cutting pattern PDF is made at real size.
+scenarios.push({
+  name: 'textile-size-chart',
+  async run(t) {
+    const fs = await import('node:fs');
+    const { PDFDocument } = await import('pdf-lib');
+    await t.page.addInitScript(() => { try { if (!sessionStorage.getItem('scInit')) { localStorage.removeItem('mt:textile-studio'); localStorage.removeItem('mt:textile-measures'); localStorage.removeItem('mt:textile-workspace'); sessionStorage.setItem('scInit', '1'); } } catch {} });
+    await t.page.goto(`${t.BASE}/textile-studio?product=kurta`, { waitUntil: 'domcontentloaded' });
+    const studio = t.page.getByLabel('Textile Studio', { exact: true });
+    await studio.waitFor({ timeout: 30000 });
+    await studio.getByRole('radio', { name: 'Size chart (several sizes)' }).click();
+    const csv = 'Size,Bust,Waist,Hip,Shoulder,Length,Waist length,Armhole,Front neck,Back neck,Sleeve length,Bicep,Sleeve opening,Qty\nS,88,72,94,36,104,39,42,17,6,45,28,22,2\nM,92,78,100,38,105,40,44,18,6,48,30,24,3\nL,100,86,108,40,108,41,46,18,6,50,32,26,1';
+    const path = (await import('node:path')).join(process.cwd(), 'e2e-out', 'sizes.csv');
+    fs.writeFileSync(path, csv);
+    await studio.getByRole('group', { name: 'Size chart' }).locator('input[type=file]').setInputFiles(path);
+    await t.page.waitForTimeout(500);
+    const status = await studio.getByRole('group', { name: 'Size chart' }).innerText();
+    t.check('size chart imported (3 sizes)', /3 sizes imported/.test(status) && (await studio.getByLabel(/^Size name \d$/).count()) === 3, status.slice(0, 200));
+    t.check('pieces drafted for the chart', (await studio.getByRole('img', { name: 'Garment pieces' }).count()) === 1, (await studio.innerText()).slice(0, 300));
+    const [pdf] = await Promise.all([t.page.waitForEvent('download', { timeout: 60000 }), studio.getByRole('button', { name: /Print PDF/ }).click()]);
+    const doc = await PDFDocument.load(fs.readFileSync(await pdf.path()));
+    t.check('each size laid out on its own pages', doc.getPageCount() >= 3, String(doc.getPageCount()));
+    const [cut] = await Promise.all([t.page.waitForEvent('download', { timeout: 60000 }), studio.getByRole('button', { name: /Cutting pattern PDF/ }).click()]);
+    const cdoc = await PDFDocument.load(fs.readFileSync(await cut.path()));
+    t.check('cutting pattern PDF at the roll width', Math.round(cdoc.getPage(0).getSize().width / 72 * 25.4) === 1600, JSON.stringify(cdoc.getPage(0).getSize()));
+    await t.shot('size-chart');
+  },
+});
+
 // Photo Studio face tools: with landmarks given (the real face finder downloads a model), eyes,
 // mouth and shape edits preview on a close-up and apply to the photo as one history step.
 scenarios.push({

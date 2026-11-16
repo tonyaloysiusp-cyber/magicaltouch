@@ -257,7 +257,7 @@ export function coverTemplateSvg(r: BookResult, o: { slug?: number; labels?: boo
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${r2(W)}mm" height="${r2(H)}mm" viewBox="0 0 ${r2(W)} ${r2(H)}">${parts.join('')}</svg>`;
 }
 
-const BIND_LABEL: Record<Binding, string> = { perfect: 'Perfect binding (glued spine)', saddle: 'Saddle stitch (stapled)', hardcover: 'Hardcover (case binding)' };
+const BIND_LABEL: Record<Binding, string> = { perfect: 'Perfect binding (glued spine)', saddle: 'Saddle stitch (stapled)', hardcover: 'Hardcover (case binding)', wire: 'Wire-O binding', spiral: 'Spiral (coil) binding', comb: 'Comb binding' };
 export function specText(s: BookSpec, r: BookResult): string {
   const L: string[] = [];
   L.push('PRINT SPECIFICATION — Magical Touch Design', '');

@@ -4,7 +4,7 @@
 // layout nests them on a roll with bleed, and the markup sheet draws them
 // as labelled line drawings (a simple tech pack).
 
-export interface Piece { id: string; label: string; w: number; h: number; d: string; mirror?: boolean; qty: number; /** Colour / panel role when the id doesn't say it (drafted garments). */ role?: 'body' | 'sleeve' | 'trim' }
+export interface Piece { id: string; label: string; w: number; h: number; d: string; mirror?: boolean; qty: number; /** Colour / panel role when the id doesn't say it (drafted garments). */ role?: 'body' | 'sleeve' | 'trim'; /** Pattern annotations (drafted pieces): grain direction, notch points on the stitch line, cut on the fold. */ grain?: 'vertical' | 'bias'; notches?: [number, number][]; fold?: boolean; /** Border on every edge (mm), in the trim colour. */ border?: number }
 export interface Product { id: string; label: string; pieces: Piece[]; note: string }
 
 export const PRODUCTS: Product[] = [
@@ -68,8 +68,8 @@ export const PRODUCTS: Product[] = [
 ];
 
 export const SIZES: { id: string; label: string; k: number }[] = [
-  { id: 'kids', label: 'Kids (8–10)', k: 0.78 }, { id: 'xs', label: 'XS', k: 0.9 }, { id: 's', label: 'S', k: 0.95 }, { id: 'm', label: 'M', k: 1 },
-  { id: 'l', label: 'L', k: 1.05 }, { id: 'xl', label: 'XL', k: 1.1 }, { id: '2xl', label: '2XL', k: 1.16 }, { id: '3xl', label: '3XL', k: 1.22 },
+  { id: 'kids', label: 'Kids (8–10)', k: 0.78 }, { id: 'xxs', label: 'XXS', k: 0.85 }, { id: 'xs', label: 'XS', k: 0.9 }, { id: 's', label: 'S', k: 0.95 }, { id: 'm', label: 'M', k: 1 },
+  { id: 'l', label: 'L', k: 1.05 }, { id: 'xl', label: 'XL', k: 1.1 }, { id: '2xl', label: 'XXL (2XL)', k: 1.16 }, { id: '3xl', label: 'XXXL (3XL)', k: 1.22 },
 ];
 
 export const ROLLS = [610, 914, 1118, 1600, 1620];

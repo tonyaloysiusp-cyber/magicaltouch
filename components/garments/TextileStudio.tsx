@@ -17,13 +17,14 @@ import { boardLayout, artFonts, type ArtEl } from '@/lib/textile/art';
 import { ensureFonts } from '@/lib/textile/fonts';
 import { measureGarment } from '@/lib/textile/measure';
 import {
-  CHUDIDAR_FIELDS, CHUDIDAR_STYLE_DEFAULTS, DUPATTA_FIELDS, DUPATTA_PRESETS, FABRIC_FIELDS, KURTA_FIELDS, KURTA_STYLE_DEFAULTS,
-  conflicts, draftChudidar, draftKurta, draftRect, missing, outOfRange, type Field, type GarmentType, type Measures, type NeckStyle, type SleeveStyle,
+  CHUDIDAR_FIELDS, CHUDIDAR_STYLE_DEFAULTS, DUPATTA_FIELDS, DUPATTA_PRESETS, DUPATTA_STYLE_DEFAULTS, FABRIC_FIELDS, KURTA_FIELDS, KURTA_STYLE_DEFAULTS, TEE_FIELDS, TEE_STYLE_DEFAULTS,
+  conflicts, draftFor, missing, outOfRange, type Field, type GarmentType, type Measures, type NeckStyle, type SleeveStyle,
 } from '@/lib/textile/draft';
 import { listAssets } from '@/lib/assets/library';
 import { openToolFile, saveToolProject, takeToolHandoff, TOOL_FILE_ACCEPT } from '@/lib/mtd/toolProject';
 import { PrintStudio } from './PrintStudio';
 import { EmbroideryStudio, type EmbroideryDesign } from './EmbroideryStudio';
+import { SizeChart } from './SizeChart';
 import type { Asset } from '@/lib/assets/library';
 
 export interface TextileProject {
@@ -42,12 +43,19 @@ export interface TextileProject {
   bleed: number;
   textMode: 'outline' | 'live';
   embroidery?: EmbroideryDesign | null;
+  /** Made-to-measure T-shirt: polo collar and placket. */
+  teePolo?: boolean;
+  /** Size chart per garment: several sizes, each drafted from its own row (real grading, no scaling). */
+  chart?: Partial<Record<GarmentType, { name: string; qty: number; m: Measures }[]>>;
+  useChart?: Partial<Record<GarmentType, boolean>>;
+  /** Seam allowance (mm) for the cutting pattern. */
+  seam?: number;
 }
 
 export const NEW_PROJECT: TextileProject = {
   name: 'My textile design', type: 'kurta', tshirtNeck: 'round', sleeves: 'short', neck: 'round', sleeve: 'elbow',
   measures: {}, colours: { body: '#F5E6D3', sleeve: '#F5E6D3', trim: '#7A1F3D' }, art: [], sizeQty: { m: 1 }, qty: 1,
-  rollW: 1600, bleed: 10, textMode: 'outline', embroidery: null,
+  rollW: 1600, bleed: 10, textMode: 'outline', embroidery: null, teePolo: false, chart: {}, useChart: {}, seam: 10,
 };
 
 const GARMENTS: { id: GarmentType; label: string; hint: string }[] = [
@@ -55,11 +63,13 @@ const GARMENTS: { id: GarmentType; label: string; hint: string }[] = [
   { id: 'polo', label: 'Polo', hint: 'Collar and placket · standard sizes' },
   { id: 'kurta', label: 'Kurta / kameez', hint: 'Drafted from your measurements' },
   { id: 'chudidar', label: 'Chudidar', hint: 'Drafted from your measurements' },
+  { id: 'tee', label: 'T-shirt / polo · made to measure', hint: 'Drafted from your measurements or size chart' },
   { id: 'dupatta', label: 'Dupatta / stole', hint: 'Any width and length' },
   { id: 'fabric', label: 'Fabric length', hint: 'Running fabric, borders, yardage' },
 ];
-const FIELDS: Partial<Record<GarmentType, Field[]>> = { kurta: KURTA_FIELDS, chudidar: CHUDIDAR_FIELDS, dupatta: DUPATTA_FIELDS, fabric: FABRIC_FIELDS };
-const STYLE_DEFAULTS: Partial<Record<GarmentType, Record<string, number>>> = { kurta: KURTA_STYLE_DEFAULTS, chudidar: CHUDIDAR_STYLE_DEFAULTS };
+const FIELDS: Partial<Record<GarmentType, Field[]>> = { kurta: KURTA_FIELDS, chudidar: CHUDIDAR_FIELDS, tee: TEE_FIELDS, dupatta: DUPATTA_FIELDS, fabric: FABRIC_FIELDS };
+const STYLE_DEFAULTS: Partial<Record<GarmentType, Record<string, number>>> = { kurta: KURTA_STYLE_DEFAULTS, chudidar: CHUDIDAR_STYLE_DEFAULTS, tee: TEE_STYLE_DEFAULTS, dupatta: DUPATTA_STYLE_DEFAULTS };
+const CHARTABLE = (t: GarmentType) => t === 'kurta' || t === 'chudidar' || t === 'tee';
 const DRAFT_KEY = 'mt:textile-studio';
 const MEASURE_KEY = 'mt:textile-measures';
 const standard = (t: GarmentType) => t === 'tshirt' || t === 'polo';
@@ -69,19 +79,42 @@ function save(blob: Blob, name: string) {
   document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
 }
 
-/** Pieces of the project, or the reason they can't be made yet. */
+/** Problems with one set of measurements (empty = it can be drafted). */
+function measureProblems(type: GarmentType, m: Measures, who = ''): string[] {
+  const fields = FIELDS[type]!;
+  const miss = missing(fields, m);
+  if (miss.length) return [`${who}Type ${miss.length === 1 ? 'this measurement' : `these ${miss.length} measurements`}: ${miss.map((f) => f.label).join(', ')}.`];
+  const bad = outOfRange(fields, m);
+  if (bad.length) return bad.map((f) => `${who}${f.label}: ${m[f.key]} cm looks wrong (expected ${f.min}–${f.max} cm). Check the unit.`);
+  return conflicts(type, m).map((c) => who + c);
+}
+const opts = (p: TextileProject) => ({ neck: p.neck, sleeve: p.sleeve, polo: !!p.teePolo, teeSleeve: p.sleeves });
+export const chartOn = (p: TextileProject) => CHARTABLE(p.type) && !!p.useChart?.[p.type];
+
+/** Every size to produce: its name, its own pieces and how many garments. */
+export function projectSets(p: TextileProject): { sets: { size: string; product: Product; qty: number }[]; problems: string[] } {
+  if (standard(p.type)) return { sets: [], problems: [] };
+  if (chartOn(p)) {
+    const rows = p.chart?.[p.type] || [];
+    if (!rows.length) return { sets: [], problems: ['Add at least one size to the size chart.'] };
+    const problems = rows.flatMap((r) => measureProblems(p.type, r.m, `Size ${r.name || '?'}: `));
+    const names = rows.map((r) => r.name.trim().toLowerCase());
+    if (names.some((n) => !n)) problems.push('Every size in the chart needs a name.');
+    if (new Set(names).size !== names.length) problems.push('Two sizes in the chart have the same name.');
+    if (problems.length) return { sets: [], problems };
+    return { sets: rows.map((r) => ({ size: r.name.trim(), product: draftFor(p.type, r.m, opts(p)), qty: Math.max(0, Math.floor(r.qty || 0)) })), problems: [] };
+  }
+  const m = p.measures[p.type] || {};
+  const problems = measureProblems(p.type, m);
+  if (problems.length) return { sets: [], problems };
+  return { sets: [{ size: 'Custom', product: draftFor(p.type, m, opts(p)), qty: Math.max(1, Math.floor(p.qty || 1)) }], problems: [] };
+}
+
+/** Pieces of the project (the first size), or the reason they can't be made yet. */
 export function projectProduct(p: TextileProject): { product: Product | null; problems: string[] } {
   if (standard(p.type)) return { product: kitProduct(projectKit(p, null)), problems: [] };
-  const fields = FIELDS[p.type]!, m = p.measures[p.type] || {};
-  const miss = missing(fields, m);
-  if (miss.length) return { product: null, problems: [`Type ${miss.length === 1 ? 'this measurement' : `these ${miss.length} measurements`}: ${miss.map((f) => f.label).join(', ')}.`] };
-  const bad = outOfRange(fields, m);
-  if (bad.length) return { product: null, problems: bad.map((f) => `${f.label}: ${m[f.key]} cm looks wrong (expected ${f.min}–${f.max} cm). Check the unit.`) };
-  const c = conflicts(p.type, m);
-  if (c.length) return { product: null, problems: c };
-  if (p.type === 'kurta') return { product: draftKurta(m, p.neck, p.sleeve), problems: [] };
-  if (p.type === 'chudidar') return { product: draftChudidar(m), problems: [] };
-  return { product: draftRect(p.type as 'dupatta' | 'fabric', m), problems: [] };
+  const { sets, problems } = projectSets(p);
+  return { product: sets[0]?.product || null, problems };
 }
 
 export function projectKit(p: TextileProject, product: Product | null): KitDesign {
@@ -187,11 +220,32 @@ export function TextileStudio({ mode = 'pro', pick, embedded, onForeign, openReq
 
   const ready = async () => { if (p.art.length) await ensureFonts(artFonts(p.art)); };
   const fonts = { loadFont: p.textMode === 'live' ? async (family: string, weight: number, italic: boolean) => { try { const { fontBytes } = await import('@/lib/fontOutline'); return await fontBytes(family, weight, italic); } catch { return null; } } : undefined };
-  const sheets = () => rosterSheets(kit, DEFAULT_PATTERN, players, {}, { rollW: p.rollW, bleed: p.bleed, cutLines: true, group: 'fabric', marks: true, textMode: p.textMode });
+  // Every size is laid out with its own pieces (never a scaled copy of another size); pages per size, labelled.
+  const sheets = () => {
+    const o = { rollW: p.rollW, bleed: p.bleed, cutLines: true, group: 'fabric' as const, marks: true, textMode: p.textMode };
+    if (standard(p.type)) return rosterSheets(kit, DEFAULT_PATTERN, players, {}, o);
+    const parts = projectSets(p).sets.filter((st) => st.qty > 0).map((st) => rosterSheets({ ...kit, customProduct: st.product }, DEFAULT_PATTERN, Array.from({ length: st.qty }, () => ({ name: '', number: '', size: st.size })), {}, o));
+    const pages = parts.flatMap((r) => r.pages);
+    const totalMm = parts.reduce((a, r) => a + r.totalMm, 0);
+    return { pages, totalMm, overlaps: parts.reduce((a, r) => a + (r.overlaps || 0), 0), tooWide: parts.reduce((a, r) => a + (r.tooWide || 0), 0), utilisation: parts.length ? parts.reduce((a, r) => a + r.utilisation * r.totalMm, 0) / Math.max(1, totalMm) : 0 } as ReturnType<typeof rosterSheets>;
+  };
+  const garmentCount = standard(p.type) ? players.length : projectSets(p).sets.reduce((a, st) => a + st.qty, 0);
+  const dlCutPattern = async () => {
+    const { sets } = projectSets(p);
+    if (!sets.length) { flash(problems[0] || 'Finish the garment set-up first.'); return; }
+    setBusy('cut');
+    try {
+      const [{ cuttingPatternPages }, { svgToPdfBlob }] = await Promise.all([import('@/lib/textile/cutPattern'), import('@/lib/svgToPdf')]);
+      const pages = cuttingPatternPages(sets.map((st) => ({ ...st, qty: Math.max(1, st.qty) })), { rollW: p.rollW, seam: p.seam ?? 10, project: p.name });
+      save(await svgToPdfBlob('', 0, 0, pages.map((pg) => ({ svg: pg.svg, widthMm: pg.width, heightMm: pg.height }))), `${safeFile(p.name)}-cutting-pattern.pdf`);
+      flash(`Cutting pattern ready: ${sets.length} size${sets.length > 1 ? 's' : ''} on ${pages.length} page${pages.length > 1 ? 's' : ''}, seam allowance ${p.seam ?? 10} mm.`);
+    } catch { flash('The cutting pattern could not be made.'); }
+    setBusy(null);
+  };
 
   const dlPrintPdf = async () => {
     if (!product) { flash(problems[0] || 'Finish the garment set-up first.'); return; }
-    if (!players.length) { flash('Set how many garments to print.'); return; }
+    if (!garmentCount) { flash('Set how many garments to print.'); return; }
     setBusy('pdf');
     try {
       await ready();
@@ -200,7 +254,7 @@ export function TextileStudio({ mode = 'pro', pick, embedded, onForeign, openReq
       if (r.overlaps) { flash(`${r.overlaps} pieces overlap — not exported. Try a wider roll.`); setBusy(null); return; }
       const { svgToPdfBlob } = await import('@/lib/svgToPdf');
       save(await svgToPdfBlob('', 0, 0, r.pages.map((pg) => ({ svg: pg.svg, widthMm: pg.width, heightMm: pg.height })), fonts), `${safeFile(p.name)}-print.pdf`);
-      flash(`Print PDF ready: ${players.length} garment${players.length > 1 ? 's' : ''} on ${r.pages.length} page${r.pages.length > 1 ? 's' : ''}, ${(r.totalMm / 1000).toFixed(2)} m of ${p.rollW} mm fabric, ${Math.round(r.utilisation * 100)} % used.`);
+      flash(`Print PDF ready: ${garmentCount} garment${garmentCount > 1 ? 's' : ''} on ${r.pages.length} page${r.pages.length > 1 ? 's' : ''}, ${(r.totalMm / 1000).toFixed(2)} m of ${p.rollW} mm fabric, ${Math.round(r.utilisation * 100)} % used.`);
     } catch { flash('The PDF could not be made in this browser.'); }
     setBusy(null);
   };
@@ -228,16 +282,19 @@ export function TextileStudio({ mode = 'pro', pick, embedded, onForeign, openReq
       const [{ techPackPages }, { svgToPdfBlob }] = await Promise.all([import('@/lib/textile/techPack'), import('@/lib/svgToPdf')]);
       const r = sheets();
       const allFields = fields || [];
+      const rows = chartOn(p) ? (p.chart?.[p.type] || []) : null;
       const measurements = standard(p.type)
         ? pieceMeasures.map((x) => ({ label: `${x.label} — standard template, size M (unverified)`, value: (x.mm / 10).toFixed(1) }))
-        : allFields.map((f) => ({ label: f.label, value: String(m[f.key] ?? STYLE_DEFAULTS[p.type]?.[f.key] ?? '—'), style: f.style }));
+        : rows
+          ? [{ label: 'Size', value: rows.map((r) => r.name).join(' / ') }, ...allFields.map((f) => ({ label: f.label, value: rows.map((r) => String(r.m[f.key] ?? STYLE_DEFAULTS[p.type]?.[f.key] ?? '—')).join(' / '), style: f.style }))]
+          : allFields.map((f) => ({ label: f.label, value: String(m[f.key] ?? STYLE_DEFAULTS[p.type]?.[f.key] ?? '—'), style: f.style }));
       const pages = techPackPages({
         project: p.name, garment: garmentLabel, date: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }),
         sketch: flat, product,
         measurements,
         colours: [{ role: 'Body', hex: p.colours.body }, ...(product.pieces.some((x) => x.id.startsWith('sleeve')) ? [{ role: 'Sleeves', hex: p.colours.sleeve }] : []), { role: 'Trim / collar / casing', hex: p.colours.trim }],
         artwork: p.art.filter((e: any) => !e.hidden).map((e: any) => ({ name: e.name || e.kind, detail: e.kind === 'text' ? `${e.font} ${e.weight} · ${typeof e.fill === 'string' ? e.fill : 'gradient / pattern'}` : e.kind })),
-        order: standard(p.type) ? SIZES.filter((s) => (p.sizeQty[s.id] || 0) > 0).map((s) => ({ label: `Size ${s.label}`, qty: p.sizeQty[s.id] })) : [{ label: 'Made to measure', qty: Math.max(1, p.qty) }],
+        order: standard(p.type) ? SIZES.filter((s) => (p.sizeQty[s.id] || 0) > 0).map((s) => ({ label: `Size ${s.label}`, qty: p.sizeQty[s.id] })) : projectSets(p).sets.map((st) => ({ label: st.size === 'Custom' ? 'Made to measure' : `Size ${st.size} (your size chart)`, qty: st.qty })),
         print: { rollW: p.rollW, bleed: p.bleed, lengthMm: r.totalMm, pages: r.pages.length, textMode: p.textMode === 'live' ? 'live text (fonts embedded)' : 'outlines' },
         embroidery: p.embroidery?.summary || null,
         notes: [
@@ -343,9 +400,21 @@ export function TextileStudio({ mode = 'pro', pick, embedded, onForeign, openReq
               <div className="flex flex-wrap items-center gap-2"><span className="text-[12.5px] text-mt-muted w-16">Sleeves</span>{(['sleeveless', 'cap', 'short', 'elbow', 'three-quarter', 'full'] as SleeveStyle[]).map((n) => <button key={n} type="button" className={chip(p.sleeve === n)} onClick={() => set({ sleeve: n })}>{{ sleeveless: 'Sleeveless', cap: 'Cap', short: 'Short', elbow: 'Elbow', 'three-quarter': '¾', full: 'Full' }[n]}</button>)}</div>
             </>}
             {p.type === 'dupatta' && <div className="flex flex-wrap gap-2">{DUPATTA_PRESETS.map((d) => <button key={d.label} type="button" className={chip(m.width === d.width && m.length === d.length)} onClick={() => set({ measures: { ...p.measures, dupatta: { width: d.width, length: d.length } } })}>{d.label}</button>)}</div>}
-            {fields && (
+            {p.type === 'tee' && <>
+              <div className="flex flex-wrap items-center gap-2"><span className="text-[12.5px] text-mt-muted w-16">Style</span>{([[false, 'T-shirt (neck rib)'], [true, 'Polo (collar + placket)']] as const).map(([v, l]) => <button key={l} type="button" className={chip(!!p.teePolo === v)} onClick={() => set({ teePolo: v })}>{l}</button>)}</div>
+              <div className="flex flex-wrap items-center gap-2"><span className="text-[12.5px] text-mt-muted w-16">Sleeves</span>{(['short', 'long'] as const).map((n) => <button key={n} type="button" className={chip(p.sleeves === n)} onClick={() => set({ sleeves: n })}>{n === 'short' ? 'Short' : 'Long'}</button>)}</div>
+            </>}
+            {CHARTABLE(p.type) && (
+              <div role="radiogroup" aria-label="Sizing" className="flex flex-wrap items-center gap-2">
+                <span className="text-[12.5px] text-mt-muted w-16">Sizing</span>
+                <button type="button" role="radio" aria-checked={!chartOn(p)} className={chip(!chartOn(p))} onClick={() => set({ useChart: { ...p.useChart, [p.type]: false } })}>One customer</button>
+                <button type="button" role="radio" aria-checked={chartOn(p)} className={chip(chartOn(p))} onClick={() => { const cur = p.chart?.[p.type]; set({ useChart: { ...p.useChart, [p.type]: true }, chart: { ...p.chart, [p.type]: cur && cur.length ? cur : [{ name: 'M', qty: 1, m: { ...(p.measures[p.type] || {}) } }] } }); }}>Size chart (several sizes)</button>
+              </div>
+            )}
+            {fields && chartOn(p) && <SizeChart fields={fields} rows={p.chart?.[p.type] || []} onChange={(rows) => set({ chart: { ...p.chart, [p.type]: rows } })} unit={units} styleDefaults={STYLE_DEFAULTS[p.type] || {}} pro={pro} />}
+            {fields && !chartOn(p) && (
               <div role="group" aria-label="Measurements">
-                <p className="text-[12.5px] text-mt-muted">{p.type === 'kurta' || p.type === 'chudidar' ? `Measurements in ${units === 'in' ? 'inches' : units} — taken on the person, saved on this device only.` : `Size in ${units === 'in' ? 'inches' : units}.`}</p>
+                <p className="text-[12.5px] text-mt-muted">{p.type === 'kurta' || p.type === 'chudidar' || p.type === 'tee' ? `Measurements in ${units === 'in' ? 'inches' : units} — taken on the person, saved on this device only.` : `Size in ${units === 'in' ? 'inches' : units}.`}</p>
                 <div className="mt-1 grid grid-cols-2 gap-x-3 gap-y-2">
                   {fields.filter((f) => pro || !f.style).map((f) => (
                     <label key={f.key} className={lbl}>{f.label}{f.style && <span className="text-mt-faint"> · style</span>}
@@ -355,7 +424,7 @@ export function TextileStudio({ mode = 'pro', pick, embedded, onForeign, openReq
                 </div>
               </div>
             )}
-            {!standard(p.type) && <label className={lbl}>How many garments<input type="number" min={1} value={p.qty} onChange={(e) => set({ qty: Math.max(1, Math.floor(Number(e.target.value) || 1)) })} aria-label="Quantity" className={`${field} max-w-[140px]`} /></label>}
+            {!standard(p.type) && !chartOn(p) && <label className={lbl}>How many garments<input type="number" min={1} value={p.qty} onChange={(e) => set({ qty: Math.max(1, Math.floor(Number(e.target.value) || 1)) })} aria-label="Quantity" className={`${field} max-w-[140px]`} /></label>}
             <div className="flex flex-wrap items-end gap-3">
               {(['body', 'sleeve', 'trim'] as const).map((k) => <label key={k} className={lbl}>{{ body: 'Body colour', sleeve: 'Sleeve colour', trim: 'Trim / collar' }[k]}<input type="color" value={p.colours[k]} onChange={(e) => set({ colours: { ...p.colours, [k]: e.target.value } })} aria-label={{ body: 'Body colour', sleeve: 'Sleeve colour', trim: 'Trim colour' }[k]} className="mt-1 block h-9 w-14 rounded-lg border border-mt-border" /></label>)}
             </div>
@@ -403,6 +472,7 @@ export function TextileStudio({ mode = 'pro', pick, embedded, onForeign, openReq
           </label>
           <label className={lbl}>Width (mm)<input type="number" value={p.rollW} min={300} max={3300} onChange={(e) => set({ rollW: Math.max(300, Number(e.target.value) || 300) })} aria-label="Roll width in mm" className={`${field} w-28`} /></label>
           <label className={lbl}>Bleed (mm)<input type="number" value={p.bleed} min={0} max={50} onChange={(e) => set({ bleed: Math.max(0, Math.min(50, Number(e.target.value) || 0)) })} aria-label="Bleed" className={`${field} w-24`} /></label>
+          {!standard(p.type) && <label className={lbl}>Seam allowance (mm)<input type="number" value={p.seam ?? 10} min={0} max={40} onChange={(e) => set({ seam: Math.max(0, Math.min(40, Number(e.target.value) || 0)) })} aria-label="Seam allowance" className={`${field} w-24`} /></label>}
           <label className={lbl}>Text
             <select value={p.textMode} onChange={(e) => set({ textMode: e.target.value as any })} aria-label="Text in print files" className={`${field} w-44`}><option value="outline">Outlines (safest)</option><option value="live">Live text (editable)</option></select>
           </label>
@@ -412,6 +482,7 @@ export function TextileStudio({ mode = 'pro', pick, embedded, onForeign, openReq
           <button type="button" className={btn} disabled={!product || !!busy} onClick={dlPrintSvg}><Download size={15} /> {busy === 'svg' ? 'Making…' : 'Print SVG'}</button>
           <button type="button" className={btn} disabled={!product || !!busy} onClick={dlTechPack}><Scissors size={15} /> {busy === 'tech' ? 'Making…' : 'Tech pack PDF'}</button>
           <button type="button" className={btn} disabled={!product || !!busy} onClick={dlSketch}><Download size={15} /> Flat sketch PNG</button>
+          {!standard(p.type) && <button type="button" className={btn} disabled={!product || !!busy} onClick={dlCutPattern}><Scissors size={15} /> {busy === 'cut' ? 'Making…' : 'Cutting pattern PDF'}</button>}
         </div>
         <p className="mt-2 text-[11.5px] text-mt-muted">Print files: every piece at real size with {p.bleed} mm bleed, magenta cut lines and registration marks, nested on the roll to save fabric. Branding appears only on the tech pack, never in the artwork.</p>
       </section>

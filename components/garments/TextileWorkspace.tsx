@@ -28,7 +28,8 @@ const PRODUCTS: Product[] = [
   { id: 'tshirt', label: 'T-shirt', hint: 'Round or V-neck', family: 'team' },
   { id: 'kurta', label: 'Kurta / kameez', hint: 'From your measurements', family: 'made' },
   { id: 'chudidar', label: 'Chudidar', hint: 'From your measurements', family: 'made' },
-  { id: 'dupatta', label: 'Dupatta / stole', hint: 'Any width and length', family: 'made' },
+  { id: 'tee', label: 'T-shirt / polo · to measure', hint: 'Your measurements or size chart', family: 'made' },
+  { id: 'dupatta', label: 'Dupatta / stole', hint: 'Any width, length and border', family: 'made' },
   { id: 'fabric', label: 'Fabric panel', hint: 'Running fabric, borders, custom products', family: 'made' },
 ];
 

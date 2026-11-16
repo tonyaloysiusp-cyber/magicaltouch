@@ -11,7 +11,7 @@
 
 import type { Piece, Product } from '../garments.ts';
 
-export type GarmentType = 'tshirt' | 'polo' | 'kurta' | 'chudidar' | 'dupatta' | 'fabric';
+export type GarmentType = 'tshirt' | 'polo' | 'kurta' | 'chudidar' | 'dupatta' | 'fabric' | 'tee';
 export type NeckStyle = 'round' | 'v' | 'boat' | 'square';
 export type SleeveStyle = 'sleeveless' | 'cap' | 'short' | 'elbow' | 'three-quarter' | 'full';
 
@@ -56,10 +56,31 @@ export const CHUDIDAR_FIELDS: Field[] = [
 ];
 export const CHUDIDAR_STYLE_DEFAULTS: Record<string, number> = { gathers: 30, ease: 6, casing: 4 };
 
+export const TEE_FIELDS: Field[] = [
+  { key: 'chest', label: 'Chest (round)', min: 50, max: 200 },
+  { key: 'length', label: 'Body length (shoulder to hem)', min: 35, max: 110 },
+  { key: 'shoulder', label: 'Shoulder (point to point)', min: 25, max: 70 },
+  { key: 'armhole', label: 'Armhole (round)', min: 25, max: 70 },
+  { key: 'sleeveLength', label: 'Sleeve length', min: 5, max: 90 },
+  { key: 'bicep', label: 'Upper arm (round)', min: 15, max: 70 },
+  { key: 'sleeveOpening', label: 'Sleeve opening (round)', min: 12, max: 70 },
+  { key: 'hem', label: 'Hem (round)', min: 50, max: 220 },
+  { key: 'neckWidth', label: 'Neck opening width', min: 8, max: 30 },
+  { key: 'frontNeck', label: 'Front neck depth', min: 3, max: 30 },
+  { key: 'backNeck', label: 'Back neck depth', min: 1, max: 10 },
+  { key: 'ease', label: 'Ease added to chest and hem', style: true, min: 0, max: 30 },
+  { key: 'shoulderDrop', label: 'Shoulder drop', style: true, min: 1, max: 8 },
+  { key: 'collarHeight', label: 'Polo collar height (finished)', style: true, min: 2, max: 10 },
+  { key: 'placket', label: 'Polo placket length', style: true, min: 8, max: 25 },
+];
+export const TEE_STYLE_DEFAULTS: Record<string, number> = { ease: 8, shoulderDrop: 4, collarHeight: 7, placket: 15 };
+
 export const DUPATTA_FIELDS: Field[] = [
   { key: 'width', label: 'Width', min: 20, max: 160 },
   { key: 'length', label: 'Length', min: 50, max: 400 },
+  { key: 'border', label: 'Border width (each edge, 0 = none)', style: true, min: 0, max: 40 },
 ];
+export const DUPATTA_STYLE_DEFAULTS: Record<string, number> = { border: 0 };
 export const FABRIC_FIELDS: Field[] = [
   { key: 'width', label: 'Fabric width (printable)', min: 20, max: 330 },
   { key: 'length', label: 'Length', min: 20, max: 5000 },
@@ -132,7 +153,8 @@ function kurtaBody(m: Measures, neck: NeckStyle, back: boolean): Piece {
     'Z',
   ].join('');
   const d = neckline(style, cx, nw, nd) + right + left;
-  return { id: back ? 'back' : 'front', label: back ? 'Back' : 'Front', w: r1(W), h: r1(len), qty: 1, d };
+  const notches: [number, number][] = [[r1(cx - wq), r1(wl)], [r1(cx + wq), r1(wl)], [r1(cx - hq), r1(hl)], [r1(cx + hq), r1(hl)]];
+  return { id: back ? 'back' : 'front', label: back ? 'Back' : 'Front', w: r1(W), h: r1(len), qty: 1, d, grain: 'vertical', notches };
 }
 
 const SLEEVE_FRACTION: Record<SleeveStyle, number> = { sleeveless: 0, cap: 0.18, short: 0.35, elbow: 0.55, 'three-quarter': 0.75, full: 1 };
@@ -148,14 +170,14 @@ function kurtaSleeve(m: Measures, style: SleeveStyle): Piece[] {
   const open = Math.min(bw, Math.max(g('sleeveOpening'), style === 'full' || style === 'three-quarter' ? 0 : bw * 0.85));
   const cx = bw / 2;
   const d = `M${P(0, cap)}C${P(bw * 0.18, cap * 0.35)} ${P(cx - bw * 0.22, 0)} ${P(cx, 0)}C${P(cx + bw * 0.22, 0)} ${P(bw * 0.82, cap * 0.35)} ${P(bw, cap)}L${P(cx + open / 2, len)}L${P(cx - open / 2, len)}Z`;
-  const base = { w: r1(bw), h: r1(len), qty: 1, d, role: 'sleeve' as const };
+  const base = { w: r1(bw), h: r1(len), qty: 1, d, role: 'sleeve' as const, grain: 'vertical' as const, notches: [[r1(cx), 0]] as [number, number][] };
   return [{ id: 'sleeve-l', label: 'Sleeve left', ...base }, { id: 'sleeve-r', label: 'Sleeve right', mirror: true, ...base }];
 }
 
 /** Neck facing (bias strip) long enough for the neckline, 4 cm wide. */
 function facing(len: number): Piece {
   const w = Math.max(200, Math.round(len));
-  return { id: 'facing', label: 'Neck facing (bias)', w, h: 40, qty: 1, d: `M0 0H${w}V40H0Z`, role: 'trim' };
+  return { id: 'facing', label: 'Neck facing (bias)', w, h: 40, qty: 1, d: `M0 0H${w}V40H0Z`, role: 'trim', grain: 'bias' };
 }
 
 export function draftKurta(m: Measures, neck: NeckStyle, sleeve: SleeveStyle): Product {
@@ -187,7 +209,7 @@ export function draftChudidar(m: Measures): Product {
     `L${P(cx - half(ankle), len)}L${P(cx - half(calf), calfY)}L${P(cx - half(knee), kneeY)}L${P(cx - half(thigh), crotch)}`,
     `C${P(cx - half(thigh) - 8, crotch * 0.85)} ${P(cx - half(top), crotch * 0.6)} ${P(cx - half(top), 0)}Z`,
   ].join('');
-  const leg = { w: r1(W), h: r1(len), qty: 1, d, role: 'body' as const };
+  const leg = { w: r1(W), h: r1(len), qty: 1, d, role: 'body' as const, grain: 'bias' as const, notches: [[r1(cx - knee / 2), r1(kneeY)], [r1(cx + knee / 2), r1(kneeY)], [r1(cx - thigh / 2), r1(crotch)], [r1(cx + thigh / 2), r1(crotch)]] as [number, number][] };
   const cas = g('casing') * 2 + 15;
   const bandW = Math.round(g('hip') + ease + 40);
   return {
@@ -196,7 +218,7 @@ export function draftChudidar(m: Measures): Product {
     pieces: [
       { id: 'leg-l', label: 'Leg left (bias)', ...leg },
       { id: 'leg-r', label: 'Leg right (bias)', mirror: true, ...leg },
-      { id: 'casing', label: 'Waist casing', w: bandW, h: r1(cas), qty: 1, d: `M0 0H${bandW}V${r1(cas)}H0Z`, role: 'trim' },
+      { id: 'casing', label: 'Waist casing', w: bandW, h: r1(cas), qty: 1, d: `M0 0H${bandW}V${r1(cas)}H0Z`, role: 'trim', grain: 'vertical' },
     ],
   };
 }
@@ -204,11 +226,44 @@ export function draftChudidar(m: Measures): Product {
 export function draftRect(type: 'dupatta' | 'fabric', m: Measures): Product {
   const w = Math.round((m.width || 0) * 10), h = Math.round((m.length || 0) * 10);
   const label = type === 'dupatta' ? 'Dupatta' : 'Fabric length';
+  const border = type === 'dupatta' ? Math.max(0, Math.round((m.border ?? 0) * 10)) : 0;
   return {
-    id: type, label: `${label} ${r1(w / 10)} × ${r1(h / 10)} cm`,
-    note: type === 'dupatta' ? 'Single piece; hem or tassels are finishing, not printed.' : 'Printed running fabric at the width and length you set.',
-    pieces: [{ id: type, label, w, h, qty: 1, d: `M0 0H${w}V${h}H0Z`, role: 'body' }],
+    id: type, label: `${label} ${r1(w / 10)} × ${r1(h / 10)} cm${border ? `, ${border / 10} cm border` : ''}`,
+    note: type === 'dupatta' ? `Single piece${border ? ` with a ${border / 10} cm border on every edge (the trim colour)` : ''}; hem or tassels are finishing, not printed.` : 'Printed running fabric at the width and length you set.',
+    pieces: [{ id: type, label, w, h, qty: 1, d: `M0 0H${w}V${h}H0Z`, role: 'body', grain: 'vertical', ...(border && border * 2 < Math.min(w, h) ? { border } : {}) }],
   };
+}
+
+/** T-shirt or polo drafted from the customer's own measurements (one size). */
+export function draftTee(m: Measures, polo: boolean, sleeve: 'short' | 'long'): Product {
+  const v = (k: string) => m[k] ?? TEE_STYLE_DEFAULTS[k] ?? 0;
+  const armDepth = v('armhole') / 2;
+  // The kurta block with chest = bust and the hem as waist and hip (a straight side seam).
+  const km: Measures = {
+    bust: v('chest'), waist: v('hem'), hip: v('hem'), shoulder: v('shoulder'), length: v('length'),
+    waistLength: Math.min(v('length') - 3, (armDepth + v('length')) / 2), armhole: v('armhole'), frontNeck: polo ? Math.min(v('frontNeck'), 4) : v('frontNeck'), backNeck: v('backNeck'),
+    neckWidth: v('neckWidth'), ease: v('ease'), shoulderDrop: v('shoulderDrop'), hipDepth: 2, flare: 0,
+  };
+  const front = kurtaBody(km, 'round', false), back = kurtaBody(km, 'round', true);
+  const sl = kurtaSleeve({ ...m, sleeveLength: v('sleeveLength'), bicep: v('bicep'), sleeveOpening: v('sleeveOpening'), armhole: v('armhole') }, sleeve === 'long' ? 'full' : 'short');
+  const neckRound = Math.round((Math.PI * (v('neckWidth') / 2) + v('frontNeck') + v('backNeck')) * 10 + 20);
+  const pieces: Piece[] = [front, back, ...sl];
+  if (polo) {
+    const ch = v('collarHeight') * 10 * 2 + 15, pl = v('placket') * 10;
+    pieces.push({ id: 'collar', label: 'Collar (fold in half)', w: neckRound, h: r1(ch), qty: 1, d: `M0 0H${neckRound}V${r1(ch)}H0Z`, role: 'trim', grain: 'vertical', fold: true });
+    pieces.push({ id: 'placket', label: 'Placket (cut 2)', w: 70, h: r1(pl + 20), qty: 2, d: `M0 0H70V${r1(pl + 20)}H0Z`, role: 'trim', grain: 'vertical' });
+  } else {
+    pieces.push({ id: 'collar', label: 'Neck rib', w: Math.round(neckRound * 0.85), h: 40, qty: 1, d: `M0 0H${Math.round(neckRound * 0.85)}V40H0Z`, role: 'trim', grain: 'vertical', fold: true });
+  }
+  return { id: polo ? 'polo-mtm' : 'tee', label: `${polo ? 'Polo' : 'T-shirt'} (${sleeve} sleeves) — drafted`, note: 'Drafted from your measurements. Make a test garment first.', pieces };
+}
+
+/** Pieces for one set of measurements (one size). */
+export function draftFor(type: GarmentType, m: Measures, o: { neck: NeckStyle; sleeve: SleeveStyle; polo?: boolean; teeSleeve?: 'short' | 'long' }): Product {
+  if (type === 'kurta') return draftKurta(m, o.neck, o.sleeve);
+  if (type === 'chudidar') return draftChudidar(m);
+  if (type === 'tee') return draftTee(m, !!o.polo, o.teeSleeve || 'short');
+  return draftRect(type as 'dupatta' | 'fabric', m);
 }
 
 /** Stored ready-to-use size presets for rectangles (common market sizes, user picks them on purpose). */

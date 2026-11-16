@@ -111,7 +111,7 @@ export interface Player { name: string; number: string; size: string; qty?: numb
 export interface CustomSize { label: string; chestCm: number; /** Body length (cm); without it the length grades with the chest. */ lengthCm?: number }
 export interface RosterIssue { row: number; level: 'error' | 'warning'; message: string }
 
-const SIZE_IDS = new Map(SIZES.map((s) => [s.label.toLowerCase().replace(/ .*/, ''), s.id] as [string, string]).concat(SIZES.map((s) => [s.id, s.id] as [string, string])));
+const SIZE_IDS = new Map(SIZES.map((s) => [s.label.toLowerCase().replace(/ .*/, ''), s.id] as [string, string]).concat(SIZES.map((s) => [s.id, s.id] as [string, string]), [['xxl', '2xl'], ['xxxl', '3xl'], ['2xs', 'xxs']] as [string, string][]));
 export const sizeId = (s: string) => SIZE_IDS.get(s.trim().toLowerCase().replace(/ .*/, '')) || null;
 /** The size-M block's flat chest width and body length (cm) for this garment. */
 export function blockMeasure(kit: KitDesign): { chestCm: number; lengthCm: number } {
@@ -120,6 +120,8 @@ export function blockMeasure(kit: KitDesign): { chestCm: number; lengthCm: numbe
 }
 /** A standard size (XS–3XL…) or one of the kit's custom measured sizes. */
 export function sizeInfo(kit: KitDesign | null | undefined, s: string): { id: string; label: string; k: number; ky: number } | null {
+  // Drafted garments carry their own pieces for each size (no scaling).
+  if (kit?.customProduct) return { id: `drafted:${s}`, label: (s || 'M').toUpperCase(), k: 1, ky: 1 };
   const id = sizeId(s || '');
   if (id) {
     const z = SIZES.find((x) => x.id === id)!;
@@ -364,6 +366,8 @@ export function pieceMarkup(piece: Piece, kit: KitDesign, pat: PatternSettings, 
   const w = piece.w;
   const deco: string[] = [];
   const studio = !!kit.studioOnly;
+  // Woven / printed border on every edge (dupatta, stole): the trim colour, running into the bleed.
+  if (piece.border && piece.border > 0) { const bd = piece.border; deco.push(`<path d="M${r2(-b - 2)} ${r2(-by - 2)}H${r2(w + b + 2)}V${r2(piece.h + by + 2)}H${r2(-b - 2)}Z M${bd} ${bd}V${r2(piece.h - bd)}H${r2(w - bd)}V${bd}Z" fill="${kit.collar}" fill-rule="evenodd"/>`); }
   if (r === 'body' && !studio) deco.push(graphicMarkup(kit, w, piece.h, b, piece.id === 'back'));
   if (r === 'sleeve' && kit.cuffs && kit.graphic && kit.graphic !== 'plain') deco.push(`<rect x="${r2(-b - 2)}" y="${r2(piece.h - 34)}" width="${r2(w + 2 * b + 4)}" height="${r2(34 + b + 2)}" fill="${kit.accent || kit.collar}"/><rect x="${r2(-b - 2)}" y="${r2(piece.h - 46)}" width="${r2(w + 2 * b + 4)}" height="7" fill="${kit.accent2 || '#FFFFFF'}"/>`);
   const wantPattern = kit.patternOn === 'all' || (kit.patternOn === 'body' && r === 'body') || (kit.patternOn === 'sleeves' && r === 'sleeve');

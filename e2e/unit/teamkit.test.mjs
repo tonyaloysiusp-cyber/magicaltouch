@@ -12,7 +12,7 @@ test('roster: CSV with header, plain lines, sizes', () => {
   const a = parseRoster('Player name,Back number,Size\nArun,07,S\n"Kumar, R",10,m\nDavid,11,L\nJohn,23,XL');
   assert.equal(a.length, 4);
   assert.deepEqual(a[1], { name: 'Kumar, R', number: '10', size: 'm' });
-  assert.equal(sizeId('xl'), 'xl'); assert.equal(sizeId('Kids'), 'kids'); assert.equal(sizeId('XXL'), null);
+  assert.equal(sizeId('xl'), 'xl'); assert.equal(sizeId('Kids'), 'kids'); assert.equal(sizeId('XXL'), '2xl'); assert.equal(sizeId('XXS'), 'xxs'); assert.equal(sizeId('XXXL'), '3xl'); assert.equal(sizeId('5XL'), null);
   const b = parseRoster('Arun, 7, S');
   assert.deepEqual(b[0], { name: 'Arun', number: '7', size: 'S' });
 });

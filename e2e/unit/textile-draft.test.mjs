@@ -70,3 +70,49 @@ test('tech pack: branded footer, measurements and pieces listed', async () => {
   assert.match(all, /Sleeve left/); assert.match(all, /Bust/); assert.match(all, /1,200 stitches/);
   assert.match(all, /CMYK/);
 });
+
+test('T-shirt / polo drafted from measurements; dupatta border; notches and grain on pieces', () => {
+  const T = { chest: 100, length: 72, shoulder: 44, armhole: 46, sleeveLength: 22, bicep: 34, sleeveOpening: 32, hem: 100, neckWidth: 17, frontNeck: 9, backNeck: 2 };
+  assert.equal(D.missing(D.TEE_FIELDS, T).length, 0);
+  const tee = D.draftTee(T, false, 'short'), polo = D.draftTee(T, true, 'long');
+  assert.deepEqual(tee.pieces.map((p) => p.id), ['front', 'back', 'sleeve-l', 'sleeve-r', 'collar']);
+  assert.deepEqual(polo.pieces.map((p) => p.id), ['front', 'back', 'sleeve-l', 'sleeve-r', 'collar', 'placket']);
+  assert.equal(tee.pieces[0].h, 720);
+  assert.ok(Math.abs(widthAt(tee.pieces[0].d, 230) - (1000 + 80) / 2) < 6, 'chest width = (chest + ease) / 2');
+  assert.ok(tee.pieces[0].notches.length >= 2 && tee.pieces[0].grain === 'vertical');
+  assert.equal(D.draftChudidar({ waist: 72, hip: 98, crotch: 28, thigh: 56, knee: 38, calf: 34, ankle: 24, length: 100, kneeLength: 58 }).pieces[0].grain, 'bias');
+  assert.equal(D.draftRect('dupatta', { width: 90, length: 225, border: 8 }).pieces[0].border, 80);
+});
+
+test('size chart: each size drafted from its own measurements (not scaled)', () => {
+  const S = { ...K, bust: 88, waist: 72, hip: 94 }, L = { ...K, bust: 100, waist: 86, hip: 108, length: 108 };
+  const a = D.draftFor('kurta', S, { neck: 'round', sleeve: 'short' }), b = D.draftFor('kurta', L, { neck: 'round', sleeve: 'short' });
+  const ka = widthAt(b.pieces[0].d, 222) / widthAt(a.pieces[0].d, 222), kl = b.pieces[0].h / a.pieces[0].h;
+  assert.ok(Math.abs(ka - kl) > 0.05, 'width and length grade independently');
+  assert.equal(a.pieces[2].h, b.pieces[2].h, 'same sleeve length stays the same');
+});
+
+test('cutting pattern pages: cut line, grain, notches, labels at real size', async () => {
+  const { cuttingPatternPages } = await import('../../lib/textile/cutPattern.ts');
+  const prod = D.draftKurta(K, 'round', 'elbow');
+  const pages = cuttingPatternPages([{ size: 'M', product: prod, qty: 2 }, { size: 'L', product: D.draftKurta({ ...K, bust: 100 }, 'round', 'elbow'), qty: 1 }], { rollW: 1600, seam: 10, project: 'Test' });
+  const all = pages.map((p) => p.svg).join('');
+  assert.ok(pages.every((p) => p.width === 1600));
+  assert.match(all, /GRAIN/); assert.match(all, /BIAS 45°/); assert.match(all, /Size M · cut 2/); assert.match(all, /Size L · cut 1/);
+  assert.match(all, /Sleeve right/); assert.match(all, /\(mirrored\)/); assert.match(all, /100 mm — check scale/);
+});
+
+test('size chart CSV import (a row per size, values in the chosen unit)', async () => {
+  const { parseChartCsv } = await import('../../lib/textile/sizeChart.ts');
+  const r = parseChartCsv('Size,Bust,Waist,Hip,Length,Qty\nS,34,28,36,40,3\nM,36,30,38,41,5', D.KURTA_FIELDS, (n) => n * 2.54);
+  assert.deepEqual(r.rows.map((x) => x.name), ['S', 'M']);
+  assert.equal(r.rows[1].qty, 5);
+  assert.equal(r.rows[0].m.bust, 86.36);
+  assert.equal(r.rows[0].m.length, 101.6);
+});
+
+test('size chart CSV: similar column names map to the right measurement', async () => {
+  const { parseChartCsv } = await import('../../lib/textile/sizeChart.ts');
+  const r = parseChartCsv('Size,Waist,Waist length,Front neck,Sleeve length,Sleeve opening\nM,78,40,18,48,24', D.KURTA_FIELDS, (n) => n);
+  assert.deepEqual(r.rows[0].m, { waist: 78, waistLength: 40, frontNeck: 18, sleeveLength: 48, sleeveOpening: 24 });
+});
