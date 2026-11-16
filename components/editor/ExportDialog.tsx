@@ -8,6 +8,9 @@ import { X, Image as ImageIcon, FileImage, FileText, Printer, Loader2, Download,
 import { ArtboardMeta } from '@/lib/editor/artboards';
 import { PX_PER_INCH } from '@/lib/editor/units';
 import { cx } from './shell/ui';
+import { DEFAULT_PACKAGE } from '@/lib/print/printPackage';
+import type { PrintJobInfo } from '@/lib/print/printJob';
+import { PrintFilesOptions, loadPeople, savePeople, type PrintFilesSettings } from './PrintFilesOptions';
 
 export type ExportRangeMode = 'current' | 'range' | 'selected' | 'all';
 export type ExportFormat = 'png' | 'jpg' | 'webp' | 'pdf' | 'svg' | 'tiff' | 'video';
@@ -32,11 +35,14 @@ export interface ExportSettings {
   /** Animated video of the current page. */
   videoSeconds?: number;
   videoStyle?: 'glide' | 'pop' | 'fade';
+  /** Export → Print files: actual size + fit to print + information sheet. */
+  printFiles?: PrintFilesSettings;
 }
 
-type Choice = 'png' | 'jpg' | 'webp' | 'pdf' | 'pdf-print' | 'svg' | 'tiff' | 'video';
+type Choice = 'print-files' | 'png' | 'jpg' | 'webp' | 'pdf' | 'pdf-print' | 'svg' | 'tiff' | 'video';
 
 const CHOICES: { id: Choice; label: string; hint: string; icon: React.ReactNode }[] = [
+  { id: 'print-files', label: 'Print files (actual + fit + info)', hint: 'Actual size on a bigger sheet, fit to print on your paper, and one information sheet.', icon: <Printer size={18} /> },
   { id: 'png', label: 'PNG', hint: 'Sharp graphics and text. Can be transparent.', icon: <ImageIcon size={18} /> },
   { id: 'jpg', label: 'JPG', hint: 'Small files, great for photos and sharing.', icon: <FileImage size={18} /> },
   { id: 'pdf', label: 'PDF (vector)', hint: 'Sharp text and shapes at any size. For sending and printing.', icon: <FileText size={18} /> },
@@ -59,6 +65,11 @@ interface Props {
   exporting: boolean;
   onClose: () => void;
   onExport: (settings: ExportSettings) => void;
+  /** The print job of this design (from the Print Size Calculator, or this page's own size). */
+  printJob?: PrintJobInfo | null;
+  fromCalculator?: boolean;
+  designName?: string;
+  initialChoice?: 'print-files';
 }
 
 function Switch({ checked, onChange, label, hint, disabled }: { checked: boolean; onChange: (v: boolean) => void; label: string; hint?: string; disabled?: boolean }) {
@@ -83,9 +94,10 @@ function Switch({ checked, onChange, label, hint, disabled }: { checked: boolean
   );
 }
 
-export function ExportDialog({ artboards, activeArtboardId, exporting, onClose, onExport }: Props) {
+export function ExportDialog({ artboards, activeArtboardId, exporting, onClose, onExport, printJob, fromCalculator, designName, initialChoice }: Props) {
   const multi = artboards.length > 1;
-  const [choice, setChoice] = useState<Choice>('png');
+  const [choice, setChoice] = useState<Choice>(initialChoice || (fromCalculator && printJob ? 'print-files' : 'png'));
+  const [printFiles, setPrintFiles] = useState<PrintFilesSettings>(() => ({ options: { ...DEFAULT_PACKAGE }, people: loadPeople(designName || ''), files: { actual: true, fit: true, info: true }, zip: true }));
   const [rangeMode, setRangeMode] = useState<ExportRangeMode>(multi ? 'all' : 'current');
   const [selectedIds, setSelectedIds] = useState<string[]>(activeArtboardId ? [activeArtboardId] : []);
   const [dpi, setDpi] = useState(300);
@@ -103,9 +115,10 @@ export function ExportDialog({ artboards, activeArtboardId, exporting, onClose, 
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
 
-  const format: ExportFormat = choice === 'pdf-print' ? 'pdf' : choice;
+  const isPrintFiles = choice === 'print-files';
+  const format: ExportFormat = choice === 'pdf-print' || choice === 'print-files' ? 'pdf' : choice;
   const printPreset = choice === 'pdf-print';
-  const cmykPossible = format === 'pdf' || format === 'tiff';
+  const cmykPossible = !isPrintFiles && (format === 'pdf' || format === 'tiff');
   const cmyk = cmykPossible && colour === 'cmyk';
   // A CMYK PDF is made from a full-resolution picture of each page, so it
   // needs a resolution like the picture formats do.
@@ -145,10 +158,13 @@ export function ExportDialog({ artboards, activeArtboardId, exporting, onClose, 
       colour: cmyk ? 'cmyk' : 'rgb',
       videoSeconds,
       videoStyle,
+      printFiles: isPrintFiles ? printFiles : undefined,
     });
+    if (isPrintFiles) savePeople(printFiles.people);
   };
 
-  const fileNote = format === 'video' ? 'One video of this page' : pages.length > 1 && format !== 'pdf' ? `${pages.length} pictures in one .zip file` : pages.length > 1 ? `One PDF with ${pages.length} pages` : format === 'pdf' ? 'One PDF' : 'One picture';
+  const nFiles = isPrintFiles ? Object.values(printFiles.files).filter(Boolean).length : 0;
+  const fileNote = isPrintFiles ? `${nFiles} PDF${nFiles === 1 ? '' : 's'}${printFiles.zip && nFiles > 1 ? ' in one .zip' : ''}` : format === 'video' ? 'One video of this page' : pages.length > 1 && format !== 'pdf' ? `${pages.length} pictures in one .zip file` : pages.length > 1 ? `One PDF with ${pages.length} pages` : format === 'pdf' ? 'One PDF' : 'One picture';
 
   return (
     <div className="fixed inset-0 z-[110] flex items-end sm:items-center justify-center bg-black/40 p-0 sm:p-4" onClick={onClose}>
@@ -172,7 +188,7 @@ export function ExportDialog({ artboards, activeArtboardId, exporting, onClose, 
           <section>
             <p className="text-[13px] font-semibold mb-2">File type</p>
             <div className="grid grid-cols-2 gap-2">
-              {CHOICES.map((c) => (
+              {CHOICES.filter((c) => c.id !== 'print-files' || printJob).map((c) => (
                 <button
                   key={c.id}
                   type="button"
@@ -184,7 +200,8 @@ export function ExportDialog({ artboards, activeArtboardId, exporting, onClose, 
                   className={cx(
                     'relative text-left rounded-2xl border p-3 transition-colors',
                     choice === c.id ? 'mt-active-blue' : 'border-mt-border hover:bg-mt-surface2',
-                    c.id === 'webp' && 'col-span-2 sm:col-span-1'
+                    c.id === 'webp' && 'col-span-2 sm:col-span-1',
+                    c.id === 'print-files' && 'col-span-2'
                   )}
                 >
                   <span className="flex items-center gap-2 text-sm font-semibold">
@@ -197,6 +214,8 @@ export function ExportDialog({ artboards, activeArtboardId, exporting, onClose, 
               ))}
             </div>
           </section>
+
+          {isPrintFiles && printJob && <PrintFilesOptions job={printJob} fromCalculator={!!fromCalculator} value={printFiles} onChange={setPrintFiles} />}
 
           {cmykPossible && (
             <section>
@@ -295,7 +314,7 @@ export function ExportDialog({ artboards, activeArtboardId, exporting, onClose, 
             </section>
           )}
 
-          {multi && choice !== 'video' && (
+          {multi && choice !== 'video' && !isPrintFiles && (
             <section>
               <p className="text-[13px] font-semibold mb-2">Pages</p>
               <div className="flex flex-wrap gap-1.5">
@@ -333,7 +352,7 @@ export function ExportDialog({ artboards, activeArtboardId, exporting, onClose, 
             </section>
           )}
 
-          {format !== 'video' && <section className="rounded-2xl border border-mt-border px-3 py-1">
+          {format !== 'video' && !isPrintFiles && <section className="rounded-2xl border border-mt-border px-3 py-1">
             {format === 'png' && <Switch checked={transparent} onChange={setTransparent} label="Transparent background" hint="Only what you added, no page colour" />}
             {!printPreset && (
               <>
@@ -350,7 +369,7 @@ export function ExportDialog({ artboards, activeArtboardId, exporting, onClose, 
           <button
             type="button"
             onClick={submit}
-            disabled={exporting || pages.length === 0}
+            disabled={exporting || pages.length === 0 || (isPrintFiles && nFiles === 0)}
             className="h-11 px-6 rounded-full bg-mt-primary text-mt-onprimary text-sm font-semibold inline-flex items-center gap-2 disabled:opacity-50"
           >
             {exporting ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}

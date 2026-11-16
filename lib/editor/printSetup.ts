@@ -39,6 +39,9 @@ export interface ArtboardPrintSettings {
   marginsLinked?: boolean;
   columns?: number;
   gutter?: number; // px between columns
+  /** Print job from the Print Size Calculator (folds, panels, sides) and which side this page is. */
+  job?: import('../print/printJob').PrintJobInfo;
+  jobSide?: number;
 }
 
 export function createDefaultPrintSettings(): ArtboardPrintSettings {

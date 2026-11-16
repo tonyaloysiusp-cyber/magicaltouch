@@ -853,6 +853,41 @@ scenarios.push({
 });
 
 // Folding calculator: tri-fold and accordion, a PDF check, the technical report.
+// Size calculator → editor → print files: an A4 tri-fold opens with Outside +
+// Inside pages and fold guides; Export → Print files gives actual size on A3,
+// fit to print on A4 (scaled) and one information sheet.
+scenarios.push({
+  name: 'print-files-roundtrip',
+  async run(t) {
+    await t.page.goto(t.BASE + '/print-size-calculator?tab=fold', { waitUntil: 'domcontentloaded' });
+    const link = t.page.getByRole('link', { name: /Design this leaflet in the editor/ });
+    await link.waitFor({ timeout: 30000 });
+    const href = await link.getAttribute('href');
+    t.check('editor link carries the print job and fold guides', /printJob=/.test(href || '') && /guidesV=/.test(href || ''), href);
+    await t.page.goto(t.BASE + href, { waitUntil: 'domcontentloaded' });
+    await t.page.waitForFunction(() => window.__fabricCanvas && window.__fabricCanvas.getObjects().filter((o) => o.__isArtboard).length === 2, null, { timeout: 60000 }).catch(() => {});
+    const info = await t.eval(() => window.__fabricCanvas.getObjects().filter((o) => o.__isArtboard).map((o) => ({ name: o.name, side: o.__print && o.__print.jobSide, w: Math.round(o.width) })));
+    t.check('Outside + Inside pages with the job', info.length === 2 && info[0].name === 'Outside' && info[1].name === 'Inside' && info[1].side === 1, JSON.stringify(info));
+    const guides = await t.eval(() => window.__fabricCanvas.getObjects().filter((o) => o.__isGuide).length);
+    t.check('fold guides on both pages', guides >= 4, String(guides));
+    await t.page.getByRole('button', { name: 'Print files', exact: true }).click({ timeout: 30000 });
+    const dlg = t.page.locator('[role=dialog][aria-label="Download your design"]');
+    const plan = dlg.getByTestId('print-plan');
+    await plan.waitFor({ timeout: 15000 });
+    const pt = await plan.innerText();
+    t.check('actual size on A3 at 100 %', /Actual size — A3 landscape \(420 × 297 mm\), 100 %/.test(pt), pt.slice(0, 300));
+    t.check('fit to print on A4, scaled', /Fit to print — A4 landscape \(297 × 210 mm\), scaled to \d+(\.\d)? %/.test(pt), pt.slice(0, 300));
+    await dlg.getByLabel('Job name').fill('Spring leaflet');
+    await dlg.getByLabel('Designer').fill('Test Designer');
+    const [dl] = await Promise.all([t.page.waitForEvent('download', { timeout: 120000 }), dlg.locator('button', { hasText: 'Download' }).last().click()]);
+    const fs = await import('node:fs');
+    const zip = fs.readFileSync(await dl.path());
+    const names = zip.toString('latin1');
+    t.check('zip with the three files', /Spring_leaflet_PRINT_FILES\.zip$/.test(dl.suggestedFilename()) && /_1_ACTUAL_SIZE_on_A3\.pdf/.test(names) && /_2_FIT_TO_PRINT_A4_\d+(-\d)?pc\.pdf/.test(names) && /_3_INFORMATION\.pdf/.test(names), dl.suggestedFilename());
+    await t.shot('print-files');
+  },
+});
+
 scenarios.push({
   name: 'folding-calculator',
   async run(t) {

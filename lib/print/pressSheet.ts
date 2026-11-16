@@ -257,16 +257,30 @@ const hex = (c: string) => { const n = parseInt(c.replace('#', ''), 16); return 
  * and MediaBox / CropBox = sheet, BleedBox / TrimBox = the job (for one item).
  */
 export async function pressPdf(job: PressJob, l: PressLayout, art: Artwork): Promise<Uint8Array> {
-  const { PDFDocument, rgb, StandardFonts, pushGraphicsState, popGraphicsState, rectangle, clip, endPath, setDashPattern } = await import('pdf-lib');
+  return pressPdfPages([{ job, layout: l, art }], job.name);
+}
+
+/** One press sheet per entry (e.g. outside + inside of a leaflet), in one PDF. */
+export async function pressPdfPages(sheets: { job: PressJob; layout: PressLayout; art: Artwork }[], title: string): Promise<Uint8Array> {
+  const { PDFDocument, StandardFonts } = await import('pdf-lib');
   const doc = await PDFDocument.create();
-  doc.setTitle(`${job.name} — print`); doc.setProducer('Magical Touch Design'); doc.setCreator('Magical Touch Design');
+  doc.setTitle(`${title} — print`); doc.setProducer('Magical Touch Design'); doc.setCreator('Magical Touch Design');
+  const font = await doc.embedFont(StandardFonts.Helvetica);
+  const srcCache = new Map<Uint8Array, any>();
+  for (const sh of sheets) await drawSheet(doc, font, srcCache, sh.job, sh.layout, sh.art);
+  return doc.save({ useObjectStreams: false });
+}
+
+async function drawSheet(doc: any, font: any, srcCache: Map<Uint8Array, any>, job: PressJob, l: PressLayout, art: Artwork) {
+  const { PDFDocument, rgb, pushGraphicsState, popGraphicsState, rectangle, clip, endPath, setDashPattern } = await import('pdf-lib');
   const page = doc.addPage([l.sheet.w * MM, l.sheet.h * MM]);
   const H = l.sheet.h;
   const Y = (y: number) => (H - y) * MM;
   const b = l.bleed;
   let embedded: any = null, artBox: { w: number; h: number; bleedPt?: number } | null = null;
   if (art?.kind === 'pdf') {
-    const src = await PDFDocument.load(art.bytes, { ignoreEncryption: true });
+    let src = srcCache.get(art.bytes);
+    if (!src) { src = await PDFDocument.load(art.bytes, { ignoreEncryption: true }); srcCache.set(art.bytes, src); }
     const sp = src.getPage(Math.min(src.getPageCount() - 1, art.page || 0));
     const m = sp.getMediaBox(), t = sp.getTrimBox();
     const hasTrim = Math.abs(t.width - m.width) > 0.5;
@@ -312,7 +326,6 @@ export async function pressPdf(job: PressJob, l: PressLayout, art: Artwork): Pro
     if (ln.dash) page.pushOperators(setDashPattern([], 0));
   }
   for (const c of l.circles) { const [r, g, bl] = hex(c.color); page.drawCircle({ x: c.cx * MM, y: Y(c.cy), size: c.r * MM, borderColor: rgb(r, g, bl), borderWidth: c.width * MM }); }
-  const font = await doc.embedFont(StandardFonts.Helvetica);
   for (const t of l.labels) {
     const [r, g, bl] = hex(t.color), size = t.size * MM, w = font.widthOfTextAtSize(t.text, size);
     const x = t.anchor === 'middle' ? t.x * MM - w / 2 : t.anchor === 'end' ? t.x * MM - w : t.x * MM;
@@ -323,21 +336,21 @@ export async function pressPdf(job: PressJob, l: PressLayout, art: Artwork): Pro
   page.setTrimBox(bx0 * MM, Y(by0 + bh), bw * MM, bh * MM);
   page.setBleedBox((bx0 - b) * MM, Y(by0 + bh + b), (bw + 2 * b) * MM, (bh + 2 * b) * MM);
   page.setCropBox(0, 0, l.sheet.w * MM, l.sheet.h * MM);
-  // Plain (uncompressed) object table: the widest RIP / preflight compatibility.
-  return doc.save({ useObjectStreams: false });
 }
 
 /** Reads a press PDF back and checks it (dimensions, page count, boxes) before it is offered. */
-export async function verifyPressPdf(bytes: Uint8Array, l: PressLayout): Promise<{ ok: boolean; issues: string[] }> {
+export async function verifyPressPdf(bytes: Uint8Array, l: PressLayout, pages = 1): Promise<{ ok: boolean; issues: string[] }> {
   const { PDFDocument } = await import('pdf-lib');
   const d = await PDFDocument.load(bytes);
   const issues: string[] = [];
-  if (d.getPageCount() !== 1) issues.push(`Expected 1 page, found ${d.getPageCount()}.`);
-  const p = d.getPage(0), m = p.getMediaBox(), t = p.getTrimBox(), b = p.getBleedBox();
+  if (d.getPageCount() !== pages) issues.push(`Expected ${pages} page${pages > 1 ? 's' : ''}, found ${d.getPageCount()}.`);
+  for (let pi = 0; pi < d.getPageCount(); pi++) {
+  const p = d.getPage(pi), m = p.getMediaBox(), t = p.getTrimBox(), b = p.getBleedBox();
   const mm = (v: number) => v / MM;
   if (Math.abs(mm(m.width) - l.sheet.w) > 0.2 || Math.abs(mm(m.height) - l.sheet.h) > 0.2) issues.push(`Sheet ${mm(m.width).toFixed(1)} × ${mm(m.height).toFixed(1)} mm, expected ${l.sheet.w} × ${l.sheet.h} mm.`);
   if (Math.abs(mm(t.width) - l.block.w) > 0.2 || Math.abs(mm(t.height) - l.block.h) > 0.2) issues.push('TrimBox does not match the finished size.');
   if (l.bleed > 0 && Math.abs(mm(b.width - t.width) / 2 - l.bleed) > 0.2) issues.push('BleedBox does not match the bleed.');
+  }
   // Marks must stay outside the bleed of every item.
   const inside = (x: number, y: number) => l.items.some((it) => x > it.x - l.bleed + 0.01 && x < it.x + it.w + l.bleed - 0.01 && y > it.y - l.bleed + 0.01 && y < it.y + it.h + l.bleed - 0.01);
   for (const ln of l.lines) for (let s = 0; s <= 1; s += 0.25) if (inside(ln.x1 + (ln.x2 - ln.x1) * s, ln.y1 + (ln.y2 - ln.y1) * s)) { issues.push('A mark touches the artwork.'); s = 2; break; }

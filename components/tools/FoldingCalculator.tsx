@@ -6,7 +6,8 @@
 // technical report for the print operator (branded in the footer only).
 
 import { useMemo, useState } from 'react';
-import { Download, FileSearch, Loader2 } from 'lucide-react';
+import { Download, ExternalLink, FileSearch, Loader2 } from 'lucide-react';
+import { printJobEditorUrl, type PrintJobInfo } from '@/lib/print/printJob';
 import { FOLDS, calculateFold, foldDiagramSvg, checkPdfForFold, type FoldType, type PdfInspect } from '@/lib/fold';
 import { PAPER_SIZES } from '@/lib/printSizes';
 import { PAPER_PROFILES, estimateCaliper } from '@/lib/binding';
@@ -36,6 +37,18 @@ export function FoldingCalculator() {
   const caliper = estimateCaliper(gsm, profile) / 1000;
   const r = useMemo(() => calculateFold({ type, w: W, h: H, panels, caliper, bleed, safe, widths: custom || undefined, dirs }), [type, W, H, panels, caliper, bleed, safe, custom, dirs]);
   const svg = useMemo(() => foldDiagramSvg(r, side, bleed, safe), [r, side, bleed, safe]);
+  // The job handed to the Design Editor: both sides (outside + inside), fold guides, bleed, safe area.
+  const editorHref = useMemo(() => {
+    const job: PrintJobInfo = {
+      v: 1, source: 'fold', title: FOLDS.find((f) => f.id === type)?.label || 'Folded leaflet',
+      trimW: r.flat.w, trimH: r.flat.h, bleed, safe,
+      folds: r.folds.map((f) => ({ x: f.x, y: f.y, dir: f.dir, order: f.order })),
+      panels: r.panels.map((p) => ({ x: p.x, w: p.w, name: p.outside, inside: p.inside })),
+      sides: ['Outside', 'Inside'], folded: r.folded, sequence: r.sequence,
+      values: [['Paper', `${gsm} gsm ${(PAPER_PROFILES.find((p) => p.id === profile)?.label || '').split(' (')[0].toLowerCase()}`], ['Creep allowance', `${r.allowance} mm per tuck-in panel`]],
+    };
+    return printJobEditorUrl(job);
+  }, [r, type, bleed, safe, gsm, profile]);
   const pressJob = useMemo(() => ({ name: `${type}-fold-${r.flat.w}x${r.flat.h}`, title: `${FOLDS.find((f) => f.id === type)?.label || 'Folded'} leaflet`, trimW: r.flat.w, trimH: r.flat.h, bleed, safe, folds: r.folds.map((f) => ({ x: f.x, y: f.y })), panels: r.panels.map((p, i) => ({ x: p.x, w: p.w, name: `PANEL ${i + 1}` })) }), [r, type, bleed, safe]);
   const def = FOLDS.find((f) => f.id === type)!;
 
@@ -127,6 +140,7 @@ export function FoldingCalculator() {
           <p className="text-[15px] font-semibold">{def.label}: {W} × {H} mm flat → <b>{r.folded.w} × {r.folded.h} mm</b> folded</p>
           <p className="text-mt-muted">{r.panels.length} panels · {r.folds.length} folds · creep allowance {r.allowance} mm per tuck · folded thickness ≈ {r.folded.thick} mm</p>
           {r.errors.map((e) => <p key={e} className="text-rose-600">{e}</p>)}
+          <a href={editorHref} className="mt-2 h-10 px-4 rounded-full bg-mt-primary text-mt-onprimary text-[13.5px] font-semibold inline-flex items-center gap-2">Design this leaflet in the editor (outside + inside) <ExternalLink size={15} /></a>
           {r.notes.map((n) => <p key={n} className="text-[12.5px] text-mt-muted">{n}</p>)}
         </section>
         <section className="rounded-3xl border border-mt-border bg-mt-surface p-4">

@@ -87,3 +87,29 @@ test('ready-made sizes: every size drafts cleanly and grades up; changes are det
   const m = { ...readySize('kurta', 'M'), hip: 105 };
   assert.deepEqual(changedFrom('kurta', 'M', m), ['hip']);
 });
+
+test('print package: A4 tri-fold → actual size on A3, fit to print on A4, both sides, mirrored inside folds; info sheet', async () => {
+  const { buildPrintFiles, DEFAULT_PACKAGE, describeFile } = await import('../../lib/print/printPackage.ts');
+  const { encodePrintJob, decodePrintJob, sideFolds, printJobEditorUrl } = await import('../../lib/print/printJob.ts');
+  const { infoSheetSvg } = await import('../../lib/print/infoSheet.ts');
+  const { calculateFold } = await import('../../lib/fold.ts');
+  const { PDFDocument } = await import('pdf-lib');
+  const r = calculateFold({ type: 'tri', w: 297, h: 210, caliper: 0.1, bleed: 3, safe: 5 });
+  const job = { v: 1, source: 'fold', title: 'Tri-fold', trimW: 297, trimH: 210, bleed: 3, safe: 5, folds: r.folds.map((f) => ({ x: f.x, y: f.y, dir: f.dir, order: f.order })), panels: r.panels.map((p) => ({ x: p.x, w: p.w, name: p.outside, inside: p.inside })), sides: ['Outside', 'Inside'], folded: r.folded };
+  assert.deepEqual(decodePrintJob(encodePrintJob(job)), JSON.parse(JSON.stringify(job)));
+  assert.match(printJobEditorUrl(job), /printJob=.*/);
+  const inside = sideFolds(job, 1).map((f) => f.x);
+  assert.deepEqual(inside, job.folds.map((f) => Math.round((297 - f.x) * 100) / 100).sort((a, b) => a - b));
+  const k = 72 / 25.4, art = await PDFDocument.create();
+  for (let i = 0; i < 2; i++) { const p = art.addPage([303 * k, 216 * k]); p.drawRectangle({ x: 0, y: 0, width: 303 * k, height: 216 * k, color: undefined }); }
+  const res = await buildPrintFiles(job, await art.save(), 'Leaflet', DEFAULT_PACKAGE);
+  assert.ok(res.actual, res.warnings.join(' '));
+  assert.match(res.actualLayout.sheet.name, /^A3/);
+  assert.equal(res.actualLayout.scale, 1);
+  assert.match(res.fitLayout.sheet.name, /^A4/);
+  assert.ok(res.fitLayout.scale < 1 && res.fitLayout.scale > 0.8, String(res.fitLayout.scale));
+  assert.equal((await PDFDocument.load(res.actual)).getPageCount(), 2);
+  assert.equal((await PDFDocument.load(res.fit)).getPageCount(), 2);
+  const svg = infoSheetSvg({ job, people: { jobName: 'Leaflet', client: 'C', designer: 'D', company: 'Co', contact: '', notes: '' }, date: '16 Nov 2026', previews: [null, null], files: [describeFile('Actual size', 'a.pdf', res.actualLayout, job, 1), describeFile('Fit to print', 'b.pdf', res.fitLayout, job, 1)], margin: 3, colour: 'RGB vector' });
+  assert.match(svg, /PRINT JOB INFORMATION/); assert.match(svg, /100 %/); assert.match(svg, /86\.\d %|8\d(\.\d)? %/);
+});

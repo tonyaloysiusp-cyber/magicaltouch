@@ -3,7 +3,9 @@
 import { previousStep } from '@/lib/toolsCatalog';
 import { blockBrowserShortcut } from '@/lib/editor/browserKeys';
 import { ThemeSwitch } from '@/components/ThemeSwitch';
-import { useEffect, useRef, useState, useCallback, Suspense } from 'react';
+import { useEffect, useRef, useState, useCallback, useMemo, Suspense } from 'react';
+import { Printer } from 'lucide-react';
+import { pageJob } from '@/lib/print/printJob';
 import type { ReactNode } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { BrandLogo } from '@/components/BrandLogo';
@@ -370,6 +372,18 @@ function EditorContent() {
     artboardsRef.current = artboards;
   }, [artboards]);
   const [activeArtboardId, setActiveArtboardId] = useState<string | null>(null);
+  const calculatorJob = artboards.find((a) => a.print?.job)?.print?.job || null;
+  const documentPrintJob = useMemo(() => {
+    if (calculatorJob) return calculatorJob;
+    const ab = artboards.find((a) => a.id === activeArtboardId) || artboards[0];
+    if (!ab) return null;
+    const mm = (px: number) => (px / 96) * 25.4;
+    const b = ab.print?.bleed || { top: 0, right: 0, bottom: 0, left: 0 };
+    const sa = ab.print?.safeArea || { top: 0, right: 0, bottom: 0, left: 0 };
+    const same = artboards.filter((a) => Math.abs(a.width - ab.width) < 0.5 && Math.abs(a.height - ab.height) < 0.5);
+    return pageJob({ trimW: mm(ab.width), trimH: mm(ab.height), bleed: mm(Math.max(b.top, b.right, b.bottom, b.left)), safe: mm(Math.max(sa.top, sa.right, sa.bottom, sa.left)), name: designName || 'Design', pages: same.length });
+  }, [artboards, activeArtboardId, calculatorJob, designName]);
+  const [exportInitial, setExportInitial] = useState<'print-files' | undefined>(undefined);
   const activeArtboardIdRef = useRef<string | null>(null);
   useEffect(() => {
     activeArtboardIdRef.current = activeArtboardId;
@@ -1031,6 +1045,50 @@ function EditorContent() {
       const nums = (x: string | null) => (x || '').split(',').map(Number).filter((n) => Number.isFinite(n));
       addGuidesAt([...nums(g.v).map((n) => ({ axis: 'v' as const, pos: (ab.left || 0) + n })), ...nums(g.h).map((n) => ({ axis: 'h' as const, pos: (ab.top || 0) + n }))]);
     }, 200);
+    return () => clearInterval(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ?printJob=… — a job from the Print Size Calculator (fold leaflet, book
+  // cover). Stored on the page's print settings so the print export can make
+  // the actual-size / fit-to-print / information files later; a two-sided
+  // leaflet gets its second page ("Inside") with the folds mirrored.
+  const urlPrintJobRef = useRef<string | null>(searchParams.get('printJob'));
+  useEffect(() => {
+    const raw = urlPrintJobRef.current;
+    if (!raw) return;
+    let tries = 0;
+    const timer = setInterval(async () => {
+      const c: any = fabricCanvasRef.current;
+      const abs = c?.getObjects().filter((o: any) => o.__isArtboard) || [];
+      // Wait for the first page and for its fold guides (placed by the effect above).
+      if (!abs.length || urlGuidesRef.current.v || urlGuidesRef.current.h) { if (++tries > 150) clearInterval(timer); return; }
+      clearInterval(timer);
+      urlPrintJobRef.current = null;
+      const { decodePrintJob, sideFolds } = await import('@/lib/print/printJob');
+      const job = decodePrintJob(raw);
+      if (!job || abs.some((o: any) => o.__print?.job)) return;
+      const first = abs[0];
+      first.__print = { ...(first.__print || createDefaultPrintSettings()), job, jobSide: 0 };
+      first.name = job.sides[0] || first.name;
+      const F = (window as any).fabric || (await import('fabric')).fabric;
+      const pxPerMm = 96 / 25.4;
+      for (let i = 1; i < job.sides.length; i++) {
+        const metas = getArtboardMetas();
+        const pos = nextArtboardPosition(metas);
+        const rect = createArtboardRect(F, pos.x, pos.y, first.width, first.height, job.sides[i]);
+        rect.set({ fill: first.fill });
+        rect.__print = { ...JSON.parse(JSON.stringify(first.__print)), job, jobSide: i };
+        c.add(rect);
+        const f = sideFolds(job, i);
+        addGuidesAt(f.filter((x) => x.x != null).map((x) => ({ axis: 'v' as const, pos: pos.x + x.x! * pxPerMm })));
+      }
+      pinArtboardsBack();
+      recomputeMembership();
+      refreshArtboards();
+      c.requestRenderAll();
+      if (job.sides.length > 1) setLocalNotice(`${job.title}: ${job.sides.join(' and ')} pages are ready with fold guides. When you're done, Export → Print files.`);
+    }, 250);
     return () => clearInterval(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -6981,6 +7039,115 @@ function EditorContent() {
     if (reduced) reducedNotice(Math.min(...pages.map(dpiFor)));
   };
 
+  // The print job of this design: from the Print Size Calculator (stored on
+  // the pages), or — for any other design — this document's own page size.
+
+  // Export → Print files: actual size + fit to print (vector, every page of
+  // the job on its press sheet with cut / fold marks) + one information sheet.
+  const exportPrintPackage = async (settings: ExportSettings) => {
+    const pf = settings.printFiles!;
+    const canvas = fabricCanvasRef.current;
+    const base0 = (pf.people.jobName || designName || 'print-job').replace(/[^\w\- ]+/g, '').trim().replace(/\s+/g, '_') || 'print-job';
+    let job = documentPrintJob;
+    if (!job || !canvas) throw new Error('No page to export.');
+    // The pages of the job, in side order.
+    const all = getArtboardMetas();
+    let pages: ArtboardMeta[];
+    if (calculatorJob) {
+      pages = job.sides.map((_, i) => all.find((a) => a.print?.job && (a.print.jobSide ?? 0) === i)).filter(Boolean) as ArtboardMeta[];
+      if (pages.length < job.sides.length) {
+        const rest = all.filter((a) => !pages.includes(a) && Math.abs(a.width - all[0].width) < 0.5);
+        while (pages.length < job.sides.length && rest.length) pages.push(rest.shift()!);
+      }
+    } else {
+      const first = all.find((a) => a.id === activeArtboardId) || all[0];
+      pages = all.filter((a) => Math.abs(a.width - first.width) < 0.5 && Math.abs(a.height - first.height) < 0.5);
+    }
+    if (!pages.length) throw new Error('No page to export.');
+    if (pages.length < job.sides.length) job = { ...job, sides: job.sides.slice(0, pages.length) };
+    // Size and bleed as the pages really are now.
+    const mm = (px: number) => Math.round((px / 96) * 25.4 * 100) / 100;
+    const scope: ExportScope = 'bleed';
+    const rects = pages.map((ab) => ({ ab, print: { ...ab.print, marks: { crop: false, registration: false, colorBar: false } } })).map((x) => ({ ...x, rect: getExportRect(x.ab, x.print, scope) }));
+    const bleedMm = Math.min(...rects.map((x) => mm(Math.max(0, (x.rect.width - x.ab.width) / 2))));
+    job = { ...job, trimW: mm(pages[0].width), trimH: mm(pages[0].height), bleed: bleedMm };
+
+    // 1. The artwork: one vector PDF, a page per side, trim + bleed.
+    const [{ jsPDF }, mod, pkg, info, { svgToPdfBlob }] = await Promise.all([import('jspdf'), import('fabric'), import('@/lib/print/printPackage'), import('@/lib/print/infoSheet'), import('@/lib/svgToPdf')]);
+    const F = mod.fabric;
+    const r0 = rects[0].rect;
+    const pdf = new jsPDF({ orientation: r0.width > r0.height ? 'landscape' : 'portrait', unit: 'pt', format: [toPt(r0.width), toPt(r0.height)] });
+    suppressHistoryRef.current = true;
+    try {
+      for (let i = 0; i < rects.length; i++) {
+        const { ab, rect } = rects[i];
+        if (i > 0) pdf.addPage([toPt(rect.width), toPt(rect.height)], rect.width > rect.height ? 'landscape' : 'portrait');
+        await exportArtboardsToPDF(pdf, canvas, F, [{ id: ab.id, x: rect.x, y: rect.y, width: rect.width, height: rect.height }]);
+      }
+    } finally {
+      suppressHistoryRef.current = false;
+    }
+    const artPdf = new Uint8Array(pdf.output('arraybuffer') as ArrayBuffer);
+
+    // 2. Actual size + fit to print.
+    const res = await pkg.buildPrintFiles(job, artPdf, base0, pf.options);
+    const pct = Math.round(res.fitLayout.scale * 1000) / 10;
+    const sheetTag = (n: string) => n.replace(/\s*landscape/, '').replace(/[^\w]+/g, '');
+    const names = {
+      actual: `${base0}_1_ACTUAL_SIZE_on_${sheetTag(res.actualLayout.sheet.name)}.pdf`,
+      fit: `${base0}_2_FIT_TO_PRINT_${sheetTag(res.fitLayout.sheet.name)}_${String(pct).replace('.', '-')}pc.pdf`,
+      info: `${base0}_3_INFORMATION.pdf`,
+    };
+    const out: { name: string; data: Uint8Array }[] = [];
+    if (pf.files.actual && res.actual) out.push({ name: names.actual, data: res.actual });
+    if (pf.files.fit) out.push({ name: names.fit, data: res.fit });
+
+    // 3. Information sheet: one A4 page.
+    if (pf.files.info) {
+      const previews = pages.map((ab) => {
+        try {
+          const rect = { x: ab.x, y: ab.y, width: ab.width, height: ab.height };
+          const k = Math.min(2, 900 / Math.max(ab.width, ab.height));
+          const pic = capturePicture(rect, { format: 'jpeg', quality: 0.85, multiplier: k, artboardId: ab.id });
+          return { src: pic.dataUrl, w: Math.round(ab.width * k), h: Math.round(ab.height * k) };
+        } catch { return null; }
+      });
+      let logo: { src: string; w: number; h: number } | null = null;
+      try {
+        const blob = await (await fetch('/logo.png')).blob();
+        const src = await new Promise<string>((res2, rej) => { const fr = new FileReader(); fr.onload = () => res2(String(fr.result)); fr.onerror = rej; fr.readAsDataURL(blob); });
+        const img = new Image(); img.src = src; await img.decode();
+        logo = { src, w: img.naturalWidth, h: img.naturalHeight };
+      } catch { /* the sheet works without the logo */ }
+      const files = [
+        ...(res.actual ? [pkg.describeFile('Actual size', names.actual, res.actualLayout, job, pf.options.markType)] : []),
+        pkg.describeFile('Fit to print', names.fit, res.fitLayout, job, pf.options.markType),
+      ];
+      const svg = info.infoSheetSvg({ job, people: { ...pf.people, jobName: pf.people.jobName || designName }, date: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }), previews, files, margin: pf.options.margin, colour: 'RGB, vector PDF (text and shapes stay sharp)', logo });
+      const blob = await svgToPdfBlob('', 0, 0, [{ svg, widthMm: 297, heightMm: 210 }]);
+      out.push({ name: names.info, data: new Uint8Array(await blob.arrayBuffer()) });
+    }
+    if (!out.length) throw new Error(res.warnings[0] || 'Nothing to download.');
+    if (pf.zip && out.length > 1) {
+      const url = URL.createObjectURL(buildZip(out));
+      downloadFile(url, `${base0}_PRINT_FILES.zip`);
+      setTimeout(() => URL.revokeObjectURL(url), 8000);
+    } else {
+      for (const f of out) {
+        const url = URL.createObjectURL(new Blob([f.data as unknown as BlobPart], { type: 'application/pdf' }));
+        downloadFile(url, f.name);
+        setTimeout(() => URL.revokeObjectURL(url), 8000);
+        await new Promise((r) => setTimeout(r, 400));
+      }
+    }
+    const parts = [
+      res.actual && pf.files.actual ? `actual size on ${res.actualLayout.sheet.name} (100 %)` : null,
+      pf.files.fit ? `fit to print on ${res.fitLayout.sheet.name} (${pct} %)` : null,
+      pf.files.info ? 'information sheet' : null,
+    ].filter(Boolean);
+    setLocalNotice(`Print files ready: ${parts.join(', ')}.${res.warnings.length && pf.files.actual ? ` ${res.warnings[0]}` : ''}`);
+  };
+
   // One export path for every combination the dialog can produce: any
   // page range, any of the three formats, with or without bleed/marks.
   // PDF pages all land in a single multi-page file (matching how a real
@@ -7001,6 +7168,20 @@ function EditorContent() {
     // Objects inside a multi-selection have relative positions; export
     // needs their real place on the page.
     canvas.discardActiveObject();
+
+    if (settings.printFiles) {
+      try {
+        await exportPrintPackage(settings);
+        setShowExportDialog(false);
+      } catch (e: any) {
+        console.error('Print files export failed', e);
+        setLocalNotice(e?.message || 'The print files could not be made. Try again.');
+      } finally {
+        setExporting(false);
+        setExportInitial(undefined);
+      }
+      return;
+    }
 
     const scope: ExportScope = settings.includeMarks ? 'marks' : settings.includeBleed ? 'bleed' : 'artboard';
 
@@ -8156,6 +8337,17 @@ function EditorContent() {
         >
           <FileText size={15} /> PDF
         </button>
+        {calculatorJob && (
+          <button
+            type="button"
+            onClick={() => { setExportInitial('print-files'); setShowExportDialog(true); }}
+            disabled={exporting}
+            title={`${calculatorJob.title} from the Print Size Calculator: actual size, fit to print and information sheet`}
+            className="h-9 inline-flex items-center gap-1.5 px-3 rounded-full border border-mt-accent/50 text-sm font-semibold text-mt-ink hover:bg-mt-surface2 disabled:opacity-50"
+          >
+            <Printer size={15} className="text-mt-accent" /> <span className="hidden sm:inline">Print files</span>
+          </button>
+        )}
         <button
           type="button"
           onClick={() => setShowExportDialog(true)}
@@ -8256,8 +8448,12 @@ function EditorContent() {
           artboards={artboards}
           activeArtboardId={activeArtboardId}
           exporting={exporting}
-          onClose={() => setShowExportDialog(false)}
+          onClose={() => { setShowExportDialog(false); setExportInitial(undefined); }}
           onExport={runExport}
+          printJob={documentPrintJob}
+          fromCalculator={!!calculatorJob}
+          designName={designName}
+          initialChoice={exportInitial}
         />
       )}
 
