@@ -73,3 +73,30 @@ test('preview SVG draws thread in each colour', () => {
   const p = E.previewSvg(objs, E.stitchDesign(objs));
   assert.match(p.svg, /stroke="#AA0000"/); assert.match(p.svg, /stroke="#0000AA"/);
 });
+
+test('pro stitch types and controls; DST validated before download', () => {
+  const sq = 'M0 0H20V20H0Z';
+  for (const type of ['zigzag', 'motif', 'applique', 'decorative']) {
+    const st = E.stitchDesign([obj({ type, width: 3 })]);
+    assert.ok(st.filter((s) => s.cmd === 'stitch').length > 20, type);
+    const v = E.validateDst(E.toDst(st), st, [100, 100]);
+    assert.ok(v.ok, `${type}: ${v.issues.join('; ')}`);
+  }
+  const app = E.stitchDesign([obj({ type: 'applique' })]);
+  assert.equal(app.filter((s) => s.cmd === 'stop').length, 2, 'appliqué stops after placement and tack-down');
+  // tie-in: the first stitches go back and forth
+  const tied = E.stitchDesign([obj({ type: 'running', d: 'M0 0L30 0' })]).filter((s) => s.cmd === 'stitch');
+  assert.ok(tied[1].x < tied[0].x + 0.01 || tied[2].x < tied[1].x, 'lock stitch at the start');
+  const untied = E.stitchDesign([obj({ type: 'running', d: 'M0 0L30 0', tie: false })]).filter((s) => s.cmd === 'stitch');
+  assert.ok(untied.length < tied.length);
+  // pull compensation widens satin; start point
+  const w = (st) => { const ys = st.filter((s) => s.cmd === 'stitch').map((s) => s.y); return Math.max(...ys) - Math.min(...ys); };
+  assert.ok(w(E.stitchDesign([obj({ type: 'satin', d: 'M0 0L30 0', width: 3, pull: 0.4, underlay: false })])) > w(E.stitchDesign([obj({ type: 'satin', d: 'M0 0L30 0', width: 3, underlay: false })])) + 0.3);
+  const sb = E.stitchDesign([obj({ type: 'running', d: 'M0 0L30 0', start: 'top-right', tie: false })]).find((s) => s.cmd === 'jump');
+  assert.equal(sb.x, 30);
+  // validation catches a damaged file
+  const st = E.stitchDesign([obj({})]);
+  const bad = E.toDst(st); bad[bad.length - 1] = 0;
+  assert.ok(!E.validateDst(bad, st).ok);
+  assert.ok(!E.validateDst(E.toDst(st), st, [10, 10]).ok, 'bigger than the hoop');
+});

@@ -915,7 +915,7 @@ scenarios.push({
     await t.page.goto(`${t.BASE}/textile-studio?product=kurta`, { waitUntil: 'domcontentloaded' });
     const studio = t.page.getByLabel('Textile Studio', { exact: true });
     await studio.waitFor({ timeout: 30000 });
-    t.check('product picker shows every garment', (await t.page.getByRole('radiogroup', { name: 'Product' }).getByRole('radio').count()) === 8);
+    t.check('product picker shows every garment', (await t.page.getByRole('radiogroup', { name: 'Product' }).getByRole('radio').count()) === 9);
     t.check('no pieces before the measurements', (await studio.getByRole('alert').count()) === 1);
     const M = { 'Bust / chest (round)': 92, 'Waist (round)': 78, 'Hip / seat (round)': 100, 'Shoulder (across the back, point to point)': 38, 'Kurta length (shoulder to hem)': 105, 'Shoulder to waist': 40, 'Armhole (round)': 44, 'Front neck depth': 18, 'Back neck depth': 6, 'Sleeve length (shoulder down)': 48, 'Upper arm (round)': 30, 'Sleeve opening (round)': 24 };
     for (const [k, v] of Object.entries(M)) await studio.getByLabel(k, { exact: true }).fill(String(v));
@@ -950,6 +950,16 @@ scenarios.push({
     const [dst] = await Promise.all([t.page.waitForEvent('download', { timeout: 30000 }), emb.getByRole('button', { name: /DST/ }).click()]);
     const bytes = fs.readFileSync(await dst.path());
     t.check('DST machine file', dst.suggestedFilename().endsWith('.dst') && bytes.subarray(0, 3).toString() === 'LA:' && bytes.length > 600 && bytes[bytes.length - 1] === 0xF3, `${bytes.length}`);
+    t.check('DST checked before download', /DST checked and saved/.test(await t.page.getByRole('status').last().innerText().catch(() => '')));
+    await emb.getByRole('group', { name: 'Embroidery presets' }).getByRole('button', { name: 'Chest flower' }).click();
+    await t.page.waitForTimeout(600);
+    t.check('ready preset adds objects in sewing order', /Chest flower: Petals 1/.test(await emb.getByLabel('Stitch settings').innerText()));
+    const sim = emb.getByRole('group', { name: 'Stitch simulation' });
+    await sim.getByLabel('Stitch sequence').fill('50');
+    t.check('stitch simulation steps through the sewing order', /(^|\s)50 \//.test(await sim.innerText()), await sim.innerText());
+    await sim.getByRole('button', { name: 'Done' }).click();
+    await emb.getByRole('radio', { name: 'Appliqué' }).click();
+    t.check('appliqué stops shown', /stops/.test(await emb.innerText()));
     await t.shot('embroidery');
     await emb.getByRole('button', { name: 'Save' }).click();
     await emb.getByRole('button', { name: 'Close embroidery' }).click();
@@ -965,6 +975,8 @@ scenarios.push({
     await t.page.goto(`${t.BASE}/textile-designer?garment=polo`, { waitUntil: 'domcontentloaded' });
     await t.page.getByLabel('Textile Design Studio').waitFor({ timeout: 30000 });
     t.check('old route redirects to /textile-studio', /\/textile-studio/.test(t.page.url()), t.page.url());
+    await t.page.getByLabel('Project name').first().waitFor({ timeout: 30000 });
+    await t.page.waitForTimeout(600);
     const polo = t.page.getByRole('radiogroup', { name: 'Product' }).getByRole('radio', { name: /Polo/ });
     t.check('polo picked from the old address', (await polo.getAttribute('aria-checked')) === 'true', `${t.page.url()} checked=${await polo.getAttribute('aria-checked')}`);
     const name = t.page.getByLabel('Project name').first();

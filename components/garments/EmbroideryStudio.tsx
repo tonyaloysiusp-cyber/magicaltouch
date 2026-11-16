@@ -11,7 +11,8 @@ import { ArrowDown, ArrowUp, Download, Eye, EyeOff, Trash2, Upload, X } from 'lu
 import type { Piece } from '@/lib/garments';
 import { PATTERN_MOTIFS, MOTIF_CATEGORIES } from '@/lib/patternMotifs';
 import { normalize, segsToD, transformSegs, bbox } from '@/lib/textile/vector';
-import { DEFAULTS, previewSvg, stitchDesign, summarise, toDst, toExp, type EmbObject, type StitchType, type Summary } from '@/lib/embroidery/stitch';
+import { DEFAULTS, STITCH_LABEL, previewSvg, stitchDesign, summarise, toDst, toExp, validateDst, type EmbObject, type StitchType, type Summary } from '@/lib/embroidery/stitch';
+import { flower, border as floralBorder, neckline as floralNeckline, vine as floralVine, DEFAULT_FLOWER } from '@/lib/textile/floral';
 
 export interface EmbroideryDesign {
   objects: EmbObject[];
@@ -78,8 +79,25 @@ export function EmbroideryStudio({ design, pieces, colours, onSave, onClose, fil
   // Stitches are worked out after edits settle (fill of a large design takes a moment).
   const [st, setSt] = useState(() => stitchDesign(objects));
   useEffect(() => { const t = setTimeout(() => setSt(stitchDesign(objects)), 150); return () => clearTimeout(t); }, [objects]);
-  const summary = useMemo(() => summarise(objects, st), [objects, st]);
-  const preview = useMemo(() => previewSvg(objects, st), [objects, st]);
+  const [spm, setSpm] = useState(700);
+  const summary = useMemo(() => summarise(objects, st, spm), [objects, st, spm]);
+  // Stitch-by-stitch simulation: show the sewing order up to `upTo`, with jumps and trims marked.
+  const [upTo, setUpTo] = useState<number | null>(null);
+  const [playing, setPlaying] = useState(false);
+  useEffect(() => { if (!playing) return; const t = setInterval(() => setUpTo((n) => { const nx = (n ?? 0) + Math.max(5, Math.round(st.length / 300)); if (nx >= st.length) { setPlaying(false); return st.length; } return nx; }), 40); return () => clearInterval(t); }, [playing, st.length]);
+  const shown = upTo == null ? st : st.slice(0, upTo);
+  const preview = useMemo(() => previewSvg(objects, shown), [objects, shown]);
+  const travel = useMemo(() => {
+    if (upTo == null) return '';
+    let d = '', x = '', prev: { x: number; y: number } | null = null;
+    for (const s of shown) {
+      if (s.cmd === 'jump' && prev) d += `M${prev.x.toFixed(2)} ${prev.y.toFixed(2)}L${s.x.toFixed(2)} ${s.y.toFixed(2)}`;
+      if (s.cmd === 'trim') x += `M${(s.x - 1).toFixed(2)} ${(s.y - 1).toFixed(2)}l2 2m0 -2l-2 2`;
+      if (s.cmd !== 'trim' && s.cmd !== 'color' && s.cmd !== 'stop') prev = s;
+    }
+    const n = prev ? `<circle cx="${prev.x.toFixed(2)}" cy="${prev.y.toFixed(2)}" r="1.2" fill="#2563EB" stroke="#fff" stroke-width="0.3"/>` : '';
+    return `<path d="${d}" stroke="#2563EB" stroke-width="0.25" stroke-dasharray="1 0.8" fill="none"/><path d="${x}" stroke="#DC2626" stroke-width="0.35" fill="none"/>${n}`;
+  }, [shown, upTo]);
 
   const [hw, hh] = hoop;
   const centreAdd = (d: string): string => { const b = boxOf(d); return tf(d, [1, 0, 0, 1, hw / 2 - (b.x + b.w / 2), hh / 2 - (b.y + b.h / 2)]); };
@@ -139,7 +157,14 @@ export function EmbroideryStudio({ design, pieces, colours, onSave, onClose, fil
   const close = () => { if (dirty && !window.confirm('Save the embroidery before closing?\n\nOK = save and close · Cancel = keep editing')) return; if (dirty) doSave(); onClose(); };
   const dl = (kind: 'dst' | 'exp' | 'png' | 'svg') => {
     if (!summary.stitches) { flash('Add something to stitch first.'); return; }
-    if (kind === 'dst') save(new Blob([toDst(st, fileBase.slice(0, 16).toUpperCase()) as unknown as BlobPart], { type: 'application/octet-stream' }), `${fileBase}.dst`);
+    if (kind === 'dst') {
+      // The file is read back and checked before it is offered.
+      const bytes = toDst(st, fileBase.slice(0, 16).toUpperCase());
+      const v = validateDst(bytes, st, hoop);
+      if (!v.ok) { flash(`DST not saved: ${v.issues.join(' ')}`); return; }
+      save(new Blob([bytes as unknown as BlobPart], { type: 'application/octet-stream' }), `${fileBase}.dst`);
+      flash(`DST checked and saved: ${v.stitches.toLocaleString('en')} stitches, ${v.colourChanges} colour change${v.colourChanges === 1 ? '' : 's'} / stops, ${Math.round(v.sizeMm[0])} × ${Math.round(v.sizeMm[1])} mm.`);
+    }
     if (kind === 'exp') save(new Blob([toExp(st) as unknown as BlobPart], { type: 'application/octet-stream' }), `${fileBase}.exp`);
     if (kind === 'svg') { const p = previewSvg(objects, st, { background: colours.body }); save(new Blob([p.svg], { type: 'image/svg+xml' }), `${fileBase}-stitch-preview.svg`); }
     if (kind === 'png') {
@@ -161,7 +186,7 @@ export function EmbroideryStudio({ design, pieces, colours, onSave, onClose, fil
     <div className="fixed inset-0 z-[85] flex flex-col bg-mt-bg" role="dialog" aria-label="Embroidery workspace">
       <div className="flex flex-wrap items-center gap-2 border-b border-mt-border bg-mt-surface px-3 py-2">
         <p className="text-[14px] font-semibold">Embroidery</p>
-        <span className="text-[12px] text-mt-muted">{summary.stitches.toLocaleString('en')} stitches · {summary.colours.length} colour{summary.colours.length === 1 ? '' : 's'} · {Math.round(summary.sizeMm[0])} × {Math.round(summary.sizeMm[1])} mm · about {summary.minutes} min at 700 stitches/min</span>
+        <span className="text-[12px] text-mt-muted">{summary.stitches.toLocaleString('en')} stitches · {summary.colours.length} colour{summary.colours.length === 1 ? '' : 's'} · {Math.round(summary.sizeMm[0])} × {Math.round(summary.sizeMm[1])} mm · {summary.trims} trims{summary.stops ? ` · ${summary.stops} stops` : ''} · about {summary.minutes} min at <input type="number" min={200} max={1500} step={50} value={spm} onChange={(e) => setSpm(Math.max(200, Math.min(1500, Number(e.target.value) || 700)))} aria-label="Machine speed" className="w-14 rounded border border-mt-border bg-mt-bg px-1 text-[12px]" /> stitches/min</span>
         <span className="flex-1" />
         <button type="button" onClick={() => setStitchesView((v) => !v)} aria-pressed={stitches} className={chip(stitches)}>{stitches ? 'Stitches' : 'Shapes'}</button>
         <button type="button" onClick={() => dl('dst')} className="h-8 px-3 rounded-full bg-[#7A1F3D] text-white text-[12.5px] font-semibold inline-flex items-center gap-1.5"><Download size={14} /> DST (Tajima)</button>
@@ -180,6 +205,25 @@ export function EmbroideryStudio({ design, pieces, colours, onSave, onClose, fil
             <select value={`${hw}x${hh}`} onChange={(e) => { const [a, b] = e.target.value.split('x').map(Number); setHoop([a, b]); setDirty(true); }} aria-label="Hoop size" className={field}>
               {HOOPS.map(([a, b, l]) => <option key={l} value={`${a}x${b}`}>{l}</option>)}
             </select>
+          </div>
+          <div role="group" aria-label="Embroidery presets">
+            <p className="text-[12px] font-semibold uppercase tracking-wide text-mt-faint">Ready presets</p>
+            <div className="mt-1 grid grid-cols-2 gap-1">
+              {([
+                ['Chest flower', () => flower({ ...DEFAULT_FLOWER, petals: 6, length: 14, width: 9, layers: 2, leaves: 2, centreSize: 4, stem: true }), 'fill'],
+                ['Floral neckline', () => floralNeckline(Math.min(hw, 160) * 0.9, Math.min(hh, 160) * 0.55, 'u', 16), 'fill'],
+                ['Border', () => floralBorder(hw * 0.9, 18, 'floral'), 'fill'],
+                ['Vine outline', () => floralVine(hw * 0.85, 12, 6, 2), 'satin'],
+              ] as const).map(([label, make, type]) => (
+                <button key={label} type="button" onClick={() => {
+                  const parts = make();
+                  const cols: Record<string, string> = { petal: '#B8344F', petal2: '#F2A7B8', centre: '#E8B53C', leaf: '#3F7D4E', stem: '#2F5D3A', accent: '#7A1F3D' };
+                  const next = parts.filter((pt) => pt.d).map((pt) => ({ id: uid(), name: `${label}: ${pt.name}`, d: tf(pt.d, [1, 0, 0, 1, hw / 2, hh / 2]), type: (pt.role === 'stem' && type === 'satin' ? 'satin' : pt.role === 'stem' ? 'running' : 'fill') as StitchType, colour: cols[pt.role] || '#7A1F3D', angle: 45, spacing: DEFAULTS.fillSpacing, stitchLen: pt.role === 'stem' ? 2.2 : DEFAULTS.fillLen, width: 1.6, underlay: true }));
+                  update([...objects, ...next]);
+                  flash(`${label} added: ${next.length} objects in sewing order (leaves and stems first, centres last).`);
+                }} className="h-8 rounded-lg border border-mt-border text-[12px] hover:bg-mt-surface2">{label}</button>
+              ))}
+            </div>
           </div>
           <div role="group" aria-label="Lettering">
             <p className="text-[12px] font-semibold uppercase tracking-wide text-mt-faint">Lettering</p>
@@ -227,13 +271,21 @@ export function EmbroideryStudio({ design, pieces, colours, onSave, onClose, fil
             <rect x={0} y={0} width={hw} height={hh} rx={8} fill={colours.body} stroke="#8B7355" strokeWidth={1.2} />
             <path d={`M${hw / 2} 0V${hh}M0 ${hh / 2}H${hw}`} stroke="#8B7355" strokeOpacity={0.35} strokeWidth={0.2} strokeDasharray="2 2" />
             {stitches
-              ? <g dangerouslySetInnerHTML={{ __html: preview.svg.replace(/^<svg[^>]*>/, '').replace(/<\/svg>$/, '') }} />
+              ? <g dangerouslySetInnerHTML={{ __html: preview.svg.replace(/^<svg[^>]*>/, '').replace(/<\/svg>$/, '') + travel }} />
               : objects.filter((o) => !o.hidden).map((o) => o.type === 'fill' ? <path key={o.id} d={o.d} fill={o.colour} fillRule="evenodd" /> : <path key={o.id} d={o.d} fill="none" stroke={o.colour} strokeWidth={o.type === 'satin' ? o.width || DEFAULTS.satinWidth : 0.5} />)}
             {/* Hit areas for selecting and dragging */}
             {objects.filter((o) => !o.hidden).map((o) => <path key={o.id} d={o.d} fill={o.type === 'fill' ? 'transparent' : 'none'} stroke="transparent" strokeWidth={4} fillRule="evenodd" style={{ cursor: 'move' }} onPointerDown={(e) => onDown(e, o.id)} aria-label={o.name} />)}
             {selected && (() => { const b = boxOf(selected.d); return <rect x={b.x - 1} y={b.y - 1} width={b.w + 2} height={b.h + 2} fill="none" stroke="#2563EB" strokeWidth={0.4} strokeDasharray="1.5 1" pointerEvents="none" />; })()}
           </svg>
           {!objects.length && <p className="absolute inset-x-0 top-6 text-center text-[13px] text-mt-muted">Add lettering, a motif or your own SVG to start.</p>}
+          {st.length > 1 && (
+            <div className="absolute right-3 bottom-3 flex items-center gap-2 rounded-full bg-mt-surface/95 border border-mt-border px-3 py-1.5 shadow" role="group" aria-label="Stitch simulation" onPointerDown={(e) => e.stopPropagation()}>
+              <button type="button" onClick={() => { if (upTo == null || upTo >= st.length) setUpTo(0); setPlaying((v) => !v); }} className="h-7 px-3 rounded-full bg-[#7A1F3D] text-white text-[12px] font-semibold">{playing ? 'Pause' : 'Play'}</button>
+              <input type="range" min={0} max={st.length} value={upTo ?? st.length} onChange={(e) => { setPlaying(false); setUpTo(Number(e.target.value)); }} aria-label="Stitch sequence" className="w-40" />
+              <span className="text-[11.5px] tabular-nums text-mt-muted">{(upTo ?? st.length).toLocaleString('en')} / {st.length.toLocaleString('en')}</span>
+              {upTo != null && <button type="button" onClick={() => { setPlaying(false); setUpTo(null); }} className="text-[11.5px] text-mt-muted underline">Done</button>}
+            </div>
+          )}
           {warnings.length > 0 && <div role="alert" className="absolute left-3 bottom-3 max-w-md rounded-xl bg-amber-50 border border-amber-300 px-3 py-2 text-[12px] text-amber-900 space-y-0.5">{warnings.map((w) => <p key={w}>{w}</p>)}</div>}
         </main>
 
@@ -255,8 +307,8 @@ export function EmbroideryStudio({ design, pieces, colours, onSave, onClose, fil
           {selected && (
             <div className="space-y-2" role="group" aria-label="Selected object">
               <label className={lbl}>Name<input value={selected.name} onChange={(e) => patch(selected.id, { name: e.target.value })} aria-label="Object name" className={field} /></label>
-              <div role="radiogroup" aria-label="Stitch type" className="flex gap-1">
-                {(['fill', 'satin', 'running'] as StitchType[]).map((t) => <button key={t} type="button" role="radio" aria-checked={selected.type === t} className={chip(selected.type === t)} onClick={() => patch(selected.id, { type: t })}>{{ fill: 'Fill', satin: 'Satin', running: 'Running' }[t]}</button>)}
+              <div role="radiogroup" aria-label="Stitch type" className="flex flex-wrap gap-1">
+                {(Object.keys(STITCH_LABEL) as StitchType[]).map((t) => <button key={t} type="button" role="radio" aria-checked={selected.type === t} aria-label={({ fill: 'Fill', satin: 'Satin', running: 'Running' } as any)[t] || STITCH_LABEL[t]} className={chip(selected.type === t)} onClick={() => patch(selected.id, { type: t })}>{STITCH_LABEL[t]}</button>)}
               </div>
               <div className="grid grid-cols-2 gap-1.5">
                 <label className={lbl}>Thread colour<input type="color" value={selected.colour} onChange={(e) => patch(selected.id, { colour: e.target.value })} aria-label="Thread colour" className="mt-0.5 block h-8 w-full rounded-lg border border-mt-border" /></label>
@@ -264,9 +316,16 @@ export function EmbroideryStudio({ design, pieces, colours, onSave, onClose, fil
                 {selected.type === 'fill' && <label className={lbl}>Angle (°)<input type="number" value={selected.angle ?? 45} onChange={(e) => patch(selected.id, { angle: Number(e.target.value) || 0 })} aria-label="Fill angle" className={field} /></label>}
                 {selected.type !== 'running' && <label className={lbl}>Density (mm)<input type="number" step={0.05} min={0.2} max={2} value={selected.spacing ?? 0.4} onChange={(e) => patch(selected.id, { spacing: Math.max(0.2, Math.min(2, Number(e.target.value) || 0.4)) })} aria-label="Density" className={field} /></label>}
                 {selected.type !== 'satin' && <label className={lbl}>Stitch length (mm)<input type="number" step={0.1} min={1} max={7} value={selected.stitchLen ?? (selected.type === 'fill' ? 3.5 : 2.5)} onChange={(e) => patch(selected.id, { stitchLen: Math.max(1, Math.min(7, Number(e.target.value) || 2.5)) })} aria-label="Stitch length" className={field} /></label>}
+                {['zigzag', 'motif', 'applique', 'decorative'].includes(selected.type) && <label className={lbl}>{selected.type === 'decorative' ? 'Spoke depth (mm)' : 'Width (mm)'}<input type="number" step={0.5} min={1} max={12} value={selected.width ?? 3} onChange={(e) => patch(selected.id, { width: Math.max(1, Math.min(12, Number(e.target.value) || 3)) })} aria-label="Stitch width" className={field} /></label>}
+                {selected.type === 'motif' && <label className={lbl}>Motif<select value={selected.motif || 'diamond'} onChange={(e) => patch(selected.id, { motif: e.target.value as any })} aria-label="Motif shape" className={field}>{['diamond', 'cross', 'wave', 'triangle'].map((m) => <option key={m}>{m}</option>)}</select></label>}
+                {(selected.type === 'satin' || selected.type === 'fill' || selected.type === 'applique') && <label className={lbl}>Pull comp. (mm)<input type="number" step={0.05} min={0} max={1.5} value={selected.pull ?? 0} onChange={(e) => patch(selected.id, { pull: Math.max(0, Math.min(1.5, Number(e.target.value) || 0)) })} aria-label="Pull compensation" className={field} /></label>}
+                {selected.type === 'fill' && <label className={lbl}>Push comp. (mm)<input type="number" step={0.05} min={0} max={1.5} value={selected.push ?? 0} onChange={(e) => patch(selected.id, { push: Math.max(0, Math.min(1.5, Number(e.target.value) || 0)) })} aria-label="Push compensation" className={field} /></label>}
+                <label className={lbl}>Start point<select value={selected.start || 'auto'} onChange={(e) => patch(selected.id, { start: e.target.value as any })} aria-label="Start point" className={field}>{[['auto', 'Automatic'], ['top-left', 'Top left'], ['top-right', 'Top right'], ['bottom-left', 'Bottom left'], ['bottom-right', 'Bottom right'], ['centre', 'Centre']].map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></label>
                 {selected.type === 'satin' && <label className={lbl}>Column width (mm)<input type="number" step={0.5} min={1} max={12} value={selected.width ?? 3} onChange={(e) => patch(selected.id, { width: Math.max(1, Math.min(12, Number(e.target.value) || 3)) })} aria-label="Satin width" className={field} /></label>}
               </div>
               {selected.type !== 'running' && <label className="flex items-center gap-2 text-[12px]"><input type="checkbox" checked={selected.underlay !== false} onChange={(e) => patch(selected.id, { underlay: e.target.checked })} /> Underlay</label>}
+              <label className="flex items-center gap-2 text-[12px]"><input type="checkbox" checked={selected.tie !== false} onChange={(e) => patch(selected.id, { tie: e.target.checked })} /> Tie-in and tie-off (lock stitches)</label>
+              {selected.type === 'applique' && <p className="text-[11px] text-mt-muted">Appliqué sews a placement line, stops (lay the fabric), a tack-down, stops (trim the fabric), then a satin cover.</p>}
               {selected.type === 'running' && <label className="flex items-center gap-2 text-[12px]"><input type="checkbox" checked={!!selected.triple} onChange={(e) => patch(selected.id, { triple: e.target.checked })} /> Triple (bean) stitch</label>}
               <div className="flex flex-wrap gap-1">
                 <button type="button" className={chip(false)} onClick={() => scaleSel(1.1)}>Bigger</button>

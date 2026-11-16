@@ -11,7 +11,8 @@
 
 import { flatten, normalize, type Ring } from '../textile/vector.ts';
 
-export type StitchType = 'fill' | 'satin' | 'running';
+export type StitchType = 'fill' | 'satin' | 'running' | 'zigzag' | 'motif' | 'applique' | 'decorative';
+export const STITCH_LABEL: Record<StitchType, string> = { fill: 'Tatami / fill', satin: 'Satin', running: 'Running / bean', zigzag: 'Zigzag', motif: 'Motif', applique: 'Appliqué', decorative: 'Decorative (blanket)' };
 export interface EmbObject {
   id: string;
   name: string;
@@ -26,8 +27,19 @@ export interface EmbObject {
   underlay?: boolean;
   triple?: boolean;     // running: bean stitch
   hidden?: boolean;
+  /** Pull compensation (mm): satin / fill widened across the stitch direction to make up for thread pull. */
+  pull?: number;
+  /** Push compensation (mm): fill rows shortened at their ends (thread pushes the fabric out along the stitch). */
+  push?: number;
+  /** Tie-in / tie-off: small lock stitches at the start and end of the object. */
+  tie?: boolean;
+  /** Where the object starts: nearest point to this corner of its box. */
+  start?: 'auto' | 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right' | 'centre';
+  /** Motif stitch: the shape repeated along the line. */
+  motif?: 'diamond' | 'cross' | 'wave' | 'triangle';
 }
-export type Cmd = 'stitch' | 'jump' | 'trim' | 'color' | 'end';
+/** 'stop' pauses the machine without a new colour (appliqué: lay the fabric, trim it). In DST it is written like a colour change. */
+export type Cmd = 'stitch' | 'jump' | 'trim' | 'color' | 'stop' | 'end';
 export interface Stitch { x: number; y: number; cmd: Cmd }
 
 export const DEFAULTS = { fillSpacing: 0.4, fillLen: 3.5, satinSpacing: 0.4, satinWidth: 3, runLen: 2.5, maxStitch: 7, trimOver: 3 };
@@ -150,21 +162,105 @@ function split(a: Pt, b: Pt, max: number): Pt[] {
 export function objectPaths(o: EmbObject): Pt[][] {
   const rs = rings(o.d);
   if (!rs.length) return [];
+  const pull = Math.max(0, o.pull ?? 0), push = Math.max(0, o.push ?? 0);
+  let paths: Pt[][];
   if (o.type === 'fill') {
-    const closed = rs.map((r) => r.pts);
+    const closed = rs.map((r) => (pull ? grow(pull / 2)(r.pts) : r.pts));
     const sp = o.spacing || DEFAULTS.fillSpacing, len = o.stitchLen || DEFAULTS.fillLen, ang = o.angle ?? 45;
-    const top = fillStitches(closed, ang, sp, len);
+    const top = fillStitches(closed, ang, sp, len).map((b) => (push ? pushIn(b, push, ang) : b));
     const under = o.underlay === false ? [] : fillStitches(closed.map(shrink(0.6)), ang + 90, Math.max(1.5, sp * 5), 3, false);
-    return [...under, ...top];
-  }
-  if (o.type === 'satin') {
-    const w = o.width || DEFAULTS.satinWidth, sp = o.spacing || DEFAULTS.satinSpacing;
-    return rs.flatMap((r) => {
-      const under = o.underlay === false ? [] : [runningStitches(r.pts as Pt[], 2, r.closed)];
+    paths = [...under, ...top];
+  } else if (o.type === 'satin' || o.type === 'zigzag') {
+    const w = (o.width || DEFAULTS.satinWidth) + pull, sp = o.type === 'zigzag' ? Math.max(1.2, o.spacing || 2) : o.spacing || DEFAULTS.satinSpacing;
+    paths = rs.flatMap((r) => {
+      const under = o.underlay === false || o.type === 'zigzag' ? [] : [runningStitches(r.pts as Pt[], 2, r.closed)];
       return [...under, satinStitches(r.pts as Pt[], w, sp, r.closed)];
     });
+  } else if (o.type === 'motif') {
+    paths = rs.map((r) => motifStitches(r.pts as Pt[], o.motif || 'diamond', o.width || 3, o.stitchLen || 4, r.closed));
+  } else if (o.type === 'decorative') {
+    paths = rs.map((r) => blanketStitches(r.pts as Pt[], o.width || 3, o.stitchLen || 3, r.closed));
+  } else if (o.type === 'applique') {
+    // 1 placement line (machine stops: lay the fabric) → 2 tack-down → 3 satin cover over the cut edge.
+    paths = rs.flatMap((r) => [runningStitches(r.pts as Pt[], 2.5, r.closed), runningStitches(shrink(0.8)(r.pts) as Pt[], 2.5, r.closed), satinStitches(r.pts as Pt[], (o.width || 3) + pull, o.spacing || DEFAULTS.satinSpacing, r.closed)]);
+  } else {
+    paths = rs.map((r) => runningStitches(r.pts as Pt[], o.stitchLen || DEFAULTS.runLen, r.closed, !!o.triple));
   }
-  return rs.map((r) => runningStitches(r.pts as Pt[], o.stitchLen || DEFAULTS.runLen, r.closed, !!o.triple));
+  paths = paths.filter((p) => p.length);
+  if (o.start && o.start !== 'auto' && paths.length) paths = startAt(paths, o.d, o.start);
+  if (o.tie !== false && paths.length) {
+    paths[0] = tieIn(paths[0]);
+    paths[paths.length - 1] = tieOff(paths[paths.length - 1]);
+  }
+  return paths;
+}
+
+/** Lock stitches: tiny back-and-forth at the start / end (0.6 mm) so the thread does not pull out. */
+function tieIn(p: Pt[]): Pt[] {
+  if (p.length < 2) return p;
+  const [a, b] = p, L = dist(a, b) || 1, ux = (b[0] - a[0]) / L, uy = (b[1] - a[1]) / L, k = Math.min(0.6, L / 2);
+  return [a, [a[0] + ux * k, a[1] + uy * k], a, [a[0] + ux * k, a[1] + uy * k], ...p.slice(1)];
+}
+function tieOff(p: Pt[]): Pt[] {
+  if (p.length < 2) return p;
+  const b = p[p.length - 1], a = p[p.length - 2], L = dist(a, b) || 1, ux = (a[0] - b[0]) / L, uy = (a[1] - b[1]) / L, k = Math.min(0.6, L / 2);
+  return [...p, [b[0] + ux * k, b[1] + uy * k], b, [b[0] + ux * k, b[1] + uy * k], b];
+}
+/** Starts the object at the path end nearest to the chosen corner (paths are reordered; a closed path is rotated). */
+function startAt(paths: Pt[][], d: string, where: NonNullable<EmbObject['start']>): Pt[][] {
+  const pts = rings(d).flatMap((r) => r.pts as Pt[]);
+  const xs = pts.map((p) => p[0]), ys = pts.map((p) => p[1]);
+  const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
+  const target: Pt = where === 'centre' ? [(x0 + x1) / 2, (y0 + y1) / 2] : [where.endsWith('left') ? x0 : x1, where.startsWith('top') ? y0 : y1];
+  let best = 0, bd = Infinity, rev = false;
+  paths.forEach((p, i) => { const a = dist(p[0], target), b = dist(p[p.length - 1], target); if (a < bd) { bd = a; best = i; rev = false; } if (b < bd) { bd = b; best = i; rev = true; } });
+  const first = rev ? paths[best].slice().reverse() : paths[best];
+  return [first, ...paths.filter((_, i) => i !== best)];
+}
+/** Pushes a ring outward by `mm` (pull compensation). */
+const grow = (mm: number) => (r: Ring): Ring => {
+  let cx = 0, cy = 0; for (const p of r) { cx += p[0]; cy += p[1]; } cx /= r.length; cy /= r.length;
+  return r.map(([x, y]) => { const d = Math.hypot(x - cx, y - cy) || 1; const k = (d + mm) / d; return [cx + (x - cx) * k, cy + (y - cy) * k]; });
+};
+/** Push compensation: each row end pulled back along the stitch direction. */
+function pushIn(block: Pt[], mm: number, angle: number): Pt[] {
+  const a = (angle * Math.PI) / 180, ux = Math.cos(a), uy = Math.sin(a);
+  return block.map((p, i) => {
+    const prev = block[i - 1], next = block[i + 1];
+    const turnA = !prev || Math.abs((p[0] - prev[0]) * uy - (p[1] - prev[1]) * ux) > 0.05;
+    const turnB = !next || Math.abs((next[0] - p[0]) * uy - (next[1] - p[1]) * ux) > 0.05;
+    if (!turnA && !turnB) return p;
+    // A row end: move it back towards the row it belongs to.
+    const other = turnA ? next : prev;
+    if (!other) return p;
+    const dir = Math.sign((other[0] - p[0]) * ux + (other[1] - p[1]) * uy) || 0;
+    return [p[0] + ux * dir * mm / 2, p[1] + uy * dir * mm / 2] as Pt;
+  });
+}
+/** Motif stitch: a small shape repeated along the line. */
+function motifStitches(line: Pt[], m: NonNullable<EmbObject['motif']>, size: number, step: number, closed: boolean): Pt[] {
+  const c = resample(line, Math.max(1, step), closed), out: Pt[] = [];
+  for (let i = 0; i < c.length; i++) {
+    const p = c[i], q = c[Math.min(c.length - 1, i + 1)], o = c[Math.max(0, i - 1)];
+    let tx = q[0] - o[0], ty = q[1] - o[1]; const L = Math.hypot(tx, ty) || 1; tx /= L; ty /= L;
+    const nx = -ty, ny = tx, h = size / 2, s = step / 2;
+    const at = (u: number, v: number): Pt => [p[0] + tx * u + nx * v, p[1] + ty * u + ny * v];
+    if (m === 'diamond') out.push(at(0, 0), at(s / 2, h), at(s, 0), at(s / 2, -h), at(0, 0));
+    else if (m === 'cross') out.push(at(0, 0), at(s / 2, h), at(s / 2, -h), at(s, 0));
+    else if (m === 'triangle') out.push(at(0, 0), at(s / 2, h), at(s, 0));
+    else out.push(at(0, 0), at(s / 3, h), at((2 * s) / 3, -h), at(s, 0));
+  }
+  return out;
+}
+/** Blanket (E) stitch along an outline: a spoke inward every `step` mm. */
+function blanketStitches(line: Pt[], depth: number, step: number, closed: boolean): Pt[] {
+  const c = resample(line, Math.max(1, step), closed), out: Pt[] = [];
+  for (let i = 0; i < c.length; i++) {
+    const p = c[i], q = c[Math.min(c.length - 1, i + 1)], o = c[Math.max(0, i - 1)];
+    let tx = q[0] - o[0], ty = q[1] - o[1]; const L = Math.hypot(tx, ty) || 1; tx /= L; ty /= L;
+    out.push(p, [p[0] - ty * depth, p[1] + tx * depth], p);
+  }
+  return out;
 }
 
 /** Pulls a ring a little towards its centre (underlay stays inside the top stitches). */
@@ -183,7 +279,10 @@ export function stitchDesign(objects: EmbObject[], o: { maxStitch?: number; trim
     if (!paths.length) continue;
     if (colour !== null && ob.colour.toLowerCase() !== colour) { out.push({ x: cur![0], y: cur![1], cmd: 'trim' }, { x: cur![0], y: cur![1], cmd: 'color' }); }
     colour = ob.colour.toLowerCase();
-    for (const path of paths) {
+    for (let pi = 0; pi < paths.length; pi++) {
+      const path = paths[pi];
+      // Appliqué: stop after the placement line (lay the fabric) and after the tack-down (trim it).
+      if (ob.type === 'applique' && cur && pi > 0 && pi % 3 !== 0) out.push({ x: cur[0], y: cur[1], cmd: 'trim' }, { x: cur[0], y: cur[1], cmd: 'stop' });
       const start = path[0];
       if (!cur) { out.push({ x: start[0], y: start[1], cmd: 'jump' }); }
       else if (dist(cur, start) > 0.05) {
@@ -203,11 +302,11 @@ export function stitchDesign(objects: EmbObject[], o: { maxStitch?: number; trim
   return out;
 }
 
-export interface Summary { stitches: number; colours: { name: string; hex: string; stitches: number }[]; sizeMm: [number, number]; jumps: number; trims: number; minutes: number }
+export interface Summary { stitches: number; colours: { name: string; hex: string; stitches: number }[]; sizeMm: [number, number]; jumps: number; trims: number; stops?: number; minutes: number }
 export function summarise(objects: EmbObject[], st: Stitch[], spm = 700): Summary {
   const vis = objects.filter((o) => !o.hidden);
   const colours: Summary['colours'] = [];
-  let ci = -1, n = 0, jumps = 0, trims = 0, prevColour = '';
+  let ci = -1, n = 0, jumps = 0, trims = 0, stops = 0, prevColour = '';
   for (const o of vis) if (o.colour.toLowerCase() !== prevColour) { colours.push({ name: o.thread || o.colour.toUpperCase(), hex: o.colour, stitches: 0 }); prevColour = o.colour.toLowerCase(); }
   ci = colours.length ? 0 : -1;
   let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
@@ -215,9 +314,10 @@ export function summarise(objects: EmbObject[], st: Stitch[], spm = 700): Summar
     if (s.cmd === 'stitch') { n++; if (ci >= 0) colours[ci].stitches++; x0 = Math.min(x0, s.x); y0 = Math.min(y0, s.y); x1 = Math.max(x1, s.x); y1 = Math.max(y1, s.y); }
     else if (s.cmd === 'jump') jumps++;
     else if (s.cmd === 'trim') trims++;
+    else if (s.cmd === 'stop') stops++;
     else if (s.cmd === 'color') ci = Math.min(colours.length - 1, ci + 1);
   }
-  return { stitches: n, colours, sizeMm: n ? [x1 - x0, y1 - y0] : [0, 0], jumps, trims, minutes: Math.ceil(n / spm + colours.length * 0.5) };
+  return { stitches: n, colours, sizeMm: n ? [x1 - x0, y1 - y0] : [0, 0], jumps, trims, stops, minutes: Math.ceil(n / spm + (colours.length + stops) * 0.5) };
 }
 
 // ── Machine files ──────────────────────────────────────────────────────────
@@ -259,7 +359,7 @@ export function toDst(st: Stitch[], label = 'MAGICAL'): Uint8Array {
     if (s.cmd === 'stitch') { if (tx === px && ty === py) { recs.push(...dstRecord(0, 0, 'stitch')); count++; } else move(tx, ty, 'stitch'); }
     else if (s.cmd === 'jump') move(tx, ty, 'jump');
     else if (s.cmd === 'trim') { for (const [dx, dy] of [[2, 2], [-4, -4], [2, 2]]) { recs.push(...dstRecord(dx, dy, 'jump')); count++; } }
-    else if (s.cmd === 'color') { recs.push(...dstRecord(0, 0, 'color')); count++; colours++; }
+    else if (s.cmd === 'color' || s.cmd === 'stop') { recs.push(...dstRecord(0, 0, 'color')); count++; colours++; }
   }
   recs.push(0x00, 0x00, 0xF3);
   const pad = (v: string, n: number) => v.slice(0, n).padEnd(n, ' ');
@@ -312,7 +412,7 @@ export function toExp(st: Stitch[]): Uint8Array {
     const tx = Math.round(s.x * 10) - ox, ty = Math.round(s.y * 10) - oy;
     if (s.cmd === 'stitch') move(tx, ty, false);
     else if (s.cmd === 'jump') move(tx, ty, true);
-    else if (s.cmd === 'color') b.push(0x80, 0x01, 0x00, 0x00);
+    else if (s.cmd === 'color' || s.cmd === 'stop') b.push(0x80, 0x01, 0x00, 0x00);
     else if (s.cmd === 'trim') b.push(0x80, 0x80, 0x07, 0x00);
   }
   return new Uint8Array(b);
@@ -333,7 +433,7 @@ export function previewSvg(objects: EmbObject[], st: Stitch[], o: { background?:
       x0 = Math.min(x0, s.x); y0 = Math.min(y0, s.y); x1 = Math.max(x1, s.x); y1 = Math.max(y1, s.y);
     }
     if (s.cmd === 'color') { flush(); ci++; }
-    if (s.cmd !== 'trim' && s.cmd !== 'color') last = s;
+    if (s.cmd !== 'trim' && s.cmd !== 'color' && s.cmd !== 'stop') last = s;
   }
   flush();
   if (!Number.isFinite(x0)) { x0 = 0; y0 = 0; x1 = 10; y1 = 10; }
@@ -342,4 +442,37 @@ export function previewSvg(objects: EmbObject[], st: Stitch[], o: { background?:
   const x = x0 - pad, y = y0 - pad, w = x1 - x0 + 2 * pad, h = y1 - y0 + 2 * pad;
   const bg = o.background ? `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${o.background}"/>` : '';
   return { svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${x.toFixed(2)} ${y.toFixed(2)} ${w.toFixed(2)} ${h.toFixed(2)}" width="${w.toFixed(1)}mm" height="${h.toFixed(1)}mm">${bg}${body}</svg>`, w, h, x, y };
+}
+
+
+export interface DstCheck { ok: boolean; issues: string[]; stitches: number; colourChanges: number; sizeMm: [number, number] }
+/** Reads a generated DST back and checks it before it is offered: header, end marker, every stitch at its place (0.1 mm), moves within the machine limit, colour changes / stops, size within the hoop. */
+export function validateDst(bytes: Uint8Array, st: Stitch[], hoop?: [number, number]): DstCheck {
+  const issues: string[] = [];
+  if (bytes.length < 515 || (bytes.length - 512) % 3) issues.push('File length is not a whole number of DST records.');
+  const { stitches: back, header } = readDst(bytes);
+  const hdr = (k: string) => { const m = header.match(new RegExp(`${k}:\\s*([-+\\d ]+)`)); return m ? parseInt(m[1].replace(/\s/g, ''), 10) : NaN; };
+  const records = (bytes.length - 512) / 3 - 1;
+  if (!/^LA:/.test(header)) issues.push('Header label (LA:) missing.');
+  if (hdr('ST') !== records) issues.push(`Header says ${hdr('ST')} records, the file has ${records}.`);
+  if (back[back.length - 1]?.cmd !== 'end') issues.push('End-of-design marker missing.');
+  const wantChanges = st.filter((s) => s.cmd === 'color' || s.cmd === 'stop').length;
+  const gotChanges = back.filter((s) => s.cmd === 'color').length;
+  if (hdr('CO') !== gotChanges || gotChanges !== wantChanges) issues.push(`Colour changes / stops: expected ${wantChanges}, header ${hdr('CO')}, file ${gotChanges}.`);
+  for (let i = 1; i < back.length; i++) if (Math.hypot(back[i].x - back[i - 1].x, back[i].y - back[i - 1].y) > 12.15) { issues.push('A move longer than 12.1 mm (machine limit).'); break; }
+  const first = st.find((s) => s.cmd !== 'end');
+  const want = st.filter((s) => s.cmd === 'stitch');
+  if (first) {
+    let j = 0, missingN = 0;
+    for (const w of want) {
+      const tx = Math.round(w.x * 10) - Math.round(first.x * 10), ty = Math.round(w.y * 10) - Math.round(first.y * 10);
+      let k = j; while (k < back.length && !(back[k].cmd === 'stitch' && Math.round(back[k].x * 10) === tx && Math.round(back[k].y * 10) === ty)) k++;
+      if (k >= back.length) missingN++; else j = k;
+    }
+    if (missingN) issues.push(`${missingN} stitch${missingN === 1 ? '' : 'es'} not found at the right place.`);
+  }
+  const xs = back.map((s) => s.x), ys = back.map((s) => s.y);
+  const sizeMm: [number, number] = back.length ? [Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys)] : [0, 0];
+  if (hoop && (sizeMm[0] > hoop[0] + 0.5 || sizeMm[1] > hoop[1] + 0.5)) issues.push(`Design ${Math.round(sizeMm[0])} × ${Math.round(sizeMm[1])} mm is bigger than the ${hoop[0]} × ${hoop[1]} mm hoop.`);
+  return { ok: !issues.length, issues, stitches: back.filter((s) => s.cmd === 'stitch').length, colourChanges: gotChanges, sizeMm };
 }
