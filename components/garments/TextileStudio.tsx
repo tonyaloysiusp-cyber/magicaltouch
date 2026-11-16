@@ -9,7 +9,7 @@
 // pack. Everything stays on this device.
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { AlertTriangle, Download, FileUp, PenTool, Save, Scissors, Shirt, Sparkles } from 'lucide-react';
+import { AlertTriangle, Download, FileUp, PenTool, Redo2, Save, Scissors, Shirt, Sparkles, Undo2 } from 'lucide-react';
 import { DEFAULT_PATTERN } from '@/lib/patterns';
 import { SIZES, ROLLS, type Product } from '@/lib/garments';
 import { kitFor, kitProduct, pieceMarkup, rosterSheets, safeFile, type KitDesign, type Player } from '@/lib/teamKit';
@@ -21,7 +21,7 @@ import {
   conflicts, draftChudidar, draftKurta, draftRect, missing, outOfRange, type Field, type GarmentType, type Measures, type NeckStyle, type SleeveStyle,
 } from '@/lib/textile/draft';
 import { listAssets } from '@/lib/assets/library';
-import { openToolFile, saveToolProject, TOOL_FILE_ACCEPT } from '@/lib/mtd/toolProject';
+import { openToolFile, saveToolProject, takeToolHandoff, TOOL_FILE_ACCEPT } from '@/lib/mtd/toolProject';
 import { PrintStudio } from './PrintStudio';
 import { EmbroideryStudio, type EmbroideryDesign } from './EmbroideryStudio';
 import type { Asset } from '@/lib/assets/library';
@@ -107,7 +107,8 @@ export function flatSvg(kit: KitDesign, product: Product): { inner: string; w: n
   return { inner: `<g transform="translate(0 60)">${inner}</g>`, w: board.w, h: board.h + 60 };
 }
 
-export function TextileStudio() {
+export function TextileStudio({ mode = 'pro', pick, embedded, onForeign, openReq, units = 'cm' }: { units?: 'mm' | 'cm' | 'in'; mode?: 'simple' | 'pro'; pick?: { type: GarmentType; n: number }; embedded?: boolean; onForeign?: (f: File) => void; openReq?: { file: File; n: number } | null } = {}) {
+  const pro = mode !== 'simple';
   const [p, setP] = useState<TextileProject>(NEW_PROJECT);
   const [loaded, setLoaded] = useState(false);
   const [studio, setStudio] = useState(false);
@@ -124,7 +125,9 @@ export function TextileStudio() {
     try {
       const d = JSON.parse(localStorage.getItem(DRAFT_KEY) || 'null');
       const ms = JSON.parse(localStorage.getItem(MEASURE_KEY) || 'null');
-      setP({ ...NEW_PROJECT, ...(d || {}), measures: { ...(ms || {}), ...(d?.measures || {}) } });
+      const handed = takeToolHandoff('textile');
+      if (handed?.data?.project) { setP({ ...NEW_PROJECT, ...handed.data.project }); handle.current = handed.handle || null; }
+      else setP({ ...NEW_PROJECT, ...(d || {}), measures: { ...(ms || {}), ...(d?.measures || {}) } });
     } catch { /* ignore */ }
     setLoaded(true);
     listAssets('pattern').then(setLib).catch(() => {});
@@ -135,13 +138,43 @@ export function TextileStudio() {
     return () => clearTimeout(t);
   }, [p, loaded]);
 
-  const set = (o: Partial<TextileProject>) => setP((x) => ({ ...x, ...o }));
-  const setMeasure = (k: string, v: string) => setP((x) => {
+  // Undo / redo of every project change (measurements, styles, colours, artwork, embroidery).
+  const hist = useRef<{ past: TextileProject[]; future: TextileProject[]; last: number }>({ past: [], future: [], last: 0 });
+  const [, bump] = useState(0);
+  const record = (prev: TextileProject) => {
+    const h = hist.current, now = Date.now();
+    if (now - h.last > 600) { h.past.push(prev); if (h.past.length > 100) h.past.shift(); }
+    h.last = now; h.future = [];
+    bump((x) => x + 1);
+  };
+  const pRef = useRef(p); pRef.current = p;
+  const commit = (next: TextileProject) => { record(pRef.current); pRef.current = next; setP(next); };
+  const set = (o: Partial<TextileProject>) => commit({ ...pRef.current, ...o });
+  const undo = () => { const h = hist.current; const x = h.past.pop(); if (!x) return; h.future.push(pRef.current); pRef.current = x; setP(x); h.last = 0; bump((n) => n + 1); };
+  const redo = () => { const h = hist.current; const x = h.future.pop(); if (!x) return; h.past.push(pRef.current); pRef.current = x; setP(x); h.last = 0; bump((n) => n + 1); };
+  useEffect(() => {
+    const k = (e: KeyboardEvent) => {
+      if (studio || embOpen) return;
+      const t = e.target as HTMLElement;
+      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); if (e.shiftKey) redo(); else undo(); }
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') { e.preventDefault(); redo(); }
+    };
+    window.addEventListener('keydown', k);
+    return () => window.removeEventListener('keydown', k);
+  });
+  useEffect(() => { if (pick && pick.type !== p.type) set({ type: pick.type }); }, [pick?.n]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (openReq) openProject(openReq.file); }, [openReq?.n]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Measurements are kept in cm; they are shown and typed in the unit chosen in Workspace settings.
+  const uK = units === 'mm' ? 10 : units === 'in' ? 1 / 2.54 : 1;
+  const show = (cm: number | undefined) => (cm == null ? '' : String(Math.round(cm * uK * 100) / 100));
+  const setMeasure = (k: string, v: string) => {
+    const x = pRef.current;
     const cur = { ...(x.measures[x.type] || {}) };
     const n = parseFloat(v.replace(',', '.'));
-    if (v.trim() === '' || !Number.isFinite(n)) delete cur[k]; else cur[k] = n;
-    return { ...x, measures: { ...x.measures, [x.type]: cur } };
-  });
+    if (v.trim() === '' || !Number.isFinite(n)) delete cur[k]; else cur[k] = Math.round((n / uK) * 1000) / 1000;
+    commit({ ...x, measures: { ...x.measures, [x.type]: cur } });
+  };
 
   const { product, problems } = useMemo(() => projectProduct(p), [p]);
   const kit = useMemo(() => projectKit(p, product), [p, product]);
@@ -233,9 +266,11 @@ export function TextileStudio() {
     setBusy(null);
   };
 
-  const saveProject = async () => {
+  const saveProject = async (asNew = false) => {
     try {
-      const ref = await saveToolProject({ kind: 'textile', name: p.name, data: { project: p }, previewSvg: flat ? `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${flat.w} ${flat.h}">${flat.inner}</svg>` : undefined, handle: handle.current });
+      let name = p.name;
+      if (asNew) { const n = window.prompt('Save a copy as…', `${p.name} copy`); if (!n) return; name = n.trim() || p.name; if (name !== p.name) set({ name }); }
+      const ref = await saveToolProject({ kind: 'textile', name, data: { project: { ...p, name } }, previewSvg: flat ? `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${flat.w} ${flat.h}">${flat.inner}</svg>` : undefined, handle: asNew ? null : handle.current });
       if (ref) { handle.current = ref.handle; flash(`Saved as “${ref.fileName}” on this device.`); }
     } catch { flash('The project could not be saved.'); }
   };
@@ -243,14 +278,15 @@ export function TextileStudio() {
     if (!f) return;
     try {
       const pr = await openToolFile(f);
+      if (pr.kind !== 'textile' && onForeign && ['jersey', 'polo', 'tshirt'].includes(pr.kind)) { onForeign(f); return; }
       if (pr.kind !== 'textile' || !pr.data?.project) { flash('That file is not a Textile Studio project.'); return; }
-      setP({ ...NEW_PROJECT, ...pr.data.project }); handle.current = pr.handle || null;
+      commit({ ...NEW_PROJECT, ...pr.data.project }); handle.current = pr.handle || null;
       flash('Project opened.');
     } catch { flash('That file could not be opened.'); }
   };
   const newProject = (keep: boolean) => {
     if (!window.confirm(keep ? 'Start a new design with the same garment and measurements? Your current design is not deleted if you saved it.' : 'Start a new, empty project? Save the current one first if you need it.')) return;
-    setP(keep ? { ...p, name: 'My textile design', art: [], embroidery: null } : { ...NEW_PROJECT, measures: p.measures });
+    commit(keep ? { ...p, name: 'My textile design', art: [], embroidery: null } : { ...NEW_PROJECT, type: p.type, measures: p.measures });
     handle.current = null;
   };
 
@@ -264,7 +300,12 @@ export function TextileStudio() {
       {/* Project bar */}
       <div className="flex flex-wrap items-center gap-2">
         <input value={p.name} onChange={(e) => set({ name: e.target.value })} aria-label="Project name" className="h-10 min-w-[200px] flex-1 rounded-xl border border-mt-border bg-mt-bg px-3 text-[15px] font-semibold" />
-        <button type="button" className={btn} onClick={saveProject}><Save size={15} /> Save project</button>
+        <span className="inline-flex rounded-full border border-mt-border">
+          <button type="button" onClick={undo} disabled={!hist.current.past.length} aria-label="Undo" title="Undo (Ctrl+Z)" className="h-10 w-10 inline-flex items-center justify-center rounded-l-full hover:bg-mt-surface2 disabled:opacity-40"><Undo2 size={16} /></button>
+          <button type="button" onClick={redo} disabled={!hist.current.future.length} aria-label="Redo" title="Redo (Ctrl+Shift+Z)" className="h-10 w-10 inline-flex items-center justify-center rounded-r-full border-l border-mt-border hover:bg-mt-surface2 disabled:opacity-40"><Redo2 size={16} /></button>
+        </span>
+        <button type="button" className={btn} onClick={() => saveProject(false)}><Save size={15} /> Save project</button>
+        <button type="button" className={btn} onClick={() => saveProject(true)}><Save size={15} /> Save as</button>
         <button type="button" className={btn} onClick={() => fileRef.current?.click()}><FileUp size={15} /> Open</button>
         <button type="button" className={btn} onClick={() => newProject(true)}>New (same garment)</button>
         <button type="button" className={btn} onClick={() => newProject(false)}>New empty</button>
@@ -274,15 +315,15 @@ export function TextileStudio() {
       {/* 1 Garment */}
       <section aria-label="Garment">
         <p className="text-[13px] font-semibold uppercase tracking-wide text-mt-faint">1 · Garment</p>
-        <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2" role="radiogroup" aria-label="Garment type">
-          {GARMENTS.map((g) => (
+        {!embedded && <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2" role="radiogroup" aria-label="Garment type">
+          {GARMENTS.filter((g) => !embedded || !standard(g.id)).map((g) => (
             <button key={g.id} type="button" role="radio" aria-checked={p.type === g.id} onClick={() => set({ type: g.id })} className={`rounded-2xl border p-3 text-left ${p.type === g.id ? 'border-[#0F766E] ring-2 ring-[#0F766E]/30 bg-[#0F766E]/5' : 'border-mt-border hover:bg-mt-surface2'}`}>
               <Shirt size={18} className="text-[#0F766E]" />
               <p className="mt-1 text-[13.5px] font-semibold">{g.label}</p>
               <p className="text-[11.5px] text-mt-muted">{g.hint}</p>
             </button>
           ))}
-        </div>
+        </div>}
 
         <div className="mt-4 grid gap-4 lg:grid-cols-[1fr_1fr]">
           <div className="space-y-3">
@@ -304,11 +345,11 @@ export function TextileStudio() {
             {p.type === 'dupatta' && <div className="flex flex-wrap gap-2">{DUPATTA_PRESETS.map((d) => <button key={d.label} type="button" className={chip(m.width === d.width && m.length === d.length)} onClick={() => set({ measures: { ...p.measures, dupatta: { width: d.width, length: d.length } } })}>{d.label}</button>)}</div>}
             {fields && (
               <div role="group" aria-label="Measurements">
-                <p className="text-[12.5px] text-mt-muted">{p.type === 'kurta' || p.type === 'chudidar' ? 'Measurements in cm — taken on the person, saved on this device only.' : 'Size in cm.'}</p>
+                <p className="text-[12.5px] text-mt-muted">{p.type === 'kurta' || p.type === 'chudidar' ? `Measurements in ${units === 'in' ? 'inches' : units} — taken on the person, saved on this device only.` : `Size in ${units === 'in' ? 'inches' : units}.`}</p>
                 <div className="mt-1 grid grid-cols-2 gap-x-3 gap-y-2">
-                  {fields.map((f) => (
+                  {fields.filter((f) => pro || !f.style).map((f) => (
                     <label key={f.key} className={lbl}>{f.label}{f.style && <span className="text-mt-faint"> · style</span>}
-                      <input inputMode="decimal" value={m[f.key] ?? ''} placeholder={f.style ? String(STYLE_DEFAULTS[p.type]?.[f.key] ?? '') : 'cm'} onChange={(e) => setMeasure(f.key, e.target.value)} aria-label={f.label} className={field} />
+                      <input inputMode="decimal" value={show(m[f.key])} placeholder={f.style ? show(STYLE_DEFAULTS[p.type]?.[f.key]) : units} onChange={(e) => setMeasure(f.key, e.target.value)} aria-label={f.label} className={field} />
                     </label>
                   ))}
                 </div>

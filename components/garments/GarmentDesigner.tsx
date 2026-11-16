@@ -10,13 +10,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { AlertTriangle, CheckCircle2, PenTool, Download, FileArchive, FileUp, FolderOpen, Layers, Loader2, MousePointerClick, Plus, Printer, Redo2, RotateCcw, Save, Shirt, Trash2, Undo2, Upload, X, ZoomIn, ZoomOut } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, PenTool, Download, FileArchive, FileUp, FolderOpen, Layers, Loader2, MousePointerClick, Plus, Printer, Redo2, RotateCcw, Save, Shirt, Sparkles, Trash2, Undo2, Upload, X, ZoomIn, ZoomOut } from 'lucide-react';
 import { DEFAULT_PATTERN, PatternSettings, svgDataUrl, sheetPlacements, motifPath, layout } from '@/lib/patterns';
 import { SIZES, ROLLS } from '@/lib/garments';
 import {
   garmentOf, GARMENT_STYLES, GarmentKind, Glyphs, sizeInfo, sizeId, blockMeasure, KIT_GRAPHICS, KIT_STYLES, KitDesign, KitGraphic, Player, checkRoster, glyphTexts, kitFor,
   kitMockupSvg, kitPreviewSvg, parseRoster, playerPrintSvg, printList, rosterSheets, safeFile, frontLayout, kitProduct,
 } from '@/lib/teamKit';
+import { EmbroideryStudio } from './EmbroideryStudio';
 import { openToolFile, saveToolProject, takeToolHandoff, TOOL_FILE_ACCEPT } from '@/lib/mtd/toolProject';
 import { LeaveGuard } from './LeaveGuard';
 import { PrintStudio } from './PrintStudio';
@@ -97,10 +98,21 @@ const load = <T,>(k: string, d: T): T => { try { const v = localStorage.getItem(
 // text, player, size and quantity.
 const TEXTILE_KEY = 'mt:textile';
 const TEXTILE_KINDS: GarmentKind[] = ['jersey', 'polo', 'tshirt'];
-export function GarmentDesigner({ kind: initialKind = 'jersey' }: { kind?: GarmentKind }) {
+export function GarmentDesigner({ kind: initialKind = 'jersey', mode = 'pro', pick, onForeign, openReq, onKind }: { kind?: GarmentKind; mode?: 'simple' | 'pro'; pick?: { kind: GarmentKind; neck?: 'round' | 'v'; n: number }; onForeign?: (f: File) => void; openReq?: { file: File; n: number } | null; onKind?: (k: GarmentKind, neck?: 'round' | 'v') => void }) {
+  const pro = mode !== 'simple';
   const KEY = TEXTILE_KEY;
   const router = useRouter();
   const [step, setStep] = useState<Step>('design');
+  const [embOpen, setEmbOpen] = useState(false);
+  // The Textile Design Studio's product picker (jersey round / V-neck, polo, T-shirt) switches the garment here.
+  useEffect(() => {
+    if (!pick) return;
+    setKit((k) => {
+      const style = garmentOf(k.style) === pick.kind ? k.style : GARMENT_STYLES[pick.kind][0];
+      return { ...k, style, ...(pick.neck ? { neck: pick.neck } : {}) };
+    });
+  }, [pick?.n]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { onKind?.(garmentOf(kit.style), kit.neck); }, [kit.style, kit.neck]); // eslint-disable-line react-hooks/exhaustive-deps
   const [kit, setKit] = useState<KitDesign>(() => kitFor(initialKind));
   const kind = garmentOf(kit.style);
   const copy = COPY[kind];
@@ -284,10 +296,12 @@ export function GarmentDesigner({ kind: initialKind = 'jersey' }: { kind?: Garme
   const openFile = async (f: File) => {
     try {
       const p = await openToolFile(f);
+      if (p.kind === 'textile' && onForeign) { onForeign(f); return; }
       if (!TEXTILE_KINDS.includes(p.kind as GarmentKind)) { flash('That file is not a textile project — open it in its own tool.'); return; }
       apply(p.data, null); fileHandle.current = null; flash(`Opened “${p.name}”.`);
     } catch (e: any) { flash(e?.message || 'Could not open that file.'); }
   };
+  useEffect(() => { if (openReq) openFile(openReq.file); }, [openReq?.n]); // eslint-disable-line react-hooks/exhaustive-deps
   const newDesign = () => { apply({ kit: kitFor(kind), players: copy.sample, pat: { ...DEFAULT_PATTERN, ...PATTERNS[0].p }, patColor: '#FFFFFF', patName: PATTERNS[0].name }, null); setStep('design'); };
   // New design keeps the production set-up (size chart, panels, factory pattern, sleeves, lettering rule) and starts a fresh artwork and roster.
   const newKeepSetup = () => {
@@ -564,6 +578,7 @@ export function GarmentDesigner({ kind: initialKind = 'jersey' }: { kind?: Garme
     <div className="space-y-5">
       <LeaveGuard dirty={dirty} onSave={saveProject} what={copy.noun} />
       {sheetOpen && <ProductionSheet kit={kit} players={list} rollW={rollW} bleed={bleed} layout={kit.sheetLayout} onChange={(l) => setKit((k) => ({ ...k, sheetLayout: l }))} onClose={() => setSheetOpen(false)} />}
+      {embOpen && <EmbroideryStudio design={kit.embroidery || null} pieces={kitProduct(kit).pieces} colours={{ body: kit.body }} fileBase={safeFile(kit.teamName || 'embroidery')} onSave={(embroidery) => setKit((k) => ({ ...k, embroidery }))} onClose={() => setEmbOpen(false)} />}
       {studioOpen && <PrintStudio kit={kit} pattern={pattern} glyphs={glyphs} players={personal ? players : players.map((p) => ({ ...p, name: '', number: '' }))}
         libraryPatterns={mine.filter((x) => x.id).map((x) => ({ id: x.id!, kind: 'pattern' as const, name: x.name, data: x.p, createdAt: x.at || '', updatedAt: x.at || '' }))}
         onSave={(art, studioOnly) => setKit((k) => ({ ...k, art, studioOnly }))} onClose={() => setStudioOpen(false)} />}
@@ -576,7 +591,8 @@ export function GarmentDesigner({ kind: initialKind = 'jersey' }: { kind?: Garme
           <button type="button" onClick={undo} disabled={!hist.current.past.length} aria-label="Undo" title="Undo (Ctrl+Z)" className="h-10 w-10 inline-flex items-center justify-center rounded-l-full hover:bg-mt-surface2 disabled:opacity-40"><Undo2 size={16} /></button>
           <button type="button" onClick={redo} disabled={!hist.current.future.length} aria-label="Redo" title="Redo (Ctrl+Shift+Z)" className="h-10 w-10 inline-flex items-center justify-center rounded-r-full border-l border-mt-border hover:bg-mt-surface2 disabled:opacity-40"><Redo2 size={16} /></button>
         </span>
-        <button type="button" onClick={() => setStudioOpen(true)} className="h-10 px-4 rounded-full bg-mt-ink text-mt-bg text-[13.5px] font-semibold inline-flex items-center gap-1.5" title="Design directly on the flat print pieces"><PenTool size={14} /> Edit print file</button>
+        {pro && <button type="button" onClick={() => setStudioOpen(true)} className="h-10 px-4 rounded-full bg-mt-ink text-mt-bg text-[13.5px] font-semibold inline-flex items-center gap-1.5" title="Design directly on the flat print pieces"><PenTool size={14} /> Edit print file</button>}
+        <button type="button" onClick={() => setEmbOpen(true)} className={btn} title="Embroidery: logo, name or motif with real stitches and a DST machine file"><Sparkles size={14} /> Embroidery{kit.embroidery?.summary ? ` (${kit.embroidery.summary.stitches.toLocaleString('en')})` : ''}</button>
         <button type="button" onClick={() => setNewAsk(true)} className={btn}><Plus size={14} /> New</button>
         <button type="button" onClick={saveAs} className={btn} title="Save a copy under a new name; the original stays as it is"><Save size={14} /> Save as</button>
         <button type="button" onClick={() => setProjects(readProjects().filter((x) => TEXTILE_KINDS.includes(x.kind)))} className={btn}><FolderOpen size={14} /> Projects</button>
@@ -697,7 +713,7 @@ export function GarmentDesigner({ kind: initialKind = 'jersey' }: { kind?: Garme
               {kind === 'jersey' && <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label="Jersey style">{GARMENT_STYLES.jersey.map((id) => <button key={id} type="button" role="radio" aria-checked={kit.style === id} onClick={() => set({ style: id })} className={chip(kit.style === id)}>{KIT_STYLES.find((x) => x.id === id)?.label}</button>)}</div>}
               {(kit.style === 'football' || kit.style === 'basketball' || kit.style === 'tshirt') && <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label="Neck">{([['round', 'Round neck'], ['v', 'V-neck']] as const).map(([n, l]) => <button key={n} type="button" role="radio" aria-checked={(kit.neck || 'round') === n} onClick={() => set({ neck: n })} className={chip((kit.neck || 'round') === n)}>{l}</button>)}</div>}
               {kit.style !== 'basketball' && !kit.factoryPieces && <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label="Sleeves">{([['short', 'Short sleeves'], ['long', 'Long sleeves']] as const).map(([n, l]) => <button key={n} type="button" role="radio" aria-checked={(kit.sleeves || 'short') === n} onClick={() => set({ sleeves: n, sheetLayout: undefined })} className={chip((kit.sleeves || 'short') === n)}>{l}</button>)}</div>}
-              <div className="rounded-2xl border border-mt-border p-3 text-[12.5px] space-y-1.5" aria-label="Pattern pieces">
+              {pro && (<div className="rounded-2xl border border-mt-border p-3 text-[12.5px] space-y-1.5" aria-label="Pattern pieces">
                 <p><b>Pattern pieces:</b> {kit.factoryPieces ? `${kit.factoryName || 'factory pattern'} — ${kit.factoryPieces.length} pieces imported` : `standard template (${kitProduct(kit).label}) — check against your factory’s patterns before production`}</p>
                 <div className="flex flex-wrap gap-1.5">
                   <label className={`${btn} cursor-pointer`}>Import factory pattern (SVG)<input type="file" accept=".svg,image/svg+xml" hidden onChange={async (e) => {
@@ -713,7 +729,7 @@ export function GarmentDesigner({ kind: initialKind = 'jersey' }: { kind?: Garme
                   {kit.factoryPieces && <button type="button" onClick={() => set({ factoryPieces: undefined, factoryName: undefined, sheetLayout: undefined })} className={btn}>Back to the standard template</button>}
                 </div>
                 <p className="text-[11.5px] text-mt-faint">One closed outline per piece at size M, named front, back, sleeve left / right, collar… (layer or object names). Sizes are graded from it with the grading table.</p>
-              </div>
+              </div>)}
               {(kit.style === 'polo' || kit.style === 'cricket') && <div className="grid grid-cols-[1fr_auto] items-end gap-2">
                 <label className="block text-[12px] text-mt-muted">Button placket<select value={kit.placketButtons ?? 3} onChange={(e) => set({ placketButtons: Number(e.target.value) })} aria-label="Placket buttons" className={field}><option value={2}>2 buttons</option><option value={3}>3 buttons</option><option value={4}>4 buttons</option><option value={0}>No buttons (concealed)</option></select></label>
                 <label className="block text-[12px] text-mt-muted">Buttons<input type="color" value={kit.buttonColor || '#FFFFFF'} onChange={(e) => set({ buttonColor: e.target.value })} aria-label="Button colour" className="mt-1 h-10 w-14 rounded-xl border border-mt-border bg-mt-bg" /></label>
@@ -838,7 +854,7 @@ export function GarmentDesigner({ kind: initialKind = 'jersey' }: { kind?: Garme
             <section className="rounded-2xl bg-mt-bg p-3 text-[13px]">
               <b>{totalQty}</b> {personal ? 'players' : 'garments'} · {[...new Set(players.map((p) => sizeLabel(p.size)))].filter(Boolean).join(', ') || '—'}
             </section>
-            <details className="rounded-2xl border border-mt-border p-3">
+            {pro && (<details className="rounded-2xl border border-mt-border p-3">
               <summary className="cursor-pointer text-[13px] font-semibold">Size chart &amp; custom sizes</summary>
               {(() => { const b = blockMeasure(kit); return <>
                 <p className="mt-2 text-[12px] text-mt-muted">Grading table: flat chest (across the front) and body length of every size. Change any value to grade width and length separately — artwork keeps its proportions, the collar keeps its height. Check against your factory’s size chart before production.</p>
@@ -866,7 +882,7 @@ export function GarmentDesigner({ kind: initialKind = 'jersey' }: { kind?: Garme
                 <button type="button" onClick={() => set({ customSizes: [...(kit.customSizes || []), { label: `Custom ${(kit.customSizes || []).length + 1}`, chestCm: Math.round(b.chestCm * 1.3) }] })} className={`${btn} mt-2`}><Plus size={14} /> Add custom size</button>
                 <p className="mt-1 text-[11.5px] text-mt-faint">A custom size grades the size-M block to the chest (and the length, when given); use the name in the size column.</p>
               </>; })()}
-            </details>
+            </details>)}
             {issues.length ? (
               <ul className="rounded-2xl bg-mt-bg p-3 space-y-1 text-[12.5px]" aria-label="Problems in the list">
                 {issues.slice(0, 10).map((x, k) => <li key={k} className={`flex items-start gap-1.5 ${x.level === 'error' ? 'text-rose-600' : 'text-amber-700 dark:text-amber-400'}`}><AlertTriangle size={13} className="mt-0.5 shrink-0" /> Row {x.row}: {x.message}</li>)}
@@ -887,9 +903,9 @@ export function GarmentDesigner({ kind: initialKind = 'jersey' }: { kind?: Garme
                 <button type="button" aria-pressed={group === 'player'} onClick={() => setGroup('player')} className={chip(group === 'player')}>{personal ? 'Keep each player together' : 'Keep each garment together'}</button>
                 <button type="button" aria-pressed={group === 'fabric'} onClick={() => setGroup('fabric')} className={chip(group === 'fabric')}>Save fabric</button>
               </div>
-              {group === 'fabric' && <button type="button" onClick={() => setSheetOpen(true)} disabled={!list.length} className={`${btn} w-full`}>Edit production sheet{kit.sheetLayout ? ' (edited by hand)' : ''}</button>}
+              {pro && group === 'fabric' && <button type="button" onClick={() => setSheetOpen(true)} disabled={!list.length} className={`${btn} w-full`}>Edit production sheet{kit.sheetLayout ? ' (edited by hand)' : ''}</button>}
               <label className="flex items-center gap-2 text-[13px]"><input type="checkbox" checked={marks} onChange={(e) => setMarks(e.target.checked)} className="h-4 w-4 accent-[#3B82C4]" /> Registration marks in the corners</label>
-              <details className="rounded-2xl border border-mt-border p-3" aria-label="Panel settings">
+              {pro && (<details className="rounded-2xl border border-mt-border p-3" aria-label="Panel settings">
                 <summary className="cursor-pointer text-[13px] font-semibold">Panel settings — bleed, seam allowance, safe area</summary>
                 <table className="mt-2 w-full text-[12.5px]"><thead><tr className="text-left text-mt-muted"><th className="py-1">Panel</th><th className="py-1">Bleed</th><th className="py-1">Seam</th><th className="py-1">Safe</th></tr></thead>
                   <tbody>{([['body', 'Front & back'], ['sleeve', 'Sleeves'], ['trim', 'Collar & trims']] as const).map(([r, l]) => {
@@ -901,7 +917,7 @@ export function GarmentDesigner({ kind: initialKind = 'jersey' }: { kind?: Garme
                 <p className="mt-1.5 text-[11.5px] text-mt-muted">mm. The cut line (magenta) sits a seam allowance outside the stitch line; the print runs a bleed beyond the cut. Keep important artwork inside the safe area.</p>
                 {kit.panels && <button type="button" onClick={() => set({ panels: undefined })} className={`${btn} mt-2`}>Use the order’s bleed everywhere</button>}
                 <label className="mt-2 flex items-center gap-2 text-[13px]"><input type="checkbox" checked={guides} onChange={(e) => setGuides(e.target.checked)} className="h-4 w-4 accent-[#3B82C4]" /> Show stitch line &amp; safe area in the files (proof only)</label>
-              </details>
+              </details>)}
               <label className="flex items-center gap-2 text-[13px]"><input type="checkbox" checked={mirror} onChange={(e) => setMirror(e.target.checked)} className="h-4 w-4 accent-[#3B82C4]" /> Mirror for transfer paper</label>
               {personal && <label className="flex items-center gap-2 text-[13px]"><input type="checkbox" checked={kit.letterGrade !== 'scale'} onChange={(e) => set({ letterGrade: e.target.checked ? 'fixed' : 'scale' })} className="h-4 w-4 accent-[#3B82C4]" /> Names &amp; numbers the same height on every size</label>}
               <p className="pt-1 text-[12px] font-semibold text-mt-muted">Text in the print files</p>
@@ -925,7 +941,7 @@ export function GarmentDesigner({ kind: initialKind = 'jersey' }: { kind?: Garme
               <button type="button" onClick={dlSheetSvg} disabled={!!busy || !ready || !list.length} className={btn}>{busy === 'sheet-svg' ? <Loader2 size={14} className="animate-spin" /> : <Layers size={14} />} Print SVG</button>
               <button type="button" onClick={dlEach} disabled={!!busy || !ready || !picked.length} className={btn}>{busy === 'zip' ? <Loader2 size={14} className="animate-spin" /> : <FileArchive size={14} />} Each separately</button>
             </div>
-            <details className="rounded-2xl border border-mt-border p-3" aria-label="Cost and price">
+            {pro && (<details className="rounded-2xl border border-mt-border p-3" aria-label="Cost and price">
               <summary className="cursor-pointer text-[13px] font-semibold">Cost &amp; price{costing && costing.total > 0 ? ` — ${prices.currency} ${costing.perGarment.toFixed(2)} per garment` : ''}</summary>
               <p className="mt-1 text-[11.5px] text-mt-muted">Your own prices (kept on this device). Fabric and printing use the real roll metres of this order.</p>
               <div className="mt-2 grid grid-cols-2 gap-1.5 text-[12px]">
@@ -947,7 +963,7 @@ export function GarmentDesigner({ kind: initialKind = 'jersey' }: { kind?: Garme
                 <p>Cost <b>{costing.cost.toFixed(2)}</b> · price <b>{costing.price.toFixed(2)}</b>{costing.tax ? ` + tax ${costing.tax.toFixed(2)}` : ''} = <b>{prices.currency} {costing.total.toFixed(2)}</b> · <b>{costing.perGarment.toFixed(2)}</b> per garment{costing.hours != null ? ` · about ${costing.hours} h` : ''}</p>
                 {costing.missing.length > 0 && <p className="text-amber-700 dark:text-amber-400">Add your {costing.missing.join(' and ')} to get a price.</p>}
               </div>}
-            </details>
+            </details>)}
             <button type="button" onClick={dlSpec} disabled={!!busy || !plan} className={`${btn} w-full justify-center`}>{busy === 'spec' ? <Loader2 size={14} className="animate-spin" /> : <FileArchive size={14} />} Production specification (PDF)</button>
             <p className="text-[11.5px] text-mt-faint">Real-size vector pieces with {bleed} mm bleed, magenta cut lines and a label on every piece. Piece shapes are standard blocks — check them against your own patterns before a full run.</p>
           </>}

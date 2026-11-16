@@ -74,6 +74,8 @@ export interface KitDesign {
   factoryName?: string;
   /** Any other garment (drafted from measurements in the Textile Studio): its pieces replace the template entirely. */
   customProduct?: Product;
+  /** Embroidery design (Embroidery workspace) linked to this project. */
+  embroidery?: any;
   frontText?: string; frontTextColor?: string; frontTextMm?: number; frontTextTopMm?: number;
   personalise?: boolean; // names and numbers per player (off: sizes and quantities only)
   /** Extra sizes defined by measurement (flat chest width in cm); scaled from the size-M block. */

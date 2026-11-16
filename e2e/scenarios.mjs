@@ -912,9 +912,10 @@ scenarios.push({
     const fs = await import('node:fs');
     const { PDFDocument } = await import('pdf-lib');
     await t.page.addInitScript(() => { try { if (!sessionStorage.getItem('tsInit')) { localStorage.removeItem('mt:textile-studio'); localStorage.removeItem('mt:textile-measures'); sessionStorage.setItem('tsInit', '1'); } } catch {} });
-    await t.page.goto(`${t.BASE}/textile-studio`, { waitUntil: 'domcontentloaded' });
-    const studio = t.page.getByLabel('Textile Studio');
-    await studio.getByRole('radio', { name: /Kurta/ }).click({ timeout: 30000 });
+    await t.page.goto(`${t.BASE}/textile-studio?product=kurta`, { waitUntil: 'domcontentloaded' });
+    const studio = t.page.getByLabel('Textile Studio', { exact: true });
+    await studio.waitFor({ timeout: 30000 });
+    t.check('product picker shows every garment', (await t.page.getByRole('radiogroup', { name: 'Product' }).getByRole('radio').count()) === 8);
     t.check('no pieces before the measurements', (await studio.getByRole('alert').count()) === 1);
     const M = { 'Bust / chest (round)': 92, 'Waist (round)': 78, 'Hip / seat (round)': 100, 'Shoulder (across the back, point to point)': 38, 'Kurta length (shoulder to hem)': 105, 'Shoulder to waist': 40, 'Armhole (round)': 44, 'Front neck depth': 18, 'Back neck depth': 6, 'Sleeve length (shoulder down)': 48, 'Upper arm (round)': 30, 'Sleeve opening (round)': 24 };
     for (const [k, v] of Object.entries(M)) await studio.getByLabel(k, { exact: true }).fill(String(v));
@@ -953,6 +954,40 @@ scenarios.push({
     await emb.getByRole('button', { name: 'Save' }).click();
     await emb.getByRole('button', { name: 'Close embroidery' }).click();
     t.check('embroidery saved to the project', /stitches, 1 colours?\./.test(await studio.innerText()));
+  },
+});
+
+// Textile Design Studio: the old /textile-designer address opens the merged workspace; Simple mode
+// hides production controls without touching the design; settings reset keeps the artwork.
+scenarios.push({
+  name: 'textile-merge-modes',
+  async run(t) {
+    await t.page.goto(`${t.BASE}/textile-designer?garment=polo`, { waitUntil: 'domcontentloaded' });
+    await t.page.getByLabel('Textile Design Studio').waitFor({ timeout: 30000 });
+    t.check('old route redirects to /textile-studio', /\/textile-studio/.test(t.page.url()), t.page.url());
+    const polo = t.page.getByRole('radiogroup', { name: 'Product' }).getByRole('radio', { name: /Polo/ });
+    t.check('polo picked from the old address', (await polo.getAttribute('aria-checked')) === 'true');
+    const name = t.page.getByLabel('Project name').first();
+    await name.fill('Merge check');
+    const editPrint = () => t.page.getByRole('button', { name: /Edit print file/ }).count();
+    t.check('professional mode shows the print studio', (await editPrint()) === 1);
+    await t.page.getByRole('radio', { name: 'Simple' }).click();
+    await t.page.waitForTimeout(300);
+    t.check('simple mode hides production controls', (await editPrint()) === 0);
+    t.check('switching mode keeps the design', (await name.inputValue()) === 'Merge check');
+    await t.page.getByRole('radio', { name: 'Professional' }).click();
+    await t.page.getByRole('button', { name: /Workspace settings/ }).click();
+    await t.page.getByRole('menuitem', { name: 'Restore default settings' }).click();
+    await t.page.waitForTimeout(300);
+    t.check('restoring settings keeps the design', (await t.page.getByLabel('Project name').first().inputValue()) === 'Merge check');
+    await t.page.getByRole('radiogroup', { name: 'Product' }).getByRole('radio', { name: /Chudidar/ }).click();
+    await t.page.waitForTimeout(500);
+    t.check('made-to-measure garments in the same workspace', (await t.page.getByLabel('Textile Studio', { exact: true }).count()) === 1 && (await t.page.getByLabel('Waist to knee', { exact: true }).count()) === 1);
+    await t.page.getByRole('button', { name: /Workspace settings/ }).click();
+    await t.page.getByLabel('Units').selectOption('in');
+    await t.page.getByLabel('Waist (round)', { exact: true }).fill('30');
+    await t.page.getByLabel('Units').selectOption('cm');
+    t.check('measurements convert between units', (await t.page.getByLabel('Waist (round)', { exact: true }).inputValue()) === '76.2');
   },
 });
 

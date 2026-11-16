@@ -6,7 +6,7 @@
 import { buildMtd, readMtd, fileNameFor, type ToolKind } from './format';
 import { saveMtdFile, type LocalFileRef } from './fileAccess';
 import { rememberRecent } from './recent';
-import { takeHandoff } from './handoff';
+import { peekHandoff, takeHandoff } from './handoff';
 import { decodeMtdt, isMtdt } from '@/lib/mtdt';
 
 export interface ToolProject<T = any> { kind: ToolKind; name: string; data: T; fileName?: string; handle?: any | null }
@@ -61,6 +61,14 @@ export function takeToolHandoff(kind: ToolKind | ToolKind[]): ToolProject | null
     if (!h?.opened?.tool || !kinds.includes(h.opened.tool.kind)) return null;
     const u = new URL(window.location.href); u.searchParams.delete('localDoc'); window.history.replaceState(null, '', u.toString());
     return { kind: h.opened.tool.kind, name: h.opened.document.name, data: h.opened.tool.data, fileName: (h.file as any)?.fileName, handle: (h.file as any)?.handle || null };
+  } catch { return null; }
+}
+
+/** The kind of project waiting to be opened (?localDoc=…) without taking it. */
+export function peekToolHandoffKind(): ToolKind | null {
+  try {
+    const key = new URLSearchParams(window.location.search).get('localDoc');
+    return (peekHandoff(key)?.opened?.tool?.kind as ToolKind) || null;
   } catch { return null; }
 }
 
