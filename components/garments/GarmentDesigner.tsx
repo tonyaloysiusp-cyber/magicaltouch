@@ -468,6 +468,27 @@ export function GarmentDesigner({ kind: initialKind = 'jersey', mode = 'pro', pi
     } catch { flash('The PDF could not be made in this browser.'); }
     setBusy(null);
   };
+  // One production package for the order: print PDF (every garment, each size at its own dimensions),
+  // order summary (customer, size, name, number, quantity) and the production specification, in one ZIP.
+  const dlPackage = async () => {
+    if (errors.length) { setStep('players'); flash('Fix the rows marked in red first.'); return; }
+    if (!list.length) { flash('Choose at least one row to print.'); return; }
+    setBusy('package');
+    try {
+      const [{ svgToPdfBlob }, { buildZip }, { orderSummaryPages }] = await Promise.all([import('@/lib/svgToPdf'), import('@/lib/editor/zip'), import('@/lib/textile/orderDoc')]);
+      await artReady();
+      const r = rosterSheets(kit, pattern, list, glyphs, sheetOpts);
+      if (r.overlaps) { flash(`${r.overlaps} pieces overlap on the sheet — not exported. Try the other layout or a wider roll.`); setBusy(null); return; }
+      const bytes = async (b: Blob) => new Uint8Array(await b.arrayBuffer());
+      const printName = `${fileBase}-PRINT.pdf`, orderName = `${fileBase}-ORDER.pdf`;
+      const print = await svgToPdfBlob('', 0, 0, r.pages.map((pg) => ({ svg: pg.svg, widthMm: pg.width, heightMm: pg.height })), pdfFonts);
+      const order = orderSummaryPages({ project: kit.teamName || 'Order', product: copy.noun, date: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }), lines: list, sizeLabel, files: [printName, orderName] });
+      const orderPdf = await svgToPdfBlob('', 0, 0, order.map((svg) => ({ svg, widthMm: 210, heightMm: 297 })));
+      save(new Blob([await buildZip([{ name: printName, data: await bytes(print) }, { name: orderName, data: await bytes(orderPdf) }]) as unknown as BlobPart], { type: 'application/zip' }), `${fileBase}-production-package.zip`);
+      flash(`Production package ready: ${list.reduce((a, x) => a + (personal ? 1 : x.qty ?? 1), 0)} garments, print PDF (${r.pages.length} page${r.pages.length > 1 ? 's' : ''}) and order summary.`);
+    } catch { flash('The package could not be made in this browser.'); }
+    setBusy(null);
+  };
   const dlSheetSvg = async () => {
     if (errors.length) { setStep('players'); flash('Fix the rows marked in red first.'); return; }
     setBusy('sheet-svg');
@@ -937,6 +958,7 @@ export function GarmentDesigner({ kind: initialKind = 'jersey', mode = 'pro', pi
               </section>
             )}
             <button type="button" onClick={dlSheetPdf} disabled={!!busy || !ready || !list.length} className={`${primary} w-full`}>{busy === 'sheet' ? <Loader2 size={16} className="animate-spin" /> : <Printer size={16} />} Download print PDF (one file)</button>
+            <button type="button" onClick={dlPackage} disabled={!!busy || !ready || !list.length} className={`${btn} w-full justify-center`}>{busy === 'package' ? <Loader2 size={14} className="animate-spin" /> : <FileArchive size={14} />} Production package (print PDF + order summary, ZIP)</button>
             <div className="grid grid-cols-2 gap-2">
               <button type="button" onClick={dlSheetSvg} disabled={!!busy || !ready || !list.length} className={btn}>{busy === 'sheet-svg' ? <Loader2 size={14} className="animate-spin" /> : <Layers size={14} />} Print SVG</button>
               <button type="button" onClick={dlEach} disabled={!!busy || !ready || !picked.length} className={btn}>{busy === 'zip' ? <Loader2 size={14} className="animate-spin" /> : <FileArchive size={14} />} Each separately</button>
@@ -1023,7 +1045,7 @@ export function GarmentDesigner({ kind: initialKind = 'jersey', mode = 'pro', pi
               )}
               <div className="overflow-x-auto">
                 <table className="w-full text-[13px]">
-                  <thead><tr className="text-left text-mt-muted">{step === 'print' && <th className="p-1.5 w-8"><span className="sr-only">Print</span></th>}<th className="p-1.5 w-8">#</th>{personal && <><th className="p-1.5">Name</th><th className="p-1.5 w-24">Number</th></>}<th className="p-1.5 w-32">Size</th>{!personal && <th className="p-1.5 w-28">Quantity</th>}<th className="p-1.5 w-12"></th></tr></thead>
+                  <thead><tr className="text-left text-mt-muted">{step === 'print' && <th className="p-1.5 w-8"><span className="sr-only">Print</span></th>}<th className="p-1.5 w-8">#</th>{pro && <th className="p-1.5 w-32">Customer</th>}{personal && <><th className="p-1.5">Name</th><th className="p-1.5 w-24">Number</th></>}<th className="p-1.5 w-32">Size</th>{!personal && <th className="p-1.5 w-28">Quantity</th>}<th className="p-1.5 w-12"></th></tr></thead>
                   <tbody>
                     {players.map((p, i) => {
                       const bad = issues.filter((x) => x.row === i + 1);
@@ -1032,6 +1054,7 @@ export function GarmentDesigner({ kind: initialKind = 'jersey', mode = 'pro', pi
                         <tr key={i} onClick={() => setSel(i)} className={`border-t border-mt-border ${sel === i && personal ? 'bg-mt-surface2' : ''}`}>
                           {ro && <td className="p-1.5"><input type="checkbox" checked={chosen[i] !== false} onChange={(e) => setChosen((c) => players.map((_, k) => (k === i ? e.target.checked : c[k] !== false)))} aria-label={`Print row ${i + 1}`} className="h-4 w-4 accent-[#3B82C4]" /></td>}
                           <td className="p-1.5 tabular-nums text-mt-muted">{i + 1}</td>
+                          {pro && <td className="p-1.5">{ro ? (p.customer || '—') : <input value={p.customer || ''} maxLength={60} placeholder="Customer" onChange={(e) => editRow(i, { customer: e.target.value })} className={`${field} mt-0 h-9`} aria-label={`Customer row ${i + 1}`} />}</td>}
                           {personal && <>
                             <td className="p-1.5">{ro ? p.name : <input value={p.name} maxLength={20} onChange={(e) => editRow(i, { name: e.target.value })} className={`${field} mt-0 h-9 ${bad.some((b) => /Name/.test(b.message)) ? 'border-rose-500' : ''}`} aria-label={`Name row ${i + 1}`} />}</td>
                             <td className="p-1.5">{ro ? p.number : <input value={p.number} inputMode="numeric" maxLength={3} onChange={(e) => editRow(i, { number: e.target.value.replace(/\D/g, '') })} className={`${field} mt-0 h-9 ${bad.some((b) => /Number/.test(b.message) && b.level === 'error') ? 'border-rose-500' : ''}`} aria-label={`Number row ${i + 1}`} />}</td>

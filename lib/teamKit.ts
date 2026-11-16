@@ -107,7 +107,7 @@ export function kitFor(kind: GarmentKind): KitDesign {
   return { ...DEFAULT_KIT };
 }
 
-export interface Player { name: string; number: string; size: string; qty?: number }
+export interface Player { name: string; number: string; size: string; qty?: number; /** Order: who this garment is for (customer / club / company). */ customer?: string }
 export interface CustomSize { label: string; chestCm: number; /** Body length (cm); without it the length grades with the chest. */ lengthCm?: number }
 export interface RosterIssue { row: number; level: 'error' | 'warning'; message: string }
 
@@ -155,15 +155,22 @@ export function parseRoster(text: string): Player[] {
     return out;
   };
   let rows = lines.map(split);
-  let iName = 0, iNum = 1, iSize = 2;
+  let iName = 0, iNum = 1, iSize = 2, iCust = -1, iQty = -1;
   const head = rows[0]?.map((c) => c.toLowerCase());
-  if (head && head.some((c) => /name|player/.test(c)) && head.some((c) => /number|no\b|#/.test(c))) {
-    iName = head.findIndex((c) => /name|player/.test(c));
+  const isCust = (c: string) => /customer|client|company|club/.test(c);
+  if (head && head.some((c) => /name|player/.test(c) && !isCust(c)) && head.some((c) => /number|no\b|#/.test(c))) {
+    iName = head.findIndex((c) => /name|player/.test(c) && !isCust(c));
     iNum = head.findIndex((c) => /number|no\b|#/.test(c));
     iSize = head.findIndex((c) => /size/.test(c));
+    iCust = head.findIndex(isCust);
+    iQty = head.findIndex((c) => /^(qty|quantity|pcs)$/.test(c));
     rows = rows.slice(1);
   }
-  return rows.map((r) => ({ name: (r[iName] || '').slice(0, 20), number: (r[iNum] || '').replace(/[^0-9]/g, '').slice(0, 3), size: iSize >= 0 ? (r[iSize] || '') : '' }));
+  return rows.map((r) => ({
+    name: (r[iName] || '').slice(0, 20), number: (r[iNum] || '').replace(/[^0-9]/g, '').slice(0, 3), size: iSize >= 0 ? (r[iSize] || '') : '',
+    ...(iCust >= 0 ? { customer: (r[iCust] || '').slice(0, 60) } : {}),
+    ...(iQty >= 0 ? { qty: Math.max(1, Math.floor(Number(r[iQty]) || 1)) } : {}),
+  }));
 }
 
 export function checkRoster(players: Player[], personalise = true, kit?: KitDesign | null): RosterIssue[] {

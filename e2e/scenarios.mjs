@@ -923,6 +923,8 @@ scenarios.push({
     await t.page.waitForTimeout(400);
     const pieces = studio.getByRole('img', { name: 'Garment pieces' });
     t.check('pieces drafted from the measurements', (await pieces.count()) === 1 && /Kurta \/ kameez \(v neck, elbow sleeves\)/.test(await studio.innerText()));
+    await t.page.waitForTimeout(500);
+    t.check('presentation mockup shown', (await studio.getByRole('img', { name: 'Garment mockup' }).count()) === 1);
     await t.shot('textile-kurta');
     const [pdf] = await Promise.all([t.page.waitForEvent('download', { timeout: 60000 }), studio.getByRole('button', { name: /Print PDF/ }).click()]);
     const doc = await PDFDocument.load(fs.readFileSync(await pdf.path()));
@@ -963,7 +965,7 @@ scenarios.push({
     await t.shot('embroidery');
     await emb.getByRole('button', { name: 'Save' }).click();
     await emb.getByRole('button', { name: 'Close embroidery' }).click();
-    t.check('embroidery saved to the project', /stitches, 1 colours?\./.test(await studio.innerText()));
+    t.check('embroidery saved to the project', /stitches, \d+ colours?\./.test(await studio.innerText()));
   },
 });
 

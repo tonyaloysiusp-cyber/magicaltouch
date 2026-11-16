@@ -116,3 +116,21 @@ test('size chart CSV: similar column names map to the right measurement', async 
   const r = parseChartCsv('Size,Waist,Waist length,Front neck,Sleeve length,Sleeve opening\nM,78,40,18,48,24', D.KURTA_FIELDS, (n) => n);
   assert.deepEqual(r.rows[0].m, { waist: 78, waistLength: 40, frontNeck: 18, sleeveLength: 48, sleeveOpening: 24 });
 });
+
+test('mockups are built from the pieces and never change them; order summary lists every line', async () => {
+  const { garmentMockupSvg } = await import('../../lib/textile/mockup.ts');
+  const TK = await import('../../lib/teamKit.ts');
+  const prod = D.draftKurta(K, 'v', 'elbow');
+  const before = JSON.stringify(prod);
+  const kit = { ...TK.kitFor('tshirt'), studioOnly: true, art: [], customProduct: prod, patternOn: 'none' };
+  const f = garmentMockupSvg(kit, prod, 'front'), b = garmentMockupSvg(kit, prod, 'back');
+  assert.match(f.svg, /^<svg/); assert.notEqual(f.svg, b.svg);
+  assert.equal(JSON.stringify(prod), before, 'pieces unchanged');
+  assert.match(garmentMockupSvg(kit, D.draftChudidar({ waist: 72, hip: 98, crotch: 28, thigh: 56, knee: 38, calf: 34, ankle: 24, length: 100, kneeLength: 58 }), 'front').svg, /<svg/);
+  const { orderSummaryPages } = await import('../../lib/textile/orderDoc.ts');
+  const pages = orderSummaryPages({ project: 'Club', product: 'jersey', date: '16 Nov 2026', lines: [{ customer: 'Customer 1', name: 'Arun', number: '10', size: 'm' }, { customer: 'Customer 2', name: 'Kumar', number: '11', size: 'l' }, { customer: 'Customer 3', name: 'Ravi', number: '12', size: 'xl', qty: 2 }], sizeLabel: (s) => s.toUpperCase(), files: ['Club-PRINT.pdf'] });
+  const all = pages.join('');
+  assert.match(all, /Arun/); assert.match(all, /Customer 3/); assert.match(all, /Total garments: 4/); assert.match(all, /XL: 2/);
+  const r = TK.parseRoster('Customer,Name,Number,Size,Qty\nCustomer 1,Arun,10,M,1\nCustomer 2,Kumar,11,L,2');
+  assert.deepEqual(r[1], { name: 'Kumar', number: '11', size: 'L', customer: 'Customer 2', qty: 2 });
+});

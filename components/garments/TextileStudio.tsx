@@ -140,6 +140,33 @@ export function flatSvg(kit: KitDesign, product: Product): { inner: string; w: n
   return { inner: `<g transform="translate(0 60)">${inner}</g>`, w: board.w, h: board.h + 60 };
 }
 
+function MockupPanel({ kit, product, name }: { kit: KitDesign; product: Product; name: string }) {
+  const [view, setView] = useState<'front' | 'back'>('front');
+  const [svg, setSvg] = useState<string>('');
+  useEffect(() => { let on = true; import('@/lib/textile/mockup').then(({ garmentMockupSvg }) => { if (on) setSvg(garmentMockupSvg(kit, product, view).svg); }); return () => { on = false; }; }, [kit, product, view]);
+  const hasBack = product.pieces.some((x) => x.id === 'back');
+  const dl = async () => {
+    try {
+      const img = new Image(); img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`; await img.decode();
+      const k = 1600 / Math.max(img.naturalWidth, img.naturalHeight);
+      const c = document.createElement('canvas'); c.width = Math.round(img.naturalWidth * k); c.height = Math.round(img.naturalHeight * k);
+      const ctx = c.getContext('2d')!; ctx.fillStyle = '#F4F4F5'; ctx.fillRect(0, 0, c.width, c.height); ctx.drawImage(img, 0, 0, c.width, c.height);
+      c.toBlob((b) => b && save(b, `${safeFile(name)}-mockup-${view}.png`), 'image/png');
+    } catch { /* ignore */ }
+  };
+  return (
+    <section aria-label="Mockup" className="rounded-2xl border border-mt-border p-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <p className="text-[13px] font-semibold uppercase tracking-wide text-mt-faint mr-auto">Mockup</p>
+        {hasBack && (['front', 'back'] as const).map((v) => <button key={v} type="button" onClick={() => setView(v)} aria-pressed={view === v} className={`h-8 px-3 rounded-full border text-[12.5px] font-semibold ${view === v ? 'border-[#0F766E] bg-[#0F766E] text-white' : 'border-mt-border'}`}>{v === 'front' ? 'Front' : 'Back'}</button>)}
+        <button type="button" onClick={dl} disabled={!svg} className="h-8 px-3 rounded-full border border-mt-border text-[12.5px] font-semibold inline-flex items-center gap-1.5"><Download size={13} /> Mockup PNG</button>
+      </div>
+      <div className="mt-2 grid place-items-center rounded-xl bg-[#F4F4F5] p-3" role="img" aria-label="Garment mockup">{svg && <div className="w-full max-w-md [&_svg]:h-auto [&_svg]:w-full" dangerouslySetInnerHTML={{ __html: svg }} />}</div>
+      <p className="mt-1 text-[11px] text-mt-muted">Presentation only: built from the production pieces and artwork, shaded as worn. It never changes the print files, patterns or embroidery.</p>
+    </section>
+  );
+}
+
 export function TextileStudio({ mode = 'pro', pick, embedded, onForeign, openReq, units = 'cm' }: { units?: 'mm' | 'cm' | 'in'; mode?: 'simple' | 'pro'; pick?: { type: GarmentType; n: number }; embedded?: boolean; onForeign?: (f: File) => void; openReq?: { file: File; n: number } | null } = {}) {
   const pro = mode !== 'simple';
   const [p, setP] = useState<TextileProject>(NEW_PROJECT);
@@ -460,6 +487,9 @@ export function TextileStudio({ mode = 'pro', pick, embedded, onForeign, openReq
           </button>
         </div>
       </section>
+
+      {/* Mockup (presentation only) */}
+      {product && !standard(p.type) && <MockupPanel kit={kit} product={product} name={p.name} />}
 
       {/* 3 Production files */}
       <section aria-label="Production files">
