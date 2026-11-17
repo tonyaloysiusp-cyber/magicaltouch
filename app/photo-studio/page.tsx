@@ -11,9 +11,8 @@ import { DocUnit } from '@/lib/editor/types';
 import { physicalUnitToPx, pxToPhysicalUnit, useDisplayUnit } from '@/lib/editor/units';
 import { buildPhotoDesignJson } from '@/lib/editor/buildPhotoDesignPayload';
 import { PhotoStudio, PhotoStudioHandle, type PhotoProject } from '@/components/photoStudio/PhotoStudio';
+import { ToolShell } from '@/components/tools/ToolShell';
 import { BrandLogo } from '@/components/BrandLogo';
-import { AppHeader } from '@/components/AppHeader';
-import { PageHero } from '@/components/PageHero';
 import { useAppTheme } from '@/hooks/useAppTheme';
 import { createDefaultPrintSettings } from '@/lib/editor/printSetup';
 import { buildMtd, readMtd, MtdError, fileNameFor, nameFromFileName } from '@/lib/mtd/format';
@@ -392,21 +391,14 @@ function PhotoStudioContent() {
 
   if (stage === 'open') {
     return (
-      <div className={theme === 'dark' ? 'dark' : ''}>
-        <main className="min-h-screen bg-mt-bg text-mt-ink transition-colors duration-300">
-          <AppHeader theme={theme} onToggleTheme={toggleTheme} active="photo" />
+      <ToolShell path="/photo-studio" h1="Photo Studio — edit photos like a pro" name="Photo Studio" sub="Light, colour, crop to size, background removal, CMYK print files">
           {loadError && (
             <div role="alert" className="max-w-3xl mx-auto mt-4 px-4">
               <p className="rounded-2xl border border-rose-300/60 bg-rose-50 dark:bg-rose-950/30 text-rose-800 dark:text-rose-200 px-4 py-3 text-[14px]">{loadError}</p>
             </div>
           )}
-          <PageHero
-            eyebrow="Photo Studio"
-            title="Edit photos like a pro."
-            accent="like a pro"
-            subtitle="Light and colour, one-tap looks, exact-size cropping, AI background removal, spot healing and true CMYK print files — all on your device."
-          />
-          <div className="mt-container py-8 sm:py-10">
+
+          <div>
             <div className="grid lg:grid-cols-[1.35fr_1fr] gap-6 2xl:gap-8 items-start">
               <section
                 onDragOver={(e) => e.preventDefault()}
@@ -515,8 +507,7 @@ function PhotoStudioContent() {
               </section>
             </div>
           </div>
-        </main>
-      </div>
+      </ToolShell>
     );
   }
 

@@ -1,12 +1,10 @@
-// Shared layout for the standalone tool pages: one strong landing page per
-// tool (no thin sub-pages) with the tool itself above the fold, how-to
-// steps, FAQ and related tools — plus SoftwareApplication, HowTo, FAQPage
-// and BreadcrumbList structured data.
+// Shared layout for the standalone tool pages: the tool opens straight away
+// in the branded app frame (ToolShell); how-to steps, FAQ and related tools
+// sit below it — plus SoftwareApplication, HowTo, FAQPage and BreadcrumbList
+// structured data.
 
-import { BackChip } from '@/components/tools/BackChip';
 import type { ReactNode } from 'react';
-import Link from 'next/link';
-import { SeoShell, Crumbs } from '@/components/seo/SeoShell';
+import { ToolShell, ToolAbout } from '@/components/tools/ToolShell';
 import { SITE_URL, SITE_NAME } from '@/lib/seo';
 
 export interface ToolPageProps {
@@ -38,47 +36,10 @@ export function ToolPage(p: ToolPageProps) {
     { '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: [{ '@type': 'ListItem', position: 1, name: 'Home', item: SITE_URL }, { '@type': 'ListItem', position: 2, name: 'Tools', item: `${SITE_URL}/tools` }, { '@type': 'ListItem', position: 3, name: p.name, item: url }] },
   ];
   return (
-    <SeoShell active="tools">
+    <ToolShell path={p.path} h1={p.h1} name={p.name} sub={p.eyebrow}
+      about={<ToolAbout intro={p.intro} steps={p.steps} faq={p.faq} related={p.related.filter((r) => r.href !== p.path)} extra={p.extra} />}>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(ld) }} />
-      <div className="mt-container py-6 sm:py-10">
-        <div className="flex flex-wrap items-center justify-between gap-3"><Crumbs items={[{ href: '/', label: 'Home' }, { href: '/tools', label: 'Tools' }, { label: p.name }]} /><BackChip /></div>
-        <header className="mt-4 max-w-3xl">
-          <p className="text-[12px] font-semibold uppercase tracking-[0.2em] text-[#3B82C4]">{p.eyebrow}</p>
-          <h1 className="mt-2 text-3xl sm:text-5xl font-semibold tracking-tight">{p.h1}</h1>
-          <p className="mt-3 text-lg text-mt-muted leading-relaxed">{p.intro}</p>
-        </header>
-        <div className="mt-8">{p.children}</div>
-
-        <section className="mt-16" aria-labelledby="how">
-          <h2 id="how" className="text-2xl font-semibold">How it works</h2>
-          <ol className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {p.steps.map(([t, d], i) => (
-              <li key={t} className="rounded-2xl border border-mt-border bg-mt-surface p-5">
-                <span className="grid h-8 w-8 place-items-center rounded-full bg-mt-primary text-mt-onprimary text-[13px] font-semibold">{i + 1}</span>
-                <h3 className="mt-3 font-semibold">{t}</h3>
-                <p className="mt-1 text-[14px] text-mt-muted leading-relaxed">{d}</p>
-              </li>
-            ))}
-          </ol>
-        </section>
-
-        {p.extra}
-
-        <section className="mt-16 grid gap-8 lg:grid-cols-[minmax(0,1fr)_340px]" aria-labelledby="faq">
-          <div>
-            <h2 id="faq" className="text-2xl font-semibold">Questions</h2>
-            <dl className="mt-4 divide-y divide-mt-border">
-              {p.faq.map(([q, a]) => (<div key={q} className="py-4"><dt className="font-semibold">{q}</dt><dd className="mt-1 text-[15px] text-mt-muted leading-relaxed">{a}</dd></div>))}
-            </dl>
-          </div>
-          <nav aria-label="More free tools" className="rounded-3xl border border-mt-border bg-mt-surface p-6 self-start">
-            <h2 className="text-lg font-semibold">More free tools</h2>
-            <ul className="mt-3 space-y-2 text-[15px]">
-              {p.related.filter((r) => r.href !== p.path).map((r) => <li key={r.href}><Link href={r.href} className="text-mt-muted hover:text-mt-ink">{r.label} →</Link></li>)}
-            </ul>
-          </nav>
-        </section>
-      </div>
-    </SeoShell>
+      {p.children}
+    </ToolShell>
   );
 }

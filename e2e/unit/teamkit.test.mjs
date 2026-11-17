@@ -1,7 +1,7 @@
 // Team kits: roster import and checks, and per-player vector print files.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { DEFAULT_KIT, parseRoster, checkRoster, playerPrintSvg, kitPreviewSvg, glyphTexts, placedText, sizeId } from '../../lib/teamKit.ts';
+import { DEFAULT_KIT, kitFor, parseRoster, checkRoster, playerPrintSvg, kitPreviewSvg, glyphTexts, placedText, sizeId } from '../../lib/teamKit.ts';
 import { DEFAULT_PATTERN } from '../../lib/patterns.ts';
 import { pathBox } from '../../lib/pathFit.ts';
 
@@ -28,7 +28,8 @@ test('roster checks catch missing and duplicate values', () => {
 
 test('each player file is vector, sized for their size, with their name and number', () => {
   const glyphs = { ARUN: box, '7': box, JOHN: box, '23': box };
-  const s = playerPrintSvg(DEFAULT_KIT, pat, { name: 'Arun', number: '7', size: 'S' }, glyphs, { rollW: 1600, bleed: 10, cutLines: true });
+  const patterned = { ...DEFAULT_KIT, patternOn: 'body' };
+  const s = playerPrintSvg(patterned, pat, { name: 'Arun', number: '7', size: 'S' }, glyphs, { rollW: 1600, bleed: 10, cutLines: true });
   const xl = playerPrintSvg(DEFAULT_KIT, pat, { name: 'John', number: '23', size: 'XL' }, glyphs, { rollW: 1600, bleed: 10, cutLines: true });
   assert.match(s.svg, /width="1600mm"/);
   assert.ok(!/<image/.test(s.svg), 'no pictures without logos');
@@ -184,4 +185,12 @@ test('per-panel bleed, seam allowance and safe area', async () => {
   assert.match(svg, /id="proof-guides"/);
   assert.match(svg, /stroke="#06B6D4"/, 'safe area drawn');
   assert.equal(sheet.overlaps, 0);
+});
+
+test('new garments start as a plain layout: white, no pattern, no graphic, no text', () => {
+  for (const k of ['jersey', 'polo', 'tshirt']) {
+    const kit = kitFor(k);
+    assert.equal(kit.body, '#FFFFFF'); assert.equal(kit.sleeve, '#FFFFFF'); assert.equal(kit.collar, '#FFFFFF');
+    assert.equal(kit.patternOn, 'none'); assert.equal(kit.graphic, 'plain'); assert.equal(kit.frontText, '');
+  }
 });

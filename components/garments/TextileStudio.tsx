@@ -61,7 +61,7 @@ export const NEW_PROJECT: TextileProject = {
   // Ready-made size M preloaded, like a shop size; change any value afterwards.
   measures: { kurta: readySize('kurta', 'M'), chudidar: readySize('chudidar', 'M'), tee: readySize('tee', 'M') },
   readySize: { kurta: 'M', chudidar: 'M', tee: 'M' },
-  colours: { body: '#F5E6D3', sleeve: '#F5E6D3', trim: '#7A1F3D' }, art: [], sizeQty: { m: 1 }, qty: 1,
+  colours: { body: '#FFFFFF', sleeve: '#FFFFFF', trim: '#FFFFFF' }, art: [], sizeQty: { m: 1 }, qty: 1,
   rollW: 1600, bleed: 10, textMode: 'outline', embroidery: null, teePolo: false, chart: {}, useChart: {}, seam: 10,
 };
 

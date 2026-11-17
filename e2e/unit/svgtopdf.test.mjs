@@ -43,7 +43,7 @@ test('XML parser reads attributes, nesting and entities', () => {
 
 test('a team-kit print file becomes vector PDF drawing: fills, clips, no pictures', () => {
   const box = 'M-50 -20L50 -20L50 20L-50 20Z';
-  const { svg } = playerPrintSvg(DEFAULT_KIT, { ...DEFAULT_PATTERN, motif: 'chevron' }, { name: 'Arun', number: '7', size: 'M' }, { ARUN: box, '7': box }, { rollW: 1600, bleed: 10, cutLines: true });
+  const { svg } = playerPrintSvg({ ...DEFAULT_KIT, patternOn: 'body', body: '#1E3A5F' }, { ...DEFAULT_PATTERN, motif: 'chevron' }, { name: 'Arun', number: '7', size: 'M' }, { ARUN: box, '7': box }, { rollW: 1600, bleed: 10, cutLines: true });
   const pdf = fakePdf();
   const st = renderSvgToPdf(pdf, svg, { scale: 1 });
   assert.ok(st.paths > 300, String(st.paths));

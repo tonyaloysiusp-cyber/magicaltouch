@@ -1,6 +1,5 @@
-import { BackChip } from '@/components/tools/BackChip';
 import type { Metadata } from 'next';
-import { SeoShell, Crumbs } from '@/components/seo/SeoShell';
+import { ToolShell, ToolAbout } from '@/components/tools/ToolShell';
 import { SITE_URL, SITE_NAME, fitTitle, fitDescription } from '@/lib/seo';
 import { ColourExplorer } from '@/components/colours/ColourExplorer';
 import { GradientMaker } from '@/components/tools/GradientMaker';
@@ -31,30 +30,11 @@ export default function ColoursPage() {
     { '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: [{ '@type': 'ListItem', position: 1, name: 'Home', item: SITE_URL }, { '@type': 'ListItem', position: 2, name: 'Colour Explorer', item: URL }] },
   ];
   return (
-    <SeoShell active="tools">
+    <ToolShell path="/colours" h1={'Find colours that work together'} name="Colour Explorer" sub="Palettes, harmonies, contrast and gradients"
+      about={<ToolAbout intro="Start from one colour on the wheel and get balanced palettes with HEX, RGB, HSL and CMYK. Check text contrast, build gradients, browse palette collections, export swatches, and use any palette in the editor or Pattern Studio." faq={FAQ} />}>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(ld) }} />
-      <div className="mt-container py-6 sm:py-10">
-        <div className="flex flex-wrap items-center justify-between gap-3"><Crumbs items={[{ href: '/', label: 'Home' }, { href: '/free-design-tools', label: 'Free tools' }, { label: 'Colour Explorer' }]} /><BackChip /></div>
-        <header className="mt-4 max-w-3xl">
-          <p className="text-[12px] font-semibold uppercase tracking-[0.2em] text-[#3B82C4]">Colour Explorer</p>
-          <h1 className="mt-2 text-3xl sm:text-5xl font-semibold tracking-tight">Find colours that work together</h1>
-          <p className="mt-3 text-lg text-mt-muted leading-relaxed">Start from one colour on the wheel and get balanced palettes with HEX, RGB, HSL and CMYK. Check text contrast, build gradients, browse palette collections, export swatches, and use any palette in the editor or Pattern Studio.</p>
-          <a href="/editor?w=1080&h=1080&panel=colours" className="mt-4 inline-flex h-10 items-center gap-2 rounded-full border border-mt-border px-4 text-[14px] font-semibold hover:border-mt-ink/40">Use it inside the design editor (Colours panel) →</a>
-        </header>
-        <div className="mt-8"><ColourExplorer /></div>
-        {/* Gradient backgrounds are an option here (and in the editor's Background panel), not a separate tool. */}
-        <section id="gradients" aria-labelledby="gradients-h" className="mt-14 scroll-mt-24">
-          <h2 id="gradients-h" className="text-2xl font-semibold tracking-tight">Gradient backgrounds</h2>
-          <p className="mt-2 max-w-3xl text-mt-muted">Mesh gradients with grain — drag the colour spots, pick a preset, then download a 4K PNG, a vector SVG or copy the CSS.</p>
-          <div className="mt-5"><GradientMaker /></div>
-        </section>
-        <section aria-labelledby="faq" className="mt-16 max-w-3xl">
-          <h2 id="faq" className="text-2xl font-semibold tracking-tight">Questions</h2>
-          <div className="mt-4 divide-y divide-mt-border rounded-2xl border border-mt-border">
-            {FAQ.map(([q, a]) => <details key={q} className="group p-4"><summary className="cursor-pointer font-semibold">{q}</summary><p className="mt-2 text-mt-muted leading-relaxed">{a}</p></details>)}
-          </div>
-        </section>
-      </div>
-    </SeoShell>
+      <ColourExplorer />
+      <section id="gradients" aria-labelledby="gradients-h" className="mt-8 scroll-mt-24"><h2 id="gradients-h" className="text-[15px] font-semibold mb-3">Gradient backgrounds</h2><GradientMaker /></section>
+    </ToolShell>
   );
 }

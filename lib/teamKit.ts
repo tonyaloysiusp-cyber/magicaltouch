@@ -93,17 +93,19 @@ export interface KitDesign {
   frontNumX?: number; frontNumY?: number; frontNumMm?: number; frontTextX?: number;
 }
 
+// Every garment starts as a plain layout: white panels, no pattern, no graphic,
+// no preset colours or text. The customer's own design goes on top.
 export const DEFAULT_KIT: KitDesign = {
-  style: 'football', body: '#1E3A5F', sleeve: '#1E3A5F', collar: '#C9A86A', patternOn: 'body', patternOpacity: 0.35, repeatMm: 70,
-  font: 'Oswald', fontWeight: 700, nameColor: '#FFFFFF', numberColor: '#FFFFFF', outlineColor: '#C9A86A', outlineMm: 2,
+  style: 'football', body: '#FFFFFF', sleeve: '#FFFFFF', collar: '#FFFFFF', patternOn: 'none', patternOpacity: 0.35, repeatMm: 70,
+  font: 'Oswald', fontWeight: 700, nameColor: '#111111', numberColor: '#111111', outlineColor: '#111111', outlineMm: 0,
   nameMm: 55, numberMm: 230, nameTopMm: 95, numberTopMm: 175, frontNumber: true, teamLogo: null, sponsorLogo: null, teamName: 'My Team',
-  graphic: 'plain', accent: '#C9A86A', accent2: '#FFFFFF', cuffs: true, frontText: '', frontTextColor: '#FFFFFF', frontTextMm: 60, frontTextTopMm: 420, personalise: true,
+  graphic: 'plain', accent: '#FFFFFF', accent2: '#FFFFFF', cuffs: true, frontText: '', frontTextColor: '#111111', frontTextMm: 60, frontTextTopMm: 420, personalise: true,
 };
 
 /** Starting design for each designer. */
 export function kitFor(kind: GarmentKind): KitDesign {
-  if (kind === 'polo') return { ...DEFAULT_KIT, style: 'polo', body: '#FFFFFF', sleeve: '#FFFFFF', collar: '#1E3A5F', accent: '#1E3A5F', graphic: 'band', patternOn: 'none', nameColor: '#1E3A5F', numberColor: '#1E3A5F', outlineMm: 0, frontNumber: false, personalise: false, frontText: '', teamName: 'My Company' };
-  if (kind === 'tshirt') return { ...DEFAULT_KIT, style: 'tshirt', body: '#111827', sleeve: '#111827', collar: '#111827', accent: '#F59E0B', graphic: 'plain', patternOn: 'none', frontNumber: false, personalise: false, frontText: 'MAGICAL', frontTextColor: '#F59E0B', frontTextTopMm: 300, teamName: 'My T-shirt' };
+  if (kind === 'polo') return { ...DEFAULT_KIT, style: 'polo', frontNumber: false, personalise: false, teamName: 'My Company' };
+  if (kind === 'tshirt') return { ...DEFAULT_KIT, style: 'tshirt', frontNumber: false, personalise: false, frontTextTopMm: 300, teamName: 'My T-shirt' };
   return { ...DEFAULT_KIT };
 }
 

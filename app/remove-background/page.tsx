@@ -1,7 +1,5 @@
-import { BackChip } from '@/components/tools/BackChip';
 import type { Metadata } from 'next';
-import Link from 'next/link';
-import { SeoShell, Crumbs } from '@/components/seo/SeoShell';
+import { ToolShell, ToolAbout } from '@/components/tools/ToolShell';
 import { SITE_URL, SITE_NAME, fitTitle, fitDescription } from '@/lib/seo';
 import { BulkRemover } from '@/components/tools/BulkRemover';
 
@@ -34,32 +32,10 @@ export default function RemoveBackgroundPage() {
     { '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: [{ '@type': 'ListItem', position: 1, name: 'Home', item: SITE_URL }, { '@type': 'ListItem', position: 2, name: 'Free background remover', item: URL }] },
   ];
   return (
-    <SeoShell>
+    <ToolShell path="/remove-background" h1={'Remove backgrounds free — one photo or a whole folder'} name="Background Remover" sub="Transparent PNG, white or any colour — on your device"
+      about={<ToolAbout intro="Transparent PNG, white or any colour background. Runs on your device — your photos are never uploaded. No sign-up, no watermark." steps={[['Add photos', 'Choose or drop up to 60 photos — people, products, pets, logos.'], ['Backgrounds go', 'The AI finds the subject and removes the rest. Tap Edit on any photo to restore or erase areas with a brush.'], ['Save', 'Download one, all in a ZIP, or save them straight into a folder.']]} faq={FAQ} />}>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(ld) }} />
-      <div className="mt-container py-6 sm:py-10">
-        <div className="flex flex-wrap items-center justify-between gap-3"><Crumbs items={[{ href: '/', label: 'Home' }, { label: 'Free background remover' }]} /><BackChip /></div>
-        <div className="mt-5 max-w-3xl">
-          <h1 className="text-3xl sm:text-5xl font-semibold tracking-tight leading-tight">Remove backgrounds <span className="mt-spectrum-text">free</span> — one photo or a whole folder</h1>
-          <p className="mt-3 text-[16px] text-mt-muted">Transparent PNG, white or any colour background. Runs on your device — your photos are never uploaded. No sign-up, no watermark.</p>
-        </div>
-        <div className="mt-8"><BulkRemover /></div>
-
-        <section className="mt-14 grid gap-4 sm:grid-cols-3">
-          {[['1. Add photos', 'Choose or drop up to 60 photos — people, products, pets, logos.'], ['2. Backgrounds go', 'The AI finds the subject and removes the rest. Tap ✎ Edit on any photo to restore or erase areas with a brush.'], ['3. Save', 'Download one, all in a ZIP, or save them straight into a folder.']].map(([h, p]) => (
-            <div key={h} className="rounded-3xl border border-mt-border bg-mt-surface p-5"><h2 className="text-[16px] font-semibold">{h}</h2><p className="mt-1 text-[14px] text-mt-muted">{p}</p></div>
-          ))}
-        </section>
-
-        <section className="mt-12 max-w-3xl">
-          <h2 className="text-2xl font-semibold tracking-tight">Questions</h2>
-          <dl className="mt-4 divide-y divide-mt-border">
-            {FAQ.map(([q, a]) => (
-              <div key={q} className="py-4"><dt className="text-[15px] font-semibold">{q}</dt><dd className="mt-1 text-[14px] text-mt-muted">{a}</dd></div>
-            ))}
-          </dl>
-          <p className="mt-6 text-[14px] text-mt-muted">Need more? Fine-tune edges with brushes in the free <Link href="/photo-studio" className="text-mt-accent hover:underline">Photo Studio</Link>, or put your cut-out photo on one of thousands of <Link href="/templates" className="text-mt-accent hover:underline">free templates</Link>.</p>
-        </section>
-      </div>
-    </SeoShell>
+      <BulkRemover />
+    </ToolShell>
   );
 }

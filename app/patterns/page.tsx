@@ -1,7 +1,5 @@
-import { BackChip } from '@/components/tools/BackChip';
 import type { Metadata } from 'next';
-import Link from 'next/link';
-import { SeoShell, Crumbs } from '@/components/seo/SeoShell';
+import { ToolShell, ToolAbout } from '@/components/tools/ToolShell';
 import { SITE_URL, SITE_NAME, fitTitle, fitDescription } from '@/lib/seo';
 import { PatternWorkspace } from '@/components/patterns/PatternWorkspace';
 
@@ -38,38 +36,10 @@ export default function PatternsPage() {
     { '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: [{ '@type': 'ListItem', position: 1, name: 'Home', item: SITE_URL }, { '@type': 'ListItem', position: 2, name: 'Pattern Studio', item: URL }] },
   ];
   return (
-    <SeoShell active="tools">
+    <ToolShell path="/patterns" h1={'Pattern Design — seamless patterns, rangoli & mandala'} name="Pattern Design" sub="Seamless repeats, rangoli & mandala → SVG, PDF, PNG"
+      about={<ToolAbout intro="Pick from 130+ vector shapes, choose how it repeats, then tune size, spacing, rotation and colour. See it on fabric and packaging, and download vector SVG, PDF or PNG." faq={FAQ} extra={<div className="rounded-2xl border border-mt-border bg-mt-surface p-5 max-w-3xl"><h2 className="text-[15px] font-semibold">Repeat types</h2><p className="mt-1 text-[14px] text-mt-muted">Grid, brick and half-drop, mirror and rotational, radial and kaleidoscope, geometric, organic and random scatters.</p></div>} />}>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(ld) }} />
-      <div className="mt-container py-6 sm:py-10">
-        <div className="flex flex-wrap items-center justify-between gap-3"><Crumbs items={[{ href: '/', label: 'Home' }, { href: '/free-design-tools', label: 'Free tools' }, { label: 'Pattern Design' }]} /><BackChip /></div>
-        <header className="mt-4 max-w-3xl">
-          <p className="text-[12px] font-semibold uppercase tracking-[0.2em] text-[#3B82C4]">Pattern Studio</p>
-          <h1 className="mt-2 text-3xl sm:text-5xl font-semibold tracking-tight">Pattern Design — seamless patterns, rangoli & mandala</h1>
-          <p className="mt-3 text-lg text-mt-muted leading-relaxed">Pick from 130+ vector shapes, choose how it repeats, then tune size, spacing, rotation and colour. See it on fabric and packaging, and download vector SVG, PDF or PNG.</p>
-          <a href="/editor?w=1080&h=1080&panel=patterns" className="mt-4 inline-flex h-10 items-center gap-2 rounded-full border border-mt-border px-4 text-[14px] font-semibold hover:border-mt-ink/40">Use it inside the design editor (Patterns panel) →</a>
-        </header>
-        <div className="mt-8"><PatternWorkspace /></div>
-
-        <section className="mt-16 grid gap-8 lg:grid-cols-2" aria-labelledby="faq">
-          <div>
-            <h2 id="faq" className="text-2xl font-semibold">Questions</h2>
-            <dl className="mt-4 divide-y divide-mt-border">
-              {FAQ.map(([q, a]) => (<div key={q} className="py-4"><dt className="font-semibold">{q}</dt><dd className="mt-1 text-[15px] text-mt-muted leading-relaxed">{a}</dd></div>))}
-            </dl>
-          </div>
-          <div className="rounded-3xl border border-mt-border bg-mt-surface p-6 self-start">
-            <h2 className="text-xl font-semibold">Repeat types explained</h2>
-            <ul className="mt-3 space-y-2 text-[15px] text-mt-muted">
-              <li><b className="text-mt-ink">Grid</b> — the classic block repeat.</li>
-              <li><b className="text-mt-ink">Brick &amp; half-drop</b> — offset rows or columns, softer on large surfaces.</li>
-              <li><b className="text-mt-ink">Mirror &amp; rotational</b> — symmetric repeats for tiles and textiles.</li>
-              <li><b className="text-mt-ink">Radial &amp; kaleidoscope</b> — medallions and mandala-like motifs.</li>
-              <li><b className="text-mt-ink">Geometric, organic &amp; random</b> — lattices and natural scatters.</li>
-            </ul>
-            <Link href="/templates" className="mt-5 inline-flex h-10 items-center rounded-full border border-mt-border px-4 text-[14px] font-semibold">Browse templates</Link>
-          </div>
-        </section>
-      </div>
-    </SeoShell>
+      <PatternWorkspace />
+    </ToolShell>
   );
 }
