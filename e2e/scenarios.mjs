@@ -1051,6 +1051,8 @@ scenarios.push({
     const fs = await import('node:fs');
     const { PDFDocument } = await import('pdf-lib');
     await t.page.goto(`${t.BASE}/print-size-calculator?tab=fold`, { waitUntil: 'domcontentloaded' });
+    await t.page.getByLabel('Folding result').waitFor({ timeout: 30000 });
+    await t.page.waitForTimeout(500);
     const panel = t.page.getByRole('region', { name: 'Download and print' });
     await panel.waitFor({ timeout: 30000 });
     t.check('simple mode: only paper, job name and client', !(await panel.getByLabel('Printer no-print margin mm').count()) && await panel.getByLabel('Job name').isVisible());
