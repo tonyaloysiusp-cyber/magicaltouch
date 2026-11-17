@@ -61,7 +61,7 @@ function ToolsMenu({ active }: { active: boolean }) {
                   <p className="px-2.5 pb-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-mt-faint">{g.label}</p>
                   {g.tools.map((t) => (
                     <Link key={t.href} role="menuitem" href={t.href} onClick={() => { rememberTool(t.id); setOpen(false); }} className="flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 hover:bg-mt-surface2">
-                      <span className="w-6 h-6 shrink-0 rounded-md text-white inline-flex items-center justify-center" style={{ background: t.tint }}><ToolIcon name={t.icon} size={13} /></span>
+                      <span className="w-6 h-6 shrink-0 rounded-md bg-mt-ink text-mt-bg inline-flex items-center justify-center"><ToolIcon name={t.icon} size={13} /></span>
                       <span className="text-[13px] font-medium text-mt-ink truncate">{t.title}</span>
                     </Link>
                   ))}

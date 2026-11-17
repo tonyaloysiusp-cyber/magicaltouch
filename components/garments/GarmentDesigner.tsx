@@ -10,7 +10,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { AlertTriangle, CheckCircle2, PenTool, Download, FileArchive, FileUp, FolderOpen, Layers, Loader2, MousePointerClick, Plus, Printer, Redo2, RotateCcw, Save, Shirt, Sparkles, Trash2, Undo2, Upload, X, ZoomIn, ZoomOut } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, PenTool, Download, FileUp, FolderOpen, Loader2, MousePointerClick, Plus, Redo2, RotateCcw, Save, Shirt, Sparkles, Trash2, Undo2, Upload, X, ZoomIn, ZoomOut } from 'lucide-react';
 import { DEFAULT_PATTERN, PatternSettings, svgDataUrl, sheetPlacements, motifPath, layout } from '@/lib/patterns';
 import { SIZES, ROLLS } from '@/lib/garments';
 import {
@@ -21,6 +21,7 @@ import { EmbroideryStudio } from './EmbroideryStudio';
 import { openToolFile, saveToolProject, takeToolHandoff, TOOL_FILE_ACCEPT } from '@/lib/mtd/toolProject';
 import { LeaveGuard } from './LeaveGuard';
 import { PrintStudio } from './PrintStudio';
+import { ExportCentre, type ExportItem } from './ExportCentre';
 import { ProductionSheet } from './ProductionSheet';
 import { ensureFonts } from '@/lib/textile/fonts';
 import { measureGarment, fmtLen, type Unit } from '@/lib/textile/measure';
@@ -428,106 +429,81 @@ export function GarmentDesigner({ kind: initialKind = 'jersey', mode = 'pro', pi
   const [methodIdx, setMethodIdx] = useState(0);
   const costing = useMemo(() => (plan ? costOrder(prices, { garments: list.length, rollW, rollMm: plan.metres * 1000, fabric: fabricIdx, method: methodIdx }) : null), [plan, prices, list.length, rollW, fabricIdx, methodIdx]);
   const fileBase = `${safeFile(kit.teamName)}-${copy.noun.replace(/\s+/g, '-')}`;
-  const dlSpec = async () => {
-    if (!plan) return;
-    setBusy('spec');
-    try {
-      const { specSheetPages } = await import('@/lib/textile/specSheet');
-      const { svgToPdfBlob } = await import('@/lib/svgToPdf');
-      const counts = new Map<string, number>();
-      for (const p of list) counts.set(p.size, (counts.get(p.size) || 0) + 1);
-      const sizes = [...counts.entries()].map(([size, count]) => { const z = sizeInfo(kit, size); return { size: z?.label || size, count, measures: measureGarment(kitProduct(kit).pieces, z?.k || 1, z?.ky || z?.k || 1) }; });
-      const panels = ([['body', 'Front & back'], ['sleeve', 'Sleeves'], ['trim', 'Collar & trims']] as const).map(([r, l]) => ({ panel: l, bleed: kit.panels?.[r]?.bleed ?? bleed, seam: kit.panels?.[r]?.seam ?? 0, safe: kit.panels?.[r]?.safe ?? 0 }));
-      const pages = specSheetPages({
-        project: kit.teamName || copy.noun, garment: kitProduct(kit).label, date: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }),
-        template: kit.factoryPieces ? `Factory pattern: ${kit.factoryName || 'imported'}` : 'Standard template — measurements unverified, confirm with your factory',
-        sizes, panels,
-        print: { rollW, lengthMm: plan.metres * 1000, pages: plan.pages, use: plan.use, overlaps: plan.overlaps, textMode: textMode === 'live' ? 'Live text (fonts embedded)' : 'Outlines', layout: group === 'fabric' ? `Save fabric${kit.sheetLayout ? ' (edited by hand)' : ''}` : 'Each player together', mirror },
-        cost: costing && costing.total > 0 ? { prices, result: costing, fabric: prices.fabrics[fabricIdx]?.name || '', method: prices.methods[methodIdx]?.name || '' } : null,
-        notes: [kit.letterGrade === 'scale' ? 'Names and numbers grow with the size.' : 'Names and numbers keep the same height on every size.', 'Print files are separate: this document is for information only.'],
-      });
-      save(await svgToPdfBlob('', 0, 0, pages.map((svg) => ({ svg, widthMm: 210, heightMm: 297 }))), `${fileBase}-production-spec.pdf`);
-      flash(`Production specification ready (${pages.length} page${pages.length > 1 ? 's' : ''}).`);
-    } catch { flash('The specification PDF could not be made in this browser.'); }
-    setBusy(null);
-  };
   // Fonts the print files need: for outlines the art's font files must be loaded; for live text the PDF embeds them.
   const artReady = async () => { if (kit.art?.length) await ensureFonts(artFonts(kit.art)); };
   const pdfFonts = { loadFont: textMode === 'live' ? async (family: string, weight: number, italic: boolean) => { try { const { fontBytes } = await import('@/lib/fontOutline'); return await fontBytes(family, weight, italic); } catch { return null; } } : undefined };
-  const dlSheetPdf = async () => {
-    if (errors.length) { setStep('players'); flash('Fix the rows marked in red first.'); return; }
-    if (!list.length) { flash('Choose at least one row to print.'); return; }
-    setBusy('sheet');
-    try {
-      const { svgToPdfBlob } = await import('@/lib/svgToPdf');
-      await artReady();
-      const r = rosterSheets(kit, pattern, list, glyphs, sheetOpts);
-      if (r.overlaps) { flash(`${r.overlaps} pieces overlap on the sheet — not exported. Try the other layout or a wider roll.`); setBusy(null); return; }
-      save(await svgToPdfBlob('', 0, 0, r.pages.map((p) => ({ svg: p.svg, widthMm: p.width, heightMm: p.height })), pdfFonts), `${fileBase}-print-${list.length}.pdf`);
-      flash(`Print PDF ready: ${list.length} garments on ${r.pages.length} page${r.pages.length > 1 ? 's' : ''}, ${(r.totalMm / 1000).toFixed(2)} m of ${rollW} mm roll.`);
-    } catch { flash('The PDF could not be made in this browser.'); }
-    setBusy(null);
-  };
-  // One production package for the order: print PDF (every garment, each size at its own dimensions),
-  // order summary (customer, size, name, number, quantity) and the production specification, in one ZIP.
-  const dlPackage = async () => {
-    if (errors.length) { setStep('players'); flash('Fix the rows marked in red first.'); return; }
-    if (!list.length) { flash('Choose at least one row to print.'); return; }
-    setBusy('package');
-    try {
-      const [{ svgToPdfBlob }, { buildZip }, { orderSummaryPages }] = await Promise.all([import('@/lib/svgToPdf'), import('@/lib/editor/zip'), import('@/lib/textile/orderDoc')]);
-      await artReady();
-      const r = rosterSheets(kit, pattern, list, glyphs, sheetOpts);
-      if (r.overlaps) { flash(`${r.overlaps} pieces overlap on the sheet — not exported. Try the other layout or a wider roll.`); setBusy(null); return; }
-      const bytes = async (b: Blob) => new Uint8Array(await b.arrayBuffer());
-      const printName = `${fileBase}-PRINT.pdf`, orderName = `${fileBase}-ORDER.pdf`;
-      const print = await svgToPdfBlob('', 0, 0, r.pages.map((pg) => ({ svg: pg.svg, widthMm: pg.width, heightMm: pg.height })), pdfFonts);
-      const order = orderSummaryPages({ project: kit.teamName || 'Order', product: copy.noun, date: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }), lines: list, sizeLabel, files: [printName, orderName] });
-      const orderPdf = await svgToPdfBlob('', 0, 0, order.map((svg) => ({ svg, widthMm: 210, heightMm: 297 })));
-      save(new Blob([await buildZip([{ name: printName, data: await bytes(print) }, { name: orderName, data: await bytes(orderPdf) }]) as unknown as BlobPart], { type: 'application/zip' }), `${fileBase}-production-package.zip`);
-      flash(`Production package ready: ${list.reduce((a, x) => a + (personal ? 1 : x.qty ?? 1), 0)} garments, print PDF (${r.pages.length} page${r.pages.length > 1 ? 's' : ''}) and order summary.`);
-    } catch { flash('The package could not be made in this browser.'); }
-    setBusy(null);
-  };
-  const dlSheetSvg = async () => {
-    if (errors.length) { setStep('players'); flash('Fix the rows marked in red first.'); return; }
-    setBusy('sheet-svg');
-    try {
-      await artReady();
-      const r = rosterSheets(kit, pattern, list, glyphs, sheetOpts);
-      if (r.pages.length === 1) save(new Blob([r.pages[0].svg], { type: 'image/svg+xml' }), `${fileBase}-print-${list.length}.svg`);
-      else {
-        const { buildZip } = await import('@/lib/editor/zip');
-        const enc = new TextEncoder();
-        save(buildZip(r.pages.map((p, i) => ({ name: `${fileBase}-print-page-${i + 1}.svg`, data: enc.encode(p.svg) }))), `${fileBase}-print-svg.zip`);
-      }
-    } catch { flash('The SVG could not be made.'); }
-    setBusy(null);
-  };
   const base = (p: Player, i: number) => personal ? `${String(i + 1).padStart(2, '0')}-${safeFile(p.name)}-${p.number}-${sizeLabel(p.size)}` : `${sizeLabel(p.size)}-x${p.qty || 1}`;
-  const dlEach = async () => {
-    if (errors.length) { setStep('players'); flash('Fix the rows marked in red first.'); return; }
-    setBusy('zip');
-    try {
-      const [{ svgToPdfBlob }, { buildZip }] = await Promise.all([import('@/lib/svgToPdf'), import('@/lib/editor/zip')]);
-      const parts: { name: string; data: Uint8Array }[] = [];
-      const enc = new TextEncoder();
-      await artReady();
-      for (let i = 0; i < picked.length; i++) {
-        const p = personal ? picked[i] : { ...picked[i], name: '', number: '' };
-        const f = playerPrintSvg(kit, pattern, p, glyphs, { rollW, bleed, cutLines: true, textMode });
-        parts.push({ name: `SVG/${base(picked[i], i)}.svg`, data: enc.encode(f.svg) });
-        parts.push({ name: `PDF/${base(picked[i], i)}.pdf`, data: new Uint8Array(await (await svgToPdfBlob(f.svg, f.width, f.height, undefined, pdfFonts)).arrayBuffer()) });
-      }
-      const csv = personal ? 'Row,Name,Number,Size\n' + picked.map((p, i) => `${i + 1},"${p.name.replace(/"/g, '""')}",${p.number},${sizeLabel(p.size)}`).join('\n') : 'Size,Quantity\n' + picked.map((p) => `${sizeLabel(p.size)},${p.qty || 0}`).join('\n');
-      parts.push({ name: personal ? 'roster.csv' : 'sizes.csv', data: enc.encode(csv) });
-      parts.push({ name: 'preview.svg', data: enc.encode(kitMockupSvg(kit, pattern, player, glyphs)) });
-      save(buildZip(parts), `${fileBase}-files.zip`);
-      flash(`ZIP ready: ${picked.length} file sets (SVG and vector PDF).`);
-    } catch { flash('The ZIP could not be made in this browser.'); }
-    setBusy(null);
-  };
   const dlPreview = () => save(new Blob([kitMockupSvg(kit, pattern, player, glyphs)], { type: 'image/svg+xml' }), `${fileBase}-preview.svg`);
+
+  // ── Export centre makers: files as name + bytes (the centre saves them, or zips the complete package). ──
+  const toBytes = async (b: Blob) => new Uint8Array(await b.arrayBuffer());
+  const pdfOf = async (pages: { svg: string; widthMm: number; heightMm: number }[], f?: any) => { const { svgToPdfBlob } = await import('@/lib/svgToPdf'); return toBytes(await svgToPdfBlob('', 0, 0, pages, f)); };
+  const checkList = () => {
+    if (errors.length) { setStep('players'); throw new Error('Fix the rows marked in red first.'); }
+    if (!list.length) throw new Error('Choose at least one row to print.');
+  };
+  const sheetsNow = async () => {
+    checkList(); await artReady();
+    const r = rosterSheets(kit, pattern, list, glyphs, sheetOpts);
+    if (r.overlaps) throw new Error(`${r.overlaps} pieces overlap on the sheet — not exported. Try the other layout or a wider roll.`);
+    return r;
+  };
+  const mkPrint = async () => { const r = await sheetsNow(); return [{ name: `${fileBase}-PRINT.pdf`, data: await pdfOf(r.pages.map((pg) => ({ svg: pg.svg, widthMm: pg.width, heightMm: pg.height })), pdfFonts) }]; };
+  const mkPrintSvg = async () => { const r = await sheetsNow(); const enc = new TextEncoder(); return r.pages.map((pg, i) => ({ name: r.pages.length === 1 ? `${fileBase}-PRINT.svg` : `${fileBase}-PRINT-page-${i + 1}.svg`, data: enc.encode(pg.svg) })); };
+  const mkEach = async () => {
+    checkList(); await artReady();
+    const { svgToPdfBlob } = await import('@/lib/svgToPdf');
+    const enc = new TextEncoder(); const parts: { name: string; data: Uint8Array }[] = [];
+    for (let i = 0; i < picked.length; i++) {
+      const pl = personal ? picked[i] : { ...picked[i], name: '', number: '' };
+      const f = playerPrintSvg(kit, pattern, pl, glyphs, { rollW, bleed, cutLines: true, textMode });
+      parts.push({ name: `SVG/${base(picked[i], i)}.svg`, data: enc.encode(f.svg) });
+      parts.push({ name: `PDF/${base(picked[i], i)}.pdf`, data: await toBytes(await svgToPdfBlob(f.svg, f.width, f.height, undefined, pdfFonts)) });
+    }
+    return parts;
+  };
+  const embDesign = kit.embroidery?.objects?.length ? kit.embroidery : null;
+  const mkEmb = async () => {
+    if (!embDesign) throw new Error('No embroidery in this project yet.');
+    const { embroideryFiles } = await import('@/lib/textile/embroideryDoc');
+    const f = embroideryFiles(embDesign, fileBase);
+    if (!f.ok) throw new Error(`Embroidery file not saved: ${f.issues.join(' ')}`);
+    return [{ name: `${fileBase}.dst`, data: f.dst }, { name: `${fileBase}.exp`, data: f.exp }];
+  };
+  // One technical production file: specification (sizes, measurements, panels, print plan, cost) + order summary + embroidery, branded.
+  const mkTech = async () => {
+    checkList();
+    if (!plan) throw new Error('Nothing to plan yet.');
+    const [{ specSheetPages }, { orderSummaryPages }, { brandDocument }, { loadImage }] = await Promise.all([import('@/lib/textile/specSheet'), import('@/lib/textile/orderDoc'), import('@/lib/print/brand'), import('@/lib/print/printDownload')]);
+    const counts = new Map<string, number>();
+    for (const p of list) counts.set(p.size, (counts.get(p.size) || 0) + 1);
+    const sizes = [...counts.entries()].map(([size, count]) => { const z = sizeInfo(kit, size); return { size: z?.label || size, count, measures: measureGarment(kitProduct(kit).pieces, z?.k || 1, z?.ky || z?.k || 1) }; });
+    const panels = ([['body', 'Front & back'], ['sleeve', 'Sleeves'], ['trim', 'Collar & trims']] as const).map(([r, l]) => ({ panel: l, bleed: kit.panels?.[r]?.bleed ?? bleed, seam: kit.panels?.[r]?.seam ?? 0, safe: kit.panels?.[r]?.safe ?? 0 }));
+    const pages = specSheetPages({
+      project: kit.teamName || copy.noun, garment: kitProduct(kit).label, date: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }),
+      template: kit.factoryPieces ? `Factory pattern: ${kit.factoryName || 'imported'}` : 'Standard template — measurements unverified, confirm with your factory',
+      sizes, panels,
+      print: { rollW, lengthMm: plan.metres * 1000, pages: plan.pages, use: plan.use, overlaps: plan.overlaps, textMode: textMode === 'live' ? 'Live text (fonts embedded)' : 'Outlines', layout: group === 'fabric' ? `Save fabric${kit.sheetLayout ? ' (edited by hand)' : ''}` : 'Each player together', mirror },
+      cost: costing && costing.total > 0 ? { prices, result: costing, fabric: prices.fabrics[fabricIdx]?.name || '', method: prices.methods[methodIdx]?.name || '' } : null,
+      notes: [kit.letterGrade === 'scale' ? 'Names and numbers grow with the size.' : 'Names and numbers keep the same height on every size.', 'Print files are separate: this document is for information only.'],
+    });
+    const order = orderSummaryPages({ project: kit.teamName || 'Order', product: copy.noun, date: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }), lines: list, sizeLabel, files: [`${fileBase}-PRINT.pdf`, `${fileBase}-TECHNICAL-PRODUCTION-FILE.pdf`, ...(embDesign ? [`${fileBase}.dst`, `${fileBase}.exp`] : [])] });
+    const parts = [pages, order];
+    if (embDesign) { const { embroideryPageSvg } = await import('@/lib/textile/embroideryDoc'); parts.push([embroideryPageSvg(embDesign, { project: kit.teamName || copy.noun, files: [`${fileBase}.dst`, `${fileBase}.exp`], background: kit.body })]); }
+    return [{ name: `${fileBase}-TECHNICAL-PRODUCTION-FILE.pdf`, data: await pdfOf(brandDocument(parts, { logo: await loadImage('/logo.png'), label: `${kit.teamName || copy.noun} · technical production file` })) }];
+  };
+  const exportItems: ExportItem[] = [
+    { id: 'technical', group: 'factory', title: 'Technical production file', hint: 'One branded PDF: sizes, measurements, panels, print plan, order list' + (embDesign ? ', embroidery' : ''), make: mkTech },
+    { id: 'print', group: 'printer', title: 'Ready-to-print PDF', hint: `Every garment's panels at real size, ${bleed} mm bleed, cut lines, on the ${rollW} mm roll — no branding`, make: mkPrint },
+    { id: 'print-svg', group: 'printer', title: 'Ready-to-print SVG', hint: 'Editable vector pages in mm', make: mkPrintSvg, pro: true, inPackage: false },
+    { id: 'each', group: 'printer', title: 'Each garment separately', hint: 'One SVG + PDF per garment', make: mkEach, pro: true, inPackage: false },
+    ...(embDesign ? [{ id: 'embroidery', group: 'embroidery' as const, title: 'Embroidery machine files', hint: 'DST (Tajima, checked) + EXP (Melco)', make: mkEmb }] : []),
+  ];
+  const exportChecks = [
+    { ok: !errors.length, text: errors.length ? `${errors.length} row${errors.length > 1 ? 's' : ''} need fixing in the list` : `${list.length} garment${list.length === 1 ? '' : 's'} in the list` },
+    { ok: !!list.length, text: list.length ? 'Sizes and quantities set' : 'Choose at least one row to print' },
+    ...(plan ? [{ ok: !plan.overlaps && !plan.tooWide, text: plan.overlaps ? `${plan.overlaps} pieces overlap on the roll` : plan.tooWide ? `${plan.tooWide} piece(s) wider than the roll` : `${plan.metres.toFixed(2)} m of ${rollW} mm roll, no overlaps` }] : []),
+  ];
 
   // Artwork changes in the main editor (names and numbers stay here).
   const editInEditor = async () => {
@@ -957,12 +933,7 @@ export function GarmentDesigner({ kind: initialKind = 'jersey', mode = 'pro', pi
                 {plan.tooWide > 0 && <p className="text-rose-600">{plan.tooWide} piece(s) are wider than this roll — choose a wider roll.</p>}
               </section>
             )}
-            <button type="button" onClick={dlSheetPdf} disabled={!!busy || !ready || !list.length} className={`${primary} w-full`}>{busy === 'sheet' ? <Loader2 size={16} className="animate-spin" /> : <Printer size={16} />} Download print PDF (one file)</button>
-            <button type="button" onClick={dlPackage} disabled={!!busy || !ready || !list.length} className={`${btn} w-full justify-center`}>{busy === 'package' ? <Loader2 size={14} className="animate-spin" /> : <FileArchive size={14} />} Production package (print PDF + order summary, ZIP)</button>
-            <div className="grid grid-cols-2 gap-2">
-              <button type="button" onClick={dlSheetSvg} disabled={!!busy || !ready || !list.length} className={btn}>{busy === 'sheet-svg' ? <Loader2 size={14} className="animate-spin" /> : <Layers size={14} />} Print SVG</button>
-              <button type="button" onClick={dlEach} disabled={!!busy || !ready || !picked.length} className={btn}>{busy === 'zip' ? <Loader2 size={14} className="animate-spin" /> : <FileArchive size={14} />} Each separately</button>
-            </div>
+            <ExportCentre items={exportItems} pro={pro} checks={exportChecks} packageName={fileBase} note="Print files carry no branding. The technical production file carries the Magical Touch Design logo. Piece shapes are standard blocks — check them against your own patterns before a full run." />
             {pro && (<details className="rounded-2xl border border-mt-border p-3" aria-label="Cost and price">
               <summary className="cursor-pointer text-[13px] font-semibold">Cost &amp; price{costing && costing.total > 0 ? ` — ${prices.currency} ${costing.perGarment.toFixed(2)} per garment` : ''}</summary>
               <p className="mt-1 text-[11.5px] text-mt-muted">Your own prices (kept on this device). Fabric and printing use the real roll metres of this order.</p>
@@ -986,8 +957,6 @@ export function GarmentDesigner({ kind: initialKind = 'jersey', mode = 'pro', pi
                 {costing.missing.length > 0 && <p className="text-amber-700 dark:text-amber-400">Add your {costing.missing.join(' and ')} to get a price.</p>}
               </div>}
             </details>)}
-            <button type="button" onClick={dlSpec} disabled={!!busy || !plan} className={`${btn} w-full justify-center`}>{busy === 'spec' ? <Loader2 size={14} className="animate-spin" /> : <FileArchive size={14} />} Production specification (PDF)</button>
-            <p className="text-[11.5px] text-mt-faint">Real-size vector pieces with {bleed} mm bleed, magenta cut lines and a label on every piece. Piece shapes are standard blocks — check them against your own patterns before a full run.</p>
           </>}
 
           {msg && <p role="status" className="text-[13px] font-medium">{msg}</p>}

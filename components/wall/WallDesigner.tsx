@@ -7,6 +7,7 @@
 //  • Wall pattern: wallpaper or a wall sticker of any size filled with a
 //    pattern and optional lettering, split into numbered print strips.
 
+import { ModeSwitch, useToolMode } from '@/components/ToolMode';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { Download, ExternalLink, Loader2, RectangleVertical, RectangleHorizontal } from 'lucide-react';
@@ -43,6 +44,7 @@ function wallMockup(wMm: number, hMm: number): string {
 }
 
 export function WallDesigner({ initial = 'poster', wallpaperOnly = false }: { initial?: 'poster' | 'pattern'; wallpaperOnly?: boolean }) {
+  const [pro, setPro] = useToolMode('wall');
   const [mode, setMode] = useState<'poster' | 'pattern'>(initial);
   useEffect(() => { try { const t = new URLSearchParams(window.location.search).get('type'); if (t === 'pattern' || t === 'poster') setMode(t); } catch { /* ignore */ } }, []);
   const pick = (m: 'poster' | 'pattern') => { setMode(m); try { const u = new URL(window.location.href); u.searchParams.set('type', m); window.history.replaceState(null, '', u.toString()); } catch { /* ignore */ } };
@@ -163,9 +165,12 @@ export function WallDesigner({ initial = 'poster', wallpaperOnly = false }: { in
 
   return (
     <div className="space-y-5">
-      {!wallpaperOnly && <div role="tablist" aria-label="Wall design type" className="flex w-fit gap-1 rounded-2xl border border-mt-border bg-mt-surface p-1">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+      {!wallpaperOnly ? <div role="tablist" aria-label="Wall design type" className="flex w-fit gap-1 rounded-2xl border border-mt-border bg-mt-surface p-1">
         {(['poster', 'pattern'] as const).map((m) => <button key={m} type="button" role="tab" aria-selected={mode === m} onClick={() => pick(m)} className={`h-10 px-5 rounded-xl text-[14px] font-semibold ${mode === m ? 'bg-mt-primary text-mt-onprimary' : 'text-mt-muted hover:text-mt-ink'}`}>{m === 'poster' ? 'Wall poster' : 'Wall pattern & wallpaper'}</button>)}
-      </div>}
+      </div> : <span />}
+      <ModeSwitch pro={pro} onChange={setPro} />
+      </div>
 
       {mode === 'poster' ? (
         <div className="grid gap-5 lg:grid-cols-[360px_minmax(0,1fr)] lg:items-start">
@@ -189,11 +194,11 @@ export function WallDesigner({ initial = 'poster', wallpaperOnly = false }: { in
                 <button type="button" aria-pressed={landscape} onClick={() => setLandscape(true)} className={`${btn} ${landscape ? 'border-mt-ink bg-mt-ink text-mt-bg' : ''}`}><RectangleHorizontal size={15} /> Landscape</button>
               </div>
             </section>
-            <section className="space-y-2">
+            {pro && <section className="space-y-2">
               <H>Print settings</H>
               {num('Bleed on each side (mm)', bleedMm, setBleedMm, 0, 20)}
               <p className="text-[11.5px] text-mt-muted">Opens at 150 DPI — sharp for posters viewed from a metre or more — with a 10 mm safe area for text.</p>
-            </section>
+            </section>}
             <a href={posterEditorUrl(base.wMm, base.hMm, { landscape, bleedMm })} className={`${primary} w-full`}>Design this poster <ExternalLink size={15} /></a>
             <Link href="/templates?q=poster" className={`${btn} w-full`}>Start from a poster template</Link>
           </aside>
@@ -220,8 +225,8 @@ export function WallDesigner({ initial = 'poster', wallpaperOnly = false }: { in
               <H>Wall</H>
               <div className="grid grid-cols-2 gap-2">{num('Width (mm)', wall.widthMm, (n) => sw({ widthMm: n }), 200, 20000)}{num('Height (mm)', wall.heightMm, (n) => sw({ heightMm: n }), 200, 6000)}</div>
               <label className="block text-[12px] text-mt-muted">Material roll<select value={wall.rollMm} onChange={(e) => sw({ rollMm: Number(e.target.value) })} className={field}>{WALL_ROLLS.map((r) => <option key={r.mm} value={r.mm}>{r.label}</option>)}</select></label>
-              <div className="grid grid-cols-2 gap-2">{num('Overlap (mm)', wall.overlapMm, (n) => sw({ overlapMm: n }), 0, 50)}{num('Repeat (mm)', wall.repeatMm, (n) => sw({ repeatMm: n }), 20, 2000)}</div>
-              <label className="flex items-center justify-between text-[12px] text-mt-muted">Background<input type="color" value={wall.background} onChange={(e) => sw({ background: e.target.value })} className="h-9 w-12 rounded-md border border-mt-border bg-transparent" /></label>
+              {pro && <><div className="grid grid-cols-2 gap-2">{num('Overlap (mm)', wall.overlapMm, (n) => sw({ overlapMm: n }), 0, 50)}{num('Repeat (mm)', wall.repeatMm, (n) => sw({ repeatMm: n }), 20, 2000)}</div>
+              <label className="flex items-center justify-between text-[12px] text-mt-muted">Background<input type="color" value={wall.background} onChange={(e) => sw({ background: e.target.value })} className="h-9 w-12 rounded-md border border-mt-border bg-transparent" /></label></>}
             </section>
             <section className="space-y-2">
               <H>Lettering (optional)</H>

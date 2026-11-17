@@ -9,6 +9,7 @@
 // per side). Nothing is uploaded.
 
 import { useMemo, useState, useEffect } from 'react';
+import { ModeSwitch, useToolMode } from '@/components/ToolMode';
 import { Download, ExternalLink, FileText, LayoutTemplate, Loader2, Package, Upload } from 'lucide-react';
 import type { Artwork } from '@/lib/print/pressSheet';
 import { templateSvg } from '@/lib/print/pressSheet';
@@ -20,21 +21,8 @@ import { PrintOutputSettings, initialOutput, rememberOutput, type PrintOutput } 
 
 const MODE_KEY = 'mt:print-mode';
 
-export function ModeSwitch({ pro, onChange, label = 'Settings mode' }: { pro: boolean; onChange: (pro: boolean) => void; label?: string }) {
-  return (
-    <div role="radiogroup" aria-label={label} className="inline-flex rounded-full border border-mt-border bg-mt-surface2/60 p-0.5 text-[12.5px] font-semibold">
-      {([[false, 'Simple'], [true, 'Pro']] as const).map(([v, l]) => (
-        <button key={l} type="button" role="radio" aria-checked={pro === v} onClick={() => onChange(v)} className={`h-7 px-3 rounded-full ${pro === v ? 'bg-mt-ink text-mt-bg' : 'text-mt-muted hover:text-mt-ink'}`}>{l}</button>
-      ))}
-    </div>
-  );
-}
-
-export function usePro(key = MODE_KEY): [boolean, (v: boolean) => void] {
-  const [pro, setPro] = useState(false);
-  useEffect(() => { try { setPro(localStorage.getItem(key) === 'pro'); } catch { /* none */ } }, [key]);
-  return [pro, (v: boolean) => { setPro(v); try { localStorage.setItem(key, v ? 'pro' : 'simple'); } catch { /* none */ } }];
-}
+export { ModeSwitch };
+export function usePro(key = MODE_KEY): [boolean, (v: boolean) => void] { return useToolMode(key); }
 
 export function PrintDownloadPanel({ job, editorHref }: { job: PrintJobInfo; editorHref?: string }) {
   const [pro, setPro] = usePro();

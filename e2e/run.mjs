@@ -16,6 +16,8 @@ for (const sc of scenarios) {
   if (only && !sc.name.includes(only)) continue;
   const ctx = await browser.newContext({ viewport: sc.viewport || { width: 1440, height: 900 }, hasTouch: !!sc.touch, deviceScaleFactor: 1 });
   if (!sc.onboarding) await ctx.addInitScript(() => { try { localStorage.setItem('mt:onboarded', '1'); } catch {} });
+  // Tools open in Pro for the existing scenarios (every control visible); a scenario can set simpleTools to test Simple.
+  if (!sc.simpleTools) await ctx.addInitScript(() => { try { if (!localStorage.getItem('mt:mode:default')) localStorage.setItem('mt:mode:default', 'pro'); } catch {} });
   if (sc.init) await ctx.addInitScript(sc.init);
   const page = await ctx.newPage();
   const logs = [];

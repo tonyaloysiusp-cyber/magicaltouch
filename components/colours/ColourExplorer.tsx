@@ -8,6 +8,7 @@
 // editor, in Pattern Studio or to find templates in those colours.
 // Every number is calculated, not guessed.
 
+import { ModeSwitch, useToolMode } from '@/components/ToolMode';
 import { PaletteGenerator } from './PaletteGenerator';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
@@ -72,6 +73,7 @@ function Wheel({ base, onPick, dots }: { base: string; onPick: (hex: string) => 
 }
 
 export function ColourExplorer() {
+  const [pro, setPro] = useToolMode('colours');
   const [base, setBase] = useState('#3B82C4');
   const [input, setInput] = useState('#3B82C4');
   const [kind, setKind] = useState<Harmony>('analogous');
@@ -135,6 +137,7 @@ export function ColourExplorer() {
 
   return (
     <div className="space-y-12">
+      <div className="flex justify-end -mb-8"><ModeSwitch pro={pro} onChange={setPro} /></div>
       <PaletteGenerator onSave={savePalette} onEditor={toEditor} onPattern={toPattern} onTemplates={findTemplates} exportMenu={(c) => <ExportMenu cols={c} />} />
       {/* Picker + harmony */}
       <section className="rounded-3xl border border-mt-border bg-mt-surface p-5 sm:p-7">
@@ -173,6 +176,7 @@ export function ColourExplorer() {
       </section>
 
       {/* Contrast checker */}
+      {pro && (
       <section aria-labelledby="contrast" className="rounded-3xl border border-mt-border bg-mt-surface p-5 sm:p-7">
         <h2 id="contrast" className="text-2xl font-semibold tracking-tight">Contrast checker</h2>
         <p className="mt-1 text-[14px] text-mt-muted">Will the text be readable? Ratios follow the WCAG 2 accessibility guidelines.</p>
@@ -194,8 +198,10 @@ export function ColourExplorer() {
         </div>
         <p className="mt-3 text-[13px] text-mt-muted">{grades.aaNormal ? 'Good for all text sizes.' : grades.aaLarge ? 'Fine for large headings (24 px+ or 19 px bold), too low for small text.' : 'Too low for text — darken the text or lighten the background.'}</p>
       </section>
+      )}
 
       {/* Gradient builder */}
+      {pro && (
       <section aria-labelledby="grad" className="rounded-3xl border border-mt-border bg-mt-surface p-5 sm:p-7">
         <h2 id="grad" className="text-2xl font-semibold tracking-tight">Gradient builder</h2>
         <div className="mt-5 grid gap-5 md:grid-cols-[minmax(0,1fr)_300px]">
@@ -224,6 +230,7 @@ export function ColourExplorer() {
           <Link href="/colours#gradients" className="h-10 px-4 rounded-full border border-mt-border text-[14px] font-semibold inline-flex items-center">Mesh gradients →</Link>
         </div>
       </section>
+      )}
 
       {/* Collections */}
       <section aria-labelledby="collections">

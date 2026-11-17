@@ -121,3 +121,17 @@ test('print set: A4 tri-fold → actual size on A3, fit to A4, normal with bleed
   const only = await makePrintSet({ job, base: 'L', options: DEFAULT_PACKAGE, files: ALL_FILES, arts: null, details: EMPTY_DETAILS, date: '', colour: '', toPdf: async () => new Uint8Array([1]) });
   assert.deepEqual(only.out.map((f) => f.name), ['L_JOB_REPORT.pdf']);
 });
+
+test('brand frame joins documents into one, numbered, logo footer; embroidery files and page', async () => {
+  const { brandDocument } = await import('../../lib/print/brand.ts');
+  const { embroideryFiles, embroideryPageSvg } = await import('../../lib/textile/embroideryDoc.ts');
+  const page = (t) => `<svg xmlns="http://www.w3.org/2000/svg" width="210mm" height="297mm" viewBox="0 0 210 297"><text>${t}</text><line x1="14" y1="283" x2="196" y2="283"/><text>Magical Touch Design old footer</text></svg>`;
+  const doc = brandDocument([[page('A'), page('B')], [page('C')]], { logo: { src: 'data:image/png;base64,AA', w: 900, h: 129 }, label: 'Kit · technical production file' });
+  assert.equal(doc.length, 3);
+  assert.match(doc[2].svg, /Page 3 of 3/); assert.match(doc[0].svg, /<image/); assert.doesNotMatch(doc[0].svg, /old footer/);
+  const d = { objects: [{ id: 'a', name: 'Square', d: 'M0 0H30V30H0Z', type: 'fill', colour: '#CC0000' }], hoop: [100, 100], placement: null };
+  const f = embroideryFiles(d, 'kit');
+  assert.ok(f.ok, f.issues.join(' ')); assert.equal(String.fromCharCode(...f.dst.subarray(0, 3)), 'LA:'); assert.ok(f.exp.length > 10);
+  const svg = embroideryPageSvg(d, { project: 'Kit', files: ['kit.dst', 'kit.exp'] });
+  assert.match(svg, /Thread sequence/); assert.match(svg, /30 × 30 mm/); assert.match(svg, /kit\.dst/);
+});

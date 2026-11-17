@@ -1668,7 +1668,7 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
         return (
           <Section title="Text">
             {activeText?.text ? (
-              <div className="rounded-xl border border-[#2680EB]/50 bg-[#2680EB]/5 p-2.5 flex flex-col gap-1.5">
+              <div className="rounded-xl border border-mt-ink bg-mt-accentsoft p-2.5 flex flex-col gap-1.5">
                 <p className="text-[12px] font-semibold text-mt-ink">Editing “{activeText.text.value.slice(0, 28)}”</p>
                 <textarea id="ps-text-edit" rows={Math.min(5, Math.max(2, activeText.text.value.split('\n').length))} value={activeText.text.value}
                   onChange={(e) => e.target.value.trim() && updateActiveText({ value: e.target.value })}
@@ -1740,7 +1740,7 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
         return (
           <>
             {manyLayers && layers && (
-              <p className="mt-3 rounded-lg bg-[#2680EB]/10 text-[12px] text-mt-ink px-2.5 py-1.5">
+              <p className="mt-3 rounded-lg bg-mt-accentsoft text-[12px] text-mt-ink px-2.5 py-1.5">
                 Adjusting layer <b>{layers[activeIdx].name}</b> only. Pick another layer to adjust it separately.
               </p>
             )}
@@ -2198,9 +2198,9 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
     </nav>
   );
   const optLabel = 'text-mt-muted';
-  const optField = 'h-7 rounded border border-mt-input-border bg-mt-bg px-1.5 text-[12px] text-mt-ink tabular-nums focus:outline-none focus:border-[#2680EB]';
+  const optField = 'h-7 rounded border border-mt-input-border bg-mt-bg px-1.5 text-[12px] text-mt-ink tabular-nums focus:outline-none focus:border-mt-ink';
   const optBtn = 'h-7 px-2.5 rounded border border-mt-input-border text-[12px] text-mt-ink hover:bg-mt-surface2 disabled:opacity-40';
-  const optOn = (on: boolean) => cx(optBtn, on && 'bg-[#2680EB] border-[#2680EB] text-white hover:bg-[#2680EB]');
+  const optOn = (on: boolean) => cx(optBtn, on && 'bg-mt-primary border-mt-ink text-white hover:bg-mt-primary');
   const activeProTool = PRO_TOOLBAR.find((t) => t && !t.subject && t.tool === tool && (!t.retouch || t.retouch === retouch) && (!t.sel || t.sel === selKind)) || null;
   const ToolGlyph = activeProTool?.icon;
   const optionsBar = (
@@ -2217,12 +2217,12 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
             </select>
           </label>
           <label className="inline-flex items-center gap-1.5"><span className={optLabel}>Size</span>
-            <input type="range" min={8} max={240} value={healSize} onChange={(e) => setHealSize(+e.target.value)} className="w-24 accent-[#2680EB]" />
+            <input type="range" min={8} max={240} value={healSize} onChange={(e) => setHealSize(+e.target.value)} className="w-24 accent-[#3B82C4]" />
             <span className="w-10 tabular-nums">{healSize} px</span>
           </label>
           {retouch !== 'heal' && (
             <label className="inline-flex items-center gap-1.5"><span className={optLabel}>{retouch === 'paint' || retouch === 'erase' ? 'Opacity' : 'Strength'}</span>
-              <input type="range" min={5} max={100} value={brushStrength} onChange={(e) => setBrushStrength(+e.target.value)} className="w-24 accent-[#2680EB]" />
+              <input type="range" min={5} max={100} value={brushStrength} onChange={(e) => setBrushStrength(+e.target.value)} className="w-24 accent-[#3B82C4]" />
               <span className="w-9 tabular-nums">{brushStrength}%</span>
             </label>
           )}
@@ -2305,7 +2305,7 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
       )}
       {tool === 'bucket' && (
         <>
-          <label className="inline-flex items-center gap-1.5"><span className={optLabel}>Tolerance</span><input type="range" min={0} max={255} value={bucketTol} onChange={(e) => setBucketTol(+e.target.value)} className="w-28 accent-[#2680EB]" /><span className="w-8 tabular-nums">{bucketTol}</span></label>
+          <label className="inline-flex items-center gap-1.5"><span className={optLabel}>Tolerance</span><input type="range" min={0} max={255} value={bucketTol} onChange={(e) => setBucketTol(+e.target.value)} className="w-28 accent-[#3B82C4]" /><span className="w-8 tabular-nums">{bucketTol}</span></label>
           <span className="w-6 h-6 rounded border border-white/60 ring-1 ring-black/30" style={{ background: paintColor }} />
           <span className={optLabel}>Click an area to fill it</span>
         </>
@@ -2598,7 +2598,7 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
                     else if (e.key === 'Escape') setTextDraft(null);
                   }}
                   rows={Math.max(1, textDraft.value.split('\n').length)}
-                  className="absolute bg-transparent outline-none border border-dashed border-[#2680EB] resize-none overflow-hidden p-0 m-0 leading-[1.2] placeholder:text-black/30"
+                  className="absolute bg-transparent outline-none border border-dashed border-mt-ink resize-none overflow-hidden p-0 m-0 leading-[1.2] placeholder:text-black/30"
                   style={{
                     left: (textDraft.x * dispW) / base.width,
                     top: (textDraft.y * dispH) / base.height,
@@ -2674,7 +2674,7 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
                 return (
                   <button key={d.id} role="tab" aria-selected={on}
                     onClick={() => setTool(d.id === 'props' ? lastCanvasTool.current : d.id)}
-                    className={cx('h-8 px-2.5 border-b-2 -mb-px', on ? 'border-[#2680EB] text-mt-ink bg-mt-surface' : 'border-transparent text-mt-muted hover:text-mt-ink')}>
+                    className={cx('h-8 px-2.5 border-b-2 -mb-px', on ? 'border-mt-ink text-mt-ink bg-mt-surface' : 'border-transparent text-mt-muted hover:text-mt-ink')}>
                     {d.label}
                   </button>
                 );

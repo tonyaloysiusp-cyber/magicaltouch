@@ -179,7 +179,7 @@ export function EmbroideryStudio({ design, pieces, colours, onSave, onClose, fil
   const piece = pieces.find((p) => p.id === placement?.piece) || null;
   const lbl = 'block text-[11.5px] text-mt-muted';
   const field = 'mt-0.5 h-8 w-full rounded-lg border border-mt-border bg-mt-bg px-2 text-[12.5px] text-mt-ink';
-  const chip = (on: boolean) => `h-7 px-2.5 rounded-full border text-[11.5px] font-semibold ${on ? 'border-[#7A1F3D] bg-[#7A1F3D] text-white' : 'border-mt-border hover:bg-mt-surface2'}`;
+  const chip = (on: boolean) => `h-7 px-2.5 rounded-full border text-[11.5px] font-semibold ${on ? 'border-mt-ink bg-mt-primary text-mt-onprimary' : 'border-mt-border hover:bg-mt-surface2'}`;
   const motifs = PATTERN_MOTIFS.filter((m) => m.cat === cat);
 
   return (
@@ -189,7 +189,7 @@ export function EmbroideryStudio({ design, pieces, colours, onSave, onClose, fil
         <span className="text-[12px] text-mt-muted">{summary.stitches.toLocaleString('en')} stitches · {summary.colours.length} colour{summary.colours.length === 1 ? '' : 's'} · {Math.round(summary.sizeMm[0])} × {Math.round(summary.sizeMm[1])} mm · {summary.trims} trims{summary.stops ? ` · ${summary.stops} stops` : ''} · about {summary.minutes} min at <input type="number" min={200} max={1500} step={50} value={spm} onChange={(e) => setSpm(Math.max(200, Math.min(1500, Number(e.target.value) || 700)))} aria-label="Machine speed" className="w-14 rounded border border-mt-border bg-mt-bg px-1 text-[12px]" /> stitches/min</span>
         <span className="flex-1" />
         <button type="button" onClick={() => setStitchesView((v) => !v)} aria-pressed={stitches} className={chip(stitches)}>{stitches ? 'Stitches' : 'Shapes'}</button>
-        <button type="button" onClick={() => dl('dst')} className="h-8 px-3 rounded-full bg-[#7A1F3D] text-white text-[12.5px] font-semibold inline-flex items-center gap-1.5"><Download size={14} /> DST (Tajima)</button>
+        <button type="button" onClick={() => dl('dst')} className="h-8 px-3 rounded-full bg-mt-primary text-mt-onprimary text-[12.5px] font-semibold inline-flex items-center gap-1.5"><Download size={14} /> DST (Tajima)</button>
         <button type="button" onClick={() => dl('exp')} className="h-8 px-3 rounded-full border border-mt-border text-[12.5px] font-semibold">EXP (Melco)</button>
         <button type="button" onClick={() => dl('png')} disabled={!!busy} className="h-8 px-3 rounded-full border border-mt-border text-[12.5px] font-semibold">Preview PNG</button>
         <button type="button" onClick={() => dl('svg')} className="h-8 px-3 rounded-full border border-mt-border text-[12.5px] font-semibold">Preview SVG</button>
@@ -280,7 +280,7 @@ export function EmbroideryStudio({ design, pieces, colours, onSave, onClose, fil
           {!objects.length && <p className="absolute inset-x-0 top-6 text-center text-[13px] text-mt-muted">Add lettering, a motif or your own SVG to start.</p>}
           {st.length > 1 && (
             <div className="absolute right-3 bottom-3 flex items-center gap-2 rounded-full bg-mt-surface/95 border border-mt-border px-3 py-1.5 shadow" role="group" aria-label="Stitch simulation" onPointerDown={(e) => e.stopPropagation()}>
-              <button type="button" onClick={() => { if (upTo == null || upTo >= st.length) setUpTo(0); setPlaying((v) => !v); }} className="h-7 px-3 rounded-full bg-[#7A1F3D] text-white text-[12px] font-semibold">{playing ? 'Pause' : 'Play'}</button>
+              <button type="button" onClick={() => { if (upTo == null || upTo >= st.length) setUpTo(0); setPlaying((v) => !v); }} className="h-7 px-3 rounded-full bg-mt-primary text-mt-onprimary text-[12px] font-semibold">{playing ? 'Pause' : 'Play'}</button>
               <input type="range" min={0} max={st.length} value={upTo ?? st.length} onChange={(e) => { setPlaying(false); setUpTo(Number(e.target.value)); }} aria-label="Stitch sequence" className="w-40" />
               <span className="text-[11.5px] tabular-nums text-mt-muted">{(upTo ?? st.length).toLocaleString('en')} / {st.length.toLocaleString('en')}</span>
               {upTo != null && <button type="button" onClick={() => { setPlaying(false); setUpTo(null); }} className="text-[11.5px] text-mt-muted underline">Done</button>}
@@ -295,7 +295,7 @@ export function EmbroideryStudio({ design, pieces, colours, onSave, onClose, fil
             <p className="text-[12px] font-semibold uppercase tracking-wide text-mt-faint">Objects (sewing order)</p>
             <div className="mt-1 space-y-1">
               {objects.map((o, i) => (
-                <div key={o.id} className={`flex items-center gap-1.5 rounded-lg border px-2 py-1 text-[12px] ${sel === o.id ? 'border-[#7A1F3D] bg-[#7A1F3D]/5' : 'border-mt-border'}`}>
+                <div key={o.id} className={`flex items-center gap-1.5 rounded-lg border px-2 py-1 text-[12px] ${sel === o.id ? 'border-mt-ink bg-mt-accentsoft' : 'border-mt-border'}`}>
                   <span className="h-3.5 w-3.5 shrink-0 rounded-sm border border-black/10" style={{ background: o.colour }} />
                   <button type="button" onClick={() => setSel(o.id)} className="flex-1 truncate text-left">{i + 1}. {o.name}</button>
                   <span className="text-mt-faint">{o.type}</span>

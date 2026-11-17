@@ -365,7 +365,7 @@ function ToolsDemo({ t }: { t: number }) {
     <div className="p-4 sm:p-6 grid grid-cols-2 sm:grid-cols-3 gap-2.5">
       {list.map((x, j) => (
         <div key={x.id} className={`flex items-center gap-2.5 rounded-xl border p-2.5 transition-all duration-300 ${j === on ? 'border-[#3B82C4] bg-mt-surface shadow-md -translate-y-0.5' : 'border-mt-border bg-mt-surface/70'}`}>
-          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-white" style={{ background: x.tint }}><ToolIcon name={x.icon} size={15} /></span>
+          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-mt-ink text-mt-bg"><ToolIcon name={x.icon} size={15} /></span>
           <span className="min-w-0 text-[12.5px] font-semibold leading-tight">{x.title}</span>
         </div>
       ))}

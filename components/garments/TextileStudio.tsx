@@ -9,7 +9,7 @@
 // pack. Everything stays on this device.
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { AlertTriangle, Download, FileUp, PenTool, Redo2, Save, Scissors, Shirt, Sparkles, Undo2 } from 'lucide-react';
+import { AlertTriangle, Download, FileUp, PenTool, Redo2, Save, Shirt, Sparkles, Undo2 } from 'lucide-react';
 import { DEFAULT_PATTERN } from '@/lib/patterns';
 import { SIZES, ROLLS, type Product } from '@/lib/garments';
 import { kitFor, kitProduct, pieceMarkup, rosterSheets, safeFile, type KitDesign, type Player } from '@/lib/teamKit';
@@ -23,6 +23,7 @@ import {
 import { listAssets } from '@/lib/assets/library';
 import { openToolFile, saveToolProject, takeToolHandoff, TOOL_FILE_ACCEPT } from '@/lib/mtd/toolProject';
 import { PrintStudio } from './PrintStudio';
+import { ExportCentre, type ExportItem } from './ExportCentre';
 import { EmbroideryStudio, type EmbroideryDesign } from './EmbroideryStudio';
 import { SizeChart } from './SizeChart';
 import { READY_SIZE_NAMES, changedFrom, hasReadySizes, readySize, type ReadySize } from '@/lib/textile/sizes';
@@ -164,7 +165,7 @@ function MockupPanel({ kit, product, name }: { kit: KitDesign; product: Product;
     <section aria-label="Mockup" className="rounded-2xl border border-mt-border p-4">
       <div className="flex flex-wrap items-center gap-2">
         <p className="text-[13px] font-semibold uppercase tracking-wide text-mt-faint mr-auto">Mockup</p>
-        {hasBack && (['front', 'back'] as const).map((v) => <button key={v} type="button" onClick={() => setView(v)} aria-pressed={view === v} className={`h-8 px-3 rounded-full border text-[12.5px] font-semibold ${view === v ? 'border-[#0F766E] bg-[#0F766E] text-white' : 'border-mt-border'}`}>{v === 'front' ? 'Front' : 'Back'}</button>)}
+        {hasBack && (['front', 'back'] as const).map((v) => <button key={v} type="button" onClick={() => setView(v)} aria-pressed={view === v} className={`h-8 px-3 rounded-full border text-[12.5px] font-semibold ${view === v ? 'border-mt-ink bg-mt-primary text-mt-onprimary' : 'border-mt-border'}`}>{v === 'front' ? 'Front' : 'Back'}</button>)}
         <button type="button" onClick={dl} disabled={!svg} className="h-8 px-3 rounded-full border border-mt-border text-[12.5px] font-semibold inline-flex items-center gap-1.5"><Download size={13} /> Mockup PNG</button>
       </div>
       <div className="mt-2 grid place-items-center rounded-xl bg-[#F4F4F5] p-3" role="img" aria-label="Garment mockup">{svg && <div className="w-full max-w-md [&_svg]:h-auto [&_svg]:w-full" dangerouslySetInnerHTML={{ __html: svg }} />}</div>
@@ -179,7 +180,6 @@ export function TextileStudio({ mode = 'pro', pick, embedded, onForeign, openReq
   const [loaded, setLoaded] = useState(false);
   const [studio, setStudio] = useState(false);
   const [embOpen, setEmbOpen] = useState(false);
-  const [busy, setBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [lib, setLib] = useState<Asset[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -264,98 +264,108 @@ export function TextileStudio({ mode = 'pro', pick, embedded, onForeign, openReq
     return { pages, totalMm, overlaps: parts.reduce((a, r) => a + (r.overlaps || 0), 0), tooWide: parts.reduce((a, r) => a + (r.tooWide || 0), 0), utilisation: parts.length ? parts.reduce((a, r) => a + r.utilisation * r.totalMm, 0) / Math.max(1, totalMm) : 0 } as ReturnType<typeof rosterSheets>;
   };
   const garmentCount = standard(p.type) ? players.length : projectSets(p).sets.reduce((a, st) => a + st.qty, 0);
-  const dlCutPattern = async () => {
+  // ── Export centre: each output is made as files (name + bytes); the centre saves them or zips the package. ──
+  const base = safeFile(p.name);
+  const need = () => { if (!product) throw new Error(problems[0] || 'Finish the garment set-up first.'); };
+  const pdfBytes = async (pages: { svg: string; widthMm: number; heightMm: number }[], f?: any) => { const { svgToPdfBlob } = await import('@/lib/svgToPdf'); return new Uint8Array(await (await svgToPdfBlob('', 0, 0, pages, f)).arrayBuffer()); };
+  const logo = async () => (await import('@/lib/print/printDownload')).loadImage('/logo.png');
+  const printSheets = async () => {
+    need();
+    if (!garmentCount) throw new Error('Set how many garments to print.');
+    await ready();
+    const r = sheets();
+    if (r.tooWide) throw new Error(`${r.tooWide} piece${r.tooWide > 1 ? 's are' : ' is'} wider than the ${p.rollW} mm roll — choose a wider roll.`);
+    if (r.overlaps) throw new Error(`${r.overlaps} pieces overlap — not exported. Try a wider roll.`);
+    return r;
+  };
+  const makePrint = async () => {
+    const r = await printSheets();
+    return [{ name: `${base}-PRINT.pdf`, data: await pdfBytes(r.pages.map((pg) => ({ svg: pg.svg, widthMm: pg.width, heightMm: pg.height })), fonts) }];
+  };
+  const makePrintSvg = async () => {
+    const r = await printSheets();
+    const enc = new TextEncoder();
+    return r.pages.map((pg, i) => ({ name: r.pages.length === 1 ? `${base}-PRINT.svg` : `${base}-PRINT-page-${i + 1}.svg`, data: enc.encode(pg.svg) }));
+  };
+  const makeCut = async () => {
     const { sets } = projectSets(p);
-    if (!sets.length) { flash(problems[0] || 'Finish the garment set-up first.'); return; }
-    setBusy('cut');
-    try {
-      const [{ cuttingPatternPages }, { svgToPdfBlob }] = await Promise.all([import('@/lib/textile/cutPattern'), import('@/lib/svgToPdf')]);
-      const pages = cuttingPatternPages(sets.map((st) => ({ ...st, qty: Math.max(1, st.qty) })), { rollW: p.rollW, seam: p.seam ?? 10, project: p.name });
-      save(await svgToPdfBlob('', 0, 0, pages.map((pg) => ({ svg: pg.svg, widthMm: pg.width, heightMm: pg.height }))), `${safeFile(p.name)}-cutting-pattern.pdf`);
-      flash(`Cutting pattern ready: ${sets.length} size${sets.length > 1 ? 's' : ''} on ${pages.length} page${pages.length > 1 ? 's' : ''}, seam allowance ${p.seam ?? 10} mm.`);
-    } catch { flash('The cutting pattern could not be made.'); }
-    setBusy(null);
+    if (!sets.length) throw new Error(problems[0] || 'Finish the garment set-up first.');
+    const { cuttingPatternPages } = await import('@/lib/textile/cutPattern');
+    const pages = cuttingPatternPages(sets.map((st) => ({ ...st, qty: Math.max(1, st.qty) })), { rollW: p.rollW, seam: p.seam ?? 10, project: p.name, logo: await logo() });
+    return [{ name: `${base}-CUTTING-PATTERN.pdf`, data: await pdfBytes(pages.map((pg) => ({ svg: pg.svg, widthMm: pg.width, heightMm: pg.height }))) }];
   };
-
-  const dlPrintPdf = async () => {
-    if (!product) { flash(problems[0] || 'Finish the garment set-up first.'); return; }
-    if (!garmentCount) { flash('Set how many garments to print.'); return; }
-    setBusy('pdf');
-    try {
-      await ready();
-      const r = sheets();
-      if (r.tooWide) { flash(`${r.tooWide} piece${r.tooWide > 1 ? 's are' : ' is'} wider than the ${p.rollW} mm roll — choose a wider roll.`); setBusy(null); return; }
-      if (r.overlaps) { flash(`${r.overlaps} pieces overlap — not exported. Try a wider roll.`); setBusy(null); return; }
-      const { svgToPdfBlob } = await import('@/lib/svgToPdf');
-      save(await svgToPdfBlob('', 0, 0, r.pages.map((pg) => ({ svg: pg.svg, widthMm: pg.width, heightMm: pg.height })), fonts), `${safeFile(p.name)}-print.pdf`);
-      flash(`Print PDF ready: ${garmentCount} garment${garmentCount > 1 ? 's' : ''} on ${r.pages.length} page${r.pages.length > 1 ? 's' : ''}, ${(r.totalMm / 1000).toFixed(2)} m of ${p.rollW} mm fabric, ${Math.round(r.utilisation * 100)} % used.`);
-    } catch { flash('The PDF could not be made in this browser.'); }
-    setBusy(null);
+  const embFiles = () => {
+    const d = p.embroidery;
+    if (!d?.objects?.length) return null;
+    return d;
   };
-  const dlPrintSvg = async () => {
-    if (!product) { flash(problems[0] || 'Finish the garment set-up first.'); return; }
-    setBusy('svg');
-    try {
-      await ready();
-      const r = sheets();
-      if (r.overlaps || r.tooWide) { flash('Pieces overlap or are wider than the roll — not exported.'); setBusy(null); return; }
-      if (r.pages.length === 1) save(new Blob([r.pages[0].svg], { type: 'image/svg+xml' }), `${safeFile(p.name)}-print.svg`);
-      else {
-        const { buildZip } = await import('@/lib/editor/zip');
-        save(new Blob([await buildZip(r.pages.map((pg, i) => ({ name: `${safeFile(p.name)}-page-${i + 1}.svg`, data: new TextEncoder().encode(pg.svg) })))], { type: 'application/zip' }), `${safeFile(p.name)}-print-svg.zip`);
-      }
-      flash('Print SVG ready (real size in mm).');
-    } catch { flash('The SVG could not be made.'); }
-    setBusy(null);
+  const makeEmb = async () => {
+    const d = embFiles();
+    if (!d) throw new Error('No embroidery in this project yet.');
+    const { embroideryFiles } = await import('@/lib/textile/embroideryDoc');
+    const f = embroideryFiles(d, base);
+    if (!f.ok) throw new Error(`Embroidery file not saved: ${f.issues.join(' ')}`);
+    return [{ name: `${base}.dst`, data: f.dst }, { name: `${base}.exp`, data: f.exp }];
   };
-  const dlTechPack = async () => {
-    if (!product) { flash(problems[0] || 'Finish the garment set-up first.'); return; }
-    setBusy('tech');
-    try {
-      await ready();
-      const [{ techPackPages }, { svgToPdfBlob }] = await Promise.all([import('@/lib/textile/techPack'), import('@/lib/svgToPdf')]);
-      const r = sheets();
-      const allFields = fields || [];
-      const rows = chartOn(p) ? (p.chart?.[p.type] || []) : null;
-      const measurements = standard(p.type)
-        ? pieceMeasures.map((x) => ({ label: `${x.label} — standard template, size M (unverified)`, value: (x.mm / 10).toFixed(1) }))
-        : rows
-          ? [{ label: 'Size', value: rows.map((r) => r.name).join(' / ') }, ...allFields.map((f) => ({ label: f.label, value: rows.map((r) => String(r.m[f.key] ?? STYLE_DEFAULTS[p.type]?.[f.key] ?? '—')).join(' / '), style: f.style }))]
-          : allFields.map((f) => ({ label: f.label, value: String(m[f.key] ?? STYLE_DEFAULTS[p.type]?.[f.key] ?? '—'), style: f.style }));
-      const pages = techPackPages({
+  // One technical production file: tech pack (sketch, measurements, pieces, colours, artwork, order) + embroidery page, branded.
+  const makeTech = async () => {
+    need();
+    await ready();
+    const [{ techPackPages }, { brandDocument }] = await Promise.all([import('@/lib/textile/techPack'), import('@/lib/print/brand')]);
+    const product_ = product!;
+    const r = sheets();
+    const allFields = fields || [];
+    const rows = chartOn(p) ? (p.chart?.[p.type] || []) : null;
+    const measurements = standard(p.type)
+      ? pieceMeasures.map((x) => ({ label: `${x.label} — standard template, size M (unverified)`, value: (x.mm / 10).toFixed(1) }))
+      : rows
+        ? [{ label: 'Size', value: rows.map((r) => r.name).join(' / ') }, ...allFields.map((f) => ({ label: f.label, value: rows.map((r) => String(r.m[f.key] ?? STYLE_DEFAULTS[p.type]?.[f.key] ?? '—')).join(' / '), style: f.style }))]
+        : allFields.map((f) => ({ label: f.label, value: String(m[f.key] ?? STYLE_DEFAULTS[p.type]?.[f.key] ?? '—'), style: f.style }));
+    const pages = techPackPages({
         project: p.name, garment: garmentLabel, date: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }),
-        sketch: flat, product,
+        sketch: flat, product: product_,
         measurements,
-        colours: [{ role: 'Body', hex: p.colours.body }, ...(product.pieces.some((x) => x.id.startsWith('sleeve')) ? [{ role: 'Sleeves', hex: p.colours.sleeve }] : []), { role: 'Trim / collar / casing', hex: p.colours.trim }],
+        colours: [{ role: 'Body', hex: p.colours.body }, ...(product_.pieces.some((x) => x.id.startsWith('sleeve')) ? [{ role: 'Sleeves', hex: p.colours.sleeve }] : []), { role: 'Trim / collar / casing', hex: p.colours.trim }],
         artwork: p.art.filter((e: any) => !e.hidden).map((e: any) => ({ name: e.name || e.kind, detail: e.kind === 'text' ? `${e.font} ${e.weight} · ${typeof e.fill === 'string' ? e.fill : 'gradient / pattern'}` : e.kind })),
         order: standard(p.type) ? SIZES.filter((s) => (p.sizeQty[s.id] || 0) > 0).map((s) => ({ label: `Size ${s.label}`, qty: p.sizeQty[s.id] })) : projectSets(p).sets.map((st) => ({ label: st.size === 'Custom' ? 'Made to measure' : `Size ${st.size} (your size chart)`, qty: st.qty })),
         print: { rollW: p.rollW, bleed: p.bleed, lengthMm: r.totalMm, pages: r.pages.length, textMode: p.textMode === 'live' ? 'live text (fonts embedded)' : 'outlines' },
         embroidery: p.embroidery?.summary || null,
         notes: [
-          product.note,
+          product_.note,
           ...(standard(p.type) ? ['Standard template sizes are not a factory specification — check them against your own pattern before production.'] : ['Pieces are drafted from the measurements above. Sew a test garment (toile) before cutting good fabric.']),
           `Print at 100 %. Cut lines are magenta (${p.bleed} mm bleed outside them).`,
         ],
       });
-      save(await svgToPdfBlob('', 0, 0, pages.map((svg) => ({ svg, widthMm: 210, heightMm: 297 }))), `${safeFile(p.name)}-tech-pack.pdf`);
-      flash(`Tech pack ready (${pages.length} page${pages.length > 1 ? 's' : ''}).`);
-    } catch { flash('The tech pack could not be made.'); }
-    setBusy(null);
+    const parts = [pages];
+    const d = embFiles();
+    if (d) { const { embroideryPageSvg } = await import('@/lib/textile/embroideryDoc'); parts.push([embroideryPageSvg(d, { project: p.name, files: [`${base}.dst`, `${base}.exp`], background: p.colours.body })]); }
+    return [{ name: `${base}-TECHNICAL-PRODUCTION-FILE.pdf`, data: await pdfBytes(brandDocument(parts, { logo: await logo(), label: `${p.name} · technical production file` })) }];
   };
-  const dlSketch = async () => {
-    if (!flat) return;
-    setBusy('png');
-    try {
-      await ready();
-      const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-40 -20 ${flat.w + 80} ${flat.h + 40}" width="${Math.round(flat.w + 80)}" height="${Math.round(flat.h + 40)}"><rect x="-40" y="-20" width="${flat.w + 80}" height="${flat.h + 40}" fill="#fff"/>${flat.inner}</svg>`;
-      const img = new Image(); img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`; await img.decode();
-      const k = Math.min(1, 2400 / Math.max(img.naturalWidth, img.naturalHeight));
-      const c = document.createElement('canvas'); c.width = Math.round(img.naturalWidth * k); c.height = Math.round(img.naturalHeight * k);
-      c.getContext('2d')!.drawImage(img, 0, 0, c.width, c.height);
-      c.toBlob((b) => b && save(b, `${safeFile(p.name)}-flat-sketch.png`), 'image/png');
-    } catch { flash('The picture could not be made.'); }
-    setBusy(null);
+  const makeSketch = async () => {
+    if (!flat) throw new Error('Finish the garment set-up first.');
+    await ready();
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-40 -20 ${flat.w + 80} ${flat.h + 40}" width="${Math.round(flat.w + 80)}" height="${Math.round(flat.h + 40)}"><rect x="-40" y="-20" width="${flat.w + 80}" height="${flat.h + 40}" fill="#fff"/>${flat.inner}</svg>`;
+    const img = new Image(); img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`; await img.decode();
+    const k = Math.min(1, 2400 / Math.max(img.naturalWidth, img.naturalHeight));
+    const c = document.createElement('canvas'); c.width = Math.round(img.naturalWidth * k); c.height = Math.round(img.naturalHeight * k);
+    c.getContext('2d')!.drawImage(img, 0, 0, c.width, c.height);
+    const blob: Blob | null = await new Promise((res) => c.toBlob(res, 'image/png'));
+    if (!blob) throw new Error('The picture could not be made.');
+    return [{ name: `${base}-flat-sketch.png`, data: new Uint8Array(await blob.arrayBuffer()) }];
   };
+  const exportItems: ExportItem[] = [
+    { id: 'technical', group: 'factory', title: 'Technical production file', hint: 'One branded PDF: sketch, measurements, pieces, colours, artwork, order' + (p.embroidery?.objects?.length ? ', embroidery' : ''), make: makeTech },
+    ...(!standard(p.type) ? [{ id: 'cutting', group: 'factory' as const, title: 'Cutting pattern', hint: `Every piece at real size, ${p.seam ?? 10} mm seam allowance, grain, notches`, make: makeCut }] : []),
+    { id: 'print', group: 'printer', title: 'Ready-to-print PDF', hint: `Real-size pieces, ${p.bleed} mm bleed, cut lines, nested on ${p.rollW} mm — no branding`, make: makePrint },
+    { id: 'print-svg', group: 'printer', title: 'Ready-to-print SVG', hint: 'Editable vector pages in mm', make: makePrintSvg, pro: true, inPackage: false },
+    { id: 'sketch', group: 'factory', title: 'Flat sketch PNG', hint: 'Front and back flat drawing', make: makeSketch, pro: true, inPackage: false },
+    ...(p.embroidery?.objects?.length ? [{ id: 'embroidery', group: 'embroidery' as const, title: 'Embroidery machine files', hint: 'DST (Tajima, checked) + EXP (Melco)', make: makeEmb }] : []),
+  ];
+  const exportChecks = [
+    { ok: !!product, text: product ? `${garmentLabel}: ${product.pieces.length} pieces drafted` : (problems[0] || 'Finish the garment set-up first.') },
+    { ok: garmentCount > 0, text: garmentCount > 0 ? `${garmentCount} garment${garmentCount > 1 ? 's' : ''} to make` : 'Set how many garments to make' },
+    ...(p.embroidery?.objects?.length ? [{ ok: true, text: `Embroidery: ${p.embroidery.summary?.stitches?.toLocaleString('en') || ''} stitches` }] : []),
+  ];
 
   const saveProject = async (asNew = false) => {
     try {
@@ -383,7 +393,7 @@ export function TextileStudio({ mode = 'pro', pick, embedded, onForeign, openReq
 
   const lbl = 'block text-[12px] text-mt-muted';
   const field = 'mt-1 h-9 w-full rounded-lg border border-mt-border bg-mt-bg px-2.5 text-[13.5px] text-mt-ink';
-  const chip = (on: boolean) => `h-8 px-3 rounded-full border text-[12.5px] font-semibold ${on ? 'border-[#0F766E] bg-[#0F766E] text-white' : 'border-mt-border hover:bg-mt-surface2'}`;
+  const chip = (on: boolean) => `h-8 px-3 rounded-full border text-[12.5px] font-semibold ${on ? 'border-mt-ink bg-mt-primary text-mt-onprimary' : 'border-mt-border hover:bg-mt-surface2'}`;
   const btn = 'h-10 px-4 rounded-full border border-mt-border text-[13.5px] font-semibold inline-flex items-center gap-2 hover:bg-mt-surface2 disabled:opacity-50';
 
   return (
@@ -408,8 +418,8 @@ export function TextileStudio({ mode = 'pro', pick, embedded, onForeign, openReq
         <p className="text-[13px] font-semibold uppercase tracking-wide text-mt-faint">1 · Garment</p>
         {!embedded && <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2" role="radiogroup" aria-label="Garment type">
           {GARMENTS.filter((g) => !embedded || !standard(g.id)).map((g) => (
-            <button key={g.id} type="button" role="radio" aria-checked={p.type === g.id} onClick={() => set({ type: g.id })} className={`rounded-2xl border p-3 text-left ${p.type === g.id ? 'border-[#0F766E] ring-2 ring-[#0F766E]/30 bg-[#0F766E]/5' : 'border-mt-border hover:bg-mt-surface2'}`}>
-              <Shirt size={18} className="text-[#0F766E]" />
+            <button key={g.id} type="button" role="radio" aria-checked={p.type === g.id} onClick={() => set({ type: g.id })} className={`rounded-2xl border p-3 text-left ${p.type === g.id ? 'border-mt-ink ring-2 ring-mt-accent/30 bg-mt-accentsoft' : 'border-mt-border hover:bg-mt-surface2'}`}>
+              <Shirt size={18} className="text-mt-accent" />
               <p className="mt-1 text-[13.5px] font-semibold">{g.label}</p>
               <p className="text-[11.5px] text-mt-muted">{g.hint}</p>
             </button>
@@ -494,12 +504,12 @@ export function TextileStudio({ mode = 'pro', pick, embedded, onForeign, openReq
         <p className="text-[13px] font-semibold uppercase tracking-wide text-mt-faint">2 · Design</p>
         <div className="mt-2 grid gap-3 sm:grid-cols-2">
           <button type="button" disabled={!product} onClick={() => setStudio(true)} className="rounded-2xl border border-mt-border p-4 text-left hover:bg-mt-surface2 disabled:opacity-50">
-            <PenTool size={18} className="text-[#0F766E]" />
+            <PenTool size={18} className="text-mt-accent" />
             <p className="mt-1 text-[14px] font-semibold">Open the design workspace</p>
             <p className="text-[12px] text-mt-muted">Illustrator-style tools on the real-size pieces: pen, shapes, text, curved text, layers, booleans, clipping masks, patterns, gradients, logos. {p.art.length ? `${p.art.length} element${p.art.length > 1 ? 's' : ''} so far.` : ''}</p>
           </button>
           <button type="button" disabled={!product} onClick={() => setEmbOpen(true)} className="rounded-2xl border border-mt-border p-4 text-left hover:bg-mt-surface2 disabled:opacity-50">
-            <Sparkles size={18} className="text-[#7A1F3D]" />
+            <Sparkles size={18} className="text-mt-accent" />
             <p className="mt-1 text-[14px] font-semibold">Embroidery</p>
             <p className="text-[12px] text-mt-muted">Neck, yoke, border or logo embroidery: fill, satin and running stitches, thread preview, colour list and a DST machine file. {p.embroidery?.summary ? `${p.embroidery.summary.stitches.toLocaleString('en')} stitches, ${p.embroidery.summary.colours.length} colour${p.embroidery.summary.colours.length === 1 ? '' : 's'}.` : ''}</p>
           </button>
@@ -525,14 +535,7 @@ export function TextileStudio({ mode = 'pro', pick, embedded, onForeign, openReq
             <select value={p.textMode} onChange={(e) => set({ textMode: e.target.value as any })} aria-label="Text in print files" className={`${field} w-44`}><option value="outline">Outlines (safest)</option><option value="live">Live text (editable)</option></select>
           </label>
         </div>
-        <div className="mt-3 flex flex-wrap gap-2">
-          <button type="button" className="h-10 px-4 rounded-full bg-[#0F766E] text-white text-[13.5px] font-semibold inline-flex items-center gap-2 disabled:opacity-50" disabled={!product || !!busy} onClick={dlPrintPdf}><Download size={15} /> {busy === 'pdf' ? 'Making…' : 'Print PDF (real size)'}</button>
-          <button type="button" className={btn} disabled={!product || !!busy} onClick={dlPrintSvg}><Download size={15} /> {busy === 'svg' ? 'Making…' : 'Print SVG'}</button>
-          <button type="button" className={btn} disabled={!product || !!busy} onClick={dlTechPack}><Scissors size={15} /> {busy === 'tech' ? 'Making…' : 'Tech pack PDF'}</button>
-          <button type="button" className={btn} disabled={!product || !!busy} onClick={dlSketch}><Download size={15} /> Flat sketch PNG</button>
-          {!standard(p.type) && <button type="button" className={btn} disabled={!product || !!busy} onClick={dlCutPattern}><Scissors size={15} /> {busy === 'cut' ? 'Making…' : 'Cutting pattern PDF'}</button>}
-        </div>
-        <p className="mt-2 text-[11.5px] text-mt-muted">Print files: every piece at real size with {p.bleed} mm bleed, magenta cut lines and registration marks, nested on the roll to save fabric. Branding appears only on the tech pack, never in the artwork.</p>
+        <div className="mt-3"><ExportCentre items={exportItems} pro={pro} checks={exportChecks} packageName={base} note={`Print files carry no branding: every piece at real size with ${p.bleed} mm bleed and cut lines. The technical file and cutting pattern carry the Magical Touch Design logo.`} /></div>
       </section>
 
       {msg && <p role="status" className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[90] rounded-full bg-mt-ink px-4 py-2 text-[13px] text-mt-bg shadow-lg">{msg}</p>}

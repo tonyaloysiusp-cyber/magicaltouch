@@ -8,6 +8,7 @@
 //    repeats around the centre)
 //  · right: palettes, layers and the selected layer's settings.
 
+import { ToolModeBar, useToolMode } from '@/components/ToolMode';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { putAsset } from '@/lib/assets/library';
@@ -48,6 +49,7 @@ async function svgToImage(svg: string, size: number, type: 'image/png' | 'image/
 
 export function MandalaMaker() {
   const router = useRouter();
+  const [pro, setPro] = useToolMode('rangoli');
   const [m, setM] = useState<Mandala>(() => preset('rangoli', 0));
   const [past, setPast] = useState<Mandala[]>([]);
   const [future, setFuture] = useState<Mandala[]>([]);
@@ -215,6 +217,7 @@ export function MandalaMaker() {
 
         {/* Right: colours and layers */}
         <aside className={`${panel} lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto order-3 lg:order-2 xl:order-none`}>
+          <ToolModeBar pro={pro} onChange={setPro} />
           <section className="space-y-2">
             <H>Palette</H>
             <div className="grid grid-cols-2 gap-1.5">
@@ -231,9 +234,9 @@ export function MandalaMaker() {
             <H>Download</H>
             <div className="grid grid-cols-2 gap-1.5">
               <button type="button" onClick={pdf} disabled={!!busy} className={`${chip} justify-center`}><Download size={13} /> {busy === 'pdf' ? 'Making…' : 'Vector PDF'}</button>
-              <button type="button" onClick={() => save(new Blob([svg], { type: 'image/svg+xml' }), 'rangoli.svg')} className={`${chip} justify-center`}><Download size={13} /> SVG</button>
+              {pro && <button type="button" onClick={() => save(new Blob([svg], { type: 'image/svg+xml' }), 'rangoli.svg')} className={`${chip} justify-center`}><Download size={13} /> SVG</button>}
               <button type="button" onClick={async () => save(await svgToImage(svg, 2400, 'image/png'), 'rangoli.png')} className={`${chip} justify-center`}><Download size={13} /> PNG</button>
-              <button type="button" onClick={async () => save(await svgToImage(mandalaSvg(m), 2400, 'image/jpeg', m.background), 'rangoli.jpg')} className={`${chip} justify-center`}><Download size={13} /> JPEG</button>
+              {pro && <button type="button" onClick={async () => save(await svgToImage(mandalaSvg(m), 2400, 'image/jpeg', m.background), 'rangoli.jpg')} className={`${chip} justify-center`}><Download size={13} /> JPEG</button>}
             </div>
             <label className="flex items-center gap-2 text-[12.5px]"><input type="checkbox" checked={transparent} onChange={(e) => setTransparent(e.target.checked)} className="h-4 w-4 accent-[#3B82C4]" /> Transparent background</label>
           </section>
@@ -243,7 +246,7 @@ export function MandalaMaker() {
             <p className="text-[11.5px] text-mt-muted">Saved as a repeat pattern (this rangoli as the motif) — it appears in the Textile and Wallpaper designers. Stays on this device.</p>
             {libMsg && <p role="status" className="text-[12px] font-medium">{libMsg}</p>}
           </section>
-          <section className="space-y-2">
+          {pro && <section className="space-y-2">
             <H>Layers</H>
             <ul className="space-y-1 max-h-48 overflow-y-auto" aria-label="Layers (top is drawn last)">
               {m.layers.map((l, i) => ({ l, i })).reverse().map(({ l, i }) => (
@@ -255,7 +258,7 @@ export function MandalaMaker() {
               ))}
               {!m.layers.length && <li className="text-[12px] text-mt-muted">No layers yet — add elements or draw.</li>}
             </ul>
-          </section>
+          </section>}
           {L && sel !== null ? (
             <div className="rounded-xl bg-mt-bg p-3 space-y-2">
               <div className="flex flex-wrap gap-1.5">
@@ -265,7 +268,7 @@ export function MandalaMaker() {
                 <button type="button" onClick={() => { change((x) => ({ ...x, layers: x.layers.filter((_, k) => k !== sel) })); setSel(null); }} className={chip}><Trash2 size={13} /> Delete</button>
               </div>
               <label className="flex items-center justify-between text-[12px] text-mt-muted">Colour<input type="color" value={L.color} onChange={(e) => editLayer(sel, { color: e.target.value })} className="h-7 w-9 rounded border border-mt-border bg-transparent" /></label>
-              {L.kind !== 'stroke' && (
+              {pro && L.kind !== 'stroke' && (
                 <label className="flex items-center justify-between text-[12px] text-mt-muted">Gradient to
                   <span className="flex items-center gap-1.5">{L.gradient && <input type="color" value={L.gradient[1]} onChange={(e) => editLayer(sel, { gradient: [L.color, e.target.value] as [string, string] })} className="h-7 w-9 rounded border border-mt-border bg-transparent" />}<input type="checkbox" checked={!!L.gradient} onChange={(e) => editLayer(sel, { gradient: e.target.checked ? ([L.color, '#FFFFFF'] as [string, string]) : null })} className="h-4 w-4 accent-[#3B82C4]" /></span></label>
               )}
@@ -275,7 +278,7 @@ export function MandalaMaker() {
               {L.kind === 'spokes' && <>{slider('From', Math.round(L.r1), 0, 470, (n) => editLayer(sel, { r1: n }))}{slider('To', Math.round(L.r2), 0, 480, (n) => editLayer(sel, { r2: n }))}{slider('Width', L.width, 1, 20, (n) => editLayer(sel, { width: n }))}</>}
               {L.kind === 'border' && <>{slider('Distance', Math.round(L.radius), 20, 480, (n) => editLayer(sel, { radius: n }))}{slider('Width', L.width, 1, 20, (n) => editLayer(sel, { width: n }))}<div className="flex flex-wrap gap-1">{(['line', 'double', 'scallop', 'dots'] as const).map((s) => <button key={s} type="button" aria-pressed={L.style === s} onClick={() => editLayer(sel, { style: s })} className={`${pill(L.style === s)} h-7 text-[12px] capitalize`}>{s}</button>)}</div></>}
               {L.kind === 'stroke' && slider('Line width', L.width, 1, 40, (n) => editLayer(sel, { width: n }))}
-              <details className="text-[12px]">
+              {pro && <details className="text-[12px]">
                 <summary className="cursor-pointer text-mt-muted">More settings</summary>
                 {L.kind === 'ring' && (
                   <div className="mt-2 space-y-2">
@@ -286,7 +289,7 @@ export function MandalaMaker() {
                 )}
                 {L.kind === 'stroke' && <label className="mt-2 flex items-center justify-between">Mirrored<input type="checkbox" checked={L.mirror} onChange={(e) => editLayer(sel, { mirror: e.target.checked })} className="h-4 w-4 accent-[#3B82C4]" /></label>}
                 {L.kind === 'border' && slider('Scallops / dots', L.count, 6, 120, (n) => editLayer(sel, { count: n }))}
-              </details>
+              </details>}
             </div>
           ) : <p className="text-[12px] text-mt-muted">Select a layer (here or on the canvas) to change its colour, size, distance and shape.</p>}
         </aside>

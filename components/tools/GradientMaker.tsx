@@ -4,6 +4,7 @@
 // shuffle, add grain, then download PNG at wallpaper / social sizes, a
 // vector SVG, copy the CSS, or open it in the editor as a background.
 
+import { ToolModeBar, useToolMode } from '@/components/ToolMode';
 import { useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Check, Copy, Download, Plus, Shuffle, Trash2, Wand2 } from 'lucide-react';
@@ -26,6 +27,7 @@ async function svgToPng(svg: string, w: number, h: number): Promise<Blob> {
 
 export function GradientMaker() {
   const router = useRouter();
+  const [pro, setPro] = useToolMode('gradients');
   const [g, setG] = useState<GradientBg>(GRADIENT_PRESETS[2].g);
   const [sel, setSel] = useState(0);
   const [size, setSize] = useState(0);
@@ -64,6 +66,7 @@ export function GradientMaker() {
   return (
     <div className="grid gap-6 lg:grid-cols-[320px_minmax(0,1fr)] lg:items-start">
       <aside className="rounded-3xl border border-mt-border bg-mt-surface p-5 space-y-5 lg:sticky lg:top-20">
+        <ToolModeBar pro={pro} onChange={setPro} />
         <button type="button" onClick={() => { setG(randomGradient()); setSel(0); }} className="w-full h-11 rounded-xl bg-mt-primary text-mt-onprimary text-[14px] font-semibold inline-flex items-center justify-center gap-2"><Shuffle size={16} /> Shuffle colours</button>
         <section>
           <h2 className="text-[13px] font-semibold uppercase tracking-wide text-mt-muted">Presets</h2>
@@ -71,7 +74,7 @@ export function GradientMaker() {
             {GRADIENT_PRESETS.map((p) => <button key={p.id} type="button" title={p.label} aria-label={p.label} onClick={() => { setG(p.g); setSel(0); }} className="aspect-square rounded-xl ring-1 ring-black/10 hover:scale-105 transition-transform" style={gradientStyle(p.g)} />)}
           </div>
         </section>
-        <section className="space-y-3 border-t border-mt-border pt-4">
+        {pro && <section className="space-y-3 border-t border-mt-border pt-4">
           <div className="flex items-center justify-between">
             <h2 className="text-[13px] font-semibold uppercase tracking-wide text-mt-muted">Colour spots</h2>
             <div className="flex gap-1">
@@ -88,7 +91,7 @@ export function GradientMaker() {
           </>}
           <label className="flex items-center gap-3 text-[12px] text-mt-muted">Base <input type="color" value={g.base} onChange={(e) => setG({ ...g, base: e.target.value })} className="h-9 flex-1 rounded-lg border border-mt-border bg-transparent cursor-pointer" /></label>
           <label className="block"><span className="flex justify-between text-[12px] text-mt-muted"><span>Grain</span><span className="text-mt-ink">{g.grain}</span></span><input type="range" min={0} max={40} value={g.grain} onChange={(e) => setG({ ...g, grain: Number(e.target.value) })} className="mt-1 w-full accent-[#3B82C4]" /></label>
-        </section>
+        </section>}
       </aside>
 
       <div className="min-w-0 space-y-4">
@@ -110,7 +113,7 @@ export function GradientMaker() {
             <button type="button" onClick={() => save(new Blob([gradientSvg(g, S.w, S.h)], { type: 'image/svg+xml' }), `gradient-${S.w}x${S.h}.svg`)} className={chip}><Download size={14} /> SVG</button>
             <button type="button" onClick={() => navigator.clipboard?.writeText(css).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500); })} className={chip}>{copied ? <Check size={14} /> : <Copy size={14} />} {copied ? 'Copied' : 'Copy CSS'}</button>
           </div>
-          <p className="text-[12px] font-semibold text-mt-muted">CSS code (for websites)</p><pre className="text-[11.5px] leading-relaxed bg-mt-bg rounded-xl p-3 overflow-x-auto text-mt-muted"><code>{css}</code></pre>
+          {pro && <><p className="text-[12px] font-semibold text-mt-muted">CSS code (for websites)</p><pre className="text-[11.5px] leading-relaxed bg-mt-bg rounded-xl p-3 overflow-x-auto text-mt-muted"><code>{css}</code></pre></>}
         </div>
       </div>
     </div>

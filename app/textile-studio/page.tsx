@@ -10,7 +10,7 @@ const TITLE = 'Textile Design Studio — Jerseys, T-shirts, Kurta & Embroidery';
 const DESC = 'Design jerseys, polos, T-shirts, kurtas, chudidars, dupattas and fabric panels in one textile workspace: names, numbers and sizes, pieces from your measurements, embroidery with DST files, print-ready PDF and tech packs.';
 export const metadata: Metadata = {
   title: fitTitle(TITLE), description: fitDescription(DESC), alternates: { canonical: `${SITE_URL}${PATH}` },
-  openGraph: { type: 'website', url: `${SITE_URL}${PATH}`, title: TITLE, description: DESC, siteName: SITE_NAME, images: [{ url: `${SITE_URL}/tools/thumbs/jersey.webp`, width: 960, height: 540 }] },
+  openGraph: { type: 'website', url: `${SITE_URL}${PATH}`, title: TITLE, description: DESC, siteName: SITE_NAME, images: [{ url: `${SITE_URL}/tools/thumbs/textile.webp`, width: 960, height: 540 }] },
   twitter: { card: 'summary_large_image', title: TITLE, description: DESC },
 };
 const FAQ: [string, string][] = [
@@ -39,7 +39,7 @@ const STEPS: [string, string][] = [
 ];
 export default function Page() {
   return (
-    <ToolPage image="/tools/thumbs/jersey.webp" path={PATH} name="Textile Design Studio" eyebrow="Jerseys · T-shirts · Kurta · Chudidar · Embroidery" h1="Textile Design Studio" intro="One workspace for team kits, everyday garments, made-to-measure clothes and embroidery — Simple or Professional mode, print-ready files at the end." description={DESC} steps={STEPS} faq={FAQ} related={RELATED_TOOLS}>
+    <ToolPage image="/tools/thumbs/textile.webp" path={PATH} name="Textile Design Studio" eyebrow="Jerseys · T-shirts · Kurta · Chudidar · Embroidery" h1="Textile Design Studio" intro="One workspace for team kits, everyday garments, made-to-measure clothes and embroidery — Simple or Professional mode, print-ready files at the end." description={DESC} steps={STEPS} faq={FAQ} related={RELATED_TOOLS}>
       <TextileWorkspace />
     </ToolPage>
   );

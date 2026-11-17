@@ -6,6 +6,7 @@
 // open it in the editor as editable shapes, and keep a library of patterns.
 // All work happens in the browser.
 
+import { ToolModeBar, useToolMode } from '@/components/ToolMode';
 import { MotifEditor } from './MotifEditor';
 import { isMtdt } from '@/lib/mtdt';
 import { openToolFile, saveToolProject, takeToolHandoff, TOOL_FILE_ACCEPT } from '@/lib/mtd/toolProject';
@@ -68,6 +69,7 @@ export function PatternStudio() {
   const router = useRouter();
   // Old links to the garment and wall workspaces now open their own tools.
   useEffect(() => { try { const t = new URLSearchParams(window.location.search).get('tab'); if (t === 'kits') router.replace('/textile-studio'); } catch { /* ignore */ } }, [router]);
+  const [pro, setPro] = useToolMode('patterns');
   const [p, setP] = useState<PatternSettings>(DEFAULT_PATTERN);
   const [saved, setSaved] = useState<Saved[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -244,6 +246,7 @@ export function PatternStudio() {
     <div className="grid gap-6 lg:grid-cols-[340px_minmax(0,1fr)] lg:items-start">
       {/* Controls */}
       <aside className="rounded-3xl border border-mt-border bg-mt-surface p-5 space-y-6 lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto">
+        <ToolModeBar pro={pro} onChange={setPro} />
         <section>
           <h2 className="text-[13px] font-semibold uppercase tracking-wide text-mt-muted">Motif</h2>
           <div className="mt-3 relative">
@@ -322,6 +325,7 @@ export function PatternStudio() {
           {p.stroke && <Slider label="Line width" value={p.strokeWidth} min={1} max={10} step={0.5} onChange={(v) => set({ strokeWidth: v })} fmt={(v) => `${v}px`} />}
         </section>
 
+        {pro && (
         <section className="space-y-3">
           <h2 className="text-[13px] font-semibold uppercase tracking-wide text-mt-muted">Variation</h2>
           <Slider label="Size variation" value={p.sizeJitter || 0} min={0} max={1} step={0.01} onChange={(v) => set({ sizeJitter: v })} fmt={(v) => `${Math.round(v * 100)}%`} />
@@ -332,6 +336,7 @@ export function PatternStudio() {
           {((p.sizeJitter || 0) > 0 || (p.rotJitter || 0) > 0) && <button type="button" onClick={() => set({ seed: Math.floor(Math.random() * 1e6) })} className="h-9 w-full rounded-xl border border-mt-border text-[13px] font-medium inline-flex items-center justify-center gap-2"><Shuffle size={14} /> New variation</button>}
           <p className="text-[11.5px] text-mt-muted">Variation stays seamless — the tile simply gets bigger so the pattern doesn’t look stamped.</p>
         </section>
+        )}
 
         <section>
           <h2 className="text-[13px] font-semibold uppercase tracking-wide text-mt-muted">Colour</h2>

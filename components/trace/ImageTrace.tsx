@@ -4,6 +4,7 @@
 // (1, 3, 4, 6, 8, 16 colours, black & white or a line drawing). Runs in the
 // browser; nothing is uploaded.
 
+import { ToolModeBar, useToolMode } from '@/components/ToolMode';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Download, ImagePlus, Loader2, Wand2 } from 'lucide-react';
@@ -46,6 +47,7 @@ function Slider({ label, value, min, max, step = 1, onChange, fmt }: { label: st
 
 export function ImageTrace() {
   const router = useRouter();
+  const [pro, setPro] = useToolMode('trace');
   const [src, setSrc] = useState(SAMPLE);
   const [px, setPx] = useState<{ data: Uint8ClampedArray; width: number; height: number } | null>(null);
   const [o, setO] = useState<TraceOptions>({ ...DEFAULT_TRACE, ...PRESETS[0].o, split: true });
@@ -120,6 +122,7 @@ export function ImageTrace() {
   return (
     <div className="grid gap-6 lg:grid-cols-[320px_minmax(0,1fr)] lg:items-start">
       <aside className="rounded-3xl border border-mt-border bg-mt-surface p-5 space-y-6 lg:sticky lg:top-20">
+        <ToolModeBar pro={pro} onChange={setPro} />
         <button type="button" onClick={() => fileRef.current?.click()} className="w-full h-11 rounded-xl bg-mt-primary text-mt-onprimary text-[14px] font-semibold inline-flex items-center justify-center gap-2"><ImagePlus size={16} /> Choose a picture</button>
         <input ref={fileRef} type="file" accept="image/*" hidden onChange={(e) => choose(e.target.files?.[0])} />
         <section>
@@ -136,6 +139,7 @@ export function ImageTrace() {
           {o.mode === 'gray' && <Slider label="Grey tones" value={o.colors} min={2} max={12} onChange={(v) => set({ colors: v })} />}
           {flat && <Slider label="Threshold" value={o.threshold ?? 128} min={10} max={245} onChange={(v) => set({ threshold: v })} />}
           <Slider label="Detail" value={o.detail} min={200} max={1600} step={50} onChange={(v) => set({ detail: v })} fmt={(v) => `${v}px`} />
+          {pro && <>
           <Slider label="Smoothness" value={o.smooth} min={0.3} max={4} step={0.1} onChange={(v) => set({ smooth: v })} />
           <Slider label="Ignore specks under" value={o.noise} min={0} max={200} onChange={(v) => set({ noise: v })} fmt={(v) => `${v} px²`} />
           <Slider label="Corners" value={o.corner ?? 60} min={20} max={150} step={5} onChange={(v) => set({ corner: v })} fmt={(v) => (v < 45 ? 'Very sharp' : v < 80 ? 'Sharp' : v < 115 ? 'Soft' : 'Round')} />
@@ -143,10 +147,11 @@ export function ImageTrace() {
           <label className="flex items-center justify-between text-[13px]"><span>Smooth curves</span><input type="checkbox" checked={o.curves} onChange={(e) => set({ curves: e.target.checked })} className="h-4 w-4 accent-[#3B82C4]" /></label>
           <label className="flex items-center justify-between text-[13px]" title="Each separate region becomes its own editable shape"><span>Separate shapes</span><input type="checkbox" checked={!!o.split} onChange={(e) => set({ split: e.target.checked })} className="h-4 w-4 accent-[#3B82C4]" /></label>
           {!flat && <label className="flex items-center justify-between text-[13px]" title="Colours overlap a little, so no thin gaps show between them"><span>Stack colours (no gaps)</span><input type="checkbox" checked={o.stack !== false} onChange={(e) => set({ stack: e.target.checked })} className="h-4 w-4 accent-[#3B82C4]" /></label>}
+          </>}
           {o.mode === 'colour' && <label className="flex items-center justify-between text-[13px]"><span>Remove white background</span><input type="checkbox" checked={o.ignoreWhite} onChange={(e) => set({ ignoreWhite: e.target.checked })} className="h-4 w-4 accent-[#3B82C4]" /></label>}
           {flat && <label className="flex items-center justify-between text-[13px]"><span>White background</span><input type="checkbox" checked={bg} onChange={(e) => setBg(e.target.checked)} className="h-4 w-4 accent-[#3B82C4]" /></label>}
         </section>
-        {colors.length > 0 && (
+        {pro && colors.length > 0 && (
           <section>
             <h2 className="text-[13px] font-semibold uppercase tracking-wide text-mt-muted">Colours</h2>
             <div className="mt-3 flex flex-wrap gap-2">

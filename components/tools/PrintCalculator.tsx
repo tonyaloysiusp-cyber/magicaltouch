@@ -59,7 +59,7 @@ export function PrintCalculator() {
               <rect x={1 + (bleed + safe) * k} y={1 + (bleed + safe) * k} width={Math.max(0, (w - 2 * safe) * k)} height={Math.max(0, (h - 2 * safe) * k)} fill="none" stroke="#3B82C4" strokeDasharray="3 3" />
             </svg>
             <div className="mt-3 flex flex-wrap gap-3 text-[11.5px] text-mt-muted">
-              <span className="inline-flex items-center gap-1"><i className="h-2.5 w-2.5 bg-[#FDE2E8] ring-1 ring-[#F2708F]" /> Bleed</span>
+              <span className="inline-flex items-center gap-1"><i className="h-2.5 w-2.5 bg-[#FDE2E8] ring-1 ring-mt-accent/30" /> Bleed</span>
               <span className="inline-flex items-center gap-1"><i className="h-2.5 w-2.5 bg-white ring-1 ring-black" /> Trim</span>
               <span className="inline-flex items-center gap-1"><i className="h-2.5 w-2.5 ring-1 ring-[#3B82C4]" /> Safe area</span>
             </div>

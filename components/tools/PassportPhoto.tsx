@@ -8,6 +8,7 @@
 //    JPEG with the DPI written in) with a pass / fail checklist,
 //  · a 300 DPI print photo, or a 4×6 / A4 sheet as JPG or PDF.
 
+import { ToolModeBar, useToolMode } from '@/components/ToolMode';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { CheckCircle2, Download, Eraser, ExternalLink, ImagePlus, Loader2, Paintbrush, RotateCcw, ScanFace, XCircle } from 'lucide-react';
 import { COUNTRIES, PHOTO_SPECS, PURPOSES, Purpose, SHEETS, PhotoSpec, autoFit, checkFile, customSpec, fitFileSize, mmToPx, outputSize, sheetLayout } from '@/lib/passportPhoto';
@@ -27,6 +28,7 @@ const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(
 type Check = { label: string; ok: boolean; detail: string };
 
 export function PassportPhoto() {
+  const [pro, setPro] = useToolMode('passport');
   const [country, setCountry] = useState('India');
   const [purpose, setPurpose] = useState<Purpose | 'all'>('all');
   const [specId, setSpecId] = useState('in-35x45');
@@ -203,6 +205,7 @@ export function PassportPhoto() {
   return (
     <div className="grid gap-6 lg:grid-cols-[360px_minmax(0,1fr)] lg:items-start">
       <aside className="rounded-3xl border border-mt-border bg-mt-surface p-5 space-y-5 lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto">
+        <ToolModeBar pro={pro} onChange={setPro} />
         <section className="space-y-3">
           <h2 className="text-[13px] font-semibold uppercase tracking-wide text-mt-muted">1 · Country and purpose</h2>
           <label className="block text-[12px] text-mt-muted">Country
@@ -264,7 +267,7 @@ export function PassportPhoto() {
         {src && (
           <section className="space-y-3">
             <h2 className="text-[13px] font-semibold uppercase tracking-wide text-mt-muted">3 · Adjust</h2>
-            {([['Size of head', zoom, 0.6, 1.8, 0.005, setZoom, (v: number) => `${Math.round(v * 100)}%`], ['Left / right', ox, -W / 2, W / 2, 1, setOx, (v: number) => `${Math.round(v)}`], ['Up / down', oy, -H / 2, H / 2, 1, setOy, (v: number) => `${Math.round(v)}`], ['Straighten', tilt, -12, 12, 0.5, setTilt, (v: number) => `${v}°`], ['Brightness', bright, 70, 140, 1, setBright, (v: number) => `${v}%`], ['Contrast', contrast, 80, 130, 1, setContrast, (v: number) => `${v}%`]] as const).map(([l, v, mn, mx, st, fn, fmt]) => (
+            {([['Size of head', zoom, 0.6, 1.8, 0.005, setZoom, (v: number) => `${Math.round(v * 100)}%`], ['Left / right', ox, -W / 2, W / 2, 1, setOx, (v: number) => `${Math.round(v)}`], ['Up / down', oy, -H / 2, H / 2, 1, setOy, (v: number) => `${Math.round(v)}`], ['Straighten', tilt, -12, 12, 0.5, setTilt, (v: number) => `${v}°`], ['Brightness', bright, 70, 140, 1, setBright, (v: number) => `${v}%`], ['Contrast', contrast, 80, 130, 1, setContrast, (v: number) => `${v}%`]] as const).filter((_, i) => pro || i < 3).map(([l, v, mn, mx, st, fn, fmt]) => (
               <label key={l} className="block">
                 <span className="flex justify-between text-[12px] text-mt-muted"><span>{l}</span><span className="tabular-nums text-mt-ink">{fmt(v as number)}</span></span>
                 <input type="range" min={mn} max={mx} step={st} value={v as number} onChange={(e) => (fn as any)(Number(e.target.value))} className="mt-1 w-full accent-[#3B82C4]" />
@@ -274,7 +277,7 @@ export function PassportPhoto() {
               <label className="flex items-center gap-2 text-[13px]"><input type="checkbox" checked={guides} onChange={(e) => setGuides(e.target.checked)} className="h-4 w-4 accent-[#3B82C4]" /> Head guides</label>
               <button type="button" onClick={() => src && fit(src)} className="text-[12.5px] text-mt-muted inline-flex items-center gap-1 hover:text-mt-ink"><RotateCcw size={12} /> Auto fit</button>
             </div>
-            {cut && !keepBg && (
+            {pro && cut && !keepBg && (
               <div className="rounded-xl bg-mt-bg p-3 space-y-2">
                 <p className="text-[12px] text-mt-muted">Touch up the edge — paint on the photo</p>
                 <div className="flex gap-1.5">

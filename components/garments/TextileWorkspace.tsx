@@ -92,7 +92,7 @@ export function TextileWorkspace({ initial }: { initial?: Product['id'] }) {
   return (
     <div className="space-y-4" aria-label="Textile Design Studio">
       <div className="flex flex-wrap items-center gap-2">
-        <p className="text-[15px] font-semibold flex items-center gap-2"><Shirt size={18} className="text-[#7A1F3D]" /> Textile Design Studio</p>
+        <p className="text-[15px] font-semibold flex items-center gap-2"><Shirt size={18} className="text-mt-accent" /> Textile Design Studio</p>
         <span className="flex-1" />
         <div role="radiogroup" aria-label="Workspace mode" className="inline-flex rounded-full border border-mt-border bg-mt-surface p-1">
           <button type="button" role="radio" aria-checked={ws.mode === 'simple'} onClick={() => setWs((w) => ({ ...w, mode: 'simple' }))} className={chip(ws.mode === 'simple')} title="The essentials: templates, colours, patterns, logo, text, names and numbers, embroidery, mockup, simple export">Simple</button>
@@ -119,7 +119,7 @@ export function TextileWorkspace({ initial }: { initial?: Product['id'] }) {
       <div role="radiogroup" aria-label="Product" className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         {PRODUCTS.map((p) => (
           <button key={p.id} type="button" role="radio" aria-label={`Product: ${p.label}`} aria-checked={ws.product === p.id} onClick={() => choose(p.id)}
-            className={`rounded-2xl border p-3 text-left ${ws.product === p.id ? 'border-[#7A1F3D] ring-2 ring-[#7A1F3D]/25 bg-[#7A1F3D]/5' : 'border-mt-border hover:bg-mt-surface2'}`}>
+            className={`rounded-2xl border p-3 text-left ${ws.product === p.id ? 'border-mt-ink ring-2 ring-mt-accent/30 bg-mt-accentsoft' : 'border-mt-border hover:bg-mt-surface2'}`}>
             <p className="text-[13.5px] font-semibold">{p.label}</p>
             <p className="text-[11.5px] text-mt-muted">{p.hint}</p>
           </button>

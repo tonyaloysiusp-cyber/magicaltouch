@@ -10,7 +10,7 @@ const TITLE = 'PDF Imposition Online — N-up, Booklet, Step & Repeat, Crop Mark
 const DESC = 'Professional PDF imposition in your browser: booklets with creep, n-up and step & repeat with duplex, tiling, page shuffles, bleeds, trim and shift, stick-on numbers and masking tape, automation sequences and undo — vector PDF out, nothing uploaded.';
 export const metadata: Metadata = {
   title: fitTitle(TITLE), description: fitDescription(DESC), alternates: { canonical: `${SITE_URL}${PATH}` },
-  openGraph: { type: 'website', url: `${SITE_URL}${PATH}`, title: TITLE, description: DESC, siteName: SITE_NAME, images: [{ url: `${SITE_URL}/tools/thumbs/print-size.webp`, width: 960, height: 540 }] },
+  openGraph: { type: 'website', url: `${SITE_URL}${PATH}`, title: TITLE, description: DESC, siteName: SITE_NAME, images: [{ url: `${SITE_URL}/tools/thumbs/print-layout.webp`, width: 960, height: 540 }] },
   twitter: { card: 'summary_large_image', title: TITLE, description: DESC },
 };
 const FAQ: [string, string][] = [
@@ -32,7 +32,7 @@ const STEPS: [string, string][] = [
 ];
 export default function Page() {
   return (
-    <ToolPage image="/tools/thumbs/print-size.webp" path={PATH} name="Print Layout" eyebrow="Imposition · N-up · Booklets · Step & repeat" h1="Print layout & PDF imposition studio" intro="Open a PDF and impose it like a print shop: booklets with creep, n-up and step & repeat with duplex, tiling, shuffles, bleeds and marks — with preview, undo and automation. Or use the quick layout for business cards and photos." description={DESC} steps={STEPS} faq={FAQ} related={RELATED_TOOLS}>
+    <ToolPage image="/tools/thumbs/print-layout.webp" path={PATH} name="Print Layout" eyebrow="Imposition · N-up · Booklets · Step & repeat" h1="Print layout & PDF imposition studio" intro="Open a PDF and impose it like a print shop: booklets with creep, n-up and step & repeat with duplex, tiling, shuffles, bleeds and marks — with preview, undo and automation. Or use the quick layout for business cards and photos." description={DESC} steps={STEPS} faq={FAQ} related={RELATED_TOOLS}>
       <PrintLayoutWorkspace />
     </ToolPage>
   );

@@ -21,26 +21,26 @@ function Card({ t, compact = false }: { t: ToolEntry; compact?: boolean }) {
   return (
     <Link href={t.href} onClick={() => rememberTool(t.id)} className="group relative flex h-full flex-col overflow-hidden rounded-3xl border border-mt-border bg-mt-surface transition-[transform,box-shadow] hover:-translate-y-1 hover:shadow-[0_24px_50px_-28px_rgba(9,9,11,0.45)]">
       {!compact && (
-        <div className="relative aspect-[16/9] overflow-hidden border-b border-mt-border" style={{ background: `linear-gradient(135deg, ${t.tint}22, ${t.tint}55)` }}>
+        <div className="relative aspect-[16/9] overflow-hidden border-b border-mt-border bg-mt-surface2">
           {thumbOk ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={`/tools/thumbs/${t.id}.webp`} alt={`${t.title} preview`} loading="lazy" decoding="async" onError={() => setThumbOk(false)} className="h-full w-full object-cover object-top transition-transform duration-500 group-hover:scale-[1.03]" />
           ) : (
-            <span className="absolute inset-0 grid place-items-center text-white"><span className="grid h-16 w-16 place-items-center rounded-2xl" style={{ background: t.tint }}><ToolIcon name={t.icon} size={30} /></span></span>
+            <span className="absolute inset-0 grid place-items-center"><span className="grid h-16 w-16 place-items-center rounded-2xl bg-mt-ink text-mt-bg"><ToolIcon name={t.icon} size={30} /></span></span>
           )}
           {t.isNew && <span className="absolute left-3 top-3 rounded-full bg-mt-primary px-2.5 py-0.5 text-[11px] font-semibold text-mt-onprimary">New</span>}
         </div>
       )}
       <div className={`flex flex-1 flex-col ${compact ? 'p-4' : 'p-5'}`}>
         <div className="flex items-center gap-3">
-          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl text-white" style={{ background: t.tint }}><ToolIcon name={t.icon} size={19} /></span>
+          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-mt-ink text-mt-bg"><ToolIcon name={t.icon} size={19} /></span>
           <div className="min-w-0">
             <h3 className="text-[16px] font-semibold leading-tight">{t.title}</h3>
             {compact && <p className="text-[12.5px] text-mt-muted truncate">{t.hint}</p>}
           </div>
         </div>
         {!compact && <p className="mt-3 text-[14px] text-mt-muted leading-relaxed flex-1">{t.body}</p>}
-        <span className={`${compact ? 'mt-3' : 'mt-4'} inline-flex items-center gap-1 text-[14px] font-semibold`}>Open <ArrowUpRight size={15} className="transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" /></span>
+        <span className={`${compact ? 'mt-3' : 'mt-4'} inline-flex items-center gap-1 text-[14px] font-semibold text-mt-accent`}>Open <ArrowUpRight size={15} className="transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" /></span>
         {!compact && t.panel && <span className="mt-1 block text-[12px] text-mt-muted">Also inside the editor → {t.panel}</span>}
       </div>
     </Link>

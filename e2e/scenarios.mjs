@@ -964,13 +964,13 @@ scenarios.push({
     await t.page.waitForTimeout(500);
     t.check('presentation mockup shown', (await studio.getByRole('img', { name: 'Garment mockup' }).count()) === 1);
     await t.shot('textile-kurta');
-    const [pdf] = await Promise.all([t.page.waitForEvent('download', { timeout: 60000 }), studio.getByRole('button', { name: /Print PDF/ }).click()]);
+    const [pdf] = await Promise.all([t.page.waitForEvent('download', { timeout: 60000 }), studio.getByRole('button', { name: /Ready-to-print PDF/ }).click()]);
     const doc = await PDFDocument.load(fs.readFileSync(await pdf.path()));
     const sz = doc.getPage(0).getSize();
     t.check('print PDF at real roll width (1600 mm)', Math.abs(sz.width / 72 * 25.4 - 1600) < 2, JSON.stringify(sz));
-    const [tp] = await Promise.all([t.page.waitForEvent('download', { timeout: 60000 }), studio.getByRole('button', { name: /Tech pack/ }).click()]);
+    const [tp] = await Promise.all([t.page.waitForEvent('download', { timeout: 60000 }), studio.getByRole('button', { name: /Technical production file/ }).click()]);
     const tdoc = await PDFDocument.load(fs.readFileSync(await tp.path()));
-    t.check('tech pack PDF (A4)', tdoc.getPageCount() >= 1 && Math.round(tdoc.getPage(0).getSize().width / 72 * 25.4) === 210);
+    t.check('technical production file (A4, branded)', tdoc.getPageCount() >= 1 && Math.round(tdoc.getPage(0).getSize().width / 72 * 25.4) === 210);
     await studio.getByRole('button', { name: /Open the design workspace/ }).click();
     const ws = t.page.getByRole('dialog', { name: /Design workspace/ });
     await ws.waitFor({ timeout: 20000 });
@@ -1110,10 +1110,10 @@ scenarios.push({
     const status = await studio.getByRole('group', { name: 'Size chart' }).innerText();
     t.check('size chart imported (3 sizes)', /3 sizes imported/.test(status) && (await studio.getByLabel(/^Size name \d$/).count()) === 3, status.slice(0, 200));
     t.check('pieces drafted for the chart', (await studio.getByRole('img', { name: 'Garment pieces' }).count()) === 1, (await studio.innerText()).slice(0, 300));
-    const [pdf] = await Promise.all([t.page.waitForEvent('download', { timeout: 60000 }), studio.getByRole('button', { name: /Print PDF/ }).click()]);
+    const [pdf] = await Promise.all([t.page.waitForEvent('download', { timeout: 60000 }), studio.getByRole('button', { name: /Ready-to-print PDF/ }).click()]);
     const doc = await PDFDocument.load(fs.readFileSync(await pdf.path()));
     t.check('each size laid out on its own pages', doc.getPageCount() >= 3, String(doc.getPageCount()));
-    const [cut] = await Promise.all([t.page.waitForEvent('download', { timeout: 60000 }), studio.getByRole('button', { name: /Cutting pattern PDF/ }).click()]);
+    const [cut] = await Promise.all([t.page.waitForEvent('download', { timeout: 60000 }), studio.getByRole('button', { name: /^Cutting pattern/ }).click()]);
     const cdoc = await PDFDocument.load(fs.readFileSync(await cut.path()));
     t.check('cutting pattern PDF at the roll width', Math.round(cdoc.getPage(0).getSize().width / 72 * 25.4) === 1600, JSON.stringify(cdoc.getPage(0).getSize()));
     await t.shot('size-chart');
@@ -1363,11 +1363,11 @@ scenarios.push({
     await t.page.getByRole('tab', { name: /Print files/ }).click();
     await t.page.getByLabel('Print summary').waitFor({ timeout: 30000 });
     t.check('summary counts 4 garments', /4\s*garments/.test(await t.page.getByLabel('Print summary').innerText()));
-    await t.page.getByRole('button', { name: /Download print PDF/ }).waitFor({ timeout: 30000 });
-    await t.page.waitForFunction(() => { const b = [...document.querySelectorAll('button')].find((x) => /Download print PDF/.test(x.textContent || '')); return b && !b.disabled; }, null, { timeout: 60000 });
+    await t.page.getByRole('button', { name: /Ready-to-print PDF/ }).waitFor({ timeout: 30000 });
+    await t.page.waitForFunction(() => { const b = [...document.querySelectorAll('button')].find((x) => /Ready-to-print PDF/.test(x.textContent || '')); return b && !b.disabled; }, null, { timeout: 60000 });
     await t.shot('jersey-print');
     const fs = await import('node:fs');
-    const [pdfDl] = await Promise.all([t.page.waitForEvent('download', { timeout: 120000 }), t.page.getByRole('button', { name: /Download print PDF/ }).click()]);
+    const [pdfDl] = await Promise.all([t.page.waitForEvent('download', { timeout: 120000 }), t.page.getByRole('button', { name: /Ready-to-print PDF/ }).click()]);
     const pdf = fs.readFileSync(await pdfDl.path());
     const txt = pdf.toString('latin1');
     t.check('one print PDF for the team', pdf.subarray(0, 4).toString() === '%PDF' && pdf.length > 5000, `${pdfDl.suggestedFilename()} ${pdf.length} bytes`);
@@ -1376,7 +1376,7 @@ scenarios.push({
     await t.page.getByLabel('Print row 3').uncheck();
     await t.page.getByLabel('Print row 4').uncheck();
     t.check('summary follows the selection', /2\s*garments/.test(await t.page.getByLabel('Print summary').innerText()));
-    const [svgDl] = await Promise.all([t.page.waitForEvent('download', { timeout: 60000 }), t.page.getByRole('button', { name: /Print SVG/ }).click()]);
+    const [svgDl] = await Promise.all([t.page.waitForEvent('download', { timeout: 60000 }), t.page.getByRole('button', { name: /Ready-to-print SVG/ }).click()]);
     const svg = fs.readFileSync(await svgDl.path(), 'utf8');
     t.check('print SVG labels each piece by player', /1\. ARUN #07/.test(svg) && /2\. KUMAR #10/.test(svg) && !/DAVID/.test(svg), svgDl.suggestedFilename());
   },
@@ -1434,15 +1434,15 @@ scenarios.push({
     await t.page.waitForFunction(() => /#ffcc00/i.test(document.querySelector('.garment-edit')?.innerHTML || ''), null, { timeout: 30000 });
     t.check('mockup shows the print-file artwork after saving', true);
     await t.page.getByRole('tab', { name: /Print files/ }).click();
-    await t.page.waitForFunction(() => { const b = [...document.querySelectorAll('button')].find((x) => /Download print PDF/.test(x.textContent || '')); return b && !b.disabled; }, null, { timeout: 90000 });
-    const [pdfDl] = await Promise.all([t.page.waitForEvent('download', { timeout: 120000 }), t.page.getByRole('button', { name: /Download print PDF/ }).click()]);
+    await t.page.waitForFunction(() => { const b = [...document.querySelectorAll('button')].find((x) => /Ready-to-print PDF/.test(x.textContent || '')); return b && !b.disabled; }, null, { timeout: 90000 });
+    const [pdfDl] = await Promise.all([t.page.waitForEvent('download', { timeout: 120000 }), t.page.getByRole('button', { name: /Ready-to-print PDF/ }).click()]);
     const pdf = fs.readFileSync(await pdfDl.path()).toString('latin1');
     t.check('live-text PDF embeds the real font', /\/FontFile2/.test(pdf) && /Oswald/i.test(pdf));
-    const [svgLive] = await Promise.all([t.page.waitForEvent('download', { timeout: 60000 }), t.page.getByRole('button', { name: /Print SVG/ }).click()]);
+    const [svgLive] = await Promise.all([t.page.waitForEvent('download', { timeout: 60000 }), t.page.getByRole('button', { name: /Ready-to-print SVG/ }).click()]);
     const live = fs.readFileSync(await svgLive.path(), 'utf8');
     t.check('live SVG keeps numbers as retypeable text', />07<\/text>/.test(live), svgLive.suggestedFilename());
     await t.page.getByRole('radio', { name: 'Outlines (exact shapes)' }).click();
-    const [svgOut] = await Promise.all([t.page.waitForEvent('download', { timeout: 60000 }), t.page.getByRole('button', { name: /Print SVG/ }).click()]);
+    const [svgOut] = await Promise.all([t.page.waitForEvent('download', { timeout: 60000 }), t.page.getByRole('button', { name: /Ready-to-print SVG/ }).click()]);
     const out = fs.readFileSync(await svgOut.path(), 'utf8');
     t.check('outlined SVG draws numbers from the font curves', !/>07<\/text>/.test(out) && /fill="#ffcc00"/i.test(out));
   },
@@ -1585,9 +1585,9 @@ scenarios.push({
     const cost = await t.page.getByLabel('Cost result').innerText();
     t.check('price per garment computed', /per garment/.test(cost) && !/Add your/.test(cost), cost.slice(0, 200));
     const fs = await import('node:fs');
-    const [dl] = await Promise.all([t.page.waitForEvent('download', { timeout: 30000 }), t.page.getByRole('button', { name: /Production specification/ }).click()]);
+    const [dl] = await Promise.all([t.page.waitForEvent('download', { timeout: 30000 }), t.page.getByRole('button', { name: /Technical production file/ }).click()]);
     const pdf = fs.readFileSync(await dl.path());
-    t.check('production specification PDF', pdf.slice(0, 4).toString() === '%PDF' && pdf.length > 3000 && /production-spec\.pdf$/.test(dl.suggestedFilename()), `${dl.suggestedFilename()} ${pdf.length}`);
+    t.check('one technical production file (spec + order list)', pdf.slice(0, 4).toString() === '%PDF' && pdf.length > 3000 && /TECHNICAL-PRODUCTION-FILE\.pdf$/.test(dl.suggestedFilename()), `${dl.suggestedFilename()} ${pdf.length}`);
   },
 });
 

@@ -28,7 +28,7 @@ function normalAt(d: string, x: number, y: number): [number, number] {
   return n;
 }
 
-export function cuttingPatternPages(sets: { size: string; product: Product; qty: number }[], o: { rollW: number; seam: number; maxLen?: number; project: string }): CutPage[] {
+export function cuttingPatternPages(sets: { size: string; product: Product; qty: number }[], o: { rollW: number; seam: number; maxLen?: number; project: string; logo?: { src: string; w: number; h: number } | null }): CutPage[] {
   const gap = 25, seam = Math.max(0, o.seam), maxLen = o.maxLen ?? 3000, W = o.rollW;
   type Item = { size: string; pieceIdx: number; set: number; w: number; h: number; copy: number };
   const items: Item[] = [];
@@ -46,7 +46,11 @@ export function cuttingPatternPages(sets: { size: string; product: Product; qty:
   return pages.map((pg, pn) => {
     const H = Math.max(200, Math.max(...pg.items.map((i) => i.y + i.h)) + gap);
     let g = `<rect width="${W}" height="${r2(H)}" fill="#FFFFFF"/>`;
-    g += `<text x="${gap}" y="${gap}" font-family="Helvetica" font-size="9" fill="#111">${esc(o.project)} — cutting pattern, page ${pn + 1} of ${pages.length} · print at 100 % · seam allowance ${seam} mm (solid = cut, dashed = stitch)</text>`;
+    // Cutting layout = technical file: Magical Touch Design header (never on the print files).
+    let tx = gap;
+    if (o.logo) { const lh = 9, lw = lh * (o.logo.w / o.logo.h); g += `<image x="${gap}" y="${gap - 8}" width="${r2(lw)}" height="${lh}" href="${o.logo.src}"/>`; tx = gap + lw + 8; }
+    else { g += `<text x="${gap}" y="${gap}" font-family="Helvetica" font-size="9" font-weight="700" fill="#111">Magical Touch Design</text>`; tx = gap + 110; }
+    g += `<text x="${r2(tx)}" y="${gap}" font-family="Helvetica" font-size="9" fill="#111">${esc(o.project)} — cutting pattern, page ${pn + 1} of ${pages.length} · print at 100 % · seam allowance ${seam} mm (solid = cut, dashed = stitch) · www.magicaltouchdesign.com</text>`;
     // 100 mm check square
     g += `<rect x="${W - gap - 100}" y="${gap - 8}" width="100" height="0.01" fill="none"/><path d="M${W - gap - 100} ${gap + 2}h100M${W - gap - 100} ${gap - 2}v8M${W - gap} ${gap - 2}v8" stroke="#111" stroke-width="0.4" fill="none"/><text x="${W - gap - 50}" y="${gap - 4}" font-family="Helvetica" font-size="6" text-anchor="middle" fill="#111">100 mm — check scale</text>`;
     for (const it of pg.items) {
