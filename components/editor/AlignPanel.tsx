@@ -45,7 +45,7 @@ export function AlignPanel({ alignObject, distribute, hasSelection, selectionCou
     <div className="p-3">
       <p className="font-semibold text-mt-ink mb-3 text-sm">Align</p>
       <div role="radiogroup" aria-label="Align to" className="flex gap-1 mb-3 text-[11px]">
-        {((multi ? ['selection', 'page', 'column'] : ['page', 'column']) as const).map((r) => (
+        {(multi ? (['selection', 'page', 'column'] as const) : (['page', 'column'] as const)).map((r) => (
           <button
             key={r}
             role="radio"
