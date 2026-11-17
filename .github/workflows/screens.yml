@@ -1,0 +1,53 @@
+# Screenshots of live pages for design review: run by hand (Actions → Screens),
+# prints each screenshot as base64 JPEG in the log between markers.
+name: Screens
+on:
+  workflow_dispatch:
+    inputs:
+      paths:
+        description: 'Space-separated paths, e.g. "/ /tools /textile-studio"'
+        required: true
+        default: '/ /tools /textile-studio /print-size-calculator /editor'
+      width:
+        description: 'Viewport width'
+        required: false
+        default: '1440'
+permissions:
+  contents: read
+jobs:
+  shots:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Playwright
+        run: |
+          mkdir s && cd s && npm init -y >/dev/null && npm i playwright@1.47.2 sharp@0.33.5 >/dev/null
+          npx playwright install --with-deps chromium >/dev/null
+      - name: Shoot
+        working-directory: s
+        env:
+          PATHS: ${{ inputs.paths }}
+          WIDTH: ${{ inputs.width }}
+        run: |
+          cat > shoot.mjs <<'EOF'
+          import { chromium } from 'playwright';
+          import sharp from 'sharp';
+          const b = await chromium.launch();
+          const ctx = await b.newContext({ viewport: { width: Number(process.env.WIDTH || 1440), height: 900 } });
+          await ctx.addInitScript(() => { try { localStorage.setItem('mt:onboarded', '1'); } catch {} });
+          const p = await ctx.newPage();
+          for (const path of process.env.PATHS.split(/\s+/).filter(Boolean)) {
+            try { await p.goto('https://magicaltouchdesign.com' + path, { waitUntil: 'networkidle', timeout: 60000 }); } catch {}
+            await p.waitForTimeout(2500);
+            const png = await p.screenshot({ fullPage: false });
+            const jpg = await sharp(png).resize({ width: 1100 }).jpeg({ quality: 62 }).toBuffer();
+            console.log(`=====SHOT ${path}=====`);
+            console.log(jpg.toString('base64'));
+            console.log('=====END=====');
+          }
+          await b.close();
+          EOF
+          node shoot.mjs
