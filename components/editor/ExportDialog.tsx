@@ -8,9 +8,9 @@ import { X, Image as ImageIcon, FileImage, FileText, Printer, Loader2, Download,
 import { ArtboardMeta } from '@/lib/editor/artboards';
 import { PX_PER_INCH } from '@/lib/editor/units';
 import { cx } from './shell/ui';
-import { DEFAULT_PACKAGE } from '@/lib/print/printPackage';
 import type { PrintJobInfo } from '@/lib/print/printJob';
-import { PrintFilesOptions, loadPeople, savePeople, type PrintFilesSettings } from './PrintFilesOptions';
+import { PrintOutputSettings, initialOutput, rememberOutput, type PrintOutput } from '@/components/tools/PrintOutputSettings';
+import { ModeSwitch, usePro } from '@/components/tools/PrintDownloadPanel';
 
 export type ExportRangeMode = 'current' | 'range' | 'selected' | 'all';
 export type ExportFormat = 'png' | 'jpg' | 'webp' | 'pdf' | 'svg' | 'tiff' | 'video';
@@ -36,13 +36,13 @@ export interface ExportSettings {
   videoSeconds?: number;
   videoStyle?: 'glide' | 'pop' | 'fade';
   /** Export → Print files: actual size + fit to print + information sheet. */
-  printFiles?: PrintFilesSettings;
+  printFiles?: PrintOutput;
 }
 
 type Choice = 'print-files' | 'png' | 'jpg' | 'webp' | 'pdf' | 'pdf-print' | 'svg' | 'tiff' | 'video';
 
 const CHOICES: { id: Choice; label: string; hint: string; icon: React.ReactNode }[] = [
-  { id: 'print-files', label: 'Print files (actual + fit + info)', hint: 'Actual size on a bigger sheet, fit to print on your paper, and one information sheet.', icon: <Printer size={18} /> },
+  { id: 'print-files', label: 'Print files', hint: 'Actual size, fit to print, normal (bleed only) and the job report.', icon: <Printer size={18} /> },
   { id: 'png', label: 'PNG', hint: 'Sharp graphics and text. Can be transparent.', icon: <ImageIcon size={18} /> },
   { id: 'jpg', label: 'JPG', hint: 'Small files, great for photos and sharing.', icon: <FileImage size={18} /> },
   { id: 'pdf', label: 'PDF (vector)', hint: 'Sharp text and shapes at any size. For sending and printing.', icon: <FileText size={18} /> },
@@ -97,7 +97,8 @@ function Switch({ checked, onChange, label, hint, disabled }: { checked: boolean
 export function ExportDialog({ artboards, activeArtboardId, exporting, onClose, onExport, printJob, fromCalculator, designName, initialChoice }: Props) {
   const multi = artboards.length > 1;
   const [choice, setChoice] = useState<Choice>(initialChoice || (fromCalculator && printJob ? 'print-files' : 'png'));
-  const [printFiles, setPrintFiles] = useState<PrintFilesSettings>(() => ({ options: { ...DEFAULT_PACKAGE }, people: loadPeople(designName || ''), files: { actual: true, fit: true, info: true }, zip: true }));
+  const [printFiles, setPrintFiles] = useState<PrintOutput>(() => initialOutput(designName || ''));
+  const [printPro, setPrintPro] = usePro();
   const [rangeMode, setRangeMode] = useState<ExportRangeMode>(multi ? 'all' : 'current');
   const [selectedIds, setSelectedIds] = useState<string[]>(activeArtboardId ? [activeArtboardId] : []);
   const [dpi, setDpi] = useState(300);
@@ -160,7 +161,7 @@ export function ExportDialog({ artboards, activeArtboardId, exporting, onClose, 
       videoStyle,
       printFiles: isPrintFiles ? printFiles : undefined,
     });
-    if (isPrintFiles) savePeople(printFiles.people);
+    if (isPrintFiles) rememberOutput(printFiles);
   };
 
   const nFiles = isPrintFiles ? Object.values(printFiles.files).filter(Boolean).length : 0;
@@ -215,7 +216,16 @@ export function ExportDialog({ artboards, activeArtboardId, exporting, onClose, 
             </div>
           </section>
 
-          {isPrintFiles && printJob && <PrintFilesOptions job={printJob} fromCalculator={!!fromCalculator} value={printFiles} onChange={setPrintFiles} />}
+          {isPrintFiles && printJob && (
+            <section aria-label="Print files options" className="space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-[12.5px] text-mt-muted">{printJob.title} · {printJob.trimW} × {printJob.trimH} mm · {printJob.bleed} mm bleed{printJob.sides.length > 1 ? ` · ${printJob.sides.join(' + ')}` : ''}</p>
+                <ModeSwitch pro={printPro} onChange={setPrintPro} />
+              </div>
+              <PrintOutputSettings job={printJob} value={printFiles} onChange={setPrintFiles} pro={printPro} showFiles />
+              {!fromCalculator && <p className="text-[11.5px] text-mt-faint">No fold marks: this design didn’t start in the Print Size Calculator.</p>}
+            </section>
+          )}
 
           {cmykPossible && (
             <section>

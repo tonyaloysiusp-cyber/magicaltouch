@@ -875,15 +875,15 @@ scenarios.push({
     const plan = dlg.getByTestId('print-plan');
     await plan.waitFor({ timeout: 15000 });
     const pt = await plan.innerText();
-    t.check('actual size on A3 at 100 %', /Actual size — A3 landscape \(420 × 297 mm\), 100 %/.test(pt), pt.slice(0, 300));
-    t.check('fit to print on A4, scaled', /Fit to print — A4 landscape \(297 × 210 mm\), scaled to \d+(\.\d)? %/.test(pt), pt.slice(0, 300));
+    t.check('actual size on A3 at 100 %', /Actual size — A3 landscape, 100 %/.test(pt), pt.slice(0, 300));
+    t.check('fit to print on A4, scaled', /Fit to print — A4 landscape, scaled to \d+(\.\d)? %/.test(pt), pt.slice(0, 300));
     await dlg.getByLabel('Job name').fill('Spring leaflet');
-    await dlg.getByLabel('Designer').fill('Test Designer');
+    await dlg.getByLabel('Client').fill('Test Client');
     const [dl] = await Promise.all([t.page.waitForEvent('download', { timeout: 120000 }), dlg.locator('button', { hasText: 'Download' }).last().click()]);
     const fs = await import('node:fs');
     const zip = fs.readFileSync(await dl.path());
     const names = zip.toString('latin1');
-    t.check('zip with the three files', /Spring_leaflet_PRINT_FILES\.zip$/.test(dl.suggestedFilename()) && /_1_ACTUAL_SIZE_on_A3\.pdf/.test(names) && /_2_FIT_TO_PRINT_A4_\d+(-\d)?pc\.pdf/.test(names) && /_3_INFORMATION\.pdf/.test(names), dl.suggestedFilename());
+    t.check('zip with the print files and the job report', /Spring_leaflet_PRINT_FILES\.zip$/.test(dl.suggestedFilename()) && /_PRINT_ACTUAL_SIZE_on_A3\.pdf/.test(names) && /_PRINT_FIT_TO_A4_\d+(-\d)?pc\.pdf/.test(names) && /_PRINT_NORMAL_with_bleed\.pdf/.test(names) && /_JOB_REPORT\.pdf/.test(names), dl.suggestedFilename());
     await t.shot('print-files');
   },
 });
@@ -891,6 +891,7 @@ scenarios.push({
 scenarios.push({
   name: 'folding-calculator',
   async run(t) {
+    await t.page.addInitScript(() => { try { localStorage.setItem('mt:print-mode', 'pro'); } catch {} });
     await t.page.goto(t.BASE + '/print-size-calculator?tab=fold', { waitUntil: 'domcontentloaded' });
     const res = t.page.getByLabel('Folding result');
     await res.waitFor({ timeout: 30000 });
@@ -905,14 +906,11 @@ scenarios.push({
     for (let i = 0; i < 2; i++) { const p = doc.addPage([303 * k, 216 * k]); p.setTrimBox(3 * k, 3 * k, 297 * k, 210 * k); }
     const fs = await import('node:fs'); const path = (await import('node:path')).join(process.cwd(), 'e2e-out', 'trifold.pdf');
     fs.writeFileSync(path, await doc.save());
-    await t.page.locator('input[type=file][accept*="pdf"]:not([aria-label="Artwork for print file"])').first().setInputFiles(path);
+    await t.page.locator('input[type=file][accept*="pdf"]:not([aria-label="Artwork for print files"])').first().setInputFiles(path);
     const chk = t.page.getByLabel('PDF check');
     await chk.waitFor({ timeout: 15000 });
     t.check('matching PDF is accepted', /suitable for this fold/.test(await chk.innerText()) && !/not suitable/.test(await chk.innerText()), (await chk.innerText()).slice(0, 200));
-    const [dl] = await Promise.all([t.page.waitForEvent('download', { timeout: 30000 }), t.page.getByRole('button', { name: /Technical folding report/ }).click()]);
-    const pdf = fs.readFileSync(await dl.path());
-    const back = await PDFDocument.load(pdf);
-    t.check('technical report PDF with summary + outside + inside', back.getPageCount() === 3, String(back.getPageCount()));
+    t.check('pro mode shows panel widths and the PDF check', await t.page.getByLabel('Panel 1 width').isVisible());
     await t.shot('folding');
   },
 });
@@ -1045,35 +1043,50 @@ scenarios.push({
   },
 });
 
-// Printing layout & specification PDF: built from the folding settings, the job details and a
-// supplied PDF that is really read (page count, boxes) — 3 A4 landscape pages.
+// Download & print (folding): branded layout template and job report without artwork; with a
+// 2-page artwork PDF the print files — actual size on A3, fit to A4, normal with bleed — and the zip.
 scenarios.push({
-  name: 'print-specification',
+  name: 'print-downloads',
   async run(t) {
     const fs = await import('node:fs');
     const { PDFDocument } = await import('pdf-lib');
     await t.page.goto(`${t.BASE}/print-size-calculator?tab=fold`, { waitUntil: 'domcontentloaded' });
-    await t.page.getByLabel('Fold type').selectOption('accordion', { timeout: 30000 });
-    await t.page.getByLabel('Number of panels').fill('4');
-    const spec = t.page.getByRole('region', { name: 'Printing layout and specification' });
-    await spec.getByLabel('Client / company').fill('Test Client');
-    await spec.getByLabel('Project name').fill('Leaflet job');
-    await spec.getByLabel('Panel 1 contents').fill('Front cover — logo');
-    t.check('page contents for every panel (8)', (await spec.getByLabel(/^Panel \d+ contents$/).count()) === 8);
-    const k = 72 / 25.4, doc = await PDFDocument.create();
-    for (let i = 0; i < 2; i++) { const p = doc.addPage([303 * k, 216 * k]); p.setTrimBox(3 * k, 3 * k, 297 * k, 210 * k); p.setBleedBox(0, 0, 303 * k, 216 * k); }
-    const path = (await import('node:path')).join(process.cwd(), 'e2e-out', 'leaflet_PRESS.pdf');
-    fs.writeFileSync(path, await doc.save());
-    await spec.locator('input[type=file]').setInputFiles(path);
-    await t.page.waitForTimeout(800);
-    const listed = await spec.getByRole('group', { name: 'Supplied files' }).innerText();
-    t.check('supplied PDF read: pages, trim, bleed, ready', /2 pages/.test(listed) && /trim 297 × 210 mm/.test(listed) && /3 mm bleed/.test(listed) && /ready/.test(listed), listed.slice(0, 300));
-    const [dl] = await Promise.all([t.page.waitForEvent('download', { timeout: 60000 }), spec.getByRole('button', { name: /Printing layout & specification \(PDF\)/ }).click()]);
-    const out = await PDFDocument.load(fs.readFileSync(await dl.path()));
-    const sz = out.getPage(0).getSize();
-    t.check('specification PDF: 3 A4 landscape pages', out.getPageCount() === 3 && Math.round(sz.width / k) === 297 && Math.round(sz.height / k) === 210, `${out.getPageCount()} ${JSON.stringify(sz)}`);
-    t.check('file named after the project', dl.suggestedFilename() === 'Leaflet_job_LAYOUT_SPECIFICATION.pdf', dl.suggestedFilename());
-    await t.shot('print-spec');
+    const panel = t.page.getByRole('region', { name: 'Download and print' });
+    await panel.waitFor({ timeout: 30000 });
+    t.check('simple mode: only paper, job name and client', !(await panel.getByLabel('Printer no-print margin mm').count()) && await panel.getByLabel('Job name').isVisible());
+    const plan = await panel.getByTestId('print-plan').innerText();
+    t.check('plan: actual size on A3, fit to A4 scaled', /Actual size — A3 landscape, 100 %/.test(plan) && /Fit to print — A4 landscape, scaled to \d+(\.\d)? %/.test(plan), plan.slice(0, 300));
+    t.check('print files wait for artwork', await panel.getByRole('button', { name: 'Normal PDF' }).isDisabled());
+    await panel.getByLabel('Job name').fill('Leaflet job');
+    const k = 72 / 25.4;
+    const [tp] = await Promise.all([t.page.waitForEvent('download', { timeout: 60000 }), panel.getByRole('button', { name: 'Layout template' }).click()]);
+    const tdoc = await PDFDocument.load(fs.readFileSync(await tp.path()));
+    t.check('layout template: outside + inside', tdoc.getPageCount() === 2 && tp.suggestedFilename() === 'Leaflet_job_LAYOUT_TEMPLATE.pdf', `${tdoc.getPageCount()} ${tp.suggestedFilename()}`);
+    const [rp] = await Promise.all([t.page.waitForEvent('download', { timeout: 60000 }), panel.getByRole('button', { name: 'Job report' }).click()]);
+    const rdoc = await PDFDocument.load(fs.readFileSync(await rp.path()));
+    const sz = rdoc.getPage(0).getSize();
+    t.check('one job report: 2 A4 landscape pages', rdoc.getPageCount() === 2 && Math.round(sz.width / k) === 297 && rp.suggestedFilename() === 'Leaflet_job_JOB_REPORT.pdf', `${rdoc.getPageCount()} ${rp.suggestedFilename()}`);
+    const art = await PDFDocument.create();
+    for (let i = 0; i < 2; i++) art.addPage([303 * k, 216 * k]).drawRectangle({ x: 0, y: 0, width: 303 * k, height: 216 * k });
+    const path = (await import('node:path')).join(process.cwd(), 'e2e-out', 'leaflet_art.pdf');
+    fs.writeFileSync(path, await art.save());
+    await panel.getByLabel('Artwork for print files').setInputFiles(path);
+    await t.page.waitForTimeout(600);
+    const get = async (name) => { const [d] = await Promise.all([t.page.waitForEvent('download', { timeout: 60000 }), panel.getByRole('button', { name }).click()]); return { name: d.suggestedFilename(), doc: await PDFDocument.load(fs.readFileSync(await d.path())) }; };
+    const actual = await get('Actual size');
+    const aw = actual.doc.getPage(0).getMediaBox().width / k;
+    t.check('actual size on A3 landscape, 2 sheets', Math.round(aw) === 420 && actual.doc.getPageCount() === 2 && /_PRINT_ACTUAL_SIZE_on_A3\.pdf$/.test(actual.name), `${aw} ${actual.name}`);
+    const fit = await get('Fit to A4');
+    t.check('fit to A4: A4 sheet, scaled', Math.round(fit.doc.getPage(0).getMediaBox().width / k) === 297 && /_PRINT_FIT_TO_A4_\d+(-\d)?pc\.pdf$/.test(fit.name), fit.name);
+    const normal = await get('Normal PDF');
+    const nm = normal.doc.getPage(0).getMediaBox(), nt = normal.doc.getPage(0).getTrimBox();
+    t.check('normal: trim + bleed page, no marks', Math.round(nm.width / k) === 303 && Math.round(nt.width / k) === 297, `${nm.width / k}`);
+    const [z] = await Promise.all([t.page.waitForEvent('download', { timeout: 60000 }), panel.getByRole('button', { name: /Download all/ }).click()]);
+    const zs = fs.readFileSync(await z.path()).toString('latin1');
+    t.check('zip: 3 print files + job report', /ACTUAL_SIZE/.test(zs) && /FIT_TO_A4/.test(zs) && /NORMAL_with_bleed/.test(zs) && /JOB_REPORT/.test(zs), z.suggestedFilename());
+    await panel.getByRole('radio', { name: 'Pro' }).first().click();
+    t.check('pro mode adds margin, crop marks and job details', await panel.getByLabel('Printer no-print margin mm').isVisible() && await panel.getByLabel('Designer').isVisible());
+    await t.shot('print-downloads');
   },
 });
 
@@ -1788,6 +1801,7 @@ scenarios.push({
 scenarios.push({
   name: 'binding-calculator',
   async run(t) {
+    await t.page.addInitScript(() => { try { localStorage.setItem('mt:print-mode', 'pro'); } catch {} });
     await t.page.goto(t.BASE + '/print-size-calculator', { waitUntil: 'domcontentloaded' });
     await t.page.getByLabel('Number of pages').fill('200', { timeout: 30000 });
     await t.page.getByLabel('Paper weight (gsm)').fill('80');
@@ -1806,34 +1820,20 @@ scenarios.push({
     await t.page.getByRole('radio', { name: 'Saddle stitch' }).click();
     await t.page.waitForTimeout(300);
     t.check('saddle stitch shows creep', /Creep per sheet/i.test(await t.page.locator('body').innerText()));
-    const [dl] = await Promise.all([t.page.waitForEvent('download', { timeout: 60000 }), t.page.getByRole('button', { name: 'Template · PDF', exact: true }).click()]);
     const fs = await import('node:fs');
-    const b = fs.readFileSync(await dl.path());
-    t.check('cover template PDF', b.subarray(0, 4).toString() === '%PDF', dl.suggestedFilename());
-    // Press-sheet export: perfect-binding cover on A4 doesn't fit at actual size; A3 / fit-to-print do.
+    // Download & print: a perfect-binding cover goes on a big sheet at actual size, or is fitted to A4.
     await t.page.getByRole('radio', { name: 'Perfect / softcover' }).click();
-    const press = t.page.getByRole('region', { name: 'Print file export' });
-    await press.scrollIntoViewIfNeeded();
-    const sum = press.getByTestId('press-summary');
-    t.check('smallest sheet suggested for the cover', /SRA3|33 × 48|A3\+|SRA2/.test(await press.getByLabel('Print on paper').locator('option').first().innerText()));
-    await press.getByLabel('Print on paper').selectOption('a4');
+    const panel = t.page.getByRole('region', { name: 'Download and print' });
+    await panel.scrollIntoViewIfNeeded();
+    const plan = await panel.getByTestId('print-plan').innerText();
+    t.check('cover: actual size on SRA3 / 33 × 48 class, fit to A4 scaled', /Actual size — (SRA3|33 × 48 cm|A3\+|SRA2)/.test(plan) && /Fit to print — A4.*scaled/.test(plan), plan.slice(0, 300));
+    await panel.getByLabel('Actual size paper').selectOption('a4');
     await t.page.waitForTimeout(200);
-    t.check('A4 actual size warns it does not fit', /needs a sheet of at least/.test(await press.innerText()));
-    t.check('print-ready disabled when it does not fit', await press.getByRole('button', { name: /Print-ready PDF/ }).isDisabled());
-    await press.getByRole('radio', { name: 'Fit to print' }).click();
-    await t.page.waitForTimeout(200);
-    t.check('fit to print shows the scale', /scaled to \d+(\.\d)? %/.test(await sum.innerText()), await sum.innerText());
-    await press.getByLabel('Crop mark type').selectOption('4');
-    const [pd] = await Promise.all([t.page.waitForEvent('download', { timeout: 60000 }), press.getByRole('button', { name: /Print-ready PDF/ }).click()]);
-    const pb = fs.readFileSync(await pd.path());
-    t.check('print-ready PDF has trim and bleed boxes', pb.subarray(0, 4).toString() === '%PDF' && /TrimBox/.test(pb.toString('latin1')) && /BleedBox/.test(pb.toString('latin1')), pd.suggestedFilename());
-    t.check('file name says fit %', /_PRINT_READY_A4.*fit-\d+pc\.pdf$/.test(pd.suggestedFilename()), pd.suggestedFilename());
-    await press.getByLabel('Print on paper').selectOption('33x48');
-    await press.getByRole('radio', { name: 'Actual size (100 %)' }).click();
-    await t.page.waitForTimeout(200);
-    t.check('33 × 48 actual size fits', /actual size/.test(await sum.innerText()) && !/needs a sheet/.test(await press.innerText()), await sum.innerText());
-    const [wd] = await Promise.all([t.page.waitForEvent('download', { timeout: 60000 }), press.getByRole('button', { name: 'Working template · SVG' }).click()]);
-    t.check('working template has the instruction box', /working file, not ready to print/.test(fs.readFileSync(await wd.path(), 'utf8')));
+    t.check('A4 at actual size says it does not fit', /needs a sheet of at least/.test(await panel.getByTestId('print-plan').innerText()));
+    await panel.getByLabel('Actual size paper').selectOption('auto');
+    const [dl] = await Promise.all([t.page.waitForEvent('download', { timeout: 60000 }), panel.getByRole('button', { name: 'Layout template' }).click()]);
+    const b = fs.readFileSync(await dl.path());
+    t.check('branded cover layout template PDF', b.subarray(0, 4).toString() === '%PDF' && /_LAYOUT_TEMPLATE\.pdf$/.test(dl.suggestedFilename()), dl.suggestedFilename());
     await t.shot('binding');
     await t.page.goto(t.BASE + href, { waitUntil: 'domcontentloaded' });
     await t.page.waitForFunction(() => window.__fabricCanvas && window.__fabricCanvas.getObjects().some((o) => o.__isGuide), null, { timeout: 60000 }).catch(() => {});

@@ -49,27 +49,20 @@ test('diagram and PDF check', () => {
   assert.ok(!wrong.ok && wrong.issues.some((s) => /2 flat pages/.test(s)) && wrong.issues.some((s) => /turned 90/.test(s)));
 });
 
-test('printing layout & specification: built from the calculation, branded, 3 pages', async () => {
-  const D = await import('../../lib/print/specDoc.ts');
+test('job report: one branded 2-page document built from the calculation', async () => {
+  const { jobReportPages, EMPTY_DETAILS } = await import('../../lib/print/jobReport.ts');
+  const { foldPrintJob, sidePanels } = await import('../../lib/print/printJob.ts');
   const { calculateFold } = await import('../../lib/fold.ts');
   const fold = calculateFold({ type: 'accordion', w: 297, h: 210, panels: 4, caliper: 0.1, bleed: 3, safe: 7 });
-  const { side1, side2 } = D.sidePanels(fold);
-  assert.deepEqual(side1.map((p) => p.num), [1, 2, 3, 4]);
-  assert.deepEqual(side2.map((p) => p.num), [5, 6, 7, 8]);
-  assert.equal(side2[3].role, 'Inside 1');
-  const pages = D.specPages({ client: { company: 'Client A', contact: '', email: '', phone: '' }, job: { project: 'Leaflet', description: '', artworkFile: 'L_PRESS.pdf', jobNo: '7', orderNo: '', quantity: '', date: '16 Nov 2026', preparedBy: '', status: 'Proof', revision: '1' },
-    print: { paper: 'A4 landscape', method: 'Digital', colours: '4/4 full colour both sides', colourMode: 'CMYK', resolution: '300 dpi', stock: '', lamination: '', finishing: '', optional: '', binding: '', cutting: '' },
-    fold, bleed: 3, safe: 7, marks: { len: 5, offset: 3 }, contents: ['Front cover'], notes: D.DEFAULT_NOTES, approvals: D.DEFAULT_APPROVALS, files: [] });
-  assert.equal(pages.length, 3);
+  const job = foldPrintJob(fold, { title: 'Accordion', bleed: 3, safe: 7, paper: '150 gsm matt' });
+  assert.equal(sidePanels(job, 1)[3].name, 'Inside 1');
+  const pages = jobReportPages({ job, details: { ...EMPTY_DETAILS, jobName: 'Leaflet', client: 'Client A' }, date: '16 Nov 2026', previews: [], files: [], margin: 3, markType: 1, colour: 'CMYK' });
+  assert.equal(pages.length, 2);
   const all = pages.join('');
-  assert.match(all, /8-panel leaflet/); assert.match(all, /297 × 210 mm/); assert.match(all, /74\.25 × 210 mm/);
-  assert.match(all, /FOLDS AT 74\.25 \/ 148\.5 \/ 222\.75 MM/);
-  assert.match(all, /MEDIA BOX 319 × 232 MM/);
-  assert.match(all, /No files supplied yet/);
-  assert.match(all, /www\.magicaltouchdesign\.com/);
-  assert.match(all, /SHEET 3 OF 3/);
-  assert.match(all, /PDF proof approval/);
-  assert.doesNotMatch(all, /Fortys/);
+  assert.match(all, /JOB REPORT/); assert.match(all, /297 × 210 mm/); assert.match(all, /74\.25 \/ 74\.25/);
+  assert.match(all, /Client A/); assert.match(all, /150 gsm matt/);
+  assert.match(all, /Cut marks — cut here/); assert.match(all, /FOLDING SEQUENCE/);
+  assert.match(all, /www\.magicaltouchdesign\.com/); assert.match(all, /Page 2 of 2/); assert.match(all, /Approval/);
 });
 
 test('concertina and custom folds; mechanical bindings and signatures', async () => {

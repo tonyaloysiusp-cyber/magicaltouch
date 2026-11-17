@@ -6,6 +6,7 @@
 // settings, so it survives saving, reopening and undo.
 
 import type { PressJob } from './pressSheet.ts';
+import type { FoldResult } from '../fold.ts';
 
 export interface PrintJobFold { x?: number; y?: number; label?: string; dir?: 'valley' | 'mountain'; order?: number }
 export interface PrintJobInfo {
@@ -80,4 +81,15 @@ export function printJobEditorUrl(j: PrintJobInfo, dpi = 300): string {
   q.set('printJob', encodePrintJob(j));
   q.set('newTab', `${j.source}-${Math.round(j.trimW)}x${Math.round(j.trimH)}-${Date.now().toString(36)}`);
   return `/editor?${q.toString()}`;
+}
+
+/** The print job of a folded leaflet from the folding calculator: both sides, folds, panels, paper. */
+export function foldPrintJob(r: FoldResult, o: { title: string; bleed: number; safe: number; paper?: string }): PrintJobInfo {
+  return {
+    v: 1, source: 'fold', title: o.title, trimW: r.flat.w, trimH: r.flat.h, bleed: o.bleed, safe: o.safe,
+    folds: r.folds.map((f) => ({ x: f.x, y: f.y, dir: f.dir, order: f.order })),
+    panels: r.panels.map((p) => ({ x: p.x, w: p.w, name: p.outside, inside: p.inside })),
+    sides: ['Outside', 'Inside'], folded: r.folded, sequence: r.sequence,
+    values: [...(o.paper ? [['Paper', o.paper] as [string, string]] : []), ...(r.allowance ? [['Creep allowance', `${r.allowance} mm per tuck-in panel`] as [string, string]] : [])],
+  };
 }

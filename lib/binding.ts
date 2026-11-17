@@ -294,16 +294,22 @@ export function coverEditorUrl(r: BookResult, dpi = 300): string {
   for (const k of ['T', 'R', 'B', 'L']) { q.set(`bleed${k}`, px(c.bleed)); q.set(`safe${k}`, px(c.safe)); }
   q.set('guidesV', c.folds.map((f) => px(f.x - c.trim.x)).join(','));
   if (r.hardcover) { const ty = (c.heightMm - r.hardcover.boardH) / 2; q.set('guidesH', [px(ty), px(c.heightMm - ty)].join(',')); }
+  const job = bookPrintJob(r);
+  q.set('printJob', encodePrintJob(job));
+  q.set('newTab', `cover-${Math.round(c.trim.w)}x${Math.round(c.trim.h)}-${Date.now().toString(36)}`);
+  return `/editor?${q.toString()}`;
+}
+
+/** The print job of a cover from the binding calculator: one side (back · spine · front), spine / hinge folds. */
+export function bookPrintJob(r: BookResult): PrintJobInfo {
+  const c = r.cover;
   const spine = c.panels.find((p) => p.kind === 'spine');
-  const title = r.hardcover ? 'Hardcover case wrap' : c.panels.length > 1 ? 'Book cover (back · spine · front)' : 'Book cover';
-  const job: PrintJobInfo = {
+  const title = r.hardcover ? 'Hardcover case wrap' : c.panels.length > 1 ? 'Book cover' : 'Cover';
+  return {
     v: 1, source: 'book', title, trimW: c.trim.w, trimH: c.trim.h, bleed: c.bleed, safe: c.safe,
-    folds: c.folds.map((f) => ({ x: Math.round((f.x - c.trim.x) * 100) / 100, label: spine && Math.abs(f.x - spine.x) < 0.05 ? `SPINE ${spine.w} mm` : f.label })),
+    folds: c.folds.map((f) => ({ x: Math.round((f.x - c.trim.x) * 100) / 100, label: spine && Math.abs(f.x - spine.x) < 0.05 ? `SPINE ${spine.w} mm` : undefined })),
     panels: c.panels.map((p) => ({ x: Math.round((p.x - c.trim.x) * 100) / 100, w: p.w, name: p.name })),
     sides: ['Cover'],
     values: [['Spine', `${r.spineMm} mm`], ['Pages', String(r.pagesUsed)]],
   };
-  q.set('printJob', encodePrintJob(job));
-  q.set('newTab', `cover-${Math.round(c.trim.w)}x${Math.round(c.trim.h)}-${Date.now().toString(36)}`);
-  return `/editor?${q.toString()}`;
 }

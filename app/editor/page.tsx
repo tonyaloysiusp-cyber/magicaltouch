@@ -7043,11 +7043,12 @@ function EditorContent() {
   // the pages), or — for any other design — this document's own page size.
 
   // Export → Print files: actual size + fit to print (vector, every page of
-  // the job on its press sheet with cut / fold marks) + one information sheet.
+  // the job on its press sheet with cut / fold marks), normal (bleed only)
+  // and the one branded job report. Print files carry no branding.
   const exportPrintPackage = async (settings: ExportSettings) => {
     const pf = settings.printFiles!;
     const canvas = fabricCanvasRef.current;
-    const base0 = (pf.people.jobName || designName || 'print-job').replace(/[^\w\- ]+/g, '').trim().replace(/\s+/g, '_') || 'print-job';
+    const base0 = (pf.details.jobName || designName || 'print-job').replace(/[^\w\- ]+/g, '').trim().replace(/\s+/g, '_') || 'print-job';
     let job = documentPrintJob;
     if (!job || !canvas) throw new Error('No page to export.');
     // The pages of the job, in side order.
@@ -7073,7 +7074,7 @@ function EditorContent() {
     job = { ...job, trimW: mm(pages[0].width), trimH: mm(pages[0].height), bleed: bleedMm };
 
     // 1. The artwork: one vector PDF, a page per side, trim + bleed.
-    const [{ jsPDF }, mod, pkg, info, { svgToPdfBlob }] = await Promise.all([import('jspdf'), import('fabric'), import('@/lib/print/printPackage'), import('@/lib/print/infoSheet'), import('@/lib/svgToPdf')]);
+    const [{ jsPDF }, mod, pkg, dl] = await Promise.all([import('jspdf'), import('fabric'), import('@/lib/print/printPackage'), import('@/lib/print/printDownload')]);
     const F = mod.fabric;
     const r0 = rects[0].rect;
     const pdf = new jsPDF({ orientation: r0.width > r0.height ? 'landscape' : 'portrait', unit: 'pt', format: [toPt(r0.width), toPt(r0.height)] });
@@ -7089,63 +7090,33 @@ function EditorContent() {
     }
     const artPdf = new Uint8Array(pdf.output('arraybuffer') as ArrayBuffer);
 
-    // 2. Actual size + fit to print.
-    const res = await pkg.buildPrintFiles(job, artPdf, base0, pf.options);
-    const pct = Math.round(res.fitLayout.scale * 1000) / 10;
-    const sheetTag = (n: string) => n.replace(/\s*landscape/, '').replace(/[^\w]+/g, '');
-    const names = {
-      actual: `${base0}_1_ACTUAL_SIZE_on_${sheetTag(res.actualLayout.sheet.name)}.pdf`,
-      fit: `${base0}_2_FIT_TO_PRINT_${sheetTag(res.fitLayout.sheet.name)}_${String(pct).replace('.', '-')}pc.pdf`,
-      info: `${base0}_3_INFORMATION.pdf`,
-    };
-    const out: { name: string; data: Uint8Array }[] = [];
-    if (pf.files.actual && res.actual) out.push({ name: names.actual, data: res.actual });
-    if (pf.files.fit) out.push({ name: names.fit, data: res.fit });
-
-    // 3. Information sheet: one A4 page.
-    if (pf.files.info) {
-      const previews = pages.map((ab) => {
-        try {
-          const rect = { x: ab.x, y: ab.y, width: ab.width, height: ab.height };
-          const k = Math.min(2, 900 / Math.max(ab.width, ab.height));
-          const pic = capturePicture(rect, { format: 'jpeg', quality: 0.85, multiplier: k, artboardId: ab.id });
-          return { src: pic.dataUrl, w: Math.round(ab.width * k), h: Math.round(ab.height * k) };
-        } catch { return null; }
-      });
-      let logo: { src: string; w: number; h: number } | null = null;
+    // 2. Previews of each page for the job report.
+    const previews = pf.files.report ? pages.map((ab) => {
       try {
-        const blob = await (await fetch('/logo.png')).blob();
-        const src = await new Promise<string>((res2, rej) => { const fr = new FileReader(); fr.onload = () => res2(String(fr.result)); fr.onerror = rej; fr.readAsDataURL(blob); });
-        const img = new Image(); img.src = src; await img.decode();
-        logo = { src, w: img.naturalWidth, h: img.naturalHeight };
-      } catch { /* the sheet works without the logo */ }
-      const files = [
-        ...(res.actual ? [pkg.describeFile('Actual size', names.actual, res.actualLayout, job, pf.options.markType)] : []),
-        pkg.describeFile('Fit to print', names.fit, res.fitLayout, job, pf.options.markType),
-      ];
-      const svg = info.infoSheetSvg({ job, people: { ...pf.people, jobName: pf.people.jobName || designName }, date: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }), previews, files, margin: pf.options.margin, colour: 'RGB, vector PDF (text and shapes stay sharp)', logo });
-      const blob = await svgToPdfBlob('', 0, 0, [{ svg, widthMm: 297, heightMm: 210 }]);
-      out.push({ name: names.info, data: new Uint8Array(await blob.arrayBuffer()) });
-    }
-    if (!out.length) throw new Error(res.warnings[0] || 'Nothing to download.');
-    if (pf.zip && out.length > 1) {
-      const url = URL.createObjectURL(buildZip(out));
-      downloadFile(url, `${base0}_PRINT_FILES.zip`);
-      setTimeout(() => URL.revokeObjectURL(url), 8000);
-    } else {
-      for (const f of out) {
-        const url = URL.createObjectURL(new Blob([f.data as unknown as BlobPart], { type: 'application/pdf' }));
-        downloadFile(url, f.name);
-        setTimeout(() => URL.revokeObjectURL(url), 8000);
-        await new Promise((r) => setTimeout(r, 400));
-      }
-    }
+        const k = Math.min(2, 900 / Math.max(ab.width, ab.height));
+        const pic = capturePicture({ x: ab.x, y: ab.y, width: ab.width, height: ab.height }, { format: 'jpeg', quality: 0.85, multiplier: k, artboardId: ab.id });
+        return { src: pic.dataUrl, w: Math.round(ab.width * k), h: Math.round(ab.height * k) };
+      } catch { return null; }
+    }) : [];
+
+    // 3. The set.
+    const set = await pkg.makePrintSet({
+      job, base: base0, options: pf.options, files: pf.files,
+      arts: job.sides.map((_, i) => ({ kind: 'pdf' as const, bytes: artPdf, page: i })),
+      details: { ...pf.details, jobName: pf.details.jobName || designName }, date: dl.today(),
+      colour: 'RGB, vector PDF (text and shapes stay sharp)', previews,
+      logo: pf.files.report ? await dl.loadImage('/logo.png') : null, toPdf: dl.svgPagesToPdf,
+    });
+    if (!set.out.length) throw new Error(set.warnings[0] || 'Nothing to download.');
+    await dl.saveSet(set.out, `${base0}_PRINT_FILES.zip`, pf.zip);
+    const pct = Math.round(set.fitLayout.scale * 1000) / 10;
     const parts = [
-      res.actual && pf.files.actual ? `actual size on ${res.actualLayout.sheet.name} (100 %)` : null,
-      pf.files.fit ? `fit to print on ${res.fitLayout.sheet.name} (${pct} %)` : null,
-      pf.files.info ? 'information sheet' : null,
+      pf.files.actual && set.actualLayout.fits ? `actual size on ${set.actualLayout.sheet.name}` : null,
+      pf.files.fit ? `fit to print on ${set.fitLayout.sheet.name} (${pct} %)` : null,
+      pf.files.normal ? 'normal (bleed only)' : null,
+      pf.files.report ? 'job report' : null,
     ].filter(Boolean);
-    setLocalNotice(`Print files ready: ${parts.join(', ')}.${res.warnings.length && pf.files.actual ? ` ${res.warnings[0]}` : ''}`);
+    setLocalNotice(`Print files ready: ${parts.join(', ')}.${set.warnings.length ? ` ${set.warnings[0]}` : ''}`);
   };
 
   // One export path for every combination the dialog can produce: any

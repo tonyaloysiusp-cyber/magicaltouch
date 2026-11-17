@@ -1,18 +1,17 @@
 'use client';
 
 // Folding calculator: brochures, leaflets, cards and maps. Panel widths with
-// creep compensation, fold positions and order, the flat artwork layout
-// (outside / inside), a folded preview, a check of an uploaded PDF, and a
-// technical report for the print operator (branded in the footer only).
+// creep compensation, fold positions and order, the flat layout (outside /
+// inside), a folded preview, a PDF check (Pro), and Download & print: the
+// branded layout template and job report, and the unbranded print files.
 
 import { useMemo, useState } from 'react';
-import { Download, ExternalLink, FileSearch, Loader2 } from 'lucide-react';
-import { printJobEditorUrl, type PrintJobInfo } from '@/lib/print/printJob';
+import { ExternalLink, FileSearch, Loader2 } from 'lucide-react';
+import { foldPrintJob, printJobEditorUrl } from '@/lib/print/printJob';
 import { FOLDS, calculateFold, foldDiagramSvg, checkPdfForFold, type FoldType, type PdfInspect } from '@/lib/fold';
 import { PAPER_SIZES } from '@/lib/printSizes';
 import { PAPER_PROFILES, estimateCaliper } from '@/lib/binding';
-import { PrintSpecPanel } from './PrintSpecPanel';
-import { PressExport } from './PressExport';
+import { ModeSwitch, PrintDownloadPanel, usePro } from './PrintDownloadPanel';
 
 const field = 'mt-1 h-10 w-full rounded-xl border border-mt-border bg-mt-bg px-3 text-[13.5px]';
 const lbl = 'block text-[12px] text-mt-muted';
@@ -31,25 +30,16 @@ export function FoldingCalculator() {
   const [angle, setAngle] = useState(60);
   const [busy, setBusy] = useState<string | null>(null);
   const [pdf, setPdf] = useState<{ name: string; res: PdfInspect } | null>(null);
+  const [pro, setPro] = usePro();
   const size = PAPER_SIZES.find((p) => p.id === sizeId);
   const W = sizeId === 'custom' ? cw : size ? (landscape ? Math.max(size.w, size.h) : Math.min(size.w, size.h)) : 297;
   const H = sizeId === 'custom' ? ch : size ? (landscape ? Math.min(size.w, size.h) : Math.max(size.w, size.h)) : 210;
   const caliper = estimateCaliper(gsm, profile) / 1000;
   const r = useMemo(() => calculateFold({ type, w: W, h: H, panels, caliper, bleed, safe, widths: custom || undefined, dirs }), [type, W, H, panels, caliper, bleed, safe, custom, dirs]);
   const svg = useMemo(() => foldDiagramSvg(r, side, bleed, safe), [r, side, bleed, safe]);
-  // The job handed to the Design Editor: both sides (outside + inside), fold guides, bleed, safe area.
-  const editorHref = useMemo(() => {
-    const job: PrintJobInfo = {
-      v: 1, source: 'fold', title: FOLDS.find((f) => f.id === type)?.label || 'Folded leaflet',
-      trimW: r.flat.w, trimH: r.flat.h, bleed, safe,
-      folds: r.folds.map((f) => ({ x: f.x, y: f.y, dir: f.dir, order: f.order })),
-      panels: r.panels.map((p) => ({ x: p.x, w: p.w, name: p.outside, inside: p.inside })),
-      sides: ['Outside', 'Inside'], folded: r.folded, sequence: r.sequence,
-      values: [['Paper', `${gsm} gsm ${(PAPER_PROFILES.find((p) => p.id === profile)?.label || '').split(' (')[0].toLowerCase()}`], ['Creep allowance', `${r.allowance} mm per tuck-in panel`]],
-    };
-    return printJobEditorUrl(job);
-  }, [r, type, bleed, safe, gsm, profile]);
-  const pressJob = useMemo(() => ({ name: `${type}-fold-${r.flat.w}x${r.flat.h}`, title: `${FOLDS.find((f) => f.id === type)?.label || 'Folded'} leaflet`, trimW: r.flat.w, trimH: r.flat.h, bleed, safe, folds: r.folds.map((f) => ({ x: f.x, y: f.y })), panels: r.panels.map((p, i) => ({ x: p.x, w: p.w, name: `PANEL ${i + 1}` })) }), [r, type, bleed, safe]);
+  // The print job: handed to the editor (both sides, fold guides) and to Download & print.
+  const printJob = useMemo(() => foldPrintJob(r, { title: FOLDS.find((f) => f.id === type)?.label || 'Folded leaflet', bleed, safe, paper: `${gsm} gsm ${(PAPER_PROFILES.find((p) => p.id === profile)?.label || '').split(' (')[0].toLowerCase()}` }), [r, type, bleed, safe, gsm, profile]);
+  const editorHref = useMemo(() => printJobEditorUrl(printJob), [printJob]);
   const def = FOLDS.find((f) => f.id === type)!;
 
   const inspect = async (f: File) => {
@@ -64,51 +54,13 @@ export function FoldingCalculator() {
     setBusy(null);
   };
 
-  const report = async () => {
-    setBusy('report');
-    try {
-      const { svgToPdfBlob } = await import('@/lib/svgToPdf');
-      const esc = (s: string) => s.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' } as any)[c]);
-      const lines: [string, number, number][] = []; // text, size, weight
-      const add = (s: string, size = 3.2, weight = 400) => lines.push([s, size, weight]);
-      add('Folding specification', 6.5, 700);
-      add(`${def.label} · flat ${W} × ${H} mm → folded ${r.folded.w} × ${r.folded.h} mm`, 4);
-      add(`Paper ${gsm} gsm ${PAPER_PROFILES.find((p) => p.id === profile)?.label} (≈ ${Math.round(caliper * 1000)} µm) · folded thickness ≈ ${r.folded.thick} mm · creep allowance ${r.allowance} mm`, 3.2);
-      add(`Bleed ${bleed} mm · safe margin ${safe} mm from every trim and fold · ${r.pages} panels (outside + inside)`, 3.2);
-      add(' ', 2); add('Panels (outside, from the left)', 4.2, 700);
-      r.panels.forEach((p) => add(`${p.n}.  ${p.w} mm at ${p.x} mm — outside: ${p.outside} · inside: ${p.inside}`));
-      add(' ', 2); add('Folds', 4.2, 700);
-      [...r.folds].sort((a, b) => a.order - b.order).forEach((f) => add(`Step ${f.order}: ${f.label} — ${f.dir} fold ${f.x != null ? `at ${f.x} mm from the left (outside)` : `across at ${f.y} mm from the top`}`));
-      add(' ', 2); add('Folding sequence', 4.2, 700);
-      r.sequence.forEach((s, i) => add(`${i + 1}. ${s}`));
-      add(' ', 2); add('Cutting & printing', 4.2, 700);
-      add(`Trim the flat sheet to ${W} × ${H} mm. Print outside and inside on the two sides, turning on the ${type === 'cross' ? 'long' : 'short'} edge (check with a folded dummy).`);
-      r.notes.forEach((s) => add(`• ${s}`));
-      r.errors.forEach((s) => add(`! ${s}`, 3.2, 700));
-      if (pdf) { add(' ', 2); add(`Checked PDF: ${pdf.name}`, 4.2, 700); add(pdf.res.ok ? 'Suitable for this fold.' : 'Not suitable as it is:'); pdf.res.issues.forEach((s) => add(`• ${s}`)); }
-      let y = 22, body = '';
-      for (const [s, sz, wt] of lines) { body += `<text x="14" y="${y}" font-family="Helvetica" font-size="${sz}" font-weight="${wt}" fill="#111">${esc(s)}</text>`; y += sz * 1.6; }
-      const foot = (pg: number, of: number, w: number, h: number) => `<line x1="14" y1="${h - 14}" x2="${w - 14}" y2="${h - 14}" stroke="#CBD5E1" stroke-width="0.25"/><text x="14" y="${h - 9}" font-family="Helvetica" font-size="3" font-weight="700" fill="#111">Magical Touch Design</text><text x="48" y="${h - 9}" font-family="Helvetica" font-size="3" fill="#475569">www.magicaltouchdesign.com · folding specification · technical information, not a print file</text><text x="${w - 14}" y="${h - 9}" font-family="Helvetica" font-size="3" fill="#475569" text-anchor="end">page ${pg} of ${of}</text>`;
-      const page1 = `<svg xmlns="http://www.w3.org/2000/svg" width="210mm" height="297mm" viewBox="0 0 210 297"><rect width="210" height="297" fill="#fff"/>${body}${foot(1, 3, 210, 297)}</svg>`;
-      const diag = (sd: 'outside' | 'inside', pg: number) => {
-        const d = foldDiagramSvg(r, sd, bleed, safe);
-        const vb = d.match(/viewBox="([^"]+)"/)![1].split(' ').map(Number);
-        const pw = 297, ph = 210, k = Math.min((pw - 28) / vb[2], (ph - 40) / vb[3]);
-        const inner = d.replace(/^<svg[^>]*>/, '').replace(/<\/svg>$/, '');
-        return `<svg xmlns="http://www.w3.org/2000/svg" width="${pw}mm" height="${ph}mm" viewBox="0 0 ${pw} ${ph}"><rect width="${pw}" height="${ph}" fill="#fff"/><text x="14" y="16" font-family="Helvetica" font-size="5" font-weight="700" fill="#111">${sd === 'outside' ? 'Outside' : 'Inside'} — flat layout (scale ${Math.round(k * 100)} %)</text><g transform="translate(${14 - vb[0] * k} ${24 - vb[1] * k}) scale(${k})">${inner}</g>${foot(pg, 3, pw, ph)}</svg>`;
-      };
-      const blob = await svgToPdfBlob('', 0, 0, [{ svg: page1, widthMm: 210, heightMm: 297 }, { svg: diag('outside', 2), widthMm: 297, heightMm: 210 }, { svg: diag('inside', 3), widthMm: 297, heightMm: 210 }]);
-      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `folding-${type}-${W}x${H}.pdf`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
-    } catch { /* surfaced by the disabled state */ }
-    setBusy(null);
-  };
-
   // Folded preview: panels as cards hinged at the folds, opened by the slider.
   const pv = r.panels.map((p) => p.w), totalW = W;
   const scale = 300 / totalW;
   return (
     <div className="grid gap-6 lg:grid-cols-[340px_1fr]">
       <aside className="space-y-3 rounded-3xl border border-mt-border bg-mt-surface p-5" aria-label="Folding settings">
+        <div className="flex items-center justify-between"><p className="text-[13px] font-semibold">Settings</p><ModeSwitch pro={pro} onChange={setPro} /></div>
         <label className={lbl}>Flat sheet<select value={sizeId} onChange={(e) => { setSizeId(e.target.value); setCustom(null); }} aria-label="Flat sheet size" className={field}>{PAPER_SIZES.filter((p) => /A sizes|US/.test(p.group || '') || ['dl', 'letter', 'legal', 'tabloid'].includes(p.id)).map((p) => <option key={p.id} value={p.id}>{p.label} ({p.w} × {p.h} mm)</option>)}<option value="custom">Custom size</option></select></label>
         {sizeId === 'custom'
           ? <div className="grid grid-cols-2 gap-2"><label className={lbl}>Width (mm)<input type="number" value={cw} min={50} onChange={(e) => { setCw(Number(e.target.value) || 0); setCustom(null); }} aria-label="Flat width" className={field} /></label><label className={lbl}>Height (mm)<input type="number" value={ch} min={50} onChange={(e) => setCh(Number(e.target.value) || 0)} aria-label="Flat height" className={field} /></label></div>
@@ -122,17 +74,16 @@ export function FoldingCalculator() {
           <label className={lbl}>Bleed (mm)<input type="number" min={0} max={10} step={0.5} value={bleed} onChange={(e) => setBleed(Number(e.target.value) || 0)} aria-label="Bleed mm" className={field} /></label>
           <label className={lbl}>Safe margin (mm)<input type="number" min={0} max={20} step={0.5} value={safe} onChange={(e) => setSafe(Number(e.target.value) || 0)} aria-label="Safe margin mm" className={field} /></label>
         </div>
-        {type === 'custom' && <div role="group" aria-label="Fold directions"><p className="text-[12px] font-semibold">Fold directions</p><div className="mt-1 flex flex-wrap gap-1.5">{r.folds.filter((f) => f.x != null).map((f, i) => <button key={i} type="button" onClick={() => setDirs(r.folds.map((g, j) => (j === i ? (g.dir === 'valley' ? 'mountain' : 'valley') : g.dir)))} className="h-8 px-2.5 rounded-full border border-mt-border text-[12px]">{f.label}: {f.dir}</button>)}</div></div>}
-        <div>
+        {pro && type === 'custom' && <div role="group" aria-label="Fold directions"><p className="text-[12px] font-semibold">Fold directions</p><div className="mt-1 flex flex-wrap gap-1.5">{r.folds.filter((f) => f.x != null).map((f, i) => <button key={i} type="button" onClick={() => setDirs(r.folds.map((g, j) => (j === i ? (g.dir === 'valley' ? 'mountain' : 'valley') : g.dir)))} className="h-8 px-2.5 rounded-full border border-mt-border text-[12px]">{f.label}: {f.dir}</button>)}</div></div>}
+        {pro && <div>
           <div className="flex items-center justify-between"><p className="text-[12px] font-semibold">Panel widths (mm)</p><button type="button" onClick={() => setCustom(custom ? null : r.panels.map((p) => p.w))} className="text-[12px] text-mt-primary">{custom ? 'Back to calculated' : 'Adjust by hand'}</button></div>
           <div className="mt-1 grid grid-cols-3 gap-1.5">{r.panels.map((p, i) => <label key={i} className="text-[11px] text-mt-muted">Panel {p.n}<input type="number" step={0.5} value={custom ? custom[i] : p.w} disabled={!custom} onChange={(e) => custom && setCustom(custom.map((v, j) => (j === i ? Number(e.target.value) || 0 : v)))} aria-label={`Panel ${p.n} width`} className="mt-0.5 h-9 w-full rounded-lg border border-mt-border bg-mt-bg px-2 text-[13px] disabled:opacity-70" /></label>)}</div>
-        </div>
-        <label className="block rounded-2xl border border-dashed border-mt-border p-3 text-[12.5px] cursor-pointer hover:bg-mt-surface2">
+        </div>}
+        {pro && <label className="block rounded-2xl border border-dashed border-mt-border p-3 text-[12.5px] cursor-pointer hover:bg-mt-surface2">
           <span className="inline-flex items-center gap-1.5 font-semibold">{busy === 'pdf' ? <Loader2 size={14} className="animate-spin" /> : <FileSearch size={14} />} Check an existing PDF</span>
           <span className="block text-[11.5px] text-mt-muted">Page count, sizes, trim and bleed are read and compared with this fold. Nothing is uploaded.</span>
           <input type="file" accept="application/pdf,.pdf" hidden onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) inspect(f); }} />
-        </label>
-        <button type="button" onClick={report} disabled={!!busy} className="h-11 w-full rounded-full bg-mt-primary text-mt-onprimary text-[14px] font-semibold inline-flex items-center justify-center gap-2 disabled:opacity-60">{busy === 'report' ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />} Technical folding report (PDF)</button>
+        </label>}
       </aside>
 
       <div className="min-w-0 space-y-4">
@@ -166,8 +117,7 @@ export function FoldingCalculator() {
         </section>}
       </div>
       <div className="lg:col-span-2">
-        <PrintSpecPanel fold={r} bleed={bleed} safe={safe} paperLabel={sizeId === 'custom' ? `${W} × ${H} mm` : `${(size?.label || '').split(' (')[0]} ${landscape ? 'landscape' : 'portrait'}`} stockHint={`${gsm} gsm ${(PAPER_PROFILES.find((p) => p.id === profile)?.label || '').split(' (')[0].toLowerCase()}`} />
-        <PressExport job={pressJob} fileBase={pressJob.name} allowRepeat />
+        <PrintDownloadPanel job={printJob} editorHref={editorHref} />
       </div>
     </div>
   );

@@ -57,16 +57,21 @@ test('all four crop-mark types stay outside the bleed and type 1 marks every cut
   assert.match(templateSvg(card, layoutPress(card, { ...DEFAULT_PRESS, sheet: A('a4') }), DEFAULT_PRESS), /<svg/);
 });
 
-test('working template has the instruction box; print PDF has trim and bleed boxes and embeds a PNG', async () => {
+test('press preview has no instruction box; branded layout template; print PDF has trim and bleed boxes and embeds a PNG', async () => {
+  const { layoutTemplatePages } = await import('../../lib/print/layoutTemplate.ts');
+  const { bookPrintJob, calculateBook } = await import('../../lib/binding.ts');
   const l = layoutPress(cover, { ...DEFAULT_PRESS, sheet: { w: 480, h: 330, name: '48 × 33' } });
   const svg = templateSvg(cover, l, DEFAULT_PRESS);
-  assert.match(svg, /working file, not ready to print/);
-  // 1 × 1 red PNG
+  assert.doesNotMatch(svg, /working file/);
+  const r = calculateBook({ trimW: 210, trimH: 297, pages: 120, sides: 'double', paperGsm: 100, paperProfile: 'uncoated', paperCaliperUm: 100, coverGsm: 300, coverProfile: 'board', coverCaliperUm: 300, binding: 'perfect', bleed: 3, safe: 5, hingeScore: 6 });
+  const tpl = layoutTemplatePages(bookPrintJob(r), { name: 'Book' });
+  assert.equal(tpl.length, 1);
+  assert.match(tpl[0].svg, /LAYOUT TEMPLATE/); assert.match(tpl[0].svg, /magicaltouchdesign\.com/); assert.match(tpl[0].svg, /not a print file/);
   const png = Uint8Array.from(Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==', 'base64'));
   const pdf = await pressPdf(cover, l, { kind: 'png', bytes: png });
   const v = await verifyPressPdf(pdf, l);
   assert.deepEqual(v.issues, []);
-  assert.ok(!/working file/.test(Buffer.from(pdf).toString('latin1')));
+  assert.ok(!/magicaltouch|Magical Touch/i.test(Buffer.from(pdf).toString('latin1')), 'print files carry no branding');
 });
 
 test('ready-made sizes: every size drafts cleanly and grades up; changes are detected', () => {
@@ -88,28 +93,31 @@ test('ready-made sizes: every size drafts cleanly and grades up; changes are det
   assert.deepEqual(changedFrom('kurta', 'M', m), ['hip']);
 });
 
-test('print package: A4 tri-fold → actual size on A3, fit to print on A4, both sides, mirrored inside folds; info sheet', async () => {
-  const { buildPrintFiles, DEFAULT_PACKAGE, describeFile } = await import('../../lib/print/printPackage.ts');
-  const { encodePrintJob, decodePrintJob, sideFolds, printJobEditorUrl } = await import('../../lib/print/printJob.ts');
-  const { infoSheetSvg } = await import('../../lib/print/infoSheet.ts');
+test('print set: A4 tri-fold → actual size on A3, fit to A4, normal with bleed, job report; both sides', async () => {
+  const { makePrintSet, DEFAULT_PACKAGE, ALL_FILES } = await import('../../lib/print/printPackage.ts');
+  const { encodePrintJob, decodePrintJob, sideFolds, printJobEditorUrl, foldPrintJob } = await import('../../lib/print/printJob.ts');
+  const { EMPTY_DETAILS } = await import('../../lib/print/jobReport.ts');
   const { calculateFold } = await import('../../lib/fold.ts');
   const { PDFDocument } = await import('pdf-lib');
   const r = calculateFold({ type: 'tri', w: 297, h: 210, caliper: 0.1, bleed: 3, safe: 5 });
-  const job = { v: 1, source: 'fold', title: 'Tri-fold', trimW: 297, trimH: 210, bleed: 3, safe: 5, folds: r.folds.map((f) => ({ x: f.x, y: f.y, dir: f.dir, order: f.order })), panels: r.panels.map((p) => ({ x: p.x, w: p.w, name: p.outside, inside: p.inside })), sides: ['Outside', 'Inside'], folded: r.folded };
+  const job = foldPrintJob(r, { title: 'Tri-fold', bleed: 3, safe: 5 });
   assert.deepEqual(decodePrintJob(encodePrintJob(job)), JSON.parse(JSON.stringify(job)));
-  assert.match(printJobEditorUrl(job), /printJob=.*/);
-  const inside = sideFolds(job, 1).map((f) => f.x);
-  assert.deepEqual(inside, job.folds.map((f) => Math.round((297 - f.x) * 100) / 100).sort((a, b) => a - b));
+  assert.match(printJobEditorUrl(job), /printJob=/);
+  assert.deepEqual(sideFolds(job, 1).map((f) => f.x), job.folds.map((f) => Math.round((297 - f.x) * 100) / 100).sort((a, b) => a - b));
   const k = 72 / 25.4, art = await PDFDocument.create();
-  for (let i = 0; i < 2; i++) { const p = art.addPage([303 * k, 216 * k]); p.drawRectangle({ x: 0, y: 0, width: 303 * k, height: 216 * k, color: undefined }); }
-  const res = await buildPrintFiles(job, await art.save(), 'Leaflet', DEFAULT_PACKAGE);
-  assert.ok(res.actual, res.warnings.join(' '));
-  assert.match(res.actualLayout.sheet.name, /^A3/);
-  assert.equal(res.actualLayout.scale, 1);
-  assert.match(res.fitLayout.sheet.name, /^A4/);
-  assert.ok(res.fitLayout.scale < 1 && res.fitLayout.scale > 0.8, String(res.fitLayout.scale));
-  assert.equal((await PDFDocument.load(res.actual)).getPageCount(), 2);
-  assert.equal((await PDFDocument.load(res.fit)).getPageCount(), 2);
-  const svg = infoSheetSvg({ job, people: { jobName: 'Leaflet', client: 'C', designer: 'D', company: 'Co', contact: '', notes: '' }, date: '16 Nov 2026', previews: [null, null], files: [describeFile('Actual size', 'a.pdf', res.actualLayout, job, 1), describeFile('Fit to print', 'b.pdf', res.fitLayout, job, 1)], margin: 3, colour: 'RGB vector' });
-  assert.match(svg, /PRINT JOB INFORMATION/); assert.match(svg, /100 %/); assert.match(svg, /86\.\d %|8\d(\.\d)? %/);
+  for (let i = 0; i < 2; i++) art.addPage([303 * k, 216 * k]).drawRectangle({ x: 0, y: 0, width: 50, height: 50 });
+  const bytes = await art.save();
+  let reportPages = 0;
+  const set = await makePrintSet({ job, base: 'Leaflet', options: DEFAULT_PACKAGE, files: ALL_FILES, arts: [0, 1].map((page) => ({ kind: 'pdf', bytes, page })), details: { ...EMPTY_DETAILS, jobName: 'Leaflet' }, date: '17 Nov 2026', colour: 'RGB',
+    toPdf: async (pages) => { reportPages = pages.length; return new Uint8Array([37, 80, 68, 70]); } });
+  assert.deepEqual(set.out.map((f) => f.name), ['Leaflet_PRINT_ACTUAL_SIZE_on_A3.pdf', `Leaflet_PRINT_FIT_TO_A4_${String(Math.round(set.fitLayout.scale * 1000) / 10).replace('.', '-')}pc.pdf`, 'Leaflet_PRINT_NORMAL_with_bleed.pdf', 'Leaflet_JOB_REPORT.pdf']);
+  assert.equal(reportPages, 2);
+  assert.match(set.actualLayout.sheet.name, /^A3/); assert.equal(set.actualLayout.scale, 1);
+  assert.ok(set.fitLayout.scale < 1 && set.fitLayout.scale > 0.8);
+  for (const f of set.out.slice(0, 3)) assert.equal((await PDFDocument.load(f.data)).getPageCount(), 2);
+  const normal = await PDFDocument.load(set.out[2].data), p = normal.getPage(0);
+  assert.ok(Math.abs(p.getMediaBox().width / k - 303) < 0.2 && Math.abs(p.getTrimBox().width / k - 297) < 0.2);
+  // Without artwork only the report is made.
+  const only = await makePrintSet({ job, base: 'L', options: DEFAULT_PACKAGE, files: ALL_FILES, arts: null, details: EMPTY_DETAILS, date: '', colour: '', toPdf: async () => new Uint8Array([1]) });
+  assert.deepEqual(only.out.map((f) => f.name), ['L_JOB_REPORT.pdf']);
 });

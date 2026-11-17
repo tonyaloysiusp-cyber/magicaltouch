@@ -207,43 +207,43 @@ export function maxUp(job: PressJob, o: PressOptions): { cols: number; rows: num
   return { cols: Math.max(1, best.cols), rows: Math.max(1, best.rows), rotate: best.rotate };
 }
 
-function marksSvg(l: PressLayout): string {
+export function marksSvg(l: PressLayout): string {
   return l.lines.map((ln) => `<line x1="${ln.x1}" y1="${ln.y1}" x2="${ln.x2}" y2="${ln.y2}" stroke="${ln.color}" stroke-width="${ln.width}"${ln.dash ? ` stroke-dasharray="${ln.dash}"` : ''}/>`).join('')
     + l.circles.map((c) => `<circle cx="${c.cx}" cy="${c.cy}" r="${c.r}" fill="none" stroke="${c.color}" stroke-width="${c.width}"/>`).join('')
     + l.labels.map((t) => `<text x="${t.x}" y="${t.y}" font-family="Helvetica" font-size="${t.size}" fill="${t.color}" text-anchor="${t.anchor || 'start'}">${t.text.replace(/[&<]/g, (c) => (c === '&' ? '&amp;' : '&lt;'))}</text>`).join('');
 }
 
-/** Working template (SVG, mm): trim, bleed, panel and fold guides, marks and the instruction box. Not a print file. */
-export function templateSvg(job: PressJob, l: PressLayout, o: PressOptions): string {
+/** Guides of a sheet (SVG markup, mm): bleed (blue), trim (black), folds, safe area (green), panel names, marks. No artwork, no branding. */
+export function guidesSvg(job: PressJob, l: PressLayout, o: { printable?: boolean } = {}): string {
   const k = l.scale, b = l.bleed;
-  let g = `<rect width="${l.sheet.w}" height="${l.sheet.h}" fill="#FFFFFF"/>`;
-  g += `<rect x="${l.printable.x}" y="${l.printable.y}" width="${r2(l.printable.w)}" height="${r2(l.printable.h)}" fill="none" stroke="#CBD5E1" stroke-width="0.2" stroke-dasharray="2 2"/>`;
+  let g = '';
+  if (o.printable) g += `<rect x="${l.printable.x}" y="${l.printable.y}" width="${r2(l.printable.w)}" height="${r2(l.printable.h)}" fill="none" stroke="#CBD5E1" stroke-width="0.2" stroke-dasharray="2 2"/>`;
   for (const it of l.items) {
     g += `<rect x="${r2(it.x - b)}" y="${r2(it.y - b)}" width="${r2(it.w + 2 * b)}" height="${r2(it.h + 2 * b)}" fill="none" stroke="#3B9BD8" stroke-width="0.25"/>`;
     g += `<rect x="${it.x}" y="${it.y}" width="${it.w}" height="${it.h}" fill="none" stroke="#111111" stroke-width="0.3"/>`;
     for (const f of (l.rotated ? [] : job.folds)) {
-      if (f.x != null) g += `<line x1="${r2(it.x + f.x * k)}" y1="${it.y}" x2="${r2(it.x + f.x * k)}" y2="${r2(it.y + it.h)}" stroke="#111111" stroke-width="0.25"/>`;
-      if (f.y != null) g += `<line x1="${it.x}" y1="${r2(it.y + f.y * k)}" x2="${r2(it.x + it.w)}" y2="${r2(it.y + f.y * k)}" stroke="#111111" stroke-width="0.25"/>`;
+      if (f.x != null) g += `<line x1="${r2(it.x + f.x * k)}" y1="${it.y}" x2="${r2(it.x + f.x * k)}" y2="${r2(it.y + it.h)}" stroke="#00A651" stroke-width="0.25" stroke-dasharray="1.5 1"/>`;
+      if (f.y != null) g += `<line x1="${it.x}" y1="${r2(it.y + f.y * k)}" x2="${r2(it.x + it.w)}" y2="${r2(it.y + f.y * k)}" stroke="#00A651" stroke-width="0.25" stroke-dasharray="1.5 1"/>`;
     }
     if (job.safe && !l.rotated) g += `<rect x="${r2(it.x + job.safe * k)}" y="${r2(it.y + job.safe * k)}" width="${r2(it.w - 2 * job.safe * k)}" height="${r2(it.h - 2 * job.safe * k)}" fill="none" stroke="#2F9E7A" stroke-width="0.2" stroke-dasharray="1.5 1"/>`;
-    if (!l.rotated) for (const p of job.panels || []) g += `<text x="${r2(it.x + (p.x + p.w / 2) * k)}" y="${r2(it.y + 8)}" font-family="Helvetica" font-size="3" fill="#94A3B8" text-anchor="middle">${p.name}</text>`;
+    if (!l.rotated) for (const p of job.panels || []) g += `<text x="${r2(it.x + (p.x + p.w / 2) * k)}" y="${r2(it.y + it.h / 2)}" font-family="Helvetica" font-size="${Math.min(4, Math.max(2, p.w * k / 12))}" fill="#A1A1AA" text-anchor="middle">${p.name}</text>`;
   }
-  g += marksSvg(l);
-  // Instruction box (working file only), in the last item.
-  const it = l.items[l.items.length - 1];
-  const bw = Math.min(110, it.w * 0.6), bh = 62, x = it.x + it.w - bw - 6, y = it.y + it.h * 0.5;
-  if (it.w > 60 && it.h > 80) {
-    g += `<rect x="${r2(x)}" y="${r2(y)}" width="${r2(bw)}" height="${bh}" fill="#F7E3DA" opacity="0.92"/>`;
-    const T = (dy: number, s: string, size = 2.6) => `<text x="${r2(x + 6)}" y="${r2(y + dy)}" font-family="Helvetica" font-size="${size}" fill="#B42318">${s}</text>`;
-    g += T(7, 'This box: instructions for the working file only');
-    g += `<line x1="${r2(x + 6)}" y1="${r2(y + 13)}" x2="${r2(x + 16)}" y2="${r2(y + 13)}" stroke="${o.cutColour}" stroke-width="0.5"/>` + T(14, 'cutting mark').replace(`x="${r2(x + 6)}"`, `x="${r2(x + 19)}"`);
-    g += `<line x1="${r2(x + 6)}" y1="${r2(y + 19)}" x2="${r2(x + 16)}" y2="${r2(y + 19)}" stroke="${o.foldColour}" stroke-width="0.5"/>` + T(20, 'folding mark').replace(`x="${r2(x + 6)}"`, `x="${r2(x + 19)}"`);
-    g += `<rect x="${r2(x + 6)}" y="${r2(y + 23)}" width="9" height="6" fill="none" stroke="#111" stroke-width="0.3"/>` + T(27.5, `finished (trim) size ${job.trimW} × ${job.trimH} mm`).replace(`x="${r2(x + 6)}"`, `x="${r2(x + 19)}"`);
-    g += `<rect x="${r2(x + 6)}" y="${r2(y + 32)}" width="9" height="6" fill="none" stroke="#3B9BD8" stroke-width="0.3"/>` + T(36.5, `${job.bleed} mm bleed — artwork runs to here`).replace(`x="${r2(x + 6)}"`, `x="${r2(x + 19)}"`);
-    if (job.safe) g += `<rect x="${r2(x + 6)}" y="${r2(y + 41)}" width="9" height="6" fill="none" stroke="#2F9E7A" stroke-width="0.3" stroke-dasharray="1.5 1"/>` + T(45.5, `safe area ${job.safe} mm — keep text inside`).replace(`x="${r2(x + 6)}"`, `x="${r2(x + 19)}"`);
-    g += T(56, 'Important: this is a working file, not ready to print.', 2.6);
-  }
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${l.sheet.w}mm" height="${l.sheet.h}mm" viewBox="0 0 ${l.sheet.w} ${l.sheet.h}">${g}</svg>`;
+  return g + marksSvg(l);
+}
+
+/** Preview of a press sheet (SVG, mm): guides and marks on the sheet. Not a print file. */
+export function templateSvg(job: PressJob, l: PressLayout, _o?: PressOptions): string {
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${l.sheet.w}mm" height="${l.sheet.h}mm" viewBox="0 0 ${l.sheet.w} ${l.sheet.h}"><rect width="${l.sheet.w}" height="${l.sheet.h}" fill="#FFFFFF"/>${guidesSvg(job, l, { printable: true })}</svg>`;
+}
+
+/** The "normal" file: one page = trim + bleed, no marks (TrimBox / BleedBox still set). */
+export function normalLayout(job: PressJob): PressLayout {
+  const b = job.bleed, w = r2(job.trimW + 2 * b), h = r2(job.trimH + 2 * b);
+  return {
+    sheet: { w, h, name: 'Finished size + bleed' }, scale: 1, items: [{ x: b, y: b, w: job.trimW, h: job.trimH }], bleed: b,
+    block: { x: b, y: b, w: job.trimW, h: job.trimH }, lines: [], circles: [], labels: [],
+    printable: { x: 0, y: 0, w, h }, fits: true, warnings: [], needed: { w, h }, rotated: false,
+  };
 }
 
 export type Artwork = { kind: 'pdf'; bytes: Uint8Array; page?: number } | { kind: 'png' | 'jpg'; bytes: Uint8Array } | null;
@@ -264,7 +264,7 @@ export async function pressPdf(job: PressJob, l: PressLayout, art: Artwork): Pro
 export async function pressPdfPages(sheets: { job: PressJob; layout: PressLayout; art: Artwork }[], title: string): Promise<Uint8Array> {
   const { PDFDocument, StandardFonts } = await import('pdf-lib');
   const doc = await PDFDocument.create();
-  doc.setTitle(`${title} — print`); doc.setProducer('Magical Touch Design'); doc.setCreator('Magical Touch Design');
+  doc.setTitle(`${title} — print`); doc.setProducer(''); doc.setCreator('');
   const font = await doc.embedFont(StandardFonts.Helvetica);
   const srcCache = new Map<Uint8Array, any>();
   for (const sh of sheets) await drawSheet(doc, font, srcCache, sh.job, sh.layout, sh.art);

@@ -1,15 +1,17 @@
-// Print package for a job designed in the editor: three files from one click.
-//  1. ACTUAL SIZE  — every side at 100 % on a sheet big enough for the job,
-//     its bleed and the marks (an A4 tri-fold goes on A3), cut + fold marks.
-//  2. FIT TO PRINT — the same sheets scaled so the artwork, bleed and every
-//     mark fit inside the printable area of the chosen paper (A4 with a 3 mm
-//     no-print edge, say); marks and fold positions are recalculated.
-//  3. INFORMATION  — one A4 page: preview, sizes, folds, files, people.
-// The artwork comes in as one vector PDF, one page per side, each page the
-// trim size plus bleed (what the editor's PDF export makes).
+// Print set for a job — the files a print shop needs, from one place (the
+// Print Size Calculator or Export → Print files in the editor):
+//  · ACTUAL SIZE  — every side at 100 % on a sheet big enough for the job,
+//                   its bleed and the marks (an A4 tri-fold goes on A3).
+//  · FIT TO PRINT — the same sheets scaled so artwork, bleed and every mark
+//                   fit inside the printable area of your paper (A4 with a
+//                   3 mm no-print edge); marks and folds recalculated.
+//  · NORMAL       — trim + bleed only, no marks (TrimBox / BleedBox set).
+//  · JOB REPORT   — the one branded document (2 pages).
+// Print files never carry the Magical Touch Design brand.
 
-import { DEFAULT_PRESS, SHEETS, layoutPress, pressPdfPages, verifyPressPdf, type MarkType, type PressLayout, type PressOptions } from './pressSheet.ts';
+import { DEFAULT_PRESS, SHEETS, layoutPress, normalLayout, pressPdfPages, verifyPressPdf, type Artwork, type MarkType, type PressLayout, type PressOptions } from './pressSheet.ts';
 import { sidePressJob, type PrintJobInfo } from './printJob.ts';
+import { jobReportPages, type JobDetails, type ReportFile } from './jobReport.ts';
 
 export interface PackageOptions {
   actualSheet: string;   // 'auto' | sheet id
@@ -17,6 +19,8 @@ export interface PackageOptions {
   margin: number; markType: MarkType;
 }
 export const DEFAULT_PACKAGE: PackageOptions = { actualSheet: 'auto', fitSheet: 'a4', margin: 3, markType: 1 };
+export interface PrintSelection { actual: boolean; fit: boolean; normal: boolean; report: boolean }
+export const ALL_FILES: PrintSelection = { actual: true, fit: true, normal: true, report: true };
 
 type Sheet = { w: number; h: number; name: string };
 const r1 = (n: number) => Math.round(n * 10) / 10;
@@ -33,7 +37,6 @@ export function planSheet(job: PrintJobInfo, mode: 'actual' | 'fit', sheetId: st
   if (mode === 'actual') {
     const list = sheetId === 'auto' ? SHEETS : SHEETS.filter((s) => s.id === sheetId);
     for (const s of list) { const fit = try_(s).find((l) => l.fits); if (fit) return fit; }
-    // Nothing fits: report on the chosen (or the largest) sheet so the warning says what is needed.
     return try_(list[list.length - 1] || SHEETS[SHEETS.length - 1])[0];
   }
   const s = SHEETS.find((x) => x.id === sheetId) || SHEETS[0];
@@ -41,35 +44,86 @@ export function planSheet(job: PrintJobInfo, mode: 'actual' | 'fit', sheetId: st
   return b.scale > a.scale ? b : a;
 }
 
-export interface PackageResult {
-  actual: Uint8Array | null; fit: Uint8Array;
-  actualLayout: PressLayout; fitLayout: PressLayout;
-  warnings: string[];
+const sheetTag = (n: string) => n.replace(/\s*landscape/, '').replace(/[^\w]+/g, '');
+export function fileNames(base: string, actual: PressLayout, fit: PressLayout) {
+  const pct = String(Math.round(fit.scale * 1000) / 10).replace('.', '-');
+  return {
+    actual: `${base}_PRINT_ACTUAL_SIZE_on_${sheetTag(actual.sheet.name)}.pdf`,
+    fit: `${base}_PRINT_FIT_TO_${sheetTag(fit.sheet.name)}${fit.scale < 1 ? `_${pct}pc` : ''}.pdf`,
+    normal: `${base}_PRINT_NORMAL_with_bleed.pdf`,
+    report: `${base}_JOB_REPORT.pdf`,
+    template: `${base}_LAYOUT_TEMPLATE.pdf`,
+  };
 }
 
-export async function buildPrintFiles(job: PrintJobInfo, artPdf: Uint8Array, name: string, o: PackageOptions): Promise<PackageResult> {
+export function describeFile(label: string, file: string, l: PressLayout, job: PrintJobInfo, markType: MarkType | null): ReportFile {
+  return { label, file, sheet: `${l.sheet.name} (${l.sheet.w} × ${l.sheet.h} mm)`, scale: l.scale, printed: `${r1(job.trimW * l.scale)} × ${r1(job.trimH * l.scale)} mm`, marks: markType ? `crop marks type ${markType}${job.folds.length ? ', fold marks' : ''}` : 'bleed only, no marks' };
+}
+
+export interface PrintSetInput {
+  job: PrintJobInfo; base: string; options: PackageOptions; files: PrintSelection;
+  /** Artwork per side (null: no artwork — print files are skipped). */
+  arts: Artwork[] | null;
+  details: JobDetails; date: string; colour: string;
+  previews?: ({ src: string; w: number; h: number } | null)[];
+  logo?: { src: string; w: number; h: number } | null;
+  /** SVG pages → PDF bytes (svgToPdf in the browser). */
+  toPdf: (pages: { svg: string; widthMm: number; heightMm: number }[]) => Promise<Uint8Array>;
+}
+export interface PrintSet {
+  out: { name: string; data: Uint8Array }[];
+  actualLayout: PressLayout; fitLayout: PressLayout; warnings: string[];
+}
+
+export async function makePrintSet(i: PrintSetInput): Promise<PrintSet> {
+  const { job, options: o } = i;
   const actualLayout = planSheet(job, 'actual', o.actualSheet, o);
   const fitLayout = planSheet(job, 'fit', o.fitSheet, o);
+  const names = fileNames(i.base, actualLayout, fitLayout);
   const warnings: string[] = [];
+  const out: PrintSet['out'] = [];
   const sides = job.sides.length;
-  const sheetsFor = (l: PressLayout) => job.sides.map((_, i) => {
-    const sj = sidePressJob(job, i, name);
-    // Same sheet, scale and position for every side; only the folds (mirrored) differ.
+  const sheetsFor = (l: PressLayout) => job.sides.map((_, s) => {
+    const sj = sidePressJob(job, s, i.base);
     const ls = layoutPress(sj, { ...DEFAULT_PRESS, margin: o.margin, markType: o.markType, sheet: l.sheet, mode: l.scale < 1 ? 'fit' : 'actual' });
-    return { job: sj, layout: ls, art: { kind: 'pdf' as const, bytes: artPdf, page: i } };
+    return { job: sj, layout: ls, art: i.arts?.[s] ?? null };
   });
-  let actual: Uint8Array | null = null;
-  if (actualLayout.fits) {
-    actual = await pressPdfPages(sheetsFor(actualLayout), `${name} — actual size`);
-    const v = await verifyPressPdf(actual, actualLayout, sides);
-    if (!v.ok) throw new Error(`Actual-size file failed its check: ${v.issues.join(' ')}`);
-  } else warnings.push(...actualLayout.warnings);
-  const fit = await pressPdfPages(sheetsFor(fitLayout), `${name} — fit to print`);
-  const v2 = await verifyPressPdf(fit, fitLayout, sides);
-  if (!v2.ok) throw new Error(`Fit-to-print file failed its check: ${v2.issues.join(' ')}`);
-  return { actual, fit, actualLayout, fitLayout, warnings };
-}
-
-export function describeFile(label: string, file: string, l: PressLayout, job: PrintJobInfo, markType: MarkType) {
-  return { label, file, sheet: `${l.sheet.name} (${l.sheet.w} × ${l.sheet.h} mm)`, scale: l.scale, printed: `${r1(job.trimW * l.scale)} × ${r1(job.trimH * l.scale)} mm`, marks: `crop marks type ${markType}${job.folds.length ? ', green fold marks' : ''}` };
+  const filesForReport: ReportFile[] = [];
+  if (i.arts) {
+    if (i.files.actual) {
+      if (actualLayout.fits) {
+        const b = await pressPdfPages(sheetsFor(actualLayout), `${i.base} — actual size`);
+        const v = await verifyPressPdf(b, actualLayout, sides);
+        if (!v.ok) throw new Error(`Actual-size file failed its check: ${v.issues.join(' ')}`);
+        out.push({ name: names.actual, data: b });
+        filesForReport.push(describeFile('Actual size', names.actual, actualLayout, job, o.markType));
+      } else warnings.push(...actualLayout.warnings);
+    }
+    if (i.files.fit) {
+      const b = await pressPdfPages(sheetsFor(fitLayout), `${i.base} — fit to print`);
+      const v = await verifyPressPdf(b, fitLayout, sides);
+      if (!v.ok) throw new Error(`Fit-to-print file failed its check: ${v.issues.join(' ')}`);
+      out.push({ name: names.fit, data: b });
+      filesForReport.push(describeFile('Fit to print', names.fit, fitLayout, job, o.markType));
+    }
+    if (i.files.normal) {
+      const nl = normalLayout(sidePressJob(job, 0, i.base));
+      const b = await pressPdfPages(job.sides.map((_, s) => ({ job: sidePressJob(job, s, i.base), layout: nl, art: i.arts![s] ?? null })), `${i.base} — normal`);
+      const v = await verifyPressPdf(b, nl, sides);
+      if (!v.ok) throw new Error(`Normal file failed its check: ${v.issues.join(' ')}`);
+      out.push({ name: names.normal, data: b });
+      filesForReport.push(describeFile('Normal (bleed, no marks)', names.normal, nl, job, null));
+    }
+  }
+  if (i.files.report) {
+    // The report lists the print files of this job even when only the report is downloaded.
+    const listed = filesForReport.length ? filesForReport : [
+      ...(actualLayout.fits ? [describeFile('Actual size', names.actual, actualLayout, job, o.markType)] : []),
+      describeFile('Fit to print', names.fit, fitLayout, job, o.markType),
+      describeFile('Normal (bleed, no marks)', names.normal, normalLayout(sidePressJob(job, 0, i.base)), job, null),
+    ];
+    const pages = jobReportPages({ job, details: i.details, date: i.date, previews: i.previews || [], files: listed, margin: o.margin, markType: o.markType, colour: i.colour, logo: i.logo });
+    out.push({ name: names.report, data: await i.toPdf(pages.map((svg) => ({ svg, widthMm: 297, heightMm: 210 }))) });
+  }
+  return { out, actualLayout, fitLayout, warnings };
 }
