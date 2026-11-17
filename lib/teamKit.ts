@@ -250,7 +250,12 @@ function textMarkup(text: string, glyphs: Glyphs, kit: KitDesign, color: string,
     return `${kit.outlineMm > 0 ? `<path d="${d}" transform="${t}" fill="${kit.outlineColor}" stroke="${kit.outlineColor}" stroke-width="${r2(ow / s)}" stroke-linejoin="round"/>` : ''}<path d="${d}" transform="${t}" fill="${color}"/>`;
   }
   // Live (retypeable) text in the chosen font — also the fallback while outlines are being made.
-  return `<text x="${r2(cx)}" y="${r2(cy)}" font-family="'${esc(kit.font)}', sans-serif" font-weight="${kit.fontWeight}" font-size="${r2(h * 1.35)}" text-anchor="middle" dominant-baseline="central" fill="${color}"${kit.outlineMm > 0 ? ` stroke="${kit.outlineColor}" stroke-width="${r2(ow)}" paint-order="stroke"` : ''}>${esc(text)}</text>`;
+  // Fit live text to the same width limit as outlines (estimated advance ≈ 0.62 em per character).
+  let fs = h * 1.35;
+  const est = text.length * fs * 0.62;
+  if (est > maxW) fs = Math.max(h * 0.4, fs * (maxW / est));
+  const fit = text.length * fs * 0.62 > maxW * 0.98 ? ` textLength="${r2(maxW * 0.98)}" lengthAdjust="spacingAndGlyphs"` : '';
+  return `<text x="${r2(cx)}" y="${r2(cy)}" font-family="'${esc(kit.font)}', sans-serif" font-weight="${kit.fontWeight}" font-size="${r2(fs)}" text-anchor="middle" dominant-baseline="central"${fit} fill="${color}"${kit.outlineMm > 0 ? ` stroke="${kit.outlineColor}" stroke-width="${r2(ow)}" paint-order="stroke"` : ''}>${esc(text)}</text>`;
 }
 
 function patternPaths(p: PatternSettings, w: number, h: number, mmPerTile: number, k: number): string {

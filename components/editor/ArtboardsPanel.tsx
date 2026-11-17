@@ -1,4 +1,5 @@
 'use client';
+import { LAYOUT_PRESETS, presetOf } from '@/lib/editor/pageLayout';
 
 import { useState } from 'react';
 import { Plus, Trash2, Copy, ScanSearch, ChevronUp, ChevronDown, Download, FileDown, ClipboardCheck, ChevronRight, Lock, Unlock } from 'lucide-react';
@@ -378,6 +379,32 @@ export function ArtboardsPanel({
                 onChange={(next) => onUpdatePrint(active.id, { margins: next })}
                 onToggleLinked={() => onUpdatePrint(active.id, { marginsLinked: active.print.marginsLinked === false })}
               />
+              <div role="group" aria-label="Page layout">
+                <span className="text-[10px] text-mt-muted block mb-1">Page layout</span>
+                <div className="grid grid-cols-3 gap-1">
+                  {LAYOUT_PRESETS.map((p) => {
+                    const on = presetOf(active.print) === p.id;
+                    return (
+                      <button key={p.id} type="button" title={p.label} aria-label={p.label} aria-pressed={on}
+                        onClick={() => {
+                          const mmPx = 96 / 25.4;
+                          onUpdatePrint(active.id, p.fold
+                            ? { columns: p.cols, foldColumns: true, gutter: Math.max(active.print.gutter ?? 0, 10 * mmPx), margins: active.print.margins && (active.print.margins.left || active.print.margins.top) ? active.print.margins : { top: 5 * mmPx, right: 5 * mmPx, bottom: 5 * mmPx, left: 5 * mmPx } }
+                            : { columns: p.cols, foldColumns: false });
+                        }}
+                        className={`rounded-md border px-1 py-1.5 text-[10.5px] leading-tight ${on ? 'mt-active-blue text-mt-ink' : 'border-mt-border text-mt-muted hover:bg-mt-surface2'}`}>
+                        <svg viewBox="0 0 30 18" className="mx-auto mb-0.5 h-4 w-7" aria-hidden><rect x="0.5" y="0.5" width="29" height="17" fill="none" stroke="currentColor" />
+                          {Array.from({ length: p.cols - 1 }, (_, i) => <line key={i} x1={(30 * (i + 1)) / p.cols} y1="0" x2={(30 * (i + 1)) / p.cols} y2="18" stroke={p.fold ? '#00A651' : 'currentColor'} strokeDasharray={p.fold ? '2 1.5' : undefined} />)}
+                        </svg>
+                        {p.fold ? `${p.cols} folded` : p.cols === 1 ? 'None' : `${p.cols} cols`}
+                      </button>
+                    );
+                  })}
+                </div>
+                {active.print.foldColumns && (active.print.columns || 1) > 1 && (
+                  <p className="mt-1.5 text-[10.5px] text-mt-muted leading-snug">Folds on every panel edge (green). Keep text inside the violet panels. Export → <b>Print files</b> adds fold marks.</p>
+                )}
+              </div>
               <div className="grid grid-cols-2 gap-2">
                 <label className="block">
                   <span className="text-[10px] text-mt-muted block mb-0.5">Columns</span>

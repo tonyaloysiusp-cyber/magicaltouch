@@ -280,7 +280,8 @@ export function TextileStudio({ mode = 'pro', pick, embedded, onForeign, openReq
   };
   const makePrint = async () => {
     const r = await printSheets();
-    return [{ name: `${base}-PRINT.pdf`, data: await pdfBytes(r.pages.map((pg) => ({ svg: pg.svg, widthMm: pg.width, heightMm: pg.height })), fonts) }];
+    const { printPdfCmyk } = await import('@/lib/print/printDownload');
+    return [{ name: `${base}-PRINT-CMYK.pdf`, data: await printPdfCmyk(await pdfBytes(r.pages.map((pg) => ({ svg: pg.svg, widthMm: pg.width, heightMm: pg.height })), fonts)) }];
   };
   const makePrintSvg = async () => {
     const r = await printSheets();
@@ -356,7 +357,7 @@ export function TextileStudio({ mode = 'pro', pick, embedded, onForeign, openReq
   const exportItems: ExportItem[] = [
     { id: 'technical', group: 'factory', title: 'Technical production file', hint: 'One branded PDF: sketch, measurements, pieces, colours, artwork, order' + (p.embroidery?.objects?.length ? ', embroidery' : ''), make: makeTech },
     ...(!standard(p.type) ? [{ id: 'cutting', group: 'factory' as const, title: 'Cutting pattern', hint: `Every piece at real size, ${p.seam ?? 10} mm seam allowance, grain, notches`, make: makeCut }] : []),
-    { id: 'print', group: 'printer', title: 'Ready-to-print PDF', hint: `Real-size pieces, ${p.bleed} mm bleed, cut lines, nested on ${p.rollW} mm — no branding`, make: makePrint },
+    { id: 'print', group: 'printer', title: 'Ready-to-print PDF', hint: `Real-size pieces, ${p.bleed} mm bleed, cut lines, ${p.rollW} mm roll · CMYK · no branding`, make: makePrint },
     { id: 'print-svg', group: 'printer', title: 'Ready-to-print SVG', hint: 'Editable vector pages in mm', make: makePrintSvg, pro: true, inPackage: false },
     { id: 'sketch', group: 'factory', title: 'Flat sketch PNG', hint: 'Front and back flat drawing', make: makeSketch, pro: true, inPackage: false },
     ...(p.embroidery?.objects?.length ? [{ id: 'embroidery', group: 'embroidery' as const, title: 'Embroidery machine files', hint: 'DST (Tajima, checked) + EXP (Melco)', make: makeEmb }] : []),
@@ -397,19 +398,20 @@ export function TextileStudio({ mode = 'pro', pick, embedded, onForeign, openReq
   const btn = 'h-10 px-4 rounded-full border border-mt-border text-[13.5px] font-semibold inline-flex items-center gap-2 hover:bg-mt-surface2 disabled:opacity-50';
 
   return (
-    <div className="rounded-3xl border border-mt-border bg-mt-surface p-4 sm:p-6 space-y-6" aria-label="Textile Studio">
+    <div className="rounded-2xl border border-mt-border bg-mt-surface p-3 sm:p-5 space-y-6" aria-label="Textile Studio">
       {/* Project bar */}
-      <div className="flex flex-wrap items-center gap-2">
-        <input value={p.name} onChange={(e) => set({ name: e.target.value })} aria-label="Project name" className="h-10 min-w-[200px] flex-1 rounded-xl border border-mt-border bg-mt-bg px-3 text-[15px] font-semibold" />
-        <span className="inline-flex rounded-full border border-mt-border">
-          <button type="button" onClick={undo} disabled={!hist.current.past.length} aria-label="Undo" title="Undo (Ctrl+Z)" className="h-10 w-10 inline-flex items-center justify-center rounded-l-full hover:bg-mt-surface2 disabled:opacity-40"><Undo2 size={16} /></button>
-          <button type="button" onClick={redo} disabled={!hist.current.future.length} aria-label="Redo" title="Redo (Ctrl+Shift+Z)" className="h-10 w-10 inline-flex items-center justify-center rounded-r-full border-l border-mt-border hover:bg-mt-surface2 disabled:opacity-40"><Redo2 size={16} /></button>
+      <div role="toolbar" aria-label="Project" className="-mx-1 -mt-1 flex flex-wrap items-center gap-1 rounded-xl border border-mt-border bg-mt-surface px-2 py-1.5">
+        <input value={p.name} onChange={(e) => set({ name: e.target.value })} aria-label="Project name" className="h-9 min-w-[200px] flex-1 rounded-lg bg-transparent px-2 text-[14.5px] font-semibold focus:outline-none focus:bg-mt-bg" />
+        <span aria-hidden className="mx-1 h-6 w-px bg-mt-border" /><span className="inline-flex">
+          <button type="button" onClick={undo} disabled={!hist.current.past.length} aria-label="Undo" title="Undo (Ctrl+Z)" className="h-9 w-9 inline-flex items-center justify-center rounded-lg hover:bg-mt-surface2 disabled:opacity-40"><Undo2 size={16} /></button>
+          <button type="button" onClick={redo} disabled={!hist.current.future.length} aria-label="Redo" title="Redo (Ctrl+Shift+Z)" className="h-9 w-9 inline-flex items-center justify-center rounded-lg hover:bg-mt-surface2 disabled:opacity-40"><Redo2 size={16} /></button>
         </span>
-        <button type="button" className={btn} onClick={() => saveProject(false)}><Save size={15} /> Save project</button>
-        <button type="button" className={btn} onClick={() => saveProject(true)}><Save size={15} /> Save as</button>
-        <button type="button" className={btn} onClick={() => fileRef.current?.click()}><FileUp size={15} /> Open</button>
-        <button type="button" className={btn} onClick={() => newProject(true)}>New (same garment)</button>
-        <button type="button" className={btn} onClick={() => newProject(false)}>New empty</button>
+        <span aria-hidden className="mx-1 h-6 w-px bg-mt-border" />
+        <button type="button" className="h-9 px-3 rounded-lg text-[13px] font-semibold inline-flex items-center gap-1.5 text-mt-ink hover:bg-mt-surface2 disabled:opacity-50" onClick={() => saveProject(false)}><Save size={15} /> Save project</button>
+        <button type="button" className="h-9 px-3 rounded-lg text-[13px] font-semibold inline-flex items-center gap-1.5 text-mt-ink hover:bg-mt-surface2 disabled:opacity-50" onClick={() => saveProject(true)}><Save size={15} /> Save as</button>
+        <button type="button" className="h-9 px-3 rounded-lg text-[13px] font-semibold inline-flex items-center gap-1.5 text-mt-ink hover:bg-mt-surface2 disabled:opacity-50" onClick={() => fileRef.current?.click()}><FileUp size={15} /> Open</button>
+        <button type="button" className="h-9 px-3 rounded-lg text-[13px] font-semibold inline-flex items-center gap-1.5 text-mt-ink hover:bg-mt-surface2 disabled:opacity-50" onClick={() => newProject(true)}>New (same garment)</button>
+        <button type="button" className="h-9 px-3 rounded-lg text-[13px] font-semibold inline-flex items-center gap-1.5 text-mt-ink hover:bg-mt-surface2 disabled:opacity-50" onClick={() => newProject(false)}>New empty</button>
         <input ref={fileRef} type="file" hidden accept={TOOL_FILE_ACCEPT} onChange={(e) => { openProject(e.target.files?.[0]); e.target.value = ''; }} />
       </div>
 

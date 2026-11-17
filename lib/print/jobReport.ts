@@ -57,25 +57,43 @@ const T = (x: number, y: number, s: string, size = 2.8, o: { bold?: boolean; col
   `<text x="${r2(x)}" y="${r2(y)}" font-family="Helvetica" font-size="${size}"${o.bold ? ' font-weight="700"' : ''} fill="${o.color || INK}"${o.anchor ? ` text-anchor="${o.anchor}"` : ''}>${esc(s)}</text>`;
 const label = (x: number, y: number, s: string) => T(x, y, s.toUpperCase(), 2.3, { bold: true, color: ACCENT });
 
+/** Job number from the date and job name: stable for the same job on the same day. */
+export function jobNumber(d: { date: string; details: { jobName: string } }): string {
+  let h = 0; for (const ch of `${d.details.jobName}|${d.date}`) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return `MTD-${(h % 900000 + 100000)}`;
+}
+
+/** Brand header band: ink bar with the logo on a white tile, document type, title, job number and date. */
 function header(d: JobReportData, title: string): string {
   const cols = ['#F472B6', '#A78BFA', '#38BDF8', '#4ADE80', '#FACC15'];
-  let g = cols.map((c, i) => `<rect x="${r2((W / cols.length) * i)}" y="0" width="${r2(W / cols.length + 0.2)}" height="1.4" fill="${c}"/>`).join('');
+  let g = `<rect x="0" y="0" width="${W}" height="20" fill="${INK}"/>`;
+  g += cols.map((c, i) => `<rect x="${r2((W / cols.length) * i)}" y="20" width="${r2(W / cols.length + 0.2)}" height="1.1" fill="${c}"/>`).join('');
   let x = M;
-  if (d.logo) { const lh = 7.5, lw = lh * (d.logo.w / d.logo.h); g += `<image x="${M}" y="7" width="${r2(lw)}" height="${lh}" href="${d.logo.src}"/>`; x = M + lw + 6; }
-  else { g += T(M, 12.5, 'MAGICAL TOUCH DESIGN', 3.6, { bold: true }); x = M + 52; }
-  g += `<line x1="${r2(x - 3)}" y1="7" x2="${r2(x - 3)}" y2="15" stroke="${LINE}" stroke-width="0.3"/>`;
-  g += T(x, 10.5, 'JOB REPORT', 2.4, { bold: true, color: ACCENT });
-  g += T(x, 15, title, 3.4, { bold: true });
-  g += T(W - M, 10.5, d.date, 2.6, { color: MUTED, anchor: 'end' });
-  g += T(W - M, 15, d.details.jobName || 'Untitled job', 2.6, { color: MUTED, anchor: 'end' });
-  g += `<line x1="${M}" y1="20" x2="${W - M}" y2="20" stroke="${LINE}" stroke-width="0.3"/>`;
+  if (d.logo) { const lh = 7, lw = lh * (d.logo.w / d.logo.h); g += `<rect x="${M - 2.5}" y="4.5" width="${r2(lw + 5)}" height="11" rx="1.6" fill="#FFFFFF"/><image x="${M}" y="6.5" width="${r2(lw)}" height="${lh}" href="${d.logo.src}"/>`; x = M + lw + 8; }
+  else { g += T(M, 12.5, 'MAGICAL TOUCH DESIGN', 3.6, { bold: true, color: '#FFFFFF' }); x = M + 54; }
+  g += T(x, 9.6, 'JOB REPORT', 2.3, { bold: true, color: '#93C5FD' });
+  g += T(x, 15, title, 3.6, { bold: true, color: '#FFFFFF' });
+  g += T(W - M, 9.6, `${jobNumber(d)} · ${d.date}`, 2.5, { color: '#D4D4D8', anchor: 'end' });
+  g += T(W - M, 15, d.details.jobName || 'Untitled job', 2.9, { bold: true, color: '#FFFFFF', anchor: 'end' });
   return g;
 }
+/** Footer with a small brand line (a quiet promotion, never on the artwork). */
 function footer(page: number, pages: number): string {
   return `<line x1="${M}" y1="${H - 11}" x2="${W - M}" y2="${H - 11}" stroke="${LINE}" stroke-width="0.3"/>`
-    + T(M, H - 6.5, 'Magical Touch Design · www.magicaltouchdesign.com', 2.3, { bold: true, color: MUTED })
-    + T(W / 2, H - 6.5, 'Technical document — not a print file', 2.3, { color: FAINT, anchor: 'middle' })
+    + T(M, H - 6.5, 'Magical Touch Design', 2.3, { bold: true, color: INK })
+    + T(M + 30, H - 6.5, 'Free design, print & textile tools · www.magicaltouchdesign.com', 2.3, { color: MUTED })
+    + T(W / 2 + 40, H - 6.5, 'Technical document — not a print file', 2.2, { color: FAINT, anchor: 'middle' })
     + T(W - M, H - 6.5, `Page ${page} of ${pages}`, 2.3, { color: MUTED, anchor: 'end' });
+}
+
+/** A small promotion card (bottom of the last page). */
+export function promoCard(x: number, y: number, w: number): string {
+  const h = 17;
+  return `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="2" fill="#FFFFFF" stroke="${LINE}" stroke-width="0.3"/>`
+    + `<rect x="${x}" y="${y}" width="1.6" height="${h}" rx="0.8" fill="${ACCENT}"/>`
+    + T(x + 5, y + 5.6, 'Design it, print it, wear it — with Magical Touch Design', 2.5, { bold: true })
+    + T(x + 5, y + 9.8, 'Design editor · Print size & binding · Textile studio · Embroidery · Passport photos', 2.15, { color: MUTED })
+    + T(x + 5, y + 13.6, 'www.magicaltouchdesign.com', 2.2, { bold: true, color: ACCENT });
 }
 
 /** Rows of "label  value" with wrapping; returns the new y. */
@@ -187,7 +205,7 @@ export function jobReportPages(d: JobReportData): string[] {
   for (const s of [...PRODUCTION_NOTES, ...(det.notes ? [det.notes] : [])]) { if (y > 188) break; const ls = wrap(s, 92); ls.forEach((ln, i) => { p2.s += T(M + (i ? 3 : 0), y + i * 3.3, (i ? '' : '•  ') + ln, 2.6, { color: s === det.notes ? INK : MUTED }); }); y += ls.length * 3.3 + 1.4; }
   // Approval
   const AX = 196;
-  p2.s += `<rect x="${AX - 6}" y="24" width="${W - M - AX + 6}" height="${H - 24 - 16}" fill="${TINT}"/>`;
+  p2.s += `<rect x="${AX - 6}" y="24" width="${W - M - AX + 6}" height="${H - 24 - 14}" fill="${TINT}"/>`;
   p2.s += label(AX, 31, 'Approval');
   let ay = 39;
   for (const a of APPROVALS) {
@@ -200,6 +218,7 @@ export function jobReportPages(d: JobReportData): string[] {
     ay += 11;
   }
   wrap('Printing starts after this report is approved. Approval covers the artwork, sizes, folds, paper, colours and quantity listed here.', 44).forEach((ln, i) => { p2.s += T(AX, ay + 2 + i * 3.1, ln, 2.3, { color: MUTED }); });
+  p2.s += promoCard(AX - 2, H - 16 - 22, W - M - AX + 2);
 
   const pages = [p1.s, p2.s];
   return pages.map((g, i) => `<svg xmlns="http://www.w3.org/2000/svg" width="${W}mm" height="${H}mm" viewBox="0 0 ${W} ${H}"><rect width="${W}" height="${H}" fill="#FFFFFF"/>${g}${footer(i + 1, pages.length)}</svg>`);

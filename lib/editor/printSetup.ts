@@ -39,6 +39,8 @@ export interface ArtboardPrintSettings {
   marginsLinked?: boolean;
   columns?: number;
   gutter?: number; // px between columns
+  /** Columns are folding panels (bi-fold / tri-fold): equal panels, a fold on every panel edge. */
+  foldColumns?: boolean;
   /** Print job from the Print Size Calculator (folds, panels, sides) and which side this page is. */
   job?: import('../print/printJob').PrintJobInfo;
   jobSide?: number;

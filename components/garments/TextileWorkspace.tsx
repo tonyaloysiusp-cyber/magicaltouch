@@ -11,7 +11,7 @@
 // resetting them never deletes a design.
 
 import { useEffect, useState } from 'react';
-import { Settings2, Shirt } from 'lucide-react';
+import { Settings2 } from 'lucide-react';
 import { GarmentDesigner } from './GarmentDesigner';
 import { TextileStudio } from './TextileStudio';
 import type { GarmentType } from '@/lib/textile/draft';
@@ -92,7 +92,7 @@ export function TextileWorkspace({ initial }: { initial?: Product['id'] }) {
   return (
     <div className="space-y-4" aria-label="Textile Design Studio">
       <div className="flex flex-wrap items-center gap-2">
-        <p className="text-[15px] font-semibold flex items-center gap-2"><Shirt size={18} className="text-mt-accent" /> Textile Design Studio</p>
+        <p className="text-[13px] text-mt-muted"><span className="font-semibold text-mt-ink">{prod.label}</span> · {prod.hint}</p>
         <span className="flex-1" />
         <div role="radiogroup" aria-label="Workspace mode" className="inline-flex rounded-full border border-mt-border bg-mt-surface p-1">
           <button type="button" role="radio" aria-checked={ws.mode === 'simple'} onClick={() => setWs((w) => ({ ...w, mode: 'simple' }))} className={chip(ws.mode === 'simple')} title="The essentials: templates, colours, patterns, logo, text, names and numbers, embroidery, mockup, simple export">Simple</button>
@@ -116,12 +116,13 @@ export function TextileWorkspace({ initial }: { initial?: Product['id'] }) {
         </div>
       </div>
 
-      <div role="radiogroup" aria-label="Product" className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+      {/* Garment library strip — like a CAD presets bar: pick what you are designing. */}
+      <div role="radiogroup" aria-label="Product" className="flex gap-2 overflow-x-auto rounded-2xl border border-mt-border bg-mt-surface p-2">
         {PRODUCTS.map((p) => (
-          <button key={p.id} type="button" role="radio" aria-label={`Product: ${p.label}`} aria-checked={ws.product === p.id} onClick={() => choose(p.id)}
-            className={`rounded-2xl border p-3 text-left ${ws.product === p.id ? 'border-mt-ink ring-2 ring-mt-accent/30 bg-mt-accentsoft' : 'border-mt-border hover:bg-mt-surface2'}`}>
-            <p className="text-[13.5px] font-semibold">{p.label}</p>
-            <p className="text-[11.5px] text-mt-muted">{p.hint}</p>
+          <button key={p.id} type="button" role="radio" aria-label={`Product: ${p.label}`} aria-checked={ws.product === p.id} onClick={() => choose(p.id)} title={p.hint}
+            className={`group shrink-0 w-[118px] rounded-xl border px-2 py-2 text-center transition-colors ${ws.product === p.id ? 'border-mt-ink bg-mt-surface2' : 'border-transparent hover:border-mt-border hover:bg-mt-surface2'}`}>
+            <GarmentGlyph id={p.id} on={ws.product === p.id} />
+            <span className="mt-1 block text-[12px] font-semibold leading-tight">{p.label}</span>
           </button>
         ))}
       </div>
@@ -133,4 +134,29 @@ export function TextileWorkspace({ initial }: { initial?: Product['id'] }) {
       {note && <p role="status" className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[90] rounded-full bg-mt-ink px-4 py-2 text-[13px] text-mt-bg shadow-lg">{note}</p>}
     </div>
   );
+}
+
+/** Small line drawing of each product for the library strip (ink, accent when selected). */
+function GarmentGlyph({ id, on }: { id: string; on: boolean }) {
+  const ink = 'currentColor', acc = on ? '#3B82C4' : 'currentColor';
+  const shirt = (neck: 'round' | 'v' | 'polo') => (
+    <>
+      <path d="M14 8 L22 5 Q28 9 34 5 L42 8 L50 18 L44 23 L40 18 L40 46 L16 46 L16 18 L12 23 L6 18 Z" fill="none" stroke={ink} strokeWidth="1.8" strokeLinejoin="round" />
+      {neck === 'round' && <path d="M22 5 Q28 12 34 5" fill="none" stroke={acc} strokeWidth="2" />}
+      {neck === 'v' && <path d="M22 5 L28 14 L34 5" fill="none" stroke={acc} strokeWidth="2" />}
+      {neck === 'polo' && <><path d="M22 5 L26 11 L28 8 L30 11 L34 5" fill="none" stroke={acc} strokeWidth="2" /><path d="M28 8 V20" stroke={acc} strokeWidth="1.6" /></>}
+    </>
+  );
+  const shapes: Record<string, any> = {
+    jersey: <>{shirt('round')}<text x="28" y="35" fontSize="10" fontWeight="700" textAnchor="middle" fill={acc}>07</text></>,
+    'jersey-v': <>{shirt('v')}<text x="28" y="35" fontSize="10" fontWeight="700" textAnchor="middle" fill={acc}>10</text></>,
+    polo: shirt('polo'),
+    tshirt: shirt('round'),
+    tee: <>{shirt('round')}<path d="M18 30 H38" stroke={acc} strokeWidth="1.4" strokeDasharray="2 2" /></>,
+    kurta: <><path d="M20 4 L25 3 Q28 7 31 3 L36 4 L44 14 L39 17 L37 13 L39 48 L17 48 L19 13 L17 17 L12 14 Z" fill="none" stroke={ink} strokeWidth="1.8" strokeLinejoin="round" /><path d="M28 6 V22" stroke={acc} strokeWidth="1.8" /><path d="M19 40 H37" stroke={acc} strokeWidth="1.4" /></>,
+    chudidar: <><path d="M18 4 H38 L36 48 H30 L28 18 L26 48 H20 Z" fill="none" stroke={ink} strokeWidth="1.8" strokeLinejoin="round" /><path d="M20 38 Q23 36 26 38 M30 38 Q33 36 36 38 M20 42 Q23 40 26 42 M30 42 Q33 40 36 42" fill="none" stroke={acc} strokeWidth="1.2" /></>,
+    dupatta: <><path d="M10 10 Q28 2 46 10 L42 46 Q28 40 14 46 Z" fill="none" stroke={ink} strokeWidth="1.8" strokeLinejoin="round" /><path d="M14 40 Q28 34 42 40" fill="none" stroke={acc} strokeWidth="2" /></>,
+    fabric: <><rect x="8" y="8" width="40" height="38" rx="2" fill="none" stroke={ink} strokeWidth="1.8" />{[16, 28, 40].map((x) => [18, 30].map((y) => <circle key={`${x}-${y}`} cx={x} cy={y} r="3" fill={acc} />))}<path d="M8 40 H48" stroke={acc} strokeWidth="1.6" /></>,
+  };
+  return <svg viewBox="0 0 56 52" width="56" height="52" aria-hidden className={`mx-auto ${on ? 'text-mt-ink' : 'text-mt-muted group-hover:text-mt-ink'}`}>{shapes[id] || shirt('round')}</svg>;
 }

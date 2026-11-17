@@ -7,10 +7,10 @@
 // pieces). Downloads are real vectors: one print-ready PDF with every
 // selected garment nested on the roll, plus SVG and per-player files.
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, useDeferredValue } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { AlertTriangle, CheckCircle2, PenTool, Download, FileUp, FolderOpen, Loader2, MousePointerClick, Plus, Redo2, RotateCcw, Save, Shirt, Sparkles, Trash2, Undo2, Upload, X, ZoomIn, ZoomOut } from 'lucide-react';
+import { AlertTriangle, Image as ImageIcon, Printer, Type, Users, CheckCircle2, PenTool, Download, FileUp, FolderOpen, Loader2, MousePointerClick, Plus, Redo2, RotateCcw, Save, Shirt, Sparkles, Trash2, Undo2, Upload, X, ZoomIn, ZoomOut } from 'lucide-react';
 import { DEFAULT_PATTERN, PatternSettings, svgDataUrl, sheetPlacements, motifPath, layout } from '@/lib/patterns';
 import { SIZES, ROLLS } from '@/lib/garments';
 import {
@@ -327,7 +327,8 @@ export function GarmentDesigner({ kind: initialKind = 'jersey', mode = 'pro', pi
   const pattern = useMemo<PatternSettings>(() => (patOwn ? pat : { ...pat, colors: [patColor] }), [pat, patColor, patOwn]);
 
   // Letter outlines for names, numbers and the front text, in the chosen font.
-  const texts = useMemo(() => glyphTexts(players, kit), [players, kit]);
+  const playersV = useDeferredValue(players);
+  const texts = useMemo(() => glyphTexts(playersV, kit), [playersV, kit]);
   useEffect(() => {
     let live = true;
     const t = setTimeout(async () => {
@@ -353,9 +354,11 @@ export function GarmentDesigner({ kind: initialKind = 'jersey', mode = 'pro', pi
   const [studioOpen, setStudioOpen] = useState(false);
   const [artFontTick, setArtFontTick] = useState(0);
   useEffect(() => { if (!kit.art?.length) return; let live = true; ensureFonts(artFonts(kit.art)).then(() => { if (live) setArtFontTick((t) => t + 1); }); return () => { live = false; }; }, [kit.art]);
-  const preview = useMemo(() => (view === 'garment' ? kitMockupSvg(kit, pattern, player, glyphs, side, { selected: selEl }) : kitPreviewSvg(kit, pattern, player, glyphs)),
+  // Typing stays instant: the (heavy) garment drawing follows the latest values a moment later.
+  const kitV = useDeferredValue(kit), playerV = useDeferredValue(player), patternV = useDeferredValue(pattern);
+  const preview = useMemo(() => (view === 'garment' ? kitMockupSvg(kitV, patternV, playerV, glyphs, side, { selected: selEl }) : kitPreviewSvg(kitV, patternV, playerV, glyphs)),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [view, side, kit, pattern, player, glyphs, selEl, artFontTick]);
+    [view, side, kitV, patternV, playerV, glyphs, selEl, artFontTick]);
 
   // Picker thumbnails only change with the style / colours they show.
   const starterThumbs = useMemo(() => Object.fromEntries(STARTERS.map((st) => [st.name, svgDataUrl(kitMockupSvg({ ...kitFor(kind), style: kit.style, ...st.o, personalise: false, frontText: '', teamLogo: null, sponsorLogo: null, patternOn: 'none' }, DEFAULT_PATTERN, null, {}, 'front'))])), [kind, kit.style]);
@@ -442,21 +445,44 @@ export function GarmentDesigner({ kind: initialKind = 'jersey', mode = 'pro', pi
     if (errors.length) { setStep('players'); throw new Error('Fix the rows marked in red first.'); }
     if (!list.length) throw new Error('Choose at least one row to print.');
   };
+  // Every name, number and front text as real letter outlines before anything is exported —
+  // the print file never depends on a font being installed at the printer.
+  const ensureGlyphs = async (): Promise<Glyphs> => {
+    if (textMode === 'live') return glyphs;
+    const out: Glyphs = { ...glyphs };
+    const failed: string[] = [];
+    for (const t of texts) {
+      if (out[t]) continue;
+      const key = `${kit.font}|${kit.fontWeight}|${t}`;
+      let d = cache.current.get(key);
+      if (!d) { try { d = await textOutline(t, { family: kit.font, weight: kit.fontWeight, italic: false }); } catch { d = null; } cache.current.set(key, d); }
+      if (d) out[t] = d; else failed.push(t);
+    }
+    if (failed.length) throw new Error(`The font “${kit.font}” could not be turned into outlines for ${failed.slice(0, 3).join(', ')}${failed.length > 3 ? '…' : ''}. Check your connection, or choose another font.`);
+    setGlyphs(out);
+    return out;
+  };
   const sheetsNow = async () => {
     checkList(); await artReady();
-    const r = rosterSheets(kit, pattern, list, glyphs, sheetOpts);
+    const g = await ensureGlyphs();
+    const r = rosterSheets(kit, pattern, list, g, sheetOpts);
     if (r.overlaps) throw new Error(`${r.overlaps} pieces overlap on the sheet — not exported. Try the other layout or a wider roll.`);
     return r;
   };
-  const mkPrint = async () => { const r = await sheetsNow(); return [{ name: `${fileBase}-PRINT.pdf`, data: await pdfOf(r.pages.map((pg) => ({ svg: pg.svg, widthMm: pg.width, heightMm: pg.height })), pdfFonts) }]; };
+  const mkPrint = async () => {
+    const r = await sheetsNow();
+    const { printPdfCmyk } = await import('@/lib/print/printDownload');
+    return [{ name: `${fileBase}-PRINT-CMYK.pdf`, data: await printPdfCmyk(await pdfOf(r.pages.map((pg) => ({ svg: pg.svg, widthMm: pg.width, heightMm: pg.height })), pdfFonts)) }];
+  };
   const mkPrintSvg = async () => { const r = await sheetsNow(); const enc = new TextEncoder(); return r.pages.map((pg, i) => ({ name: r.pages.length === 1 ? `${fileBase}-PRINT.svg` : `${fileBase}-PRINT-page-${i + 1}.svg`, data: enc.encode(pg.svg) })); };
   const mkEach = async () => {
     checkList(); await artReady();
+    const g = await ensureGlyphs();
     const { svgToPdfBlob } = await import('@/lib/svgToPdf');
     const enc = new TextEncoder(); const parts: { name: string; data: Uint8Array }[] = [];
     for (let i = 0; i < picked.length; i++) {
       const pl = personal ? picked[i] : { ...picked[i], name: '', number: '' };
-      const f = playerPrintSvg(kit, pattern, pl, glyphs, { rollW, bleed, cutLines: true, textMode });
+      const f = playerPrintSvg(kit, pattern, pl, g, { rollW, bleed, cutLines: true, textMode });
       parts.push({ name: `SVG/${base(picked[i], i)}.svg`, data: enc.encode(f.svg) });
       parts.push({ name: `PDF/${base(picked[i], i)}.pdf`, data: await toBytes(await svgToPdfBlob(f.svg, f.width, f.height, undefined, pdfFonts)) });
     }
@@ -487,19 +513,20 @@ export function GarmentDesigner({ kind: initialKind = 'jersey', mode = 'pro', pi
       cost: costing && costing.total > 0 ? { prices, result: costing, fabric: prices.fabrics[fabricIdx]?.name || '', method: prices.methods[methodIdx]?.name || '' } : null,
       notes: [kit.letterGrade === 'scale' ? 'Names and numbers grow with the size.' : 'Names and numbers keep the same height on every size.', 'Print files are separate: this document is for information only.'],
     });
-    const order = orderSummaryPages({ project: kit.teamName || 'Order', product: copy.noun, date: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }), lines: list, sizeLabel, files: [`${fileBase}-PRINT.pdf`, `${fileBase}-TECHNICAL-PRODUCTION-FILE.pdf`, ...(embDesign ? [`${fileBase}.dst`, `${fileBase}.exp`] : [])] });
+    const order = orderSummaryPages({ project: kit.teamName || 'Order', product: copy.noun, date: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }), lines: list, sizeLabel, files: [`${fileBase}-PRINT-CMYK.pdf`, `${fileBase}-TECHNICAL-PRODUCTION-FILE.pdf`, ...(embDesign ? [`${fileBase}.dst`, `${fileBase}.exp`] : [])] });
     const parts = [pages, order];
     if (embDesign) { const { embroideryPageSvg } = await import('@/lib/textile/embroideryDoc'); parts.push([embroideryPageSvg(embDesign, { project: kit.teamName || copy.noun, files: [`${fileBase}.dst`, `${fileBase}.exp`], background: kit.body })]); }
     return [{ name: `${fileBase}-TECHNICAL-PRODUCTION-FILE.pdf`, data: await pdfOf(brandDocument(parts, { logo: await loadImage('/logo.png'), label: `${kit.teamName || copy.noun} · technical production file` })) }];
   };
   const exportItems: ExportItem[] = [
     { id: 'technical', group: 'factory', title: 'Technical production file', hint: 'One branded PDF: sizes, measurements, panels, print plan, order list' + (embDesign ? ', embroidery' : ''), make: mkTech },
-    { id: 'print', group: 'printer', title: 'Ready-to-print PDF', hint: `Every garment's panels at real size, ${bleed} mm bleed, cut lines, on the ${rollW} mm roll — no branding`, make: mkPrint },
+    { id: 'print', group: 'printer', title: 'Ready-to-print PDF', hint: `Every garment's panels at real size, ${bleed} mm bleed, cut lines, ${rollW} mm roll · CMYK · no branding`, make: mkPrint },
     { id: 'print-svg', group: 'printer', title: 'Ready-to-print SVG', hint: 'Editable vector pages in mm', make: mkPrintSvg, pro: true, inPackage: false },
     { id: 'each', group: 'printer', title: 'Each garment separately', hint: 'One SVG + PDF per garment', make: mkEach, pro: true, inPackage: false },
     ...(embDesign ? [{ id: 'embroidery', group: 'embroidery' as const, title: 'Embroidery machine files', hint: 'DST (Tajima, checked) + EXP (Melco)', make: mkEmb }] : []),
   ];
   const exportChecks = [
+    ...(texts.length ? [{ ok: true, text: textMode === 'live' ? 'Text stays live — fonts are embedded in the PDF' : ready ? `${texts.length} name / number / text outline${texts.length > 1 ? 's' : ''} ready` : 'Names and numbers are turned into outlines on export' }] : []),
     { ok: !errors.length, text: errors.length ? `${errors.length} row${errors.length > 1 ? 's' : ''} need fixing in the list` : `${list.length} garment${list.length === 1 ? '' : 's'} in the list` },
     { ok: !!list.length, text: list.length ? 'Sizes and quantities set' : 'Choose at least one row to print' },
     ...(plan ? [{ ok: !plan.overlaps && !plan.tooWide, text: plan.overlaps ? `${plan.overlaps} pieces overlap on the roll` : plan.tooWide ? `${plan.tooWide} piece(s) wider than the roll` : `${plan.metres.toFixed(2)} m of ${rollW} mm roll, no overlaps` }] : []),
@@ -550,6 +577,8 @@ export function GarmentDesigner({ kind: initialKind = 'jersey', mode = 'pro', pi
   // ---------- UI pieces ----------
   const field = 'mt-1 h-10 w-full rounded-xl border border-mt-border bg-mt-bg px-3 text-[13.5px] focus:outline-none focus:border-[#3B82C4]';
   const btn = 'h-10 px-4 rounded-full border border-mt-border text-[13.5px] font-semibold inline-flex items-center justify-center gap-1.5 hover:border-mt-ink/40 disabled:opacity-50';
+  // Software-style toolbar buttons (compact; label hidden on narrow screens).
+  const tb = 'h-9 px-3 rounded-lg text-[13px] font-semibold inline-flex items-center justify-center gap-1.5 text-mt-ink hover:bg-mt-surface2 disabled:opacity-50';
   const primary = 'h-11 px-5 rounded-full bg-mt-primary text-mt-onprimary text-[14px] font-semibold inline-flex items-center justify-center gap-2 disabled:opacity-50';
   const H = ({ children }: { children: React.ReactNode }) => <h3 className="text-[12px] font-semibold uppercase tracking-[0.12em] text-mt-muted">{children}</h3>;
   const colour = (label: string, k: keyof KitDesign) => (
@@ -580,22 +609,24 @@ export function GarmentDesigner({ kind: initialKind = 'jersey', mode = 'pro', pi
         libraryPatterns={mine.filter((x) => x.id).map((x) => ({ id: x.id!, kind: 'pattern' as const, name: x.name, data: x.p, createdAt: x.at || '', updatedAt: x.at || '' }))}
         onSave={(art, studioOnly) => setKit((k) => ({ ...k, art, studioOnly }))} onClose={() => setStudioOpen(false)} />}
       {/* Project bar */}
-      <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-mt-border bg-mt-surface p-2">
+      <div role="toolbar" aria-label="Project" className="flex flex-wrap items-center gap-1 rounded-xl border border-mt-border bg-mt-surface px-2 py-1.5 shadow-[0_1px_0_rgba(9,9,11,0.04)]">
         <Shirt size={18} className="ml-2 text-mt-muted" aria-hidden />
-        <input value={kit.teamName} maxLength={40} onChange={(e) => set({ teamName: e.target.value })} aria-label="Project name" className="h-10 min-w-0 flex-1 basis-40 rounded-xl bg-transparent px-2 text-[15px] font-semibold focus:outline-none focus:bg-mt-bg" />
+        <input value={kit.teamName} maxLength={40} onChange={(e) => set({ teamName: e.target.value })} aria-label="Project name" className="h-9 min-w-0 flex-1 basis-40 rounded-lg bg-transparent px-2 text-[14.5px] font-semibold focus:outline-none focus:bg-mt-bg" />
         <span className={`text-[12px] ${dirty ? 'text-amber-600 dark:text-amber-400' : 'text-mt-faint'}`}>{dirty ? 'Unsaved changes' : projectId ? 'Saved' : ''}</span>
-        <span className="inline-flex rounded-full border border-mt-border">
-          <button type="button" onClick={undo} disabled={!hist.current.past.length} aria-label="Undo" title="Undo (Ctrl+Z)" className="h-10 w-10 inline-flex items-center justify-center rounded-l-full hover:bg-mt-surface2 disabled:opacity-40"><Undo2 size={16} /></button>
-          <button type="button" onClick={redo} disabled={!hist.current.future.length} aria-label="Redo" title="Redo (Ctrl+Shift+Z)" className="h-10 w-10 inline-flex items-center justify-center rounded-r-full border-l border-mt-border hover:bg-mt-surface2 disabled:opacity-40"><Redo2 size={16} /></button>
+        <span aria-hidden className="mx-1 h-6 w-px bg-mt-border" /><span className="inline-flex">
+          <button type="button" onClick={undo} disabled={!hist.current.past.length} aria-label="Undo" title="Undo (Ctrl+Z)" className="h-9 w-9 inline-flex items-center justify-center rounded-lg hover:bg-mt-surface2 disabled:opacity-40"><Undo2 size={16} /></button>
+          <button type="button" onClick={redo} disabled={!hist.current.future.length} aria-label="Redo" title="Redo (Ctrl+Shift+Z)" className="h-9 w-9 inline-flex items-center justify-center rounded-lg hover:bg-mt-surface2 disabled:opacity-40"><Redo2 size={16} /></button>
         </span>
-        {pro && <button type="button" onClick={() => setStudioOpen(true)} className="h-10 px-4 rounded-full bg-mt-ink text-mt-bg text-[13.5px] font-semibold inline-flex items-center gap-1.5" title="Design directly on the flat print pieces"><PenTool size={14} /> Edit print file</button>}
-        <button type="button" onClick={() => setEmbOpen(true)} className={btn} title="Embroidery: logo, name or motif with real stitches and a DST machine file"><Sparkles size={14} /> Embroidery{kit.embroidery?.summary ? ` (${kit.embroidery.summary.stitches.toLocaleString('en')})` : ''}</button>
-        <button type="button" onClick={() => setNewAsk(true)} className={btn}><Plus size={14} /> New</button>
-        <button type="button" onClick={saveAs} className={btn} title="Save a copy under a new name; the original stays as it is"><Save size={14} /> Save as</button>
-        <button type="button" onClick={() => setProjects(readProjects().filter((x) => TEXTILE_KINDS.includes(x.kind)))} className={btn}><FolderOpen size={14} /> Projects</button>
-        <button type="button" onClick={() => fileRef.current?.click()} className={btn}><FileUp size={14} /> Open file</button>
-        <button type="button" onClick={saveFile} className={btn} title="Save a Magical Touch project file (.mtd) on this device"><Download size={14} /> Save file</button>
-        <button type="button" onClick={() => { if (saveProject()) setSavedAsk(true); }} className="h-10 px-4 rounded-full bg-mt-primary text-mt-onprimary text-[13.5px] font-semibold inline-flex items-center gap-1.5"><Save size={14} /> Save</button>
+        <span aria-hidden className="mx-1 h-6 w-px bg-mt-border" />
+        {pro && <button type="button" onClick={() => setStudioOpen(true)} className="h-9 px-3 rounded-lg bg-mt-ink text-mt-bg text-[13px] font-semibold inline-flex items-center gap-1.5" title="Design directly on the flat print pieces"><PenTool size={14} /> Edit print file</button>}
+        <button type="button" onClick={() => setEmbOpen(true)} className={tb} title="Embroidery: logo, name or motif with real stitches and a DST machine file"><Sparkles size={14} /> Embroidery{kit.embroidery?.summary ? ` (${kit.embroidery.summary.stitches.toLocaleString('en')})` : ''}</button>
+        <span aria-hidden className="mx-1 h-6 w-px bg-mt-border" />
+        <button type="button" onClick={() => setNewAsk(true)} className={tb}><Plus size={14} /> New</button>
+        <button type="button" onClick={saveAs} className={tb} title="Save a copy under a new name; the original stays as it is"><Save size={14} /> Save as</button>
+        <button type="button" onClick={() => setProjects(readProjects().filter((x) => TEXTILE_KINDS.includes(x.kind)))} className={tb}><FolderOpen size={14} /> Projects</button>
+        <button type="button" onClick={() => fileRef.current?.click()} className={tb}><FileUp size={14} /> Open file</button>
+        <button type="button" onClick={saveFile} className={tb} title="Save a Magical Touch project file (.mtd) on this device"><Download size={14} /> Save file</button>
+        <button type="button" onClick={() => { if (saveProject()) setSavedAsk(true); }} className="ml-1 h-9 px-4 rounded-lg bg-mt-primary text-mt-onprimary text-[13px] font-semibold inline-flex items-center gap-1.5"><Save size={14} /> Save</button>
         <input ref={fileRef} type="file" accept={TOOL_FILE_ACCEPT} hidden onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) openFile(f); }} />
       </div>
 
@@ -640,17 +671,21 @@ export function GarmentDesigner({ kind: initialKind = 'jersey', mode = 'pro', pi
         </div>
       )}
 
-      {/* Sections */}
-      <nav aria-label="Sections" className="overflow-x-auto">
-        <div role="tablist" className="flex min-w-max gap-1 rounded-2xl border border-mt-border bg-mt-surface p-1">
-          {steps.map((x) => (
-            <button key={x.id} type="button" role="tab" aria-selected={step === x.id} onClick={() => { setStep(x.id); setSelEl(null); }}
-              className={`h-10 px-4 rounded-xl text-[13.5px] font-semibold ${step === x.id ? 'bg-mt-primary text-mt-onprimary' : 'text-mt-muted hover:text-mt-ink'}`}>{x.label}</button>
-          ))}
+      {/* Workspace: section rail · controls · canvas (software layout) */}
+      <div className="grid gap-4 lg:grid-cols-[88px_340px_minmax(0,1fr)] lg:items-start">
+      <nav aria-label="Sections" className="overflow-x-auto lg:overflow-visible lg:sticky lg:top-20">
+        <div role="tablist" aria-orientation="vertical" className="flex min-w-max gap-1 rounded-2xl border border-mt-border bg-mt-surface p-1 lg:min-w-0 lg:flex-col">
+          {steps.map((x) => {
+            const I = { design: Shirt, logos: ImageIcon, letters: Type, players: Users, print: Printer }[x.id] || Shirt;
+            return (
+              <button key={x.id} type="button" role="tab" aria-selected={step === x.id} onClick={() => { setStep(x.id); setSelEl(null); }} title={x.label}
+                className={`h-10 px-4 rounded-xl text-[13px] font-semibold inline-flex items-center gap-1.5 lg:h-auto lg:flex-col lg:gap-1 lg:px-1 lg:py-2.5 lg:text-[11px] lg:leading-tight ${step === x.id ? 'bg-mt-primary text-mt-onprimary' : 'text-mt-muted hover:text-mt-ink hover:bg-mt-surface2'}`}>
+                <I size={17} className="shrink-0" /><span className="lg:text-center">{x.label}</span>
+              </button>
+            );
+          })}
         </div>
       </nav>
-
-      <div className="grid gap-5 lg:grid-cols-[360px_minmax(0,1fr)] lg:items-start">
         {/* Controls for the current step */}
         <aside className="rounded-3xl border border-mt-border bg-mt-surface p-5 space-y-5 lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto">
           {selEl && (() => {
@@ -965,7 +1000,7 @@ export function GarmentDesigner({ kind: initialKind = 'jersey', mode = 'pro', pi
 
         {/* Preview and the list (preview first on phones) */}
         <div className="min-w-0 space-y-5 order-first lg:order-none">
-          <div className="rounded-3xl border border-mt-border bg-mt-surface2/50 p-4">
+          <div className="rounded-2xl border border-mt-border bg-mt-surface p-3">
             <div className="flex flex-wrap items-center gap-2 mb-3">
               <span className="inline-flex items-center rounded-full border border-mt-border bg-mt-surface p-0.5" aria-label="Zoom">
                 <button type="button" onClick={() => setZoom((z) => Math.max(0.5, Math.round((z - 0.25) * 100) / 100))} aria-label="Zoom out" className="h-8 w-8 inline-flex items-center justify-center rounded-full hover:bg-mt-surface2"><ZoomOut size={14} /></button>
@@ -977,7 +1012,7 @@ export function GarmentDesigner({ kind: initialKind = 'jersey', mode = 'pro', pi
               <button type="button" onClick={dlPreview} className="h-9 px-3 rounded-full border border-mt-border text-[12.5px] font-semibold inline-flex items-center gap-1.5"><Download size={13} /> Preview</button>
               <button type="button" onClick={editInEditor} disabled={!!busy} className="h-9 px-3 rounded-full border border-mt-border text-[12.5px] font-semibold inline-flex items-center gap-1.5" title="Open the artwork in the design editor">{busy === 'editor' ? <Loader2 size={13} className="animate-spin" /> : <Shirt size={13} />} Edit in editor</button>
             </div>
-            <div className="rounded-2xl bg-gradient-to-b from-white to-[#EEF1F5] dark:from-[#1b1f27] dark:to-[#12151b] p-3 sm:p-6 overflow-auto max-h-[78vh]">
+            <div className="rounded-2xl bg-[#F4F4F5] dark:bg-[#141418] bg-[radial-gradient(circle,rgba(9,9,11,0.09)_1px,transparent_1px)] dark:bg-[radial-gradient(circle,rgba(255,255,255,0.08)_1px,transparent_1px)] [background-size:16px_16px] p-3 sm:p-6 overflow-auto max-h-[78vh]">
               <div style={{ width: `${zoom * 100}%` }} className="mx-auto">
               {view === 'garment' ? (
                 <div role="application" aria-label={`${copy.noun} — click a part to edit it, drag names, numbers, logos and text to move them`}

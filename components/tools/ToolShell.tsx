@@ -13,6 +13,10 @@ import { BackChip } from '@/components/tools/BackChip';
 import { ToolIcon } from '@/components/tools/ToolsDirectory';
 import { TOOLS, rememberTool } from '@/lib/toolsCatalog';
 import { useAppTheme } from '@/hooks/useAppTheme';
+import { Unbounded } from 'next/font/google';
+
+// The wordmark's wide, rounded display face — the same as the home page.
+const display = Unbounded({ subsets: ['latin'], weight: ['500', '600'], variable: '--font-display' });
 
 export interface ToolShellProps {
   path: string;
@@ -61,7 +65,7 @@ export function ToolShell({ path, h1, name, sub, icon, about, children }: ToolSh
   const title = name || entry?.title || h1;
   useEffect(() => { if (entry) rememberTool(entry.id); }, [entry]);
   return (
-    <div className={theme === 'dark' ? 'dark' : ''}>
+    <div className={`${display.variable} ${theme === 'dark' ? 'dark' : ''}`}>
       <div className="min-h-[100dvh] bg-mt-bg text-mt-ink flex flex-col">
         <header className="sticky top-0 z-[70] bg-mt-surface/95 backdrop-blur border-b border-mt-border">
           <div className="h-14 px-3 sm:px-5 flex items-center gap-3">
@@ -69,7 +73,7 @@ export function ToolShell({ path, h1, name, sub, icon, about, children }: ToolSh
             <span aria-hidden className="h-6 w-px bg-mt-border" />
             <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-mt-ink text-mt-bg"><ToolIcon name={icon || entry?.icon || 'Sparkles'} size={16} /></span>
             <div className="min-w-0 mr-auto">
-              <h1 className="text-[15px] font-semibold leading-tight truncate" title={h1}>{title}<span className="sr-only"> — {h1}</span></h1>
+              <h1 className="font-[family-name:var(--font-display)] text-[14.5px] font-medium tracking-[-0.01em] leading-tight truncate" title={h1}>{title}<span className="sr-only"> — {h1}</span></h1>
               {(sub || entry?.hint) && <p className="hidden sm:block text-[11.5px] text-mt-muted truncate">{sub || entry?.hint}</p>}
             </div>
             <span className="hidden md:inline-flex"><BackChip /></span>
@@ -79,7 +83,9 @@ export function ToolShell({ path, h1, name, sub, icon, about, children }: ToolSh
           </div>
           <div aria-hidden className="h-[3px]" style={{ background: 'var(--mt-spectrum)' }} />
         </header>
-        <main className="flex-1 w-full max-w-[1800px] mx-auto px-3 sm:px-5 py-4 sm:py-5">{children}</main>
+        <main className="flex-1 w-full bg-[radial-gradient(circle,rgba(9,9,11,0.06)_1px,transparent_1px)] dark:bg-[radial-gradient(circle,rgba(255,255,255,0.05)_1px,transparent_1px)] [background-size:22px_22px]">
+          <div className="w-full max-w-[1800px] mx-auto px-3 sm:px-5 py-4 sm:py-5">{children}</div>
+        </main>
         {about && (
           <section id="about" aria-label="How it works and questions" className="scroll-mt-20 border-t border-mt-border bg-mt-surface2/40">
             <div className="max-w-[1200px] mx-auto px-4 sm:px-6 py-10">{about}</div>
@@ -105,7 +111,7 @@ export function ToolAbout({ intro, steps, faq, related, extra }: { intro?: strin
       {intro && <p className="max-w-3xl text-[16px] text-mt-muted leading-relaxed">{intro}</p>}
       {steps && steps.length > 0 && (
         <div>
-          <h2 className="text-xl font-semibold">How it works</h2>
+          <h2 className="font-[family-name:var(--font-display)] text-xl font-medium tracking-[-0.02em]">How it works</h2>
           <ol className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {steps.map(([t, d], i) => (
               <li key={t} className="rounded-2xl border border-mt-border bg-mt-surface p-4">
@@ -122,7 +128,7 @@ export function ToolAbout({ intro, steps, faq, related, extra }: { intro?: strin
         <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
           {faq && faq.length > 0 && (
             <div>
-              <h2 className="text-xl font-semibold">Questions</h2>
+              <h2 className="font-[family-name:var(--font-display)] text-xl font-medium tracking-[-0.02em]">Questions</h2>
               <div className="mt-3 divide-y divide-mt-border rounded-2xl border border-mt-border bg-mt-surface">
                 {faq.map(([q, a]) => <details key={q} className="p-4"><summary className="cursor-pointer text-[14.5px] font-semibold">{q}</summary><p className="mt-2 text-[14px] text-mt-muted leading-relaxed">{a}</p></details>)}
               </div>

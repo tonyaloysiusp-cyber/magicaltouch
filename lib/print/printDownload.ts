@@ -34,3 +34,26 @@ export async function saveSet(out: { name: string; data: Uint8Array }[], zipName
 
 export const today = () => new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 export const safeBase = (s: string, fallback = 'print-job') => (s || '').replace(/[^\w\- ]+/g, '').trim().replace(/\s+/g, '_') || fallback;
+
+/** CMYK conversion for print files (FOGRA39 coated): press LUT, output profile, JPEG decoding via canvas. */
+export async function loadPressCmyk() {
+  const [{ loadCmykTable, loadPressProfile, makeCmykMapper, rgbaToCmyk }] = await Promise.all([import('../color/cmyk')]);
+  const [lut, icc] = await Promise.all([loadCmykTable(), loadPressProfile()]);
+  return {
+    toCmyk: makeCmykMapper(lut),
+    pixels: (rgba: Uint8Array) => rgbaToCmyk(rgba, lut),
+    icc,
+    decodeJpeg: async (bytes: Uint8Array) => {
+      const bmp = await createImageBitmap(new Blob([bytes as unknown as BlobPart], { type: 'image/jpeg' }));
+      const c = document.createElement('canvas'); c.width = bmp.width; c.height = bmp.height;
+      const ctx = c.getContext('2d')!; ctx.drawImage(bmp, 0, 0);
+      return { rgba: new Uint8Array(ctx.getImageData(0, 0, c.width, c.height).data.buffer), width: c.width, height: c.height };
+    },
+  };
+}
+
+/** A print-ready PDF converted to CMYK (FOGRA39 coated) — used for every print file. */
+export async function printPdfCmyk(bytes: Uint8Array): Promise<Uint8Array> {
+  const [{ cmykify }, o] = await Promise.all([import('./cmykPdf'), loadPressCmyk()]);
+  return (await cmykify(bytes, o)).bytes;
+}

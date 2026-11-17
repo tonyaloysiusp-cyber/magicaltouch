@@ -12,6 +12,7 @@
 import { DEFAULT_PRESS, SHEETS, layoutPress, normalLayout, pressPdfPages, verifyPressPdf, type Artwork, type MarkType, type PressLayout, type PressOptions } from './pressSheet.ts';
 import { sidePressJob, type PrintJobInfo } from './printJob.ts';
 import { jobReportPages, type JobDetails, type ReportFile } from './jobReport.ts';
+import { cmykify, type CmykOptions } from './cmykPdf.ts';
 
 export interface PackageOptions {
   actualSheet: string;   // 'auto' | sheet id
@@ -57,7 +58,7 @@ export function fileNames(base: string, actual: PressLayout, fit: PressLayout) {
 }
 
 export function describeFile(label: string, file: string, l: PressLayout, job: PrintJobInfo, markType: MarkType | null): ReportFile {
-  return { label, file, sheet: `${l.sheet.name} (${l.sheet.w} × ${l.sheet.h} mm)`, scale: l.scale, printed: `${r1(job.trimW * l.scale)} × ${r1(job.trimH * l.scale)} mm`, marks: markType ? `crop marks type ${markType}${job.folds.length ? ', fold marks' : ''}` : 'bleed only, no marks' };
+  return { label, file, sheet: `${l.sheet.name} (${l.sheet.w} × ${l.sheet.h} mm)`, scale: l.scale, printed: `${r1(job.trimW * l.scale)} × ${r1(job.trimH * l.scale)} mm`, marks: `${markType ? `crop marks type ${markType}${job.folds.length ? ', fold marks' : ''}` : 'bleed only, no marks'} · CMYK` };
 }
 
 export interface PrintSetInput {
@@ -69,10 +70,12 @@ export interface PrintSetInput {
   logo?: { src: string; w: number; h: number } | null;
   /** SVG pages → PDF bytes (svgToPdf in the browser). */
   toPdf: (pages: { svg: string; widthMm: number; heightMm: number }[]) => Promise<Uint8Array>;
+  /** Print files are converted to CMYK (FOGRA39) with this; without it they stay as supplied. */
+  cmyk?: CmykOptions | null;
 }
 export interface PrintSet {
   out: { name: string; data: Uint8Array }[];
-  actualLayout: PressLayout; fitLayout: PressLayout; warnings: string[];
+  actualLayout: PressLayout; fitLayout: PressLayout; warnings: string[]; cmyk: boolean;
 }
 
 export async function makePrintSet(i: PrintSetInput): Promise<PrintSet> {
@@ -89,10 +92,17 @@ export async function makePrintSet(i: PrintSetInput): Promise<PrintSet> {
     return { job: sj, layout: ls, art: i.arts?.[s] ?? null };
   });
   const filesForReport: ReportFile[] = [];
+  // Every print file goes to CMYK (marks are already press inks); the check runs on the converted file.
+  const press = async (b: Uint8Array) => {
+    if (!i.cmyk) return b;
+    const r = await cmykify(b, i.cmyk);
+    for (const s of r.report.skipped) if (!warnings.includes(`Not converted to CMYK: ${s}.`)) warnings.push(`Not converted to CMYK: ${s}.`);
+    return r.bytes;
+  };
   if (i.arts) {
     if (i.files.actual) {
       if (actualLayout.fits) {
-        const b = await pressPdfPages(sheetsFor(actualLayout), `${i.base} — actual size`);
+        const b = await press(await pressPdfPages(sheetsFor(actualLayout), `${i.base} — actual size`));
         const v = await verifyPressPdf(b, actualLayout, sides);
         if (!v.ok) throw new Error(`Actual-size file failed its check: ${v.issues.join(' ')}`);
         out.push({ name: names.actual, data: b });
@@ -100,7 +110,7 @@ export async function makePrintSet(i: PrintSetInput): Promise<PrintSet> {
       } else warnings.push(...actualLayout.warnings);
     }
     if (i.files.fit) {
-      const b = await pressPdfPages(sheetsFor(fitLayout), `${i.base} — fit to print`);
+      const b = await press(await pressPdfPages(sheetsFor(fitLayout), `${i.base} — fit to print`));
       const v = await verifyPressPdf(b, fitLayout, sides);
       if (!v.ok) throw new Error(`Fit-to-print file failed its check: ${v.issues.join(' ')}`);
       out.push({ name: names.fit, data: b });
@@ -108,7 +118,7 @@ export async function makePrintSet(i: PrintSetInput): Promise<PrintSet> {
     }
     if (i.files.normal) {
       const nl = normalLayout(sidePressJob(job, 0, i.base));
-      const b = await pressPdfPages(job.sides.map((_, s) => ({ job: sidePressJob(job, s, i.base), layout: nl, art: i.arts![s] ?? null })), `${i.base} — normal`);
+      const b = await press(await pressPdfPages(job.sides.map((_, s) => ({ job: sidePressJob(job, s, i.base), layout: nl, art: i.arts![s] ?? null })), `${i.base} — normal`));
       const v = await verifyPressPdf(b, nl, sides);
       if (!v.ok) throw new Error(`Normal file failed its check: ${v.issues.join(' ')}`);
       out.push({ name: names.normal, data: b });
@@ -125,5 +135,5 @@ export async function makePrintSet(i: PrintSetInput): Promise<PrintSet> {
     const pages = jobReportPages({ job, details: i.details, date: i.date, previews: i.previews || [], files: listed, margin: o.margin, markType: o.markType, colour: i.colour, logo: i.logo });
     out.push({ name: names.report, data: await i.toPdf(pages.map((svg) => ({ svg, widthMm: 297, heightMm: 210 }))) });
   }
-  return { out, actualLayout, fitLayout, warnings };
+  return { out, actualLayout, fitLayout, warnings, cmyk: !!i.cmyk };
 }

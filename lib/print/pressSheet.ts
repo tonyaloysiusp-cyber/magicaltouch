@@ -250,6 +250,16 @@ export type Artwork = { kind: 'pdf'; bytes: Uint8Array; page?: number } | { kind
 
 const MM = 72 / 25.4;
 const hex = (c: string) => { const n = parseInt(c.replace('#', ''), 16); return [((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255] as [number, number, number]; };
+/** Mark colours as press inks: cut red = M+Y, fold green = C+Y, registration = all four, text = K. */
+function ink(lib: any, c: string, kind?: string) {
+  const u = c.toUpperCase();
+  if (kind === 'reg' || u === '#000000') return lib.cmyk(1, 1, 1, 1);
+  if (u === '#E30613') return lib.cmyk(0, 1, 1, 0);
+  if (u === '#00A651') return lib.cmyk(1, 0, 1, 0);
+  if (u === '#111111' || u === '#111827') return lib.cmyk(0, 0, 0, 1);
+  const [r, g, b] = hex(c); const k = 1 - Math.max(r, g, b);
+  return k >= 1 ? lib.cmyk(0, 0, 0, 1) : lib.cmyk((1 - r - k) / (1 - k), (1 - g - k) / (1 - k), (1 - b - k) / (1 - k), k);
+}
 
 /**
  * Print-ready PDF: the artwork (its trim + bleed area, or the whole artwork page fitted to trim + bleed)
@@ -272,7 +282,8 @@ export async function pressPdfPages(sheets: { job: PressJob; layout: PressLayout
 }
 
 async function drawSheet(doc: any, font: any, srcCache: Map<Uint8Array, any>, job: PressJob, l: PressLayout, art: Artwork) {
-  const { PDFDocument, rgb, pushGraphicsState, popGraphicsState, rectangle, clip, endPath, setDashPattern } = await import('pdf-lib');
+  const pdfLib: any = await import('pdf-lib');
+  const { PDFDocument, pushGraphicsState, popGraphicsState, rectangle, clip, endPath, setDashPattern } = pdfLib;
   const page = doc.addPage([l.sheet.w * MM, l.sheet.h * MM]);
   const H = l.sheet.h;
   const Y = (y: number) => (H - y) * MM;
@@ -322,14 +333,16 @@ async function drawSheet(doc: any, font: any, srcCache: Map<Uint8Array, any>, jo
   for (const ln of l.lines) {
     const [r, g, bl] = hex(ln.color);
     if (ln.dash) page.pushOperators(setDashPattern(ln.dash.split(' ').map((v) => Number(v) * MM), 0));
-    page.drawLine({ start: { x: ln.x1 * MM, y: Y(ln.y1) }, end: { x: ln.x2 * MM, y: Y(ln.y2) }, thickness: ln.width * MM, color: rgb(r, g, bl) });
+    void r; void g; void bl;
+    page.drawLine({ start: { x: ln.x1 * MM, y: Y(ln.y1) }, end: { x: ln.x2 * MM, y: Y(ln.y2) }, thickness: ln.width * MM, color: ink(pdfLib, ln.color, ln.kind) });
     if (ln.dash) page.pushOperators(setDashPattern([], 0));
   }
-  for (const c of l.circles) { const [r, g, bl] = hex(c.color); page.drawCircle({ x: c.cx * MM, y: Y(c.cy), size: c.r * MM, borderColor: rgb(r, g, bl), borderWidth: c.width * MM }); }
+  for (const c of l.circles) page.drawCircle({ x: c.cx * MM, y: Y(c.cy), size: c.r * MM, borderColor: ink(pdfLib, c.color, 'reg'), borderWidth: c.width * MM });
   for (const t of l.labels) {
     const [r, g, bl] = hex(t.color), size = t.size * MM, w = font.widthOfTextAtSize(t.text, size);
     const x = t.anchor === 'middle' ? t.x * MM - w / 2 : t.anchor === 'end' ? t.x * MM - w : t.x * MM;
-    page.drawText(t.text, { x, y: Y(t.y), size, font, color: rgb(r, g, bl) });
+    void r; void g; void bl;
+    page.drawText(t.text, { x, y: Y(t.y), size, font, color: ink(pdfLib, t.color) });
   }
   // PDF boxes: trim and bleed of the job (all items together when there are several).
   const bx0 = l.block.x, by0 = l.block.y, bw = l.block.w, bh = l.block.h;

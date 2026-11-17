@@ -16,7 +16,7 @@ import { templateSvg } from '@/lib/print/pressSheet';
 import { sidePressJob, type PrintJobInfo } from '@/lib/print/printJob';
 import { makePrintSet, planSheet, type PrintSelection } from '@/lib/print/printPackage';
 import { layoutTemplatePages } from '@/lib/print/layoutTemplate';
-import { loadImage, saveBytes, saveSet, safeBase, svgPagesToPdf, today } from '@/lib/print/printDownload';
+import { loadImage, loadPressCmyk, saveBytes, saveSet, safeBase, svgPagesToPdf, today } from '@/lib/print/printDownload';
 import { PrintOutputSettings, initialOutput, rememberOutput, type PrintOutput } from './PrintOutputSettings';
 
 const MODE_KEY = 'mt:print-mode';
@@ -63,7 +63,7 @@ export function PrintDownloadPanel({ job, editorHref }: { job: PrintJobInfo; edi
     setBusy(key); setErr(null); setMsg(null);
     try {
       const logo = files.report ? await loadImage('/logo.png') : null;
-      const set = await makePrintSet({ job, base, options: out.options, files, arts: art?.arts || null, details: { ...out.details, jobName: out.details.jobName || base.replace(/_/g, ' ') }, date: today(), colour: 'As supplied in the artwork', previews: art?.previews, logo, toPdf: svgPagesToPdf });
+      const set = await makePrintSet({ job, base, options: out.options, files, arts: art?.arts || null, details: { ...out.details, jobName: out.details.jobName || base.replace(/_/g, ' ') }, date: today(), colour: 'CMYK (FOGRA39 coated)', previews: art?.previews, logo, toPdf: svgPagesToPdf, cmyk: (files.actual || files.fit || files.normal) && art ? await loadPressCmyk() : null });
       if (!set.out.length) throw new Error(set.warnings[0] || 'Nothing to download.');
       await saveSet(set.out, `${base}_PRINT_FILES.zip`, zip);
       rememberOutput(out);

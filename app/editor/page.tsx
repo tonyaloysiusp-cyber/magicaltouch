@@ -6,6 +6,7 @@ import { ThemeSwitch } from '@/components/ThemeSwitch';
 import { useEffect, useRef, useState, useCallback, useMemo, Suspense } from 'react';
 import { Printer } from 'lucide-react';
 import { pageJob } from '@/lib/print/printJob';
+import { columnAt, columnRects, foldXs } from '@/lib/editor/pageLayout';
 import type { ReactNode } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { BrandLogo } from '@/components/BrandLogo';
@@ -381,7 +382,18 @@ function EditorContent() {
     const b = ab.print?.bleed || { top: 0, right: 0, bottom: 0, left: 0 };
     const sa = ab.print?.safeArea || { top: 0, right: 0, bottom: 0, left: 0 };
     const same = artboards.filter((a) => Math.abs(a.width - ab.width) < 0.5 && Math.abs(a.height - ab.height) < 0.5);
-    return pageJob({ trimW: mm(ab.width), trimH: mm(ab.height), bleed: mm(Math.max(b.top, b.right, b.bottom, b.left)), safe: mm(Math.max(sa.top, sa.right, sa.bottom, sa.left)), name: designName || 'Design', pages: same.length });
+    const job = pageJob({ trimW: mm(ab.width), trimH: mm(ab.height), bleed: mm(Math.max(b.top, b.right, b.bottom, b.left)), safe: mm(Math.max(sa.top, sa.right, sa.bottom, sa.left)), name: designName || 'Design', pages: same.length });
+    // Folding panels set in Page layout: folds and panels go into the print files and the job report.
+    const fx = foldXs({ x: 0, y: 0, width: ab.width, height: ab.height }, ab.print || {});
+    if (fx.length) {
+      const n = fx.length + 1, pw = mm(ab.width) / n;
+      const r2 = (v: number) => Math.round(v * 100) / 100;
+      job.title = `${n}-panel folded ${n === 2 ? 'card' : 'leaflet'}`;
+      job.folds = fx.map((x, i) => ({ x: r2(mm(x)), order: i + 1 }));
+      job.panels = Array.from({ length: n }, (_, i) => ({ x: r2(i * pw), w: r2(pw), name: `Panel ${i + 1}`, inside: `Inside ${n - i}` }));
+      if (same.length >= 2) job.sides = ['Outside', 'Inside', ...job.sides.slice(2)];
+    }
+    return job;
   }, [artboards, activeArtboardId, calculatorJob, designName]);
   const [exportInitial, setExportInitial] = useState<'print-files' | undefined>(undefined);
   const activeArtboardIdRef = useRef<string | null>(null);
@@ -2280,7 +2292,22 @@ function EditorContent() {
               ctx.strokeStyle = 'rgba(217,70,239,0.75)';
               ctx.strokeRect(ix + 0.5, iy + 0.5, Math.max(iw - 1, 0), Math.max(ih - 1, 0));
             }
-            if (cols > 1) {
+            if (cols > 1 && print.foldColumns) {
+              // Folding panels: green dashed folds across the full height (bleed too), panel content guides in violet.
+              const bl = print.bleed || { top: 0, right: 0, bottom: 0, left: 0 };
+              const ab0 = { x: 0, y: 0, width: w / vt[0], height: h / vt[3] };
+              ctx.strokeStyle = 'rgba(139,92,246,0.55)';
+              for (const r of columnRects(ab0, print)) ctx.strokeRect(x + r.x * vt[0] + 0.5, y + r.y * vt[3] + 0.5, Math.max(r.width * vt[0] - 1, 0), Math.max(r.height * vt[3] - 1, 0));
+              ctx.save();
+              ctx.setLineDash([6, 4]);
+              ctx.strokeStyle = 'rgba(0,166,81,0.95)';
+              ctx.lineWidth = 1.25;
+              for (const fx of foldXs(ab0, print)) {
+                const px = x + fx * vt[0];
+                ctx.beginPath(); ctx.moveTo(px + 0.5, y - bl.top * vt[3]); ctx.lineTo(px + 0.5, y + h + bl.bottom * vt[3]); ctx.stroke();
+              }
+              ctx.restore();
+            } else if (cols > 1) {
               const g = (print.gutter ?? 16) * vt[0];
               const colW = (iw - g * (cols - 1)) / cols;
               ctx.strokeStyle = 'rgba(139,92,246,0.6)';
@@ -4787,7 +4814,7 @@ function EditorContent() {
   // `relativeTo` says 'page'. Bounding boxes are used throughout so
   // rotated objects line up by what you actually see.
   type AlignMode = 'left' | 'centerH' | 'right' | 'top' | 'centerV' | 'bottom';
-  const alignObject = (mode: AlignMode, relativeTo: 'auto' | 'page' | 'selection' = 'auto') => {
+  const alignObject = (mode: AlignMode, relativeTo: 'auto' | 'page' | 'selection' | 'column' = 'auto') => {
     const canvas = fabricCanvasRef.current;
     const active = canvas.getActiveObject();
     if (!active || active.locked) return;
@@ -4798,7 +4825,14 @@ function EditorContent() {
 
     const rects = members.map((o) => o.getBoundingRect(true, true));
     let ref: { x: number; y: number; width: number; height: number };
-    if (isMulti && relativeTo !== 'page') {
+    if (relativeTo === 'column') {
+      // The column (or folding panel) under the selection's centre on its page.
+      const minX0 = Math.min(...rects.map((r) => r.left)), maxX0 = Math.max(...rects.map((r) => r.left + r.width));
+      const own = artboardsRef.current.find((a) => a.id === members[0].__artboardId) || artboardsRef.current.find((a) => a.id === getActiveArtboardRect()?.id);
+      const abR = own || getActiveArtboardRect();
+      const col = own ? columnAt(columnRects({ x: own.x, y: own.y, width: own.width, height: own.height }, own.print || {}), (minX0 + maxX0) / 2) : null;
+      ref = col || abR;
+    } else if (isMulti && relativeTo !== 'page') {
       const minX = Math.min(...rects.map((r) => r.left));
       const minY = Math.min(...rects.map((r) => r.top));
       const maxX = Math.max(...rects.map((r) => r.left + r.width));
@@ -7104,8 +7138,9 @@ function EditorContent() {
       job, base: base0, options: pf.options, files: pf.files,
       arts: job.sides.map((_, i) => ({ kind: 'pdf' as const, bytes: artPdf, page: i })),
       details: { ...pf.details, jobName: pf.details.jobName || designName }, date: dl.today(),
-      colour: 'RGB, vector PDF (text and shapes stay sharp)', previews,
+      colour: 'CMYK (FOGRA39 coated), vector PDF', previews,
       logo: pf.files.report ? await dl.loadImage('/logo.png') : null, toPdf: dl.svgPagesToPdf,
+      cmyk: pf.files.actual || pf.files.fit || pf.files.normal ? await dl.loadPressCmyk() : null,
     });
     if (!set.out.length) throw new Error(set.warnings[0] || 'Nothing to download.');
     await dl.saveSet(set.out, `${base0}_PRINT_FILES.zip`, pf.zip);

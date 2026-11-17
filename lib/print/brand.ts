@@ -20,7 +20,8 @@ export function brandChrome(w: number, h: number, o: { logo?: Logo; label: strin
   let x = M;
   if (o.logo) { const lh = 4.6, lw = lh * (o.logo.w / o.logo.h); g += `<image x="${M}" y="${h - 11.6}" width="${(lw).toFixed(2)}" height="${lh}" href="${o.logo.src}"/>`; x = M + lw + 4; }
   else { g += `<text x="${M}" y="${h - 8.6}" font-family="Helvetica" font-size="3" font-weight="700" fill="#09090B">Magical Touch Design</text>`; x = M + 36; }
-  g += `<text x="${x}" y="${h - 8.6}" font-family="Helvetica" font-size="2.6" fill="#52525B">www.magicaltouchdesign.com · ${esc(o.label)} · technical document, not a print file</text>`;
+  g += `<text x="${x}" y="${h - 8.6}" font-family="Helvetica" font-size="2.5" fill="#52525B">${esc(o.label)} · technical document, not a print file</text>`;
+  g += `<text x="${x}" y="${h - 5.2}" font-family="Helvetica" font-size="2.2" fill="#3B82C4">Free design, print &amp; textile tools · www.magicaltouchdesign.com</text>`;
   g += `<text x="${w - M}" y="${h - 8.6}" font-family="Helvetica" font-size="2.6" fill="#52525B" text-anchor="end">Page ${o.page} of ${o.pages}</text>`;
   return g;
 }
