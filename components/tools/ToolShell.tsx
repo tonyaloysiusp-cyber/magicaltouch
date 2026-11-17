@@ -9,6 +9,7 @@ import { ReactNode, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { ChevronDown, CircleHelp, LayoutGrid, Moon, Sun } from 'lucide-react';
 import { BrandLogo } from '@/components/BrandLogo';
+import { BackChip } from '@/components/tools/BackChip';
 import { ToolIcon } from '@/components/tools/ToolsDirectory';
 import { TOOLS, rememberTool } from '@/lib/toolsCatalog';
 import { useAppTheme } from '@/hooks/useAppTheme';
@@ -71,6 +72,7 @@ export function ToolShell({ path, h1, name, sub, icon, about, children }: ToolSh
               <h1 className="text-[15px] font-semibold leading-tight truncate" title={h1}>{title}<span className="sr-only"> — {h1}</span></h1>
               {(sub || entry?.hint) && <p className="hidden sm:block text-[11.5px] text-mt-muted truncate">{sub || entry?.hint}</p>}
             </div>
+            <span className="hidden md:inline-flex"><BackChip /></span>
             <Switcher current={path} />
             <button type="button" onClick={toggleTheme} aria-label={theme === 'dark' ? 'Light theme' : 'Dark theme'} className="h-9 w-9 grid place-items-center rounded-full border border-mt-border hover:bg-mt-surface2">{theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}</button>
             {about && <a href="#about" aria-label="How it works and questions" className="h-9 w-9 grid place-items-center rounded-full border border-mt-border hover:bg-mt-surface2"><CircleHelp size={15} /></a>}
@@ -79,7 +81,7 @@ export function ToolShell({ path, h1, name, sub, icon, about, children }: ToolSh
         </header>
         <main className="flex-1 w-full max-w-[1800px] mx-auto px-3 sm:px-5 py-4 sm:py-5">{children}</main>
         {about && (
-          <section id="about" aria-label={`About ${title}`} className="scroll-mt-20 border-t border-mt-border bg-mt-surface2/40">
+          <section id="about" aria-label="How it works and questions" className="scroll-mt-20 border-t border-mt-border bg-mt-surface2/40">
             <div className="max-w-[1200px] mx-auto px-4 sm:px-6 py-10">{about}</div>
           </section>
         )}
