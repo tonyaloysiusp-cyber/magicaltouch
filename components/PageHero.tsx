@@ -57,8 +57,8 @@ export function PageHero({
         {children && <div className="relative z-10 mt-7">{children}</div>}
       </div>
       {center && (
-        <div aria-hidden className={`relative pointer-events-none overflow-hidden ${ribbon === 'slim' ? 'h-10 sm:h-20 -mt-4' : 'h-6 sm:h-36 -mt-6 sm:overflow-visible'}`}>
-          <BrandRibbon className={`absolute left-1/2 -translate-x-1/2 top-0 max-w-none opacity-80 ${ribbon === 'slim' ? 'w-[900px] sm:w-[1500px]' : 'hidden sm:block w-[1700px]'}`} />
+        <div aria-hidden className={`relative pointer-events-none overflow-hidden ${ribbon === 'slim' ? 'h-10 sm:h-16 -mt-6' : 'h-6 sm:h-36 -mt-6 sm:overflow-visible'}`}>
+          <BrandRibbon className={`absolute left-1/2 -translate-x-1/2 max-w-none opacity-80 ${ribbon === 'slim' ? 'w-[900px] sm:w-[1500px] top-[-18px] sm:top-[-42px]' : 'hidden sm:block top-0 w-[1700px]'}`} />
         </div>
       )}
     </section>
