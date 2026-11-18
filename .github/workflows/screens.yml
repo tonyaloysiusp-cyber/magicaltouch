@@ -8,6 +8,10 @@ on:
         description: 'Space-separated paths, e.g. "/ /tools /textile-studio"'
         required: true
         default: '/ /tools /textile-studio /print-size-calculator /editor'
+      probe:
+        description: 'Optional space-separated paths to fetch (status, type, size)'
+        required: false
+        default: ''
       width:
         description: 'Viewport width'
         required: false
@@ -19,6 +23,12 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
+      - name: Probe
+        if: ${{ inputs.probe != '' }}
+        env:
+          PROBE: ${{ inputs.probe }}
+        run: |
+          for u in $PROBE; do echo "PROBE $u => $(curl -s -o /tmp/b -w '%{http_code} %{content_type} %{size_download}' "https://magicaltouchdesign.com$u") $(head -c 120 /tmp/b | tr -dc '[:print:]')"; done
       - uses: actions/setup-node@v4
         with:
           node-version: 20
