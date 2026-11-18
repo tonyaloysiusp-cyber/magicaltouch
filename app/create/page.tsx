@@ -7,6 +7,7 @@
 
 import { Footer } from '@/components/home/Footer';
 import { AppHeader } from '@/components/AppHeader';
+import { BrandRibbon } from '@/components/home/BrandRibbon';
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Lock, Unlock, Search, Wand2, ArrowRightLeft, ChevronDown, Check, Ruler, ArrowRight, X } from 'lucide-react';
@@ -193,13 +194,14 @@ export default function CreateDesignPage() {
 
         {/* Hero */}
         <section className="relative overflow-hidden border-b border-mt-border">
-          <div aria-hidden className="pointer-events-none absolute -top-40 left-1/2 -translate-x-1/2 w-[900px] h-[420px] rounded-full opacity-[0.16] dark:opacity-[0.22] blur-3xl mt-spectrum" />
+          <div aria-hidden className="pointer-events-none absolute -top-44 left-1/2 -translate-x-1/2 w-[1200px] max-w-[160vw] h-[440px] rounded-full opacity-[0.16] dark:opacity-[0.24] blur-3xl mt-spectrum" />
           <div className="relative mt-container pt-10 sm:pt-14 pb-8">
-            <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-mt-muted">New design</p>
-            <h1 className="mt-2 text-[34px] sm:text-5xl font-semibold tracking-tight leading-[1.05]">
+            <p className="text-center text-[12px] font-semibold uppercase tracking-[0.14em] text-mt-muted">New design</p>
+            <h1 className="mt-2 text-center text-[34px] sm:text-5xl 2xl:text-6xl font-semibold tracking-tight leading-[1.05]">
               What will you <span className="mt-spectrum-text">create</span> today?
             </h1>
-            <div className="mt-6 flex flex-col sm:flex-row gap-2.5 max-w-3xl">
+            <p className="mt-3 mx-auto max-w-2xl text-center text-[15px] sm:text-lg text-mt-muted leading-relaxed">Pick a size, a template or a tool — everything opens in the same editor, free.</p>
+            <div className="mt-6 mx-auto flex flex-col sm:flex-row gap-2.5 max-w-3xl">
               <label className="relative flex-1">
                 <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-mt-faint" />
                 <input
@@ -261,6 +263,9 @@ export default function CreateDesignPage() {
                 );
               })}
             </div>
+          </div>
+          <div aria-hidden className="relative h-6 sm:h-28 -mt-4 pointer-events-none overflow-hidden">
+            <BrandRibbon className="hidden sm:block absolute left-1/2 -translate-x-1/2 top-0 w-[1700px] max-w-none opacity-80" />
           </div>
         </section>
 

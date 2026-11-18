@@ -1,14 +1,16 @@
 'use client';
 
-// App frame for every standalone tool: the tool opens straight away under a
-// slim Magical Touch bar (logo · tool name · switch tool · theme · help),
-// like a desktop app — no website hero in front of it. How it works,
-// questions and related tools sit below the workspace for whoever wants them.
+// Frame for every standalone tool, in the site's theme: the main site menu,
+// a compact brand hero (glow, headline with the gradient word, the brand
+// ribbon) with back / switch tool / help, then the workspace. How it works,
+// questions and related tools sit below the workspace.
 
 import { ReactNode, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { ChevronDown, CircleHelp, LayoutGrid, Moon, Sun } from 'lucide-react';
-import { BrandLogo } from '@/components/BrandLogo';
+import { ChevronDown, CircleHelp, LayoutGrid } from 'lucide-react';
+import { SiteHeader } from '@/components/SiteHeader';
+import { PageHero } from '@/components/PageHero';
+import { Footer } from '@/components/home/Footer';
 import { BackChip } from '@/components/tools/BackChip';
 import { ToolIcon } from '@/components/tools/ToolsDirectory';
 import { TOOLS, rememberTool } from '@/lib/toolsCatalog';
@@ -40,11 +42,11 @@ function Switcher({ current }: { current: string }) {
   }, [open]);
   return (
     <div ref={ref} className="relative">
-      <button type="button" aria-expanded={open} aria-haspopup="menu" onClick={() => setOpen((v) => !v)} className="h-9 px-3 rounded-full border border-mt-border text-[13px] font-semibold inline-flex items-center gap-1.5 hover:bg-mt-surface2">
-        <LayoutGrid size={15} /> <span className="hidden sm:inline">Tools</span> <ChevronDown size={13} className={open ? 'rotate-180 transition-transform' : 'transition-transform'} />
+      <button type="button" aria-expanded={open} aria-haspopup="menu" onClick={() => setOpen((v) => !v)} className="h-9 px-3.5 rounded-full border border-mt-border bg-mt-surface text-[13px] font-semibold inline-flex items-center gap-1.5 hover:bg-mt-surface2">
+        <LayoutGrid size={15} /> <span>Switch tool</span> <ChevronDown size={13} className={open ? 'rotate-180 transition-transform' : 'transition-transform'} />
       </button>
       {open && (
-        <div role="menu" aria-label="Switch tool" className="absolute right-0 z-[80] mt-1.5 w-[300px] rounded-2xl border border-mt-border bg-mt-surface p-1.5 shadow-[0_18px_40px_-12px_rgba(9,9,11,0.3)]">
+        <div role="menu" aria-label="Switch tool" className="absolute left-1/2 -translate-x-1/2 z-[80] text-left mt-1.5 w-[300px] rounded-2xl border border-mt-border bg-mt-surface p-1.5 shadow-[0_18px_40px_-12px_rgba(9,9,11,0.3)]">
           {TOOLS.map((t) => (
             <Link key={t.id} role="menuitem" href={t.href} onClick={() => { rememberTool(t.id); setOpen(false); }} aria-current={t.href === current ? 'page' : undefined}
               className={`flex items-center gap-2.5 rounded-xl px-2.5 py-2 ${t.href === current ? 'bg-mt-surface2' : 'hover:bg-mt-surface2'}`}>
@@ -64,25 +66,27 @@ export function ToolShell({ path, h1, name, sub, icon, about, children }: ToolSh
   const entry = TOOLS.find((t) => t.href === path);
   const title = name || entry?.title || h1;
   useEffect(() => { if (entry) rememberTool(entry.id); }, [entry]);
+  // The headline's last word carries the brand gradient, as on the home and templates pages.
+  const words = h1.replace(/[.!?]$/, '').split(' ');
+  const accent = words.length > 1 ? words[words.length - 1] : undefined;
   return (
     <div className={`${display.variable} ${theme === 'dark' ? 'dark' : ''}`}>
       <div className="min-h-[100dvh] bg-mt-bg text-mt-ink flex flex-col">
-        <header className="sticky top-0 z-[70] bg-mt-surface/95 backdrop-blur border-b border-mt-border">
-          <div className="h-14 px-3 sm:px-5 flex items-center gap-3">
-            <Link href="/" aria-label="Magical Touch Design — home" className="shrink-0"><BrandLogo theme={theme} width={118} height={24} /></Link>
-            <span aria-hidden className="h-6 w-px bg-mt-border" />
-            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-mt-ink text-mt-bg"><ToolIcon name={icon || entry?.icon || 'Sparkles'} size={16} /></span>
-            <div className="min-w-0 mr-auto">
-              <h1 className="font-[family-name:var(--font-display)] text-[14.5px] font-medium tracking-[-0.01em] leading-tight truncate" title={h1}>{title}<span className="sr-only"> — {h1}</span></h1>
-              {(sub || entry?.hint) && <p className="hidden sm:block text-[11.5px] text-mt-muted truncate">{sub || entry?.hint}</p>}
-            </div>
-            <span className="hidden md:inline-flex"><BackChip /></span>
+        <SiteHeader theme={theme} onToggleTheme={toggleTheme} active="tools" />
+        <PageHero
+          align="center"
+          compact
+          ribbon="slim"
+          eyebrow={<span className="inline-flex items-center gap-2"><span className="grid h-6 w-6 place-items-center rounded-md bg-mt-ink text-mt-bg"><ToolIcon name={icon || entry?.icon || 'Sparkles'} size={13} /></span>{title}</span>}
+          title={h1}
+          accent={accent}
+          subtitle={sub || entry?.hint}
+          actions={<>
+            <BackChip />
             <Switcher current={path} />
-            <button type="button" onClick={toggleTheme} aria-label={theme === 'dark' ? 'Light theme' : 'Dark theme'} className="h-9 w-9 grid place-items-center rounded-full border border-mt-border hover:bg-mt-surface2">{theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}</button>
-            {about && <a href="#about" aria-label="How it works and questions" className="h-9 w-9 grid place-items-center rounded-full border border-mt-border hover:bg-mt-surface2"><CircleHelp size={15} /></a>}
-          </div>
-          <div aria-hidden className="h-[3px]" style={{ background: 'var(--mt-spectrum)' }} />
-        </header>
+            {about && <a href="#about" className="inline-flex h-9 items-center gap-1.5 rounded-full border border-mt-border bg-mt-surface px-3.5 text-[13px] font-semibold hover:border-mt-ink/40"><CircleHelp size={14} /> How it works and questions</a>}
+          </>}
+        />
         <main className="flex-1 w-full bg-[radial-gradient(circle,rgba(9,9,11,0.06)_1px,transparent_1px)] dark:bg-[radial-gradient(circle,rgba(255,255,255,0.05)_1px,transparent_1px)] [background-size:22px_22px]">
           <div className="w-full max-w-[1800px] mx-auto px-3 sm:px-5 py-4 sm:py-5">{children}</div>
         </main>
@@ -91,14 +95,7 @@ export function ToolShell({ path, h1, name, sub, icon, about, children }: ToolSh
             <div className="max-w-[1200px] mx-auto px-4 sm:px-6 py-10">{about}</div>
           </section>
         )}
-        <footer className="border-t border-mt-border px-4 sm:px-6 py-4 text-[12px] text-mt-muted flex flex-wrap items-center gap-x-4 gap-y-1">
-          <span className="font-semibold text-mt-ink">Magical Touch Design</span>
-          <Link href="/tools" className="hover:text-mt-ink">All tools</Link>
-          <Link href="/templates" className="hover:text-mt-ink">Templates</Link>
-          <Link href="/create" className="hover:text-mt-ink">Design editor</Link>
-          <Link href="/privacy" className="hover:text-mt-ink">Privacy</Link>
-          <span className="ml-auto">Your files stay on this device.</span>
-        </footer>
+        <Footer theme={theme} />
       </div>
     </div>
   );

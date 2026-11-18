@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { PageHero } from '@/components/PageHero';
 import { SeoShell, Crumbs } from '@/components/seo/SeoShell';
 import { SITE_URL, SITE_NAME, fitTitle, fitDescription } from '@/lib/seo';
 import { getActivePosts, postImage, hashtagText } from '@/lib/sitePosts';
@@ -19,11 +20,16 @@ export default async function Showcase() {
   const posts = await getActivePosts();
   return (
     <SeoShell>
+      <PageHero
+        align="center"
+        eyebrow="Showcase"
+        title="Made with Magical Touch."
+        accent="Magical Touch"
+        subtitle={`Posters, videos and ideas from ${SITE_NAME}. Every design here is made with our free templates — open one and make it yours.`}
+      />
       <div className="mt-container py-6 sm:py-10">
         <Crumbs items={[{ href: '/', label: 'Home' }, { label: 'Showcase' }]} />
-        <h1 className="mt-4 text-3xl sm:text-5xl font-semibold tracking-tight">Showcase</h1>
-        <p className="mt-2 text-mt-muted max-w-2xl">Posters, videos and ideas from {SITE_NAME}. Every design here is made with our free templates — open one and make it yours.</p>
-        <ul className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        <ul className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {posts.map((p) => (
             <li key={p.id} className="rounded-3xl border border-mt-border overflow-hidden bg-mt-surface">
               <Link href={`/showcase/${p.slug}`} className="block">

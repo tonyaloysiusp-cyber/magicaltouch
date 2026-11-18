@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { PageHero } from '@/components/PageHero';
 import { SeoShell, Crumbs } from '@/components/seo/SeoShell';
 import { SITE_URL, SITE_NAME, SeoTemplate, relatedHashtags } from '@/lib/seo';
 
@@ -85,12 +86,14 @@ export function CategoryLanding(props: {
   return (
     <SeoShell active="templates">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <PageHero
+        eyebrow="Templates"
+        title={`Free ${full} templates`}
+        accent={full}
+        subtitle={`${count} editable ${low} designs. ${intro || 'Pick one, change the words, colours and photos online, and download it ready to print or share.'}`}
+      />
       <div className="mt-container py-6 sm:py-10">
         <Crumbs items={crumbs} />
-        <h1 className="mt-4 text-3xl sm:text-4xl font-semibold tracking-tight">Free {full} templates</h1>
-        <p className="mt-3 max-w-2xl text-mt-muted">
-          {count} editable {low} designs. {intro || 'Pick one, change the words, colours and photos online, and download it ready to print or share.'}
-        </p>
         {subLinks && subLinks.length > 0 && (
           <nav aria-label={`${name} types`} className="mt-5 flex flex-wrap gap-2">
             {subLinks.map((s) => (

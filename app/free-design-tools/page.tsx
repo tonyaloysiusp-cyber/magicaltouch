@@ -6,6 +6,7 @@ import {
   QrCode, Quote, Scissors, SlidersHorizontal, Smartphone, Sparkles, Tag, TreePine, User, UtensilsCrossed, Wand2, Home, Languages,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import { PageHero } from '@/components/PageHero';
 import { SeoShell } from '@/components/seo/SeoShell';
 import { SITE_URL, SITE_NAME, getHiddenLandings, getPublishedSeoPages, fitTitle, fitDescription } from '@/lib/seo';
 import { ALL_LANDINGS } from '@/lib/landings';
@@ -86,11 +87,15 @@ export default async function FreeToolsPage() {
 
   return (
     <SeoShell active="tools">
+      <PageHero
+        align="center"
+        eyebrow="Tools"
+        title="Free design tools"
+        accent="design tools"
+        subtitle="Pick a tool and start. Every feature is free, with print-ready downloads."
+      />
       <div className="mt-container py-6 sm:py-10">
-        <h1 className="text-3xl sm:text-5xl font-semibold tracking-tight">Free design tools</h1>
-        <p className="mt-3 max-w-xl text-mt-muted">Pick a tool and start. Every feature is free, with print-ready downloads.</p>
-
-        <ul className="mt-8 grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+        <ul className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
           {STUDIO.map(({ href, name, note, icon: I, tint }) => (
             <li key={href}>
               <Link href={href} className="flex sm:flex-col items-center sm:items-start gap-3 rounded-2xl border border-mt-border bg-mt-surface p-4 h-full hover:-translate-y-0.5 transition-transform">

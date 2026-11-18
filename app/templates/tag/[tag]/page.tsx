@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { PageHero } from '@/components/PageHero';
 import { SeoShell, Crumbs } from '@/components/seo/SeoShell';
 import { SITE_URL, SITE_NAME, getTemplatesByHashtag, relatedHashtags, hashtagTitle, categorySlug, fitTitle, fitDescription } from '@/lib/seo';
 
@@ -58,18 +59,18 @@ export default async function TagPage({ params }: { params: { tag: string } }) {
   return (
     <SeoShell active="templates">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <PageHero
+        eyebrow={`#${tag}`}
+        title={`${title} templates`}
+        accent="templates"
+        subtitle={`${n} free, editable ${low} designs. Pick one, change the words, colours and photos in your browser, and download it ready to print or post.`}
+        actions={<>
+          <Link href={`/templates?q=${encodeURIComponent(tag)}`} className="h-10 px-5 inline-flex items-center rounded-full bg-mt-primary text-mt-onprimary text-sm font-medium">Open in the template gallery</Link>
+          <Link href="/editor" className="h-10 px-5 inline-flex items-center rounded-full border border-mt-border bg-mt-surface text-sm">Start from a blank page</Link>
+        </>}
+      />
       <div className="mt-container py-6 sm:py-10">
         <Crumbs items={[{ href: '/', label: 'Home' }, { href: '/templates', label: 'Templates' }, { label: `#${tag}` }]} />
-        <p className="mt-5 text-[13px] font-medium text-mt-primary">#{tag}</p>
-        <h1 className="mt-1 text-3xl sm:text-4xl font-semibold tracking-tight">{title} templates</h1>
-        <p className="mt-3 max-w-2xl text-mt-muted">
-          {n} free, editable {low} designs. Pick one, change the words, colours and photos in your browser, and download it ready to print or post.
-        </p>
-        <div className="mt-5 flex flex-wrap gap-2">
-          <Link href={`/templates?q=${encodeURIComponent(tag)}`} className="h-10 px-5 inline-flex items-center rounded-full bg-mt-primary text-mt-onprimary text-sm font-medium">Open in the template gallery</Link>
-          <Link href="/editor" className="h-10 px-5 inline-flex items-center rounded-full border border-mt-border text-sm">Start from a blank page</Link>
-        </div>
-
         <h2 className="sr-only">{title} templates</h2>
         <ul className="mt-8 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
           {rows.map((r) => (

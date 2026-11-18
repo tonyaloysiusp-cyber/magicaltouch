@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound, permanentRedirect } from 'next/navigation';
+import { PageHero } from '@/components/PageHero';
 import { SeoShell, Crumbs } from '@/components/seo/SeoShell';
 import { SITE_URL, SITE_NAME, searchTemplates, getSeoPage, getHiddenLandings, getLandingRedirects, fitTitle, fitDescription } from '@/lib/seo';
 import { landingBySlug, Landing, ALL_LANDINGS } from '@/lib/landings';
@@ -137,22 +138,24 @@ export default async function LandingPage({ params }: { params: { landing: strin
   return (
     <SeoShell>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
-      <div className="mt-container py-6 sm:py-10" lang={l.lang} dir={l.lang === 'ar' ? 'rtl' : undefined}>
-        <Crumbs items={[{ href: '/', label: l.lang === 'ar' ? 'الرئيسية' : 'Home' }, { href: '/free-design-tools', label: u.crumbs }, { label: l.h1 }]} />
-        <header className="mt-4 max-w-3xl">
-          <h1 className="text-3xl sm:text-5xl font-semibold tracking-tight">{l.h1}</h1>
-          {l.intro.map((p, i) => (
-            <p key={i} className="mt-4 text-[15px] sm:text-base text-mt-muted leading-relaxed">{p}</p>
-          ))}
-          <div className="mt-6 flex flex-wrap gap-3">
+      <div lang={l.lang} dir={l.lang === 'ar' ? 'rtl' : undefined}>
+        <PageHero
+          eyebrow={u.crumbs}
+          title={l.h1}
+          accent={l.h1.split(' ').slice(-2).join(' ')}
+          subtitle={<>{l.intro.map((p, i) => <span key={i} className={i ? 'block mt-3' : 'block'}>{p}</span>)}</>}
+          actions={<>
             {l.ctaHref ? (
               <Link href={l.ctaHref} className="h-12 px-6 rounded-2xl bg-mt-primary text-mt-onprimary font-semibold inline-flex items-center">{l.ctaLabel}</Link>
             ) : (
               <a href="#templates" className="h-12 px-6 rounded-2xl bg-mt-primary text-mt-onprimary font-semibold inline-flex items-center">{u.browse(items.length, l.thing)}</a>
             )}
-            <Link href="/create" className="h-12 px-6 rounded-2xl border border-mt-border font-semibold inline-flex items-center hover:bg-mt-surface2">{u.blank}</Link>
-          </div>
-        </header>
+            <Link href="/create" className="h-12 px-6 rounded-2xl border border-mt-border bg-mt-surface font-semibold inline-flex items-center hover:bg-mt-surface2">{u.blank}</Link>
+          </>}
+        />
+      </div>
+      <div className="mt-container py-6 sm:py-10" lang={l.lang} dir={l.lang === 'ar' ? 'rtl' : undefined}>
+        <Crumbs items={[{ href: '/', label: l.lang === 'ar' ? 'الرئيسية' : 'Home' }, { href: '/free-design-tools', label: u.crumbs }, { label: l.h1 }]} />
 
         {l.features && (
           <section className="mt-12">

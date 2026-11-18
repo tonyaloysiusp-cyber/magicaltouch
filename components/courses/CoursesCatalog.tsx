@@ -5,6 +5,7 @@
 // browser.
 
 import Link from 'next/link';
+import { BrandRibbon } from '@/components/home/BrandRibbon';
 import { ArrowRight, Award, BookOpen, CheckCircle2, Clock, Download, GraduationCap, Layers, Lock, Sparkles, Wand2 } from 'lucide-react';
 import { CourseWithLessons, CourseLevel, doneCount, formatMinutes, learnerStatus, totalMinutes } from '@/lib/courses';
 import { useLearner } from './useLearner';
@@ -27,15 +28,14 @@ export function CoursesCatalog({ courses }: { courses: CourseWithLessons[] }) {
     <div>
       {/* Hero */}
       <section className="relative overflow-hidden border-b border-mt-border">
-        <div aria-hidden className="absolute inset-0 opacity-[0.07] dark:opacity-[0.12]" style={{ background: GRADIENT }} />
-        <div aria-hidden className="absolute -top-40 right-[-10%] h-[520px] w-[520px] rounded-full blur-3xl opacity-25 dark:opacity-20" style={{ background: 'radial-gradient(circle, #35C2F1, transparent 65%)' }} />
+        <div aria-hidden className="pointer-events-none absolute -top-44 left-1/2 -translate-x-1/2 w-[1200px] max-w-[160vw] h-[440px] rounded-full opacity-[0.16] dark:opacity-[0.24] blur-3xl mt-spectrum" />
         <div className="mt-container relative py-12 sm:py-16 lg:py-20 grid gap-12 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
           <div>
             <p className="inline-flex items-center gap-2 rounded-full border border-mt-border bg-mt-surface/80 backdrop-blur px-3 py-1 text-[12px] font-semibold tracking-wide text-mt-muted">
               <GraduationCap size={14} aria-hidden /> Free tutorials &amp; courses
             </p>
             <h1 className="mt-5 text-4xl sm:text-5xl lg:text-[56px] font-semibold tracking-tight leading-[1.05]">
-              Learn design,<br className="hidden sm:block" /> <span className="bg-clip-text text-transparent" style={{ backgroundImage: 'linear-gradient(90deg,#3B82C4,#A69BD3,#F2708F)' }}>step by step.</span>
+              Learn design,<br className="hidden sm:block" /> <span className="mt-spectrum-text">step by step.</span>
             </h1>
             <p className="mt-5 max-w-xl text-lg text-mt-muted leading-relaxed">
               Short, hands-on lessons — from your first template to pro photo editing. Finish a course, then request a certificate; our team reviews every request before it is issued.
@@ -100,6 +100,9 @@ export function CoursesCatalog({ courses }: { courses: CourseWithLessons[] }) {
               </div>
             </div>
           </div>
+        </div>
+        <div aria-hidden className="relative h-6 sm:h-28 -mt-10 pointer-events-none overflow-hidden">
+          <BrandRibbon className="hidden sm:block absolute left-1/2 -translate-x-1/2 top-0 w-[1700px] max-w-none opacity-80" />
         </div>
       </section>
 

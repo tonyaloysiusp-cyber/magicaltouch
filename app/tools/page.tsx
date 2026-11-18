@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Brush, FileDown, Languages, Layers, Maximize2, PenTool, QrCode, Shapes, Sparkles, SwatchBook, Type, Wand2 } from 'lucide-react';
+import { PageHero } from '@/components/PageHero';
 import { SeoShell, Crumbs } from '@/components/seo/SeoShell';
 import { ToolsDirectory } from '@/components/tools/ToolsDirectory';
 import { TOOLS } from '@/lib/toolsCatalog';
@@ -38,13 +39,15 @@ export default function ToolsPage() {
   return (
     <SeoShell active="tools">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(ld) }} />
+      <PageHero
+        align="center"
+        eyebrow="Creative tools"
+        title="Every tool a designer needs."
+        accent="designer"
+        subtitle="Professional vector, photo, pattern and colour tools — free, in your browser, and connected to the same editor."
+      />
       <div className="mt-container py-6 sm:py-10">
         <Crumbs items={[{ href: '/', label: 'Home' }, { label: 'Tools' }]} />
-        <header className="mt-4 max-w-3xl">
-          <p className="text-[12px] font-semibold uppercase tracking-[0.2em] text-[#3B82C4]">Creative tools</p>
-          <h1 className="mt-2 text-3xl sm:text-5xl font-semibold tracking-tight">Every tool a designer needs</h1>
-          <p className="mt-3 text-lg text-mt-muted leading-relaxed">Professional vector, photo, pattern and colour tools — free, in your browser, and connected to the same editor.</p>
-        </header>
 
         <ToolsDirectory />
 

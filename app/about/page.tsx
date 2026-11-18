@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { getTemplateCountLabel, withCount } from '@/lib/templateCountServer';
 import Link from 'next/link';
+import { PageHero } from '@/components/PageHero';
 import { SeoShell } from '@/components/seo/SeoShell';
 import { BadgeCheck, Eraser, LayoutTemplate, Printer, SlidersHorizontal, Wand2 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
@@ -72,21 +73,15 @@ export default async function AboutPage() {
   return (
     <SeoShell active="about">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
-      <div className="mt-container py-8 sm:py-14">
-        <header className="max-w-3xl">
-          <p className="text-[12px] font-semibold tracking-[0.22em] uppercase text-mt-muted">About Magical Touch Design</p>
-          <h1 className="mt-4 text-4xl sm:text-6xl font-semibold tracking-tight leading-[1.04]">
-            Professional design,
-            <br />
-            <span className="mt-spectrum-text">made effortless.</span>
-          </h1>
-          <p className="mt-6 text-lg text-mt-muted leading-relaxed max-w-2xl">
-            We build the design studio we always wanted: professional templates, a powerful editor and a photo studio — in your browser, on any device, free for everyone.
-          </p>
-          <div className="mt-8 h-1 w-28 rounded-full" style={{ background: 'linear-gradient(90deg,#F2708F,#A69BD3,#35C2F1,#5DCCB8,#8CC84B,#DDE23B)' }} aria-hidden />
-        </header>
-
-        <section aria-label="At a glance" className="mt-12 grid grid-cols-2 lg:grid-cols-4 rounded-3xl border border-mt-border divide-x divide-y lg:divide-y-0 divide-mt-border overflow-hidden">
+      <PageHero
+        align="center"
+        eyebrow="About Magical Touch Design"
+        title="Professional design, made effortless."
+        accent="made effortless"
+        subtitle="We build the design studio we always wanted: professional templates, a powerful editor and a photo studio — in your browser, on any device, free for everyone."
+      />
+      <div className="mt-container py-8 sm:py-12">
+        <section aria-label="At a glance" className=" grid grid-cols-2 lg:grid-cols-4 rounded-3xl border border-mt-border divide-x divide-y lg:divide-y-0 divide-mt-border overflow-hidden">
           {[[label, 'editable templates'], ['100%', 'free — every feature'], ['0', 'watermarks'], ['Any device', 'computer, tablet, phone']].map(([n, l]) => (
             <div key={l} className="p-6 bg-mt-surface">
               <p className="text-3xl sm:text-4xl font-semibold tracking-tight">{n}</p>

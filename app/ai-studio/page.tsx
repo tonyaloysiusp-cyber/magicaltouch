@@ -13,6 +13,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowRight, ImagePlus, MousePointerClick, Sparkles, Wand2 } from 'lucide-react';
 import { AppHeader } from '@/components/AppHeader';
+import { PageHero } from '@/components/PageHero';
 import { Footer } from '@/components/home/Footer';
 import { ClaudeTemplate } from '@/components/admin/ClaudeTemplate';
 import { getSessionUser, supabase } from '@/lib/supabase';
@@ -55,16 +56,20 @@ export default function AiStudioPage() {
       <main className="min-h-screen bg-mt-bg text-mt-ink">
         <AppHeader theme={theme} onToggleTheme={toggleTheme} />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
-        <section className="mt-container py-12 sm:py-20">
-          <p className="text-[12px] font-semibold uppercase tracking-[0.16em] text-[#D97757]">New · AI Template Studio</p>
-          <h1 className="mt-3 max-w-3xl text-4xl sm:text-6xl font-semibold tracking-tight leading-[1.04]">Paste any design. <span className="mt-spectrum-text">Edit it in a minute.</span></h1>
-          <p className="mt-5 max-w-2xl text-[16px] sm:text-lg text-mt-muted leading-relaxed">See a flyer, invitation or post you love? Free AI rebuilds it as a fully editable design — then change every word, colour and photo and download a print-ready PDF or PNG. No watermark.</p>
-          <div className="mt-8 flex flex-wrap gap-3">
+        <PageHero
+          align="center"
+          eyebrow="New · AI Template Studio"
+          title="Paste any design. Edit it in a minute."
+          accent="Edit it in a minute."
+          subtitle="See a flyer, invitation or post you love? Free AI rebuilds it as a fully editable design — then change every word, colour and photo and download a print-ready PDF or PNG. No watermark."
+          actions={<>
             <button onClick={start} disabled={user === undefined} className="h-12 px-6 rounded-2xl bg-mt-primary text-mt-onprimary font-semibold inline-flex items-center gap-2 disabled:opacity-50"><Sparkles size={18} /> {user === null ? 'Sign in & start free' : 'Open the AI Studio'}</button>
-            <Link href="/templates" className="h-12 px-6 rounded-2xl border border-mt-border font-semibold inline-flex items-center gap-2 hover:bg-mt-surface2">Or browse templates <ArrowRight size={16} /></Link>
-          </div>
-          <p className="mt-4 text-[13px] text-mt-faint">Works with: {AI_PROVIDERS.map((p) => p.name).join(' · ')}</p>
-        </section>
+            <Link href="/templates" className="h-12 px-6 rounded-2xl border border-mt-border bg-mt-surface font-semibold inline-flex items-center gap-2 hover:bg-mt-surface2">Or browse templates <ArrowRight size={16} /></Link>
+          </>}
+        >
+          <p className="text-center text-[13px] text-mt-faint">Works with: {AI_PROVIDERS.map((p) => p.name).join(' · ')}</p>
+        </PageHero>
+        <div className="h-10" />
 
         <section className="mt-container pb-16">
           <ol className="grid gap-6 md:grid-cols-3">
