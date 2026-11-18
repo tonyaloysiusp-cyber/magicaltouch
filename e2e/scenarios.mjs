@@ -1397,10 +1397,15 @@ scenarios.push({
     await studio.getByRole('tab', { name: 'Layouts' }).click();
     await studio.getByRole('button', { name: '+ Sash' }).click();
     const layers = studio.getByRole('region', { name: 'Layers' }).or(studio.getByLabel('Layers'));
+    await t.page.waitForFunction(() => /Player name/.test(document.querySelector('[aria-label="Layers"]')?.textContent || ''), null, { timeout: 20000 }).catch(() => {});
     await t.page.waitForTimeout(800);
     const ltxt = await layers.innerText();
     t.check('layers list the added artwork', /Player number/.test(ltxt) && /Sash/.test(ltxt), ltxt.slice(0, 120));
-    await layers.getByRole('button', { name: /Player number/ }).click();
+    // The jersey's own name and number open as editable text layers too.
+    t.check('standard name and number are editable layers', /Player name/.test(ltxt) && (ltxt.match(/Player number/g) || []).length >= 2, ltxt.slice(0, 160));
+    await layers.getByRole('button', { name: /Player number/ }).first().click();
+    await studio.getByLabel('Font', { exact: true }).waitFor({ timeout: 5000 });
+    t.check('text inspector: font, size, outline controls', await studio.getByLabel('Font weight').isVisible() && await studio.getByLabel('Text content').isVisible());
     await studio.getByLabel('Fill HEX').fill('#ffcc00');
     await t.page.waitForTimeout(600);
     // Vector tools: draw a rectangle with the tool rail, combine it with a sash (boolean), group, ungroup.

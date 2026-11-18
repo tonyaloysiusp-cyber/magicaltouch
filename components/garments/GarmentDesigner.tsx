@@ -347,6 +347,9 @@ export function GarmentDesigner({ kind: initialKind = 'jersey', mode = 'pro', pi
     return () => { live = false; clearTimeout(t); };
   }, [texts, kit.font, kit.fontWeight]);
 
+  // The chosen font is also loaded into the page, so lettering shows in it even before its outlines are ready.
+  const [fontTick, setFontTick] = useState(0);
+  useEffect(() => { let live = true; import('@/lib/fontOutline').then(({ registerPageFont }) => registerPageFont(kit.font, kit.fontWeight)).then(() => { if (live) setFontTick((t) => t + 1); }).catch(() => {}); return () => { live = false; }; }, [kit.font, kit.fontWeight]);
   const issues = useMemo(() => checkRoster(players, personal, kit), [players, personal, kit]);
   const errors = issues.filter((i) => i.level === 'error');
   const player = personal ? players[Math.min(sel, players.length - 1)] || null : { name: '', number: '', size: players[0]?.size || 'M' };
@@ -358,7 +361,7 @@ export function GarmentDesigner({ kind: initialKind = 'jersey', mode = 'pro', pi
   const kitV = useDeferredValue(kit), playerV = useDeferredValue(player), patternV = useDeferredValue(pattern);
   const preview = useMemo(() => (view === 'garment' ? kitMockupSvg(kitV, patternV, playerV, glyphs, side, { selected: selEl }) : kitPreviewSvg(kitV, patternV, playerV, glyphs)),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [view, side, kitV, patternV, playerV, glyphs, selEl, artFontTick]);
+    [view, side, kitV, patternV, playerV, glyphs, selEl, artFontTick, fontTick]);
 
   // Picker thumbnails only change with the style / colours they show.
   const starterThumbs = useMemo(() => Object.fromEntries(STARTERS.map((st) => [st.name, svgDataUrl(kitMockupSvg({ ...kitFor(kind), style: kit.style, ...st.o, personalise: false, frontText: '', teamLogo: null, sponsorLogo: null, patternOn: 'none' }, DEFAULT_PATTERN, null, {}, 'front'))])), [kind, kit.style]);
@@ -607,7 +610,7 @@ export function GarmentDesigner({ kind: initialKind = 'jersey', mode = 'pro', pi
       {embOpen && <EmbroideryStudio design={kit.embroidery || null} pieces={kitProduct(kit).pieces} colours={{ body: kit.body }} fileBase={safeFile(kit.teamName || 'embroidery')} onSave={(embroidery) => setKit((k) => ({ ...k, embroidery }))} onClose={() => setEmbOpen(false)} />}
       {studioOpen && <PrintStudio kit={kit} pattern={pattern} glyphs={glyphs} players={personal ? players : players.map((p) => ({ ...p, name: '', number: '' }))}
         libraryPatterns={mine.filter((x) => x.id).map((x) => ({ id: x.id!, kind: 'pattern' as const, name: x.name, data: x.p, createdAt: x.at || '', updatedAt: x.at || '' }))}
-        onSave={(art, studioOnly) => setKit((k) => ({ ...k, art, studioOnly }))} onClose={() => setStudioOpen(false)} />}
+        onSave={(art, studioOnly) => setKit((k) => ({ ...k, art, studioOnly, ...(art.some((e: any) => e.std === 'frontText') ? { frontText: '' } : {}) }))} onClose={() => setStudioOpen(false)} />}
       {/* Project bar */}
       <div role="toolbar" aria-label="Project" className="flex flex-wrap items-center gap-1 rounded-xl border border-mt-border bg-mt-surface px-2 py-1.5 shadow-[0_1px_0_rgba(9,9,11,0.04)]">
         <Shirt size={18} className="ml-2 text-mt-muted" aria-hidden />
@@ -1020,7 +1023,7 @@ export function GarmentDesigner({ kind: initialKind = 'jersey', mode = 'pro', pi
                   style={{ touchAction: selEl && DRAG.includes(selEl) ? 'none' : 'pan-y' }}
                   onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp}
                   dangerouslySetInnerHTML={{ __html: preview }} />
-              ) : <img src={svgDataUrl(preview)} alt={`${copy.noun} print pieces`} className={`mx-auto w-full ${zoom > 1 ? '' : 'max-h-[600px]'} object-contain`} />}
+              ) : <div role="img" aria-label={`${copy.noun} print pieces`} className={`mx-auto w-full [&_svg]:mx-auto [&_svg]:block [&_svg]:w-full [&_svg]:h-auto ${zoom > 1 ? '' : '[&_svg]:max-h-[600px]'}`} dangerouslySetInnerHTML={{ __html: preview }} />}
               </div>
               {view === 'garment' && !selEl && <p className="mt-2 text-center text-[12px] text-mt-muted inline-flex w-full items-center justify-center gap-1.5"><MousePointerClick size={13} /> Click any part of the shirt to edit it · drag names, numbers, logos and text to move them</p>}
             </div>

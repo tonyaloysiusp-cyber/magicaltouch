@@ -44,6 +44,22 @@ export function loadFont(family: string, weight = 400, italic = false): Promise<
   return fonts.get(key)!;
 }
 
+const pageFaces = new Map<string, Promise<void>>();
+/** Registers the real font under its own family name in this page (for live SVG text and previews). */
+export function registerPageFont(family: string, weight = 400, italic = false): Promise<void> {
+  if (typeof document === 'undefined' || typeof FontFace === 'undefined') return Promise.resolve();
+  const f = resolveFace(family, weight);
+  const key = `${family}|${weight}|${italic ? 1 : 0}`;
+  if (!pageFaces.has(key)) {
+    pageFaces.set(key, (async () => {
+      const face = new FontFace(family, `url(/api/font-file?family=${encodeURIComponent(f.src)}&weight=${f.weight}${italic ? '&italic=1' : ''})`, { weight: String(weight), style: italic ? 'italic' : 'normal' });
+      await face.load();
+      (document.fonts as any).add(face);
+    })().catch(() => { pageFaces.delete(key); }));
+  }
+  return pageFaces.get(key)!;
+}
+
 /** The TTF bytes (for embedding live text in PDFs). */
 export async function fontBytes(family: string, weight = 400, italic = false): Promise<ArrayBuffer> {
   const f = resolveFace(family, weight);

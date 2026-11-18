@@ -44,7 +44,7 @@ export function loadFace(family: string, weight: number, italic: boolean): Promi
 
 /** The word as one vector path fitted to the -50…50 motif box. */
 export async function textOutline(text: string, opts: { family: string; weight: number; italic: boolean; spacing?: number }): Promise<string | null> {
-  const t = text.trim().slice(0, 12);
+  const t = text.trim().slice(0, 60);
   if (!t) return null;
   const exact = await exactTextOutline(t, { family: opts.family, weight: opts.weight, italic: opts.italic, spacing: opts.spacing, size: 320 });
   if (exact) return fitPath(exact, pathBox(exact));

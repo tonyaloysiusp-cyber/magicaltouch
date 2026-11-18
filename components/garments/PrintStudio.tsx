@@ -20,7 +20,7 @@ import {
 import { boardLayout, layoutText, mulM, artFonts, type ArtEl, type Board, type Fill, type Mat } from '@/lib/textile/art';
 import { ensureFonts, shaper } from '@/lib/textile/fonts';
 import { normalize, segsToD, transformSegs, bbox as segBox, flatten, regionOf, booleanOp, polysToD, centred, nodes as pathNodes, moveNode, insertNode, deleteNode, setNodeType, penPath, polygonPath, starPath, offsetPath, type BoolOp, type Seg } from '@/lib/textile/vector';
-import { kitProduct, pieceMarkup, stdLettering, panelSpec, type KitDesign, type Player, type Glyphs } from '@/lib/teamKit';
+import { kitProduct, pieceMarkup, stdLettering, panelSpec, frontLayout, type KitDesign, type Player, type Glyphs } from '@/lib/teamKit';
 import { GENERATORS, DESIGNS, generate, genDefaults, roleColour, pathBytes, type GenKind, type GenParams, type GenSpec, type Box as GenBox } from '@/lib/textile/generators';
 import { MOTIFS, tileSvg, layout as patLayout, type PatternSettings } from '@/lib/patterns';
 import { flower, paisley, mandala, damask, border as floralBorder, neckline as floralNeckline, vine as floralVine, DEFAULT_FLOWER, DEFAULT_ROLE_COLOURS, ROLE_LABEL, type FlowerSpec, type Part as FloralPart, type Role as FloralRole, type BorderMotif, type NeckShape, type PetalShape, type CentreStyle, type LeafShape } from '@/lib/textile/floral';
@@ -147,6 +147,38 @@ export function PrintStudio({ kit, pattern, glyphs, players, libraryPatterns, on
     return () => { live = false; };
   }, [art]);
 
+  // ---------------------------------------------------------------- lettering becomes real, editable text
+  // The name, number and front number set up outside the studio are turned into studio text
+  // objects at exactly the same place and size, so every one can be selected, retyped, re-fonted,
+  // outlined, curved and moved here — instead of being a fixed picture behind the artwork.
+  const seeded = useRef(false);
+  useEffect(() => {
+    if (seeded.current || garment) return;
+    seeded.current = true;
+    const std = stdLettering({ ...kit, art });
+    const wantFront = false; // the front text stays on the garment's own controls (its "+ Text" spot on the shirt)
+    const personal = kit.personalise !== false && players.some((p) => (p.name || p.number));
+    if (!wantFront && !(personal && (std.name || std.number))) return;
+    const font = kit.font || 'Oswald', weight = kit.fontWeight || 700;
+    ensureFonts([{ font, weight }]).then(() => {
+      const capOf = (size: number) => { const sh = shaper(font, weight, false, 'H0', 100, 0); return size * 100 / Math.max(1, sh?.capHeight || 72); };
+      const back = board.pieces.find((p) => p.piece.id === 'back');
+      const front = board.pieces.find((p) => p.piece.id === 'front');
+      const outline = kit.outlineMm ? { stroke: kit.outlineColor, strokeW: kit.outlineMm * 2 } : { stroke: null, strokeW: 0 };
+      const els: any[] = [];
+      if (personal && back && std.name) els.push({ kind: 'text', text: '{NAME}', upper: true, font, weight, size: capOf(kit.nameMm), fill: kit.nameColor, ...outline, align: 'center', fitW: back.piece.w * 0.78, m: T(back.x + back.piece.w / 2, back.y + kit.nameTopMm + kit.nameMm / 2), name: 'Player name', std: 'name' });
+      if (personal && back && std.number) els.push({ kind: 'text', text: '{NUMBER}', font, weight, size: capOf(kit.numberMm), fill: kit.numberColor, ...outline, align: 'center', fitW: back.piece.w * 0.7, m: T(back.x + back.piece.w / 2, back.y + kit.numberTopMm + kit.numberMm / 2), name: 'Player number', std: 'number' });
+      if (front) {
+        const L = frontLayout(kit, front.piece.w);
+        if (personal && std.number && kit.frontNumber) els.push({ kind: 'text', text: '{NUMBER}', font, weight, size: capOf(L.frontNum.h), fill: kit.numberColor, ...outline, align: 'center', fitW: L.frontNum.w, m: T(front.x + L.frontNum.x + L.frontNum.w / 2, front.y + L.frontNum.y + L.frontNum.h / 2), name: 'Front number', std: 'frontNumber' });
+        if (wantFront) els.push({ kind: 'text', text: kit.frontText!.trim(), font, weight, size: capOf(L.frontText.h), fill: kit.frontTextColor || '#FFFFFF', stroke: null, strokeW: 0, align: 'center', fitW: L.frontText.w, m: T(front.x + L.frontText.x + L.frontText.w / 2, front.y + L.frontText.y + L.frontText.h / 2), name: 'Front text', std: 'frontText' });
+      }
+      if (!els.length) return;
+      setArtState((a) => [...a, ...els.map((e) => ({ ...e, id: uid() }))]);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // ---------------------------------------------------------------- responsive
   useEffect(() => {
     const on = () => { const w = window.innerWidth; const n = w < 1100; setNarrow(n); if (n) { setShowLeft(false); setShowRight(false); } else { setShowLeft(true); setShowRight(true); } };
@@ -258,11 +290,11 @@ export function PrintStudio({ kit, pattern, glyphs, players, libraryPatterns, on
     const flags: ArtEl[] = [];
     if (letters[0] === '0') flags.push({ id: 'f1', kind: 'text', text: '{NAME}', font: 'Oswald', weight: 700, size: 1, hidden: true, m: I } as any);
     if (letters[1] === '0') flags.push({ id: 'f2', kind: 'text', text: '{NUMBER}', font: 'Oswald', weight: 700, size: 1, hidden: true, m: I } as any);
-    const base = { ...kit, art: flags, studioOnly };
+    const base = { ...kit, art: flags, studioOnly, frontText: art.some((e: any) => e.std === 'frontText') ? '' : kit.frontText };
     const bgs: any[] = [];
     for (const bp of board.pieces) {
       const p = bp.piece;
-      const inner = pieceMarkup(p, base, pattern, player, glyphs, 1, 0, 'live');
+      const inner = pieceMarkup(p, base, pattern, player, glyphs, 1, 0, 'outline');
       const svg = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${p.w * 2}" height="${p.h * 2}" viewBox="0 0 ${p.w} ${p.h}">${p.mirror ? `<g transform="translate(${p.w} 0) scale(-1 1)">${inner}</g>` : inner}</svg>`;
       const img: any = await new Promise((res) => Fb.Image.fromURL(svgUrl(svg), (o: any) => res(o)));
       if (!img) continue;
@@ -289,7 +321,7 @@ export function PrintStudio({ kit, pattern, glyphs, players, libraryPatterns, on
     bgCount.current = bgs.length;
     c.requestRenderAll();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [kit, pattern, board, player, glyphs, studioOnly, grid, letters]);
+  }, [kit, pattern, board, player, glyphs, studioOnly, grid, letters, art.some((e: any) => e.std === 'frontText')]);
   useEffect(() => { drawBoard(); }, [drawBoard]);
 
   // ---------------------------------------------------------------- model → fabric
@@ -710,6 +742,8 @@ export function PrintStudio({ kit, pattern, glyphs, players, libraryPatterns, on
   const toolDbl = (opt: any) => {
     const t = toolRef.current;
     if (t === 'pen') { pen.current.pts.pop(); finishPen(false); return; }
+    // Double-click text: type straight into it (the text box in Properties).
+    if (t === 'select' && selected && selected.kind === 'text') { setShowRight(true); setTimeout(() => { const ta = document.querySelector('textarea[aria-label="Text content"]') as HTMLTextAreaElement | null; ta?.focus(); ta?.select(); }, 60); return; }
     if (t === 'node' && selected && selected.kind === 'path') {
       const c = fc.current; const p = c.getPointer(opt.e); const local = ap(inv(selected.m), p.x, p.y);
       const segs = normalize(selected.d);
