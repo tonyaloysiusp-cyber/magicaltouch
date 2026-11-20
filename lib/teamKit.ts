@@ -98,7 +98,7 @@ export interface KitDesign {
 export const DEFAULT_KIT: KitDesign = {
   style: 'football', body: '#FFFFFF', sleeve: '#FFFFFF', collar: '#FFFFFF', patternOn: 'none', patternOpacity: 0.35, repeatMm: 70,
   font: 'Oswald', fontWeight: 700, nameColor: '#111111', numberColor: '#111111', outlineColor: '#111111', outlineMm: 0,
-  nameMm: 55, numberMm: 230, nameTopMm: 95, numberTopMm: 175, frontNumber: true, teamLogo: null, sponsorLogo: null, teamName: 'My Team',
+  nameMm: 55, numberMm: 230, nameTopMm: 90, numberTopMm: 192, frontNumber: true, teamLogo: null, sponsorLogo: null, teamName: 'My Team',
   graphic: 'plain', accent: '#FFFFFF', accent2: '#FFFFFF', cuffs: true, frontText: '', frontTextColor: '#111111', frontTextMm: 60, frontTextTopMm: 420, personalise: true,
 };
 
