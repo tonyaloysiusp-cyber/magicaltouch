@@ -6,7 +6,8 @@
 // Every change goes through the same actions as the floating toolbar, so
 // it records undo steps, saves and exports the same way.
 
-import { ReactNode, useState } from 'react';
+import { DEFAULT_TEXT_STYLES, loadBrandKit, saveBrandKit, type BrandKit, type BrandTextRole, type BrandTextStyle } from '@/lib/editor/brandKit';
+import { ReactNode, useEffect, useState } from 'react';
 import {
   Lock,
   Unlock,
@@ -634,8 +635,17 @@ function TextSection({ p, colorProps }: { p: Props; colorProps: any }) {
             <Strikethrough size={15} />
           </IconBtn>
         </div>
-        <p className="text-[11px] text-mt-faint leading-snug">Double-click the text and highlight some letters to change just those.</p>
+        <div className="flex flex-wrap gap-1.5" role="group" aria-label="Letter case and position">
+          {([['UPPER', 'AA', (t: string) => t.toUpperCase()], ['lower', 'aa', (t: string) => t.toLowerCase()], ['Title Case', 'Aa', (t: string) => t.toLowerCase().replace(/(^|[\s\-–—/(])(\p{L})/gu, (_m, a, b) => a + b.toUpperCase())], ['Sentence case', 'A.', (t: string) => t.toLowerCase().replace(/(^\s*|[.!?]\s+|\n\s*)(\p{L})/gu, (_m, a, b) => a + b.toUpperCase())]] as [string, string, (t: string) => string][]).map(([label, short, fn]) => (
+            <IconBtn key={label} label={label} disabled={locked} onClick={() => a.applyProp({ text: fn(String(sel.text || '')) })}><span className="text-[11.5px] font-semibold">{short}</span></IconBtn>
+          ))}
+          <IconBtn label="Superscript" disabled={locked} onClick={() => { const fs = size.value ?? 40; a.applyCharProp({ fontSize: Math.round(fs * 0.6 * 10) / 10, deltaY: -Math.round(fs * 0.38) }); }}><span className="text-[11.5px] font-semibold">x²</span></IconBtn>
+          <IconBtn label="Subscript" disabled={locked} onClick={() => { const fs = size.value ?? 40; a.applyCharProp({ fontSize: Math.round(fs * 0.6 * 10) / 10, deltaY: Math.round(fs * 0.12) }); }}><span className="text-[11.5px] font-semibold">x₂</span></IconBtn>
+          <IconBtn label="Normal position" disabled={locked} onClick={() => a.applyCharProp({ deltaY: 0 })}><span className="text-[11.5px] font-semibold">x</span></IconBtn>
+        </div>
+        <p className="text-[11px] text-mt-faint leading-snug">Double-click the text and highlight some letters to change just those (size, colour, superscript…).</p>
       </Section>
+      <TextStylesSection p={p} locked={locked} />
       <Section title="Paragraph">
         <div className="flex gap-1.5">
           {(
@@ -660,6 +670,24 @@ function TextSection({ p, colorProps }: { p: Props; colorProps: any }) {
           <NumField label="Baseline" value={baseline.mixed ? undefined : baseline.value ?? 0} mixed={baseline.mixed} min={-500} max={500} disabled={locked} title="Raise or lower letters" onCommit={(n) => a.applyCharProp({ deltaY: n })} />
           <NumField label="H scale" value={Math.round((Math.abs(sel.scaleX || 1) / Math.abs(sel.scaleY || 1)) * 100)} min={10} max={1000} suffix="%" disabled={locked} title="Horizontal scale: letters wider or narrower, same height" onCommit={(n) => a.applyProp({ scaleX: Math.sign(sel.scaleX || 1) * Math.abs(sel.scaleY || 1) * (n / 100) })} />
           <NumField label="V scale" value={Math.round((Math.abs(sel.scaleY || 1) / Math.abs(sel.scaleX || 1)) * 100)} min={10} max={1000} suffix="%" disabled={locked} title="Vertical scale: letters taller or shorter, same width" onCommit={(n) => a.applyProp({ scaleY: Math.sign(sel.scaleY || 1) * Math.abs(sel.scaleX || 1) * (n / 100) })} />
+        </div>
+        <div className="flex flex-wrap gap-1.5" role="group" aria-label="Lists and fitting">
+          {([['Bullet list', '•', (l: string, _i: number) => `• ${l}`], ['Numbered list', '1.', (l: string, i: number) => `${i + 1}. ${l}`], ['Dash list', '–', (l: string) => `– ${l}`]] as [string, string, (l: string, i: number) => string][]).map(([label, short, mk]) => (
+            <IconBtn key={label} label={label} disabled={locked} onClick={() => {
+              const lines = String(sel.text || '').split('\n');
+              const strip = (l: string) => l.replace(/^\s*(?:[•–-]|\d+[.)])\s+/, '');
+              const has = lines.every((l) => !l.trim() || /^\s*(?:[•–-]|\d+[.)])\s+/.test(l));
+              let n = 0;
+              a.applyProp({ text: lines.map((l) => (!l.trim() ? l : has ? strip(l) : mk(strip(l), n++))).join('\n') });
+            }}><span className="text-[12px] font-semibold">{short}</span></IconBtn>
+          ))}
+          {sel.type === 'textbox' && <WideBtn icon={<AlignJustify size={14} />} label="Fit text to width" disabled={locked} onClick={() => {
+            // Largest size at which the longest line still fits the box width.
+            const lines = (sel._textLines || []).map((_l: any, i: number) => sel.getLineWidth ? sel.getLineWidth(i) : 0);
+            const longest = Math.max(1, ...lines), inner = Math.max(10, (sel.width || 100) - (sel.indentLeft || 0) - (sel.indentRight || 0));
+            const fs = Math.max(4, Math.min(2000, Math.floor((size.value ?? 40) * (inner / longest) * 0.98)));
+            a.applyProp({ fontSize: fs });
+          }} />}
         </div>
         <label className="flex items-center justify-between text-[12px] text-mt-muted">Direction
           <select value={sel.direction || 'ltr'} disabled={locked} onChange={(e) => a.applyProp({ direction: e.target.value, ...(e.target.value === 'rtl' && (sel.textAlign || 'left') === 'left' ? { textAlign: 'right' } : {}) })} aria-label="Text direction" className="h-8 rounded-lg border border-mt-input-border bg-mt-surface px-2 text-[12.5px] text-mt-ink">
@@ -697,5 +725,45 @@ function TextSection({ p, colorProps }: { p: Props; colorProps: any }) {
         </Section>
       )}
     </>
+  );
+}
+
+// ------------------------------------------------------- text styles
+// Corporate text styles from the brand kit (Heading, Subheading, Body, Quote) —
+// one click gives any text the house font, weight, size, colour and spacing.
+function TextStylesSection({ p, locked }: { p: Props; locked: boolean }) {
+  const { a, selected: sel } = p;
+  const [styles, setStyles] = useState<Record<BrandTextRole, BrandTextStyle>>(DEFAULT_TEXT_STYLES);
+  const [kit, setKit] = useState<BrandKit | null>(null);
+  useEffect(() => { let on = true; loadBrandKit().then((k) => { if (!on) return; setKit(k); setStyles({ ...DEFAULT_TEXT_STYLES, ...(k.styles || {}) }); }).catch(() => {}); return () => { on = false; }; }, []);
+  const k = Math.abs(sel.scaleY || 1) || 1;
+  const apply = (st: BrandTextStyle) => a.applyProp({ fontFamily: st.font, fontWeight: st.weight, fontSize: st.size / k, fill: st.color, fontStyle: st.italic ? 'italic' : 'normal', charSpacing: st.spacing || 0, ...(st.upper ? { text: String(sel.text || '').toUpperCase() } : {}) });
+  const saveAs = async (role: BrandTextRole) => {
+    const st: BrandTextStyle = { font: sel.fontFamily, weight: Number(sel.fontWeight === 'bold' ? 700 : sel.fontWeight === 'normal' ? 400 : sel.fontWeight) || 400, size: Math.round((sel.fontSize || 40) * k), color: typeof sel.fill === 'string' ? sel.fill : '#111111', italic: sel.fontStyle === 'italic', spacing: sel.charSpacing || 0, upper: String(sel.text || '') === String(sel.text || '').toUpperCase() && /[A-Z]/.test(String(sel.text || '')) };
+    const next = { ...styles, [role]: st };
+    setStyles(next);
+    const base = kit || (await loadBrandKit());
+    await saveBrandKit({ ...base, styles: next });
+  };
+  const LABEL: Record<BrandTextRole, string> = { heading: 'Heading', subheading: 'Subheading', body: 'Body', quote: 'Quote' };
+  return (
+    <Section title="Text styles">
+      <div className="grid grid-cols-2 gap-1.5">
+        {(Object.keys(LABEL) as BrandTextRole[]).map((r) => (
+          <button key={r} type="button" disabled={locked} onClick={() => apply(styles[r])} title={`${styles[r].font} ${styles[r].weight} · ${styles[r].size}px`}
+            className="rounded-lg border border-mt-input-border px-2 py-1.5 text-left hover:bg-mt-surface2 disabled:opacity-50">
+            <span className="block truncate text-[12.5px] text-mt-ink" style={{ fontFamily: styles[r].font, fontWeight: styles[r].weight, fontStyle: styles[r].italic ? 'italic' : 'normal', textTransform: styles[r].upper ? 'uppercase' : 'none' }}>{LABEL[r]}</span>
+            <span className="block truncate text-[10.5px] text-mt-faint">{styles[r].font} · {styles[r].size}px</span>
+          </button>
+        ))}
+      </div>
+      <label className="flex items-center justify-between gap-2 text-[12px] text-mt-muted">Save this text as
+        <select defaultValue="" disabled={locked} onChange={(e) => { const r = e.target.value as BrandTextRole; if (r) saveAs(r); e.target.value = ''; }} aria-label="Save as text style" className="h-8 rounded-lg border border-mt-input-border bg-mt-surface px-2 text-[12.5px] text-mt-ink">
+          <option value="">Choose a style…</option>
+          {(Object.keys(LABEL) as BrandTextRole[]).map((r) => <option key={r} value={r}>{LABEL[r]}</option>)}
+        </select>
+      </label>
+      <p className="text-[11px] text-mt-faint leading-snug">Styles are saved in your brand kit and used across all your designs.</p>
+    </Section>
   );
 }

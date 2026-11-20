@@ -11,7 +11,7 @@ import { useEffect, useMemo, useRef, useState, useDeferredValue } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { AlertTriangle, Image as ImageIcon, Printer, Type, Users, CheckCircle2, PenTool, Download, FileUp, FolderOpen, Loader2, MousePointerClick, Plus, Redo2, RotateCcw, Save, Shirt, Sparkles, Trash2, Undo2, Upload, X, ZoomIn, ZoomOut } from 'lucide-react';
-import { DEFAULT_PATTERN, PatternSettings, svgDataUrl, sheetPlacements, motifPath, layout } from '@/lib/patterns';
+import { DEFAULT_PATTERN, PatternSettings, svgDataUrl, sheetPlacements, motifPath, layout, MOTIFS, MOTIF_CATEGORIES, REPEATS } from '@/lib/patterns';
 import { SIZES, ROLLS } from '@/lib/garments';
 import {
   garmentOf, GARMENT_STYLES, GarmentKind, Glyphs, sizeInfo, sizeId, blockMeasure, KIT_GRAPHICS, KIT_STYLES, KitDesign, KitGraphic, Player, checkRoster, glyphTexts, kitFor,
@@ -119,6 +119,7 @@ export function GarmentDesigner({ kind: initialKind = 'jersey', mode = 'pro', pi
   useEffect(() => { onKind?.(garmentOf(kit.style), kit.neck); }, [kit.style, kit.neck]); // eslint-disable-line react-hooks/exhaustive-deps
   const [players, setPlayers] = useState<Player[]>(COPY[initialKind].sample);
   const [pat, setPat] = useState<PatternSettings>({ ...DEFAULT_PATTERN, ...PATTERNS[0].p });
+  const [patEditOpen, setPatEditOpen] = useState(false);
   const [patColor, setPatColor] = useState('#FFFFFF');
   const [patName, setPatName] = useState(PATTERNS[0].name);
   const [mine, setMine] = useState<{ id?: string; name: string; p: PatternSettings; at?: string }[]>([]);
@@ -606,6 +607,11 @@ export function GarmentDesigner({ kind: initialKind = 'jersey', mode = 'pro', pi
       </span>{label}
     </label>
   );
+  const patSlider = (label: string, v: number, min: number, max: number, step: number, on: (v: number) => void, unit: string) => (
+    <label className="block"><span className="flex justify-between text-[12px] text-mt-muted"><span>{label}</span><span className="text-mt-ink tabular-nums">{v}{unit}</span></span><input type="range" min={min} max={max} step={step} value={v} onChange={(e) => on(Number(e.target.value))} aria-label={label} className="mt-1 w-full accent-[#3B82C4]" /></label>
+  );
+  // Editing a library pattern here makes a custom copy (the saved one in My patterns is not changed).
+  const editPat = (p: Partial<PatternSettings>) => { setPat((v) => ({ ...v, ...p })); if (patAssetId) { setPatAssetId(null); setPatAssetAt(null); setPatName(`${patName} (custom)`); } };
   const slider = (label: string, v: number, min: number, max: number, step: number, k: keyof KitDesign, unit = 'mm') => (
     <label className="block"><span className="flex justify-between text-[12px] text-mt-muted"><span>{label}</span><span className="text-mt-ink tabular-nums">{v}{unit}</span></span><input type="range" min={min} max={max} step={step} value={v} onChange={(e) => set({ [k]: Number(e.target.value) } as any)} className="mt-1 w-full accent-[#3B82C4]" /></label>
   );
@@ -827,6 +833,53 @@ export function GarmentDesigner({ kind: initialKind = 'jersey', mode = 'pro', pi
                 </div>
                 <label className="block"><span className="flex justify-between text-[12px] text-mt-muted"><span>Strength</span><span className="text-mt-ink tabular-nums">{Math.round(kit.patternOpacity * 100)}%</span></span><input type="range" min={5} max={100} step={5} value={Math.round(kit.patternOpacity * 100)} onChange={(e) => set({ patternOpacity: Number(e.target.value) / 100 })} className="mt-1 w-full accent-[#3B82C4]" /></label>
                 {slider('Repeat size', kit.repeatMm, 20, 300, 5, 'repeatMm')}
+                {/* Full pattern control right here: motif, repeat, size, turn, spacing, colours. */}
+                <details className="rounded-xl border border-mt-border" open={patEditOpen} onToggle={(e) => setPatEditOpen((e.target as HTMLDetailsElement).open)}>
+                  <summary className="cursor-pointer px-3 py-2 text-[12.5px] font-semibold">Customise pattern</summary>
+                  <div className="space-y-2.5 px-3 pb-3" role="group" aria-label="Customise pattern">
+                    <label className="block text-[12px] text-mt-muted">Motif
+                      <select value={pat.motif} onChange={(e) => editPat({ motif: e.target.value })} className={`${field} mt-1`} aria-label="Pattern motif">
+                        {pat.motif === 'text' && <option value="text">Your text</option>}
+                        {pat.motif === 'image' && <option value="image">Your image</option>}
+                        {MOTIF_CATEGORIES.map((c) => <optgroup key={c} label={c}>{MOTIFS.filter((m) => m.cat === c).map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}</optgroup>)}
+                      </select>
+                    </label>
+                    <div className="grid grid-cols-6 gap-1" aria-label="Quick motifs">
+                      {MOTIFS.filter((m) => m.cat === (MOTIFS.find((x) => x.id === pat.motif)?.cat || 'Basic')).slice(0, 12).map((m) => (
+                        <button key={m.id} type="button" title={m.label} aria-label={`Motif ${m.label}`} aria-pressed={pat.motif === m.id} onClick={() => editPat({ motif: m.id })} className={`aspect-square rounded-lg border p-1 ${pat.motif === m.id ? 'border-mt-ink bg-mt-surface2' : 'border-mt-border hover:border-mt-ink/40'}`}>
+                          <svg viewBox="-55 -55 110 110" className="h-full w-full"><path d={m.d} fill="currentColor" /></svg>
+                        </button>
+                      ))}
+                    </div>
+                    <label className="block text-[12px] text-mt-muted">Repeat
+                      <select value={pat.repeat} onChange={(e) => editPat({ repeat: e.target.value as PatternSettings['repeat'] })} className={`${field} mt-1`} aria-label="Pattern repeat">{REPEATS.map((r) => <option key={r.id} value={r.id} title={r.hint}>{r.label} — {r.hint}</option>)}</select>
+                    </label>
+                    {patSlider('Motif size', Math.round(pat.scale * 100), 10, 150, 5, (v) => editPat({ scale: v / 100 }), '%')}
+                    {patSlider('Rotation', pat.rotation, -180, 180, 5, (v) => editPat({ rotation: v }), '°')}
+                    {patSlider('Space between columns', Math.round(pat.spacingX * 100), 0, 100, 5, (v) => editPat({ spacingX: v / 100 }), '%')}
+                    {patSlider('Space between rows', Math.round(pat.spacingY * 100), 0, 100, 5, (v) => editPat({ spacingY: v / 100 }), '%')}
+                    {(pat.repeat === 'brick' || pat.repeat === 'half-drop') && patSlider('Row offset', Math.round(pat.offset * 100), 0, 100, 5, (v) => editPat({ offset: v / 100 }), '%')}
+                    {(pat.repeat === 'random' || pat.repeat === 'organic') && patSlider('Density', pat.density, 3, 60, 1, (v) => editPat({ density: v }), '')}
+                    {(pat.repeat === 'radial' || pat.repeat === 'kaleidoscope') && patSlider('Copies', pat.symmetry, 3, 16, 1, (v) => editPat({ symmetry: v }), '')}
+                    {patSlider('Random size', Math.round((pat.sizeJitter || 0) * 100), 0, 100, 5, (v) => editPat({ sizeJitter: v / 100 }), '%')}
+                    {patSlider('Random turn', pat.rotJitter || 0, 0, 180, 5, (v) => editPat({ rotJitter: v }), '°')}
+                    <label className="block text-[12px] text-mt-muted">Every other motif
+                      <select value={pat.alternate || 'none'} onChange={(e) => editPat({ alternate: e.target.value as PatternSettings['alternate'] })} className={`${field} mt-1`} aria-label="Alternate motifs"><option value="none">Same</option><option value="rotate">Turned 180°</option><option value="flip">Mirrored</option></select>
+                    </label>
+                    <label className="flex items-center gap-2 text-[12.5px]"><input type="checkbox" checked={pat.stroke} onChange={(e) => editPat({ stroke: e.target.checked })} className="h-4 w-4 accent-[#3B82C4]" /> Outline only</label>
+                    {pat.stroke && patSlider('Outline width', pat.strokeWidth, 0.5, 8, 0.5, (v) => editPat({ strokeWidth: v }), '')}
+                    <div className="flex flex-wrap items-center gap-1.5" aria-label="Pattern colours">
+                      <span className="text-[12px] text-mt-muted mr-1">Colours</span>
+                      {pat.colors.slice(0, 4).map((c, i) => <input key={i} type="color" value={c} onChange={(e) => { const cs = [...pat.colors]; cs[i] = e.target.value; editPat({ colors: cs }); setPatOwn(true); }} aria-label={`Pattern colour ${i + 1}`} className="h-8 w-9 rounded-md border border-mt-border bg-transparent" />)}
+                      {pat.colors.length < 4 && <button type="button" onClick={() => { editPat({ colors: [...pat.colors, '#3B82C4'] }); setPatOwn(true); }} className="h-8 rounded-md border border-dashed border-mt-border px-2 text-[12px]">+ colour</button>}
+                      {pat.colors.length > 1 && <button type="button" onClick={() => editPat({ colors: pat.colors.slice(0, -1) })} className="h-8 rounded-md border border-mt-border px-2 text-[12px]">− colour</button>}
+                    </div>
+                    <div className="flex gap-2">
+                      <button type="button" onClick={() => editPat({ seed: Math.floor(Math.random() * 1e6) })} className="h-8 rounded-full border border-mt-border px-3 text-[12px] font-semibold">Shuffle</button>
+                      <button type="button" onClick={() => { const base = PATTERNS.find((x) => x.name === patName); setPat({ ...DEFAULT_PATTERN, ...(base?.p || {}) }); }} className="h-8 rounded-full border border-mt-border px-3 text-[12px]">Reset</button>
+                    </div>
+                  </div>
+                </details>
               </>}
             </section>
           </>}

@@ -175,6 +175,24 @@ const ART: Record<string, (id: string) => React.ReactNode> = {
       <circle cx="224" cy="121" r="11" fill="#5DCCB8" /><path d="M219 121L223 125L230 117" fill="none" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
     </>
   ),
+  packaging: () => (
+    <>
+      <g transform="translate(40 30)">
+        <path d="M14 30H40V118H14Z" fill="#fff" /><path d="M40 30H96V118H40Z" fill="#fff" /><path d="M96 30H122V118H96Z" fill="#fff" /><path d="M122 30H178V118H122Z" fill="#fff" />
+        <path d="M0 40L14 30V118L0 108Z" fill="#fff" />
+        <path d="M122 30V6C122 0 126 -2 132 -2H168C174 -2 178 0 178 6V30" fill="#fff" />
+        <path d="M40 118V142C40 148 44 150 50 150H86C92 150 96 148 96 142V118" fill="#fff" />
+        <path d="M14 30L22 12H40V30M96 30V12H114L122 30M14 118L22 136H40M96 136H114L122 118" fill="#fff" />
+        <path d="M0 40L14 30M14 30L22 12H40V30H96V12H114L122 30V6C122 0 126 -2 132 -2H168C174 -2 178 0 178 6V118H96V136H114L122 118M96 118V142C96 148 92 150 86 150H50C44 150 40 148 40 142V118H14L22 136H40M14 118L0 108V40" fill="none" stroke="#EC008C" strokeWidth="1.4" strokeLinejoin="round" />
+        <path d="M14 30V118M40 30V118M96 30V118M122 30V118M14 30H40M96 30H178M14 118H96M122 118H178M40 118H96M122 6H178" fill="none" stroke="#00A0E3" strokeWidth="1.1" strokeDasharray="4 2.5" />
+      </g>
+      <g transform="translate(236 66)">
+        <path d="M0 18L30 0L60 18L30 36Z" fill="#F7F8FA" stroke="#0B0B12" strokeWidth="1.2" strokeLinejoin="round" />
+        <path d="M0 18V70L30 88V36Z" fill="#fff" stroke="#0B0B12" strokeWidth="1.2" strokeLinejoin="round" />
+        <path d="M60 18V70L30 88V36Z" fill="#EEF0F4" stroke="#0B0B12" strokeWidth="1.2" strokeLinejoin="round" />
+      </g>
+    </>
+  ),
   colours: () => (
     <>
       <g transform="translate(160 92)">
