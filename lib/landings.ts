@@ -696,7 +696,7 @@ function withDefaults(l: Landing): Landing {
   return { ...l, faqs: [...l.faqs, ...extra].slice(0, Math.max(3, l.faqs.length)) };
 }
 
-export const ALL_LANDINGS = () => [...LANDINGS, ...MORE_LANDINGS, ...ALT_LANDINGS, ...COUNTRY_LANDINGS, ...NEW_LANDINGS].map(withDefaults);
+export const ALL_LANDINGS = () => [...LANDINGS, ...MORE_LANDINGS, ...ALT_LANDINGS, ...COUNTRY_LANDINGS, ...NEW_LANDINGS, ...FEATURE_LANDINGS].map(withDefaults);
 export const landingBySlug = (s: string) => ALL_LANDINGS().find((l) => l.slug === s);
 
 const FREE_FEATURES: [string, string][] = [
@@ -944,5 +944,117 @@ export const ALT_LANDINGS: Landing[] = [
     uses: ['Business marketing', 'Events and parties', 'Job applications', 'Restaurants', 'Festivals and holidays'],
     faqs: [['Are all the templates really free?', 'Yes. Every template, tool and download is free.']],
     related: ['free-design-templates', 'free-flyer-maker', 'free-poster-maker'],
+  }),
+];
+
+// Feature pages for the textile, print and photo tools (Nov 2026).
+export const FEATURE_LANDINGS: Landing[] = [
+  L({
+    slug: 'football-jersey-maker',
+    thing: 'team jersey',
+    h1: 'Football jersey maker with names & numbers — free',
+    title: 'Free Football Jersey Maker — Names, Numbers & Print Files',
+    description: 'Design football, cricket and basketball jerseys online: colours, patterns, logos, player names and numbers, sizes per player and print-ready CMYK files for sublimation.',
+    intro: [
+      'Pick a jersey, set your colours and badge, then type or paste the player list — every player gets their own name, number and size on the back and front.',
+      'Names and numbers are turned into exact letter outlines from the real font file before export, so the print file never depends on a font at the printer.',
+    ],
+    terms: ['jersey', 'sports', 'team'],
+    features: [
+      ['Names & numbers per player', 'Paste a list from a spreadsheet; long names shrink to fit the back.'],
+      ['Real fonts, outlined', 'Every letter is the font’s own curve — prints the same everywhere.'],
+      ['Sizes & grading', 'Each player’s size is drawn at its real measurements on the print roll.'],
+      ['CMYK print files', 'Ready-to-print sublimation files plus one branded technical file for the factory.'],
+      ['Realistic mockup', 'Show the client the kit on a hanger, in a studio or as a flat lay — PNG download.'],
+    ],
+    ctaHref: '/textile-studio?product=jersey',
+    ctaLabel: 'Open the jersey maker',
+    uses: ['Football and futsal teams', 'Cricket clubs', 'Basketball teams', 'School sports days', 'Corporate tournaments', 'Fan shirts'],
+    faqs: [
+      ['Can I print the files at any sublimation shop?', 'Yes. The print file is a standard CMYK PDF at real size on your roll width, with cut lines and each piece labelled with the player and size.'],
+      ['Do I need the font installed to print?', 'No. Names and numbers are converted to outlines from the real font before export.'],
+      ['Is it free?', 'Yes — free, with no watermark on your files.'],
+    ],
+    related: ['jersey-mockup-generator', 'free-design-templates', 'free-print-ready-pdf'],
+  }),
+  L({
+    slug: 'jersey-mockup-generator',
+    thing: 'jersey mockup',
+    h1: 'Jersey & T-shirt mockup generator — free',
+    title: 'Free Jersey & T-shirt Mockup Generator — Hanger, Studio, Flat Lay',
+    description: 'Turn your jersey, polo or T-shirt design into a realistic mockup with soft fabric folds and shadows — on a hanger, in a studio or as a flat lay. Download a 2400 px PNG.',
+    intro: [
+      'Design the garment in the Textile Design Studio, then switch to Mockup: the same design is shown as real fabric with soft folds, light and shadow.',
+      'Choose Studio, On a hanger or Flat lay, front, back or both — and download a sharp PNG for your client, shop or social post.',
+    ],
+    terms: ['t-shirt', 'jersey', 'apparel', 'mockup'],
+    features: [
+      ['Three scenes', 'Studio backdrop, wooden hanger or linen flat lay.'],
+      ['Your exact design', 'Colours, patterns, logos, names and numbers as designed — nothing re-drawn.'],
+      ['Front, back or both', 'Show one side or the full kit.'],
+      ['2400 px PNG', 'Sharp enough for a website, catalogue or Instagram post.'],
+    ],
+    ctaHref: '/textile-studio?product=jersey',
+    ctaLabel: 'Make a mockup',
+    uses: ['Client approval', 'Team order forms', 'Online shop listings', 'Social media posts', 'Quotes and proposals'],
+    faqs: [
+      ['Is it a 3D model?', 'No — it is a realistic 2D mockup: your flat design with fabric folds, light and shadow added, so it always matches the print file.'],
+      ['Can I use the mockup commercially?', 'Yes. The mockup is made from your own design; use it in your shop, quotes and posts.'],
+    ],
+    related: ['football-jersey-maker', 'free-instagram-post-maker', 'free-design-templates'],
+  }),
+  L({
+    slug: 'face-reshape-online',
+    thing: 'portrait',
+    h1: 'Face reshape & retouch online — free',
+    title: 'Free Face Reshape Online — Slim Face, Eyes, Nose, Lips & Smile',
+    description: 'Reshape a face in your browser: slim face and jaw, eye size and distance, brow lift, forehead, nose width and length, fuller lips and smile — with one-tap looks and a strength slider.',
+    intro: [
+      'Open a portrait in the Photo Studio, find the face, then pick a look — Natural, Beauty or Sculpt — and set its strength. Every slider stays editable.',
+      'The face is found on your device; your photo is never uploaded. Shape changes are capped so faces stay natural.',
+    ],
+    terms: ['portrait', 'photo'],
+    features: [
+      ['Face shape', 'Slim face, slim jaw and chin length.'],
+      ['Eyes & brows', 'Eye size, eye distance, brow lift, brighter whites and dark circles.'],
+      ['Nose', 'Slimmer or wider, shorter or longer.'],
+      ['Mouth', 'Fuller lips, mouth width, smile lift, lip colour and teeth whitening.'],
+      ['One-tap looks', '12 presets with a single strength slider — then fine-tune.'],
+      ['Private', 'Runs in your browser; the photo stays on your device.'],
+    ],
+    ctaHref: '/photo-studio',
+    ctaLabel: 'Open the Photo Studio',
+    uses: ['Profile pictures', 'Portraits and headshots', 'Wedding photos', 'Social posts'],
+    faqs: [
+      ['Is my photo uploaded?', 'No. The face finder is downloaded once and runs in your browser; the photo never leaves your device.'],
+      ['Will it look fake?', 'Every shape change is capped to a few per cent, and Hold to compare shows the original at any time.'],
+    ],
+    related: ['free-instagram-post-maker', 'free-design-templates', 'free-youtube-thumbnail-maker'],
+  }),
+  L({
+    slug: 'tri-fold-brochure-maker',
+    thing: 'folded brochure',
+    h1: 'Tri-fold & bi-fold brochure maker with fold lines — free',
+    title: 'Free Tri-fold Brochure Maker — Fold Lines, Columns & CMYK PDF',
+    description: 'Make 2-, 3- or 4-panel folded brochures and cards: automatic fold lines and panel sizes, align to a column or the page, and print-ready CMYK PDFs with fold marks.',
+    intro: [
+      'Choose 2 folded, 3 folded or 4 folded in Page layout: the page splits into equal panels, fold lines are drawn and each fold gets a safe zone.',
+      'Align any object to its column or to the whole page, duplicate the page for the inside, and export CMYK print files with fold and crop marks plus a branded job report.',
+    ],
+    terms: ['brochure', 'leaflet', 'trifold', 'tri-fold', 'menu'],
+    features: [
+      ['Fold presets', '2, 3 or 4 panels, or plain 2 / 3 columns for layout only.'],
+      ['Align to column', 'Centre or edge-align objects inside their panel.'],
+      ['Fold & crop marks', 'Marks drawn outside the artwork, in press inks.'],
+      ['CMYK print PDF', 'FOGRA39 coated, with bleed — plus a 2-page job report.'],
+    ],
+    ctaHref: '/create',
+    ctaLabel: 'Start a folded brochure',
+    uses: ['Restaurant menus', 'Company brochures', 'Event programmes', 'Price lists', 'Wedding programmes'],
+    faqs: [
+      ['Are the panels exactly equal?', 'Folded presets split the page into equal panels. For a tuck-in panel that is 1 mm shorter, use the Print Size Calculator’s folding tab.'],
+      ['Is the PDF really CMYK?', 'Yes — colours, text and pictures are converted to CMYK with the FOGRA39 coated profile attached.'],
+    ],
+    related: ['free-brochure-maker', 'free-menu-maker', 'free-print-ready-pdf'],
   }),
 ];

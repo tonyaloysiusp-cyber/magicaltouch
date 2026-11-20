@@ -10,7 +10,7 @@ export const revalidate = 3600;
 
 // Fixed "last changed" dates for pages whose content only changes with a
 // release (a date that is always "now" teaches search engines to ignore it).
-const PAGES_UPDATED = new Date('2026-11-13T00:00:00Z');
+const PAGES_UPDATED = new Date('2026-11-20T00:00:00Z');
 const LEGAL_UPDATED = new Date('2026-06-01T00:00:00Z');
 
 // Standalone tools (one strong landing page each).

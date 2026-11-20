@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { SITE_URL, SITE_NAME } from '@/lib/seo';
 
-const DESC = 'Free online photo editor: remove blemishes, smooth skin, enlarge eyes, change hair colour, curves, layers, filters and background removal — in your browser.';
+const DESC = 'Free online photo editor: face reshape (slim face, eyes, nose, lips, smile) with one-tap looks, skin retouch, hair colour, curves, layers, filters and background removal — in your browser.';
 export const metadata: Metadata = {
   title: 'Free Online Photo Editor — Photo Studio',
   description: DESC,
