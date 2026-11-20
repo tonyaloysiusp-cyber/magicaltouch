@@ -5,6 +5,7 @@
 // change the order, double-click a name to rename it. Groups open up to
 // show what's inside them (and can be nested).
 
+import { clickMods, nextLayerSelection } from '@/lib/ui/layerSelect';
 import { useRef, useState } from 'react';
 import { Eye, EyeOff, Lock, Unlock, GripVertical, Copy, Trash2, ChevronRight, Type, Image as ImageIcon, Shapes, Folder, PenTool, Brush } from 'lucide-react';
 import { cx } from './shell/ui';
@@ -55,6 +56,10 @@ interface Props {
   layers: any[]; // top-most first
   selection: any[]; // the selected objects (members of a multi-selection)
   onSelect: (obj: any, additive: boolean) => void;
+  /** Set the selection to exactly these layers (Shift range / Ctrl toggle). */
+  onSelectMany?: (objs: any[]) => void;
+  onGroup?: () => void;
+  onUngroup?: () => void;
   onToggleVisible: (obj: any) => void;
   onToggleLock: (obj: any) => void;
   onRename: (obj: any, name: string) => void;
@@ -72,6 +77,14 @@ export function DesignLayersPanel(p: Props) {
   const [open, setOpen] = useState<WeakSet<any>>(() => new WeakSet());
   const [, force] = useState(0);
   const dragFrom = useRef<number | null>(null);
+  const anchor = useRef<any>(null);
+  const pick = (obj: any, e: { shiftKey: boolean; metaKey: boolean; ctrlKey: boolean }) => {
+    const m = clickMods(e);
+    if (!p.onSelectMany) { p.onSelect(obj, !!(m.shift || m.toggle)); return; }
+    const r = nextLayerSelection(p.layers, p.selection.filter((o) => p.layers.includes(o)), anchor.current, obj, m);
+    anchor.current = r.anchor;
+    p.onSelectMany(r.selection);
+  };
   const [dropAt, setDropAt] = useState<number | null>(null);
   const focused = p.selection.length === 1 ? p.selection[0] : null;
 
@@ -165,23 +178,24 @@ export function DesignLayersPanel(p: Props) {
           ) : (
             <button
               type="button"
-              onClick={(e) => topLevel && p.onSelect(obj, e.shiftKey || e.metaKey || e.ctrlKey)}
+              onClick={(e) => topLevel && pick(obj, e)}
               onDoubleClick={() => {
                 setRenaming(obj);
                 setRenameValue(layerName(obj));
               }}
-              title={topLevel ? 'Click to select · Shift-click to add · Double-click to rename' : 'Double-click to rename'}
+              title={topLevel ? 'Click to select · Shift-click: select a range · Ctrl/Cmd-click: add or remove · Double-click to rename' : 'Double-click to rename'}
               className="flex-1 min-w-0 h-full text-left truncate focus-visible:outline-none focus-visible:underline"
             >
               {layerName(obj)}
             </button>
           )}
-          <button type="button" onClick={() => p.onToggleVisible(obj)} aria-label={isHidden ? 'Show' : 'Hide'} title={isHidden ? 'Show' : 'Hide'} className={cx('shrink-0 h-7 w-7 inline-flex items-center justify-center rounded-md text-mt-muted hover:text-mt-ink', !isHidden && 'opacity-0 group-hover:opacity-100 focus-visible:opacity-100')}>
+          <button type="button" onClick={() => p.onToggleVisible(obj)} aria-label={isHidden ? 'Show' : 'Hide'} title={isHidden ? 'Show' : 'Hide'} className={cx('shrink-0 h-7 w-7 inline-flex items-center justify-center rounded-md hover:bg-mt-surface2', isHidden ? 'text-mt-ink' : 'text-mt-faint hover:text-mt-ink')}>
             {isHidden ? <EyeOff size={14} /> : <Eye size={14} />}
           </button>
-          <button type="button" onClick={() => p.onToggleLock(obj)} aria-label={isLocked ? 'Unlock' : 'Lock'} title={isLocked ? 'Unlock' : 'Lock'} className={cx('shrink-0 h-7 w-7 inline-flex items-center justify-center rounded-md text-mt-muted hover:text-mt-ink', !isLocked && 'opacity-0 group-hover:opacity-100 focus-visible:opacity-100')}>
+          <button type="button" onClick={() => p.onToggleLock(obj)} aria-label={isLocked ? 'Unlock' : 'Lock'} title={isLocked ? 'Unlock' : 'Lock'} className={cx('shrink-0 h-7 w-7 inline-flex items-center justify-center rounded-md hover:bg-mt-surface2', isLocked ? 'text-mt-ink' : 'text-mt-faint hover:text-mt-ink')}>
             {isLocked ? <Lock size={14} /> : <Unlock size={14} />}
           </button>
+          {topLevel && <button type="button" onClick={() => p.onDelete(obj)} disabled={isLocked} aria-label={`Delete ${layerName(obj)}`} title="Delete layer" className="shrink-0 h-7 w-7 inline-flex items-center justify-center rounded-md text-mt-faint hover:bg-mt-surface2 hover:text-red-600 disabled:opacity-30"><Trash2 size={13} /></button>}
         </div>
         {expanded && (
           <ul>
@@ -210,6 +224,21 @@ export function DesignLayersPanel(p: Props) {
         </ul>
       )}
 
+      {p.selection.length > 1 && (
+        <div className="mt-3 border-t border-mt-border pt-3" role="group" aria-label="Selected layers">
+          <p className="text-[12px] font-semibold text-mt-ink">{p.selection.length} layers selected</p>
+          <div className="mt-2 grid grid-cols-2 gap-1.5">
+            {p.onGroup && <button type="button" onClick={p.onGroup} className="h-8 rounded-lg border border-mt-border text-xs font-medium hover:bg-mt-surface2">Group</button>}
+            <button type="button" onClick={() => p.selection.forEach((o) => p.onToggleVisible(o))} className="h-8 rounded-lg border border-mt-border text-xs font-medium hover:bg-mt-surface2">Hide / show</button>
+            <button type="button" onClick={() => p.selection.forEach((o) => p.onToggleLock(o))} className="h-8 rounded-lg border border-mt-border text-xs font-medium hover:bg-mt-surface2">Lock / unlock</button>
+            <button type="button" onClick={() => [...p.selection].forEach((o) => !o.locked && p.onDelete(o))} className="h-8 rounded-lg border border-mt-border text-xs font-medium hover:text-red-600">Delete all</button>
+          </div>
+          <p className="mt-2 text-[11px] text-mt-faint">Shift-click selects a range; Ctrl/Cmd-click adds or removes one layer.</p>
+        </div>
+      )}
+      {focused && p.layers.includes(focused) && focused.type === 'group' && p.onUngroup && (
+        <button type="button" onClick={p.onUngroup} className="mt-3 h-8 w-full rounded-lg border border-mt-border text-xs font-medium hover:bg-mt-surface2">Ungroup</button>
+      )}
       {focused && p.layers.includes(focused) && (
         <div className="mt-3 border-t border-mt-border pt-3 flex flex-col gap-2.5">
           <p className="text-[12px] font-semibold text-mt-ink truncate">{layerName(focused)}</p>

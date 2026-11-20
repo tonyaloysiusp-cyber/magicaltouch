@@ -4,6 +4,7 @@
 // Layer, Select, Filter, View, Window), the Layers panel and the History
 // panel. Kept plain and labelled so first-time users can find things.
 
+import { clickMods, nextLayerSelection } from '@/lib/ui/layerSelect';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Eye, EyeOff, Plus, Copy, Trash2, ChevronUp, ChevronDown, Layers as LayersIcon, History as HistoryIcon, Merge, Check } from 'lucide-react';
 import { BLENDS, Blend, Layer, layerThumb } from '@/lib/photo/layers';
@@ -75,7 +76,7 @@ function Thumb({ canvas }: { canvas: HTMLCanvasElement }) {
   return <img src={url} alt="" className="w-11 h-11 object-contain rounded border border-mt-border bg-mt-surface2 shrink-0" />;
 }
 
-export function LayersPanel({ layers, active, onSelect, onEditText, onToggle, onRename, onOpacity, onBlend, onAdd, onPlace, onDuplicate, onDelete, onUp, onDown, onMerge, onFlatten, onLoadSelection }: {
+export function LayersPanel({ layers, active, onSelect, onEditText, onToggle, onRename, onOpacity, onBlend, onAdd, onPlace, onDuplicate, onDelete, onUp, onDown, onMerge, onFlatten, onLoadSelection, onDeleteMany, onToggleMany }: {
   layers: Layer[];
   active: number;
   onSelect: (i: number) => void;
@@ -94,8 +95,26 @@ export function LayersPanel({ layers, active, onSelect, onEditText, onToggle, on
   onFlatten: () => void;
   /** Ctrl/⌘-click a layer: select its pixels (Photoshop's “load selection”). */
   onLoadSelection?: (i: number) => void;
+  onDeleteMany?: (idx: number[]) => void;
+  onToggleMany?: (idx: number[]) => void;
 }) {
   const cur = layers[active];
+  // Multi-selection by layer id (same rules as the Design editor): click / Shift range / Ctrl-Cmd toggle.
+  const [sel, setSel] = useState<string[]>([]);
+  const anchorRef = useRef<string | null>(null);
+  const order = layers.map((l) => l.id).reverse();   // panel order: top first
+  const selected = sel.filter((id) => order.includes(id));
+  const multi = selected.length > 1;
+  useEffect(() => { if (!multi && layers[active]) setSel([layers[active].id]); }, [active]); // eslint-disable-line react-hooks/exhaustive-deps
+  const pickRow = (i: number, e: { shiftKey: boolean; metaKey: boolean; ctrlKey: boolean }) => {
+    const id = layers[i].id;
+    const r = nextLayerSelection(order, selected.length ? selected : [layers[active]?.id].filter(Boolean) as string[], anchorRef.current ?? layers[active]?.id ?? null, id, clickMods(e));
+    anchorRef.current = r.anchor; setSel(r.selection);
+    // The clicked layer is the one edits apply to (if it stayed selected).
+    if (r.selection.includes(id)) onSelect(i);
+    else if (r.selection.length) onSelect(layers.findIndex((l) => l.id === r.selection[r.selection.length - 1]));
+  };
+  const selIdx = () => selected.map((id) => layers.findIndex((l) => l.id === id)).filter((i) => i >= 0);
   const [op, setOp] = useState(Math.round(cur.opacity * 100));
   useEffect(() => setOp(Math.round(cur.opacity * 100)), [cur.opacity, active]);
   const [editing, setEditing] = useState<number | null>(null);
@@ -124,15 +143,15 @@ export function LayersPanel({ layers, active, onSelect, onEditText, onToggle, on
       <input type="range" min={0} max={100} value={op} aria-label="Layer opacity slider" onChange={(e) => setOp(Number(e.target.value))} onPointerUp={() => onOpacity(active, op / 100)} onKeyUp={() => onOpacity(active, op / 100)} className="mt-range w-full mb-2" />
       <ul className="flex flex-col gap-1 max-h-[260px] overflow-y-auto mt-scroll" role="listbox" aria-label="Layer list">
         {layers.map((l, i) => ({ l, i })).reverse().map(({ l, i }) => (
-          <li key={l.id} role="option" aria-selected={i === active}
-            onClick={(e) => (e.ctrlKey || e.metaKey) && onLoadSelection ? onLoadSelection(i) : onSelect(i)}
-            title="Click to select · Ctrl/⌘-click to select its pixels · double-click the name to rename"
-            className={cx('flex items-center gap-2 rounded-lg px-1.5 py-1 cursor-pointer border', i === active ? 'border-[#3B82C4] bg-[#3B82C4]/10' : 'border-transparent hover:bg-mt-surface2')}
+          <li key={l.id} role="option" aria-selected={i === active || selected.includes(l.id)}
+            onClick={(e) => pickRow(i, e)}
+            title="Click to select · Shift-click: select a range · Ctrl/⌘-click: add or remove · Ctrl/⌘-click the thumbnail: select its pixels · double-click the name to rename"
+            className={cx('flex items-center gap-2 rounded-lg px-1.5 py-1 cursor-pointer border', i === active ? 'border-[#3B82C4] bg-[#3B82C4]/10' : selected.includes(l.id) ? 'border-[#3B82C4]/50 bg-[#3B82C4]/5' : 'border-transparent hover:bg-mt-surface2')}
           >
             <button className={ib} aria-label={l.visible ? 'Hide layer' : 'Show layer'} onClick={(e) => { e.stopPropagation(); onToggle(i); }}>
               {l.visible ? <Eye size={14} /> : <EyeOff size={14} className="text-mt-faint" />}
             </button>
-            <Thumb canvas={l.canvas} />
+            <span onClick={(e) => { if ((e.ctrlKey || e.metaKey) && onLoadSelection) { e.stopPropagation(); onLoadSelection(i); } }} title="Ctrl/⌘-click: select this layer's pixels"><Thumb canvas={l.canvas} /></span>
             {editing === i ? (
               <input
                 autoFocus defaultValue={l.name} aria-label="Layer name"
@@ -149,9 +168,20 @@ export function LayersPanel({ layers, active, onSelect, onEditText, onToggle, on
               </span>
             )}
             {(l as any).text && onEditText && <button className="h-6 px-2 rounded-md border border-mt-border text-[11px] font-semibold hover:bg-mt-surface2" onClick={(e) => { e.stopPropagation(); onEditText(i); }}>Edit</button>}
+            {onDeleteMany && layers.length > 1 && <button className={cx(ib, 'h-7 w-7 text-mt-faint hover:text-red-600')} aria-label={`Delete ${l.name}`} title="Delete layer" onClick={(e) => { e.stopPropagation(); onDeleteMany([i]); }}><Trash2 size={13} /></button>}
           </li>
         ))}
       </ul>
+      {multi && (
+        <div className="mt-2 rounded-lg border border-mt-border p-2" role="group" aria-label="Selected layers">
+          <p className="text-[11.5px] font-semibold">{selected.length} layers selected</p>
+          <div className="mt-1.5 flex gap-1.5">
+            {onToggleMany && <button className="h-7 flex-1 rounded-md border border-mt-border text-[11.5px] hover:bg-mt-surface2" onClick={() => onToggleMany(selIdx())}>Hide / show</button>}
+            {onDeleteMany && <button className="h-7 flex-1 rounded-md border border-mt-border text-[11.5px] hover:text-red-600" onClick={() => { onDeleteMany(selIdx()); setSel([]); }}>Delete all</button>}
+            <button className="h-7 rounded-md border border-mt-border px-2 text-[11.5px] hover:bg-mt-surface2" onClick={() => setSel(layers[active] ? [layers[active].id] : [])}>Clear</button>
+          </div>
+        </div>
+      )}
       <div className="mt-2 flex items-center gap-0.5">
         <button className={ib} onClick={onAdd} title="New empty layer" aria-label="New layer"><Plus size={15} /></button>
         <button className={cx(ib, 'w-auto px-2 text-[11.5px] font-medium')} onClick={onPlace} title="Add a picture as a new layer">+ Image</button>

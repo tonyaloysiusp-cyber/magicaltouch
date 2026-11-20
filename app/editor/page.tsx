@@ -7640,6 +7640,17 @@ function EditorContent() {
         canvas.requestRenderAll();
         setSelected(canvas.getActiveObject() || null);
       }}
+      onSelectMany={(objs) => {
+        const canvas = fabricCanvasRef.current;
+        const F = (window as any).fabric;
+        canvas.discardActiveObject();
+        if (objs.length === 1) canvas.setActiveObject(objs[0]);
+        else if (objs.length > 1) canvas.setActiveObject(new F.ActiveSelection(objs, { canvas }));
+        canvas.requestRenderAll();
+        setSelected(canvas.getActiveObject() || null);
+      }}
+      onGroup={groupSelected}
+      onUngroup={ungroupSelected}
       onToggleVisible={toggleVisible}
       onToggleLock={toggleLock}
       onRename={renameLayer}

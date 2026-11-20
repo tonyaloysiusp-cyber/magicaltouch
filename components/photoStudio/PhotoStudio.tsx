@@ -349,6 +349,10 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
   const [busy, setBusy] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [comparing, setComparing] = useState(false);
+  // Split view: original (left) | preview (right) with a draggable divider — for adjustments and filters.
+  const [split, setSplit] = useState(false);
+  const [splitPos, setSplitPos] = useState(0.5);
+  const beforeRef = useRef<HTMLCanvasElement>(null);
   const [proof, setProof] = useState(false);
   const [zoom, setZoom] = useState(1); // 1 = fit
   const [pan, setPan] = useState({ x: 0, y: 0 });
@@ -602,6 +606,21 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
         if (stack.above) x.drawImage(stack.above, 0, 0, img.width, img.height);
         img = x.getImageData(0, 0, img.width, img.height);
       }
+      // Split view (not for filters — there the live filter overlay is clipped instead): the same picture without the pending adjustments.
+      const bc = beforeRef.current;
+      if (bc && split && !comparing && tool !== 'filter') {
+        let b = new ImageData(new Uint8ClampedArray(preview.data.data), preview.data.width, preview.data.height);
+        if (stack) {
+          const one = makeCanvas(b.width, b.height); one.getContext('2d')!.putImageData(b, 0, 0);
+          const all = makeCanvas(b.width, b.height); const x = all.getContext('2d')!;
+          if (stack.below) x.drawImage(stack.below, 0, 0, b.width, b.height);
+          if (stack.layer.visible && stack.layer.opacity > 0) { x.globalAlpha = stack.layer.opacity; x.globalCompositeOperation = (stack.layer.blend === 'normal' ? 'source-over' : stack.layer.blend) as GlobalCompositeOperation; x.drawImage(one, 0, 0); x.globalAlpha = 1; x.globalCompositeOperation = 'source-over'; }
+          if (stack.above) x.drawImage(stack.above, 0, 0, b.width, b.height);
+          b = x.getImageData(0, 0, b.width, b.height);
+        }
+        if (proof && proofTable.current) proofRgbaInPlace(b.data, proofTable.current);
+        bc.width = b.width; bc.height = b.height; bc.getContext('2d')!.putImageData(b, 0, 0);
+      }
       if (proof && proofTable.current) proofRgbaInPlace(img.data, proofTable.current);
       d.width = img.width;
       d.height = img.height;
@@ -616,7 +635,7 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
         ctx.restore();
       } else ctx.putImageData(img, 0, 0);
     });
-  }, [preview, draft, stack, dragging, adjust, comparing, proof, tool, cropAngle, tick]);
+  }, [preview, draft, stack, dragging, adjust, comparing, proof, tool, cropAngle, tick, split]);
 
   // ---------------- histogram (Pro)
   const histData = useRef<Uint32Array[] | null>(null);
@@ -1242,6 +1261,21 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
     remove: () => {
       if (!layers || layers.length < 2) return;
       setLayers(layers.filter((_, i) => i !== activeIdx), Math.max(0, activeIdx - 1), 'Delete layer');
+    },
+    /** Delete several layers at once (at least one is always kept). */
+    removeMany: (idx: number[]) => {
+      if (!layers) return;
+      const drop = new Set(idx);
+      if (drop.size >= layers.length) drop.delete(Math.min(...idx));
+      const kept = layers.filter((_, i) => !drop.has(i));
+      if (kept.length === layers.length) return;
+      setLayers(kept, Math.max(0, Math.min(kept.length - 1, activeIdx - [...drop].filter((i) => i < activeIdx).length)), drop.size > 1 ? `Delete ${drop.size} layers` : 'Delete layer');
+    },
+    /** Show or hide several layers in one step: hidden ones all show if any is hidden, else all hide. */
+    toggleMany: (idx: number[]) => {
+      if (!layers || !idx.length) return;
+      const show = idx.some((i) => !layers[i].visible);
+      setLayers(layers.map((l, i) => (idx.includes(i) ? { ...l, visible: show } : l)), activeIdx, show ? 'Show layers' : 'Hide layers');
     },
     move: (dir: 1 | -1) => {
       if (!layers) return;
@@ -2434,6 +2468,9 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
           <button className={iconBtn} onClick={undo} disabled={history.index <= 0} aria-label="Undo" title="Undo (Ctrl/⌘ Z)"><Undo2 size={17} /></button>
           <button className={iconBtn} onClick={redo} disabled={history.index >= history.list.length - 1} aria-label="Redo" title="Redo"><Redo2 size={17} /></button>
           <span className="w-px h-5 bg-mt-border mx-1.5 hidden sm:block" />
+          <button type="button" className={cx(iconBtn, 'w-auto px-2.5 gap-1.5 text-[12px] font-medium', split && 'bg-mt-surface2 text-[#3B82C4]')} aria-pressed={split} onClick={() => setSplit((v) => !v)} title="Split view: original | preview (drag the divider)">
+            <span aria-hidden className="inline-block h-3.5 w-3.5 rounded-[3px] border border-current bg-[linear-gradient(90deg,currentColor_50%,transparent_50%)] opacity-80" /> Split
+          </button>
           <button
             className={cx(iconBtn, 'hidden sm:inline-flex w-auto px-2.5 gap-1.5 text-[12px] font-medium', comparing && 'bg-mt-surface2')}
             onPointerDown={() => setComparing(true)}
@@ -2509,9 +2546,26 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
             <div className="absolute inset-0 flex items-center justify-center text-sm text-mt-muted gap-2"><Loader2 className="animate-spin" size={16} /> Opening photo…</div>
           )}
           {preview && (
-            <div className="absolute left-1/2 top-1/2" style={{ width: dispW, height: dispH, transform: `translate(calc(-50% + ${pan.x}px), calc(-50% + ${pan.y}px))` }}>
+            <div data-split-host className="absolute left-1/2 top-1/2" style={{ width: dispW, height: dispH, transform: `translate(calc(-50% + ${pan.x}px), calc(-50% + ${pan.y}px))` }}>
               <canvas ref={displayRef} className={cx('block w-full h-full shadow-[0_20px_60px_-30px_rgba(0,0,0,0.6)]', pro && 'bg-[repeating-conic-gradient(#cfcfcf_0_25%,#ffffff_0_50%)] bg-[length:16px_16px]')} />
-              <canvas ref={draftRef} aria-hidden className="absolute inset-0 w-full h-full pointer-events-none" style={{ visibility: 'hidden' }} />
+              <canvas ref={draftRef} aria-hidden className="absolute inset-0 w-full h-full pointer-events-none" style={{ visibility: 'hidden', clipPath: split && tool === 'filter' ? `inset(0 0 0 ${splitPos * 100}%)` : undefined }} />
+              {split && tool !== 'filter' && tool !== 'crop' && <canvas ref={beforeRef} aria-hidden className="absolute inset-0 w-full h-full pointer-events-none" style={{ clipPath: `inset(0 ${(1 - splitPos) * 100}% 0 0)` }} />}
+              {split && tool !== 'crop' && (
+                <div className="absolute inset-y-0 z-[5]" style={{ left: `${splitPos * 100}%` }}>
+                  <div className="absolute inset-y-0 -left-px w-0.5 bg-white shadow-[0_0_0_1px_rgba(0,0,0,0.35)]" />
+                  <button type="button" aria-label="Drag to compare the original and the preview" title="Drag to compare"
+                    onPointerDown={(e) => {
+                      e.stopPropagation(); e.preventDefault();
+                      const box = (e.currentTarget.closest('[data-split-host]') as HTMLElement) || (e.currentTarget.parentElement!.parentElement as HTMLElement);
+                      const move = (ev: PointerEvent) => { const r = box.getBoundingClientRect(); setSplitPos(Math.max(0.02, Math.min(0.98, (ev.clientX - r.left) / r.width))); };
+                      window.addEventListener('pointermove', move);
+                      window.addEventListener('pointerup', () => window.removeEventListener('pointermove', move), { once: true });
+                    }}
+                    className="absolute top-1/2 -left-4 -translate-y-1/2 h-8 w-8 rounded-full bg-white text-[#0B0B12] shadow-lg grid place-items-center cursor-ew-resize touch-none text-[12px] font-bold">⇔</button>
+                </div>
+              )}
+              {split && tool !== 'crop' && <span className="pointer-events-none absolute left-2 top-2 rounded-md bg-black/60 px-2 py-0.5 text-[11px] font-semibold text-white">Original</span>}
+              {split && tool !== 'crop' && <span className="pointer-events-none absolute right-2 top-2 rounded-md bg-black/60 px-2 py-0.5 text-[11px] font-semibold text-white">Preview</span>}
               {tool === 'crop' && box && base && (
                 <CropOverlay box={box} base={base} />
               )}
@@ -2698,6 +2752,8 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
               onPlace={() => placeRef.current?.click()}
               onDuplicate={layerOps.duplicate}
               onDelete={layerOps.remove}
+              onDeleteMany={layerOps.removeMany}
+              onToggleMany={layerOps.toggleMany}
               onUp={() => layerOps.move(1)}
               onDown={() => layerOps.move(-1)}
               onMerge={layerOps.mergeDown}
