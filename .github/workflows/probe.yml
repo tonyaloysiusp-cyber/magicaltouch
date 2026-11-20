@@ -1,0 +1,14 @@
+name: probe
+on:
+  workflow_dispatch:
+    inputs:
+      urls: { description: 'space-separated paths', required: true }
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          for p in ${{ inputs.urls }}; do
+            out=$(curl -s -o /tmp/b -w '%{http_code} %{content_type} %{size_download}' "https://magicaltouchdesign.com$p")
+            echo "=====PROBE $p => $out"; head -c 300 /tmp/b | tr -cd '[:print:]\n' ; echo
+          done
