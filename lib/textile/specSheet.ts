@@ -17,6 +17,8 @@ export interface SpecData {
   notes?: string[];
 }
 
+import { C, metaStrip, section } from '../print/docStyle.ts';
+
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' } as any)[c]);
 const W = 210, H = 297, M = 14;
 
@@ -28,14 +30,25 @@ export function specSheetPages(d: SpecData): string[] {
   const need = (h: number) => { if (y + h > H - 22) newPage(); };
   const text = (x: number, s: string, size = 3.2, weight = 400, fill = '#111', anchor = 'start') => page().push(`<text x="${x}" y="${y}" font-family="Helvetica" font-size="${size}" font-weight="${weight}" fill="${fill}" text-anchor="${anchor}">${esc(s)}</text>`);
   const rule = () => page().push(`<line x1="${M}" y1="${y}" x2="${W - M}" y2="${y}" stroke="#CBD5E1" stroke-width="0.25"/>`);
-  const heading = (s: string) => { need(14); y += 8; text(M, s, 4.2, 700); y += 2.5; rule(); y += 5; };
-  const row = (cells: string[], xs: number[], bold = false) => { need(5.5); cells.forEach((c, i) => text(xs[i], c, 3.1, bold ? 700 : 400, '#111', i > 0 && xs[i] > M + 60 ? 'end' : 'start')); y += 5; };
+  // Document style: spectrum-tab section labels, soft header rows, light zebra rows.
+  let zebra = 0;
+  const heading = (s: string) => { need(16); y += 9; page().push(section(M, y, s, W - 2 * M)); y += 7.5; zebra = 0; };
+  const row = (cells: string[], xs: number[], bold = false) => {
+    need(5.5);
+    if (bold) page().push(`<rect x="${M}" y="${y - 3.6}" width="${W - 2 * M}" height="5.2" rx="1.2" fill="${C.soft}"/>`);
+    else if (zebra++ % 2) page().push(`<rect x="${M}" y="${y - 3.6}" width="${W - 2 * M}" height="5.2" fill="#FAFAFC"/>`);
+    cells.forEach((c, i) => text(xs[i] + (i === 0 ? 1.5 : 0) - (i > 0 && xs[i] > M + 60 && xs[i] >= W - M - 0.1 ? 1.5 : 0), c, 3.1, bold ? 700 : 400, bold ? C.ink : C.text, i > 0 && xs[i] > M + 60 ? 'end' : 'start'));
+    y += 5.2;
+  };
 
   // Title block
   y = 22;
   text(M, 'Textile production specification', 6.5, 700); y += 7;
   text(M, `${d.project} · ${d.garment}`, 4, 400, '#334155'); y += 5.5;
-  text(M, `${d.date} · ${d.template}`, 3.2, 400, '#64748B'); y += 2;
+  text(M, `${d.date} · ${d.template}`, 3.2, 400, '#64748B'); y += 5;
+  const garments = d.sizes.reduce((a, x) => a + x.count, 0);
+  page().push(metaStrip(M, y, W - 2 * M, [['Garments', String(garments)], ['Sizes', d.sizes.map((x) => x.size).join(' · ') || '—'], ['Roll', `${(d.print.lengthMm / 1000).toFixed(2)} m × ${d.print.rollW} mm`], ['Fabric use', `${Math.round(d.print.use * 100)} %`]]));
+  y += 12;
 
   heading('Order');
   const total = d.sizes.reduce((s, x) => s + x.count, 0);

@@ -11,6 +11,7 @@
 
 import type { PrintJobInfo } from './printJob.ts';
 import { sideFolds, sidePanels } from './printJob.ts';
+import { C, card, docDefs, docFooter, docHeader, metaStrip, promo, section } from './docStyle.ts';
 
 export interface JobDetails {
   jobName: string; client: string; designer: string; company: string; contact: string;
@@ -36,7 +37,7 @@ export const PRODUCTION_NOTES = [
 export const APPROVALS = ['Artwork and text', 'Sizes, folds and panel order', 'Paper stock and finishing', 'Colours', 'Quantity'];
 
 const W = 297, H = 210, M = 12;
-const INK = '#09090B', MUTED = '#52525B', FAINT = '#A1A1AA', LINE = '#E4E4E7', ACCENT = '#3B82C4', TINT = '#F4F4F5';
+const INK = C.ink, MUTED = C.muted, FAINT = C.faint, LINE = C.line, TINT = C.soft;
 const CUT = '#E30613', FOLD = '#00A651', BLEED = '#3B9BD8', SAFE = '#2F9E7A';
 const r1 = (n: number) => Math.round(n * 10) / 10;
 const r2 = (n: number) => Math.round(n * 100) / 100;
@@ -55,7 +56,7 @@ export function wrap(s: string, max: number): string[] {
 }
 const T = (x: number, y: number, s: string, size = 2.8, o: { bold?: boolean; color?: string; anchor?: string } = {}) =>
   `<text x="${r2(x)}" y="${r2(y)}" font-family="Helvetica" font-size="${size}"${o.bold ? ' font-weight="700"' : ''} fill="${o.color || INK}"${o.anchor ? ` text-anchor="${o.anchor}"` : ''}>${esc(s)}</text>`;
-const label = (x: number, y: number, s: string) => T(x, y, s.toUpperCase(), 2.3, { bold: true, color: ACCENT });
+const label = (x: number, y: number, s: string) => section(x, y, s);
 
 /** Job number from the date and job name: stable for the same job on the same day. */
 export function jobNumber(d: { date: string; details: { jobName: string } }): string {
@@ -63,38 +64,16 @@ export function jobNumber(d: { date: string; details: { jobName: string } }): st
   return `MTD-${(h % 900000 + 100000)}`;
 }
 
-/** Brand header band: ink bar with the logo on a white tile, document type, title, job number and date. */
+/** Brand header (document style): spectrum line, logo, "Job report", title, job number and date. */
 function header(d: JobReportData, title: string): string {
-  const cols = ['#F472B6', '#A78BFA', '#38BDF8', '#4ADE80', '#FACC15'];
-  let g = `<rect x="0" y="0" width="${W}" height="20" fill="${INK}"/>`;
-  g += cols.map((c, i) => `<rect x="${r2((W / cols.length) * i)}" y="20" width="${r2(W / cols.length + 0.2)}" height="1.1" fill="${c}"/>`).join('');
-  let x = M;
-  if (d.logo) { const lh = 7, lw = lh * (d.logo.w / d.logo.h); g += `<rect x="${M - 2.5}" y="4.5" width="${r2(lw + 5)}" height="11" rx="1.6" fill="#FFFFFF"/><image x="${M}" y="6.5" width="${r2(lw)}" height="${lh}" href="${d.logo.src}"/>`; x = M + lw + 8; }
-  else { g += T(M, 12.5, 'MAGICAL TOUCH DESIGN', 3.6, { bold: true, color: '#FFFFFF' }); x = M + 54; }
-  g += T(x, 9.6, 'JOB REPORT', 2.3, { bold: true, color: '#93C5FD' });
-  g += T(x, 15, title, 3.6, { bold: true, color: '#FFFFFF' });
-  g += T(W - M, 9.6, `${jobNumber(d)} · ${d.date}`, 2.5, { color: '#D4D4D8', anchor: 'end' });
-  g += T(W - M, 15, d.details.jobName || 'Untitled job', 2.9, { bold: true, color: '#FFFFFF', anchor: 'end' });
-  return g;
+  return docHeader(W, { logo: d.logo, kind: 'Job report', title, meta: `${jobNumber(d)} · ${d.date}`, meta2: d.details.jobName || undefined, margin: M });
 }
-/** Footer with a small brand line (a quiet promotion, never on the artwork). */
-function footer(page: number, pages: number): string {
-  return `<line x1="${M}" y1="${H - 11}" x2="${W - M}" y2="${H - 11}" stroke="${LINE}" stroke-width="0.3"/>`
-    + T(M, H - 6.5, 'Magical Touch Design', 2.3, { bold: true, color: INK })
-    + T(M + 30, H - 6.5, 'Free design, print & textile tools · www.magicaltouchdesign.com', 2.3, { color: MUTED })
-    + T(W / 2 + 40, H - 6.5, 'Technical document — not a print file', 2.2, { color: FAINT, anchor: 'middle' })
-    + T(W - M, H - 6.5, `Page ${page} of ${pages}`, 2.3, { color: MUTED, anchor: 'end' });
+function footer(page: number, pages: number, d?: JobReportData): string {
+  return docFooter(W, H, { label: d ? `Job ${jobNumber(d)}` : 'Job report', page, pages, margin: M });
 }
 
-/** A small promotion card (bottom of the last page). */
-export function promoCard(x: number, y: number, w: number): string {
-  const h = 17;
-  return `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="2" fill="#FFFFFF" stroke="${LINE}" stroke-width="0.3"/>`
-    + `<rect x="${x}" y="${y}" width="1.6" height="${h}" rx="0.8" fill="${ACCENT}"/>`
-    + T(x + 5, y + 5.6, 'Design it, print it, wear it — with Magical Touch Design', 2.5, { bold: true })
-    + T(x + 5, y + 9.8, 'Design editor · Print size & binding · Textile studio · Embroidery · Passport photos', 2.15, { color: MUTED })
-    + T(x + 5, y + 13.6, 'www.magicaltouchdesign.com', 2.2, { bold: true, color: ACCENT });
-}
+/** The one small ad (end of the last page). */
+export function promoCard(x: number, y: number, w: number): string { return promo(x, y, w); }
 
 /** Rows of "label  value" with wrapping; returns the new y. */
 function rows(g: { s: string }, x: number, y: number, w: number, items: [string, string][], keyW = 30, size = 2.55): number {
@@ -121,7 +100,7 @@ function previews(d: JobReportData, x: number, y: number, w: number, h: number):
     g += T(x0, y0 - 1.5, `${j.sides[i] || `Side ${i + 1}`}${n > 1 ? ` · side ${i + 1} of ${n}` : ''}`, 2.6, { bold: true });
     const pv = d.previews[i];
     if (pv) g += `<image x="${r2(x0)}" y="${r2(y0)}" width="${r2(pw)}" height="${r2(ph)}" href="${pv.src}"/>`;
-    else g += `<rect x="${r2(x0)}" y="${r2(y0)}" width="${r2(pw)}" height="${r2(ph)}" fill="${TINT}"/>`;
+    else g += `<rect x="${r2(x0)}" y="${r2(y0)}" width="${r2(pw)}" height="${r2(ph)}" fill="#FFFFFF"/>`;
     g += `<rect x="${r2(x0)}" y="${r2(y0)}" width="${r2(pw)}" height="${r2(ph)}" fill="none" stroke="${INK}" stroke-width="0.3"/>`;
     const panels = sidePanels(j, i);
     if (!pv) panels.forEach((p, pi) => { const cx = x0 + (p.x + p.w / 2) * k; g += T(cx, y0 + ph / 2, String(i * panels.length + pi + 1), 6, { color: FAINT, anchor: 'middle' }) + T(cx, y0 + ph / 2 + 4.5, p.name, 2, { color: MUTED, anchor: 'middle' }); });
@@ -146,13 +125,23 @@ export function jobReportPages(d: JobReportData): string[] {
   // ── Page 1: job & specification ──
   const p1 = { s: header(d, title) };
   const LW = 165, RX = M + LW + 10, RW = W - M - RX;
-  p1.s += label(M, 28, 'Preview');
-  p1.s += previews(d, M, 32, LW, 130);
-  p1.s += `<line x1="${M}" y1="173" x2="${M + 7}" y2="173" stroke="${FOLD}" stroke-width="0.4" stroke-dasharray="1.2 0.8"/>` + T(M + 9, 173.8, 'fold', 2.2, { color: MUTED });
-  p1.s += `<rect x="${M + 20}" y="171.8" width="6" height="2.4" fill="none" stroke="${INK}" stroke-width="0.25"/>` + T(M + 28, 173.8, 'finished (trim) edge — panel numbers in reading order', 2.2, { color: MUTED });
+  // Key facts at a glance.
+  p1.s += metaStrip(M, 28, W - 2 * M, [
+    ['Finished size', `${j.trimW} × ${j.trimH} mm`],
+    ['Folded', j.folded ? `${r1(j.folded.w)} × ${r1(j.folded.h)} mm` : 'Flat'],
+    ['Sides', `${j.sides.length} · ${j.sides.join(' / ')}`],
+    ['Quantity', det.quantity ? `${det.quantity}` : 'To confirm'],
+    ['Colour', 'CMYK print'],
+    ['Bleed · safe', `${j.bleed} · ${j.safe} mm`],
+  ]);
+  p1.s += card(M, 45, LW, 140, C.soft);
+  p1.s += label(M + 5, 52, 'Preview');
+  p1.s += previews(d, M + 5, 58, LW - 10, 112);
+  p1.s += `<line x1="${M + 5}" y1="180" x2="${M + 12}" y2="180" stroke="${FOLD}" stroke-width="0.4" stroke-dasharray="1.2 0.8"/>` + T(M + 14, 180.8, 'fold', 2.2, { color: MUTED });
+  p1.s += `<rect x="${M + 25}" y="178.8" width="6" height="2.4" fill="none" stroke="${INK}" stroke-width="0.25"/>` + T(M + 33, 180.8, 'finished (trim) edge — panel numbers in reading order', 2.2, { color: MUTED });
   // Job
-  p1.s += label(RX, 28, 'Job');
-  let y = rows(p1, RX, 34, RW, [
+  p1.s += label(RX, 52, 'Job');
+  let y = rows(p1, RX, 58, RW, [
     ['Job', det.jobName], ['Client', det.client], ['Designer', det.designer],
     ['Company', [det.company, det.contact].filter(Boolean).join(' · ')], ['Quantity', det.quantity ? `${det.quantity} copies` : 'To confirm'],
   ]);
@@ -178,7 +167,7 @@ export function jobReportPages(d: JobReportData): string[] {
   // ── Page 2: production ──
   const p2 = { s: header(d, 'Production & approval') };
   // How the file is built — the working-file instructions.
-  p2.s += label(M, 28, 'How the file is built');
+  p2.s += label(M, 32, 'How the file is built');
   const legend: [string, string][] = [
     [`<line x1="0" y1="1.5" x2="9" y2="1.5" stroke="${CUT}" stroke-width="0.5"/>`, 'Cut marks — cut here (red, outside the artwork)'],
     [`<line x1="0" y1="1.5" x2="9" y2="1.5" stroke="${FOLD}" stroke-width="0.5" stroke-dasharray="1.2 0.8"/>`, j.folds.length ? 'Fold marks — fold here (green, outside the artwork)' : 'Fold marks — none on this job'],
@@ -186,8 +175,8 @@ export function jobReportPages(d: JobReportData): string[] {
     [`<rect x="0" y="0" width="9" height="3.4" fill="none" stroke="${BLEED}" stroke-width="0.35"/>`, `Bleed — artwork runs ${j.bleed} mm past the trim on every edge`],
     [`<rect x="0" y="0" width="9" height="3.4" fill="none" stroke="${SAFE}" stroke-width="0.35" stroke-dasharray="1.2 0.8"/>`, `Safe area — keep text ${j.safe} mm inside the trim${j.folds.length ? ' and away from folds' : ''}`],
   ];
-  legend.forEach(([icon, txt], i) => { const yy = 34 + i * 6.2; p2.s += `<g transform="translate(${M} ${r2(yy - 2.8)})">${icon}</g>` + T(M + 13, yy, txt, 2.6); });
-  y = 34 + legend.length * 6.2 + 4;
+  legend.forEach(([icon, txt], i) => { const yy = 39 + i * 6.2; p2.s += `<g transform="translate(${M} ${r2(yy - 2.8)})">${icon}</g>` + T(M + 13, yy, txt, 2.6); });
+  y = 39 + legend.length * 6.2 + 4;
   p2.s += label(M, y, 'Cutting & printing'); y += 6;
   const fit = d.files.find((f) => f.scale < 1);
   const howTo = [
@@ -205,11 +194,11 @@ export function jobReportPages(d: JobReportData): string[] {
   for (const s of [...PRODUCTION_NOTES, ...(det.notes ? [det.notes] : [])]) { if (y > 188) break; const ls = wrap(s, 92); ls.forEach((ln, i) => { p2.s += T(M + (i ? 3 : 0), y + i * 3.3, (i ? '' : '•  ') + ln, 2.6, { color: s === det.notes ? INK : MUTED }); }); y += ls.length * 3.3 + 1.4; }
   // Approval
   const AX = 196;
-  p2.s += `<rect x="${AX - 6}" y="24" width="${W - M - AX + 6}" height="${H - 24 - 14}" fill="${TINT}"/>`;
-  p2.s += label(AX, 31, 'Approval');
-  let ay = 39;
+  p2.s += card(AX - 6, 28, W - M - AX + 6, H - 28 - 16, C.soft);
+  p2.s += label(AX, 36, 'Approval');
+  let ay = 44;
   for (const a of APPROVALS) {
-    p2.s += `<rect x="${AX}" y="${ay - 2.9}" width="3.4" height="3.4" fill="#FFFFFF" stroke="${INK}" stroke-width="0.3"/>` + T(AX + 6, ay, a, 2.6);
+    p2.s += `<rect x="${AX}" y="${ay - 2.9}" width="3.4" height="3.4" rx="0.7" fill="#FFFFFF" stroke="${INK}" stroke-width="0.3"/>` + T(AX + 6, ay, a, 2.6);
     ay += 7.5;
   }
   ay += 5;
@@ -218,8 +207,8 @@ export function jobReportPages(d: JobReportData): string[] {
     ay += 11;
   }
   wrap('Printing starts after this report is approved. Approval covers the artwork, sizes, folds, paper, colours and quantity listed here.', 44).forEach((ln, i) => { p2.s += T(AX, ay + 2 + i * 3.1, ln, 2.3, { color: MUTED }); });
-  p2.s += promoCard(AX - 2, H - 16 - 22, W - M - AX + 2);
+  p2.s += promoCard(AX - 2, H - 16 - 21, W - M - AX - 2);
 
   const pages = [p1.s, p2.s];
-  return pages.map((g, i) => `<svg xmlns="http://www.w3.org/2000/svg" width="${W}mm" height="${H}mm" viewBox="0 0 ${W} ${H}"><rect width="${W}" height="${H}" fill="#FFFFFF"/>${g}${footer(i + 1, pages.length)}</svg>`);
+  return pages.map((g, i) => `<svg xmlns="http://www.w3.org/2000/svg" width="${W}mm" height="${H}mm" viewBox="0 0 ${W} ${H}">${docDefs()}<rect width="${W}" height="${H}" fill="#FFFFFF"/>${g}${footer(i + 1, pages.length, d)}</svg>`);
 }

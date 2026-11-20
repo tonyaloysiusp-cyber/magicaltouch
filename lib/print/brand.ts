@@ -1,29 +1,23 @@
 // Brand frame for technical documents (never for print files): joins the
-// pages of several generators into ONE document, replaces each old footer
-// with the Magical Touch Design logo footer, adds the brand colour line at
-// the top and numbers the pages across the whole document.
+// pages of several generators into ONE document in the Magical Touch Design
+// document style (lib/print/docStyle) — spectrum line, logo header with the
+// document title, footer with the page pill — and numbers the pages across
+// the whole document. Each generator's page is placed in the body area
+// (its own old footer removed), so every technical file looks the same.
 
-export type Logo = { src: string; w: number; h: number } | null | undefined;
-const esc = (s: string) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' } as any)[c]);
-const COLS = ['#F472B6', '#A78BFA', '#38BDF8', '#4ADE80', '#FACC15'];
+import { docDefs, docFooter, docHeader, type DocLogo } from './docStyle.ts';
+
+export type Logo = DocLogo;
 
 function size(svg: string): { w: number; h: number } {
   const m = svg.match(/viewBox="0 0 ([\d.]+) ([\d.]+)"/);
   return m ? { w: Number(m[1]), h: Number(m[2]) } : { w: 210, h: 297 };
 }
 
-/** The brand footer (logo, site, document name, page x of n) and top colour line. */
-export function brandChrome(w: number, h: number, o: { logo?: Logo; label: string; page: number; pages: number; margin?: number }): string {
-  const M = o.margin ?? 14;
-  let g = COLS.map((c, i) => `<rect x="${(w / COLS.length) * i}" y="0" width="${w / COLS.length + 0.2}" height="1.2" fill="${c}"/>`).join('');
-  g += `<line x1="${M}" y1="${h - 14}" x2="${w - M}" y2="${h - 14}" stroke="#E4E4E7" stroke-width="0.25"/>`;
-  let x = M;
-  if (o.logo) { const lh = 4.6, lw = lh * (o.logo.w / o.logo.h); g += `<image x="${M}" y="${h - 11.6}" width="${(lw).toFixed(2)}" height="${lh}" href="${o.logo.src}"/>`; x = M + lw + 4; }
-  else { g += `<text x="${M}" y="${h - 8.6}" font-family="Helvetica" font-size="3" font-weight="700" fill="#09090B">Magical Touch Design</text>`; x = M + 36; }
-  g += `<text x="${x}" y="${h - 8.6}" font-family="Helvetica" font-size="2.5" fill="#52525B">${esc(o.label)} · technical document, not a print file</text>`;
-  g += `<text x="${x}" y="${h - 5.2}" font-family="Helvetica" font-size="2.2" fill="#3B82C4">Free design, print &amp; textile tools · www.magicaltouchdesign.com</text>`;
-  g += `<text x="${w - M}" y="${h - 8.6}" font-family="Helvetica" font-size="2.6" fill="#52525B" text-anchor="end">Page ${o.page} of ${o.pages}</text>`;
-  return g;
+/** The brand header and footer for one page (kept for callers that frame their own pages). */
+export function brandChrome(w: number, h: number, o: { logo?: Logo; label: string; page: number; pages: number; margin?: number; title?: string; kind?: string }): string {
+  return docHeader(w, { logo: o.logo, kind: o.kind || 'Technical document', title: o.title || o.label, margin: o.margin })
+    + docFooter(w, h, { label: o.label, page: o.page, pages: o.pages, margin: o.margin });
 }
 
 /** Strips a generator's own footer block (the rule at H − 14 and the texts after it). */
@@ -34,11 +28,37 @@ function stripFooter(svg: string, h: number): string {
   return svg.slice(0, start);
 }
 
+/** The page title a generator wrote (its largest bold text near the top), for the header. */
+function pageTitle(inner: string): { t: string; raw: string } | null {
+  let best: { s: number; t: string; raw: string } | null = null;
+  const re = /<text[^>]*\by="([\d.]+)"[^>]*font-size="([\d.]+)"[^>]*font-weight="700"[^>]*>([^<]{2,80})<\/text>/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(inner))) { const y = Number(m[1]), s = Number(m[2]); if (y < 40 && s >= 4.5 && (!best || s > best.s)) best = { s, t: m[3], raw: m[0] }; }
+  return best ? { t: best.t.replace(/&amp;/g, '&'), raw: best.raw } : null;
+}
+
 /** One branded document from the page lists of several generators, numbered as one. */
-export function brandDocument(parts: string[][], o: { logo?: Logo; label: string }): { svg: string; widthMm: number; heightMm: number }[] {
+export function brandDocument(parts: string[][], o: { logo?: Logo; label: string; kind?: string }): { svg: string; widthMm: number; heightMm: number }[] {
   const all = parts.flat();
   return all.map((svg, i) => {
     const { w, h } = size(svg);
-    return { svg: `${stripFooter(svg, h)}${brandChrome(w, h, { logo: o.logo, label: o.label, page: i + 1, pages: all.length })}</svg>`, widthMm: w, heightMm: h };
+    const body = stripFooter(svg, h);
+    let inner = body.slice(body.indexOf('>') + 1);
+    // The generator's own big page title moves into the brand header (not shown twice).
+    const pt = pageTitle(inner);
+    if (pt) inner = inner.replace(pt.raw, '');
+    // Generator content sits between y ≈ 10 and h − 16; place that band under the header (y 27 … h − 15).
+    const top = 10, bottom = h - 16, to = 27, toEnd = h - 15;
+    const s = Math.min(1, (toEnd - to) / (bottom - top));
+    const dx = (w - w * s) / 2, dy = to - top * s;
+    const title = pt?.t || o.label;
+    return {
+      svg: `<svg xmlns="http://www.w3.org/2000/svg" width="${w}mm" height="${h}mm" viewBox="0 0 ${w} ${h}">${docDefs()}<rect width="${w}" height="${h}" fill="#FFFFFF"/>`
+        + `<g transform="translate(${dx.toFixed(3)} ${dy.toFixed(3)}) scale(${s.toFixed(5)})">${inner.replace(/<rect width="[\d.]+" height="[\d.]+" fill="#(?:FFFFFF|fff|FFF|ffffff)"\/>/, '')}</g>`
+        + `<rect x="0" y="0" width="${w}" height="25" fill="#FFFFFF"/>`
+        + brandChrome(w, h, { logo: o.logo, label: o.label, page: i + 1, pages: all.length, title, kind: o.kind || 'Technical production file' })
+        + `</svg>`,
+      widthMm: w, heightMm: h,
+    };
   });
 }
