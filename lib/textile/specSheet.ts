@@ -35,9 +35,9 @@ export function specSheetPages(d: SpecData): string[] {
   const heading = (s: string) => { need(16); y += 9; page().push(section(M, y, s, W - 2 * M)); y += 7.5; zebra = 0; };
   const row = (cells: string[], xs: number[], bold = false) => {
     need(5.5);
-    if (bold) page().push(`<rect x="${M}" y="${y - 3.6}" width="${W - 2 * M}" height="5.2" rx="1.2" fill="${C.soft}"/>`);
-    else if (zebra++ % 2) page().push(`<rect x="${M}" y="${y - 3.6}" width="${W - 2 * M}" height="5.2" fill="#FAFAFC"/>`);
-    cells.forEach((c, i) => text(xs[i] + (i === 0 ? 1.5 : 0) - (i > 0 && xs[i] > M + 60 && xs[i] >= W - M - 0.1 ? 1.5 : 0), c, 3.1, bold ? 700 : 400, bold ? C.ink : C.text, i > 0 && xs[i] > M + 60 ? 'end' : 'start'));
+    if (bold) page().push(`<line x1="${M}" y1="${y + 1.6}" x2="${W - M}" y2="${y + 1.6}" stroke="${C.ink}" stroke-width="0.25"/>`);
+    else { zebra++; page().push(`<line x1="${M}" y1="${y + 1.6}" x2="${W - M}" y2="${y + 1.6}" stroke="${C.line}" stroke-width="0.2"/>`); }
+    cells.forEach((c, i) => text(xs[i], c, 3.1, bold ? 700 : 400, bold ? C.ink : C.text, i > 0 && xs[i] > M + 60 ? 'end' : 'start'));
     y += 5.2;
   };
 

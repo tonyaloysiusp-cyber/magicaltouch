@@ -37,67 +37,63 @@ export function caps(x: number, y: number, s: string, size = 2.1, color: string 
   return `<text x="${r2(x)}" y="${r2(y)}" font-family="Helvetica" font-size="${size}" font-weight="700" letter-spacing="${track}" fill="${color}"${anchor === 'end' ? ' text-anchor="end"' : ''}>${esc(s.toUpperCase())}</text>`;
 }
 
-/** Page header: spectrum line, logo, document type, title, and up to two right-hand meta lines. */
+/** Page header: logo on the left; document type, title and reference on the right; one fine rule. */
 export function docHeader(w: number, o: { logo?: DocLogo; kind: string; title: string; meta?: string; meta2?: string; margin?: number }): string {
   const M = o.margin ?? 14;
-  let g = `<rect x="0" y="0" width="${w}" height="2" fill="url(#mt-spectrum)"/>`;
-  g += `<rect x="0" y="2" width="${w}" height="22" fill="url(#mt-wash)"/>`;
-  if (o.logo) { const lh = 6.4, lw = lh * (o.logo.w / o.logo.h); g += `<image x="${M}" y="7" width="${r2(lw)}" height="${lh}" href="${o.logo.src}"/>`; }
-  else g += txt(M, 12, 'MAGICAL TOUCH DESIGN', 3.4, { bold: true, color: C.ink });
-  g += caps(w - M, 9.2, o.kind, 2, C.violet, 0.45, 'end');
-  g += txt(w - M, 15.4, o.title, 4.2, { bold: true, color: C.ink, anchor: 'end' });
-  if (o.meta) g += txt(w - M, 20.2, o.meta, 2.3, { color: C.muted, anchor: 'end' });
-  if (o.meta2) g += txt(M, 20.2, o.meta2, 2.3, { color: C.muted });
-  g += `<line x1="0" y1="24" x2="${w}" y2="24" stroke="${C.line}" stroke-width="0.3"/>`;
+  let g = '';
+  if (o.logo) { const lh = 6, lw = lh * (o.logo.w / o.logo.h); g += `<image x="${M}" y="8" width="${r2(lw)}" height="${lh}" href="${o.logo.src}"/>`; }
+  else g += txt(M, 13, 'MAGICAL TOUCH DESIGN', 3.4, { bold: true, color: C.ink });
+  if (o.meta2) g += txt(M, 19.6, o.meta2, 2.3, { color: C.muted });
+  g += caps(w - M, 9.4, o.kind, 1.9, C.muted, 0.5, 'end');
+  g += txt(w - M, 15.2, o.title, 4, { bold: true, color: C.ink, anchor: 'end' });
+  if (o.meta) g += txt(w - M, 19.6, o.meta, 2.3, { color: C.muted, anchor: 'end' });
+  g += `<line x1="${M}" y1="23.5" x2="${w - M}" y2="23.5" stroke="${C.ink}" stroke-width="0.35"/>`;
   return g;
 }
 
-/** Page footer: brand line, site, document label and page pill. */
+/** Page footer: company and site on the left, document label in the middle, page number on the right. */
 export function docFooter(w: number, h: number, o: { label: string; page: number; pages: number; margin?: number }): string {
   const M = o.margin ?? 14;
   const y = h - 7;
-  return `<line x1="${M}" y1="${h - 12.5}" x2="${w - M}" y2="${h - 12.5}" stroke="${C.line}" stroke-width="0.25"/>`
-    + `<rect x="${M}" y="${r2(y - 2.6)}" width="3.2" height="3.2" rx="0.9" fill="url(#mt-spectrum)"/>`
-    + txt(M + 5, y, 'Magical Touch Design', 2.3, { bold: true, color: C.ink })
-    + txt(M + 33, y, 'www.magicaltouchdesign.com', 2.3, { color: C.accent })
-    + txt(w / 2 + 18, y, `${o.label} · technical document, not a print file`, 2.1, { color: C.faint, anchor: 'middle' })
-    + `<rect x="${r2(w - M - 17)}" y="${r2(y - 3.1)}" width="17" height="4.4" rx="2.2" fill="${C.soft}"/>`
-    + txt(w - M - 8.5, y, `Page ${o.page} of ${o.pages}`, 1.95, { bold: true, color: C.muted, anchor: 'middle' })
-    + `<rect x="0" y="${h - 1.2}" width="${w}" height="1.2" fill="url(#mt-spectrum)"/>`;
+  return `<line x1="${M}" y1="${h - 12}" x2="${w - M}" y2="${h - 12}" stroke="${C.line}" stroke-width="0.3"/>`
+    + txt(M, y, 'Magical Touch Design', 2.2, { bold: true, color: C.ink })
+    + txt(M + 30, y, 'www.magicaltouchdesign.com', 2.2, { color: C.muted })
+    + txt(w / 2 + 10, y, `${o.label} · technical document, not a print file`, 2, { color: C.faint, anchor: 'middle' })
+    + txt(w - M, y, `Page ${o.page} of ${o.pages}`, 2.2, { color: C.muted, anchor: 'end' });
 }
 
-/** Section title: a small spectrum tab and a letter-spaced label. */
+/** Section title: letter-spaced capitals over a fine rule. */
 export function section(x: number, y: number, label: string, w?: number): string {
-  return `<rect x="${r2(x)}" y="${r2(y - 2.5)}" width="1.1" height="3" rx="0.55" fill="url(#mt-spectrum)"/>` + caps(x + 2.8, y, label, 2.1, C.ink, 0.42)
-    + (w ? `<line x1="${r2(x)}" y1="${r2(y + 2)}" x2="${r2(x + w)}" y2="${r2(y + 2)}" stroke="${C.line}" stroke-width="0.2"/>` : '');
+  return caps(x, y, label, 2.1, C.ink, 0.45)
+    + (w ? `<line x1="${r2(x)}" y1="${r2(y + 2)}" x2="${r2(x + w)}" y2="${r2(y + 2)}" stroke="${C.line}" stroke-width="0.25"/>` : '');
 }
 
+/** A plain panel: hairline border, square-ish corners, white (or a very light grey) inside. */
 export function card(x: number, y: number, w: number, h: number, fill: string = C.card): string {
-  return `<rect x="${r2(x)}" y="${r2(y)}" width="${r2(w)}" height="${r2(h)}" rx="2.2" fill="${fill}" stroke="${C.line}" stroke-width="0.25"/>`;
+  return `<rect x="${r2(x)}" y="${r2(y)}" width="${r2(w)}" height="${r2(h)}" rx="0.8" fill="${fill === C.soft ? '#FBFBFC' : fill}" stroke="${C.line}" stroke-width="0.3"/>`;
 }
 
-/** A row of key facts in a soft strip: [label, value][]. */
+/** A row of key facts between two rules: [label, value][]. */
 export function metaStrip(x: number, y: number, w: number, items: [string, string][]): string {
   const n = Math.max(1, items.length), cw = w / n;
-  let g = `<rect x="${r2(x)}" y="${r2(y)}" width="${r2(w)}" height="12" rx="2.2" fill="${C.soft}"/>`;
+  let g = `<line x1="${r2(x)}" y1="${r2(y + 12)}" x2="${r2(x + w)}" y2="${r2(y + 12)}" stroke="${C.line}" stroke-width="0.3"/>`;
   items.forEach(([k, v], i) => {
-    const cx = x + i * cw + 4;
+    const cx = x + i * cw + (i ? 4 : 0);
     if (i) g += `<line x1="${r2(x + i * cw)}" y1="${r2(y + 2.5)}" x2="${r2(x + i * cw)}" y2="${r2(y + 9.5)}" stroke="${C.line}" stroke-width="0.25"/>`;
-    g += caps(cx, y + 4.6, k, 1.75, C.faint, 0.32);
+    g += caps(cx, y + 4.6, k, 1.7, C.faint, 0.35);
     const max = Math.max(6, Math.floor((cw - 6) / 1.45));
-    g += txt(cx, y + 9.3, v.length > max ? v.slice(0, max - 1) + '…' : v, 2.75, { bold: true, color: C.ink });
+    g += txt(cx, y + 9.4, v.length > max ? v.slice(0, max - 1) + '…' : v, 2.7, { bold: true, color: C.ink });
   });
   return g;
 }
 
-/** The one small ad: compact, quiet, at the end of a document. */
+/** The one small ad: a quiet bordered note at the end of a document. */
 export function promo(x: number, y: number, w: number): string {
-  const h = 15;
-  return `<rect x="${r2(x)}" y="${r2(y)}" width="${r2(w)}" height="${h}" rx="2.4" fill="url(#mt-wash)" stroke="${C.line}" stroke-width="0.25"/>`
-    + `<rect x="${r2(x)}" y="${r2(y)}" width="1.4" height="${h}" rx="0.7" fill="url(#mt-spectrum)"/>`
-    + txt(x + 5, y + 5.4, 'Design it, print it, wear it — free with Magical Touch Design', 2.45, { bold: true, color: C.ink })
-    + txt(x + 5, y + 9.2, 'Design editor · Print & binding · Textile studio · Photo studio', 2.05, { color: C.muted })
-    + txt(x + 5, y + 12.6, 'magicaltouchdesign.com', 2.15, { bold: true, color: C.accent });
+  const h = 14;
+  return `<rect x="${r2(x)}" y="${r2(y)}" width="${r2(w)}" height="${h}" rx="0.8" fill="#FFFFFF" stroke="${C.line}" stroke-width="0.3"/>`
+    + txt(x + 4, y + 5.2, 'Design it, print it, wear it — free with Magical Touch Design', 2.35, { bold: true, color: C.ink })
+    + txt(x + 4, y + 8.9, 'Design editor · Print & binding · Textile studio · Photo studio', 2, { color: C.muted })
+    + txt(x + 4, y + 12, 'www.magicaltouchdesign.com', 2.05, { color: C.accent });
 }
 
 export const docPage = (w: number, h: number, body: string) =>

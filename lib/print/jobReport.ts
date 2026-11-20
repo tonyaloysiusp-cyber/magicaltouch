@@ -198,7 +198,7 @@ export function jobReportPages(d: JobReportData): string[] {
   p2.s += label(AX, 36, 'Approval');
   let ay = 44;
   for (const a of APPROVALS) {
-    p2.s += `<rect x="${AX}" y="${ay - 2.9}" width="3.4" height="3.4" rx="0.7" fill="#FFFFFF" stroke="${INK}" stroke-width="0.3"/>` + T(AX + 6, ay, a, 2.6);
+    p2.s += `<rect x="${AX}" y="${ay - 2.9}" width="3.4" height="3.4" fill="#FFFFFF" stroke="${INK}" stroke-width="0.3"/>` + T(AX + 6, ay, a, 2.6);
     ay += 7.5;
   }
   ay += 5;
