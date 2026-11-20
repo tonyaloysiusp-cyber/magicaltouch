@@ -12,6 +12,7 @@
 // left, the canvas, properties / layers on the right (both panels collapse,
 // and become drawers on small screens), the view bar and a status bar below.
 
+import { clickMods, nextLayerSelection } from '@/lib/ui/layerSelect';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlignCenterHorizontal, AlignCenterVertical, AlignEndHorizontal, AlignEndVertical, AlignStartHorizontal, AlignStartVertical, ArrowDown, ArrowUp, Circle, Copy, Eye, EyeOff, Hand, Hash, Image as ImageIcon,
@@ -112,6 +113,7 @@ export function PrintStudio({ kit, pattern, glyphs, players, libraryPatterns, on
   const artRef = useRef(art); artRef.current = art;
   const toolRef = useRef<Tool>('select'); toolRef.current = tool;
   const selRef = useRef<string[]>([]); selRef.current = selIds;
+  const layerAnchor = useRef<string | null>(null);
   const clip = useRef<ArtEl[]>([]);
   const imgFile = useRef<HTMLInputElement>(null);
   const spaceDown = useRef(false);
@@ -1192,10 +1194,12 @@ export function PrintStudio({ kit, pattern, glyphs, players, libraryPatterns, on
           <section aria-label="Layers" className="space-y-1">
             <div className="flex items-center justify-between"><p className={h4}>Layers ({art.length})</p>{selIds.length > 0 && <span className="inline-flex gap-1"><button type="button" onClick={() => arrange('forward')} aria-label="Bring forward" className="h-7 w-7 rounded border border-mt-border inline-flex items-center justify-center"><ArrowUp size={13} /></button><button type="button" onClick={() => arrange('backward')} aria-label="Send backward" className="h-7 w-7 rounded border border-mt-border inline-flex items-center justify-center"><ArrowDown size={13} /></button></span>}</div>
             <ul className="space-y-0.5">{[...art].reverse().map((e) => <li key={e.id} className={`flex items-center gap-1.5 rounded-lg px-1.5 py-1 text-[12.5px] ${selIds.includes(e.id) ? 'bg-mt-ink/10' : 'hover:bg-mt-surface2'}`}>
-              <button type="button" onClick={(ev) => { const ids = ev.shiftKey ? Array.from(new Set([...selIds, e.id])) : [e.id]; if (!e.locked) selectIds(ids); else setSelIds(ids); }} className="min-w-0 flex-1 truncate text-left">{e.kind === 'text' ? (/\{(NAME|NUMBER)\}/i.test(e.text) ? <Hash size={12} className="inline mr-1" /> : <Type size={12} className="inline mr-1" />) : e.kind === 'image' ? <ImageIcon size={12} className="inline mr-1" /> : <Shapes size={12} className="inline mr-1" />}{e.name || (e.kind === 'text' ? e.text : e.kind)}</button>
+              <button type="button" title="Click to select · Shift-click: select a range · Ctrl/Cmd-click: add or remove" onClick={(ev) => { const order = [...art].reverse().map((x) => x.id); const r = nextLayerSelection(order, selIds, layerAnchor.current, e.id, clickMods(ev)); layerAnchor.current = r.anchor; const live = r.selection.filter((id) => !art.find((x) => x.id === id)?.locked); if (live.length) selectIds(live); else setSelIds(r.selection); }} className="min-w-0 flex-1 truncate text-left">{e.kind === 'text' ? (/\{(NAME|NUMBER)\}/i.test(e.text) ? <Hash size={12} className="inline mr-1" /> : <Type size={12} className="inline mr-1" />) : e.kind === 'image' ? <ImageIcon size={12} className="inline mr-1" /> : <Shapes size={12} className="inline mr-1" />}{e.name || (e.kind === 'text' ? e.text : e.kind)}</button>
               <button type="button" onClick={() => update(e.id, { hidden: !e.hidden })} aria-label={e.hidden ? 'Show' : 'Hide'} className="p-1">{e.hidden ? <EyeOff size={13} /> : <Eye size={13} />}</button>
               <button type="button" onClick={() => update(e.id, { locked: !e.locked })} aria-label={e.locked ? 'Unlock' : 'Lock'} className="p-1">{e.locked ? <Lock size={13} /> : <Unlock size={13} />}</button>
+              <button type="button" onClick={() => { setArt((a) => a.filter((x) => x.id !== e.id)); setSelIds((v) => v.filter((id) => id !== e.id)); }} disabled={!!e.locked} aria-label={`Delete ${e.name || e.kind}`} title="Delete layer" className="p-1 text-mt-faint hover:text-red-600 disabled:opacity-30"><Trash2 size={13} /></button>
             </li>)}</ul>
+            {selIds.length > 1 && <div className="flex gap-1.5 pt-1"><button type="button" onClick={() => group()} className="h-7 flex-1 rounded-md border border-mt-border text-[11.5px]">Group</button><button type="button" onClick={hideSel} className="h-7 flex-1 rounded-md border border-mt-border text-[11.5px]">Hide</button><button type="button" onClick={removeSel} className="h-7 flex-1 rounded-md border border-mt-border text-[11.5px] hover:text-red-600">Delete all</button></div>}
             {!art.length && <p className="text-[12px] text-mt-faint">No artwork yet.</p>}
           </section>
         </aside>}

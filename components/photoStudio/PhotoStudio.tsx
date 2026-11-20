@@ -818,6 +818,7 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
         else if (lasso && k === 'escape') { e.preventDefault(); setLasso(null); setLassoHover(null); }
         else if (lasso && k === 'backspace') { e.preventDefault(); setLasso(lasso.pts.length > 1 ? { ...lasso, pts: lasso.pts.slice(0, -1) } : null); }
         else if ((k === 'delete' || k === 'backspace') && sel) { e.preventDefault(); selOps.clear(); }
+        else if ((k === 'delete' || k === 'backspace') && !sel && layers && layers.length > 1 && tool !== 'text') { e.preventDefault(); layerOps.remove(); }
         else if (k === 'escape' && sel) setSel(null);
         else if (!mod && !e.altKey) {
           if (k === 'v') setTool('move');

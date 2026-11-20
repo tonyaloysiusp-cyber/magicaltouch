@@ -175,6 +175,14 @@ const ART: Record<string, (id: string) => React.ReactNode> = {
       <circle cx="224" cy="121" r="11" fill="#5DCCB8" /><path d="M219 121L223 125L230 117" fill="none" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
     </>
   ),
+  barcode: () => (
+    <>
+      <g transform="translate(86 34)"><rect width="148" height="112" rx="8" fill="#fff" />
+        {[3,1,1,2,1,3,2,1,1,1,2,3,1,2,1,1,3,1,2,1,1,2,1,3,1,1,2,1,1,3].reduce((acc: { x: number; els: any[] }, w, i) => { if (i % 2 === 0) acc.els.push(<rect key={i} x={14 + acc.x} y={14} width={w * 1.6} height={i < 2 || i > 27 || (i > 13 && i < 16) ? 72 : 64} fill="#0B0B12" />); acc.x += w * 1.9; return acc; }, { x: 0, els: [] }).els}
+        <text x="74" y="100" textAnchor="middle" fontFamily="Arial" fontSize="11" letterSpacing="2" fill="#0B0B12">4 006381 333931</text>
+      </g>
+    </>
+  ),
   preflight: () => (
     <>
       <g transform="translate(72 22)"><path d="M0 0H86L110 24V140H0Z" fill="#fff" /><path d="M86 0V24H110" fill="#EEF0F4" />
