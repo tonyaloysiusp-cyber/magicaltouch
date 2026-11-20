@@ -175,6 +175,16 @@ const ART: Record<string, (id: string) => React.ReactNode> = {
       <circle cx="224" cy="121" r="11" fill="#5DCCB8" /><path d="M219 121L223 125L230 117" fill="none" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
     </>
   ),
+  'large-format': () => (
+    <>
+      <g transform="translate(96 18)">
+        <rect width="128" height="150" fill="#fff" />
+        <circle cx="64" cy="80" r="52" fill="#35C2F1" /><circle cx="64" cy="80" r="34" fill="#F2708F" /><circle cx="64" cy="80" r="16" fill="#DDE23B" />
+        {[42.7, 85.3].map((x) => <path key={x} d={`M${x} 0V150`} stroke="#3B82C4" strokeWidth="1.2" strokeDasharray="4 3" />)}
+        {[50, 100].map((y) => <path key={y} d={`M0 ${y}H128`} stroke="#3B82C4" strokeWidth="1.2" strokeDasharray="4 3" />)}
+      </g>
+    </>
+  ),
   separation: () => (
     <>
       {[['#00A0E3', 0], ['#E6007E', 1], ['#FFED00', 2], ['#1A1A1A', 3]].map(([c, i]) => (
