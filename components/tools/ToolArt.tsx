@@ -175,6 +175,12 @@ const ART: Record<string, (id: string) => React.ReactNode> = {
       <circle cx="224" cy="121" r="11" fill="#5DCCB8" /><path d="M219 121L223 125L230 117" fill="none" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
     </>
   ),
+  labels: () => (
+    <>
+      <g transform="translate(70 28)"><path d="M60 6C88 6 104 28 100 52C112 64 110 92 88 100C76 122 40 122 30 100C6 94 2 66 16 52C10 26 32 6 60 6Z" fill="#fff" /><path d="M60 6C88 6 104 28 100 52C112 64 110 92 88 100C76 122 40 122 30 100C6 94 2 66 16 52C10 26 32 6 60 6Z" fill="none" stroke="#EC008C" strokeWidth="1.4" /><circle cx="58" cy="62" r="32" fill="#F59E0B" /><circle cx="48" cy="54" r="5" fill="#0B0B12" /><circle cx="68" cy="54" r="5" fill="#0B0B12" /><path d="M44 72C52 80 64 80 72 72" stroke="#0B0B12" strokeWidth="4" fill="none" strokeLinecap="round" /></g>
+      <g transform="translate(196 52)"><circle cx="36" cy="36" r="34" fill="#fff" stroke="#EC008C" strokeWidth="1.4" /><circle cx="36" cy="36" r="24" fill="#5DCCB8" /><rect x="0" y="84" width="72" height="34" rx="8" fill="#fff" stroke="#EC008C" strokeWidth="1.4" /><rect x="10" y="94" width="40" height="5" rx="2.5" fill="#C9C9D6" /><rect x="10" y="104" width="28" height="5" rx="2.5" fill="#C9C9D6" /></g>
+    </>
+  ),
   vdp: () => (
     <>
       {['Arun Kumar', 'Priya Nair', 'Ravi Shankar'].map((n, i) => (

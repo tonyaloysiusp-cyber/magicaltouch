@@ -1,6 +1,6 @@
 'use client';
 
-// Wall stickers — upload artwork (PNG with transparency, JPG or SVG), set the
+// Labels & stickers — upload artwork (PNG with transparency, JPG or SVG), set the
 // sticker size, and get a cut contour that follows the shape (with a white
 // border, or cutting just inside the art for bleed). Lay many on a sheet
 // with registration marks for print-and-cut machines and download a vector
@@ -22,6 +22,8 @@ export function StickerDesigner() {
   const [art, setArt] = useState<{ url: string; name: string; w: number; h: number; rgba: Uint8ClampedArray; pw: number; ph: number } | null>(null);
   const [widthMm, setWidthMm] = useState(200);
   const [cut, setCut] = useState<'border' | 'bleed' | 'none'>('border');
+  const [shape, setShape] = useState<'contour' | 'oval' | 'rounded' | 'rect'>('contour');
+  const [radius, setRadius] = useState(4);
   const [offsetMm, setOffsetMm] = useState(3);
   const [sheet, setSheet] = useState('a3');
   const [margin, setMargin] = useState(12);
@@ -50,6 +52,15 @@ export function StickerDesigner() {
   // Contour in millimetres (sticker-local: 0,0 = artwork top-left).
   const contour = useMemo(() => {
     if (!art || cut === 'none') return null;
+    if (shape !== 'contour') {
+      // Label shapes around the artwork box (+ border, or inside it for bleed), in mm (s = 1, pad = 0).
+      const W = widthMm, H = (widthMm * art.h) / art.w;
+      const L = cut === 'border' ? -offsetMm : offsetMm, R = cut === 'border' ? W + offsetMm : W - offsetMm, T = L, B = cut === 'border' ? H + offsetMm : H - offsetMm;
+      const K = 0.5523; let d = '';
+      if (shape === 'oval') { const cx = (L + R) / 2, cy = (T + B) / 2, rx = (R - L) / 2, ry = (B - T) / 2; d = `M${cx + rx} ${cy}C${cx + rx} ${cy + ry * K} ${cx + rx * K} ${cy + ry} ${cx} ${cy + ry}C${cx - rx * K} ${cy + ry} ${cx - rx} ${cy + ry * K} ${cx - rx} ${cy}C${cx - rx} ${cy - ry * K} ${cx - rx * K} ${cy - ry} ${cx} ${cy - ry}C${cx + rx * K} ${cy - ry} ${cx + rx} ${cy - ry * K} ${cx + rx} ${cy}Z`; }
+      else { const r = shape === 'rect' ? 0 : Math.min(radius, (R - L) / 2, (B - T) / 2), k = r * (1 - K); d = r ? `M${L + r} ${T}L${R - r} ${T}C${R - k} ${T} ${R} ${T + k} ${R} ${T + r}L${R} ${B - r}C${R} ${B - k} ${R - k} ${B} ${R - r} ${B}L${L + r} ${B}C${L + k} ${B} ${L} ${B - k} ${L} ${B - r}L${L} ${T + r}C${L} ${T + k} ${L + k} ${T} ${L + r} ${T}Z` : `M${L} ${T}L${R} ${T}L${R} ${B}L${L} ${B}Z`; }
+      return { d, s: 1, pad: 0, loops: 1 };
+    }
     const ppm = art.pw / widthMm; // contour pixels per mm
     let rgba = art.rgba;
     // No transparency (JPG / full rectangle)? The contour follows the rectangle.
@@ -68,7 +79,7 @@ export function StickerDesigner() {
     }
     const c = contourFromRgba(rgba, art.pw, art.ph, offsetMm * ppm, { smooth: 1.2 });
     return { d: c.d, s: 1 / ppm, pad: c.pad, loops: c.loops };
-  }, [art, widthMm, cut, offsetMm]);
+  }, [art, widthMm, cut, offsetMm, shape, radius]);
   const ext = cut === 'border' ? offsetMm : 0; // how far the cut reaches outside the art
   const itemW = widthMm + 2 * ext, itemH = heightMm + 2 * ext;
   const S = SHEETS.find((x) => x.id === sheet)!;
@@ -103,10 +114,35 @@ export function StickerDesigner() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [art, contour, itemW, itemH, widthMm, heightMm, ext]);
 
-  const pdf = async (svg: string, w: number, h: number, name: string) => {
+  // PDF: artwork as drawn, then the cut line as the spot colour “CutContour” (overprint) in its own stream.
+  const pdf = async (svg: string, w: number, h: number, name: string, items: { x: number; y: number; rotated: boolean }[]) => {
     setBusy(true); setErr(null);
-    try { const { svgToPdfBlob } = await import('@/lib/svgToPdf'); save(await svgToPdfBlob(svg, w, h), name); }
-    catch { setErr('The PDF could not be made in this browser.'); }
+    try {
+      const { svgToPdfBlob } = await import('@/lib/svgToPdf');
+      const printOnly = svg.replace(/<g id="CutContour">[\s\S]*<\/g><\/svg>$/, '</svg>');
+      const base = new Uint8Array(await (await svgToPdfBlob(printOnly, w, h)).arrayBuffer());
+      if (!contour) { save(new Blob([base as unknown as BlobPart], { type: 'application/pdf' }), name); setBusy(false); return; }
+      const [{ PDFDocument, PDFName }, { svgPathToPdf }] = await Promise.all([import('pdf-lib'), import('@/lib/print/pathPdf')]);
+      const doc = await PDFDocument.load(base); const page = doc.getPage(0); const ctx = doc.context;
+      const PT = 72 / 25.4, H = h;
+      const res = page.node.Resources();
+      const cs = res.lookup(PDFName.of('ColorSpace')) as any || ctx.obj({}); cs.set(PDFName.of('CsCut'), ctx.obj([PDFName.of('Separation'), PDFName.of('CutContour'), PDFName.of('DeviceCMYK'), ctx.obj({ FunctionType: 2, Domain: [0, 1], C0: [0, 0, 0, 0], C1: [0, 1, 0, 0], N: 1 })])); res.set(PDFName.of('ColorSpace'), cs);
+      const gs = res.lookup(PDFName.of('ExtGState')) as any || ctx.obj({}); gs.set(PDFName.of('GsCut'), ctx.obj({ Type: 'ExtGState', OP: true, op: true, OPM: 1 })); res.set(PDFName.of('ExtGState'), gs);
+      let ops = 'q /GsCut gs /CsCut CS 1 SCN 0.25 w 1 j\n';
+      for (const it of items) {
+        ops += svgPathToPdf(contour.d, (px, py) => {
+          const lx = ext + (px - contour.pad) * contour.s, ly = ext + (py - contour.pad) * contour.s;
+          const X = it.rotated ? it.x + itemH - ly : it.x + lx, Y = it.rotated ? it.y + lx : it.y + ly;
+          return [X * PT, (H - Y) * PT];
+        }) + 'S\n';
+      }
+      ops += 'Q\n';
+      const ref = ctx.register(ctx.flateStream(new TextEncoder().encode(ops)));
+      const c: any = page.node.get(PDFName.of('Contents'));
+      const arr = ctx.obj([]) as any; if (c?.asArray) c.asArray().forEach((x: any) => arr.push(x)); else if (c) arr.push(c); arr.push(ref);
+      page.node.set(PDFName.of('Contents'), arr);
+      save(new Blob([await doc.save() as unknown as BlobPart], { type: 'application/pdf' }), name);
+    } catch (e) { console.error(e); setErr('The PDF could not be made in this browser.'); }
     setBusy(false);
   };
   useEffect(() => { if (cut === 'bleed' && offsetMm > 5) setOffsetMm(2); }, [cut, offsetMm]);
@@ -133,6 +169,10 @@ export function StickerDesigner() {
             {([['border', 'White border'], ['bleed', 'Cut inside'], ['none', 'No cut line']] as const).map(([v, l]) => <button key={v} type="button" role="radio" aria-checked={cut === v} onClick={() => setCut(v)} className={chip(cut === v)}>{l}</button>)}
           </div>
           {cut !== 'none' && num(cut === 'border' ? 'Border around the art (mm)' : 'Bleed — cut inside the art by (mm)', offsetMm, setOffsetMm, cut === 'border' ? 0 : 0.5, cut === 'border' ? 30 : 5, 0.5)}
+          {cut !== 'none' && <div className="grid grid-cols-4 gap-1.5" role="radiogroup" aria-label="Cut shape">
+            {([['contour', 'Contour'], ['oval', 'Round / oval'], ['rounded', 'Rounded'], ['rect', 'Rectangle']] as const).map(([v, l]) => <button key={v} type="button" role="radio" aria-checked={shape === v} onClick={() => setShape(v)} className={chip(shape === v)}>{l}</button>)}
+          </div>}
+          {cut !== 'none' && shape === 'rounded' && num('Corner radius (mm)', radius, setRadius, 0, 50, 0.5)}
         </section>
         <section className="space-y-2">
           <h3 className="text-[12px] font-semibold uppercase tracking-[0.12em] text-mt-muted">Sheet</h3>
@@ -141,14 +181,14 @@ export function StickerDesigner() {
           <label className="flex items-center gap-2 text-[13px]"><input type="checkbox" checked={marks} onChange={(e) => setMarks(e.target.checked)} className="h-4 w-4 accent-[#3B82C4]" /> Registration marks (print-and-cut)</label>
         </section>
         <div className="grid gap-2">
-          <button type="button" disabled={!art || busy || !slots.length} onClick={() => pdf(sheetSvg, S.w, S.h, `${base}-sticker-sheet-${sheet}.pdf`)} className="h-11 rounded-full bg-mt-primary text-mt-onprimary text-[14px] font-semibold inline-flex items-center justify-center gap-2 disabled:opacity-50">{busy ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />} Sticker sheet · PDF</button>
+          <button type="button" disabled={!art || busy || !slots.length} onClick={() => pdf(sheetSvg, S.w, S.h, `${base}-sticker-sheet-${sheet}.pdf`, slots.map((sl) => ({ x: sl.x, y: sl.y, rotated: sl.rotated })))} className="h-11 rounded-full bg-mt-primary text-mt-onprimary text-[14px] font-semibold inline-flex items-center justify-center gap-2 disabled:opacity-50">{busy ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />} Sticker sheet · PDF</button>
           <div className="grid grid-cols-2 gap-2">
             <button type="button" disabled={!art} onClick={() => save(new Blob([sheetSvg], { type: 'image/svg+xml' }), `${base}-sticker-sheet.svg`)} className="h-10 rounded-full border border-mt-border text-[13px] font-semibold disabled:opacity-50">Sheet · SVG</button>
-            <button type="button" disabled={!art || busy} onClick={() => pdf(singleSvg, itemW, itemH, `${base}-sticker.pdf`)} className="h-10 rounded-full border border-mt-border text-[13px] font-semibold disabled:opacity-50">One sticker · PDF</button>
+            <button type="button" disabled={!art || busy} onClick={() => pdf(singleSvg, itemW, itemH, `${base}-sticker.pdf`, [{ x: 0, y: 0, rotated: false }])} className="h-10 rounded-full border border-mt-border text-[13px] font-semibold disabled:opacity-50">One sticker · PDF</button>
           </div>
         </div>
         {err && <p role="alert" className="text-[13px] text-rose-600">{err}</p>}
-        <p className="text-[11.5px] text-mt-faint">The cut line is a 0.25 pt magenta ({CUT}) path in its own “CutContour” layer of the SVG. If your cutter needs a named spot colour, assign it to that line in your RIP.</p>
+        <p className="text-[11.5px] text-mt-faint">In the PDF the cut line is the spot colour <b>CutContour</b> (0.25 pt, overprint) — print-and-cut RIPs pick it up automatically. In the SVG it is the magenta path in the “CutContour” layer.</p>
       </aside>
       <div className="rounded-3xl border border-mt-border bg-mt-surface2/50 p-4">
         {art ? <>
