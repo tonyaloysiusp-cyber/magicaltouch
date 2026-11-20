@@ -485,6 +485,32 @@ export function PropertiesPanel(p: Props) {
                   onChange={(d) => a.setStroke({ dash: d as 'solid' | 'dashed' | 'dotted' })}
                 />
               </div>
+              {(selected.strokeWidth || 0) > 0 && selected.stroke && (
+                <div className="space-y-2" role="group" aria-label="Stroke options">
+                  <div className="grid grid-cols-2 gap-2">
+                    <label className="block text-[11px] text-mt-muted">Caps
+                      <Segmented size="sm" value={selected.strokeLineCap || 'butt'} options={[{ value: 'butt', label: '▏', hint: 'Butt cap' }, { value: 'round', label: '◖', hint: 'Round cap' }, { value: 'square', label: '▮', hint: 'Projecting cap' }]} onChange={(v) => a.applyProp({ strokeLineCap: v })} />
+                    </label>
+                    <label className="block text-[11px] text-mt-muted">Corners
+                      <Segmented size="sm" value={selected.strokeLineJoin || 'miter'} options={[{ value: 'miter', label: '⌐', hint: 'Miter join' }, { value: 'round', label: '◜', hint: 'Round join' }, { value: 'bevel', label: '◸', hint: 'Bevel join' }]} onChange={(v) => a.applyProp({ strokeLineJoin: v })} />
+                    </label>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    <NumField label="Dash" value={selected.strokeDashArray?.length ? Math.round(selected.strokeDashArray[0] * 10) / 10 : 0} min={0} max={500} suffix="px" disabled={locked} title="Dash length (0 = solid line)" onCommit={(n) => { const gap = selected.strokeDashArray?.[1] ?? Math.max(2, n); a.applyProp({ strokeDashArray: n > 0 ? [n, gap] : null }); }} />
+                    <NumField label="Gap" value={selected.strokeDashArray?.length ? Math.round((selected.strokeDashArray[1] ?? 0) * 10) / 10 : 0} min={0} max={500} suffix="px" disabled={locked || !selected.strokeDashArray?.length} title="Gap between dashes" onCommit={(n) => selected.strokeDashArray?.length && a.applyProp({ strokeDashArray: [selected.strokeDashArray[0], Math.max(0, n)] })} />
+                    <NumField label="Offset" value={Math.round(selected.strokeDashOffset || 0)} min={-500} max={500} suffix="px" disabled={locked || !selected.strokeDashArray?.length} title="Where the dash pattern starts" onCommit={(n) => a.applyProp({ strokeDashOffset: n })} />
+                  </div>
+                  {!isLine && (
+                    <label className="flex items-center justify-between gap-2 text-[12px] text-mt-muted">Stroke position
+                      <select value={selected.paintFirst === 'stroke' ? 'behind' : 'centre'} disabled={locked} onChange={(e) => a.applyProp({ paintFirst: e.target.value === 'behind' ? 'stroke' : 'fill' })} aria-label="Stroke position" className="h-8 rounded-lg border border-mt-input-border bg-mt-surface px-2 text-[12.5px] text-mt-ink">
+                        <option value="centre">Centre (on the edge)</option>
+                        <option value="behind">Outside (behind the fill)</option>
+                      </select>
+                    </label>
+                  )}
+                  <label className="flex items-center gap-2 text-[12px] text-mt-muted"><input type="checkbox" checked={!selected.strokeUniform} disabled={locked} onChange={(e) => a.applyProp({ strokeUniform: !e.target.checked })} className="h-3.5 w-3.5 accent-[#3B82C4]" /> Scale stroke when resizing</label>
+                </div>
+              )}
             </Section>
           )}
           {hasCorner && !isMultiple && (
