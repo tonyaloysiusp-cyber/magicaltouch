@@ -428,7 +428,17 @@ export function kitPreviewSvg(kit: KitDesign, pat: PatternSettings, player: Play
  * collar, soft shading) for the on-screen preview. Same artwork as the print
  * pieces; only the sleeves are folded the way they hang when worn.
  */
-export function kitMockupSvg(kit: KitDesign, pat: PatternSettings, player: Player | null, glyphs: Glyphs, view: 'both' | 'front' | 'back' = 'both', edit?: { selected?: string | null }): string {
+export type MockScene = 'studio' | 'hanger' | 'flat';
+/**
+ * Realistic 2D product mockup of the garment: soft fabric folds (a gentle displacement),
+ * light and shade from the same folds, fine fabric grain, a soft shadow and a scene
+ * (studio backdrop, on a hanger, or a flat lay). Pure SVG filters — no 3D model.
+ */
+export function kitPhotoMockupSvg(kit: KitDesign, pat: PatternSettings, player: Player | null, glyphs: Glyphs, view: 'both' | 'front' | 'back' = 'both', scene: MockScene = 'studio'): string {
+  return kitMockupSvg(kit, pat, player, glyphs, view, undefined, scene);
+}
+
+export function kitMockupSvg(kit: KitDesign, pat: PatternSettings, player: Player | null, glyphs: Glyphs, view: 'both' | 'front' | 'back' = 'both', edit?: { selected?: string | null }, real?: MockScene): string {
   const product = kitProduct(kit);
   const k = sizeInfo(kit, player?.size || 'M')?.k || 1;
   const front = product.pieces.find((p) => p.id === 'front')!, back = product.pieces.find((p) => p.id === 'back')!;
@@ -479,8 +489,33 @@ export function kitMockupSvg(kit: KitDesign, pat: PatternSettings, player: Playe
   const pad = sleeve ? 170 : 30, gap = 120, H = Math.max(front.h, back.h);
   const views: [Piece, boolean, string][] = view === 'front' ? [[front, false, 'FRONT']] : view === 'back' ? [[back, true, 'BACK']] : [[front, false, 'FRONT'], [back, true, 'BACK']];
   const cell = W + 2 * pad;
-  const body = views.map(([pc, isB, lab], i) => `<g transform="translate(${pad + i * (cell + gap)} 40)">${view1(pc, isB)}<text x="${W / 2}" y="${H + 60}" text-anchor="middle" font-size="24" letter-spacing="4" fill="#8A8F98" font-family="Arial, sans-serif">${lab}</text></g>`).join('');
   const TW = views.length * cell + (views.length - 1) * gap;
+  if (real) {
+    // ── Photo mockup ──
+    const top = real === 'hanger' ? 150 : 60, VH = H + top + 110;
+    const fx = `${sid}-fab`;
+    const filt = `<filter id="${fx}" x="-6%" y="-6%" width="112%" height="118%" color-interpolation-filters="sRGB">`
+      + `<feTurbulence type="fractalNoise" baseFrequency="${real === 'flat' ? '0.004 0.007' : '0.004 0.009'}" numOctaves="1" seed="${(kit.teamName || 'k').length + 5}" result="drape"/>`
+      + `<feDisplacementMap in="SourceGraphic" in2="drape" scale="${real === 'flat' ? 6 : 9}" xChannelSelector="R" yChannelSelector="G" result="warped"/>`
+      + `<feTurbulence type="fractalNoise" baseFrequency="${real === 'flat' ? '0.006 0.004' : '0.011 0.0028'}" numOctaves="2" seed="${(kit.teamName || 'k').length + 11}" result="folds0"/>`
+      + `<feGaussianBlur in="folds0" stdDeviation="7" result="folds"/>`
+      + `<feDiffuseLighting in="folds" surfaceScale="${real === 'flat' ? 16 : 22}" diffuseConstant="1" lighting-color="#ffffff" result="light"><feDistantLight azimuth="200" elevation="60"/></feDiffuseLighting>`
+      + `<feComponentTransfer in="light" result="lightK"><feFuncR type="linear" slope="0.9" intercept="0.2"/><feFuncG type="linear" slope="0.9" intercept="0.2"/><feFuncB type="linear" slope="0.9" intercept="0.2"/></feComponentTransfer>`
+      + `<feBlend in="warped" in2="lightK" mode="multiply" result="shaded"/>`
+      + `<feComposite in="shaded" in2="warped" operator="in" result="shadedIn"/>`
+      + `<feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="3" result="grain"/>`
+      + `<feColorMatrix in="grain" type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 -0.35 0.2" result="grainA"/>`
+      + `<feComposite in="grainA" in2="warped" operator="in" result="grainIn"/>`
+      + `<feMerge><feMergeNode in="shadedIn"/><feMergeNode in="grainIn"/></feMerge></filter>`
+      + `<filter id="${sid}-drop" x="-20%" y="-20%" width="140%" height="150%"><feDropShadow dx="0" dy="${real === 'flat' ? 10 : 22}" stdDeviation="${real === 'flat' ? 9 : 18}" flood-color="#1B1830" flood-opacity="${real === 'flat' ? 0.28 : 0.22}"/></filter>`
+      + `<radialGradient id="${sid}-bg" cx="0.5" cy="0.38" r="0.75"><stop offset="0" stop-color="${real === 'flat' ? '#EFE9E1' : '#FFFFFF'}"/><stop offset="1" stop-color="${real === 'flat' ? '#D9D1C6' : '#E4E4EA'}"/></radialGradient>`;
+    const hanger = (cx: number) => `<g fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M${cx} ${-top + 18}C${cx - 22} ${-top + 18} ${cx - 22} ${-top + 52} ${cx} ${-top + 56}V${-top + 78}" stroke="#8A8F98" stroke-width="7"/><path d="M${cx} ${-top + 78}L${cx - 250} ${-6}C${cx - 262} ${2} ${cx - 252} ${14} ${cx - 236} ${12}H${cx + 236}C${cx + 252} ${14} ${cx + 262} ${2} ${cx + 250} ${-6}Z" stroke="#B88A5A" stroke-width="16" fill="#C99A68"/></g>`;
+    const bodyR = views.map(([pc, isB], i) => `<g transform="translate(${pad + i * (cell + gap)} ${top})">${real === 'hanger' ? hanger(W / 2) : ''}<g filter="url(#${sid}-drop)"><g filter="url(#${fx})">${view1(pc, isB)}</g></g></g>`).join('');
+    const floor = real === 'studio' ? `<ellipse cx="${TW / 2}" cy="${H + top + 60}" rx="${TW * 0.42}" ry="26" fill="#1B1830" opacity="0.08"/>` : '';
+    const grainBg = real === 'flat' ? `<filter id="${sid}-wood"><feTurbulence type="fractalNoise" baseFrequency="0.003 0.09" numOctaves="3" seed="2"/><feColorMatrix type="matrix" values="0 0 0 0 0.45  0 0 0 0 0.36  0 0 0 0 0.27  0 0 0 0.18 0"/></filter><rect width="${TW}" height="${VH}" filter="url(#${sid}-wood)"/>` : '';
+    return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${TW} ${VH}"><defs>${defs.replace(/^<defs>|<\/defs>$/g, '')}${filt}</defs><rect width="${TW}" height="${VH}" fill="url(#${sid}-bg)"/>${grainBg}${floor}${bodyR}</svg>`;
+  }
+  const body = views.map(([pc, isB, lab], i) => `<g transform="translate(${pad + i * (cell + gap)} 40)">${view1(pc, isB)}<text x="${W / 2}" y="${H + 60}" text-anchor="middle" font-size="24" letter-spacing="4" fill="#8A8F98" font-family="Arial, sans-serif">${lab}</text></g>`).join('');
   return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${TW} ${H + 120}">${defs}${body}</svg>`;
 }
 

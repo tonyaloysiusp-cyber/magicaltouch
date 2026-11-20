@@ -98,3 +98,15 @@ test('slim face makes the face a few per cent narrower at the cheeks', () => {
 test('presets stay gentle', () => {
   for (const p of FACE_PRESETS) for (const [k, v] of Object.entries(p.edit)) if (typeof v === 'number') assert.ok(Math.abs(v) <= 50, `${p.id} ${k}=${v}`);
 });
+
+test('new shape controls make warps and presets scale with strength', () => {
+  const lm = Array.from({ length: 478 }, (_, i) => ({ x: 60 + (i % 20) * 4, y: 40 + Math.floor(i / 20) * 7 }));
+  for (const key of ['eyeDistance', 'browLift', 'forehead', 'noseLength', 'lipFull', 'mouthWidth', 'smile']) {
+    const ws = F.shapeWarps(lm, { ...F.NO_FACE_EDIT, [key]: 60 });
+    assert.ok(ws.length > 0, key);
+  }
+  const p = F.FACE_PRESETS.find((x) => x.id === 's-v');
+  const half = F.presetAt(p.edit, 50), full = F.presetAt(p.edit, 100);
+  assert.equal(full.jaw, 45); assert.equal(half.jaw, 23);
+  assert.equal(F.presetAt({ lipColour: '#112233', lipAmount: 40 }, 50).lipColour, '#112233');
+});

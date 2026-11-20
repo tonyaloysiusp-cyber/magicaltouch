@@ -1,9 +1,11 @@
 'use client';
 
+
 // The Tools page body: search, categories, recently used, recommended and a
 // card per tool (preview, name, description, badge, Open). Every card opens
 // the tool's real page.
 
+import { ToolArt, hasToolArt } from './ToolArt';
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { ArrowUpRight, Blend, Clock, Crop, Eraser, Flower2, Grid3x3, LayoutTemplate, Palette, PenTool, Ruler, ScanFace, Search, Shirt, Sparkles, Star, X, Frame, Printer } from 'lucide-react';
@@ -22,7 +24,9 @@ function Card({ t, compact = false }: { t: ToolEntry; compact?: boolean }) {
     <Link href={t.href} onClick={() => rememberTool(t.id)} className="group relative flex h-full flex-col overflow-hidden rounded-3xl border border-mt-border bg-mt-surface transition-[transform,box-shadow] hover:-translate-y-1 hover:shadow-[0_24px_50px_-28px_rgba(9,9,11,0.45)]">
       {!compact && (
         <div className="relative aspect-[16/9] overflow-hidden border-b border-mt-border bg-mt-surface2">
-          {thumbOk ? (
+          {hasToolArt(t.id) ? (
+            <span className="absolute inset-0 transition-transform duration-500 group-hover:scale-[1.03]"><ToolArt id={t.id} tint={t.tint || '#3B82C4'} /></span>
+          ) : thumbOk ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={`/tools/thumbs/${t.id}.webp`} alt={`${t.title} preview`} loading="lazy" decoding="async" onError={() => setThumbOk(false)} className="h-full w-full object-cover object-top transition-transform duration-500 group-hover:scale-[1.03]" />
           ) : (

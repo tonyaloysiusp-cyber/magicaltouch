@@ -1151,12 +1151,19 @@ scenarios.push({
     await t.page.waitForTimeout(800);
     t.check('face found', (await t.page.getByText('Face found.').count()) > 0);
     t.check('face preview shown', (await t.page.getByLabel('Face preview').count()) > 0);
-    for (const label of ['Brighten eye whites', 'Iris clarity', 'Dark circles', 'Whiten teeth', 'Lip colour', 'Lip saturation', 'Eye size', 'Slim face', 'Slim jaw', 'Slim nose', 'Chin height']) t.check(`face slider ${label}`, (await t.page.getByRole('slider', { name: label, exact: true }).count()) > 0);
-    const fg = await t.page.getByRole('group', { name: 'Female portrait face presets' }).first().getByRole('button').count(), mg = await t.page.getByRole('group', { name: 'Male portrait face presets', exact: true }).first().getByRole('button').count();
-    t.check('face preset groups', fg === 4 && mg === 3, `${fg} / ${mg}`);
+    const groups = { 'Eyes': ['Brighten eye whites', 'Iris clarity', 'Dark circles', 'Eye size', 'Eye distance'], 'Brows & forehead': ['Brow lift', 'Forehead height'], 'Nose': ['Slim nose', 'Nose length'], 'Mouth': ['Whiten teeth', 'Lip colour', 'Lip saturation', 'Fuller lips', 'Mouth width', 'Smile lift'], 'Face shape': ['Slim face', 'Slim jaw', 'Chin length'] };
+    for (const [g, labels] of Object.entries(groups)) {
+      const head = t.page.getByRole('group', { name: `Face ${g.toLowerCase()}` }).first().getByRole('button').first();
+      if ((await head.getAttribute('aria-expanded')) !== 'true') await head.click();
+      for (const label of labels) t.check(`face slider ${label}`, (await t.page.getByRole('slider', { name: label, exact: true }).count()) > 0);
+    }
+    const counts = [];
+    for (const g of ['Natural', 'Beauty', 'Sculpt', 'Portrait (men)']) counts.push(await t.page.getByRole('group', { name: `${g} face presets`, exact: true }).first().getByRole('button').count());
+    t.check('face preset groups', counts.every((n) => n === 3), counts.join(' / '));
     const before = await big();
     await t.page.getByRole('button', { name: 'Soft glam', exact: true }).click();
     await t.page.waitForTimeout(600);
+    t.check('preset strength slider shown', (await t.page.getByRole('slider', { name: 'Preset strength' }).count()) === 1);
     t.check('preview does not touch the photo yet', (await big()) === before);
     await t.shot('face-preview');
     await t.page.getByRole('button', { name: 'Apply face edits' }).click();

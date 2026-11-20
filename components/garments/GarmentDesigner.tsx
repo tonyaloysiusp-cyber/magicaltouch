@@ -15,7 +15,7 @@ import { DEFAULT_PATTERN, PatternSettings, svgDataUrl, sheetPlacements, motifPat
 import { SIZES, ROLLS } from '@/lib/garments';
 import {
   garmentOf, GARMENT_STYLES, GarmentKind, Glyphs, sizeInfo, sizeId, blockMeasure, KIT_GRAPHICS, KIT_STYLES, KitDesign, KitGraphic, Player, checkRoster, glyphTexts, kitFor,
-  kitMockupSvg, kitPreviewSvg, parseRoster, playerPrintSvg, printList, rosterSheets, safeFile, frontLayout, kitProduct,
+  kitMockupSvg, kitPhotoMockupSvg, type MockScene, kitPreviewSvg, parseRoster, playerPrintSvg, printList, rosterSheets, safeFile, frontLayout, kitProduct,
 } from '@/lib/teamKit';
 import { EmbroideryStudio } from './EmbroideryStudio';
 import { openToolFile, saveToolProject, takeToolHandoff, TOOL_FILE_ACCEPT } from '@/lib/mtd/toolProject';
@@ -127,7 +127,8 @@ export function GarmentDesigner({ kind: initialKind = 'jersey', mode = 'pro', pi
   const [patAssetAt, setPatAssetAt] = useState<string | null>(null);
   const [patOwn, setPatOwn] = useState(false);
   const [sel, setSel] = useState(0);
-  const [view, setView] = useState<'garment' | 'flat'>('garment');
+  const [view, setView] = useState<'garment' | 'flat' | 'mock'>('garment');
+  const [scene, setScene] = useState<MockScene>('studio');
   const [side, setSide] = useState<'both' | 'front' | 'back'>('both');
   const [glyphs, setGlyphs] = useState<Glyphs>({});
   const [making, setMaking] = useState(false);
@@ -359,9 +360,9 @@ export function GarmentDesigner({ kind: initialKind = 'jersey', mode = 'pro', pi
   useEffect(() => { if (!kit.art?.length) return; let live = true; ensureFonts(artFonts(kit.art)).then(() => { if (live) setArtFontTick((t) => t + 1); }); return () => { live = false; }; }, [kit.art]);
   // Typing stays instant: the (heavy) garment drawing follows the latest values a moment later.
   const kitV = useDeferredValue(kit), playerV = useDeferredValue(player), patternV = useDeferredValue(pattern);
-  const preview = useMemo(() => (view === 'garment' ? kitMockupSvg(kitV, patternV, playerV, glyphs, side, { selected: selEl }) : kitPreviewSvg(kitV, patternV, playerV, glyphs)),
+  const preview = useMemo(() => (view === 'garment' ? kitMockupSvg(kitV, patternV, playerV, glyphs, side, { selected: selEl }) : view === 'mock' ? kitPhotoMockupSvg(kitV, patternV, playerV, glyphs, side, scene) : kitPreviewSvg(kitV, patternV, playerV, glyphs)),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [view, side, kitV, patternV, playerV, glyphs, selEl, artFontTick, fontTick]);
+    [view, side, scene, kitV, patternV, playerV, glyphs, selEl, artFontTick, fontTick]);
 
   // Picker thumbnails only change with the style / colours they show.
   const starterThumbs = useMemo(() => Object.fromEntries(STARTERS.map((st) => [st.name, svgDataUrl(kitMockupSvg({ ...kitFor(kind), style: kit.style, ...st.o, personalise: false, frontText: '', teamLogo: null, sponsorLogo: null, patternOn: 'none' }, DEFAULT_PATTERN, null, {}, 'front'))])), [kind, kit.style]);
@@ -439,6 +440,20 @@ export function GarmentDesigner({ kind: initialKind = 'jersey', mode = 'pro', pi
   const artReady = async () => { if (kit.art?.length) await ensureFonts(artFonts(kit.art)); };
   const pdfFonts = { loadFont: textMode === 'live' ? async (family: string, weight: number, italic: boolean) => { try { const { fontBytes } = await import('@/lib/fontOutline'); return await fontBytes(family, weight, italic); } catch { return null; } } : undefined };
   const base = (p: Player, i: number) => personal ? `${String(i + 1).padStart(2, '0')}-${safeFile(p.name)}-${p.number}-${sizeLabel(p.size)}` : `${sizeLabel(p.size)}-x${p.qty || 1}`;
+  // Realistic mockup as a PNG (2400 px wide) for sharing with the client or a shop.
+  const dlMockup = async () => {
+    try {
+      const svg = kitPhotoMockupSvg(kit, pattern, player, glyphs, side, scene);
+      const vb = svg.match(/viewBox="0 0 ([\d.]+) ([\d.]+)"/);
+      const w = 2400, h = Math.round(w * (vb ? Number(vb[2]) / Number(vb[1]) : 0.6));
+      const url = URL.createObjectURL(new Blob([svg.replace('<svg ', `<svg width="${w}" height="${h}" `)], { type: 'image/svg+xml' }));
+      const img = new Image(); img.src = url; await img.decode();
+      const c = document.createElement('canvas'); c.width = w; c.height = h;
+      c.getContext('2d')!.drawImage(img, 0, 0, w, h); URL.revokeObjectURL(url);
+      const blob = await new Promise<Blob | null>((r) => c.toBlob(r, 'image/png'));
+      if (blob) save(blob, `${fileBase}-mockup-${scene}.png`);
+    } catch { flash('The mockup picture could not be made in this browser — try the SVG preview instead.'); }
+  };
   const dlPreview = () => save(new Blob([kitMockupSvg(kit, pattern, player, glyphs)], { type: 'image/svg+xml' }), `${fileBase}-preview.svg`);
 
   // ── Export centre makers: files as name + bytes (the centre saves them, or zips the complete package). ──
@@ -1023,17 +1038,25 @@ export function GarmentDesigner({ kind: initialKind = 'jersey', mode = 'pro', pi
                   style={{ touchAction: selEl && DRAG.includes(selEl) ? 'none' : 'pan-y' }}
                   onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp}
                   dangerouslySetInnerHTML={{ __html: preview }} />
-              ) : <div role="img" aria-label={`${copy.noun} print pieces`} className={`mx-auto w-full [&_svg]:mx-auto [&_svg]:block [&_svg]:w-full [&_svg]:h-auto ${zoom > 1 ? '' : '[&_svg]:max-h-[600px]'}`} dangerouslySetInnerHTML={{ __html: preview }} />}
+              ) : view === 'mock' ? <div role="img" aria-label={`${copy.noun} mockup`} className={`mx-auto w-full overflow-hidden rounded-xl [&_svg]:mx-auto [&_svg]:block [&_svg]:w-full [&_svg]:h-auto ${zoom > 1 ? '' : '[&_svg]:max-h-[620px]'}`} dangerouslySetInnerHTML={{ __html: preview }} />
+              : <div role="img" aria-label={`${copy.noun} print pieces`} className={`mx-auto w-full [&_svg]:mx-auto [&_svg]:block [&_svg]:w-full [&_svg]:h-auto ${zoom > 1 ? '' : '[&_svg]:max-h-[600px]'}`} dangerouslySetInnerHTML={{ __html: preview }} />}
               </div>
               {view === 'garment' && !selEl && <p className="mt-2 text-center text-[12px] text-mt-muted inline-flex w-full items-center justify-center gap-1.5"><MousePointerClick size={13} /> Click any part of the shirt to edit it · drag names, numbers, logos and text to move them</p>}
             </div>
             {/* View bar */}
             <div role="tablist" aria-label="View" className="mt-3 mx-auto flex w-fit flex-wrap justify-center gap-1 rounded-full border border-mt-border bg-mt-surface p-0.5">
-              {([['front', 'Front'], ['back', 'Back'], ['both', 'Front & back'], ['flat', 'Print pieces · sleeves & collar']] as const).map(([v, l]) => {
-                const on = v === 'flat' ? view === 'flat' : view === 'garment' && side === v;
-                return <button key={v} type="button" role="tab" aria-selected={on} onClick={() => { if (v === 'flat') setView('flat'); else { setView('garment'); setSide(v); } }} className={`h-8 px-3 rounded-full text-[12.5px] font-semibold ${on ? 'bg-mt-ink text-mt-bg' : 'text-mt-muted hover:text-mt-ink'}`}>{l}</button>;
+              {([['front', 'Front'], ['back', 'Back'], ['both', 'Front & back'], ['mock', 'Mockup'], ['flat', 'Print pieces · sleeves & collar']] as const).map(([v, l]) => {
+                const on = v === 'flat' ? view === 'flat' : v === 'mock' ? view === 'mock' : view === 'garment' && side === v;
+                return <button key={v} type="button" role="tab" aria-selected={on} onClick={() => { if (v === 'flat') setView('flat'); else if (v === 'mock') { setView('mock'); setSelEl(null); } else { setView('garment'); setSide(v); } }} className={`h-8 px-3 rounded-full text-[12.5px] font-semibold ${on ? 'bg-mt-ink text-mt-bg' : 'text-mt-muted hover:text-mt-ink'}`}>{l}</button>;
               })}
             </div>
+            {view === 'mock' && (
+              <div className="mt-2 mx-auto flex w-fit flex-wrap items-center justify-center gap-1.5" role="group" aria-label="Mockup scene">
+                {([['studio', 'Studio'], ['hanger', 'On a hanger'], ['flat', 'Flat lay']] as const).map(([v, l]) => <button key={v} type="button" aria-pressed={scene === v} onClick={() => setScene(v)} className={`h-8 px-3 rounded-full border text-[12px] font-semibold ${scene === v ? 'border-mt-ink bg-mt-ink text-mt-bg' : 'border-mt-border bg-mt-surface hover:bg-mt-surface2'}`}>{l}</button>)}
+                {(['front', 'back', 'both'] as const).map((v) => <button key={v} type="button" aria-pressed={side === v} onClick={() => setSide(v)} className={`h-8 px-3 rounded-full border text-[12px] ${side === v ? 'border-mt-ink font-semibold' : 'border-mt-border'}`}>{v === 'both' ? 'Front & back' : v === 'front' ? 'Front' : 'Back'}</button>)}
+                <button type="button" onClick={dlMockup} className="h-8 px-3 rounded-full bg-mt-primary text-mt-onprimary text-[12px] font-semibold inline-flex items-center gap-1.5"><Download size={13} /> Mockup PNG</button>
+              </div>
+            )}
           </div>
 
           {(step === 'players' || step === 'print') && (

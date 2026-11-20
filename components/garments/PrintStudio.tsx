@@ -1054,6 +1054,34 @@ export function PrintStudio({ kit, pattern, glyphs, players, libraryPatterns, on
           {tool === 'pen' && <p className="pointer-events-none absolute left-3 top-2 rounded-md bg-mt-surface/90 px-2 py-1 text-[11.5px] text-mt-muted">Pen: click for a corner, drag for a curve. Click the first point to close, double-click or Enter to finish, Esc to cancel.</p>}
           {tool === 'node' && <p className="pointer-events-none absolute left-3 top-2 rounded-md bg-mt-surface/90 px-2 py-1 text-[11.5px] text-mt-muted">Edit points: select a shape, drag its points and handles. Double-click the outline to add a point; Delete removes the selected point.</p>}
           {measure && <p className="pointer-events-none absolute right-3 top-2 rounded-md bg-mt-ink px-2 py-1 text-[12px] font-semibold text-mt-bg tabular-nums">{measure}</p>}
+          {/* Text toolbar on the canvas: type, font, size, colour, outline, alignment and curve — right where the text is. */}
+          {selected && selected.kind === 'text' && !selected.locked && (() => {
+            const t = selected as any;
+            const fill = typeof t.fill === 'string' ? t.fill : '#111111';
+            const ib = 'h-8 min-w-8 px-2 rounded-lg border border-mt-border bg-mt-bg text-[12px] font-semibold inline-flex items-center justify-center hover:bg-mt-surface2';
+            return (
+              <div role="toolbar" aria-label="Text toolbar" className="absolute left-1/2 top-2 z-20 -translate-x-1/2 flex max-w-[calc(100%-16px)] flex-wrap items-center gap-1.5 rounded-2xl border border-mt-border bg-mt-surface/95 p-1.5 shadow-[0_14px_30px_-14px_rgba(9,9,11,0.45)] backdrop-blur">
+                <input value={t.text} onChange={(e) => update(t.id, { text: e.target.value } as any)} aria-label="Edit text" className="h-8 w-[150px] rounded-lg border border-mt-border bg-mt-bg px-2 text-[13px] font-semibold" />
+                <select value={t.font} onChange={(e) => { const def = PATTERN_FONTS.find((x) => x.family === e.target.value); const w = def && !def.weights.includes(t.weight) ? def.weights[def.weights.length - 1] : t.weight; update(t.id, { font: e.target.value, weight: w } as any); }} aria-label="Text font" className="h-8 max-w-[140px] rounded-lg border border-mt-border bg-mt-bg px-1.5 text-[12.5px]" style={{ fontFamily: t.font }}>{PATTERN_FONTS.map((f2) => <option key={f2.family} value={f2.family}>{f2.family}</option>)}</select>
+                <select value={t.weight} onChange={(e) => update(t.id, { weight: Number(e.target.value) } as any)} aria-label="Text weight" className="h-8 rounded-lg border border-mt-border bg-mt-bg px-1 text-[12px]">{(PATTERN_FONTS.find((x) => x.family === t.font)?.weights || [400, 700]).map((w) => <option key={w} value={w}>{w}</option>)}</select>
+                <span className="inline-flex items-center">
+                  <button type="button" className={ib} aria-label="Smaller text" onClick={() => update(t.id, { size: Math.max(2, Math.round(t.size * 0.9)) } as any)}>A−</button>
+                  <input type="number" value={Math.round(t.size)} onChange={(e) => update(t.id, { size: Math.max(2, Number(e.target.value) || 2) } as any)} aria-label="Text size (mm)" className="mx-1 h-8 w-14 rounded-lg border border-mt-border bg-mt-bg px-1 text-center text-[12px] tabular-nums" />
+                  <button type="button" className={ib} aria-label="Larger text" onClick={() => update(t.id, { size: Math.round(t.size * 1.1 + 1) } as any)}>A+</button>
+                </span>
+                <label className="inline-flex items-center gap-1 text-[11px] text-mt-muted" title="Fill colour"><input type="color" value={fill.slice(0, 7)} onChange={(e) => update(t.id, { fill: e.target.value } as any)} aria-label="Text colour" className="h-8 w-8 rounded-lg border border-mt-border" /></label>
+                <label className="inline-flex items-center gap-1 text-[11px] text-mt-muted" title="Outline colour and width (mm)">
+                  <input type="color" value={(t.stroke || '#000000').slice(0, 7)} onChange={(e) => update(t.id, { stroke: e.target.value, strokeW: t.strokeW || 2 } as any)} aria-label="Outline colour" className="h-8 w-8 rounded-lg border border-mt-border" />
+                  <input type="number" min={0} step={0.5} value={t.strokeW || 0} onChange={(e) => { const n = Math.max(0, Number(e.target.value) || 0); update(t.id, { strokeW: n, stroke: n ? (t.stroke || '#000000') : null } as any); }} aria-label="Outline width (mm)" className="h-8 w-12 rounded-lg border border-mt-border bg-mt-bg px-1 text-center text-[12px]" />
+                </label>
+                {(['left', 'center', 'right'] as const).map((a) => <button key={a} type="button" aria-pressed={(t.align || 'center') === a} aria-label={`Align ${a}`} onClick={() => update(t.id, { align: a } as any)} className={`${ib} ${(t.align || 'center') === a ? '!bg-mt-ink !text-mt-bg !border-mt-ink' : ''}`}>{a === 'left' ? '⟸' : a === 'center' ? '≡' : '⟹'}</button>)}
+                <button type="button" aria-pressed={!!t.upper} onClick={() => update(t.id, { upper: !t.upper } as any)} className={`${ib} ${t.upper ? '!bg-mt-ink !text-mt-bg !border-mt-ink' : ''}`}>AA</button>
+                <button type="button" aria-pressed={!!t.italic} onClick={() => update(t.id, { italic: !t.italic } as any)} className={`${ib} italic ${t.italic ? '!bg-mt-ink !text-mt-bg !border-mt-ink' : ''}`}>I</button>
+                <label className="inline-flex items-center gap-1 text-[11px] text-mt-muted" title="Curve (arc) in degrees">Curve<input type="range" min={-180} max={180} step={5} value={t.arc || 0} onChange={(e) => update(t.id, { arc: Number(e.target.value) } as any)} aria-label="Text curve" className="w-20" /></label>
+                <label className="inline-flex items-center gap-1 text-[11px] text-mt-muted" title="Letter spacing">Spacing<input type="range" min={-10} max={60} value={Math.round((t.spacing || 0) * 100)} onChange={(e) => update(t.id, { spacing: Number(e.target.value) / 100 } as any)} aria-label="Letter spacing" className="w-16" /></label>
+              </div>
+            );
+          })()}
         </div>
 
         {/* Properties + layers */}

@@ -24,6 +24,9 @@ const NOSE_TIP = 1, NOSE_WING_R = 129, NOSE_WING_L = 358;
 const JAW_R = [132, 58, 172, 136, 150], JAW_L = [361, 288, 397, 365, 379];
 const CHEEK_R = [234, 93, 132], CHEEK_L = [454, 323, 361];
 const CHIN = 152;
+const BROW_R = [70, 63, 105, 66, 107], BROW_L = [300, 293, 334, 296, 336];
+const FOREHEAD = [10, 109, 67, 338, 297, 151];
+const MOUTH_R = 61, MOUTH_L = 291;
 
 export interface FaceEdit {
   eyeBright: number;   // 0..100 whiten / brighten the eye whites
@@ -39,19 +42,43 @@ export interface FaceEdit {
   jaw: number;         // -100..100  (jaw line, ±3.5 %)
   noseSlim: number;    // -100..100  (±15 % nose width)
   chin: number;        // -100..100  (chin height, ±3 % of face height)
+  eyeDistance: number; // -100..100  (eyes closer / wider, ±2.5 % of face width each)
+  browLift: number;    // -100..100  (brows up / down, ±2 % of face height)
+  forehead: number;    // -100..100  (hairline up / down, ±3.5 % of face height)
+  noseLength: number;  // -100..100  (tip down / up, ±3 % of face height)
+  lipFull: number;     // -100..100  (fuller / thinner lips, ±18 %)
+  mouthWidth: number;  // -100..100  (±12 % mouth width)
+  smile: number;       // -100..100  (lift / lower the mouth corners, ±1.4 % of face height)
 }
-export const NO_FACE_EDIT: FaceEdit = { eyeBright: 0, iris: 0, redEye: false, darkCircles: 0, teeth: 0, lipColour: '#B8344F', lipAmount: 0, lipSat: 0, eyeSize: 0, faceSlim: 0, jaw: 0, noseSlim: 0, chin: 0 };
+export const NO_FACE_EDIT: FaceEdit = { eyeBright: 0, iris: 0, redEye: false, darkCircles: 0, teeth: 0, lipColour: '#B8344F', lipAmount: 0, lipSat: 0, eyeSize: 0, faceSlim: 0, jaw: 0, noseSlim: 0, chin: 0, eyeDistance: 0, browLift: 0, forehead: 0, noseLength: 0, lipFull: 0, mouthWidth: 0, smile: 0 };
 export const isFaceNeutral = (e: FaceEdit) => JSON.stringify({ ...NO_FACE_EDIT, ...e, lipColour: '' }) === JSON.stringify({ ...NO_FACE_EDIT, lipColour: '' });
 
-export const FACE_PRESETS: { group: 'Female portrait' | 'Male portrait'; id: string; name: string; edit: Partial<FaceEdit> }[] = [
-  { group: 'Female portrait', id: 'f-fresh', name: 'Fresh eyes', edit: { eyeBright: 35, iris: 30, darkCircles: 40 } },
-  { group: 'Female portrait', id: 'f-smile', name: 'Bright smile', edit: { teeth: 45, lipSat: 15 } },
-  { group: 'Female portrait', id: 'f-rose', name: 'Rose lips', edit: { lipColour: '#C2435E', lipAmount: 35, lipSat: 10 } },
-  { group: 'Female portrait', id: 'f-glam', name: 'Soft glam', edit: { eyeBright: 30, iris: 35, darkCircles: 45, teeth: 30, lipColour: '#A8324A', lipAmount: 30, eyeSize: 20, faceSlim: 20 } },
-  { group: 'Male portrait', id: 'm-rested', name: 'Rested', edit: { eyeBright: 25, darkCircles: 45 } },
-  { group: 'Male portrait', id: 'm-clean', name: 'Clean smile', edit: { teeth: 40, eyeBright: 20 } },
-  { group: 'Male portrait', id: 'm-jaw', name: 'Defined jaw', edit: { jaw: 30, chin: 15, darkCircles: 30 } },
+export type PresetGroup = 'Natural' | 'Beauty' | 'Sculpt' | 'Portrait (men)';
+/** One-tap looks; the Strength slider scales every value, then any slider can be fine-tuned. */
+export const FACE_PRESETS: { group: PresetGroup; id: string; name: string; edit: Partial<FaceEdit> }[] = [
+  { group: 'Natural', id: 'n-fresh', name: 'Fresh eyes', edit: { eyeBright: 35, iris: 30, darkCircles: 40 } },
+  { group: 'Natural', id: 'n-rested', name: 'Well rested', edit: { eyeBright: 25, darkCircles: 50, browLift: 10 } },
+  { group: 'Natural', id: 'n-smile', name: 'Bright smile', edit: { teeth: 45, lipSat: 15, smile: 20 } },
+  { group: 'Beauty', id: 'b-glow', name: 'Soft glam', edit: { eyeBright: 30, iris: 35, darkCircles: 45, teeth: 30, lipColour: '#A8324A', lipAmount: 30, eyeSize: 20, faceSlim: 20 } },
+  { group: 'Beauty', id: 'b-doll', name: 'Big bright eyes', edit: { eyeSize: 40, eyeBright: 35, iris: 40, browLift: 15 } },
+  { group: 'Beauty', id: 'b-rose', name: 'Rose lips', edit: { lipColour: '#C2435E', lipAmount: 40, lipSat: 10, lipFull: 25 } },
+  { group: 'Sculpt', id: 's-v', name: 'V-line face', edit: { faceSlim: 35, jaw: 45, chin: 20 } },
+  { group: 'Sculpt', id: 's-petite', name: 'Petite features', edit: { noseSlim: 35, noseLength: -20, mouthWidth: -15, faceSlim: 15 } },
+  { group: 'Sculpt', id: 's-balance', name: 'Balanced', edit: { forehead: -15, chin: 15, noseSlim: 15, eyeDistance: -10 } },
+  { group: 'Portrait (men)', id: 'm-clean', name: 'Clean & rested', edit: { teeth: 35, eyeBright: 20, darkCircles: 45 } },
+  { group: 'Portrait (men)', id: 'm-jaw', name: 'Defined jaw', edit: { jaw: -25, chin: 20, darkCircles: 30 } },
+  { group: 'Portrait (men)', id: 'm-strong', name: 'Strong brow', edit: { browLift: -15, noseSlim: 10, chin: 15 } },
 ];
+/** A preset at a strength (0..150 %): shape and tone values are scaled, colours are kept. */
+export function presetAt(p: Partial<FaceEdit>, strength: number): FaceEdit {
+  const k = Math.max(0, Math.min(1.5, strength / 100));
+  const out: FaceEdit = { ...NO_FACE_EDIT };
+  for (const [key, v] of Object.entries(p)) {
+    if (typeof v === 'number') { const lim = FACE_SLIDERS.find((d) => d.key === key); (out as any)[key] = Math.round(Math.max(lim?.min ?? -100, Math.min(lim?.max ?? 100, v * k))); }
+    else (out as any)[key] = v;
+  }
+  return out;
+}
 
 // ── Loader ─────────────────────────────────────────────────────────────────
 const MP_VERSION = '0.10.14';
@@ -263,6 +290,25 @@ export function shapeWarps(lm: Pt[], e: FaceEdit): Warp[] {
   if (e.faceSlim) pushIn([...CHEEK_R, ...CHEEK_L], 0.04 * fw * clamp(e.faceSlim) / 2.2, fw * 0.22);
   if (e.jaw) pushIn([...JAW_R, ...JAW_L], 0.035 * fw * clamp(e.jaw) / 2.2, fw * 0.16);
   if (e.chin && lm[CHIN]) ws.push({ kind: 'push', c: lm[CHIN], r: fw * 0.25, dx: 0, dy: 0.03 * fh * clamp(e.chin) });
+  // Eye spacing: each eye moves along the line to the face centre.
+  if (e.eyeDistance) for (const ids of [EYE_R, EYE_L]) {
+    const ps = at(lm, ids); if (ps.length < 8) continue;
+    const c = mean(ps), r = Math.max(...ps.map((p) => dist(p, c))) * 2.3, dir = c.x < mid ? -1 : 1;
+    ws.push({ kind: 'push', c, r, dx: dir * 0.025 * fw * clamp(e.eyeDistance), dy: 0 });
+  }
+  if (e.browLift) for (const ids of [BROW_R, BROW_L]) {
+    const ps = at(lm, ids); if (ps.length < 3) continue;
+    ws.push({ kind: 'push', c: mean(ps), r: fw * 0.17, dx: 0, dy: -0.02 * fh * clamp(e.browLift) });
+  }
+  if (e.forehead) { const ps = at(lm, FOREHEAD); if (ps.length) ws.push({ kind: 'push', c: mean(ps), r: fw * 0.42, dx: 0, dy: -0.035 * fh * clamp(e.forehead) }); }
+  if (e.noseLength && lm[NOSE_TIP] && lm[NOSE_WING_R] && lm[NOSE_WING_L]) ws.push({ kind: 'push', c: lm[NOSE_TIP], r: dist(lm[NOSE_WING_R], lm[NOSE_WING_L]) * 1.15, dx: 0, dy: 0.03 * fh * clamp(e.noseLength) });
+  const mouth = at(lm, LIPS_OUTER);
+  if (mouth.length > 10 && lm[MOUTH_R] && lm[MOUTH_L]) {
+    const mc = mean(mouth), mw = dist(lm[MOUTH_R], lm[MOUTH_L]);
+    if (e.lipFull) ws.push({ kind: 'scale', c: mc, r: mw * 0.78, s: 0.18 * clamp(e.lipFull) });
+    if (e.mouthWidth) ws.push({ kind: 'scale', c: mc, r: mw * 0.95, s: 0.12 * clamp(e.mouthWidth), xOnly: true });
+    if (e.smile) for (const p of [lm[MOUTH_R], lm[MOUTH_L]]) ws.push({ kind: 'push', c: p, r: mw * 0.38, dx: 0, dy: -0.014 * fh * clamp(e.smile) });
+  }
   return ws;
 }
 
@@ -320,16 +366,25 @@ export function applyFaceEdit(c: HTMLCanvasElement, lm: Pt[], e: FaceEdit): HTML
   return out;
 }
 
-export const FACE_SLIDERS: { key: keyof FaceEdit; label: string; min: number; max: number; group: 'Eyes' | 'Mouth' | 'Shape' }[] = [
+export type SliderGroup = 'Eyes' | 'Brows & forehead' | 'Nose' | 'Mouth' | 'Face shape';
+export const FACE_SLIDERS: { key: keyof FaceEdit; label: string; min: number; max: number; group: SliderGroup }[] = [
   { key: 'eyeBright', label: 'Brighten eye whites', min: 0, max: 100, group: 'Eyes' },
   { key: 'iris', label: 'Iris clarity', min: 0, max: 100, group: 'Eyes' },
   { key: 'darkCircles', label: 'Dark circles', min: 0, max: 100, group: 'Eyes' },
+  { key: 'eyeSize', label: 'Eye size', min: -100, max: 100, group: 'Eyes' },
+  { key: 'eyeDistance', label: 'Eye distance', min: -100, max: 100, group: 'Eyes' },
+  { key: 'browLift', label: 'Brow lift', min: -100, max: 100, group: 'Brows & forehead' },
+  { key: 'forehead', label: 'Forehead height', min: -100, max: 100, group: 'Brows & forehead' },
+  { key: 'noseSlim', label: 'Slim nose', min: -100, max: 100, group: 'Nose' },
+  { key: 'noseLength', label: 'Nose length', min: -100, max: 100, group: 'Nose' },
   { key: 'teeth', label: 'Whiten teeth', min: 0, max: 100, group: 'Mouth' },
   { key: 'lipAmount', label: 'Lip colour', min: 0, max: 100, group: 'Mouth' },
   { key: 'lipSat', label: 'Lip saturation', min: -100, max: 100, group: 'Mouth' },
-  { key: 'eyeSize', label: 'Eye size', min: -100, max: 100, group: 'Shape' },
-  { key: 'faceSlim', label: 'Slim face', min: -100, max: 100, group: 'Shape' },
-  { key: 'jaw', label: 'Slim jaw', min: -100, max: 100, group: 'Shape' },
-  { key: 'noseSlim', label: 'Slim nose', min: -100, max: 100, group: 'Shape' },
-  { key: 'chin', label: 'Chin height', min: -100, max: 100, group: 'Shape' },
+  { key: 'lipFull', label: 'Fuller lips', min: -100, max: 100, group: 'Mouth' },
+  { key: 'mouthWidth', label: 'Mouth width', min: -100, max: 100, group: 'Mouth' },
+  { key: 'smile', label: 'Smile lift', min: -100, max: 100, group: 'Mouth' },
+  { key: 'faceSlim', label: 'Slim face', min: -100, max: 100, group: 'Face shape' },
+  { key: 'jaw', label: 'Slim jaw', min: -100, max: 100, group: 'Face shape' },
+  { key: 'chin', label: 'Chin length', min: -100, max: 100, group: 'Face shape' },
 ];
+export const SLIDER_GROUPS: SliderGroup[] = ['Eyes', 'Brows & forehead', 'Nose', 'Mouth', 'Face shape'];
