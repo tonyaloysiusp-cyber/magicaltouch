@@ -117,7 +117,7 @@ export function PackagingStudio() {
         ))}
         <div className="flex items-center justify-between gap-2">
           <div role="radiogroup" aria-label="Size is" className="inline-flex rounded-full border border-mt-border p-0.5 text-[12px]">
-            {(['inside', 'outside'] as const).map((v) => <button key={v} type="button" role="radio" aria-checked={sizeIs === v} onClick={() => setSizeIs(v)} className={`h-7 rounded-full px-3 font-semibold ${sizeIs === v ? 'bg-mt-ink text-mt-bg' : 'text-mt-muted'}`}>{v === 'inside' ? 'Inside size' : 'Outside size'}</button>)}
+            {(['inside', 'outside'] as const).map((v) => <button key={v} type="button" role="radio" aria-checked={sizeIs === v} onClick={() => setSizeIs(v)} className={`h-7 rounded-full px-3 font-semibold ${sizeIs === v ? 'bg-mt-ink text-mt-bg' : 'text-mt-muted'}`}>{v === 'inside' ? 'Inside' : 'Outside'}</button>)}
           </div>
           <div role="radiogroup" aria-label="Units" className="inline-flex rounded-full border border-mt-border p-0.5 text-[12px]">
             {(['mm', 'in'] as const).map((v) => <button key={v} type="button" role="radio" aria-checked={unit === v} onClick={() => setUnit(v)} className={`h-7 rounded-full px-3 font-semibold ${unit === v ? 'bg-mt-ink text-mt-bg' : 'text-mt-muted'}`}>{v}</button>)}
