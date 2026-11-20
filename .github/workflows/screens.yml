@@ -16,6 +16,10 @@ on:
         description: 'Optional CSS selector: screenshot just that element (2x)'
         required: false
         default: ''
+      js:
+        description: 'Optional JS expression evaluated on each page; result printed'
+        required: false
+        default: ''
       width:
         description: 'Viewport width'
         required: false
@@ -46,6 +50,7 @@ jobs:
           PATHS: ${{ inputs.paths }}
           WIDTH: ${{ inputs.width }}
           SEL: ${{ inputs.selector }}
+          JS: ${{ inputs.js }}
         run: |
           cat > shoot.mjs <<'EOF'
           import { chromium } from 'playwright';
@@ -57,6 +62,7 @@ jobs:
           for (const path of process.env.PATHS.split(/\s+/).filter(Boolean)) {
             try { await p.goto('https://magicaltouchdesign.com' + path, { waitUntil: 'networkidle', timeout: 60000 }); } catch {}
             await p.waitForTimeout(2500);
+            if (process.env.JS) { try { const r = await p.evaluate(process.env.JS); console.log('=====JS ' + path + '=====\n' + String(typeof r === 'string' ? r : JSON.stringify(r)).slice(0, 20000) + '\n=====JSEND====='); } catch (e) { console.log('js failed', String(e).slice(0, 300)); } }
             let png;
             if (process.env.SEL) { const el = p.locator(process.env.SEL).first(); try { await el.scrollIntoViewIfNeeded({ timeout: 10000 }); await p.waitForTimeout(1500); png = await el.screenshot({ timeout: 15000 }); } catch (e) { console.log('selector failed', String(e).slice(0, 200)); } }
             if (!png) png = await p.screenshot({ fullPage: false });
