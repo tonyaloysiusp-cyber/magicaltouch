@@ -13,6 +13,7 @@ import { DEFAULT_PRESS, SHEETS, layoutPress, normalLayout, pressPdfPages, verify
 import { sidePressJob, type PrintJobInfo } from './printJob.ts';
 import { jobReportPages, type JobDetails, type ReportFile } from './jobReport.ts';
 import { cmykify, type CmykOptions } from './cmykPdf.ts';
+import { preflightPdf } from './preflight.ts';
 
 export interface PackageOptions {
   actualSheet: string;   // 'auto' | sheet id
@@ -97,6 +98,11 @@ export async function makePrintSet(i: PrintSetInput): Promise<PrintSet> {
     if (!i.cmyk) return b;
     const r = await cmykify(b, i.cmyk);
     for (const s of r.report.skipped) if (!warnings.includes(`Not converted to CMYK: ${s}.`)) warnings.push(`Not converted to CMYK: ${s}.`);
+    // Output verification: the converted file goes through the same preflight as the Preflight Inspector.
+    try {
+      const pf = await preflightPdf(r.bytes, 'press-cmyk');
+      for (const f of pf.findings) if (f.level === 'error' && !['Image resolution'].includes(f.check)) { const m = `Preflight: ${f.check} — ${f.message}`; if (!warnings.includes(m)) warnings.push(m); }
+    } catch { /* the check never blocks the download */ }
     return r.bytes;
   };
   if (i.arts) {

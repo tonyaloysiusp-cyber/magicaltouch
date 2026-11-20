@@ -175,6 +175,14 @@ const ART: Record<string, (id: string) => React.ReactNode> = {
       <circle cx="224" cy="121" r="11" fill="#5DCCB8" /><path d="M219 121L223 125L230 117" fill="none" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
     </>
   ),
+  preflight: () => (
+    <>
+      <g transform="translate(72 22)"><path d="M0 0H86L110 24V140H0Z" fill="#fff" /><path d="M86 0V24H110" fill="#EEF0F4" />
+        {[34, 50, 66, 82, 98, 114].map((y, i) => <g key={y}><circle cx="16" cy={y} r="4.5" fill={i === 2 ? '#F59E0B' : i === 4 ? '#DC2626' : '#10B981'} /><rect x="27" y={y - 3} width={i % 2 ? 58 : 70} height="6" rx="3" fill="#E4E4EA" /></g>)}
+      </g>
+      <g transform="translate(196 60)"><circle cx="34" cy="34" r="30" fill="#fff" stroke="#0B0B12" strokeWidth="5" /><path d="M56 56L80 80" stroke="#0B0B12" strokeWidth="9" strokeLinecap="round" /><path d="M22 34L31 43L47 25" fill="none" stroke="#10B981" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" /></g>
+    </>
+  ),
   packaging: () => (
     <>
       <g transform="translate(40 30)">
