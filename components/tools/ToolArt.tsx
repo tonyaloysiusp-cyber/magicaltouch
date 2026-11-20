@@ -175,6 +175,18 @@ const ART: Record<string, (id: string) => React.ReactNode> = {
       <circle cx="224" cy="121" r="11" fill="#5DCCB8" /><path d="M219 121L223 125L230 117" fill="none" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
     </>
   ),
+  vdp: () => (
+    <>
+      {['Arun Kumar', 'Priya Nair', 'Ravi Shankar'].map((n, i) => (
+        <g key={n} transform={`translate(${74 + i * 22} ${36 + i * 22})`}>
+          <rect width="128" height="80" rx="8" fill="#fff" />
+          <rect width="128" height="18" rx="8" fill={['#7C3AED', '#3B82C4', '#5DCCB8'][i]} />
+          <text x="64" y="46" textAnchor="middle" fontFamily="Arial" fontWeight="700" fontSize="12" fill="#0B0B12">{n}</text>
+          <text x="64" y="62" textAnchor="middle" fontFamily="Arial" fontSize="8" fill="#6B7280">{`No. 000${i + 1}`}</text>
+        </g>
+      ))}
+    </>
+  ),
   'large-format': () => (
     <>
       <g transform="translate(96 18)">
