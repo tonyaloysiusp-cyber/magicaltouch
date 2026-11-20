@@ -8,7 +8,9 @@ export function fitPath(d: string, box: { x: number; y: number; w: number; h: nu
   return d.replace(/-?\d*\.?\d+(?:e-?\d+)?/gi, (n) => {
     const v = Number(n);
     const out = i++ % 2 === 0 ? (v - cx) * k : (v - cy) * k;
-    return String(Math.round(out * 100) / 100);
+    // Always keep a separator: compact path data uses the minus sign as the only separator
+    // ("10.5-20.3"), and a positive result would otherwise run into the previous number.
+    return ` ${Math.round(out * 100) / 100}`;
   });
 }
 

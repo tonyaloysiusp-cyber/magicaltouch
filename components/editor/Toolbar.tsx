@@ -23,7 +23,6 @@ import {
   Star,
   ImagePlus,
   Combine,
-  ChevronRight,
 } from 'lucide-react';
 import type { DrawTool } from '@/lib/editor/types';
 import { cx } from './shell/ui';
@@ -116,6 +115,14 @@ function Btn({ id, active, onClick }: { id: StripTool; active: boolean; onClick:
 export function Toolbar({ active, onTool, onImageUpload, onShapeBuilder, canShapeBuild }: Props) {
   const [shape, setShape] = useState<DrawTool>('rect');
   const [shapesOpen, setShapesOpen] = useState(false);
+  const [menuAt, setMenuAt] = useState({ x: 72, y: 200 });
+  useEffect(() => {
+    if (!shapesOpen) return;
+    const off = (e: MouseEvent) => { const t = e.target as HTMLElement; if (!t.closest('[data-shape-menu]')) setShapesOpen(false); };
+    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') setShapesOpen(false); };
+    document.addEventListener('mousedown', off); window.addEventListener('keydown', esc);
+    return () => { document.removeEventListener('mousedown', off); window.removeEventListener('keydown', esc); };
+  }, [shapesOpen]);
   const shapeActive = (SHAPES as string[]).includes(active);
   const shownShape = shapeActive ? (active as DrawTool) : shape;
   const group = (ids: StripTool[]) => ids.map((id) => <Btn key={id} id={id} active={active === id} onClick={() => onTool(id)} />);
@@ -128,19 +135,20 @@ export function Toolbar({ active, onTool, onImageUpload, onShapeBuilder, canShap
       {group(['pen', 'pencil', 'brush', 'eraser'])}
       {divider}
       {group(['text'])}
-      <div className="relative">
+      <div className="relative" data-shape-menu>
         <Btn id={shownShape} active={shapeActive} onClick={() => onTool(shownShape)} />
         <button
           type="button"
-          onClick={() => setShapesOpen((v) => !v)}
+          onClick={(e) => { const r = (e.currentTarget.parentElement as HTMLElement).getBoundingClientRect(); setMenuAt({ x: r.right + 8, y: Math.min(r.top, window.innerHeight - 320) }); setShapesOpen((v) => !v); }}
           aria-label="More shape tools"
           aria-expanded={shapesOpen}
-          className="absolute -right-1.5 bottom-0 h-4 w-4 rounded-full bg-mt-surface border border-mt-border text-mt-muted inline-flex items-center justify-center"
+          title="More shape tools"
+          className="absolute right-0.5 bottom-0.5 h-3.5 w-3.5 inline-flex items-end justify-end"
         >
-          <ChevronRight size={10} />
+          <span aria-hidden className="block h-0 w-0 border-l-[6px] border-l-transparent border-b-[6px] border-b-current text-mt-muted" />
         </button>
         {shapesOpen && (
-          <div role="menu" className="absolute left-12 top-0 z-50 w-56 rounded-2xl border border-mt-border bg-mt-surface shadow-xl p-1.5">
+          <div role="menu" data-shape-menu style={{ position: 'fixed', left: menuAt.x, top: menuAt.y }} className="z-[90] w-56 rounded-2xl border border-mt-border bg-mt-surface shadow-xl p-1.5">
             {SHAPES.map((s) => (
               <button
                 key={s}

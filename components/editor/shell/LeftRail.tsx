@@ -71,7 +71,7 @@ export function LeftRail({
 
   return (
     <div className="flex h-full shrink-0">
-      <nav aria-label="Editor panels" className="w-[76px] shrink-0 border-r border-mt-border bg-mt-surface flex flex-col items-center gap-1 py-3 overflow-y-auto mt-scroll">
+      <nav aria-label="Editor panels" className="w-[76px] shrink-0 border-r border-mt-border bg-mt-surface flex flex-col items-center gap-0.5 py-2 overflow-y-auto mt-scroll [mask-image:linear-gradient(to_bottom,#000_calc(100%-28px),transparent)] pb-6">
         {railItems.map((it) => (
           <button
             key={it.id}
@@ -80,7 +80,7 @@ export function LeftRail({
             onClick={() => (it.action ? it.action() : onActivate(active === it.id ? null : it.id))}
             aria-pressed={it.action ? undefined : active === it.id}
             className={cx(
-              'w-[64px] flex flex-col items-center gap-1 py-2 rounded-xl text-[10.5px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8CCBFF]',
+              'w-[64px] shrink-0 flex flex-col items-center gap-0.5 py-1.5 rounded-xl text-[10.5px] leading-tight font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8CCBFF]',
               active === it.id ? 'mt-active-blue border text-mt-ink' : 'border border-transparent text-mt-muted hover:text-mt-ink hover:bg-mt-surface2'
             )}
           >

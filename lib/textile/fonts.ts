@@ -34,6 +34,6 @@ export function shiftPath(d: string, dx: number, dy: number, sx = 1): string {
   return d.replace(/-?\d*\.?\d+(?:e-?\d+)?/gi, (n) => {
     const v = Number(n);
     const out = i++ % 2 === 0 ? v * sx + dx : v + dy;
-    return String(Math.round(out * 100) / 100);
+    return ` ${Math.round(out * 100) / 100}`; // keep a separator (compact data uses '-' as one)
   });
 }
