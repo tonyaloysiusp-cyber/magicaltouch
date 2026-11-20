@@ -168,7 +168,7 @@ export function LayersPanel({ layers, active, onSelect, onEditText, onToggle, on
               </span>
             )}
             {(l as any).text && onEditText && <button className="h-6 px-2 rounded-md border border-mt-border text-[11px] font-semibold hover:bg-mt-surface2" onClick={(e) => { e.stopPropagation(); onEditText(i); }}>Edit</button>}
-            {onDeleteMany && layers.length > 1 && <button className={cx(ib, 'h-7 w-7 text-mt-faint hover:text-red-600')} aria-label={`Delete ${l.name}`} title="Delete layer" onClick={(e) => { e.stopPropagation(); onDeleteMany([i]); }}><Trash2 size={13} /></button>}
+            {onDeleteMany && layers.length > 1 && <button className={cx(ib, 'h-7 w-7 text-mt-faint hover:text-red-600')} aria-label="Remove this layer" title="Delete layer" onClick={(e) => { e.stopPropagation(); onDeleteMany([i]); }}><Trash2 size={13} /></button>}
           </li>
         ))}
       </ul>

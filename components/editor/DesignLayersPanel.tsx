@@ -195,7 +195,7 @@ export function DesignLayersPanel(p: Props) {
           <button type="button" onClick={() => p.onToggleLock(obj)} aria-label={isLocked ? 'Unlock' : 'Lock'} title={isLocked ? 'Unlock' : 'Lock'} className={cx('shrink-0 h-7 w-7 inline-flex items-center justify-center rounded-md hover:bg-mt-surface2', isLocked ? 'text-mt-ink' : 'text-mt-faint hover:text-mt-ink')}>
             {isLocked ? <Lock size={14} /> : <Unlock size={14} />}
           </button>
-          {topLevel && <button type="button" onClick={() => p.onDelete(obj)} disabled={isLocked} aria-label={`Delete ${layerName(obj)}`} title="Delete layer" className="shrink-0 h-7 w-7 inline-flex items-center justify-center rounded-md text-mt-faint hover:bg-mt-surface2 hover:text-red-600 disabled:opacity-30"><Trash2 size={13} /></button>}
+          {topLevel && <button type="button" onClick={() => p.onDelete(obj)} disabled={isLocked} aria-label="Remove this layer" title="Delete layer" className="shrink-0 h-7 w-7 inline-flex items-center justify-center rounded-md text-mt-faint hover:bg-mt-surface2 hover:text-red-600 disabled:opacity-30"><Trash2 size={13} /></button>}
         </div>
         {expanded && (
           <ul>
