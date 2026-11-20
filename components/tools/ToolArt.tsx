@@ -175,6 +175,16 @@ const ART: Record<string, (id: string) => React.ReactNode> = {
       <circle cx="224" cy="121" r="11" fill="#5DCCB8" /><path d="M219 121L223 125L230 117" fill="none" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
     </>
   ),
+  separation: () => (
+    <>
+      {[['#00A0E3', 0], ['#E6007E', 1], ['#FFED00', 2], ['#1A1A1A', 3]].map(([c, i]) => (
+        <g key={String(c)} transform={`translate(${70 + Number(i) * 26} ${30 + Number(i) * 10})`}>
+          <rect width="104" height="104" rx="6" fill="#fff" />
+          {Array.from({ length: 49 }, (_, k) => { const x = k % 7, y = Math.floor(k / 7); const r = 1.2 + ((x + y + Number(i)) % 5) * 0.9; return <circle key={k} cx={14 + x * 12.6} cy={14 + y * 12.6} r={r} fill={String(c)} />; })}
+        </g>
+      ))}
+    </>
+  ),
   barcode: () => (
     <>
       <g transform="translate(86 34)"><rect width="148" height="112" rx="8" fill="#fff" />
