@@ -62,6 +62,12 @@ export function PackagingStudio() {
       save(await dielinePdf(die, { template, bleed, board: boardName }), `${base}_${template ? 'ARTWORK_TEMPLATE' : 'DIELINE'}.pdf`);
     } catch { setMsg('The PDF could not be made in this browser.'); }
   };
+  // DXF for die makers, CAD, laser and plotter cutters: CUT (red) and CREASE (blue) layers, 1:1 mm.
+  const dxfFile = async () => {
+    const { pathToPolylines, writeDxf } = await import('@/lib/dxf');
+    const layer = (kind: 'cut' | 'crease', name: string, color: number) => ({ name, color, polylines: die.lines.filter((l) => l.kind === kind).flatMap((l) => pathToPolylines(l.d, 0.02)) });
+    save(new Blob([writeDxf([layer('cut', 'CUT', 1), layer('crease', 'CREASE', 5)], die.h)], { type: 'application/dxf' }), `${base}_DIELINE.dxf`, 'application/dxf');
+  };
   const svgFile = () => save(new Blob([dielineSvg(die, { bleed, layers: { ...layers, dims: false } })], { type: 'image/svg+xml' }), `${base}_DIELINE.svg`);
   // Open the editor with the dieline as a locked guide layer, artboard = blank + bleed.
   const toEditor = async () => {
@@ -181,7 +187,10 @@ export function PackagingStudio() {
         <div className="space-y-2 rounded-2xl border border-mt-border bg-mt-surface p-4">
           <button type="button" onClick={() => pdf(false)} className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-mt-primary text-[13.5px] font-semibold text-mt-onprimary"><FileDown size={16} /> Dieline PDF (cut + crease)</button>
           <button type="button" onClick={() => pdf(true)} className="flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-mt-border text-[13px] font-semibold hover:bg-mt-surface2"><Download size={15} /> Artwork template PDF</button>
-          <button type="button" onClick={svgFile} className="flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-mt-border text-[13px] font-semibold hover:bg-mt-surface2"><Download size={15} /> SVG (for Illustrator / Inkscape)</button>
+          <div className="grid grid-cols-2 gap-2">
+            <button type="button" onClick={svgFile} className="flex h-10 items-center justify-center gap-1.5 rounded-xl border border-mt-border text-[13px] font-semibold hover:bg-mt-surface2"><Download size={15} /> SVG</button>
+            <button type="button" onClick={dxfFile} className="flex h-10 items-center justify-center gap-1.5 rounded-xl border border-mt-border text-[13px] font-semibold hover:bg-mt-surface2" title="CAD / die maker / plotter: CUT and CREASE layers in mm"><Download size={15} /> DXF</button>
+          </div>
           <button type="button" onClick={toEditor} className="flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-mt-border text-[13px] font-semibold hover:bg-mt-surface2"><PenTool size={15} /> Design on this dieline</button>
           <p className="text-[11px] leading-relaxed text-mt-muted">Cut is the spot colour <b>CutContour</b>, folds are <b>Crease</b>; both overprint and never print. The PDF is 1:1 — print or send it at 100 %.</p>
           {msg && <p role="alert" className="text-[12px] text-red-600">{msg}</p>}

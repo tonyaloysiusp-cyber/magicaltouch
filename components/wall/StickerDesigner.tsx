@@ -125,7 +125,7 @@ export function StickerDesigner() {
       const [{ PDFDocument, PDFName }, { svgPathToPdf }] = await Promise.all([import('pdf-lib'), import('@/lib/print/pathPdf')]);
       const doc = await PDFDocument.load(base); const page = doc.getPage(0); const ctx = doc.context;
       const PT = 72 / 25.4, H = h;
-      const res = page.node.Resources();
+      const res = page.node.Resources() as any;
       const cs = res.lookup(PDFName.of('ColorSpace')) as any || ctx.obj({}); cs.set(PDFName.of('CsCut'), ctx.obj([PDFName.of('Separation'), PDFName.of('CutContour'), PDFName.of('DeviceCMYK'), ctx.obj({ FunctionType: 2, Domain: [0, 1], C0: [0, 0, 0, 0], C1: [0, 1, 0, 0], N: 1 })])); res.set(PDFName.of('ColorSpace'), cs);
       const gs = res.lookup(PDFName.of('ExtGState')) as any || ctx.obj({}); gs.set(PDFName.of('GsCut'), ctx.obj({ Type: 'ExtGState', OP: true, op: true, OPM: 1 })); res.set(PDFName.of('ExtGState'), gs);
       let ops = 'q /GsCut gs /CsCut CS 1 SCN 0.25 w 1 j\n';
