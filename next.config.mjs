@@ -3,10 +3,8 @@ const SUPABASE = (process.env.NEXT_PUBLIC_SUPABASE_URL || '').replace(/\/$/, '')
 
 const nextConfig = {
   // Pages that read the template library can be slow while the database is
-  // busy; give them three minutes and fewer parallel workers so a build does
-  // not hammer the database (and fail) — Nov 2026.
+  // busy; give them three minutes before the build gives up — Nov 2026.
   staticPageGenerationTimeout: 180,
-  experimental: { cpus: 2 },
   // Fallback route to Supabase through our own domain, used by the browser
   // only when a direct request to *.supabase.co fails (lib/supabase.ts).
   async rewrites() {
