@@ -89,7 +89,7 @@ export function ToolShell({ path, h1, name, sub, icon, about, children }: ToolSh
           <main className="flex-1 w-full bg-mt-bg bg-[radial-gradient(circle,rgba(9,9,11,0.06)_1px,transparent_1px)] dark:bg-[radial-gradient(circle,rgba(255,255,255,0.05)_1px,transparent_1px)] [background-size:22px_22px]">
             <div className="w-full max-w-[2000px] mx-auto px-2 sm:px-3 py-3">{children}</div>
           </main>
-          <footer className="sticky bottom-0 z-[50] flex h-7 shrink-0 items-center gap-3 border-t border-mt-border bg-mt-surface/95 px-3 text-[11px] text-mt-muted backdrop-blur" aria-label="Status bar">
+          <footer className="flex h-7 shrink-0 items-center gap-3 border-t border-mt-border bg-mt-surface/95 px-3 text-[11px] text-mt-muted backdrop-blur" aria-label="Status bar">
             <span className="inline-flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full bg-emerald-500" aria-hidden /> Runs on this device · your files are not uploaded</span>
             <span className="hidden sm:inline text-mt-faint">{title}</span>
             <span className="flex-1" />
