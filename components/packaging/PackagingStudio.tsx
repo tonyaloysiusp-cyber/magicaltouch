@@ -19,7 +19,7 @@ const r1 = (v: number) => Math.round(v * 10) / 10;
 
 export function PackagingStudio() {
   const router = useRouter();
-  const [o, setO] = useState<DieOptions>(DEFAULT_DIE);
+  const [o, setO] = useState<DieOptions>(() => ({ ...DEFAULT_DIE, t: caliperFor(gradeById('fbb'), 300) }));
   const [board, setBoard] = useState('fbb');
   const [gsm, setGsm] = useState(300);
   const [cutH, setCutH] = useState(23.8);
