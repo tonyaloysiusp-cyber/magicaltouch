@@ -102,9 +102,9 @@ export function PackagingStudio() {
   const groups = ['Folding carton', 'Tray & lid', 'Corrugated'] as const;
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[320px_minmax(0,1fr)_280px]">
+    <div className="grid gap-3 lg:h-[calc(100dvh-6.25rem)] lg:grid-cols-[300px_minmax(0,1fr)_300px]">
       {/* Left: structure */}
-      <aside aria-label="Box settings" className="space-y-4 rounded-2xl border border-mt-border bg-mt-surface p-4 self-start">
+      <aside aria-label="Box settings" className="space-y-4 rounded-xl border border-mt-border bg-mt-surface p-3.5 self-start lg:self-stretch lg:overflow-y-auto">
         {groups.map((g) => (
           <div key={g} role="radiogroup" aria-label={`${g} styles`}>
             <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-mt-faint">{g}</p>
@@ -152,7 +152,7 @@ export function PackagingStudio() {
       </aside>
 
       {/* Centre: dieline */}
-      <section aria-label="Dieline" className="min-w-0 rounded-2xl border border-mt-border bg-mt-surface">
+      <section aria-label="Dieline" className="flex min-w-0 flex-col overflow-hidden rounded-xl border border-mt-border bg-mt-surface">
         <div className="flex flex-wrap items-center gap-1.5 border-b border-mt-border px-3 py-2">
           <span className="mr-auto text-[13px] font-semibold">{die.title}</span>
           {(['cut', 'crease', 'bleed', 'labels', 'dims'] as const).map((l) => (
@@ -170,14 +170,14 @@ export function PackagingStudio() {
             <button type="button" aria-label="Zoom in" onClick={() => setZoom((z) => Math.min(4, z * 1.25))} className="h-7 w-7 rounded-full border border-mt-border text-[13px]">+</button>
           </span>
         </div>
-        <div className="max-h-[72vh] overflow-auto bg-[radial-gradient(circle,rgba(9,9,11,0.07)_1px,transparent_1px)] [background-size:18px_18px] p-4">
+        <div className="max-h-[72vh] flex-1 overflow-auto lg:max-h-none bg-[radial-gradient(circle,rgba(9,9,11,0.07)_1px,transparent_1px)] [background-size:18px_18px] p-4">
           <div role="img" aria-label={`${die.title} dieline, flat size ${r1(die.w)} by ${r1(die.h)} millimetres`} style={{ width: `${zoom * 100}%` }} className="mx-auto [&_svg]:h-auto [&_svg]:w-full [&_svg]:shadow-[0_10px_30px_-18px_rgba(9,9,11,0.4)]" dangerouslySetInnerHTML={{ __html: svg }} />
         </div>
       </section>
 
       {/* Right: facts + files */}
-      <aside aria-label="Dieline files" className="space-y-4 self-start">
-        <div className="rounded-2xl border border-mt-border bg-mt-surface p-4">
+      <aside aria-label="Dieline files" className="space-y-3 self-start lg:self-stretch lg:overflow-y-auto lg:pr-0.5">
+        <div className="rounded-xl border border-mt-border bg-mt-surface p-3.5">
           <div className="mx-auto h-36 w-full [&_svg]:h-full [&_svg]:w-full" aria-label="Closed box preview" role="img" dangerouslySetInnerHTML={{ __html: iso }} />
           <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-1.5 text-[12px]">
             <dt className="text-mt-muted">Inside</dt><dd className="text-right font-semibold tabular-nums">{r1(die.inside.L / k)} × {r1(die.inside.W / k)} × {r1(die.inside.D / k)} {unit}</dd>
@@ -188,7 +188,7 @@ export function PackagingStudio() {
           </dl>
           {die.notes.map((n) => <p key={n} className="mt-2 text-[11.5px] leading-relaxed text-mt-muted">{n}</p>)}
         </div>
-        <section aria-label="Structure check" className="rounded-2xl border border-mt-border bg-mt-surface p-4">
+        <section aria-label="Structure check" className="rounded-xl border border-mt-border bg-mt-surface p-3.5">
           <div className="flex items-center justify-between">
             <p className="text-[13px] font-semibold">Structure check</p>
             <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ${report.level === 'ok' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300' : report.level === 'warn' ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300' : 'bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-300'}`}>
@@ -205,7 +205,7 @@ export function PackagingStudio() {
             ))}
           </ul>
         </section>
-        <section aria-label="Crease and board" className="rounded-2xl border border-mt-border bg-mt-surface p-4">
+        <section aria-label="Crease and board" className="rounded-xl border border-mt-border bg-mt-surface p-3.5">
           <p className="text-[13px] font-semibold">Crease set-up for this board</p>
           <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1.5 text-[12px]">
             <dt className="text-mt-muted">Board</dt><dd className="text-right tabular-nums">{range ? `${gsm} g/m² · ` : ''}{r1(o.t * 1000) / 1000} mm</dd>
@@ -225,7 +225,7 @@ export function PackagingStudio() {
             {cset.confidence === 'published' ? 'Inside the board maker\'s published table.' : cset.confidence === 'formula' ? 'From the published formula — confirm with a crease test.' : 'Outside published tables — a starting point for your die maker only.'}
           </p>
         </section>
-        <div className="space-y-2 rounded-2xl border border-mt-border bg-mt-surface p-4">
+        <div className="space-y-2 rounded-xl border border-mt-border bg-mt-surface p-3.5">
           <button type="button" onClick={() => pdf(false)} className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-mt-primary text-[13.5px] font-semibold text-mt-onprimary"><FileDown size={16} /> Dieline PDF (cut + crease)</button>
           <button type="button" onClick={() => pdf(true)} className="flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-mt-border text-[13px] font-semibold hover:bg-mt-surface2"><Download size={15} /> Artwork template PDF</button>
           <div className="grid grid-cols-2 gap-2">
