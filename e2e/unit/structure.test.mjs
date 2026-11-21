@@ -34,11 +34,29 @@ test('tuck deeper than the box cannot close', () => {
   assert.ok(r.checks.find((c) => c.id === 'tuck' && c.level === 'error' && c.fix));
 });
 
-test('tray corner flaps overlapping the end wall is an error', () => {
-  const bad = checkStructure({ ...DEFAULT_DIE, style: 'tray', L: 200, W: 60, D: 50, t: 1.5 }, 'rigid');
-  assert.equal(bad.checks.find((c) => c.id === 'corner').level, 'error');
-  const ok = checkStructure({ ...DEFAULT_DIE, style: 'tray', L: 200, W: 120, D: 50, t: 1.5 }, 'rigid');
-  assert.equal(ok.checks.find((c) => c.id === 'corner').level, 'ok');
+test('tray corner flaps are capped so they never overlap on the end wall', async () => {
+  const { makeDieline } = await import('../../lib/packaging/dieline.ts');
+  for (const [L, W, D] of [[200, 60, 50], [80, 40, 120], [300, 300, 20], [50, 20, 80]]) {
+    const d = makeDieline({ ...DEFAULT_DIE, style: 'tray', L, W, D, t: 1.5 });
+    const Wb = W + 3, Db = D;
+    // corner flaps start at the base corner (x = D) and run left; their far edge must stay within half the end wall
+    const xs = d.lines.filter((l) => l.kind === 'cut').flatMap((l) => (l.d.match(/-?\d*\.?\d+/g) || []).map(Number).filter((_, i) => i % 2 === 0));
+    const minFlapX = Math.min(...xs.filter((x) => x > 0 && x < Db));
+    assert.ok(Db - minFlapX <= Wb / 2, `${L}x${W}x${D}: flap ${Db - minFlapX} > ${Wb / 2}`);
+  }
+  const weak = checkStructure({ ...DEFAULT_DIE, style: 'tray', L: 200, W: 30, D: 80, t: 1.5 }, 'rigid');
+  assert.equal(weak.checks.find((c) => c.id === 'corner').level, 'warn');
+  assert.equal(weak.closes, true);
+});
+
+test('FEFCO 0203 flaps are the full width; tray and sleeve fits the tray', async () => {
+  const { makeDieline } = await import('../../lib/packaging/dieline.ts');
+  const rsc = makeDieline({ ...DEFAULT_DIE, style: 'rsc', L: 300, W: 200, D: 150, t: 3, glue: 30 });
+  const fol = makeDieline({ ...DEFAULT_DIE, style: 'fol', L: 300, W: 200, D: 150, t: 3, glue: 30 });
+  assert.ok(Math.abs((fol.h - rsc.h) - 2 * ((200 + 6) - ((200 + 6) / 2 + 3))) < 0.01);
+  const mb = makeDieline({ ...DEFAULT_DIE, style: 'matchbox', L: 100, W: 60, D: 25, t: 1.5, glue: 14 });
+  const top = mb.panels.find((p) => p.name === 'Sleeve top');
+  assert.ok(Math.abs(top.w - (100 + 3 + 3 + 1)) < 0.01); // tray outside + 1 mm play
 });
 
 test('glue flap wider than its panel is an error', () => {

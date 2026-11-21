@@ -91,3 +91,30 @@ test('templates: 24 designs, scenes and previews build', async () => {
     assert.ok(!/NaN/.test(templateMockupSvg(t)), t.id);
   }
 });
+
+test('size modes: product + gap, inside, outside', async () => {
+  const { specInner } = await import('../../lib/packaging/editorBridge.ts');
+  const base = { style: 'rte', product: { L: 50, W: 40, H: 30 }, clearance: { L: 2, W: 2, H: 2 }, grade: 'sbs', gsm: 350, t: 0.5, glue: 14, tuck: 15, lidDepth: 30 };
+  assert.deepEqual(specInner(base), { L: 52, W: 42, D: 32 });
+  assert.deepEqual(specInner({ ...base, mode: 'inside' }), { L: 50, W: 40, D: 30 });
+  assert.deepEqual(specInner({ ...base, mode: 'outside' }), { L: 49, W: 39, D: 29 });
+});
+
+test('panel mapping: artwork stays on its panel when the box grows', async () => {
+  const { remapBox, specDieline } = await import('../../lib/packaging/editorBridge.ts');
+  const base = { style: 'rte', product: { L: 50, W: 40, H: 80 }, clearance: { L: 0, W: 0, H: 0 }, grade: 'sbs', gsm: 350, t: 0.5, glue: 14, tuck: 15, lidDepth: 30 };
+  const a = specDieline(base), b = specDieline({ ...base, product: { L: 100, W: 40, H: 80 } });
+  const fa = a.panels.find((p) => p.name === 'Front'), fb = b.panels.find((p) => p.name === 'Front');
+  // a logo in the middle of the front panel
+  const logo = { x: fa.x + fa.w / 2 - 5, y: fa.y + fa.h / 2 - 5, w: 10, h: 10 };
+  const r = remapBox(logo, a, b);
+  assert.ok(Math.abs(r.cx - (fb.x + fb.w / 2)) < 0.01 && Math.abs(r.cy - (fb.y + fb.h / 2)) < 0.01);
+  assert.equal(r.fx, r.fy); // keeps its shape
+  // a band filling the front panel width stretches with it
+  const band = { x: fa.x, y: fa.y + 10, w: fa.w, h: 8 };
+  const rb = remapBox(band, a, b);
+  assert.ok(Math.abs(rb.fx - fb.w / fa.w) < 1e-9);
+  // the background covering everything maps to the whole blank
+  const bg = remapBox({ x: -3, y: -3, w: a.w + 6, h: a.h + 6 }, a, b);
+  assert.ok(Math.abs(bg.fx - b.w / a.w) < 1e-9);
+});

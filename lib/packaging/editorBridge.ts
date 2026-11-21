@@ -23,10 +23,19 @@ export const DIE_STYLE: Record<DieKind, { colour: string; dash: number[] | null;
 };
 
 export interface PackSpec {
-  style: BoxStyleId; product: { L: number; W: number; H: number }; clearance: { L: number; W: number; H: number };
+  style: BoxStyleId;
+  /** the three sizes as entered; how they are read depends on `mode` */
+  product: { L: number; W: number; H: number }; clearance: { L: number; W: number; H: number };
+  /** product: size of what goes in (+ fitting gap) · inside: box inside size · outside: box outside size */
+  mode?: 'product' | 'inside' | 'outside';
   grade: string; gsm: number; t: number; glue: number; tuck: number; lidDepth: number;
 }
-export const specInner = (s: PackSpec) => ({ L: s.product.L + s.clearance.L, W: s.product.W + s.clearance.W, D: s.product.H + s.clearance.H });
+export const specInner = (s: PackSpec) => {
+  const m = s.mode || 'product', r = (v: number) => Math.round(v * 100) / 100;
+  if (m === 'inside') return { L: s.product.L, W: s.product.W, D: s.product.H };
+  if (m === 'outside') return { L: r(s.product.L - 2 * s.t), W: r(s.product.W - 2 * s.t), D: r(s.product.H - 2 * s.t) };
+  return { L: r(s.product.L + s.clearance.L), W: r(s.product.W + s.clearance.W), D: r(s.product.H + s.clearance.H) };
+};
 export const specDieline = (s: PackSpec): Dieline => { const i = specInner(s); return makeDieline({ style: s.style, L: i.L, W: i.W, D: i.D, t: s.t, glue: s.glue, tuck: s.tuck, lidDepth: s.lidDepth }); };
 export const pageSizePx = (d: Dieline) => ({ width: Math.round((d.w + 2 * PAGE_MARGIN) * PX), height: Math.round((d.h + 2 * PAGE_MARGIN) * PX) });
 
@@ -151,4 +160,38 @@ export async function appendDieLayer(pdfBytes: Uint8Array | ArrayBuffer, lines: 
     page.node.set(PDFName.of('BleedBox'), ctx.obj([x0 - b * PT, y0 - b * PT, x1 + b * PT, y1 + b * PT]));
   }
   return doc.save({ useObjectStreams: false });
+}
+
+// ── Panel mapping: when the box changes, artwork follows the panel it sits on ──
+export interface Rect4 { x: number; y: number; w: number; h: number }
+export interface RemapPlan { cx: number; cy: number; fx: number; fy: number }
+/**
+ * For an artwork box (mm, blank origin) on the old dieline, where it goes on the
+ * new one. The panel holding its centre is matched by name and order; position
+ * keeps its place inside that panel. Objects that fill a panel (or the whole
+ * blank) stretch with it; smaller ones scale evenly so text and logos keep shape.
+ */
+export function remapBox(b: Rect4, from: Dieline, to: Dieline): RemapPlan {
+  const cx = b.x + b.w / 2, cy = b.y + b.h / 2;
+  const whole = (d: Dieline): Rect4 => ({ x: 0, y: 0, w: d.w, h: d.h });
+  const inside = (p: Rect4) => cx >= p.x && cx <= p.x + p.w && cy >= p.y && cy <= p.y + p.h;
+  // prefer face panels, then flaps; a box much bigger than its panel maps with the whole blank
+  const order = [...from.panels.filter((p) => p.face), ...from.panels.filter((p) => !p.face)];
+  let op: Rect4 | null = order.find(inside) || null, np: Rect4 | null = null;
+  if (op && (b.w > (op as Rect4).w * 1.25 || b.h > (op as Rect4).h * 1.25)) op = null;
+  if (op) {
+    const src = op as any;
+    const nth = from.panels.filter((p) => p.name === src.name).indexOf(src);
+    np = to.panels.filter((p) => p.name === src.name)[nth] || null;
+  }
+  if (!op || !np) { op = whole(from); np = whole(to); }
+  const sx = np.w / Math.max(0.01, op.w), sy = np.h / Math.max(0.01, op.h);
+  const fillsX = b.w >= op.w * 0.8, fillsY = b.h >= op.h * 0.8;
+  const even = Math.min(sx, sy);
+  return {
+    cx: np.x + (cx - op.x) * sx,
+    cy: np.y + (cy - op.y) * sy,
+    fx: fillsX ? sx : even,
+    fy: fillsY ? sy : (fillsX ? even : even),
+  };
 }

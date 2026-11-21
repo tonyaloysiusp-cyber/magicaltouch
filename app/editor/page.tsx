@@ -7948,6 +7948,16 @@ function EditorContent() {
     fabric: () => (window as any).fabric,
     page: () => getActiveArtboardRect(),
     resize: (w, h) => resizePage({ width: w, height: h }, 'this'),
+    resizeOnly: (w, h) => {
+      const page = getActiveArtboardRect();
+      const rect = artboardRectById(page.id);
+      if (!rect) return;
+      rect.set({ width: w, height: h, scaleX: 1, scaleY: 1 });
+      rect.setCoords();
+      refreshArtboards();
+      fitToRect(fabricCanvasRef.current, { x: rect.left || 0, y: rect.top || 0, width: w, height: h });
+    },
+    pageArtwork: () => { const page = getActiveArtboardRect(); return (fabricCanvasRef.current?.getObjects() || []).filter((o: any) => isArtwork(o) && o.__artboardId === page.id); },
     commit: () => { recomputeMembership(); refreshArtboards(); refreshLayers(); fabricCanvasRef.current?.requestRenderAll(); pushHistory(); },
     selection: () => fabricCanvasRef.current?.getActiveObjects?.() || [],
     pressPdf: packagingPressPdf,

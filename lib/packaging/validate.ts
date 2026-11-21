@@ -59,20 +59,19 @@ export function checkStructure(o: DieOptions, family: BoardFamily): StructureRep
       : { id: 'dust', level: 'ok', title: 'Dust flaps', detail: `Dust flaps ${f(minor)} mm clear each other.`, rule: 'geometry' });
     add({ id: 'major', level: 'ok', title: 'Major flaps overlap', detail: `Major flaps overlap ${f(2 * major - Wp)} mm for gluing.`, rule: 'geometry' });
   }
-  if (o.style === 'tray' || o.style === 'traylid') {
-    // Corner flaps (depth − 1) from both long walls are glued onto each end wall of width W.
-    const W = o.W + 2 * t, cf = Math.max(4, o.D - 1);
-    add(2 * cf > W
-      ? { id: 'corner', level: 'error', title: 'Corner flaps fit the end wall', detail: `Two corner flaps of ${f(cf)} mm overlap on the ${f(W)} mm end wall. Lower the depth to under ${f(W / 2 + 1)} mm or widen the tray.`, fix: { D: Math.floor(W / 2) }, rule: 'geometry' }
-      : { id: 'corner', level: 'ok', title: 'Corner flaps fit the end wall', detail: `Corner flaps ${f(cf)} mm sit side by side on the ${f(W)} mm end wall.`, rule: 'geometry' });
+  if (o.style === 'tray' || o.style === 'traylid' || o.style === 'matchbox') {
+    // Corner flaps (from the long walls) fold onto each end wall of length W; they are capped at W/2 − 1.
+    const W = o.W + 2 * t, want = Math.max(4, o.D - 1), cf = Math.max(4, Math.min(want, W / 2 - 1));
+    add(cf < want
+      ? { id: 'corner', level: cf < o.D * 0.35 ? 'warn' : 'ok', title: 'Corner flaps', detail: `Corner flaps shortened to ${f(cf)} mm so the two flaps on each ${f(W)} mm end wall do not overlap (full wall height would be ${f(want)} mm).${cf < o.D * 0.35 ? ' Short flaps give a weak corner — a wider tray or a lower wall glues better.' : ''}`, rule: 'geometry' }
+      : { id: 'corner', level: 'ok', title: 'Corner flaps', detail: `Corner flaps ${f(cf)} mm sit side by side on the ${f(W)} mm end wall.`, rule: 'geometry' });
     if (o.style === 'traylid') {
       const lD = Math.max(10, Math.min(o.lidDepth, o.D));
-      const lW = o.W + 4 * t + 1, lcf = Math.max(4, lD - 1);
-      if (2 * lcf > lW) add({ id: 'lid', level: 'error', title: 'Lid corner flaps', detail: `Lid corner flaps (${f(lcf)} mm) overlap on the ${f(lW)} mm lid end wall.`, fix: { lidDepth: Math.floor(lW / 2) }, rule: 'geometry' });
-      else add({ id: 'lid', level: o.lidDepth > o.D ? 'warn' : 'ok', title: 'Lid fits over tray', detail: o.lidDepth > o.D ? `Lid depth is capped at the tray depth (${f(o.D)} mm).` : `Lid ${f(lD)} mm deep with 1 mm play over the tray.`, rule: 'geometry' });
+      add({ id: 'lid', level: o.lidDepth > o.D ? 'warn' : 'ok', title: 'Lid fits over tray', detail: o.lidDepth > o.D ? `Lid depth is capped at the tray depth (${f(o.D)} mm).` : `Lid ${f(lD)} mm deep with 1 mm play over the tray.`, rule: 'geometry' });
     }
+    if (o.style === 'matchbox') add({ id: 'sleeve', level: 'ok', title: 'Sleeve fit', detail: `Sleeve inside is the tray outside + 1 mm, so the drawer slides.`, rule: 'geometry' });
   }
-  if (o.style === 'rsc' || o.style === 'hsc') {
+  if (o.style === 'rsc' || o.style === 'hsc' || o.style === 'fol') {
     add(o.L < o.W
       ? { id: 'lw', level: 'warn', title: 'Length and width', detail: 'FEFCO sizes are given length ≥ width. Swap them so the flaps on the long panels meet.', fix: { L: o.W, W: o.L }, rule: 'rule of thumb' }
       : { id: 'lw', level: 'ok', title: 'Flaps meet', detail: `Outer flaps ${f((o.W + 2 * t) / 2 + t)} mm meet in the middle.`, rule: 'geometry' });
@@ -80,8 +79,8 @@ export function checkStructure(o: DieOptions, family: BoardFamily): StructureRep
 
   // Glue flap: needs enough width for the glue line, and must fit on the panel it is glued to.
   if (o.style !== 'tray' && o.style !== 'traylid') {
-    const g = (o.style === 'rsc' || o.style === 'hsc') ? Math.max(o.glue, 25) : o.glue;
-    const minG = corr ? 25 : 10, target = (o.style === 'rsc' || o.style === 'hsc') ? o.W + 2 * t : Lp; // slotted: joint glued to the last side panel
+    const g = (o.style === 'rsc' || o.style === 'hsc' || o.style === 'fol') ? Math.max(o.glue, 25) : o.glue;
+    const minG = corr ? 25 : 10, target = (o.style === 'rsc' || o.style === 'hsc' || o.style === 'fol') ? o.W + 2 * t : Lp; // slotted: joint glued to the last side panel
     if (g >= target) add({ id: 'glue', level: 'error', title: 'Glue flap', detail: `Glue flap ${f(g)} mm is wider than the panel it is glued to (${f(target)} mm).`, fix: { glue: Math.round(target * 0.3) }, rule: 'geometry' });
     else if (g < minG) add({ id: 'glue', level: 'warn', title: 'Glue flap', detail: `Glue flap ${f(g)} mm is narrow; at least ${minG} mm is usual for ${corr ? 'corrugated' : 'carton'}.`, fix: { glue: minG + (corr ? 5 : 4) }, rule: 'rule of thumb' });
     else add({ id: 'glue', level: 'ok', title: 'Glue flap', detail: `Glue flap ${f(g)} mm.`, rule: 'rule of thumb' });

@@ -39,8 +39,8 @@ export const THEMES: Theme[] = [
 export interface PackTemplate { id: string; name: string; theme: Theme; style: BoxStyleId; L: number; W: number; D: number; t: number }
 const STYLE_FOR: Record<string, [BoxStyleId, number, number, number][]> = {
   'botanical-tea': [['rte', 70, 70, 110], ['traylid', 160, 110, 50]],
-  'luxe-cosmetics': [['rte', 45, 45, 120], ['traylid', 120, 120, 40]],
-  'kraft-coffee': [['ste', 90, 60, 160], ['sleeve', 120, 80, 40]],
+  'luxe-cosmetics': [['rte', 45, 45, 120], ['traylid', 120, 120, 40], ['matchbox', 110, 70, 30]],
+  'kraft-coffee': [['ste', 90, 60, 160], ['sleeve', 120, 80, 40], ['fol', 400, 300, 250]],
   'kids-toys': [['seal', 200, 80, 150], ['rsc', 300, 200, 150]],
   'tech-gadget': [['traylid', 110, 110, 40], ['rte', 90, 40, 120]],
   'sweet-bakery': [['tray', 180, 120, 50], ['rte', 120, 60, 120]],
@@ -52,12 +52,12 @@ const STYLE_FOR: Record<string, [BoxStyleId, number, number, number][]> = {
   'chocolate': [['sleeve', 160, 80, 12], ['rte', 160, 25, 85]],
 };
 export const PACK_TEMPLATES: PackTemplate[] = THEMES.flatMap((th) => (STYLE_FOR[th.id] || []).map(([style, L, W, D], i) => ({
-  id: `${th.id}-${style}`, name: `${th.name} · ${i === 0 ? 'box' : style === 'traylid' ? 'gift box' : style === 'sleeve' ? 'sleeve' : style.endsWith('sc') ? 'shipper' : style === 'tray' ? 'tray' : 'box'}`,
-  theme: th, style, L, W, D, t: style === 'rsc' || style === 'hsc' ? 3 : style === 'traylid' || style === 'tray' ? 1.5 : 0.45,
+  id: `${th.id}-${style}`, name: `${th.name} · ${i === 0 ? 'box' : style === 'traylid' ? 'gift box' : style === 'sleeve' ? 'sleeve' : style.endsWith('sc') ? 'shipper' : style === 'tray' ? 'tray' : style === 'matchbox' ? 'drawer box' : 'box'}`,
+  theme: th, style, L, W, D, t: style === 'rsc' || style === 'hsc' || style === 'fol' ? 3 : style === 'traylid' || style === 'tray' || style === 'matchbox' ? 1.5 : 0.45,
 })));
 
 export function templateDieline(t: PackTemplate): Dieline {
-  const corr = t.style === 'rsc' || t.style === 'hsc';
+  const corr = t.style === 'rsc' || t.style === 'hsc' || t.style === 'fol';
   return makeDieline({ style: t.style, L: t.L, W: t.W, D: t.D, t: t.t, glue: corr ? 30 : 14, tuck: 15, lidDepth: Math.min(t.D, 30) });
 }
 
@@ -82,9 +82,9 @@ export function templateScene(t: PackTemplate, bleed = 3): SceneItem[] {
   const d = templateDieline(t), th = t.theme, out: SceneItem[] = [];
   out.push({ k: 'rect', name: 'Background', x: -bleed, y: -bleed, w: d.w + 2 * bleed, h: d.h + 2 * bleed, fill: th.bg });
   const faces = d.panels.filter((p) => p.face), flaps = d.panels.filter((p) => !p.face);
-  const main = faces.find((p) => p.name === 'Front') || faces.find((p) => p.name === 'Lid base') || faces.find(isMain) || faces[0];
-  const back = faces.find((p) => p.name === 'Back' || p.name === 'Tray back wall' || p.name === 'Lid back wall');
-  const sides = faces.filter((p) => p.name === 'Side' || /end wall/.test(p.name));
+  const main = faces.find((p) => p.name === 'Front') || faces.find((p) => p.name === 'Lid base') || faces.find((p) => p.name === 'Sleeve top') || faces.find(isMain) || faces[0];
+  const back = faces.find((p) => p.name === 'Back' || p.name === 'Sleeve bottom' || p.name === 'Tray back wall' || p.name === 'Lid back wall');
+  const sides = faces.filter((p) => p.name === 'Side' || p.name === 'Sleeve side' || /end wall/.test(p.name));
   const motifC = th.layout === 'frame' ? th.accent : th.soft;
   // flaps and closures carry the pattern
   for (const p of flaps) out.push(...motifItems(th.motif, p, motifC, `Pattern · ${p.name}`, 0.8));
@@ -179,13 +179,15 @@ function itemsOn(items: SceneItem[], p: { x: number; y: number; w: number; h: nu
 }
 
 /** 3D mockup: front, side and lid artwork mapped onto an isometric box (near corner in the middle). */
+const sleeveBox0 = (d: Dieline) => d.panels.some((p) => p.name === 'Sleeve top');
 export function templateMockupSvg(t: PackTemplate): string {
   const d = templateDieline(t), items = templateScene(t, 3);
   const P = (n: string) => d.panels.find((p) => p.name === n);
   const lidBox = !!P('Lid base') && !P('Front');
   const front = lidBox ? (P('Lid front wall') || d.panels[0]) : (P('Front') || P('Tray front wall') || d.panels[0]);
-  const side = lidBox ? (d.panels.find((p) => p.name === 'Lid end wall') || front) : (P('Side') || d.panels.find((p) => /end wall/.test(p.name)) || front);
-  const top = lidBox ? P('Lid base')! : (P('Top closure') || P('Top flap') || P('Tray base') || front);
+  const side = sleeveBox0(d) ? (d.panels.find((p) => p.name === 'Sleeve side') || front) : lidBox ? (d.panels.find((p) => p.name === 'Lid end wall') || front) : (P('Side') || d.panels.find((p) => /end wall/.test(p.name)) || front);
+  const sleeveBox = !!P('Sleeve top');
+  const top = lidBox ? P('Lid base')! : sleeveBox ? P('Sleeve top')! : (P('Top closure') || P('Top flap') || P('Tray base') || front);
   const L = t.L, W = t.W, H = lidBox ? Math.min(t.D, 30) * 1.0 : t.D;
   const cos = Math.cos(Math.PI / 6), sin = 0.5;
   const k = 170 / Math.max((L + W) * cos, H + (L + W) * sin);

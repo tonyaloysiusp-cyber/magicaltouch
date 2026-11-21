@@ -2062,6 +2062,7 @@ scenarios.push({
     await t.shot('dieline');
     // Change the product size: the dieline is redrawn, not duplicated.
     await t.page.getByLabel('Length', { exact: true }).fill('80');
+    await t.page.getByLabel('Length', { exact: true }).press('Enter');
     await t.page.getByRole('button', { name: 'Update the dieline' }).click();
     await t.page.waitForTimeout(600);
     const cuts = await t.eval(() => window.__fabricCanvas.getObjects().filter((o) => o.__die === 'cut').length);

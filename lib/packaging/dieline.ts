@@ -18,7 +18,7 @@ export interface Dieline {
   inside: { L: number; W: number; D: number }; t: number;
 }
 
-export type BoxStyleId = 'rte' | 'ste' | 'seal' | 'sleeve' | 'tray' | 'traylid' | 'rsc' | 'hsc';
+export type BoxStyleId = 'rte' | 'ste' | 'seal' | 'sleeve' | 'tray' | 'traylid' | 'matchbox' | 'rsc' | 'hsc' | 'fol';
 export interface BoxStyleDef { id: BoxStyleId; name: string; code: string; group: 'Folding carton' | 'Tray & lid' | 'Corrugated'; hint: string }
 export const BOX_STYLES: BoxStyleDef[] = [
   { id: 'rte', name: 'Reverse tuck end', code: 'ECMA A20 type', group: 'Folding carton', hint: 'Top tuck on the back, bottom tuck on the front — cosmetics, pharma, retail.' },
@@ -27,8 +27,10 @@ export const BOX_STYLES: BoxStyleDef[] = [
   { id: 'sleeve', name: 'Sleeve', code: 'Open ends', group: 'Folding carton', hint: 'A wrap that slides over a tray or product.' },
   { id: 'tray', name: 'Four-corner tray', code: 'Glued corners', group: 'Tray & lid', hint: 'Open tray with corner flaps glued inside the walls.' },
   { id: 'traylid', name: 'Tray with lid', code: 'Two pieces', group: 'Tray & lid', hint: 'A tray and a slightly larger lid on one sheet — gift boxes.' },
+  { id: 'matchbox', name: 'Tray and sleeve', code: 'Matchbox / drawer', group: 'Tray & lid', hint: 'A four-corner tray that slides into a sleeve — drawer boxes.' },
   { id: 'rsc', name: 'Regular slotted container', code: 'FEFCO 0201', group: 'Corrugated', hint: 'The standard shipping box: flaps meet in the middle.' },
   { id: 'hsc', name: 'Half slotted container', code: 'FEFCO 0200', group: 'Corrugated', hint: 'Like 0201 with no top flaps — open top.' },
+  { id: 'fol', name: 'Full overlap container', code: 'FEFCO 0203', group: 'Corrugated', hint: 'All flaps the full width — outer flaps overlap completely for strength.' },
 ];
 
 export interface DieOptions {
@@ -158,7 +160,8 @@ function sleeve(o: DieOptions): Dieline {
 
 /** Four-corner tray at (ox, oy): base L×W, walls D, corner flaps on the long walls glued inside the end walls. */
 function trayAt(n: Net, ox: number, oy: number, L: number, W: number, D: number, label: string) {
-  const bx0 = ox + D, by0 = oy + D, bx1 = bx0 + L, by1 = by0 + W, cf = Math.max(4, D - 1);
+  // Corner flaps fold onto the end wall (length W); the two flaps on one wall must not overlap.
+  const bx0 = ox + D, by0 = oy + D, bx1 = bx0 + L, by1 = by0 + W, cf = Math.max(4, Math.min(D - 1, W / 2 - 1));
   n.panel(`${label} base`, bx0, by0, L, W);
   n.panel(`${label} front wall`, bx0, by1, L, D); n.panel(`${label} back wall`, bx0, oy, L, D);
   n.panel(`${label} end wall`, ox, by0, D, W); n.panel(`${label} end wall`, bx1, by0, D, W);
@@ -169,8 +172,9 @@ function trayAt(n: Net, ox: number, oy: number, L: number, W: number, D: number,
     const y1 = y0 + dir * D;
     n.crease(seg([bx0, y0], [bx0, y1])); n.crease(seg([bx1, y0], [bx1, y1]));
     n.cut(seg([bx0 - cf, y1], [bx1 + cf, y1]));
-    n.cut(P([[bx0, y0 + dir * 0.5], [bx0 - cf, y0 + dir * (D * 0.25)], [bx0 - cf, y1]]));
-    n.cut(P([[bx1, y0 + dir * 0.5], [bx1 + cf, y0 + dir * (D * 0.25)], [bx1 + cf, y1]]));
+    const ch = Math.min(D * 0.25, cf);  // 45°-ish relief at the base so the flap clears the base fold
+    n.cut(P([[bx0, y0 + dir * 0.5], [bx0 - cf, y0 + dir * ch], [bx0 - cf, y1]]));
+    n.cut(P([[bx1, y0 + dir * 0.5], [bx1 + cf, y0 + dir * ch], [bx1 + cf, y1]]));
   }
   // end walls
   n.cut(P([[bx0, by0], [ox, by0], [ox, by1], [bx0, by1]]));
@@ -193,10 +197,26 @@ function trayLid(o: DieOptions): Dieline {
     notes: [`Lid inside ${f(lL)} × ${f(lW)} mm (tray outside + 1 mm play), ${f(lD)} mm deep.`] };
 }
 
-function slotted(o: DieOptions, topFlaps: boolean): Dieline {
+/** Tray that slides into a sleeve: tray as tray(), sleeve wraps the tray's outside with 1 mm play. */
+function matchbox(o: DieOptions): Dieline {
+  const n = new Net(), t = o.t, L = o.L + 2 * t, W = o.W + 2 * t, D = o.D;
+  trayAt(n, 0, 0, L, W, D, 'Tray');
+  // sleeve inside = tray outside + play; its length runs along the tray width
+  const sL = L + 2 * t + 1, sD = D + 2 * t + 1, sLen = W + 2 * t, g = Math.max(o.glue, 12);
+  const oy = W + 2 * D + 14, x0 = g, x1 = x0 + sL, x2 = x1 + sD, x3 = x2 + sL, x4 = x3 + sD;
+  n.panel('Sleeve top', x0, oy, sL, sLen); n.panel('Sleeve side', x1, oy, sD, sLen); n.panel('Sleeve bottom', x2, oy, sL, sLen); n.panel('Sleeve side', x3, oy, sD, sLen);
+  for (const x of [x1, x2, x3]) n.crease(seg([x, oy], [x, oy + sLen]));
+  glueFlap(n, x0, oy, oy + sLen, g);
+  n.cut(P([[x0, oy], [x4, oy], [x4, oy + sLen], [x0, oy + sLen]]));
+  return { style: 'matchbox', title: 'Tray and sleeve', w: Math.max(L + 2 * D, x4), h: oy + sLen, lines: n.lines, panels: n.panels, inside: { L: o.L, W: o.W, D: o.D }, t,
+    notes: [`Sleeve inside ${f(sL)} × ${f(sD)} mm (tray outside + 1 mm play), ${f(sLen)} mm long.`] };
+}
+
+function slotted(o: DieOptions, topFlaps: boolean, full = false): Dieline {
   const n = new Net(), t = o.t;
   const Lp = o.L + 2 * t, Wp = o.W + 2 * t, Dp = o.D + 2 * t, g = Math.max(o.glue, 25);
-  const fd = Wp / 2 + t, slot = Math.max(3, 2 * t + 1);
+  // 0201: flaps half the width (outer flaps meet); 0203: flaps the full width (outer flaps overlap).
+  const fd = full ? Wp : Wp / 2 + t, slot = Math.max(3, 2 * t + 1);
   const x0 = g, x1 = x0 + Lp, x2 = x1 + Wp, x3 = x2 + Lp, x4 = x3 + Wp;
   const y0 = topFlaps ? fd : 0, y1 = y0 + Dp;
   n.panel('Front', x0, y0, Lp, Dp); n.panel('Side', x1, y0, Wp, Dp); n.panel('Back', x2, y0, Lp, Dp); n.panel('Side', x3, y0, Wp, Dp);
@@ -215,8 +235,8 @@ function slotted(o: DieOptions, topFlaps: boolean): Dieline {
     fl(y1, 1, 'Bottom flap');
     if (topFlaps) fl(y0, -1, 'Top flap'); else n.cut(seg([a, y0], [b, y0]));
   });
-  return { style: topFlaps ? 'rsc' : 'hsc', title: topFlaps ? 'Regular slotted container (FEFCO 0201)' : 'Half slotted container (FEFCO 0200)', w: x4, h: y1 + fd, lines: n.lines, panels: n.panels, inside: { L: o.L, W: o.W, D: o.D }, t,
-    notes: [`Flaps ${f(fd)} mm (meet in the middle), slots ${f(slot)} mm, manufacturer's joint ${f(g)} mm.`] };
+  return { style: full ? 'fol' : topFlaps ? 'rsc' : 'hsc', title: full ? 'Full overlap container (FEFCO 0203)' : topFlaps ? 'Regular slotted container (FEFCO 0201)' : 'Half slotted container (FEFCO 0200)', w: x4, h: y1 + fd, lines: n.lines, panels: n.panels, inside: { L: o.L, W: o.W, D: o.D }, t,
+    notes: [`Flaps ${f(fd)} mm (${full ? 'outer flaps overlap fully' : 'meet in the middle'}), slots ${f(slot)} mm, manufacturer's joint ${f(g)} mm.`] };
 }
 
 export function makeDieline(o: DieOptions): Dieline {
@@ -230,6 +250,8 @@ export function makeDieline(o: DieOptions): Dieline {
     case 'traylid': return trayLid(c);
     case 'rsc': return slotted(c, true);
     case 'hsc': return slotted(c, false);
+    case 'fol': return slotted(c, true, true);
+    case 'matchbox': return matchbox(c);
   }
 }
 

@@ -15,7 +15,7 @@ import { BOX_STYLES, type BoxStyleId } from '@/lib/packaging/dieline';
 import { BOARD_GRADES, caliperFor, creaseSetup, gradeById, gsmRange } from '@/lib/packaging/board';
 import { checkStructure } from '@/lib/packaging/validate';
 import { defaultClearance } from '@/lib/packaging/editorModel';
-import { DIE_STYLE, PAGE_MARGIN, PX, dieToFabric, objectPathPx, pageSizePx, specDieline, specInner, type DieKind, type PackSpec } from '@/lib/packaging/editorBridge';
+import { DIE_STYLE, PAGE_MARGIN, PX, dieToFabric, objectPathPx, remapBox, pageSizePx, specDieline, specInner, type DieKind, type PackSpec } from '@/lib/packaging/editorBridge';
 import { StyleThumb } from '@/components/packaging/StyleThumb';
 
 export interface PackagingApi {
@@ -23,6 +23,10 @@ export interface PackagingApi {
   fabric: () => any;
   page: () => { id?: string; x: number; y: number; width: number; height: number };
   resize: (w: number, h: number) => void;
+  /** change the page size without touching objects (the panel maps artwork itself) */
+  resizeOnly?: (w: number, h: number) => void;
+  /** artwork objects on the current page (no page frames, guides or helpers) */
+  pageArtwork?: () => any[];
   commit: () => void;
   selection: () => any[];
   pressPdf: () => Promise<void>;
@@ -38,12 +42,19 @@ export function defaultSpec(): PackSpec {
   return { style: 'rte', product: { L: 50, W: 50, H: 50 }, clearance: defaultClearance(g.family), grade: g.id, gsm: 350, t: caliperFor(g, 350), glue: g.glue, tuck: 15, lidDepth: 30 };
 }
 
+/** Number field that commits on Enter or when it loses focus — typing "12.5" never redraws at "1". */
 function Field({ label, value, onChange, unit = 'mm', step = 0.5 }: { label: string; value: number; onChange: (v: number) => void; unit?: string; step?: number }) {
+  const [txt, setTxt] = useState(String(value));
+  const [editing, setEditing] = useState(false);
+  useEffect(() => { if (!editing) setTxt(String(value)); }, [value, editing]);
+  const commit = () => { setEditing(false); const v = Number(txt.replace(',', '.')); if (txt !== '' && isFinite(v) && v >= 0) onChange(v); else setTxt(String(value)); };
   return (
     <label className="block text-[11.5px]">
       <span className="text-mt-muted">{label}</span>
       <span className="mt-0.5 flex h-8 items-center rounded-md border border-mt-border bg-mt-bg focus-within:border-mt-ink/50">
-        <input type="number" step={step} value={value} onChange={(e) => { const v = Number(e.target.value); if (e.target.value !== '' && isFinite(v) && v >= 0) onChange(v); }} aria-label={label} className="h-full w-full min-w-0 bg-transparent px-2 text-[12.5px] tabular-nums outline-none" />
+        <input inputMode="decimal" value={txt} aria-label={label} onFocus={() => setEditing(true)} onChange={(e) => setTxt(e.target.value)} onBlur={commit}
+          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); commit(); (e.target as HTMLInputElement).blur(); } if (e.key === 'ArrowUp' || e.key === 'ArrowDown') { e.preventDefault(); const v = Math.max(0, Math.round(((Number(txt) || 0) + (e.key === 'ArrowUp' ? step : -step) * (e.shiftKey ? 10 : 1)) * 1000) / 1000); setTxt(String(v)); onChange(v); } }}
+          className="h-full w-full min-w-0 bg-transparent px-2 text-[12.5px] tabular-nums outline-none" />
         <span className="pr-2 text-[10.5px] text-mt-faint">{unit}</span>
       </span>
     </label>
@@ -59,7 +70,10 @@ export function PackagingPanel({ api }: { api: PackagingApi }) {
   };
   const [spec, setSpec] = useState<PackSpec>(() => readSpec() || defaultSpec());
   const [applied, setApplied] = useState<string | null>(() => { const s = readSpec(); return s ? JSON.stringify(s) : null; });
-  const [unit, setUnit] = useState<Unit>('mm');
+  const [unit, setUnit] = useState<Unit>(() => { try { return (localStorage.getItem('mt-pack-unit') as Unit) || 'mm'; } catch { return 'mm'; } });
+  useEffect(() => { try { localStorage.setItem('mt-pack-unit', unit); } catch { /* optional */ } }, [unit]);
+  const u = (mm: number) => r2(mm / UK[unit]), toMm = (v: number) => Math.round(v * UK[unit] * 1000) / 1000;
+  const stepU = unit === 'mm' ? 1 : unit === 'cm' ? 0.1 : 0.05, fine = unit === 'mm' ? 0.01 : unit === 'cm' ? 0.001 : 0.001;
   const [busy, setBusy] = useState<string | null>(null);
   const [, bump] = useState(0);
   useEffect(() => { const c = api.canvas(); if (!c) return; const f = () => bump((x) => x + 1); c.on('selection:created', f); c.on('selection:updated', f); c.on('selection:cleared', f); return () => { c.off('selection:created', f); c.off('selection:updated', f); c.off('selection:cleared', f); }; }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -76,19 +90,32 @@ export function PackagingPanel({ api }: { api: PackagingApi }) {
 
   const dieObjs = () => { const c = api.canvas(); const page = api.page(); return c ? c.getObjects().filter((o: any) => o.__die && (!page.id || !o.__artboardId || o.__artboardId === page.id)) : []; };
 
-  /** Draw (or redraw) the dieline on this page; artwork stays. */
+  /** Draw (or redraw) the dieline on this page. Artwork moves and resizes with the panel it sits on. */
   const apply = () => {
     const c = api.canvas(), F = api.fabric(); if (!c || !F) return;
-    c.getObjects().filter((o: any) => o.__dieGen && (!api.page().id || !o.__artboardId || o.__artboardId === api.page().id)).forEach((o: any) => c.remove(o));
-    const size = pageSizePx(die), page = api.page();
-    if (Math.abs(page.width - size.width) > 1 || Math.abs(page.height - size.height) > 1) api.resize(size.width, size.height);
-    const p2 = api.page();
-    const objs = dieToFabric(F, die, { x: p2.x + PAGE_MARGIN * PX, y: p2.y + PAGE_MARGIN * PX }, spec);
+    const page = api.page();
+    const onPage = (o: any) => !page.id || !o.__artboardId || o.__artboardId === page.id;
+    let prev: PackSpec | null = null; try { prev = applied ? JSON.parse(applied) : null; } catch { prev = null; }
+    const oldDie = prev ? specDieline(prev) : null;
+    const origin = { x: page.x + PAGE_MARGIN * PX, y: page.y + PAGE_MARGIN * PX };
+    // plan where each artwork object goes before anything moves
+    const art = oldDie ? (api.pageArtwork ? api.pageArtwork() : c.getObjects().filter((o: any) => onPage(o) && !o.__isArtboard)).filter((o: any) => !o.__dieGen) : [];
+    const plans = art.map((o: any) => { const r = o.getBoundingRect(true, true); return { o, plan: remapBox({ x: (r.left - origin.x) / PX, y: (r.top - origin.y) / PX, w: r.width / PX, h: r.height / PX }, oldDie!, die) }; });
+    c.getObjects().filter((o: any) => o.__dieGen && onPage(o)).forEach((o: any) => c.remove(o));
+    const size = pageSizePx(die);
+    if (Math.abs(page.width - size.width) > 1 || Math.abs(page.height - size.height) > 1) (api.resizeOnly || api.resize)(size.width, size.height);
+    const p2 = api.page(), o2 = { x: p2.x + PAGE_MARGIN * PX, y: p2.y + PAGE_MARGIN * PX };
+    if (api.resizeOnly) for (const { o, plan } of plans) {
+      o.set({ scaleX: (o.scaleX || 1) * plan.fx, scaleY: (o.scaleY || 1) * plan.fy });
+      o.setPositionByOrigin(new F.Point(o2.x + plan.cx * PX, o2.y + plan.cy * PX), 'center', 'center');
+      o.setCoords();
+    }
+    const objs = dieToFabric(F, die, o2, spec);
     objs.forEach((o) => { c.add(o); c.bringToFront(o); });
     c.requestRenderAll();
     api.commit();
     setApplied(JSON.stringify(spec));
-    api.notice(hasDie ? 'Dieline updated — artwork kept on the page.' : 'Dieline added. Design on the page; the die lines are locked layers.');
+    api.notice(hasDie ? `Dieline updated — ${plans.length} artwork object${plans.length === 1 ? '' : 's'} moved with their panels.` : 'Dieline added. Design on the page; the die lines are locked layers.');
   };
 
   const markAs = (kind: DieKind | 'art') => {
@@ -159,34 +186,43 @@ export function PackagingPanel({ api }: { api: PackagingApi }) {
         </div>
       </section>
       <section>
-        <div className="mb-1.5 flex items-center justify-between">
-          <p className="text-[10.5px] font-semibold uppercase tracking-[0.08em] text-mt-faint">Product size</p>
-          <select value={unit} onChange={(e) => setUnit(e.target.value as Unit)} aria-label="Units" className="h-6 rounded border border-mt-border bg-mt-bg px-1 text-[11px]"><option value="mm">mm</option><option value="cm">cm</option><option value="in">in</option></select>
+        <div className="mb-1.5 flex items-center justify-between gap-2">
+          <p className="text-[10.5px] font-semibold uppercase tracking-[0.08em] text-mt-faint">Size</p>
+          <div className="inline-flex rounded-md border border-mt-border p-0.5" role="radiogroup" aria-label="Units">
+            {(['mm', 'cm', 'in'] as Unit[]).map((x) => <button key={x} type="button" role="radio" aria-checked={unit === x} onClick={() => setUnit(x)} className={`h-6 rounded px-2 text-[11px] font-semibold ${unit === x ? 'bg-mt-ink text-mt-bg' : 'text-mt-muted hover:text-mt-ink'}`}>{x}</button>)}
+          </div>
         </div>
+        <select value={spec.mode || 'product'} onChange={(e) => { const m = e.target.value as PackSpec['mode']; const i = specInner(spec); const t2 = spec.t; set({ mode: m, product: m === 'inside' ? { L: i.L, W: i.W, H: i.D } : m === 'outside' ? { L: r2(i.L + 2 * t2), W: r2(i.W + 2 * t2), H: r2(i.D + 2 * t2) } : { L: r2(i.L - spec.clearance.L), W: r2(i.W - spec.clearance.W), H: r2(i.D - spec.clearance.H) } }); }} aria-label="Size means" className="mb-1.5 h-8 w-full rounded-md border border-mt-border bg-mt-bg px-2 text-[12px]">
+          <option value="product">Product size (+ fitting gap)</option>
+          <option value="inside">Box inside size</option>
+          <option value="outside">Box outside size</option>
+        </select>
         <div className="grid grid-cols-3 gap-1.5">
-          {(['L', 'W', 'H'] as const).map((k) => <Field key={k} label={k === 'L' ? 'Length' : k === 'W' ? 'Width' : 'Height'} unit={unit} step={unit === 'mm' ? 1 : 0.1} value={r2(spec.product[k] / UK[unit])} onChange={(v) => set({ product: { ...spec.product, [k]: r2(v * UK[unit]) } })} />)}
+          {(['L', 'W', 'H'] as const).map((k) => <Field key={k} label={k === 'L' ? 'Length' : k === 'W' ? 'Width' : 'Height'} unit={unit} step={stepU} value={u(spec.product[k])} onChange={(v) => set({ product: { ...spec.product, [k]: toMm(v) } })} />)}
         </div>
-        <p className="mt-1.5 text-[11px] text-mt-muted">Fitting gap added (total per size)</p>
-        <div className="mt-0.5 grid grid-cols-3 gap-1.5">
-          {(['L', 'W', 'H'] as const).map((k) => <Field key={k} label={`+ ${k}`} value={spec.clearance[k]} onChange={(v) => set({ clearance: { ...spec.clearance, [k]: v } })} />)}
-        </div>
+        {(spec.mode || 'product') === 'product' && <>
+          <p className="mt-1.5 text-[11px] text-mt-muted">Fitting gap added (total per size)</p>
+          <div className="mt-0.5 grid grid-cols-3 gap-1.5">
+            {(['L', 'W', 'H'] as const).map((k) => <Field key={k} label={`+ ${k}`} unit={unit} step={stepU / 2} value={u(spec.clearance[k])} onChange={(v) => set({ clearance: { ...spec.clearance, [k]: toMm(v) } })} />)}
+          </div>
+        </>}
       </section>
       <section className="space-y-2">
         <p className="text-[10.5px] font-semibold uppercase tracking-[0.08em] text-mt-faint">Board</p>
         <select value={spec.grade} onChange={(e) => { const g = gradeById(e.target.value), rg = gsmRange(g); setBoard(g.id, rg ? Math.min(rg[1], Math.max(rg[0], spec.gsm)) : spec.gsm); }} aria-label="Board" className="h-8 w-full rounded-md border border-mt-border bg-mt-bg px-2 text-[12.5px]">{BOARD_GRADES.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}</select>
         {range && <label className="block text-[11.5px]"><span className="text-mt-muted">Weight · {spec.gsm} g/m² → {spec.t} mm</span><input type="range" min={range[0]} max={range[1]} step={5} value={spec.gsm} onChange={(e) => setBoard(spec.grade, Number(e.target.value))} aria-label="Board weight" className="w-full" /></label>}
         <div className="grid grid-cols-2 gap-1.5">
-          <Field label="Thickness" value={spec.t} step={0.01} onChange={(v) => set({ t: v })} />
-          <Field label="Glue flap" value={spec.glue} onChange={(v) => set({ glue: v })} />
-          {(spec.style === 'rte' || spec.style === 'ste') && <Field label="Tuck depth" value={spec.tuck} onChange={(v) => set({ tuck: v })} />}
-          {spec.style === 'traylid' && <Field label="Lid depth" value={spec.lidDepth} onChange={(v) => set({ lidDepth: v })} />}
+          <Field label="Thickness" unit={unit} step={fine * 10} value={unit === 'mm' ? spec.t : Math.round(spec.t / UK[unit] * 10000) / 10000} onChange={(v) => set({ t: toMm(v) })} />
+          <Field label="Glue flap" unit={unit} step={stepU} value={u(spec.glue)} onChange={(v) => set({ glue: toMm(v) })} />
+          {(spec.style === 'rte' || spec.style === 'ste') && <Field label="Tuck depth" unit={unit} step={stepU} value={u(spec.tuck)} onChange={(v) => set({ tuck: toMm(v) })} />}
+          {spec.style === 'traylid' && <Field label="Lid depth" unit={unit} step={stepU} value={u(spec.lidDepth)} onChange={(v) => set({ lidDepth: toMm(v) })} />}
         </div>
       </section>
       <section className="rounded-lg border border-mt-border p-2.5">
         <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 tabular-nums">
-          <dt className="text-mt-muted">Inside</dt><dd className="text-right font-semibold">{r2(inner.L)} × {r2(inner.W)} × {r2(inner.D)} mm</dd>
-          <dt className="text-mt-muted">Outside</dt><dd className="text-right">{r2(outer.L)} × {r2(outer.W)} × {r2(outer.D)} mm</dd>
-          <dt className="text-mt-muted">Flat blank</dt><dd className="text-right">{r2(die.w)} × {r2(die.h)} mm</dd>
+          <dt className="text-mt-muted">Inside</dt><dd className="text-right font-semibold">{u(inner.L)} × {u(inner.W)} × {u(inner.D)} {unit}</dd>
+          <dt className="text-mt-muted">Outside</dt><dd className="text-right">{u(outer.L)} × {u(outer.W)} × {u(outer.D)} {unit}</dd>
+          <dt className="text-mt-muted">Flat blank</dt><dd className="text-right">{u(die.w)} × {u(die.h)} {unit}</dd>
           <dt className="text-mt-muted">Crease rule</dt><dd className="text-right">{crease.rulePt} pt · channel {crease.channelWidth} × {crease.channelDepth}</dd>
         </dl>
         <p className={`mt-2 text-[11.5px] font-semibold ${report.level === 'error' ? 'text-rose-600' : report.level === 'warn' ? 'text-amber-600' : 'text-emerald-600'}`}>{report.level === 'error' ? 'Will not close' : report.level === 'warn' ? 'Closes — check the notes' : `Closes — all ${report.checks.length} checks pass`}</p>
