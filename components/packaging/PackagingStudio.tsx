@@ -94,8 +94,8 @@ export function PackagingStudio() {
     <label className="block text-[12px]">
       <span className="text-mt-muted">{label}</span>
       <span className="mt-1 flex items-center rounded-lg border border-mt-border bg-mt-bg focus-within:border-mt-ink">
-        <input type="number" step={unit === 'in' ? 0.01 : step} value={unit === 'in' ? Math.round((v / 25.4) * 100) / 100 : r1(v)} onChange={(e) => onV((Number(e.target.value) || 0) * k)} aria-label={label} className="h-9 w-full bg-transparent px-2.5 tabular-nums outline-none" />
-        <span className="pr-2.5 text-mt-faint">{unit}</span>
+        <input type="number" step={unit === 'in' ? 0.01 : step} value={unit === 'in' ? Math.round((v / 25.4) * 100) / 100 : r1(v)} onChange={(e) => onV((Number(e.target.value) || 0) * k)} aria-label={label} className="h-9 w-full min-w-0 bg-transparent px-2 tabular-nums outline-none" />
+        <span className="pr-2 text-[11px] text-mt-faint">{unit}</span>
       </span>
     </label>
   );
