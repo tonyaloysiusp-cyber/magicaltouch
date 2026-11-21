@@ -17,7 +17,9 @@ export const preferredRegion = 'bom1';
 // made on first visit — quickly, next to the database — and cached. Kept to
 // 500 so a deploy stays well inside Vercel's 45-minute build limit (all
 // ~1,900 took about 40 minutes).
-const PREBUILD = 500;
+// Built ahead: the most-used templates. Every other template renders on its
+// first visit and is cached for an hour (dynamicParams + revalidate).
+const PREBUILD = 150;
 export async function generateStaticParams() {
   const all = await getAllPublishedTemplates().catch(() => []);
   return all.slice(0, PREBUILD).map((t) => ({ slug: t.slug }));
