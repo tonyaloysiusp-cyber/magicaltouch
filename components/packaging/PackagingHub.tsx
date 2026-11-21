@@ -73,7 +73,7 @@ export function PackagingHub() {
       {/* Hero — the site's brand glow, gradient word and ribbon */}
       <section className="relative overflow-hidden rounded-2xl border border-mt-border bg-mt-surface">
         <div aria-hidden className="pointer-events-none absolute -top-40 left-1/2 h-[420px] w-[1100px] max-w-[160vw] -translate-x-1/2 rounded-full opacity-[0.18] blur-3xl mt-spectrum dark:opacity-[0.26]" />
-        <BrandRibbon className="pointer-events-none absolute -bottom-10 left-1/2 hidden w-[1500px] max-w-none -translate-x-1/2 opacity-60 sm:block" />
+        <BrandRibbon className="pointer-events-none absolute -bottom-28 left-1/2 hidden w-[1500px] max-w-none -translate-x-1/2 opacity-50 sm:block" />
         <div className="relative grid items-center gap-8 p-6 lg:grid-cols-[1fr_1.15fr] lg:p-10">
           <div>
             <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-mt-muted">Packaging design studio</p>
