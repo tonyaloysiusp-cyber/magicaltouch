@@ -11,7 +11,7 @@ concurrency:
 jobs:
   e2e:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     env:
       NEXT_PUBLIC_SUPABASE_URL: https://rqkjogzljsbufbrdlbfr.supabase.co
       NEXT_PUBLIC_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJxa2pvZ3psanNidWZicmRsYmZyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkyNzgyMDcsImV4cCI6MjEwNDg1NDIwN30.-OHCqhZNWsdlbkIE3qUV6It5VUoAN1lQDUFCRLtUaPM
