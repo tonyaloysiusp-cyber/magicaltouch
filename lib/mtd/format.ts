@@ -49,9 +49,9 @@ const IMAGE_KEYS = new Set(['src', '__originalSrc', 'source']);
 export class MtdError extends Error {}
 
 /** Projects made in a dedicated tool rather than the design editor. */
-export type ToolKind = 'jersey' | 'polo' | 'tshirt' | 'pattern' | 'wall' | 'textile';
-export const TOOL_KINDS: ToolKind[] = ['jersey', 'polo', 'tshirt', 'pattern', 'wall', 'textile'];
-export const TOOL_PATHS: Record<ToolKind, string> = { jersey: '/textile-studio', polo: '/textile-studio', tshirt: '/textile-studio', pattern: '/patterns', wall: '/wallpaper-designer', textile: '/textile-studio' };
+export type ToolKind = 'jersey' | 'polo' | 'tshirt' | 'pattern' | 'wall' | 'textile' | 'packaging';
+export const TOOL_KINDS: ToolKind[] = ['jersey', 'polo', 'tshirt', 'pattern', 'wall', 'textile', 'packaging'];
+export const TOOL_PATHS: Record<ToolKind, string> = { jersey: '/textile-studio', polo: '/textile-studio', tshirt: '/textile-studio', pattern: '/patterns', wall: '/wallpaper-designer', textile: '/textile-studio', packaging: '/packaging-editor' };
 export interface MtdTool { kind: ToolKind; version: number; data: any }
 export const isToolKind = (v: unknown): v is ToolKind => typeof v === 'string' && (TOOL_KINDS as string[]).includes(v);
 /** Where an opened project belongs (tool projects open in their tool). */

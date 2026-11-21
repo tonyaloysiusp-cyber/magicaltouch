@@ -233,6 +233,7 @@ export function PackagingStudio() {
             <button type="button" onClick={dxfFile} className="flex h-10 items-center justify-center gap-1.5 rounded-xl border border-mt-border text-[13px] font-semibold hover:bg-mt-surface2" title="CAD / die maker / plotter: CUT and CREASE layers in mm"><Download size={15} /> DXF</button>
           </div>
           <button type="button" onClick={toEditor} className="flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-mt-border text-[13px] font-semibold hover:bg-mt-surface2"><PenTool size={15} /> Design on this dieline</button>
+          <a href={`/packaging-editor?style=${inside.style}&L=${inside.L}&W=${inside.W}&D=${inside.D}&t=${inside.t}&grade=${board}&gsm=${gsm}&glue=${inside.glue}&tuck=${inside.tuck}&lid=${inside.lidDepth}`} className="flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-mt-ink text-[13px] font-semibold text-mt-bg hover:opacity-90"><Box size={15} /> Open in Packaging Editor</a>
           <p className="text-[11px] leading-relaxed text-mt-muted">Cut is the spot colour <b>CutContour</b>, folds are <b>Crease</b>; both overprint and never print. The PDF is 1:1 — print or send it at 100 %.</p>
           {msg && <p role="alert" className="text-[12px] text-red-600">{msg}</p>}
         </div>

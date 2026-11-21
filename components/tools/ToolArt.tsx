@@ -237,6 +237,27 @@ const ART: Record<string, (id: string) => React.ReactNode> = {
       <g transform="translate(196 60)"><circle cx="34" cy="34" r="30" fill="#fff" stroke="#0B0B12" strokeWidth="5" /><path d="M56 56L80 80" stroke="#0B0B12" strokeWidth="9" strokeLinecap="round" /><path d="M22 34L31 43L47 25" fill="none" stroke="#10B981" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" /></g>
     </>
   ),
+  'packaging-editor': () => (
+    <>
+      <g transform="translate(30 18)">
+        <rect width="260" height="146" rx="8" fill="#fff" />
+        <rect width="260" height="14" rx="8" fill="#0B0B12" /><rect y="8" width="260" height="6" fill="#0B0B12" />
+        <rect x="0" y="14" width="16" height="132" fill="#F1F2F5" />
+        {[24, 38, 52, 66, 80].map((y) => <rect key={y} x="4" y={y} width="8" height="8" rx="2" fill={y === 24 ? '#0B0B12' : '#C9CCD4'} />)}
+        <rect x="16" y="14" width="56" height="132" fill="#FAFAFB" />
+        {[26, 36, 46, 62, 72].map((y, i) => <rect key={y} x="22" y={y} width={i % 2 ? 34 : 44} height="5" rx="2.5" fill="#E4E4EA" />)}
+        <rect x="216" y="14" width="44" height="132" fill="#FAFAFB" />
+        {[26, 36, 46].map((y) => <rect key={y} x="222" y={y} width="32" height="5" rx="2.5" fill="#E4E4EA" />)}
+        <g transform="translate(86 40)">
+          <path d="M10 20H34V86H10ZM34 20H74V86H34ZM74 20H98V86H74ZM98 20H122V86H98Z" fill="#fff" />
+          <path d="M0 26L10 20V86L0 80ZM34 20V4H74V20M34 86V102H74V86" fill="#fff" stroke="#EC008C" strokeWidth="1.2" strokeLinejoin="round" />
+          <path d="M10 20H122V86H10Z" fill="none" stroke="#EC008C" strokeWidth="1.2" />
+          <path d="M34 20V86M74 20V86M98 20V86" fill="none" stroke="#00A0E3" strokeWidth="1" strokeDasharray="3 2" />
+          <rect x="40" y="38" width="28" height="22" rx="2" fill="none" stroke="#2563eb" strokeWidth="1" strokeDasharray="2 1.5" />
+        </g>
+      </g>
+    </>
+  ),
   packaging: () => (
     <>
       <g transform="translate(40 30)">
