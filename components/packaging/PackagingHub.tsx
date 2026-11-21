@@ -1,0 +1,151 @@
+'use client';
+
+// Packaging start page: mockups, a short guide, the template gallery and a
+// blank box. Every "Customise" opens the full design editor with the
+// artwork as editable layers and the dieline as locked line layers; the
+// Packaging panel in the editor keeps the box, line types and press files.
+
+import { useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { ArrowRight, Box, FileDown, Layers, PenTool, Ruler, Sparkles } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
+import { putHandoff, editorUrlForLocal, newLocalKey } from '@/lib/mtd/handoff';
+import { PERSIST_PROPS } from '@/lib/editor/persist';
+import { BOX_STYLES, type BoxStyleId } from '@/lib/packaging/dieline';
+import { PACK_TEMPLATES, templateDieline, templateFlatSvg, templateMockupSvg, templateScene, type PackTemplate } from '@/lib/packaging/templates';
+import { PAGE_MARGIN, PX, dieToFabric, pageSizePx, sceneToFabric, specDieline, type PackSpec } from '@/lib/packaging/editorBridge';
+import { defaultSpec } from '@/components/editor/shell/panels/PackagingPanel';
+import { gradeById } from '@/lib/packaging/board';
+import { StyleThumb } from './StyleThumb';
+
+const FILTERS: { id: string; label: string; test: (t: PackTemplate) => boolean }[] = [
+  { id: 'all', label: 'All designs', test: () => true },
+  { id: 'carton', label: 'Folding cartons', test: (t) => ['rte', 'ste', 'seal'].includes(t.style) },
+  { id: 'gift', label: 'Gift boxes & trays', test: (t) => t.style === 'traylid' || t.style === 'tray' },
+  { id: 'sleeve', label: 'Sleeves', test: (t) => t.style === 'sleeve' },
+  { id: 'ship', label: 'Shipping boxes', test: (t) => t.style === 'rsc' || t.style === 'hsc' },
+];
+
+function specFor(t: PackTemplate): PackSpec {
+  const grade = t.t >= 3 ? 'bflute' : t.t >= 1.5 ? 'rigid' : 'sbs';
+  const g = gradeById(grade);
+  return { style: t.style, product: { L: t.L - 2, W: t.W - 2, H: t.D - 2 }, clearance: { L: 2, W: 2, H: 2 }, grade, gsm: grade === 'sbs' ? 400 : 0, t: t.t, glue: g.glue, tuck: 15, lidDepth: Math.min(t.D, 30) };
+}
+
+export function PackagingHub() {
+  const router = useRouter();
+  const [filter, setFilter] = useState('all');
+  const [busy, setBusy] = useState<string | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  const list = useMemo(() => PACK_TEMPLATES.filter(FILTERS.find((f) => f.id === filter)!.test), [filter]);
+  const hero = useMemo(() => ['botanical-tea-rte', 'kraft-coffee-sleeve', 'luxe-cosmetics-rte'].map((id) => PACK_TEMPLATES.find((t) => t.id === id)!).filter(Boolean), []);
+
+  /** Open a template (or a blank box) in the design editor. */
+  const open = async (t: PackTemplate | null, style?: BoxStyleId) => {
+    setErr(null); setBusy(t?.id || `blank-${style}`);
+    try {
+      const { data } = await supabase.auth.getSession();
+      if (!data.session) { router.push('/login?next=' + encodeURIComponent('/packaging-dieline')); return; }
+      const mod: any = await import('fabric'); const F = mod.fabric;
+      const spec = t ? specFor(t) : { ...defaultSpec(), style: style || 'rte' };
+      if (!t && style && (style === 'rsc' || style === 'hsc')) Object.assign(spec, { grade: 'bflute', gsm: 0, t: 3, glue: 30, clearance: { L: 4, W: 4, H: 4 }, product: { L: 300, W: 200, H: 150 } });
+      if (!t && style && (style === 'tray' || style === 'traylid')) Object.assign(spec, { grade: 'rigid', gsm: 0, t: 1.5, glue: 18, clearance: { L: 3, W: 3, H: 2 }, product: { L: 150, W: 100, H: 50 } });
+      const die = t ? templateDieline(t) : specDieline(spec);
+      const size = pageSizePx(die), origin = { x: PAGE_MARGIN * PX, y: PAGE_MARGIN * PX };
+      const art = t ? sceneToFabric(F, templateScene(t), origin) : [];
+      const objs = [...art, ...dieToFabric(F, die, origin, spec)];
+      const canvas = { version: '5.1.0', background: '#FFFFFF', objects: objs.map((o) => { const j = o.toObject(PERSIST_PROPS); for (const k of ['__die', '__dieGen', '__pack']) if (o[k] !== undefined) j[k] = o[k]; return j; }) };
+      const name = t ? t.name : `${BOX_STYLES.find((s) => s.id === spec.style)?.name || 'Box'} — new`;
+      const key = newLocalKey();
+      putHandoff(key, { opened: { document: { name, width: size.width, height: size.height, editor: 'design' }, canvas, fonts: [], thumbnail: null, template: null, missingAssets: [] } as any, file: { handle: null, fileName: `${name}.mtd` } } as any);
+      router.push(`${editorUrlForLocal(key, size.width, size.height)}&panel=packaging`);
+    } catch (e: any) { setErr(e?.message || 'Could not open the editor.'); setBusy(null); }
+  };
+
+  return (
+    <div className="space-y-10">
+      {/* Hero */}
+      <section className="grid items-center gap-8 rounded-2xl border border-mt-border bg-mt-surface p-6 lg:grid-cols-[1fr_1.15fr] lg:p-10">
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-mt-faint">Packaging design</p>
+          <h2 className="mt-2 font-[family-name:var(--font-display)] text-3xl font-medium leading-tight tracking-[-0.02em] sm:text-4xl">Design the box and its dieline in one editor.</h2>
+          <p className="mt-3 max-w-lg text-[15px] leading-relaxed text-mt-muted">Start from a template or your product size. The full design editor opens with text, shapes, images, patterns and layers on the real flat blank, with cut and crease lines locked on top. Then download the print PDF with spot-colour die lines.</p>
+          <div className="mt-6 flex flex-wrap gap-2">
+            <button type="button" onClick={() => open(null, 'rte')} disabled={!!busy} className="inline-flex h-11 items-center gap-2 rounded-full bg-mt-ink px-5 text-[14px] font-semibold text-mt-bg hover:opacity-90"><Box size={16} /> Start a blank box</button>
+            <a href="#templates" className="inline-flex h-11 items-center gap-2 rounded-full border border-mt-border px-5 text-[14px] font-semibold hover:bg-mt-surface2">Browse {PACK_TEMPLATES.length} templates <ArrowRight size={15} /></a>
+          </div>
+          {err && <p role="alert" className="mt-3 text-[13px] text-rose-600">{err}</p>}
+        </div>
+        <div className="grid grid-cols-3 items-end gap-3 rounded-xl bg-mt-surface2/70 p-4">
+          {hero.map((t) => <div key={t.id} className="[&_svg]:h-auto [&_svg]:w-full" dangerouslySetInnerHTML={{ __html: templateMockupSvg(t) }} />)}
+        </div>
+      </section>
+
+      {/* How it works */}
+      <section aria-labelledby="pk-how">
+        <h2 id="pk-how" className="text-[13px] font-semibold uppercase tracking-[0.12em] text-mt-faint">How it works</h2>
+        <ol className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {[
+            { icon: Ruler, t: 'Enter the product size', d: 'Length, width and height of what goes inside, and the board. A 2 mm fitting gap and the board thickness at every fold are added for you.' },
+            { icon: Sparkles, t: 'Pick a template or style', d: 'Tuck end, seal end, sleeve, tray, gift box or shipping box — with a ready design, or blank.' },
+            { icon: Layers, t: 'Design in the full editor', d: 'Text, fonts, shapes, images, patterns and layers on the flat blank. Draw windows or a unique outline and mark them as cut or crease.' },
+            { icon: FileDown, t: 'Download press files', d: 'Print PDF (vector, CMYK, CutContour and Crease spot colours), a branded dieline template, DXF, and the .mtd project.' },
+          ].map((s, i) => (
+            <li key={s.t} className="rounded-xl border border-mt-border bg-mt-surface p-4">
+              <span className="flex items-center gap-2 text-[12px] font-semibold text-mt-faint"><span className="grid h-6 w-6 place-items-center rounded-full bg-mt-ink text-[11px] text-mt-bg">{i + 1}</span><s.icon size={15} /></span>
+              <p className="mt-2 text-[14px] font-semibold">{s.t}</p>
+              <p className="mt-1 text-[13px] leading-relaxed text-mt-muted">{s.d}</p>
+            </li>
+          ))}
+        </ol>
+      </section>
+
+      {/* Templates */}
+      <section id="templates" aria-labelledby="pk-tpl" className="scroll-mt-16">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h2 id="pk-tpl" className="text-xl font-semibold tracking-[-0.01em]">Packaging templates</h2>
+            <p className="mt-1 text-[13px] text-mt-muted">Every design sits on a real dieline at its true size. Change the size later in the editor — the dieline follows.</p>
+          </div>
+          <div className="flex flex-wrap gap-1.5" role="tablist">
+            {FILTERS.map((f) => <button key={f.id} type="button" role="tab" aria-selected={filter === f.id} onClick={() => setFilter(f.id)} className={`h-8 rounded-full px-3 text-[12.5px] font-semibold ${filter === f.id ? 'bg-mt-ink text-mt-bg' : 'border border-mt-border hover:bg-mt-surface2'}`}>{f.label}</button>)}
+          </div>
+        </div>
+        <ul className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {list.map((t) => (
+            <li key={t.id} className="group overflow-hidden rounded-xl border border-mt-border bg-mt-surface">
+              <div className="relative grid h-52 place-items-center bg-mt-surface2/70 p-4 [&_svg]:max-h-44 [&_svg]:w-auto">
+                <div className="transition-opacity duration-200 group-hover:opacity-0" dangerouslySetInnerHTML={{ __html: templateMockupSvg(t) }} />
+                <div className="absolute inset-0 grid place-items-center p-4 opacity-0 transition-opacity duration-200 group-hover:opacity-100 [&_svg]:max-h-44 [&_svg]:max-w-full" dangerouslySetInnerHTML={{ __html: templateFlatSvg(t) }} />
+              </div>
+              <div className="flex items-center justify-between gap-2 p-3">
+                <div className="min-w-0">
+                  <p className="truncate text-[13.5px] font-semibold">{t.name}</p>
+                  <p className="truncate text-[11.5px] text-mt-faint">{BOX_STYLES.find((s) => s.id === t.style)?.name} · {t.L} × {t.W} × {t.D} mm</p>
+                </div>
+                <button type="button" onClick={() => open(t)} disabled={!!busy} className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full bg-mt-ink px-3 text-[12px] font-semibold text-mt-bg disabled:opacity-50"><PenTool size={13} /> {busy === t.id ? 'Opening…' : 'Customise'}</button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      {/* Blank styles */}
+      <section aria-labelledby="pk-blank">
+        <h2 id="pk-blank" className="text-xl font-semibold tracking-[-0.01em]">Start from a blank style</h2>
+        <p className="mt-1 text-[13px] text-mt-muted">Opens the editor with just the dieline. Set your product size in the Packaging panel.</p>
+        <ul className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {BOX_STYLES.map((s) => (
+            <li key={s.id}>
+              <button type="button" onClick={() => open(null, s.id)} disabled={!!busy} className="w-full rounded-xl border border-mt-border bg-mt-surface p-3 text-left hover:border-mt-ink/40">
+                <span className="block text-mt-ink/80"><StyleThumb id={s.id} className="h-20 w-full" /></span>
+                <span className="mt-2 block text-[13px] font-semibold">{s.name}</span>
+                <span className="block text-[11.5px] text-mt-faint">{s.code} · {s.hint}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      </section>
+    </div>
+  );
+}

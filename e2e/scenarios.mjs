@@ -2050,3 +2050,27 @@ scenarios.push({
     await t.shot('booklet');
   },
 });
+
+scenarios.push({
+  name: 'packaging-panel',
+  async run(t) {
+    await t.editor('w=1080&h=1080&panel=packaging');
+    await t.page.getByRole('button', { name: 'Add this dieline to the page' }).click();
+    await t.page.waitForTimeout(800);
+    const kinds = await t.eval(() => window.__fabricCanvas.getObjects().filter((o) => o.__die).map((o) => o.__die).sort());
+    t.check('dieline added as cut and crease layers', kinds.includes('cut') && kinds.includes('crease'), kinds.join(','));
+    await t.shot('dieline');
+    // Change the product size: the dieline is redrawn, not duplicated.
+    await t.page.getByLabel('Length', { exact: true }).fill('80');
+    await t.page.getByRole('button', { name: 'Update the dieline' }).click();
+    await t.page.waitForTimeout(600);
+    const cuts = await t.eval(() => window.__fabricCanvas.getObjects().filter((o) => o.__die === 'cut').length);
+    t.check('one cut layer after updating', cuts === 1, cuts);
+    // Mark a drawn rectangle as a crease line.
+    await t.eval(() => { const F = window.fabric, c = window.__fabricCanvas; const r = new F.Rect({ left: 200, top: 200, width: 80, height: 40, fill: '#ff0000' }); c.add(r); c.setActiveObject(r); c.fire('selection:created', { selected: [r] }); });
+    await t.page.waitForTimeout(300);
+    await t.page.getByRole('button', { name: /^Perforation$/ }).click();
+    const perf = await t.eval(() => window.__fabricCanvas.getObjects().filter((o) => o.__die === 'perf').length);
+    t.check('selected shape marked as perforation', perf === 1, perf);
+  },
+});

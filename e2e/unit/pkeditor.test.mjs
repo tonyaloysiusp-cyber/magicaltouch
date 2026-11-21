@@ -65,3 +65,29 @@ test('editor PDF: spot plates, trim box, outlined text, template header', async 
   assert.equal(shapePath({ kind: 'path', d: 'M0 0 L10 0', x: 5, y: 2 }).replace(/\s+/g, ' ').trim(), 'M5 2 L15 2');
   assert.match(pathToPdf('M0 0 h10 v10 z', (x, y) => [x, y]), /10 0 l\n10 10 l\nh/);
 });
+
+test('die layer is added to an artwork PDF as overprinting spot colours with a trim box', async () => {
+  const { appendDieLayer, specDieline, pageSizePx } = await import('../../lib/packaging/editorBridge.ts');
+  const { PDFDocument, rgb } = await import('pdf-lib');
+  const src = await PDFDocument.create();
+  const p = src.addPage([300, 300]); p.drawRectangle({ x: 10, y: 10, width: 100, height: 100, color: rgb(1, 0, 0) });
+  const out = await appendDieLayer(await src.save(), [{ kind: 'cut', d: 'M10 10 L90 10 L90 90 L10 90 Z' }, { kind: 'crease', d: 'M50 10 L50 90' }]);
+  const raw = Buffer.from(out).toString('latin1');
+  assert.match(raw, /CutContour/); assert.match(raw, /Crease/);
+  const pg = (await PDFDocument.load(out)).getPage(0);
+  const tb = pg.getTrimBox();
+  assert.ok(Math.abs(tb.width - 80 * 72 / 25.4) < 0.5);
+  const d = specDieline({ style: 'rte', product: { L: 50, W: 50, H: 50 }, clearance: { L: 2, W: 2, H: 2 }, grade: 'sbs', gsm: 350, t: 0.43, glue: 14, tuck: 15, lidDepth: 30 });
+  assert.ok(pageSizePx(d).width > d.w * 3.7);
+});
+
+test('templates: 24 designs, scenes and previews build', async () => {
+  const { PACK_TEMPLATES, templateScene, templateFlatSvg, templateMockupSvg } = await import('../../lib/packaging/templates.ts');
+  assert.ok(PACK_TEMPLATES.length >= 24);
+  for (const t of PACK_TEMPLATES) {
+    const sc = templateScene(t);
+    assert.ok(sc.some((i) => i.k === 'text' && i.name === 'Brand name'), t.id);
+    assert.ok(templateFlatSvg(t).startsWith('<svg'));
+    assert.ok(!/NaN/.test(templateMockupSvg(t)), t.id);
+  }
+});

@@ -63,6 +63,11 @@ export const PERSIST_PROPS = [
   '__certTpl',
   '__certCode',
   '__certSlot',
+  // Packaging: die line type (cut / crease / perf / glue), generated dieline
+  // flag and the box spec it was made from (lib/packaging/editorBridge.ts).
+  '__die',
+  '__dieGen',
+  '__pack',
   // Fabric's own interaction locks are not serialized by default.
   'lockMovementX',
   'lockMovementY',
