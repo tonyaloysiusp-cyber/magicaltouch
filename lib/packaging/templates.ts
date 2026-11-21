@@ -66,7 +66,7 @@ function motifItems(m: Motif, area: { x: number; y: number; w: number; h: number
   const out: SceneItem[] = [];
   const s = 9 * scale, { x, y, w, h } = area;
   if (m === 'none' || w < 6 || h < 6) return out;
-  if (m === 'dots') { for (let yy = y + s / 2; yy < y + h; yy += s) for (let xx = x + s / 2 + ((Math.round((yy - y) / s) % 2) * s) / 2; xx < x + w; xx += s) out.push({ k: 'circle', name, cx: xx, cy: yy, r: s * 0.18, fill: colour }); }
+  if (m === 'dots') { const r = +(s * 0.18).toFixed(2); let d = ''; for (let yy = y + s / 2; yy < y + h; yy += s) for (let xx = x + s / 2 + ((Math.round((yy - y) / s) % 2) * s) / 2; xx < x + w; xx += s) d += `M${(xx - r).toFixed(1)} ${yy.toFixed(1)}a${r} ${r} 0 1 0 ${2 * r} 0a${r} ${r} 0 1 0 ${-2 * r} 0`; out.push({ k: 'path', name, d, fill: colour }); }
   else if (m === 'stripes') { for (let xx = x; xx < x + w; xx += s) out.push({ k: 'rect', name, x: xx, y, w: Math.min(s / 2, x + w - xx), h, fill: colour }); }
   else if (m === 'grid') { let d = ''; for (let xx = x; xx <= x + w; xx += s) d += `M${xx} ${y} L${xx} ${y + h} `; for (let yy = y; yy <= y + h; yy += s) d += `M${x} ${yy} L${x + w} ${yy} `; out.push({ k: 'path', name, d, stroke: colour, sw: 0.25 }); }
   else if (m === 'diamonds') { let d = ''; for (let yy = y; yy < y + h; yy += s) for (let xx = x + ((Math.round((yy - y) / s) % 2) * s) / 2; xx < x + w; xx += s) d += `M${xx + s / 2} ${yy + s * 0.2} L${xx + s * 0.8} ${yy + s / 2} L${xx + s / 2} ${yy + s * 0.8} L${xx + s * 0.2} ${yy + s / 2} Z `; out.push({ k: 'path', name, d, fill: colour }); }
@@ -161,9 +161,26 @@ export function templateFlatSvg(t: PackTemplate, o: { lines?: boolean } = {}): s
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${-pad} ${-pad} ${d.w + 2 * pad} ${d.h + 2 * pad}"><defs><clipPath id="c-${t.id}"><path d="${clip}"/></clipPath></defs><g clip-path="url(#c-${t.id})">${body}</g>${lines}</svg>`;
 }
 
+/** Scene items that can show inside a panel (bounds overlap; rotated text by its anchor). Patterns are split per mark. */
+function itemsOn(items: SceneItem[], p: { x: number; y: number; w: number; h: number }): SceneItem[] {
+  const hit = (x0: number, y0: number, x1: number, y1: number) => x1 >= p.x - 1 && x0 <= p.x + p.w + 1 && y1 >= p.y - 1 && y0 <= p.y + p.h + 1;
+  const out: SceneItem[] = [];
+  for (const it of items) {
+    if (it.k === 'rect') { if (hit(it.x, it.y, it.x + it.w, it.y + it.h)) out.push(it); }
+    else if (it.k === 'circle') { if (hit(it.cx - it.r, it.cy - it.r, it.cx + it.r, it.cy + it.r)) out.push(it); }
+    else if (it.k === 'text') { const r = it.rot ? Math.max(it.w, it.size * 3) : 0; if (hit(it.x - r, it.y - r, it.x + it.w + r, it.y + it.size * 4 + r)) out.push(it); }
+    else {
+      // keep only the sub-paths of a pattern that fall in the panel
+      const subs = it.d.split(/(?=M)/).filter((sp) => { const n = (sp.match(/-?\d*\.?\d+/g) || []).map(Number); const xs = n.filter((_, i) => i % 2 === 0), ys = n.filter((_, i) => i % 2 === 1); return xs.length && hit(Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)); });
+      if (subs.length) out.push({ ...it, d: subs.join('') });
+    }
+  }
+  return out;
+}
+
 /** 3D mockup: front, side and lid artwork mapped onto an isometric box (near corner in the middle). */
 export function templateMockupSvg(t: PackTemplate): string {
-  const d = templateDieline(t), scene = templateScene(t, 3).map(sceneItemSvg).join('');
+  const d = templateDieline(t), items = templateScene(t, 3);
   const P = (n: string) => d.panels.find((p) => p.name === n);
   const lidBox = !!P('Lid base') && !P('Front');
   const front = lidBox ? (P('Lid front wall') || d.panels[0]) : (P('Front') || P('Tray front wall') || d.panels[0]);
@@ -175,7 +192,7 @@ export function templateMockupSvg(t: PackTemplate): string {
   const fW = L * k, sW = W * k, fH = H * k;
   const ox = 16 + sW * cos, oy = 16 + (fW + sW) * sin;
   const face = (p: { x: number; y: number; w: number; h: number }, m: number[], shade: number) =>
-    `<g transform="matrix(${m.map((v) => v.toFixed(4)).join(' ')})"><svg x="0" y="0" width="${p.w}" height="${p.h}" viewBox="${p.x} ${p.y} ${p.w} ${p.h}" preserveAspectRatio="none">${scene}</svg>${shade ? `<rect width="${p.w}" height="${p.h}" fill="#000" opacity="${shade}"/>` : ''}</g>`;
+    `<g transform="matrix(${m.map((v) => v.toFixed(4)).join(' ')})"><svg x="0" y="0" width="${p.w}" height="${p.h}" viewBox="${p.x} ${p.y} ${p.w} ${p.h}" preserveAspectRatio="none">${itemsOn(items, p).map(sceneItemSvg).join('')}</svg>${shade ? `<rect width="${p.w}" height="${p.h}" fill="#000" opacity="${shade}"/>` : ''}</g>`;
   const mFront = [(fW * cos) / front.w, (-fW * sin) / front.w, 0, fH / front.h, ox, oy];
   const mSide = [(sW * cos) / side.w, (sW * sin) / side.w, 0, fH / side.h, ox - sW * cos, oy - sW * sin];
   const mTop = [(fW * cos) / top.w, (-fW * sin) / top.w, (sW * cos) / top.h, (sW * sin) / top.h, ox - sW * cos, oy - sW * sin];

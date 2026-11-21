@@ -5,7 +5,7 @@
 // artwork as editable layers and the dieline as locked line layers; the
 // Packaging panel in the editor keeps the box, line types and press files.
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowRight, Box, FileDown, Layers, PenTool, Ruler, Sparkles } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
@@ -37,6 +37,10 @@ export function PackagingHub() {
   const [filter, setFilter] = useState('all');
   const [busy, setBusy] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  // Previews are drawn in the browser (keeps the page light for visitors and search engines).
+  const [ready, setReady] = useState(false);
+  const [hover, setHover] = useState<string | null>(null);
+  useEffect(() => { setReady(true); }, []);
   const list = useMemo(() => PACK_TEMPLATES.filter(FILTERS.find((f) => f.id === filter)!.test), [filter]);
   const hero = useMemo(() => ['botanical-tea-rte', 'kraft-coffee-sleeve', 'luxe-cosmetics-rte'].map((id) => PACK_TEMPLATES.find((t) => t.id === id)!).filter(Boolean), []);
 
@@ -77,7 +81,7 @@ export function PackagingHub() {
           {err && <p role="alert" className="mt-3 text-[13px] text-rose-600">{err}</p>}
         </div>
         <div className="grid grid-cols-3 items-end gap-3 rounded-xl bg-mt-surface2/70 p-4">
-          {hero.map((t) => <div key={t.id} className="[&_svg]:h-auto [&_svg]:w-full" dangerouslySetInnerHTML={{ __html: templateMockupSvg(t) }} />)}
+          {hero.map((t) => <div key={t.id} className="aspect-[4/5] [&_svg]:h-full [&_svg]:w-full" dangerouslySetInnerHTML={{ __html: ready ? templateMockupSvg(t) : '' }} />)}
         </div>
       </section>
 
@@ -113,10 +117,10 @@ export function PackagingHub() {
         </div>
         <ul className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {list.map((t) => (
-            <li key={t.id} className="group overflow-hidden rounded-xl border border-mt-border bg-mt-surface">
+            <li key={t.id} onMouseEnter={() => setHover(t.id)} onMouseLeave={() => setHover((h) => (h === t.id ? null : h))} className="group overflow-hidden rounded-xl border border-mt-border bg-mt-surface">
               <div className="relative h-52 bg-mt-surface2/70 p-4">
-                <div className="h-full w-full transition-opacity duration-200 group-hover:opacity-0 [&_svg]:h-full [&_svg]:w-full" dangerouslySetInnerHTML={{ __html: templateMockupSvg(t) }} />
-                <div className="absolute inset-0 p-4 opacity-0 transition-opacity duration-200 group-hover:opacity-100 [&_svg]:h-full [&_svg]:w-full" dangerouslySetInnerHTML={{ __html: templateFlatSvg(t) }} />
+                <div className="h-full w-full transition-opacity duration-200 group-hover:opacity-0 [&_svg]:h-full [&_svg]:w-full" dangerouslySetInnerHTML={{ __html: ready ? templateMockupSvg(t) : '' }} />
+                <div className="absolute inset-0 p-4 opacity-0 transition-opacity duration-200 group-hover:opacity-100 [&_svg]:h-full [&_svg]:w-full" dangerouslySetInnerHTML={{ __html: hover === t.id ? templateFlatSvg(t) : '' }} />
               </div>
               <div className="flex items-center justify-between gap-2 p-3">
                 <div className="min-w-0">
