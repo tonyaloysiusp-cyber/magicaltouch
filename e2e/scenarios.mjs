@@ -1781,10 +1781,13 @@ scenarios.push({
     await t.page.getByText(/N-up pages — done/).waitFor({ timeout: 10000 });
     const groups = () => t.page.locator('[role=img][aria-label^="Sheet"] [data-grp]').evaluateAll((els) => new Set(els.map((e) => e.getAttribute('data-grp'))).size);
     const n0 = await groups();
+    await t.page.locator('[role=img][aria-label^="Sheet"]').evaluate((el) => el.scrollIntoView({ block: 'center' }));
     const pt = await t.page.locator('[role=img][aria-label^="Sheet"]').evaluate((box) => {
       const host = box.getBoundingClientRect();
+      // Visible area only: below the pinned tool bar and inside the window.
+      const top = Math.max(host.top, document.querySelector('header[aria-label="Tool bar"]')?.getBoundingClientRect().bottom || 0), bottom = Math.min(host.bottom, window.innerHeight);
       let best = null;
-      for (const g of box.querySelectorAll('[data-grp]')) { if (!g.querySelector('clipPath')) continue; const r = g.getBoundingClientRect(); const x0 = Math.max(r.left, host.left), y0 = Math.max(r.top, host.top), x1 = Math.min(r.right, host.right), y1 = Math.min(r.bottom, host.bottom); const a = Math.max(0, x1 - x0) * Math.max(0, y1 - y0); if (!best || a > best.a) best = { a, x: (x0 + x1) / 2, y: (y0 + y1) / 2 }; }
+      for (const g of box.querySelectorAll('[data-grp]')) { if (!g.querySelector('clipPath')) continue; const r = g.getBoundingClientRect(); const x0 = Math.max(r.left, host.left), y0 = Math.max(r.top, top), x1 = Math.min(r.right, host.right), y1 = Math.min(r.bottom, bottom); const a = Math.max(0, x1 - x0) * Math.max(0, y1 - y0); if (!best || a > best.a) best = { a, x: (x0 + x1) / 2, y: (y0 + y1) / 2 }; }
       return best;
     });
     await t.page.mouse.click(pt.x, pt.y);
