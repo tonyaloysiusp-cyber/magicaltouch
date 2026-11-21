@@ -114,9 +114,9 @@ export function PackagingHub() {
         <ul className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {list.map((t) => (
             <li key={t.id} className="group overflow-hidden rounded-xl border border-mt-border bg-mt-surface">
-              <div className="relative grid h-52 place-items-center bg-mt-surface2/70 p-4 [&_svg]:max-h-44 [&_svg]:w-auto">
-                <div className="transition-opacity duration-200 group-hover:opacity-0" dangerouslySetInnerHTML={{ __html: templateMockupSvg(t) }} />
-                <div className="absolute inset-0 grid place-items-center p-4 opacity-0 transition-opacity duration-200 group-hover:opacity-100 [&_svg]:max-h-44 [&_svg]:max-w-full" dangerouslySetInnerHTML={{ __html: templateFlatSvg(t) }} />
+              <div className="relative h-52 bg-mt-surface2/70 p-4">
+                <div className="h-full w-full transition-opacity duration-200 group-hover:opacity-0 [&_svg]:h-full [&_svg]:w-full" dangerouslySetInnerHTML={{ __html: templateMockupSvg(t) }} />
+                <div className="absolute inset-0 p-4 opacity-0 transition-opacity duration-200 group-hover:opacity-100 [&_svg]:h-full [&_svg]:w-full" dangerouslySetInnerHTML={{ __html: templateFlatSvg(t) }} />
               </div>
               <div className="flex items-center justify-between gap-2 p-3">
                 <div className="min-w-0">
