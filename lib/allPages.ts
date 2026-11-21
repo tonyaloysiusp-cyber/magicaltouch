@@ -1,7 +1,14 @@
 // The database answers at most 1,000 rows per request, so long lists are
 // read in pages of 1,000 (all pages at once) and joined.
-export async function allPages<T>(page: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: any; count?: number | null }>): Promise<{ data: T[] | null; error: any }> {
+export async function allPages<T>(pageOnce: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: any; count?: number | null }>): Promise<{ data: T[] | null; error: any }> {
   const SIZE = 1000;
+  // A page that times out under load is asked again (twice, with a short
+  // pause) before the whole list is given up.
+  const page = async (from: number, to: number) => {
+    let r = await pageOnce(from, to);
+    for (let i = 0; r.error && i < 2; i++) { await new Promise((ok) => setTimeout(ok, 400 * (i + 1))); r = await pageOnce(from, to); }
+    return r;
+  };
   const first = await page(0, SIZE - 1);
   if (first.error || !first.data) return { data: null, error: first.error };
   if (first.data.length < SIZE) return { data: first.data, error: null };
