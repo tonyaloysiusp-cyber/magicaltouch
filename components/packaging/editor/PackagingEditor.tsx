@@ -129,6 +129,8 @@ export function PackagingEditor() {
   const [textPaths, setTextPaths] = useState<Record<string, { key: string; d: string }>>({});
   const svgRef = useRef<SVGSVGElement>(null), wrapRef = useRef<HTMLDivElement>(null), imgInput = useRef<HTMLInputElement>(null), fileInput = useRef<HTMLInputElement>(null);
   const drag = useRef<any>(null);
+  const [size, setSize] = useState({ w: 800, h: 600 });
+  useEffect(() => { const el = wrapRef.current; if (!el) return; const ro = new ResizeObserver(() => setSize({ w: el.clientWidth || 800, h: el.clientHeight || 600 })); ro.observe(el); setSize({ w: el.clientWidth || 800, h: el.clientHeight || 600 }); return () => ro.disconnect(); }, []);
   const spaceDown = useRef(false);
 
   const flash = (m: string) => { setMsg(m); window.setTimeout(() => setMsg((x) => (x === m ? null : x)), 4000); };
@@ -660,19 +662,19 @@ export function PackagingEditor() {
 
           {/* ── canvas ── */}
           <main ref={wrapRef} className="relative min-w-0 flex-1 overflow-hidden bg-[#e9eaee] dark:bg-[#17181c]" aria-label="Canvas">
-            <svg ref={svgRef} role="img" aria-label="Dieline canvas" className={`h-full w-full touch-none select-none ${tool === 'hand' || drag.current?.kind === 'pan' ? 'cursor-grab' : tool === 'select' ? 'cursor-default' : 'cursor-crosshair'}`}
-              viewBox={`${view.x} ${view.y} ${(wrapRef.current?.clientWidth || 800) / W} ${(wrapRef.current?.clientHeight || 600) / W}`}
+            <svg ref={svgRef} role="img" aria-label="Dieline canvas" preserveAspectRatio="xMinYMin meet" className={`h-full w-full touch-none select-none ${tool === 'hand' || drag.current?.kind === 'pan' ? 'cursor-grab' : tool === 'select' ? 'cursor-default' : 'cursor-crosshair'}`}
+              viewBox={`${view.x} ${view.y} ${size.w / W} ${size.h / W}`}
               onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerLeave={() => setCursor(null)} onWheel={onWheel}
               onDoubleClick={() => { if (tool === 'pen') finishPen(false); }}>
               <defs>
                 <pattern id="pk-grid" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M10 0 L0 0 0 10" fill="none" stroke={theme === 'dark' ? '#2a2c33' : '#d5d7de'} strokeWidth={1 / W} /></pattern>
               </defs>
-              {grid && <rect x={view.x} y={view.y} width={(wrapRef.current?.clientWidth || 800) / W} height={(wrapRef.current?.clientHeight || 600) / W} fill="url(#pk-grid)" />}
+              {grid && <rect x={view.x} y={view.y} width={size.w / W} height={size.h / W} fill="url(#pk-grid)" />}
               {cutB && <rect x={cutB.x - doc.bleed - 8} y={cutB.y - doc.bleed - 8} width={cutB.w + 2 * doc.bleed + 16} height={cutB.h + 2 * doc.bleed + 16} fill={theme === 'dark' ? '#202227' : '#ffffff'} stroke={theme === 'dark' ? '#33363e' : '#c9ccd4'} strokeWidth={1 / W} />}
               {showBleed && doc.objects.filter((o) => o.line === 'cut' && !isHidden(o)).map((o) => <path key={`b${o.id}`} d={pathFor(o)} fill="none" stroke="#9AD0F5" strokeOpacity={0.55} strokeWidth={doc.bleed * 2} strokeLinejoin="round" pointerEvents="none" />)}
               {paintOrder(doc).filter((o) => !isHidden(o)).map((o) => {
-                const stroke = strokeFor(o), sw = o.line === 'art' ? (o.strokeW ?? 0) : 1.3 / W;
-                const dash = DASH[o.line] ? DASH[o.line]!.split(' ').map((v) => Number(v) * (o.line === 'art' ? 1 : 1)).join(' ') : undefined;
+                const stroke = strokeFor(o), sw = o.line === 'art' ? (o.strokeW ?? 0) : Math.max(0.25, 1.4 / W);
+                const dash = DASH[o.line] ? DASH[o.line]!.split(' ').map((v) => Number(v) * Math.max(1, 3 / W)).join(' ') : undefined;
                 const common = { 'data-id': o.id, opacity: o.opacity ?? 1 } as any;
                 const hit = <path d={pathFor(o, textPaths[o.id]?.d)} fill={o.kind === 'path' && o.line !== 'art' ? 'none' : 'transparent'} stroke="transparent" strokeWidth={10 / W} data-id={o.id} />;
                 if (o.kind === 'image') return <g key={o.id} {...common}><image href={o.href} x={o.x} y={o.y} width={o.w} height={o.h} preserveAspectRatio="none" />{hit}</g>;
@@ -681,7 +683,7 @@ export function PackagingEditor() {
                   return <g key={o.id} {...common}>{tp ? <path d={tp} fill={o.fill || '#111'} fillRule="evenodd" /> : <text x={o.x} y={o.y + (o.size || 24) * 0.3528} fontSize={(o.size || 24) * 0.3528} fontFamily={o.font} fontWeight={o.weight} fill={o.fill}>{o.text}</text>}<rect x={o.x} y={o.y} width={o.w} height={Math.max(o.h, (o.size || 24) * 0.3528 * 1.2 * ((o.text || '').split('\n').length))} fill="transparent" data-id={o.id} /></g>;
                 }
                 const fill = o.line === 'art' ? (o.fill && o.fill !== 'none' ? o.fill : 'none') : 'none';
-                return <g key={o.id} {...common}><path d={pathFor(o)} fill={fill} stroke={stroke || 'none'} strokeWidth={sw} strokeDasharray={o.line !== 'art' ? dash : undefined} strokeLinecap="round" strokeLinejoin="round" vectorEffect={o.line === 'art' ? undefined : 'non-scaling-stroke'} />{hit}</g>;
+                return <g key={o.id} {...common}><path d={pathFor(o)} fill={fill} stroke={stroke || 'none'} strokeWidth={sw} strokeDasharray={o.line !== 'art' ? dash : undefined} strokeLinecap="round" strokeLinejoin="round" />{hit}</g>;
               })}
               {labels && !doc.layers.find((l) => l.id === DIE_LAYER)?.hidden && die.panels.filter((p) => p.w > 12 && p.h > 7).map((p, i) => <text key={i} x={p.x + 1.5} y={p.y + 4} fontSize={Math.min(4, p.h / 4)} fill={theme === 'dark' ? '#7c8090' : '#9aa0ad'} pointerEvents="none">{p.name}</text>)}
               {draft && <path d={pathFor(draft)} fill={draft.line === 'art' && draft.kind !== 'path' ? '#E5E7EB' : 'none'} stroke={draft.line === 'art' ? '#111827' : LINE_COLOURS[draft.line]} strokeWidth={1.5 / W} strokeDasharray={DASH[draft.line]} pointerEvents="none" />}
