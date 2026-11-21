@@ -7,28 +7,23 @@
 
 import { Fragment, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Box, Download, FileDown, PenTool } from 'lucide-react';
+import { AlertTriangle, Box, CheckCircle2, Download, FileDown, PenTool, XCircle } from 'lucide-react';
 import { BOX_STYLES, DEFAULT_DIE, DIE_COLOURS, boxIsoSvg, dielineSvg, makeDieline, ruleLength, type BoxStyleId, type DieOptions } from '@/lib/packaging/dieline';
+import { BOARD_GRADES, caliperFor, creaseSetup, gradeById, gsmRange } from '@/lib/packaging/board';
+import { checkStructure } from '@/lib/packaging/validate';
 import { putHandoff, newLocalKey, editorUrlForLocal } from '@/lib/mtd/handoff';
 import { supabase } from '@/lib/supabase';
 
-const BOARDS: { id: string; name: string; t: number; glue: number }[] = [
-  { id: 'fbb300', name: 'Folding boxboard 300 gsm · 0.45 mm', t: 0.45, glue: 14 },
-  { id: 'sbs350', name: 'SBS / white board 350 gsm · 0.5 mm', t: 0.5, glue: 15 },
-  { id: 'kraft', name: 'Kraft board 400 gsm · 0.6 mm', t: 0.6, glue: 15 },
-  { id: 'rigid', name: 'Grey board (rigid wrap) · 1.5 mm', t: 1.5, glue: 18 },
-  { id: 'eflute', name: 'Corrugated E-flute · 1.5 mm', t: 1.5, glue: 25 },
-  { id: 'bflute', name: 'Corrugated B-flute · 3 mm', t: 3, glue: 30 },
-  { id: 'cflute', name: 'Corrugated C-flute · 4 mm', t: 4, glue: 35 },
-  { id: 'bcflute', name: 'Double wall BC-flute · 7 mm', t: 7, glue: 40 },
-];
 const SHEETS = [{ name: 'SRA3', w: 320, h: 450 }, { name: 'B2', w: 500, h: 707 }, { name: 'B1', w: 707, h: 1000 }, { name: '28 × 40 in', w: 711, h: 1016 }];
 const r1 = (v: number) => Math.round(v * 10) / 10;
 
 export function PackagingStudio() {
   const router = useRouter();
   const [o, setO] = useState<DieOptions>(DEFAULT_DIE);
-  const [board, setBoard] = useState('fbb300');
+  const [board, setBoard] = useState('fbb');
+  const [gsm, setGsm] = useState(300);
+  const [cutH, setCutH] = useState(23.8);
+  const [crushed, setCrushed] = useState(0);
   const [unit, setUnit] = useState<'mm' | 'in'>('mm');
   const [sizeIs, setSizeIs] = useState<'inside' | 'outside'>('inside');
   const [bleed, setBleed] = useState(3);
@@ -49,7 +44,11 @@ export function PackagingStudio() {
   });
   const style = BOX_STYLES.find((s) => s.id === o.style)!;
   const base = `${style.name.replace(/[^\w]+/g, '-')}_${r1(die.inside.L)}x${r1(die.inside.W)}x${r1(die.inside.D)}mm`;
-  const boardName = BOARDS.find((b) => b.id === board)?.name;
+  const grade = gradeById(board), range = gsmRange(grade);
+  const cset = useMemo(() => creaseSetup(grade.family, o.t, { cutHeight: cutH, compressed: crushed > 0 ? crushed : undefined }), [grade.family, o.t, cutH, crushed]);
+  const report = useMemo(() => checkStructure(inside, grade.family), [inside.style, inside.L, inside.W, inside.D, inside.t, inside.glue, inside.tuck, inside.lidDepth, grade.family]); // eslint-disable-line react-hooks/exhaustive-deps
+  const boardName = `${grade.name}${range ? ` ${gsm} gsm` : ''} · ${r1(o.t * 100) / 100} mm · crease rule ${cset.rulePt} pt (${cset.ruleWidth} mm), channel ${cset.channelWidth} × ${cset.channelDepth} mm`;
+  const pickBoard = (id: string, g = gsm) => { const b = gradeById(id), rg = gsmRange(b), gg = rg ? Math.min(rg[1], Math.max(rg[0], g)) : g; setBoard(b.id); if (rg) setGsm(gg); set({ t: caliperFor(b, gg), glue: b.glue }); };
 
   const save = (data: Uint8Array | Blob, name: string, type = 'application/pdf') => {
     const blob = data instanceof Blob ? data : new Blob([data as unknown as BlobPart], { type });
@@ -112,7 +111,7 @@ export function PackagingStudio() {
             <div className="mt-1.5 grid grid-cols-2 gap-1.5">
               {BOX_STYLES.filter((s) => s.group === g).map((s) => (
                 <button key={s.id} type="button" role="radio" aria-checked={o.style === s.id} title={s.hint}
-                  onClick={() => { const corr = s.group === 'Corrugated', b = corr ? 'bflute' : s.group === 'Tray & lid' ? 'rigid' : 'fbb300', bd = BOARDS.find((x) => x.id === b)!; setBoard(b); set({ style: s.id as BoxStyleId, t: bd.t, glue: bd.glue, ...(corr && o.L < 150 ? { L: 300, W: 200, D: 150 } : {}), ...(!corr && o.L >= 250 ? { L: 80, W: 40, D: 120 } : {}) }); }}
+                  onClick={() => { const corr = s.group === 'Corrugated', b = corr ? 'bflute' : s.group === 'Tray & lid' ? 'rigid' : 'fbb', bd = gradeById(b); setBoard(b); set({ style: s.id as BoxStyleId, t: caliperFor(bd, gsm), glue: bd.glue, ...(corr && o.L < 150 ? { L: 300, W: 200, D: 150 } : {}), ...(!corr && o.L >= 250 ? { L: 80, W: 40, D: 120 } : {}) }); }}
                   className={`rounded-xl border px-2.5 py-2 text-left ${o.style === s.id ? 'border-mt-ink bg-mt-ink text-mt-bg' : 'border-mt-border hover:bg-mt-surface2'}`}>
                   <span className="block text-[12.5px] font-semibold leading-tight">{s.name}</span>
                   <span className={`block text-[10.5px] ${o.style === s.id ? 'text-mt-bg/70' : 'text-mt-faint'}`}>{s.code}</span>
@@ -135,8 +134,13 @@ export function PackagingStudio() {
           {num(o.style === 'sleeve' ? 'Sleeve width' : 'Depth', o.D, (n) => set({ D: n }))}
         </div>
         <label className="block text-[12px]"><span className="text-mt-muted">Board</span>
-          <select value={board} onChange={(e) => { const b = BOARDS.find((x) => x.id === e.target.value)!; setBoard(b.id); set({ t: b.t, glue: b.glue }); }} className="mt-1 h-9 w-full rounded-lg border border-mt-border bg-mt-bg px-2 text-[12.5px]">{BOARDS.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}</select>
+          <select value={board} onChange={(e) => pickBoard(e.target.value)} className="mt-1 h-9 w-full rounded-lg border border-mt-border bg-mt-bg px-2 text-[12.5px]">{BOARD_GRADES.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}</select>
         </label>
+        {range && <label className="block text-[12px]"><span className="text-mt-muted">Grammage (g/m²) · published {range[0]}–{range[1]}</span>
+          <span className="mt-1 flex items-center gap-2"><input type="range" min={range[0]} max={range[1]} step={5} value={gsm} onChange={(e) => pickBoard(board, Number(e.target.value))} aria-label="Board grammage slider" className="flex-1" />
+          <input type="number" min={range[0]} max={range[1]} value={gsm} onChange={(e) => pickBoard(board, Number(e.target.value) || range[0])} aria-label="Board grammage" className="h-9 w-20 rounded-lg border border-mt-border bg-mt-bg px-2 tabular-nums" /></span>
+          <span className="mt-1 block text-[11px] text-mt-faint">Thickness follows the {grade.source}; you can still type your own below.</span>
+        </label>}
         <div className="grid grid-cols-2 gap-2">
           {num('Board thickness', o.t, (n) => set({ t: n }), 0.05)}
           {style.id !== 'tray' && style.id !== 'traylid' && num(style.group === 'Corrugated' ? "Manufacturer's joint" : 'Glue flap', o.glue, (n) => set({ glue: n }))}
@@ -184,6 +188,43 @@ export function PackagingStudio() {
           </dl>
           {die.notes.map((n) => <p key={n} className="mt-2 text-[11.5px] leading-relaxed text-mt-muted">{n}</p>)}
         </div>
+        <section aria-label="Structure check" className="rounded-2xl border border-mt-border bg-mt-surface p-4">
+          <div className="flex items-center justify-between">
+            <p className="text-[13px] font-semibold">Structure check</p>
+            <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ${report.level === 'ok' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300' : report.level === 'warn' ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300' : 'bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-300'}`}>
+              {report.level === 'error' ? 'Will not close' : report.level === 'warn' ? 'Closes — check notes' : 'Closes'}
+            </span>
+          </div>
+          <ul className="mt-2 space-y-2">
+            {report.checks.map((c) => (
+              <li key={c.id} className="flex gap-2 text-[11.5px] leading-relaxed">
+                {c.level === 'ok' ? <CheckCircle2 size={14} className="mt-0.5 shrink-0 text-emerald-600" /> : c.level === 'warn' ? <AlertTriangle size={14} className="mt-0.5 shrink-0 text-amber-600" /> : <XCircle size={14} className="mt-0.5 shrink-0 text-rose-600" />}
+                <span><b className="font-semibold">{c.title}</b> <span className="text-mt-faint">· {c.rule}</span><br /><span className="text-mt-muted">{c.detail}</span>
+                  {c.fix && c.level !== 'ok' && <button type="button" onClick={() => set(c.fix!)} className="ml-1 font-semibold text-mt-primary underline-offset-2 hover:underline">Apply fix</button>}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+        <section aria-label="Crease and board" className="rounded-2xl border border-mt-border bg-mt-surface p-4">
+          <p className="text-[13px] font-semibold">Crease set-up for this board</p>
+          <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1.5 text-[12px]">
+            <dt className="text-mt-muted">Board</dt><dd className="text-right tabular-nums">{range ? `${gsm} g/m² · ` : ''}{r1(o.t * 1000) / 1000} mm</dd>
+            <dt className="text-mt-muted">Crease rule</dt><dd className="text-right font-semibold tabular-nums">{cset.rulePt} pt · {cset.ruleWidth} mm</dd>
+            <dt className="text-mt-muted">Crease rule height</dt><dd className="text-right font-semibold tabular-nums">{cset.ruleHeight} mm</dd>
+            <dt className="text-mt-muted">Channel width</dt><dd className="text-right font-semibold tabular-nums">{cset.channelWidth} mm</dd>
+            <dt className="text-mt-muted">Channel depth</dt><dd className="text-right font-semibold tabular-nums">{cset.channelDepth} mm</dd>
+            <dt className="text-mt-muted">Panel allowance</dt><dd className="text-right tabular-nums">+{r1(o.t * 100) / 100} mm per panel</dd>
+          </dl>
+          <div className="mt-2 grid grid-cols-2 gap-2">
+            <label className="block text-[11.5px]"><span className="text-mt-muted">Cutting rule height</span><input type="number" step={0.01} value={cutH} onChange={(e) => setCutH(Number(e.target.value) || 23.8)} aria-label="Cutting rule height" className="mt-1 h-8 w-full rounded-lg border border-mt-border bg-mt-bg px-2 tabular-nums" /></label>
+            {grade.family === 'corrugated' && <label className="block text-[11.5px]"><span className="text-mt-muted">Crushed thickness</span><input type="number" step={0.1} min={0} value={crushed || ''} placeholder="measure" onChange={(e) => setCrushed(Number(e.target.value) || 0)} aria-label="Crushed board thickness" className="mt-1 h-8 w-full rounded-lg border border-mt-border bg-mt-bg px-2 tabular-nums" /></label>}
+          </div>
+          <p className="mt-2 font-mono text-[10.5px] leading-relaxed text-mt-faint">{cset.formula}</p>
+          {cset.notes.map((n) => <p key={n} className="mt-1 text-[11px] leading-relaxed text-mt-muted">{n}</p>)}
+          <p className={`mt-2 text-[11px] font-semibold ${cset.confidence === 'published' ? 'text-emerald-700 dark:text-emerald-400' : 'text-amber-700 dark:text-amber-400'}`}>
+            {cset.confidence === 'published' ? 'Inside the board maker\'s published table.' : cset.confidence === 'formula' ? 'From the published formula — confirm with a crease test.' : 'Outside published tables — a starting point for your die maker only.'}
+          </p>
+        </section>
         <div className="space-y-2 rounded-2xl border border-mt-border bg-mt-surface p-4">
           <button type="button" onClick={() => pdf(false)} className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-mt-primary text-[13.5px] font-semibold text-mt-onprimary"><FileDown size={16} /> Dieline PDF (cut + crease)</button>
           <button type="button" onClick={() => pdf(true)} className="flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-mt-border text-[13px] font-semibold hover:bg-mt-surface2"><Download size={15} /> Artwork template PDF</button>

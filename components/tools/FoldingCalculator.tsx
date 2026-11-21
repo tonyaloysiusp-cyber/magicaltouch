@@ -8,7 +8,7 @@
 import { useMemo, useState } from 'react';
 import { ExternalLink, FileSearch, Loader2 } from 'lucide-react';
 import { foldPrintJob, printJobEditorUrl } from '@/lib/print/printJob';
-import { FOLDS, calculateFold, foldDiagramSvg, checkPdfForFold, type FoldType, type PdfInspect } from '@/lib/fold';
+import { FOLDS, calculateFold, foldability, foldDiagramSvg, checkPdfForFold, type FoldType, type PdfInspect } from '@/lib/fold';
 import { PAPER_SIZES } from '@/lib/printSizes';
 import { PAPER_PROFILES, estimateCaliper } from '@/lib/binding';
 import { ModeSwitch, PrintDownloadPanel, usePro } from './PrintDownloadPanel';
@@ -24,6 +24,7 @@ export function FoldingCalculator() {
   const [panels, setPanels] = useState(6);
   const [gsm, setGsm] = useState(150), [profile, setProfile] = useState('matt');
   const [bleed, setBleed] = useState(3), [safe, setSafe] = useState(5);
+  const [grain, setGrain] = useState<'parallel' | 'across' | 'unknown'>('unknown'), [darkInk, setDarkInk] = useState(false);
   const [custom, setCustom] = useState<number[] | null>(null);
   const [dirs, setDirs] = useState<('valley' | 'mountain')[]>([]);
   const [side, setSide] = useState<'outside' | 'inside'>('outside');
@@ -38,6 +39,7 @@ export function FoldingCalculator() {
   const r = useMemo(() => calculateFold({ type, w: W, h: H, panels, caliper, bleed, safe, widths: custom || undefined, dirs }), [type, W, H, panels, caliper, bleed, safe, custom, dirs]);
   const svg = useMemo(() => foldDiagramSvg(r, side, bleed, safe), [r, side, bleed, safe]);
   // The print job: handed to the editor (both sides, fold guides) and to Download & print.
+  const fa = useMemo(() => foldability({ gsm, caliper, coated: profile !== 'uncoated' && profile !== 'bookwove', grain, type, layers: Math.max(1, Math.round(r.folded.thick / Math.max(caliper, 0.01))), darkInkOnFold: darkInk }), [gsm, caliper, profile, grain, type, r.folded.thick, darkInk]);
   const printJob = useMemo(() => foldPrintJob(r, { title: FOLDS.find((f) => f.id === type)?.label || 'Folded leaflet', bleed, safe, paper: `${gsm} gsm ${(PAPER_PROFILES.find((p) => p.id === profile)?.label || '').split(' (')[0].toLowerCase()}` }), [r, type, bleed, safe, gsm, profile]);
   const editorHref = useMemo(() => printJobEditorUrl(printJob), [printJob]);
   const def = FOLDS.find((f) => f.id === type)!;
@@ -71,6 +73,8 @@ export function FoldingCalculator() {
         <div className="grid grid-cols-2 gap-2">
           <label className={lbl}>Paper (gsm)<input type="number" min={40} max={450} value={gsm} onChange={(e) => setGsm(Number(e.target.value) || 0)} aria-label="Paper gsm" className={field} /></label>
           <label className={lbl}>Type<select value={profile} onChange={(e) => setProfile(e.target.value)} aria-label="Paper type" className={field}>{PAPER_PROFILES.map((p) => <option key={p.id} value={p.id}>{p.label.split(' (')[0]}</option>)}</select></label>
+          <label className={lbl}>Grain<select value={grain} onChange={(e) => setGrain(e.target.value as typeof grain)} aria-label="Grain direction" className={field}><option value="unknown">Not known</option><option value="parallel">Folds with the grain</option><option value="across">Folds across the grain</option></select></label>
+          <label className={`${lbl} flex items-end gap-2 pb-2`}><input type="checkbox" checked={darkInk} onChange={(e) => setDarkInk(e.target.checked)} aria-label="Heavy ink across a fold" /> Heavy ink across a fold</label>
           <label className={lbl}>Bleed (mm)<input type="number" min={0} max={10} step={0.5} value={bleed} onChange={(e) => setBleed(Number(e.target.value) || 0)} aria-label="Bleed mm" className={field} /></label>
           <label className={lbl}>Safe margin (mm)<input type="number" min={0} max={20} step={0.5} value={safe} onChange={(e) => setSafe(Number(e.target.value) || 0)} aria-label="Safe margin mm" className={field} /></label>
         </div>
@@ -93,6 +97,13 @@ export function FoldingCalculator() {
           {r.errors.map((e) => <p key={e} className="text-rose-600">{e}</p>)}
           <a href={editorHref} className="mt-2 h-10 px-4 rounded-full bg-mt-primary text-mt-onprimary text-[13.5px] font-semibold inline-flex items-center gap-2">Design this leaflet in the editor (outside + inside) <ExternalLink size={15} /></a>
           {r.notes.map((n) => <p key={n} className="text-[12.5px] text-mt-muted">{n}</p>)}
+        </section>
+        <section aria-label="Will this paper fold" className="rounded-3xl border border-mt-border bg-mt-surface p-5 text-[13px]">
+          <div className="flex items-center justify-between"><p className="text-[14px] font-semibold">Will this paper fold?</p>
+            <span className={`rounded-full px-2.5 py-0.5 text-[11.5px] font-semibold ${fa.level === 'ok' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300' : fa.level === 'warn' ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300' : 'bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-300'}`}>{fa.level === 'error' ? 'Not practical' : fa.method === 'crease' ? 'Crease first' : fa.method === 'score' ? 'Score first' : 'Folds as it is'}</span></div>
+          <ul className="mt-2 space-y-1.5">{fa.checks.map((c) => <li key={c.id} className="flex gap-2"><span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${c.level === 'ok' ? 'bg-emerald-500' : c.level === 'warn' ? 'bg-amber-500' : 'bg-rose-500'}`} /><span><b className="font-semibold">{c.title}.</b> <span className="text-mt-muted">{c.detail}</span></span></li>)}</ul>
+          {fa.crease && <p className="mt-2 text-[12px] text-mt-muted">Creasing set-up for {Math.round(caliper * 1000)} µm: rule {fa.crease.ruleWidth} mm, channel {fa.crease.channelWidth} mm wide × {fa.crease.channelDepth} mm deep (channel = 1.5 × caliper + rule width). Confirm with a test crease on the actual stock.</p>}
+          <p className="mt-1 text-[11px] text-mt-faint">Caliper estimated from the paper type ({Math.round(caliper * 1000)} µm). Weight thresholds are printers' rules of thumb.</p>
         </section>
         <section className="rounded-3xl border border-mt-border bg-mt-surface p-4">
           <div className="mb-2 flex items-center gap-1.5" role="radiogroup" aria-label="Side">{(['outside', 'inside'] as const).map((s2) => <button key={s2} type="button" role="radio" aria-checked={side === s2} onClick={() => setSide(s2)} className={`h-8 px-3 rounded-full text-[12.5px] font-semibold capitalize ${side === s2 ? 'bg-mt-ink text-mt-bg' : 'border border-mt-border'}`}>{s2}</button>)}</div>

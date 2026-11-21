@@ -198,3 +198,42 @@ export function checkPdfForFold(pdf: { pages: { w: number; h: number; trim?: { w
   });
   return { pages: pdf.pages.length, sizes, orientation: first.w >= first.h ? 'landscape' : 'portrait', issues, ok: !issues.some((s) => !/no bleed/.test(s)) };
 }
+
+// ── Will this paper fold? ──
+// Rules of thumb from printers' published guidance (heavier stock needs creasing
+// to stop the coating cracking; risk rises with coating, heavy ink across the fold
+// and folding against the grain) plus the creasing-channel formula published by
+// matrix makers (channel = 1.5 × caliper + rule width).
+export type FoldLevel = 'ok' | 'warn' | 'error';
+export interface FoldCheck { id: string; level: FoldLevel; title: string; detail: string }
+export interface Foldability {
+  level: FoldLevel; method: 'fold' | 'score' | 'crease'; checks: FoldCheck[];
+  crease?: { ruleWidth: number; channelWidth: number; channelDepth: number };
+}
+export function foldability(p: { gsm: number; caliper: number; coated: boolean; grain: 'parallel' | 'across' | 'unknown'; type: FoldType; layers: number; darkInkOnFold?: boolean }): Foldability {
+  const cs: FoldCheck[] = [], t = p.caliper;
+  let method: Foldability['method'] = 'fold';
+  if (p.gsm >= 170 || t >= 0.2) {
+    method = 'crease';
+    cs.push({ id: 'weight', level: 'warn', title: 'Crease before folding', detail: `${p.gsm} gsm (${Math.round(t * 1000)} µm) is too heavy to fold cleanly without a crease — the surface cracks along the fold.` });
+  } else if (p.gsm >= 130 && (p.coated || p.darkInkOnFold)) {
+    method = 'score';
+    cs.push({ id: 'weight', level: 'warn', title: 'Score recommended', detail: `${p.gsm} gsm ${p.coated ? 'coated' : ''} stock can crack where ink crosses the fold; a score keeps it clean.` });
+  } else cs.push({ id: 'weight', level: 'ok', title: 'Paper weight', detail: `${p.gsm} gsm folds without creasing.` });
+
+  if (p.grain === 'across') cs.push({ id: 'grain', level: p.gsm >= 130 ? 'warn' : 'ok', title: 'Grain direction', detail: 'Folds run across the grain: the fold is stiffer and cracks sooner. Turn the sheet so the folds run with the grain if the imposition allows.' });
+  else if (p.grain === 'parallel') cs.push({ id: 'grain', level: 'ok', title: 'Grain direction', detail: 'Folds run with the grain — the best case.' });
+  else cs.push({ id: 'grain', level: 'warn', title: 'Grain direction', detail: 'Unknown grain. Ask for grain-long or grain-short paper so the main folds run parallel to the grain.' });
+
+  if (p.darkInkOnFold && (p.coated || p.gsm >= 150)) cs.push({ id: 'ink', level: 'warn', title: 'Heavy ink across the fold', detail: 'Solid dark colour over a fold shows every crack. Crease, and consider a matt or soft-touch laminate on the outside.' });
+
+  const crossed = p.type === 'cross' || p.type === 'map';
+  if (crossed && (p.gsm >= 170 || t >= 0.2)) cs.push({ id: 'cross', level: p.gsm >= 250 ? 'error' : 'warn', title: 'Second fold across a folded sheet', detail: `A right-angle fold through ${p.type === 'map' ? 'many' : 'two'} layers of ${p.gsm} gsm wrinkles at the spine${p.gsm >= 250 ? ' and is not practical' : ''}. Use lighter paper or a parallel fold.` });
+  const stack = p.layers * t;
+  if (stack > 3) cs.push({ id: 'bulk', level: stack > 6 ? 'error' : 'warn', title: 'Folded thickness', detail: `${p.layers} layers make ${Math.round(stack * 10) / 10} mm; the outer panels pull and the inner ones buckle. Use fewer panels or lighter paper.` });
+
+  const level: FoldLevel = cs.some((c) => c.level === 'error') ? 'error' : cs.some((c) => c.level === 'warn') ? 'warn' : 'ok';
+  const rule = 0.71;
+  const crease = method === 'fold' ? undefined : { ruleWidth: rule, channelWidth: Math.round((1.5 * t + rule) * 100) / 100, channelDepth: Math.round(Math.max(0.1, t) * 100) / 100 };
+  return { level, method, checks: cs, crease };
+}
