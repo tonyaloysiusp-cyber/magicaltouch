@@ -118,3 +118,13 @@ test('panel mapping: artwork stays on its panel when the box grows', async () =>
   const bg = remapBox({ x: -3, y: -3, w: a.w + 6, h: a.h + 6 }, a, b);
   assert.ok(Math.abs(bg.fx - b.w / a.w) < 1e-9);
 });
+
+test('login helpers retry server hiccups and explain them', async () => {
+  const { withAuthRetry, isTransientAuthError, friendlyAuthError } = await import('../../lib/authErrors.ts');
+  assert.ok(isTransientAuthError({ status: 504, message: 'context deadline exceeded' }));
+  assert.ok(!isTransientAuthError({ status: 400, message: 'Invalid login credentials' }));
+  let n = 0;
+  const r = await withAuthRetry(async () => (++n < 2 ? { error: { status: 500, message: 'error finding user: context canceled' } } : { error: null }));
+  assert.equal(r.error, null); assert.equal(n, 2);
+  assert.match(friendlyAuthError('500: error finding user: timeout: context canceled'), /busy/);
+});

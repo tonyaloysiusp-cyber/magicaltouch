@@ -31,7 +31,7 @@ export default function PackagingPage() {
     { '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: [{ '@type': 'ListItem', position: 1, name: 'Home', item: SITE_URL }, { '@type': 'ListItem', position: 2, name: 'Packaging Dieline Studio', item: URL }] },
   ];
   return (
-    <ToolShell path="/packaging-dieline" h1="Packaging design, from template to press-ready dieline." name="Packaging Design Studio" sub="Templates, dielines and the full design editor"
+    <ToolShell variant="page" path="/packaging-dieline" h1="Packaging design, from template to press-ready dieline." name="Packaging Design Studio" sub="Templates, dielines and the full design editor"
       about={<ToolAbout intro="Pick a box style, enter the inside size and the board, and download a 1:1 vector dieline with cut and crease spot colours, an artwork template with bleed, or an SVG — or open it in the editor and design the box." steps={[['Pick a style', 'Tuck end, seal end, sleeve, tray, lid or corrugated FEFCO 0201 / 0200.'], ['Enter the size', 'Inside length, width and depth in mm or inches, and the board.'], ['Check the net', 'Toggle cut, crease, bleed and panel labels; see knife length and sheets per sheet size.'], ['Download', 'Dieline PDF, artwork template, SVG — or design on it in the editor.']]} faq={FAQ} related={[{ href: '/print-size-calculator', label: 'Print Size & Binding Calculator' }, { href: '/print-layout', label: 'Print Layout (many-up)' }, { href: '/create', label: 'Design Editor' }]} />}>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(ld) }} />
       <PackagingHub />

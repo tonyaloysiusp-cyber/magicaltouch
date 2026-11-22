@@ -1,7 +1,7 @@
 'use client';
 
 import { ThemeSwitch } from '@/components/ThemeSwitch';
-import { friendlyAuthError } from '@/lib/authErrors';
+import { friendlyAuthError, withAuthRetry } from '@/lib/authErrors';
 import { Suspense, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -37,7 +37,9 @@ function LoginForm() {
     setError('');
     setResendMsg('');
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    // Phones and password managers often add spaces or capitals to the email.
+    const cleanEmail = email.trim().toLowerCase();
+    const { error } = await withAuthRetry(() => supabase.auth.signInWithPassword({ email: cleanEmail, password }));
 
     if (error) {
       setUnconfirmed(/email not confirmed/i.test(error.message));
@@ -53,11 +55,11 @@ function LoginForm() {
     if (!email) return;
     setResending(true);
     setResendMsg('');
-    const { error } = await supabase.auth.resend({
+    const { error } = await withAuthRetry(() => supabase.auth.resend({
       type: 'signup',
-      email,
+      email: email.trim().toLowerCase(),
       options: { emailRedirectTo: `${window.location.origin}/login?confirmed=1${next !== '/dashboard' ? `&next=${encodeURIComponent(next)}` : ''}` },
-    });
+    }));
     setResending(false);
     setResendMsg(error ? friendlyAuthError(error.message) : `New confirmation link sent to ${email}. Open it (check spam too), then log in.`);
   };
@@ -67,9 +69,9 @@ function LoginForm() {
     setResetLoading(true);
     setResetError('');
 
-    const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
+    const { error } = await withAuthRetry(() => supabase.auth.resetPasswordForEmail(resetEmail.trim().toLowerCase(), {
       redirectTo: `${window.location.origin}/reset-password`,
-    });
+    }));
 
     setResetLoading(false);
 

@@ -23,7 +23,7 @@ const FILTERS: { id: string; label: string; test: (t: PackTemplate) => boolean }
   { id: 'all', label: 'All designs', test: () => true },
   { id: 'carton', label: 'Folding cartons', test: (t) => ['rte', 'ste', 'seal'].includes(t.style) },
   { id: 'gift', label: 'Gift boxes & trays', test: (t) => t.style === 'traylid' || t.style === 'tray' || t.style === 'matchbox' },
-  { id: 'sleeve', label: 'Sleeves', test: (t) => t.style === 'sleeve' },
+  { id: 'drawer', label: 'Drawer boxes', test: (t) => t.style === 'matchbox' },
   { id: 'ship', label: 'Shipping boxes', test: (t) => t.style === 'rsc' || t.style === 'hsc' || t.style === 'fol' },
 ];
 
@@ -43,8 +43,8 @@ export function PackagingHub() {
   const [hover, setHover] = useState<string | null>(null);
   useEffect(() => { setReady(true); }, []);
   const list = useMemo(() => PACK_TEMPLATES.filter(FILTERS.find((f) => f.id === filter)!.test), [filter]);
-  const showcase = useMemo(() => ['kids-toys-seal', 'tech-gadget-traylid', 'spice-sleeve', 'eco-reusable-hsc', 'wine-gift-rte', 'sweet-bakery-tray', 'candle-traylid', 'chocolate-sleeve'].map((id) => PACK_TEMPLATES.find((t) => t.id === id)!).filter(Boolean), []);
-  const hero = useMemo(() => ['botanical-tea-rte', 'kraft-coffee-sleeve', 'luxe-cosmetics-rte'].map((id) => PACK_TEMPLATES.find((t) => t.id === id)!).filter(Boolean), []);
+  const showcase = useMemo(() => ['kids-toys-seal', 'tech-gadget-traylid', 'spice-traylid', 'eco-reusable-hsc', 'wine-gift-rte', 'sweet-bakery-tray', 'candle-traylid', 'chocolate-matchbox'].map((id) => PACK_TEMPLATES.find((t) => t.id === id)!).filter(Boolean), []);
+  const hero = useMemo(() => ['botanical-tea-rte', 'tech-gadget-traylid', 'luxe-cosmetics-rte'].map((id) => PACK_TEMPLATES.find((t) => t.id === id)!).filter(Boolean), []);
 
   /** Open a template (or a blank box) in the design editor. */
   const open = async (t: PackTemplate | null, style?: BoxStyleId) => {
@@ -78,14 +78,12 @@ export function PackagingHub() {
           <div>
             <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-mt-muted">Packaging design studio</p>
             <h2 className="mt-2 text-[34px] font-semibold leading-[1.05] tracking-tight sm:text-5xl">Design the box and its <span className="mt-spectrum-text">dieline</span> in one editor.</h2>
-            <p className="mt-3 max-w-lg text-[15px] leading-relaxed text-mt-muted sm:text-lg">Start from a template or your product size. The full design editor opens on the real flat blank with text, shapes, images, patterns and layers, and the cut and crease lines locked on top.</p>
+            <p className="mt-3 max-w-lg text-[15px] leading-relaxed text-mt-muted sm:text-lg">Pick a box, enter your product size and board, then design it in the full editor.</p>
             <div className="mt-6 flex flex-wrap gap-2.5">
               <button type="button" onClick={() => open(null, 'rte')} disabled={!!busy} className="inline-flex h-11 items-center gap-2 rounded-full bg-mt-ink px-5 text-[14px] font-semibold text-mt-bg hover:opacity-90"><Box size={16} /> Start a blank box</button>
               <a href="#templates" className="inline-flex h-11 items-center gap-2 rounded-full border border-mt-border bg-mt-surface/80 px-5 text-[14px] font-semibold backdrop-blur hover:bg-mt-surface2">Browse {PACK_TEMPLATES.length} templates <ArrowRight size={15} /></a>
             </div>
-            <ul className="mt-6 flex flex-wrap gap-x-5 gap-y-1.5 text-[12.5px] text-mt-muted">
-              <li>✓ {BOX_STYLES.length} box structures</li><li>✓ mm · cm · inches</li><li>✓ Closure and crease checks</li><li>✓ Print PDF with spot die lines</li>
-            </ul>
+            
             {err && <p role="alert" className="mt-3 text-[13px] text-rose-600">{err}</p>}
           </div>
           <div className="grid grid-cols-3 items-end gap-3 rounded-xl border border-mt-border/70 bg-mt-bg/60 p-4 backdrop-blur">

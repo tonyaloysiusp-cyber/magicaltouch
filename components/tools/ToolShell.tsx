@@ -8,6 +8,7 @@ import { ReactNode, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { ChevronDown, CircleHelp, LayoutGrid, Moon, Sun } from 'lucide-react';
 import { Footer } from '@/components/home/Footer';
+import { SiteHeader } from '@/components/SiteHeader';
 import { BackChip } from '@/components/tools/BackChip';
 import { ToolIcon } from '@/components/tools/ToolsDirectory';
 import { TOOLS, rememberTool } from '@/lib/toolsCatalog';
@@ -25,6 +26,8 @@ export interface ToolShellProps {
   sub?: string;
   icon?: string;
   about?: ReactNode;
+  /** 'app' (default): software layout for working tools. 'page': website layout (site menu, page width) for start pages. */
+  variant?: 'app' | 'page';
   children: ReactNode;
 }
 
@@ -58,11 +61,31 @@ function Switcher({ current }: { current: string }) {
   );
 }
 
-export function ToolShell({ path, h1, name, sub, icon, about, children }: ToolShellProps) {
+export function ToolShell({ path, h1, name, sub, icon, about, variant = 'app', children }: ToolShellProps) {
   const { theme, toggleTheme } = useAppTheme();
   const entry = TOOLS.find((t) => t.href === path);
   const title = name || entry?.title || h1;
   useEffect(() => { if (entry) rememberTool(entry.id); }, [entry]);
+  if (variant === 'page') {
+    // Website layout: the site's own menu, page-width content, help and footer.
+    return (
+      <div className={`${display.variable} ${theme === 'dark' ? 'dark' : ''}`}>
+        <div className="min-h-screen bg-mt-bg text-mt-ink">
+          <SiteHeader theme={theme} onToggleTheme={toggleTheme} active="tools" />
+          <main className="mx-auto w-full max-w-[1400px] px-4 pb-12 pt-4 sm:px-6">
+            <h1 className="sr-only">{h1}</h1>
+            {children}
+          </main>
+          {about && (
+            <section id="about" aria-label="How it works and questions" className="scroll-mt-14 border-t border-mt-border bg-mt-surface2/40">
+              <div className="mx-auto max-w-[1200px] px-4 py-10 sm:px-6">{about}</div>
+            </section>
+          )}
+          <Footer theme={theme} />
+        </div>
+      </div>
+    );
+  }
   // Software layout: a slim app bar, the workspace filling the screen and a
   // status bar. The page's marketing headline, how-it-works and questions sit
   // below the workspace (still on the page for search engines and new users).

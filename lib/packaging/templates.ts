@@ -40,19 +40,19 @@ export interface PackTemplate { id: string; name: string; theme: Theme; style: B
 const STYLE_FOR: Record<string, [BoxStyleId, number, number, number][]> = {
   'botanical-tea': [['rte', 70, 70, 110], ['traylid', 160, 110, 50]],
   'luxe-cosmetics': [['rte', 45, 45, 120], ['traylid', 120, 120, 40], ['matchbox', 110, 70, 30]],
-  'kraft-coffee': [['ste', 90, 60, 160], ['sleeve', 120, 80, 40], ['fol', 400, 300, 250]],
+  'kraft-coffee': [['ste', 90, 60, 160], ['seal', 110, 70, 180], ['fol', 400, 300, 250]],
   'kids-toys': [['seal', 200, 80, 150], ['rsc', 300, 200, 150]],
   'tech-gadget': [['traylid', 110, 110, 40], ['rte', 90, 40, 120]],
   'sweet-bakery': [['tray', 180, 120, 50], ['rte', 120, 60, 120]],
   'candle': [['rte', 80, 80, 90], ['traylid', 100, 100, 100]],
-  'spice': [['rte', 60, 40, 140], ['sleeve', 160, 100, 30]],
+  'spice': [['rte', 60, 40, 140], ['traylid', 140, 100, 45]],
   'skincare': [['rte', 55, 55, 110], ['ste', 50, 35, 150]],
   'wine-gift': [['rte', 95, 95, 340], ['traylid', 360, 120, 110]],
   'eco-reusable': [['rte', 80, 80, 240], ['hsc', 300, 220, 160]],
-  'chocolate': [['sleeve', 160, 80, 12], ['rte', 160, 25, 85]],
+  'chocolate': [['matchbox', 160, 80, 20], ['rte', 160, 25, 85]],
 };
 export const PACK_TEMPLATES: PackTemplate[] = THEMES.flatMap((th) => (STYLE_FOR[th.id] || []).map(([style, L, W, D], i) => ({
-  id: `${th.id}-${style}`, name: `${th.name} · ${i === 0 ? 'box' : style === 'traylid' ? 'gift box' : style === 'sleeve' ? 'sleeve' : style.endsWith('sc') ? 'shipper' : style === 'tray' ? 'tray' : style === 'matchbox' ? 'drawer box' : 'box'}`,
+  id: `${th.id}-${style}`, name: `${th.name} · ${style === 'matchbox' ? 'drawer box' : i === 0 ? 'box' : style === 'traylid' ? 'gift box' : style === 'sleeve' ? 'sleeve' : style.endsWith('sc') ? 'shipper' : style === 'tray' ? 'tray' : style === 'matchbox' ? 'drawer box' : 'box'}`,
   theme: th, style, L, W, D, t: style === 'rsc' || style === 'hsc' || style === 'fol' ? 3 : style === 'traylid' || style === 'tray' || style === 'matchbox' ? 1.5 : 0.45,
 })));
 

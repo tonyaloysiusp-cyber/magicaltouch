@@ -1,7 +1,7 @@
 'use client';
 
 import { ThemeSwitch } from '@/components/ThemeSwitch';
-import { friendlyAuthError } from '@/lib/authErrors';
+import { friendlyAuthError, withAuthRetry } from '@/lib/authErrors';
 import { PasswordInput } from '@/components/PasswordInput';
 import { Suspense, useState } from 'react';
 import { supabase } from '@/lib/supabase';
@@ -44,7 +44,7 @@ function SignupForm() {
 
     // The choice travels with the account until the e-mail is verified,
     // then the welcome step records it on the profile.
-    const { data, error } = await supabase.auth.signUp({
+    const { data, error } = await withAuthRetry(() => supabase.auth.signUp({
       email: cleanEmail,
       password,
       options: {
@@ -52,7 +52,7 @@ function SignupForm() {
         // The confirmation link brings people back to this site.
         emailRedirectTo: `${window.location.origin}/login?confirmed=1${next !== '/dashboard' ? `&next=${encodeURIComponent(next)}` : ''}`,
       },
-    });
+    }));
 
     if (error) {
       setError(friendlyAuthError(error.message));
