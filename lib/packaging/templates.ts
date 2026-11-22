@@ -52,7 +52,7 @@ const STYLE_FOR: Record<string, [BoxStyleId, number, number, number][]> = {
   'chocolate': [['matchbox', 160, 80, 20], ['rte', 160, 25, 85]],
 };
 export const PACK_TEMPLATES: PackTemplate[] = THEMES.flatMap((th) => (STYLE_FOR[th.id] || []).map(([style, L, W, D], i) => ({
-  id: `${th.id}-${style}`, name: `${th.name} · ${style === 'matchbox' ? 'drawer box' : i === 0 ? 'box' : style === 'traylid' ? 'gift box' : style === 'sleeve' ? 'sleeve' : style.endsWith('sc') ? 'shipper' : style === 'tray' ? 'tray' : style === 'matchbox' ? 'drawer box' : 'box'}`,
+  id: `${th.id}-${style}`, name: `${th.name} · ${style === 'matchbox' ? 'drawer box' : i === 0 ? 'box' : style === 'traylid' ? 'gift box' : style === 'sleeve' ? 'sleeve' : style.endsWith('sc') ? 'shipper' : style === 'tray' ? 'tray' : 'box'}`,
   theme: th, style, L, W, D, t: style === 'rsc' || style === 'hsc' || style === 'fol' ? 3 : style === 'traylid' || style === 'tray' || style === 'matchbox' ? 1.5 : 0.45,
 })));
 
