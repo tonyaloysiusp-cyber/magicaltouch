@@ -1,0 +1,16 @@
+name: perf
+on:
+  workflow_dispatch:
+    inputs:
+      paths: { description: 'space-separated paths', required: true, default: '/ /templates' }
+jobs:
+  perf:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: npm i --no-save playwright@1.48.2 && npx playwright install --with-deps chromium
+      - env: { PATHS: '${{ inputs.paths }}' }
+        run: node e2e/perf/profile.mjs
