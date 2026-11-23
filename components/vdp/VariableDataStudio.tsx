@@ -15,7 +15,7 @@ const SHEETS = [{ n: 'A4', w: 210, h: 297 }, { n: 'A3', w: 297, h: 420 }, { n: '
 const SAMPLE = 'Name,Role,Company\nArun Kumar,Head of Design,Magical Touch\nPriya Nair,Production Manager,Magical Touch\nRavi Shankar,Print Specialist,Magical Touch';
 let nid = 1;
 
-export function VariableDataStudio() {
+export function VariableDataStudio({ initialFile }: { initialFile?: File } = {}) {
   const [csv, setCsv] = useState(SAMPLE);
   const ds: DataSet = useMemo(() => parseTable(csv), [csv]);
   const [rec, setRec] = useState(0);
@@ -41,6 +41,9 @@ export function VariableDataStudio() {
   // Live web fonts for the preview (the PDF uses exact outlines).
   useEffect(() => { import('@/lib/fontOutline').then((m) => fields.forEach((x) => m.registerPageFont(x.font, x.weight).catch(() => {}))); }, [fields]);
 
+  // Opened from the design editor with the current page.
+  const initRef = useRef(false);
+  useEffect(() => { if (initialFile && !initRef.current) { initRef.current = true; void openBg(initialFile); } }); // eslint-disable-line react-hooks/exhaustive-deps
   const openBg = async (file: File | undefined | null) => {
     if (!file) return;
     const bytes = new Uint8Array(await file.arrayBuffer());

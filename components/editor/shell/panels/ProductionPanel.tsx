@@ -18,10 +18,11 @@ import { AlertTriangle, Barcode, CheckCircle2, Download, Layers, Maximize2, Scis
 import { CODE_KINDS, barcodeWarnings, linearBarcode, type CodeKind } from '@/lib/barcodeLinear';
 import type { PackagingApi } from './PackagingPanel';
 
+export type StudioKind = 'separation' | 'tiling' | 'layout' | 'vdp' | 'size';
 export interface ProductionApi extends PackagingApi {
   pagePdf: () => Promise<Uint8Array>;
   pagePng: (dpi: number) => Promise<Blob>;
-  openStudio: (kind: 'separation' | 'tiling', file: File) => void;
+  openStudio: (kind: StudioKind, file: File | null) => void;
 }
 
 const PX = 96 / 25.4;
@@ -54,7 +55,7 @@ function Num({ name, value, onChange, unit = 'mm', step = 0.5, min = 0, max = 10
 }
 
 export function ProductionPanel({ api, initialTab }: { api: ProductionApi; initialTab?: string }) {
-  const [tab, setTab] = useState<'barcode' | 'cut' | 'large' | 'sep'>(() => (['barcode', 'cut', 'large', 'sep'].includes(initialTab || '') ? (initialTab as any) : 'barcode'));
+  const [tab, setTab] = useState<'barcode' | 'cut' | 'large' | 'sep' | 'layout' | 'data' | 'size'>(() => (['barcode', 'cut', 'large', 'sep', 'layout', 'data', 'size'].includes(initialTab || '') ? (initialTab as any) : 'barcode'));
   const [busy, setBusy] = useState<string | null>(null);
   const run = async (what: string, f: () => Promise<void>) => { setBusy(what); try { await f(); } catch (e: any) { api.notice(e?.message || 'That did not work.'); } finally { setBusy(null); } };
   const save = (blob: Blob, name: string) => { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); };
@@ -215,8 +216,8 @@ export function ProductionPanel({ api, initialTab }: { api: ProductionApi; initi
 
   return (
     <div className="space-y-4 text-[12px]">
-      <div role="tablist" aria-label="Print and cut" className="grid grid-cols-4 rounded-lg border border-mt-border p-0.5">
-        {([['barcode', 'Barcode'], ['cut', 'Cut'], ['large', 'Large'], ['sep', 'Separate']] as const).map(([id, l]) => (
+      <div role="tablist" aria-label="Print and cut" className="grid grid-cols-4 gap-0.5 rounded-lg border border-mt-border p-0.5">
+        {([['barcode', 'Barcode'], ['cut', 'Cut'], ['large', 'Large'], ['sep', 'Separate'], ['layout', 'Imposition'], ['data', 'Data merge'], ['size', 'Sizes']] as const).map(([id, l]) => (
           <button key={id} type="button" role="tab" aria-selected={tab === id} onClick={() => setTab(id)} className={`h-7 rounded-md text-[11.5px] font-semibold ${tab === id ? 'bg-mt-ink text-mt-bg' : 'text-mt-muted hover:text-mt-ink'}`}>{l}</button>
         ))}
       </div>
@@ -310,6 +311,28 @@ export function ProductionPanel({ api, initialTab }: { api: ProductionApi; initi
           <select value={sepDpi} onChange={(e) => setSepDpi(Number(e.target.value))} className={sel} aria-label="Separation resolution">{[150, 200, 300].map((d) => <option key={d} value={d}>{d} dpi</option>)}</select>
         </label>
         <button type="button" className={primary} disabled={!!busy} onClick={() => run('Rendering the page…', async () => { const b = await api.pagePng(sepDpi); api.openStudio('separation', new File([b], 'page.png', { type: 'image/png' })); })}><Sparkles size={14} /> Separate this page…</button>
+      </section>}
+      {tab === 'layout' && <section className="space-y-2.5">
+        <p className="text-[11px] text-mt-faint">Put this page many times on a sheet (business cards, flyers, stickers), or arrange pages as a booklet: sheet size A4–A1 or custom, spacing, bleed, crop and registration marks, colour bars, front and back, duplex.</p>
+        <button type="button" className={primary} disabled={!!busy} onClick={() => run('Preparing the page…', async () => { const b = await api.pagePdf(); api.openStudio('layout', new File([b as BlobPart], 'page.pdf', { type: 'application/pdf' })); })}><Layers size={14} /> Lay out this page on sheets…</button>
+        <p className="text-[11px] text-mt-faint">The page goes in as a vector PDF; the layout downloads as a production PDF with marks.</p>
+      </section>}
+
+      {tab === 'data' && <section className="space-y-2.5">
+        <p className="text-[11px] text-mt-faint">Business cards, certificates, ID cards, tickets and labels from a list: import CSV, map columns to text, image, QR and barcode fields, automatic numbering, check missing or duplicate data, preview each record and download one print-ready PDF.</p>
+        <button type="button" className={primary} disabled={!!busy} onClick={() => run('Preparing the page…', async () => { const b = await api.pagePdf(); api.openStudio('vdp', new File([b as BlobPart], 'page.pdf', { type: 'application/pdf' })); })}><Sparkles size={14} /> Merge data onto this page…</button>
+        <p className="text-[11px] text-mt-faint">This page becomes the background; place the data fields on top.</p>
+      </section>}
+
+      {tab === 'size' && <section className="space-y-2.5">
+        <div className="rounded-md border border-mt-border p-2 tabular-nums">
+          <p className="text-[10.5px] text-mt-faint">This page</p>
+          <p className="text-[15px] font-semibold">{pageMm.w} × {pageMm.h} mm</p>
+          <p className="text-[11px] text-mt-faint">{(pageMm.w / 25.4).toFixed(2)} × {(pageMm.h / 25.4).toFixed(2)} in · {Math.round((pageMm.w / 25.4) * 300)} × {Math.round((pageMm.h / 25.4) * 300)} px at 300 dpi</p>
+          <p className="text-[11px] text-mt-faint">With 3 mm bleed: {(pageMm.w + 6).toFixed(1)} × {(pageMm.h + 6).toFixed(1)} mm · safe area {(pageMm.w - 10).toFixed(1)} × {(pageMm.h - 10).toFixed(1)} mm (5 mm margin)</p>
+        </div>
+        <button type="button" className={primary} onClick={() => api.openStudio('size', null)}><Maximize2 size={14} /> Print size & binding calculator…</button>
+        <p className="text-[11px] text-mt-faint">A and B paper sizes, units and DPI, bleed and margins, book spine width from page count and paper, cover spread, creep, folding — with CSV and a printable sheet.</p>
       </section>}
       {busy && <p className="text-[11px] text-mt-muted">{busy}</p>}
     </div>

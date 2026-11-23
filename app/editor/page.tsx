@@ -66,12 +66,16 @@ import { traceLayerObjects } from '@/lib/traceVector';
 import { QrCode as QrCodeIcon, Package as PackageIcon, Shirt as ShirtIcon, Scissors as ScissorsIcon } from 'lucide-react';
 import { PackagingPanel, type PackagingApi } from '@/components/editor/shell/panels/PackagingPanel';
 import { TextilePanel } from '@/components/editor/shell/panels/TextilePanel';
-import { ProductionPanel, type ProductionApi } from '@/components/editor/shell/panels/ProductionPanel';
+import { ProductionPanel, type ProductionApi, type StudioKind } from '@/components/editor/shell/panels/ProductionPanel';
 import { Gem as StudioIcon } from 'lucide-react';
 import { StudioPanel, StudioPublish } from '@/components/editor/shell/panels/StudioPanel';
 import dynamic from 'next/dynamic';
 const SeparationStudioLazy = dynamic(() => import('@/components/separation/SeparationStudio').then((m) => m.SeparationStudio), { ssr: false });
 const LargeFormatStudioLazy = dynamic(() => import('@/components/largeFormat/LargeFormatStudio').then((m) => m.LargeFormatStudio), { ssr: false });
+const ImpositionStudioLazy = dynamic(() => import('@/components/tools/ImpositionStudio').then((m) => m.ImpositionStudio), { ssr: false });
+const VariableDataStudioLazy = dynamic(() => import('@/components/vdp/VariableDataStudio').then((m) => m.VariableDataStudio), { ssr: false });
+const PrintSizeWorkspaceLazy = dynamic(() => import('@/components/tools/PrintSizeWorkspace').then((m) => m.PrintSizeWorkspace), { ssr: false });
+const STUDIO_TITLES: Record<string, string> = { separation: 'Colour separations — this page', tiling: 'Tiling and panels — this page', layout: 'Imposition — this page on sheets', vdp: 'Data merge — this page', size: 'Print size & binding calculator' };
 import { useAppTheme } from '@/hooks/useAppTheme';
 
 import { ToolMode, DocUnit, isDrawTool, PASTEBOARD_BG, RULER_SIZE } from '@/lib/editor/types';
@@ -1575,6 +1579,14 @@ function EditorContent() {
       // debugging tools inspect real document state (anchors, handles,
       // z-order, history) directly instead of guessing from pixels.
       (window as any).__fabricCanvas = canvas;
+      // Fonts now load on demand: whenever one finishes, re-measure and re-wrap text
+      // drawn before it arrived. The common text fonts are fetched straight away.
+      try {
+        const fonts: any = (document as any).fonts;
+        let raf = 0;
+        fonts?.addEventListener?.('loadingdone', () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(() => refreshTextMetrics(canvas)); });
+        ['Arial', 'Inter'].forEach((f) => { ensureFontLoaded(f, 400).catch(() => {}); ensureFontLoaded(f, 700).catch(() => {}); });
+      } catch { /* older browsers: text still renders, metrics refresh on edit */ }
 
       // Tool previews, anchor handles and other helpers are never part of
       // the document: keep them out of saves, undo and the layers list.
@@ -2930,7 +2942,7 @@ function EditorContent() {
   // Workspace type (Design / Packaging / Textile): the workspace's panel opens and its tools lead the rail.
   const [studio, setStudio] = useState<EditorStudio>(() => { const p = searchParams.get('panel'); return p === 'packaging' || p === 'textile' ? p : 'design'; });
   const studioPickedRef = useRef(false);
-  const [studioOverlay, setStudioOverlay] = useState<{ kind: 'separation' | 'tiling'; file: File } | null>(null);
+  const [studioOverlay, setStudioOverlay] = useState<{ kind: StudioKind; file: File | null } | null>(null);
   useEffect(() => {
     // a packaging or garment design opened from a file or the recent list picks its workspace by itself
     let n = 0;
@@ -8078,7 +8090,7 @@ function EditorContent() {
     {
       id: 'production',
       label: 'Print & cut',
-      title: 'Print & cut — barcodes, sticker and laser cut lines, large format, separations',
+      title: 'Print & cut — barcodes, sticker and laser cut lines, large format, separations, imposition, data merge, print sizes',
       icon: <ScissorsIcon size={20} />,
       render: () => <ProductionPanel api={productionApi} initialTab={searchParams.get('tab') || undefined} />,
     },
@@ -8936,13 +8948,17 @@ function EditorContent() {
       )}
       {workspace === 'design' && compact && <LeftRail items={orderForStudio(railItems, studio)} active={leftPanel} onActivate={setLeftPanel} compact />}
       {studioOverlay && (
-        <div role="dialog" aria-modal="true" aria-label={studioOverlay.kind === 'separation' ? 'Colour separations' : 'Tiling and panels'} className="fixed inset-0 z-[90] flex flex-col bg-mt-bg">
+        <div role="dialog" aria-modal="true" aria-label={STUDIO_TITLES[studioOverlay.kind]} className="fixed inset-0 z-[90] flex flex-col bg-mt-bg">
           <div className="flex h-12 shrink-0 items-center justify-between border-b border-mt-border px-4">
-            <p className="text-[14px] font-semibold">{studioOverlay.kind === 'separation' ? 'Colour separations — this page' : 'Tiling and panels — this page'}</p>
+            <p className="text-[14px] font-semibold">{STUDIO_TITLES[studioOverlay.kind]}</p>
             <button type="button" onClick={() => setStudioOverlay(null)} className="inline-flex h-8 items-center gap-1.5 rounded-md border border-mt-border px-3 text-[12.5px] font-semibold hover:bg-mt-surface2">Back to the design</button>
           </div>
           <div className="min-h-0 flex-1 overflow-auto p-4">
-            {studioOverlay.kind === 'separation' ? <SeparationStudioLazy initialFile={studioOverlay.file} /> : <LargeFormatStudioLazy initialFile={studioOverlay.file} />}
+            {studioOverlay.kind === 'separation' ? <SeparationStudioLazy initialFile={studioOverlay.file || undefined} />
+              : studioOverlay.kind === 'tiling' ? <LargeFormatStudioLazy initialFile={studioOverlay.file || undefined} />
+              : studioOverlay.kind === 'layout' ? <ImpositionStudioLazy initialFile={studioOverlay.file || undefined} />
+              : studioOverlay.kind === 'vdp' ? <VariableDataStudioLazy initialFile={studioOverlay.file || undefined} />
+              : <PrintSizeWorkspaceLazy />}
           </div>
         </div>
       )}

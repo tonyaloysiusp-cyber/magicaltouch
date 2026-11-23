@@ -146,7 +146,7 @@ function sheetSvg(s: Sheet, thumbs: Thumb[][], o: { sel?: string | null; drag?: 
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${-pad} ${-pad} ${s.w + 2 * pad} ${s.h + 2 * pad}" style="width:100%;height:auto;display:block"><rect x="0" y="0" width="${s.w}" height="${s.h}" fill="#fff" stroke="#94A3B8" stroke-width="0.3"/><g transform="matrix(1 0 0 -1 0 ${H})">${parts.join('')}${bleedRect}</g></svg>`;
 }
 
-export function ImpositionStudio() {
+export function ImpositionStudio({ initialFile }: { initialFile?: File } = {}) {
   const [sources, setSources] = useState<Src[]>([]);
   const [doc, setDoc] = useState<Doc>({ sheets: [] });
   const [past, setPast] = useState<{ doc: Doc; steps: Command[] }[]>([]);
@@ -228,6 +228,9 @@ export function ImpositionStudio() {
     window.addEventListener('keydown', onKey); return () => window.removeEventListener('keydown', onKey);
   });
 
+  // Opened from the design editor with the current page.
+  const initRef = useRef(false);
+  useEffect(() => { if (initialFile && !initRef.current) { initRef.current = true; void loadFile(initialFile, false); } }); // eslint-disable-line react-hooks/exhaustive-deps
   const loadFile = async (f: File, add: boolean) => {
     setErr(null); setMsg(null); setBusy('open');
     try {

@@ -5,7 +5,7 @@
 // same behaviour everywhere; on phones and tablets the tabs move into a
 // menu so nothing is ever cut off.
 
-import { TOOLS as CATALOG, TOOL_CATEGORIES, rememberTool } from '@/lib/toolsCatalog';
+import { TOOLS as CATALOG, MAIN_APPS, IN_EDITOR, rememberTool } from '@/lib/toolsCatalog';
 import { ToolIcon } from '@/components/tools/ToolsDirectory';
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
@@ -27,7 +27,14 @@ const TABS: { id: SiteTab; label: string; href: string }[] = [
 ];
 
 // The "Tools" menu: every tool from the shared list, grouped, plus All tools.
-const MENU = TOOL_CATEGORIES.map((c) => ({ ...c, tools: CATALOG.filter((t) => t.category === c.id) }));
+const byIds = (ids: string[]) => ids.map((id) => CATALOG.find((t) => t.id === id)).filter(Boolean) as typeof CATALOG;
+const MORE = CATALOG.filter((t) => !MAIN_APPS.includes(t.id) && !IN_EDITOR.includes(t.id));
+const MENU = [
+  { id: 'main', label: 'Main applications', tools: byIds(MAIN_APPS) },
+  { id: 'more', label: 'More tools', tools: MORE.slice(0, Math.ceil(MORE.length / 2)) },
+  { id: 'more2', label: '\u00a0', tools: MORE.slice(Math.ceil(MORE.length / 2)) },
+  { id: 'editor', label: 'Inside the Design Editor', tools: byIds(IN_EDITOR) },
+];
 
 // "Tools" opens the Tools page on click or tap. With a mouse, hovering also
 // shows a quick menu of the tools by group (never on touch screens).

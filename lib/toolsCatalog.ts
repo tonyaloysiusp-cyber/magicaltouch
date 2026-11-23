@@ -38,7 +38,12 @@ export const TOOLS: ToolEntry[] = [
   { id: 'separation', href: '/editor?panel=production&tab=sep', title: 'Separations & Halftone in the Design Editor', hint: 'Screen-print and CMYK films', body: 'Spot-colour plates with white underbase or CMYK process separations, halftone frequency, angle and dot shape, one film per ink. Part of the Design Editor (Print & cut panel).', category: 'print', icon: 'Layers3', tint: '#E6007E', isNew: true, keywords: ['separation', 'colour separation', 'color separation', 'halftone', 'screen printing', 'films', 'underbase', 'lpi', 'spot colour', 'cmyk plates'] },
 ];
 
-export const RECOMMENDED = ['editor', 'textile', 'remove-background', 'trace', 'patterns'];
+/** The main applications, in this order; everything else is listed under More tools. */
+export const MAIN_APPS = ['editor', 'photo-studio', 'packaging', 'remove-background', 'passport', 'patterns'];
+/** Tools that live inside the Design Editor (their old pages open the editor panel). */
+export const IN_EDITOR = ['labels', 'barcode', 'large-format', 'separation'];
+
+export const RECOMMENDED = MAIN_APPS;
 export const RECENT_KEY = 'mt:recent-tools';
 
 export function toolForPath(path: string): ToolEntry | undefined {
