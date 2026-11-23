@@ -41,23 +41,23 @@ const STYLE_FOR: Record<string, [BoxStyleId, number, number, number][]> = {
   'botanical-tea': [['rte', 70, 70, 110], ['traylid', 160, 110, 50]],
   'luxe-cosmetics': [['rte', 45, 45, 120], ['traylid', 120, 120, 40], ['matchbox', 110, 70, 30]],
   'kraft-coffee': [['ste', 90, 60, 160], ['seal', 110, 70, 180], ['fol', 400, 300, 250]],
-  'kids-toys': [['seal', 200, 80, 150], ['rsc', 300, 200, 150]],
+  'kids-toys': [['seal', 200, 80, 150], ['rsc', 300, 200, 150], ['crash', 120, 80, 160]],
   'tech-gadget': [['traylid', 110, 110, 40], ['rte', 90, 40, 120]],
-  'sweet-bakery': [['tray', 180, 120, 50], ['rte', 120, 60, 120]],
+  'sweet-bakery': [['tray', 180, 120, 50], ['rte', 120, 60, 120], ['gable', 160, 90, 110]],
   'candle': [['rte', 80, 80, 90], ['traylid', 100, 100, 100]],
-  'spice': [['rte', 60, 40, 140], ['traylid', 140, 100, 45]],
+  'spice': [['rte', 60, 40, 140], ['traylid', 140, 100, 45], ['snap123', 70, 50, 150]],
   'skincare': [['rte', 55, 55, 110], ['ste', 50, 35, 150]],
   'wine-gift': [['rte', 95, 95, 340], ['traylid', 360, 120, 110]],
-  'eco-reusable': [['rte', 80, 80, 240], ['hsc', 300, 220, 160]],
+  'eco-reusable': [['rte', 80, 80, 240], ['hsc', 300, 220, 160], ['mailer', 260, 190, 70]],
   'chocolate': [['matchbox', 160, 80, 20], ['rte', 160, 25, 85]],
 };
 export const PACK_TEMPLATES: PackTemplate[] = THEMES.flatMap((th) => (STYLE_FOR[th.id] || []).map(([style, L, W, D], i) => ({
-  id: `${th.id}-${style}`, name: `${th.name} · ${style === 'matchbox' ? 'drawer box' : i === 0 ? 'box' : style === 'traylid' ? 'gift box' : style === 'sleeve' ? 'sleeve' : style.endsWith('sc') ? 'shipper' : style === 'tray' ? 'tray' : 'box'}`,
-  theme: th, style, L, W, D, t: style === 'rsc' || style === 'hsc' || style === 'fol' ? 3 : style === 'traylid' || style === 'tray' || style === 'matchbox' ? 1.5 : 0.45,
+  id: `${th.id}-${style}`, name: `${th.name} · ${style === 'matchbox' ? 'drawer box' : i === 0 ? 'box' : style === 'traylid' ? 'gift box' : style === 'sleeve' ? 'sleeve' : style.endsWith('sc') ? 'shipper' : style === 'tray' ? 'tray' : style === 'mailer' ? 'mailer' : style === 'gable' ? 'gable box' : style === 'crash' ? 'crash-lock box' : style === 'snap123' ? 'snap-lock box' : 'box'}`,
+  theme: th, style, L, W, D, t: style === 'rsc' || style === 'hsc' || style === 'fol' ? 3 : style === 'mailer' ? 1.5 : style === 'traylid' || style === 'tray' || style === 'matchbox' ? 1.5 : 0.45,
 })));
 
 export function templateDieline(t: PackTemplate): Dieline {
-  const corr = t.style === 'rsc' || t.style === 'hsc' || t.style === 'fol';
+  const corr = t.style === 'rsc' || t.style === 'hsc' || t.style === 'fol' || t.style === 'mailer';
   return makeDieline({ style: t.style, L: t.L, W: t.W, D: t.D, t: t.t, glue: corr ? 30 : 14, tuck: 15, lidDepth: Math.min(t.D, 30) });
 }
 
@@ -200,5 +200,18 @@ export function templateMockupSvg(t: PackTemplate): string {
   const mTop = [(fW * cos) / top.w, (-fW * sin) / top.w, (sW * cos) / top.h, (sW * sin) / top.h, ox - sW * cos, oy - sW * sin];
   const Wv = ox + fW * cos + 16, Hv = oy + fH + 22;
   const shadow = `<ellipse cx="${(ox + (fW - sW) * cos / 2).toFixed(1)}" cy="${(oy + fH - (fW - sW) * sin / 2 + 2).toFixed(1)}" rx="${((fW + sW) * cos * 0.55).toFixed(1)}" ry="${((fW + sW) * sin * 0.28).toFixed(1)}" fill="#000" opacity="0.13"/>`;
+  if (t.style === 'gable') {
+    // roof planes meet at a ridge over the middle of the width (about 45°), handle stands on the ridge
+    const roofP = P('Roof'), r = sW * 0.5, hk = Math.min(60, Math.max(30, t.D * 0.45)) * k * 0.8;
+    const rl = [ox - (sW * cos) / 2, oy - (sW * sin) / 2 - r], rr = [rl[0] + fW * cos, rl[1] - fW * sin];
+    const fl = [ox, oy], fr = [ox + fW * cos, oy - fW * sin], bl = [ox - sW * cos, oy - sW * sin];
+    const pts = (a: number[][]) => a.map((q) => q.map((v) => v.toFixed(1)).join(',')).join(' ');
+    const roofFace = roofP ? face(roofP, [(fW * cos) / roofP.w, (-fW * sin) / roofP.w, (fl[0] - rl[0]) / roofP.h, (fl[1] - rl[1]) / roofP.h, rl[0], rl[1]], 0) : `<polygon points="${pts([rl, rr, fr, fl])}" fill="${t.theme.bg}"/>`;
+    const handle = `<polygon points="${pts([rl, rr, [rr[0], rr[1] - hk], [rl[0], rl[1] - hk]])}" fill="${t.theme.bg}" stroke="#0002" stroke-width="0.6"/>` +
+      `<ellipse cx="${((rl[0] + rr[0]) / 2).toFixed(1)}" cy="${((rl[1] + rr[1]) / 2 - hk * 0.55).toFixed(1)}" rx="${(fW * 0.22).toFixed(1)}" ry="${(hk * 0.2).toFixed(1)}" transform="rotate(-30 ${((rl[0] + rr[0]) / 2).toFixed(1)} ${((rl[1] + rr[1]) / 2 - hk * 0.55).toFixed(1)})" fill="#00000055"/>`;
+    const gableEnd = `<polygon points="${pts([bl, fl, rl])}" fill="${t.theme.bg}"/><polygon points="${pts([bl, fl, rl])}" fill="#000" opacity="0.2"/>`;
+    const Hv2 = Hv, top2 = Math.min(0, rl[1] - hk - 8);
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 ${top2.toFixed(1)} ${Wv.toFixed(1)} ${(Hv2 - top2).toFixed(1)}">${shadow}${face(side, mSide, 0.16)}${face(front, mFront, 0.02)}${gableEnd}${handle}${roofFace}</svg>`;
+  }
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${Wv.toFixed(1)} ${Hv.toFixed(1)}">${shadow}${face(side, mSide, 0.16)}${face(front, mFront, 0.02)}${face(top, mTop, 0)}</svg>`;
 }

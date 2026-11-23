@@ -18,17 +18,21 @@ export interface Dieline {
   inside: { L: number; W: number; D: number }; t: number;
 }
 
-export type BoxStyleId = 'rte' | 'ste' | 'seal' | 'sleeve' | 'tray' | 'traylid' | 'matchbox' | 'rsc' | 'hsc' | 'fol' | 'pillow';
+export type BoxStyleId = 'rte' | 'ste' | 'seal' | 'sleeve' | 'tray' | 'traylid' | 'matchbox' | 'rsc' | 'hsc' | 'fol' | 'pillow' | 'snap123' | 'crash' | 'gable' | 'mailer';
 export interface BoxStyleDef { id: BoxStyleId; name: string; code: string; group: 'Folding carton' | 'Tray & lid' | 'Corrugated'; hint: string }
 export const BOX_STYLES: BoxStyleDef[] = [
   { id: 'rte', name: 'Reverse tuck end', code: 'ECMA A20 type', group: 'Folding carton', hint: 'Top tuck on the back, bottom tuck on the front — cosmetics, pharma, retail.' },
   { id: 'ste', name: 'Straight tuck end', code: 'ECMA A20 type', group: 'Folding carton', hint: 'Both tucks on the back panel — a clean, uninterrupted front.' },
   { id: 'seal', name: 'Seal end (glued)', code: 'ECMA A10 type', group: 'Folding carton', hint: 'Glued top and bottom flaps — cereal, food and multipacks.' },
+  { id: 'snap123', name: 'Tuck top, 1-2-3 snap-lock bottom', code: 'ECMA A55 type', group: 'Folding carton', hint: 'Bottom flaps fold in order 1-2-3 and lock — heavier products, no glue at the bottom.' },
+  { id: 'crash', name: 'Tuck top, crash-lock bottom', code: 'ECMA A60 type', group: 'Folding carton', hint: 'Pre-glued bottom pops open in one move — fast packing, strong base.' },
+  { id: 'gable', name: 'Gable box with handle', code: 'Gable carrier', group: 'Folding carton', hint: 'Roof-shaped top with a carry handle, crash-lock bottom — gifts, food, take-away.' },
   { id: 'pillow', name: 'Pillow box', code: 'ECMA F70.01', group: 'Folding carton', hint: 'Curved ends that close by pressing in — gifts, small items. Make a sample first.' },
   { id: 'sleeve', name: 'Sleeve', code: 'Open ends', group: 'Folding carton', hint: 'A wrap that slides over a tray or product.' },
   { id: 'tray', name: 'Four-corner tray', code: 'Glued corners', group: 'Tray & lid', hint: 'Open tray with corner flaps glued inside the walls.' },
   { id: 'traylid', name: 'Tray with lid', code: 'Two pieces', group: 'Tray & lid', hint: 'A tray and a slightly larger lid on one sheet — gift boxes.' },
   { id: 'matchbox', name: 'Tray and sleeve', code: 'Matchbox / drawer', group: 'Tray & lid', hint: 'A four-corner tray that slides into a sleeve — drawer boxes.' },
+  { id: 'mailer', name: 'Mailer box (roll end, tuck top)', code: 'FEFCO 0427', group: 'Corrugated', hint: 'E-commerce mailer: double front wall, ears locked in, tuck-in lid. No glue.' },
   { id: 'rsc', name: 'Regular slotted container', code: 'FEFCO 0201', group: 'Corrugated', hint: 'The standard shipping box: flaps meet in the middle.' },
   { id: 'hsc', name: 'Half slotted container', code: 'FEFCO 0200', group: 'Corrugated', hint: 'Like 0201 with no top flaps — open top.' },
   { id: 'fol', name: 'Full overlap container', code: 'FEFCO 0203', group: 'Corrugated', hint: 'All flaps the full width — outer flaps overlap completely for strength.' },
@@ -308,6 +312,189 @@ function pillow(o: DieOptions): Dieline {
     notes: [`Panels ${f(pw)} mm wide (arc over ${f(W)} mm with ${f(s)} mm rise), end curves ${f(k)} mm.`, 'Curved creases need a sample: score depth and curve rise depend on the board.'] };
 }
 
+// ── Lock bottoms, gable and mailer ──
+// Shapes follow how each style folds; sizes are derived from L, W, D and the board, not copied from a drawing.
+
+/** Four-panel body with a tuck top (tuck on the back, dust flaps on the sides). Returns the columns and edges. */
+function tuckTopBody(n: Net, o: DieOptions, extraTop = 0) {
+  const t = o.t, Lp = o.L + t, Wp = o.W + t, Dp = o.D + 2 * t, g = o.glue, td = Math.max(8, o.tuck), dd = Math.min(Wp * 0.85, Lp / 2 - 1);
+  const { cols, end, front, back } = bodyCols(Lp, Wp, g, o.gluePos);
+  const y0 = Wp + td + extraTop, y1 = y0 + Dp;
+  cols.forEach((c) => n.panel(c.name, c.x0, y0, c.x1 - c.x0, Dp));
+  cols.slice(1).forEach((c) => n.crease(seg([c.x0, y0], [c.x0, y1])));
+  n.cut(seg([end, y0], [end, y1]));
+  glueFlap(n, g, y0, y1, g, o.glueAngle);
+  return { t, Lp, Wp, Dp, g, td, dd, cols, end, front, back, y0, y1 };
+}
+function addTuckTop(n: Net, o: DieOptions, b: ReturnType<typeof tuckTopBody>) {
+  const { cols, front, back, y0, Wp, td, dd, Lp, Dp } = b;
+  tuckClosure(n, back.x0, back.x1, y0, Wp, td, -1, 'Top');
+  if (o.thumbNotch) { const r = Math.min(10, Lp / 6, Dp / 6), cx = (front.x0 + front.x1) / 2; n.cut(`M${f(front.x0)} ${f(y0)} L${f(cx - r)} ${f(y0)}` + arcC(cx, y0, r, Math.PI, 0) + ` L${f(front.x1)} ${f(y0)}`); }
+  else n.cut(seg([front.x0, y0], [front.x1, y0]));
+  cols.forEach((c, i) => { if (c.name === 'Side') dustFlap(n, c.x0, c.x1, y0, dd, -1, cols[(i + 1) % cols.length] === back); });
+}
+
+/**
+ * 1-2-3 snap-lock bottom. Fold the two side flaps in (1), then the back flap (2), which reaches past the
+ * middle and has a slit; the front flap (3) has a tongue that pushes through the slit and locks.
+ */
+function addSnapBottom(n: Net, b: ReturnType<typeof tuckTopBody>) {
+  const { cols, front, back, y1, Wp } = b;
+  const half = Wp / 2, backD = Wp * 0.62, tongueD = Wp * 0.24;
+  for (const c of cols) {
+    const w = c.x1 - c.x0;
+    n.crease(seg([c.x0, y1], [c.x1, y1]));
+    if (c.name === 'Side') {
+      // (1) side flap: half the width, both ends angled so it clears the walls
+      const d = half - 1, a = Math.min(d * 0.6, w * 0.25);
+      n.cut(P([[c.x0, y1], [c.x0 + a, y1 + d], [c.x1 - a, y1 + d], [c.x1, y1]]));
+      n.panel('Bottom flap 1', c.x0 + a, y1, w - 2 * a, d, false);
+    } else if (c === back) {
+      // (2) back flap with the locking slit at the box middle
+      const sl = w * 0.34 + 2, cx = (c.x0 + c.x1) / 2, a = Math.min(6, w * 0.06);
+      n.cut(P([[c.x0, y1], [c.x0 + 1, y1 + 1], [c.x0 + a, y1 + backD], [c.x1 - a, y1 + backD], [c.x1 - 1, y1 + 1], [c.x1, y1]]));
+      n.cut(seg([cx - sl / 2, y1 + half], [cx + sl / 2, y1 + half]));
+      n.panel('Bottom flap 2', c.x0 + a, y1, w - 2 * a, backD, false);
+    } else {
+      // (3) front flap: half the width plus a centred tongue that goes through the slit
+      const tw = w * 0.34, cx = (c.x0 + c.x1) / 2, a = Math.min(6, w * 0.06), r = Math.min(4, tw / 4);
+      n.cut(P([[c.x0, y1], [c.x0 + 1, y1 + 1], [c.x0 + a, y1 + half], [cx - tw / 2, y1 + half], [cx - tw / 2, y1 + half + tongueD - r]]) + corner([cx - tw / 2, y1 + half + tongueD - r], [cx - tw / 2, y1 + half + tongueD], [cx - tw / 2 + r, y1 + half + tongueD]) + ` L${f(cx + tw / 2 - r)} ${f(y1 + half + tongueD)}` + corner([cx + tw / 2 - r, y1 + half + tongueD], [cx + tw / 2, y1 + half + tongueD], [cx + tw / 2, y1 + half + tongueD - r]) + ` L${f(cx + tw / 2)} ${f(y1 + half)} L${f(c.x1 - a)} ${f(y1 + half)} L${f(c.x1 - 1)} ${f(y1 + 1)} L${f(c.x1)} ${f(y1)}`);
+      n.crease(seg([cx - tw / 2, y1 + half], [cx + tw / 2, y1 + half]));
+      n.panel('Bottom flap 3', c.x0 + a, y1, w - 2 * a, half + tongueD, false);
+    }
+  }
+  return y1 + Math.max(backD, half + tongueD);
+}
+
+/**
+ * Crash-lock (auto-lock) bottom. Each side flap carries a 45° web: its outer triangle is glued to the
+ * neighbouring front/back flap at the converter, so the bottom folds flat with the carton and springs
+ * into place when the carton is opened. Front and back flaps overlap past the middle and hook.
+ */
+function addCrashBottom(n: Net, b: ReturnType<typeof tuckTopBody>) {
+  const { cols, y1, Wp } = b;
+  const half = Wp / 2, major = Math.min(Wp * 0.8, half + Math.max(8, Wp * 0.2));
+  cols.forEach((c, i) => {
+    const w = c.x1 - c.x0;
+    n.crease(seg([c.x0, y1], [c.x1, y1]));
+    if (c.name === 'Side') {
+      const d = half;
+      // web crease from the corner it shares with the next panel, at 45°
+      const nextIsRight = true;
+      const cx = nextIsRight ? c.x1 : c.x0, dir = nextIsRight ? -1 : 1;
+      n.cut(P([[c.x0, y1], [c.x0 + 1, y1 + 1], [c.x0 + 1, y1 + d], [c.x1, y1 + d]]));
+      n.crease(seg([cx, y1], [cx + dir * Math.min(d, w), y1 + Math.min(d, w)]));
+      n.panel('Glue area', c.x1 - Math.min(d, w) * 0.7, y1 + Math.min(d, w) * 0.15, Math.min(d, w) * 0.6, Math.min(d, w) * 0.5, false);
+      n.panel('Lock web', c.x0 + 1, y1, w - 1, d, false);
+    } else {
+      // front/back flap: past the middle, 45° lead-in on the side that swings, small hook notch to lock
+      const a = Math.min(major, w * 0.3), hookW = Math.min(10, w * 0.12), hookD = Math.min(6, major * 0.2);
+      const hx = c.x0 + w * 0.5;
+      n.cut(P([[c.x0, y1], [c.x0, y1 + half], [c.x0 + a, y1 + major], [hx - hookW / 2, y1 + major], [hx - hookW / 2, y1 + major - hookD], [hx + hookW / 2, y1 + major - hookD], [hx + hookW / 2, y1 + major], [c.x1 - 2, y1 + major], [c.x1 - 2, y1 + 1], [c.x1, y1]]));
+      n.panel(i === 0 ? 'Bottom flap' : 'Bottom flap', c.x0 + a, y1, w - a - 2, major, false);
+    }
+  });
+  return y1 + major;
+}
+
+function snap123(o: DieOptions): Dieline {
+  const n = new Net(), b = tuckTopBody(n, o); addTuckTop(n, o, b); const h = addSnapBottom(n, b);
+  return { style: 'snap123', title: 'Tuck top, 1-2-3 snap-lock bottom', w: b.end, h, lines: n.lines, panels: n.panels, inside: { L: o.L, W: o.W, D: o.D }, t: b.t,
+    notes: ['Bottom: fold the side flaps (1), then the back flap (2), then push the front tongue (3) through the slit.', `Tuck ${f(b.td)} mm, glue flap ${f(b.g)} mm.`] };
+}
+function crash(o: DieOptions): Dieline {
+  const n = new Net(), b = tuckTopBody(n, o); addTuckTop(n, o, b); const h = addCrashBottom(n, b);
+  return { style: 'crash', title: 'Tuck top, crash-lock bottom', w: b.end, h, lines: n.lines, panels: n.panels, inside: { L: o.L, W: o.W, D: o.D }, t: b.t,
+    notes: ['Converter glues the side seam and the four bottom webs; the bottom opens into place in one move.', 'Make a sample: web angle and hook depth are tuned per board.'] };
+}
+
+/** Gable box: crash-lock bottom, roof panels on the front and back with a stacked handle, gusseted sides. */
+function gable(o: DieOptions): Dieline {
+  const n = new Net(), t = o.t, Lp = o.L + t, Wp = o.W + t, Dp = o.D + 2 * t, g = o.glue;
+  const roof = Wp * 0.71, handle = Math.max(30, Math.min(60, o.D * 0.45)), top = roof + handle;
+  const { cols, end } = bodyCols(Lp, Wp, g, o.gluePos);
+  const y0 = top, y1 = y0 + Dp, yr = y0 - roof, yh = yr - handle;
+  cols.forEach((c) => n.panel(c.name, c.x0, y0, c.x1 - c.x0, Dp));
+  // body creases run up through the roof so the gussets stay hinged to the roof panels
+  cols.slice(1).forEach((c) => n.crease(seg([c.x0, yr], [c.x0, y1])));
+  n.cut(seg([end, yr], [end, y1]));
+  glueFlap(n, g, yr, y1, g, o.glueAngle);
+  for (const c of cols) {
+    const w = c.x1 - c.x0, cx = (c.x0 + c.x1) / 2;
+    n.crease(seg([c.x0, y0], [c.x1, y0]));
+    if (c.name === 'Side') {
+      // gusset: diagonals from the base corners to the middle, then straight up; folds in as the roof closes
+      const mid = y0 - Math.min(Wp / 2, roof - 1);
+      n.crease(seg([c.x0, y0], [cx, mid])); n.crease(seg([c.x1, y0], [cx, mid])); n.crease(seg([cx, mid], [cx, yr]));
+      n.cut(seg([c.x0, yr], [c.x1, yr]));
+      n.panel('Gusset', c.x0, yr, w, roof, false);
+    } else {
+      n.crease(seg([c.x0, yr], [c.x1, yr]));
+      n.cut(P([[c.x0, yr], [c.x0, yh], [c.x1, yh], [c.x1, yr]]));
+      // handle hole (the two handle panels lie back to back)
+      const hw = Math.min(90, w * 0.55), hh = Math.min(22, handle * 0.45), hy = yh + handle * 0.45, r = hh / 2;
+      n.cut(`M${f(cx - hw / 2 + r)} ${f(hy - r)} L${f(cx + hw / 2 - r)} ${f(hy - r)}` + arcC(cx + hw / 2 - r, hy, r, -Math.PI / 2, Math.PI / 2) + ` L${f(cx - hw / 2 + r)} ${f(hy + r)}` + arcC(cx - hw / 2 + r, hy, r, Math.PI / 2, (3 * Math.PI) / 2) + ' Z');
+      n.panel('Roof', c.x0, yr, w, roof); n.panel('Handle', c.x0, yh, w, handle, false);
+    }
+  }
+  // the glue flap and side cut stop at the roof line on the outer edge
+  const b = { t, Lp, Wp, Dp, g, td: 0, dd: 0, cols, end, front: cols.find((c) => c.name === 'Front')!, back: cols.find((c) => c.name === 'Back')!, y0, y1 };
+  const h = addCrashBottom(n, b as any);
+  return { style: 'gable', title: 'Gable box with handle', w: end, h, lines: n.lines, panels: n.panels, inside: { L: o.L, W: o.W, D: o.D }, t,
+    notes: [`Roof ${f(roof)} mm on each side (about 45°), handle ${f(handle)} mm, crash-lock bottom.`, 'Glue or staple the two handle panels together after filling.'] };
+}
+
+/**
+ * Mailer, FEFCO 0427 type. Base in the middle; the front wall rolls over into a double wall whose tabs
+ * lock into slots in the base; the side walls are double with ears that tuck behind the rolled front and
+ * the back wall; the back wall carries the lid, its dust flaps and the front tuck.
+ */
+function mailer(o: DieOptions): Dieline {
+  const n = new Net(), t = o.t, L = o.L + 2 * t, W = o.W + 2 * t, D = o.D + 2 * t;
+  const ear = Math.max(10, D - 2 * t - 2), lidW = W + t, tuck = Math.max(12, D - 4), dust = Math.max(10, D - 3);
+  const ox = 2 * D + 6, oy = tuck + lidW + D;          // base origin
+  const bx0 = ox, bx1 = ox + L, by0 = oy, by1 = oy + W;
+  n.panel('Base', bx0, by0, L, W, false);
+  // side walls: outer (D) then inner (D - t), folded over
+  for (const side of [-1, 1] as const) {
+    const xa = side === -1 ? bx0 : bx1, xo = xa + side * D, xi = xo + side * (D - t);
+    n.crease(seg([xa, by0], [xa, by1])); n.crease(seg([xo, by0 + t], [xo, by1 - t]));
+    n.panel('Side wall', Math.min(xa, xo), by0, D, W);
+    // ears on the outer wall, folding against the front and back walls
+    for (const [y, dir] of [[by0, -1], [by1, 1]] as [number, 1 | -1][]) {
+      n.crease(seg([xa, y], [xo, y]));
+      n.cut(P([[xa, y], [xa + side * 1, y + dir * 1], [xa + side * 2, y + dir * ear], [xo - side * Math.min(ear * 0.5, D * 0.4), y + dir * ear], [xo, y + dir * 2], [xo, y]]));
+    }
+    // inner wall outline with locking lugs
+    const lug = Math.min(12, W * 0.12), ly = by0 + W * 0.3;
+    n.cut(P([[xo, by0 + t], [xi, by0 + t + 2], [xi, ly], [xi + side * 4, ly], [xi + side * 4, ly + lug], [xi, ly + lug], [xi, by1 - W * 0.3 - lug], [xi + side * 4, by1 - W * 0.3 - lug], [xi + side * 4, by1 - W * 0.3], [xi, by1 - W * 0.3], [xi, by1 - t - 2], [xo, by1 - t]]));
+  }
+  // front wall (outer D), rolled inner wall (D - t) with tabs into base slots
+  const fy0 = by1, fy1 = fy0 + D, fy2 = fy1 + D - t, tabW = Math.min(25, L * 0.12), tabD = Math.min(6, D * 0.3);
+  n.crease(seg([bx0, fy0], [bx1, fy0])); n.crease(seg([bx0, fy1], [bx1, fy1]));
+  n.panel('Front wall', bx0, fy0, L, D); n.panel('Front inner wall', bx0, fy1, L, D - t, false);
+  n.cut(seg([bx0, fy0], [bx0, fy2])); n.cut(seg([bx1, fy0], [bx1, fy2]));
+  const t1 = bx0 + L * 0.25, t2 = bx1 - L * 0.25;
+  n.cut(P([[bx0, fy2], [t1 - tabW / 2, fy2], [t1 - tabW / 2, fy2 + tabD], [t1 + tabW / 2, fy2 + tabD], [t1 + tabW / 2, fy2], [t2 - tabW / 2, fy2], [t2 - tabW / 2, fy2 + tabD], [t2 + tabW / 2, fy2 + tabD], [t2 + tabW / 2, fy2], [bx1, fy2]]));
+  // slots in the base, just inside the front edge (behind the rolled wall and the ears)
+  const sy = by1 - 3 * t - 3;
+  for (const tx of [t1, t2]) n.cut(P([[tx - tabW / 2 - 1, sy], [tx + tabW / 2 + 1, sy], [tx + tabW / 2 + 1, sy + 3], [tx - tabW / 2 - 1, sy + 3]], true));
+  // back wall, lid, lid dust flaps, front tuck
+  const ky1 = by0, ky0 = ky1 - D, ly0 = ky0 - lidW, tuckY = ly0 - tuck;
+  n.crease(seg([bx0, ky1], [bx1, ky1])); n.crease(seg([bx0, ky0], [bx1, ky0])); n.crease(seg([bx0, ly0], [bx1, ly0]));
+  n.panel('Back wall', bx0, ky0, L, D); n.panel('Lid', bx0, ly0, L, lidW);
+  n.cut(seg([bx0, ky0], [bx0, ky1])); n.cut(seg([bx1, ky0], [bx1, ky1]));
+  for (const side of [-1, 1] as const) {
+    const xa = side === -1 ? bx0 : bx1, xd = xa + side * dust;
+    n.crease(seg([xa, ly0], [xa, ky0]));
+    n.cut(P([[xa, ky0], [xa + side * 1, ky0 - 2], [xd, ky0 - Math.min(10, lidW * 0.15)], [xd, ly0 + Math.min(dust * 0.6, lidW * 0.3)], [xa + side * 2, ly0], [xa, ly0]]));
+  }
+  tuckClosure(n, bx0, bx1, ly0, 0.0001, tuck, -1, 'Lid front');
+  const w = bx1 + 2 * D + 6, h = fy2 + tabD;
+  return { style: 'mailer', title: 'Mailer box (FEFCO 0427)', w, h, lines: n.lines, panels: n.panels, inside: { L: o.L, W: o.W, D: o.D }, t,
+    notes: ['Fold the side walls up and over, tuck the ears in, roll the front wall over the ears and push its tabs into the base slots, then close the lid and tuck it in.', 'Corrugated E or B flute is usual. Make a sample.'] };
+}
+
 export function makeDieline(o: DieOptions): Dieline {
   const c = { ...o, L: Math.max(10, o.L), W: Math.max(10, o.W), D: Math.max(5, o.D), t: Math.max(0.1, Math.min(8, o.t)), glue: Math.max(6, o.glue), tuck: Math.max(8, o.tuck) };
   switch (c.style) {
@@ -322,6 +509,10 @@ export function makeDieline(o: DieOptions): Dieline {
     case 'fol': return slotted(c, true, true);
     case 'matchbox': return matchbox(c);
     case 'pillow': return pillow(c);
+    case 'snap123': return snap123(c);
+    case 'crash': return crash(c);
+    case 'gable': return gable(c);
+    case 'mailer': return mailer(c);
   }
 }
 
