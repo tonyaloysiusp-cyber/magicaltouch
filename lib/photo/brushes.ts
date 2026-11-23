@@ -6,13 +6,15 @@
 // the preview copy, then replayed on the full-size picture when the
 // customer lets go, so the result matches what they saw.
 
-export type BrushKind = 'smudge' | 'dodge' | 'burn' | 'blur' | 'sharpen' | 'bloat' | 'pinch' | 'push' | 'recolour' | 'whiten';
+export type BrushKind = 'smudge' | 'dodge' | 'burn' | 'blur' | 'sharpen' | 'bloat' | 'pinch' | 'push' | 'recolour' | 'whiten' | 'clone';
 
 export interface BrushOpts {
   radius: number; // in pixels of the image being painted
   strength: number; // 0..1
   hardness: number; // 0..1
   color?: [number, number, number]; // recolour target
+  /** clone stamp: copy from (x + dx, y + dy) of the picture as it was when the stroke started */
+  cloneOffset?: { dx: number; dy: number };
 }
 
 export interface Box { x0: number; y0: number; x1: number; y1: number }
@@ -44,6 +46,9 @@ export function createStroke(img: ImageData, kind: BrushKind, opts: BrushOpts) {
   let last: { x: number; y: number } | null = null;
   const spacing = Math.max(1, R * (kind === 'smudge' ? 0.12 : kind === 'push' ? 0.15 : 0.25));
   const box: Box = { x0: Infinity, y0: Infinity, x1: -Infinity, y1: -Infinity };
+  // Clone stamp reads from an untouched copy, so painted pixels are never re-cloned.
+  const source = kind === 'clone' ? new Uint8ClampedArray(px) : null;
+  const cdx = Math.round(opts.cloneOffset?.dx || 0), cdy = Math.round(opts.cloneOffset?.dy || 0);
 
   const sample = (cx: number, cy: number) => {
     const out = new Float32Array(size * size * 4);
@@ -90,7 +95,11 @@ export function createStroke(img: ImageData, kind: BrushKind, opts: BrushOpts) {
         if (m <= 0) continue;
         const p = (yy * W + xx) * 4;
         const o = (y * size + x) * 4;
-        if (warp && local) {
+        if (kind === 'clone' && source) {
+          const sx = Math.min(W - 1, Math.max(0, xx + cdx)), sy = Math.min(H - 1, Math.max(0, yy + cdy));
+          const q = (sy * W + sx) * 4, k = m * st;
+          for (let c = 0; c < 4; c++) px[p + c] = px[p + c] + (source[q + c] - px[p + c]) * k;
+        } else if (warp && local) {
           // Liquify: sample from a point nearer the centre (enlarge), further out (shrink) or behind the stroke (push).
           const rx = x - ri, ry = y - ri;
           let sx: number, sy: number;
@@ -198,7 +207,7 @@ export function replayStroke(canvas: HTMLCanvasElement, kind: BrushKind, opts: B
   const ctx = out.getContext('2d', { willReadFrequently: true })!;
   ctx.drawImage(canvas, 0, 0);
   const img = ctx.getImageData(0, 0, out.width, out.height);
-  const stroke = createStroke(img, kind, { ...opts, radius: opts.radius * scale });
+  const stroke = createStroke(img, kind, { ...opts, radius: opts.radius * scale, cloneOffset: opts.cloneOffset ? { dx: opts.cloneOffset.dx * scale, dy: opts.cloneOffset.dy * scale } : undefined });
   pts.forEach((p) => stroke.to(p.x * scale, p.y * scale));
   ctx.putImageData(img, 0, 0);
   return out;

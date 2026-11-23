@@ -27,7 +27,7 @@ const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(
 
 type Check = { label: string; ok: boolean; detail: string };
 
-export function PassportPhoto() {
+export function PassportPhoto({ initialFile }: { initialFile?: File } = {}) {
   const [pro, setPro] = useToolMode('passport');
   const [country, setCountry] = useState('India');
   const [purpose, setPurpose] = useState<Purpose | 'all'>('all');
@@ -69,6 +69,9 @@ export function PassportPhoto() {
   }, [spec, W, H]);
   useEffect(() => { if (src) fit(src); }, [spec.id, spec.w, spec.h]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Opened from Photo Studio with the current picture.
+  const initRef = useRef(false);
+  useEffect(() => { if (initialFile && !initRef.current) { initRef.current = true; void choose(initialFile); } }); // eslint-disable-line react-hooks/exhaustive-deps
   const choose = async (f?: File | null) => {
     if (!f || !/^image\//.test(f.type)) { setStatus('Choose a photo (JPG, PNG, WebP or HEIC saved as JPG).'); return; }
     setBusy('open'); setStatus('Opening the photo…'); setCut(null); setChecks(null); matteRef.current = null; setBrush('off');

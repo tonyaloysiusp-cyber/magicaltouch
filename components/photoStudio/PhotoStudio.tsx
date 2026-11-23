@@ -20,10 +20,12 @@ import {
   SlidersHorizontal, Sparkles, Crop as CropIcon, Scissors, Brush, Maximize2, Download, Undo2, Redo2, Plus, Minus,
   Maximize, RotateCcw, RotateCw, FlipHorizontal2, FlipVertical2, Loader2, Check, X, Eye, Printer, Lock, Unlock, Palette, Wand2,
   Move, BoxSelect, Blend as BlendIcon, Hand, ZoomIn, Pipette, Type as TypeIcon, Eraser, Droplet, Sun, Circle, ArrowLeftRight, Square, PaintBucket,
-  Lasso as LassoIcon, PenTool, CircleDashed, Layers as LayersIcon, Trash2, FlipHorizontal, Copy as CopyIcon,
+  Lasso as LassoIcon, PenTool, CircleDashed, Layers as LayersIcon, Trash2, FlipHorizontal, Copy as CopyIcon, IdCard,
 } from 'lucide-react';
 import { Adjust, NO_ADJUST, LIGHT_SLIDERS, COLOR_SLIDERS, DETAIL_SLIDERS, LENS_SLIDERS, PORTRAIT_SLIDERS, PORTRAIT_PRESETS, LOOKS, SliderDef, applyAdjust, renderAdjusted, isNeutral, autoEnhance, HSL_RANGES, CurvePts, curveLut } from '@/lib/photo/adjust';
 import { BrushKind, createStroke, replayStroke } from '@/lib/photo/brushes';
+import dynamicImport from 'next/dynamic';
+const PassportPhotoLazy = dynamicImport(() => import('@/components/tools/PassportPhoto').then((m) => m.PassportPhoto), { ssr: false });
 import { CropBox, PhysUnit, cropTo, flip, fmtNum, fromPx, inscribedRect, makeCanvas, resample, rotate90, spotHeal, toPx, fillBackground, hasTransparency } from '@/lib/photo/ops';
 import { ColourMode, FORMAT_INFO, PhotoFormat, downloadBlob, exportPhoto, extFor } from '@/lib/photo/exportPhoto';
 import { loadProofTable, proofRgbaInPlace, PRESS_PROFILE_NAME } from '@/lib/color/cmyk';
@@ -38,7 +40,7 @@ import { isPremium, PREMIUM_LOOKS } from '@/lib/textfx/premium';
 import { LookGallery } from '@/components/textfx/LookGallery';
 import { FaceTools } from './FaceTools';
 
-type Tool = 'adjust' | 'color' | 'looks' | 'crop' | 'bg' | 'retouch' | 'resize' | 'export' | 'move' | 'select' | 'filter' | 'hand' | 'zoom' | 'eyedropper' | 'text' | 'gradient' | 'shape' | 'bucket' | 'pen';
+type Tool = 'adjust' | 'color' | 'looks' | 'crop' | 'bg' | 'retouch' | 'resize' | 'export' | 'passport' | 'move' | 'select' | 'filter' | 'hand' | 'zoom' | 'eyedropper' | 'text' | 'gradient' | 'shape' | 'bucket' | 'pen';
 // Tools that work directly on the picture (the rest are panels).
 const CANVAS_TOOLS: Tool[] = ['move', 'select', 'pen', 'crop', 'retouch', 'hand', 'zoom', 'eyedropper', 'text', 'gradient', 'shape', 'bucket', 'bg', 'resize', 'export'];
 // The same font library as the design editor (loaded on demand).
@@ -58,6 +60,7 @@ const RETOUCH: { id: RetouchKind; label: string; hint: string; pro?: boolean; fa
   { id: 'paint', label: 'Paint', hint: 'Paint with a colour on the selected layer.', pro: true },
   { id: 'erase', label: 'Eraser', hint: 'Erase the selected layer to see-through.', pro: true },
   { id: 'heal', label: 'Heal', hint: 'Paint over spots, blemishes or small objects to remove them.' },
+  { id: 'clone', label: 'Clone stamp', hint: 'Alt-click (or long-press) where to copy from, then paint: that area is copied under the brush.', pro: true },
   { id: 'smudge', label: 'Smudge', hint: 'Push and blend colours, like a finger in wet paint.' },
   { id: 'blur', label: 'Soften', hint: 'Soften skin or a busy area by painting over it.' },
   { id: 'dodge', label: 'Dodge', hint: 'Lighten where you paint (eyes, faces, highlights).', pro: true },
@@ -176,6 +179,7 @@ const TOOLS: { id: Tool; label: string; simpleLabel?: string; icon: any; standal
   { id: 'retouch', label: 'Retouch', icon: Brush },
   { id: 'resize', label: 'Resize', icon: Maximize2 },
   { id: 'export', label: 'Export', icon: Download, standaloneOnly: true },
+  { id: 'passport', label: 'Passport', icon: IdCard, standaloneOnly: true },
   { id: 'move', label: 'Move', icon: Move, proOnly: true },
   { id: 'select', label: 'Select', icon: BoxSelect, proOnly: true },
   { id: 'filter', label: 'Filters', icon: BlendIcon, proOnly: true },
@@ -221,7 +225,7 @@ const DOCK_TABS: { id: Tool | 'props'; label: string }[] = [
   { id: 'looks', label: 'Looks' },
 ];
 // Pro shows the Photoshop-style tools first.
-const PRO_ORDER: Tool[] = ['move', 'select', 'crop', 'retouch', 'adjust', 'color', 'filter', 'looks', 'bg', 'resize', 'export'];
+const PRO_ORDER: Tool[] = ['move', 'select', 'crop', 'retouch', 'adjust', 'color', 'filter', 'looks', 'bg', 'resize', 'passport', 'export'];
 
 // iPad / iPhone Safari can't keep canvases larger than ~16.7 megapixels and
 // has a small total canvas memory, so phones and tablets work on a smaller copy.
@@ -862,6 +866,10 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
   const [healPts, setHealPts] = useState<{ x: number; y: number }[]>([]);
   const [retouch, setRetouch] = useState<RetouchKind>('heal');
   const [brushStrength, setBrushStrength] = useState(50);
+  // Clone stamp source (picture pixels) and the offset fixed when a stroke starts (aligned, like Photoshop).
+  const [cloneSrc, setCloneSrc] = useState<{ x: number; y: number } | null>(null);
+  const cloneOffsetRef = useRef<{ dx: number; dy: number } | null>(null);
+  const longPress = useRef<number | null>(null);
   const [hairColour, setHairColour] = useState('#8E3B1F');
   const [brushHardness, setBrushHardness] = useState(30);
   const strokeRef = useRef<{ work: ImageData; stroke: ReturnType<typeof createStroke>; pts: { x: number; y: number }[]; radius: number } | null>(null);
@@ -1059,12 +1067,23 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
       setHealPts([toBase(e.clientX, e.clientY)]);
       return;
     }
+    if (tool === 'retouch' && base && preview && retouch === 'clone' && (e.altKey || !cloneSrc)) {
+      const b0 = toBase(e.clientX, e.clientY);
+      if (e.altKey) { setCloneSrc(b0); setNotice('Clone source set. Now paint where you want the copy.'); return; }
+      // touch: hold still for half a second to set the source
+      if (longPress.current) window.clearTimeout(longPress.current);
+      longPress.current = window.setTimeout(() => { setCloneSrc(b0); setNotice('Clone source set. Now paint where you want the copy.'); }, 500);
+      gesture.current = { kind: 'clonepick' };
+      return;
+    }
     if (tool === 'retouch' && base && preview) {
       gesture.current = { kind: 'brush' };
       const work = new ImageData(new Uint8ClampedArray(preview.data.data), preview.data.width, preview.data.height);
       const radius = healSize / 2 / viewScale; // preview pixels
-      const stroke = createStroke(work, retouch as BrushKind, brushOpts(radius));
       const b = toBase(e.clientX, e.clientY);
+      if (retouch === 'clone' && cloneSrc) cloneOffsetRef.current = { dx: cloneSrc.x - b.x, dy: cloneSrc.y - b.y };
+      const co = retouch === 'clone' && cloneOffsetRef.current ? { dx: cloneOffsetRef.current.dx * preview.k, dy: cloneOffsetRef.current.dy * preview.k } : undefined;
+      const stroke = createStroke(work, retouch as BrushKind, { ...brushOpts(radius), cloneOffset: co });
       const p = { x: b.x * preview.k, y: b.y * preview.k };
       strokeRef.current = { work, stroke, pts: [p], radius };
       const r = stroke.to(p.x, p.y);
@@ -1074,6 +1093,7 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
     gesture.current = { kind: 'pan', sx: e.clientX, sy: e.clientY, pan: { ...pan } };
   };
   const onStageMove = (e: React.PointerEvent) => {
+    if (gesture.current?.kind === 'clonepick' && longPress.current && (Math.abs(e.movementX) + Math.abs(e.movementY) > 3)) { window.clearTimeout(longPress.current); longPress.current = null; }
     if (statusRef.current && base) {
       const p = toBase(e.clientX, e.clientY);
       statusRef.current.textContent = p.x >= 0 && p.y >= 0 && p.x <= base.width && p.y <= base.height ? `X ${Math.round(p.x)}  Y ${Math.round(p.y)}` : '';
@@ -1181,6 +1201,7 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
     }
   };
   const onStageUp = (e: React.PointerEvent) => {
+    if (longPress.current) { window.clearTimeout(longPress.current); longPress.current = null; }
     pointers.current.delete(e.pointerId);
     const g = gesture.current;
     if (pointers.current.size === 0) gesture.current = null;
@@ -1233,7 +1254,7 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
         const c = makeCanvas(st.work.width, st.work.height);
         c.getContext('2d')!.putImageData(st.work, 0, 0);
         push({ base: c, label });
-      } else run(label, () => replayStroke(target!, kind, brushOpts(st.radius), st.pts, 1 / preview.k));
+      } else run(label, () => replayStroke(target!, kind, { ...brushOpts(st.radius), cloneOffset: kind === 'clone' && cloneOffsetRef.current ? { dx: cloneOffsetRef.current.dx * preview.k, dy: cloneOffsetRef.current.dy * preview.k } : undefined }, st.pts, 1 / preview.k));
     }
   };
   const onWheel = (e: React.WheelEvent) => {
@@ -2261,6 +2282,7 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
               <span className="w-9 tabular-nums">{brushStrength}%</span>
             </label>
           )}
+          {retouch === 'clone' && <span className={optLabel}>{cloneSrc ? `Source at ${Math.round(cloneSrc.x)}, ${Math.round(cloneSrc.y)} — Alt-click to move it` : 'Alt-click (or hold) to set the source'}</span>}
           {retouch === 'paint' && (
             <label className="inline-flex items-center gap-1.5"><span className={optLabel}>Colour</span>
               <input type="color" value={paintColor} onChange={(e) => setPaintColor(e.target.value)} className="w-7 h-7 rounded border border-mt-input-border bg-transparent" />
@@ -2364,6 +2386,15 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
       {(tool === 'bg' || tool === 'resize' || tool === 'export') && <span className={optLabel}>Use the panel on the right.</span>}
     </div>
   );
+  // Passport section: the current picture goes into the passport maker (country, size, background, face guides, print sheet).
+  const [passportFile, setPassportFile] = useState<File | null>(null);
+  useEffect(() => {
+    if (tool !== 'passport') { if (passportFile) setPassportFile(null); return; }
+    if (passportFile) return;
+    const out = renderResult();
+    if (!out) { setNotice('Open a photo first.'); setTool('adjust'); return; }
+    out.toBlob((b) => b && setPassportFile(new File([b], 'photo.png', { type: 'image/png' })), 'image/png');
+  }, [tool]); // eslint-disable-line react-hooks/exhaustive-deps
   const downloadPng = async () => {
     const out = renderResult();
     if (!out) return;
@@ -2453,6 +2484,15 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
   ];
   return (
     <div className={cx('h-full w-full flex flex-col bg-mt-bg text-mt-ink min-h-0', pro && 'mt-ps')}>
+      {tool === 'passport' && (
+        <div role="dialog" aria-modal="true" aria-label="Passport photo" className="fixed inset-0 z-[90] flex flex-col bg-mt-bg">
+          <div className="flex h-12 shrink-0 items-center justify-between border-b border-mt-border px-4">
+            <p className="text-[14px] font-semibold">Passport photo — from this picture</p>
+            <button type="button" onClick={() => setTool('adjust')} className="inline-flex h-8 items-center gap-1.5 rounded-md border border-mt-border px-3 text-[12.5px] font-semibold hover:bg-mt-surface2">Back to Photo Studio</button>
+          </div>
+          <div className="min-h-0 flex-1 overflow-auto p-4">{passportFile ? <PassportPhotoLazy initialFile={passportFile} /> : <p className="text-[13px] text-mt-muted">Preparing the picture…</p>}</div>
+        </div>
+      )}
       {/* top bar */}
       <div className="h-14 shrink-0 flex items-center gap-2 px-3 border-b border-mt-border bg-mt-surface">
         <div className="min-w-0 flex items-center gap-2">
