@@ -27,11 +27,9 @@ const nextConfig = {
       pricing: '/about',
       'pattern-studio': '/patterns',
       // Tools combined (14 Nov 2026): the old addresses open the combined workspace.
-      'custom-jersey-designer': '/textile-studio?product=jersey',
-      'polo-shirt-designer': '/textile-studio?product=polo',
-      'custom-t-shirt-designer': '/textile-studio?product=tshirt',
-      // Textile Designer and Textile Studio merged (16 Nov 2026) into the Textile Design Studio.
-      'textile-designer': '/textile-studio',
+      'custom-jersey-designer': '/textile-designer?product=jersey',
+      'polo-shirt-designer': '/textile-designer?product=polo',
+      'custom-t-shirt-designer': '/textile-designer?product=tshirt',
       'wall-designer': '/wallpaper-designer',
       'rangoli-mandala-maker': '/patterns?mode=rangoli',
       'gradient-background-generator': '/colours#gradients',

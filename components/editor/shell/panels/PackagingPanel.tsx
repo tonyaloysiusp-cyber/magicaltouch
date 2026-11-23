@@ -11,7 +11,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { Box, Download, Eye, EyeOff, FileDown, Lock, RefreshCw, Unlock } from 'lucide-react';
-import { BOX_STYLES, type BoxStyleId } from '@/lib/packaging/dieline';
+import { GLUE_ANGLES, BOX_STYLES, type BoxStyleId } from '@/lib/packaging/dieline';
 import { BOARD_GRADES, caliperFor, creaseSetup, gradeById, gsmRange } from '@/lib/packaging/board';
 import { checkStructure } from '@/lib/packaging/validate';
 import { defaultClearance } from '@/lib/packaging/editorModel';
@@ -246,6 +246,21 @@ export function PackagingPanel({ api }: { api: PackagingApi }) {
           {spec.style === 'traylid' && <Field label="Lid depth" unit={unit} step={stepU} value={u(spec.lidDepth)} onChange={(v) => set({ lidDepth: toMm(v) })} />}
         </div>
       </section>
+      {!['tray', 'traylid'].includes(spec.style) && <section className="space-y-2">
+        <p className="text-[10.5px] font-semibold uppercase tracking-[0.08em] text-mt-faint">Glue flap{spec.style === 'rte' || spec.style === 'ste' ? ' & tuck' : ''}</p>
+        <div className="grid grid-cols-2 gap-1.5">
+          {['rte', 'ste', 'seal', 'sleeve'].includes(spec.style) && <label className="block text-[11.5px]"><span className="text-mt-muted">Attached to</span>
+            <select value={spec.gluePos || 'side'} onChange={(e) => set({ gluePos: e.target.value as 'side' | 'back' })} aria-label="Glue flap attached to" className="h-8 w-full rounded-md border border-mt-border bg-mt-bg px-1.5 text-[12px]">
+              <option value="side">Side panel</option><option value="back">Back panel</option>
+            </select></label>}
+          <label className="block text-[11.5px]"><span className="text-mt-muted">End angle</span>
+            <select value={spec.glueAngle ?? 45} onChange={(e) => set({ glueAngle: Number(e.target.value) })} aria-label="Glue flap end angle" className="h-8 w-full rounded-md border border-mt-border bg-mt-bg px-1.5 text-[12px]">
+              {GLUE_ANGLES.map((a) => <option key={a} value={a}>{a === 0 ? 'Straight (0°)' : `${a}°`}</option>)}
+            </select></label>
+        </div>
+        {(spec.style === 'rte' || spec.style === 'ste') && <label className="flex items-center gap-2 text-[12px]"><input type="checkbox" checked={!!spec.thumbNotch} onChange={(e) => set({ thumbNotch: e.target.checked })} /> Thumb notch on the front panel</label>}
+        <p className="text-[11px] text-mt-faint">Folder-gluer lines usually want 15–22 mm flaps with 7–15° ends; hand-glued samples are fine at 30–45°. Ask your converter for their machine’s numbers.</p>
+      </section>}
       <section className="rounded-lg border border-mt-border p-2.5">
         <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 tabular-nums">
           <dt className="text-mt-muted">Inside</dt><dd className="text-right font-semibold">{u(inner.L)} × {u(inner.W)} × {u(inner.D)} {unit}</dd>

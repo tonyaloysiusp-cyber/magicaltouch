@@ -967,7 +967,7 @@ export const FEATURE_LANDINGS: Landing[] = [
       ['CMYK print files', 'Ready-to-print sublimation files plus one branded technical file for the factory.'],
       ['Realistic mockup', 'Show the client the kit on a hanger, in a studio or as a flat lay — PNG download.'],
     ],
-    ctaHref: '/textile-studio?product=jersey',
+    ctaHref: '/textile-designer?product=jersey',
     ctaLabel: 'Open the jersey maker',
     uses: ['Football and futsal teams', 'Cricket clubs', 'Basketball teams', 'School sports days', 'Corporate tournaments', 'Fan shirts'],
     faqs: [
@@ -994,7 +994,7 @@ export const FEATURE_LANDINGS: Landing[] = [
       ['Front, back or both', 'Show one side or the full kit.'],
       ['2400 px PNG', 'Sharp enough for a website, catalogue or Instagram post.'],
     ],
-    ctaHref: '/textile-studio?product=jersey',
+    ctaHref: '/textile-designer?product=jersey',
     ctaLabel: 'Make a mockup',
     uses: ['Client approval', 'Team order forms', 'Online shop listings', 'Social media posts', 'Quotes and proposals'],
     faqs: [

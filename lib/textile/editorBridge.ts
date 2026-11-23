@@ -12,6 +12,7 @@ import { readySize, READY_SIZE_NAMES, type ReadySize } from './sizes.ts';
 import { draftDress, SAMPLE_BODY, DEFAULT_STYLE, toPath, type Body, type Style } from './blocks.ts';
 import { offsetPolygon, type Pt } from './blocks.ts';
 import { pathToPolylines } from '../dxf.ts';
+import { garmentFlatSvg } from './flats.ts';
 
 export type GarmentId = 'polo' | 'tshirt' | 'jersey' | 'kurta' | 'chudidar' | 'frock' | 'dupatta';
 export const GARMENTS: { id: GarmentId; name: string; hint: string }[] = [
@@ -173,38 +174,9 @@ export function textileFlatSvg(t: TextileTemplate): string {
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${lay.w} ${lay.h}">${body}</svg>`;
 }
 
-/** Garment sketch: the front piece with the sleeves set at the shoulders (gallery mockup). */
+/** Garment flats (front and back technical drawing) for the gallery; editing works on the pieces. */
 export function textileSketchSvg(t: TextileTemplate): string {
-  const lay = layoutPieces(templateSpec(t), 4000);
-  const art = templateArt(t, lay);
-  const front = art.find((a) => /^front|bodice-front|skirt/.test(a.piece.id)) || art[0];
-  const sleeve = art.find((a) => /sleeve/.test(a.piece.id));
-  const skirt = t.garment === 'frock' ? art.find((a) => /^skirt/.test(a.piece.id)) : null;
-  const P = front.piece, clip = (id: string, a: PieceArt) => `<clipPath id="${id}"><path d="${a.piece.d}"/></clipPath><g clip-path="url(#${id})">${a.items.map(itemSvg).join('')}</g><path d="${a.piece.d}" fill="none" stroke="#0000002a" stroke-width="3"/>`;
-  let s = '';
-  // A cut-on-fold piece is half the garment: show it with its mirror image.
-  const half = P.foldX != null;
-  const W = half ? P.w * 2 : P.w;
-  const ox = half && P.foldX! < P.w / 2 ? P.w : 0; // fold on the left → the piece is the right half
-  const skH = skirt ? skirt.piece.h * 0.9 : 0, H = P.h + skH;
-  if (sleeve && t.garment !== 'chudidar' && t.garment !== 'dupatta') {
-    const sw = sleeve.piece.w, ang = 62;
-    s += `<g transform="translate(${W * 0.06} ${P.h * 0.07}) rotate(${ang}) translate(${-sw / 2} 0)">${clip(`sk-${t.id}-l`, sleeve)}</g>`;
-    s += `<g transform="translate(${W * 0.94} ${P.h * 0.07}) rotate(${-ang}) translate(${-sw / 2} 0)">${clip(`sk-${t.id}-r`, sleeve)}</g>`;
-  }
-  if (skirt && skirt.piece.foldX != null) {
-    const k = (W * 1.5) / (skirt.piece.w * 2), sw = skirt.piece.w, left = skirt.piece.foldX < sw / 2; // fold on the left → right half
-    const x0 = (W - W * 1.5) / 2;
-    s += `<g transform="translate(${x0} ${P.h * 0.97}) scale(${k})"><g transform="translate(${left ? sw : 0} 0)">${clip(`sk-${t.id}-s`, skirt)}</g><g transform="translate(${left ? sw : 2 * sw} 0) scale(-1 1)">${clip(`sk-${t.id}-t`, skirt)}</g></g>`;
-  } else if (skirt) { const sx = (W * 1.7) / skirt.piece.w; s += `<g transform="translate(${(W - W * 1.7) / 2} ${P.h * 0.97}) scale(${sx} 0.9)">${clip(`sk-${t.id}-s`, skirt)}</g>`; }
-  if (t.garment === 'chudidar') {
-    s += `<g>${clip(`sk-${t.id}-a`, front)}</g><g transform="translate(${W * 2.1} 0) scale(-1 1)">${clip(`sk-${t.id}-b`, front)}</g>`;
-    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${-W * 0.2} -20 ${W * 2.4} ${P.h + 40}">${s}</svg>`;
-  }
-  if (half) s += `<g transform="translate(${ox} 0)">${clip(`sk-${t.id}-f`, front)}</g><g transform="translate(${ox === 0 ? 2 * P.w : P.w} 0) scale(-1 1)">${clip(`sk-${t.id}-g`, front)}</g>`;
-  else s += `<g>${clip(`sk-${t.id}-f`, front)}</g>`;
-  const pad = W * 0.55;
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${-pad} -40 ${W + 2 * pad} ${H + 80}">${s}</svg>`;
+  return garmentFlatSvg({ garment: t.garment, theme: t.theme, neck: t.neck, sleeve: t.sleeve, skirt: t.skirt, text: t.text, id: t.id, motif: (w, h) => motifPath(t.theme.motif, w, h) });
 }
 
 // ── Editor objects ──

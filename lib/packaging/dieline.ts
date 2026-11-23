@@ -18,12 +18,13 @@ export interface Dieline {
   inside: { L: number; W: number; D: number }; t: number;
 }
 
-export type BoxStyleId = 'rte' | 'ste' | 'seal' | 'sleeve' | 'tray' | 'traylid' | 'matchbox' | 'rsc' | 'hsc' | 'fol';
+export type BoxStyleId = 'rte' | 'ste' | 'seal' | 'sleeve' | 'tray' | 'traylid' | 'matchbox' | 'rsc' | 'hsc' | 'fol' | 'pillow';
 export interface BoxStyleDef { id: BoxStyleId; name: string; code: string; group: 'Folding carton' | 'Tray & lid' | 'Corrugated'; hint: string }
 export const BOX_STYLES: BoxStyleDef[] = [
   { id: 'rte', name: 'Reverse tuck end', code: 'ECMA A20 type', group: 'Folding carton', hint: 'Top tuck on the back, bottom tuck on the front — cosmetics, pharma, retail.' },
   { id: 'ste', name: 'Straight tuck end', code: 'ECMA A20 type', group: 'Folding carton', hint: 'Both tucks on the back panel — a clean, uninterrupted front.' },
   { id: 'seal', name: 'Seal end (glued)', code: 'ECMA A10 type', group: 'Folding carton', hint: 'Glued top and bottom flaps — cereal, food and multipacks.' },
+  { id: 'pillow', name: 'Pillow box', code: 'ECMA F70.01', group: 'Folding carton', hint: 'Curved ends that close by pressing in — gifts, small items. Make a sample first.' },
   { id: 'sleeve', name: 'Sleeve', code: 'Open ends', group: 'Folding carton', hint: 'A wrap that slides over a tray or product.' },
   { id: 'tray', name: 'Four-corner tray', code: 'Glued corners', group: 'Tray & lid', hint: 'Open tray with corner flaps glued inside the walls.' },
   { id: 'traylid', name: 'Tray with lid', code: 'Two pieces', group: 'Tray & lid', hint: 'A tray and a slightly larger lid on one sheet — gift boxes.' },
@@ -40,8 +41,15 @@ export interface DieOptions {
   glue: number;                      // glue flap width, mm
   tuck: number;                      // tuck flap depth, mm (tuck styles)
   lidDepth: number;                  // lid height, mm (tray with lid)
+  /** glue flap end bevel, degrees from square (0 = straight ends). Folder-gluer guides use about 7–15°, hand-glued samples often 30–45°. */
+  glueAngle?: number;
+  /** which panel the glue flap is attached to: the narrow side panel (glued inside the back) or the back panel (glued inside the side) */
+  gluePos?: 'side' | 'back';
+  /** half-round thumb notch on the panel the top tuck slides behind */
+  thumbNotch?: boolean;
 }
-export const DEFAULT_DIE: DieOptions = { style: 'rte', L: 80, W: 40, D: 120, t: 0.4, glue: 14, tuck: 15, lidDepth: 30 };
+export const DEFAULT_DIE: DieOptions = { style: 'rte', L: 80, W: 40, D: 120, t: 0.4, glue: 14, tuck: 15, lidDepth: 30, glueAngle: 45, gluePos: 'side', thumbNotch: false };
+export const GLUE_ANGLES = [0, 10, 15, 30, 45] as const;
 
 // ── Path helpers ──
 const f = (n: number) => String(Math.round(n * 100) / 100);
@@ -51,6 +59,27 @@ const seg = (a: [number, number], b: [number, number]) => `M${f(a[0])} ${f(a[1])
 const K = 0.5523;
 const corner = (a: [number, number], c: [number, number], b: [number, number]) =>
   ` C${f(a[0] + (c[0] - a[0]) * K)} ${f(a[1] + (c[1] - a[1]) * K)} ${f(b[0] + (c[0] - b[0]) * K)} ${f(b[1] + (c[1] - b[1]) * K)} ${f(b[0])} ${f(b[1])}`;
+
+/** Circular arc as cubic Béziers (≤90° each) from angle a0 to a1 around (cx, cy); continues the current path. */
+function arcC(cx: number, cy: number, r: number, a0: number, a1: number): string {
+  const segs = Math.max(1, Math.ceil(Math.abs(a1 - a0) / (Math.PI / 2))), da = (a1 - a0) / segs, h = (4 / 3) * Math.tan(da / 4) * r;
+  let out = '';
+  for (let i = 0; i < segs; i++) {
+    const t0 = a0 + i * da, t1 = t0 + da;
+    const p0 = [cx + r * Math.cos(t0), cy + r * Math.sin(t0)], p1 = [cx + r * Math.cos(t1), cy + r * Math.sin(t1)];
+    out += ` C${f(p0[0] - h * Math.sin(t0))} ${f(p0[1] + h * Math.cos(t0))} ${f(p1[0] + h * Math.sin(t1))} ${f(p1[1] - h * Math.cos(t1))} ${f(p1[0])} ${f(p1[1])}`;
+  }
+  return out;
+}
+/** Arc from (a, y) to (b, y) rising `rise` mm up (dir −1) or down (dir +1) in the middle, as cubics. */
+function bowPath(a: number, b: number, y: number, rise: number, dir: 1 | -1): string {
+  const c = (b - a) / 2, r = (c * c + rise * rise) / (2 * rise), cx = a + c, cy = y - dir * (r - rise);
+  const half = Math.asin(Math.min(1, c / r));
+  // angles measured in screen coords (y down): the bow's middle is at angle +90° (down) or −90° (up)
+  const mid = dir === 1 ? Math.PI / 2 : -Math.PI / 2;
+  const a0 = dir === 1 ? mid + half : mid - half, a1 = dir === 1 ? mid - half : mid + half;
+  return `M${f(a)} ${f(y)}` + arcC(cx, cy, r, a0, a1);
+}
 
 class Net {
   lines: DieLine[] = []; panels: DiePanel[] = [];
@@ -98,50 +127,64 @@ function flap(n: Net, x0: number, x1: number, y0: number, depth: number, dir: 1 
   n.panel(name, x0 + relief, Math.min(y0, y1), x1 - x0 - 2 * relief, depth, false);
 }
 
-function glueFlap(n: Net, x: number, y0: number, y1: number, g: number) {
-  const tp = Math.min(g * 0.9, (y1 - y0) / 4);
+function glueFlap(n: Net, x: number, y0: number, y1: number, g: number, angle = 45) {
+  const tp = Math.min(g * Math.tan((Math.max(0, Math.min(60, angle)) * Math.PI) / 180), (y1 - y0) / 4);
   n.crease(seg([x, y0], [x, y1]));
   n.cut(P([[x, y0], [x - g, y0 + tp], [x - g, y1 - tp], [x, y1]]));
   n.panel('Glue flap', x - g, y0 + tp, g, y1 - y0 - 2 * tp, false);
 }
 
 // ── Box styles ──
+/** Body columns for a four-panel carton: glue flap then the panels in order; `back` puts the glue flap on the back panel. */
+function bodyCols(Lp: number, Wp: number, g: number, gluePos: 'side' | 'back' = 'side') {
+  const order: ('Side' | 'Front' | 'Back')[] = gluePos === 'back' ? ['Back', 'Side', 'Front', 'Side'] : ['Side', 'Front', 'Side', 'Back'];
+  let x = g; const cols = order.map((name) => { const w = name === 'Side' ? Wp : Lp; const c = { name, x0: x, x1: x + w }; x += w; return c; });
+  return { cols, end: x, front: cols.find((c) => c.name === 'Front')!, back: cols.find((c) => c.name === 'Back')!, sides: cols.filter((c) => c.name === 'Side') };
+}
+
 function tuckBox(o: DieOptions, straight: boolean): Dieline {
   const n = new Net(), t = o.t;
   const Lp = o.L + t, Wp = o.W + t, Dp = o.D + 2 * t;
   const g = o.glue, td = Math.max(8, o.tuck), dd = Math.min(Wp * 0.85, Lp / 2 - 1);
-  const top = Wp + td, x0 = g, x1 = x0 + Wp, x2 = x1 + Lp, x3 = x2 + Wp, x4 = x3 + Lp;
+  const top = Wp + td, { cols, end, front, back } = bodyCols(Lp, Wp, g, o.gluePos);
   const y0 = top, y1 = y0 + Dp;
-  // panels: glue | side | front | side | back
-  n.panel('Side', x0, y0, Wp, Dp); n.panel('Front', x1, y0, Lp, Dp); n.panel('Side', x2, y0, Wp, Dp); n.panel('Back', x3, y0, Lp, Dp);
-  for (const x of [x1, x2, x3]) n.crease(seg([x, y0], [x, y1]));
-  n.cut(seg([x4, y0], [x4, y1]));
-  glueFlap(n, x0, y0, y1, g);
+  cols.forEach((c) => n.panel(c.name, c.x0, y0, c.x1 - c.x0, Dp));
+  cols.slice(1).forEach((c) => n.crease(seg([c.x0, y0], [c.x0, y1])));
+  n.cut(seg([end, y0], [end, y1]));
+  glueFlap(n, g, y0, y1, g, o.glueAngle);
   // top: tuck on the back; bottom: on the front (reverse) or the back (straight)
-  tuckClosure(n, x3, x4, y0, Wp, td, -1, 'Top');
-  n.cut(seg([x1, y0], [x2, y0]));
-  if (straight) { tuckClosure(n, x3, x4, y1, Wp, td, 1, 'Bottom'); n.cut(seg([x1, y1], [x2, y1])); }
-  else { tuckClosure(n, x1, x2, y1, Wp, td, 1, 'Bottom'); n.cut(seg([x3, y1], [x4, y1])); }
-  // dust flaps on both sides, top and bottom; taper toward the panel that carries the tuck
-  dustFlap(n, x0, x1, y0, dd, -1, false); dustFlap(n, x2, x3, y0, dd, -1, true);
-  if (straight) { dustFlap(n, x0, x1, y1, dd, 1, false); dustFlap(n, x2, x3, y1, dd, 1, true); }
-  else { dustFlap(n, x0, x1, y1, dd, 1, true); dustFlap(n, x2, x3, y1, dd, 1, false); }
+  tuckClosure(n, back.x0, back.x1, y0, Wp, td, -1, 'Top');
+  if (o.thumbNotch) {
+    // half-round notch in the front panel's top edge so the tuck can be pulled open
+    const r = Math.min(10, Lp / 6, Dp / 6), cx = (front.x0 + front.x1) / 2;
+    n.cut(`M${f(front.x0)} ${f(y0)} L${f(cx - r)} ${f(y0)}` + arcC(cx, y0, r, Math.PI, 0) + ` L${f(front.x1)} ${f(y0)}`);
+  } else n.cut(seg([front.x0, y0], [front.x1, y0]));
+  const bot = straight ? back : front, open = straight ? front : back;
+  tuckClosure(n, bot.x0, bot.x1, y1, Wp, td, 1, 'Bottom'); n.cut(seg([open.x0, y1], [open.x1, y1]));
+  // dust flaps on both sides, top and bottom; each tapers on the edge next to the panel that carries the tuck
+  const rightOf = (i: number) => cols[(i + 1) % cols.length];
+  cols.forEach((c, i) => {
+    if (c.name !== 'Side') return;
+    dustFlap(n, c.x0, c.x1, y0, dd, -1, rightOf(i) === back);
+    dustFlap(n, c.x0, c.x1, y1, dd, 1, rightOf(i) === bot);
+  });
   const H = y1 + Wp + td;
-  return { style: straight ? 'ste' : 'rte', title: straight ? 'Straight tuck end carton' : 'Reverse tuck end carton', w: x4, h: H, lines: n.lines, panels: n.panels, inside: { L: o.L, W: o.W, D: o.D }, t,
-    notes: [`Dust flaps ${f(dd)} mm, tuck ${f(td)} mm, glue flap ${f(g)} mm.`, 'Glue the flap to the inside of the back panel.'] };
+  return { style: straight ? 'ste' : 'rte', title: straight ? 'Straight tuck end carton' : 'Reverse tuck end carton', w: end, h: H, lines: n.lines, panels: n.panels, inside: { L: o.L, W: o.W, D: o.D }, t,
+    notes: [`Dust flaps ${f(dd)} mm, tuck ${f(td)} mm, glue flap ${f(g)} mm${o.glueAngle != null ? ` with ${f(o.glueAngle)}° ends` : ''}.`, o.gluePos === 'back' ? 'Glue flap on the back panel — glue it to the inside of the side panel.' : 'Glue flap on the side panel — glue it to the inside of the back panel.'] };
 }
 
 function sealEnd(o: DieOptions): Dieline {
   const n = new Net(), t = o.t;
   const Lp = o.L + t, Wp = o.W + t, Dp = o.D + 2 * t, g = o.glue;
   const major = Math.max(10, Wp - 2), minor = Math.max(8, Wp * 0.45);
-  const x0 = g, x1 = x0 + Wp, x2 = x1 + Lp, x3 = x2 + Wp, x4 = x3 + Lp, y0 = major, y1 = y0 + Dp;
-  n.panel('Side', x0, y0, Wp, Dp); n.panel('Front', x1, y0, Lp, Dp); n.panel('Side', x2, y0, Wp, Dp); n.panel('Back', x3, y0, Lp, Dp);
-  for (const x of [x1, x2, x3]) n.crease(seg([x, y0], [x, y1]));
+  const { cols, end: x4 } = bodyCols(Lp, Wp, g, o.gluePos), y0 = major, y1 = y0 + Dp;
+  cols.forEach((c) => n.panel(c.name, c.x0, y0, c.x1 - c.x0, Dp));
+  cols.slice(1).forEach((c) => n.crease(seg([c.x0, y0], [c.x0, y1])));
   n.cut(seg([x4, y0], [x4, y1]));
-  glueFlap(n, x0, y0, y1, g);
-  for (const [a, b, depth, nm] of [[x0, x1, minor, 'Dust flap'], [x1, x2, major, 'Top flap'], [x2, x3, minor, 'Dust flap'], [x3, x4, major, 'Top flap']] as [number, number, number, string][]) {
-    flap(n, a, b, y0, depth, -1, 1, nm); flap(n, a, b, y1, depth, 1, 1, nm.replace('Top', 'Bottom'));
+  glueFlap(n, g, y0, y1, g, o.glueAngle);
+  for (const c of cols) {
+    const side = c.name === 'Side', depth = side ? minor : major, nm = side ? 'Dust flap' : 'Top flap';
+    flap(n, c.x0, c.x1, y0, depth, -1, 1, nm); flap(n, c.x0, c.x1, y1, depth, 1, 1, nm.replace('Top', 'Bottom'));
   }
   return { style: 'seal', title: 'Seal end carton', w: x4, h: y1 + major, lines: n.lines, panels: n.panels, inside: { L: o.L, W: o.W, D: o.D }, t,
     notes: [`Major flaps ${f(major)} mm overlap and are glued; dust flaps ${f(minor)} mm.`] };
@@ -150,10 +193,10 @@ function sealEnd(o: DieOptions): Dieline {
 function sleeve(o: DieOptions): Dieline {
   const n = new Net(), t = o.t;
   const Lp = o.L + t, Wp = o.W + t, Dp = o.D, g = o.glue;
-  const x0 = g, x1 = x0 + Wp, x2 = x1 + Lp, x3 = x2 + Wp, x4 = x3 + Lp, y0 = 0, y1 = Dp;
-  n.panel('Side', x0, y0, Wp, Dp); n.panel('Front', x1, y0, Lp, Dp); n.panel('Side', x2, y0, Wp, Dp); n.panel('Back', x3, y0, Lp, Dp);
-  for (const x of [x1, x2, x3]) n.crease(seg([x, y0], [x, y1]));
-  glueFlap(n, x0, y0, y1, g);
+  const { cols, end: x4 } = bodyCols(Lp, Wp, g, o.gluePos), x0 = g, y0 = 0, y1 = Dp;
+  cols.forEach((c) => n.panel(c.name, c.x0, y0, c.x1 - c.x0, Dp));
+  cols.slice(1).forEach((c) => n.crease(seg([c.x0, y0], [c.x0, y1])));
+  glueFlap(n, x0, y0, y1, g, o.glueAngle);
   n.cut(P([[x0, y0], [x4, y0], [x4, y1], [x0, y1]]));
   return { style: 'sleeve', title: 'Sleeve', w: x4, h: Dp, lines: n.lines, panels: n.panels, inside: { L: o.L, W: o.W, D: o.D }, t, notes: ['Open at both ends; the depth is the sleeve width along the product.'] };
 }
@@ -206,7 +249,7 @@ function matchbox(o: DieOptions): Dieline {
   const oy = W + 2 * D + 14, x0 = g, x1 = x0 + sL, x2 = x1 + sD, x3 = x2 + sL, x4 = x3 + sD;
   n.panel('Sleeve top', x0, oy, sL, sLen); n.panel('Sleeve side', x1, oy, sD, sLen); n.panel('Sleeve bottom', x2, oy, sL, sLen); n.panel('Sleeve side', x3, oy, sD, sLen);
   for (const x of [x1, x2, x3]) n.crease(seg([x, oy], [x, oy + sLen]));
-  glueFlap(n, x0, oy, oy + sLen, g);
+  glueFlap(n, x0, oy, oy + sLen, g, o.glueAngle);
   n.cut(P([[x0, oy], [x4, oy], [x4, oy + sLen], [x0, oy + sLen]]));
   return { style: 'matchbox', title: 'Tray and sleeve', w: Math.max(L + 2 * D, x4), h: oy + sLen, lines: n.lines, panels: n.panels, inside: { L: o.L, W: o.W, D: o.D }, t,
     notes: [`Sleeve inside ${f(sL)} × ${f(sD)} mm (tray outside + 1 mm play), ${f(sLen)} mm long.`] };
@@ -222,7 +265,7 @@ function slotted(o: DieOptions, topFlaps: boolean, full = false): Dieline {
   n.panel('Front', x0, y0, Lp, Dp); n.panel('Side', x1, y0, Wp, Dp); n.panel('Back', x2, y0, Lp, Dp); n.panel('Side', x3, y0, Wp, Dp);
   for (const x of [x1, x2, x3]) n.crease(seg([x, y0], [x, y1]));
   n.cut(seg([x4, y0], [x4, y1]));
-  glueFlap(n, x0, y0, y1, g);
+  glueFlap(n, x0, y0, y1, g, o.glueAngle);
   const cols: [number, number][] = [[x0, x1], [x1, x2], [x2, x3], [x3, x4]];
   cols.forEach(([a, b], i) => {
     const ra = i === 0 ? 0 : slot / 2, rb = i === 3 ? 0 : slot / 2;
@@ -239,6 +282,32 @@ function slotted(o: DieOptions, topFlaps: boolean, full = false): Dieline {
     notes: [`Flaps ${f(fd)} mm (${full ? 'outer flaps overlap fully' : 'meet in the middle'}), slots ${f(slot)} mm, manufacturer's joint ${f(g)} mm.`] };
 }
 
+/**
+ * Pillow box (ECMA F70.01 type). Closed: length L, width W, thickness D in the middle.
+ * Cross-section is two arcs of chord W and rise D/2, so each panel is that arc's length wide.
+ * Each end is a curved crease (rise k) with a matching curved cut beyond it; pressing the ends in
+ * along the curved creases closes the box. k = D/2 is the usual starting point — make a sample.
+ */
+function pillow(o: DieOptions): Dieline {
+  const n = new Net(), t = o.t, W = o.W + t, s = Math.max(2, Math.min(W * 0.45, (o.D + 2 * t) / 2)), L = o.L;
+  const R = (W * W / 4 + s * s) / (2 * s), arc = 2 * R * Math.asin(Math.min(1, W / (2 * R)));
+  const pw = arc, k = s, g = o.glue;
+  const x0 = g, x1 = x0 + pw, x2 = x1 + pw, y0 = k, y1 = y0 + L;
+  n.panel('Front', x0, y0, pw, L); n.panel('Back', x1, y0, pw, L);
+  n.crease(seg([x1, y0], [x1, y1]));
+  glueFlap(n, x0, y0, y1, g, o.glueAngle);
+  n.cut(seg([x2, y0], [x2, y1]));
+  const arcPath = bowPath;
+  for (const [a, b] of [[x0, x1], [x1, x2]] as [number, number][]) {
+    // top end: crease bows into the panel, cut bows out beyond the panel edge
+    n.crease(arcPath(a, b, y0, k, 1)); n.cut(arcPath(a, b, y0, k, -1));
+    n.crease(arcPath(a, b, y1, k, -1)); n.cut(arcPath(a, b, y1, k, 1));
+    n.panel('End flap', a, y0 - k, b - a, k, false); n.panel('End flap', a, y1, b - a, k, false);
+  }
+  return { style: 'pillow', title: 'Pillow box', w: x2, h: y1 + k, lines: n.lines, panels: n.panels, inside: { L: o.L, W: o.W, D: o.D }, t,
+    notes: [`Panels ${f(pw)} mm wide (arc over ${f(W)} mm with ${f(s)} mm rise), end curves ${f(k)} mm.`, 'Curved creases need a sample: score depth and curve rise depend on the board.'] };
+}
+
 export function makeDieline(o: DieOptions): Dieline {
   const c = { ...o, L: Math.max(10, o.L), W: Math.max(10, o.W), D: Math.max(5, o.D), t: Math.max(0.1, Math.min(8, o.t)), glue: Math.max(6, o.glue), tuck: Math.max(8, o.tuck) };
   switch (c.style) {
@@ -252,6 +321,7 @@ export function makeDieline(o: DieOptions): Dieline {
     case 'hsc': return slotted(c, false);
     case 'fol': return slotted(c, true, true);
     case 'matchbox': return matchbox(c);
+    case 'pillow': return pillow(c);
   }
 }
 

@@ -71,3 +71,26 @@ test('paper fold check', () => {
   assert.equal(heavy.level, 'error');
   assert.equal(heavy.crease.channelWidth, 1.21);
 });
+
+import { makeDieline as mk2, DEFAULT_DIE as DD2 } from '../../lib/packaging/dieline.ts';
+test('glue flap on the back panel puts Back first and keeps the blank width', () => {
+  const a = mk2({ ...DD2, gluePos: 'side' }), b = mk2({ ...DD2, gluePos: 'back' });
+  assert.equal(Math.round(a.w * 100), Math.round(b.w * 100));
+  assert.equal(b.panels.filter((p) => p.face)[0].name, 'Back');
+  assert.equal(a.panels.filter((p) => p.face)[0].name, 'Side');
+});
+test('glue flap end angle changes the bevel; 0° gives square ends', () => {
+  const flapCut = (d) => d.lines.find((l) => l.kind === 'cut' && /^M14 /.test(l.d));
+  const sq = mk2({ ...DD2, glueAngle: 0 }), bev = mk2({ ...DD2, glueAngle: 45 });
+  assert.match(flapCut(sq).d, /M14 \S+ L0 \S+/);
+  assert.notEqual(flapCut(sq).d, flapCut(bev).d);
+});
+test('thumb notch adds a curved cut on the front top edge', () => {
+  const d = mk2({ ...DD2, thumbNotch: true });
+  assert.ok(d.lines.some((l) => l.kind === 'cut' && / C/.test(l.d) && !/Top|tuck/.test(l.d)));
+});
+test('pillow box: panel width is the arc length over the width', () => {
+  const d = mk2({ ...DD2, style: 'pillow', L: 120, W: 80, D: 30, t: 0 });
+  const p = d.panels.find((x) => x.name === 'Front');
+  assert.ok(p.w > 80 && p.w < 80 * 1.15, String(p.w));
+});

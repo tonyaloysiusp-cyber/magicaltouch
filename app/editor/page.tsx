@@ -131,6 +131,7 @@ import { useLeaveGuard } from '@/hooks/useLeaveGuard';
 import { shrinkEmbeddedImages, canvasJsonForSave } from '@/lib/editor/templateSave';
 import { loadTabSession, saveTabSession, clearTabSession } from '@/lib/editor/tabSession';
 import { WorkspaceSwitcher, EditorWorkspace } from '@/components/editor/WorkspaceSwitcher';
+import { StudioSwitcher, orderForStudio, detectStudio, type EditorStudio } from '@/components/editor/StudioSwitcher';
 import type { PhotoEditResult, CropRect } from '@/lib/photo/editTypes';
 import { PhotoStudio, PhotoStudioHandle } from '@/components/photoStudio/PhotoStudio';
 import { PhotoAdjustments, DEFAULT_ADJUSTMENTS } from '@/lib/editor/photoFilters';
@@ -2925,6 +2926,21 @@ function EditorContent() {
     const p = searchParams.get('panel');
     return p && ['qr', 'patterns', 'colours', 'trace', 'background', 'brand', 'text', 'elements', 'templates', 'draw', 'layers', 'packaging', 'textile'].includes(p) ? p : null;
   });
+  // Workspace type (Design / Packaging / Textile): the workspace's panel opens and its tools lead the rail.
+  const [studio, setStudio] = useState<EditorStudio>(() => { const p = searchParams.get('panel'); return p === 'packaging' || p === 'textile' ? p : 'design'; });
+  const studioPickedRef = useRef(false);
+  useEffect(() => {
+    // a packaging or garment design opened from a file or the recent list picks its workspace by itself
+    let n = 0;
+    const iv = setInterval(() => {
+      const c = fabricCanvasRef.current; n++;
+      if (studioPickedRef.current || n > 40) { clearInterval(iv); return; }
+      if (!c) return;
+      const found = detectStudio(c.getObjects());
+      if (found) { setStudio(found); clearInterval(iv); }
+    }, 400);
+    return () => clearInterval(iv);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const [templateCategory, setTemplateCategory] = useState<string | null>(null);
   const [showResize, setShowResize] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
@@ -4169,6 +4185,13 @@ function EditorContent() {
   // Editing), not just once a photo session already exists — switching
   // to Photo Editing with none open yet starts one from the currently
   // selected image, same as the "Edit Photo" button.
+  const handleStudioSwitch = (target: EditorStudio) => {
+    studioPickedRef.current = true;
+    setStudio(target);
+    if (target !== 'design') { setLeftPanel(target); setUnit('mm'); setLocalNotice(target === 'packaging' ? 'Packaging workspace: box, dieline and production files are in the Packaging panel.' : 'Textile workspace: garment, size, fabric and pattern files are in the Textile panel.'); }
+    else setLeftPanel((p) => (p === 'packaging' || p === 'textile' ? null : p));
+  };
+
   const handleWorkspaceSwitch = (target: EditorWorkspace) => {
     if (target === 'photo' && !photoEditSession) {
       const active = fabricCanvasRef.current?.getActiveObject();
@@ -8404,6 +8427,7 @@ function EditorContent() {
             />
           </div>
         )}
+        {!hideWorkspaceSwitcherForPhotoFirst && workspace === 'design' && <StudioSwitcher studio={studio} onSwitch={handleStudioSwitch} compact={compact} />}
         {pro && !hideWorkspaceSwitcherForPhotoFirst && !compact && <WorkspaceSwitcher workspace={workspace} onSwitch={handleWorkspaceSwitch} />}
         {pro && !compact && (
           <select value={unit} onChange={(e) => setUnit(e.target.value as DocUnit)} aria-label="Units" title="Units" className="hidden lg:block h-9 text-xs border border-mt-border rounded-lg px-1.5 bg-mt-surface text-mt-ink">
@@ -8717,7 +8741,7 @@ function EditorContent() {
             if (files.length) addImageFiles(files);
           }}
         />
-        {!compact && <LeftRail items={railItems} active={leftPanel} onActivate={setLeftPanel} compact={false} />}
+        {!compact && <LeftRail items={orderForStudio(railItems, studio)} active={leftPanel} onActivate={setLeftPanel} compact={false} />}
         {pro && !compact && (
           <Toolbar
             active={stripTool}
@@ -8872,7 +8896,7 @@ function EditorContent() {
           compact={compact}
         />
       )}
-      {workspace === 'design' && compact && <LeftRail items={railItems} active={leftPanel} onActivate={setLeftPanel} compact />}
+      {workspace === 'design' && compact && <LeftRail items={orderForStudio(railItems, studio)} active={leftPanel} onActivate={setLeftPanel} compact />}
 
       {liveDim && (
         <div style={{ position: 'fixed', left: liveDim.x + 16, top: liveDim.y + 16, pointerEvents: 'none' }} className="z-50 bg-black/80 text-white text-[11px] font-mono px-2 py-1 rounded shadow">

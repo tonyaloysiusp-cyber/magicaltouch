@@ -60,10 +60,10 @@ export function TextileHub() {
           <a href="#templates" className="inline-flex h-11 items-center gap-2 rounded-full border border-mt-border bg-mt-surface px-5 text-[14px] font-semibold hover:bg-mt-surface2">Browse {TEXTILE_TEMPLATES.length} templates <ArrowRight size={15} /></a>
         </div>
         {err && <p role="alert" className="mt-3 text-[13px] text-rose-600">{err}</p>}
-        <div className="mx-auto mt-8 grid max-w-3xl grid-cols-4 items-end gap-4">
+        <div className="mx-auto mt-8 grid max-w-5xl grid-cols-2 items-end gap-4 lg:grid-cols-4">
           {hero.map((t) => (
             <figure key={t.id} className="flex flex-col items-center gap-1.5">
-              <div className="aspect-[4/5] w-full [&_svg]:h-full [&_svg]:w-full" dangerouslySetInnerHTML={{ __html: ready ? textileSketchSvg(t) : '' }} />
+              <div className="aspect-[16/10] w-full rounded-xl bg-white/70 p-2 [&_svg]:h-full [&_svg]:w-full" dangerouslySetInnerHTML={{ __html: ready ? textileSketchSvg(t) : '' }} />
               <figcaption className="text-[11.5px] font-medium text-mt-muted">{GARMENTS.find((g) => g.id === t.garment)?.name}</figcaption>
             </figure>
           ))}
@@ -134,10 +134,6 @@ export function TextileHub() {
           </ul>
         </section>
 
-        <section aria-labelledby="tx-classic" className="scroll-mt-16" id="team-kits">
-          <h2 id="tx-classic" className="text-xl font-semibold tracking-[-0.01em]">Team kits, sizes and embroidery</h2>
-          <p className="mt-1 text-[13px] text-mt-muted">Players with names, numbers and sizes, order quantities, embroidery DST files and tech packs — the Textile Designer below.</p>
-        </section>
       </div>
     </div>
   );

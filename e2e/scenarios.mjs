@@ -945,7 +945,7 @@ scenarios.push({
     const fs = await import('node:fs');
     const { PDFDocument } = await import('pdf-lib');
     await t.page.addInitScript(() => { try { if (!sessionStorage.getItem('tsInit')) { localStorage.removeItem('mt:textile-studio'); localStorage.removeItem('mt:textile-measures'); sessionStorage.setItem('tsInit', '1'); } } catch {} });
-    await t.page.goto(`${t.BASE}/textile-studio?product=kurta`, { waitUntil: 'domcontentloaded' });
+    await t.page.goto(`${t.BASE}/textile-designer?product=kurta`, { waitUntil: 'domcontentloaded' });
     const studio = t.page.getByLabel('Textile Studio', { exact: true });
     await studio.waitFor({ timeout: 30000 });
     t.check('product picker shows every garment', (await t.page.getByRole('radiogroup', { name: 'Product' }).getByRole('radio').count()) === 9);
@@ -1014,7 +1014,7 @@ scenarios.push({
   async run(t) {
     await t.page.goto(`${t.BASE}/textile-designer?garment=polo`, { waitUntil: 'domcontentloaded' });
     await t.page.getByLabel('Textile Design Studio').waitFor({ timeout: 30000 });
-    t.check('old route redirects to /textile-studio', /\/textile-studio/.test(t.page.url()), t.page.url());
+    t.check('team kit designer opens at /textile-designer', /\/textile-designer/.test(t.page.url()), t.page.url());
     await t.page.getByLabel('Project name').first().waitFor({ timeout: 30000 });
     await t.page.waitForTimeout(600);
     const polo = t.page.getByRole('radiogroup', { name: 'Product' }).getByRole('radio', { name: /Polo/ });
@@ -1100,7 +1100,7 @@ scenarios.push({
     const fs = await import('node:fs');
     const { PDFDocument } = await import('pdf-lib');
     await t.page.addInitScript(() => { try { if (!sessionStorage.getItem('scInit')) { localStorage.removeItem('mt:textile-studio'); localStorage.removeItem('mt:textile-measures'); localStorage.removeItem('mt:textile-workspace'); sessionStorage.setItem('scInit', '1'); } } catch {} });
-    await t.page.goto(`${t.BASE}/textile-studio?product=kurta`, { waitUntil: 'domcontentloaded' });
+    await t.page.goto(`${t.BASE}/textile-designer?product=kurta`, { waitUntil: 'domcontentloaded' });
     const studio = t.page.getByLabel('Textile Studio', { exact: true });
     await studio.waitFor({ timeout: 30000 });
     await studio.getByRole('radio', { name: 'Size chart (several sizes)' }).click();
@@ -2106,6 +2106,7 @@ scenarios.push({
     t.check('garment template opened with pieces, cut line and guides', r.base >= 4 && r.cut === 1 && r.guides >= 8 && r.text, JSON.stringify(r));
     const clickable = await t.eval(() => window.__fabricCanvas.getObjects().filter((x) => (x.__pat || x.__die) && x.evented !== false).length);
     t.check('pattern guides are click-through', clickable === 0, clickable);
+    t.check('editor opens in the Textile workspace', (await t.page.getByRole('radiogroup', { name: 'Workspace type' }).getByRole('radio', { name: /Textile/ }).getAttribute('aria-checked')) === 'true');
     // change the size: pieces redraw, artwork stays
     await t.page.getByRole('button', { name: /Pattern is up to date/ }).waitFor({ timeout: 15000 });
     await t.page.getByRole('button', { name: 'XL', exact: true }).click();
@@ -2114,5 +2115,26 @@ scenarios.push({
     const r2 = await t.eval(() => { const o = window.__fabricCanvas.getObjects(); const c = o.find((x) => x.__tex); return { size: c && JSON.parse(c.__tex).size, base: o.filter((x) => x.__texBase).length, text: o.some((x) => x.name === 'Chest text') }; });
     t.check('size change redraws the pieces and keeps the artwork', r2.size === 'XL' && r2.base === r.base && r2.text, JSON.stringify(r2));
     await t.shot('textile-in-editor');
+  },
+});
+
+scenarios.push({
+  name: 'workspace-type-switch',
+  async run(t) {
+    await t.editor('w=1080&h=1080');
+    const group = t.page.getByRole('radiogroup', { name: 'Workspace type' });
+    await group.getByRole('radio', { name: /Packaging/ }).click();
+    await t.page.getByRole('tab', { name: 'Box' }).waitFor({ timeout: 10000 });
+    t.check('Packaging workspace opens the Packaging panel', true);
+    const first = await t.page.locator('nav[aria-label="Editor panels"] button').first().innerText();
+    t.check('Packaging tools lead the rail', /Packaging/.test(first), first);
+    await group.getByRole('radio', { name: /Textile/ }).click();
+    await t.page.getByRole('button', { name: /Lay out pattern pieces/ }).waitFor({ timeout: 10000 });
+    t.check('Textile workspace opens the Textile panel', true);
+    await t.page.getByRole('button', { name: /Lay out pattern pieces/ }).click();
+    await t.page.waitForTimeout(600);
+    const n = await t.eval(() => window.__fabricCanvas.getObjects().filter((o) => o.__texBase).length);
+    t.check('blank page gets pattern pieces', n >= 4, n);
+    await t.shot('textile-workspace');
   },
 });

@@ -77,10 +77,14 @@ export function checkStructure(o: DieOptions, family: BoardFamily): StructureRep
       : { id: 'lw', level: 'ok', title: 'Flaps meet', detail: `Outer flaps ${f((o.W + 2 * t) / 2 + t)} mm meet in the middle.`, rule: 'geometry' });
   }
 
+  if (o.style === 'pillow') {
+    add({ id: 'pillow', level: o.D > o.W * 0.5 ? 'warn' : 'ok', title: 'Pillow ends', detail: o.D > o.W * 0.5 ? `Thickness ${f(o.D)} mm is over half the width; the curved ends get very deep and may not close flat. Keep it under ${f(o.W * 0.5)} mm or make a sample.` : 'Curved ends close by pressing in along the curved creases. Make a sample on your board before production.', rule: 'rule of thumb' });
+  }
+  if ((o.glueAngle ?? 45) < 5 && !corr) add({ id: 'glueangle', level: 'warn', title: 'Glue flap ends', detail: 'Square glue flap ends can catch on the folded closures; a 7–15° bevel is usual on folder-gluers.', fix: { glueAngle: 15 } as any, rule: 'rule of thumb' });
   // Glue flap: needs enough width for the glue line, and must fit on the panel it is glued to.
   if (o.style !== 'tray' && o.style !== 'traylid') {
     const g = (o.style === 'rsc' || o.style === 'hsc' || o.style === 'fol') ? Math.max(o.glue, 25) : o.glue;
-    const minG = corr ? 25 : 10, target = (o.style === 'rsc' || o.style === 'hsc' || o.style === 'fol') ? o.W + 2 * t : Lp; // slotted: joint glued to the last side panel
+    const minG = corr ? 25 : 10, target = (o.style === 'rsc' || o.style === 'hsc' || o.style === 'fol') ? o.W + 2 * t : o.gluePos === 'back' && o.style !== 'pillow' ? o.W + t : Lp; // slotted: joint glued to the last side panel; back-panel flap glues onto a side
     if (g >= target) add({ id: 'glue', level: 'error', title: 'Glue flap', detail: `Glue flap ${f(g)} mm is wider than the panel it is glued to (${f(target)} mm).`, fix: { glue: Math.round(target * 0.3) }, rule: 'geometry' });
     else if (g < minG) add({ id: 'glue', level: 'warn', title: 'Glue flap', detail: `Glue flap ${f(g)} mm is narrow; at least ${minG} mm is usual for ${corr ? 'corrugated' : 'carton'}.`, fix: { glue: minG + (corr ? 5 : 4) }, rule: 'rule of thumb' });
     else add({ id: 'glue', level: 'ok', title: 'Glue flap', detail: `Glue flap ${f(g)} mm.`, rule: 'rule of thumb' });
