@@ -356,6 +356,8 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
   // Split view: original (left) | preview (right) with a draggable divider — for adjustments and filters.
   const [split, setSplit] = useState(false);
   const [splitPos, setSplitPos] = useState(0.5);
+  // side by side (vertical divider) or top / bottom (horizontal divider)
+  const [splitDir, setSplitDir] = useState<'v' | 'h'>('v');
   const beforeRef = useRef<HTMLCanvasElement>(null);
   const [proof, setProof] = useState(false);
   const [zoom, setZoom] = useState(1); // 1 = fit
@@ -2512,6 +2514,7 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
           <button type="button" className={cx(iconBtn, 'w-auto px-2.5 gap-1.5 text-[12px] font-medium', split && 'bg-mt-surface2 text-[#3B82C4]')} aria-pressed={split} onClick={() => setSplit((v) => !v)} title="Split view: original | preview (drag the divider)">
             <span aria-hidden className="inline-block h-3.5 w-3.5 rounded-[3px] border border-current bg-[linear-gradient(90deg,currentColor_50%,transparent_50%)] opacity-80" /> Split
           </button>
+          {split && <button type="button" className={cx(iconBtn, 'w-auto px-2 text-[12px] font-medium')} onClick={() => setSplitDir((d) => (d === 'v' ? 'h' : 'v'))} title={splitDir === 'v' ? 'Split top / bottom' : 'Split side by side'} aria-label={splitDir === 'v' ? 'Split top and bottom' : 'Split side by side'}>{splitDir === 'v' ? '⇕' : '⇔'}</button>}
           <button
             className={cx(iconBtn, 'hidden sm:inline-flex w-auto px-2.5 gap-1.5 text-[12px] font-medium', comparing && 'bg-mt-surface2')}
             onPointerDown={() => setComparing(true)}
@@ -2589,24 +2592,24 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
           {preview && (
             <div data-split-host className="absolute left-1/2 top-1/2" style={{ width: dispW, height: dispH, transform: `translate(calc(-50% + ${pan.x}px), calc(-50% + ${pan.y}px))` }}>
               <canvas ref={displayRef} className={cx('block w-full h-full shadow-[0_20px_60px_-30px_rgba(0,0,0,0.6)]', pro && 'bg-[repeating-conic-gradient(#cfcfcf_0_25%,#ffffff_0_50%)] bg-[length:16px_16px]')} />
-              <canvas ref={draftRef} aria-hidden className="absolute inset-0 w-full h-full pointer-events-none" style={{ visibility: 'hidden', clipPath: split && tool === 'filter' ? `inset(0 0 0 ${splitPos * 100}%)` : undefined }} />
-              {split && tool !== 'filter' && tool !== 'crop' && <canvas ref={beforeRef} aria-hidden className="absolute inset-0 w-full h-full pointer-events-none" style={{ clipPath: `inset(0 ${(1 - splitPos) * 100}% 0 0)` }} />}
+              <canvas ref={draftRef} aria-hidden className="absolute inset-0 w-full h-full pointer-events-none" style={{ visibility: 'hidden', clipPath: split && tool === 'filter' ? (splitDir === 'v' ? `inset(0 0 0 ${splitPos * 100}%)` : `inset(${splitPos * 100}% 0 0 0)`) : undefined }} />
+              {split && tool !== 'filter' && tool !== 'crop' && <canvas ref={beforeRef} aria-hidden className="absolute inset-0 w-full h-full pointer-events-none" style={{ clipPath: splitDir === 'v' ? `inset(0 ${(1 - splitPos) * 100}% 0 0)` : `inset(0 0 ${(1 - splitPos) * 100}% 0)` }} />}
               {split && tool !== 'crop' && (
-                <div className="absolute inset-y-0 z-[5]" style={{ left: `${splitPos * 100}%` }}>
-                  <div className="absolute inset-y-0 -left-px w-0.5 bg-white shadow-[0_0_0_1px_rgba(0,0,0,0.35)]" />
+                <div className={splitDir === 'v' ? 'absolute inset-y-0 z-[5]' : 'absolute inset-x-0 z-[5]'} style={splitDir === 'v' ? { left: `${splitPos * 100}%` } : { top: `${splitPos * 100}%` }}>
+                  <div className={splitDir === 'v' ? 'absolute inset-y-0 -left-px w-0.5 bg-white shadow-[0_0_0_1px_rgba(0,0,0,0.35)]' : 'absolute inset-x-0 -top-px h-0.5 bg-white shadow-[0_0_0_1px_rgba(0,0,0,0.35)]'} />
                   <button type="button" aria-label="Drag to compare the original and the preview" title="Drag to compare"
                     onPointerDown={(e) => {
                       e.stopPropagation(); e.preventDefault();
                       const box = (e.currentTarget.closest('[data-split-host]') as HTMLElement) || (e.currentTarget.parentElement!.parentElement as HTMLElement);
-                      const move = (ev: PointerEvent) => { const r = box.getBoundingClientRect(); setSplitPos(Math.max(0.02, Math.min(0.98, (ev.clientX - r.left) / r.width))); };
+                      const move = (ev: PointerEvent) => { const r = box.getBoundingClientRect(); setSplitPos(Math.max(0.02, Math.min(0.98, splitDir === 'v' ? (ev.clientX - r.left) / r.width : (ev.clientY - r.top) / r.height))); };
                       window.addEventListener('pointermove', move);
                       window.addEventListener('pointerup', () => window.removeEventListener('pointermove', move), { once: true });
                     }}
-                    className="absolute top-1/2 -left-4 -translate-y-1/2 h-8 w-8 rounded-full bg-white text-[#0B0B12] shadow-lg grid place-items-center cursor-ew-resize touch-none text-[12px] font-bold">⇔</button>
+                    className={splitDir === 'v' ? 'absolute top-1/2 -left-4 -translate-y-1/2 h-8 w-8 rounded-full bg-white text-[#0B0B12] shadow-lg grid place-items-center cursor-ew-resize touch-none text-[12px] font-bold' : 'absolute left-1/2 -top-4 -translate-x-1/2 h-8 w-8 rounded-full bg-white text-[#0B0B12] shadow-lg grid place-items-center cursor-ns-resize touch-none text-[12px] font-bold'}>{splitDir === 'v' ? '⇔' : '⇕'}</button>
                 </div>
               )}
               {split && tool !== 'crop' && <span className="pointer-events-none absolute left-2 top-2 rounded-md bg-black/60 px-2 py-0.5 text-[11px] font-semibold text-white">Original</span>}
-              {split && tool !== 'crop' && <span className="pointer-events-none absolute right-2 top-2 rounded-md bg-black/60 px-2 py-0.5 text-[11px] font-semibold text-white">Preview</span>}
+              {split && tool !== 'crop' && <span className={cx('pointer-events-none absolute rounded-md bg-black/60 px-2 py-0.5 text-[11px] font-semibold text-white', splitDir === 'v' ? 'right-2 top-2' : 'left-2 bottom-2')}>Preview</span>}
               {tool === 'crop' && box && base && (
                 <CropOverlay box={box} base={base} />
               )}
