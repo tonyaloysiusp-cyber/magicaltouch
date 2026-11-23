@@ -5,15 +5,19 @@ import { useAppTheme } from '@/hooks/useAppTheme';
 import { IntroAnimation } from './IntroAnimation';
 import { Navbar } from './Navbar';
 import { WorkspaceHero } from './WorkspaceHero';
-import { StudioTools } from './StudioTools';
-import { TemplateShowcase } from './TemplateShowcase';
-import { StudioTour } from './StudioTour';
-import { SocialShowcase } from './SocialShowcase';
-import { HowItWorks } from './HowItWorks';
-import { PricingFree } from './PricingFree';
-import { FinalCTA } from './FinalCTA';
-import { Footer } from './Footer';
-import { FestivalWish } from '@/components/festival/FestivalWish';
+import dynamic from 'next/dynamic';
+// Below-the-fold sections are separate chunks: still rendered on the server
+// (same HTML for visitors and search), but their JavaScript loads and
+// hydrates in smaller pieces after the hero, so the page responds sooner.
+const StudioTools = dynamic(() => import('./StudioTools').then((m) => m.StudioTools));
+const TemplateShowcase = dynamic(() => import('./TemplateShowcase').then((m) => m.TemplateShowcase));
+const StudioTour = dynamic(() => import('./StudioTour').then((m) => m.StudioTour));
+const SocialShowcase = dynamic(() => import('./SocialShowcase').then((m) => m.SocialShowcase));
+const HowItWorks = dynamic(() => import('./HowItWorks').then((m) => m.HowItWorks));
+const PricingFree = dynamic(() => import('./PricingFree').then((m) => m.PricingFree));
+const FinalCTA = dynamic(() => import('./FinalCTA').then((m) => m.FinalCTA));
+const Footer = dynamic(() => import('./Footer').then((m) => m.Footer));
+const FestivalWish = dynamic(() => import('@/components/festival/FestivalWish').then((m) => m.FestivalWish), { ssr: false });
 
 // Unbounded's wide, rounded geometry echoes the Magical Touch wordmark.
 const display = Unbounded({

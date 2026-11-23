@@ -35,7 +35,7 @@ function shortPreview(thumb: string | null, preview: string | null) {
 }
 
 export async function GET() {
-  return edgeCached('public-templates-v3', 300, build);
+  return edgeCached('public-templates-v3', 1800, build);
 }
 
 async function build() {

@@ -190,13 +190,11 @@ function EditorContent() {
   const { theme, toggleTheme } = useAppTheme();
   const isDark = theme === 'dark';
 
-  // Background, one-time-per-session audit of every font in the picker —
-  // detects a genuinely broken family (a 404 from the proxy, a name
-  // Google's since renamed) even if the user never happens to select it,
-  // instead of only ever finding out when someone picks a dead font.
-  useEffect(() => {
-    validateAllFonts();
-  }, []);
+  // Fonts load only when a design uses them or someone picks one: the old
+  // up-front audit of every font in the picker downloaded several MB on
+  // each editor visit. A broken family is still caught when it is first
+  // used (ensureFontLoaded marks it unavailable and it leaves the picker).
+  void validateAllFonts;
   // Fabric.js has a narrow, pre-existing render-cache bug: an object's
   // clipPath rebuilt right after a photo edit apply (crop/resize/mask)
   // can throw "this._cacheContext.setTransform is not a function" if the

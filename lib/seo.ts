@@ -30,21 +30,31 @@ export interface SeoTemplate {
 
 const COLS = 'id,name,slug,category,width,height,preview,thumbnail,tags,search_keywords,color1,updated_at,published_at,is_free,occasion,industry,hashtags,description';
 
+// Template pages that are not pre-built render on request, and the Next data
+// cache does not persist on this host — so without this every page view
+// queried the database (the related-templates query alone ran ~800,000
+// times). Answers are now kept in Cloudflare's edge cache for `revalidate`
+// seconds and refreshed in the background (stale-while-revalidate).
 async function rest<T>(query: string, revalidate = 3600): Promise<T | null> {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!url || !key) return null;
+  const load = () => fetch(`${url}/rest/v1/${query}`, { headers: { apikey: key, Authorization: `Bearer ${key}` }, next: { revalidate } } as RequestInit);
   try {
-    const res = await fetch(`${url}/rest/v1/${query}`, {
-      headers: { apikey: key, Authorization: `Bearer ${key}` },
-      next: { revalidate },
-    } as RequestInit);
+    let res: Response;
+    try {
+      const { edgeCached } = await import('./edgeCache');
+      res = await edgeCached(`rest/${query.length > 900 ? hashKey(query) : query}`, revalidate, load);
+    } catch {
+      res = await load();
+    }
     if (!res.ok) return null;
     return (await res.json()) as T;
   } catch {
     return null;
   }
 }
+function hashKey(s: string) { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return `h${(h >>> 0).toString(36)}-${s.length}`; }
 
 const PUBLISHED = 'status=eq.published&slug=not.is.null';
 
