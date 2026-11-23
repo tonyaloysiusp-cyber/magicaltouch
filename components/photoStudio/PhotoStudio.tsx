@@ -20,7 +20,7 @@ import {
   SlidersHorizontal, Sparkles, Crop as CropIcon, Scissors, Brush, Maximize2, Download, Undo2, Redo2, Plus, Minus,
   Maximize, RotateCcw, RotateCw, FlipHorizontal2, FlipVertical2, Loader2, Check, X, Eye, Printer, Lock, Unlock, Palette, Wand2,
   Move, BoxSelect, Blend as BlendIcon, Hand, ZoomIn, Pipette, Type as TypeIcon, Eraser, Droplet, Sun, Circle, ArrowLeftRight, Square, PaintBucket,
-  Lasso as LassoIcon, PenTool, CircleDashed, Layers as LayersIcon, Trash2, FlipHorizontal, Copy as CopyIcon, IdCard,
+  Lasso as LassoIcon, PenTool, CircleDashed, Layers as LayersIcon, Trash2, FlipHorizontal, Copy as CopyIcon, Contact as IdCard,
 } from 'lucide-react';
 import { Adjust, NO_ADJUST, LIGHT_SLIDERS, COLOR_SLIDERS, DETAIL_SLIDERS, LENS_SLIDERS, PORTRAIT_SLIDERS, PORTRAIT_PRESETS, LOOKS, SliderDef, applyAdjust, renderAdjusted, isNeutral, autoEnhance, HSL_RANGES, CurvePts, curveLut } from '@/lib/photo/adjust';
 import { BrushKind, createStroke, replayStroke } from '@/lib/photo/brushes';
