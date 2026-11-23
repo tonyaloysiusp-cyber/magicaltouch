@@ -43,7 +43,7 @@ export function defaultSpec(): PackSpec {
 }
 
 /** Number field that commits on Enter or when it loses focus — typing "12.5" never redraws at "1". */
-function Field({ label, value, onChange, unit = 'mm', step = 0.5 }: { label: string; value: number; onChange: (v: number) => void; unit?: string; step?: number }) {
+function Field({ label, value, onChange, unit = 'mm', step = 0.5, onFocusChange }: { label: string; value: number; onChange: (v: number) => void; unit?: string; step?: number; onFocusChange?: (on: boolean) => void }) {
   const [txt, setTxt] = useState(String(value));
   const [editing, setEditing] = useState(false);
   useEffect(() => { if (!editing) setTxt(String(value)); }, [value, editing]);
@@ -52,12 +52,29 @@ function Field({ label, value, onChange, unit = 'mm', step = 0.5 }: { label: str
     <label className="block text-[11.5px]">
       <span className="text-mt-muted">{label}</span>
       <span className="mt-0.5 flex h-8 items-center rounded-md border border-mt-border bg-mt-bg focus-within:border-mt-ink/50">
-        <input inputMode="decimal" value={txt} aria-label={label} onFocus={() => setEditing(true)} onChange={(e) => setTxt(e.target.value)} onBlur={commit}
+        <input inputMode="decimal" value={txt} aria-label={label} onFocus={() => { setEditing(true); onFocusChange?.(true); }} onChange={(e) => setTxt(e.target.value)} onBlur={() => { commit(); onFocusChange?.(false); }}
           onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); commit(); (e.target as HTMLInputElement).blur(); } if (e.key === 'ArrowUp' || e.key === 'ArrowDown') { e.preventDefault(); const v = Math.max(0, Math.round(((Number(txt) || 0) + (e.key === 'ArrowUp' ? step : -step) * (e.shiftKey ? 10 : 1)) * 1000) / 1000); setTxt(String(v)); onChange(v); } }}
           className="h-full w-full min-w-0 bg-transparent px-2 text-[12.5px] tabular-nums outline-none" />
         <span className="pr-2 text-[10.5px] text-mt-faint">{unit}</span>
       </span>
     </label>
+  );
+}
+
+/** Which edge is Length, Width and Height: L and W are the opening, H runs from the opening to the base. */
+function BoxAxes({ hl }: { hl: 'L' | 'W' | 'H' | null }) {
+  const c = (k: 'L' | 'W' | 'H') => (hl === k ? '#2563eb' : 'currentColor');
+  const w = (k: 'L' | 'W' | 'H') => (hl === k ? 2.4 : 1.2);
+  return (
+    <svg viewBox="0 0 150 92" className="h-[84px] w-full text-mt-muted" aria-label="Length is the longer side of the opening, width the shorter side, height from the opening to the base">
+      <path d="M40 30 L90 18 L120 28 L70 40 Z" fill="#2563eb" fillOpacity={0.08} stroke="currentColor" strokeWidth={0.8} />
+      <path d="M40 30 L40 72 L70 84 L70 40 Z M70 40 L70 84 L120 72 L120 28" fill="none" stroke="currentColor" strokeWidth={0.8} />
+      <path d="M40 30 L70 40" stroke={c('W')} strokeWidth={w('W')} /><path d="M70 40 L120 28" stroke={c('L')} strokeWidth={w('L')} /><path d="M120 28 L120 72" stroke={c('H')} strokeWidth={w('H')} />
+      <text x="96" y="44" fontSize="9" fill={c('L')} fontWeight={hl === 'L' ? 700 : 500}>L</text>
+      <text x="50" y="44" fontSize="9" fill={c('W')} fontWeight={hl === 'W' ? 700 : 500}>W</text>
+      <text x="125" y="54" fontSize="9" fill={c('H')} fontWeight={hl === 'H' ? 700 : 500}>H</text>
+      <text x="62" y="27" fontSize="6.5" fill="currentColor">opening</text>
+    </svg>
   );
 }
 
@@ -75,6 +92,8 @@ export function PackagingPanel({ api }: { api: PackagingApi }) {
   const u = (mm: number) => r2(mm / UK[unit]), toMm = (v: number) => Math.round(v * UK[unit] * 1000) / 1000;
   const stepU = unit === 'mm' ? 1 : unit === 'cm' ? 0.1 : 0.05, fine = unit === 'mm' ? 0.01 : unit === 'cm' ? 0.001 : 0.001;
   const [busy, setBusy] = useState<string | null>(null);
+  const [tab, setTab] = useState<'box' | 'lines' | 'files'>('box');
+  const [focusKey, setFocusKey] = useState<'L' | 'W' | 'H' | null>(null);
   const [, bump] = useState(0);
   useEffect(() => { const c = api.canvas(); if (!c) return; const f = () => bump((x) => x + 1); c.on('selection:created', f); c.on('selection:updated', f); c.on('selection:cleared', f); return () => { c.off('selection:created', f); c.off('selection:updated', f); c.off('selection:cleared', f); }; }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -136,7 +155,7 @@ export function PackagingPanel({ api }: { api: PackagingApi }) {
     const on = what === 'visible' ? !objs.every((o: any) => o.visible !== false) : !objs.every((o: any) => o.locked);
     for (const o of objs) {
       if (what === 'visible') o.set({ visible: on });
-      else o.set({ locked: on, lockMovementX: on, lockMovementY: on, lockScalingX: on, lockScalingY: on, lockRotation: on, hasControls: !on });
+      else o.set({ locked: on, lockMovementX: on, lockMovementY: on, lockScalingX: on, lockScalingY: on, lockRotation: on, hasControls: !on, selectable: !on, evented: !on, perPixelTargetFind: true });
     }
     api.canvas()?.requestRenderAll(); api.commit();
   };
@@ -170,6 +189,12 @@ export function PackagingPanel({ api }: { api: PackagingApi }) {
 
   return (
     <div className="space-y-4 text-[12px]">
+      <div role="tablist" aria-label="Packaging" className="grid grid-cols-3 rounded-lg border border-mt-border p-0.5">
+        {([['box', 'Box'], ['lines', 'Lines'], ['files', 'Files']] as const).map(([id, label]) => (
+          <button key={id} type="button" role="tab" aria-selected={tab === id} onClick={() => setTab(id)} className={`h-7 rounded-md text-[12px] font-semibold ${tab === id ? 'bg-mt-ink text-mt-bg' : 'text-mt-muted hover:text-mt-ink'}`}>{label}</button>
+        ))}
+      </div>
+      {tab === 'box' && <>
       {/* Box */}
       <section>
         <p className="mb-1.5 text-[10.5px] font-semibold uppercase tracking-[0.08em] text-mt-faint">Box style</p>
@@ -198,8 +223,11 @@ export function PackagingPanel({ api }: { api: PackagingApi }) {
           <option value="outside">Box outside size</option>
         </select>
         <div className="grid grid-cols-3 gap-1.5">
-          {(['L', 'W', 'H'] as const).map((k) => <Field key={k} label={k === 'L' ? 'Length' : k === 'W' ? 'Width' : 'Height'} unit={unit} step={stepU} value={u(spec.product[k])} onChange={(v) => set({ product: { ...spec.product, [k]: toMm(v) } })} />)}
+          {(['L', 'W', 'H'] as const).map((k) => <Field key={k} label={k === 'L' ? 'Length' : k === 'W' ? 'Width' : 'Height'} unit={unit} step={stepU} value={u(spec.product[k])} onChange={(v) => set({ product: { ...spec.product, [k]: toMm(v) } })} onFocusChange={(on) => setFocusKey(on ? k : null)} />)}
         </div>
+        <BoxAxes hl={focusKey} />
+        <p className="text-[10.5px] leading-snug text-mt-faint">L = longer side of the opening · W = shorter side · H = from the opening to the base. Inside sizes, as box makers quote them.</p>
+        {spec.product.W > spec.product.L && <p className="mt-1 text-[11px] text-amber-600">Width is larger than length. <button type="button" onClick={() => set({ product: { ...spec.product, L: spec.product.W, W: spec.product.L } })} className="font-semibold underline-offset-2 hover:underline">Swap them</button></p>}
         {(spec.mode || 'product') === 'product' && <>
           <p className="mt-1.5 text-[11px] text-mt-muted">Fitting gap added (total per size)</p>
           <div className="mt-0.5 grid grid-cols-3 gap-1.5">
@@ -231,7 +259,9 @@ export function PackagingPanel({ api }: { api: PackagingApi }) {
       <button type="button" onClick={apply} disabled={hasDie && !dirty} className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-mt-ink text-[13px] font-semibold text-mt-bg disabled:opacity-40">
         {hasDie ? <><RefreshCw size={15} /> {dirty ? 'Update the dieline' : 'Dieline is up to date'}</> : <><Box size={15} /> Add this dieline to the page</>}
       </button>
+      </>}
 
+      {tab === 'lines' && <>
       {/* Lines */}
       <section className="space-y-2">
         <p className="text-[10.5px] font-semibold uppercase tracking-[0.08em] text-mt-faint">Die lines</p>
@@ -251,6 +281,9 @@ export function PackagingPanel({ api }: { api: PackagingApi }) {
         <p className="text-[10.5px] leading-relaxed text-mt-faint">Draw windows, hang holes or a unique outline with the shape, line or pen tools, then mark them here. They join the dieline in every export.</p>
       </section>
 
+      </>}
+
+      {tab === 'files' && <>
       {/* Files */}
       <section className="space-y-1.5">
         <p className="text-[10.5px] font-semibold uppercase tracking-[0.08em] text-mt-faint">Press files</p>
@@ -260,6 +293,7 @@ export function PackagingPanel({ api }: { api: PackagingApi }) {
         {busy && <p role="status" className="text-[11px] text-mt-muted">{busy}</p>}
         <p className="text-[10.5px] leading-relaxed text-mt-faint">Save the project as .mtd from the File menu — it opens again with every layer editable.</p>
       </section>
+      </>}
     </div>
   );
 }

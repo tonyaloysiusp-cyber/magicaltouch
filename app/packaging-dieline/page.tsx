@@ -35,7 +35,7 @@ export default function PackagingPage() {
       about={<ToolAbout intro="Pick a box style, enter the inside size and the board, and download a 1:1 vector dieline with cut and crease spot colours, an artwork template with bleed, or an SVG — or open it in the editor and design the box." steps={[['Pick a style', 'Tuck end, seal end, sleeve, tray, lid or corrugated FEFCO 0201 / 0200.'], ['Enter the size', 'Inside length, width and depth in mm or inches, and the board.'], ['Check the net', 'Toggle cut, crease, bleed and panel labels; see knife length and sheets per sheet size.'], ['Download', 'Dieline PDF, artwork template, SVG — or design on it in the editor.']]} faq={FAQ} related={[{ href: '/print-size-calculator', label: 'Print Size & Binding Calculator' }, { href: '/print-layout', label: 'Print Layout (many-up)' }, { href: '/create', label: 'Design Editor' }]} />}>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(ld) }} />
       <PackagingHub />
-      <section id="quick-dieline" aria-labelledby="pk-quick" className="mt-10 scroll-mt-16">
+      <section id="quick-dieline" aria-labelledby="pk-quick" className="mx-auto mt-10 max-w-[1400px] scroll-mt-16 px-4 sm:px-6">
         <h2 id="pk-quick" className="text-xl font-semibold tracking-[-0.01em]">Quick dieline calculator</h2>
         <p className="mb-4 mt-1 text-[13px] text-mt-muted">Only need the dieline file? Enter the inside size and download it here.</p>
         <PackagingStudio />

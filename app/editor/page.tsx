@@ -145,7 +145,7 @@ import { SaveLocationDialog, SaveLocation } from '@/components/storage/SaveLocat
 import { CloudOpenDialog } from '@/components/storage/CloudOpenDialog';
 import { rememberRecent } from '@/lib/mtd/recent';
 import { missingFontsIn, fontRequiredMessage } from '@/lib/editor/missingFonts';
-import { PERSIST_PROPS, cloneWithProps, isHelperObject, isArtwork, applyStoredLocks, lockProps, reviveTextPaths } from '@/lib/editor/persist';
+import { PERSIST_PROPS, cloneWithProps, isHelperObject, isArtwork, applyStoredLocks, lockProps, lockPropsFor, reviveTextPaths } from '@/lib/editor/persist';
 import { ensureImageFilters, reviveImageAdjust } from '@/lib/editor/imageAdjust';
 import { installParagraphSpacing } from '@/lib/editor/paragraphSpacing';
 import { installTextIndent } from '@/lib/editor/textIndent';
@@ -4735,7 +4735,7 @@ function EditorContent() {
     const nextLocked = !targets.every((t) => t.locked);
     if (obj.type === 'activeSelection') canvas.discardActiveObject();
     targets.forEach((t) => {
-      t.set(lockProps(nextLocked));
+      t.set(lockPropsFor(t, nextLocked));
       t.setCoords();
     });
     if (obj.type === 'activeSelection' && targets.length > 1) {

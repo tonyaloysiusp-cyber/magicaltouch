@@ -72,8 +72,7 @@ export function ToolShell({ path, h1, name, sub, icon, about, variant = 'app', c
       <div className={`${display.variable} ${theme === 'dark' ? 'dark' : ''}`}>
         <div className="min-h-screen bg-mt-bg text-mt-ink">
           <SiteHeader theme={theme} onToggleTheme={toggleTheme} active="tools" />
-          <main className="mx-auto w-full max-w-[1400px] px-4 pb-12 pt-4 sm:px-6">
-            <h1 className="sr-only">{h1}</h1>
+          <main className="w-full pb-12">
             {children}
           </main>
           {about && (

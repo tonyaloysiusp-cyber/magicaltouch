@@ -66,7 +66,8 @@ export function dieToFabric(F: any, d: Dieline, origin: { x: number; y: number }
     const st = DIE_STYLE[kind];
     const p = new F.Path(dd, { name: `Dieline · ${st.name}`, fill: '', stroke: st.colour, strokeWidth: 1, strokeUniform: true, strokeDashArray: st.dash, objectCaching: false });
     p.set({ scaleX: PX, scaleY: PX, left: origin.x + p.left * PX, top: origin.y + p.top * PX });
-    p.set({ locked: true, lockMovementX: true, lockMovementY: true, lockScalingX: true, lockScalingY: true, lockRotation: true, hasControls: false });
+    // Locked and click-through: clicks reach the artwork underneath (unlock in Layers to edit lines).
+    p.set({ locked: true, lockMovementX: true, lockMovementY: true, lockScalingX: true, lockScalingY: true, lockRotation: true, hasControls: false, selectable: false, evented: false, perPixelTargetFind: true });
     p.__die = kind; p.__dieGen = true;
     if (spec && kind === 'cut') p.__pack = JSON.stringify(spec);
     out.push(p);

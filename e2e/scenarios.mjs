@@ -2070,8 +2070,26 @@ scenarios.push({
     // Mark a drawn rectangle as a crease line.
     await t.eval(() => { const F = window.fabric, c = window.__fabricCanvas; const r = new F.Rect({ left: 200, top: 200, width: 80, height: 40, fill: '#ff0000' }); c.add(r); c.setActiveObject(r); c.fire('selection:created', { selected: [r] }); });
     await t.page.waitForTimeout(300);
+    await t.page.getByRole('tab', { name: 'Lines' }).click();
     await t.page.getByRole('button', { name: /^Perforation$/ }).click();
     const perf = await t.eval(() => window.__fabricCanvas.getObjects().filter((o) => o.__die === 'perf').length);
     t.check('selected shape marked as perforation', perf === 1, perf);
+  },
+});
+
+scenarios.push({
+  name: 'packaging-template-opens',
+  async run(t) {
+    await t.page.goto(t.BASE + '/packaging-dieline', { waitUntil: 'domcontentloaded' });
+    await t.page.locator('#templates').getByRole('button', { name: /Customise/ }).first().click();
+    await t.page.waitForURL(/\/editor\?/, { timeout: 30000 });
+    await t.page.waitForFunction(() => !!window.__fabricCanvas, null, { timeout: 30000 });
+    await t.page.waitForTimeout(1500);
+    const r = await t.eval(() => { const o = window.__fabricCanvas.getObjects(); return { brand: o.some((x) => x.name === 'Brand name' && x.text), die: o.filter((x) => x.__die).length, art: o.filter((x) => !x.__die && !x.__isArtboard).length }; });
+    t.check('template design opened in the editor', r.brand && r.die >= 2 && r.art > 5, JSON.stringify(r));
+    // Locked die lines must not catch clicks: the artwork under them stays selectable.
+    const clickable = await t.eval(() => window.__fabricCanvas.getObjects().filter((x) => x.__die && x.evented !== false).length);
+    t.check('locked die lines are click-through', clickable === 0, clickable);
+    await t.shot('template-in-editor');
   },
 });

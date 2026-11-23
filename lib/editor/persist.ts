@@ -128,13 +128,24 @@ export function lockProps(locked: boolean) {
   };
 }
 
+/**
+ * Lock props for an object, plus click-through for packaging die lines: a
+ * locked dieline must not catch clicks, so the artwork underneath can be
+ * selected (its bounding box covers the whole blank). Unlocked, it is
+ * clickable again.
+ */
+export function lockPropsFor(o: any, locked: boolean) {
+  return o && o.__die ? { ...lockProps(locked), selectable: !locked, evented: !locked } : lockProps(locked);
+}
+
 // Re-applies everything that depends on stored flags after a load or an
 // undo/redo: Fabric doesn't restore these, so locked objects would
 // otherwise become draggable again and artboards selectable.
 export function applyStoredLocks(canvas: any) {
   const visit = (o: any) => {
     if (o.type === 'group' && o.getObjects) o.getObjects().forEach(visit);
-    if (o.locked) o.set(lockProps(true));
+    if (o.locked) o.set(lockPropsFor(o, true));
+    else if (o.__die) o.set({ selectable: true, evented: true });
     // "Keep proportions": no side handles, so it can't be stretched.
     if (o.__lockRatio && o.setControlsVisibility && o.type !== 'textbox') o.setControlsVisibility({ ml: false, mr: false, mt: false, mb: false });
   };
