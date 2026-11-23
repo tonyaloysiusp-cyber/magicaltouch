@@ -64,6 +64,13 @@ export function TextilePanel({ api }: { api: TextileApi }) {
   const [fabricW, setFabricW] = useState(1500);
   const [busy, setBusy] = useState<string | null>(null);
   const [, bump] = useState(0);
+  // The design may still be loading when the panel opens: pick up its pattern once it arrives.
+  useEffect(() => {
+    if (applied) return;
+    let n = 0;
+    const iv = setInterval(() => { const s = readSpec(); if (s) { setSpec(s); setApplied(JSON.stringify(s)); clearInterval(iv); } else if (++n > 40) clearInterval(iv); }, 250);
+    return () => clearInterval(iv);
+  }, [applied]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const lay = useMemo(() => layoutPieces(spec), [spec]);
   const need = useMemo(() => fabricNeed(spec, fabricW), [spec, fabricW]);

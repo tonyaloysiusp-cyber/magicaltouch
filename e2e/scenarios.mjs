@@ -614,7 +614,7 @@ scenarios.push(
     async run(t) {
       await t.editor('w=1080&h=1350');
       await t.shot('open');
-      await t.page.locator('nav[aria-label="Editor panels"] button', { hasText: 'Text' }).click();
+      await t.page.locator('nav[aria-label="Editor panels"] button', { hasText: /^Text$/ }).click();
       await t.page.waitForTimeout(500);
       await t.shot('sheet');
     },
@@ -1984,7 +1984,7 @@ scenarios.push({
     t.check('logo moved by dragging', Math.abs(b2.x - b.x) > 20, `${Math.round(b.x)} → ${Math.round(b2.x)}`);
     t.check('unsaved changes shown', await t.page.getByText('Unsaved changes').isVisible());
     // Leaving asks first.
-    await t.page.getByRole('link', { name: /Back to/ }).click();
+    await t.page.locator('header a[href="/"]').first().click();
     await t.page.getByRole('dialog').waitFor({ timeout: 5000 });
     t.check('leave prompt appears', await t.page.getByRole('button', { name: 'Save & leave' }).isVisible());
     await t.page.getByRole('button', { name: 'Stay here' }).click();
@@ -2107,6 +2107,7 @@ scenarios.push({
     const clickable = await t.eval(() => window.__fabricCanvas.getObjects().filter((x) => (x.__pat || x.__die) && x.evented !== false).length);
     t.check('pattern guides are click-through', clickable === 0, clickable);
     // change the size: pieces redraw, artwork stays
+    await t.page.getByRole('button', { name: /Pattern is up to date/ }).waitFor({ timeout: 15000 });
     await t.page.getByRole('button', { name: 'XL', exact: true }).click();
     await t.page.getByRole('button', { name: /Update pattern/ }).click();
     await t.page.waitForTimeout(800);
