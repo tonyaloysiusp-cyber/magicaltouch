@@ -11,7 +11,7 @@ import { cmykPlanes, coverage, dotsPath, filmSvg, halftone, quantize, spotPlates
 const PROCESS_INKS = [{ name: 'Cyan', ink: '#00A0E3', angle: 15 }, { name: 'Magenta', ink: '#E6007E', angle: 75 }, { name: 'Yellow', ink: '#FFED00', angle: 0 }, { name: 'Black', ink: '#1A1A1A', angle: 45 }];
 const MAXPX = 1400;
 
-export function SeparationStudio() {
+export function SeparationStudio({ initialFile }: { initialFile?: File } = {}) {
   const [img, setImg] = useState<{ name: string; data: ImageData } | null>(null);
   const [mode, setMode] = useState<'process' | 'spot'>('spot');
   const [inks, setInks] = useState(4);
@@ -34,6 +34,9 @@ export function SeparationStudio() {
 
   useEffect(() => { if (mode === 'process' && !lut) import('@/lib/color/cmyk').then((m) => m.loadCmykTable()).then(setLut).catch(() => setMsg('The CMYK table could not load.')); }, [mode, lut]);
 
+  // Opened from the design editor: start with the page it handed over.
+  const initRef = useRef(false);
+  useEffect(() => { if (initialFile && !initRef.current) { initRef.current = true; void open(initialFile); } }); // eslint-disable-line react-hooks/exhaustive-deps
   const open = async (f: File | undefined | null) => {
     if (!f) return;
     try {

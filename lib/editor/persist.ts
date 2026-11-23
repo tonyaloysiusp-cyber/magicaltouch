@@ -67,6 +67,9 @@ export const PERSIST_PROPS = [
   // flag and the box spec it was made from (lib/packaging/editorBridge.ts).
   '__die',
   '__dieGen',
+  '__cutType',
+  '__cutFor',
+  '__barcode',
   '__pat',
   '__tex',
   '__piece',

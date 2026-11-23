@@ -31,6 +31,12 @@ const nextConfig = {
       'polo-shirt-designer': '/textile-designer?product=polo',
       'custom-t-shirt-designer': '/textile-designer?product=tshirt',
       'wall-designer': '/wallpaper-designer',
+      // Standalone print tools moved into the Design Editor's Print & cut panel (23 Nov 2026).
+      'barcode-generator': '/editor?panel=production&tab=barcode',
+      'label-sticker': '/editor?panel=production&tab=cut',
+      'laser-cnc': '/editor?panel=production&tab=cut',
+      'poster-tiling': '/editor?panel=production&tab=large',
+      'separation-halftone': '/editor?panel=production&tab=sep',
       'rangoli-mandala-maker': '/patterns?mode=rangoli',
       'gradient-background-generator': '/colours#gradients',
     };

@@ -18,7 +18,7 @@ export default function VdpPage() {
   const ld = [{ '@context': 'https://schema.org', '@type': 'SoftwareApplication', name: 'Variable Data Studio — Magical Touch Design', applicationCategory: 'DesignApplication', operatingSystem: 'Any (web browser)', url: URL, description: DESC, offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' } }, { '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: FAQ.map(([q, a]) => ({ '@type': 'Question', name: q, acceptedAnswer: { '@type': 'Answer', text: a } })) }];
   return (
     <ToolShell path="/variable-data" h1="One design, every name on your list." name="Variable Data Studio" sub="Badges, certificates, tickets and cards from a spreadsheet"
-      about={<ToolAbout intro="Paste your list, place the fields on the design, and download one print-ready PDF with every record — one per page or many per sheet with crop marks." faq={FAQ} related={[{ href: '/barcode-generator', label: 'Barcode Studio' }, { href: '/print-layout', label: 'Print Layout' }, { href: '/pdf-preflight', label: 'PDF Preflight Inspector' }]} />}>
+      about={<ToolAbout intro="Paste your list, place the fields on the design, and download one print-ready PDF with every record — one per page or many per sheet with crop marks." faq={FAQ} related={[{ href: '/editor?panel=production&tab=barcode', label: 'Barcodes in the Design Editor' }, { href: '/print-layout', label: 'Print Layout' }, { href: '/pdf-preflight', label: 'PDF Preflight Inspector' }]} />}>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(ld) }} />
       <VariableDataStudio />
     </ToolShell>

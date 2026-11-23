@@ -2138,3 +2138,29 @@ scenarios.push({
     await t.shot('textile-workspace');
   },
 });
+
+scenarios.push({
+  name: 'print-and-cut',
+  async run(t) {
+    await t.editor('w=1080&h=1080&panel=production');
+    await t.page.getByLabel('Barcode type').selectOption('code128');
+    await t.page.getByLabel('Barcode data').fill('MTD-2026-0042');
+    await t.page.getByRole('button', { name: /Add barcode to the page/ }).click();
+    await t.page.waitForTimeout(800);
+    const bc = await t.eval(() => window.__fabricCanvas.getObjects().filter((o) => o.__barcode).length);
+    t.check('Code 128 barcode added as vector', bc === 1, bc);
+    await t.page.getByLabel('Barcode type').selectOption('ean13');
+    await t.page.getByLabel('Barcode data').fill('400638133393');
+    await t.page.getByRole('button', { name: /Add barcode to the page/ }).click();
+    await t.page.waitForTimeout(600);
+    t.check('EAN-13 added', (await t.eval(() => window.__fabricCanvas.getObjects().filter((o) => o.__barcode).length)) === 2);
+    // cut line around a shape
+    await t.eval(() => { const c = window.__fabricCanvas, F = window.fabric; const r = new F.Circle({ left: 200, top: 200, radius: 120, fill: '#e11d48' }); c.add(r); c.setActiveObject(r); c.requestRenderAll(); });
+    await t.page.getByRole('tab', { name: 'Cut' }).click();
+    await t.page.getByRole('button', { name: /Make cut line/ }).click();
+    await t.page.waitForTimeout(1200);
+    const cut = await t.eval(() => { const o = window.__fabricCanvas.getObjects(); return { cut: o.filter((x) => x.__cutType === 'kiss' && x.__die === 'cut').length, border: o.filter((x) => x.name === 'Sticker border (white)').length }; });
+    t.check('kiss-cut line and white border made around the shape', cut.cut === 1 && cut.border === 1, JSON.stringify(cut));
+    await t.shot('print-and-cut');
+  },
+});

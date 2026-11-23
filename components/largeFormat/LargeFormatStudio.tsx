@@ -4,13 +4,13 @@
 // PDFs stay vector (each tile embeds the original page, cropped); pictures
 // are placed at full resolution. Overlap, trim marks, labels and an assembly map.
 
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { FileDown, FileUp } from 'lucide-react';
 import { PAPERS, planTiles, tiledPdf, type TileOptions } from '@/lib/print/tiling';
 
 const POSTERS = [{ n: 'A0', w: 841, h: 1189 }, { n: 'A1', w: 594, h: 841 }, { n: 'A2', w: 420, h: 594 }, { n: '24 × 36 in', w: 609.6, h: 914.4 }, { n: '1 × 2 m banner', w: 1000, h: 2000 }];
 
-export function LargeFormatStudio() {
+export function LargeFormatStudio({ initialFile }: { initialFile?: File } = {}) {
   const [src, setSrc] = useState<{ name: string; pdf?: Uint8Array; image?: Uint8Array; mime?: string; preview: string; w: number; h: number; pages?: number } | null>(null);
   const [page, setPage] = useState(1);
   const [posterW, setPosterW] = useState(594);
@@ -31,6 +31,9 @@ export function LargeFormatStudio() {
   const plan = useMemo(() => planTiles(opts), [posterW, posterH, pp.w, pp.h, margin, overlap, orient]); // eslint-disable-line react-hooks/exhaustive-deps
   const dpi = src && !src.pdf ? Math.round(src.w / (posterW / 25.4)) : null;
 
+  // Opened from the design editor: start with the page it handed over.
+  const initRef = useRef(false);
+  useEffect(() => { if (initialFile && !initRef.current) { initRef.current = true; void open(initialFile); } }); // eslint-disable-line react-hooks/exhaustive-deps
   const open = async (f: File | undefined | null) => {
     if (!f) return;
     setMsg('Opening…');

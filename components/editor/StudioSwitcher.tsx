@@ -18,7 +18,7 @@ export const STUDIOS: { id: EditorStudio; label: string; hint: string }[] = [
 /** Rail order for each workspace: its own tools first, then everything else in the usual order. */
 const FIRST: Record<EditorStudio, string[]> = {
   design: [],
-  packaging: ['packaging', 'elements', 'text', 'upload', 'qr', 'colours', 'patterns'],
+  packaging: ['packaging', 'production', 'elements', 'text', 'upload', 'qr', 'colours', 'patterns'],
   textile: ['textile', 'patterns', 'colours', 'elements', 'text', 'upload', 'trace'],
 };
 export function orderForStudio<T extends { id: string }>(items: T[], studio: EditorStudio): T[] {

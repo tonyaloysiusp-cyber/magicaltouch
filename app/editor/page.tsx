@@ -63,12 +63,15 @@ import type { PatternSettings } from '@/lib/patterns';
 import { Grid3x3 as PatternIcon, SwatchBook as ColoursIcon, PenTool as TraceIcon } from 'lucide-react';
 import { trace as traceImage, type TraceOptions } from '@/lib/trace';
 import { traceLayerObjects } from '@/lib/traceVector';
-import { QrCode as QrCodeIcon, Package as PackageIcon, Shirt as ShirtIcon } from 'lucide-react';
+import { QrCode as QrCodeIcon, Package as PackageIcon, Shirt as ShirtIcon, Scissors as ScissorsIcon } from 'lucide-react';
 import { PackagingPanel, type PackagingApi } from '@/components/editor/shell/panels/PackagingPanel';
 import { TextilePanel } from '@/components/editor/shell/panels/TextilePanel';
+import { ProductionPanel, type ProductionApi } from '@/components/editor/shell/panels/ProductionPanel';
 import { Gem as StudioIcon } from 'lucide-react';
 import { StudioPanel, StudioPublish } from '@/components/editor/shell/panels/StudioPanel';
 import dynamic from 'next/dynamic';
+const SeparationStudioLazy = dynamic(() => import('@/components/separation/SeparationStudio').then((m) => m.SeparationStudio), { ssr: false });
+const LargeFormatStudioLazy = dynamic(() => import('@/components/largeFormat/LargeFormatStudio').then((m) => m.LargeFormatStudio), { ssr: false });
 import { useAppTheme } from '@/hooks/useAppTheme';
 
 import { ToolMode, DocUnit, isDrawTool, PASTEBOARD_BG, RULER_SIZE } from '@/lib/editor/types';
@@ -2922,11 +2925,12 @@ function EditorContent() {
   const [leftPanel, setLeftPanel] = useState<string | null>(() => {
     // ?panel= opens a tool straight away (links from the Tools pages).
     const p = searchParams.get('panel');
-    return p && ['qr', 'patterns', 'colours', 'trace', 'background', 'brand', 'text', 'elements', 'templates', 'draw', 'layers', 'packaging', 'textile'].includes(p) ? p : null;
+    return p && ['qr', 'patterns', 'colours', 'trace', 'background', 'brand', 'text', 'elements', 'templates', 'draw', 'layers', 'packaging', 'textile', 'production'].includes(p) ? p : null;
   });
   // Workspace type (Design / Packaging / Textile): the workspace's panel opens and its tools lead the rail.
   const [studio, setStudio] = useState<EditorStudio>(() => { const p = searchParams.get('panel'); return p === 'packaging' || p === 'textile' ? p : 'design'; });
   const studioPickedRef = useRef(false);
+  const [studioOverlay, setStudioOverlay] = useState<{ kind: 'separation' | 'tiling'; file: File } | null>(null);
   useEffect(() => {
     // a packaging or garment design opened from a file or the recent list picks its workspace by itself
     let n = 0;
@@ -7938,13 +7942,13 @@ function EditorContent() {
     if (!canvas || !F) return;
     const page = getActiveArtboardRect();
     const onPage = (o: any) => !page.id || !o.__artboardId || o.__artboardId === page.id;
-    const dies = canvas.getObjects().filter((o: any) => o.__die && o.visible !== false && onPage(o));
-    if (!dies.some((o: any) => o.__die === 'cut')) throw new Error('Add a dieline first, or mark a shape as Cut.');
+    const dies = canvas.getObjects().filter((o: any) => (o.__die || o.__cutType) && o.visible !== false && onPage(o));
+    if (!dies.some((o: any) => o.__die === 'cut')) throw new Error('Add a dieline or a cut line first, or mark a shape as Cut.');
     // pattern guides (stitch line, grain, notches, labels) never print
     const guides = canvas.getObjects().filter((o: any) => o.__pat && o.visible !== false && onPage(o));
     const [{ objectPathPx, appendDieLayer, PX }, { jsPDF }] = await Promise.all([import('@/lib/packaging/editorBridge'), import('jspdf')]);
     const toMm = (d: string | null) => { if (!d) return ''; let i = 0; return d.replace(/-?\d*\.?\d+(?:e-?\d+)?/gi, (v) => { const n = Number(v); const out = i % 2 === 0 ? (n - page.x) / PX : (n - page.y) / PX; i++; return String(Math.round(out * 100) / 100); }); };
-    const lines = dies.map((o: any) => ({ kind: o.__die, d: toMm(objectPathPx(o)) })).filter((l: any) => l.d);
+    const lines = dies.filter((o: any) => o.__die).map((o: any) => ({ kind: o.__die, d: toMm(objectPathPx(o)) })).filter((l: any) => l.d);
     const pdf = new jsPDF({ orientation: page.width > page.height ? 'landscape' : 'portrait', unit: 'pt', format: [toPt(page.width), toPt(page.height)] });
     try {
       const [{ loadCmykTable, loadPressProfile, makeCmykMapper }, { applyCmykInks }] = await Promise.all([import('@/lib/color/cmyk'), import('@/lib/editor/pdfExport')]);
@@ -7988,6 +7992,35 @@ function EditorContent() {
     selection: () => fabricCanvasRef.current?.getActiveObjects?.() || [],
     pressPdf: packagingPressPdf,
     notice: (m) => setLocalNotice(m),
+  };
+  // Print & cut panel: the page as a vector PDF or a picture for tiling and separations.
+  const productionApi: ProductionApi = {
+    ...packagingApi,
+    pagePdf: async () => {
+      const canvas = fabricCanvasRef.current, F = (window as any).fabric;
+      const page = getActiveArtboardRect();
+      const onPage = (o: any) => !page.id || !o.__artboardId || o.__artboardId === page.id;
+      const hide = canvas.getObjects().filter((o: any) => (o.__die || o.__cutType || o.__pat) && o.visible !== false && onPage(o));
+      const { jsPDF } = await import('jspdf');
+      const pdf = new jsPDF({ orientation: page.width > page.height ? 'landscape' : 'portrait', unit: 'pt', format: [toPt(page.width), toPt(page.height)] });
+      suppressHistoryRef.current = true;
+      hide.forEach((o: any) => { o.visible = false; });
+      try { await exportArtboardsToPDF(pdf, canvas, F, [{ id: page.id as any, x: page.x, y: page.y, width: page.width, height: page.height }]); }
+      finally { hide.forEach((o: any) => { o.visible = true; }); suppressHistoryRef.current = false; canvas.requestRenderAll(); }
+      return new Uint8Array(pdf.output('arraybuffer'));
+    },
+    pagePng: async (dpi: number) => {
+      const canvas = fabricCanvasRef.current;
+      const page = getActiveArtboardRect();
+      const onPage = (o: any) => !page.id || !o.__artboardId || o.__artboardId === page.id;
+      const hide = canvas.getObjects().filter((o: any) => (o.__die || o.__cutType || o.__pat) && o.visible !== false && onPage(o));
+      hide.forEach((o: any) => { o.visible = false; });
+      try {
+        const out = capturePicture({ x: page.x, y: page.y, width: page.width, height: page.height }, { format: 'png', multiplier: dpi / 96, artboardId: page.id as any });
+        return dataUrlToBlob(out.dataUrl);
+      } finally { hide.forEach((o: any) => { o.visible = true; }); canvas.requestRenderAll(); }
+    },
+    openStudio: (kind, file) => setStudioOverlay({ kind, file }),
   };
 
   const railItems: RailItem[] = [
@@ -8041,6 +8074,13 @@ function EditorContent() {
       title: 'Textile — garment pattern pieces from size or measurements, fabric need, pattern files',
       icon: <ShirtIcon size={20} />,
       render: () => <TextilePanel api={packagingApi} />,
+    },
+    {
+      id: 'production',
+      label: 'Print & cut',
+      title: 'Print & cut — barcodes, sticker and laser cut lines, large format, separations',
+      icon: <ScissorsIcon size={20} />,
+      render: () => <ProductionPanel api={productionApi} initialTab={searchParams.get('tab') || undefined} />,
     },
     {
       id: 'qr',
@@ -8895,6 +8935,17 @@ function EditorContent() {
         />
       )}
       {workspace === 'design' && compact && <LeftRail items={orderForStudio(railItems, studio)} active={leftPanel} onActivate={setLeftPanel} compact />}
+      {studioOverlay && (
+        <div role="dialog" aria-modal="true" aria-label={studioOverlay.kind === 'separation' ? 'Colour separations' : 'Tiling and panels'} className="fixed inset-0 z-[90] flex flex-col bg-mt-bg">
+          <div className="flex h-12 shrink-0 items-center justify-between border-b border-mt-border px-4">
+            <p className="text-[14px] font-semibold">{studioOverlay.kind === 'separation' ? 'Colour separations — this page' : 'Tiling and panels — this page'}</p>
+            <button type="button" onClick={() => setStudioOverlay(null)} className="inline-flex h-8 items-center gap-1.5 rounded-md border border-mt-border px-3 text-[12.5px] font-semibold hover:bg-mt-surface2">Back to the design</button>
+          </div>
+          <div className="min-h-0 flex-1 overflow-auto p-4">
+            {studioOverlay.kind === 'separation' ? <SeparationStudioLazy initialFile={studioOverlay.file} /> : <LargeFormatStudioLazy initialFile={studioOverlay.file} />}
+          </div>
+        </div>
+      )}
 
       {liveDim && (
         <div style={{ position: 'fixed', left: liveDim.x + 16, top: liveDim.y + 16, pointerEvents: 'none' }} className="z-50 bg-black/80 text-white text-[11px] font-mono px-2 py-1 rounded shadow">
