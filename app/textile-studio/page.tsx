@@ -1,13 +1,15 @@
 import type { Metadata } from 'next';
-import { ToolPage, RELATED_TOOLS } from '@/components/seo/ToolPage';
+import { RELATED_TOOLS } from '@/components/seo/ToolPage';
+import { ToolShell, ToolAbout } from '@/components/tools/ToolShell';
+import { TextileHub } from '@/components/textile/TextileHub';
 import { TextileWorkspace } from '@/components/garments/TextileWorkspace';
 import { SITE_URL, SITE_NAME, fitTitle, fitDescription } from '@/lib/seo';
 
 // Textile Studio — T-shirts, polos, kurta / kameez, chudidar, dupatta and
 // running fabric in one professional workspace, with embroidery.
 const PATH = '/textile-studio';
-const TITLE = 'Textile Design Studio — Jerseys, T-shirts, Kurta & Embroidery';
-const DESC = 'Design jerseys, polos, T-shirts, kurtas, chudidars, dupattas and fabric panels in one textile workspace: names, numbers and sizes, pieces from your measurements, embroidery with DST files, print-ready PDF and tech packs.';
+const TITLE = 'Textile Design Studio — Garment Patterns, Kurti, Polo & Jerseys';
+const DESC = 'Design garments on real pattern pieces: polo, T-shirt, jersey, kurti, churidar, frock and dupatta templates drafted from a size or your measurements, in the full design editor. Pattern PDF, DXF and print PDF. Also design jerseys, polos, T-shirts, kurtas, chudidars, dupattas and fabric panels in one textile workspace: names, numbers and sizes, pieces from your measurements, embroidery with DST files, print-ready PDF and tech packs.';
 export const metadata: Metadata = {
   title: fitTitle(TITLE), description: fitDescription(DESC), alternates: { canonical: `${SITE_URL}${PATH}` },
   openGraph: { type: 'website', url: `${SITE_URL}${PATH}`, title: TITLE, description: DESC, siteName: SITE_NAME, images: [{ url: `${SITE_URL}/tools/thumbs/textile.webp`, width: 960, height: 540 }] },
@@ -38,9 +40,18 @@ const STEPS: [string, string][] = [
   ['Download production files', 'Print-ready PDF / SVG, DST embroidery file and a tech pack.'],
 ];
 export default function Page() {
+  const ld = [
+    { '@context': 'https://schema.org', '@type': 'SoftwareApplication', name: 'Textile Design Studio — Magical Touch Design', applicationCategory: 'DesignApplication', operatingSystem: 'Any (web browser)', url: `${SITE_URL}${PATH}`, description: DESC, offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' } },
+    { '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: FAQ.map(([q, a]) => ({ '@type': 'Question', name: q, acceptedAnswer: { '@type': 'Answer', text: a } })) },
+  ];
   return (
-    <ToolPage image="/tools/thumbs/textile.webp" path={PATH} name="Textile Design Studio" eyebrow="Jerseys · T-shirts · Kurta · Chudidar · Embroidery" h1="Textile Design Studio" intro="One workspace for team kits, everyday garments, made-to-measure clothes and embroidery — Simple or Professional mode, print-ready files at the end." description={DESC} steps={STEPS} faq={FAQ} related={RELATED_TOOLS}>
-      <TextileWorkspace />
-    </ToolPage>
+    <ToolShell variant="page" path={PATH} h1="Textile Design Studio" name="Textile Design Studio" sub="Garment patterns, templates and the full design editor"
+      about={<ToolAbout intro="One studio for garments: pattern pieces drafted from a size or your measurements, designed in the full editor, plus team kits with names, numbers and sizes, and embroidery with DST files." steps={STEPS} faq={FAQ} related={RELATED_TOOLS} />}>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(ld) }} />
+      <TextileHub />
+      <section aria-label="Textile Designer — team kits and embroidery" className="mx-auto mt-6 max-w-[1400px] px-4 sm:px-6">
+        <TextileWorkspace />
+      </section>
+    </ToolShell>
   );
 }

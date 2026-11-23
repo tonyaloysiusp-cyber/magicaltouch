@@ -63,8 +63,9 @@ import type { PatternSettings } from '@/lib/patterns';
 import { Grid3x3 as PatternIcon, SwatchBook as ColoursIcon, PenTool as TraceIcon } from 'lucide-react';
 import { trace as traceImage, type TraceOptions } from '@/lib/trace';
 import { traceLayerObjects } from '@/lib/traceVector';
-import { QrCode as QrCodeIcon, Package as PackageIcon } from 'lucide-react';
+import { QrCode as QrCodeIcon, Package as PackageIcon, Shirt as ShirtIcon } from 'lucide-react';
 import { PackagingPanel, type PackagingApi } from '@/components/editor/shell/panels/PackagingPanel';
+import { TextilePanel } from '@/components/editor/shell/panels/TextilePanel';
 import { Gem as StudioIcon } from 'lucide-react';
 import { StudioPanel, StudioPublish } from '@/components/editor/shell/panels/StudioPanel';
 import dynamic from 'next/dynamic';
@@ -2922,7 +2923,7 @@ function EditorContent() {
   const [leftPanel, setLeftPanel] = useState<string | null>(() => {
     // ?panel= opens a tool straight away (links from the Tools pages).
     const p = searchParams.get('panel');
-    return p && ['qr', 'patterns', 'colours', 'trace', 'background', 'brand', 'text', 'elements', 'templates', 'draw', 'layers', 'packaging'].includes(p) ? p : null;
+    return p && ['qr', 'patterns', 'colours', 'trace', 'background', 'brand', 'text', 'elements', 'templates', 'draw', 'layers', 'packaging', 'textile'].includes(p) ? p : null;
   });
   const [templateCategory, setTemplateCategory] = useState<string | null>(null);
   const [showResize, setShowResize] = useState(false);
@@ -7918,6 +7919,8 @@ function EditorContent() {
     const onPage = (o: any) => !page.id || !o.__artboardId || o.__artboardId === page.id;
     const dies = canvas.getObjects().filter((o: any) => o.__die && o.visible !== false && onPage(o));
     if (!dies.some((o: any) => o.__die === 'cut')) throw new Error('Add a dieline first, or mark a shape as Cut.');
+    // pattern guides (stitch line, grain, notches, labels) never print
+    const guides = canvas.getObjects().filter((o: any) => o.__pat && o.visible !== false && onPage(o));
     const [{ objectPathPx, appendDieLayer, PX }, { jsPDF }] = await Promise.all([import('@/lib/packaging/editorBridge'), import('jspdf')]);
     const toMm = (d: string | null) => { if (!d) return ''; let i = 0; return d.replace(/-?\d*\.?\d+(?:e-?\d+)?/gi, (v) => { const n = Number(v); const out = i % 2 === 0 ? (n - page.x) / PX : (n - page.y) / PX; i++; return String(Math.round(out * 100) / 100); }); };
     const lines = dies.map((o: any) => ({ kind: o.__die, d: toMm(objectPathPx(o)) })).filter((l: any) => l.d);
@@ -7929,19 +7932,21 @@ function EditorContent() {
     } catch { /* falls back to RGB if the colour tables can't load */ }
     suppressHistoryRef.current = true;
     dies.forEach((o: any) => { o.visible = false; });
+    guides.forEach((o: any) => { o.visible = false; });
     try {
       await exportArtboardsToPDF(pdf, canvas, F, [{ id: page.id as any, x: page.x, y: page.y, width: page.width, height: page.height }]);
     } finally {
       dies.forEach((o: any) => { o.visible = true; });
+      guides.forEach((o: any) => { o.visible = true; });
       suppressHistoryRef.current = false;
       canvas.requestRenderAll();
     }
     const bytes = await appendDieLayer(pdf.output('arraybuffer'), lines);
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([bytes as BlobPart], { type: 'application/pdf' }));
-    a.download = `${designName || 'packaging'} - print.pdf`;
+    a.download = `${designName || (guides.length ? 'garment' : 'packaging')} - print.pdf`;
     document.body.appendChild(a); a.click(); a.remove();
-    setLocalNotice('Print PDF saved: vector artwork in CMYK, die lines as overprinting spot colours, trim box on the cut line.');
+    setLocalNotice(guides.length ? 'Print PDF saved: artwork in CMYK, cut lines as an overprinting spot colour; stitch lines and labels left out.' : 'Print PDF saved: vector artwork in CMYK, die lines as overprinting spot colours, trim box on the cut line.');
   };
   const packagingApi: PackagingApi = {
     canvas: () => fabricCanvasRef.current,
@@ -8008,6 +8013,13 @@ function EditorContent() {
       title: 'Packaging — box dieline from product size, line types and press files',
       icon: <PackageIcon size={20} />,
       render: () => <PackagingPanel api={packagingApi} />,
+    },
+    {
+      id: 'textile',
+      label: 'Textile',
+      title: 'Textile — garment pattern pieces from size or measurements, fabric need, pattern files',
+      icon: <ShirtIcon size={20} />,
+      render: () => <TextilePanel api={packagingApi} />,
     },
     {
       id: 'qr',

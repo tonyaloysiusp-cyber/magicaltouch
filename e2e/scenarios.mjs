@@ -2093,3 +2093,25 @@ scenarios.push({
     await t.shot('template-in-editor');
   },
 });
+
+SCENARIOS.push({
+  name: 'textile-template-opens',
+  async run(t) {
+    await t.page.goto(t.BASE + '/textile-studio', { waitUntil: 'domcontentloaded' });
+    await t.page.locator('#templates').getByRole('button', { name: /Customise/ }).first().click();
+    await t.page.waitForURL(/\/editor\?/, { timeout: 30000 });
+    await t.page.waitForFunction(() => !!window.__fabricCanvas, null, { timeout: 30000 });
+    await t.page.waitForTimeout(1500);
+    const r = await t.eval(() => { const o = window.__fabricCanvas.getObjects(); return { base: o.filter((x) => x.__texBase).length, cut: o.filter((x) => x.__die === 'cut' && x.__tex).length, guides: o.filter((x) => x.__pat).length, text: o.some((x) => x.name === 'Chest text') }; });
+    t.check('garment template opened with pieces, cut line and guides', r.base >= 4 && r.cut === 1 && r.guides >= 8 && r.text, JSON.stringify(r));
+    const clickable = await t.eval(() => window.__fabricCanvas.getObjects().filter((x) => (x.__pat || x.__die) && x.evented !== false).length);
+    t.check('pattern guides are click-through', clickable === 0, clickable);
+    // change the size: pieces redraw, artwork stays
+    await t.page.getByRole('button', { name: 'XL', exact: true }).click();
+    await t.page.getByRole('button', { name: /Update pattern/ }).click();
+    await t.page.waitForTimeout(800);
+    const r2 = await t.eval(() => { const o = window.__fabricCanvas.getObjects(); const c = o.find((x) => x.__tex); return { size: c && JSON.parse(c.__tex).size, base: o.filter((x) => x.__texBase).length, text: o.some((x) => x.name === 'Chest text') }; });
+    t.check('size change redraws the pieces and keeps the artwork', r2.size === 'XL' && r2.base === r.base && r2.text, JSON.stringify(r2));
+    await t.shot('textile-in-editor');
+  },
+});
