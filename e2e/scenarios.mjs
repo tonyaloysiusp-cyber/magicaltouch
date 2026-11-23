@@ -2094,7 +2094,7 @@ scenarios.push({
   },
 });
 
-SCENARIOS.push({
+scenarios.push({
   name: 'textile-template-opens',
   async run(t) {
     await t.page.goto(t.BASE + '/textile-studio', { waitUntil: 'domcontentloaded' });
