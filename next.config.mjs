@@ -27,9 +27,9 @@ const nextConfig = {
       pricing: '/about',
       'pattern-studio': '/patterns',
       // Tools combined (14 Nov 2026): the old addresses open the combined workspace.
-      'custom-jersey-designer': '/textile-designer?product=jersey',
-      'polo-shirt-designer': '/textile-designer?product=polo',
-      'custom-t-shirt-designer': '/textile-designer?product=tshirt',
+      'custom-jersey-designer': '/textile-studio',
+      'polo-shirt-designer': '/textile-studio',
+      'custom-t-shirt-designer': '/textile-studio',
       'wall-designer': '/wallpaper-designer',
       // Standalone print tools moved into the Design Editor's Print & cut panel (23 Nov 2026).
       'barcode-generator': '/editor?panel=production&tab=barcode',
@@ -37,8 +37,12 @@ const nextConfig = {
       'laser-cnc': '/editor?panel=production&tab=cut',
       'poster-tiling': '/editor?panel=production&tab=large',
       'separation-halftone': '/editor?panel=production&tab=sep',
+      // 24 Nov 2026: Colour Explorer and Variable Data only inside the editor; PDF Preflight removed.
+      colours: '/editor?panel=colours',
+      'variable-data': '/editor?panel=production&tab=data',
+      'pdf-preflight': '/tools',
       'rangoli-mandala-maker': '/patterns?mode=rangoli',
-      'gradient-background-generator': '/colours#gradients',
+      'gradient-background-generator': '/editor?panel=colours',
     };
     // Template categories were reorganised by design type (12 Nov 2026):
     // old category pages go to the matching new one.

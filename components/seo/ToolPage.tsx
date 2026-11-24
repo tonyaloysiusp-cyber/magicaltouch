@@ -23,7 +23,7 @@ export const RELATED_TOOLS: { href: string; label: string }[] = [
   { href: '/print-layout', label: 'Print layout & imposition' },
   { href: '/remove-background', label: 'Background remover' },
   { href: '/passport-photo-maker', label: 'Passport size photo maker' },
-  { href: '/colours', label: 'Colour palettes & gradients' },
+  { href: '/patterns', label: 'Pattern Design' },
   { href: '/templates', label: 'Free templates' },
 ];
 

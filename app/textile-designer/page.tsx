@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { redirect } from 'next/navigation';
 import { RELATED_TOOLS } from '@/components/seo/ToolPage';
 import { ToolShell, ToolAbout } from '@/components/tools/ToolShell';
 import { TextileWorkspace } from '@/components/garments/TextileWorkspace';
@@ -38,7 +39,12 @@ const STEPS: [string, string][] = [
   ['Design and embroider', 'Illustrator-style tools on the real pieces, and an embroidery workspace with real stitches.'],
   ['Download production files', 'Print-ready PDF / SVG, DST embroidery file and a tech pack.'],
 ];
-export default function Page() {
+// Team kits moved into the Textile workspace of the design editor (24 Nov 2026).
+// This page only opens existing team-kit files and projects (a .mtd file, a saved
+// project, or a direct product link); anyone else goes to Textile Design.
+export default function Page({ searchParams }: { searchParams?: Record<string, string | string[] | undefined> }) {
+  const sp = searchParams || {};
+  if (!sp.localDoc && !sp.product && !sp.garment && !sp.open) redirect('/textile-studio');
   const ld = [
     { '@context': 'https://schema.org', '@type': 'SoftwareApplication', name: 'Team Kit Designer — Magical Touch Design', applicationCategory: 'DesignApplication', operatingSystem: 'Any (web browser)', url: `${SITE_URL}${PATH}`, description: DESC, offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' } },
     { '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: FAQ.map(([q, a]) => ({ '@type': 'Question', name: q, acceptedAnswer: { '@type': 'Answer', text: a } })) },

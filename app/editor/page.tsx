@@ -8170,6 +8170,7 @@ function EditorContent() {
             features.setFill(hex);
           }}
           onBackground={(hex) => features.setPageBackground({ color: hex })}
+          onGradient={(g) => { if (fabricCanvasRef.current?.getActiveObject()) features.setFill(g); else features.setPageBackground({ gradient: g }); }}
         />
       ),
     },

@@ -1890,25 +1890,25 @@ scenarios.push({
     await btn.waitFor({ timeout: 30000 });
     await tab.waitForTimeout(800);
     t.check('wallpaper picks the same pattern', (await btn.getAttribute('aria-pressed')) === 'true');
-    await tab.goto(t.BASE + '/textile-designer', { waitUntil: 'domcontentloaded' });
+    await tab.goto(t.BASE + '/textile-designer?open=1', { waitUntil: 'domcontentloaded' });
     await tab.getByText(/From My patterns:/).waitFor({ timeout: 30000 });
     t.check('textile restored with the pattern (T-shirt)', (await tab.getByRole('radio', { name: 'T-shirt', exact: true }).getAttribute('aria-checked')) === 'true');
     await t.shot('continuity');
   },
 });
 
-// Colour Explorer: Adobe swatch export and gradient CSS.
+// Colours panel in the editor (Colour Explorer is only inside the editor now): values, contrast, gradient.
 scenarios.push({
   name: 'colour-explorer',
   async run(t) {
-    await t.page.goto(t.BASE + '/colours', { waitUntil: 'domcontentloaded' });
-    await t.page.getByRole('heading', { name: 'Contrast checker' }).waitFor({ timeout: 30000 });
-    await t.page.locator('summary', { hasText: 'Export' }).first().click();
-    const [dl] = await Promise.all([t.page.waitForEvent('download', { timeout: 30000 }), t.page.getByRole('button', { name: 'Adobe swatches (.ase)' }).first().click()]);
-    const fs = await import('node:fs');
-    const b = fs.readFileSync(await dl.path());
-    t.check('ASE file starts with ASEF', b.subarray(0, 4).toString() === 'ASEF', dl.suggestedFilename());
+    await t.editor('w=1080&h=1080&panel=colours');
+    await t.page.getByRole('tab', { name: 'Contrast' }).click();
     t.check('contrast grades shown', await t.page.getByText(/AA normal text/).first().isVisible());
+    await t.page.getByRole('tab', { name: 'Gradient' }).click();
+    await t.page.getByRole('button', { name: 'Apply gradient' }).click();
+    await t.page.waitForTimeout(500);
+    const g = await t.eval(() => { const bg = window.__fabricCanvas.getObjects().find((o) => o.__isArtboard); return !!(bg && bg.fill && bg.fill.colorStops); });
+    t.check('gradient applied to the page background', g);
     await t.shot('colours');
   },
 });
