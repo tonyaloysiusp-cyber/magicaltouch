@@ -19,6 +19,9 @@ for (const vp of [{ name: 'desktop', o: { viewport: { width: 1280, height: 800 }
   try {
     await p.locator('input[type=email]').first().fill('probe-' + Date.now() + '@example.com');
     await p.locator('input[type=password]').first().fill('WrongPassword123!');
+    p.on('request', (r) => { if (!/\.(png|jpe?g|webp|svg|woff2?|css)(\?|$)/.test(r.url())) log('REQ', r.method(), r.url().slice(0, 200)); });
+    const sw = await p.evaluate(async () => (navigator.serviceWorker ? (await navigator.serviceWorker.getRegistrations()).map((r) => r.scope) : []));
+    log('service workers', JSON.stringify(sw));
     const t1 = Date.now();
     await p.locator('form button[type=submit], form button:has-text("Log in"), button:has-text("Log in")').first().click();
     await p.waitForTimeout(12000);
