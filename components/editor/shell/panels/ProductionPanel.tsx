@@ -17,12 +17,14 @@ import { useMemo, useState } from 'react';
 import { AlertTriangle, Barcode, CheckCircle2, Download, Layers, Maximize2, Scissors, Sparkles } from 'lucide-react';
 import { CODE_KINDS, barcodeWarnings, linearBarcode, type CodeKind } from '@/lib/barcodeLinear';
 import type { PackagingApi } from './PackagingPanel';
+import { DataMergePanel } from './DataMergePanel';
 
 export type StudioKind = 'separation' | 'tiling' | 'layout' | 'vdp' | 'size';
 export interface ProductionApi extends PackagingApi {
   pagePdf: () => Promise<Uint8Array>;
   pagePng: (dpi: number) => Promise<Blob>;
   openStudio: (kind: StudioKind, file: File | null) => void;
+  recordsPdf: (count: number, apply: (i: number) => Promise<void>) => Promise<Uint8Array>;
 }
 
 const PX = 96 / 25.4;
@@ -268,11 +270,7 @@ export function ProductionPanel({ api, initialTab }: { api: ProductionApi; initi
         <p className="text-[11px] text-mt-faint">The page goes in as a vector PDF; the layout downloads as a production PDF with marks.</p>
       </section>}
 
-      {tab === 'data' && <section className="space-y-2.5">
-        <p className="text-[11px] text-mt-faint">Business cards, certificates, ID cards, tickets and labels from a list: import CSV, map columns to text, image, QR and barcode fields, automatic numbering, check missing or duplicate data, preview each record and download one print-ready PDF.</p>
-        <button type="button" className={primary} disabled={!!busy} onClick={() => run('Preparing the page…', async () => { const b = await api.pagePdf(); api.openStudio('vdp', new File([b as BlobPart], 'page.pdf', { type: 'application/pdf' })); })}><Sparkles size={14} /> Merge data onto this page…</button>
-        <p className="text-[11px] text-mt-faint">This page becomes the background; place the data fields on top.</p>
-      </section>}
+      {tab === 'data' && <DataMergePanel api={{ canvas: api.canvas, fabric: api.fabric, page: api.page, commit: api.commit, notice: api.notice, recordsPdf: api.recordsPdf, openStudio: (k, f) => api.openStudio(k, f) }} />}
 
       {tab === 'size' && <section className="space-y-2.5">
         <div className="rounded-md border border-mt-border p-2 tabular-nums">

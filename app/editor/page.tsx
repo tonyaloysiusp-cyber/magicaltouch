@@ -7658,17 +7658,6 @@ function EditorContent() {
       })()}
     />
   );
-  const wsLabel = studio === 'packaging' ? 'Box' : 'Garment';
-  const propertiesPanelEl = studio !== 'design' && pro && !compact ? (
-    <div>
-      <div role="tablist" aria-label="Right panel" className="sticky top-0 z-[2] grid grid-cols-2 gap-0.5 border-b border-mt-border bg-mt-surface p-1.5">
-        <button type="button" role="tab" aria-selected={wsTab === 'work'} onClick={() => setWsTab('work')} className={cx('h-8 rounded-md text-[12.5px] font-semibold', wsTab === 'work' ? 'bg-mt-ink text-mt-bg' : 'text-mt-muted hover:text-mt-ink')}>{wsLabel}</button>
-        <button type="button" role="tab" aria-selected={wsTab === 'object'} onClick={() => setWsTab('object')} className={cx('h-8 rounded-md text-[12.5px] font-semibold', wsTab === 'object' ? 'bg-mt-ink text-mt-bg' : 'text-mt-muted hover:text-mt-ink')}>Selection</button>
-      </div>
-      <div hidden={wsTab !== 'work'} className="p-3">{studio === 'packaging' ? <PackagingPanel api={packagingApi} /> : <TextilePanel api={packagingApi} />}</div>
-      <div hidden={wsTab !== 'object'}>{objectPropsEl}</div>
-    </div>
-  ) : objectPropsEl;
 
   const artboardsPanelEl = (
     <ArtboardsPanel
@@ -8068,6 +8057,30 @@ function EditorContent() {
       } finally { hide.forEach((o: any) => { o.visible = true; }); canvas.requestRenderAll(); }
     },
     openStudio: (kind, file) => setStudioOverlay({ kind, file }),
+    recordsPdf: async (count, apply) => {
+      const canvas = fabricCanvasRef.current, F = (window as any).fabric;
+      const { jsPDF } = await import('jspdf');
+      let pdf: any = null;
+      let hidden: any[] = [];
+      suppressHistoryRef.current = true;
+      try {
+        for (let i = 0; i < count; i++) {
+          await apply(i);
+          // the page can change size between records (a garment in another size)
+          const page = getActiveArtboardRect();
+          const onPage = (o: any) => !page.id || !o.__artboardId || o.__artboardId === page.id;
+          hidden.forEach((o: any) => { o.visible = true; });
+          hidden = canvas.getObjects().filter((o: any) => (o.__die || o.__cutType || o.__pat) && o.visible !== false && onPage(o));
+          hidden.forEach((o: any) => { o.visible = false; });
+          const fmt: [number, number] = [toPt(page.width), toPt(page.height)];
+          const orient = page.width > page.height ? 'landscape' : 'portrait';
+          if (!pdf) pdf = new jsPDF({ orientation: orient, unit: 'pt', format: fmt }); else pdf.addPage(fmt, orient);
+          await exportArtboardsToPDF(pdf, canvas, F, [{ id: page.id as any, x: page.x, y: page.y, width: page.width, height: page.height }]);
+        }
+      } finally { hidden.forEach((o: any) => { o.visible = true; }); suppressHistoryRef.current = false; canvas.requestRenderAll(); }
+      if (!pdf) throw new Error('Nothing to export.');
+      return new Uint8Array(pdf.output('arraybuffer'));
+    },
   };
 
   const railItems: RailItem[] = [
@@ -8120,7 +8133,7 @@ function EditorContent() {
       label: 'Textile',
       title: 'Textile — garment pattern pieces from size or measurements, fabric need, pattern files',
       icon: <ShirtIcon size={20} />,
-      render: () => <TextilePanel api={packagingApi} />,
+      render: () => <TextilePanel api={packagingApi} recordsPdf={productionApi.recordsPdf} />,
     },
     {
       id: 'production',
@@ -8325,6 +8338,18 @@ function EditorContent() {
   // bar, which still offers a manual way to add an image) stays hidden
   // for that stretch too.
   const hideWorkspaceSwitcherForPhotoFirst = photoOnlySession || (photoFirstSession && !hasOpenedPhotoEditorOnceRef.current);
+
+  const wsLabel = studio === 'packaging' ? 'Box' : 'Garment';
+  const propertiesPanelEl = studio !== 'design' && pro && !compact ? (
+    <div>
+      <div role="tablist" aria-label="Right panel" className="sticky top-0 z-[2] grid grid-cols-2 gap-0.5 border-b border-mt-border bg-mt-surface p-1.5">
+        <button type="button" role="tab" aria-selected={wsTab === 'work'} onClick={() => setWsTab('work')} className={cx('h-8 rounded-md text-[12.5px] font-semibold', wsTab === 'work' ? 'bg-mt-ink text-mt-bg' : 'text-mt-muted hover:text-mt-ink')}>{wsLabel}</button>
+        <button type="button" role="tab" aria-selected={wsTab === 'object'} onClick={() => setWsTab('object')} className={cx('h-8 rounded-md text-[12.5px] font-semibold', wsTab === 'object' ? 'bg-mt-ink text-mt-bg' : 'text-mt-muted hover:text-mt-ink')}>Selection</button>
+      </div>
+      <div hidden={wsTab !== 'work'} className="p-3">{studio === 'packaging' ? <PackagingPanel api={packagingApi} /> : <TextilePanel api={packagingApi} recordsPdf={productionApi.recordsPdf} />}</div>
+      <div hidden={wsTab !== 'object'}>{objectPropsEl}</div>
+    </div>
+  ) : objectPropsEl;
 
   // Workspace types: Design shows the design tools only; Packaging adds the box tools,
   // Textile the garment tools — never both. On a desktop in Pro mode the box / garment

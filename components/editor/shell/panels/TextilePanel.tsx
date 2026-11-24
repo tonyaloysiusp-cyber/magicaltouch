@@ -54,12 +54,15 @@ function Num({ label, value, onChange, unit = 'cm', hint }: { label: string; val
   );
 }
 
-export function TextilePanel({ api }: { api: TextileApi }) {
+export function TextilePanel({ api, recordsPdf }: { api: TextileApi; recordsPdf?: (count: number, apply: (i: number) => Promise<void>) => Promise<Uint8Array> }) {
   const pageObjs = () => { const c = api.canvas(); const page = api.page(); return c ? c.getObjects().filter((o: any) => !page.id || !o.__artboardId || o.__artboardId === page.id) : []; };
   const readSpec = (): TextileSpec | null => { const cut = pageObjs().find((o: any) => o.__tex); try { return cut ? JSON.parse(cut.__tex) : null; } catch { return null; } };
   const [spec, setSpec] = useState<TextileSpec>(() => readSpec() || defaultTextileSpec('polo'));
   const [applied, setApplied] = useState<string | null>(() => { const s = readSpec(); return s ? JSON.stringify(s) : null; });
-  const [tab, setTab] = useState<'garment' | 'fabric' | 'files'>('garment');
+  const [tab, setTab] = useState<'garment' | 'team' | 'fabric' | 'files'>('garment');
+  // Team: one shirt per player with their own name, number and size.
+  const [roster, setRoster] = useState('');
+  const players = useMemo(() => roster.split(/\r?\n/).map((l) => l.split(/\t|,|;/).map((x) => x.trim())).filter((r) => r[0] || r[1]).map((r) => ({ name: r[0] || '', number: r[1] || '', size: (r[2] || '').toUpperCase() })), [roster]);
   const [showAll, setShowAll] = useState(false);
   const [fabricW, setFabricW] = useState(1500);
   const [busy, setBusy] = useState<string | null>(null);
@@ -83,10 +86,10 @@ export function TextilePanel({ api }: { api: TextileApi }) {
   const outOfRange = fields.filter((f) => { const v = spec.measures[f.key]; return v != null && (v < f.min || v > f.max); });
   const sizeName = (s: TextileSpec) => (s.size === 'custom' ? 'Custom size' : `Size ${s.size}`);
 
-  /** Draft and lay out the pieces on this page. Artwork keeps its place on its piece. */
-  const apply = () => {
-    const c = api.canvas(), F = api.fabric(); if (!c || !F) return;
-    if (outOfRange.length) { api.notice(`Check: ${outOfRange.map((f) => f.label).join(', ')} is outside the usual range.`); }
+  /** Draft and lay out the pieces on this page for `spec`. Artwork keeps its place on its piece. Returns the applied spec as JSON. */
+  const applySpec = (spec: TextileSpec, appliedJson: string | null, quiet = false): string | null => {
+    const c = api.canvas(), F = api.fabric(); if (!c || !F) return appliedJson;
+    const lay = layoutPieces(spec), applied = appliedJson;
     const page = api.page();
     let prev: TextileSpec | null = null; try { prev = applied ? JSON.parse(applied) : null; } catch { prev = null; }
     const oldLay: TextileLayout | null = prev ? layoutPieces(prev) : null;
@@ -126,10 +129,60 @@ export function TextilePanel({ api }: { api: TextileApi }) {
     const bases = artToFabric(F, plainArt({ ...lay, pieces: missing }, bodyFill), origin, spec.allowance);
     bases.forEach((o) => { c.insertAt(o, 0); });
     guidesToFabric(F, spec, lay, origin, sizeName(spec)).forEach((o) => { c.add(o); c.bringToFront(o); });
-    c.requestRenderAll(); api.commit();
-    setApplied(JSON.stringify(spec));
+    c.requestRenderAll();
+    if (quiet) return JSON.stringify(spec);
+    api.commit();
     api.notice(prev ? `Pattern updated — ${moved} object${moved === 1 ? '' : 's'} kept on their pieces${orphan ? `, ${orphan} left where they were (their piece is gone)` : ''}.` : `${lay.pieces.length} pattern pieces laid out. Design on the pieces; cut lines and guides are locked.`);
+    return JSON.stringify(spec);
   };
+  const apply = () => {
+    if (outOfRange.length) api.notice(`Check: ${outOfRange.map((f) => f.label).join(', ')} is outside the usual range.`);
+    const j = applySpec(spec, applied);
+    if (j) setApplied(j);
+  };
+
+  // ── Team ──
+  const nameObjs = () => pageObjs().filter((o: any) => o.name === 'Player name');
+  const numberObjs = () => pageObjs().filter((o: any) => o.name === 'Player number' || o.name === 'Back number');
+  const addNameNumber = () => {
+    const c = api.canvas(), F = api.fabric(); if (!c || !F || !applied) { api.notice('Lay out the pattern pieces first.'); return; }
+    const p = api.page(), L = layoutPieces(usedSpec());
+    const back = L.pieces.find((x) => /^back$|bodice-back/.test(x.id)) || L.pieces[0];
+    const ox = p.x + (TEX_MARGIN + back.x) * TEX_PX, oy = p.y + (TEX_MARGIN + back.y) * TEX_PX, w = back.w * TEX_PX;
+    if (!nameObjs().length) { const t = new F.Textbox('PLAYER', { left: ox + w * 0.1, top: oy + back.h * TEX_PX * 0.16, width: w * 0.8, fontSize: back.w * 0.09 * TEX_PX, fontFamily: 'Oswald', fontWeight: 700, textAlign: 'center', fill: '#111827', name: 'Player name' }); t.__piece = back.id; c.add(t); }
+    if (!numberObjs().length) { const t = new F.Textbox('10', { left: ox + w * 0.15, top: oy + back.h * TEX_PX * 0.26, width: w * 0.7, fontSize: back.w * 0.4 * TEX_PX, fontFamily: 'Oswald', fontWeight: 700, textAlign: 'center', fill: '#111827', name: 'Player number' }); t.__piece = back.id; c.add(t); }
+    c.requestRenderAll(); api.commit(); bump((x) => x + 1);
+    api.notice('Name and number added to the back. Style them like any text; each player gets their own in the team PDF.');
+  };
+  const teamPdf = () => run(`Making ${players.length} shirts…`, async () => {
+    if (!recordsPdf) throw new Error('Team export is not available here.');
+    if (!players.length) throw new Error('Add the players first: one per line — name, number, size.');
+    if (!nameObjs().length && !numberObjs().length) throw new Error('Add the name and number to the back first.');
+    const base = usedSpec(), baseJson = applied;
+    const chart = chartFor(base.garment);
+    const order = players.map((pl, i) => ({ ...pl, i })).sort((a, b) => SIZES.indexOf(a.size as any) - SIZES.indexOf(b.size as any));
+    const keepN = nameObjs().map((o: any) => [o, o.text] as const), keepNo = numberObjs().map((o: any) => [o, o.text] as const);
+    let cur = baseJson;
+    try {
+      const bytes = await recordsPdf(order.length, async (k) => {
+        const pl = order[k];
+        if (hasReady(base.garment) && SIZES.includes(pl.size as any)) {
+          const next: TextileSpec = { ...base, size: pl.size as any, measures: readySize(chart, pl.size as any) };
+          if (JSON.stringify(next) !== cur) cur = applySpec(next, cur, true);
+        }
+        nameObjs().forEach((o: any) => { o.set({ text: pl.name.toUpperCase() }); o.initDimensions?.(); });
+        numberObjs().forEach((o: any) => { o.set({ text: pl.number }); o.initDimensions?.(); });
+      });
+      const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([bytes as BlobPart], { type: 'application/pdf' })); a.download = `team_${players.length}-shirts.pdf`; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    } finally {
+      if (cur !== baseJson) applySpec(base, cur, true);
+      keepN.forEach(([o, t]) => { o.set({ text: t }); o.initDimensions?.(); });
+      keepNo.forEach(([o, t]) => { o.set({ text: t }); o.initDimensions?.(); });
+      api.canvas()?.requestRenderAll();
+    }
+    api.notice(`${players.length} shirts in one PDF — one page each, in the player’s size.`);
+  });
+  const sizeCounts = useMemo(() => { const m = new Map<string, number>(); players.forEach((p) => m.set(p.size || '—', (m.get(p.size || '—') || 0) + 1)); return [...m]; }, [players]);
 
   const guides = () => pageObjs().filter((o: any) => o.__pat || (o.__dieGen && o.__die));
   const toggle = (what: 'visible' | 'locked') => {
@@ -217,8 +270,8 @@ export function TextilePanel({ api }: { api: TextileApi }) {
 
   return (
     <div className="space-y-4 text-[12px]">
-      <div role="tablist" aria-label="Textile" className="grid grid-cols-3 rounded-lg border border-mt-border p-0.5">
-        {([['garment', 'Garment'], ['fabric', 'Fabric'], ['files', 'Files']] as const).map(([id, label]) => (
+      <div role="tablist" aria-label="Textile" className="grid grid-cols-4 rounded-lg border border-mt-border p-0.5">
+        {([['garment', 'Garment'], ['team', 'Team'], ['fabric', 'Fabric'], ['files', 'Files']] as const).map(([id, label]) => (
           <button key={id} type="button" role="tab" aria-selected={tab === id} onClick={() => setTab(id)} className={`h-7 rounded-md text-[12px] font-semibold ${tab === id ? 'bg-mt-ink text-mt-bg' : 'text-mt-muted hover:text-mt-ink'}`}>{label}</button>
         ))}
       </div>
@@ -295,6 +348,23 @@ export function TextilePanel({ api }: { api: TextileApi }) {
           </ul>
         </section>
       </>}
+
+      {tab === 'team' && <section className="space-y-2.5">
+        <p className="text-[11.5px] text-mt-muted">Team kits: design the shirt once, then every player gets their own name, number and size in one print PDF.</p>
+        <button type="button" className={`${btn} w-full`} onClick={addNameNumber}>Add name & number to the back</button>
+        <label className="block text-[11.5px]"><span className="text-mt-muted">Players — one per line: name, number, size</span>
+          <textarea value={roster} onChange={(e) => setRoster(e.target.value)} rows={6} aria-label="Players" placeholder={'Arun, 7, M\nRavi, 10, L\nAisha, 23, S'} className="mt-0.5 w-full rounded-md border border-mt-border bg-mt-bg p-2 font-mono text-[11.5px]" />
+        </label>
+        {players.length > 0 && <div className="rounded-md border border-mt-border p-2">
+          <p className="text-[11.5px] font-semibold">{players.length} player{players.length === 1 ? '' : 's'}</p>
+          <p className="mt-0.5 text-[11px] text-mt-faint">Sizes: {sizeCounts.map(([k, v]) => `${k} × ${v}`).join(' · ')}</p>
+          {hasReady(spec.garment) && players.some((p) => p.size && !SIZES.includes(p.size as any)) && <p className="mt-1 text-[11px] text-amber-700 dark:text-amber-300">Sizes must be XS–XXXL; others use the current size.</p>}
+          {new Set(players.map((p) => p.number).filter(Boolean)).size < players.filter((p) => p.number).length && <p className="mt-1 text-[11px] text-amber-700 dark:text-amber-300">Some numbers are used twice.</p>}
+        </div>}
+        <button type="button" className="inline-flex h-9 w-full items-center justify-center gap-2 rounded-md bg-mt-ink text-[12.5px] font-semibold text-mt-bg hover:opacity-90 disabled:opacity-50" disabled={!!busy || !players.length || !applied} onClick={teamPdf}><Download size={14} /> Team PDF — one shirt per player</button>
+        {busy && <p className="text-[11px] text-mt-muted">{busy}</p>}
+        <p className="text-[11px] text-mt-faint">Each page has all the pieces in that player’s size, ready for sublimation printing. Cut lines and guides are left out.</p>
+      </section>}
 
       {tab === 'fabric' && <>
         <section className="space-y-2">

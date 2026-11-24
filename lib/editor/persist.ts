@@ -70,6 +70,8 @@ export const PERSIST_PROPS = [
   '__cutType',
   '__cutFor',
   '__barcode',
+  '__mergeTpl',
+  '__mergeQr',
   '__pat',
   '__tex',
   '__piece',
