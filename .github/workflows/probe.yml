@@ -2,15 +2,17 @@ name: probe
 on:
   workflow_dispatch:
     inputs:
-      urls: { description: 'space-separated paths', required: true }
+      script: { description: 'probe script in e2e/probe', required: true, default: 'login.mjs' }
 jobs:
   probe:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
-      - env:
-          URLS: ${{ inputs.urls }}
-        run: |
-          for p in $URLS; do
-            out=$(curl -s -o /tmp/b -w '%{http_code} %{content_type} %{size_download}' "https://magicaltouchdesign.com$p")
-            echo "=====PROBE $p => $out"; head -c 300 /tmp/b | tr -cd '[:print:]\n' ; echo
-          done
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: npm i --no-save playwright@1.48.2 && npx playwright install --with-deps chromium
+      - run: node e2e/probe/${{ inputs.script }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: probe-shots, path: '*.png' }
