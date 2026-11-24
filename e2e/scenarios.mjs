@@ -1688,8 +1688,8 @@ scenarios.push({
     await t.shot('polo');
     // The Wallpaper Designer is retired: the plain link lands on Pattern Design, and it is in no menu.
     // The redirect can race the previous page's navigation (net::ERR_ABORTED) — retry once, then check where we landed.
-    try { await t.page.goto(t.BASE + '/wallpaper-designer', { waitUntil: 'domcontentloaded' }); }
-    catch { await t.page.waitForTimeout(800); await t.page.goto(t.BASE + '/wallpaper-designer', { waitUntil: 'domcontentloaded' }).catch(() => {}); }
+    try { await t.page.goto(t.BASE + '/wallpaper-designer?open=1', { waitUntil: 'domcontentloaded' }); }
+    catch { await t.page.waitForTimeout(800); await t.page.goto(t.BASE + '/wallpaper-designer?open=1', { waitUntil: 'domcontentloaded' }).catch(() => {}); }
     await t.page.waitForURL(/\/patterns/, { timeout: 15000 });
     t.check('old wallpaper link goes to Pattern Design', /\/patterns/.test(t.page.url()));
     t.check('wallpaper designer not in the navigation', (await t.page.locator('a[href="/wallpaper-designer"]').count()) === 0);
@@ -1871,7 +1871,7 @@ scenarios.push({
     await t.page.getByText(/Saved “.+” to My patterns/).waitFor({ timeout: 15000 });
     const name = (await t.page.getByText(/Saved “.+” to My patterns/).innerText()).match(/“(.+)”/)[1];
     t.check('pattern can go to a garment, a box or a design', (await t.page.getByRole('link', { name: /A garment \(Textile\)/ }).count()) === 1 && (await t.page.getByRole('link', { name: /A box \(Packaging\)/ }).count()) === 1);
-    await t.page.goto(t.BASE + '/wallpaper-designer', { waitUntil: 'domcontentloaded' });
+    await t.page.goto(t.BASE + '/wallpaper-designer?open=1', { waitUntil: 'domcontentloaded' });
     const btn = t.page.getByRole('button', { name: `Pattern: ${name}` }).first();
     await btn.waitFor({ timeout: 30000 });
     t.check('wallpaper lists the saved pattern', await btn.isVisible());
