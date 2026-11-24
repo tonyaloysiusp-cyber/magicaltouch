@@ -1688,8 +1688,8 @@ scenarios.push({
     await t.shot('polo');
     // The Wallpaper Designer is retired: the plain link lands on Pattern Design, and it is in no menu.
     // The redirect can race the previous page's navigation (net::ERR_ABORTED) — retry once, then check where we landed.
-    try { await t.page.goto(t.BASE + '/wallpaper-designer?open=1', { waitUntil: 'domcontentloaded' }); }
-    catch { await t.page.waitForTimeout(800); await t.page.goto(t.BASE + '/wallpaper-designer?open=1', { waitUntil: 'domcontentloaded' }).catch(() => {}); }
+    try { await t.page.goto(t.BASE + '/wallpaper-designer', { waitUntil: 'domcontentloaded' }); }
+    catch { await t.page.waitForTimeout(800); await t.page.goto(t.BASE + '/wallpaper-designer', { waitUntil: 'domcontentloaded' }).catch(() => {}); }
     await t.page.waitForURL(/\/patterns/, { timeout: 15000 });
     t.check('old wallpaper link goes to Pattern Design', /\/patterns/.test(t.page.url()));
     t.check('wallpaper designer not in the navigation', (await t.page.locator('a[href="/wallpaper-designer"]').count()) === 0);
