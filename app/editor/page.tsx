@@ -167,7 +167,7 @@ import { SaveLocationDialog, SaveLocation } from '@/components/storage/SaveLocat
 import { CloudOpenDialog } from '@/components/storage/CloudOpenDialog';
 import { rememberRecent } from '@/lib/mtd/recent';
 import { missingFontsIn, fontRequiredMessage } from '@/lib/editor/missingFonts';
-import { PERSIST_PROPS, cloneWithProps, isHelperObject, isArtwork, applyStoredLocks, lockProps, lockPropsFor, reviveTextPaths } from '@/lib/editor/persist';
+import { PERSIST_PROPS, cloneWithProps, isHelperObject, isArtwork, applyStoredLocks, keepGuidesOnTop, lockProps, lockPropsFor, reviveTextPaths } from '@/lib/editor/persist';
 import { ensureImageFilters, reviveImageAdjust } from '@/lib/editor/imageAdjust';
 import { installParagraphSpacing } from '@/lib/editor/paragraphSpacing';
 import { installTextIndent } from '@/lib/editor/textIndent';
@@ -1650,6 +1650,9 @@ function EditorContent() {
         if (isHelperObject(e?.target)) return;
         recomputeMembership();
         refreshArtboards();
+        // new artwork goes under the die / pattern lines, which stay visible on top
+        const t = e?.target;
+        if (t && !((t.__die || t.__pat) && t.__dieGen) && keepGuidesOnTop(canvas)) canvas.requestRenderAll();
       });
       canvas.on('object:removed', (e: any) => {
         if (isHelperObject(e?.target)) return;

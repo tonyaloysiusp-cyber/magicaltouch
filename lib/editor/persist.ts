@@ -148,9 +148,24 @@ export function lockPropsFor(o: any, locked: boolean) {
 // Re-applies everything that depends on stored flags after a load or an
 // undo/redo: Fabric doesn't restore these, so locked objects would
 // otherwise become draggable again and artboards selectable.
+/** Die lines, pattern guides and cut lines stay above the artwork so they are always visible. */
+export function keepGuidesOnTop(canvas: any) {
+  const objs = canvas.getObjects();
+  const guides = objs.filter((o: any) => (o.__die || o.__pat) && o.__dieGen);
+  if (!guides.length) return false;
+  const lastArt = objs.reduce((m: number, o: any, i: number) => ((o.__die || o.__pat) && o.__dieGen) || isHelperObject(o) || o.__isArtboard ? m : i, -1);
+  const firstGuide = objs.indexOf(guides[0]);
+  if (firstGuide > lastArt) return false;
+  guides.forEach((g: any) => canvas.bringToFront(g));
+  return true;
+}
+
 export function applyStoredLocks(canvas: any) {
   const visit = (o: any) => {
     if (o.type === 'group' && o.getObjects) o.getObjects().forEach(visit);
+    // Die and pattern lines only take a click on the line itself, never inside the shape,
+    // so artwork under them can always be picked (perPixelTargetFind is not saved with the file).
+    if (o.__die || o.__pat || o.__cutType) o.set({ perPixelTargetFind: true, targetFindTolerance: 4 });
     if (o.locked) o.set(lockPropsFor(o, true));
     else if (o.__die || o.__pat) o.set({ selectable: true, evented: true });
     // "Keep proportions": no side handles, so it can't be stretched.
@@ -164,6 +179,7 @@ export function applyStoredLocks(canvas: any) {
     if (isHelperObject(o)) return;
     visit(o);
   });
+  keepGuidesOnTop(canvas);
 }
 
 // Curved text keeps its baseline as a path. Text boxes don't rebuild that

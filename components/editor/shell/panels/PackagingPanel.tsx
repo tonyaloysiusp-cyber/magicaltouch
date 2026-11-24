@@ -11,7 +11,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { Box, Download, Eye, EyeOff, FileDown, Lock, RefreshCw, Unlock } from 'lucide-react';
-import { GLUE_ANGLES, BOX_STYLES, type BoxStyleId } from '@/lib/packaging/dieline';
+import { GLUE_ANGLES, TOP_ENDS, BOTTOM_ENDS, type TopEnd, type BottomEnd, BOX_STYLES, type BoxStyleId } from '@/lib/packaging/dieline';
 import { BOARD_GRADES, caliperFor, creaseSetup, gradeById, gsmRange } from '@/lib/packaging/board';
 import { checkStructure } from '@/lib/packaging/validate';
 import { defaultClearance } from '@/lib/packaging/editorModel';
@@ -242,14 +242,34 @@ export function PackagingPanel({ api }: { api: PackagingApi }) {
         <div className="grid grid-cols-2 gap-1.5">
           <Field label="Thickness" unit={unit} step={fine * 10} value={unit === 'mm' ? spec.t : Math.round(spec.t / UK[unit] * 10000) / 10000} onChange={(v) => set({ t: toMm(v) })} />
           <Field label="Glue flap" unit={unit} step={stepU} value={u(spec.glue)} onChange={(v) => set({ glue: toMm(v) })} />
-          {['rte', 'ste', 'snap123', 'crash', 'mailer'].includes(spec.style) && <Field label="Tuck depth" unit={unit} step={stepU} value={u(spec.tuck)} onChange={(v) => set({ tuck: toMm(v) })} />}
+          {['rte', 'ste', 'snap123', 'crash', 'mailer', 'carton'].includes(spec.style) && <Field label="Tuck depth" unit={unit} step={stepU} value={u(spec.tuck)} onChange={(v) => set({ tuck: toMm(v) })} />}
           {spec.style === 'traylid' && <Field label="Lid depth" unit={unit} step={stepU} value={u(spec.lidDepth)} onChange={(v) => set({ lidDepth: toMm(v) })} />}
         </div>
       </section>
+      {['rte', 'ste', 'seal', 'snap123', 'crash', 'carton'].includes(spec.style) && (() => {
+        const ends = (): [TopEnd, BottomEnd] => spec.style === 'carton' ? [spec.topEnd || 'tuck', spec.bottomEnd || 'tuck-reverse'] : spec.style === 'ste' ? ['tuck', 'tuck-straight'] : spec.style === 'seal' ? ['seal-full', 'seal-full'] : spec.style === 'snap123' ? ['tuck', 'snap123'] : spec.style === 'crash' ? ['tuck', 'crash'] : ['tuck', 'tuck-reverse'];
+        const [te, be] = ends();
+        return (
+          <section className="space-y-2">
+            <p className="text-[10.5px] font-semibold uppercase tracking-[0.08em] text-mt-faint">Carton ends</p>
+            <div className="grid grid-cols-2 gap-1.5">
+              <label className="block text-[11.5px]"><span className="text-mt-muted">Top end</span>
+                <select value={te} onChange={(e) => set({ style: 'carton', topEnd: e.target.value as TopEnd, bottomEnd: be })} aria-label="Top end" className="h-8 w-full rounded-md border border-mt-border bg-mt-bg px-1.5 text-[12px]">
+                  {TOP_ENDS.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
+                </select></label>
+              <label className="block text-[11.5px]"><span className="text-mt-muted">Bottom end</span>
+                <select value={be} onChange={(e) => set({ style: 'carton', topEnd: te, bottomEnd: e.target.value as BottomEnd })} aria-label="Bottom end" className="h-8 w-full rounded-md border border-mt-border bg-mt-bg px-1.5 text-[12px]">
+                  {BOTTOM_ENDS.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
+                </select></label>
+            </div>
+            <p className="text-[11px] text-mt-faint">{TOP_ENDS.find((x) => x.id === te)?.hint} {BOTTOM_ENDS.find((x) => x.id === be)?.hint}</p>
+          </section>
+        );
+      })()}
       {!['tray', 'traylid', 'mailer'].includes(spec.style) && <section className="space-y-2">
-        <p className="text-[10.5px] font-semibold uppercase tracking-[0.08em] text-mt-faint">Glue flap{spec.style === 'rte' || spec.style === 'ste' ? ' & tuck' : ''}</p>
+        <p className="text-[10.5px] font-semibold uppercase tracking-[0.08em] text-mt-faint">Glue flap{['rte', 'ste', 'carton'].includes(spec.style) ? ' & tuck' : ''}</p>
         <div className="grid grid-cols-2 gap-1.5">
-          {['rte', 'ste', 'seal', 'sleeve', 'snap123', 'crash', 'gable'].includes(spec.style) && <label className="block text-[11.5px]"><span className="text-mt-muted">Attached to</span>
+          {['rte', 'ste', 'seal', 'sleeve', 'snap123', 'crash', 'gable', 'carton'].includes(spec.style) && <label className="block text-[11.5px]"><span className="text-mt-muted">Attached to</span>
             <select value={spec.gluePos || 'side'} onChange={(e) => set({ gluePos: e.target.value as 'side' | 'back' })} aria-label="Glue flap attached to" className="h-8 w-full rounded-md border border-mt-border bg-mt-bg px-1.5 text-[12px]">
               <option value="side">Side panel</option><option value="back">Back panel</option>
             </select></label>}
@@ -258,7 +278,7 @@ export function PackagingPanel({ api }: { api: PackagingApi }) {
               {GLUE_ANGLES.map((a) => <option key={a} value={a}>{a === 0 ? 'Straight (0°)' : `${a}°`}</option>)}
             </select></label>
         </div>
-        {['rte', 'ste', 'snap123', 'crash'].includes(spec.style) && <label className="flex items-center gap-2 text-[12px]"><input type="checkbox" checked={!!spec.thumbNotch} onChange={(e) => set({ thumbNotch: e.target.checked })} /> Thumb notch on the front panel</label>}
+        {['rte', 'ste', 'snap123', 'crash', 'carton'].includes(spec.style) && <label className="flex items-center gap-2 text-[12px]"><input type="checkbox" checked={!!spec.thumbNotch} onChange={(e) => set({ thumbNotch: e.target.checked })} /> Thumb notch on the front panel</label>}
         <p className="text-[11px] text-mt-faint">Folder-gluer lines usually want 15–22 mm flaps with 7–15° ends; hand-glued samples are fine at 30–45°. Ask your converter for their machine’s numbers.</p>
       </section>}
       <section className="rounded-lg border border-mt-border p-2.5">

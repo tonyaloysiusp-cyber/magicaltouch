@@ -37,7 +37,7 @@ export function checkStructure(o: DieOptions, family: BoardFamily): StructureRep
   else add({ id: 'board', level: 'ok', title: 'Board for this size', detail: 'Board type suits the box size.', rule: 'rule of thumb' });
 
   const Lp = o.L + t, Wp = o.W + t, Dp = o.D + 2 * t;
-  if (o.style === 'rte' || o.style === 'ste' || o.style === 'snap123' || o.style === 'crash') {
+  if (o.style === 'rte' || o.style === 'ste' || o.style === 'snap123' || o.style === 'crash' || (o.style === 'carton' && (o.topEnd || 'tuck') === 'tuck')) {
     const td = Math.max(8, o.tuck);
     // The tuck slides down inside the front (or back) panel: it must fit within the panel depth.
     if (td >= Dp - 2) add({ id: 'tuck', level: 'error', title: 'Tuck flap closes', detail: `Tuck ${f(td)} mm is as deep as the box (${f(Dp)} mm). It cannot slide in.`, fix: { tuck: Math.max(10, Math.round(Dp * 0.3)) }, rule: 'geometry' });
@@ -77,7 +77,7 @@ export function checkStructure(o: DieOptions, family: BoardFamily): StructureRep
       : { id: 'lw', level: 'ok', title: 'Flaps meet', detail: `Outer flaps ${f((o.W + 2 * t) / 2 + t)} mm meet in the middle.`, rule: 'geometry' });
   }
 
-  if (o.style === 'snap123' || o.style === 'crash' || o.style === 'gable') {
+  if (o.style === 'snap123' || o.style === 'crash' || o.style === 'gable' || (o.style === 'carton' && (o.bottomEnd === 'snap123' || o.bottomEnd === 'crash'))) {
     add({ id: 'bottom', level: Lp < Wp ? 'warn' : 'ok', title: o.style === 'snap123' ? '1-2-3 bottom' : 'Crash-lock bottom', detail: Lp < Wp ? 'Length is shorter than width: the bottom flaps lock across the short side. Swap length and width if the product allows.' : o.style === 'snap123' ? 'Side flaps half the width, back flap past the middle with the slit, front tongue locks through it.' : 'Bottom webs at 45° are glued at the converter so the base opens in one move. Make a sample on your board.', rule: 'geometry' });
   }
   if (o.style === 'mailer') {

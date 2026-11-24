@@ -18,12 +18,13 @@ export interface Dieline {
   inside: { L: number; W: number; D: number }; t: number;
 }
 
-export type BoxStyleId = 'rte' | 'ste' | 'seal' | 'sleeve' | 'tray' | 'traylid' | 'matchbox' | 'rsc' | 'hsc' | 'fol' | 'pillow' | 'snap123' | 'crash' | 'gable' | 'mailer';
+export type BoxStyleId = 'rte' | 'ste' | 'seal' | 'sleeve' | 'tray' | 'traylid' | 'matchbox' | 'rsc' | 'hsc' | 'fol' | 'pillow' | 'snap123' | 'crash' | 'gable' | 'mailer' | 'carton';
 export interface BoxStyleDef { id: BoxStyleId; name: string; code: string; group: 'Folding carton' | 'Tray & lid' | 'Corrugated'; hint: string }
 export const BOX_STYLES: BoxStyleDef[] = [
   { id: 'rte', name: 'Reverse tuck end', code: 'ECMA A20 type', group: 'Folding carton', hint: 'Top tuck on the back, bottom tuck on the front — cosmetics, pharma, retail.' },
   { id: 'ste', name: 'Straight tuck end', code: 'ECMA A20 type', group: 'Folding carton', hint: 'Both tucks on the back panel — a clean, uninterrupted front.' },
   { id: 'seal', name: 'Seal end (glued)', code: 'ECMA A10 type', group: 'Folding carton', hint: 'Glued top and bottom flaps — cereal, food and multipacks.' },
+  { id: 'carton', name: 'Folding carton — choose each end', code: 'ECMA A/B types', group: 'Folding carton', hint: 'Pick the top end and the bottom end separately: tuck, glued seal end (full, partial or economy overlap), 1-2-3 lock or crash lock.' },
   { id: 'snap123', name: 'Tuck top, 1-2-3 snap-lock bottom', code: 'ECMA A55 type', group: 'Folding carton', hint: 'Bottom flaps fold in order 1-2-3 and lock — heavier products, no glue at the bottom.' },
   { id: 'crash', name: 'Tuck top, crash-lock bottom', code: 'ECMA A60 type', group: 'Folding carton', hint: 'Pre-glued bottom pops open in one move — fast packing, strong base.' },
   { id: 'gable', name: 'Gable box with handle', code: 'Gable carrier', group: 'Folding carton', hint: 'Roof-shaped top with a carry handle, crash-lock bottom — gifts, food, take-away.' },
@@ -51,7 +52,27 @@ export interface DieOptions {
   gluePos?: 'side' | 'back';
   /** half-round thumb notch on the panel the top tuck slides behind */
   thumbNotch?: boolean;
+  /** folding carton ('carton' style): how each end closes */
+  topEnd?: TopEnd;
+  bottomEnd?: BottomEnd;
 }
+export type TopEnd = 'tuck' | 'seal-full' | 'seal-partial' | 'seal-economy';
+export type BottomEnd = 'tuck-reverse' | 'tuck-straight' | 'seal-full' | 'seal-partial' | 'seal-economy' | 'snap123' | 'crash';
+export const TOP_ENDS: { id: TopEnd; name: string; hint: string }[] = [
+  { id: 'tuck', name: 'Tuck end', hint: 'Tuck flap on the back panel slides in behind the front; reclosable.' },
+  { id: 'seal-full', name: 'Glued — full overlap', hint: 'Outer flaps the full width, glued over each other: strongest, tamper-evident.' },
+  { id: 'seal-partial', name: 'Glued — partial overlap', hint: 'Outer flaps overlap past the middle and are glued.' },
+  { id: 'seal-economy', name: 'Glued — economy (meeting)', hint: 'Outer flaps meet in the middle; least board.' },
+];
+export const BOTTOM_ENDS: { id: BottomEnd; name: string; hint: string }[] = [
+  { id: 'tuck-reverse', name: 'Tuck end — reverse', hint: 'Bottom tuck on the front panel (opposite the top tuck): cheapest to cut.' },
+  { id: 'tuck-straight', name: 'Tuck end — straight', hint: 'Bottom tuck on the back panel, same side as the top: neat front.' },
+  { id: 'seal-full', name: 'Glued — full overlap', hint: 'Glued bottom, outer flaps the full width.' },
+  { id: 'seal-partial', name: 'Glued — partial overlap', hint: 'Glued bottom, outer flaps overlap past the middle.' },
+  { id: 'seal-economy', name: 'Glued — economy (meeting)', hint: 'Glued bottom, outer flaps meet in the middle.' },
+  { id: 'snap123', name: '1-2-3 snap lock', hint: 'Folds in three steps and locks; no glue; heavier products.' },
+  { id: 'crash', name: 'Crash lock (auto bottom)', hint: 'Pre-glued; opens into place in one move; fastest to pack.' },
+];
 export const DEFAULT_DIE: DieOptions = { style: 'rte', L: 80, W: 40, D: 120, t: 0.4, glue: 14, tuck: 15, lidDepth: 30, glueAngle: 45, gluePos: 'side', thumbNotch: false };
 export const GLUE_ANGLES = [0, 10, 15, 30, 45] as const;
 
@@ -397,6 +418,38 @@ function addCrashBottom(n: Net, b: ReturnType<typeof tuckTopBody>) {
   return y1 + major;
 }
 
+/** Glued (seal) end: dust flaps on the side panels, outer flaps on the front and back. */
+function sealFlaps(n: Net, cols: { name: string; x0: number; x1: number }[], y: number, Wp: number, dir: 1 | -1, kind: 'seal-full' | 'seal-partial' | 'seal-economy') {
+  const major = kind === 'seal-full' ? Math.max(10, Wp - 1) : kind === 'seal-partial' ? Math.max(10, Wp * 0.75) : Math.max(8, Wp / 2 - 0.5);
+  const minor = Math.max(8, Wp * 0.45);
+  for (const c of cols) {
+    const side = c.name === 'Side';
+    flap(n, c.x0, c.x1, y, side ? minor : major, dir, 1, side ? 'Dust flap' : dir === -1 ? 'Top flap' : 'Bottom flap');
+  }
+  return major;
+}
+
+/** Folding carton with the top and bottom ends chosen separately. */
+function carton(o: DieOptions): Dieline {
+  const top = o.topEnd || 'tuck', bottom = o.bottomEnd || 'tuck-reverse';
+  const n = new Net(), b = tuckTopBody(n, o);
+  const { cols, front, back, y0, y1, Wp, td, dd } = b;
+  if (top === 'tuck') addTuckTop(n, o, b);
+  else sealFlaps(n, cols, y0, Wp, -1, top);
+  let h = y1;
+  if (bottom === 'tuck-reverse' || bottom === 'tuck-straight') {
+    const bot = bottom === 'tuck-straight' ? back : front, open = bot === back ? front : back;
+    tuckClosure(n, bot.x0, bot.x1, y1, Wp, td, 1, 'Bottom'); n.cut(seg([open.x0, y1], [open.x1, y1]));
+    cols.forEach((c, i) => { if (c.name === 'Side') dustFlap(n, c.x0, c.x1, y1, dd, 1, cols[(i + 1) % cols.length] === bot); });
+    h = y1 + Wp + td;
+  } else if (bottom === 'snap123') h = addSnapBottom(n, b);
+  else if (bottom === 'crash') h = addCrashBottom(n, b);
+  else h = y1 + sealFlaps(n, cols, y1, Wp, 1, bottom);
+  const tn = TOP_ENDS.find((x) => x.id === top)!.name, bn = BOTTOM_ENDS.find((x) => x.id === bottom)!.name;
+  return { style: 'carton', title: `Folding carton — ${tn.toLowerCase()} top, ${bn.toLowerCase()} bottom`, w: b.end, h, lines: n.lines, panels: n.panels, inside: { L: o.L, W: o.W, D: o.D }, t: b.t,
+    notes: [`Top: ${tn}. Bottom: ${bn}.`, `Glue flap ${f(b.g)} mm${top === 'tuck' || bottom.startsWith('tuck') ? `, tuck ${f(td)} mm` : ''}.`] };
+}
+
 function snap123(o: DieOptions): Dieline {
   const n = new Net(), b = tuckTopBody(n, o); addTuckTop(n, o, b); const h = addSnapBottom(n, b);
   return { style: 'snap123', title: 'Tuck top, 1-2-3 snap-lock bottom', w: b.end, h, lines: n.lines, panels: n.panels, inside: { L: o.L, W: o.W, D: o.D }, t: b.t,
@@ -513,6 +566,7 @@ export function makeDieline(o: DieOptions): Dieline {
     case 'crash': return crash(c);
     case 'gable': return gable(c);
     case 'mailer': return mailer(c);
+    case 'carton': return carton(c);
   }
 }
 

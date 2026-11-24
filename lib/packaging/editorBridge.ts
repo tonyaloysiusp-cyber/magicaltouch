@@ -8,7 +8,7 @@
 //    die objects hidden, plus the die lines added as overprinting spot
 //    colours (CutContour, Crease, Perforation, Glue area).
 
-import { makeDieline, type BoxStyleId, type Dieline } from './dieline.ts';
+import { makeDieline, type BoxStyleId, type Dieline, type TopEnd, type BottomEnd } from './dieline.ts';
 import type { SceneItem } from './templates.ts';
 import { pathToPdf } from './editorPdf.ts';
 
@@ -30,6 +30,7 @@ export interface PackSpec {
   mode?: 'product' | 'inside' | 'outside';
   grade: string; gsm: number; t: number; glue: number; tuck: number; lidDepth: number;
   glueAngle?: number; gluePos?: 'side' | 'back'; thumbNotch?: boolean;
+  topEnd?: TopEnd; bottomEnd?: BottomEnd;
 }
 export const specInner = (s: PackSpec) => {
   const m = s.mode || 'product', r = (v: number) => Math.round(v * 100) / 100;
@@ -37,7 +38,7 @@ export const specInner = (s: PackSpec) => {
   if (m === 'outside') return { L: r(s.product.L - 2 * s.t), W: r(s.product.W - 2 * s.t), D: r(s.product.H - 2 * s.t) };
   return { L: r(s.product.L + s.clearance.L), W: r(s.product.W + s.clearance.W), D: r(s.product.H + s.clearance.H) };
 };
-export const specDieline = (s: PackSpec): Dieline => { const i = specInner(s); return makeDieline({ style: s.style, L: i.L, W: i.W, D: i.D, t: s.t, glue: s.glue, tuck: s.tuck, lidDepth: s.lidDepth, glueAngle: s.glueAngle ?? 45, gluePos: s.gluePos || 'side', thumbNotch: !!s.thumbNotch }); };
+export const specDieline = (s: PackSpec): Dieline => { const i = specInner(s); return makeDieline({ style: s.style, L: i.L, W: i.W, D: i.D, t: s.t, glue: s.glue, tuck: s.tuck, lidDepth: s.lidDepth, glueAngle: s.glueAngle ?? 45, gluePos: s.gluePos || 'side', thumbNotch: !!s.thumbNotch, topEnd: s.topEnd, bottomEnd: s.bottomEnd }); };
 export const pageSizePx = (d: Dieline) => ({ width: Math.round((d.w + 2 * PAGE_MARGIN) * PX), height: Math.round((d.h + 2 * PAGE_MARGIN) * PX) });
 
 /** Template artwork → editor objects (fabric), placed with the blank at (originPx). */
