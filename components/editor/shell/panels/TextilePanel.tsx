@@ -161,7 +161,7 @@ export function TextilePanel({ api, recordsPdf }: { api: TextileApi; recordsPdf?
     const base = usedSpec(), baseJson = applied;
     const chart = chartFor(base.garment);
     const order = players.map((pl, i) => ({ ...pl, i })).sort((a, b) => SIZES.indexOf(a.size as any) - SIZES.indexOf(b.size as any));
-    const keepN = nameObjs().map((o: any) => [o, o.text] as const), keepNo = numberObjs().map((o: any) => [o, o.text] as const);
+    const keepN: [any, string][] = nameObjs().map((o: any) => [o, o.text]), keepNo: [any, string][] = numberObjs().map((o: any) => [o, o.text]);
     let cur = baseJson;
     try {
       const bytes = await recordsPdf(order.length, async (k) => {
