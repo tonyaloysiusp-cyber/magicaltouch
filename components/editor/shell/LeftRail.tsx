@@ -42,7 +42,7 @@ export function LeftRail({
             <div className="relative bg-mt-surface rounded-t-3xl max-h-[72vh] flex flex-col animate-[mt-sheet_180ms_ease-out] shadow-2xl">
               <div className="flex items-center justify-between px-4 pt-3 pb-2">
                 <span className="mx-auto absolute left-1/2 -translate-x-1/2 top-1.5 w-10 h-1 rounded-full bg-mt-border" />
-                <h2 className="text-base font-semibold text-mt-ink mt-2">{current.title || current.label}</h2>
+                <h2 className="text-base font-semibold text-mt-ink mt-2 truncate" title={current.title || current.label}>{current.label}</h2>
                 <button type="button" onClick={() => onActivate(null)} aria-label="Close" className="h-9 w-9 mt-1 inline-flex items-center justify-center rounded-lg hover:bg-mt-surface2">
                   <X size={18} />
                 </button>
@@ -92,7 +92,7 @@ export function LeftRail({
       {current && (
         <aside aria-label={current.title || current.label} className="w-[320px] shrink-0 border-r border-mt-border bg-mt-surface flex flex-col">
           <div className="h-12 shrink-0 flex items-center justify-between px-4">
-            <h2 className="text-[15px] font-semibold text-mt-ink">{current.title || current.label}</h2>
+            <h2 className="min-w-0 truncate text-[15px] font-semibold text-mt-ink" title={current.title || current.label}>{current.label}</h2>
             <button type="button" onClick={() => onActivate(null)} aria-label="Hide panel" title="Hide panel" className="h-8 w-8 inline-flex items-center justify-center rounded-lg text-mt-muted hover:text-mt-ink hover:bg-mt-surface2">
               <ChevronLeft size={18} />
             </button>

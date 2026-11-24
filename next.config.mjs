@@ -32,7 +32,7 @@ const nextConfig = {
       'custom-t-shirt-designer': '/textile-studio',
       'wall-designer': '/wallpaper-designer',
       // Standalone print tools moved into the Design Editor's Print & cut panel (23 Nov 2026).
-      'barcode-generator': '/editor?panel=production&tab=barcode',
+      'barcode-generator': '/editor?panel=qr&tab=barcode',
       'label-sticker': '/editor?panel=production&tab=cut',
       'laser-cnc': '/editor?panel=production&tab=cut',
       'poster-tiling': '/editor?panel=production&tab=large',

@@ -2120,17 +2120,19 @@ scenarios.push({
 
 scenarios.push({
   name: 'workspace-type-switch',
+  init: () => { try { localStorage.setItem('mt:editorMode', 'pro'); } catch {} },
   async run(t) {
     await t.editor('w=1080&h=1080');
+    const rail = () => t.page.locator('nav[aria-label="Editor panels"] button');
+    const has = async (label) => (await rail().filter({ hasText: label }).count()) > 0;
+    t.check('Design workspace: no packaging or textile tools', !(await has('Packaging')) && !(await has('Textile')));
     const group = t.page.getByRole('radiogroup', { name: 'Workspace type' });
     await group.getByRole('radio', { name: /Packaging/ }).click();
-    await t.page.getByRole('tab', { name: 'Box' }).waitFor({ timeout: 10000 });
-    t.check('Packaging workspace opens the Packaging panel', true);
-    const first = await t.page.locator('nav[aria-label="Editor panels"] button').first().innerText();
-    t.check('Packaging tools lead the rail', /Packaging/.test(first), first);
+    await t.page.getByRole('tab', { name: 'Box', exact: true }).first().waitFor({ timeout: 10000 });
+    t.check('Packaging workspace: box controls on the right, no textile tools', !(await has('Textile')));
     await group.getByRole('radio', { name: /Textile/ }).click();
     await t.page.getByRole('button', { name: /Lay out pattern pieces/ }).waitFor({ timeout: 10000 });
-    t.check('Textile workspace opens the Textile panel', true);
+    t.check('Textile workspace: garment controls, no packaging tools', !(await has('Packaging')));
     await t.page.getByRole('button', { name: /Lay out pattern pieces/ }).click();
     await t.page.waitForTimeout(600);
     const n = await t.eval(() => window.__fabricCanvas.getObjects().filter((o) => o.__texBase).length);
@@ -2142,7 +2144,7 @@ scenarios.push({
 scenarios.push({
   name: 'print-and-cut',
   async run(t) {
-    await t.editor('w=1080&h=1080&panel=production');
+    await t.editor('w=1080&h=1080&panel=qr&tab=barcode');
     await t.page.getByLabel('Barcode type').selectOption('code128');
     await t.page.getByLabel('Barcode data').fill('MTD-2026-0042');
     await t.page.getByRole('button', { name: /Add barcode to the page/ }).click();
@@ -2156,7 +2158,8 @@ scenarios.push({
     t.check('EAN-13 added', (await t.eval(() => window.__fabricCanvas.getObjects().filter((o) => o.__barcode).length)) === 2);
     // cut line around a shape
     await t.eval(() => { const c = window.__fabricCanvas, F = window.fabric; const r = new F.Circle({ left: 200, top: 200, radius: 120, fill: '#e11d48' }); c.add(r); c.setActiveObject(r); c.requestRenderAll(); });
-    await t.page.getByRole('tab', { name: 'Cut' }).click();
+    await t.page.locator('nav[aria-label="Editor panels"] button', { hasText: 'Print & cut' }).first().click();
+    await t.page.getByRole('tab', { name: 'Cut & sticker' }).click();
     await t.page.getByRole('button', { name: /Make cut line/ }).click();
     await t.page.waitForTimeout(1200);
     const cut = await t.eval(() => { const o = window.__fabricCanvas.getObjects(); return { cut: o.filter((x) => x.__cutType === 'kiss' && x.__die === 'cut').length, border: o.filter((x) => x.name === 'Sticker border (white)').length }; });

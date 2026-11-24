@@ -1,7 +1,7 @@
 'use client';
 
-// Print & cut tools inside the design editor (replacing the separate Barcode
-// Studio, Label & Sticker Studio, Laser & CNC Prep, Large Format Studio and
+// Print & cut tools inside the design editor (barcodes live in the QR code panel)
+// (replacing the separate Barcode Studio, Label & Sticker Studio, Laser & CNC Prep, Large Format Studio and
 // Separation & Halftone Studio pages):
 //  · Barcode — EAN-13, UPC-A, EAN-8, UPC-E, ITF-14, ITF, Code 128, Code 39
 //    as vector bars on the page, with quiet zones and print checks.
@@ -55,39 +55,13 @@ function Num({ name, value, onChange, unit = 'mm', step = 0.5, min = 0, max = 10
 }
 
 export function ProductionPanel({ api, initialTab }: { api: ProductionApi; initialTab?: string }) {
-  const [tab, setTab] = useState<'barcode' | 'cut' | 'large' | 'sep' | 'layout' | 'data' | 'size'>(() => (['barcode', 'cut', 'large', 'sep', 'layout', 'data', 'size'].includes(initialTab || '') ? (initialTab as any) : 'barcode'));
+  const [tab, setTab] = useState<'cut' | 'large' | 'sep' | 'layout' | 'data' | 'size'>(() => (['cut', 'large', 'sep', 'layout', 'data', 'size'].includes(initialTab || '') ? (initialTab as any) : 'cut'));
   const [busy, setBusy] = useState<string | null>(null);
   const run = async (what: string, f: () => Promise<void>) => { setBusy(what); try { await f(); } catch (e: any) { api.notice(e?.message || 'That did not work.'); } finally { setBusy(null); } };
   const save = (blob: Blob, name: string) => { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); };
   const pageObjs = () => { const c = api.canvas(); const page = api.page(); return c ? c.getObjects().filter((o: any) => !o.__isArtboard && (!page.id || !o.__artboardId || o.__artboardId === page.id)) : []; };
   const page = api.page();
   const pageMm = { w: Math.round((page.width / PX) * 10) / 10, h: Math.round((page.height / PX) * 10) / 10 };
-
-  // ── Barcode ──
-  const [kind, setKind] = useState<CodeKind>('ean13');
-  const [value, setValue] = useState('');
-  const [x, setX] = useState(0.33);
-  const [height, setHeight] = useState(22.85);
-  const [showText, setShowText] = useState(true);
-  const [ink, setInk] = useState('#000000');
-  const [bg, setBg] = useState<string | null>('#FFFFFF');
-  const def = CODE_KINDS.find((k) => k.id === kind)!;
-  const bopts = { kind, value: value || def.placeholder, x, heightMm: height, text: showText, ink, bg };
-  const warn = useMemo(() => barcodeWarnings(bopts), [kind, x, height, ink, bg]); // eslint-disable-line react-hooks/exhaustive-deps
-  const setKindDefaults = (k: CodeKind) => { setKind(k); setValue(''); setX(k === 'itf14' ? 0.495 : k === 'code128' || k === 'code39' || k === 'itf' ? 0.25 : 0.33); setHeight(k === 'ean8' ? 18.23 : k === 'itf14' ? 32 : k === 'ean13' || k === 'upca' || k === 'upce' ? 22.85 : 15); };
-  const addBarcode = () => run('Making the barcode…', async () => {
-    const c = api.canvas(), F = api.fabric(); if (!c || !F) return;
-    const r = await linearBarcode(bopts);
-    if (r.error) throw new Error(r.error);
-    const group: any = await new Promise((res) => F.loadSVGFromString(r.svg, (objs: any[], o: any) => res(F.util.groupSVGElements(objs, o))));
-    const sx = (r.wMm * PX) / (group.width || 1);
-    group.set({ scaleX: sx, scaleY: sx, name: `${def.name} ${r.value}` });
-    const p = api.page();
-    group.set({ left: p.x + (p.width - r.wMm * PX) / 2, top: p.y + (p.height - r.hMm * PX) / 2 });
-    group.__barcode = JSON.stringify({ ...bopts, value: r.value });
-    c.add(group); c.setActiveObject(group); api.commit();
-    api.notice(`${def.name} added at ${r.wMm.toFixed(1)} × ${r.hMm.toFixed(1)} mm${r.note ? ` — ${r.note}` : ''}. Test-scan a print before production.`);
-  });
 
   // ── Cut & sticker ──
   const [offset, setOffset] = useState(2);
@@ -216,36 +190,12 @@ export function ProductionPanel({ api, initialTab }: { api: ProductionApi; initi
 
   return (
     <div className="space-y-4 text-[12px]">
-      <div role="tablist" aria-label="Print and cut" className="grid grid-cols-4 gap-0.5 rounded-lg border border-mt-border p-0.5">
-        {([['barcode', 'Barcode'], ['cut', 'Cut'], ['large', 'Large'], ['sep', 'Separate'], ['layout', 'Imposition'], ['data', 'Data merge'], ['size', 'Sizes']] as const).map(([id, l]) => (
-          <button key={id} type="button" role="tab" aria-selected={tab === id} onClick={() => setTab(id)} className={`h-7 rounded-md text-[11.5px] font-semibold ${tab === id ? 'bg-mt-ink text-mt-bg' : 'text-mt-muted hover:text-mt-ink'}`}>{l}</button>
+      <div role="tablist" aria-label="Print and cut" className="grid grid-cols-3 gap-0.5 rounded-lg border border-mt-border p-0.5">
+        {([['cut', 'Cut & sticker'], ['large', 'Large format'], ['sep', 'Separations'], ['layout', 'Imposition'], ['data', 'Data merge'], ['size', 'Print sizes']] as const).map(([id, l]) => (
+          <button key={id} type="button" role="tab" aria-selected={tab === id} onClick={() => setTab(id)} className={`min-h-[30px] rounded-md px-1 text-[11px] font-semibold leading-tight ${tab === id ? 'bg-mt-ink text-mt-bg' : 'text-mt-muted hover:text-mt-ink'}`}>{l}</button>
         ))}
       </div>
 
-      {tab === 'barcode' && <section className="space-y-2.5">
-        <label className="block text-[11.5px]"><span className="text-mt-muted">Type</span>
-          <select value={kind} onChange={(e) => setKindDefaults(e.target.value as CodeKind)} className={sel} aria-label="Barcode type">{CODE_KINDS.map((k) => <option key={k.id} value={k.id}>{k.name}</option>)}</select>
-        </label>
-        <p className="text-[11px] text-mt-faint">{def.hint}</p>
-        <label className="block text-[11.5px]"><span className="text-mt-muted">Data</span>
-          <input value={value} onChange={(e) => setValue(e.target.value)} placeholder={def.placeholder} aria-label="Barcode data" className={`${sel} font-mono`} />
-        </label>
-        <div className="grid grid-cols-2 gap-2">
-          <Num name="Bar width (X)" value={x} step={0.01} min={0.1} max={2} onChange={setX} />
-          <Num name="Bar height" value={height} step={0.5} min={4} max={200} onChange={setHeight} />
-        </div>
-        <div className="grid grid-cols-2 gap-2">
-          <label className="block text-[11.5px]"><span className="text-mt-muted">Bars</span><input type="color" value={ink} onChange={(e) => setInk(e.target.value)} aria-label="Bar colour" className="h-8 w-full rounded-md border border-mt-border" /></label>
-          <label className="block text-[11.5px]"><span className="text-mt-muted">Background</span>
-            <span className="flex gap-1"><input type="color" value={bg || '#FFFFFF'} onChange={(e) => setBg(e.target.value)} aria-label="Background colour" className="h-8 w-full rounded-md border border-mt-border" disabled={!bg} />
-              <button type="button" className={btn} onClick={() => setBg(bg ? null : '#FFFFFF')} title="Transparent background">{bg ? 'Clear' : 'Fill'}</button></span>
-          </label>
-        </div>
-        <label className="flex items-center gap-2"><input type="checkbox" checked={showText} onChange={(e) => setShowText(e.target.checked)} /> Human-readable text</label>
-        {warn.length > 0 && <ul className="space-y-1 rounded-md bg-amber-500/10 px-2 py-1.5 text-[11px] text-amber-700 dark:text-amber-300">{warn.map((w) => <li key={w} className="flex gap-1.5"><AlertTriangle size={12} className="mt-0.5 shrink-0" />{w}</li>)}</ul>}
-        <button type="button" className={primary} onClick={addBarcode} disabled={!!busy}><Barcode size={14} /> Add barcode to the page</button>
-        <p className="text-[11px] text-mt-faint">Quiet zones (blank margins) are included — keep them clear of other artwork. QR codes are in the QR code panel.</p>
-      </section>}
 
       {tab === 'cut' && <section className="space-y-2.5">
         <p className="text-[11px] text-mt-faint">Select a picture, text or shape. Transparent PNGs get a cut line that follows their outline.</p>
@@ -336,5 +286,63 @@ export function ProductionPanel({ api, initialTab }: { api: ProductionApi; initi
       </section>}
       {busy && <p className="text-[11px] text-mt-muted">{busy}</p>}
     </div>
+  );
+}
+
+/** Barcodes, in the QR code panel of the editor. */
+export function BarcodeTool({ api }: { api: Pick<PackagingApi, 'canvas' | 'fabric' | 'page' | 'commit' | 'notice'> }) {
+  const [busy, setBusy] = useState<string | null>(null);
+  const run = async (what: string, f: () => Promise<void>) => { setBusy(what); try { await f(); } catch (e: any) { api.notice(e?.message || 'That did not work.'); } finally { setBusy(null); } };
+  // ── Barcode ──
+  const [kind, setKind] = useState<CodeKind>('ean13');
+  const [value, setValue] = useState('');
+  const [x, setX] = useState(0.33);
+  const [height, setHeight] = useState(22.85);
+  const [showText, setShowText] = useState(true);
+  const [ink, setInk] = useState('#000000');
+  const [bg, setBg] = useState<string | null>('#FFFFFF');
+  const def = CODE_KINDS.find((k) => k.id === kind)!;
+  const bopts = { kind, value: value || def.placeholder, x, heightMm: height, text: showText, ink, bg };
+  const warn = useMemo(() => barcodeWarnings(bopts), [kind, x, height, ink, bg]); // eslint-disable-line react-hooks/exhaustive-deps
+  const setKindDefaults = (k: CodeKind) => { setKind(k); setValue(''); setX(k === 'itf14' ? 0.495 : k === 'code128' || k === 'code39' || k === 'itf' ? 0.25 : 0.33); setHeight(k === 'ean8' ? 18.23 : k === 'itf14' ? 32 : k === 'ean13' || k === 'upca' || k === 'upce' ? 22.85 : 15); };
+  const addBarcode = () => run('Making the barcode…', async () => {
+    const c = api.canvas(), F = api.fabric(); if (!c || !F) return;
+    const r = await linearBarcode(bopts);
+    if (r.error) throw new Error(r.error);
+    const group: any = await new Promise((res) => F.loadSVGFromString(r.svg, (objs: any[], o: any) => res(F.util.groupSVGElements(objs, o))));
+    const sx = (r.wMm * PX) / (group.width || 1);
+    group.set({ scaleX: sx, scaleY: sx, name: `${def.name} ${r.value}` });
+    const p = api.page();
+    group.set({ left: p.x + (p.width - r.wMm * PX) / 2, top: p.y + (p.height - r.hMm * PX) / 2 });
+    group.__barcode = JSON.stringify({ ...bopts, value: r.value });
+    c.add(group); c.setActiveObject(group); api.commit();
+    api.notice(`${def.name} added at ${r.wMm.toFixed(1)} × ${r.hMm.toFixed(1)} mm${r.note ? ` — ${r.note}` : ''}. Test-scan a print before production.`);
+  });
+
+  return (
+    <section className="space-y-2.5">
+        <label className="block text-[11.5px]"><span className="text-mt-muted">Type</span>
+          <select value={kind} onChange={(e) => setKindDefaults(e.target.value as CodeKind)} className={sel} aria-label="Barcode type">{CODE_KINDS.map((k) => <option key={k.id} value={k.id}>{k.name}</option>)}</select>
+        </label>
+        <p className="text-[11px] text-mt-faint">{def.hint}</p>
+        <label className="block text-[11.5px]"><span className="text-mt-muted">Data</span>
+          <input value={value} onChange={(e) => setValue(e.target.value)} placeholder={def.placeholder} aria-label="Barcode data" className={`${sel} font-mono`} />
+        </label>
+        <div className="grid grid-cols-2 gap-2">
+          <Num name="Bar width (X)" value={x} step={0.01} min={0.1} max={2} onChange={setX} />
+          <Num name="Bar height" value={height} step={0.5} min={4} max={200} onChange={setHeight} />
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <label className="block text-[11.5px]"><span className="text-mt-muted">Bars</span><input type="color" value={ink} onChange={(e) => setInk(e.target.value)} aria-label="Bar colour" className="h-8 w-full rounded-md border border-mt-border" /></label>
+          <label className="block text-[11.5px]"><span className="text-mt-muted">Background</span>
+            <span className="flex gap-1"><input type="color" value={bg || '#FFFFFF'} onChange={(e) => setBg(e.target.value)} aria-label="Background colour" className="h-8 w-full rounded-md border border-mt-border" disabled={!bg} />
+              <button type="button" className={btn} onClick={() => setBg(bg ? null : '#FFFFFF')} title="Transparent background">{bg ? 'Clear' : 'Fill'}</button></span>
+          </label>
+        </div>
+        <label className="flex items-center gap-2"><input type="checkbox" checked={showText} onChange={(e) => setShowText(e.target.checked)} /> Human-readable text</label>
+        {warn.length > 0 && <ul className="space-y-1 rounded-md bg-amber-500/10 px-2 py-1.5 text-[11px] text-amber-700 dark:text-amber-300">{warn.map((w) => <li key={w} className="flex gap-1.5"><AlertTriangle size={12} className="mt-0.5 shrink-0" />{w}</li>)}</ul>}
+        <button type="button" className={primary} onClick={addBarcode} disabled={!!busy}><Barcode size={14} /> Add barcode to the page</button>
+        <p className="text-[11px] text-mt-faint">Quiet zones (blank margins) are included — keep them clear of other artwork.</p>
+    </section>
   );
 }

@@ -66,7 +66,20 @@ import { traceLayerObjects } from '@/lib/traceVector';
 import { QrCode as QrCodeIcon, Package as PackageIcon, Shirt as ShirtIcon, Scissors as ScissorsIcon } from 'lucide-react';
 import { PackagingPanel, type PackagingApi } from '@/components/editor/shell/panels/PackagingPanel';
 import { TextilePanel } from '@/components/editor/shell/panels/TextilePanel';
-import { ProductionPanel, type ProductionApi, type StudioKind } from '@/components/editor/shell/panels/ProductionPanel';
+import { ProductionPanel, BarcodeTool, type ProductionApi, type StudioKind } from '@/components/editor/shell/panels/ProductionPanel';
+
+function QrBarcodeTabs({ initial, qr, barcode }: { initial: 'qr' | 'barcode'; qr: ReactNode; barcode: ReactNode }) {
+  const [t, setT] = useState<'qr' | 'barcode'>(initial);
+  return (
+    <div className="space-y-3">
+      <div role="tablist" aria-label="Code type" className="grid grid-cols-2 rounded-lg border border-mt-border p-0.5">
+        {([['qr', 'QR code'], ['barcode', 'Barcode']] as const).map(([id, l]) => <button key={id} type="button" role="tab" aria-selected={t === id} onClick={() => setT(id)} className={`h-8 rounded-md text-[12.5px] font-semibold ${t === id ? 'bg-mt-ink text-mt-bg' : 'text-mt-muted hover:text-mt-ink'}`}>{l}</button>)}
+      </div>
+      <div hidden={t !== 'qr'}>{qr}</div>
+      <div hidden={t !== 'barcode'}>{barcode}</div>
+    </div>
+  );
+}
 import { Gem as StudioIcon } from 'lucide-react';
 import { StudioPanel, StudioPublish } from '@/components/editor/shell/panels/StudioPanel';
 import dynamic from 'next/dynamic';
@@ -2942,6 +2955,14 @@ function EditorContent() {
   // Workspace type (Design / Packaging / Textile): the workspace's panel opens and its tools lead the rail.
   const [studio, setStudio] = useState<EditorStudio>(() => { const p = searchParams.get('panel'); return p === 'packaging' || p === 'textile' ? p : 'design'; });
   const studioPickedRef = useRef(false);
+  // Right panel tab in Packaging / Textile: the box or garment controls, or the selection's properties.
+  const [wsTab, setWsTab] = useState<'work' | 'object'>('work');
+  const hadSelectionRef = useRef(false);
+  useEffect(() => {
+    // picking something shows its properties; clicking empty canvas brings the box / garment back
+    const has = !!selected;
+    if (has !== hadSelectionRef.current) { hadSelectionRef.current = has; setWsTab(has ? 'object' : 'work'); }
+  }, [selected]);
   const [studioOverlay, setStudioOverlay] = useState<{ kind: StudioKind; file: File | null } | null>(null);
   useEffect(() => {
     // a packaging or garment design opened from a file or the recent list picks its workspace by itself
@@ -4202,7 +4223,7 @@ function EditorContent() {
   const handleStudioSwitch = (target: EditorStudio) => {
     studioPickedRef.current = true;
     setStudio(target);
-    if (target !== 'design') { setLeftPanel(target); setUnit('mm'); setLocalNotice(target === 'packaging' ? 'Packaging workspace: box, dieline and production files are in the Packaging panel.' : 'Textile workspace: garment, size, fabric and pattern files are in the Textile panel.'); }
+    if (target !== 'design') { if (pro && !compact) { setWsTab('work'); setLeftPanel((p) => (p === 'packaging' || p === 'textile' ? null : p)); } else setLeftPanel(target); setUnit('mm'); setLocalNotice(target === 'packaging' ? 'Packaging workspace: box size, structure, lines and files are on the right; design tools on the left.' : 'Textile workspace: garment, size, measurements, fabric and pattern files are on the right; design tools on the left.'); }
     else setLeftPanel((p) => (p === 'packaging' || p === 'textile' ? null : p));
   };
 
@@ -7610,7 +7631,7 @@ function EditorContent() {
     pickFromCanvas,
   };
 
-  const propertiesPanelEl = (
+  const objectPropsEl = (
     <PropertiesPanel
       activeTool={activeTool}
       stripTool={stripTool}
@@ -7634,6 +7655,17 @@ function EditorContent() {
       })()}
     />
   );
+  const wsLabel = studio === 'packaging' ? 'Box' : 'Garment';
+  const propertiesPanelEl = studio !== 'design' && pro && !compact ? (
+    <div>
+      <div role="tablist" aria-label="Right panel" className="sticky top-0 z-[2] grid grid-cols-2 gap-0.5 border-b border-mt-border bg-mt-surface p-1.5">
+        <button type="button" role="tab" aria-selected={wsTab === 'work'} onClick={() => setWsTab('work')} className={cx('h-8 rounded-md text-[12.5px] font-semibold', wsTab === 'work' ? 'bg-mt-ink text-mt-bg' : 'text-mt-muted hover:text-mt-ink')}>{wsLabel}</button>
+        <button type="button" role="tab" aria-selected={wsTab === 'object'} onClick={() => setWsTab('object')} className={cx('h-8 rounded-md text-[12.5px] font-semibold', wsTab === 'object' ? 'bg-mt-ink text-mt-bg' : 'text-mt-muted hover:text-mt-ink')}>Selection</button>
+      </div>
+      <div hidden={wsTab !== 'work'} className="p-3">{studio === 'packaging' ? <PackagingPanel api={packagingApi} /> : <TextilePanel api={packagingApi} />}</div>
+      <div hidden={wsTab !== 'object'}>{objectPropsEl}</div>
+    </div>
+  ) : objectPropsEl;
 
   const artboardsPanelEl = (
     <ArtboardsPanel
@@ -8096,10 +8128,10 @@ function EditorContent() {
     },
     {
       id: 'qr',
-      label: 'QR code',
-      title: 'QR code generator',
+      label: 'QR & barcode',
+      title: 'QR codes and barcodes (EAN, UPC, ITF, Code 128, Code 39)',
       icon: <QrCodeIcon size={20} />,
-      render: () => <QrPanel brandLogoUrl={brandKit.logoUrl} onAdd={(url) => insertImageDataUrl(url)} />,
+      render: () => <QrBarcodeTabs initial={searchParams.get('tab') === 'barcode' ? 'barcode' : 'qr'} qr={<QrPanel brandLogoUrl={brandKit.logoUrl} onAdd={(url) => insertImageDataUrl(url)} />} barcode={<BarcodeTool api={packagingApi} />} />,
     },
     {
       id: 'draw',
@@ -8291,6 +8323,16 @@ function EditorContent() {
   // for that stretch too.
   const hideWorkspaceSwitcherForPhotoFirst = photoOnlySession || (photoFirstSession && !hasOpenedPhotoEditorOnceRef.current);
 
+  // Workspace types: Design shows the design tools only; Packaging adds the box tools,
+  // Textile the garment tools — never both. On a desktop in Pro mode the box / garment
+  // controls sit in the right-hand panel (with the selection's properties); otherwise
+  // they stay in the left rail.
+  const wsOnRight = studio !== 'design' && pro && !compact;
+  const railForStudio = orderForStudio(railItems.filter((it) => {
+    if (it.id === 'packaging') return studio === 'packaging' && !wsOnRight;
+    if (it.id === 'textile') return studio === 'textile' && !wsOnRight;
+    return true;
+  }), studio);
   // Right-hand panel dock: panels can be reordered, the dock moved to the
   // left or right and made wider or narrower (remembered on this device).
   const dockPanels: { id: 'properties' | 'artboards' | 'align' | 'layers'; label: string; el: ReactNode }[] = [
@@ -8792,7 +8834,7 @@ function EditorContent() {
             if (files.length) addImageFiles(files);
           }}
         />
-        {!compact && <LeftRail items={orderForStudio(railItems, studio)} active={leftPanel} onActivate={setLeftPanel} compact={false} />}
+        {!compact && <LeftRail items={railForStudio} active={leftPanel} onActivate={setLeftPanel} compact={false} />}
         {pro && !compact && (
           <Toolbar
             active={stripTool}
@@ -8947,7 +8989,7 @@ function EditorContent() {
           compact={compact}
         />
       )}
-      {workspace === 'design' && compact && <LeftRail items={orderForStudio(railItems, studio)} active={leftPanel} onActivate={setLeftPanel} compact />}
+      {workspace === 'design' && compact && <LeftRail items={railForStudio} active={leftPanel} onActivate={setLeftPanel} compact />}
       {studioOverlay && (
         <div role="dialog" aria-modal="true" aria-label={STUDIO_TITLES[studioOverlay.kind]} className="fixed inset-0 z-[90] flex flex-col bg-mt-bg">
           <div className="flex h-12 shrink-0 items-center justify-between border-b border-mt-border px-4">
