@@ -23,11 +23,11 @@ const building = new Map<string, Promise<unknown>>();
 //  • every database call has a time limit, so a page never waits on it;
 //  • answers are also kept in this server's memory, so most views never
 //    reach the database at all;
-//  • a failed answer is remembered for a minute, so a struggling database is
-//    asked once a minute per server — not once per visitor;
+//  • a failed answer is remembered for 5 minutes, so a struggling database is
+//    asked once every 5 minutes per server — not once per visitor;
 //  • the same question asked by many visitors at once is sent only once.
 const BUILD_TIMEOUT_MS = 4000;
-const FAIL_TTL_MS = 60_000;
+const FAIL_TTL_MS = 300_000;
 const memo = new Map<string, { at: number; body: ArrayBuffer; headers: Headers }>();
 const failed = new Map<string, number>();
 const inflight = new Map<string, Promise<{ body: ArrayBuffer; headers: Headers } | Response>>();
