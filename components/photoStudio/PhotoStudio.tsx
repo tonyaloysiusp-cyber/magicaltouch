@@ -17,7 +17,7 @@ import type { CSSProperties } from 'react';
 import { blockBrowserShortcut } from '@/lib/editor/browserKeys';
 import { Fragment, forwardRef, ReactNode, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
-  SlidersHorizontal, Sparkles, Crop as CropIcon, Scissors, Brush, Maximize2, Download, Undo2, Redo2, Plus, Minus,
+  SlidersHorizontal, Sparkles, Crop as CropIcon, Scissors, Brush, Maximize2, Download, FileText, Undo2, Redo2, Plus, Minus,
   Maximize, RotateCcw, RotateCw, FlipHorizontal2, FlipVertical2, Loader2, Check, X, Eye, Printer, Lock, Unlock, Palette, Wand2,
   Move, BoxSelect, Blend as BlendIcon, Hand, ZoomIn, Pipette, Type as TypeIcon, Eraser, Droplet, Sun, Circle, ArrowLeftRight, Square, PaintBucket,
   Lasso as LassoIcon, PenTool, CircleDashed, Layers as LayersIcon, Trash2, FlipHorizontal, Copy as CopyIcon, Contact as IdCard,
@@ -1699,10 +1699,10 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
 
   const dispW = preview ? preview.canvas.width * viewScale : 0;
   const sideMode = split && splitDir === 's' && tool !== 'crop';
-  // Adjustments, colour, looks and filters open with the original and the result side by side;
-  // the Split button turns it off (remembered until the page is reloaded).
+  // Filters open with the original and the result side by side (face shaping has its own side-by-side
+  // preview); light adjustments stay a single view. The Split button still works anywhere.
   const splitOffRef = useRef(false);
-  useEffect(() => { if (!splitOffRef.current && ['adjust', 'color', 'looks', 'filter'].includes(tool)) setSplit(true); }, [tool]);
+  useEffect(() => { if (tool === 'filter') { if (!splitOffRef.current) setSplit(true); } else if (split) setSplit(false); }, [tool]); // eslint-disable-line react-hooks/exhaustive-deps
   const dispH = preview ? preview.canvas.height * viewScale : 0;
   const tools = TOOLS.filter((t) => !(embedded && t.standaloneOnly) && (pro || !t.proOnly)).sort((a, b) => (pro ? PRO_ORDER.indexOf(a.id) - PRO_ORDER.indexOf(b.id) : 0));
 
@@ -2214,6 +2214,51 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
                 }}
               >
                 <Download size={15} /> Download {info.label}{cmykOk && colour === 'cmyk' ? ' (CMYK)' : ''}
+              </button>
+              <button
+                className={cx(btnGhost, 'mt-2 w-full')}
+                disabled={!!busy}
+                onClick={async () => {
+                  setBusy('Building the technical document');
+                  await new Promise((r) => setTimeout(r, 30));
+                  try {
+                    const out = renderResult()!;
+                    const { downloadTechDoc, previewFromCanvas } = await import('@/lib/print/techDoc');
+                    const cm = (px: number) => fmtNum(fromPx(px, 'cm', dpi), 'cm');
+                    const edits = (history.list.slice(1, history.index + 1).map((h) => h.label).filter(Boolean));
+                    const nm = props.name || 'Photo';
+                    const ppiNote = dpi >= 300 ? 'Good for print' : dpi >= 200 ? 'Acceptable for print' : 'Screen use; prints soft';
+                    await downloadTechDoc({
+                      kind: 'Photo specification',
+                      title: nm,
+                      subtitle: `${out.width} × ${out.height} px · ${dpi} DPI`,
+                      summary: [['Pixels', `${out.width} × ${out.height}`], ['Print size', `${cm(out.width)} × ${cm(out.height)} cm`], ['Resolution', `${dpi} DPI`], ['File', info.label], ['Colour', cmykOk && colour === 'cmyk' ? 'CMYK' : 'RGB']],
+                      preview: { ...previewFromCanvas(out), caption: `${out.width} × ${out.height} px` },
+                      spec: [
+                        ['File type', info.label],
+                        ['Colour', cmykOk && colour === 'cmyk' ? `CMYK, ${PRESS_PROFILE_NAME} profile embedded` : 'RGB (sRGB)'],
+                        ...((fmt === 'jpg' || fmt === 'webp') ? [['Quality', `${quality}%`] as [string, string]] : []),
+                        ['Pixel size', `${out.width} × ${out.height} px`],
+                        ['Resolution', `${dpi} DPI — ${ppiNote}`],
+                        ['Print size', `${cm(out.width)} × ${cm(out.height)} cm`],
+                        ['Layers', String(layers?.length || 1)],
+                        ['Edits', String(edits.length)],
+                      ],
+                      blocks: [
+                        ...(edits.length ? [{ type: 'table' as const, title: 'Edit history', head: ['#', 'Edit'], widths: [0.4, 5], rows: edits.slice(-40).map((e, i) => [String(i + 1), e]) }] : []),
+                        { type: 'checks', title: 'Before printing', items: ['Check the print size against the resolution: 300 DPI for photo prints, 150 DPI for large posters seen from a distance.', 'Screen colours are not a colour proof; ask for a printed proof for colour-critical work.', 'Keep the original photo; this file has the edits applied.'] },
+                        { type: 'signoff', roles: ['Edited by', 'Checked by', 'Approved by (client)'] },
+                      ],
+                    }, `${nm.replace(/[\\/:*?"<>|]+/g, '-')} - photo spec.pdf`);
+                  } catch (e) {
+                    console.error(e);
+                    setNotice('The technical document couldn’t be made. Please try again.');
+                  } finally {
+                    setBusy(null);
+                  }
+                }}
+              >
+                <FileText size={15} /> Technical document (PDF)
               </button>
             </div>
           </>

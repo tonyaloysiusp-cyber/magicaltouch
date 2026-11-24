@@ -7222,6 +7222,62 @@ function EditorContent() {
   // PDF pages all land in a single multi-page file (matching how a real
   // print-ready document is delivered); PNG/JPG can't hold multiple
   // pages, so each artboard downloads as its own file.
+  /** Branded technical document for a design export: pages, colours, fonts, pictures and the export settings. */
+  const designTechDoc = async (list: { id: string; name?: string; x: number; y: number; width: number; height: number }[], settings: ExportSettings) => {
+    const canvas = fabricCanvasRef.current;
+    if (!canvas || !list.length) return;
+    const mm = (px: number) => Math.round((px / 96) * 25.4 * 10) / 10;
+    const first = list[0];
+    const k = Math.min(2, 1400 / Math.max(1, first.width, first.height));
+    let pv: string | null = null;
+    try { pv = capturePicture({ x: first.x, y: first.y, width: first.width, height: first.height }, { format: 'jpeg', quality: 0.86, multiplier: k, artboardId: first.id as any }).dataUrl; } catch { pv = null; }
+    const ids = new Set(list.map((a) => a.id));
+    const objs = canvas.getObjects().filter((o: any) => isArtwork(o) && (!o.__artboardId || ids.has(o.__artboardId)));
+    const flat: any[] = []; const walk = (o: any) => { flat.push(o); if (o.type === 'group' && o._objects) o._objects.forEach(walk); }; objs.forEach(walk);
+    const fonts = new Map<string, number>(), colours = new Map<string, number>();
+    const addColour = (c: any) => { if (typeof c !== 'string' || !c || c === 'transparent' || c === 'none') return; try { const F = (window as any).fabric; const hex = F ? '#' + new F.Color(c).toHex() : c; colours.set(hex.toUpperCase(), (colours.get(hex.toUpperCase()) || 0) + 1); } catch { /* skip */ } };
+    const pics: { name: string; dpi: number; w: number; h: number }[] = [];
+    for (const o of flat) {
+      if (/text/.test(o.type)) fonts.set(String(o.fontFamily || 'Default'), (fonts.get(String(o.fontFamily || 'Default')) || 0) + 1);
+      if (o.type !== 'image') { addColour(o.fill); if (o.stroke && o.strokeWidth) addColour(o.stroke); }
+      if (o.type === 'image') {
+        const el = o.getElement?.(), nw = el?.naturalWidth || o.width || 0, inch = (o.getScaledWidth?.() || o.width || 1) / 96;
+        pics.push({ name: o.name || 'Picture', dpi: Math.round(nw / Math.max(0.01, inch)), w: mm(o.getScaledWidth?.() || 0), h: mm(o.getScaledHeight?.() || 0) });
+      }
+    }
+    const { downloadTechDoc, previewFromDataUrl } = await import('@/lib/print/techDoc');
+    const preview = pv ? { ...(await previewFromDataUrl(pv)), caption: `${first.name || 'Page 1'} · ${mm(first.width)} × ${mm(first.height)} mm` } : null;
+    const fmt = settings.format.toUpperCase();
+    const low = pics.filter((p) => p.dpi < 200);
+    const name = designNameRef.current || 'Design';
+    const topColours = [...colours.entries()].sort((a, b) => b[1] - a[1]).slice(0, 12);
+    await downloadTechDoc({
+      kind: 'Design specification',
+      title: name,
+      subtitle: `${list.length} page${list.length === 1 ? '' : 's'} · exported as ${fmt}`,
+      summary: [['Pages', String(list.length)], ['Size', `${mm(first.width)} × ${mm(first.height)} mm`], ['Format', fmt], ['Colour', settings.colour === 'cmyk' ? 'CMYK (FOGRA39)' : 'RGB'], ['Resolution', settings.format === 'pdf' || settings.format === 'svg' ? 'Vector' : `${settings.dpi} dpi`]],
+      preview,
+      spec: [
+        ['Export format', fmt],
+        ['Colour', settings.colour === 'cmyk' ? 'CMYK through the FOGRA39 press profile' : 'RGB (screen and digital)'],
+        ['Resolution', settings.format === 'pdf' && settings.colour !== 'cmyk' ? 'Vector text and shapes; pictures at their own resolution' : settings.format === 'svg' ? 'Vector' : `${settings.dpi} dpi`],
+        ['Bleed', settings.includeBleed ? 'Included' : 'None'],
+        ['Crop marks', settings.includeMarks ? 'Crop marks and colour bar' : 'None'],
+        ...(settings.format === 'png' ? [['Background', settings.transparentBackground ? 'Transparent' : 'Page colour'] as [string, string]] : []),
+        ['Fonts', fonts.size ? `${fonts.size} famil${fonts.size === 1 ? 'y' : 'ies'}` : 'No text'],
+        ['Pictures', pics.length ? `${pics.length}${low.length ? `, ${low.length} under 200 dpi` : ', all 200 dpi or more'}` : 'None'],
+      ],
+      blocks: [
+        { type: 'table', title: 'Pages', head: ['#', 'Page', 'Width', 'Height', 'Orientation'], align: ['l', 'l', 'r', 'r', 'l'], widths: [0.5, 3, 1, 1, 1.2], rows: list.map((a, i) => [String(i + 1), a.name || `Page ${i + 1}`, `${mm(a.width)} mm`, `${mm(a.height)} mm`, a.width > a.height ? 'Landscape' : a.width < a.height ? 'Portrait' : 'Square']) },
+        ...(topColours.length ? [{ type: 'legend' as const, title: 'Colours used', items: topColours.map(([c, n]) => ({ colour: c, label: c, note: `${n} object${n === 1 ? '' : 's'}${settings.colour === 'cmyk' ? ' · converted to CMYK on export' : ''}` })) }] : []),
+        ...(fonts.size ? [{ type: 'table' as const, title: 'Fonts', head: ['Font family', 'Text objects'], align: ['l', 'r'] as ('l' | 'r')[], widths: [3, 1], rows: [...fonts.entries()].map(([f, n]) => [f, String(n)]) }] : []),
+        ...(pics.length ? [{ type: 'table' as const, title: 'Pictures', head: ['Picture', 'Size on page', 'Resolution', 'Print'], align: ['l', 'r', 'r', 'l'] as ('l' | 'r')[], widths: [2.4, 1.4, 1, 1], rows: pics.slice(0, 30).map((p) => [p.name, `${p.w} × ${p.h} mm`, `${p.dpi} dpi`, p.dpi >= 300 ? 'Good' : p.dpi >= 200 ? 'Acceptable' : 'Low']) }] : []),
+        { type: 'checks', title: 'Before printing', items: ['Proof-read every text and check names, numbers and dates.', 'Check pictures marked Low: they may print soft at this size.', settings.includeBleed ? 'Bleed is included; the printer trims to the page size.' : 'No bleed: keep colour away from the edges or export again with bleed.', 'Screen colours are not a colour proof; ask for a printed proof for colour-critical work.'] },
+        { type: 'signoff' },
+      ],
+    }, `${name.replace(/[\\/:*?"<>|]+/g, '-')} - technical document.pdf`);
+  };
+
   const runExport = async (settings: ExportSettings) => {
     // Set before the (possibly ~2s) auto-apply wait below so the button
     // reads "Exporting..." the whole time instead of looking stuck.
@@ -7253,6 +7309,9 @@ function EditorContent() {
     }
 
     const scope: ExportScope = settings.includeMarks ? 'marks' : settings.includeBleed ? 'bleed' : 'artboard';
+    if (settings.techDoc && settings.format !== 'video') {
+      try { await designTechDoc(list as any, settings); } catch (e) { console.error('Technical document failed', e); setLocalNotice('The technical document could not be made; the export continues.'); }
+    }
 
     // Animated video of the page you are on (all your own elements).
     if (settings.format === 'video') {
@@ -8028,6 +8087,14 @@ function EditorContent() {
     selection: () => fabricCanvasRef.current?.getActiveObjects?.() || [],
     pressPdf: packagingPressPdf,
     notice: (m) => setLocalNotice(m),
+    preview: () => {
+      try {
+        const page = getActiveArtboardRect();
+        const k = Math.min(2, 1400 / Math.max(1, page.width, page.height));
+        return capturePicture({ x: page.x, y: page.y, width: page.width, height: page.height }, { format: 'jpeg', quality: 0.86, multiplier: k, artboardId: page.id as any }).dataUrl;
+      } catch { return null; }
+    },
+    docName: () => designNameRef.current || '',
   };
   // Print & cut panel: the page as a vector PDF or a picture for tiling and separations.
   const productionApi: ProductionApi = {

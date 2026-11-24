@@ -130,6 +130,43 @@ export function ProductionPanel({ api, initialTab }: { api: ProductionApi; initi
       return { o, d: mm, type: CUT_TYPES.find((t) => t.id === o.__cutType) || CUT_TYPES.find((t) => t.die === o.__die) || CUT_TYPES[1] };
     }).filter((l: any) => l.d);
   };
+  /** Branded cutting job sheet: page, cut operations with counts and lengths, barcodes, checks, sign-off. */
+  const techDoc = () => run('Building the technical document…', async () => {
+    const { downloadTechDoc, previewFromDataUrl } = await import('@/lib/print/techDoc');
+    const p = api.page(), wMm = Math.round(p.width / PX * 10) / 10, hMm = Math.round(p.height / PX * 10) / 10;
+    const ls = await pathMm();
+    const { pathToPolylines } = await import('@/lib/dxf');
+    const lenOf = (d: string) => pathToPolylines(d).reduce((a, pl) => { const pts = pl.pts.concat(pl.closed && pl.pts.length ? [pl.pts[0]] : []); let s = 0; for (let i = 1; i < pts.length; i++) s += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]); return a + s; }, 0);
+    const ops = CUT_TYPES.map((t) => { const g = ls.filter((l: any) => l.type.id === t.id); return { t, n: g.length, len: g.reduce((a: number, l: any) => a + lenOf(l.d), 0) }; }).filter((o) => o.n);
+    const codes = pageObjs().filter((o: any) => o.__barcode).map((o: any) => { try { return JSON.parse(o.__barcode); } catch { return null; } }).filter(Boolean);
+    const pvUrl = api.preview?.();
+    const preview = pvUrl ? { ...(await previewFromDataUrl(pvUrl)), caption: `Page with cut lines · ${wMm} × ${hMm} mm` } : null;
+    const name = api.docName?.() || '';
+    const total = ops.reduce((a, o) => a + o.len, 0);
+    await downloadTechDoc({
+      kind: 'Print & cut job sheet',
+      title: name && name !== 'Untitled Design' ? name : 'Print and cut job',
+      subtitle: `Page ${wMm} × ${hMm} mm`,
+      summary: [['Page', `${wMm} × ${hMm} mm`], ['Cut lines', String(report.count)], ['Operations', String(ops.length)], ['Cut length', `${(total / 1000).toFixed(2)} m`], ['Barcodes', String(codes.length)]],
+      preview,
+      spec: [
+        ['Page size', `${wMm} × ${hMm} mm`],
+        ['Cut lines', `${report.count} on this page`],
+        ['Open paths', report.open.length ? `${report.open.length} — close them before cutting` : 'None'],
+        ['Duplicates', report.dup.length ? `${report.dup.length} — would cut twice` : 'None'],
+        ['Under 2 mm', report.tiny.length ? `${report.tiny.length} — too small to cut cleanly` : 'None'],
+        ['Print file', 'Artwork CMYK, cut lines as overprinting spot colours'],
+        ['Cut files', 'SVG and DXF with one layer per operation'],
+      ],
+      blocks: [
+        ...(ops.length ? [{ type: 'table' as const, title: 'Cut operations', head: ['Operation', 'Layer', 'Lines', 'Length'], align: ['l', 'l', 'r', 'r'] as ('l' | 'r')[], widths: [2, 1.6, 0.8, 1], rows: ops.map((o) => [o.t.name, o.t.layer, String(o.n), `${(o.len / 1000).toFixed(2)} m`]) },
+          { type: 'legend' as const, title: 'Line colours', items: ops.map((o) => ({ colour: o.t.colour, label: o.t.name, note: o.t.hint, dash: o.t.id === 'perf' ? '0.6 0.8' : o.t.id === 'crease' ? '1.6 1' : undefined })) }] : []),
+        ...(codes.length ? [{ type: 'table' as const, title: 'Barcodes', head: ['Type', 'Value', 'Size'], widths: [1, 2.4, 1.2], rows: codes.map((c: any) => [String(CODE_KINDS.find((k) => k.id === c.kind)?.name || c.kind || '—'), String(c.value || ''), c.heightMm ? `X ${c.x} mm, bars ${c.heightMm} mm` : '—']) }] : []),
+        { type: 'checks', title: 'Before cutting', items: ['Print one sheet and cut it; check the cut sits on the artwork edge (registration).', 'Kiss cut: test the blade depth on the backing first.', 'Laser: check power and speed on an offcut of the same material.', ...(codes.length ? ['Scan every barcode from the printed sample.'] : [])] },
+        { type: 'signoff' },
+      ],
+    }, `${(name && name !== 'Untitled Design' ? name : 'print-and-cut').replace(/[\\/:*?"<>|]+/g, '-')} - job sheet.pdf`);
+  });
   const report = useMemo(() => {
     const cs = cutObjs();
     const open: string[] = [], tiny: string[] = [], dup: string[] = [];
@@ -234,6 +271,7 @@ export function ProductionPanel({ api, initialTab }: { api: ProductionApi; initi
           <button type="button" className={btn} onClick={exportDxf} disabled={!!busy}><Download size={13} /> DXF</button>
         </div>
         <button type="button" className={`${btn} w-full`} onClick={() => run('Building the print-and-cut PDF…', api.pressPdf)} disabled={!!busy}><Download size={13} /> Print-and-cut PDF (CMYK + cut spot colour)</button>
+        <button type="button" className={`${btn} w-full`} onClick={techDoc} disabled={!!busy}><Download size={13} /> Technical document — job sheet</button>
         <p className="text-[11px] text-mt-faint">Laser: red = cut, blue = engrave / score. DXF layers are named by operation.</p>
       </section>}
 

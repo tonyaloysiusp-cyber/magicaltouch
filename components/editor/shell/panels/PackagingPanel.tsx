@@ -31,6 +31,10 @@ export interface PackagingApi {
   selection: () => any[];
   pressPdf: () => Promise<void>;
   notice: (m: string) => void;
+  /** the current page as a small picture (JPEG data URL) for technical documents */
+  preview?: () => string | null;
+  /** the design's name */
+  docName?: () => string;
 }
 
 const r2 = (v: number) => Math.round(v * 100) / 100;
@@ -175,6 +179,44 @@ export function PackagingPanel({ api }: { api: PackagingApi }) {
     let logo: Uint8Array | null = null; try { logo = new Uint8Array(await (await fetch('/logo.png')).arrayBuffer()); } catch { /* optional */ }
     const bytes = await editorPdf({ doc, mode: 'template', textPaths: {}, logoPng: logo, board: `${grade.name}${range ? ` ${spec.gsm} g/m²` : ''} · ${spec.t} mm · crease ${crease.rulePt} pt, channel ${crease.channelWidth} × ${crease.channelDepth} mm` });
     save(new Blob([bytes as BlobPart], { type: 'application/pdf' }), 'dieline-template.pdf');
+  });
+  /** Branded packaging specification: box, sizes, board, ends, glue, line legend, panels, checks, sign-off. */
+  const techDoc = () => run('Building the technical document…', async () => {
+    const { downloadTechDoc, previewFromDataUrl, LINE_LEGEND } = await import('@/lib/print/techDoc');
+    const st = BOX_STYLES.find((s) => s.id === spec.style);
+    const d = die, mm = (v: number) => `${r2(v)} mm`, dims = (o: { L: number; W: number; D: number }) => `${r2(o.L)} × ${r2(o.W)} × ${r2(o.D)} mm`;
+    const pvUrl = api.preview?.();
+    const preview = pvUrl ? { ...(await previewFromDataUrl(pvUrl)), caption: `Flat blank with artwork · ${r2(d.w)} × ${r2(d.h)} mm` } : null;
+    const counts = new Map<string, number>(); for (const l of dieLinesMm()) counts.set(l.kind, (counts.get(l.kind) || 0) + 1);
+    const top = TOP_ENDS.find((e) => e.id === spec.topEnd), bottom = BOTTOM_ENDS.find((e) => e.id === spec.bottomEnd);
+    const name = api.docName?.() || '';
+    const issues = report.checks.filter((c) => c.level !== 'ok');
+    await downloadTechDoc({
+      kind: 'Packaging specification',
+      title: st?.name || 'Box',
+      subtitle: name && name !== 'Untitled Design' ? name : `Box ${dims(inner)}`,
+      summary: [['Style', st?.code || st?.name || '—'], ['Inside L × W × D', dims(inner)], ['Flat blank', `${r2(d.w)} × ${r2(d.h)} mm`], ['Board', `${spec.gsm} g/m² · ${spec.t} mm`], ['Closes', report.closes ? 'Yes' : 'Check']],
+      preview,
+      spec: [
+        ['Box style', `${st?.name || spec.style}${st?.code ? ` (${st.code})` : ''}`],
+        ['Inside size', dims(inner)], ['Outside size', dims(outer)],
+        ['Size entered as', spec.mode === 'inside' ? 'Inside size' : spec.mode === 'outside' ? 'Outside size' : `Product + fitting gap (${r2(spec.clearance.L)} / ${r2(spec.clearance.W)} / ${r2(spec.clearance.H)} mm)`],
+        ['Flat blank', `${r2(d.w)} × ${r2(d.h)} mm`],
+        ['Board', `${grade.name}, ${spec.gsm} g/m², caliper ${spec.t} mm`],
+        ['Crease rule', `${crease.rulePt} pt; channel ${crease.channelWidth} × ${crease.channelDepth} mm`],
+        ['Glue flap', `${mm(spec.glue)}${spec.glueAngle != null ? `, ends at ${spec.glueAngle}°` : ''}${spec.gluePos === 'back' ? ', on the back panel' : ', on the side panel'}${spec.thumbNotch ? ', thumb notch' : ''}`],
+        ...(top || bottom ? [['Top end', top?.name || '—'] as [string, string], ['Bottom end', bottom?.name || '—'] as [string, string]] : []),
+        ['Tuck flap', mm(spec.tuck)],
+      ],
+      blocks: [
+        { type: 'legend', title: 'Line legend', items: (['cut', 'crease', 'perf', 'glue'] as const).map((k) => { const l = LINE_LEGEND[k], n = counts.get(k) || 0; return { ...l, note: n ? `${l.note} · ${n} line${n === 1 ? '' : 's'}` : l.note }; }) },
+        ...(d.panels.length ? [{ type: 'table' as const, title: 'Panels', head: ['Panel', 'Width', 'Height'], align: ['l', 'r', 'r'] as ('l' | 'r')[], widths: [3, 1, 1], rows: d.panels.slice(0, 24).map((p) => [p.name || 'Panel', mm(p.w), mm(p.h)]) }] : []),
+        { type: 'kv', title: 'Structure check', cols: 1, rows: issues.length ? issues.slice(0, 8).map((c) => [c.level === 'error' ? 'Problem' : 'Check', `${c.title}: ${c.detail}`] as [string, string]) : [['Result', report.closes ? 'The box closes with this board and these sizes.' : 'See the notes.']] },
+        ...(d.notes.length ? [{ type: 'notes' as const, title: 'Construction notes', items: d.notes.slice(0, 8) }] : []),
+        { type: 'checks', title: 'Before production', items: ['Cut and fold a plain sample on the chosen board; check the closure and the product fit.', 'Check that the board grain runs as the die maker needs for this style.', 'Print files carry die lines as overprinting spot colours (cut, crease, perf, glue); artwork is CMYK.', 'Keep text and barcodes at least 3 mm inside the crease lines.'] },
+        { type: 'signoff' },
+      ],
+    }, `${(name || st?.name || 'box').replace(/[\\/:*?"<>|]+/g, '-')} - packaging spec.pdf`);
   });
   const dxf = () => run('Building DXF…', async () => {
     const { pathToPolylines, writeDxf } = await import('@/lib/dxf');
@@ -325,6 +367,8 @@ export function PackagingPanel({ api }: { api: PackagingApi }) {
         <button type="button" onClick={() => run('Building the print PDF…', api.pressPdf)} disabled={!!busy} className={`${iconBtn} w-full justify-start`}><FileDown size={14} /> Print PDF — vector, CMYK, die lines as spot colours</button>
         <button type="button" onClick={templatePdf} disabled={!!busy} className={`${iconBtn} w-full justify-start`}><Download size={14} /> Dieline template PDF (branded)</button>
         <button type="button" onClick={dxf} disabled={!!busy} className={`${iconBtn} w-full justify-start`}><Download size={14} /> DXF for the die maker</button>
+        <p className="pt-2 text-[10.5px] font-semibold uppercase tracking-[0.08em] text-mt-faint">Documents</p>
+        <button type="button" onClick={techDoc} disabled={!!busy || !hasDie} className={`${iconBtn} w-full justify-start`}><FileDown size={14} /> Technical document — packaging specification</button>
         {busy && <p role="status" className="text-[11px] text-mt-muted">{busy}</p>}
         <p className="text-[10.5px] leading-relaxed text-mt-faint">Save the project as .mtd from the File menu — it opens again with every layer editable.</p>
       </section>

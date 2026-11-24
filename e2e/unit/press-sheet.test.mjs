@@ -128,10 +128,26 @@ test('brand frame joins documents into one, numbered, logo footer; embroidery fi
   const page = (t) => `<svg xmlns="http://www.w3.org/2000/svg" width="210mm" height="297mm" viewBox="0 0 210 297"><text>${t}</text><line x1="14" y1="283" x2="196" y2="283"/><text>Magical Touch Design old footer</text></svg>`;
   const doc = brandDocument([[page('A'), page('B')], [page('C')]], { logo: { src: 'data:image/png;base64,AA', w: 900, h: 129 }, label: 'Kit · technical production file' });
   assert.equal(doc.length, 3);
-  assert.match(doc[2].svg, /Page 3 of 3/); assert.match(doc[0].svg, /<image/); assert.doesNotMatch(doc[0].svg, /old footer/);
+  assert.match(doc[2].svg, /03 \/ 03/); assert.match(doc[0].svg, /<image/); assert.doesNotMatch(doc[0].svg, /old footer/);
   const d = { objects: [{ id: 'a', name: 'Square', d: 'M0 0H30V30H0Z', type: 'fill', colour: '#CC0000' }], hoop: [100, 100], placement: null };
   const f = embroideryFiles(d, 'kit');
   assert.ok(f.ok, f.issues.join(' ')); assert.equal(String.fromCharCode(...f.dst.subarray(0, 3)), 'LA:'); assert.ok(f.exp.length > 10);
   const svg = embroideryPageSvg(d, { project: 'Kit', files: ['kit.dst', 'kit.exp'] });
   assert.match(svg, /Thread sequence/); assert.match(svg, /30 × 30 mm/); assert.match(svg, /kit\.dst/);
+});
+
+test('technical document: branded A4 pages, summary, tables, legend, sign-off, paginates', async () => {
+  const { techDocPages, LINE_LEGEND, techRef } = await import('../../lib/print/techDoc.ts');
+  const rows = Array.from({ length: 70 }, (_, i) => [`Piece ${i + 1}`, '1', '100 mm']);
+  const pages = techDocPages({ kind: 'Garment specification', title: 'Polo shirt', summary: [['Size', 'M']], spec: [['Garment', 'Polo']], blocks: [
+    { type: 'table', title: 'Pattern pieces', head: ['Piece', 'Cut', 'Width'], rows },
+    { type: 'legend', title: 'Legend', items: [LINE_LEGEND.cut, LINE_LEGEND.stitch] },
+    { type: 'signoff' },
+  ] }, { src: 'data:image/png;base64,AA', w: 900, h: 129 });
+  assert.ok(pages.length >= 2, 'long tables flow onto more pages');
+  for (const p of pages) { assert.equal(p.widthMm, 210); assert.equal(p.heightMm, 297); assert.match(p.svg, /GARMENT SPECIFICATION/); assert.match(p.svg, /mt-spectrum/); }
+  const all = pages.map((p) => p.svg).join('');
+  assert.match(all, /Piece 70/); assert.match(all, /PREPARED BY/); assert.match(all, /Stitch line/);
+  assert.match(pages[0].svg, new RegExp(techRef('Polo shirt', '').slice(0, 4)));
+  assert.match(pages.at(-1).svg, new RegExp(`${String(pages.length).padStart(2, '0')} / ${String(pages.length).padStart(2, '0')}`));
 });

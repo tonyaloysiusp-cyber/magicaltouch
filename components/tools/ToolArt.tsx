@@ -1,277 +1,351 @@
-// Card artwork for every tool: a small, crisp vector illustration of what the
-// tool makes (not a screenshot, no repeated title) on a soft brand-gradient
-// stage. Plain inline SVG — sharp on every screen, light and dark.
+// Card artwork for every tool: one consistent system — a soft tinted stage
+// with a fine dot grid, one clean app window (title bar, tool area) and a
+// small floating chip that names the result. Flat line art in the brand
+// colours, no faces or clip-art. Plain inline SVG, sharp on every screen.
+
+import type React from 'react';
 
 const SPECTRUM = ['#F2708F', '#A69BD3', '#35C2F1', '#5DCCB8', '#8CC84B', '#DDE23B'];
+const INK = '#16161F', MUTED = '#8A8A9A', LINE = '#E4E4EC', SOFT = '#F5F5F9', BLUE = '#3B82C4';
+const CUT = '#E4007C', CREASE = '#00A0E3';
 
-function Stage({ id, tint, children }: { id: string; tint: string; children: React.ReactNode }) {
+/** The stage: tinted wash, dot grid, one spectrum hairline, and the window frame. */
+function Stage({ id, tint, title, children, chip }: { id: string; tint: string; title: string; children: React.ReactNode; chip?: React.ReactNode }) {
   return (
     <svg viewBox="0 0 320 180" className="h-full w-full" role="img" aria-hidden preserveAspectRatio="xMidYMid slice">
       <defs>
         <linearGradient id={`${id}-wash`} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor={tint} stopOpacity="0.16" />
-          <stop offset="1" stopColor={tint} stopOpacity="0.04" />
+          <stop offset="0" stopColor={tint} stopOpacity="0.14" />
+          <stop offset="1" stopColor={tint} stopOpacity="0.03" />
         </linearGradient>
         <linearGradient id={`${id}-sp`} x1="0" y1="0" x2="1" y2="0">
           {SPECTRUM.map((c, i) => <stop key={c} offset={i / (SPECTRUM.length - 1)} stopColor={c} />)}
         </linearGradient>
-        <radialGradient id={`${id}-glow`} cx="0.5" cy="0.55" r="0.55">
-          <stop offset="0" stopColor="#FFFFFF" stopOpacity="0.9" />
-          <stop offset="1" stopColor="#FFFFFF" stopOpacity="0" />
-        </radialGradient>
-        <filter id={`${id}-sh`} x="-20%" y="-20%" width="140%" height="150%">
-          <feDropShadow dx="0" dy="6" stdDeviation="7" floodColor="#0B0B12" floodOpacity="0.16" />
+        <pattern id={`${id}-dots`} width="12" height="12" patternUnits="userSpaceOnUse"><circle cx="1" cy="1" r="0.9" fill={INK} opacity="0.09" /></pattern>
+        <filter id={`${id}-sh`} x="-10%" y="-10%" width="120%" height="135%">
+          <feDropShadow dx="0" dy="5" stdDeviation="6" floodColor="#16161F" floodOpacity="0.12" />
         </filter>
       </defs>
+      <rect width="320" height="180" fill="#FBFBFD" />
       <rect width="320" height="180" fill={`url(#${id}-wash)`} />
-      <ellipse cx="160" cy="98" rx="150" ry="80" fill={`url(#${id}-glow)`} />
-      <path d="M-10 166C60 140 120 176 190 156S290 132 330 150" fill="none" stroke={`url(#${id}-sp)`} strokeWidth="7" strokeLinecap="round" opacity="0.55" />
-      <g filter={`url(#${id}-sh)`}>{children}</g>
+      <rect width="320" height="180" fill={`url(#${id}-dots)`} />
+      <g filter={`url(#${id}-sh)`}>
+        <rect x="52" y="20" width="216" height="146" rx="10" fill="#fff" />
+      </g>
+      <rect x="52" y="20" width="216" height="146" rx="10" fill="none" stroke={LINE} />
+      <path d="M52 40H268" stroke={LINE} />
+      {[0, 1, 2].map((i) => <circle key={i} cx={64 + i * 9} cy="30" r="2.6" fill={i === 0 ? '#F2708F' : i === 1 ? '#DDE23B' : '#5DCCB8'} opacity="0.8" />)}
+      <text x="160" y="33" textAnchor="middle" fontFamily="Inter, Arial, sans-serif" fontSize="7.5" fontWeight="600" fill={MUTED}>{title}</text>
+      <rect x="52" y="164" width="216" height="2" rx="1" fill={`url(#${id}-sp)`} opacity="0.9" />
+      {children}
+      {chip}
     </svg>
   );
 }
 
-const handles = (x: number, y: number, w: number, h: number, c = '#3B82C4') => (
+/** Floating chip at the lower right: a short result label. */
+const Chip = ({ text, dot = '#5DCCB8', x = 214, y = 142, w = 78 }: { text: string; dot?: string; x?: number; y?: number; w?: number }) => (
   <g>
-    <rect x={x} y={y} width={w} height={h} fill="none" stroke={c} strokeWidth="1.4" />
-    {[[x, y], [x + w, y], [x, y + h], [x + w, y + h], [x + w / 2, y], [x + w / 2, y + h]].map(([a, b], i) => <rect key={i} x={a - 3} y={b - 3} width="6" height="6" rx="1" fill="#fff" stroke={c} strokeWidth="1.3" />)}
+    <rect x={x} y={y} width={w} height="22" rx="11" fill="#fff" stroke={LINE} />
+    <circle cx={x + 11} cy={y + 11} r="4" fill={dot} />
+    <text x={x + 20} y={y + 14.4} fontFamily="Inter, Arial, sans-serif" fontSize="8.5" fontWeight="600" fill={INK}>{text}</text>
   </g>
 );
 
-const ART: Record<string, (id: string) => React.ReactNode> = {
-  editor: (id) => (
-    <>
-      <rect x="92" y="22" width="136" height="140" rx="6" fill="#fff" />
-      <rect x="102" y="32" width="116" height="66" rx="4" fill={`url(#${id}-sp)`} opacity="0.85" />
-      <circle cx="190" cy="54" r="12" fill="#fff" opacity="0.8" />
-      <path d="M102 98L136 66L160 86L178 72L218 98Z" fill="#0B0B12" opacity="0.25" />
-      <rect x="102" y="108" width="80" height="9" rx="2" fill="#0B0B12" />
-      <rect x="102" y="123" width="104" height="5" rx="2.5" fill="#C9C9D6" />
-      <rect x="102" y="133" width="88" height="5" rx="2.5" fill="#C9C9D6" />
-      <rect x="102" y="145" width="42" height="10" rx="5" fill="#3B82C4" />
-      {handles(98, 104, 88, 17)}
-      <g transform="translate(236 70)"><rect width="56" height="62" rx="8" fill="#fff" /><rect x="8" y="9" width="40" height="7" rx="3.5" fill="#E6E6EE" /><rect x="8" y="22" width="18" height="18" rx="4" fill="#F2708F" /><rect x="30" y="22" width="18" height="18" rx="4" fill="#35C2F1" /><rect x="8" y="46" width="40" height="6" rx="3" fill="#E6E6EE" /></g>
-      <g transform="translate(30 58)"><rect width="46" height="76" rx="8" fill="#fff" />{[12, 26, 40, 54].map((y) => <rect key={y} x="12" y={y} width="22" height="8" rx="2" fill={y === 26 ? '#3B82C4' : '#E6E6EE'} />)}</g>
-    </>
-  ),
-  'photo-studio': (id) => (
-    <>
-      <rect x="70" y="20" width="132" height="142" rx="8" fill="#fff" />
-      <clipPath id={`${id}-ph`}><rect x="78" y="28" width="116" height="126" rx="5" /></clipPath>
-      <g clipPath={`url(#${id}-ph)`}>
-        <rect x="78" y="28" width="116" height="126" fill="#BFE6F6" />
-        <path d="M78 28H136V154H78Z" fill="#FCE3E8" opacity="0.6" />
-        <circle cx="136" cy="82" r="24" fill="#E9B79A" />
-        <path d="M110 76C112 52 160 50 162 78C158 64 116 62 110 76Z" fill="#3A2A24" />
-        <path d="M96 154C98 120 174 120 176 154Z" fill="#3B82C4" />
-        <line x1="136" y1="28" x2="136" y2="154" stroke="#fff" strokeWidth="2" />
-      </g>
-      <circle cx="136" cy="91" r="6" fill="#fff" stroke="#3B82C4" strokeWidth="2" />
-      <g transform="translate(214 36)">
-        <rect width="78" height="110" rx="8" fill="#fff" />
-        {[['Light', 0.7], ['Colour', 0.45], ['Face', 0.6], ['Skin', 0.35]].map(([l, v], i) => (
-          <g key={String(l)} transform={`translate(10 ${16 + i * 24})`}>
-            <rect width="58" height="3" rx="1.5" fill="#E6E6EE" />
-            <rect width={58 * Number(v)} height="3" rx="1.5" fill={SPECTRUM[i + 1]} />
-            <circle cx={58 * Number(v)} cy="1.5" r="4.5" fill="#fff" stroke={SPECTRUM[i + 1]} strokeWidth="2" />
+const bar = (x: number, y: number, w: number, c = LINE, h = 4) => <rect x={x} y={y} width={w} height={h} rx={h / 2} fill={c} />;
+const handles = (x: number, y: number, w: number, h: number) => (
+  <g>
+    <rect x={x} y={y} width={w} height={h} fill="none" stroke={BLUE} strokeWidth="1" />
+    {[[x, y], [x + w, y], [x, y + h], [x + w, y + h]].map(([a, b], i) => <rect key={i} x={a - 2.5} y={b - 2.5} width="5" height="5" rx="1" fill="#fff" stroke={BLUE} strokeWidth="1" />)}
+  </g>
+);
+/** A simple landscape picture (sky, sun, hills) — used instead of faces. */
+const scene = (x: number, y: number, w: number, h: number, grey = false) => {
+  const c = (a: string, g: string) => (grey ? g : a);
+  return (
+    <g>
+      <rect x={x} y={y} width={w} height={h} fill={c('#CFEAF7', '#E2E2E8')} />
+      <circle cx={x + w * 0.72} cy={y + h * 0.3} r={h * 0.12} fill={c('#FFD66B', '#C9C9D1')} />
+      <path d={`M${x} ${y + h * 0.75}L${x + w * 0.3} ${y + h * 0.45}L${x + w * 0.52} ${y + h * 0.68}L${x + w * 0.7} ${y + h * 0.52}L${x + w} ${y + h * 0.8}V${y + h}H${x}Z`} fill={c('#5DCCB8', '#B4B4BE')} />
+      <path d={`M${x} ${y + h * 0.88}C${x + w * 0.3} ${y + h * 0.78} ${x + w * 0.6} ${y + h * 0.95} ${x + w} ${y + h * 0.84}V${y + h}H${x}Z`} fill={c('#2E9C86', '#9A9AA6')} />
+    </g>
+  );
+};
+
+/** The leaf (bezier) sampled into pixels for the "before" side of Image Trace. */
+const LEAF_PIXELS: [number, number][] = (() => {
+  const bz = (p: number[], t: number) => { const u = 1 - t; return [u * u * u * p[0] + 3 * u * u * t * p[2] + 3 * u * t * t * p[4] + t * t * t * p[6], u * u * u * p[1] + 3 * u * u * t * p[3] + 3 * u * t * t * p[5] + t * t * t * p[7]]; };
+  const poly: number[][] = [];
+  for (let i = 0; i <= 20; i++) poly.push(bz([0, 40, 0, 14, 22, 0, 46, 0], i / 20));
+  for (let i = 1; i < 20; i++) poly.push(bz([46, 0, 46, 26, 30, 46, 0, 40], i / 20));
+  const inside = (x: number, y: number) => { let c = false; for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) { const [xi, yi] = poly[i], [xj, yj] = poly[j]; if ((yi > y) !== (yj > y) && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) c = !c; } return c; };
+  const out: [number, number][] = [];
+  for (let y = 0; y < 12; y++) for (let x = 0; x < 11; x++) if (inside((x * 7 + 3.5 - 16) / 1.05, (y * 7 + 3.5 - 24) / 1.05)) out.push([x, y]);
+  return out;
+})();
+
+const ART: Record<string, { title: string; draw: (id: string) => React.ReactNode }> = {
+  editor: {
+    title: 'Design Editor',
+    draw: (id) => (
+      <>
+        {/* tool rail */}
+        <rect x="52" y="40" width="20" height="124" fill={SOFT} />
+        {[50, 64, 78, 92, 106].map((y, i) => <rect key={y} x="57" y={y} width="10" height="8" rx="2" fill={i === 1 ? BLUE : '#D9D9E3'} />)}
+        {/* page */}
+        <rect x="88" y="48" width="96" height="108" rx="2" fill="#fff" stroke={LINE} />
+        <rect x="96" y="56" width="80" height="46" rx="3" fill={`url(#${id}-sp)`} opacity="0.85" />
+        <circle cx="160" cy="70" r="7" fill="#fff" opacity="0.85" />
+        <path d="M96 102L120 82L136 96L148 88L176 102Z" fill={INK} opacity="0.18" />
+        {bar(96, 110, 54, INK, 6)}
+        {bar(96, 121, 72)}
+        {bar(96, 129, 60)}
+        <rect x="96" y="139" width="30" height="9" rx="4.5" fill={BLUE} />
+        {handles(93, 107, 60, 12)}
+        {/* properties */}
+        <rect x="196" y="48" width="62" height="70" rx="6" fill={SOFT} />
+        {bar(203, 56, 30, '#CFCFDA')}
+        {['#F2708F', '#35C2F1', '#8CC84B', INK].map((c, i) => <rect key={c} x={203 + i * 12.5} y="66" width="10" height="10" rx="3" fill={c} />)}
+        {bar(203, 84, 46, '#E1E1EA')}
+        {bar(203, 92, 38, '#E1E1EA')}
+        {bar(203, 104, 48, '#E1E1EA')}
+      </>
+    ),
+  },
+  'photo-studio': {
+    title: 'Photo Studio',
+    draw: (id) => (
+      <>
+        <clipPath id={`${id}-ph`}><rect x="62" y="48" width="132" height="108" rx="4" /></clipPath>
+        <g clipPath={`url(#${id}-ph)`}>
+          {scene(62, 48, 132, 108, true)}
+          <clipPath id={`${id}-half`}><rect x="128" y="48" width="66" height="108" /></clipPath>
+          <g clipPath={`url(#${id}-half)`}>{scene(62, 48, 132, 108)}</g>
+        </g>
+        <line x1="128" y1="48" x2="128" y2="156" stroke="#fff" strokeWidth="2" />
+        <circle cx="128" cy="102" r="7" fill="#fff" stroke={BLUE} strokeWidth="1.6" />
+        <path d="M125 102H131M125 102l2-2M125 102l2 2M131 102l-2-2M131 102l-2 2" stroke={BLUE} strokeWidth="1" strokeLinecap="round" />
+        <text x="68" y="60" fontFamily="Inter, Arial" fontSize="7" fontWeight="700" fill="#fff">BEFORE</text>
+        <text x="188" y="60" textAnchor="end" fontFamily="Inter, Arial" fontSize="7" fontWeight="700" fill="#fff">AFTER</text>
+        <rect x="202" y="48" width="58" height="108" rx="6" fill={SOFT} />
+        {[['Light', 0.7], ['Colour', 0.5], ['Detail', 0.62], ['Tone', 0.38]].map(([l, v], i) => (
+          <g key={String(l)} transform={`translate(209 ${60 + i * 24})`}>
+            <text y="0" fontFamily="Inter, Arial" fontSize="6.5" fill={MUTED}>{l}</text>
+            {bar(0, 6, 44, '#E1E1EA', 3)}
+            {bar(0, 6, 44 * Number(v), SPECTRUM[i + 1], 3)}
+            <circle cx={44 * Number(v)} cy="7.5" r="3.6" fill="#fff" stroke={SPECTRUM[i + 1]} strokeWidth="1.6" />
           </g>
         ))}
-      </g>
-    </>
-  ),
-  trace: (id) => (
-    <>
-      <rect x="40" y="36" width="104" height="104" rx="8" fill="#fff" />
-      {Array.from({ length: 64 }, (_, i) => { const x = i % 8, y = Math.floor(i / 8); const d = Math.hypot(x - 3.5, y - 3.5); return d < 3.6 ? <rect key={i} x={50 + x * 10.5} y={46 + y * 10.5} width="10" height="10" fill={d < 2 ? '#F2708F' : '#A69BD3'} opacity={d < 3 ? 1 : 0.6} /> : null; })}
-      <path d="M152 88H176" stroke="#0B0B12" strokeWidth="3" strokeLinecap="round" /><path d="M170 80L178 88L170 96" fill="none" stroke="#0B0B12" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-      <rect x="186" y="36" width="104" height="104" rx="8" fill="#fff" />
-      <circle cx="238" cy="88" r="38" fill="#A69BD3" /><circle cx="238" cy="88" r="21" fill="#F2708F" />
-      <circle cx="238" cy="88" r="38" fill="none" stroke="#3B82C4" strokeWidth="1.3" />
-      {[0, 60, 120, 180, 240, 300].map((a) => { const r = (a * Math.PI) / 180; return <rect key={a} x={238 + 38 * Math.cos(r) - 3} y={88 + 38 * Math.sin(r) - 3} width="6" height="6" fill="#fff" stroke="#3B82C4" strokeWidth="1.3" />; })}
-      <text x="238" y="158" textAnchor="middle" fontFamily="Arial" fontSize="11" fontWeight="700" fill="#3B82C4">SVG</text>
-    </>
-  ),
-  patterns: (id) => {
-    const motif = (x: number, y: number, c: string, k: number) => <g key={`${x}-${y}`} transform={`translate(${x} ${y})`}>{[0, 45, 90, 135].map((a) => <ellipse key={a} rx="11" ry="4.2" fill={c} transform={`rotate(${a})`} opacity="0.9" />)}<circle r="3.6" fill={k % 2 ? '#DDE23B' : '#fff'} /></g>;
-    return (
-      <>
-        <rect x="64" y="22" width="192" height="138" rx="10" fill="#1B1830" />
-        <clipPath id={`${id}-pc`}><rect x="64" y="22" width="192" height="138" rx="10" /></clipPath>
-        <g clipPath={`url(#${id}-pc)`}>
-          {Array.from({ length: 7 * 5 }, (_, i) => { const cx = i % 7, cy = Math.floor(i / 7); return motif(72 + cx * 32 + (cy % 2) * 16, 34 + cy * 30, SPECTRUM[(cx + cy) % 6], i); })}
-        </g>
-        <rect x="128" y="62" width="64" height="60" fill="none" stroke="#fff" strokeWidth="1.6" strokeDasharray="5 4" />
       </>
-    );
+    ),
   },
-  textile: (id) => (
-    <>
-      <path d="M80 44L106 30C112 42 136 42 142 30L168 44L184 74L164 82L160 70V156H88V70L84 82L64 74Z" fill="#fff" />
-      <path d="M106 30C112 42 136 42 142 30" fill="none" stroke="#3B82C4" strokeWidth="5" strokeLinecap="round" />
-      <path d="M88 118H160V128H88Z" fill={`url(#${id}-sp)`} />
-      <text x="124" y="108" textAnchor="middle" fontFamily="Arial Black, Arial" fontWeight="900" fontSize="34" fill="#0B0B12">07</text>
-      <text x="124" y="66" textAnchor="middle" fontFamily="Arial" fontWeight="700" fontSize="10" letterSpacing="2" fill="#0B0B12">ARUN</text>
-      <g transform="translate(196 26)">
-        <path d="M18 0H46L52 10L64 22L58 34L54 30V132H10V30L6 34L0 22L12 10Z" fill="#fff" />
-        <path d="M32 2V40" stroke="#F2708F" strokeWidth="3" />
-        <path d="M10 112H54" stroke="#0B0B12" strokeWidth="1.4" strokeDasharray="4 3" />
-        <path d="M20 60C26 70 38 70 44 60M20 78C26 88 38 88 44 78" fill="none" stroke="#A69BD3" strokeWidth="2.2" />
-      </g>
-      <g transform="translate(36 120)"><rect width="34" height="34" rx="6" fill="#fff" /><path d="M8 26L26 8M8 8L26 26" stroke="#5DCCB8" strokeWidth="2" strokeDasharray="2.5 2" /></g>
-    </>
-  ),
-  'print-size': () => (
-    <>
-      <path d="M78 40H160V150H78Z" fill="#fff" />
-      <path d="M160 40H170V150H160Z" fill="#EBE7FF" />
-      <path d="M170 40H252V150H170Z" fill="#fff" />
-      <rect x="90" y="56" width="58" height="36" rx="3" fill="#A69BD3" opacity="0.6" />
-      <rect x="182" y="56" width="58" height="46" rx="3" fill="#35C2F1" opacity="0.55" />
-      <rect x="90" y="102" width="46" height="5" rx="2.5" fill="#C9C9D6" /><rect x="182" y="112" width="52" height="5" rx="2.5" fill="#C9C9D6" />
-      <rect x="74" y="36" width="182" height="118" fill="none" stroke="#E30613" strokeWidth="1" strokeDasharray="3 2" />
-      <path d="M78 164H252M78 160V168M252 160V168" stroke="#0B0B12" strokeWidth="1.2" />
-      <text x="165" y="176" textAnchor="middle" fontFamily="Arial" fontSize="9" fill="#5D5D6E">433.5 mm</text>
-      <path d="M160 26V40M170 26V40" stroke="#00A651" strokeWidth="1.4" strokeDasharray="3 2" />
-      <text x="165" y="22" textAnchor="middle" fontFamily="Arial" fontSize="9" fontWeight="700" fill="#00A651">spine 7.5</text>
-    </>
-  ),
-  'print-layout': () => (
-    <>
-      <rect x="84" y="18" width="152" height="146" rx="4" fill="#fff" />
-      {Array.from({ length: 10 }, (_, i) => { const c = i % 2, r = Math.floor(i / 2); return <g key={i} transform={`translate(${98 + c * 66} ${30 + r * 26})`}><rect width="58" height="21" rx="2" fill={i % 3 === 0 ? '#0B0B12' : '#F5F5FA'} stroke="#E6E6EE" strokeWidth="0.8" /><rect x="5" y="6" width="10" height="10" rx="5" fill={SPECTRUM[i % 6]} /><rect x="19" y="7" width="26" height="3" rx="1.5" fill={i % 3 === 0 ? '#fff' : '#9C9CAD'} /><rect x="19" y="12" width="18" height="2.5" rx="1.25" fill={i % 3 === 0 ? '#9C9CAD' : '#C9C9D6'} /></g>; })}
-      {[94, 160, 226].map((x) => <path key={x} d={`M${x} 18V26M${x} 156V164`} stroke="#0B0B12" strokeWidth="0.8" />)}
-      {[28, 158].map((y) => <path key={y} d={`M84 ${y}H92M228 ${y}H236`} stroke="#0B0B12" strokeWidth="0.8" />)}
-    </>
-  ),
-  'remove-background': (id) => (
-    <>
-      <clipPath id={`${id}-rb`}><rect x="74" y="24" width="172" height="134" rx="8" /></clipPath>
-      <g clipPath={`url(#${id}-rb)`}>
-        <rect x="74" y="24" width="86" height="134" fill="#9BD3A2" />
-        <path d="M74 120C100 100 130 116 160 104V158H74Z" fill="#5DA66A" />
-        {Array.from({ length: 9 * 14 }, (_, i) => { const x = i % 9, y = Math.floor(i / 9); return (x + y) % 2 ? <rect key={i} x={160 + x * 9.6} y={24 + y * 9.6} width="9.6" height="9.6" fill="#ECECF2" /> : <rect key={i} x={160 + x * 9.6} y={24 + y * 9.6} width="9.6" height="9.6" fill="#fff" />; })}
-        <circle cx="160" cy="78" r="26" fill="#E9B79A" />
-        <path d="M132 72C134 46 186 44 188 74C182 58 140 56 132 72Z" fill="#3A2A24" />
-        <path d="M116 158C118 116 202 116 204 158Z" fill="#F2708F" />
-      </g>
-      <line x1="160" y1="20" x2="160" y2="162" stroke="#fff" strokeWidth="3" />
-      <circle cx="160" cy="92" r="9" fill="#fff" stroke="#3B82C4" strokeWidth="2" />
-    </>
-  ),
-  passport: () => (
-    <>
-      <rect x="66" y="30" width="188" height="124" rx="6" fill="#fff" />
-      {[0, 1, 2, 3].map((i) => (
-        <g key={i} transform={`translate(${78 + i * 43} 44)`}>
-          <rect width="36" height="46" fill="#FFFFFF" stroke="#D5D5E0" strokeWidth="0.8" />
-          <circle cx="18" cy="19" r="9" fill="#E9B79A" />
-          <path d="M8 16C9 6 27 6 28 16C25 10 11 10 8 16Z" fill="#3A2A24" />
-          <path d="M5 46C6 31 30 31 31 46Z" fill="#1E3A5F" />
+  packaging: {
+    title: 'Packaging · Reverse tuck end',
+    draw: () => {
+      // a reverse tuck end blank: glue flap | side | front | side | back; top tuck on the back, bottom tuck on the front
+      const cut = 'M66 80L74 76V66L88 64L90 76H120L122 64L136 66V60L138 50Q140 48 144 48H158Q162 48 164 50L166 60V122H136V132L122 134L120 122V138L118 148Q116 150 112 150H98Q94 150 92 148L90 138V122L88 134L74 132V122L66 118Z';
+      const crease = 'M74 76V122M90 76V122M120 76V122M136 76V122M74 76H90M120 76H166M136 60H166M74 122H136M90 138H120';
+      return (
+        <>
+          <g transform="translate(4 -2)">
+            <path d={cut} fill="#fff" />
+            <rect x="90" y="76" width="30" height="46" fill="#FDE7F0" />
+            <rect x="136" y="76" width="30" height="46" fill="#E3F4FB" />
+            <path d="M96 88h18M96 94h12" stroke={CUT} strokeOpacity="0.4" strokeWidth="3" strokeLinecap="round" />
+            <path d={cut} fill="none" stroke={CUT} strokeWidth="1.2" strokeLinejoin="round" />
+            <path d={crease} fill="none" stroke={CREASE} strokeWidth="0.9" strokeDasharray="3 2" />
+          </g>
+          <g transform="translate(200 62)">
+            <path d="M0 16L26 4L52 16L26 28Z" fill="#F5F7FA" stroke={INK} strokeWidth="1" strokeLinejoin="round" />
+            <path d="M0 16V64L26 76V28Z" fill="#FDE7F0" stroke={INK} strokeWidth="1" strokeLinejoin="round" />
+            <path d="M52 16V64L26 76V28Z" fill="#E3F4FB" stroke={INK} strokeWidth="1" strokeLinejoin="round" />
+            <path d="M6 30h12M6 35h8" stroke={CUT} strokeOpacity="0.4" strokeWidth="2.4" strokeLinecap="round" transform="skewY(26)" />
+          </g>
+        </>
+      );
+    },
+  },
+  'remove-background': {
+    title: 'Background Remover',
+    draw: (id) => {
+      const plant = (
+        <g>
+          <path d="M112 76C96 70 92 54 98 46C110 50 116 62 118 76ZM124 74C124 56 134 44 146 42C150 56 140 70 128 78ZM120 80C108 86 92 84 86 74C98 66 112 70 122 80Z" fill="#2E9C86" />
+          <path d="M120 84V96" stroke="#2E9C86" strokeWidth="2.4" />
+          <path d="M100 96H140L135 130H105Z" fill="#F2708F" />
+          <rect x="98" y="92" width="44" height="8" rx="2" fill="#E25C7D" />
         </g>
-      ))}
-      <rect x="78" y="100" width="164" height="42" rx="6" fill="#F5F5FA" />
-      <text x="90" y="118" fontFamily="Arial" fontSize="10" fontWeight="700" fill="#0B0B12">35 × 45 mm</text>
-      <text x="90" y="133" fontFamily="Arial" fontSize="9" fill="#5D5D6E">white background · 50 KB</text>
-      <circle cx="224" cy="121" r="11" fill="#5DCCB8" /><path d="M219 121L223 125L230 117" fill="none" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
-    </>
-  ),
-  laser: () => (
-    <>
-      <g transform="translate(70 30)"><rect width="180" height="120" rx="8" fill="#fff" />
-        <path d="M30 90L60 30L90 90Z" fill="none" stroke="#FF0000" strokeWidth="1.4" /><circle cx="130" cy="60" r="30" fill="none" stroke="#FF0000" strokeWidth="1.4" /><path d="M110 60H150M130 40V80" stroke="#0000FF" strokeWidth="1.2" strokeDasharray="3 2" />
-        <path d="M60 30V8" stroke="#DC2626" strokeWidth="2" /><path d="M54 8H66L60 0Z" fill="#0B0B12" /><circle cx="60" cy="30" r="3" fill="#FACC15" />
-      </g>
-    </>
-  ),
-  labels: () => (
-    <>
-      <g transform="translate(70 28)"><path d="M60 6C88 6 104 28 100 52C112 64 110 92 88 100C76 122 40 122 30 100C6 94 2 66 16 52C10 26 32 6 60 6Z" fill="#fff" /><path d="M60 6C88 6 104 28 100 52C112 64 110 92 88 100C76 122 40 122 30 100C6 94 2 66 16 52C10 26 32 6 60 6Z" fill="none" stroke="#EC008C" strokeWidth="1.4" /><circle cx="58" cy="62" r="32" fill="#F59E0B" /><circle cx="48" cy="54" r="5" fill="#0B0B12" /><circle cx="68" cy="54" r="5" fill="#0B0B12" /><path d="M44 72C52 80 64 80 72 72" stroke="#0B0B12" strokeWidth="4" fill="none" strokeLinecap="round" /></g>
-      <g transform="translate(196 52)"><circle cx="36" cy="36" r="34" fill="#fff" stroke="#EC008C" strokeWidth="1.4" /><circle cx="36" cy="36" r="24" fill="#5DCCB8" /><rect x="0" y="84" width="72" height="34" rx="8" fill="#fff" stroke="#EC008C" strokeWidth="1.4" /><rect x="10" y="94" width="40" height="5" rx="2.5" fill="#C9C9D6" /><rect x="10" y="104" width="28" height="5" rx="2.5" fill="#C9C9D6" /></g>
-    </>
-  ),
-  vdp: () => (
-    <>
-      {['Arun Kumar', 'Priya Nair', 'Ravi Shankar'].map((n, i) => (
-        <g key={n} transform={`translate(${74 + i * 22} ${36 + i * 22})`}>
-          <rect width="128" height="80" rx="8" fill="#fff" />
-          <rect width="128" height="18" rx="8" fill={['#7C3AED', '#3B82C4', '#5DCCB8'][i]} />
-          <text x="64" y="46" textAnchor="middle" fontFamily="Arial" fontWeight="700" fontSize="12" fill="#0B0B12">{n}</text>
-          <text x="64" y="62" textAnchor="middle" fontFamily="Arial" fontSize="8" fill="#6B7280">{`No. 000${i + 1}`}</text>
+      );
+      return (
+        <>
+          <clipPath id={`${id}-l`}><rect x="62" y="48" width="58" height="108" rx="4" /></clipPath>
+          <clipPath id={`${id}-r`}><rect x="120" y="48" width="66" height="108" /></clipPath>
+          <g clipPath={`url(#${id}-l)`}><rect x="62" y="48" width="124" height="108" fill="#FFE9B8" /><rect x="62" y="120" width="124" height="36" fill="#E9D3A0" /></g>
+          <g clipPath={`url(#${id}-r)`}>{Array.from({ length: 7 * 12 }, (_, i) => { const x = i % 7, y = Math.floor(i / 7); return <rect key={i} x={120 + x * 9.5} y={48 + y * 9.5} width="9.5" height="9.5" fill={(x + y) % 2 ? '#ECECF2' : '#fff'} />; })}</g>
+          <g transform="translate(4 14)">{plant}</g>
+          <line x1="120" y1="48" x2="120" y2="156" stroke={BLUE} strokeWidth="1.4" strokeDasharray="3 2" />
+          <rect x="62" y="48" width="124" height="108" rx="4" fill="none" stroke={LINE} />
+          <rect x="196" y="48" width="64" height="58" rx="6" fill={SOFT} />
+          {bar(203, 56, 34, '#CFCFDA')}
+          {['#fff', '#FFE9B8', '#CFEAF7', INK].map((c, i) => <rect key={c} x={203 + i * 13} y="66" width="10" height="10" rx="3" fill={c} stroke={LINE} />)}
+          {bar(203, 84, 44, '#E1E1EA')}
+          {bar(203, 92, 36, '#E1E1EA')}
+        </>
+      );
+    },
+  },
+  passport: {
+    title: 'Passport Photo',
+    draw: () => (
+      <>
+        <rect x="64" y="48" width="122" height="96" rx="3" fill={SOFT} />
+        {Array.from({ length: 8 }, (_, i) => { const c = i % 4, r = Math.floor(i / 4); const x = 70 + c * 28.5, y = 54 + r * 43; return (
+          <g key={i}>
+            <rect x={x} y={y} width="24" height="38" fill="#fff" stroke="#D6D6E0" strokeWidth="0.6" />
+            <circle cx={x + 12} cy={y + 15} r="6.5" fill="#B9C3D3" />
+            <path d={`M${x + 3} ${y + 38}C${x + 3} ${y + 26} ${x + 21} ${y + 26} ${x + 21} ${y + 38}Z`} fill="#8C9AB0" />
+          </g>
+        ); })}
+        <path d="M70 52v-2h3M94 52v-2h-3" stroke={MUTED} strokeWidth="0.8" fill="none" />
+        <rect x="196" y="48" width="64" height="70" rx="6" fill={SOFT} />
+        <text x="203" y="62" fontFamily="Inter, Arial" fontSize="9" fontWeight="700" fill={INK}>35 × 45</text>
+        <text x="203" y="72" fontFamily="Inter, Arial" fontSize="6.5" fill={MUTED}>millimetres</text>
+        {bar(203, 82, 46, '#E1E1EA')}
+        {bar(203, 90, 34, '#E1E1EA')}
+        {bar(203, 102, 40, '#5DCCB8', 6)}
+      </>
+    ),
+  },
+  patterns: {
+    title: 'Pattern Design',
+    draw: (id) => {
+      const motif = (x: number, y: number, k: number) => (
+        <g key={`${x}-${y}`} transform={`translate(${x} ${y})`}>
+          {[0, 60, 120].map((a) => <ellipse key={a} rx="8" ry="3" fill={SPECTRUM[k % 6]} transform={`rotate(${a})`} opacity="0.9" />)}
+          <circle r="2.4" fill="#fff" />
         </g>
-      ))}
-    </>
-  ),
-  'large-format': () => (
-    <>
-      <g transform="translate(96 18)">
-        <rect width="128" height="150" fill="#fff" />
-        <circle cx="64" cy="80" r="52" fill="#35C2F1" /><circle cx="64" cy="80" r="34" fill="#F2708F" /><circle cx="64" cy="80" r="16" fill="#DDE23B" />
-        {[42.7, 85.3].map((x) => <path key={x} d={`M${x} 0V150`} stroke="#3B82C4" strokeWidth="1.2" strokeDasharray="4 3" />)}
-        {[50, 100].map((y) => <path key={y} d={`M0 ${y}H128`} stroke="#3B82C4" strokeWidth="1.2" strokeDasharray="4 3" />)}
-      </g>
-    </>
-  ),
-  separation: () => (
-    <>
-      {[['#00A0E3', 0], ['#E6007E', 1], ['#FFED00', 2], ['#1A1A1A', 3]].map(([c, i]) => (
-        <g key={String(c)} transform={`translate(${70 + Number(i) * 26} ${30 + Number(i) * 10})`}>
-          <rect width="104" height="104" rx="6" fill="#fff" />
-          {Array.from({ length: 49 }, (_, k) => { const x = k % 7, y = Math.floor(k / 7); const r = 1.2 + ((x + y + Number(i)) % 5) * 0.9; return <circle key={k} cx={14 + x * 12.6} cy={14 + y * 12.6} r={r} fill={String(c)} />; })}
+      );
+      return (
+        <>
+          <clipPath id={`${id}-pc`}><rect x="62" y="48" width="196" height="108" rx="4" /></clipPath>
+          <g clipPath={`url(#${id}-pc)`}>
+            <rect x="62" y="48" width="196" height="108" fill="#FFF8EF" />
+            {Array.from({ length: 9 * 6 }, (_, i) => { const cx = i % 9, cy = Math.floor(i / 9); return motif(70 + cx * 24 + (cy % 2) * 12, 56 + cy * 21, cx + cy * 2); })}
+            {Array.from({ length: 9 * 6 }, (_, i) => { const cx = i % 9, cy = Math.floor(i / 9); return <circle key={`d${i}`} cx={82 + cx * 24 + (cy % 2) * 12} cy={66 + cy * 21} r="1.6" fill={INK} opacity="0.35" />; })}
+          </g>
+          <rect x="130" y="77" width="48" height="42" fill="none" stroke={BLUE} strokeWidth="1.3" strokeDasharray="4 3" />
+          {[[130, 77], [178, 77], [130, 119], [178, 119]].map(([a, b], i) => <rect key={i} x={a - 2.5} y={b - 2.5} width="5" height="5" rx="1" fill="#fff" stroke={BLUE} strokeWidth="1" />)}
+        </>
+      );
+    },
+  },
+  textile: {
+    title: 'Textile Studio · Tee',
+    draw: () => (
+      <>
+        {/* technical flat, front */}
+        <g transform="translate(70 52)" fill="none" stroke={INK} strokeWidth="1.1" strokeLinejoin="round">
+          <path d="M28 2L40 0C42 7 54 7 56 0L68 2L90 18L80 32L70 26V100H14V26L4 32L-6 18Z" fill="#fff" />
+          <path d="M40 0C42 9 54 9 56 0" strokeWidth="1.6" />
+          <path d="M16 96H68M8 28L-2 20M76 28L86 20" strokeDasharray="2 1.6" strokeWidth="0.7" />
+          <rect x="28" y="34" width="28" height="22" rx="2" fill="#E3F4FB" stroke={CREASE} strokeWidth="0.8" strokeDasharray="2.5 2" />
         </g>
-      ))}
-    </>
-  ),
-  barcode: () => (
-    <>
-      <g transform="translate(86 34)"><rect width="148" height="112" rx="8" fill="#fff" />
-        {[3,1,1,2,1,3,2,1,1,1,2,3,1,2,1,1,3,1,2,1,1,2,1,3,1,1,2,1,1,3].reduce((acc: { x: number; els: any[] }, w, i) => { if (i % 2 === 0) acc.els.push(<rect key={i} x={14 + acc.x} y={14} width={w * 1.6} height={i < 2 || i > 27 || (i > 13 && i < 16) ? 72 : 64} fill="#0B0B12" />); acc.x += w * 1.9; return acc; }, { x: 0, els: [] }).els}
-        <text x="74" y="100" textAnchor="middle" fontFamily="Arial" fontSize="11" letterSpacing="2" fill="#0B0B12">4 006381 333931</text>
-      </g>
-    </>
-  ),
-  preflight: () => (
-    <>
-      <g transform="translate(72 22)"><path d="M0 0H86L110 24V140H0Z" fill="#fff" /><path d="M86 0V24H110" fill="#EEF0F4" />
-        {[34, 50, 66, 82, 98, 114].map((y, i) => <g key={y}><circle cx="16" cy={y} r="4.5" fill={i === 2 ? '#F59E0B' : i === 4 ? '#DC2626' : '#10B981'} /><rect x="27" y={y - 3} width={i % 2 ? 58 : 70} height="6" rx="3" fill="#E4E4EA" /></g>)}
-      </g>
-      <g transform="translate(196 60)"><circle cx="34" cy="34" r="30" fill="#fff" stroke="#0B0B12" strokeWidth="5" /><path d="M56 56L80 80" stroke="#0B0B12" strokeWidth="9" strokeLinecap="round" /><path d="M22 34L31 43L47 25" fill="none" stroke="#10B981" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" /></g>
-    </>
-  ),
-  packaging: () => (
-    <>
-      <g transform="translate(40 30)">
-        <path d="M14 30H40V118H14Z" fill="#fff" /><path d="M40 30H96V118H40Z" fill="#fff" /><path d="M96 30H122V118H96Z" fill="#fff" /><path d="M122 30H178V118H122Z" fill="#fff" />
-        <path d="M0 40L14 30V118L0 108Z" fill="#fff" />
-        <path d="M122 30V6C122 0 126 -2 132 -2H168C174 -2 178 0 178 6V30" fill="#fff" />
-        <path d="M40 118V142C40 148 44 150 50 150H86C92 150 96 148 96 142V118" fill="#fff" />
-        <path d="M14 30L22 12H40V30M96 30V12H114L122 30M14 118L22 136H40M96 136H114L122 118" fill="#fff" />
-        <path d="M0 40L14 30M14 30L22 12H40V30H96V12H114L122 30V6C122 0 126 -2 132 -2H168C174 -2 178 0 178 6V118H96V136H114L122 118M96 118V142C96 148 92 150 86 150H50C44 150 40 148 40 142V118H14L22 136H40M14 118L0 108V40" fill="none" stroke="#EC008C" strokeWidth="1.4" strokeLinejoin="round" />
-        <path d="M14 30V118M40 30V118M96 30V118M122 30V118M14 30H40M96 30H178M14 118H96M122 118H178M40 118H96M122 6H178" fill="none" stroke="#00A0E3" strokeWidth="1.1" strokeDasharray="4 2.5" />
-      </g>
-      <g transform="translate(236 66)">
-        <path d="M0 18L30 0L60 18L30 36Z" fill="#F7F8FA" stroke="#0B0B12" strokeWidth="1.2" strokeLinejoin="round" />
-        <path d="M0 18V70L30 88V36Z" fill="#fff" stroke="#0B0B12" strokeWidth="1.2" strokeLinejoin="round" />
-        <path d="M60 18V70L30 88V36Z" fill="#EEF0F4" stroke="#0B0B12" strokeWidth="1.2" strokeLinejoin="round" />
-      </g>
-    </>
-  ),
-  colours: () => (
-    <>
-      <g transform="translate(160 92)">
-        {Array.from({ length: 12 }, (_, i) => { const a0 = (i / 12) * Math.PI * 2, a1 = ((i + 1) / 12) * Math.PI * 2, R = 62, r = 30; const p = (a: number, rr: number) => `${rr * Math.cos(a)} ${rr * Math.sin(a)}`; return <path key={i} d={`M${p(a0, r)}L${p(a0, R)}A${R} ${R} 0 0 1 ${p(a1, R)}L${p(a1, r)}A${r} ${r} 0 0 0 ${p(a0, r)}Z`} fill={`hsl(${i * 30} 75% 62%)`} stroke="#fff" strokeWidth="1.5" />; })}
-        <circle r="26" fill="#fff" />
-        <circle cx="0" cy="-46" r="7" fill="none" stroke="#0B0B12" strokeWidth="2.2" />
-      </g>
-      <g transform="translate(236 40)">{['#F2708F', '#A69BD3', '#35C2F1', '#5DCCB8', '#8CC84B'].map((c, i) => <rect key={c} y={i * 22} width="56" height="18" rx="5" fill={c} />)}</g>
-      <g transform="translate(30 56)"><rect width="56" height="66" rx="8" fill="#fff" /><text x="10" y="22" fontFamily="Arial" fontSize="9" fontWeight="700" fill="#0B0B12">#35C2F1</text><text x="10" y="38" fontFamily="Arial" fontSize="8" fill="#5D5D6E">CMYK</text><text x="10" y="50" fontFamily="Arial" fontSize="8" fill="#5D5D6E">AA ✓</text></g>
-    </>
-  ),
+        {/* pattern pieces */}
+        <g transform="translate(176 50)">
+          <path d="M6 6L18 2C20 8 30 8 32 2L44 6L46 22L40 24V66H10V24L4 22Z" fill="#FDE7F0" stroke={CUT} strokeWidth="1" />
+          <path d="M25 24V58M22 27L25 24L28 27M22 55L25 58L28 55" stroke={INK} strokeWidth="0.7" fill="none" />
+          <path d="M54 10C62 4 74 4 82 10L84 34H52Z" fill="#E7F7EF" stroke={CUT} strokeWidth="1" />
+          <path d="M8 74H44V104H8Z" fill="#EFEAFB" stroke={CUT} strokeWidth="1" />
+          <path d="M54 44H84V60H54Z" fill="#FFF6D6" stroke={CUT} strokeWidth="1" />
+          <text x="26" y="92" textAnchor="middle" fontFamily="Inter, Arial" fontSize="6" fill={MUTED}>Back</text>
+          <text x="69" y="27" textAnchor="middle" fontFamily="Inter, Arial" fontSize="6" fill={MUTED}>Sleeve ×2</text>
+        </g>
+      </>
+    ),
+  },
+  trace: {
+    title: 'Image Trace',
+    draw: () => {
+      const leaf = 'M0 40C0 14 22 0 46 0C46 26 30 46 0 40Z';
+      return (
+        <>
+          <g transform="translate(66 56)">
+            <rect width="78" height="90" rx="4" fill={SOFT} />
+            {LEAF_PIXELS.map(([x, y], i) => <rect key={i} x={x * 7} y={y * 7} width="7" height="7" fill={(x + y) % 3 ? '#8CC84B' : '#77B83D'} />)}
+          </g>
+          <path d="M150 100H168M162 94L168 100L162 106" stroke={INK} strokeWidth="1.8" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+          <g transform="translate(176 56)">
+            <rect width="80" height="90" rx="4" fill="#fff" stroke={LINE} />
+            <g transform="translate(16 24) scale(1.05)">
+              <path d={leaf} fill="#8CC84B" stroke={BLUE} strokeWidth="0.9" />
+              <path d="M0 40C14 28 28 16 46 0" stroke="#fff" strokeWidth="1.4" fill="none" />
+              <path d="M0 14L0 40L22 2" stroke={BLUE} strokeWidth="0.6" fill="none" />
+              {[[0, 40], [46, 0], [0, 14], [22, 2]].map(([a, b], i) => i < 2 ? <rect key={i} x={a - 2.6} y={b - 2.6} width="5.2" height="5.2" fill="#fff" stroke={BLUE} strokeWidth="1" /> : <circle key={i} cx={a} cy={b} r="2" fill={BLUE} />)}
+            </g>
+          </g>
+        </>
+      );
+    },
+  },
+  'print-size': {
+    title: 'Print Size & Binding',
+    draw: () => (
+      <>
+        <rect x="74" y="58" width="74" height="86" fill="#fff" stroke={LINE} />
+        <rect x="148" y="58" width="10" height="86" fill="#EFEAFB" stroke={LINE} />
+        <rect x="158" y="58" width="74" height="86" fill="#fff" stroke={LINE} />
+        <rect x="70" y="54" width="166" height="94" fill="none" stroke="#E30613" strokeWidth="0.8" strokeDasharray="3 2" />
+        <rect x="84" y="70" width="54" height="34" rx="2" fill="#A69BD3" opacity="0.55" />
+        {bar(84, 112, 44)}
+        {bar(84, 120, 34)}
+        <rect x="168" y="70" width="54" height="44" rx="2" fill="#35C2F1" opacity="0.5" />
+        {bar(168, 122, 48)}
+        <path d="M148 50V58M158 50V58" stroke="#00A651" strokeWidth="1" strokeDasharray="2 1.5" />
+        <text x="153" y="47" textAnchor="middle" fontFamily="Inter, Arial" fontSize="7" fontWeight="700" fill="#00A651">spine 7.5 mm</text>
+        <path d="M74 152H232M74 149V155M232 149V155" stroke={INK} strokeWidth="0.9" />
+        <rect x="134" y="147" width="38" height="10" rx="5" fill="#fff" />
+        <text x="153" y="154.5" textAnchor="middle" fontFamily="Inter, Arial" fontSize="7" fill={INK}>433.5 mm</text>
+      </>
+    ),
+  },
+  'print-layout': {
+    title: 'Print Layout · SRA3',
+    draw: () => (
+      <>
+        <rect x="80" y="48" width="160" height="108" rx="2" fill={SOFT} />
+        {Array.from({ length: 10 }, (_, i) => { const c = i % 5, r = Math.floor(i / 5); const x = 88 + c * 30, y = 58 + r * 46; return (
+          <g key={i}>
+            <rect x={x} y={y} width="26" height="40" rx="1.5" fill="#fff" stroke={LINE} />
+            <rect x={x} y={y} width="26" height="12" rx="1.5" fill={SPECTRUM[i % 6]} opacity="0.85" />
+            {bar(x + 4, y + 18, 16, '#CFCFDA', 3)}
+            {bar(x + 4, y + 24, 12, '#E1E1EA', 2.5)}
+            {bar(x + 4, y + 30, 14, '#E1E1EA', 2.5)}
+          </g>
+        ); })}
+        {[86, 116, 146, 176, 206, 234].map((x) => <path key={x} d={`M${x} 50V55M${x} 149V154`} stroke={INK} strokeWidth="0.6" />)}
+        {[58, 98, 104, 144].map((y) => <path key={y} d={`M82 ${y}H86M234 ${y}H238`} stroke={INK} strokeWidth="0.6" />)}
+      </>
+    ),
+  },
+};
+
+const CHIPS: Record<string, React.ReactNode> = {
+  editor: <Chip text="Print-ready PDF" dot="#3B82C4" w={80} />,
+  'photo-studio': <Chip text="Before · after" dot="#F2708F" w={72} x={220} />,
+  packaging: <Chip text="Dieline + 3D" dot={CUT} w={70} x={222} />,
+  'remove-background': <Chip text="Transparent PNG" dot="#5DCCB8" w={82} x={210} />,
+  passport: <Chip text="Ready to print" dot="#5DCCB8" w={76} x={216} />,
+  patterns: <Chip text="Seamless tile" dot="#A69BD3" w={70} x={222} />,
+  textile: <Chip text="Pattern pieces" dot={CUT} w={76} x={216} />,
+  trace: <Chip text="SVG vector" dot={BLUE} w={62} x={230} />,
+  'print-size': <Chip text="Cover size" dot="#00A651" w={62} x={230} />,
+  'print-layout': <Chip text="10-up · marks" dot="#35C2F1" w={72} x={220} />,
 };
 
 export function ToolArt({ id, tint }: { id: string; tint: string }) {
-  const draw = ART[id];
-  if (!draw) return null;
+  const art = ART[id];
+  if (!art) return null;
   const uid = `ta-${id}`;
-  return <Stage id={uid} tint={tint}>{draw(uid)}</Stage>;
+  return <Stage id={uid} tint={tint} title={art.title} chip={CHIPS[id]}>{art.draw(uid)}</Stage>;
 }
 export const hasToolArt = (id: string) => !!ART[id];

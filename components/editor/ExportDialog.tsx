@@ -37,6 +37,8 @@ export interface ExportSettings {
   videoStyle?: 'glide' | 'pop' | 'fade';
   /** Export → Print files: actual size + fit to print + information sheet. */
   printFiles?: PrintOutput;
+  /** Also save a branded technical document (page sizes, colours, fonts, pictures, settings). */
+  techDoc?: boolean;
 }
 
 type Choice = 'print-files' | 'png' | 'jpg' | 'webp' | 'pdf' | 'pdf-print' | 'svg' | 'tiff' | 'video';
@@ -109,6 +111,7 @@ export function ExportDialog({ artboards, activeArtboardId, exporting, onClose, 
   const [colour, setColour] = useState<'rgb' | 'cmyk'>('rgb');
   const [videoSeconds, setVideoSeconds] = useState(8);
   const [videoStyle, setVideoStyle] = useState<'glide' | 'pop' | 'fade'>('glide');
+  const [techDoc, setTechDoc] = useState(false);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
@@ -160,12 +163,14 @@ export function ExportDialog({ artboards, activeArtboardId, exporting, onClose, 
       videoSeconds,
       videoStyle,
       printFiles: isPrintFiles ? printFiles : undefined,
+      techDoc: !isPrintFiles && format !== 'video' && techDoc,
     });
     if (isPrintFiles) rememberOutput(printFiles);
   };
 
   const nFiles = isPrintFiles ? Object.values(printFiles.files).filter(Boolean).length : 0;
-  const fileNote = isPrintFiles ? `${nFiles} PDF${nFiles === 1 ? '' : 's'}${printFiles.zip && nFiles > 1 ? ' in one .zip' : ''}` : format === 'video' ? 'One video of this page' : pages.length > 1 && format !== 'pdf' ? `${pages.length} pictures in one .zip file` : pages.length > 1 ? `One PDF with ${pages.length} pages` : format === 'pdf' ? 'One PDF' : 'One picture';
+  const fileNoteBase = isPrintFiles ? `${nFiles} PDF${nFiles === 1 ? '' : 's'}${printFiles.zip && nFiles > 1 ? ' in one .zip' : ''}` : format === 'video' ? 'One video of this page' : pages.length > 1 && format !== 'pdf' ? `${pages.length} pictures in one .zip file` : pages.length > 1 ? `One PDF with ${pages.length} pages` : format === 'pdf' ? 'One PDF' : 'One picture';
+  const fileNote = techDoc && !isPrintFiles && format !== 'video' ? `${fileNoteBase} + technical document` : fileNoteBase;
 
   return (
     <div className="fixed inset-0 z-[110] flex items-end sm:items-center justify-center bg-black/40 p-0 sm:p-4" onClick={onClose}>
@@ -371,6 +376,7 @@ export function ExportDialog({ artboards, activeArtboardId, exporting, onClose, 
               </>
             )}
             {printPreset && <p className="text-xs text-mt-muted py-2">Bleed, crop marks and a colour bar are included, the way print shops expect.</p>}
+            <Switch checked={techDoc} onChange={setTechDoc} label="Technical document" hint="A branded spec sheet as a second PDF: page sizes, colours, fonts, picture resolution and these settings" />
           </section>}
         </div>
 

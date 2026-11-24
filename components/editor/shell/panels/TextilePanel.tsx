@@ -199,6 +199,47 @@ export function TextilePanel({ api, recordsPdf }: { api: TextileApi; recordsPdf?
   const run = async (label: string, f: () => Promise<void>) => { setBusy(label); try { await f(); } catch (e: any) { api.notice(e?.message || 'Export failed.'); } finally { setBusy(null); } };
   const usedSpec = (): TextileSpec => { try { return applied ? JSON.parse(applied) : spec; } catch { return spec; } };
 
+  /** Branded technical document (garment spec sheet): sizes, measurements, pieces, fabric need, roster, legend, checks, sign-off. */
+  const techDoc = () => run('Building the technical document…', async () => {
+    const { downloadTechDoc, previewFromDataUrl, LINE_LEGEND } = await import('@/lib/print/techDoc');
+    const sp = usedSpec(), L = layoutPieces(sp), nd = fabricNeed(sp, fabricW);
+    const g = GARMENTS.find((x) => x.id === sp.garment);
+    const ff = fieldsFor(sp.garment).fields;
+    const pvUrl = api.preview?.();
+    const preview = pvUrl ? { ...(await previewFromDataUrl(pvUrl)), caption: `Pattern layout with artwork · ${Math.round(L.w)} × ${Math.round(L.h)} mm` } : null;
+    const name = api.docName?.() || '';
+    const sizeLabel = sp.size === 'custom' ? 'Own measurements' : `Size ${sp.size}`;
+    const meas: [string, string][] = ff.filter((f) => sp.measures[f.key] != null).map((f) => [f.label, `${sp.measures[f.key]} cm`]);
+    const team = players.length ? [{ type: 'table' as const, title: `Team roster · ${players.length} garments`, head: ['#', 'Name', 'Number', 'Size'], widths: [0.6, 3, 1, 1], rows: players.map((p, i) => [String(i + 1), p.name || '—', p.number || '—', p.size || sp.size]) },
+      { type: 'kv' as const, title: 'Sizes to make', cols: 2 as const, rows: Object.entries(players.reduce<Record<string, number>>((a, p) => { const k = p.size || String(sp.size); a[k] = (a[k] || 0) + 1; return a; }, {})).map(([k, v]) => [k, `${v} pc${v === 1 ? '' : 's'}`] as [string, string]) }] : [];
+    await downloadTechDoc({
+      kind: 'Garment specification',
+      title: g?.name || 'Garment',
+      subtitle: name && name !== 'Untitled Design' ? name : sizeLabel,
+      summary: [['Garment', g?.name || sp.garment], ['Size', sp.size === 'custom' ? 'Custom' : String(sp.size)], ['Seam allowance', `${sp.allowance} mm`], ['Fabric', `${nd.metres} m × ${fabricW / 10} cm`], ['Pieces', String(L.pieces.reduce((a, p) => a + (p.qty || 1), 0))]],
+      preview,
+      spec: [
+        ['Garment', g?.name || sp.garment], ['Size', sizeLabel],
+        ['Neck', NECKS.find((n) => n.id === sp.neck)?.name || sp.neck], ['Sleeve', SLEEVES.find((n) => n.id === sp.sleeve)?.name || sp.sleeve],
+        ...(sp.garment === 'frock' && sp.skirt ? [['Skirt', String(sp.skirt)] as [string, string]] : []),
+        ['Seam allowance', `${sp.allowance} mm on every seam`],
+        ['Fabric width', `${fabricW / 10} cm (${Math.round(fabricW / 25.4)}″)`],
+        ['Fabric length', `${nd.metres} m for one garment (upper estimate)`],
+        ['Pieces cover', `${nd.efficiency}% of the fabric used`],
+        ['Print', 'Sublimation / digital textile print, artwork CMYK'],
+      ],
+      blocks: [
+        ...(meas.length ? [{ type: 'kv' as const, title: 'Measurements', rows: meas }] : []),
+        { type: 'table', title: 'Pattern pieces', head: ['Piece', 'Cut', 'Width', 'Length', 'Grain'], align: ['l', 'r', 'r', 'r', 'l'], widths: [3, 0.8, 1, 1, 1.2], rows: L.pieces.map((p) => [p.label, `${p.qty || 1}${p.mirror ? ' (pair)' : ''}`, `${Math.round(p.w)} mm`, `${Math.round(p.h)} mm`, p.grain === 'bias' ? 'Bias' : 'Lengthwise']) },
+        ...team,
+        { type: 'legend', title: 'Pattern legend', items: [{ ...LINE_LEGEND.cut, label: 'Cut line', note: 'Outer edge, seam allowance included' }, LINE_LEGEND.stitch, LINE_LEGEND.grain, { colour: '#E30613', label: 'Notch', note: 'Match points between pieces' }] },
+        ...(nd.tooWide.length ? [{ type: 'notes' as const, title: 'Warnings', items: [`Wider than the ${fabricW / 10} cm fabric: ${nd.tooWide.join(', ')}. Use a wider fabric or add a seam.`] }] : []),
+        { type: 'checks', title: 'Before cutting', items: ['Print the pattern at 100% and measure the 10 cm test square.', 'Pre-wash or pre-shrink the fabric if it is cotton; sublimation needs polyester.', 'Lay every piece with its grain line along the fabric length.', 'Cut pairs mirrored; check notches line up before stitching.'] },
+        { type: 'signoff', roles: ['Pattern by', 'Cutting checked', 'Approved by (client)'] },
+      ],
+    }, `${(name && name !== 'Untitled Design' ? name : g?.name || 'garment').replace(/[\\/:*?"<>|]+/g, '-')} - garment spec.pdf`);
+  });
+
   /** Pattern PDF: stitch line, cut line, grain, notches and labels at full size; A4 tiles with overlap and match marks. */
   const patternPdf = (tiled: boolean) => run('Building the pattern PDF…', async () => {
     const [{ jsPDF }, { pathToPolylines }] = await Promise.all([import('jspdf'), import('@/lib/dxf')]);
@@ -395,6 +436,8 @@ export function TextilePanel({ api, recordsPdf }: { api: TextileApi; recordsPdf?
         <button type="button" className={`${btn} w-full justify-start`} disabled={!!busy || !applied} onClick={() => patternPdf(false)}><Download size={13} /> Pattern PDF — full size (plotter)</button>
         <button type="button" className={`${btn} w-full justify-start`} disabled={!!busy || !applied} onClick={() => patternPdf(true)}><Download size={13} /> Pattern PDF — A4 tiled (home printer)</button>
         <button type="button" className={`${btn} w-full justify-start`} disabled={!!busy || !applied} onClick={dxf}><Download size={13} /> DXF — cut, stitch, grain, notch layers</button>
+        <p className="pt-2 text-[10.5px] font-semibold uppercase tracking-[0.08em] text-mt-faint">Documents</p>
+        <button type="button" className={`${btn} w-full justify-start`} disabled={!!busy || !applied} onClick={techDoc}><Download size={13} /> Technical document — garment specification{players.length ? ' with team roster' : ''}</button>
         {!applied && <p className="text-[11px] text-mt-faint">Lay out the pattern pieces first.</p>}
         {busy && <p className="text-[11px] text-mt-muted">{busy}</p>}
         <p className="text-[11px] text-mt-faint">For sublimation or digital fabric printing, send the print PDF. Check the 10 cm / 5 cm test square after printing a pattern — it must measure exactly.</p>

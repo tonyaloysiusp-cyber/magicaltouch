@@ -62,7 +62,7 @@ test('job report: one branded 2-page document built from the calculation', async
   assert.match(all, /JOB REPORT/); assert.match(all, /297 × 210 mm/); assert.match(all, /74\.25 \/ 74\.25/);
   assert.match(all, /Client A/); assert.match(all, /150 gsm matt/);
   assert.match(all, /Cut marks — cut here/); assert.match(all, /FOLDING SEQUENCE/);
-  assert.match(all, /www\.magicaltouchdesign\.com/); assert.match(all, /Page 2 of 2/); assert.match(all, /Approval/);
+  assert.match(all, /magicaltouchdesign\.com/); assert.match(all, /02 \/ 02/); assert.match(all, /Approval/);
 });
 
 test('concertina and custom folds; mechanical bindings and signatures', async () => {
