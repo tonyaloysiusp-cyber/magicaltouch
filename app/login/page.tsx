@@ -20,6 +20,7 @@ function LoginForm() {
   const [resendMsg, setResendMsg] = useState('');
   const [resending, setResending] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [slow, setSlow] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
   const next = searchParams.get('next') || '/dashboard';
@@ -39,7 +40,12 @@ function LoginForm() {
 
     // Phones and password managers often add spaces or capitals to the email.
     const cleanEmail = email.trim().toLowerCase();
+    // Tell people what is happening if the sign-in server is slow, instead of a silent "Logging in…".
+    setSlow(false);
+    const slowTimer = setTimeout(() => setSlow(true), 6000);
     const { error } = await withAuthRetry(() => supabase.auth.signInWithPassword({ email: cleanEmail, password }));
+    clearTimeout(slowTimer);
+    setSlow(false);
 
     if (error) {
       setUnconfirmed(/email not confirmed/i.test(error.message));
@@ -127,7 +133,8 @@ function LoginForm() {
                 </button>
               </div>
 
-              {error && <p className="text-red-500 text-sm">{error}</p>}
+              {error && <p className="text-red-500 text-sm" role="alert">{error}</p>}
+              {loading && slow && <p className="text-sm text-mt-muted" role="status">Still signing you in — our server is slower than usual right now. Please keep this page open.</p>}
               {unconfirmed && (
                 <div className="-mt-1 flex flex-col gap-1.5">
                   <button type="button" onClick={resendConfirmation} disabled={resending} className="self-start text-sm font-semibold text-brand-blue hover:underline disabled:opacity-50">

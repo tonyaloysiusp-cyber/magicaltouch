@@ -22,6 +22,7 @@ export async function POST(request: NextRequest) {
   }
   if (!ok) return NextResponse.json({ error: 'Not allowed' }, { status: 401 });
   clearCountMemo();
+  try { const { purgeEdge } = await import('@/lib/edgeCache'); await purgeEdge(['count/templates?select=id&status=eq.published&limit=1', 'count/site_settings?select=value&key=eq.template_count_style']); } catch { /* not on Cloudflare */ }
   revalidateTag(COUNT_TAG);
   // Not revalidatePath('/', 'layout'): that threw away every cached page on
   // each import, and the rebuild storm timed the database out (522s). Pages

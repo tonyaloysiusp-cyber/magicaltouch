@@ -12,10 +12,17 @@ async function rest(path: string, extra: Record<string, string> = {}) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!url || !key) return null;
-  return fetch(`${url}/rest/v1/${path}`, {
+  const load = () => fetch(`${url}/rest/v1/${path}`, {
     headers: { apikey: key, Authorization: `Bearer ${key}`, ...extra },
     next: { revalidate: 300, tags: [COUNT_TAG] },
   } as RequestInit);
+  // Through the shared edge cache: time limit, memory, stale copies, one query per server.
+  try {
+    const { edgeCached } = await import('./edgeCache');
+    return await edgeCached(`count/${path}`, 900, load);
+  } catch {
+    return load();
+  }
 }
 
 // Also memoised in memory per server instance (5 min): every page's layout
