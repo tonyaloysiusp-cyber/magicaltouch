@@ -1,10 +1,12 @@
 'use client';
 
 // Face retouch panel of the Photo Studio: finds the face on the device, then
-// eyes, mouth and gentle shape edits with a live close-up preview. Nothing is
-// applied to the photo until "Apply face edits".
+// eyes, mouth and gentle shape edits. The preview fills the Photo Studio's
+// picture area — original and result side by side at full size — while the
+// controls stay in the panel. Nothing changes until "Apply face edits".
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { FACE_PRESETS, FACE_SLIDERS, FaceEdit, NO_FACE_EDIT, Pt, SLIDER_GROUPS, applyFaceEdit, detectFace, faceBox, isFaceNeutral, presetAt, type PresetGroup, type SliderGroup } from '@/lib/photo/face';
 
 const chip = 'rounded-full border border-mt-line px-2.5 py-1 text-[12px] hover:bg-mt-surface2';
@@ -19,8 +21,11 @@ export function FaceTools({ target, busy, onApply }: { target: HTMLCanvasElement
   const [strength, setStrength] = useState(100);
   const [open, setOpen] = useState<SliderGroup | null>('Eyes');
   const prevRef = useRef<HTMLCanvasElement>(null);
+  const beforeRef = useRef<HTMLCanvasElement>(null);
+  const [slot, setSlot] = useState<HTMLElement | null>(null);
+  useEffect(() => { setSlot(document.getElementById('ps-stage-slot')); }, []);
   const [ws, setWs] = useState(false);            // the full face workspace (preview | controls)
-  const [mode, setMode] = useState<'split' | 'before' | 'after'>('split');
+  const [mode, setMode] = useState<'side' | 'split' | 'before' | 'after'>('side');
   const [region, setRegion] = useState<'face' | 'photo'>('face');
   const [cut, setCut] = useState(0.5);            // split divider position
   const edited = useRef<{ key: string; cv: HTMLCanvasElement } | null>(null);
@@ -62,7 +67,9 @@ export function FaceTools({ target, busy, onApply }: { target: HTMLCanvasElement
       const maxW = ws ? 1400 : 520, s = Math.min(1, maxW / Math.max(sw, sh));
       cv.width = Math.max(1, Math.round(sw * s)); cv.height = Math.max(1, Math.round(sh * s));
       const g = cv.getContext('2d')!;
-      const m = compare ? 'before' : mode;
+      const bcv = beforeRef.current;
+      if (bcv && mode === 'side') { bcv.width = cv.width; bcv.height = cv.height; bcv.getContext('2d')!.drawImage(target, sx, sy, sw, sh, 0, 0, bcv.width, bcv.height); }
+      const m = compare ? 'before' : mode === 'side' ? 'after' : mode;
       g.drawImage(m === 'before' ? target : after, sx, sy, sw, sh, 0, 0, cv.width, cv.height);
       if (m === 'split') {
         const x = Math.round(cv.width * cut);
@@ -101,32 +108,41 @@ export function FaceTools({ target, busy, onApply }: { target: HTMLCanvasElement
       {lm && !ws && (
         <div className="space-y-2 rounded-xl border border-mt-line p-2.5">
           <p className="text-[12px]">{isFaceNeutral(edit) ? 'Face ready.' : 'You have face edits that are not applied yet.'}</p>
-          <button type="button" className="w-full rounded-lg bg-[#3B82C4] px-3 py-2 text-[12.5px] font-semibold text-white" onClick={() => setWs(true)}>Open face workspace</button>
+          <button type="button" className="w-full rounded-lg bg-[#3B82C4] px-3 py-2 text-[12.5px] font-semibold text-white" onClick={() => setWs(true)}>Show face edits</button>
         </div>
       )}
-      {lm && ws && (
-        <div role="dialog" aria-modal="true" aria-label="Face workspace" className="fixed inset-0 z-[95] flex items-stretch justify-center bg-[#0B0B12]/55 p-2 sm:p-4 backdrop-blur-sm">
-          <div className="flex w-full max-w-[1500px] flex-col overflow-hidden rounded-2xl border border-mt-border bg-mt-surface shadow-2xl">
-            <div className="flex flex-wrap items-center gap-2 border-b border-mt-border px-4 py-2.5">
-              <h2 className="mr-auto text-[14px] font-semibold">Face &amp; sculpt</h2>
-              <div role="radiogroup" aria-label="Preview mode" className="inline-flex rounded-full border border-mt-border p-0.5 text-[12px]">
-                {(['before', 'split', 'after'] as const).map((v) => <button key={v} type="button" role="radio" aria-checked={mode === v} onClick={() => setMode(v)} className={`h-7 rounded-full px-3 font-semibold ${mode === v ? 'bg-mt-ink text-mt-bg' : 'text-mt-muted'}`}>{v === 'before' ? 'Before' : v === 'split' ? 'Split' : 'After'}</button>)}
+      {lm && ws && (() => {
+        const view = (
+          <div className="absolute inset-0 z-[30] flex flex-col bg-[#1B1B22]">
+            <div className="flex flex-wrap items-center gap-2 border-b border-white/10 px-3 py-2 text-white">
+              <h2 className="mr-auto text-[13.5px] font-semibold">Face &amp; sculpt</h2>
+              <div role="radiogroup" aria-label="Preview mode" className="inline-flex rounded-full border border-white/20 p-0.5 text-[12px]">
+                {(['side', 'split', 'before', 'after'] as const).map((v) => <button key={v} type="button" role="radio" aria-checked={mode === v} onClick={() => setMode(v)} className={`h-7 rounded-full px-3 font-semibold ${mode === v ? 'bg-white text-[#0B0B12]' : 'text-white/70'}`}>{v === 'side' ? 'Side by side' : v === 'before' ? 'Before' : v === 'split' ? 'Divider' : 'After'}</button>)}
               </div>
-              <div role="radiogroup" aria-label="Preview area" className="inline-flex rounded-full border border-mt-border p-0.5 text-[12px]">
-                {(['face', 'photo'] as const).map((v) => <button key={v} type="button" role="radio" aria-checked={region === v} onClick={() => setRegion(v)} className={`h-7 rounded-full px-3 font-semibold ${region === v ? 'bg-mt-ink text-mt-bg' : 'text-mt-muted'}`}>{v === 'face' ? 'Face' : 'Whole photo'}</button>)}
+              <div role="radiogroup" aria-label="Preview area" className="inline-flex rounded-full border border-white/20 p-0.5 text-[12px]">
+                {(['face', 'photo'] as const).map((v) => <button key={v} type="button" role="radio" aria-checked={region === v} onClick={() => setRegion(v)} className={`h-7 rounded-full px-3 font-semibold ${region === v ? 'bg-white text-[#0B0B12]' : 'text-white/70'}`}>{v === 'face' ? 'Face' : 'Whole photo'}</button>)}
               </div>
-              <button type="button" className={chip} onPointerDown={() => setCompare(true)} onPointerUp={() => setCompare(false)} onPointerLeave={() => setCompare(false)}>Hold to compare</button>
             </div>
-            <div className="grid min-h-0 flex-1 lg:grid-cols-[minmax(0,1fr)_380px]">
-              {/* Preview */}
-              <div ref={wrapRef} className="relative flex min-h-[40vh] items-center justify-center overflow-auto bg-[#1B1B22] p-3">
-                <canvas ref={prevRef} aria-label="Face preview" onPointerDown={dragCut} className={`max-h-[74vh] max-w-full rounded-lg ${mode === 'split' ? 'cursor-ew-resize touch-none' : ''}`} />
-                {mode === 'split' && <span className="pointer-events-none absolute left-4 top-4 rounded-md bg-black/55 px-2 py-0.5 text-[11px] font-semibold text-white">Before</span>}
-                {mode === 'split' && <span className="pointer-events-none absolute right-4 top-4 rounded-md bg-black/55 px-2 py-0.5 text-[11px] font-semibold text-white">After</span>}
-                <span className="pointer-events-none absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full bg-black/55 px-3 py-1 text-[11px] text-white">Preview only — the photo changes when you press Apply</span>
-              </div>
-              {/* Controls */}
-              <div className="min-h-0 space-y-2 overflow-y-auto border-t border-mt-border p-3 lg:border-l lg:border-t-0">
+            <div ref={wrapRef} className={`relative grid min-h-0 flex-1 gap-3 p-3 ${mode === 'side' ? 'grid-cols-2' : 'grid-cols-1'}`}>
+              {mode === 'side' && (
+                <figure className="relative flex min-h-0 items-center justify-center">
+                  <canvas ref={beforeRef} aria-label="Original" className="max-h-full max-w-full rounded-lg object-contain" />
+                  <figcaption className="pointer-events-none absolute left-2 top-2 rounded-md bg-black/55 px-2 py-0.5 text-[11px] font-semibold text-white">Original</figcaption>
+                </figure>
+              )}
+              <figure className="relative flex min-h-0 items-center justify-center">
+                <canvas ref={prevRef} aria-label="Face preview" onPointerDown={dragCut} className={`max-h-full max-w-full rounded-lg object-contain ${mode === 'split' ? 'cursor-ew-resize touch-none' : ''}`} />
+                <figcaption className="pointer-events-none absolute left-2 top-2 rounded-md bg-black/55 px-2 py-0.5 text-[11px] font-semibold text-white">{mode === 'before' ? 'Original' : mode === 'split' ? 'Original | Result' : 'Result'}</figcaption>
+              </figure>
+            </div>
+            <p className="pb-2 text-center text-[11px] text-white/60">Preview — the photo changes when you press Apply face edits in the panel.</p>
+          </div>
+        );
+        return (
+          <>
+            {slot ? createPortal(view, slot) : <div className="relative h-[60vh] overflow-hidden rounded-xl">{view}</div>}
+            <div className="space-y-2">
+              <button type="button" className={chip} onPointerDown={() => setCompare(true)} onPointerUp={() => setCompare(false)} onPointerLeave={() => setCompare(false)}>Hold to see the original</button>
           {/* One-tap looks, then one Strength slider — anyone can use it; every slider below stays editable. */}
           {(['Natural', 'Beauty', 'Sculpt', 'Portrait (men)'] as PresetGroup[]).map((g) => (
             <div key={g} role="group" aria-label={`${g} face presets`}>
@@ -166,17 +182,16 @@ export function FaceTools({ target, busy, onApply }: { target: HTMLCanvasElement
               )}
             </div>
           ))}
+              <div className="sticky bottom-0 flex flex-wrap items-center gap-2 border-t border-mt-border bg-mt-surface py-2">
+                <button type="button" className={chip} onClick={() => { setEdit(NO_FACE_EDIT); setPreset(null); }}>Reset</button>
+                <span className="mr-auto text-[11.5px] text-mt-muted">{isFaceNeutral(edit) ? 'No changes yet' : `${FACE_SLIDERS.filter((d) => (edit[d.key] as number) !== (NO_FACE_EDIT[d.key] as number)).length} adjustments`}</span>
+                <button type="button" className="h-9 rounded-lg border border-mt-border px-3 text-[13px] font-semibold hover:bg-mt-surface2" onClick={cancel}>Close</button>
+                <button type="button" className="h-9 rounded-lg bg-[#3B82C4] px-3 text-[13px] font-semibold text-white disabled:opacity-50" disabled={busy || isFaceNeutral(edit)} onClick={apply}>Apply face edits</button>
               </div>
             </div>
-            <div className="flex items-center gap-2 border-t border-mt-border px-4 py-2.5">
-              <button type="button" className={chip} onClick={() => { setEdit(NO_FACE_EDIT); setPreset(null); }}>Reset</button>
-              <span className="mr-auto text-[11.5px] text-mt-muted">{isFaceNeutral(edit) ? 'No changes yet' : `${FACE_SLIDERS.filter((d) => (edit[d.key] as number) !== (NO_FACE_EDIT[d.key] as number)).length} adjustments`}</span>
-              <button type="button" className="h-9 rounded-lg border border-mt-border px-4 text-[13px] font-semibold hover:bg-mt-surface2" onClick={cancel}>Cancel</button>
-              <button type="button" className="h-9 rounded-lg bg-[#3B82C4] px-4 text-[13px] font-semibold text-white disabled:opacity-50" disabled={busy || isFaceNeutral(edit)} onClick={apply}>Apply face edits</button>
-            </div>
-          </div>
-        </div>
-      )}
+          </>
+        );
+      })()}
     </div>
   );
 }

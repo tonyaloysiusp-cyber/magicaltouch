@@ -12,6 +12,7 @@ import { physicalUnitToPx, pxToPhysicalUnit, useDisplayUnit } from '@/lib/editor
 import { buildPhotoDesignJson } from '@/lib/editor/buildPhotoDesignPayload';
 import { PhotoStudio, PhotoStudioHandle, type PhotoProject } from '@/components/photoStudio/PhotoStudio';
 import { ToolShell } from '@/components/tools/ToolShell';
+import { PageHero } from '@/components/PageHero';
 import { BrandLogo } from '@/components/BrandLogo';
 import { useAppTheme } from '@/hooks/useAppTheme';
 import { createDefaultPrintSettings } from '@/lib/editor/printSetup';
@@ -391,7 +392,10 @@ function PhotoStudioContent() {
 
   if (stage === 'open') {
     return (
-      <ToolShell path="/photo-studio" h1="Photo Studio — edit photos like a pro" name="Photo Studio" sub="Light, colour, crop to size, background removal, CMYK print files">
+      <ToolShell variant="page" path="/photo-studio" h1="Photo Studio — edit photos like a pro" name="Photo Studio" sub="Light, colour, crop to size, background removal, CMYK print files">
+          <PageHero align="center" eyebrow="Photo Studio" title="Edit photos like a pro, in your browser." accent="like a pro"
+            subtitle="Layers, selections, retouching, adjustments with a big before and after, background removal, passport photos and CMYK print files. Your photos stay on your device." />
+          <div className="mx-auto max-w-[1400px] px-4 pt-8 sm:px-6">
           {loadError && (
             <div role="alert" className="max-w-3xl mx-auto mt-4 px-4">
               <p className="rounded-2xl border border-rose-300/60 bg-rose-50 dark:bg-rose-950/30 text-rose-800 dark:text-rose-200 px-4 py-3 text-[14px]">{loadError}</p>
@@ -506,6 +510,20 @@ function PhotoStudioContent() {
                 </button>
               </section>
             </div>
+          </div>
+          <section aria-labelledby="ps-what" className="mt-10">
+            <h2 id="ps-what" className="text-[13px] font-semibold uppercase tracking-[0.12em] text-mt-faint">What you can do</h2>
+            <ul className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              {[
+                ['Adjust & filters', 'Exposure, levels, curves, colour balance, vibrance, blur, sharpen, noise and grain — compared side by side, original and result at full size.'],
+                ['Retouch & face', 'Heal, clone stamp, dodge, burn, smudge, skin smoothing, eyes and teeth, red-eye — with brushes you control.'],
+                ['Layers & selections', 'Layers with blend modes and opacity, marquee, lasso, magic wand, masks, text and shapes.'],
+                ['Print & passport', 'Exact-size crop, DPI, CMYK print PDF, background removal and passport photos for 40+ countries.'],
+              ].map(([t, d]) => (
+                <li key={t} className="rounded-xl border border-mt-border bg-mt-surface p-4"><p className="text-[14px] font-semibold">{t}</p><p className="mt-1 text-[13px] leading-relaxed text-mt-muted">{d}</p></li>
+              ))}
+            </ul>
+          </section>
           </div>
       </ToolShell>
     );
