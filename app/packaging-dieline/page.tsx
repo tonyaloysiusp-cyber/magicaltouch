@@ -5,7 +5,7 @@ import { PackagingStudio } from '@/components/packaging/PackagingStudio';
 import { PackagingHub } from '@/components/packaging/PackagingHub';
 
 const TITLE = 'Packaging Design Studio — Box Templates, Dielines & Editor';
-const DESC = 'Design packaging online: 24 box templates on real dielines, or start from your product size and board. Full design editor with text, shapes, images, patterns and layers on the flat blank; tuck end, seal end, sleeve, tray, gift box and FEFCO 0201 / 0200. Print PDF with CutContour and Crease spot colours, branded dieline template, DXF.';
+const DESC = 'Design packaging online: box templates on real dielines, or start from your product size and board. Folding cartons with any top and bottom end (tuck, glued seal end, 1-2-3 snap lock, crash lock), trays, sleeves, pillow, gable and mailer boxes. Full design editor on the flat blank; print PDF with cut and crease spot colours, dieline template, DXF.';
 const URL = `${SITE_URL}/packaging-dieline`;
 
 export const metadata: Metadata = {
