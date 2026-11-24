@@ -20,6 +20,7 @@ const FAQ: [string, string][] = [
   ['What happens when I click Customise?', 'The full design editor opens with the garment’s pattern pieces as editable artwork, laid out like the print file. The cut line, stitch line, grain line and notches are locked guides that never print.'],
   ['Does my design stretch when I change the size?', 'No. Backgrounds that fill a piece follow the piece; logos, text and pictures keep their proportions and their place on the piece.'],
   ['What files do I get?', 'A print PDF (artwork in CMYK, cut line as a spot colour), a full-size pattern PDF for a plotter, an A4 tiled pattern PDF with a test square, a DXF with cut, stitch, grain and notch layers, and the .mtd project.'],
+  ['Can I make team kits with names and numbers?', 'Yes. In the Textile panel’s Team tab, add the name and number to the back, then list the players (name, number, size). One print PDF gives every player their own shirt in their own size.'],
   ['Are my measurements and designs uploaded?', 'No. They stay on your device. Save the project as a .mtd file to keep it.'],
 ];
 const STEPS: [string, string][] = [
