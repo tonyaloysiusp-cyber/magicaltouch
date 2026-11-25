@@ -1,6 +1,6 @@
--- Keep the best 10,000 templates; permanently delete the rest (approved by the owner on 25 Nov 2026).
+-- Keep the best 5,000 templates; permanently delete the rest (approved by the owner on 25 Nov 2026).
 -- Run step by step once the database answers. Users' own designs (designs table) are never touched.
--- Templates someone bought or unlocked are always kept (on top of the 10,000).
+-- Templates someone bought or unlocked are always kept (on top of the 5,000).
 
 -- 1. Which templates stay
 create table if not exists public.cleanup_keep (id uuid primary key);
@@ -21,7 +21,7 @@ with base as (
     and has_design and has_picture
     and dup_rank = 1
   order by is_featured desc, quality_score desc nulls last, published_at desc nulls last
-  limit 10000
+  limit 5000
 )
 insert into public.cleanup_keep (id)
 select id from best
