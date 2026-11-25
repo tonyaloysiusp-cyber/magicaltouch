@@ -2596,7 +2596,7 @@ function EditorContent() {
         // than overwriting the template itself (copy-on-use, matching
         // how every template-based design tool works).
         setOpening('Opening the template…');
-        fetchTemplateById(cameFromTemplate).then(async (template) => {
+        fetchTemplateById(cameFromTemplate, true).then(async (template) => {
           setOpening(null);
           // The new design starts with the template's name instead of
           // "Untitled Design" (easy to find later; rename any time).
@@ -5869,7 +5869,7 @@ function EditorContent() {
       else if (slot) objs.push({ type: 'rect', version: slot.version, left: slot.left, top: slot.top, width: slot.width, height: slot.height, fill: 'rgba(0,0,0,0.04)', stroke: 'rgba(0,0,0,0.25)', strokeDashArray: [6, 4], strokeWidth: 1, name: 'Verification slot', __artboardId: slot.__artboardId });
       json.objects = objs;
       await shrinkEmbeddedImages(json);
-      const tpl = await fetchTemplateById(certEdit.masterId);
+      const tpl = await fetchTemplateById(certEdit.masterId, true);
       const { data: auth } = await getSessionUser();
       let version = tpl?.currentVersion || '1.0';
       if (tpl && auth.user) {

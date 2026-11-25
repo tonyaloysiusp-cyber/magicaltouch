@@ -45,6 +45,11 @@ export async function getTemplateCount(): Promise<number | null> {
 
 async function fetchCount(): Promise<number | null> {
   try {
+    const { catalogRows } = await import('./catalog');
+    const rows = await catalogRows();
+    if (rows?.length) return rows.length;
+  } catch { /* fall back to the database */ }
+  try {
     const res = await rest('templates?select=id&status=eq.published&limit=1', { Prefer: 'count=exact' });
     if (!res) return null;
     const total = Number((res.headers.get('content-range') || '').split('/')[1]);

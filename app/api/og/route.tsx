@@ -41,7 +41,11 @@ export async function GET() {
   const s = parseShareImage(setting?.[0]?.value);
   const dark = s.theme === 'dark';
   const slugs = s.templates.length ? s.templates : null;
-  const rows = await rest<{ slug: string; preview: string | null; thumbnail: string | null }[]>(
+  const { catalogRows } = await import('@/lib/catalog');
+  const cat = await catalogRows();
+  const rows = cat
+    ? (slugs ? cat.filter((r) => r.slug && slugs.includes(r.slug)) : cat.filter((r) => r.is_featured && r.width === 1080 && r.height === 1350).sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)).slice(0, 4)).map((r) => ({ slug: r.slug as string, preview: r.preview, thumbnail: r.thumbnail }))
+    : await rest<{ slug: string; preview: string | null; thumbnail: string | null }[]>(
     slugs
       ? `templates?select=slug,preview,thumbnail&status=eq.published&slug=in.(${slugs.join(',')})`
       : 'templates?select=slug,preview,thumbnail&status=eq.published&is_featured=eq.true&width=eq.1080&height=eq.1350&order=sort_order.asc&limit=4',

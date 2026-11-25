@@ -39,9 +39,12 @@ export async function GET() {
 }
 
 async function build() {
+  // From the static catalog when it exists (no database work at all).
+  const { catalogGallery } = await import('@/lib/catalog');
+  const fromCatalog = await catalogGallery();
   const sb = createAnonSupabaseClient();
   // Every published template (the database returns 1,000 rows per request).
-  const { data, error } = await allPages<any>((from, to) =>
+  const { data, error } = fromCatalog ? { data: fromCatalog as any[], error: null } : await allPages<any>((from, to) =>
     sb
       .from('templates')
       .select(SELECT)

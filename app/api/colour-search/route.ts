@@ -13,8 +13,10 @@ let cache: { at: number; rows: Row[] } | null = null;
 
 async function index(): Promise<Row[]> {
   if (cache && Date.now() - cache.at < 10 * 60 * 1000) return cache.rows;
+  const { catalogRows } = await import('@/lib/catalog');
+  const fromCatalog = (await catalogRows())?.filter((r) => r.thumbnail && r.slug) as unknown as Row[] | undefined;
   const sb = createAnonSupabaseClient();
-  const { data } = await allPages<Row>((from, to) =>
+  const { data } = fromCatalog ? { data: fromCatalog } : await allPages<Row>((from, to) =>
     sb.from('templates').select('slug, name, thumbnail, color1, color2, width, height').eq('status', 'published').not('thumbnail', 'is', null).order('id').range(from, to),
   );
   const rows = (data || []).filter((r) => normHex(r.color1 || '') || normHex(r.color2 || ''));

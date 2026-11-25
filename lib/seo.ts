@@ -58,12 +58,27 @@ function hashKey(s: string) { let h = 2166136261; for (let i = 0; i < s.length; 
 
 const PUBLISHED = 'status=eq.published&slug=not.is.null';
 
+// ---------------------------------------------------------------- catalog first
+// Template data comes from the static catalog files (public/catalog) when they
+// exist, so these pages never touch the database; the database queries below
+// are only the fallback.
+import { catalogRows, type CatalogRow } from './catalog';
+const bySort = (a: CatalogRow, b: CatalogRow) => (a.sort_order ?? 0) - (b.sort_order ?? 0) || (a.id < b.id ? -1 : 1);
+const byFeatured = (a: CatalogRow, b: CatalogRow) => Number(b.is_featured) - Number(a.is_featured) || bySort(a, b);
+async function cat(): Promise<SeoTemplate[] | null> {
+  const rows = await catalogRows();
+  return rows ? (rows.filter((r) => r.slug) as unknown as SeoTemplate[]) : null;
+}
+
+
 export async function getTemplateBySlug(slug: string): Promise<SeoTemplate | null> {
+  const c = await cat(); if (c) return c.find((r) => r.slug === slug) || null;
   const rows = await rest<SeoTemplate[]>(`templates?select=${COLS}&${PUBLISHED}&slug=eq.${encodeURIComponent(slug)}&limit=1`);
   return rows?.[0] || null;
 }
 
 export async function getRelatedTemplates(t: SeoTemplate, limit = 8): Promise<SeoTemplate[]> {
+  const c = await cat(); if (c) return (c as unknown as CatalogRow[]).filter((r) => r.category === t.category && r.id !== t.id).sort(bySort).slice(0, limit) as unknown as SeoTemplate[];
   const rows = await rest<SeoTemplate[]>(
     `templates?select=${COLS}&${PUBLISHED}&category=eq.${encodeURIComponent(t.category)}&id=neq.${t.id}&order=sort_order.asc&limit=${limit}`
   );
@@ -71,6 +86,7 @@ export async function getRelatedTemplates(t: SeoTemplate, limit = 8): Promise<Se
 }
 
 export async function getTemplatesInCategory(category: string, limit = 400): Promise<SeoTemplate[]> {
+  const c = await cat(); if (c) return (c as unknown as CatalogRow[]).filter((r) => r.category === category).sort(bySort).slice(0, limit) as unknown as SeoTemplate[];
   const rows = await rest<SeoTemplate[]>(`templates?select=${COLS}&${PUBLISHED}&category=eq.${encodeURIComponent(category)}&order=sort_order.asc&limit=${limit}`);
   return rows || [];
 }
@@ -90,6 +106,7 @@ export function getAllPublishedTemplates(): Promise<SeoTemplate[]> {
   return p;
 }
 async function fetchAllPublished(): Promise<SeoTemplate[]> {
+  const c = await cat(); if (c) return [...(c as unknown as CatalogRow[])].sort(bySort) as unknown as SeoTemplate[];
   const out: SeoTemplate[] = [];
   for (let from = 0; from < 20000; from += 1000) {
     const rows = await rest<SeoTemplate[]>(`templates?select=${COLS}&${PUBLISHED}&order=sort_order.asc,id.asc&offset=${from}&limit=1000`);
@@ -118,6 +135,16 @@ export async function searchTemplates(terms: string[], limit = 40): Promise<SeoT
     })
     .join(',');
   if (!ors) return [];
+  const c = await cat();
+  if (c) {
+    const hay = (r: CatalogRow) => `${r.name} ${r.search_keywords || ''}`.toLowerCase();
+    const wide = (r: CatalogRow) => `${r.name} ${r.search_keywords || ''} ${r.category} ${r.occasion || ''}`.toLowerCase();
+    const tests = terms.map((t) => {
+      if (t.includes('+')) { const parts = t.split('+').map(clean).filter(Boolean).map((w) => w.toLowerCase()); return (r: CatalogRow) => parts.length > 0 && parts.every((w) => wide(r).includes(w)); }
+      const w = clean(t).toLowerCase(); return (r: CatalogRow) => !!w && hay(r).includes(w);
+    });
+    return (c as unknown as CatalogRow[]).filter((r) => tests.some((f) => f(r))).sort(byFeatured).slice(0, limit) as unknown as SeoTemplate[];
+  }
   const rows = await rest<SeoTemplate[]>(`templates?select=${COLS}&${PUBLISHED}&or=(${encodeURIComponent(ors)})&order=is_featured.desc,sort_order.asc&limit=${limit}`);
   return rows || [];
 }
@@ -127,6 +154,8 @@ export const categorySlug = (c: string) => c.toLowerCase().replace(/&/g, 'and').
 export async function getCategories(): Promise<{ name: string; slug: string; count: number }[]> {
   // Only the category column (~150 KB) instead of the full list.
   const m = new Map<string, number>();
+  const c = await cat();
+  if (c) { c.forEach((r) => m.set(r.category, (m.get(r.category) || 0) + 1)); return [...m.entries()].sort((a, b) => b[1] - a[1]).map(([name, count]) => ({ name, slug: categorySlug(name), count })); }
   for (let from = 0; from < 20000; from += 1000) {
     const rows = await rest<{ category: string }[]>(`templates?select=category&${PUBLISHED}&order=id.asc&offset=${from}&limit=1000`);
     if (!rows || !rows.length) break;
@@ -227,6 +256,7 @@ export async function getHiddenLandings(): Promise<Set<string>> {
 export async function getTemplatesByHashtag(tag: string, limit = 240): Promise<SeoTemplate[]> {
   const t = tag.toLowerCase().replace(/[^a-z0-9]/g, '');
   if (!t) return [];
+  const c = await cat(); if (c) return (c as unknown as CatalogRow[]).filter((r) => (r.hashtags || []).includes(t)).sort(byFeatured).slice(0, limit) as unknown as SeoTemplate[];
   const rows = await rest<SeoTemplate[]>(`templates?select=${COLS}&${PUBLISHED}&hashtags=cs.%7B${t}%7D&order=is_featured.desc,sort_order.asc&limit=${limit}`);
   return rows || [];
 }
@@ -241,6 +271,7 @@ export function relatedHashtags(rows: SeoTemplate[], exclude: string[] = [], max
 /** Every hashtag with its template count (for the sitemap and hashtag index). */
 export async function getHashtagCounts(): Promise<Map<string, number>> {
   const m = new Map<string, number>();
+  const c = await cat(); if (c) { c.forEach((r) => (r.hashtags || []).forEach((h) => m.set(h, (m.get(h) || 0) + 1))); return m; }
   for (let from = 0; from < 20000; from += 1000) {
     const rows = await rest<{ hashtags: string[] | null }[]>(`templates?select=hashtags&${PUBLISHED}&order=id.asc&offset=${from}&limit=1000`);
     if (!rows || !rows.length) break;
@@ -258,7 +289,9 @@ export async function getSubcategories(): Promise<SubCategory[]> {
   if (!cats) return [];
   const byId = new Map(cats.map((c) => [c.id, c]));
   const counts = new Map<string, number>();
-  for (let from = 0; from < 20000; from += 1000) {
+  const c = await cat();
+  if (c) (c as unknown as CatalogRow[]).forEach((r) => r.category_id && counts.set(r.category_id, (counts.get(r.category_id) || 0) + 1));
+  else for (let from = 0; from < 20000; from += 1000) {
     const rows = await rest<{ category_id: string | null }[]>(`templates?select=category_id&${PUBLISHED}&order=id.asc&offset=${from}&limit=1000`);
     if (!rows || !rows.length) break;
     rows.forEach((r) => r.category_id && counts.set(r.category_id, (counts.get(r.category_id) || 0) + 1));
@@ -274,6 +307,7 @@ export async function getSubcategories(): Promise<SubCategory[]> {
 }
 
 export async function getTemplatesInSubcategory(id: string, limit = 400): Promise<SeoTemplate[]> {
+  const c = await cat(); if (c) return (c as unknown as CatalogRow[]).filter((r) => r.category_id === id).sort(byFeatured).slice(0, limit) as unknown as SeoTemplate[];
   const rows = await rest<SeoTemplate[]>(`templates?select=${COLS}&${PUBLISHED}&category_id=eq.${id}&order=is_featured.desc,sort_order.asc&limit=${limit}`);
   return rows || [];
 }

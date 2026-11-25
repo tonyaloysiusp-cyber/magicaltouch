@@ -3,9 +3,10 @@ name: Refresh site data
 # rebuilds it twice a day (and on demand: Actions → Refresh site data →
 # Run workflow) so templates published from the Studio or the Claude
 # connector appear in the gallery.
+# The schedule is off since 25 Nov 2026: every rebuild queried the free
+# database for all templates. The Template catalog workflow now updates the
+# site when templates change. This stays available to run by hand.
 on:
-  schedule:
-    - cron: '23 1,7,13,19 * * *'
   workflow_dispatch:
 permissions:
   contents: write

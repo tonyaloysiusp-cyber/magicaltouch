@@ -1,0 +1,41 @@
+name: Template catalog
+# Copies the published templates from Supabase into static files that ship
+# with the site (public/catalog), so template pages, the gallery and the
+# editor never need the database. Only changed templates are fetched again.
+# Runs twice a day and on demand (Actions → Template catalog → Run workflow);
+# commits only when something changed, which redeploys the site.
+on:
+  schedule:
+    - cron: '41 2,14 * * *'
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: catalog
+  cancel-in-progress: false
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      SUPABASE_URL: https://rqkjogzljsbufbrdlbfr.supabase.co
+      SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJxa2pvZ3psanNidWZicmRsYmZyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkyNzgyMDcsImV4cCI6MjEwNDg1NDIwN30.-OHCqhZNWsdlbkIE3qUV6It5VUoAN1lQDUFCRLtUaPM
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: main }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - name: Export the catalog
+        run: node scripts/export-catalog.mjs
+      - name: Commit if changed (main, and the working branch)
+        run: |
+          git config user.name mt-catalog
+          git config user.email catalog@users.noreply.github.com
+          git add public/catalog
+          if git diff --cached --quiet; then echo "No changes"; exit 0; fi
+          git commit -m "Template catalog update"
+          git push origin HEAD:main
+          git fetch origin nov-updates && git checkout -B nov-updates origin/nov-updates
+          git checkout main -- public/catalog
+          git add public/catalog
+          git diff --cached --quiet || { git commit -m "Template catalog update"; git push origin nov-updates; }

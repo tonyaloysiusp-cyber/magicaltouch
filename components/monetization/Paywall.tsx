@@ -90,7 +90,11 @@ export function EditorGate({ children }: { children: React.ReactNode }) {
     const q = new URLSearchParams(window.location.search);
     const id = q.get('templateId');
     if (!id || q.get('editTemplate') === '1') return;
-    supabase.from('templates').select('is_free').eq('id', id).maybeSingle().then(({ data }) => setPremium(mustPayTemplate(access, id, (data as any)?.is_free) ? id : null));
+    // Free / premium flag from the static catalog first (no database work).
+    import('@/lib/catalog').then(({ catalogTemplate }) => catalogTemplate(id)).catch(() => null).then((row) => {
+      if (row) { setPremium(mustPayTemplate(access, id, row.is_free) ? id : null); return; }
+      supabase.from('templates').select('is_free').eq('id', id).maybeSingle().then(({ data }) => setPremium(mustPayTemplate(access, id, (data as any)?.is_free) ? id : null));
+    });
   }, [access]);
   const need: Need | null = mustPayEditor(access) ? { kind: 'editor' } : premium ? { kind: 'template', templateId: premium } : null;
   return (

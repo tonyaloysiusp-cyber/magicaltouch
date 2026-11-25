@@ -326,7 +326,16 @@ async function loadPublicTemplates(): Promise<Template[]> {
 
 // The full template, including its editable design -- only called when
 // a customer actually uses a template (or an admin edits one).
-export async function fetchTemplateById(id: string): Promise<Template | null> {
+/** One template with its design. Public use reads the static catalog first (no database work);
+ *  admin editing passes fresh = true to read the database directly. */
+export async function fetchTemplateById(id: string, fresh = false): Promise<Template | null> {
+  if (!fresh) {
+    try {
+      const { catalogTemplate } = await import('./catalog');
+      const row = await catalogTemplate(id);
+      if (row) return rowToTemplate(row as TemplateRow);
+    } catch { /* fall back to the database */ }
+  }
   const { data, error } = await supabase.from('templates').select('*').eq('id', id).single();
   if (error || !data) return null;
   return rowToTemplate(data as TemplateRow);
@@ -475,7 +484,7 @@ export async function listVersions(templateId: string): Promise<TemplateVersion[
 
 // Saves an immutable snapshot of the template as it is right now.
 async function snapshot(templateId: string, version: string, userId: string, notes: string | null): Promise<boolean> {
-  const full = await fetchTemplateById(templateId);
+  const full = await fetchTemplateById(templateId, true);
   if (!full) return false;
   const { error } = await supabase.from('template_versions').insert({
     template_id: templateId,
@@ -522,7 +531,7 @@ export async function createVersion(t: Template, userId: string, notes: string |
 export async function setTemplateStatus(t: Template, status: TemplateStatus, userId: string): Promise<string | null> {
   if (!t.id) return 'This template is not saved in the database yet.';
   if (status === 'published') {
-    const full = await fetchTemplateById(t.id);
+    const full = await fetchTemplateById(t.id, true);
     if (!full?.canvasJson) return 'Add the design content first (Set content), then publish.';
     if (!full.thumbnail) return 'Add a thumbnail before publishing.';
     // Every published state is captured as a version.
@@ -541,7 +550,7 @@ export async function setTemplateStatus(t: Template, status: TemplateStatus, use
 // Admin "Duplicate": a brand-new draft template; the original is untouched.
 export async function duplicateTemplate(t: Template, userId: string): Promise<Template | null> {
   if (!t.id) return null;
-  const full = await fetchTemplateById(t.id);
+  const full = await fetchTemplateById(t.id, true);
   if (!full) return null;
   const { data, error } = await supabase
     .from('templates')

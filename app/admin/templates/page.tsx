@@ -360,7 +360,7 @@ export default function AdminTemplatesPage() {
     const failed: string[] = [];
     await runPool<Template>(selectedList, async (t) => {
       try {
-        const full = await fetchTemplateById(t.id!);
+        const full = await fetchTemplateById(t.id!, true);
         if (!full?.canvasJson) return void failed.push(`${t.name}: no design`);
         if (!countPhotosInJson(full.canvasJson)) return void none++;
         const next = await createVersion(full, userId, 'Before removing photos');

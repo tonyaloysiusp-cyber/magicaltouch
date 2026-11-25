@@ -22,8 +22,10 @@ export async function GET() {
 }
 
 async function build() {
+  const { catalogGallery } = await import('@/lib/catalog');
+  const fromCatalog = (await catalogGallery())?.filter((r) => r.thumbnail);
   const sb = createAnonSupabaseClient();
-  const { data, error } = await allPages<any>((from, to) =>
+  const { data, error } = fromCatalog ? { data: fromCatalog as any[], error: null } : await allPages<any>((from, to) =>
     sb
       .from('templates')
       .select(SELECT)

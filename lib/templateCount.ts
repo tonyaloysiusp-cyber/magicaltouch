@@ -18,6 +18,11 @@ function load(): Promise<number | null> {
   if (pending) return pending;
   pending = (async () => {
     try {
+      // The catalog's tiny count file first (no database work).
+      try {
+        const r = await fetch('/catalog/count.json');
+        if (r.ok) { const j = await r.json(); if (j?.count > 0) { cached = j.count; try { sessionStorage.setItem(KEY, String(j.count)); } catch { /* */ } return j.count as number; } }
+      } catch { /* fall back */ }
       const { count, error } = await supabase.from('templates').select('id', { count: 'exact', head: true }).eq('status', 'published');
       if (error || typeof count !== 'number' || count <= 0) return null;
       cached = count;
