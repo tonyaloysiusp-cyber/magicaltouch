@@ -1,6 +1,6 @@
 'use client';
 
-import { Unbounded, Inter } from 'next/font/google';
+import { unboundedDisplay as display, interBody as body } from '@/lib/fonts';
 import { useAppTheme } from '@/hooks/useAppTheme';
 import { IntroAnimation } from './IntroAnimation';
 import { Navbar } from './Navbar';
@@ -20,17 +20,7 @@ const Footer = dynamic(() => import('./Footer').then((m) => m.Footer));
 const FestivalWish = dynamic(() => import('@/components/festival/FestivalWish').then((m) => m.FestivalWish), { ssr: false });
 
 // Unbounded's wide, rounded geometry echoes the Magical Touch wordmark.
-const display = Unbounded({
-  subsets: ['latin'],
-  weight: ['400', '500', '600'],
-  variable: '--font-display',
-});
 
-const body = Inter({
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700'],
-  variable: '--font-body',
-});
 
 export function HomePage() {
   const { theme, toggleTheme } = useAppTheme();

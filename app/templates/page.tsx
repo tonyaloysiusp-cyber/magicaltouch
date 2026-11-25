@@ -6,7 +6,7 @@ import { ThemeSwitch } from '@/components/ThemeSwitch';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Fraunces, Inter } from 'next/font/google';
+import { frauncesDisplay as display, interBody as body } from '@/lib/fonts';
 import { X, Search, ArrowUpRight, BadgeCheck, Crown, SlidersHorizontal, ChevronLeft, ChevronRight, ChevronDown, Loader2 } from 'lucide-react';
 import { STYLES, PALETTES, ASPECTS, stylesOf, styleLabel, palettesOf, mediumOf, shapeOf, aspectOf } from '@/lib/templates/taxonomy';
 import { DESIGN_TYPES, TYPE_BY_ID, typesOf, pagesOf, hasPhoto, topicText, hasWord, parseQuery, ParsedQuery, typeHashtags } from '@/lib/designTypes';
@@ -27,18 +27,7 @@ import { ToolIcon } from '@/components/tools/ToolsDirectory';
 import { buildDoc, parseSearch, scoreDoc, looseScore, vocabulary, SearchDoc, relatedSearches } from '@/lib/templateSearch';
 import { autoHashtags } from '@/lib/templateHashtags';
 
-const display = Fraunces({
-  subsets: ['latin'],
-  weight: ['400', '500', '600'],
-  style: ['normal', 'italic'],
-  variable: '--font-display',
-});
 
-const body = Inter({
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700'],
-  variable: '--font-body',
-});
 
 
 // Each tile keeps its template's real proportions (clamped for very

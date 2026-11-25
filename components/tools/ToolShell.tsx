@@ -13,10 +13,9 @@ import { BackChip } from '@/components/tools/BackChip';
 import { ToolIcon } from '@/components/tools/ToolsDirectory';
 import { TOOLS, rememberTool } from '@/lib/toolsCatalog';
 import { useAppTheme } from '@/hooks/useAppTheme';
-import { Unbounded } from 'next/font/google';
+import { unboundedDisplay as display } from '@/lib/fonts';
 
 // The wordmark's wide, rounded display face — the same as the home page.
-const display = Unbounded({ subsets: ['latin'], weight: ['500', '600'], variable: '--font-display' });
 
 export interface ToolShellProps {
   path: string;

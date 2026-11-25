@@ -376,3 +376,9 @@ textarea::placeholder {
   box-shadow: 0 10px 24px -10px rgba(139, 111, 196, 0.7);
 }
 .mt-auth-btn:hover:not(:disabled) { background-position: 100% 0; transform: translateY(-1px); }
+
+/* Site fonts (self-hosted, see lib/fonts.ts) */
+.mt-font-poppins { font-family: 'Poppins', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Arial, sans-serif; }
+.mt-var-display-fraunces { --font-display: 'Fraunces', Georgia, 'Times New Roman', serif; }
+.mt-var-display-unbounded { --font-display: 'Unbounded', 'Poppins', ui-sans-serif, system-ui, sans-serif; }
+.mt-var-body-inter { --font-body: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Arial, sans-serif; }

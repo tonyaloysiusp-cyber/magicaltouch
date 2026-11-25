@@ -6,7 +6,7 @@ import { ThemeSwitch } from '@/components/ThemeSwitch';
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Fraunces, Inter } from 'next/font/google';
+import { frauncesDisplay as display, interBody as body } from '@/lib/fonts';
 import { MoreVertical, Pencil, Copy, Download, Trash2, Plus, Sparkles, ArrowRight, Sun, Moon, FolderOpen, HardDrive, X } from 'lucide-react';
 import { readMtd, MtdError, toolUrlFor } from '@/lib/mtd/format';
 import { pickMtdFile, reopenFromHandle, LocalFileRef } from '@/lib/mtd/fileAccess';
@@ -33,18 +33,7 @@ import { PageHero } from '@/components/PageHero';
 import { QuickStart } from '@/components/QuickStart';
 import { useAppTheme } from '@/hooks/useAppTheme';
 
-const display = Fraunces({
-  subsets: ['latin'],
-  weight: ['400', '500', '600'],
-  style: ['normal', 'italic'],
-  variable: '--font-display',
-});
 
-const body = Inter({
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700'],
-  variable: '--font-body',
-});
 
 const RECENT_COUNT = 6;
 

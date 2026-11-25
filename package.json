@@ -12,6 +12,10 @@
     "deploy:cf": "for i in 1 2 3; do opennextjs-cloudflare deploy --cacheChunkSize 10 && exit 0; echo \"Deploy attempt $i failed; retrying in 20 s\"; sleep 20; done; exit 1"
   },
   "dependencies": {
+    "@fontsource/fraunces": "^5.1.0",
+    "@fontsource/inter": "^5.1.0",
+    "@fontsource/poppins": "^5.1.0",
+    "@fontsource/unbounded": "^5.1.0",
     "@supabase/supabase-js": "^2.45.0",
     "canvas": "file:./stubs/canvas",
     "fabric": "^5.3.0",

@@ -1,15 +1,26 @@
 import { ToolVisitTracker } from '@/components/tools/ToolVisitTracker';
-import { Poppins } from 'next/font/google';
+import { poppins } from '@/lib/fonts';
+import '@fontsource/poppins/400.css';
+import '@fontsource/poppins/500.css';
+import '@fontsource/poppins/600.css';
+import '@fontsource/poppins/700.css';
+import '@fontsource/inter/400.css';
+import '@fontsource/inter/500.css';
+import '@fontsource/inter/600.css';
+import '@fontsource/inter/700.css';
+import '@fontsource/fraunces/400.css';
+import '@fontsource/fraunces/500.css';
+import '@fontsource/fraunces/600.css';
+import '@fontsource/fraunces/400-italic.css';
+import '@fontsource/unbounded/400.css';
+import '@fontsource/unbounded/500.css';
+import '@fontsource/unbounded/600.css';
 import './globals.css';
 import { ChunkRecovery } from '@/components/ChunkRecovery';
 import { VisitCounter } from '@/components/VisitCounter';
 import { TemplateCountProvider } from '@/lib/templateCount';
 import { getCountStyle, getTemplateCount, getTemplateCountLabel, withCount } from '@/lib/templateCountServer';
 
-const poppins = Poppins({
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700'],
-});
 
 import type { Metadata, Viewport } from 'next';
 import { SITE_URL, SITE_NAME, SITE_DESCRIPTION, getSiteSetting } from '@/lib/seo';
