@@ -18,5 +18,5 @@
     "paths": { "@/*": ["./*"] }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["worker.ts", "node_modules"]
+  "exclude": ["worker.ts", "supabase/functions", "node_modules"]
 }
