@@ -14,6 +14,7 @@ export function friendlyAuthError(message: string | undefined | null): string {
   if (m.includes('unable to validate email') || m.includes('invalid email') || m.includes('email address') && m.includes('invalid'))
     return 'Please enter a valid email address.';
   if (m.includes('signups not allowed')) return 'New sign-ups are paused right now. Please try again later.';
+  if (m === 'service_unavailable') return 'Sign-in is temporarily unavailable — the problem is on our side and we’re fixing it. Your account is safe; please try again in a little while.';
   if (m.includes('context canceled') || m.includes('deadline exceeded') || m.includes('unexpected_failure') || m.includes('database error') || m.includes('timeout') || m.includes('internal server error') || m.includes('gateway'))
     return 'Our sign-in server is busy right now. Please wait a few seconds and press the button again — your account is safe.';
   if (m.includes('network') || m.includes('fetch') || m.includes('abort') || m.includes('timed out')) return 'We couldn’t reach our server just now. Please press the button again — it usually works on the second try.';
@@ -36,4 +37,11 @@ export async function withAuthRetry<T extends { error: any }>(call: () => Promis
     r = await call();
   }
   return r;
+}
+
+/** Gives up after `ms` with a clear "service unavailable" error, so nobody waits minutes on a spinner. */
+export async function withAuthDeadline<T extends { error: any }>(call: () => Promise<T>, ms = 25000): Promise<T> {
+  let t: ReturnType<typeof setTimeout> | undefined;
+  const late = new Promise<T>((ok) => { t = setTimeout(() => ok({ data: null, error: { message: 'service_unavailable', status: 503 } } as unknown as T), ms); });
+  try { return await Promise.race([withAuthRetry(call), late]); } finally { if (t) clearTimeout(t); }
 }

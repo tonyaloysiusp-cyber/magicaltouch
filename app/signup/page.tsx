@@ -1,7 +1,8 @@
 'use client';
 
 import { ThemeSwitch } from '@/components/ThemeSwitch';
-import { friendlyAuthError, withAuthRetry } from '@/lib/authErrors';
+import { friendlyAuthError, withAuthDeadline as withAuthRetry } from '@/lib/authErrors';
+import AuthServiceNotice, { useAuthService } from '@/components/auth/AuthServiceNotice';
 import { PasswordInput } from '@/components/PasswordInput';
 import { Suspense, useState } from 'react';
 import { supabase } from '@/lib/supabase';
@@ -22,6 +23,7 @@ function SignupForm() {
   const [marketingOptIn, setMarketingOptIn] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const authService = useAuthService();
   const [confirmSent, setConfirmSent] = useState(false);
   const [showPw, setShowPw] = useState(false);
   const router = useRouter();
@@ -125,6 +127,7 @@ function SignupForm() {
       <BrandLogo theme={theme} width={280} height={56} className="mb-8" />
       <div className="w-full max-w-sm">
         <h1 className="text-2xl font-bold mb-6 text-center text-mt-ink dark:text-mt-ink">Create Your Account</h1>
+        <AuthServiceNotice state={authService} />
         <form onSubmit={handleSignup} className="flex flex-col gap-4">
           <input
             type="email"

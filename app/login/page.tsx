@@ -1,7 +1,8 @@
 'use client';
 
 import { ThemeSwitch } from '@/components/ThemeSwitch';
-import { friendlyAuthError, withAuthRetry } from '@/lib/authErrors';
+import { friendlyAuthError, withAuthDeadline as withAuthRetry } from '@/lib/authErrors';
+import AuthServiceNotice, { useAuthService } from '@/components/auth/AuthServiceNotice';
 import { Suspense, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -21,6 +22,7 @@ function LoginForm() {
   const [resending, setResending] = useState(false);
   const [loading, setLoading] = useState(false);
   const [slow, setSlow] = useState(false);
+  const authService = useAuthService();
   const router = useRouter();
   const searchParams = useSearchParams();
   const next = searchParams.get('next') || '/dashboard';
@@ -101,6 +103,7 @@ function LoginForm() {
         {!showForgot ? (
           <>
             <h1 className="text-2xl font-bold mb-6 text-center text-mt-ink dark:text-mt-ink">Log In</h1>
+            <AuthServiceNotice state={authService} />
 
             {justConfirmed && (
               <p className="mb-4 text-sm text-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-3 py-2">
