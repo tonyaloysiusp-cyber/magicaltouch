@@ -3,18 +3,24 @@ on:
   workflow_dispatch:
     inputs:
       script: { description: 'probe script in e2e/probe', required: true, default: 'login.mjs' }
+permissions:
+  contents: write
 jobs:
   probe:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: 20 }
       - run: npm i --no-save playwright@1.48.2 && npx playwright install --with-deps chromium
       - run: node e2e/probe/${{ inputs.script }}
-      - uses: actions/upload-artifact@v4
+      - name: Keep screenshots on the probe-shots branch
         if: always()
-        with: { name: probe-shots, path: |
-            *.png
-            shots/*.png }
+        run: |
+          [ -d shots ] || exit 0
+          git config user.name mt-probe; git config user.email probe@users.noreply.github.com
+          git checkout --orphan probe-shots-tmp
+          git rm -rfq --cached . >/dev/null
+          git add -f shots
+          git commit -qm "probe screenshots" && git push -fq origin HEAD:probe-shots
