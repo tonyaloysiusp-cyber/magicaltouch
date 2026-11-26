@@ -1,5 +1,6 @@
 'use client';
 
+import { OPEN_ACCESS } from '@/lib/access';
 import { previousStep } from '@/lib/toolsCatalog';
 import { blockBrowserShortcut } from '@/lib/editor/browserKeys';
 import { ThemeSwitch } from '@/components/ThemeSwitch';
@@ -254,7 +255,7 @@ function EditorContent() {
       return;
     }
     getSessionUser().then(({ data }) => {
-      if (!data.user) {
+      if (!data.user && !OPEN_ACCESS) {
         router.push(`/login?next=${encodeURIComponent(window.location.pathname + window.location.search)}`);
       } else {
         setCheckingAuth(false);
@@ -5603,6 +5604,11 @@ function EditorContent() {
         setSaveStatus('error');
         return;
       }
+      if (OPEN_ACCESS) {
+        // No account: save the design as a file on this device instead.
+        await saveOnDevice();
+        return;
+      }
       setLocalNotice('You must be logged in to save a design.');
       setSaveStatus('unsaved');
       return;
@@ -6274,7 +6280,7 @@ function EditorContent() {
   // against the real count rather than a cached/stale number.
   const withDesignLimitCheck = async (thenDo: () => void) => {
     const { data: { user } } = await getSessionUser();
-    if (!user) return;
+    if (!user) { if (OPEN_ACCESS) thenDo(); return; } // no account: nothing to count, work stays on this device
     const count = await getDesignCount(user.id);
     if (count >= MAX_DESIGNS) {
       setShowDesignLimitDialog(true);

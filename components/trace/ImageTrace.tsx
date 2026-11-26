@@ -4,6 +4,7 @@
 // (1, 3, 4, 6, 8, 16 colours, black & white or a line drawing). Runs in the
 // browser; nothing is uploaded.
 
+import { OPEN_ACCESS } from '@/lib/access';
 import { ToolModeBar, useToolMode } from '@/components/ToolMode';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -112,7 +113,7 @@ export function ImageTrace() {
   const toEditor = async () => {
     if (!out) return;
     const { data } = await supabase.auth.getSession();
-    if (!data.session) { router.push('/login?next=' + encodeURIComponent('/trace')); return; }
+    if (!data.session && !OPEN_ACCESS) { router.push('/login?next=' + encodeURIComponent('/trace')); return; }
     const canvas = await traceCanvasJson(out, bgFill);
     const key = newLocalKey();
     putHandoff(key, { opened: { document: { name: 'Traced artwork', width: out.width, height: out.height, editor: 'design' }, canvas, fonts: [], thumbnail: null, template: null, missingAssets: [] } as any, file: { handle: null, fileName: 'Traced artwork.mtd.svg' } });

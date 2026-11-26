@@ -1,5 +1,6 @@
 'use client';
 
+import { OPEN_ACCESS } from '@/lib/access';
 import { ThemeSwitch } from '@/components/ThemeSwitch';
 import { useRef, useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -126,7 +127,7 @@ function PhotoStudioContent() {
       return;
     }
     getSessionUser().then(({ data }) => {
-      if (!data.user) {
+      if (!data.user && !OPEN_ACCESS) {
         router.push('/login?next=/photo-studio');
       } else {
         setCheckingAuth(false);
@@ -322,7 +323,9 @@ function PhotoStudioContent() {
         data: { user },
       } = await getSessionUser();
       if (!user) {
-        alert('You must be logged in to save.');
+        alert(OPEN_ACCESS
+          ? 'Saving to an account needs signing in. You can keep your photo by using Export → Download, which saves it on this device.'
+          : 'You must be logged in to save.');
         return false;
       }
       if (!designId) {

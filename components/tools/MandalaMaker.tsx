@@ -8,6 +8,7 @@
 //    repeats around the centre)
 //  · right: palettes, layers and the selected layer's settings.
 
+import { OPEN_ACCESS } from '@/lib/access';
 import { ToolModeBar, useToolMode } from '@/components/ToolMode';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -98,7 +99,7 @@ export function MandalaMaker() {
 
   const toEditor = async () => {
     const { data } = await supabase.auth.getSession();
-    if (!data.session) { router.push('/login?next=' + encodeURIComponent('/patterns?mode=rangoli')); return; }
+    if (!data.session && !OPEN_ACCESS) { router.push('/login?next=' + encodeURIComponent('/patterns?mode=rangoli')); return; }
     setBusy('editor');
     const size = 1080;
     const mod: any = await import('fabric');

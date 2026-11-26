@@ -6,6 +6,7 @@
 // stitch line, grain and notches as locked guides; the Textile panel in the
 // editor keeps the garment, size, measurements and production files.
 
+import { OPEN_ACCESS } from '@/lib/access';
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowRight, FileDown, Layers, PenTool, Ruler, Shirt, Sparkles } from 'lucide-react';
@@ -39,7 +40,7 @@ export function TextileHub() {
     setErr(null); setBusy(t?.id || `blank-${garment}`);
     try {
       const { data } = await supabase.auth.getSession();
-      if (!data.session && process.env.NEXT_PUBLIC_E2E !== '1') { router.push('/login?next=' + encodeURIComponent('/textile-studio')); return; }
+      if (!data.session && !OPEN_ACCESS && process.env.NEXT_PUBLIC_E2E !== '1') { router.push('/login?next=' + encodeURIComponent('/textile-studio')); return; }
       const mod: any = await import('fabric'); const F = mod.fabric;
       const spec = t ? templateSpec(t) : defaultTextileSpec(garment || 'polo');
       const { size, objs } = buildTextilePage(F, spec, t);

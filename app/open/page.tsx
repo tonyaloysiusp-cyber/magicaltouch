@@ -8,6 +8,7 @@
 //    sends the visitor here with ?pending=1. If they aren't logged in they
 //    log in first and come back here, then the exact design opens.
 
+import { OPEN_ACCESS } from '@/lib/access';
 import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { readMtd, base64ToBytes, type OpenedMtd, toolUrlFor } from '@/lib/mtd/format';
@@ -54,7 +55,7 @@ function OpenFile() {
     let gone = false;
     (async () => {
       const { data } = await supabase.auth.getSession();
-      if (!data.session) {
+      if (!data.session && !OPEN_ACCESS) {
         router.replace('/login?next=' + encodeURIComponent('/open?pending=1'));
         return;
       }

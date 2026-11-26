@@ -5,6 +5,7 @@
 // PDF), an artwork template with bleed, an SVG, or open it in the editor to
 // design on it. Everything is calculated on this device.
 
+import { OPEN_ACCESS } from '@/lib/access';
 import { Fragment, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AlertTriangle, Box, CheckCircle2, Download, FileDown, PenTool, XCircle } from 'lucide-react';
@@ -71,7 +72,7 @@ export function PackagingStudio() {
   // Open the editor with the dieline as a locked guide layer, artboard = blank + bleed.
   const toEditor = async () => {
     const { data } = await supabase.auth.getSession();
-    if (!data.session) { router.push('/login?next=' + encodeURIComponent('/packaging-dieline')); return; }
+    if (!data.session && !OPEN_ACCESS) { router.push('/login?next=' + encodeURIComponent('/packaging-dieline')); return; }
     const mod: any = await import('fabric'); const F = mod.fabric;
     const px = 96 / 25.4, W = (die.w + 2 * bleed) * px, H = (die.h + 2 * bleed) * px;
     const objs: any[] = [];

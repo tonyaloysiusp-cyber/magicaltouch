@@ -6,6 +6,7 @@
 // open it in the editor as editable shapes, and keep a library of patterns.
 // All work happens in the browser.
 
+import { OPEN_ACCESS } from '@/lib/access';
 import { ToolModeBar, useToolMode } from '@/components/ToolMode';
 import { MotifEditor } from './MotifEditor';
 import { isMtdt } from '@/lib/mtdt';
@@ -217,7 +218,7 @@ export function PatternStudio() {
   // motif, grouped): ungroup it there to recolour, move or delete motifs.
   const openInEditor = async () => {
     const { data } = await supabase.auth.getSession();
-    if (!data.session) { router.push('/login?next=' + encodeURIComponent('/patterns')); return; }
+    if (!data.session && !OPEN_ACCESS) { router.push('/login?next=' + encodeURIComponent('/patterns')); return; }
     const s = SIZES[size];
     setBusy('editor');
     try {

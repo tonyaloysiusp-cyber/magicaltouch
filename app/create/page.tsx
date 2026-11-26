@@ -5,6 +5,7 @@
 // blank or from a template. Custom sizes and print settings live in one
 // place below the sizes.
 
+import { OPEN_ACCESS } from '@/lib/access';
 import { Footer } from '@/components/home/Footer';
 import { AppHeader } from '@/components/AppHeader';
 import { BrandRibbon } from '@/components/home/BrandRibbon';
@@ -74,7 +75,7 @@ export default function CreateDesignPage() {
 
   useEffect(() => {
     getSessionUser().then(({ data }) => {
-      if (!data.user) router.push('/login?next=/create');
+      if (!data.user && !OPEN_ACCESS) router.push('/login?next=/create');
       else setCheckingAuth(false);
     });
   }, [router]);

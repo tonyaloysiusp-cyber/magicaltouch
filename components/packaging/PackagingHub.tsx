@@ -5,6 +5,7 @@
 // artwork as editable layers and the dieline as locked line layers; the
 // Packaging panel in the editor keeps the box, line types and press files.
 
+import { OPEN_ACCESS } from '@/lib/access';
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowRight, Box, FileDown, Layers, PenTool, Ruler, Sparkles } from 'lucide-react';
@@ -51,7 +52,7 @@ export function PackagingHub() {
     setErr(null); setBusy(t?.id || `blank-${style}`);
     try {
       const { data } = await supabase.auth.getSession();
-      if (!data.session && process.env.NEXT_PUBLIC_E2E !== '1') { router.push('/login?next=' + encodeURIComponent('/packaging-dieline')); return; }
+      if (!data.session && !OPEN_ACCESS && process.env.NEXT_PUBLIC_E2E !== '1') { router.push('/login?next=' + encodeURIComponent('/packaging-dieline')); return; }
       const mod: any = await import('fabric'); const F = mod.fabric;
       const spec = t ? specFor(t) : { ...defaultSpec(), style: style || 'rte' };
       if (!t && style && (style === 'rsc' || style === 'hsc' || style === 'fol')) Object.assign(spec, { grade: 'bflute', gsm: 0, t: 3, glue: 30, clearance: { L: 4, W: 4, H: 4 }, product: { L: 300, W: 200, H: 150 } });

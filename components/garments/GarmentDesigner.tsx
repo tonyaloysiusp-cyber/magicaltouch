@@ -7,6 +7,7 @@
 // pieces). Downloads are real vectors: one print-ready PDF with every
 // selected garment nested on the roll, plus SVG and per-player files.
 
+import { OPEN_ACCESS } from '@/lib/access';
 import { useEffect, useMemo, useRef, useState, useDeferredValue } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -554,7 +555,7 @@ export function GarmentDesigner({ kind: initialKind = 'jersey', mode = 'pro', pi
   // Artwork changes in the main editor (names and numbers stay here).
   const editInEditor = async () => {
     const { data } = await supabase.auth.getSession();
-    if (!data.session) { router.push('/login?next=' + encodeURIComponent(window.location.pathname)); return; }
+    if (!data.session && !OPEN_ACCESS) { router.push('/login?next=' + encodeURIComponent(window.location.pathname)); return; }
     setBusy('editor');
     try {
       const svg = kitMockupSvg(kit, pattern, player, glyphs);

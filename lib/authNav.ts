@@ -6,6 +6,7 @@
 // so it lives in one place instead of being re-implemented per page.
 // ---------------------------------------------------------------------
 
+import { OPEN_ACCESS } from '@/lib/access';
 import { supabase, getSessionUser } from '@/lib/supabase';
 
 export async function isLoggedIn(): Promise<boolean> {
@@ -17,6 +18,7 @@ export async function isLoggedIn(): Promise<boolean> {
 // otherwise `/login` with `next` set so login lands the user back where
 // they meant to go (e.g. a specific template's editor URL).
 export async function resolveAuthedPath(loggedInPath: string): Promise<string> {
+  if (OPEN_ACCESS) return loggedInPath; // tools work without an account
   const loggedIn = await isLoggedIn();
   return loggedIn ? loggedInPath : `/login?next=${encodeURIComponent(loggedInPath)}`;
 }
