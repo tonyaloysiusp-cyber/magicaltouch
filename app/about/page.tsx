@@ -3,10 +3,11 @@ import { getTemplateCountLabel, withCount } from '@/lib/templateCountServer';
 import Link from 'next/link';
 import { PageHero } from '@/components/PageHero';
 import { SeoShell } from '@/components/seo/SeoShell';
-import { BadgeCheck, Eraser, LayoutTemplate, Printer, SlidersHorizontal, Wand2 } from 'lucide-react';
+import { Box, Eraser, FileText, Grid3x3, Languages, LayoutTemplate, PenTool, Printer, Ruler, Shirt, SlidersHorizontal, Wand2 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { SITE_URL, SITE_NAME, getSiteSetting, fitTitle, fitDescription } from '@/lib/seo';
 import { companyProfile } from '@/lib/email/config';
+import { ProductTour } from '@/components/ProductTour';
 
 // About Magical Touch Design — the online design platform (not an interior
 // design company), its mission, what it offers and its founder & CEO.
@@ -18,9 +19,9 @@ export const revalidate = 600;
 
 const baseMetadata: Metadata = {
   title: fitTitle(`About Magical Touch Design — Free Online Graphic Design Platform`),
-  description: fitDescription('Magical Touch Design is a free online design studio: 1,000+ professional templates, a powerful editor, a photo studio and a background remover — on any device. Founded by Tony Aloysius.'),
+  description: fitDescription('Magical Touch Design is a free online design and print studio: 1,000+ templates, a design editor, Photo Studio, packaging dielines, textile patterns and print tools — no account needed. Founded by Tony Aloysius.'),
   alternates: { canonical: `${SITE_URL}/about` },
-  openGraph: { type: 'website', url: `${SITE_URL}/about`, title: 'About Magical Touch Design', description: 'A free online graphic design platform — templates, editor and photo studio. Founder & CEO: Tony Aloysius.', siteName: SITE_NAME, images: [`${SITE_URL}/api/og`] },
+  openGraph: { type: 'website', url: `${SITE_URL}/about`, title: 'About Magical Touch Design', description: 'A free online design and print studio — templates, editor, Photo Studio, packaging and textile. No account needed. Founder & CEO: Tony Aloysius.', siteName: SITE_NAME, images: [`${SITE_URL}/api/og`] },
 };
 
 // The template count in the text follows the real library ("1,850+").
@@ -33,17 +34,24 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 const PLATFORM: [string, string, Icon][] = [
-  ['1,000+ templates', 'Every one editable, for print and screen', LayoutTemplate],
-  ['Design editor', 'Text, photos, layers, pages, brand kits', Wand2],
-  ['Photo Studio', 'Layers, retouch, filters, one-tap looks', SlidersHorizontal],
-  ['Background remover', 'One photo or a hundred, on your device', Eraser],
-  ['Print-ready files', 'Bleed, crop marks, true CMYK', Printer],
-  ['Verified certificates', 'A unique code and QR check', BadgeCheck],
+  ['1,000+ templates', 'Posters, posts, cards, menus, certificates — all editable', LayoutTemplate],
+  ['Design editor', 'Text, photos, shapes, layers, pages, brand kit, data merge', Wand2],
+  ['Photo Studio', 'Layers, filters, retouch and face shaping with before / after', SlidersHorizontal],
+  ['Packaging', 'Box dielines by size, design on the die, specification sheet', Box],
+  ['Textile', 'Garment pattern pieces by measurement, team names and numbers', Shirt],
+  ['Pattern Design', 'Seamless repeats, rangoli and mandala as vectors', Grid3x3],
+  ['Image Trace', 'Logos and sketches to clean SVG and PDF vectors', PenTool],
+  ['Background remover', 'One photo or sixty — it runs on your device', Eraser],
+  ['Print tools', 'Imposition, booklets, spine width and cover size', Ruler],
+  ['Print-ready files', 'True CMYK, bleed, crop marks; text stays vector', Printer],
+  ['17+ languages', 'Tamil, Malayalam, Hindi, Arabic, Chinese and more', Languages],
+  ['Technical documents', 'A branded job sheet with every export, for printers', FileText],
 ];
 const PRINCIPLES: [string, string][] = [
-  ['A studio, not a shortcut', 'Templates get you started; a real editor and photo studio let you finish like a professional.'],
-  ['True to print', 'What you see on screen is what comes back from the print shop — bleed, crop marks and CMYK included.'],
-  ['Free, without the catch', 'Every feature, every download. No watermark, no locked “pro” tools.'],
+  ['A studio, not a shortcut', 'Templates get you started; a real editor, Photo Studio and production tools let you finish like a professional.'],
+  ['True to print', 'CMYK colour, bleed and crop marks, and text that stays real vector type in the PDF — what you see is what comes back from the press.'],
+  ['Free, without the catch', 'Every tool and every download, with no watermark and no account needed. Open a tool and start.'],
+  ['Your files stay with you', 'Designs save as files on your own device. Background removal, tracing and photo edits run in your browser — nothing is uploaded.'],
 ];
 const DEFAULT_MISSION = 'To give every business, school and creator in the world the power to look professional — in minutes, at no cost.';
 const paras = (t: string) => t.split(/\n{2,}/).map((x) => x.trim()).filter(Boolean);
@@ -78,11 +86,11 @@ export default async function AboutPage() {
         eyebrow="About Magical Touch Design"
         title="Professional design, made effortless."
         accent="made effortless"
-        subtitle="We build the design studio we always wanted: professional templates, a powerful editor and a photo studio — in your browser, on any device, free for everyone."
+        subtitle="A complete design and print studio in your browser: templates, a design editor, Photo Studio, packaging, textile, patterns and print tools — on any device, free for everyone, no account needed."
       />
       <div className="mt-container py-8 sm:py-12">
         <section aria-label="At a glance" className=" grid grid-cols-2 lg:grid-cols-4 rounded-3xl border border-mt-border divide-x divide-y lg:divide-y-0 divide-mt-border overflow-hidden">
-          {[[label, 'editable templates'], ['100%', 'free — every feature'], ['0', 'watermarks'], ['Any device', 'computer, tablet, phone']].map(([n, l]) => (
+          {[[label, 'editable templates'], ['10', 'design & print tools'], ['17+', 'languages & scripts'], ['0', 'accounts needed']].map(([n, l]) => (
             <div key={l} className="p-6 bg-mt-surface">
               <p className="text-3xl sm:text-4xl font-semibold tracking-tight">{n}</p>
               <p className="mt-1 text-[13px] text-mt-muted">{l}</p>
@@ -92,7 +100,7 @@ export default async function AboutPage() {
 
         <section aria-labelledby="different" className="mt-16">
           <h2 id="different" className="text-2xl sm:text-3xl font-semibold tracking-tight">What makes us different</h2>
-          <ol className="mt-6 grid gap-4 md:grid-cols-3">
+          <ol className="mt-6 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             {PRINCIPLES.map(([t, d], i) => (
               <li key={t} className="rounded-3xl border border-mt-border p-6">
                 <span className="text-[13px] font-semibold text-mt-faint tabular-nums">0{i + 1}</span>
@@ -102,6 +110,8 @@ export default async function AboutPage() {
             ))}
           </ol>
         </section>
+
+        <ProductTour />
 
         <section aria-labelledby="mission" className="mt-16 rounded-3xl p-8 sm:p-12 bg-mt-ink text-mt-bg">
           <p id="mission" className="text-[12px] font-semibold tracking-[0.22em] uppercase opacity-60">Our mission</p>
@@ -119,7 +129,7 @@ export default async function AboutPage() {
         </section>
 
         <section aria-labelledby="platform" className="mt-16">
-          <h2 id="platform" className="text-2xl sm:text-3xl font-semibold tracking-tight">One platform, everything included</h2>
+          <h2 id="platform" className="text-2xl sm:text-3xl font-semibold tracking-tight">Everything included, free</h2>
           <ul className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {PLATFORM.map(([t, d, I]) => (
               <li key={t} className="flex items-start gap-4 rounded-2xl border border-mt-border p-5">

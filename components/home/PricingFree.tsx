@@ -3,7 +3,7 @@
 import { Check } from 'lucide-react';
 import { Reveal } from './Reveal';
 
-const POINTS = ['Every template', 'Every editing tool', 'Photo Studio', 'Tutorials & courses', 'No watermark', 'PNG, JPG, WebP, TIFF & PDF'];
+const POINTS = ['No account needed', 'Every template', 'All 10 tools', 'Photo Studio', 'Packaging & textile', '17+ languages & scripts', 'Vector & CMYK print PDF', 'No watermark'];
 
 // Magical Touch has one tier, so this says so plainly instead of
 // dressing it up as a pricing table.
@@ -18,7 +18,7 @@ export function PricingFree() {
             <span className="mt-spectrum-text">No catch.</span>
           </h2>
           <p className="mt-5 text-mt-muted text-lg max-w-md leading-relaxed">
-            No trials, no locked tools and no plans to compare. Sign up and start designing.
+            No trials, no locked tools and no sign-up. Open any tool and start designing — your work saves to your own device.
           </p>
         </Reveal>
         <Reveal delayMs={100}>

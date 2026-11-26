@@ -22,7 +22,7 @@ export function FinalCTA() {
           <h2 className="relative font-[family-name:var(--font-display)] font-medium text-3xl sm:text-5xl text-white leading-[1.08] tracking-[-0.03em] max-w-2xl mx-auto">
             Your next design starts here.
           </h2>
-          <p className="relative mt-5 text-white/70 text-lg max-w-md mx-auto">Pick a template and make it yours in minutes.</p>
+          <p className="relative mt-5 text-white/70 text-lg max-w-md mx-auto">Pick a template and make it yours in minutes — free, with no account needed.</p>
           <div className="relative mt-9 flex flex-wrap items-center justify-center gap-3">
             <button
               onClick={goToCreate}
