@@ -6,13 +6,14 @@
 // Pure CSS/SVG animation with small images; pauses on hover, can be stepped
 // through, and stays still for reduced motion. Below it, a "free" ticker.
 
-import { useEffect, useState, type CSSProperties } from 'react';
+import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
+import type { ComponentType } from 'react';
 import { ArrowRight, Box, Check, Download, FileDown, Languages, LayoutTemplate, PenTool, Printer, Shirt, Smile, Type, Wand2 } from 'lucide-react';
 
 const PackagingArt = dynamic(() => import('./StudioHero').then((m) => m.PackagingArt), { ssr: false });
-const GarmentArt = dynamic(() => import('./StudioHero').then((m) => m.GarmentArt), { ssr: false });
+const GarmentArt = dynamic(() => import('./StudioHero').then((m) => m.GarmentArt), { ssr: false }) as ComponentType<{ id?: string }>;
 
 const C = '/templates/collection/';
 const SCENES = [
@@ -36,12 +37,19 @@ const HEADLINES = [
   { t: 'உங்கள் வணிகத்தை முன்னேற்றும் உத்தி', dir: 'ltr', lang: 'தமிழ்' },
   { t: 'आपके व्यवसाय को आगे बढ़ाने वाली रणनीति', dir: 'ltr', lang: 'हिन्दी' },
 ];
-const STYLES: { name: string; css: CSSProperties; bg: string }[] = [
-  { name: 'Gold', bg: '#1B1712', css: { backgroundImage: 'linear-gradient(180deg,#FFF1B8 0%,#E8B64C 45%,#9A6A12 60%,#F7D77A 100%)', WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent', filter: 'drop-shadow(0 2px 0 #5a3d06)' } },
-  { name: 'Neon', bg: '#0B0B1A', css: { color: '#fff', textShadow: '0 0 6px #ff4fd8, 0 0 14px #ff4fd8, 0 0 28px #b03cff' } },
-  { name: '3D Block', bg: '#FFE45C', css: { color: '#F2708F', textShadow: '1px 1px 0 #16161F, 2px 2px 0 #16161F, 3px 3px 0 #16161F, 4px 4px 0 #16161F, 5px 5px 0 #16161F, 6px 6px 0 #16161F' } },
-  { name: 'Outline', bg: '#E9F7FF', css: { color: '#fff', WebkitTextStroke: '2.5px #1D6FB8', textShadow: '4px 4px 0 #35C2F1' } },
+type Fx = { name: string; word: string; bg: string; cls: string; css: CSSProperties; deco?: ReactNode };
+const FX: Fx[] = [
+  { name: 'Gold', word: 'Luxe', bg: 'radial-gradient(circle at 50% 40%, #2A2216 0%, #0E0B07 75%)', cls: 'text-[clamp(44px,9vw,84px)] italic font-semibold', css: { fontFamily: "'Fraunces', Georgia, serif", backgroundImage: 'linear-gradient(180deg,#FFF3C4 0%,#F0C866 38%,#A8761C 55%,#F9DE8C 78%,#C08A2E 100%)', WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent', filter: 'drop-shadow(0 3px 0 #4A3206) drop-shadow(0 10px 18px rgba(0,0,0,.5))' } },
+  { name: 'Neon tube', word: 'Open late', bg: 'linear-gradient(160deg,#1B1026 0%,#0B0B14 100%)', cls: 'text-[clamp(30px,6vw,56px)] font-bold tracking-tight', css: { fontFamily: "'Poppins', sans-serif", color: '#FFE6FA', textShadow: '0 0 4px #fff, 0 0 10px #FF4FD8, 0 0 22px #FF4FD8, 0 0 40px #B03CFF, 0 0 70px #B03CFF' }, deco: <span className="absolute inset-[10%] rounded-2xl border-2 border-[#35C2F1]" style={{ boxShadow: '0 0 12px #35C2F1, inset 0 0 12px #35C2F1' }} /> },
+  { name: 'Retro', word: 'SUMMER', bg: '#FFF1D6', cls: 'text-[clamp(34px,7.5vw,68px)] font-black italic tracking-tight', css: { fontFamily: "'Unbounded', sans-serif", color: '#FFF1D6', WebkitTextStroke: '2px #2B2D42', textShadow: '4px 4px 0 #EF476F, 8px 8px 0 #FFD166, 12px 12px 0 #06D6A0' }, deco: <span className="absolute -bottom-[40%] left-1/2 h-[90%] aspect-square -translate-x-1/2 rounded-full" style={{ background: 'repeating-linear-gradient(180deg,#FFB86B 0 9%,transparent 9% 14%)' }} /> },
+  { name: 'Sticker', word: 'NEW!', bg: 'linear-gradient(135deg,#7CDCF8 0%,#B7A8FF 100%)', cls: 'text-[clamp(40px,9vw,80px)] font-black -rotate-6', css: { fontFamily: "'Unbounded', sans-serif", color: '#F2708F', WebkitTextStroke: '3px #fff', paintOrder: 'stroke fill', filter: 'drop-shadow(0 0 0 #fff) drop-shadow(4px 6px 0 rgba(22,22,31,.35))' } },
+  { name: 'Chrome', word: 'FUTURE', bg: 'linear-gradient(180deg,#0B1F3A 0%,#1B3B6F 60%,#0B1F3A 100%)', cls: 'text-[clamp(32px,7vw,64px)] font-black tracking-tight', css: { fontFamily: "'Unbounded', sans-serif", backgroundImage: 'linear-gradient(180deg,#FFFFFF 0%,#C9D6E3 42%,#4B5D73 50%,#E8F0F8 62%,#8FA3B8 100%)', WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent', filter: 'drop-shadow(0 2px 0 #0B1F3A) drop-shadow(0 0 14px rgba(53,194,241,.45))' } },
 ];
+const KURTIS = [{ id: 'kurti-floral', name: 'Floral' }, { id: 'kurti-yoke', name: 'Paisley' }, { id: 'kurti-chevron', name: 'Chevron' }];
+const FAN = ['pro-maison-vera-autumn-edit-fashion-poster.webp', 'pro-saffron-table-brunch-menu.webp', 'pro-sage-garden-wedding-invitation.webp'];
+const EMBLEM = '<circle cx="50" cy="50" r="40" fill="#1D3557"/><path d="M50 22C61 35 61 52 50 64C39 52 39 35 50 22Z" fill="#F2708F"/><path d="M50 64C37 61 27 51 25 37C38 39 47 49 50 64Z" fill="#F7A1C4"/><path d="M50 64C63 61 73 51 75 37C62 39 53 49 50 64Z" fill="#F7A1C4"/><path d="M28 71Q50 59 72 71Q50 80 28 71Z" fill="#8CC84B"/>';
+const EMBLEM_URL = 'data:image/svg+xml;utf8,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="22" height="22">${EMBLEM}</svg>`);
+const EMBLEM_NODES = [[50, 22], [61, 44], [50, 64], [39, 44], [25, 37], [75, 37], [28, 71], [72, 71], [50, 77]];
 const LIPS = ['#C2435E', '#9C2B45', '#E07A8F', '#7E2F3C'];
 const FREE = ['Free templates', 'Free design editor', 'Free Photo Studio', 'Free packaging dielines', 'Free garment patterns', 'Free vector trace', 'Free print files', 'Free translation', 'No sign-up', 'No login', 'No watermark'];
 
@@ -63,10 +71,17 @@ function HeroReel() {
   const p = still ? 1 : Math.min(1, (tick * 100) / DUR);
   const s = SCENES[i];
   const head = HEADLINES[Math.min(HEADLINES.length - 1, Math.floor(p * HEADLINES.length))];
-  const style = STYLES[Math.min(STYLES.length - 1, Math.floor(p * STYLES.length))];
-  const lip = LIPS[Math.min(LIPS.length - 1, Math.floor(p * LIPS.length))];
+  const fx = FX[Math.min(FX.length - 1, Math.floor(p * FX.length))];
+  const kurti = KURTIS[Math.min(KURTIS.length - 1, Math.floor(p * KURTIS.length))].id;
+  const ph = Math.min(3, Math.floor(p * 4)), sub = Math.min(1, p * 4 - ph);
+  const look = [
+    { img: '/home/reel/face-vline.jpg', panel: 'Face shape · V-line', rows: [['Slim face', 0.42 * sub], ['Slim jaw', 0.54 * sub], ['Chin length', 0.24 * sub]] as [string, number][], opacity: sub, filter: 'none', swatch: false },
+    { img: '/home/reel/face-lips.jpg', panel: 'Lipstick · Rose lips', rows: [['Lip colour', 0.48], ['Fuller lips', 0.3]] as [string, number][], opacity: 1, filter: 'none', swatch: true },
+    { img: '/home/reel/face-eyes.jpg', panel: 'Eyes · Big bright eyes', rows: [['Eye size', 0.48], ['Brighten eye whites', 0.42], ['Iris clarity', 0.48]] as [string, number][], opacity: 1, filter: 'none', swatch: false },
+    { img: '/home/reel/face-glam.jpg', panel: 'Layer opacity & warmth', rows: [['Opacity', sub], ['Warmth', 0.2]] as [string, number][], opacity: sub, filter: 'sepia(.1) saturate(1.08)', swatch: false },
+  ][ph];
   const typed = Math.round(Math.min(1, p * 1.6) * 26);
-  const cards = Math.min(9, Math.floor(p * 11));
+  const cards = Math.min(8, Math.floor(p * 10));
   const second = p > 0.5;
 
   return (
@@ -81,9 +96,6 @@ function HeroReel() {
         @keyframes mhr-card { from { opacity: 0; transform: translate(-14px,-10px) scale(.9) } to { opacity: 1; transform: none } }
         @media (prefers-reduced-motion: reduce) { .mhr-in, .mhr-pop { animation: none } }
       `}</style>
-      <svg width="0" height="0" className="absolute" aria-hidden>
-        <filter id="mhr-poster"><feComponentTransfer><feFuncR type="discrete" tableValues="0 .35 .7 1" /><feFuncG type="discrete" tableValues="0 .35 .7 1" /><feFuncB type="discrete" tableValues="0 .35 .7 1" /></feComponentTransfer></filter>
-      </svg>
 
       <div className="absolute -inset-6 rounded-[40px] opacity-50 blur-3xl" aria-hidden style={{ background: 'radial-gradient(55% 55% at 75% 25%, rgba(53,194,241,.35), transparent 70%), radial-gradient(50% 50% at 20% 85%, rgba(242,112,143,.3), transparent 70%), radial-gradient(40% 40% at 90% 90%, rgba(140,200,75,.28), transparent 70%)' }} />
 
@@ -123,12 +135,13 @@ function HeroReel() {
                 </div>
               )}
               {s.id === 'styles' && (
-                <div className="flex w-full max-w-[400px] flex-col items-center gap-4">
-                  <div className="grid aspect-[16/10] w-full place-items-center rounded-2xl shadow-xl transition-colors duration-500" style={{ background: style.bg }}>
-                    <span key={style.name} className="mhr-in font-[family-name:var(--font-display)] text-[clamp(34px,7vw,64px)] font-black tracking-tight" style={style.css}>MAGIC</span>
+                <div className="flex w-full max-w-[420px] flex-col items-center gap-4">
+                  <div key={fx.name} className="mhr-in relative grid aspect-[16/10] w-full place-items-center overflow-hidden rounded-2xl shadow-xl" style={{ background: fx.bg }}>
+                    {fx.deco}
+                    <span className={`relative ${fx.cls}`} style={fx.css}>{fx.word}</span>
                   </div>
                   <div className="flex flex-wrap justify-center gap-1.5">
-                    {STYLES.map((x) => <span key={x.name} className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${x === style ? 'bg-mt-ink text-mt-bg' : 'bg-mt-surface text-mt-muted'}`}>{x.name}</span>)}
+                    {FX.map((x) => <span key={x.name} className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${x === fx ? 'bg-mt-ink text-mt-bg' : 'bg-mt-surface text-mt-muted'}`}>{x.name}</span>)}
                   </div>
                 </div>
               )}
@@ -143,27 +156,20 @@ function HeroReel() {
                 </div>
               )}
               {s.id === 'retouch' && (
-                <div className="flex h-full w-full max-w-[420px] items-center gap-3">
-                  <svg viewBox="0 0 120 150" className="h-full flex-1 drop-shadow-xl" aria-hidden>
-                    <defs><linearGradient id="mhr-bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor="#FDE7F0" /><stop offset="1" stopColor="#E3F4FB" /></linearGradient></defs>
-                    <rect width="120" height="150" rx="12" fill="url(#mhr-bg)" />
-                    <path d="M24 60C20 30 40 12 60 12C82 12 100 30 96 60C98 90 100 118 104 142H16C20 118 22 90 24 60Z" fill="#3A2A22" />
-                    <path d="M48 118h24v18c-6 4-18 4-24 0Z" fill="#E9C3AB" />
-                    <path d="M30 150c4-12 16-16 30-16s26 4 30 16Z" fill="#F2708F" />
-                    <path d="M60 22C36 22 28 44 30 66C32 94 44 118 60 124C76 118 88 94 90 66C92 44 84 22 60 22Z" fill="#F3D2BC" stroke="#16161F" strokeWidth="1" style={{ transform: `scaleX(${1 - 0.07 * p})`, transformOrigin: '60px 70px', transition: 'transform .1s linear' }} />
-                    <path d="M30 52C32 30 46 20 62 20C80 20 92 32 90 52C82 40 70 34 56 36C46 38 36 44 30 52Z" fill="#3A2A22" />
-                    <path d="M42 60q7-4 14 0M64 60q7-4 14 0" stroke="#16161F" strokeWidth="1.1" fill="none" strokeLinecap="round" />
-                    <ellipse cx="49" cy="67" rx={3.4 + p * 0.9} ry={2.1 + p * 0.5} fill="#16161F" /><ellipse cx="71" cy="67" rx={3.4 + p * 0.9} ry={2.1 + p * 0.5} fill="#16161F" />
-                    <path d="M60 72v13q-3 3 0 4" stroke="#16161F" strokeWidth=".9" fill="none" strokeLinecap="round" />
-                    <path d="M50 100q10-6 20 0q-10 8-20 0Z" fill={lip} style={{ transition: 'fill .4s' }} />
-                    {[[37, 66], [83, 66], [44, 106], [76, 106], [60, 120]].map(([x, y], k) => <circle key={k} cx={x} cy={y} r="1.6" fill="#35C2F1" opacity={p > k * 0.12 ? 1 : 0} />)}
-                  </svg>
+                <div className="flex h-full w-full max-w-[440px] items-center gap-3">
+                  <div className="relative h-full flex-1 overflow-hidden rounded-xl bg-[#1B1B22] shadow-xl">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src="/home/reel/face-original.jpg" alt="" className="absolute inset-0 h-full w-full object-cover" />
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img key={look.img} src={look.img} alt="" className="absolute inset-0 h-full w-full object-cover transition-opacity duration-300" style={{ opacity: look.opacity, filter: look.filter }} />
+                    <span className="absolute left-2 top-2 rounded-md bg-black/55 px-2 py-0.5 text-[10px] font-semibold text-white">Real result · Photo Studio</span>
+                  </div>
                   <div className="w-[44%] space-y-2.5 rounded-xl bg-mt-surface p-3 text-[10.5px] shadow-lg">
-                    <p className="font-semibold text-mt-ink">Face &amp; sculpt</p>
-                    <div><p className="text-mt-muted">Lip shade</p><div className="mt-1 flex gap-1.5">{LIPS.map((c) => <span key={c} className="h-4 w-4 rounded-full" style={{ background: c, outline: c === lip ? '2px solid #16161F' : 'none', outlineOffset: 1 }} />)}</div></div>
-                    {[['Eye size', p], ['Slim face', p * 0.8], ['Skin smoothing', 0.5]].map(([n, v]) => (
-                      <div key={n as string}><p className="text-mt-muted">{n}</p><div className="mt-1 h-1.5 rounded-full bg-mt-surface2"><div className="h-full rounded-full bg-[#F2708F]" style={{ width: `${20 + (v as number) * 55}%` }} /></div></div>
+                    <p className="font-semibold text-mt-ink">{look.panel}</p>
+                    {look.rows.map(([n, v]) => (
+                      <div key={n}><p className="flex justify-between text-mt-muted"><span>{n}</span><b className="tabular-nums text-mt-ink">{Math.round(v * 100)}</b></p><div className="mt-1 h-1.5 rounded-full bg-mt-surface2"><div className="h-full rounded-full bg-[#F2708F]" style={{ width: `${Math.max(4, v * 100)}%` }} /></div></div>
                     ))}
+                    {look.swatch && <div className="flex gap-1.5">{LIPS.map((c) => <span key={c} className="h-4 w-4 rounded-full" style={{ background: c, outline: c === LIPS[0] ? '2px solid #16161F' : 'none', outlineOffset: 1 }} />)}</div>}
                   </div>
                 </div>
               )}
@@ -177,53 +183,75 @@ function HeroReel() {
               )}
               {s.id === 'textile' && (
                 <div className="relative h-full w-full">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src="/home/reel/textile.webp" alt="" className="absolute inset-0 m-auto max-h-full max-w-full rounded-lg object-contain shadow-lg transition-opacity duration-700" style={{ opacity: second ? 0 : 1 }} />
-                  <div className="absolute inset-0 p-2 transition-opacity duration-700" style={{ opacity: second ? 1 : 0 }}>{second && <GarmentArt />}</div>
-                  <span className="absolute right-1 top-1 rounded-full bg-mt-surface px-2 py-0.5 text-[10px] font-semibold text-mt-ink shadow">{second ? 'Finished garment' : 'Pattern pieces'}</span>
+                  <div key={kurti} className="mhr-in absolute inset-0 p-1"><GarmentArt id={kurti} /></div>
+                  <div className="absolute bottom-1 right-1 flex gap-1">
+                    {KURTIS.map((k) => <span key={k.id} className={`rounded-full px-2 py-0.5 text-[10px] font-semibold shadow ${k.id === kurti ? 'bg-mt-ink text-mt-bg' : 'bg-mt-surface text-mt-muted'}`}>{k.name}</span>)}
+                  </div>
                 </div>
               )}
               {s.id === 'trace' && (
                 <div className="relative aspect-square h-[92%] overflow-hidden rounded-xl bg-white shadow-xl">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src="/templates/photos/pro/x_watch.jpg" alt="" className="absolute inset-0 h-full w-full object-cover" style={{ filter: 'url(#mhr-poster) saturate(1.2)' }} />
-                  <div className="absolute inset-0 overflow-hidden" style={{ clipPath: `inset(0 ${Math.round(p * 100)}% 0 0)` }}>
+                  <div className="absolute inset-0 grid place-items-center bg-[#FFF8EE]">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src="/templates/photos/pro/x_watch.jpg" alt="" className="absolute inset-0 h-full w-full object-cover" />
+                    <img src={EMBLEM_URL} alt="" width={22} height={22} style={{ imageRendering: 'pixelated', transform: 'scale(11)', transformOrigin: 'center' }} />
                   </div>
-                  <div className="absolute inset-y-0 w-0.5 bg-[#3B82C4]" style={{ left: `${100 - Math.round(p * 100)}%` }} />
-                  <span className="absolute right-2 top-2 rounded-full bg-[#3B82C4] px-2 py-0.5 text-[10px] font-semibold text-white">Vector</span>
+                  <div className="absolute inset-0 bg-white" style={{ clipPath: `inset(0 0 0 ${Math.round((1 - p) * 100)}%)` }}>
+                    <svg viewBox="0 0 100 100" className="h-full w-full" aria-hidden>
+                      <g dangerouslySetInnerHTML={{ __html: EMBLEM }} />
+                      {EMBLEM_NODES.map(([x, y], k) => <rect key={k} x={x - 1.4} y={y - 1.4} width="2.8" height="2.8" fill="#fff" stroke="#3B82C4" strokeWidth=".6" />)}
+                    </svg>
+                  </div>
+                  <div className="absolute inset-y-0 w-0.5 bg-[#3B82C4]" style={{ left: `${Math.round((1 - p) * 100)}%` }} />
+                  <span className="absolute left-2 top-2 rounded-full bg-mt-ink/80 px-2 py-0.5 text-[10px] font-semibold text-white">Pixels</span>
+                  <span className="absolute right-2 top-2 rounded-full bg-[#3B82C4] px-2 py-0.5 text-[10px] font-semibold text-white">Vector · 4 colours</span>
                 </div>
               )}
               {s.id === 'print' && (
                 <div className="relative flex h-full items-center gap-3">
-                  <div className="relative grid aspect-[210/297] h-full grid-cols-3 content-center gap-[4%] bg-white p-[7%] shadow-xl">
-                    {Array.from({ length: 9 }, (_, k) => (
-                      <div key={k} className="relative aspect-[85/55] rounded-[2px] bg-[#14233B]" style={{ opacity: k < cards ? 1 : 0, animation: k < cards ? 'mhr-card .35s ease-out both' : 'none' }}>
-                        <span className="absolute left-[10%] top-[22%] h-[14%] w-[40%] rounded-sm bg-[#E3A72F]" />
-                        <span className="absolute bottom-[22%] left-[10%] h-[8%] w-[60%] rounded-sm bg-white/60" />
-                      </div>
-                    ))}
-                    {[['left-[3%] top-[3%]'], ['right-[3%] top-[3%]'], ['left-[3%] bottom-[3%]'], ['right-[3%] bottom-[3%]']].map(([c]) => <span key={c} className={`absolute h-3 w-3 border-mt-ink ${c} ${c.includes('left') ? 'border-l' : 'border-r'} ${c.includes('top') ? 'border-t' : 'border-b'}`} />)}
+                  <div className="relative aspect-[210/297] h-full bg-white shadow-xl">
+                    <div className="absolute inset-[9%] grid grid-cols-2 content-start gap-[6%]">
+                      {Array.from({ length: 8 }, (_, k) => (
+                        <div key={k} className="relative aspect-[85/55]" style={{ opacity: k < cards ? 1 : 0, animation: k < cards ? 'mhr-card .35s ease-out both' : 'none' }}>
+                          <div className="absolute -inset-[5%] bg-[#F2708F]/25" />
+                          <div className="absolute inset-0 overflow-hidden rounded-[1px]" style={{ background: 'linear-gradient(135deg,#0F1B2D 0%,#1D3557 100%)' }}>
+                            <span className="absolute left-[9%] top-[18%] grid h-[34%] aspect-square place-items-center rounded-full border border-[#E3B341] font-serif text-[clamp(5px,0.9vw,9px)] italic text-[#E3B341]">A</span>
+                            <span className="absolute left-[9%] bottom-[30%] h-[7%] w-[46%] rounded-sm bg-white/85" />
+                            <span className="absolute left-[9%] bottom-[16%] h-[5%] w-[30%] rounded-sm bg-[#E3B341]" />
+                            <span className="absolute right-0 top-0 h-full w-[26%]" style={{ background: 'repeating-linear-gradient(45deg,#E3B341 0 1px,transparent 1px 5px)', opacity: 0.35 }} />
+                          </div>
+                          {[['-left-[14%] top-0 w-[10%] border-t'], ['-left-[14%] bottom-0 w-[10%] border-b'], ['-right-[14%] top-0 w-[10%] border-t'], ['-right-[14%] bottom-0 w-[10%] border-b'], ['left-0 -top-[20%] h-[14%] border-l'], ['right-0 -top-[20%] h-[14%] border-r'], ['left-0 -bottom-[20%] h-[14%] border-l'], ['right-0 -bottom-[20%] h-[14%] border-r']].map(([c]) => <span key={c} className={`absolute border-[#16161F] ${c}`} />)}
+                        </div>
+                      ))}
+                    </div>
+                    <div className="absolute bottom-[3%] left-[9%] right-[9%] flex items-center gap-1">
+                      {['#00AEEF', '#EC008C', '#FFF200', '#16161F'].map((c) => <span key={c} className="h-2 w-3" style={{ background: c }} />)}
+                      <span className="ml-1 truncate text-[6px] text-mt-faint">85 × 55 mm · 3 mm bleed · CMYK</span>
+                    </div>
+                    {[['left-1/2 top-[1.5%]'], ['left-1/2 bottom-[7%]']].map(([c]) => <span key={c} className={`absolute ${c} h-2.5 w-2.5 -translate-x-1/2 rounded-full border border-[#16161F]`} style={{ background: 'linear-gradient(#16161F,#16161F) center/100% 1px no-repeat, linear-gradient(#16161F,#16161F) center/1px 100% no-repeat' }} />)}
                   </div>
                   <div className="hidden w-[150px] rounded-xl border border-mt-border bg-mt-surface p-2.5 text-[10.5px] shadow-lg sm:block">
                     <p className="font-semibold text-mt-ink">Move</p>
-                    <p className="mt-1.5 flex justify-between text-mt-muted">Horizontal <b className="text-mt-ink">{cards % 3 === 0 && cards ? '0 mm' : '90 mm'}</b></p>
-                    <p className="flex justify-between text-mt-muted">Vertical <b className="text-mt-ink">{cards % 3 === 0 && cards ? '60 mm' : '0 mm'}</b></p>
+                    <p className="mt-1.5 flex justify-between text-mt-muted">Horizontal <b className="text-mt-ink">{cards % 2 === 1 ? '95 mm' : '−95 mm'}</b></p>
+                    <p className="flex justify-between text-mt-muted">Vertical <b className="text-mt-ink">{cards % 2 === 1 ? '0 mm' : '65 mm'}</b></p>
                     <div className="mt-2 grid grid-cols-2 gap-1"><span className="rounded-md bg-mt-ink py-1 text-center font-semibold text-mt-bg">Copy</span><span className="rounded-md border border-mt-border py-1 text-center">OK</span></div>
+                    <p className="mt-2 flex items-center gap-1 text-mt-muted"><span className="h-2 w-3 bg-[#F2708F]/40" /> Bleed</p>
                   </div>
                 </div>
               )}
               {s.id === 'export' && (
-                <div className="relative aspect-[1/1.3] h-[86%]">
-                  <svg viewBox="0 0 130 169" className="absolute -inset-[8%] h-[116%] w-[116%]" aria-hidden>
-                    <path d="M0 15h9M0 154h9M121 15h9M121 154h9M15 0v9M115 0v9M15 160v9M115 160v9" stroke="currentColor" className="text-mt-ink" strokeWidth=".8" strokeDasharray="400" style={{ animation: still ? 'none' : 'mhr-draw 1.6s ease-out both' }} />
-                  </svg>
-                  <div className="absolute inset-0 bg-[#3B82C4]/15" />
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={`${C}bdp-black-and-gold-fortieth-invitation.jpg`} alt="" className="absolute inset-[4%] h-[92%] w-[92%] object-cover shadow-lg" />
-                  <div className="absolute -right-3 top-[18%] flex flex-col gap-1.5 sm:-right-14">
-                    {['PDF', 'PNG', 'JPG', 'SVG'].map((f, k) => <span key={f} className="rounded-lg bg-mt-surface px-2.5 py-1 text-[11px] font-bold text-mt-ink shadow-md" style={{ opacity: p > k * 0.15 ? 1 : 0, transform: p > k * 0.15 ? 'none' : 'translateX(10px)', transition: 'all .35s' }}>{f}</span>)}
+                <div className="relative flex h-full w-full max-w-[420px] items-center justify-center">
+                  {FAN.map((f, k) => (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img key={f} src={C + f} alt="" className="absolute h-[70%] rounded-md bg-white object-cover shadow-xl transition-transform duration-700" style={{ aspectRatio: '1/1.35', transform: `translateX(${(k - 1) * Math.min(1, p * 2) * 62}%) rotate(${(k - 1) * Math.min(1, p * 2) * 8}deg) translateY(${k === 1 ? -4 : 6}%)`, zIndex: k === 1 ? 2 : 1 }} />
+                  ))}
+                  <div className="absolute bottom-[2%] left-1/2 z-[3] w-[86%] -translate-x-1/2 rounded-xl border border-mt-border bg-mt-surface p-2.5 text-[11px] shadow-xl">
+                    <div className="flex items-center gap-2">
+                      <span className="grid h-6 w-6 place-items-center rounded-full bg-emerald-500 text-white"><Check size={13} /></span>
+                      <p className="min-w-0 flex-1 truncate font-semibold text-mt-ink">{p < 0.8 ? 'Downloading 3 files…' : 'Saved on your device'}</p>
+                      <span className="flex gap-1">{['PDF', 'PNG', 'SVG'].map((f, k) => <b key={f} className="rounded bg-mt-surface2 px-1.5 py-0.5 text-[9.5px]" style={{ opacity: p > 0.2 + k * 0.2 ? 1 : 0.3 }}>{f}</b>)}</span>
+                    </div>
+                    <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-mt-surface2"><div className="h-full mt-spectrum" style={{ width: `${Math.min(100, p * 125)}%` }} /></div>
+                    <p className="mt-1.5 text-[10px] text-mt-muted">No login · no watermark · print PDF in CMYK</p>
                   </div>
                 </div>
               )}
@@ -277,13 +305,17 @@ export function HomeHero() {
 
       <div className="relative mt-container grid gap-14 pb-14 pt-12 sm:pb-20 sm:pt-20 lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)] lg:items-center">
         <div className="mhh-lift min-w-0">
-          <p className="inline-flex items-center gap-2 rounded-full border border-mt-border bg-mt-surface/80 px-3.5 py-1.5 text-[12px] font-semibold tracking-wide text-mt-muted backdrop-blur">
-            <span className="h-1.5 w-1.5 rounded-full mt-spectrum" aria-hidden /> 100% free · no sign-up · no login
-          </p>
-          <h1 className="mt-6 font-[family-name:var(--font-display)] text-[2rem] font-medium leading-[1.08] tracking-[-0.035em] text-mt-ink min-[400px]:text-[2.3rem] sm:text-[3.4rem] lg:text-[3.9rem]">
+          <h1 className="font-[family-name:var(--font-display)] text-[2rem] font-medium leading-[1.08] tracking-[-0.035em] text-mt-ink min-[400px]:text-[2.3rem] sm:text-[3.4rem] lg:text-[3.9rem]">
             Design anything.{' '}
             <span className="mt-spectrum-text">Free for everyone.</span>
           </h1>
+          <ul className="mt-6 flex flex-wrap gap-2" aria-label="What is free">
+            {['100% free', 'No login', 'Free export', 'No watermark'].map((t, k) => (
+              <li key={t} className="inline-flex items-center gap-2 rounded-full border border-mt-border bg-mt-surface px-4 py-2 font-[family-name:var(--font-display)] text-[15px] font-semibold tracking-tight text-mt-ink shadow-sm sm:text-[18px]">
+                <span className="h-2.5 w-2.5 rounded-full" style={{ background: ['#F2708F', '#A69BD3', '#35C2F1', '#8CC84B'][k] }} aria-hidden />{t}
+              </li>
+            ))}
+          </ul>
           <p className="mt-6 max-w-xl text-base leading-relaxed text-mt-muted sm:text-lg">
             Templates, a design editor, Photo Studio, packaging dielines, garment patterns, vector trace and print-ready files with bleed and crop marks. Just open it and create — no account, no watermark, and your files stay on your device.
           </p>

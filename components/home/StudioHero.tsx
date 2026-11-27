@@ -117,9 +117,9 @@ export function PackagingArt() {
   const t = useMemo(() => PACK_TEMPLATES.find((x) => x.id === 'botanical-tea-rte') || PACK_TEMPLATES[0], []);
   return <div className="h-full w-full [&_svg]:h-full [&_svg]:w-full" dangerouslySetInnerHTML={{ __html: ready && t ? templateMockupSvg(t) : '' }} />;
 }
-export function GarmentArt() {
+export function GarmentArt({ id = 'polo-corporate' }: { id?: string } = {}) {
   const ready = useReady();
-  const t = useMemo(() => TEXTILE_TEMPLATES.find((x) => x.id === 'polo-corporate') || TEXTILE_TEMPLATES[0], []);
+  const t = useMemo(() => TEXTILE_TEMPLATES.find((x) => x.id === id) || TEXTILE_TEMPLATES[0], [id]);
   return <div className="h-full w-full [&_svg]:h-full [&_svg]:w-full" dangerouslySetInnerHTML={{ __html: ready && t ? textileSketchSvg(t) : '' }} />;
 }
 

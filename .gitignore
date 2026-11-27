@@ -11,3 +11,4 @@ __pycache__/
 .open-next
 .wrangler
 .dev.vars
+__pycache__/
