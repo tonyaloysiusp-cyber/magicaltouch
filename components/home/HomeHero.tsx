@@ -40,7 +40,7 @@ const STYLES: { name: string; css: CSSProperties; bg: string }[] = [
   { name: 'Gold', bg: '#1B1712', css: { backgroundImage: 'linear-gradient(180deg,#FFF1B8 0%,#E8B64C 45%,#9A6A12 60%,#F7D77A 100%)', WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent', filter: 'drop-shadow(0 2px 0 #5a3d06)' } },
   { name: 'Neon', bg: '#0B0B1A', css: { color: '#fff', textShadow: '0 0 6px #ff4fd8, 0 0 14px #ff4fd8, 0 0 28px #b03cff' } },
   { name: '3D Block', bg: '#FFE45C', css: { color: '#F2708F', textShadow: '1px 1px 0 #16161F, 2px 2px 0 #16161F, 3px 3px 0 #16161F, 4px 4px 0 #16161F, 5px 5px 0 #16161F, 6px 6px 0 #16161F' } },
-  { name: 'Outline', bg: '#E9F7FF', css: { color: 'transparent', WebkitTextStroke: '2px #1D6FB8' } },
+  { name: 'Outline', bg: '#E9F7FF', css: { color: '#fff', WebkitTextStroke: '2.5px #1D6FB8', textShadow: '4px 4px 0 #35C2F1' } },
 ];
 const LIPS = ['#C2435E', '#9C2B45', '#E07A8F', '#7E2F3C'];
 const FREE = ['Free templates', 'Free design editor', 'Free Photo Studio', 'Free packaging dielines', 'Free garment patterns', 'Free vector trace', 'Free print files', 'Free translation', 'No sign-up', 'No login', 'No watermark'];
@@ -276,11 +276,11 @@ export function HomeHero() {
       <div aria-hidden className="pointer-events-none absolute inset-0 opacity-50 dark:opacity-25" style={{ backgroundImage: 'linear-gradient(to right, rgb(var(--mt-border-rgb,228 228 231) / .55) 1px, transparent 1px), linear-gradient(to bottom, rgb(var(--mt-border-rgb,228 228 231) / .55) 1px, transparent 1px)', backgroundSize: '72px 72px', maskImage: 'radial-gradient(ellipse 80% 70% at 30% 30%, #000 40%, transparent 100%)', WebkitMaskImage: 'radial-gradient(ellipse 80% 70% at 30% 30%, #000 40%, transparent 100%)' }} />
 
       <div className="relative mt-container grid gap-14 pb-14 pt-12 sm:pb-20 sm:pt-20 lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)] lg:items-center">
-        <div className="mhh-lift">
+        <div className="mhh-lift min-w-0">
           <p className="inline-flex items-center gap-2 rounded-full border border-mt-border bg-mt-surface/80 px-3.5 py-1.5 text-[12px] font-semibold tracking-wide text-mt-muted backdrop-blur">
             <span className="h-1.5 w-1.5 rounded-full mt-spectrum" aria-hidden /> 100% free · no sign-up · no login
           </p>
-          <h1 className="mt-6 font-[family-name:var(--font-display)] text-[2.5rem] font-medium leading-[1.05] tracking-[-0.035em] text-mt-ink sm:text-[3.6rem] lg:text-[4.1rem]">
+          <h1 className="mt-6 font-[family-name:var(--font-display)] text-[2rem] font-medium leading-[1.08] tracking-[-0.035em] text-mt-ink min-[400px]:text-[2.3rem] sm:text-[3.4rem] lg:text-[3.9rem]">
             Design anything.{' '}
             <span className="mt-spectrum-text">Free for everyone.</span>
           </h1>
@@ -301,7 +301,7 @@ export function HomeHero() {
             ))}
           </ul>
         </div>
-        <div className="mhh-rise"><HeroReel /></div>
+        <div className="mhh-rise min-w-0"><HeroReel /></div>
       </div>
 
       {/* "Free" ticker */}
