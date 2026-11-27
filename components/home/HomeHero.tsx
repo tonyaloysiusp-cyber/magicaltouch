@@ -39,7 +39,7 @@ const HEADLINES = [
 const STYLES: { name: string; css: CSSProperties; bg: string }[] = [
   { name: 'Gold', bg: '#1B1712', css: { backgroundImage: 'linear-gradient(180deg,#FFF1B8 0%,#E8B64C 45%,#9A6A12 60%,#F7D77A 100%)', WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent', filter: 'drop-shadow(0 2px 0 #5a3d06)' } },
   { name: 'Neon', bg: '#0B0B1A', css: { color: '#fff', textShadow: '0 0 6px #ff4fd8, 0 0 14px #ff4fd8, 0 0 28px #b03cff' } },
-  { name: '3D Block', bg: '#FFE45C', css: { color: '#fff', textShadow: '1px 1px 0 #16161F, 2px 2px 0 #16161F, 3px 3px 0 #16161F, 4px 4px 0 #16161F, 5px 5px 0 #16161F, 6px 6px 0 #16161F' } },
+  { name: '3D Block', bg: '#FFE45C', css: { color: '#F2708F', textShadow: '1px 1px 0 #16161F, 2px 2px 0 #16161F, 3px 3px 0 #16161F, 4px 4px 0 #16161F, 5px 5px 0 #16161F, 6px 6px 0 #16161F' } },
   { name: 'Outline', bg: '#E9F7FF', css: { color: 'transparent', WebkitTextStroke: '2px #1D6FB8' } },
 ];
 const LIPS = ['#C2435E', '#9C2B45', '#E07A8F', '#7E2F3C'];
@@ -116,7 +116,7 @@ function HeroReel() {
                 <div className="relative aspect-[1/1.414] h-full overflow-hidden rounded-md bg-[#14233B] shadow-xl">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={`${C}pro-northline-consulting-services-flyer.webp`} alt="" className="absolute inset-0 h-full w-full object-cover" />
-                  <div className="absolute left-[7%] top-[24%] w-[46%] rounded bg-[#14233B] px-1 py-1 ring-2 ring-[#3B82C4]">
+                  <div className="absolute left-[5%] top-[24%] h-[30%] w-[48%] rounded bg-[#14233B] px-1.5 py-1 ring-2 ring-[#3B82C4]">
                     <p className="text-[clamp(11px,2.1vw,18px)] font-bold leading-tight text-white">{'Growth plans built for you'.slice(0, typed)}<span className="ml-0.5 inline-block h-[1em] w-[2px] bg-white align-middle" style={{ animation: 'mhr-blink 1s steps(1) infinite' }} /></p>
                   </div>
                   <span className="absolute left-[7%] top-[20%] -translate-y-full rounded bg-[#3B82C4] px-1.5 py-0.5 text-[10px] font-semibold text-white">Headline</span>
@@ -147,8 +147,11 @@ function HeroReel() {
                   <svg viewBox="0 0 120 150" className="h-full flex-1 drop-shadow-xl" aria-hidden>
                     <defs><linearGradient id="mhr-bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor="#FDE7F0" /><stop offset="1" stopColor="#E3F4FB" /></linearGradient></defs>
                     <rect width="120" height="150" rx="12" fill="url(#mhr-bg)" />
+                    <path d="M24 60C20 30 40 12 60 12C82 12 100 30 96 60C98 90 100 118 104 142H16C20 118 22 90 24 60Z" fill="#3A2A22" />
+                    <path d="M48 118h24v18c-6 4-18 4-24 0Z" fill="#E9C3AB" />
+                    <path d="M30 150c4-12 16-16 30-16s26 4 30 16Z" fill="#F2708F" />
                     <path d="M60 22C36 22 28 44 30 66C32 94 44 118 60 124C76 118 88 94 90 66C92 44 84 22 60 22Z" fill="#F3D2BC" stroke="#16161F" strokeWidth="1" style={{ transform: `scaleX(${1 - 0.07 * p})`, transformOrigin: '60px 70px', transition: 'transform .1s linear' }} />
-                    <path d="M26 58C24 30 44 14 62 14C84 14 98 32 94 60C90 44 80 34 60 34C42 34 32 42 26 58Z" fill="#3A2A22" />
+                    <path d="M30 52C32 30 46 20 62 20C80 20 92 32 90 52C82 40 70 34 56 36C46 38 36 44 30 52Z" fill="#3A2A22" />
                     <path d="M42 60q7-4 14 0M64 60q7-4 14 0" stroke="#16161F" strokeWidth="1.1" fill="none" strokeLinecap="round" />
                     <ellipse cx="49" cy="67" rx={3.4 + p * 0.9} ry={2.1 + p * 0.5} fill="#16161F" /><ellipse cx="71" cy="67" rx={3.4 + p * 0.9} ry={2.1 + p * 0.5} fill="#16161F" />
                     <path d="M60 72v13q-3 3 0 4" stroke="#16161F" strokeWidth=".9" fill="none" strokeLinecap="round" />
