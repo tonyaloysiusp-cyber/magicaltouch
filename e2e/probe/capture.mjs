@@ -32,9 +32,9 @@ if (want('photo')) {
     await step(`ps tab ${t}`, async () => { await pg.getByRole('button', { name: t, exact: true }).first().click({ timeout: 4000 }); await pg.waitForTimeout(1500); await shot(`ps-tab-${t.toLowerCase()}`); });
   }
   await step('ps face find', async () => {
-    await pg.getByRole('button', { name: 'Adjust', exact: true }).first().click({ timeout: 4000 }).catch(() => {});
+    await pg.locator('[role=tab]:visible, button:visible').filter({ hasText: /^Adjust$/ }).first().click({ timeout: 4000 }).catch(() => {});
     await pg.waitForTimeout(800);
-    const f = pg.getByRole('button', { name: 'Find face' }).first();
+    const f = pg.locator('button:visible').filter({ hasText: /^Find face$/ }).first();
     await f.scrollIntoViewIfNeeded(); await f.click();
     await pg.getByText('Face found.').first().waitFor({ timeout: 60000 });
     await pg.waitForTimeout(1500);
@@ -43,7 +43,7 @@ if (want('photo')) {
   const looks = [['V-line face', 'face-vline'], ['Rose lips', 'face-lips'], ['Big bright eyes', 'face-eyes'], ['Soft glam', 'face-glam']];
   for (const [name, file] of looks) {
     await step(`ps face ${name}`, async () => {
-      await pg.getByRole('button', { name, exact: true }).first().click({ timeout: 5000 });
+      await pg.locator('button:visible').filter({ hasText: new RegExp(`^${name}$`) }).first().click({ timeout: 5000 });
       const s = pg.getByLabel('Preset strength'); if (await s.count()) { await s.fill('120').catch(() => {}); }
       await pg.waitForTimeout(2500);
       await shot(`ps-${file}`);
@@ -57,13 +57,10 @@ if (want('photo')) {
 // ---------------- Design editor with a real template
 if (want('editor')) {
   await step('open template', async () => {
-    await go('/templates', 9000);
-    const card = pg.locator('a[href^="/templates/"]:not([href*="/category/"]):not([href*="/tag/"])').filter({ has: pg.locator('img') });
-    log('cards', await card.count());
-    await card.nth(2).click({ timeout: 8000 }); await pg.waitForTimeout(5000);
-    await shot('tpl-detail');
-    await pg.getByText(/Use this template/).first().click({ timeout: 8000 });
-    await pg.waitForTimeout(14000); await closePopups();
+    const U = process.env.SUPABASE_URL, K = process.env.SUPABASE_ANON_KEY;
+    const r = await fetch(`${U}/rest/v1/templates?select=id,name,width,height&status=eq.published&is_featured=eq.true&name=ilike.*flyer*&limit=5`, { headers: { apikey: K, Authorization: `Bearer ${K}` } });
+    const list = await r.json(); const t = list[0]; log('template', t?.name, list.length);
+    await go(`/editor?w=${t.width}&h=${t.height}&templateId=${t.id}`, 15000);
   });
   await step('ed workspace', () => shot('ed-workspace'));
   for (const r of ['Templates', 'Elements', 'Text', 'Upload', 'Print & cut', 'QR & barcode', 'Draw', 'Background', 'Patterns', 'Colours', 'Trace', 'Brand', 'Layers']) {

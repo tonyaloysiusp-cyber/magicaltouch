@@ -114,15 +114,18 @@ export default function AdminStoragePage() {
       for (let round = 0; round < 200; round++) {
         const { data, error } = await supabase.rpc('admin_storage_orphans', { p_limit: 500 });
         if (error) throw new Error(error.message);
-        const names = ((data as any[]) || []).map((x) => x.name as string);
-        if (!names.length) break;
-        for (let i = 0; i < names.length; i += 100) {
-          const { data: gone, error: e2 } = await supabase.storage.from('template-media').remove(names.slice(i, i + 100));
-          if (e2) throw new Error(e2.message);
-          removed += gone?.length || 0;
-          setMsg(`Deleting… ${removed.toLocaleString()} of ${total.toLocaleString()}`);
+        const rows = ((data as any[]) || []) as { bucket: string; name: string }[];
+        if (!rows.length) break;
+        for (const bucket of ['template-media', 'template-thumbs']) {
+          const names = rows.filter((x) => x.bucket === bucket).map((x) => x.name);
+          for (let i = 0; i < names.length; i += 100) {
+            const { data: gone, error: e2 } = await supabase.storage.from(bucket).remove(names.slice(i, i + 100));
+            if (e2) throw new Error(e2.message);
+            removed += gone?.length || 0;
+            setMsg(`Deleting… ${removed.toLocaleString()} of ${total.toLocaleString()}`);
+          }
         }
-        if (names.length < 500) break;
+        if (rows.length < 500) break;
       }
       setMsg(`Deleted ${removed.toLocaleString()} unused picture(s).`);
       load();

@@ -5,12 +5,12 @@
 -- Template pictures named by any template (thumbnail, preview or inside the
 -- design), as storage object names in the template-media bucket.
 create or replace function public._template_media_in_use()
-returns table (name text) language sql stable security definer set search_path = public as $$
-  select distinct m[1]
+returns table (bucket text, name text) language sql stable security definer set search_path = public as $$
+  select distinct m[1], m[2]
   from templates t,
        lateral regexp_matches(
          coalesce(t.thumbnail, '') || ' ' || coalesce(t.preview, '') || ' ' || coalesce(t.canvas_json::text, ''),
-         '/template-media/([^"''?\s)]+)', 'g') m
+         '/(template-media|template-thumbs)/([^"''?\s)]+)', 'g') m
 $$;
 revoke all on function public._template_media_in_use() from public, anon, authenticated;
 
@@ -19,9 +19,9 @@ returns jsonb language plpgsql security definer set search_path = public, storag
 declare r jsonb;
 begin
   if not public.is_admin() then raise exception 'admins only'; end if;
-  create temp table if not exists _used (name text primary key) on commit drop;
+  create temp table if not exists _used (bucket text, name text, primary key (bucket, name)) on commit drop;
   truncate _used;
-  insert into _used select name from public._template_media_in_use() on conflict do nothing;
+  insert into _used select bucket, name from public._template_media_in_use() on conflict do nothing;
   select jsonb_build_object(
     'db_size_mb', round(pg_database_size(current_database()) / 1048576.0, 1),
     'tables', (select coalesce(jsonb_agg(t), '[]') from (
@@ -36,8 +36,8 @@ begin
     'versions_total', (select count(*) from template_versions),
     'versions_extra', (select coalesce(sum(greatest(n - 3, 0)), 0) from (select count(*) n from template_versions group by template_id) x),
     'versions_mb', round(pg_total_relation_size('public.template_versions') / 1048576.0, 1),
-    'orphan_files', (select count(*) from storage.objects o where o.bucket_id = 'template-media' and not exists (select 1 from _used u where u.name = o.name)),
-    'orphan_mb', (select round(coalesce(sum((metadata->>'size')::bigint), 0) / 1048576.0, 1) from storage.objects o where o.bucket_id = 'template-media' and not exists (select 1 from _used u where u.name = o.name)),
+    'orphan_files', (select count(*) from storage.objects o where o.bucket_id in ('template-media', 'template-thumbs') and not exists (select 1 from _used u where u.bucket = o.bucket_id and u.name = o.name)),
+    'orphan_mb', (select round(coalesce(sum((metadata->>'size')::bigint), 0) / 1048576.0, 1) from storage.objects o where o.bucket_id in ('template-media', 'template-thumbs') and not exists (select 1 from _used u where u.bucket = o.bucket_id and u.name = o.name)),
     'logs_old', (select (select count(*) from site_views_daily where day < current_date - 90)
                       + (select count(*) from site_searches_daily where day < current_date - 90)
                       + (select count(*) from site_errors_daily where day < current_date - 90)),
@@ -54,14 +54,15 @@ grant execute on function public.admin_storage_report() to authenticated;
 -- Names of unused template pictures, a page at a time. The admin page then
 -- removes them through the Storage API (admins may delete in template-media).
 create or replace function public.admin_storage_orphans(p_limit integer default 500)
-returns table (name text, mb numeric) language plpgsql security definer set search_path = public, storage as $$
+returns table (bucket text, name text, mb numeric) language plpgsql security definer set search_path = public, storage as $$
 begin
   if not public.is_admin() then raise exception 'admins only'; end if;
   return query
-    select o.name, round(coalesce((o.metadata->>'size')::bigint, 0) / 1048576.0, 2)
+    with used as (select * from public._template_media_in_use())
+    select o.bucket_id::text, o.name, round(coalesce((o.metadata->>'size')::bigint, 0) / 1048576.0, 2)
     from storage.objects o
-    where o.bucket_id = 'template-media'
-      and not exists (select 1 from public._template_media_in_use() u where u.name = o.name)
+    where o.bucket_id in ('template-media', 'template-thumbs')
+      and not exists (select 1 from used u where u.bucket = o.bucket_id and u.name = o.name)
     order by o.created_at
     limit least(greatest(p_limit, 1), 1000);
 end $$;
