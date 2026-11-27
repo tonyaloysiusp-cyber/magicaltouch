@@ -66,16 +66,12 @@ if (want('editor')) {
   for (const r of ['Templates', 'Elements', 'Text', 'Upload', 'Print & cut', 'QR & barcode', 'Draw', 'Background', 'Patterns', 'Colours', 'Trace', 'Brand', 'Layers']) {
     await step(`ed rail ${r}`, async () => { await pg.getByRole('button', { name: r, exact: true }).first().click({ timeout: 4000 }); await pg.waitForTimeout(1500); await shot(`ed-rail-${r.toLowerCase().replace(/[^a-z]+/g, '-')}`); await pg.getByRole('button', { name: r, exact: true }).first().click({ timeout: 2000 }).catch(() => {}); await pg.waitForTimeout(400); });
   }
-  await step('ed select text', async () => {
-    const cv = pg.locator('canvas.upper-canvas').first(); const bx = await cv.boundingBox();
-    await pg.mouse.click(bx.x + bx.width * 0.3, bx.y + bx.height * 0.3); await pg.waitForTimeout(1000); await shot('ed-selected');
-  });
+  await step('ed select text', async () => { await pg.mouse.click(733, 540); await pg.waitForTimeout(1200); await shot('ed-selected'); });
   for (const t of ['Effects', 'Translate', 'Write', 'Position', 'Text frame']) {
-    await step(`ed tool ${t}`, async () => { await pg.getByText(t, { exact: true }).first().click({ timeout: 4000 }); await pg.waitForTimeout(1500); await shot(`ed-tool-${t.toLowerCase().replace(/ /g, '-')}`); await pg.keyboard.press('Escape'); await pg.waitForTimeout(500); });
+    await step(`ed tool ${t}`, async () => { await pg.mouse.click(733, 540); await pg.waitForTimeout(700); await pg.locator('button:visible').filter({ hasText: new RegExp(`^\\s*${t}\\s*$`) }).first().click({ timeout: 4000 }); await pg.waitForTimeout(1500); await shot(`ed-tool-${t.toLowerCase().replace(/ /g, '-')}`); await pg.keyboard.press('Escape'); await pg.waitForTimeout(500); });
   }
   await step('ed move dialog', async () => {
-    const cv = pg.locator('canvas.upper-canvas').first(); const bx = await cv.boundingBox();
-    await pg.keyboard.press('v'); await pg.mouse.click(bx.x + bx.width * 0.3, bx.y + bx.height * 0.3); await pg.waitForTimeout(600);
+    await pg.mouse.click(733, 540); await pg.waitForTimeout(600);
     await pg.keyboard.press('Enter'); await pg.waitForTimeout(1000);
     await pg.locator('[role=dialog][aria-label="Move"] input').first().fill('40'); await pg.waitForTimeout(800);
     await shot('ed-move'); await pg.keyboard.press('Escape');
@@ -84,7 +80,7 @@ if (want('editor')) {
   await step('ed export', async () => { await click('Export', { exact: true, wait: 1800 }); await shot('ed-export'); const d = pg.locator('[role=dialog]').last(); await d.evaluate((e) => e.scrollTo?.(0, 9999)).catch(() => {}); await pg.waitForTimeout(500); await shot('ed-export-2'); await pg.keyboard.press('Escape'); await pg.waitForTimeout(600); });
   await step('ed pro', async () => { await pg.getByText('Pro', { exact: true }).first().click({ timeout: 5000 }); await pg.waitForTimeout(2500); await shot('ed-pro'); });
   await step('ed pro menus', async () => { for (const m of ['File', 'Edit', 'Object', 'Type', 'View']) { const l = pg.getByRole('button', { name: m, exact: true }).first(); if (await l.count()) { await l.click({ timeout: 2500 }); await pg.waitForTimeout(700); await shot(`ed-menu-${m.toLowerCase()}`); await pg.keyboard.press('Escape'); } } });
-  await step('ed packaging', async () => { await pg.getByText('Packaging', { exact: true }).first().click({ timeout: 5000 }); await pg.waitForTimeout(6000); await closePopups(); await shot('ed-packaging'); });
+  await step('ed packaging', async () => { await pg.locator('button:visible').filter({ hasText: /^\s*Packaging\s*$/ }).first().click({ timeout: 5000 }); await pg.waitForTimeout(6000); await closePopups(); await shot('ed-packaging'); });
   await step('ed textile', async () => { await pg.getByText('Textile', { exact: true }).first().click({ timeout: 5000 }); await pg.waitForTimeout(6000); await closePopups(); await shot('ed-textile'); });
 }
 
