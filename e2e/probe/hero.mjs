@@ -1,0 +1,23 @@
+import { chromium } from 'playwright';
+import fs from 'node:fs';
+fs.mkdirSync('shots', { recursive: true });
+const B = 'https://magicaltouchdesign.com';
+const b = await chromium.launch();
+const ctx = await b.newContext({ viewport: { width: 1440, height: 900 } });
+const pg = await ctx.newPage();
+const errs = []; pg.on('pageerror', (e) => errs.push(e.message));
+await pg.goto(B + '/?nocache=' + Date.now(), { waitUntil: 'domcontentloaded', timeout: 60000 }); await pg.waitForTimeout(6000);
+await pg.locator('button[aria-label="Close"]').first().click({ timeout: 2000 }).catch(() => {});
+console.log('[check] h1:', (await pg.locator('h1').first().innerText()).replace(/\n/g, ' '));
+await pg.screenshot({ path: 'shots/hero-desktop.png' });
+const tabs = pg.locator('[role=tablist][aria-label="Scenes"] button');
+const n = await tabs.count(); console.log('[check] scenes:', n);
+const win = pg.locator('[aria-roledescription="product film"]');
+for (let k = 0; k < n; k++) { await tabs.nth(k).click(); await pg.mouse.move(5, 5); await pg.waitForTimeout(2600); await win.screenshot({ path: `shots/scene-${String(k).padStart(2, '0')}.png` }); }
+const m = await b.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1 });
+const mp = await m.newPage(); await mp.goto(B + '/?nocache=' + Date.now(), { waitUntil: 'domcontentloaded' }); await mp.waitForTimeout(6000);
+await mp.screenshot({ path: 'shots/hero-mobile.png', fullPage: false });
+await mp.evaluate(() => window.scrollBy(0, 700)); await mp.waitForTimeout(1500); await mp.screenshot({ path: 'shots/hero-mobile2.png' });
+console.log('[check] overflow-x:', await mp.evaluate(() => document.documentElement.scrollWidth > window.innerWidth));
+console.log('[check] errors:', errs.slice(0, 5).join(' | '));
+await b.close();

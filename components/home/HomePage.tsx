@@ -4,7 +4,7 @@ import { unboundedDisplay as display, interBody as body } from '@/lib/fonts';
 import { useAppTheme } from '@/hooks/useAppTheme';
 import { IntroAnimation } from './IntroAnimation';
 import { Navbar } from './Navbar';
-import { StudioHero } from './StudioHero';
+import { HomeHero } from './HomeHero';
 import dynamic from 'next/dynamic';
 // Below-the-fold sections are separate chunks: still rendered on the server
 // (same HTML for visitors and search), but their JavaScript loads and
@@ -37,7 +37,7 @@ export function HomePage() {
         className={`${display.variable} ${body.variable} font-[family-name:var(--font-body)] bg-mt-bg text-mt-ink transition-colors duration-300`}
       >
         <Navbar theme={theme} onToggleTheme={toggleTheme} />
-        <StudioHero />
+        <HomeHero />
         <TemplateShowcase />
         <StudioTools />
         <HowItWorks />
