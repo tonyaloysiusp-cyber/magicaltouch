@@ -88,7 +88,7 @@ def side(n, cap, body):
 # ------------------------------------------------------------------ content
 EDITOR = [
     ("Start a design", f"""
-<p>Every design starts in one of three ways: from one of more than 8,000 templates, from a blank page in any size, or from a photo in Photo Studio. Everything is free, with no watermark.</p>
+<p>Every design starts in one of three ways: from a template, from a blank page in any size, or from a photo in Photo Studio. Everything is free, with no watermark and no account needed.</p>
 {shot('gallery', 'Templates → search by what you make (“business flyer”, “wedding album”) or filter by type, occasion, style and colour.')}
 {steps('Open <b>Templates</b> in the top menu.', 'Search, or tap a group (Social media, Print &amp; marketing, Invitations &amp; cards, Photos &amp; albums, Business &amp; documents).', 'Open a template and tap <b>Use this template</b>. It opens in the editor as your own copy — the original never changes.', 'Prefer a blank page? Tap <b>New design</b> and choose a size (post, story, A4, banner…) or type your own.')}
 {tip('Search understands design types: “photo album” shows albums, “birthday story” shows 9:16 stories. Add a colour or style word to narrow it down.')}
@@ -106,7 +106,7 @@ EDITOR = [
 """),
     ("Text", f"""
 {shot('text-bar', 'Tap any text: font, weight, size, colour, bold / italic, alignment, spacing, effects, text frame and translate.')}
-{steps('Tap a text once to select it; tap again (or double-click) to type.', 'Change the font, weight and size in the bar. Fonts load automatically, including Arabic and Hindi fonts.', 'Pick a colour — your brand colours and the colours already in the design are offered first.', 'Open <b>Effects</b> for shadow, glow, outline, echo, neon and curved text.', 'Use <b>Translate</b> to translate one text or the whole design; the right fonts are chosen for the new language.')}
+{steps('Tap a text once to select it; tap again (or double-click) to type.', 'Change the font, weight and size in the bar. Fonts load automatically for 17+ languages and scripts — Tamil, Malayalam, Hindi, Telugu, Kannada, Bengali, Arabic, Urdu, Chinese, Japanese, Korean and more.', 'Pick a colour — your brand colours and the colours already in the design are offered first.', 'Open <b>Effects</b> for shadow, glow, outline, echo, neon and curved text.', 'Use <b>Translate</b> to translate one text or the whole design; the right fonts are chosen for the new language.')}
 {side('text', 'The Text panel.', '<h3>Adding new text</h3><p>Open <b>Text</b> on the left: Add a heading, a subheading or body text, ready-made font pairings, page numbers (this page or every page) and article columns that flow from column to column.</p>' + tip('Keep to two fonts per design: one for headings, one for body text.'))}
 """),
     ("Pro text effects", f"""
@@ -137,7 +137,7 @@ EDITOR = [
 {tip('On a phone, the row of big buttons above the tools gives one-tap <b>Centre</b>, <b>Align</b>, <b>Copy</b> and <b>Delete</b>.')}
 """),
     ("Download and share", f"""
-{side('export', 'Export: PNG, JPG, vector PDF, PDF for print shops (CMYK), TIFF and WebP.', steps('Tap <b>Export</b> (or <b>PDF</b> for one-click vector PDF).', 'Choose the file type: PNG for sharing, JPG for photos, <b>PDF (vector)</b> for printing at home, <b>PDF for print shops</b> for professional printing.', 'Pick the quality: Screen, Standard, Print (300 dpi) or Custom.', 'Optional: transparent background, bleed, crop marks and colour bar for print.', 'Tap <b>Download</b>. Or Save to keep working later — designs are saved in your Dashboard.') + tip('For a printer, choose <b>PDF for print shops</b> with bleed and crop marks — it is what they expect.'))}
+{side('export', 'Export: PNG, JPG, vector PDF, PDF for print shops (CMYK), TIFF and WebP.', steps('Tap <b>Export</b> (or <b>PDF</b> for one-click vector PDF).', 'Choose the file type: PNG for sharing, JPG for photos, <b>PDF (vector)</b> for printing at home, <b>PDF for print shops</b> for professional printing.', 'Pick the quality: Screen, Standard, Print (300 dpi) or Custom.', 'Optional: transparent background, bleed, crop marks and colour bar for print.', 'Tap <b>Download</b>. Or Save to keep working later — the design is saved as a .mtd file on your own device (or in your account if you are signed in).') + tip('For a printer, choose <b>PDF for print shops</b> with bleed and crop marks — it is what they expect.'))}
 <h3>Keyboard shortcuts</h3>
 <table>
 <tr><td><kbd>Ctrl/⌘</kbd> + <kbd>Z</kbd></td><td>Undo</td><td><kbd>Ctrl/⌘</kbd> + <kbd>Shift</kbd> + <kbd>Z</kbd></td><td>Redo</td></tr>
@@ -310,14 +310,130 @@ PHOTO = [
 """),
 ]
 
+PACKAGING = [
+    ("Start a box", f"""
+<p>Open <b>Packaging</b> from the Tools menu (or go to magicaltouchdesign.com/packaging-dieline). Pick a ready design or a blank box style. <b>Customise</b> opens the full design editor with the box on its real dieline and the <b>Packaging</b> panel on the right.</p>
+{shot('tour-packaging', 'A packaging design in the editor: box styles on the left, the flat blank with its dieline in the middle.')}
+{steps('Choose a template, or <b>Start a blank box</b> and pick a style.', 'The editor opens in the Packaging workspace: packaging and design tools only.', 'Set the size and board in the Packaging panel, then design on the flat blank.')}
+{tip('Change the size at any time — the dieline is redrawn and your artwork stays on its panel.')}
+"""),
+    ("Size, board and crease", f"""
+<table>
+<tr><th>Setting</th><th>What it means</th></tr>
+<tr><td class="k">Size entered as</td><td><b>Inside size</b> (what fits in), <b>Outside size</b>, or <b>Product + fitting gap</b> — the product's length, width and height plus a small clearance.</td></tr>
+<tr><td class="k">Board</td><td>Folding boxboard (SBS, FBB), kraft, corrugated flutes or rigid board, with its weight and caliper (thickness). The thickness is added at every fold.</td></tr>
+<tr><td class="k">Crease</td><td>The crease rule and channel the die maker needs for that board.</td></tr>
+<tr><td class="k">Glue flap</td><td>Its width, which panel it is attached to, the angle of its ends and an optional thumb notch.</td></tr>
+</table>
+{tip('Measure the product, not the box. “Product + fitting gap” gives a box that closes cleanly around it.')}
+"""),
+    ("Box styles and ends", f"""
+<p>Styles: reverse tuck end, straight tuck end, seal end, folding carton (choose each end), tuck top with 1-2-3 snap-lock or crash-lock bottom, gable box with handle, pillow box, sleeve, four-corner tray, tray with lid, tray and sleeve, mailer box, and corrugated shipping boxes (RSC, HSC, FOL).</p>
+<table>
+<tr><th>End</th><th>Use it for</th></tr>
+<tr><td class="k">Tuck end</td><td>Reclosable top — cosmetics, toys, small goods.</td></tr>
+<tr><td class="k">Glued (full, partial, economy)</td><td>Strong, tamper-evident ends; economy uses the least board.</td></tr>
+<tr><td class="k">1-2-3 snap lock</td><td>A bottom that folds and locks without glue — heavier products.</td></tr>
+<tr><td class="k">Crash lock</td><td>Pre-glued auto bottom that opens in one move — fastest to pack.</td></tr>
+</table>
+"""),
+    ("Design on the dieline", f"""
+{steps('The dieline sits on its own layer. <b>Locked</b>, clicks go straight through it to your artwork; unlock it to select a line.', 'Add text, photos, shapes and patterns on the panels. Front, back and sides are marked on the blank.', 'Keep text and barcodes at least 3 mm inside crease lines; let backgrounds run past the cut line into the bleed.', 'Add a barcode from <b>QR &amp; barcode</b> on the left (EAN-13, UPC-A, Code 128, ITF-14 and more).')}
+{tip('Draw a window or a special outline with the pen, then mark it as a cut or crease line in the Lines tab.')}
+"""),
+    ("Lines and the structure check", f"""
+<p>The <b>Lines</b> tab lists every cut, crease, perforation and glue line. The <b>structure check</b> warns when a flap is too short for the board, a tuck will not lock, or the glue flap is too narrow — before anything is printed.</p>
+{tip('Print and fold one plain sample on the real board before a print run. It is the cheapest proof there is.')}
+"""),
+    ("Files for the printer", f"""
+<table>
+<tr><th>File</th><th>For</th></tr>
+<tr><td class="k">Print PDF</td><td>The printer: vector, CMYK, with the dieline as overprinting spot colours (CutContour, Crease) on their own layer.</td></tr>
+<tr><td class="k">Dieline template</td><td>A branded drawing of the flat blank with a line legend — to send to a designer or client.</td></tr>
+<tr><td class="k">DXF</td><td>The die maker, with one layer per line type.</td></tr>
+<tr><td class="k">Technical document</td><td>A packaging specification: style, inside / outside / flat sizes, board, crease, glue, ends, panels, line legend, checks and sign-off.</td></tr>
+</table>
+"""),
+]
+
+TEXTILE = [
+    ("Start a garment", f"""
+<p>Open <b>Textile Studio</b> from the Tools menu. Pick a garment design or a blank garment — polo, T-shirt, jersey, kurti, churidar, frock or dupatta. <b>Customise</b> opens the editor in the Textile workspace with the pattern pieces laid out and the <b>Textile</b> panel on the right.</p>
+{shot('tour-textile', 'A polo shirt as pattern pieces: front, back, sleeves and collar, with the Textile panel.')}
+"""),
+    ("Garment, size and fit", f"""
+<table>
+<tr><th>Setting</th><th>What it does</th></tr>
+<tr><td class="k">Size</td><td>Ready sizes XS to XXXL, or <b>Custom</b> with your own body measurements in cm.</td></tr>
+<tr><td class="k">Measurements</td><td>Chest, body length, shoulder, armhole, sleeve length, upper arm and more — the pieces are drafted from them.</td></tr>
+<tr><td class="k">Fit and style</td><td>Ease added to the chest, shoulder drop, collar height, placket length and sleeve type.</td></tr>
+<tr><td class="k">Seam allowance</td><td>Added around every piece (10 mm by default); the stitch line is drawn inside the cut line.</td></tr>
+</table>
+{tip('Artwork is clipped to its piece and stays on it when you change the size.')}
+"""),
+    ("Team names and numbers", f"""
+{steps('Open the <b>Team</b> tab and paste the roster, one player per line: <b>name, number, size</b>.', 'Tap <b>Add name and number</b> — a name and a back number are placed on the design. Style them like any text.', 'Download the <b>team PDF</b>: one page per player, each with their own name, number and size.')}
+{tip('Check spellings once in the roster; every page is made from it.')}
+"""),
+    ("Fabric", f"""
+<p>The <b>Fabric</b> tab shows how much fabric one garment needs for the fabric width you choose, and how much of it the pieces cover. It warns when a piece is wider than the fabric.</p>
+"""),
+    ("Production files", f"""
+<table>
+<tr><th>File</th><th>For</th></tr>
+<tr><td class="k">Print PDF</td><td>Sublimation or digital textile printing: CMYK, the cut line as a spot colour.</td></tr>
+<tr><td class="k">Pattern PDF</td><td>Full size, or tiled on A4 sheets with a 10 cm test square — print at 100% and measure it.</td></tr>
+<tr><td class="k">DXF</td><td>Cutting machines: cut, stitch, grain and notch layers.</td></tr>
+<tr><td class="k">Technical document</td><td>A garment specification: size, measurements, pieces, seam allowance, fabric, roster and sign-off.</td></tr>
+</table>
+"""),
+]
+
+PRINT = [
+    ("Print-ready files", f"""
+<p>Every design can be exported for a print shop: <b>PDF for print shops</b> converts colours to CMYK with the FOGRA39 profile, adds bleed, crop marks and a colour bar, and keeps text as real vector type. Turn on <b>Technical document</b> in Export to get a branded spec sheet with page sizes, colours, fonts and picture resolution.</p>
+{tip('Pictures marked Low in the technical document may print soft at that size — replace them or print smaller.')}
+"""),
+    ("Print and cut", f"""
+<p>Open <b>Print &amp; cut</b> in the editor. Mark any shape or outline as a cut line: kiss cut, die cut, through cut, laser cut, engrave / score, perforation or crease. The cut file downloads as SVG and DXF with one layer per operation, and the job sheet lists each operation with its line count and length.</p>
+<p>The same panel holds <b>Large format</b> (posters tiled over several sheets), <b>Separations</b>, <b>Imposition</b>, <b>Data merge</b> (one page per row of a spreadsheet, with names, numbers and QR codes) and <b>Print sizes</b>.</p>
+"""),
+    ("Print Layout", f"""
+{shot('tour-print-layout', 'Print Layout: business cards nine-up on an A4 sheet with crop marks.')}
+{steps('Choose a PDF or picture — for example a business card exported with bleed.', 'Pick the item and sheet size; the layout puts as many as fit, with crop marks.', 'Or make a booklet: pages are put in printing order.', 'Download the print PDF.')}
+"""),
+    ("Print Size and Binding", f"""
+{shot('tour-print-size', 'Spine width and the full cover spread for a perfect-bound book.')}
+<p>Enter the finished size, page count, paper weight and binding — perfect bound, saddle stitch, hardcover, wire-O, spiral or comb — and get the spine width and the flat cover size with bleed. <b>Open cover in Design Editor</b> starts a page at exactly that size.</p>
+{tip('The spine is worked out from the paper thickness. Ask your printer for the paper’s caliper for an exact figure.')}
+"""),
+]
+
+PATTERNS = [
+    ("Pattern Design", f"""
+{shot('tour-patterns', 'A seamless half-drop repeat with the tile edges.')}
+{steps('Pick a motif — 160+ shapes in groups (floral, geometric, celebration, traditional) — or use your own drawing or logo.', 'Choose the repeat: grid, brick, half-drop, diamond, mirror, rotational or kaleidoscope.', 'Change colours, size and spacing; tap a single motif to move or recolour just that one.', 'Download a seamless tile (SVG, vector PDF or PNG), or tap <b>Edit in a design</b>.')}
+<p>The <b>Rangoli &amp; Mandala</b> tab draws from the centre: petals, dots and rings, with festival presets.</p>
+"""),
+    ("Image Trace", f"""
+{shot('tour-image-trace', 'A logo traced into four colours of vector shapes.')}
+{steps('Choose a picture — a logo, sketch or photo.', 'Pick a preset: logo, black and white, line art, hand lettering, 3–16 colours, shades of grey or photo.', 'Adjust colours and detail; compare original and vector with the slider.', 'Download SVG, PDF or PNG, or <b>Edit as vectors</b> in the design editor.')}
+{tip('Tracing runs on your device. Your picture is never uploaded.')}
+"""),
+]
+
 GUIDES = {
     'design-editor-guide': ('Design Editor', 'Complete guide', 'Templates, text and pro text effects, photos, elements, brand kit, pages, resizing and print-ready downloads — step by step.', 'editor', EDITOR, '02', ('ed-fx', 'gallery')),
     'background-remover-guide': ('Background Remover', 'Complete guide', 'One photo or sixty: remove backgrounds on your device, then touch up every edge by hand.', 'rm-result', REMOVER, '03', ('rm-overlay', 'rm-results')),
     'photo-studio-guide': ('Photo Studio', 'Complete guide', 'Every tool explained: adjustments, colour, looks, filters, retouching, selections, layers, live text effects, crop and print-ready export.', 'ps-text-gold', PHOTO, '04', ('ps-looks', 'ps-colour')),
+    'packaging-guide': ('Packaging Design', 'Complete guide', 'Box styles and ends, sizes and board, designing on the dieline, and the files a printer and die maker need.', 'tour-packaging', PACKAGING, '05', ('', '')),
+    'textile-guide': ('Textile Design', 'Complete guide', 'Garments as real pattern pieces: sizes and measurements, team names and numbers, fabric and production files.', 'tour-textile', TEXTILE, '06', ('', '')),
+    'print-production-guide': ('Print Production', 'Complete guide', 'Print-ready PDFs, print and cut, large format, data merge, print layouts, booklets and spine widths.', 'tour-print-layout', PRINT, '07', ('', 'tour-print-size')),
+    'patterns-trace-guide': ('Patterns and Trace', 'Complete guide', 'Seamless repeats, rangoli and mandala, and turning pictures into clean vector shapes.', 'tour-patterns', PATTERNS, '08', ('', 'tour-image-trace')),
 }
 
 
-ACCENT = {'01': '#F7A1C4', '02': '#B7A8FF', '03': '#6FE3CB', '04': '#7FD4F5'}
+ACCENT = {'01': '#F7A1C4', '02': '#B7A8FF', '03': '#6FE3CB', '04': '#7FD4F5', '05': '#B6E388', '06': '#F7A1C4', '07': '#7FD4F5', '08': '#E7EC7A'}
 
 
 def build(slug, title, kicker, lead, hero, sections, chapters=None, no='01', extra=('', '')):
@@ -342,6 +458,6 @@ def build(slug, title, kicker, lead, hero, sections, chapters=None, no='01', ext
 
 for slug, (t, k, lead, hero, secs, no, extra) in GUIDES.items():
     build(slug, t, k, lead, hero, secs, no=no, extra=extra)
-allsecs = [(f'Design Editor — {t}', c) for t, c in EDITOR] + [(f'Background Remover — {t}', c) for t, c in REMOVER] + [(f'Photo Studio — {t}', c) for t, c in PHOTO]
-build('magical-touch-design-handbook', 'The Complete Handbook', 'Every tool, one guide', 'The design editor, Photo Studio and the background remover — everything you need to design like a pro, free.', 'editor', allsecs, no='01', extra=('ps-text-gold', 'rm-result'))
+allsecs = [(f'Design Editor — {t}', c) for t, c in EDITOR] + [(f'Background Remover — {t}', c) for t, c in REMOVER] + [(f'Photo Studio — {t}', c) for t, c in PHOTO] + [(f'Packaging — {t}', c) for t, c in PACKAGING] + [(f'Textile — {t}', c) for t, c in TEXTILE] + [(f'Print production — {t}', c) for t, c in PRINT] + [(f'Patterns and Trace — {t}', c) for t, c in PATTERNS]
+build('magical-touch-design-handbook', 'The Complete Handbook', 'Every tool, one guide', 'The design editor, Photo Studio, background remover, packaging, textile, print production, patterns and trace — everything you need to design like a pro, free.', 'editor', allsecs, no='01', extra=('ps-text-gold', 'rm-result'))
 print('ok')

@@ -12,6 +12,7 @@ import dynamic from 'next/dynamic';
 const StudioTools = dynamic(() => import('./StudioTools').then((m) => m.StudioTools));
 const TemplateShowcase = dynamic(() => import('./TemplateShowcase').then((m) => m.TemplateShowcase));
 const StudioTour = dynamic(() => import('./StudioTour').then((m) => m.StudioTour));
+const FeatureShowcase = dynamic(() => import('./FeatureShowcase'));
 const SocialShowcase = dynamic(() => import('./SocialShowcase').then((m) => m.SocialShowcase));
 const HowItWorks = dynamic(() => import('./HowItWorks').then((m) => m.HowItWorks));
 const PricingFree = dynamic(() => import('./PricingFree').then((m) => m.PricingFree));
@@ -42,6 +43,7 @@ export function HomePage() {
         <TemplateShowcase />
         <StudioTour />
         <StudioTools />
+        <FeatureShowcase />
         <HowItWorks />
         <PricingFree />
         <SocialShowcase />

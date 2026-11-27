@@ -54,6 +54,9 @@ const PRINCIPLES: [string, string][] = [
   ['Your files stay with you', 'Designs save as files on your own device. Background removal, tracing and photo edits run in your browser — nothing is uploaded.'],
 ];
 const DEFAULT_MISSION = 'To give every business, school and creator in the world the power to look professional — in minutes, at no cost.';
+// Shown when the admin hasn't written their own (Admin → Site settings) or the database is unavailable.
+const DEFAULT_FOUNDER = 'Tony Aloysius started Magical Touch Design to put a complete design and print studio in everyone\'s hands — the tools a print shop, a packaging maker and a tailoring unit actually use, free in the browser.\n\nEvery tool is built to be true to print: real sizes, CMYK colour, dielines and pattern pieces that work on the shop floor, and files that stay on your own device.';
+const DEFAULT_STORY = 'Magical Touch Design began as a template library and grew into a full studio: a design editor, Photo Studio, packaging dielines, textile pattern pieces, print layouts and production files — all in one place, in 17+ languages.\n\nIt is free for everyone. No account is needed to design, and nothing you make carries a watermark.';
 const paras = (t: string) => t.split(/\n{2,}/).map((x) => x.trim()).filter(Boolean);
 type Icon = LucideIcon;
 
@@ -140,10 +143,10 @@ export default async function AboutPage() {
           </ul>
         </section>
 
-        {story && (
+        {(story || DEFAULT_STORY) && (
           <section aria-labelledby="story" className="mt-16 max-w-3xl">
             <h2 id="story" className="text-2xl sm:text-3xl font-semibold tracking-tight">Our story</h2>
-            {paras(story).map((t, i) => <p key={i} className="mt-4 text-[16px] text-mt-muted leading-relaxed">{t}</p>)}
+            {paras(story || DEFAULT_STORY).map((t, i) => <p key={i} className="mt-4 text-[16px] text-mt-muted leading-relaxed">{t}</p>)}
           </section>
         )}
 
@@ -154,7 +157,7 @@ export default async function AboutPage() {
               <p className="text-[12px] font-semibold tracking-[0.22em] uppercase text-mt-muted">Founder</p>
               <h2 id="founder" className="mt-2 text-2xl font-semibold">Tony Aloysius</h2>
               <p className="text-mt-muted">Founder &amp; CEO</p>
-              {founderBio && paras(founderBio).map((t, i) => <p key={i} className="mt-4 text-[15px] leading-relaxed text-mt-muted">{t}</p>)}
+              {paras(founderBio || DEFAULT_FOUNDER).map((t, i) => <p key={i} className="mt-4 text-[15px] leading-relaxed text-mt-muted">{t}</p>)}
             </div>
           </div>
           <div className="rounded-3xl border border-mt-border p-8 flex flex-col">
