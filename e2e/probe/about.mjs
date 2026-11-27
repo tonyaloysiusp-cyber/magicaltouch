@@ -1,12 +1,21 @@
 import { chromium } from 'playwright';
 import fs from 'node:fs';
 fs.mkdirSync('shots', { recursive: true });
-const b = await chromium.launch(); const ctx = await b.newContext({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 });
-for (const [p, n] of [['/about?nocache=1', 'about'], ['/tutorials?nocache=1', 'tutorials']]) {
-  const pg = await ctx.newPage(); await pg.goto('https://magicaltouchdesign.com' + p, { waitUntil: 'networkidle', timeout: 60000 }).catch(() => {});
-  await pg.waitForTimeout(3000);
-  const tour = pg.locator('#tour'); console.log('[about]', n, 'tour:', await tour.count(), 'text:', (await pg.locator('h1').first().innerText().catch(() => '')).slice(0, 80));
-  if (await tour.count()) { await tour.scrollIntoViewIfNeeded(); await pg.waitForTimeout(1500); }
-  await pg.screenshot({ path: `shots/${n}.png`, fullPage: true });
-}
+const B = 'https://magicaltouchdesign.com';
+const b = await chromium.launch(); const ctx = await b.newContext({ viewport: { width: 1440, height: 900 } });
+const pg = await ctx.newPage();
+await pg.goto(B + '/templates?studio=packaging&nocache=1', { waitUntil: 'domcontentloaded', timeout: 60000 }); await pg.waitForTimeout(9000);
+console.log('[check] packaging tab cards:', await pg.locator('button:has-text("Customise")').count());
+await pg.screenshot({ path: 'shots/tpl-packaging.png' });
+await pg.getByRole('tab', { name: 'Textile & garments' }).click(); await pg.waitForTimeout(5000);
+console.log('[check] textile tab cards:', await pg.locator('button:has-text("Customise")').count());
+await pg.goto(B + '/?nocache=1', { waitUntil: 'domcontentloaded' }); await pg.waitForTimeout(4000);
+const sh = pg.locator('#showcase'); await sh.scrollIntoViewIfNeeded().catch(() => {}); await pg.waitForTimeout(2500);
+console.log('[check] home showcase:', await sh.count());
+await pg.screenshot({ path: 'shots/home-showcase.png' });
+await pg.goto(B + '/tutorials?nocache=1', { waitUntil: 'domcontentloaded' }); await pg.waitForTimeout(4000);
+console.log('[check] guides:', await pg.locator('a[href*="/guides/"][download]').count());
+for (const g of ['packaging-guide', 'textile-guide', 'print-production-guide', 'patterns-trace-guide']) { const r = await fetch(`${B}/guides/${g}.pdf`); console.log('[check]', g, r.status, r.headers.get('content-length')); }
+await pg.goto(B + '/about?nocache=1', { waitUntil: 'domcontentloaded' }); await pg.waitForTimeout(3000);
+console.log('[check] founder text:', (await pg.locator('#founder').locator('xpath=..').innerText()).slice(0, 160).replace(/\n/g, ' '));
 await b.close();
