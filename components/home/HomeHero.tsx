@@ -128,7 +128,7 @@ function HeroReel() {
                 <div className="relative aspect-[1/1.414] h-full overflow-hidden rounded-md bg-[#14233B] shadow-xl">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={`${C}pro-northline-consulting-services-flyer.webp`} alt="" className="absolute inset-0 h-full w-full object-cover" />
-                  <div className="absolute left-[5%] top-[24%] h-[30%] w-[48%] rounded bg-[#14233B] px-1.5 py-1 ring-2 ring-[#3B82C4]">
+                  <div className="absolute left-[5%] top-[24%] h-[37%] w-[48%] rounded bg-[#14233B] px-1.5 py-1 ring-2 ring-[#3B82C4]">
                     <p className="text-[clamp(11px,2.1vw,18px)] font-bold leading-tight text-white">{'Growth plans built for you'.slice(0, typed)}<span className="ml-0.5 inline-block h-[1em] w-[2px] bg-white align-middle" style={{ animation: 'mhr-blink 1s steps(1) infinite' }} /></p>
                   </div>
                   <span className="absolute left-[7%] top-[20%] -translate-y-full rounded bg-[#3B82C4] px-1.5 py-0.5 text-[10px] font-semibold text-white">Headline</span>
