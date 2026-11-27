@@ -8,7 +8,7 @@ export interface PlanPost {
   title: string;
   post_on: string; // YYYY-MM-DD
   channel: 'Instagram' | 'Instagram story' | 'Facebook' | 'LinkedIn' | 'WhatsApp status' | 'Pinterest' | 'X / Threads';
-  format: string; // SPEC_FORMATS id used by the AI Studio
+  format: string; // design size id (post, story, …)
   caption: string;
 }
 
@@ -43,7 +43,7 @@ export function buildPlan(o: { name: string; occasion_date: string }, opts: { to
   return posts.filter((p) => p.post_on >= today);
 }
 
-/** The AI Studio brief for a post: what it is, for which occasion, at which size. */
+/** A short description of a post: what it is, for which occasion, at which size. */
 export function studioTopic(o: { name: string }, p: Pick<PlanPost, 'channel' | 'title'>) {
   return `${o.name} — ${p.channel} design (${p.title.replace(`${o.name} — `, '')})`;
 }

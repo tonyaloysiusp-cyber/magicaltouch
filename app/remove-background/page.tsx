@@ -19,7 +19,7 @@ export const metadata: Metadata = {
 
 const FAQ: [string, string][] = [
   ['Is the background remover really free?', 'Yes. There is no sign-up, no limit on how many days you use it and no watermark on your pictures.'],
-  ['Are my photos uploaded?', 'No. The background is removed by a small AI model that runs inside your browser. Your photos never leave your device and we do not store them.'],
+  ['Are my photos uploaded?', 'No. The background is removed by a small model that runs inside your browser. Your photos never leave your device and we do not store them.'],
   ['Can I remove backgrounds from many photos at once?', 'Yes — choose or drop up to 60 photos. They are done one after another, then you can download them all in one ZIP file or save them straight into a folder.'],
   ['What file do I get?', 'A transparent PNG, or a JPG with a white or coloured background if you choose one. Large photos keep their size up to 4096 pixels.'],
   ['What works best?', 'Clear photos of people, products, pets and objects. Use the Edge slider for sharper or softer edges. For fine touch-ups, open the photo in our free Photo Studio.'],
@@ -33,7 +33,7 @@ export default function RemoveBackgroundPage() {
   ];
   return (
     <ToolShell path="/remove-background" h1={'Remove backgrounds free — one photo or a whole folder'} name="Background Remover" sub="Transparent PNG, white or any colour — on your device"
-      about={<ToolAbout intro="Transparent PNG, white or any colour background. Runs on your device — your photos are never uploaded. No sign-up, no watermark." steps={[['Add photos', 'Choose or drop up to 60 photos — people, products, pets, logos.'], ['Backgrounds go', 'The AI finds the subject and removes the rest. Tap Edit on any photo to restore or erase areas with a brush.'], ['Save', 'Download one, all in a ZIP, or save them straight into a folder.']]} faq={FAQ} />}>
+      about={<ToolAbout intro="Transparent PNG, white or any colour background. Runs on your device — your photos are never uploaded. No sign-up, no watermark." steps={[['Add photos', 'Choose or drop up to 60 photos — people, products, pets, logos.'], ['Backgrounds go', 'The subject is found on your device and the rest is removed. Tap Edit on any photo to restore or erase areas with a brush.'], ['Save', 'Download one, all in a ZIP, or save them straight into a folder.']]} faq={FAQ} />}>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(ld) }} />
       <BulkRemover />
     </ToolShell>

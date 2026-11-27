@@ -7,7 +7,6 @@ import { Box, Eraser, FileText, Grid3x3, Languages, LayoutTemplate, PenTool, Pri
 import type { LucideIcon } from 'lucide-react';
 import { SITE_URL, SITE_NAME, getSiteSetting, fitTitle, fitDescription } from '@/lib/seo';
 import { companyProfile } from '@/lib/email/config';
-import { ProductTour } from '@/components/ProductTour';
 
 // About Magical Touch Design — the online design platform (not an interior
 // design company), its mission, what it offers and its founder & CEO.
@@ -18,7 +17,7 @@ import { ProductTour } from '@/components/ProductTour';
 export const revalidate = 600;
 
 const baseMetadata: Metadata = {
-  title: fitTitle(`About Magical Touch Design — Free Online Graphic Design Platform`),
+  title: fitTitle(`About Magical Touch Design — Free Design, Print, Packaging & Textile Studio`),
   description: fitDescription('Magical Touch Design is a free online design and print studio: 1,000+ templates, a design editor, Photo Studio, packaging dielines, textile patterns and print tools — no account needed. Founded by Tony Aloysius.'),
   alternates: { canonical: `${SITE_URL}/about` },
   openGraph: { type: 'website', url: `${SITE_URL}/about`, title: 'About Magical Touch Design', description: 'A free online design and print studio — templates, editor, Photo Studio, packaging and textile. No account needed. Founder & CEO: Tony Aloysius.', siteName: SITE_NAME, images: [`${SITE_URL}/api/og`] },
@@ -53,6 +52,17 @@ const PRINCIPLES: [string, string][] = [
   ['Free, without the catch', 'Every tool and every download, with no watermark and no account needed. Open a tool and start.'],
   ['Your files stay with you', 'Designs save as files on your own device. Background removal, tracing and photo edits run in your browser — nothing is uploaded.'],
 ];
+const SERVICES: [string, string][] = [
+  ['Graphic design', 'Posters, flyers, social media posts, invitations, menus, certificates and business stationery — from templates or a blank page.'],
+  ['Print production', 'CMYK print PDFs with bleed, crop marks, registration and colour bars; imposition, booklets, large-format tiling, separations and data merge.'],
+  ['Packaging design', 'Folding cartons, trays, sleeves, mailers and shipping boxes drawn as real dielines from your product size and board.'],
+  ['Textile design', 'Polos, T-shirts, jerseys, kurtis, churidars and frocks as pattern pieces with seam allowance, team rosters and fabric estimates.'],
+  ['Photo editing', 'Retouching, lip colour, face sculpting, filters, layers, selections and background removal — on your own device.'],
+  ['Vector tracing', 'Logos, sketches and photos turned into clean SVG and PDF vector shapes.'],
+  ['Translation', 'Translate the words of a design into 37 languages with fonts that suit each script.'],
+  ['Technical documents', 'A branded job sheet with every export: sizes, colours, materials, line legends, checks and sign-off.'],
+  ['Learning', 'Free courses with certificates and downloadable PDF guides for every tool.'],
+];
 const DEFAULT_MISSION = 'To give every business, school and creator in the world the power to look professional — in minutes, at no cost.';
 // Shown when the admin hasn't written their own (Admin → Site settings) or the database is unavailable.
 const DEFAULT_FOUNDER = 'Tony Aloysius started Magical Touch Design to put a complete design and print studio in everyone\'s hands — the tools a print shop, a packaging maker and a tailoring unit actually use, free in the browser.\n\nEvery tool is built to be true to print: real sizes, CMYK colour, dielines and pattern pieces that work on the shop floor, and files that stay on your own device.';
@@ -64,6 +74,19 @@ export default async function AboutPage() {
   const label = await getTemplateCountLabel();
   const [story, vision, mission, founderBio] = await Promise.all(['about_story', 'about_vision', 'about_mission', 'about_founder_bio'].map((k) => getSiteSetting(k).catch(() => null)));
   const jsonLd = [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'Organization',
+      '@id': `${SITE_URL}/#organization`,
+      name: 'Magical Touch Design',
+      url: SITE_URL,
+      founder: { '@type': 'Person', name: 'Tony Aloysius' },
+      hasOfferCatalog: {
+        '@type': 'OfferCatalog',
+        name: 'Free design and print services',
+        itemListElement: SERVICES.map(([name, description]) => ({ '@type': 'Offer', price: '0', priceCurrency: 'USD', itemOffered: { '@type': 'Service', name, description } })),
+      },
+    },
     {
       '@context': 'https://schema.org',
       '@type': 'AboutPage',
@@ -114,8 +137,6 @@ export default async function AboutPage() {
           </ol>
         </section>
 
-        <ProductTour />
-
         <section aria-labelledby="mission" className="mt-16 rounded-3xl p-8 sm:p-12 bg-mt-ink text-mt-bg">
           <p id="mission" className="text-[12px] font-semibold tracking-[0.22em] uppercase opacity-60">Our mission</p>
           {(() => { const [first, ...rest] = paras(mission || DEFAULT_MISSION); return <>
@@ -129,6 +150,19 @@ export default async function AboutPage() {
               {rest.length > 0 && <details className="mt-3 group"><summary className="cursor-pointer text-[13px] font-semibold opacity-70 hover:opacity-100 list-none">Read more <span className="group-open:hidden">+</span><span className="hidden group-open:inline">−</span></summary>{rest.map((t, i) => <p key={i} className="mt-3 text-[15px] leading-relaxed opacity-75">{t}</p>)}</details>}
             </div>
           ); })()}
+        </section>
+
+        <section aria-labelledby="services" className="mt-16">
+          <h2 id="services" className="text-2xl sm:text-3xl font-semibold tracking-tight">What we do</h2>
+          <p className="mt-2 text-mt-muted max-w-3xl">Magical Touch Design is a free online design and print studio. Every service below works in your browser, without an account, and your files stay on your own device.</p>
+          <dl className="mt-6 grid gap-x-10 gap-y-5 sm:grid-cols-2 lg:grid-cols-3">
+            {SERVICES.map(([t, d]) => (
+              <div key={t} className="border-t border-mt-border pt-4">
+                <dt className="font-semibold">{t}</dt>
+                <dd className="mt-1 text-[14px] text-mt-muted leading-relaxed">{d}</dd>
+              </div>
+            ))}
+          </dl>
         </section>
 
         <section aria-labelledby="platform" className="mt-16">

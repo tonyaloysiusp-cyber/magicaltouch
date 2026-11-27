@@ -20,6 +20,7 @@ import { ProfileMenu } from '@/components/ProfileMenu';
 import { BrandLogo } from '@/components/BrandLogo';
 import { PageHero } from '@/components/PageHero';
 import dynamic from 'next/dynamic';
+const TemplateKinds = dynamic(() => import('@/components/home/StudioHero').then((m) => m.TemplateKinds), { ssr: false });
 const PackagingTemplateGallery = dynamic(() => import('@/components/packaging/PackagingHub').then((m) => m.PackagingTemplateGallery), { ssr: false, loading: () => <p className="py-16 text-center text-mt-muted">Loading packaging templates…</p> });
 const TextileTemplateGallery = dynamic(() => import('@/components/textile/TextileHub').then((m) => m.TextileTemplateGallery), { ssr: false, loading: () => <p className="py-16 text-center text-mt-muted">Loading garment templates…</p> });
 import { useAppTheme } from '@/hooks/useAppTheme';
@@ -780,6 +781,7 @@ export default function TemplatesPage() {
             <button key={k} type="button" onClick={() => search(k)} className="h-7 px-3 rounded-full border border-mt-border bg-mt-surface text-[12px] text-mt-muted hover:text-mt-ink">{k}</button>
           ))}
         </div>
+        <div className="mt-8"><TemplateKinds /></div>
       </PageHero>
 
       <div className="max-w-[1500px] mx-auto px-4 sm:px-6 pt-8">

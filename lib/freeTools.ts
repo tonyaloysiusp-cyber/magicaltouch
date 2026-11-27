@@ -1,5 +1,5 @@
 // Free tools for making festival and promo content — shown in Admin →
-// Festivals (planner) and the AI Studio. Every one has a usable free plan
+// Festivals (planner). Every one has a usable free plan
 // (some ask for a free account). Our own tools come first, so the work
 // stays on the site where possible.
 
@@ -8,31 +8,10 @@ export interface ToolGroup { id: string; title: string; tools: FreeTool[] }
 
 export const FREE_TOOLS: ToolGroup[] = [
   { id: 'ours', title: 'Built into Magical Touch', tools: [
-    { name: 'AI Template Studio', url: '/admin/templates?claude=', what: 'Recreate any image or brief as an editable template' },
     { name: 'Editor', url: '/create', what: 'Design from a template or a blank page' },
     { name: 'Photo Studio', url: '/photo-studio', what: 'Retouch, filters and background removal' },
     { name: 'Background remover', url: '/remove-background', what: 'Remove backgrounds from many photos at once, free' },
     { name: 'QR code generator', url: '/free-qr-code-generator', what: 'Scannable QR codes with your logo' },
-  ] },
-  { id: 'chat', title: 'AI that designs templates (free chat)', tools: [
-    { name: 'Claude', url: 'https://claude.ai', what: 'Clean layouts; follows the template format best' },
-    { name: 'ChatGPT', url: 'https://chatgpt.com', what: 'All-rounder; reads reference images' },
-    { name: 'Gemini', url: 'https://gemini.google.com', what: 'Strong with photos; free API key for one-click' },
-    { name: 'Microsoft Copilot', url: 'https://copilot.microsoft.com', what: 'Free with a Microsoft account' },
-    { name: 'Le Chat (Mistral)', url: 'https://chat.mistral.ai', what: 'Fast European AI' },
-    { name: 'Grok', url: 'https://grok.com', what: 'Free with an X account' },
-    { name: 'DeepSeek', url: 'https://chat.deepseek.com', what: 'Great at captions and copy' },
-    { name: 'Qwen', url: 'https://chat.qwen.ai', what: 'Reads images; good in many languages' },
-  ] },
-  { id: 'image', title: 'Free AI images', tools: [
-    { name: 'Microsoft Designer / Bing Image Creator', url: 'https://www.bing.com/images/create', what: 'Free daily image generations' },
-    { name: 'Google ImageFX', url: 'https://labs.google/fx/tools/image-fx', what: 'Free photo-realistic images' },
-    { name: 'Adobe Firefly', url: 'https://firefly.adobe.com', what: 'Free monthly credits; commercially safe' },
-    { name: 'Ideogram', url: 'https://ideogram.ai', what: 'Best at text inside images' },
-    { name: 'Leonardo.ai', url: 'https://leonardo.ai', what: 'Free daily tokens; many styles' },
-    { name: 'Krea', url: 'https://www.krea.ai', what: 'Real-time generation and upscaling' },
-    { name: 'Pollinations', url: 'https://pollinations.ai', what: 'No sign-up; used for free AI photos in the Studio' },
-    { name: 'Hugging Face Spaces', url: 'https://huggingface.co/spaces', what: 'Open models (FLUX, SDXL) to try free' },
   ] },
   { id: 'photo', title: 'Free photos, icons & illustrations', tools: [
     { name: 'Unsplash', url: 'https://unsplash.com', what: 'High-quality free photos' },

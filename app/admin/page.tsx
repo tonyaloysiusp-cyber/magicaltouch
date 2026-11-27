@@ -230,7 +230,7 @@ function Overview({ stats, messages, occasions, services, templates, go }: { sta
                     <p className="text-[12px] mt-1 text-mt-faint">
                       {have ? `${have} matching template${have === 1 ? '' : 's'} live` : 'No matching templates yet'}
                       {' · '}
-                      <Link href={`/admin/templates?claude=${encodeURIComponent(`${o.name} (${o.region})${o.ideas ? ` — ideas: ${o.ideas}` : ''}`)}`} className="font-medium text-[#D97757] hover:underline">Make one with Claude</Link>
+                      <Link href={`/templates?q=${encodeURIComponent(o.name)}`} className="font-medium text-[#D97757] hover:underline">Make one with Claude</Link>
                     </p>
                   </div>
                   <span className={`shrink-0 text-[12px] font-semibold ${n <= 10 ? 'text-rose-600' : 'text-mt-muted'}`}>{when(n)}</span>
@@ -500,7 +500,7 @@ function Occasions({ occasions, templates, reload, flash }: { occasions: Occasio
                     <span className={`text-[12px] ${have ? 'text-emerald-700 dark:text-emerald-400' : 'text-mt-faint'}`}>{have ? `${have} matching template${have === 1 ? '' : 's'} live` : 'No templates yet'}</span>
                     <span className="flex-1" />
                     <button type="button" onClick={() => setPlanning(o)} className="text-[12px] font-semibold text-white bg-mt-primary rounded-full px-3 py-1 inline-flex items-center gap-1"><CalendarHeart size={12} /> Plan & schedule</button>
-                    <Link href={`/admin/templates?claude=${encodeURIComponent(`${o.name} greeting post`)}`} className="text-[12px] font-semibold text-[#3B82C4] hover:underline inline-flex items-center gap-1"><Sparkles size={12} /> AI template</Link>
+                    <Link href={`/templates?q=${encodeURIComponent(o.name)}`} className="text-[12px] font-semibold text-[#3B82C4] hover:underline inline-flex items-center gap-1"><Sparkles size={12} /> Find templates</Link>
                     <button type="button" onClick={() => toggle(o)} className="text-[12px] text-mt-muted hover:text-mt-ink">
                       {o.active ? 'Mute' : 'Unmute'}
                     </button>

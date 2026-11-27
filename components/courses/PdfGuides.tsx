@@ -3,12 +3,12 @@ import { Download, FileText } from 'lucide-react';
 // Free PDF guides on /tutorials (files in public/guides, made from real
 // screenshots of the site). Static: no database needed.
 export const GUIDES = [
-  { slug: 'magical-touch-design-handbook', title: 'The Complete Handbook', pages: 52, size: '6.5 MB', what: 'Every tool in one guide: design editor, Photo Studio, background remover, packaging, textile, print production, patterns and trace.', featured: true },
-  { slug: 'design-editor-guide', title: 'Design Editor guide', pages: 12, size: '1.8 MB', what: 'Templates, text in 17+ languages, pro text effects, photos, elements, brand kit, pages, resizing and print-ready downloads.' },
-  { slug: 'photo-studio-guide', title: 'Photo Studio guide', pages: 19, size: '3.2 MB', what: 'Adjust, colour, looks, filters, retouch, selections, layers, live text effects, crop and export.' },
-  { slug: 'packaging-guide', title: 'Packaging Design guide', pages: 9, size: '0.8 MB', what: 'Box styles and ends, size and board, designing on the dieline, and the files for the printer and die maker.' },
+  { slug: 'magical-touch-design-handbook', title: 'The Complete Handbook', pages: 61, size: '6.6 MB', what: 'Every tool in one guide: design editor, Photo Studio, background remover, packaging, textile, print production, patterns and trace.', featured: true },
+  { slug: 'design-editor-guide', title: 'Design Editor guide', pages: 13, size: '1.9 MB', what: 'Templates, text in 17+ languages, pro text effects, photos, elements, brand kit, pages, the Move dialog and step-and-repeat, resizing and print-ready downloads.' },
+  { slug: 'photo-studio-guide', title: 'Photo Studio guide', pages: 23, size: '3.2 MB', what: 'Every tool: adjust, colour, looks, filters, skin retouch, face and sculpt (eyes, lips, nose, face shape), face brushes, selections, layers, exact Move, live text, crop and export.' },
+  { slug: 'packaging-guide', title: 'Packaging Design guide', pages: 11, size: '0.8 MB', what: 'Box styles and ends, size and board, artwork rules, product-to-box steps, the dieline and the files for the printer and die maker.' },
   { slug: 'textile-guide', title: 'Textile Design guide', pages: 8, size: '0.6 MB', what: 'Pattern pieces from sizes or measurements, team names and numbers, fabric and production files.' },
-  { slug: 'print-production-guide', title: 'Print Production guide', pages: 7, size: '0.9 MB', what: 'Print-ready PDFs, print and cut, large format, data merge, print layouts, booklets and spine widths.' },
+  { slug: 'print-production-guide', title: 'Print Production guide', pages: 9, size: '0.9 MB', what: 'Bleed, safe area, resolution, CMYK and black, setting up a print file, a pre-send checklist, print-ready PDFs, print and cut, large format, data merge, print layouts, booklets and spine widths.' },
   { slug: 'patterns-trace-guide', title: 'Patterns & Trace guide', pages: 5, size: '0.9 MB', what: 'Seamless repeats, rangoli and mandala, and turning pictures into clean vectors.' },
   { slug: 'background-remover-guide', title: 'Background Remover guide', pages: 8, size: '1.2 MB', what: 'One photo or sixty, then touch up every edge with Restore and Erase.' },
 ];

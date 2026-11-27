@@ -5,7 +5,6 @@ import { createAnonSupabaseClient } from '@/lib/supabase/server';
 import { loadCourses, totalMinutes } from '@/lib/courses';
 import { CoursesCatalog } from '@/components/courses/CoursesCatalog';
 import { PdfGuides } from '@/components/courses/PdfGuides';
-import { ProductTour } from '@/components/ProductTour';
 
 // Course content is managed in Admin → Courses; refreshed every minute.
 export const revalidate = 60;
@@ -42,9 +41,7 @@ export default async function TutorialsPage() {
     <SeoShell active="tutorials">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <CoursesCatalog courses={courses} />
-      <div className="mt-container pb-4">
-        <ProductTour heading="A quick tour of the studio" intro="Before a course, see how each tool looks and what it does. Pick a tool, then open it — no account needed." />
-      </div>
+
       <PdfGuides />
     </SeoShell>
   );

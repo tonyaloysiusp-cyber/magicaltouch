@@ -5,7 +5,7 @@
 //    you) across Instagram, stories, Facebook, LinkedIn, WhatsApp, Pinterest
 //  · Manual: add, edit or delete any post yourself
 //  · Each post: date, channel, caption to copy, "Make the design" (opens the
-//    AI Studio with the right brief and size) and "Posted" tick
+//    template search for that idea) and "Posted" tick
 //  · Template ideas for the occasion and 40+ free creative tools
 
 import { useEffect, useMemo, useState } from 'react';
@@ -22,7 +22,7 @@ interface Post { id: string; name: string; status: 'todo' | 'doing' | 'done'; me
 
 const IDEAS = ['greeting post', 'story', 'offer / sale post', 'WhatsApp status', 'greeting card', 'LinkedIn company greeting', 'poster for print', 'invitation'];
 const fmtDay = (iso: string) => new Date(`${iso}T12:00:00`).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
-const studio = (topic: string) => `/admin/templates?claude=${encodeURIComponent(topic)}`;
+const studio = (topic: string) => `/templates?q=${encodeURIComponent(topic)}`;
 
 export function OccasionPlanner({ occasion, onClose, flash }: { occasion: Occ; onClose: () => void; flash: (m: string) => void }) {
   const [posts, setPosts] = useState<Post[] | null>(null);
@@ -120,7 +120,7 @@ export function OccasionPlanner({ occasion, onClose, flash }: { occasion: Occ; o
 
           {tab === 'ideas' && (
             <>
-              <p className="text-[13px] text-mt-muted">Tap an idea to open the AI Studio with the brief filled in. {occasion.ideas && <>Your notes: <i>{occasion.ideas}</i></>}</p>
+              <p className="text-[13px] text-mt-muted">Tap an idea to find matching templates. {occasion.ideas && <>Your notes: <i>{occasion.ideas}</i></>}</p>
               <ul className="mt-3 grid sm:grid-cols-2 gap-2">
                 {[...(occasion.ideas || '').split(/[,;]/).map((s) => s.trim()).filter(Boolean), ...IDEAS].filter((v, i, a) => a.indexOf(v) === i).map((idea) => (
                   <li key={idea}><a href={studio(`${occasion.name} ${idea}`)} target="_blank" className="flex items-center gap-2 rounded-xl border border-mt-border px-3 py-2.5 text-[13px] hover:bg-mt-surface2"><Sparkles size={14} className="text-[#D97757]" /> {occasion.name} — {idea}<ExternalLink size={12} className="ml-auto text-mt-faint" /></a></li>

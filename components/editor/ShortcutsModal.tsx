@@ -23,6 +23,7 @@ const MAIN_DESIGN_SHORTCUTS: { keys: string; label: string }[] = [
   { keys: 'Click segment marker (Direct Select)', label: 'Add an anchor point on that segment' },
   { keys: 'Delete (anchor selected, Direct Select)', label: 'Remove that anchor point' },
   { keys: 'Enter', label: 'Finish open path (Pen tool)' },
+  { keys: 'Enter', label: 'Move… dialog — selected object (Selection tool): horizontal, vertical, Copy / OK' },
   { keys: '~ (Pen tool)', label: 'Switch Pen ↔ Curvature (smooth through clicked points)' },
   { keys: 'Alt/Option + click (Curvature)', label: 'Place a sharp corner' },
   { keys: 'Esc', label: 'Cancel current drawing / deselect' },

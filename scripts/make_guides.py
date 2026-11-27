@@ -136,14 +136,28 @@ EDITOR = [
 <p>Select an item and use <b>Position</b> to align it to the page (left, centre, right, top, middle, bottom) or change the layer order. Select several items to align them to each other or space them evenly. Pro mode adds rulers, guides, a layout grid and snapping.</p>
 {tip('On a phone, the row of big buttons above the tools gives one-tap <b>Centre</b>, <b>Align</b>, <b>Copy</b> and <b>Delete</b>.')}
 """),
+    ("Move dialog: exact moves and step-and-repeat", f"""
+<p>For exact positioning — and for setting up print sheets — use the <b>Move</b> dialog, which works like the one in professional vector software.</p>
+{steps('Pick the <b>Selection</b> tool and click an object (or several).', 'Press <b>Enter</b> — or choose <b>Move…</b> from the right-click menu or the Edit menu.', 'Type the <b>Horizontal</b> and <b>Vertical</b> distance in the page unit (px, mm, cm, in or pt). Or type a <b>Distance</b> and an <b>Angle</b> — the four fields stay linked.', 'Keep <b>Preview</b> on to watch it move before you commit.', '<b>OK</b> moves the object. <b>Copy</b> leaves the original where it is and places a copy at that offset. <b>Cancel</b> (or Esc) puts it back.')}
+<table>
+<tr><th>Field</th><th>Meaning</th></tr>
+<tr><td class="k">Horizontal</td><td>Positive moves right, negative moves left.</td></tr>
+<tr><td class="k">Vertical</td><td>Positive moves <b>down</b>, negative moves up.</td></tr>
+<tr><td class="k">Distance / Angle</td><td>The same move as a length and a direction: 0° is right, 90° is straight up, 180° left, −90° down.</td></tr>
+</table>
+<h3>Step-and-repeat: a sheet of labels or cards</h3>
+{steps('Place the first label at the top-left of the sheet.', 'Press Enter, type Horizontal = label width + gap (for example 90 mm for an 85 mm card with a 5 mm gap), Vertical = 0, and press <b>Copy</b>.', 'Press Enter again and Copy — the last values are remembered — until the row is full.', 'Select the whole row, press Enter, type Horizontal = 0, Vertical = label height + gap, and Copy for each row.')}
+{tip('Ctrl/⌘ + D duplicates with a small offset; the Move dialog is for exact offsets. Arrow keys nudge by 1 px, Shift + arrow by 10 px.')}
+"""),
     ("Download and share", f"""
-{side('export', 'Export: PNG, JPG, vector PDF, PDF for print shops (CMYK), TIFF and WebP.', steps('Tap <b>Export</b> (or <b>PDF</b> for one-click vector PDF).', 'Choose the file type: PNG for sharing, JPG for photos, <b>PDF (vector)</b> for printing at home, <b>PDF for print shops</b> for professional printing.', 'Pick the quality: Screen, Standard, Print (300 dpi) or Custom.', 'Optional: transparent background, bleed, crop marks and colour bar for print.', 'Tap <b>Download</b>. Or Save to keep working later — the design is saved as a .mtd file on your own device (or in your account if you are signed in).') + tip('For a printer, choose <b>PDF for print shops</b> with bleed and crop marks — it is what they expect.'))}
+{side('export', 'Export: PNG, JPG, vector PDF, PDF for print shops (CMYK), TIFF and WebP.', steps('Tap <b>Export</b> (or <b>PDF</b> for one-click vector PDF).', 'Choose the file type: PNG for sharing, JPG for photos, <b>PDF (vector)</b> for printing at home, <b>PDF for print shops</b> for professional printing.', 'Pick the quality: Screen, Standard, Print (300 dpi) or Custom.', 'Optional: transparent background, bleed, crop marks and colour bar for print.', 'Tap <b>Download</b>. Or Save to keep working later — the design is saved as a .mtd file on your own device. Nothing is stored on our servers.') + tip('For a printer, choose <b>PDF for print shops</b> with bleed and crop marks — it is what they expect.'))}
 <h3>Keyboard shortcuts</h3>
 <table>
 <tr><td><kbd>Ctrl/⌘</kbd> + <kbd>Z</kbd></td><td>Undo</td><td><kbd>Ctrl/⌘</kbd> + <kbd>Shift</kbd> + <kbd>Z</kbd></td><td>Redo</td></tr>
 <tr><td><kbd>Ctrl/⌘</kbd> + <kbd>C</kbd> / <kbd>V</kbd></td><td>Copy / paste</td><td><kbd>Ctrl/⌘</kbd> + <kbd>D</kbd></td><td>Duplicate</td></tr>
 <tr><td><kbd>Ctrl/⌘</kbd> + <kbd>S</kbd></td><td>Save</td><td><kbd>Ctrl/⌘</kbd> + <kbd>0</kbd></td><td>Fit page to screen</td></tr>
 <tr><td><kbd>Delete</kbd></td><td>Delete selection</td><td>Arrow keys</td><td>Nudge (Shift = 10×)</td></tr>
+<tr><td><kbd>Enter</kbd></td><td>Move… dialog (Selection tool)</td><td><kbd>Shift</kbd> + <kbd>Enter</kbd></td><td>Use the path as a mask</td></tr>
 </table>
 """),
 ]
@@ -212,6 +226,7 @@ PHOTO = [
 <tr><td><kbd>C</kbd> Crop</td><td><kbd>I</kbd> Eyedropper</td><td><kbd>J</kbd> Healing brush</td><td><kbd>B</kbd> Brush</td><td><kbd>E</kbd> Eraser</td></tr>
 <tr><td><kbd>G</kbd> Gradient</td><td><kbd>K</kbd> Paint bucket</td><td><kbd>R</kbd> Blur</td><td><kbd>O</kbd> Dodge</td><td><kbd>T</kbd> Type</td></tr>
 <tr><td><kbd>U</kbd> Shape</td><td><kbd>H</kbd> Hand</td><td><kbd>Z</kbd> Zoom</td><td><kbd>Ctrl Z</kbd> Undo</td><td><kbd>Ctrl ]</kbd> / <kbd>Ctrl [</kbd> Layer up / down</td></tr>
+<tr><td><kbd>Enter</kbd> Move…</td><td><kbd>Ctrl J</kbd> Layer via copy</td><td><kbd>Ctrl Shift I</kbd> Invert selection</td><td><kbd>Ctrl A</kbd> / <kbd>Ctrl D</kbd> Select all / none</td><td><kbd>Ctrl E</kbd> Merge down</td></tr>
 </table>
 """),
     ("Adjust: light, colour and detail", f"""
@@ -276,9 +291,67 @@ PHOTO = [
 <tr><td class="k">Order</td><td>Bring forward / send backward, merge down, flatten image.</td></tr>
 <tr><td class="k">Blend &amp; opacity</td><td>Normal, Multiply, Screen, Overlay, Soft light, Darken, Lighten, Difference, Colour, Luminosity.</td></tr>
 <tr><td class="k">Layer styles</td><td>Drop shadow, outer glow and stroke.</td></tr>
-<tr><td class="k">Move</td><td>Drag with Move (V). Parts pushed outside the canvas are only hidden — move them back and they return.</td></tr>
+<tr><td class="k">Move</td><td>Drag with Move (V), or press Enter for an exact Move… with Copy. Parts pushed outside the canvas are only hidden — move them back and they return.</td></tr>
 </table>""")}
 {tip('Each layer has its own adjustments: brighten a cut-out without touching the background.')}
+"""),
+    ("Portrait retouch: skin", f"""
+<p>Open <b>Adjust → Portrait retouch</b>. The skin is found on your device — nothing is uploaded — and only skin is changed, so eyes, hair and clothes stay sharp.</p>
+<table>
+<tr><th>Slider</th><th>What it does</th></tr>
+<tr><td class="k">Skin smoothing</td><td>Evens out pores, small lines and blotches.</td></tr>
+<tr><td class="k">Keep skin texture</td><td>How much natural texture comes back on top of the smoothing (60 by default) — keeps faces from looking plastic.</td></tr>
+<tr><td class="k">Even skin tone</td><td>Reduces redness and patchy colour.</td></tr>
+<tr><td class="k">Skin glow</td><td>A soft, healthy sheen.</td></tr>
+</table>
+<h3>One-tap presets</h3>
+<table>
+<tr><td class="k">Female portrait</td><td>Natural beauty, Soft skin, Studio beauty, Glamour, Wedding portrait, Professional makeup, Natural glow.</td></tr>
+<tr><td class="k">Male portrait</td><td>Natural male retouch, Professional headshot, Business portrait, Clean skin, Beard enhancement, Studio portrait, Cinematic portrait.</td></tr>
+</table>
+{tip('Start with a preset, then lower Skin smoothing until you can see pores again at 100% zoom — that is the natural look.')}
+"""),
+    ("Face and sculpt: eyes, lips and face shape", f"""
+<p>Open <b>Adjust → Face — eyes, teeth, lips, shape</b>. The face finder loads once (it needs an internet connection the first time), finds a clear, front-facing face and then everything runs on your device. Move a slider and the preview updates; press <b>Apply face edits</b> to put it on the photo. Hold <b>Original</b> to compare; double-click a slider to reset it.</p>
+<table>
+<tr><th>Group</th><th>Sliders</th></tr>
+<tr><td class="k">Eyes</td><td>Brighten eye whites · Iris clarity · Dark circles · Eye size · Eye distance · Fix red eye</td></tr>
+<tr><td class="k">Brows &amp; forehead</td><td>Brow lift · Forehead height</td></tr>
+<tr><td class="k">Nose</td><td>Slim nose · Nose length</td></tr>
+<tr><td class="k">Mouth</td><td>Whiten teeth · Lip colour with any <b>Lip shade</b> · Lip saturation · Fuller lips · Mouth width · Smile lift</td></tr>
+<tr><td class="k">Face shape</td><td>Slim face · Slim jaw · Chin length</td></tr>
+</table>
+<h3>Looks with a Strength slider</h3>
+<table>
+<tr><td class="k">Natural</td><td>Fresh eyes, Well rested, Bright smile</td></tr>
+<tr><td class="k">Beauty</td><td>Soft glam, Big bright eyes, Rose lips</td></tr>
+<tr><td class="k">Sculpt</td><td>V-line face, Petite features, Balanced</td></tr>
+<tr><td class="k">Portrait (men)</td><td>Clean &amp; rested, Defined jaw, Strong brow</td></tr>
+</table>
+<p>Strength scales every shape and tone value of the look from 0 to 150 %; colours such as the lip shade are kept. Fine-tune any slider afterwards.</p>
+{tip('Shape sliders work best in small steps: 10–25 looks natural. Lipstick: pick the shade, then set Lip colour to 30–50 so the lip texture shows through.')}
+"""),
+    ("Face brushes: reshape by hand", f"""
+<p>In <b>Retouch</b>, the face brushes change shape and colour exactly where you paint:</p>
+<table>
+<tr><td class="k">Enlarge eyes</td><td>Click (or brush gently) on an eye. Size the brush to the eye; click again for more.</td></tr>
+<tr><td class="k">Slim nose</td><td>Click on the nose — or any feature — to make it smaller and slimmer.</td></tr>
+<tr><td class="k">Reshape</td><td>Drag to push features: lift eyebrows, shape the jaw, tidy the hairline.</td></tr>
+<tr><td class="k">Hair colour</td><td>Choose a colour and paint over the hair; light and shade stay natural.</td></tr>
+<tr><td class="k">Whiten</td><td>Paint over teeth or the whites of the eyes.</td></tr>
+</table>
+{tip('Use a brush about the size of the feature and several light clicks rather than one strong one. Ctrl/⌘ + Z undoes each click.')}
+"""),
+    ("Move dialog and exact transforms", f"""
+<p>Like the design editor, Photo Studio has an exact <b>Move</b> dialog, measured in the photo's own pixels.</p>
+{steps('Choose the <b>Move</b> tool (V) — or make a selection with the Marquee, Lasso or Pen.', 'Press <b>Enter</b> (or tap <b>Move…</b> in the options bar).', 'Type Horizontal and Vertical (or Distance and Angle) in pixels; keep Preview on to see it.', '<b>OK</b> moves, <b>Copy</b> keeps the original and places a copy, <b>Cancel</b> puts it back.')}
+<table>
+<tr><th>What is selected</th><th>OK</th><th>Copy</th></tr>
+<tr><td class="k">No selection</td><td>Moves the whole layer.</td><td>Adds a new layer with a moved copy.</td></tr>
+<tr><td class="k">A selection</td><td>Moves only the selected pixels; the selection moves with them.</td><td>Copies the selected pixels to the new place on the same layer.</td></tr>
+</table>
+<p>Other transforms: <b>Image</b> menu → image size, canvas size, rotate 90°/180°, flip horizontal or vertical; <b>Crop → Straighten &amp; rotate</b> for any angle; <b>Layer</b> → bring forward / send backward.</p>
+{tip('Repeat a pattern of stamps or logos: select it, press Enter, type the offset and Copy; press Enter and Copy again — the values are remembered.')}
 """),
     ("Live text and pro text effects", f"""
 {shot('ps-text-gold', 'Text with the Gold effect — still live, editable text.')}
@@ -305,7 +378,7 @@ PHOTO = [
 </table>""")}
 """),
     ("Save and export", f"""
-{side('ps-file-menu-crop', 'File menu.', steps('<b>Save</b> keeps the project (with layers and live text) in your account or as a .mtd file on your device.', '<b>File → Export</b>: PNG (transparent), JPG, WebP, TIFF or PDF.', 'Choose <b>RGB</b> for screens or <b>CMYK</b> for print shops, and the dpi.', '<b>Quick download</b> saves a PNG in one tap; <b>Apply to design</b> sends the photo into a design in the editor.'))}
+{side('ps-file-menu-crop', 'File menu.', steps('<b>Save</b> keeps the project (with layers and live text) as a .mtd file on your own device — nothing is uploaded.', '<b>File → Export</b>: PNG (transparent), JPG, WebP, TIFF or PDF.', 'Choose <b>RGB</b> for screens or <b>CMYK</b> for print shops, and the dpi.', '<b>Quick download</b> saves a PNG in one tap; <b>Apply to design</b> sends the photo into a design in the editor.'))}
 {tip('Keep the .mtd project: you can reopen it later with every layer and text still editable.')}
 """),
 ]
@@ -344,6 +417,22 @@ PACKAGING = [
     ("Lines and the structure check", f"""
 <p>The <b>Lines</b> tab lists every cut, crease, perforation and glue line. The <b>structure check</b> warns when a flap is too short for the board, a tuck will not lock, or the glue flap is too narrow — before anything is printed.</p>
 {tip('Print and fold one plain sample on the real board before a print run. It is the cheapest proof there is.')}
+"""),
+    ("Artwork rules for boxes", f"""
+<table>
+<tr><th>Rule</th><th>Why</th></tr>
+<tr><td class="k">Bleed 3 mm past every cut line</td><td>Cutting is never perfectly on the line; colour that runs past it leaves no white edge.</td></tr>
+<tr><td class="k">Safe area 3 mm inside creases and cuts</td><td>Text, logos and barcodes that sit on a fold crack or wrap round the corner.</td></tr>
+<tr><td class="k">Glue areas free of ink and varnish</td><td>Glue holds on bare board. Leave the glue flap and the panel it sticks to plain where they meet.</td></tr>
+<tr><td class="k">Barcode: dark bars on a light ground</td><td>Black or dark blue on white scans best; keep the quiet zone (the white margin beside the bars) clear and don't shrink it far below its standard size.</td></tr>
+<tr><td class="k">Small text 6 pt or larger, in one ink</td><td>Fine text in four colours goes fuzzy if the plates are slightly off. Use 100 % black for small type.</td></tr>
+<tr><td class="k">Pictures at 300 ppi at their printed size</td><td>Lower resolution prints soft; the technical document marks low pictures.</td></tr>
+<tr><td class="k">Dieline as a spot colour, set to overprint</td><td>The printer and die maker read it, but it never prints. The Print PDF does this for you.</td></tr>
+</table>
+{tip('Fold the printed dieline template before exporting: upside-down panels and text that runs onto the lid show up at once.')}
+"""),
+    ("From product to printed box, step by step", f"""
+{steps('Measure the product (length × width × height) and its weight.', 'Pick a style: tuck end for light retail goods, snap-lock or crash-lock bottom for heavier products, mailer or shipping box for posting.', 'Enter the size as <b>Product + fitting gap</b> and choose the board; the dieline is drawn with the board thickness at every fold.', 'Read the <b>structure check</b> and fix anything it flags.', 'Design on the flat blank: background past the bleed, text inside the safe area, barcode on a flat panel away from folds.', 'Print the <b>Dieline template</b> at 100 % on plain paper, cut, fold and test with the real product.', 'Export the <b>Print PDF</b> (CMYK, dieline on its own layer), the <b>DXF</b> for the die maker and the <b>Technical document</b> for sign-off.', 'Ask the printer for a hard proof before the run.')}
 """),
     ("Files for the printer", f"""
 <table>
@@ -390,6 +479,31 @@ TEXTILE = [
 ]
 
 PRINT = [
+    ("Print basics: bleed, safe area, resolution and colour", f"""
+<table>
+<tr><th>Term</th><th>What to do</th></tr>
+<tr><td class="k">Trim</td><td>The finished size — where the paper is cut.</td></tr>
+<tr><td class="k">Bleed</td><td>Extend backgrounds and photos 3 mm past the trim on every side (some printers ask for 5 mm on large formats).</td></tr>
+<tr><td class="k">Safe area</td><td>Keep text and logos at least 3–5 mm inside the trim; more for booklets (the binding takes some).</td></tr>
+<tr><td class="k">Crop marks</td><td>Short lines outside the bleed that show the cutter where to trim. Turn them on in Export.</td></tr>
+<tr><td class="k">Resolution</td><td>Photos at 300 ppi at the printed size for close-up print; 150 ppi is enough for posters seen from a distance.</td></tr>
+<tr><td class="k">RGB and CMYK</td><td>Screens use RGB; presses use CMYK inks. <b>PDF for print shops</b> converts to CMYK (FOGRA39). Very bright RGB greens, blues and oranges look duller in CMYK — check the preview.</td></tr>
+<tr><td class="k">Black</td><td>Small text in 100 % black only. Large black areas look deeper as a “rich black” (black plus some cyan, magenta and yellow) — ask your printer for their mix.</td></tr>
+<tr><td class="k">Lines</td><td>Keep lines at least 0.25 pt thick; thinner lines may not print.</td></tr>
+</table>
+"""),
+    ("Set up a print file, step by step", f"""
+{steps('Start a page at the finished size (New design → custom size in mm or in), or open a print template.', 'Open <b>Document &amp; Print Setup</b> (size, bleed, margins, marks) and set 3 mm bleed; run backgrounds to the bleed edge.', 'Place text inside the safe area. Use the Position tools and the <b>Move</b> dialog (Enter) for exact distances.', 'For several copies on one sheet, use <b>Print Layout</b> — or step-and-repeat with Move → Copy (see the Design Editor guide).', '<b>Export → PDF for print shops</b>: tick bleed, crop marks and colour bar; choose 300 dpi.', 'Turn on <b>Technical document</b> to get a spec sheet with sizes, colours, fonts and picture resolution for the printer.')}
+<h3>Before you send it</h3>
+<table>
+<tr><td class="k">Size</td><td>Trim size correct, bleed on all sides.</td></tr>
+<tr><td class="k">Text</td><td>Spelling checked, nothing inside the 3 mm edge zone, small text 100 % black.</td></tr>
+<tr><td class="k">Pictures</td><td>No “Low” resolution warnings in the technical document.</td></tr>
+<tr><td class="k">Colour</td><td>CMYK print PDF; brand colours checked on a printed proof.</td></tr>
+<tr><td class="k">Pages</td><td>Booklet page count a multiple of 4 for saddle stitch.</td></tr>
+</table>
+{tip('Print files carry no branding of ours — only your design. The technical document is a separate sheet.')}
+"""),
     ("Print-ready files", f"""
 <p>Every design can be exported for a print shop: <b>PDF for print shops</b> converts colours to CMYK with the FOGRA39 profile, adds bleed, crop marks and a colour bar, and keeps text as real vector type. Turn on <b>Technical document</b> in Export to get a branded spec sheet with page sizes, colours, fonts and picture resolution.</p>
 {tip('Pictures marked Low in the technical document may print soft at that size — replace them or print smaller.')}

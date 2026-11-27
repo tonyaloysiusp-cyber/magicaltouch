@@ -15,13 +15,12 @@
 import { TemplateSizes } from '@/components/admin/templates/TemplateSizes';
 import { TemplateGoogle } from '@/components/admin/templates/TemplateGoogle';
 import { TemplateCountCard } from '@/components/admin/templates/TemplateCountCard';
-import { ClaudeTemplate } from '@/components/admin/ClaudeTemplate';
 import { AdminShell } from '@/components/admin/AdminShell';
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { loadPhotoLibrary, filterPhotos, LibraryPhoto } from '@/components/editor/shell/panels/PhotosPanel';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { MoreVertical, Plus, Search, Sparkles, X } from 'lucide-react';
+import { MoreVertical, Plus, Search, X } from 'lucide-react';
 import { countPhotosInJson, stripTemplatePhotos } from '@/lib/templates/stripPhotos';
 import { renderTemplatePages } from '@/lib/templates/renderPages';
 import { supabase, getSessionUser } from '@/lib/supabase';
@@ -121,11 +120,7 @@ export default function AdminTemplatesPage() {
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
-  // AI Template Studio (opened from here or from a festival on Admin → Overview).
-  const [claude, setClaude] = useState<{ topic: string } | null>(null);
   useEffect(() => {
-    const t = new URLSearchParams(window.location.search).get('claude');
-    if (t !== null) setClaude({ topic: t });
     const tb = new URLSearchParams(window.location.search).get('tab');
     if (tb === 'google' || tb === 'sizes' || tb === 'images' || tb === 'categories') setTab(tb);
     if (new URLSearchParams(window.location.search).get('new') === '1') wantNew.current = true;
@@ -638,9 +633,6 @@ export default function AdminTemplatesPage() {
             <button onClick={runGenerate} disabled={generating} className="text-sm font-medium text-mt-ink bg-mt-surface border rounded-full px-4 py-2 disabled:opacity-50">
               {generating ? 'Generating…' : 'Generate starter templates'}
             </button>
-            <button onClick={() => setClaude({ topic: '' })} className="inline-flex items-center gap-1.5 text-sm font-semibold text-white bg-[#D97757] rounded-full px-4 py-2" title="Recreate any reference image or describe a design — free AI (Claude, ChatGPT, Gemini…) builds an editable template">
-              <Sparkles size={15} /> AI Studio
-            </button>
             <button onClick={startNew} className="inline-flex items-center gap-1 text-sm font-semibold text-white bg-brand-gradient rounded-full px-4 py-2">
               <Plus size={15} /> New template
             </button>
@@ -969,14 +961,6 @@ export default function AdminTemplatesPage() {
         </Modal>
       )}
     </div>
-    {claude && userId && (
-        <ClaudeTemplate
-          userId={userId}
-          topic={claude.topic}
-          onClose={() => setClaude(null)}
-          onCreated={(_id, href) => { setClaude(null); reload(); window.open(href, '_blank'); }}
-        />
-      )}
     </AdminShell>
   );
 }

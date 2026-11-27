@@ -83,6 +83,7 @@ function QrBarcodeTabs({ initial, qr, barcode }: { initial: 'qr' | 'barcode'; qr
 }
 import { Gem as StudioIcon } from 'lucide-react';
 import { StudioPanel, StudioPublish } from '@/components/editor/shell/panels/StudioPanel';
+import { MoveDialog } from '@/components/editor/MoveDialog';
 import dynamic from 'next/dynamic';
 const SeparationStudioLazy = dynamic(() => import('@/components/separation/SeparationStudio').then((m) => m.SeparationStudio), { ssr: false });
 const LargeFormatStudioLazy = dynamic(() => import('@/components/largeFormat/LargeFormatStudio').then((m) => m.LargeFormatStudio), { ssr: false });
@@ -346,6 +347,39 @@ function EditorContent() {
   const [showDesignLimitDialog, setShowDesignLimitDialog] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
+  // Object → Transform → Move… (Enter with an object selected), like Illustrator.
+  const [moveOpen, setMoveOpen] = useState(false);
+  const moveOrigRef = useRef<{ obj: any; left: number; top: number } | null>(null);
+  const openMove = () => {
+    const c = fabricCanvasRef.current; const a = c?.getActiveObject();
+    if (!a || a.__isArtboard || a.__die) return;
+    moveOrigRef.current = { obj: a, left: a.left, top: a.top };
+    setMoveOpen(true);
+  };
+  const openMoveRef = useRef(openMove); openMoveRef.current = openMove;
+  const moveTo = (dx: number, dy: number) => {
+    const o = moveOrigRef.current; const c = fabricCanvasRef.current;
+    if (!o || !c) return;
+    o.obj.set({ left: o.left + dx, top: o.top + dy }); o.obj.setCoords(); c.requestRenderAll();
+  };
+  const closeMove = (mode: 'cancel' | 'ok' | 'copy', dx = 0, dy = 0) => {
+    const o = moveOrigRef.current; const c = fabricCanvasRef.current;
+    setMoveOpen(false); moveOrigRef.current = null;
+    if (!o || !c) return;
+    if (mode === 'ok') {
+      moveTo(0, 0); o.obj.set({ left: o.left + dx, top: o.top + dy }); o.obj.setCoords();
+      c.fire('object:modified', { target: o.obj }); c.requestRenderAll(); pushHistory();
+      return;
+    }
+    o.obj.set({ left: o.left, top: o.top }); o.obj.setCoords(); c.requestRenderAll();
+    if (mode === 'copy') {
+      void (async () => {
+        if (!getSelectedObjects(c).length) return;
+        const clones = await withPagePositions(c, (objs) => cloneObjectsAsync(objs));
+        addClonesToCanvas(clones, dx, dy);
+      })();
+    }
+  };
   const [showPreferences, setShowPreferences] = useState(false);
   const [showVersionHistory, setShowVersionHistory] = useState(false);
   // Off by default per spec: drawing tools (Rectangle, Ellipse, Line,
@@ -4640,6 +4674,7 @@ function EditorContent() {
       { label: 'Copy', shortcut: 'Ctrl/Cmd+C', onClick: copySelected, disabled: !has },
       { label: 'Paste', shortcut: 'Ctrl/Cmd+V', onClick: pasteClipboard, disabled: !canPaste },
       { label: 'Duplicate', shortcut: 'Ctrl/Cmd+D', onClick: duplicateSelected, disabled: !has },
+      { label: 'Move…', shortcut: 'Enter', onClick: openMove, disabled: !has },
       ...(isImage ? [{ divider: true } as ContextMenuEntry, { label: active.__frame?.empty ? 'Add Photo…' : 'Replace Image…', onClick: () => replaceInputRef.current?.click(), disabled: !!active.locked }, { label: 'Crop', onClick: () => features.startCrop(), disabled: !!active.locked || !!active.__frame?.empty }] : []),
       ...(pairImg && pairShape ? [{ divider: true } as ContextMenuEntry, { label: 'Add to Frame (photo inside shape)', onClick: () => features.placeInShape(pairImg, pairShape) }] : []),
       { divider: true },
@@ -5433,6 +5468,8 @@ function EditorContent() {
       }
 
       if (canUseToolShortcuts && e.shiftKey && e.key === 'Enter') { e.preventDefault(); applyPathAsMask(); return; }
+      // Enter with an object selected (selection tool): the Move dialog, as in Illustrator.
+      if (canUseToolShortcuts && !isMeta && !e.altKey && !e.shiftKey && e.key === 'Enter' && active && activeToolRef.current === 'select' && !(active as any).__isArtboard) { e.preventDefault(); openMoveRef.current(); return; }
 
       // Undo/redo and select-all belong to a text field while typing in one.
       if (isMeta && e.key.toLowerCase() === 'z' && !e.shiftKey && canUseToolShortcuts) { e.preventDefault(); undo(); return; }
@@ -7527,6 +7564,7 @@ function EditorContent() {
         { label: 'Copy', shortcut: 'Ctrl/Cmd+C', onClick: copySelected, disabled: !hasSelection },
         { label: 'Paste', shortcut: 'Ctrl/Cmd+V', onClick: pasteClipboard },
         { label: 'Duplicate', shortcut: 'Ctrl/Cmd+D', onClick: duplicateSelected, disabled: !hasSelection },
+        { label: 'Move…', shortcut: 'Enter', onClick: openMove, disabled: !hasSelection },
         { label: 'Delete', shortcut: 'Delete', onClick: deleteSelected, disabled: !hasSelection },
         { divider: true },
         { label: 'Text writer — type, Tanglish, translate…', onClick: () => setShowWriter(true) },
@@ -9124,6 +9162,9 @@ function EditorContent() {
       )}
 
       <ShortcutsModal open={showShortcuts} onClose={() => setShowShortcuts(false)} workspace={workspace} />
+      {moveOpen && (
+        <MoveDialog unit={unit as any} onPreview={moveTo} onCancel={() => closeMove('cancel')} onOk={(dx, dy) => closeMove('ok', dx, dy)} onCopy={(dx, dy) => closeMove('copy', dx, dy)} />
+      )}
       <PreferencesModal
         open={showPreferences}
         onClose={() => setShowPreferences(false)}

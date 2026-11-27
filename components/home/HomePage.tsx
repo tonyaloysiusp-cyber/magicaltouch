@@ -4,15 +4,13 @@ import { unboundedDisplay as display, interBody as body } from '@/lib/fonts';
 import { useAppTheme } from '@/hooks/useAppTheme';
 import { IntroAnimation } from './IntroAnimation';
 import { Navbar } from './Navbar';
-import { WorkspaceHero } from './WorkspaceHero';
+import { StudioHero } from './StudioHero';
 import dynamic from 'next/dynamic';
 // Below-the-fold sections are separate chunks: still rendered on the server
 // (same HTML for visitors and search), but their JavaScript loads and
 // hydrates in smaller pieces after the hero, so the page responds sooner.
 const StudioTools = dynamic(() => import('./StudioTools').then((m) => m.StudioTools));
 const TemplateShowcase = dynamic(() => import('./TemplateShowcase').then((m) => m.TemplateShowcase));
-const StudioTour = dynamic(() => import('./StudioTour').then((m) => m.StudioTour));
-const FeatureShowcase = dynamic(() => import('./FeatureShowcase'));
 const SocialShowcase = dynamic(() => import('./SocialShowcase').then((m) => m.SocialShowcase));
 const HowItWorks = dynamic(() => import('./HowItWorks').then((m) => m.HowItWorks));
 const PricingFree = dynamic(() => import('./PricingFree').then((m) => m.PricingFree));
@@ -39,11 +37,9 @@ export function HomePage() {
         className={`${display.variable} ${body.variable} font-[family-name:var(--font-body)] bg-mt-bg text-mt-ink transition-colors duration-300`}
       >
         <Navbar theme={theme} onToggleTheme={toggleTheme} />
-        <WorkspaceHero />
+        <StudioHero />
         <TemplateShowcase />
-        <StudioTour />
         <StudioTools />
-        <FeatureShowcase />
         <HowItWorks />
         <PricingFree />
         <SocialShowcase />

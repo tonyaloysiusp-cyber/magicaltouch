@@ -30,6 +30,7 @@ import { CropBox, PhysUnit, cropTo, flip, fmtNum, fromPx, inscribedRect, makeCan
 import { ColourMode, FORMAT_INFO, PhotoFormat, downloadBlob, exportPhoto, extFor } from '@/lib/photo/exportPhoto';
 import { loadProofTable, proofRgbaInPlace, PRESS_PROFILE_NAME } from '@/lib/color/cmyk';
 import { BgRemoveDialog } from '@/components/editor/shell/BgRemoveDialog';
+import { MoveDialog } from '@/components/editor/MoveDialog';
 import { Layer, Selection, makeLayer, composite, compositeAdjusted, isPlain, translate, moveLayer, syncFull, placeImage, mergeDown, maskShape, maskAll, invertMask, maskFromAlpha, blendMasked, clearMasked, copyMasked, fillMasked, paintStroke, blankLike, maskPolygon, combineMasks, maskIsEmpty, SelectionMode } from '@/lib/photo/layers';
 import { FILTERS, FilterId, applyFilter } from '@/lib/photo/filters';
 import { PenPoint, contentAwareFill, maskEdges, pathToMask, penPathD } from '@/lib/photo/fillMask';
@@ -825,6 +826,7 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
         else if (lasso && k === 'enter') { e.preventDefault(); closeLasso(); }
         else if (lasso && k === 'escape') { e.preventDefault(); setLasso(null); setLassoHover(null); }
         else if (lasso && k === 'backspace') { e.preventDefault(); setLasso(lasso.pts.length > 1 ? { ...lasso, pts: lasso.pts.slice(0, -1) } : null); }
+        else if (k === 'enter' && !mod && layers && target && (tool === 'move' || (tool === 'select' && sel))) { e.preventDefault(); setMoveDlg(true); }
         else if ((k === 'delete' || k === 'backspace') && sel) { e.preventDefault(); selOps.clear(); }
         else if ((k === 'delete' || k === 'backspace') && !sel && layers && layers.length > 1 && tool !== 'text') { e.preventDefault(); layerOps.remove(); }
         else if (k === 'escape' && sel) setSel(null);
@@ -1341,6 +1343,46 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
     // Keeps only the selected part of the layer (the rest becomes see-through).
     mask: () => sel && target && push({ base: copyMasked(target, sel.mask), label: 'Layer mask' }),
     toLayer: () => target && insertAbove(makeLayer(sel ? copyMasked(target, sel.mask) : target, sel ? copyName('Selection', layers || []) : copyName(layers![activeIdx].name, layers || [])), 'Layer via copy'),
+  };
+  // Move… (Enter with the Move tool, or with a selection): exact offset in
+  // pixels, OK moves, Copy leaves the original and places a copy — the
+  // selected pixels, or the whole layer when nothing is selected.
+  const [moveDlg, setMoveDlg] = useState(false);
+  const movedPixels = (dx: number, dy: number, keep: boolean) => {
+    if (!target || !sel) return null;
+    const piece = translate(copyMasked(target, sel.mask), dx, dy);
+    const out = keep ? translate(target, 0, 0) : clearMasked(target, sel.mask);
+    out.getContext('2d')!.drawImage(piece, 0, 0);
+    return out;
+  };
+  const shiftSel = (s0: Selection, dx: number, dy: number): Selection => ({
+    ...s0,
+    mask: translate(s0.mask, dx, dy),
+    shape: !s0.shape ? null : s0.shape.kind === 'poly' ? { kind: 'poly', pts: s0.shape.pts.map((q) => ({ x: q.x + dx, y: q.y + dy })) } : { ...s0.shape, x: s0.shape.x + dx, y: s0.shape.y + dy },
+  });
+  const movePreview = (dx0: number, dy0: number) => {
+    if (!layers || !target) return;
+    const dx = Math.round(dx0), dy = Math.round(dy0);
+    if (!dx && !dy) { hideOverlay(); return; }
+    const k = overlayScale(target.width, target.height);
+    const L = layers[activeIdx];
+    if (sel) { const c = movedPixels(dx, dy, false); if (c) showOverlay(composite(layers, k, { index: activeIdx, canvas: c })); return; }
+    showOverlay(composite(layers, k, L.full ? { index: activeIdx, canvas: L.full, dx: (L.fx || 0) + dx, dy: (L.fy || 0) + dy } : { index: activeIdx, canvas: target, dx, dy }));
+  };
+  const moveCommit = (mode: 'ok' | 'copy' | 'cancel', dx0 = 0, dy0 = 0) => {
+    setMoveDlg(false);
+    setTimeout(hideOverlay, 30);
+    const dx = Math.round(dx0), dy = Math.round(dy0);
+    if (mode === 'cancel' || !layers || !target || (!dx && !dy && mode === 'ok')) return;
+    if (sel) {
+      const c = movedPixels(dx, dy, mode === 'copy');
+      if (!c) return;
+      push({ base: c, label: mode === 'copy' ? 'Copy selection' : 'Move selection' });
+      setSel(shiftSel(sel, dx, dy));
+      return;
+    }
+    if (mode === 'ok') push({ moveBy: { dx, dy }, label: 'Move' });
+    else insertAbove(makeLayer(translate(target, dx, dy), copyName(layers[activeIdx].name, layers)), 'Copy layer');
   };
   const fileRef = useRef<HTMLInputElement>(null);
   const placeRef = useRef<HTMLInputElement>(null);
@@ -2380,7 +2422,8 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
           <button className={optOn(true)} onClick={applyCrop}>Apply crop (Enter)</button>
         </>
       )}
-      {tool === 'move' && <span className={optLabel}>Moving layer “{layers?.[activeIdx]?.name}”. Choose another layer on the right.</span>}
+      {tool === 'move' && <span className={optLabel}>Moving layer “{layers?.[activeIdx]?.name}”. Press Enter for an exact Move… (with a selection, it moves or copies the selected pixels).</span>}
+      {(tool === 'move' || (tool === 'select' && sel)) && <button type="button" onClick={() => setMoveDlg(true)} className="ml-2 h-7 rounded-md border border-mt-border px-2 text-[12px] font-semibold hover:bg-mt-surface2">Move…</button>}
       {tool === 'eyedropper' && (
         <>
           <span className={optLabel}>Click the picture to pick a colour</span>
@@ -2864,6 +2907,9 @@ export const PhotoStudio = forwardRef<PhotoStudioHandle, PhotoStudioProps>(funct
         </aside>
       </div>
 
+      {moveDlg && target && (
+        <MoveDialog unit="px" title={sel ? 'Move selection' : 'Move layer'} onPreview={movePreview} onCancel={() => moveCommit('cancel')} onOk={(dx, dy) => moveCommit('ok', dx, dy)} onCopy={(dx, dy) => moveCommit('copy', dx, dy)} />
+      )}
       {bgOpen && target && (
         <BgRemoveDialog
           img={{ getElement: () => target, _originalElement: target }}

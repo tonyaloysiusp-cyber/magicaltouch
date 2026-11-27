@@ -48,9 +48,9 @@ export interface Analysis {
 }
 
 const n = (x: unknown) => Number(x) || 0;
-const NAMES: Record<string, string> = { '/': 'Home page', '/templates': 'Template gallery', '/create': 'Create a design', '/editor': 'Editor', '/photo-studio': 'Photo Studio', '/ai-studio': 'AI Studio', '/about': 'About', '/tutorials': 'Tutorials', '/free-design-tools': 'Free design tools', '/contact': 'Contact' };
+const NAMES: Record<string, string> = { '/': 'Home page', '/templates': 'Template gallery', '/create': 'Create a design', '/editor': 'Editor', '/photo-studio': 'Photo Studio', '/about': 'About', '/tutorials': 'Tutorials', '/free-design-tools': 'Free design tools', '/contact': 'Contact' };
 const label = (p: string) => { const t = NAMES[p] || p.replace(/^\/templates\/category\//, 'Category: ').replace(/^\/templates\//, '').replace(/^\//, '').replace(/-/g, ' ') || p; return t.charAt(0).toUpperCase() + t.slice(1); };
-const typeOf = (p: string, landing: Set<string>): TopRow['type'] => (p === '/' ? 'home' : p.startsWith('/templates/') && !p.startsWith('/templates/category') ? 'template' : p === '/templates' || p.startsWith('/templates/category') ? 'tool' : landing.has(p.slice(1)) ? 'landing' : /^\/(create|photo-studio|ai-studio|editor|free-design-tools)/.test(p) ? 'tool' : 'other');
+const typeOf = (p: string, landing: Set<string>): TopRow['type'] => (p === '/' ? 'home' : p.startsWith('/templates/') && !p.startsWith('/templates/category') ? 'template' : p === '/templates' || p.startsWith('/templates/category') ? 'tool' : landing.has(p.slice(1)) ? 'landing' : /^\/(create|photo-studio|editor|free-design-tools)/.test(p) ? 'tool' : 'other');
 
 /** Live landing pages: built-in ones (with Admin edits) and custom ones. */
 export function liveLandings(d: Pick<PerfData, 'pages' | 'hidden'>): { l: Landing; kind: PageRow['kind'] }[] {
