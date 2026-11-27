@@ -16,8 +16,8 @@ jobs:
       - run: npm i --no-save playwright@1.48.2 && npx playwright install --with-deps chromium
       - run: node e2e/probe/${{ inputs.script }}
         env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_URL: https://rqkjogzljsbufbrdlbfr.supabase.co
+          SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJxa2pvZ3psanNidWZicmRsYmZyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkyNzgyMDcsImV4cCI6MjEwNDg1NDIwN30.-OHCqhZNWsdlbkIE3qUV6It5VUoAN1lQDUFCRLtUaPM
       - name: Keep screenshots on the probe-shots branch
         if: always()
         run: |
