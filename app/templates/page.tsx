@@ -19,6 +19,9 @@ import { supabase, getSessionUser } from '@/lib/supabase';
 import { ProfileMenu } from '@/components/ProfileMenu';
 import { BrandLogo } from '@/components/BrandLogo';
 import { PageHero } from '@/components/PageHero';
+import dynamic from 'next/dynamic';
+const PackagingTemplateGallery = dynamic(() => import('@/components/packaging/PackagingHub').then((m) => m.PackagingTemplateGallery), { ssr: false, loading: () => <p className="py-16 text-center text-mt-muted">Loading packaging templates…</p> });
+const TextileTemplateGallery = dynamic(() => import('@/components/textile/TextileHub').then((m) => m.TextileTemplateGallery), { ssr: false, loading: () => <p className="py-16 text-center text-mt-muted">Loading garment templates…</p> });
 import { useAppTheme } from '@/hooks/useAppTheme';
 import { loadSearchKeywords, reportSearch, SearchKeyword } from '@/lib/searchKeywords';
 import { countLabel } from '@/lib/templateCountLabel';
@@ -163,7 +166,19 @@ function readFiltersFromUrl(): Partial<Filters> & { catName?: string; subName?: 
   return out;
 }
 
+type StudioTab = 'packaging' | 'textile' | null;
+
 export default function TemplatesPage() {
+  // Packaging and textile templates live with the code (no database), shown in their own tabs.
+  const [studioTab, setStudioTab] = useState<StudioTab>(null);
+  useEffect(() => {
+    const v = new URLSearchParams(window.location.search).get('studio');
+    if (v === 'packaging' || v === 'textile') setStudioTab(v);
+  }, []);
+  const pickStudio = (v: StudioTab) => {
+    setStudioTab(v);
+    try { const u = new URL(window.location.href); if (v) u.searchParams.set('studio', v); else u.searchParams.delete('studio'); window.history.replaceState(null, '', u.toString()); } catch { /* */ }
+  };
   const { theme, toggleTheme } = useAppTheme();
   const [f, setF] = useState<Filters>(NO_FILTERS);
   const [searchKeywords, setSearchKeywords] = useState<SearchKeyword[]>([]);
@@ -732,7 +747,7 @@ export default function TemplatesPage() {
         eyebrow="Templates"
         title="Start somewhere brilliant."
         accent="brilliant"
-        subtitle="Search by what you're making and what it's for — “business flyer”, “wedding album”, “Diwali post”."
+        subtitle="Social media, print, packaging and textile — every template in one place. Search by what you're making: “business flyer”, “gift box”, “team jersey”."
       >
         <form className="max-w-2xl mx-auto relative" onSubmit={(e) => { e.preventDefault(); search(draft); }} role="search">
           <Search size={18} className="absolute left-4 top-[24px] -translate-y-1/2 text-mt-faint" />
@@ -772,17 +787,26 @@ export default function TemplatesPage() {
           {/* What you're making: five groups */}
           <div role="tablist" aria-label="What are you making?" className="flex gap-1 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 border-b border-mt-border mt-scroll">
             {[{ id: null as string | null, label: 'All templates' }, ...GROUPS.map((g) => ({ id: g.id as string | null, label: g.label }))].map((g) => {
-              const on = f.group === g.id;
+              const on = !studioTab && f.group === g.id;
               const n = g.id ? groupCounts.get(g.id) || 0 : null;
               return (
-                <button key={g.label} role="tab" aria-selected={on} onClick={() => set({ group: g.id, kind: null, ...(usingDbCategories && f.cat !== 'All' && g.id && groupOfSlug(catById.get(f.cat)?.slug) !== g.id ? { cat: 'All', sub: null } : {}) })} className={`shrink-0 relative px-3.5 pb-3 pt-1 text-[14px] font-semibold transition-colors ${on ? 'text-mt-ink' : 'text-mt-muted hover:text-mt-ink'}`}>
+                <button key={g.label} role="tab" aria-selected={on} onClick={() => { pickStudio(null); set({ group: g.id, kind: null, ...(usingDbCategories && f.cat !== 'All' && g.id && groupOfSlug(catById.get(f.cat)?.slug) !== g.id ? { cat: 'All', sub: null } : {}) }); }} className={`shrink-0 relative px-3.5 pb-3 pt-1 text-[14px] font-semibold transition-colors ${on ? 'text-mt-ink' : 'text-mt-muted hover:text-mt-ink'}`}>
                   {g.label}{n !== null && <span className="ml-1.5 text-[11px] font-normal text-mt-faint">{n.toLocaleString()}</span>}
                   {on && <span className="absolute left-2 right-2 -bottom-px h-[3px] rounded-full bg-mt-ink" />}
                 </button>
               );
             })}
+            {([['packaging', 'Packaging'], ['textile', 'Textile & garments']] as const).map(([id, label]) => (
+              <button key={id} role="tab" aria-selected={studioTab === id} onClick={() => pickStudio(id)} className={`shrink-0 relative px-3.5 pb-3 pt-1 text-[14px] font-semibold transition-colors ${studioTab === id ? 'text-mt-ink' : 'text-mt-muted hover:text-mt-ink'}`}>
+                {label}
+                {studioTab === id && <span className="absolute left-2 right-2 -bottom-px h-[3px] rounded-full bg-mt-ink" />}
+              </button>
+            ))}
           </div>
 
+          {studioTab === 'packaging' && <div className="pt-6 pb-10"><PackagingTemplateGallery heading="Packaging templates" intro="Boxes and cartons on real dielines at true size — open one, change the size and the dieline follows." /></div>}
+          {studioTab === 'textile' && <div className="pt-6 pb-10"><TextileTemplateGallery heading="Textile & garment templates" intro="Polos, T-shirts, jerseys, kurtis, churidars and frocks on drafted pattern pieces — open one and pick a size." /></div>}
+          {!studioTab && (<>
           {/* Filter bar: a few dropdowns + sort */}
           <div className="mt-3 flex items-center gap-2 overflow-x-auto sm:overflow-visible -mx-4 px-4 sm:mx-0 sm:px-0 pb-1 sm:flex-wrap" aria-label="Filters">
             {MENUS.map((m) => (
@@ -903,6 +927,7 @@ export default function TemplatesPage() {
               </div>
             )}
           </section>
+          </>)}
         </div>
       </div>
 

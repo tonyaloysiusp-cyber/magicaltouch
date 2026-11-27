@@ -24,17 +24,11 @@ const FILTERS: { id: string; label: string; test: (t: TextileTemplate) => boolea
   { id: 'dress', label: 'Frocks & dresses', test: (t) => t.garment === 'frock' },
 ];
 
-export function TextileHub() {
+/** Opens a garment template (or a blank garment) in the design editor. */
+export function useTextileOpen() {
   const router = useRouter();
-  const [filter, setFilter] = useState('all');
   const [busy, setBusy] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
-  const [ready, setReady] = useState(false);
-  const [hover, setHover] = useState<string | null>(null);
-  useEffect(() => { setReady(true); }, []);
-  const list = useMemo(() => TEXTILE_TEMPLATES.filter(FILTERS.find((f) => f.id === filter)!.test), [filter]);
-  const hero = useMemo(() => ['polo-corporate', 'kurti-floral', 'jersey-hoops', 'frock-gathered'].map((id) => TEXTILE_TEMPLATES.find((t) => t.id === id)!).filter(Boolean), []);
-
   /** Open a template (or a blank garment) in the design editor. */
   const open = async (t: TextileTemplate | null, garment?: GarmentId) => {
     setErr(null); setBusy(t?.id || `blank-${garment}`);
@@ -51,6 +45,56 @@ export function TextileHub() {
       router.push(`${editorUrlForLocal(key, size.width, size.height)}&panel=textile`);
     } catch (e: any) { setErr(e?.message || 'Could not open the editor.'); setBusy(null); }
   };
+
+  return { open, busy, err };
+}
+
+/** The garment template grid with its filters (used here and on the Templates page). */
+export function TextileTemplateGallery({ heading = 'Garment templates', intro = 'Each design sits on drafted pattern pieces with seam allowance. Hover to see the pieces.' }: { heading?: string; intro?: string }) {
+  const { open, busy, err } = useTextileOpen();
+  const [filter, setFilter] = useState('all');
+  const [ready, setReady] = useState(false);
+  const [hover, setHover] = useState<string | null>(null);
+  useEffect(() => { setReady(true); }, []);
+  const list = useMemo(() => TEXTILE_TEMPLATES.filter(FILTERS.find((f) => f.id === filter)!.test), [filter]);
+  return (
+    <section id="templates" aria-labelledby="tx-tpl" className="scroll-mt-16">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h2 id="tx-tpl" className="text-xl font-semibold tracking-[-0.01em]">{heading}</h2>
+          <p className="mt-1 text-[13px] text-mt-muted">{intro}</p>
+        </div>
+        <div className="flex flex-wrap gap-1.5" role="tablist">
+          {FILTERS.map((f) => <button key={f.id} type="button" role="tab" aria-selected={filter === f.id} onClick={() => setFilter(f.id)} className={`h-8 rounded-full px-3 text-[12.5px] font-semibold ${filter === f.id ? 'bg-mt-ink text-mt-bg' : 'border border-mt-border hover:bg-mt-surface2'}`}>{f.label}</button>)}
+        </div>
+      </div>
+      {err && <p role="alert" className="mt-3 text-[13px] text-rose-600">{err}</p>}
+      <ul className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        {list.map((t) => (
+          <li key={t.id} onMouseEnter={() => setHover(t.id)} onMouseLeave={() => setHover((h) => (h === t.id ? null : h))} className="group overflow-hidden rounded-xl border border-mt-border bg-mt-surface">
+            <div className="relative h-56 bg-mt-surface2/70 p-4">
+              <div className="h-full w-full transition-opacity duration-200 group-hover:opacity-0 [&_svg]:h-full [&_svg]:w-full" dangerouslySetInnerHTML={{ __html: ready ? textileSketchSvg(t) : '' }} />
+              <div className="absolute inset-0 p-4 opacity-0 transition-opacity duration-200 group-hover:opacity-100 [&_svg]:h-full [&_svg]:w-full" dangerouslySetInnerHTML={{ __html: hover === t.id ? textileFlatSvg(t) : '' }} />
+            </div>
+            <div className="flex items-center justify-between gap-2 p-3">
+              <div className="min-w-0">
+                <p className="truncate text-[13.5px] font-semibold">{t.name}</p>
+                <p className="truncate text-[11.5px] text-mt-faint">{GARMENTS.find((g) => g.id === t.garment)?.name} · {t.theme.name}</p>
+              </div>
+              <button type="button" onClick={() => open(t)} disabled={!!busy} className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full bg-mt-ink px-3 text-[12px] font-semibold text-mt-bg disabled:opacity-50"><PenTool size={13} /> {busy === t.id ? 'Opening…' : 'Customise'}</button>
+            </div>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+export function TextileHub() {
+  const { open, busy, err } = useTextileOpen();
+  const [ready, setReady] = useState(false);
+  useEffect(() => { setReady(true); }, []);
+  const hero = useMemo(() => ['polo-corporate', 'kurti-floral', 'jersey-hoops', 'frock-gathered'].map((id) => TEXTILE_TEMPLATES.find((t) => t.id === id)!).filter(Boolean), []);
 
   return (
     <div>
@@ -90,34 +134,7 @@ export function TextileHub() {
           </ol>
         </section>
 
-        <section id="templates" aria-labelledby="tx-tpl" className="scroll-mt-16">
-          <div className="flex flex-wrap items-end justify-between gap-3">
-            <div>
-              <h2 id="tx-tpl" className="text-xl font-semibold tracking-[-0.01em]">Garment templates</h2>
-              <p className="mt-1 text-[13px] text-mt-muted">Each design sits on drafted pattern pieces with seam allowance. Hover to see the pieces.</p>
-            </div>
-            <div className="flex flex-wrap gap-1.5" role="tablist">
-              {FILTERS.map((f) => <button key={f.id} type="button" role="tab" aria-selected={filter === f.id} onClick={() => setFilter(f.id)} className={`h-8 rounded-full px-3 text-[12.5px] font-semibold ${filter === f.id ? 'bg-mt-ink text-mt-bg' : 'border border-mt-border hover:bg-mt-surface2'}`}>{f.label}</button>)}
-            </div>
-          </div>
-          <ul className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {list.map((t) => (
-              <li key={t.id} onMouseEnter={() => setHover(t.id)} onMouseLeave={() => setHover((h) => (h === t.id ? null : h))} className="group overflow-hidden rounded-xl border border-mt-border bg-mt-surface">
-                <div className="relative h-56 bg-mt-surface2/70 p-4">
-                  <div className="h-full w-full transition-opacity duration-200 group-hover:opacity-0 [&_svg]:h-full [&_svg]:w-full" dangerouslySetInnerHTML={{ __html: ready ? textileSketchSvg(t) : '' }} />
-                  <div className="absolute inset-0 p-4 opacity-0 transition-opacity duration-200 group-hover:opacity-100 [&_svg]:h-full [&_svg]:w-full" dangerouslySetInnerHTML={{ __html: hover === t.id ? textileFlatSvg(t) : '' }} />
-                </div>
-                <div className="flex items-center justify-between gap-2 p-3">
-                  <div className="min-w-0">
-                    <p className="truncate text-[13.5px] font-semibold">{t.name}</p>
-                    <p className="truncate text-[11.5px] text-mt-faint">{GARMENTS.find((g) => g.id === t.garment)?.name} · {t.theme.name}</p>
-                  </div>
-                  <button type="button" onClick={() => open(t)} disabled={!!busy} className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full bg-mt-ink px-3 text-[12px] font-semibold text-mt-bg disabled:opacity-50"><PenTool size={13} /> {busy === t.id ? 'Opening…' : 'Customise'}</button>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </section>
+        <TextileTemplateGallery />
 
         <section aria-labelledby="tx-blank">
           <h2 id="tx-blank" className="text-xl font-semibold tracking-[-0.01em]">Start from a blank garment</h2>

@@ -34,19 +34,11 @@ function specFor(t: PackTemplate): PackSpec {
   return { style: t.style, product: { L: t.L - 2, W: t.W - 2, H: t.D - 2 }, clearance: { L: 2, W: 2, H: 2 }, grade, gsm: grade === 'sbs' ? 400 : 0, t: t.t, glue: g.glue, tuck: 15, lidDepth: Math.min(t.D, 30) };
 }
 
-export function PackagingHub() {
+/** Opens a packaging template (or a blank box) in the design editor. */
+export function usePackagingOpen() {
   const router = useRouter();
-  const [filter, setFilter] = useState('all');
   const [busy, setBusy] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
-  // Previews are drawn in the browser (keeps the page light for visitors and search engines).
-  const [ready, setReady] = useState(false);
-  const [hover, setHover] = useState<string | null>(null);
-  useEffect(() => { setReady(true); }, []);
-  const list = useMemo(() => PACK_TEMPLATES.filter(FILTERS.find((f) => f.id === filter)!.test), [filter]);
-  const showcase = useMemo(() => ['kids-toys-seal', 'tech-gadget-traylid', 'spice-traylid', 'eco-reusable-hsc', 'wine-gift-rte', 'sweet-bakery-tray', 'candle-traylid', 'chocolate-matchbox'].map((id) => PACK_TEMPLATES.find((t) => t.id === id)!).filter(Boolean), []);
-  const hero = useMemo(() => ['botanical-tea-rte', 'tech-gadget-traylid', 'luxe-cosmetics-rte'].map((id) => PACK_TEMPLATES.find((t) => t.id === id)!).filter(Boolean), []);
-
   /** Open a template (or a blank box) in the design editor. */
   const open = async (t: PackTemplate | null, style?: BoxStyleId) => {
     setErr(null); setBusy(t?.id || `blank-${style}`);
@@ -68,6 +60,57 @@ export function PackagingHub() {
       router.push(`${editorUrlForLocal(key, size.width, size.height)}&panel=packaging`);
     } catch (e: any) { setErr(e?.message || 'Could not open the editor.'); setBusy(null); }
   };
+
+  return { open, busy, err };
+}
+
+/** The packaging template grid with its style filters (used here and on the Templates page). */
+export function PackagingTemplateGallery({ heading = 'Packaging templates', intro = 'Every design sits on a real dieline at its true size. Change the size later in the editor — the dieline follows.' }: { heading?: string; intro?: string }) {
+  const { open, busy, err } = usePackagingOpen();
+  const [filter, setFilter] = useState('all');
+  const [ready, setReady] = useState(false);
+  const [hover, setHover] = useState<string | null>(null);
+  useEffect(() => { setReady(true); }, []);
+  const list = useMemo(() => PACK_TEMPLATES.filter(FILTERS.find((f) => f.id === filter)!.test), [filter]);
+  return (
+    <section id="templates" aria-labelledby="pk-tpl" className="scroll-mt-16">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h2 id="pk-tpl" className="text-xl font-semibold tracking-[-0.01em]">{heading}</h2>
+          <p className="mt-1 text-[13px] text-mt-muted">{intro}</p>
+        </div>
+        <div className="flex flex-wrap gap-1.5" role="tablist">
+          {FILTERS.map((f) => <button key={f.id} type="button" role="tab" aria-selected={filter === f.id} onClick={() => setFilter(f.id)} className={`h-8 rounded-full px-3 text-[12.5px] font-semibold ${filter === f.id ? 'bg-mt-ink text-mt-bg' : 'border border-mt-border hover:bg-mt-surface2'}`}>{f.label}</button>)}
+        </div>
+      </div>
+      {err && <p role="alert" className="mt-3 text-[13px] text-rose-600">{err}</p>}
+      <ul className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        {list.map((t) => (
+          <li key={t.id} onMouseEnter={() => setHover(t.id)} onMouseLeave={() => setHover((h) => (h === t.id ? null : h))} className="group overflow-hidden rounded-xl border border-mt-border bg-mt-surface">
+            <div className="relative h-52 bg-mt-surface2/70 p-4">
+              <div className="h-full w-full transition-opacity duration-200 group-hover:opacity-0 [&_svg]:h-full [&_svg]:w-full" dangerouslySetInnerHTML={{ __html: ready ? templateMockupSvg(t) : '' }} />
+              <div className="absolute inset-0 p-4 opacity-0 transition-opacity duration-200 group-hover:opacity-100 [&_svg]:h-full [&_svg]:w-full" dangerouslySetInnerHTML={{ __html: hover === t.id ? templateFlatSvg(t) : '' }} />
+            </div>
+            <div className="flex items-center justify-between gap-2 p-3">
+              <div className="min-w-0">
+                <p className="truncate text-[13.5px] font-semibold">{t.name}</p>
+                <p className="truncate text-[11.5px] text-mt-faint">{BOX_STYLES.find((s) => s.id === t.style)?.name} · {t.L} × {t.W} × {t.D} mm</p>
+              </div>
+              <button type="button" onClick={() => open(t)} disabled={!!busy} className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full bg-mt-ink px-3 text-[12px] font-semibold text-mt-bg disabled:opacity-50"><PenTool size={13} /> {busy === t.id ? 'Opening…' : 'Customise'}</button>
+            </div>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+export function PackagingHub() {
+  const { open, busy, err } = usePackagingOpen();
+  const [ready, setReady] = useState(false);
+  useEffect(() => { setReady(true); }, []);
+  const showcase = useMemo(() => ['kids-toys-seal', 'tech-gadget-traylid', 'spice-traylid', 'eco-reusable-hsc', 'wine-gift-rte', 'sweet-bakery-tray', 'candle-traylid', 'chocolate-matchbox'].map((id) => PACK_TEMPLATES.find((t) => t.id === id)!).filter(Boolean), []);
+  const hero = useMemo(() => ['botanical-tea-rte', 'tech-gadget-traylid', 'luxe-cosmetics-rte'].map((id) => PACK_TEMPLATES.find((t) => t.id === id)!).filter(Boolean), []);
 
   return (
     <div>
@@ -132,34 +175,7 @@ export function PackagingHub() {
       </section>
 
       {/* Templates */}
-      <section id="templates" aria-labelledby="pk-tpl" className="scroll-mt-16">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h2 id="pk-tpl" className="text-xl font-semibold tracking-[-0.01em]">Packaging templates</h2>
-            <p className="mt-1 text-[13px] text-mt-muted">Every design sits on a real dieline at its true size. Change the size later in the editor — the dieline follows.</p>
-          </div>
-          <div className="flex flex-wrap gap-1.5" role="tablist">
-            {FILTERS.map((f) => <button key={f.id} type="button" role="tab" aria-selected={filter === f.id} onClick={() => setFilter(f.id)} className={`h-8 rounded-full px-3 text-[12.5px] font-semibold ${filter === f.id ? 'bg-mt-ink text-mt-bg' : 'border border-mt-border hover:bg-mt-surface2'}`}>{f.label}</button>)}
-          </div>
-        </div>
-        <ul className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {list.map((t) => (
-            <li key={t.id} onMouseEnter={() => setHover(t.id)} onMouseLeave={() => setHover((h) => (h === t.id ? null : h))} className="group overflow-hidden rounded-xl border border-mt-border bg-mt-surface">
-              <div className="relative h-52 bg-mt-surface2/70 p-4">
-                <div className="h-full w-full transition-opacity duration-200 group-hover:opacity-0 [&_svg]:h-full [&_svg]:w-full" dangerouslySetInnerHTML={{ __html: ready ? templateMockupSvg(t) : '' }} />
-                <div className="absolute inset-0 p-4 opacity-0 transition-opacity duration-200 group-hover:opacity-100 [&_svg]:h-full [&_svg]:w-full" dangerouslySetInnerHTML={{ __html: hover === t.id ? templateFlatSvg(t) : '' }} />
-              </div>
-              <div className="flex items-center justify-between gap-2 p-3">
-                <div className="min-w-0">
-                  <p className="truncate text-[13.5px] font-semibold">{t.name}</p>
-                  <p className="truncate text-[11.5px] text-mt-faint">{BOX_STYLES.find((s) => s.id === t.style)?.name} · {t.L} × {t.W} × {t.D} mm</p>
-                </div>
-                <button type="button" onClick={() => open(t)} disabled={!!busy} className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full bg-mt-ink px-3 text-[12px] font-semibold text-mt-bg disabled:opacity-50"><PenTool size={13} /> {busy === t.id ? 'Opening…' : 'Customise'}</button>
-              </div>
-            </li>
-          ))}
-        </ul>
-      </section>
+      <PackagingTemplateGallery />
 
       {/* Blank styles */}
       <section aria-labelledby="pk-blank">
