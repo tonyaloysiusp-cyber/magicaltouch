@@ -41,7 +41,7 @@ export interface TechDocSpec {
 }
 
 const W = 210, H = 297, M = 14, CW = W - 2 * M;
-const TOP = 30, BOTTOM = H - 18;
+const TOP = 41, BOTTOM = H - 18;
 const r2 = (n: number) => Math.round(n * 100) / 100;
 
 /** Rough Helvetica width (mm) of a string at a font size (mm). */
@@ -204,7 +204,7 @@ export function techDocPages(spec: TechDocSpec, logo?: DocLogo): { svg: string; 
 
   // Key facts strip
   const summary = (spec.summary || []).slice(0, 5);
-  if (summary.length) { g += metaStrip(M, y, CW, summary); y += 17; }
+  if (summary.length) { g += metaStrip(M, y, CW, summary); y += 20; }
 
   // Preview + specification
   if (spec.preview || spec.spec?.length) {

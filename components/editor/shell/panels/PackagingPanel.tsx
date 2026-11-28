@@ -205,6 +205,7 @@ export function PackagingPanel({ api }: { api: PackagingApi }) {
         ['Board', `${grade.name}, ${spec.gsm} g/m², caliper ${spec.t} mm`],
         ['Crease rule', `${crease.rulePt} pt; channel ${crease.channelWidth} × ${crease.channelDepth} mm`],
         ['Glue flap', `${mm(spec.glue)}${spec.glueAngle != null ? `, ends at ${spec.glueAngle}°` : ''}${spec.gluePos === 'back' ? ', on the back panel' : ', on the side panel'}${spec.thumbNotch ? ', thumb notch' : ''}`],
+        ...((spec.hangTab || spec.slitLock || spec.window) ? [['Extras', [spec.hangTab && 'hang tab with euro slot', spec.slitLock && 'slit-lock tucks', spec.window && 'front window'].filter(Boolean).join(', ')] as [string, string]] : []),
         ...(top || bottom ? [['Top end', top?.name || '—'] as [string, string], ['Bottom end', bottom?.name || '—'] as [string, string]] : []),
         ['Tuck flap', mm(spec.tuck)],
       ],
@@ -321,6 +322,9 @@ export function PackagingPanel({ api }: { api: PackagingApi }) {
             </select></label>
         </div>
         {['rte', 'ste', 'snap123', 'crash', 'carton'].includes(spec.style) && <label className="flex items-center gap-2 text-[12px]"><input type="checkbox" checked={!!spec.thumbNotch} onChange={(e) => set({ thumbNotch: e.target.checked })} /> Thumb notch on the front panel</label>}
+        {['rte', 'ste', 'snap123', 'crash', 'carton'].includes(spec.style) && <label className="flex items-center gap-2 text-[12px]"><input type="checkbox" checked={!!spec.hangTab} onChange={(e) => set({ hangTab: e.target.checked })} /> Hang tab with euro slot (for hooks)</label>}
+        {['rte', 'ste', 'snap123', 'crash', 'carton'].includes(spec.style) && <label className="flex items-center gap-2 text-[12px]"><input type="checkbox" checked={!!spec.slitLock} onChange={(e) => set({ slitLock: e.target.checked })} /> Slit-lock tucks (lid stays shut)</label>}
+        {!['tray', 'traylid', 'matchbox'].includes(spec.style) && <label className="flex items-center gap-2 text-[12px]"><input type="checkbox" checked={!!spec.window} onChange={(e) => set({ window: e.target.checked })} /> Window on the front panel</label>}
         <p className="text-[11px] text-mt-faint">Folder-gluer lines usually want 15–22 mm flaps with 7–15° ends; hand-glued samples are fine at 30–45°. Ask your converter for their machine’s numbers.</p>
       </section>}
       <section className="rounded-lg border border-mt-border p-2.5">

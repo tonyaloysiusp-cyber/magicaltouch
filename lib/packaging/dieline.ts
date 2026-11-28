@@ -52,6 +52,12 @@ export interface DieOptions {
   gluePos?: 'side' | 'back';
   /** half-round thumb notch on the panel the top tuck slides behind */
   thumbNotch?: boolean;
+  /** hang tab with a euro slot rising from the front panel (tuck-top cartons) */
+  hangTab?: boolean;
+  /** slit-lock tucks: short cuts at the tuck crease that catch the dust flaps and hold the lid shut */
+  slitLock?: boolean;
+  /** display window cut out of the front panel */
+  window?: boolean;
   /** folding carton ('carton' style): how each end closes */
   topEnd?: TopEnd;
   bottomEnd?: BottomEnd;
@@ -106,6 +112,9 @@ function bowPath(a: number, b: number, y: number, rise: number, dir: 1 | -1): st
   return `M${f(a)} ${f(y)}` + arcC(cx, cy, r, a0, a1);
 }
 
+// Set by makeDieline for the dieline being drawn (keeps the closure helpers' signatures simple).
+let SLIT_LOCK = false;
+
 class Net {
   lines: DieLine[] = []; panels: DiePanel[] = [];
   cut(d: string) { this.lines.push({ kind: 'cut', d }); }
@@ -121,7 +130,12 @@ function tuckClosure(n: Net, x0: number, x1: number, y0: number, cd: number, td:
   const y1 = y0 + dir * cd, y2 = y1 + dir * td;
   const sh = Math.min(1.5, (x1 - x0) / 20), r = Math.min(td * 0.75, (x1 - x0) / 4, 12);
   n.crease(seg([x0, y0], [x1, y0]));
-  n.crease(seg([x0 + sh, y1], [x1 - sh, y1]));
+  if (SLIT_LOCK) {
+    // slit lock: the first few mm of the tuck crease at each end are cut, so the dust flaps catch in the slits
+    const ls = Math.min(8, (x1 - x0) * 0.14);
+    n.crease(seg([x0 + sh + ls, y1], [x1 - sh - ls, y1]));
+    n.cut(seg([x0 + sh, y1], [x0 + sh + ls, y1])); n.cut(seg([x1 - sh - ls, y1], [x1 - sh, y1]));
+  } else n.crease(seg([x0 + sh, y1], [x1 - sh, y1]));
   n.cut(seg([x0, y0], [x0, y1]) + ` L${f(x0 + sh)} ${f(y1)}`);
   n.cut(seg([x1, y0], [x1, y1]) + ` L${f(x1 - sh)} ${f(y1)}`);
   let d = `M${f(x0 + sh)} ${f(y1)} L${f(x0 + sh)} ${f(y2 - dir * r)}`;
@@ -159,6 +173,41 @@ function glueFlap(n: Net, x: number, y0: number, y1: number, g: number, angle = 
   n.panel('Glue flap', x - g, y0 + tp, g, y1 - y0 - 2 * tp, false);
 }
 
+/** Euro slot (30 mm slot with a 12.5 mm round middle) centred at (cx, cy) as one closed cut. */
+function euroSlot(cx: number, cy: number, maxW: number): string {
+  const a = Math.min(15, maxW / 2), b = 3.5, r = Math.min(6.25, a), s = Math.sqrt(Math.max(0, r * r - b * b)), be = Math.asin(b / r);
+  return `M${f(cx - a + b)} ${f(cy - b)} L${f(cx - s)} ${f(cy - b)}` + arcC(cx, cy, r, -Math.PI + be, -be) + ` L${f(cx + a - b)} ${f(cy - b)}`
+    + arcC(cx + a - b, cy, b, -Math.PI / 2, Math.PI / 2) + ` L${f(cx + s)} ${f(cy + b)}` + arcC(cx, cy, r, be, Math.PI - be)
+    + ` L${f(cx - a + b)} ${f(cy + b)}` + arcC(cx - a + b, cy, b, Math.PI / 2, (3 * Math.PI) / 2) + ' Z';
+}
+
+/** The front panel's top edge: plain, with a thumb notch, or rising into a hang tab with a euro slot. */
+function frontTop(n: Net, o: DieOptions, front: { x0: number; x1: number }, y0: number, Lp: number, Dp: number) {
+  const { x0, x1 } = front;
+  if (o.hangTab) {
+    // single-ply hang tab in line with the front panel; the top tuck slides in behind it
+    const hh = Math.max(12, Math.min(38, y0 - 2)), r = Math.min(6, (x1 - x0) / 6), top = y0 - hh;
+    n.cut(`M${f(x0)} ${f(y0)} L${f(x0)} ${f(top + r)}` + corner([x0, top + r], [x0, top], [x0 + r, top]) + ` L${f(x1 - r)} ${f(top)}` + corner([x1 - r, top], [x1, top], [x1, top + r]) + ` L${f(x1)} ${f(y0)}`);
+    n.cut(euroSlot((x0 + x1) / 2, top + hh * 0.45, (x1 - x0) * 0.6));
+    n.panel('Hang tab', x0, top, x1 - x0, hh, false);
+    return;
+  }
+  if (o.thumbNotch) {
+    // half-round notch in the front panel's top edge so the tuck can be pulled open
+    const r = Math.min(10, Lp / 6, Dp / 6), cx = (x0 + x1) / 2;
+    n.cut(`M${f(x0)} ${f(y0)} L${f(cx - r)} ${f(y0)}` + arcC(cx, y0, r, Math.PI, 0) + ` L${f(x1)} ${f(y0)}`);
+  } else n.cut(seg([x0, y0], [x1, y0]));
+}
+
+/** Rounded display window in the middle of the front panel (about half its width, 40% of its height). */
+function addWindow(d: Dieline) {
+  const fp = d.panels.find((p) => p.name === 'Front' && p.face !== false) || d.panels.find((p) => /front/i.test(p.name));
+  if (!fp) return;
+  const w = fp.w * 0.52, h = fp.h * 0.4, x = fp.x + (fp.w - w) / 2, y = fp.y + fp.h * 0.25, r = Math.min(5, w / 6, h / 6);
+  d.lines.push({ kind: 'cut', d: `M${f(x + r)} ${f(y)} L${f(x + w - r)} ${f(y)}` + corner([x + w - r, y], [x + w, y], [x + w, y + r]) + ` L${f(x + w)} ${f(y + h - r)}` + corner([x + w, y + h - r], [x + w, y + h], [x + w - r, y + h]) + ` L${f(x + r)} ${f(y + h)}` + corner([x + r, y + h], [x, y + h], [x, y + h - r]) + ` L${f(x)} ${f(y + r)}` + corner([x, y + r], [x, y], [x + r, y]) + ' Z' });
+  d.notes.push(`Window ${f(w)} × ${f(h)} mm on the front panel — add a window film (e.g. PET) glued inside, ~5 mm larger all round.`);
+}
+
 // ── Box styles ──
 /** Body columns for a four-panel carton: glue flap then the panels in order; `back` puts the glue flap on the back panel. */
 function bodyCols(Lp: number, Wp: number, g: number, gluePos: 'side' | 'back' = 'side') {
@@ -179,11 +228,7 @@ function tuckBox(o: DieOptions, straight: boolean): Dieline {
   glueFlap(n, g, y0, y1, g, o.glueAngle);
   // top: tuck on the back; bottom: on the front (reverse) or the back (straight)
   tuckClosure(n, back.x0, back.x1, y0, Wp, td, -1, 'Top');
-  if (o.thumbNotch) {
-    // half-round notch in the front panel's top edge so the tuck can be pulled open
-    const r = Math.min(10, Lp / 6, Dp / 6), cx = (front.x0 + front.x1) / 2;
-    n.cut(`M${f(front.x0)} ${f(y0)} L${f(cx - r)} ${f(y0)}` + arcC(cx, y0, r, Math.PI, 0) + ` L${f(front.x1)} ${f(y0)}`);
-  } else n.cut(seg([front.x0, y0], [front.x1, y0]));
+  frontTop(n, o, front, y0, Lp, Dp);
   const bot = straight ? back : front, open = straight ? front : back;
   tuckClosure(n, bot.x0, bot.x1, y1, Wp, td, 1, 'Bottom'); n.cut(seg([open.x0, y1], [open.x1, y1]));
   // dust flaps on both sides, top and bottom; each tapers on the edge next to the panel that carries the tuck
@@ -350,8 +395,7 @@ function tuckTopBody(n: Net, o: DieOptions, extraTop = 0) {
 function addTuckTop(n: Net, o: DieOptions, b: ReturnType<typeof tuckTopBody>) {
   const { cols, front, back, y0, Wp, td, dd, Lp, Dp } = b;
   tuckClosure(n, back.x0, back.x1, y0, Wp, td, -1, 'Top');
-  if (o.thumbNotch) { const r = Math.min(10, Lp / 6, Dp / 6), cx = (front.x0 + front.x1) / 2; n.cut(`M${f(front.x0)} ${f(y0)} L${f(cx - r)} ${f(y0)}` + arcC(cx, y0, r, Math.PI, 0) + ` L${f(front.x1)} ${f(y0)}`); }
-  else n.cut(seg([front.x0, y0], [front.x1, y0]));
+  frontTop(n, o, front, y0, Lp, Dp);
   cols.forEach((c, i) => { if (c.name === 'Side') dustFlap(n, c.x0, c.x1, y0, dd, -1, cols[(i + 1) % cols.length] === back); });
 }
 
@@ -549,6 +593,19 @@ function mailer(o: DieOptions): Dieline {
 }
 
 export function makeDieline(o: DieOptions): Dieline {
+  SLIT_LOCK = !!o.slitLock;
+  try {
+    const d = buildDieline(o);
+    if (o.window) addWindow(d);
+    if (o.hangTab && TUCK_TOP.includes(o.style)) d.notes.push('Hang tab with a euro slot (30 mm, 12.5 mm round middle) rises from the front panel.');
+    if (o.slitLock) d.notes.push('Slit-lock tucks: the ends of each tuck crease are cut so the dust flaps lock the lid.');
+    return d;
+  } finally { SLIT_LOCK = false; }
+}
+/** Styles whose top closes with a tuck on the back panel (hang tab and thumb notch apply). */
+export const TUCK_TOP: BoxStyleId[] = ['rte', 'ste', 'snap123', 'crash', 'carton'];
+
+function buildDieline(o: DieOptions): Dieline {
   const c = { ...o, L: Math.max(10, o.L), W: Math.max(10, o.W), D: Math.max(5, o.D), t: Math.max(0.1, Math.min(8, o.t)), glue: Math.max(6, o.glue), tuck: Math.max(8, o.tuck) };
   switch (c.style) {
     case 'rte': return tuckBox(c, false);

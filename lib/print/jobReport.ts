@@ -123,7 +123,7 @@ export function jobReportPages(d: JobReportData): string[] {
   const title = `${j.title} · ${j.trimW} × ${j.trimH} mm`;
 
   // ── Page 1: job & specification ──
-  const p1 = { s: header(d, title) };
+  const p1 = { s: '' };
   const LW = 165, RX = M + LW + 10, RW = W - M - RX;
   // Key facts at a glance.
   p1.s += metaStrip(M, 28, W - 2 * M, [
@@ -134,11 +134,11 @@ export function jobReportPages(d: JobReportData): string[] {
     ['Colour', 'CMYK print'],
     ['Bleed · safe', `${j.bleed} · ${j.safe} mm`],
   ]);
-  p1.s += card(M, 45, LW, 140, C.soft);
+  p1.s += card(M, 45, LW, 131, C.soft);
   p1.s += label(M + 5, 52, 'Preview');
-  p1.s += previews(d, M + 5, 58, LW - 10, 112);
-  p1.s += `<line x1="${M + 5}" y1="180" x2="${M + 12}" y2="180" stroke="${FOLD}" stroke-width="0.4" stroke-dasharray="1.2 0.8"/>` + T(M + 14, 180.8, 'fold', 2.2, { color: MUTED });
-  p1.s += `<rect x="${M + 25}" y="178.8" width="6" height="2.4" fill="none" stroke="${INK}" stroke-width="0.25"/>` + T(M + 33, 180.8, 'finished (trim) edge — panel numbers in reading order', 2.2, { color: MUTED });
+  p1.s += previews(d, M + 5, 58, LW - 10, 103);
+  p1.s += `<line x1="${M + 5}" y1="171" x2="${M + 12}" y2="171" stroke="${FOLD}" stroke-width="0.4" stroke-dasharray="1.2 0.8"/>` + T(M + 14, 171.8, 'fold', 2.2, { color: MUTED });
+  p1.s += `<rect x="${M + 25}" y="169.8" width="6" height="2.4" fill="none" stroke="${INK}" stroke-width="0.25"/>` + T(M + 33, 171.8, 'finished (trim) edge — panel numbers in reading order', 2.2, { color: MUTED });
   // Job
   p1.s += label(RX, 52, 'Job');
   let y = rows(p1, RX, 58, RW, [
@@ -165,7 +165,7 @@ export function jobReportPages(d: JobReportData): string[] {
   }
 
   // ── Page 2: production ──
-  const p2 = { s: header(d, 'Production & approval') };
+  const p2 = { s: '' };
   // How the file is built — the working-file instructions.
   p2.s += label(M, 32, 'How the file is built');
   const legend: [string, string][] = [
@@ -191,10 +191,10 @@ export function jobReportPages(d: JobReportData): string[] {
     j.sequence.forEach((s, i) => { const ls = wrap(s, 92); ls.forEach((ln, k) => { p2.s += T(M + (k ? 4 : 0), y + k * 3.3, (k ? '' : `${i + 1}.  `) + ln, 2.6); }); y += ls.length * 3.3 + 1.2; });
   }
   y += 2; p2.s += label(M, y, 'Production notes'); y += 6;
-  for (const s of [...PRODUCTION_NOTES, ...(det.notes ? [det.notes] : [])]) { if (y > 188) break; const ls = wrap(s, 92); ls.forEach((ln, i) => { p2.s += T(M + (i ? 3 : 0), y + i * 3.3, (i ? '' : '•  ') + ln, 2.6, { color: s === det.notes ? INK : MUTED }); }); y += ls.length * 3.3 + 1.4; }
+  for (const s of [...PRODUCTION_NOTES, ...(det.notes ? [det.notes] : [])]) { if (y > 178) break; const ls = wrap(s, 92); ls.forEach((ln, i) => { p2.s += T(M + (i ? 3 : 0), y + i * 3.3, (i ? '' : '•  ') + ln, 2.6, { color: s === det.notes ? INK : MUTED }); }); y += ls.length * 3.3 + 1.4; }
   // Approval
   const AX = 196;
-  p2.s += card(AX - 6, 28, W - M - AX + 6, H - 28 - 16, C.soft);
+  p2.s += card(AX - 6, 28, W - M - AX + 6, H - 38 - 16, C.soft);
   p2.s += label(AX, 36, 'Approval');
   let ay = 44;
   for (const a of APPROVALS) {
@@ -207,8 +207,9 @@ export function jobReportPages(d: JobReportData): string[] {
     ay += 11;
   }
   wrap('Printing starts after this report is approved. Approval covers the artwork, sizes, folds, paper, colours and quantity listed here.', 44).forEach((ln, i) => { p2.s += T(AX, ay + 2 + i * 3.1, ln, 2.3, { color: MUTED }); });
-  p2.s += promoCard(AX - 2, H - 16 - 21, W - M - AX - 2);
+  p2.s += promoCard(AX - 2, H - 16 - 31, W - M - AX - 2);
 
-  const pages = [p1.s, p2.s];
+  // the header takes the top 35 mm; page bodies start just below it
+  const pages = [header(d, title) + `<g transform="translate(0 9)">${p1.s}</g>`, header(d, 'Production & approval') + `<g transform="translate(0 10)">${p2.s}</g>`];
   return pages.map((g, i) => `<svg xmlns="http://www.w3.org/2000/svg" width="${W}mm" height="${H}mm" viewBox="0 0 ${W} ${H}">${docDefs()}<rect width="${W}" height="${H}" fill="#FFFFFF"/>${g}${footer(i + 1, pages.length, d)}</svg>`);
 }
