@@ -34,7 +34,7 @@ function Bar({ used, limit }: { used: number; limit: number }) {
 const CLEANS: { kind: 'versions' | 'logs' | 'archived' | 'backup'; title: string; detail: string }[] = [
   { kind: 'versions', title: 'Old template versions', detail: 'Backups made each time a template is saved. Keeps the newest 3 of each template.' },
   { kind: 'archived', title: 'Archived and unpublished templates', detail: 'Templates you took off the site. Deleted for good with their versions — except any that someone bought or unlocked.' },
-  { kind: 'logs', title: 'Visit, search and error counts older than 90 days', detail: 'Daily counters used by the statistics page. Recent 90 days stay.' },
+  { kind: 'logs', title: 'Visit, visitor, search and error counts older than 90 days', detail: 'Daily counters used by the statistics page. Recent 90 days stay.' },
   { kind: 'backup', title: 'Template copy backup', detail: 'A one-off safety copy made while template wording was rewritten.' },
 ];
 

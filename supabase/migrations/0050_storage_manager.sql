@@ -40,7 +40,8 @@ begin
     'orphan_mb', (select round(coalesce(sum((metadata->>'size')::bigint), 0) / 1048576.0, 1) from storage.objects o where o.bucket_id in ('template-media', 'template-thumbs') and not exists (select 1 from _used u where u.bucket = o.bucket_id and u.name = o.name)),
     'logs_old', (select (select count(*) from site_views_daily where day < current_date - 90)
                       + (select count(*) from site_searches_daily where day < current_date - 90)
-                      + (select count(*) from site_errors_daily where day < current_date - 90)),
+                      + (select count(*) from site_errors_daily where day < current_date - 90)
+                      + (select count(*) from site_visitors_daily where day < current_date - 90)),
     'backup_rows', 0
   ) into r;
   if to_regclass('public.template_copy_backup') is not null then
@@ -92,12 +93,14 @@ begin
     if p_dry then
       select (select count(*) from site_views_daily where day < current_date - 90)
            + (select count(*) from site_searches_daily where day < current_date - 90)
-           + (select count(*) from site_errors_daily where day < current_date - 90) into n;
+           + (select count(*) from site_errors_daily where day < current_date - 90)
+           + (select count(*) from site_visitors_daily where day < current_date - 90) into n;
     else
       delete from site_views_daily where day < current_date - 90; get diagnostics n = row_count;
       declare k bigint; begin
         delete from site_searches_daily where day < current_date - 90; get diagnostics k = row_count; n := n + k;
         delete from site_errors_daily where day < current_date - 90; get diagnostics k = row_count; n := n + k;
+        delete from site_visitors_daily where day < current_date - 90; get diagnostics k = row_count; n := n + k;
       end;
     end if;
   elsif p_kind = 'archived' then
