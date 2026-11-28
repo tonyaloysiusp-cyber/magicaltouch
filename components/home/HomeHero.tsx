@@ -337,11 +337,11 @@ export function HomeHero() {
       </div>
 
       {/* "Free" ticker */}
-      <div className="relative overflow-hidden border-y border-mt-border bg-mt-ink py-3.5 text-mt-bg" aria-label="Everything is free">
+      <div className="relative overflow-hidden border-y border-mt-border py-3 text-mt-ink" style={{ background: 'linear-gradient(90deg, rgba(242,112,143,.13), rgba(166,155,211,.13), rgba(53,194,241,.13), rgba(93,204,184,.13), rgba(140,200,75,.13))' }} aria-label="Everything is free">
         <div className="mhh-ticker flex w-max gap-8 whitespace-nowrap">
           {[...FREE, ...FREE].map((t, k) => (
-            <span key={k} className="inline-flex items-center gap-8 font-[family-name:var(--font-display)] text-[15px] font-semibold tracking-tight sm:text-[17px]" aria-hidden={k >= FREE.length}>
-              {t}<span className="h-2 w-2 rounded-full mt-spectrum" />
+            <span key={k} className="inline-flex items-center gap-8 font-[family-name:var(--font-display)] text-[14px] font-medium tracking-tight sm:text-[15px]" aria-hidden={k >= FREE.length}>
+              {t}<span className="h-1.5 w-1.5 rounded-full mt-spectrum" />
             </span>
           ))}
         </div>

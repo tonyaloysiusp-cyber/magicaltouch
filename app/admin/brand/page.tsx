@@ -136,10 +136,10 @@ function Group({ id, title, count, note, action, defaultOpen, children }: { id: 
 }
 
 // Official designs by kind; the promotional posts (brand-promo) by channel.
-function groupRows(rows: BrandRow[]): [string, BrandRow[], string][] {
+function groupRows(all: BrandRow[]): [string, BrandRow[], string][] {
+  const rows = all.filter((r) => !r.tags.includes('brand-promo'));
   const kind = (r: BrandRow) => {
     const n = r.name.toLowerCase();
-    if (r.tags.includes('brand-promo')) return r.tags.includes('festival') ? 'Festival greetings' : 'Promotional posts';
     if (/signature/.test(n)) return 'E-mail signatures';
     if (/certificate/.test(n)) return 'Certificates';
     if (/id badge|name badge|lanyard|staff id|id card/.test(n)) return 'ID cards, badges & lanyards';
@@ -157,8 +157,6 @@ function groupRows(rows: BrandRow[]): [string, BrandRow[], string][] {
     ['Events & stage', 'Invitations, tickets, agenda, stage screen and event posts'],
     ['Posters, presentations & marketing', 'Posters, company presentation and newsletter header'],
     ['Social media', 'Official posts, stories and highlight covers'],
-    ['Promotional posts', 'Brand messages and template promos for every channel'],
-    ['Festival greetings', 'Magical Touch greetings for festivals and special days'],
     ['E-mail signatures', 'Signature banners'],
   ];
   const m = new Map<string, BrandRow[]>();

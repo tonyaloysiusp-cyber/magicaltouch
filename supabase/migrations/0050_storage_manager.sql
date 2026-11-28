@@ -122,3 +122,32 @@ begin
 end $$;
 revoke all on function public.admin_storage_clean(text, boolean) from public;
 grant execute on function public.admin_storage_clean(text, boolean) to authenticated;
+
+-- File browser for Admin → Storage: every file in a bucket, newest first,
+-- with its size and whether any template still uses it.
+create or replace function public.admin_storage_files(p_bucket text, p_search text default '', p_only_unused boolean default false, p_limit integer default 60, p_offset integer default 0)
+returns table (name text, kb numeric, created_at timestamptz, used boolean, total bigint) language plpgsql security definer set search_path = public, storage as $$
+begin
+  if not public.is_admin() then raise exception 'admins only'; end if;
+  return query
+    with used as (select u.name from public._template_media_in_use() u where u.bucket = p_bucket),
+    f as (
+      select o.name, round(coalesce((o.metadata->>'size')::bigint, 0) / 1024.0, 1) kb, o.created_at,
+             (p_bucket not in ('template-media', 'template-thumbs') or exists (select 1 from used where used.name = o.name)) used
+      from storage.objects o
+      where o.bucket_id = p_bucket and (coalesce(p_search, '') = '' or o.name ilike '%' || p_search || '%')
+    )
+    select f.name, f.kb, f.created_at, f.used, count(*) over () from f
+    where not p_only_unused or not f.used
+    order by f.created_at desc
+    limit least(greatest(p_limit, 1), 200) offset greatest(p_offset, 0);
+end $$;
+revoke all on function public.admin_storage_files(text, text, boolean, integer, integer) from public;
+grant execute on function public.admin_storage_files(text, text, boolean, integer, integer) to authenticated;
+
+-- Admins may delete template pictures (both template buckets).
+do $$ begin
+  if not exists (select 1 from pg_policies where schemaname = 'storage' and tablename = 'objects' and policyname = 'admins delete template thumbs') then
+    create policy "admins delete template thumbs" on storage.objects for delete to authenticated using (bucket_id in ('template-thumbs', 'template-media') and public.is_admin());
+  end if;
+end $$;

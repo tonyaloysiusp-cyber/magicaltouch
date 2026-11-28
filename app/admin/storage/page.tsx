@@ -191,6 +191,8 @@ export default function AdminStoragePage() {
               <p className="mt-2 text-[12px] text-mt-faint">{Number(r.templates_protected).toLocaleString()} template(s) were bought or unlocked by someone and are always kept.</p>
             </section>
 
+            <FileBrowser buckets={(r.buckets || []).map((b: any) => b.bucket_id)} onChanged={load} />
+
             <section className={card}>
               <h2 className="text-lg font-semibold">Details</h2>
               <div className="mt-3 grid gap-6 text-[13px] md:grid-cols-3">
@@ -232,5 +234,89 @@ export default function AdminStoragePage() {
         </section>
       </div>
     </AdminShell>
+  );
+}
+
+
+// Browse every file in a bucket: preview, size, date, whether a template
+// still uses it, and delete the ones you pick. People's own buckets
+// (avatars, certificates, design-assets) are view-only.
+const PROTECTED = ['avatars', 'certificates', 'design-assets'];
+function FileBrowser({ buckets, onChanged }: { buckets: string[]; onChanged: () => void }) {
+  const [bucket, setBucket] = useState(buckets[0] || 'template-thumbs');
+  const [q, setQ] = useState('');
+  const [unused, setUnused] = useState(false);
+  const [page, setPage] = useState(0);
+  const [rows, setRows] = useState<{ name: string; kb: number; created_at: string; used: boolean; total: number }[]>([]);
+  const [pick, setPick] = useState<Set<string>>(new Set());
+  const [busy, setBusy] = useState(false);
+  const [note, setNote] = useState('');
+  const per = 60;
+  const ro = PROTECTED.includes(bucket);
+
+  const list = useCallback(async () => {
+    setBusy(true); setNote('');
+    const { data, error } = await supabase.rpc('admin_storage_files', { p_bucket: bucket, p_search: q, p_only_unused: unused, p_limit: per, p_offset: page * per });
+    setBusy(false);
+    if (error) { setNote(error.message); setRows([]); return; }
+    setRows((data as any[]) || []); setPick(new Set());
+  }, [bucket, q, unused, page]);
+  useEffect(() => { list(); }, [list]);
+
+  const total = rows[0]?.total || 0;
+  const url = (n: string) => supabase.storage.from(bucket).getPublicUrl(n).data.publicUrl;
+  const del = async () => {
+    const names = [...pick];
+    if (!names.length || ro) return;
+    const inUse = rows.filter((x) => pick.has(x.name) && x.used).length;
+    if (!window.confirm(`Delete ${names.length} file(s) from “${bucket}” permanently?${inUse ? ` ${inUse} of them are still used by a template — that template will lose its picture.` : ''} This can’t be undone.`)) return;
+    setBusy(true);
+    for (let i = 0; i < names.length; i += 100) {
+      const { error } = await supabase.storage.from(bucket).remove(names.slice(i, i + 100));
+      if (error) { setNote(error.message); break; }
+    }
+    setBusy(false); setNote(`Deleted ${names.length} file(s).`); list(); onChanged();
+  };
+
+  return (
+    <section className={card}>
+      <h2 className="text-lg font-semibold">Files</h2>
+      <p className="mt-1 text-[13px] text-mt-muted">Everything stored, newest first. Pick files and delete them, or show only the ones no template uses.</p>
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        {buckets.map((b) => <button key={b} onClick={() => { setBucket(b); setPage(0); }} className={`${btn} ${b === bucket ? 'bg-mt-ink text-mt-bg' : 'border border-mt-border'}`}>{b}</button>)}
+      </div>
+      <div className="mt-3 flex flex-wrap items-center gap-3">
+        <input value={q} onChange={(e) => { setQ(e.target.value); setPage(0); }} placeholder="Search file names" className="h-9 min-w-[200px] flex-1 rounded-full border border-mt-border bg-mt-surface px-3.5 text-[13px]" />
+        {!ro && <label className="flex items-center gap-2 text-[13px]"><input type="checkbox" checked={unused} onChange={(e) => { setUnused(e.target.checked); setPage(0); }} /> Only unused</label>}
+        {!ro && <button onClick={() => setPick(new Set(rows.map((x) => x.name)))} disabled={!rows.length} className={`${btn} border border-mt-border`}>Select page</button>}
+        {!ro && <button onClick={del} disabled={!pick.size || busy} className={`${btn} bg-mt-primary text-mt-onprimary`}><Trash2 size={13} /> Delete {pick.size || ''}</button>}
+      </div>
+      {ro && <p className="mt-2 text-[12px] text-mt-faint">This bucket holds people’s own files — view only.</p>}
+      {note && <p className="mt-2 text-[13px] text-mt-muted" role="status">{note}</p>}
+      <p className="mt-3 text-[12px] text-mt-faint">{busy ? 'Loading…' : `${total.toLocaleString()} file(s)`}</p>
+      <ul className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-6">
+        {rows.map((x) => (
+          <li key={x.name} className={`overflow-hidden rounded-xl border ${pick.has(x.name) ? 'border-mt-ink ring-2 ring-mt-ink' : 'border-mt-border'}`}>
+            <button type="button" disabled={ro} onClick={() => { const n = new Set(pick); n.has(x.name) ? n.delete(x.name) : n.add(x.name); setPick(n); }} className="block w-full text-left">
+              {/\.(png|jpe?g|webp|gif|svg)$/i.test(x.name)
+                ? /* eslint-disable-next-line @next/next/no-img-element */ <img src={url(x.name)} alt="" loading="lazy" className="aspect-square w-full bg-mt-surface2 object-cover" />
+                : <div className="grid aspect-square w-full place-items-center bg-mt-surface2 text-[11px] text-mt-faint">{x.name.split('.').pop()}</div>}
+              <div className="p-2 text-[11px]">
+                <p className="truncate font-medium text-mt-ink" title={x.name}>{x.name.split('/').pop()}</p>
+                <p className="text-mt-muted">{x.kb >= 1024 ? `${(x.kb / 1024).toFixed(1)} MB` : `${x.kb} KB`} · {new Date(x.created_at).toLocaleDateString('en-GB')}</p>
+                {!ro && <p className={x.used ? 'text-emerald-600' : 'text-amber-600'}>{x.used ? 'In use' : 'Not used'}</p>}
+              </div>
+            </button>
+          </li>
+        ))}
+      </ul>
+      {total > per && (
+        <div className="mt-4 flex items-center gap-2">
+          <button onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={page === 0} className={`${btn} border border-mt-border`}>Previous</button>
+          <span className="text-[12px] text-mt-muted">Page {page + 1} of {Math.ceil(total / per)}</span>
+          <button onClick={() => setPage((p) => p + 1)} disabled={(page + 1) * per >= total} className={`${btn} border border-mt-border`}>Next</button>
+        </div>
+      )}
+    </section>
   );
 }

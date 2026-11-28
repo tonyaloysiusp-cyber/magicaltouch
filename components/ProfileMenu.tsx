@@ -144,7 +144,7 @@ export function ProfileMenu() {
                 {([
                   ['/admin/library', 'Templates', <LayoutTemplate key="t" size={13} />],
                   ['/admin/seo', 'SEO & Google', <Megaphone key="s" size={13} />],
-                  ['/admin/seo?tab=social', 'Social media', <Share2 key="so" size={13} />],
+                  ['/admin/posts', 'Posts & Google', <Share2 key="so" size={13} />],
                   ['/admin/email', 'Email', <Mail key="e" size={13} />],
                   ['/admin/brand', 'Brand', <Sparkles key="b" size={13} />],
                   ['/admin/health', 'Site health', <HeartPulse key="h" size={13} />],
