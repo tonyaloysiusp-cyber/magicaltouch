@@ -353,8 +353,8 @@ def screen(vertical=False):
 
 
 def all_designs():
-    out = [certificate(t) for t in THEMES]
-    out += [letterhead(), envelope(), invoice(), business_card('front'), business_card('back'), id_card('front'), id_card('back'), rollup(), screen(False), screen(True)]
+    # Certificates: the original secure masters are kept as they are (restored 28 Nov), not generated here.
+    out = [letterhead(), envelope(), invoice(), business_card('front'), business_card('back'), id_card('front'), id_card('back'), rollup(), screen(False), screen(True)]
     rows = []
     for d, tags in out:
         slug = 'mt-brand-' + ''.join(c if c.isalnum() else '-' for c in d.name.lower().replace('mt brand · ', '')).strip('-')
