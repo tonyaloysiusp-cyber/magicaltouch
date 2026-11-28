@@ -110,18 +110,23 @@ export function CategoryLanding(props: {
         </nav>
         <h2 className="mt-8 text-xl font-semibold">{full} templates</h2>
         <ul className="mt-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-          {rows.map((r) => (
+          {rows.slice(0, 60).map((r, i) => (
             <li key={r.id}>
               <Link href={`/templates/${r.slug}`} className="block group">
                 <div className="aspect-[4/5] rounded-2xl border border-mt-border bg-mt-surface2 overflow-hidden flex items-center justify-center">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={r.thumbnail || r.preview || ''} alt={`${r.name} – ${low} template`} loading="lazy" className="max-h-full max-w-full object-contain group-hover:scale-[1.03] transition-transform" />
+                  <img src={r.thumbnail || r.preview || ''} alt={`${r.name} – ${low} template`} loading={i < 10 ? 'eager' : 'lazy'} decoding="async" className="max-h-full max-w-full object-contain group-hover:scale-[1.03] transition-transform" />
                 </div>
                 <p className="mt-2 text-[13px] font-medium line-clamp-2">{r.name}</p>
               </Link>
             </li>
           ))}
         </ul>
+        {rows.length > 60 && (
+          <div className="mt-6 text-center">
+            <Link href={`/templates?q=${encodeURIComponent(name)}`} className="inline-flex h-11 items-center rounded-full bg-mt-primary px-6 text-[14px] font-semibold text-mt-onprimary">See all {rows.length} {low} templates</Link>
+          </div>
+        )}
         {tags.length > 0 && (
           <section className="mt-12">
             <h2 className="text-xl font-semibold">Popular {low} hashtags</h2>

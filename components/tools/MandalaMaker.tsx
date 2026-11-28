@@ -20,6 +20,7 @@ import { PATTERN_MOTIFS } from '@/lib/patternMotifs';
 import { putHandoff, newLocalKey, editorUrlForLocal } from '@/lib/mtd/handoff';
 import { supabase } from '@/lib/supabase';
 
+import { makeFabricSafe } from '@/lib/fabricSafe';
 const STORE = 'mt:mandala';
 const ELEMENTS: { id: string; label: string; motif?: string; make: (sym: number, color: string, r: number) => MLayer }[] = [
   { id: 'petals', label: 'Petals', motif: 'petal', make: (n, c, r) => ({ kind: 'ring', motif: 'petal', count: n, radius: r, size: 80, rotate: 0, color: c, outline: false }) },
@@ -102,7 +103,7 @@ export function MandalaMaker() {
     if (!data.session && !OPEN_ACCESS) { router.push('/login?next=' + encodeURIComponent('/patterns?mode=rangoli')); return; }
     setBusy('editor');
     const size = 1080;
-    const mod: any = await import('fabric');
+    const mod: any = await import('fabric'); makeFabricSafe(mod.fabric);
     const F = mod.fabric;
     const group: any = await new Promise((res) => F.loadSVGFromString(mandalaSvg(m, { transparent: true, size }), (objs: any[], opts: any) => res(F.util.groupSVGElements(objs, opts))));
     group.set({ left: 0, top: 0, originX: 'left', originY: 'top', name: 'Rangoli (ungroup to edit)' });

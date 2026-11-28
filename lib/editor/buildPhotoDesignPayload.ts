@@ -15,6 +15,7 @@
 import { createArtboardId, nextArtboardName } from './artboards';
 import { createDefaultPrintSettings } from './printSetup';
 
+import { makeFabricSafe } from '@/lib/fabricSafe';
 // Kept in sync by hand with the identical arrays in app/editor/page.tsx's
 // own save function and hooks/useEditorHistory.ts -- all three must list
 // every custom property that needs to survive a save/reload/undo.
@@ -49,7 +50,7 @@ export async function buildPhotoDesignJson(
   dpi: number,
   _userId?: string
 ): Promise<PhotoDesignPayload> {
-  const mod: any = await import('fabric');
+  const mod: any = await import('fabric'); makeFabricSafe(mod.fabric);
   const F = mod.fabric;
 
   const canvas = new F.StaticCanvas(null, { width: widthPx, height: heightPx });

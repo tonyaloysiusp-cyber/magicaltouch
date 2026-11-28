@@ -6,6 +6,7 @@
 
 import { TraceResult, toFabricPath } from './trace';
 
+import { makeFabricSafe } from '@/lib/fabricSafe';
 /** Colour-layer groups (or single compound paths) for a trace result. */
 export function traceLayerObjects(F: any, r: TraceResult): any[] {
   return r.layers.map((l, i) => {
@@ -18,7 +19,7 @@ export function traceLayerObjects(F: any, r: TraceResult): any[] {
 
 /** The whole artwork as one group, pinned to the image box by an invisible frame. */
 export async function traceGroup(r: TraceResult, background?: string): Promise<{ F: any; group: any }> {
-  const mod: any = await import('fabric');
+  const mod: any = await import('fabric'); makeFabricSafe(mod.fabric);
   const F = mod.fabric;
   const frame = new F.Rect({ left: 0, top: 0, width: r.width, height: r.height, fill: background || 'rgba(0,0,0,0)', strokeWidth: 0, name: background ? 'Background' : 'Trace frame' });
   const group = new F.Group([frame, ...traceLayerObjects(F, r)], { name: 'Traced artwork', subTargetCheck: true });

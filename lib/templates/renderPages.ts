@@ -4,6 +4,7 @@
 
 import { ensureFontsLoadedForCanvasJSON } from '@/lib/editor/googleFonts';
 
+import { makeFabricSafe } from '@/lib/fabricSafe';
 export interface PageImage { name: string; url: string; width: number; height: number }
 
 export interface RenderOptions {
@@ -19,7 +20,7 @@ export async function renderTemplatePages(canvasJson: any, maxSide = 1100, opts:
   if (!canvasJson) return [];
   const json = typeof canvasJson === 'string' ? JSON.parse(canvasJson) : canvasJson;
   await ensureFontsLoadedForCanvasJSON(json).catch(() => undefined);
-  const mod: any = await import('fabric');
+  const mod: any = await import('fabric'); makeFabricSafe(mod.fabric);
   const F = mod.fabric;
   (await import('@/lib/textfx/fabricPremium')).installPremiumText(F);
   const el = document.createElement('canvas');

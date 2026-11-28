@@ -33,6 +33,7 @@ import { PATTERN_FONTS, textOutline } from '@/lib/patternText';
 import { supabase } from '@/lib/supabase';
 import { putHandoff, newLocalKey, editorUrlForLocal } from '@/lib/mtd/handoff';
 
+import { makeFabricSafe } from '@/lib/fabricSafe';
 type Step = 'design' | 'logos' | 'letters' | 'players' | 'print';
 type El = 'body' | 'sleeve' | 'collar' | 'name' | 'number' | 'teamLogo' | 'sponsor' | 'frontText' | 'frontNum';
 const DRAG: El[] = ['name', 'number', 'teamLogo', 'sponsor', 'frontText', 'frontNum'];
@@ -559,7 +560,7 @@ export function GarmentDesigner({ kind: initialKind = 'jersey', mode = 'pro', pi
     setBusy('editor');
     try {
       const svg = kitMockupSvg(kit, pattern, player, glyphs);
-      const F: any = (await import('fabric')).fabric;
+      const F: any = makeFabricSafe((await import('fabric')).fabric);
       const objs: any[] = await new Promise((res) => F.loadSVGFromString(svg, (o: any[]) => res(o || [])));
       const W = 1600, H = 1000;
       const g = new F.Group(objs, { name: `${kit.teamName} ${copy.noun}` });

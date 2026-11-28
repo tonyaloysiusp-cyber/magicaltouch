@@ -146,6 +146,7 @@ function groupRows(all: BrandRow[]): [string, BrandRow[], string][] {
     if (/roll-up|pull-up|flag|signage|banner/.test(n) && !/newsletter/.test(n)) return 'Roll-ups, banners & flags';
     if (/event|ticket|agenda|speaker|stage|table tent|challenge/.test(n)) return 'Events & stage';
     if (/business card|envelope|letterhead|invoice|thank-you card|voucher|price list/.test(n)) return 'Stationery & business documents';
+    if (/digital screen|signage/.test(n)) return 'Digital screens';
     if (/\bpost\b|story|highlight/.test(n)) return 'Social media';
     return 'Posters, presentations & marketing';
   };
@@ -156,6 +157,7 @@ function groupRows(all: BrandRow[]): [string, BrandRow[], string][] {
     ['Roll-ups, banners & flags', 'Roll-up banners, flags and signage for events and the studio'],
     ['Events & stage', 'Invitations, tickets, agenda, stage screen and event posts'],
     ['Posters, presentations & marketing', 'Posters, company presentation and newsletter header'],
+    ['Digital screens', 'TV and signage screens, 16:9 and vertical'],
     ['Social media', 'Official posts, stories and highlight covers'],
     ['E-mail signatures', 'Signature banners'],
   ];

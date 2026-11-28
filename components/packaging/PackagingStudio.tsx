@@ -15,6 +15,7 @@ import { checkStructure } from '@/lib/packaging/validate';
 import { putHandoff, newLocalKey, editorUrlForLocal } from '@/lib/mtd/handoff';
 import { supabase } from '@/lib/supabase';
 
+import { makeFabricSafe } from '@/lib/fabricSafe';
 const SHEETS = [{ name: 'SRA3', w: 320, h: 450 }, { name: 'B2', w: 500, h: 707 }, { name: 'B1', w: 707, h: 1000 }, { name: '28 × 40 in', w: 711, h: 1016 }];
 const r1 = (v: number) => Math.round(v * 10) / 10;
 
@@ -73,7 +74,7 @@ export function PackagingStudio() {
   const toEditor = async () => {
     const { data } = await supabase.auth.getSession();
     if (!data.session && !OPEN_ACCESS) { router.push('/login?next=' + encodeURIComponent('/packaging-dieline')); return; }
-    const mod: any = await import('fabric'); const F = mod.fabric;
+    const mod: any = await import('fabric'); makeFabricSafe(mod.fabric); const F = mod.fabric;
     const px = 96 / 25.4, W = (die.w + 2 * bleed) * px, H = (die.h + 2 * bleed) * px;
     const objs: any[] = [];
     const add = (kind: 'cut' | 'crease', name: string) => {

@@ -20,6 +20,7 @@ import { gradeById } from '@/lib/packaging/board';
 import { StyleThumb } from './StyleThumb';
 import { PageHero } from '@/components/PageHero';
 
+import { makeFabricSafe } from '@/lib/fabricSafe';
 const FILTERS: { id: string; label: string; test: (t: PackTemplate) => boolean }[] = [
   { id: 'all', label: 'All designs', test: () => true },
   { id: 'carton', label: 'Folding cartons', test: (t) => ['rte', 'ste', 'seal'].includes(t.style) },
@@ -45,7 +46,7 @@ export function usePackagingOpen() {
     try {
       const { data } = await supabase.auth.getSession();
       if (!data.session && !OPEN_ACCESS && process.env.NEXT_PUBLIC_E2E !== '1') { router.push('/login?next=' + encodeURIComponent('/packaging-dieline')); return; }
-      const mod: any = await import('fabric'); const F = mod.fabric;
+      const mod: any = await import('fabric'); makeFabricSafe(mod.fabric); const F = mod.fabric;
       const spec = t ? specFor(t) : { ...defaultSpec(), style: style || 'rte' };
       if (!t && style && (style === 'rsc' || style === 'hsc' || style === 'fol')) Object.assign(spec, { grade: 'bflute', gsm: 0, t: 3, glue: 30, clearance: { L: 4, W: 4, H: 4 }, product: { L: 300, W: 200, H: 150 } });
       if (!t && style && (style === 'tray' || style === 'traylid' || style === 'matchbox')) Object.assign(spec, { grade: 'rigid', gsm: 0, t: 1.5, glue: 18, clearance: { L: 3, W: 3, H: 2 }, product: { L: 150, W: 100, H: 50 } });

@@ -29,6 +29,7 @@ import { MOTIF_CATEGORIES } from '@/lib/patternMotifs';
 import { PATTERN_FONTS } from '@/lib/patternText';
 import type { Asset } from '@/lib/assets/library';
 
+import { makeFabricSafe } from '@/lib/fabricSafe';
 const uid = () => `el_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
 const T = (x: number, y: number): Mat => [1, 0, 0, 1, x, y];
 const I: Mat = [1, 0, 0, 1, 0, 0];
@@ -241,7 +242,7 @@ export function PrintStudio({ kit, pattern, glyphs, players, libraryPatterns, on
   useEffect(() => {
     let disposed = false;
     (async () => {
-      const mod: any = await import('fabric');
+      const mod: any = await import('fabric'); makeFabricSafe(mod.fabric);
       if (disposed) return;
       const Fb = mod.fabric;
       F.current = Fb;

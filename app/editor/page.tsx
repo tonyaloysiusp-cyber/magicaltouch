@@ -188,6 +188,7 @@ import { putDraft, getDraft, deleteDraft, Draft, UNSAVED_KEY } from '@/lib/edito
 import { buildZip, dataUrlToBytes } from '@/lib/editor/zip';
 import { pngEncoder, jpegEncoder, canStreamPng } from '@/lib/export/rasterEncode';
 
+import { makeFabricSafe } from '@/lib/fabricSafe';
 const isOpenVectorPath = (o: any): boolean =>
   !!o && o.isVectorPath && o.type === 'path' && Array.isArray(o.path) && o.path.length > 0 && o.path[o.path.length - 1][0] !== 'Z';
 
@@ -1049,7 +1050,7 @@ function EditorContent() {
     activeToolRef,
     onArtboardFinished: ({ x, y, width: w, height: h }) => {
       const canvas = fabricCanvasRef.current;
-      import('fabric').then((mod) => {
+      import('fabric').then((mod) => { makeFabricSafe((mod as any).fabric);
         const F: any = mod.fabric;
         const rect = new F.Rect({
           left: x,
@@ -1139,7 +1140,7 @@ function EditorContent() {
       const first = abs[0];
       first.__print = { ...(first.__print || createDefaultPrintSettings()), job, jobSide: 0 };
       first.name = job.sides[0] || first.name;
-      const F = (window as any).fabric || (await import('fabric')).fabric;
+      const F = (window as any).fabric || makeFabricSafe((await import('fabric')).fabric);
       const pxPerMm = 96 / 25.4;
       for (let i = 1; i < job.sides.length; i++) {
         const metas = getArtboardMetas();
@@ -1183,7 +1184,7 @@ function EditorContent() {
       return;
     }
 
-    import('fabric').then((mod) => {
+    import('fabric').then((mod) => { makeFabricSafe((mod as any).fabric);
       pathObj.clone((cloned: any) => {
         cloned.set({ absolutePositioned: true, fill: '#000000', stroke: '' });
         targetImage.__maskSourcePath = JSON.stringify(pathObj.toObject(['isVectorPath']));
@@ -1295,7 +1296,7 @@ function EditorContent() {
 
       import('fabric')
         .then(async (mod) => {
-          const F: any = mod.fabric;
+          const F: any = makeFabricSafe(mod.fabric);
           let polygonClipping: any;
           try {
             polygonClipping = (await import('polygon-clipping')).default;
@@ -1558,7 +1559,7 @@ function EditorContent() {
   };
 
   useEffect(() => {
-    import('fabric').then((mod) => {
+    import('fabric').then((mod) => { makeFabricSafe((mod as any).fabric);
       const F: any = mod.fabric;
       // Professional text looks are drawn live; install before any design loads.
       installPremiumText(F);
@@ -2893,7 +2894,7 @@ function EditorContent() {
 
   const addText = () => {
     const ab = getActiveArtboardRect();
-    import('fabric').then((mod) => {
+    import('fabric').then((mod) => { makeFabricSafe((mod as any).fabric);
       // Textbox (not plain IText) so the box actually wraps to a real
       // width — without real wrapping, 'justify' has no interior line to
       // stretch and silently does nothing on the live canvas, even
@@ -3799,7 +3800,7 @@ function EditorContent() {
       return;
     }
     if (existing.length || !brandKit.logoUrl) return;
-    import('fabric').then((mod) => {
+    import('fabric').then((mod) => { makeFabricSafe((mod as any).fabric);
       mod.fabric.Image.fromURL(brandKit.logoUrl as string, (img: any) => {
         if (!img || !img.width) return;
         const w = Math.min(page.width, page.height) * 0.18;
@@ -4007,7 +4008,7 @@ function EditorContent() {
   const insertImageDataUrl = (dataUrl: string, cascadeIndex = 0, at?: { x: number; y: number }): Promise<void> => {
     return new Promise((resolve) => {
       const ab = getActiveArtboardRect();
-      import('fabric').then((mod) => {
+      import('fabric').then((mod) => { makeFabricSafe((mod as any).fabric);
         mod.fabric.Image.fromURL(dataUrl, (img: any, isError?: boolean) => {
           if (!img || !img.width || isError) {
             setLocalNotice("That image couldn't be opened. Try a JPG or PNG file.");
@@ -5186,7 +5187,7 @@ function EditorContent() {
   const addArtboardWithSize = (w: number, h: number) => {
     const canvas = fabricCanvasRef.current;
     if (!canvas) return;
-    import('fabric').then((mod) => {
+    import('fabric').then((mod) => { makeFabricSafe((mod as any).fabric);
       const F: any = mod.fabric;
       const metas = getArtboardMetas();
       const pos = nextArtboardPosition(metas);
@@ -6845,7 +6846,7 @@ function EditorContent() {
     await ensurePhotoEditsApplied();
     try {
       const canvas = fabricCanvasRef.current;
-      const F = (window as any).fabric || (await import('fabric')).fabric;
+      const F = (window as any).fabric || makeFabricSafe((await import('fabric')).fabric);
       const ab = getActiveArtboardRect();
       const svg = exportArtboardToSVG(canvas, F, ab);
       const blob = new Blob([svg], { type: 'image/svg+xml' });
@@ -7388,7 +7389,7 @@ function EditorContent() {
     // SVG: real vectors, one file per page.
     if (settings.format === 'svg') {
       try {
-        const F = (window as any).fabric || (await import('fabric')).fabric;
+        const F = (window as any).fabric || makeFabricSafe((await import('fabric')).fabric);
         for (const ab of list) {
           const svg = exportArtboardToSVG(canvas, F, ab);
           const url = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }));
@@ -8773,7 +8774,7 @@ function EditorContent() {
             onReplace={(r) => { const o: any = fabricCanvasRef.current?.getActiveObject(); if (!o || !/text/i.test(o.type || '')) return; o.set('text', r.text); fit(o, r); }}
             onInsert={(r) => {
               const ab = getActiveArtboardRect();
-              import('fabric').then((mod) => {
+              import('fabric').then((mod) => { makeFabricSafe((mod as any).fabric);
                 const t = new mod.fabric.Textbox(r.text, { left: ab.x + ab.width / 2 - 200, top: ab.y + ab.height / 2 - 30, width: 400, fontSize: 48, fill: '#1A1A1A', fontFamily: 'Arial' });
                 fabricCanvasRef.current.add(t);
                 fabricCanvasRef.current.setActiveObject(t);

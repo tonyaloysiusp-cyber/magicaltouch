@@ -35,6 +35,7 @@ import { useAppTheme } from '@/hooks/useAppTheme';
 
 
 
+import { makeFabricSafe } from '@/lib/fabricSafe';
 const RECENT_COUNT = 6;
 
 interface Design {
@@ -125,7 +126,7 @@ export default function DashboardPage() {
   const backfillMissingThumbnails = async (list: Design[]) => {
     const missing = list.filter((d) => !d.thumbnail);
     if (!missing.length) return;
-    const F = (await import('fabric')).fabric;
+    const F = makeFabricSafe((await import('fabric')).fabric);
     installParagraphSpacing(F);
     installTextFrames(F);
     for (const design of missing) {

@@ -78,7 +78,14 @@ export function VisitCounter() {
   const path = usePathname();
 
   useEffect(() => {
-    const onErr = (e: ErrorEvent) => e.message && !/ResizeObserver loop|Script error/i.test(e.message) && reportError(e.message);
+    const onErr = (e: ErrorEvent) => {
+      if (!e.message || /ResizeObserver loop|Script error/i.test(e.message)) return;
+      // Only our own scripts: errors from browser extensions (injected code) are not ours to fix.
+      const file = e.filename || '';
+      if (file && !file.startsWith(window.location.origin)) return;
+      const at = file ? ` @ ${file.split('/').pop()?.split('?')[0]}:${e.lineno}:${e.colno}` : '';
+      reportError(`${e.message}${at}`);
+    };
     const onRej = (e: PromiseRejectionEvent) => { const r: any = e.reason; const m = r && typeof Event !== 'undefined' && r instanceof Event ? `${r.type} loading ${String(((r.target as any) && ((r.target as any).src || (r.target as any).href)) || 'a file').slice(0, 120)}` : String((r && (r.message || r)) || ''); if (m && !/AbortError|aborted/i.test(m)) reportError(`Unhandled: ${m}`); };
     window.addEventListener('error', onErr);
     window.addEventListener('unhandledrejection', onRej);

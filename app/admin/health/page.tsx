@@ -81,12 +81,14 @@ export default function HealthPage() {
     const proxy = await timed(async () => { const r = await fetch(`/sb/auth/v1/health`, { headers: { apikey: KEY } }); if (!r.ok) throw new Error(`status ${r.status}`); return r; });
     put({ id: 'proxy', name: 'Backup route (for blocked networks)', ms: proxy.ms, level: proxy.error ? 'bad' : speed(proxy.ms, 900, 2500), detail: proxy.error ? `Not working: ${proxy.error}. Visitors whose network blocks the database would see “check your connection”.` : `Working (${proxy.ms} ms). People on networks that block the database are routed through our own domain automatically.` });
 
-    const gal = await timed(async () => { const r = await fetch('/api/public-templates', { cache: 'no-store' }); if (!r.ok) throw new Error(`status ${r.status}`); return expandList(await r.json()) as any[]; });
+    let galDesigns = 0;
+    const gal = await timed(async () => { const r = await fetch('/api/public-templates', { cache: 'no-store' }); if (!r.ok) throw new Error(`status ${r.status}`); const j = await r.json(); const rows = expandList(j) as any[]; galDesigns = rows.length; return j.total ? Array.from({ length: j.total }) : rows; });
+    // Resized copies of one design show as one card (with its other sizes), so count templates, not cards.
     const galCount = gal.value?.length || 0;
     put({
       id: 'gallery', name: 'Template gallery', ms: gal.ms,
       level: gal.error ? 'bad' : galCount < (db.value || 0) ? 'warn' : speed(gal.ms, 1500, 4000),
-      detail: gal.error ? `Not loading: ${gal.error}` : `${galCount} templates in ${gal.ms} ms${galCount < (db.value || 0) ? ` — ${(db.value || 0) - galCount} published templates are not showing yet (the list refreshes every 5 minutes)` : ''}`,
+      detail: gal.error ? `Not loading: ${gal.error}` : `${galCount} templates (${galDesigns} designs — other sizes are grouped with their design) in ${gal.ms} ms${galCount < (db.value || 0) ? ` — ${(db.value || 0) - galCount} published templates are not showing yet (the list refreshes every 5 minutes)` : ''}`,
       fix: galCount < (db.value || 0) ? { label: 'Refresh the site now', run: refreshSite } : undefined,
     });
 

@@ -12,6 +12,7 @@ import { createArtboardId, nextArtboardName } from '@/lib/editor/artboards';
 import { createDefaultPrintSettings } from '@/lib/editor/printSetup';
 import { TemplateBuilderDef } from './builders';
 
+import { makeFabricSafe } from '@/lib/fabricSafe';
 // Kept in sync by hand with the identical arrays in app/editor/page.tsx's
 // save function, hooks/useEditorHistory.ts, and
 // lib/editor/buildPhotoDesignPayload.ts -- all must list every custom
@@ -41,7 +42,7 @@ export interface RenderedTemplate {
 }
 
 export async function renderTemplate(def: TemplateBuilderDef): Promise<RenderedTemplate> {
-  const mod: any = await import('fabric');
+  const mod: any = await import('fabric'); makeFabricSafe(mod.fabric);
   const F = mod.fabric;
 
   const canvas = new F.StaticCanvas(null, { width: def.width, height: def.height });

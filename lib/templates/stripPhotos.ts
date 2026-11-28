@@ -7,6 +7,7 @@ import { ensureFontsLoadedForCanvasJSON } from '@/lib/editor/googleFonts';
 import { PERSIST_PROPS } from '@/lib/editor/persist';
 import { fillFrame, isFramed } from '@/lib/editor/frames';
 
+import { makeFabricSafe } from '@/lib/fabricSafe';
 // The same "Drop a photo" picture the editor draws for empty frames, as a
 // small static file (6 KB) instead of a 300 KB data URL inside every design.
 export const FRAME_PLACEHOLDER = '/templates/photo-frame-placeholder.jpg';
@@ -39,7 +40,7 @@ export function countPhotosInJson(json: any): number {
 export async function stripTemplatePhotos(canvasJson: any): Promise<{ json: any; replaced: number }> {
   const json = typeof canvasJson === 'string' ? JSON.parse(canvasJson) : canvasJson;
   await ensureFontsLoadedForCanvasJSON(json).catch(() => undefined);
-  const mod: any = await import('fabric');
+  const mod: any = await import('fabric'); makeFabricSafe(mod.fabric);
   const F = mod.fabric;
   const el = document.createElement('canvas');
   const canvas = new F.StaticCanvas(el, { enableRetinaScaling: false, renderOnAddRemove: false });

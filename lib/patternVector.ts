@@ -7,13 +7,14 @@
 
 import { PatternSettings, sheetPlacements, motifPath } from './patterns';
 
+import { makeFabricSafe } from '@/lib/fabricSafe';
 export interface PatternFabricDoc { background: string; objects: any[] }
 
 const r2 = (n: number) => Math.round(n * 100) / 100;
 
 /** Fabric JSON for the pattern on a page of width × height. */
 export async function patternFabricJson(p: PatternSettings, width: number, height: number, opts: { transparent?: boolean } = {}): Promise<PatternFabricDoc> {
-  const mod: any = await import('fabric');
+  const mod: any = await import('fabric'); makeFabricSafe(mod.fabric);
   const F = mod.fabric;
   const d = motifPath(p);
   const places = sheetPlacements(p, width, height);
@@ -59,7 +60,7 @@ export async function patternFabricJson(p: PatternSettings, width: number, heigh
 /** Vector PDF of the pattern (page = width × height at 96 px per inch). */
 export async function patternPdf(p: PatternSettings, width: number, height: number, opts: { transparent?: boolean } = {}): Promise<Blob> {
   const doc = await patternFabricJson(p, width, height, opts);
-  const mod: any = await import('fabric');
+  const mod: any = await import('fabric'); makeFabricSafe(mod.fabric);
   const F = mod.fabric;
   const canvas = new F.StaticCanvas(null, { width, height, renderOnAddRemove: false });
   await new Promise<void>((res) => canvas.loadFromJSON({ version: '5.1.0', objects: doc.objects }, () => res()));

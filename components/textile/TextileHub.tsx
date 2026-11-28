@@ -16,6 +16,7 @@ import { PERSIST_PROPS } from '@/lib/editor/persist';
 import { GARMENTS, TEXTILE_TEMPLATES, TEX_KEYS, buildTextilePage, defaultTextileSpec, templateSpec, textileFlatSvg, textileSketchSvg, type GarmentId, type TextileTemplate } from '@/lib/textile/editorBridge';
 import { PageHero } from '@/components/PageHero';
 
+import { makeFabricSafe } from '@/lib/fabricSafe';
 const FILTERS: { id: string; label: string; test: (t: TextileTemplate) => boolean }[] = [
   { id: 'all', label: 'All designs', test: () => true },
   { id: 'polo', label: 'Polos & T-shirts', test: (t) => t.garment === 'polo' || t.garment === 'tshirt' },
@@ -35,7 +36,7 @@ export function useTextileOpen() {
     try {
       const { data } = await supabase.auth.getSession();
       if (!data.session && !OPEN_ACCESS && process.env.NEXT_PUBLIC_E2E !== '1') { router.push('/login?next=' + encodeURIComponent('/textile-studio')); return; }
-      const mod: any = await import('fabric'); const F = mod.fabric;
+      const mod: any = await import('fabric'); makeFabricSafe(mod.fabric); const F = mod.fabric;
       const spec = t ? templateSpec(t) : defaultTextileSpec(garment || 'polo');
       const { size, objs } = buildTextilePage(F, spec, t);
       const canvas = { version: '5.1.0', background: '#FFFFFF', objects: objs.map((o: any) => { const j = o.toObject(PERSIST_PROPS); for (const k of TEX_KEYS) if (o[k] !== undefined) j[k] = o[k]; return j; }) };
