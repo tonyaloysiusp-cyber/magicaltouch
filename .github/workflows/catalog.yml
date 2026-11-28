@@ -5,8 +5,9 @@ name: Template catalog
 # Runs twice a day and on demand (Actions → Template catalog → Run workflow);
 # commits only when something changed, which redeploys the site.
 on:
-  schedule:
-    - cron: '41 2,14 * * *'
+  # schedule paused until the template clean-up (index must stay under 25 MB)
+  # schedule:
+  #   - cron: '41 2,14 * * *'
   workflow_dispatch:
 permissions:
   contents: write
