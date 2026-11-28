@@ -77,7 +77,7 @@ grant execute on function public.admin_storage_orphans(integer) to authenticated
 --   backup    the one-off template_copy_backup table rows
 create or replace function public.admin_storage_clean(p_kind text, p_dry boolean default true)
 returns jsonb language plpgsql security definer set search_path = public as $$
-declare n bigint := 0;
+declare n bigint := 0; k bigint := 0;
 begin
   if not public.is_admin() then raise exception 'admins only'; end if;
   if p_kind = 'versions' then
@@ -97,11 +97,9 @@ begin
            + (select count(*) from site_visitors_daily where day < current_date - 90) into n;
     else
       delete from site_views_daily where day < current_date - 90; get diagnostics n = row_count;
-      declare k bigint; begin
-        delete from site_searches_daily where day < current_date - 90; get diagnostics k = row_count; n := n + k;
-        delete from site_errors_daily where day < current_date - 90; get diagnostics k = row_count; n := n + k;
-        delete from site_visitors_daily where day < current_date - 90; get diagnostics k = row_count; n := n + k;
-      end;
+      delete from site_searches_daily where day < current_date - 90; get diagnostics k = row_count; n := n + k;
+      delete from site_errors_daily where day < current_date - 90; get diagnostics k = row_count; n := n + k;
+      delete from site_visitors_daily where day < current_date - 90; get diagnostics k = row_count; n := n + k;
     end if;
   elsif p_kind = 'archived' then
     if p_dry then
