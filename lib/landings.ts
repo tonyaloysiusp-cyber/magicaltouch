@@ -200,8 +200,8 @@ export const LANDINGS: Landing[] = [
   L({
     slug: 'free-instagram-post-maker',
     thing: 'Instagram post',
-    h1: 'Free Instagram post maker',
-    title: 'Free Instagram Post & Story Maker — Social Media Templates',
+    h1: 'Free social media post maker — Instagram, Facebook & LinkedIn',
+    title: 'Free Social Media Post Maker — Instagram Post & Story Templates',
     description: 'Design Instagram posts, stories and carousels for free. Sale posts, quotes, hiring posts, listings and festive greetings sized perfectly for social media.',
     intro: [
       'Scroll-stopping posts need strong composition and a clear message. Our social templates are sized for Instagram posts (1080 × 1350), stories (1080 × 1920) and square posts.',

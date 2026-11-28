@@ -53,11 +53,11 @@ const STYLE_FOR: Record<string, [BoxStyleId, number, number, number][]> = {
 };
 export const PACK_TEMPLATES: PackTemplate[] = THEMES.flatMap((th) => (STYLE_FOR[th.id] || []).map(([style, L, W, D], i) => ({
   id: `${th.id}-${style}`, name: `${th.name} · ${style === 'matchbox' ? 'drawer box' : i === 0 ? 'box' : style === 'traylid' ? 'gift box' : style === 'sleeve' ? 'sleeve' : style.endsWith('sc') ? 'shipper' : style === 'tray' ? 'tray' : style === 'mailer' ? 'mailer' : style === 'gable' ? 'gable box' : style === 'crash' ? 'crash-lock box' : style === 'snap123' ? 'snap-lock box' : 'box'}`,
-  theme: th, style, L, W, D, t: style === 'rsc' || style === 'hsc' || style === 'fol' ? 3 : style === 'mailer' ? 1.5 : style === 'traylid' || style === 'tray' || style === 'matchbox' ? 1.5 : 0.45,
+  theme: th, style, L, W, D, t: style === 'rsc' || style === 'hsc' || style === 'fol' || style === 'osc' || style === 'cssc' ? 3 : style === 'mailer' ? 1.5 : style === 'traylid' || style === 'tray' || style === 'matchbox' ? 1.5 : 0.45,
 })));
 
 export function templateDieline(t: PackTemplate): Dieline {
-  const corr = t.style === 'rsc' || t.style === 'hsc' || t.style === 'fol' || t.style === 'mailer';
+  const corr = t.style === 'rsc' || t.style === 'hsc' || t.style === 'fol' || t.style === 'osc' || t.style === 'cssc' || t.style === 'mailer';
   return makeDieline({ style: t.style, L: t.L, W: t.W, D: t.D, t: t.t, glue: corr ? 30 : 14, tuck: 15, lidDepth: Math.min(t.D, 30) });
 }
 

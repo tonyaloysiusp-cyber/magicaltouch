@@ -18,15 +18,15 @@ export interface Dieline {
   inside: { L: number; W: number; D: number }; t: number;
 }
 
-export type BoxStyleId = 'rte' | 'ste' | 'seal' | 'sleeve' | 'tray' | 'traylid' | 'matchbox' | 'rsc' | 'hsc' | 'fol' | 'pillow' | 'snap123' | 'crash' | 'gable' | 'mailer' | 'carton';
+export type BoxStyleId = 'rte' | 'ste' | 'seal' | 'sleeve' | 'tray' | 'traylid' | 'matchbox' | 'rsc' | 'hsc' | 'fol' | 'pillow' | 'snap123' | 'crash' | 'gable' | 'mailer' | 'carton' | 'osc' | 'cssc';
 export interface BoxStyleDef { id: BoxStyleId; name: string; code: string; group: 'Folding carton' | 'Tray & lid' | 'Corrugated'; hint: string }
 export const BOX_STYLES: BoxStyleDef[] = [
   { id: 'rte', name: 'Reverse tuck end', code: 'ECMA A20 type', group: 'Folding carton', hint: 'Top tuck on the back, bottom tuck on the front — cosmetics, pharma, retail.' },
   { id: 'ste', name: 'Straight tuck end', code: 'ECMA A20 type', group: 'Folding carton', hint: 'Both tucks on the back panel — a clean, uninterrupted front.' },
-  { id: 'seal', name: 'Seal end (glued)', code: 'ECMA A10 type', group: 'Folding carton', hint: 'Glued top and bottom flaps — cereal, food and multipacks.' },
+  { id: 'seal', name: 'Glue end / seal end', code: 'ECMA A10 type', group: 'Folding carton', hint: 'Glued top and bottom flaps — cereal, food and multipacks.' },
   { id: 'carton', name: 'Folding carton — choose each end', code: 'ECMA A/B types', group: 'Folding carton', hint: 'Pick the top end and the bottom end separately: tuck, glued seal end (full, partial or economy overlap), 1-2-3 lock or crash lock.' },
-  { id: 'snap123', name: 'Tuck top, 1-2-3 snap-lock bottom', code: 'ECMA A55 type', group: 'Folding carton', hint: 'Bottom flaps fold in order 1-2-3 and lock — heavier products, no glue at the bottom.' },
-  { id: 'crash', name: 'Tuck top, crash-lock bottom', code: 'ECMA A60 type', group: 'Folding carton', hint: 'Pre-glued bottom pops open in one move — fast packing, strong base.' },
+  { id: 'snap123', name: 'Tuck top, 1-2-3 snap-lock bottom (lock bottom)', code: 'ECMA A55 type', group: 'Folding carton', hint: 'Bottom flaps fold in order 1-2-3 and lock — heavier products, no glue at the bottom.' },
+  { id: 'crash', name: 'Tuck top, auto-lock bottom (crash lock)', code: 'ECMA A60 type', group: 'Folding carton', hint: 'Pre-glued bottom pops open in one move — fast packing, strong base.' },
   { id: 'gable', name: 'Gable box with handle', code: 'Gable carrier', group: 'Folding carton', hint: 'Roof-shaped top with a carry handle, crash-lock bottom — gifts, food, take-away.' },
   { id: 'pillow', name: 'Pillow box', code: 'ECMA F70.01', group: 'Folding carton', hint: 'Curved ends that close by pressing in — gifts, small items. Make a sample first.' },
   { id: 'sleeve', name: 'Sleeve', code: 'Open ends', group: 'Folding carton', hint: 'A wrap that slides over a tray or product.' },
@@ -37,6 +37,8 @@ export const BOX_STYLES: BoxStyleDef[] = [
   { id: 'rsc', name: 'Regular slotted container', code: 'FEFCO 0201', group: 'Corrugated', hint: 'The standard shipping box: flaps meet in the middle.' },
   { id: 'hsc', name: 'Half slotted container', code: 'FEFCO 0200', group: 'Corrugated', hint: 'Like 0201 with no top flaps — open top.' },
   { id: 'fol', name: 'Full overlap container', code: 'FEFCO 0203', group: 'Corrugated', hint: 'All flaps the full width — outer flaps overlap completely for strength.' },
+  { id: 'osc', name: 'Overlap slotted container', code: 'FEFCO 0202', group: 'Corrugated', hint: 'Like 0201, but the outer flaps overlap by 25 mm (or less on narrow boxes) for a stronger glued or stapled closure.' },
+  { id: 'cssc', name: 'Centre special slotted container', code: 'FEFCO 0204', group: 'Corrugated', hint: 'Inner and outer flaps all meet in the middle — a flat double layer of board top and bottom.' },
 ];
 
 export interface DieOptions {
@@ -325,11 +327,15 @@ function matchbox(o: DieOptions): Dieline {
     notes: [`Sleeve inside ${f(sL)} × ${f(sD)} mm (tray outside + 1 mm play), ${f(sLen)} mm long.`] };
 }
 
-function slotted(o: DieOptions, topFlaps: boolean, full = false): Dieline {
+function slotted(o: DieOptions, topFlaps: boolean, full = false, mode: 'meet' | 'overlap' | 'centre' = 'meet'): Dieline {
   const n = new Net(), t = o.t;
   const Lp = o.L + 2 * t, Wp = o.W + 2 * t, Dp = o.D + 2 * t, g = Math.max(o.glue, 25);
   // 0201: flaps half the width (outer flaps meet); 0203: flaps the full width (outer flaps overlap).
-  const fd = full ? Wp : Wp / 2 + t, slot = Math.max(3, 2 * t + 1);
+  // 0202: outer flaps overlap by up to 25 mm; 0204: inner flaps (on the sides) reach the middle too.
+  const ov = Math.min(25, Wp / 2);
+  const fdOuter = full ? Wp : mode === 'overlap' ? Wp / 2 + ov / 2 + t : Wp / 2 + t, slot = Math.max(3, 2 * t + 1);
+  const fdInner = mode === 'centre' ? Lp / 2 + t : fdOuter;
+  const fd = Math.max(fdOuter, fdInner);
   const x0 = g, x1 = x0 + Lp, x2 = x1 + Wp, x3 = x2 + Lp, x4 = x3 + Wp;
   const y0 = topFlaps ? fd : 0, y1 = y0 + Dp;
   n.panel('Front', x0, y0, Lp, Dp); n.panel('Side', x1, y0, Wp, Dp); n.panel('Back', x2, y0, Lp, Dp); n.panel('Side', x3, y0, Wp, Dp);
@@ -339,17 +345,21 @@ function slotted(o: DieOptions, topFlaps: boolean, full = false): Dieline {
   const cols: [number, number][] = [[x0, x1], [x1, x2], [x2, x3], [x3, x4]];
   cols.forEach(([a, b], i) => {
     const ra = i === 0 ? 0 : slot / 2, rb = i === 3 ? 0 : slot / 2;
+    const depth = i % 2 ? fdInner : fdOuter;
     const fl = (y: number, dir: 1 | -1, nm: string) => {
-      const yy = y + dir * fd;
+      const yy = y + dir * depth;
       n.crease(seg([a, y], [b, y]));
       n.cut(P([[a, y], [a + ra, y], [a + ra, yy], [b - rb, yy], [b - rb, y], [b, y]]));
-      n.panel(nm, a + ra, Math.min(y, yy), b - a - ra - rb, fd, false);
+      n.panel(nm, a + ra, Math.min(y, yy), b - a - ra - rb, depth, false);
     };
     fl(y1, 1, 'Bottom flap');
     if (topFlaps) fl(y0, -1, 'Top flap'); else n.cut(seg([a, y0], [b, y0]));
   });
-  return { style: full ? 'fol' : topFlaps ? 'rsc' : 'hsc', title: full ? 'Full overlap container (FEFCO 0203)' : topFlaps ? 'Regular slotted container (FEFCO 0201)' : 'Half slotted container (FEFCO 0200)', w: x4, h: y1 + fd, lines: n.lines, panels: n.panels, inside: { L: o.L, W: o.W, D: o.D }, t,
-    notes: [`Flaps ${f(fd)} mm (${full ? 'outer flaps overlap fully' : 'meet in the middle'}), slots ${f(slot)} mm, manufacturer's joint ${f(g)} mm.`] };
+  const style: BoxStyleId = mode === 'overlap' ? 'osc' : mode === 'centre' ? 'cssc' : full ? 'fol' : topFlaps ? 'rsc' : 'hsc';
+  const title = { osc: 'Overlap slotted container (FEFCO 0202)', cssc: 'Centre special slotted container (FEFCO 0204)', fol: 'Full overlap container (FEFCO 0203)', rsc: 'Regular slotted container (FEFCO 0201)', hsc: 'Half slotted container (FEFCO 0200)' }[style as 'rsc'];
+  const how = mode === 'overlap' ? `outer flaps overlap ${f(ov)} mm` : mode === 'centre' ? `outer flaps ${f(fdOuter)} mm and inner flaps ${f(fdInner)} mm, all meet in the middle` : full ? 'outer flaps overlap fully' : 'meet in the middle';
+  return { style, title, w: x4, h: y1 + fd, lines: n.lines, panels: n.panels, inside: { L: o.L, W: o.W, D: o.D }, t,
+    notes: [`Flaps ${f(fdOuter)} mm (${how}), slots ${f(slot)} mm, manufacturer's joint ${f(g)} mm.`] };
 }
 
 /**
@@ -617,6 +627,8 @@ function buildDieline(o: DieOptions): Dieline {
     case 'rsc': return slotted(c, true);
     case 'hsc': return slotted(c, false);
     case 'fol': return slotted(c, true, true);
+    case 'osc': return slotted(c, true, false, 'overlap');
+    case 'cssc': return slotted(c, true, false, 'centre');
     case 'matchbox': return matchbox(c);
     case 'pillow': return pillow(c);
     case 'snap123': return snap123(c);

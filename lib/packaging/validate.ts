@@ -71,7 +71,7 @@ export function checkStructure(o: DieOptions, family: BoardFamily): StructureRep
     }
     if (o.style === 'matchbox') add({ id: 'sleeve', level: 'ok', title: 'Sleeve fit', detail: `Sleeve inside is the tray outside + 1 mm, so the drawer slides.`, rule: 'geometry' });
   }
-  if (o.style === 'rsc' || o.style === 'hsc' || o.style === 'fol') {
+  if (o.style === 'rsc' || o.style === 'hsc' || o.style === 'fol' || o.style === 'osc' || o.style === 'cssc') {
     add(o.L < o.W
       ? { id: 'lw', level: 'warn', title: 'Length and width', detail: 'FEFCO sizes are given length ≥ width. Swap them so the flaps on the long panels meet.', fix: { L: o.W, W: o.L }, rule: 'rule of thumb' }
       : { id: 'lw', level: 'ok', title: 'Flaps meet', detail: `Outer flaps ${f((o.W + 2 * t) / 2 + t)} mm meet in the middle.`, rule: 'geometry' });
@@ -89,8 +89,8 @@ export function checkStructure(o: DieOptions, family: BoardFamily): StructureRep
   if ((o.glueAngle ?? 45) < 5 && !corr) add({ id: 'glueangle', level: 'warn', title: 'Glue flap ends', detail: 'Square glue flap ends can catch on the folded closures; a 7–15° bevel is usual on folder-gluers.', fix: { glueAngle: 15 } as any, rule: 'rule of thumb' });
   // Glue flap: needs enough width for the glue line, and must fit on the panel it is glued to.
   if (o.style !== 'tray' && o.style !== 'traylid' && o.style !== 'mailer') {
-    const g = (o.style === 'rsc' || o.style === 'hsc' || o.style === 'fol') ? Math.max(o.glue, 25) : o.glue;
-    const minG = corr ? 25 : 10, target = (o.style === 'rsc' || o.style === 'hsc' || o.style === 'fol') ? o.W + 2 * t : o.gluePos === 'back' && o.style !== 'pillow' ? o.W + t : Lp; // slotted: joint glued to the last side panel; back-panel flap glues onto a side
+    const g = (o.style === 'rsc' || o.style === 'hsc' || o.style === 'fol' || o.style === 'osc' || o.style === 'cssc') ? Math.max(o.glue, 25) : o.glue;
+    const minG = corr ? 25 : 10, target = (o.style === 'rsc' || o.style === 'hsc' || o.style === 'fol' || o.style === 'osc' || o.style === 'cssc') ? o.W + 2 * t : o.gluePos === 'back' && o.style !== 'pillow' ? o.W + t : Lp; // slotted: joint glued to the last side panel; back-panel flap glues onto a side
     if (g >= target) add({ id: 'glue', level: 'error', title: 'Glue flap', detail: `Glue flap ${f(g)} mm is wider than the panel it is glued to (${f(target)} mm).`, fix: { glue: Math.round(target * 0.3) }, rule: 'geometry' });
     else if (g < minG) add({ id: 'glue', level: 'warn', title: 'Glue flap', detail: `Glue flap ${f(g)} mm is narrow; at least ${minG} mm is usual for ${corr ? 'corrugated' : 'carton'}.`, fix: { glue: minG + (corr ? 5 : 4) }, rule: 'rule of thumb' });
     else add({ id: 'glue', level: 'ok', title: 'Glue flap', detail: `Glue flap ${f(g)} mm.`, rule: 'rule of thumb' });

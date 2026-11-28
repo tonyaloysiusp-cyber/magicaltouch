@@ -15,7 +15,7 @@ Every design is vector (paths, shapes, text) except the logo image.
 import json, math, sys, itertools
 
 SITE = 'https://www.magicaltouchdesign.com'
-LOGO, LOGO_W = f'{SITE}/logo.png', f'{SITE}/logo-white.png'
+LOGO, LOGO_W = '/logo.png', '/logo-white.png'  # same-origin, so the canvas loads them on www and the bare domain
 SPEC = ['#F2708F', '#A69BD3', '#35C2F1', '#5DCCB8', '#8CC84B']
 _uid = itertools.count()
 

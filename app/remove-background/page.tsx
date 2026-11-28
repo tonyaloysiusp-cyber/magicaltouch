@@ -5,8 +5,8 @@ import { BulkRemover } from '@/components/tools/BulkRemover';
 
 // Free background remover: its own page because so many people search for
 // it. Works in bulk, runs on the visitor's device, nothing is uploaded.
-const TITLE = 'Free Background Remover — Remove Image Backgrounds Online, in Bulk';
-const DESC = 'Remove the background from photos for free — one or 60 at once. Transparent PNG, white or any colour. Runs in your browser: your photos are never uploaded. No sign-up, no watermark.';
+const TITLE = 'Free Background Remover Online — Remove Image Backgrounds in Bulk';
+const DESC = 'Free background remover online. Remove the background from photos — one or 60 at once. Transparent PNG, white or any colour. Runs in your browser: your photos are never uploaded. No sign-up, no watermark.';
 const URL = `${SITE_URL}/remove-background`;
 
 export const metadata: Metadata = {
@@ -32,7 +32,7 @@ export default function RemoveBackgroundPage() {
     { '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: [{ '@type': 'ListItem', position: 1, name: 'Home', item: SITE_URL }, { '@type': 'ListItem', position: 2, name: 'Free background remover', item: URL }] },
   ];
   return (
-    <ToolShell path="/remove-background" h1={'Remove backgrounds free — one photo or a whole folder'} name="Background Remover" sub="Transparent PNG, white or any colour — on your device"
+    <ToolShell path="/remove-background" h1={'Free background remover online — one photo or a whole folder'} name="Background Remover" sub="Transparent PNG, white or any colour — on your device"
       about={<ToolAbout intro="Transparent PNG, white or any colour background. Runs on your device — your photos are never uploaded. No sign-up, no watermark." steps={[['Add photos', 'Choose or drop up to 60 photos — people, products, pets, logos.'], ['Backgrounds go', 'The subject is found on your device and the rest is removed. Tap Edit on any photo to restore or erase areas with a brush.'], ['Save', 'Download one, all in a ZIP, or save them straight into a folder.']]} faq={FAQ} />}>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(ld) }} />
       <BulkRemover />

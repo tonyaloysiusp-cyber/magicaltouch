@@ -2,3 +2,11 @@
 # template previews should appear in search (Cloudflare static-asset headers).
 /templates/photos/*
   X-Robots-Tag: noindex, noimageindex
+
+# Brand logos are used inside designs; let both www and the bare domain load them on a canvas.
+/brand/*
+  Access-Control-Allow-Origin: *
+/logo.png
+  Access-Control-Allow-Origin: *
+/logo-white.png
+  Access-Control-Allow-Origin: *

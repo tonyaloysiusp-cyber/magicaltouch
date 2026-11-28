@@ -93,7 +93,9 @@ export function Footer({ theme }: { theme: AppTheme }) {
                 <li><button onClick={() => go('/create')} className={link}>Create a design</button></li>
                 <li><Link href="/templates" className={link}>Templates</Link></li>
                 <li><Link href="/photo-studio" className={link}>Photo Studio</Link></li>
-                <li><Link href="/remove-background" className={link}>Free background remover</Link></li>
+                <li><Link href="/remove-background" className={link}>Free background remover online</Link></li>
+                <li><Link href="/packaging-dieline" className={link}>Packaging design online</Link></li>
+                <li><Link href="/free-instagram-post-maker" className={link}>Social media post maker</Link></li>
                 <li><Link href="/tutorials" className={link}>Tutorials &amp; courses</Link></li>
                 <li><Link href="/free-design-tools" className={link}>Free design tools</Link></li>
                 <li><Link href="/#features" className={link}>Features</Link></li>
